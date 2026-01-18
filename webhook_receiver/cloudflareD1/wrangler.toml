@@ -1,0 +1,8 @@
+name = "webhook-receiver"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fgcare-webhook-db"
+database_id = "082ef7e3-649d-4b85-8234-ff32fa1453d5"
