@@ -1,0 +1,32 @@
+{
+  "name": "webhook_logs_consumer",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "swc src -d dist --strip-leading-paths --watch",
+    "build": "swc src -d dist --strip-leading-paths",
+    "start": "node dist/consumer.js",
+    "autostart": "pm2 start dist/consumer.js --name \"webhook-consumer\" --interpreter node",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.47.1",
+    "dotenv": "^16.4.7",
+    "pg": "^8.13.1",
+    "punycode": "^2.3.1"
+  },
+  "devDependencies": {
+    "@swc/cli": "^0.6.0",
+    "@swc/core": "^1.10.16",
+    "@types/node": "^20.10.6",
+    "@types/pg": "^8.11.10",
+    "nodemon": "^3.1.9",
+    "supabase": "^2.0.0",
+    "swc-loader": "^0.2.6",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}

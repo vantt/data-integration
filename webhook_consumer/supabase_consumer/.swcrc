@@ -1,0 +1,21 @@
+{
+  "jsc": {
+    "parser": {
+      "syntax": "typescript",
+      "decorators": true
+    },
+    "transform": {
+      "legacyDecorator": true,
+      "decoratorMetadata": true
+    },
+    "minify": {
+      "compress": true
+      //"mangle": true // kind of obfuscation
+    },
+    "target": "es2020"
+  },
+  "module": {
+    "type": "es6"
+  },
+  "sourceMaps": false
+}
