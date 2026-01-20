@@ -1,6 +1,5 @@
 """
-Sapo Orders Source - Production Implementation
-DESC Strategy with Full Features
+Sapo Customers Source - Production Implementation
 """
 
 import dlt
@@ -15,15 +14,15 @@ from tenacity import (
 )
 
 @dlt.source
-def sapo_orders_source(
+def sapo_customers_source(
     max_pages: int = 1000, 
-    page_size: int = 250, 
+    page_size: int = 100, 
     min_overlap_items: int = 500
 ):
     """
-    Sapo source function.
+    Sapo customers source function.
     """
-    return orders(
+    return customers(
         max_pages=max_pages, 
         page_size=page_size, 
         min_overlap_items=min_overlap_items
@@ -35,44 +34,56 @@ def sapo_orders_source(
     table_format="delta",
     columns={
         "id": {"data_type": "bigint"},
-        "code": {"data_type": "text"},
+        "tenant_id": {"data_type": "bigint"},
+        "default_location_id": {"data_type": "bigint"},
         "created_on": {"data_type": "timestamp"},
         "modified_on": {"data_type": "timestamp"},
-        "tenant_id": {"data_type": "bigint"},
-        "location_id": {"data_type": "bigint"},
-        "issued_on": {"data_type": "timestamp"},
-        "total": {"data_type": "double"},
-        "total_tax": {"data_type": "double"},
-        "total_discount": {"data_type": "double"},
-        "status": {"data_type": "text"},
-        "payment_status": {"data_type": "text"},
-        "fulfillment_status": {"data_type": "text"},
-        "customer_id": {"data_type": "bigint"},
-        "account_id": {"data_type": "bigint"},
+        "code": {"data_type": "text"},
+        "name": {"data_type": "text"},
+        "dob": {"data_type": "date"},
+        "sex": {"data_type": "text"},
+        "description": {"data_type": "text"},
+        "email": {"data_type": "text"},
+        "fax": {"data_type": "text"},
+        "phone_number": {"data_type": "text"},
+        "tax_number": {"data_type": "text"},
+        "website": {"data_type": "text"},
+        "customer_group_id": {"data_type": "bigint"},
+        "group_id": {"data_type": "bigint"},
+        "group_name": {"data_type": "text"},
         "assignee_id": {"data_type": "bigint"},
+        "default_payment_term_id": {"data_type": "bigint"},
+        "default_payment_method_id": {"data_type": "bigint"},
+        "default_tax_type_id": {"data_type": "bigint"},
+        "default_discount_rate": {"data_type": "double"},
+        "default_price_list_id": {"data_type": "bigint"},
+        "status": {"data_type": "text"},
+        "is_default": {"data_type": "bool"},
+        "debt": {"data_type": "double"},
+        "apply_incentives": {"data_type": "bool"},
+        "total_expense": {"data_type": "double"},
+        "loyalty_customer": {"data_type": "json"},
+        "sale_order": {"data_type": "json"},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True},
         # Prevent normalization of nested fields
-        "customer_data": {"data_type": "json"},
-        "discount_items": {"data_type": "json"},
-        "order_line_items": {"data_type": "json"},
-        "fulfillments": {"data_type": "json"},
-        "returns": {"data_type": "json"},
-        "prepayments": {"data_type": "json"},
+        "addresses": {"data_type": "json"},
+        "contacts": {"data_type": "json"},
+        "notes": {"data_type": "json"},
+        "customer_group": {"data_type": "json"},
+        "group_ids": {"data_type": "json"},
         "tags": {"data_type": "json"},
-        "order_return_exchange": {"data_type": "json"},
-        "order_returns": {"data_type": "json"},
-        "promotion_redemptions": {"data_type": "json"}
+        "social_customers": {"data_type": "json"},
     }
 )
-def orders(
+def customers(
     max_pages: int = 1000,
-    page_size: int = 250,
+    page_size: int = 100,
     min_overlap_items: int = 500,
     created_on=dlt.sources.incremental("created_on")
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
-    Load orders incrementally using DESC strategy
+    Load customers incrementally using DESC strategy
     
     Strategy:
     1. Sort DESC (newest first)
@@ -92,7 +103,7 @@ def orders(
     
     # State
     page = 1
-    # Count consecutive old items to determine safety buffer
+    # Checkpoint safety buffer
     consecutive_old_items = 0
     consecutive_errors = 0
     MAX_ERRORS = 3
@@ -110,7 +121,7 @@ def orders(
     )
     def fetch_page_with_retry(page_num: int, current_session) -> Dict[str, Any]:
         """Fetch single page with exponential backoff retry"""
-        url = f"{base_url}/orders.json"
+        url = f"{base_url}/customers/doSearch.json"
         
         # Apply rate limiting delay
         if request_delay > 0:
@@ -120,11 +131,9 @@ def orders(
         params = {
             "page": page_num,
             "limit": page_size,
-            "sort_by": "created_on", 
-            "order": "desc" 
+            "sort": "created_on,desc", 
+            "condition_type": "must"
         }
-        
-        params["sort_by"] = "created_on desc"
 
         response = current_session.get(url, params=params, timeout=30)
 
@@ -147,50 +156,48 @@ def orders(
             data = fetch_page_with_retry(page, session)
             consecutive_errors = 0
             
-            # Sapo response structure: {"orders": [...], "metadata": {...}}
-            orders_data = data.get("orders", [])
+            # Sapo response structure: {"customers": [...], "metadata": {...}}
+            customers_data = data.get("customers", [])
             
-            if not orders_data:
+            if not customers_data:
                 print(f"📭 Page {page}: Empty")
                 break
                 
             # Filter new items
-            new_orders = []
+            new_customers = []
             
-            for order in orders_data:
-                # User's created_on format check needed?
-                # Usually ISO. dlt handles string comparison for ISO timestamps correctly.
-                order_created_on = order.get("created_on")
+            for customer in customers_data:
+                customer_created_on = customer.get("created_on")
                 
                 # Check for None just in case
-                if not order_created_on:
+                if not customer_created_on:
                     continue
                 
-                if last_value is None or order_created_on > last_value:
+                if last_value is None or customer_created_on > last_value:
                     # New Item found - Enrich with partition columns
                     try:
                         # created_on format example: "2024-01-15T08:30:00Z"
-                        dt = datetime.fromisoformat(order_created_on.replace("Z", "+00:00"))
-                        order["year"] = str(dt.year)
-                        order["month"] = str(dt.month)
+                        dt = datetime.fromisoformat(customer_created_on.replace("Z", "+00:00"))
+                        customer["year"] = str(dt.year)
+                        customer["month"] = str(dt.month)
                         
-                        new_orders.append(order)
+                        new_customers.append(customer)
                         
                         # IMPORTANT: Reset counter because we found a gap-filler!
                         consecutive_old_items = 0
                     except ValueError:
-                        print(f"⚠️ Could not parse created_on: {order_created_on}")
+                        print(f"⚠️ Could not parse created_on: {customer_created_on}")
                         continue
                 else:
                     # Old Item found
                     consecutive_old_items += 1
             
-            print(f"📄 Page {page}: {len(new_orders)}/{len(orders_data)} new. Old stream: {consecutive_old_items}/{min_overlap_items}")
+            print(f"📄 Page {page}: {len(new_customers)}/{len(customers_data)} new. Old stream: {consecutive_old_items}/{min_overlap_items}")
 
-            if new_orders:
-                yield new_orders
+            if new_customers:
+                yield new_customers
             
-            # Early stop based on ITEMS count, not pages
+            # Early stop based on ITEMS count
             if consecutive_old_items >= min_overlap_items:
                 print(f"✅ Early stop triggered. Safety buffer satistied ({consecutive_old_items} old items seen).")
                 break
@@ -203,4 +210,4 @@ def orders(
             if consecutive_errors >= MAX_ERRORS:
                  print("Too many errors. Stopping.")
                  break
-            page += 1 # Skip page or retry? If retry needed, use tenacity. Here we skip to avoid infinite stuck.
+            page += 1 

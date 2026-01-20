@@ -6,11 +6,11 @@ os.environ["DESTINATION__FILESYSTEM__LOADER_FILE_FORMAT"] = "parquet"
 # Add src to path so imports work
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from sapo.orders import sapo_orders_source
+from sapo.customers import sapo_customers_source
 
 def run():
     """
-    Run the Sapo orders pipeline.
+    Run the Sapo customers pipeline.
     """
     # Configure safe layout
     from dlt.destinations import filesystem
@@ -23,12 +23,12 @@ def run():
     )
     
     pipeline = dlt.pipeline(
-        pipeline_name="sapo_orders",
-        dataset_name="sapo_orders"
+        pipeline_name="sapo_customers",
+        dataset_name="sapo_customers"
     )
 
-    # The source returns the "orders" resource
-    source = sapo_orders_source(max_pages=1000)
+    # The source returns the "customers" resource
+    source = sapo_customers_source(max_pages=1000)
 
     # Run the pipeline
     load_info = pipeline.run(source, destination=dest, loader_file_format="parquet")

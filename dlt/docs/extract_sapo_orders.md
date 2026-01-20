@@ -120,43 +120,43 @@ GET /orders?created_on_gt=2024-01-20T00:00:00Z   # No filter support!
 
 ```
 Total items: 15,892
-Page size: 250
-Total pages: ceil(15,892 / 250) = 64 pages
+Page size (limit): Flexible (Client controlled, 1-250)
+Total pages: depends on limit
 
 Pagination rules:
 - Page numbers: 1-indexed
-- Fixed page size: 250 items/page
-- Last page: May contain < 250 items
+- Page size: Client can request limit=10, 50, 100, 250...
+- Last page: May contain < limit items
 - Stable ordering: Within single request session
 ```
 
 ### 3.3 Constraints Summary
 
-| Constraint          | Impact                          | Workaround                    |
-| ------------------- | ------------------------------- | ----------------------------- |
-| No timestamp filter | Cannot skip old data directly   | Use client-side filtering     |
-| Only sort support   | Must load pages sequentially    | Choose optimal sort direction |
-| Fixed page size     | Cannot adjust for performance   | Optimize early stopping       |
-| Pagination drift    | New items shift page boundaries | Implement overlap strategy    |
+| Constraint             | Impact                          | Workaround                       |
+| ---------------------- | ------------------------------- | -------------------------------- |
+| No timestamp filter    | Cannot skip old data directly   | Use client-side filtering        |
+| Only sort support      | Must load pages sequentially    | Choose optimal sort direction    |
+| **Flexible Page Size** | **Safety buffer changes size**  | **Use ITEM-based safety buffer** |
+| Pagination drift       | New items shift page boundaries | Implement overlap strategy       |
 
 ### 3.4 Pagination Drift Phenomenon
 
 ```
-BEFORE (Run 1):
+BEFORE (Run 1): (đang sort theo DESC)
 ┌────────────────────────────────────────┐
-│ Page 1: Items [60 → 41] (20 items)    │
-│ Page 2: Items [40 → 21] (20 items)    │
-│ Page 3: Items [20 → 1]  (20 items)    │
+│ Page 1: Items [60 → 41] (20 items)     │
+│ Page 2: Items [40 → 21] (20 items)     │
+│ Page 3: Items [20 → 1]  (20 items)     │
 └────────────────────────────────────────┘
 
 [11 new items created: 61-71]
 
-AFTER (Run 2):
-┌────────────────────────────────────────┐
+AFTER (Run 2): (đang sort theo DESC)
+┌──────────────────────────────────────────────┐
 │ Page 1: Items [71 → 52] (20 items) ← SHIFTED │
 │ Page 2: Items [51 → 32] (20 items) ← SHIFTED │
 │ Page 3: Items [31 → 12] (20 items) ← SHIFTED │
-└────────────────────────────────────────┘
+└──────────────────────────────────────────────┘
 
 Problem: Items 41-51 existed in Page 1 (Run 1)
          Now in Page 2 (Run 2)
@@ -165,225 +165,119 @@ Problem: Items 41-51 existed in Page 1 (Run 1)
 
 ---
 
-## 4. DESC Strategy
+## 4. DESC Strategy (Flexible Page Size)
 
-### 4.1 Core Concept
+### 4.1 New Mindset: Items over Pages
+
+**Old Mindset (Fixed Page Size):**
+
+> "Trang là đơn vị cố định (250 items). Vậy ta cứ check 2 trang (500 items) là an toàn."
+> ❌ **Rủi ro:** Nếu ai đó giảm page_size xuống 10, ta chỉ check 20 items. Quá ít! Dễ mất dữ liệu.
+
+**New Mindset (Flexible Page Size):**
+
+> "Page size là biến số. Ta không tin vào số trang. Ta tin vào số lượng bản ghi (Items)."
+> ✅ **Giải pháp:** "Tôi muốn check đủ 500 items cũ rồi mới dừng, bất kể bạn chia nó thành 2 trang (size 250) hay 50 trang (size 10)."
+
+### 4.2 Core Concept
 
 ```
-DESC Strategy = Sort Descending + Client Filter + Early Stop + Overlap Safety
-
-Components:
-1. Sort by created_on DESC (newest first)
-2. Filter client-side: items where created_on > last_checkpoint
-3. Early stop: When consecutive pages have no new items
-4. Overlap buffer: Continue N pages after first empty page
+DESC Strategy = Sort Descending + Client Filter + Items-based Early Stop
 ```
 
-### 4.2 Strategy Flow Diagram
+**Components:**
+
+1.  **Sort by created_on DESC** (newest first).
+2.  **Filter client-side:** items where `created_on > last_checkpoint`.
+3.  **Count Old Items:** Track how many consecutive items we have seen that are <= checkpoint.
+4.  **Early Stop:** When `consecutive_old_items >= MIN_OVERLAP_ITEMS`.
+
+### 4.3 Strategy Flow Diagram
 
 ```mermaid
 flowchart TD
     Start[Start Incremental Load] --> GetCheckpoint[Get Last Checkpoint]
-    GetCheckpoint --> InitState[Initialize: page=1, no_new_pages=0]
+    GetCheckpoint --> InitState[Init: page=1, old_items_count=0]
 
-    InitState --> FetchPage[Fetch Page with DESC sort]
+    InitState --> FetchPage[Fetch Page (limit=N, sort=DESC)]
     FetchPage --> CheckEmpty{Page Empty?}
 
     CheckEmpty -->|Yes| Stop[Stop Loading]
-    CheckEmpty -->|No| FilterItems[Filter: created_on > checkpoint]
+    CheckEmpty -->|No| ProcessItems[Process Items in Page]
 
-    FilterItems --> CheckNewItems{Has New Items?}
+    ProcessItems --> Iterate{Iterate Item}
 
-    CheckNewItems -->|Yes| YieldItems[Yield New Items]
-    YieldItems --> ResetCounter[no_new_pages = 0]
-    ResetCounter --> NextPage[page++]
+    Iterate -->|Item > Checkpoint| Yield[Yield New Item]
+    Yield --> ResetCount[old_items_count = 0]
+    ResetCount --> NextItem
 
-    CheckNewItems -->|No| IncrementCounter[no_new_pages++]
-    IncrementCounter --> CheckStop{no_new_pages > OVERLAP<br/>AND page > OVERLAP?}
+    Iterate -->|Item <= Checkpoint| IncCount[old_items_count++]
+    IncCount --> CheckSafety{old_items_count >= MIN_OVERLAP_ITEMS?}
 
-    CheckStop -->|Yes| Stop
-    CheckStop -->|No| NextPage
+    CheckSafety -->|Yes| Stop
+    CheckSafety -->|No| NextItem
 
+    NextItem --> Iterate
+    Iterate -->|End of Page| NextPage[page++]
     NextPage --> FetchPage
 
     Stop --> SaveCheckpoint[Save New Checkpoint]
-    SaveCheckpoint --> End[End]
 
     style Start fill:#90EE90
     style Stop fill:#FFB6C1
-    style End fill:#90EE90
-    style YieldItems fill:#87CEEB
-    style CheckStop fill:#FFD700
+    style Yield fill:#87CEEB
+    style CheckSafety fill:#FFD700
 ```
-
-### 4.3 Why DESC?
-
-#### 4.3.1 Efficiency Comparison
-
-```
-Scenario: 10,000 total items, checkpoint at item 9,900, 100 new items
-
-┌─────────────────────────────────────────────────────────┐
-│ DESC Strategy (Recommended)                             │
-├─────────────────────────────────────────────────────────┤
-│ Direction: 10,000 → 9,901 → ... → 1                   │
-│                                                         │
-│ Page 1: [10,000 → 9,751] → 100 new items found ✅     │
-│ Page 2: [9,750 → 9,501]  → 0 new (all old)            │
-│ Page 3: [9,500 → 9,251]  → 0 new (all old)            │
-│ → STOP (triggered by overlap logic)                    │
-│                                                         │
-│ Result:                                                 │
-│ - Pages loaded: 3                                       │
-│ - Items fetched: 750                                    │
-│ - API calls: 3                                          │
-│ - Time: ~3 seconds                                      │
-│ - Efficiency: ★★★★★                                    │
-└─────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────┐
-│ ASC Strategy (NOT Recommended without filter)          │
-├─────────────────────────────────────────────────────────┤
-│ Direction: 1 → 2 → ... → 9,900 → 10,000               │
-│                                                         │
-│ Page 1: [1 → 250]         → 0 new (all old)           │
-│ Page 2: [251 → 500]       → 0 new (all old)           │
-│ ...                                                     │
-│ Page 39: [9,501 → 9,750]  → 0 new (all old)           │
-│ Page 40: [9,751 → 10,000] → 100 new items found ✅    │
-│ → STOP                                                  │
-│                                                         │
-│ Result:                                                 │
-│ - Pages loaded: 40                                      │
-│ - Items fetched: 10,000                                 │
-│ - API calls: 40                                         │
-│ - Time: ~40 seconds                                     │
-│ - Efficiency: ★                                         │
-└─────────────────────────────────────────────────────────┘
-
-Conclusion: DESC is 13x more efficient!
-```
-
-#### 4.3.2 Advantages
-
-| Aspect            | DESC            | ASC                       |
-| ----------------- | --------------- | ------------------------- |
-| **Early Stop**    | ✅ Possible     | ❌ Must load all old data |
-| **API Calls**     | 3-5 calls       | 40-500 calls              |
-| **Data Transfer** | ~1 MB           | ~25 MB                    |
-| **Latency**       | 3-5 seconds     | 40-500 seconds            |
-| **Gap Handling**  | ✅ With overlap | ❌ Difficult              |
-| **Simplicity**    | ✅ Simple logic | ❌ Complex calculation    |
-
-#### 4.3.3 Trade-offs
-
-**Disadvantages of DESC:**
-
-- ❌ Data processed in reverse chronological order (newest first)
-- ❌ Need to reverse if natural order required downstream
-- ❌ Slightly more complex stop logic
-
-**Why These Are Acceptable:**
-
-- Data order can be fixed in memory before yielding
-- Complexity is minimal compared to efficiency gains
-- Production systems prioritize performance over simplicity
 
 ### 4.4 Overlap Strategy Explained
 
-#### 4.4.1 Why Overlap Is Needed
+#### 4.4.1 The "Net" Analogy (Cái Lưới)
 
-```
-Problem: Pagination Drift + Race Conditions
+Hãy tưởng tượng **Overlap (Vùng an toàn)** như một cái lưới để hứng dữ liệu bị trôi.
 
-Timeline:
-─────────────────────────────────────────────────────────
-T0: Run 1 starts
-    Database: [1...49]
+- **Logic cũ (Page-based):**
+  - Kích thước lưới = `OVERLAP_PAGES * page_size`
+  - ⚠️ Lưới **co giãn** theo page_size.
+  - Lưới to (size 250) -> An toàn.
+  - Lưới bé (size 10) -> **Thủng lưới (Mất dữ liệu)!**
 
-T1: Run 1 at Page 3
-    Last item seen: Item 49
+- **Logic mới (Items-based):**
+  - Kích thước lưới = `MIN_OVERLAP_ITEMS` (ví dụ: 500 items).
+  - 🔒 Lưới **cố định**, không phụ thuộc page_size.
+  - Dù bạn dùng gáo múc nước to hay nhỏ (page_size), tôi vẫn chăng cái lưới 500 lỗ. Đảm bảo không con cá nào lọt lưới.
 
-T2: Run 1 completes
-    Checkpoint saved: Item 49 (created_on = "2024-01-20T10:00:00")
-
-T3: [GAP] 11 new items created (Items 50-60)
-    Database: [1...60]
-
-T4: Run 2 starts
-    Page 1: [60→41] contains BOTH new (60-50) and old (49-41)
-
-T5: Run 2 Page 1 filters
-    Filter: created_on > "2024-01-20T10:00:00"
-    Result: Items 60-50 (11 items) ✅
-
-T6: Run 2 Page 2
-    Page 2: [40→21] - all old
-
-T7: Run 2 Page 3
-    Page 3: [20→1] - all old
-
-Without Overlap: Stop at Page 3
-With Overlap (N=2): Continue 2 more pages after first empty
-→ Ensures we catch any items that may have been in the gap
-```
-
-#### 4.4.2 Overlap Configuration
+#### 4.4.2 Configuration
 
 ```python
-# Conservative (Recommended for production)
-OVERLAP = 3
-# - Handles up to 3 pages of gap (750 items)
-# - Safe for high-frequency updates
-# - Slight overhead but maximum safety
+# MIN_OVERLAP_ITEMS: Số lượng bản ghi cũ tối thiểu cần check trước khi dừng
+# Recommendation:
+# - Low traffic (<100/day): 50 items
+# - Medium traffic (~1000/day): 200 items
+# - High traffic (>10000/day): 500-1000 items
 
-# Balanced (Good for stable systems)
-OVERLAP = 2
-# - Handles up to 2 pages of gap (500 items)
-# - Good balance of safety and efficiency
-# - Recommended for ~1000 orders/day
+MIN_OVERLAP_ITEMS = 500
 
-# Aggressive (Only for low-update systems)
-OVERLAP = 1
-# - Minimal safety buffer
-# - Maximum efficiency
-# - Only use if update frequency is very low
+# Tại sao 500?
+# Trung bình 1 ngày có 1000 đơn.
+# 500 đơn tương đương nửa ngày dữ liệu.
+# Rất khó có chuyện pagination drift trôi quá nửa ngày dữ liệu.
 ```
 
-#### 4.4.3 Overlap Logic Flow
+#### 4.4.3 Example Scenario
 
-```python
-"""
-Overlap Stop Logic:
+**Setup:** `MIN_OVERLAP_ITEMS = 50`.
+**Scenario:** Chạy pipeline với `page_size = 10`.
 
-State variables:
-- no_new_pages: Counter of consecutive pages with zero new items
-- page: Current page number
-- OVERLAP: Configuration constant
+- **Page 1:** 10 new items. (old_count = 0).
+- **Page 2:** 5 new, 5 old. (old_count = 5).
+- **Page 3:** 10 old. (old_count = 15).
+- **Page 4:** 10 old. (old_count = 25).
+- **Page 5:** 10 old. (old_count = 35).
+- **Page 6:** 10 old. (old_count = 45).
+- **Page 7:** 10 old. (old_count = 55).
+  - -> **STOP!** Vì 55 >= 50.
 
-Stop Condition:
-    (no_new_pages > OVERLAP) AND (page > OVERLAP)
-
-Why this condition?
-1. no_new_pages > OVERLAP: We've seen enough empty pages
-2. page > OVERLAP: We've processed enough total pages (safety)
-
-Examples with OVERLAP = 2:
-
-Scenario A: Quick stop
-  Page 1: 10 new → no_new_pages=0
-  Page 2: 0 new → no_new_pages=1 (1 > 2? No)
-  Page 3: 0 new → no_new_pages=2 (2 > 2? No, equal!)
-  Page 4: 0 new → no_new_pages=3 (3 > 2? Yes, page=4 > 2? Yes) → STOP ✓
-
-Scenario B: Late stop
-  Page 1: 0 new → no_new_pages=1
-  Page 2: 5 new → no_new_pages=0 (reset!)
-  Page 3: 0 new → no_new_pages=1
-  Page 4: 0 new → no_new_pages=2
-  Page 5: 0 new → no_new_pages=3 (3 > 2? Yes) → STOP ✓
-"""
-```
+-> **Kết quả:** Ta đã quét qua 55 bản ghi cũ, đảm bảo an toàn tuyệt đối dù `page_size` rất nhỏ.
 
 ---
 
@@ -391,7 +285,7 @@ Scenario B: Late stop
 
 ### 5.1 Basic Implementation
 
-```python
+````python
 import dlt
 import requests
 from typing import Iterator, Dict, Any
@@ -493,293 +387,72 @@ if __name__ == "__main__":
     )
 
     load_info = pipeline.run(orders())
-    print(load_info)
-```
 
-### 5.2 Enhanced Implementation with Metrics
+## 5. Implementation
+
+### 5.1 Basic Implementation (Concepts)
 
 ```python
 import dlt
 import requests
-from typing import Iterator, Dict, Any
-from dataclasses import dataclass
-from datetime import datetime
+from typing import Iterator, Dict, Any, List
 
-@dataclass
-class LoadMetrics:
-    """Metrics tracking for load operation"""
-    pages_processed: int = 0
-    total_items_fetched: int = 0
-    total_items_new: int = 0
-    total_items_duplicate: int = 0
-    api_calls: int = 0
-    start_time: datetime = None
-    end_time: datetime = None
-
-    @property
-    def efficiency(self) -> float:
-        """Percentage of fetched items that were new"""
-        if self.total_items_fetched == 0:
-            return 0.0
-        return (self.total_items_new / self.total_items_fetched) * 100
-
-    @property
-    def duration_seconds(self) -> float:
-        """Load duration in seconds"""
-        if self.start_time and self.end_time:
-            return (self.end_time - self.start_time).total_seconds()
-        return 0.0
-
-
-@dlt.resource(
-    primary_key="id",
-    write_disposition="merge",
-    columns={
-        "id": {"data_type": "bigint"},
-        "code": {"data_type": "text"},
-        "created_on": {"data_type": "timestamp"},
-        "modified_on": {"data_type": "timestamp"}
-    }
-)
-def orders_with_metrics(
+@dlt.resource(primary_key="id", write_disposition="merge")
+def orders(
+    limit: int = 250,  # Flexible Page Size
+    min_overlap_items: int = 500,  # Items-based Safety
     created_on=dlt.sources.incremental("created_on")
-) -> Iterator[Dict[Any, Any]]:
-    """
-    Enhanced version with comprehensive metrics tracking
-    """
-    base_url = "https://api.sapo.vn/orders"
+) -> Iterator[List[Dict[str, Any]]]:
 
-    # Configuration
-    PAGE_SIZE = 250
-    OVERLAP = 2
-    MAX_PAGES = 100
+    # ... setup code ...
 
-    # State
     page = 1
-    no_new_pages = 0
-    metrics = LoadMetrics(start_time=datetime.now())
+    # Counter for consecutive old items (<= checkpoint)
+    # We count items, NOT pages!
+    consecutive_old_items = 0
 
-    print(f"\n{'='*60}")
-    print(f"🚀 DESC Strategy Incremental Load")
-    print(f"   Checkpoint: {created_on.last_value}")
-    print(f"   Overlap: {OVERLAP} pages")
-    print(f"   Max pages: {MAX_PAGES}")
-    print(f"{'='*60}\n")
+    last_value = created_on.last_value or "2000-01-01T00:00:00Z"
 
-    try:
-        while page <= MAX_PAGES:
-            # Fetch page
-            params = {
-                "page": page,
-                "limit": PAGE_SIZE,
-                "sort": "created_on",
-                "order": "desc"
-            }
+    while True:
+        # 1. Fetch Page with limit
+        data = fetch_orders(page=page, limit=limit, sort="created_on desc")
+        if not data: break
 
-            try:
-                response = requests.get(base_url, params=params, timeout=30)
-                response.raise_for_status()
-                data = response.json()
-                metrics.api_calls += 1
-            except requests.RequestException as e:
-                print(f"❌ API Error at page {page}: {e}")
-                break
+        # 2. Process Items
+        new_items_in_page = []
 
-            orders = data.get("orders", [])
+        for item in data:
+            if item["created_on"] > last_value:
+                # New Item found!
+                new_items_in_page.append(item)
 
-            if not orders:
-                print(f"📭 Page {page}: Empty (API exhausted)")
-                break
-
-            metrics.pages_processed = page
-            metrics.total_items_fetched += len(orders)
-
-            # Filter new items
-            new_orders = []
-            for order in orders:
-                if order["created_on"] > created_on.last_value:
-                    new_orders.append(order)
-                    metrics.total_items_new += 1
-                else:
-                    metrics.total_items_duplicate += 1
-
-            # Log progress
-            efficiency = (len(new_orders) / len(orders) * 100) if orders else 0
-            print(f"📄 Page {page}: {len(new_orders)}/{len(orders)} new "
-                  f"({efficiency:.1f}% efficiency) "
-                  f"[no_new_streak={no_new_pages}]")
-
-            # Yield new items
-            if new_orders:
-                yield new_orders
-                no_new_pages = 0
+                # RESET the counter because we found a gap-filler!
+                consecutive_old_items = 0
             else:
-                no_new_pages += 1
+                # Old Item found
+                consecutive_old_items += 1
 
-            # Stop condition check
-            if no_new_pages > OVERLAP and page > OVERLAP:
-                print(f"\n✅ Early stop triggered")
-                print(f"   Pages with no new items: {no_new_pages}")
-                print(f"   Overlap threshold: {OVERLAP}")
-                break
+        # 3. Yield New Items
+        if new_items_in_page:
+            yield new_items_in_page
 
-            page += 1
-
-    finally:
-        # Finalize metrics
-        metrics.end_time = datetime.now()
-
-        # Print summary
-        print(f"\n{'='*60}")
-        print(f"📊 Load Summary")
-        print(f"{'='*60}")
-        print(f"Duration: {metrics.duration_seconds:.2f}s")
-        print(f"Pages processed: {metrics.pages_processed}")
-        print(f"API calls: {metrics.api_calls}")
-        print(f"Items fetched: {metrics.total_items_fetched}")
-        print(f"Items new: {metrics.total_items_new}")
-        print(f"Items duplicate: {metrics.total_items_duplicate}")
-        print(f"Overall efficiency: {metrics.efficiency:.1f}%")
-        print(f"{'='*60}\n")
-```
-
-### 5.3 Error Handling & Retry Logic
-
-```python
-import dlt
-import requests
-from typing import Iterator, Dict, Any
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type
-)
-
-class SapoAPIError(Exception):
-    """Custom exception for Sapo API errors"""
-    pass
-
-
-@dlt.resource(
-    primary_key="id",
-    write_disposition="merge"
-)
-def orders_with_retry(
-    created_on=dlt.sources.incremental("created_on")
-) -> Iterator[Dict[Any, Any]]:
-    """
-    Production-ready version with retry logic
-    """
-    base_url = "https://api.sapo.vn/orders"
-    api_key = dlt.secrets.get("sources.sapo.api_key")
-
-    # Configuration
-    PAGE_SIZE = 250
-    OVERLAP = 2
-    MAX_PAGES = 100
-
-    # State
-    page = 1
-    no_new_pages = 0
-    consecutive_errors = 0
-    MAX_ERRORS = 3
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(requests.RequestException)
-    )
-    def fetch_page_with_retry(page_num: int) -> Dict[str, Any]:
-        """Fetch single page with exponential backoff retry"""
-        params = {
-            "page": page_num,
-            "limit": PAGE_SIZE,
-            "sort": "created_on",
-            "order": "desc"
-        }
-
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-
-        response = requests.get(
-            base_url,
-            params=params,
-            headers=headers,
-            timeout=30
-        )
-
-        # Handle specific status codes
-        if response.status_code == 429:
-            # Rate limit - wait longer
-            raise requests.RequestException("Rate limit exceeded")
-        elif response.status_code >= 500:
-            # Server error - retry
-            raise requests.RequestException(f"Server error: {response.status_code}")
-        elif response.status_code >= 400:
-            # Client error - don't retry
-            raise SapoAPIError(f"Client error: {response.status_code}")
-
-        response.raise_for_status()
-        return response.json()
-
-    print(f"🚀 Starting load with retry logic from: {created_on.last_value}")
-
-    while page <= MAX_PAGES:
-        try:
-            # Fetch with retry
-            data = fetch_page_with_retry(page)
-            consecutive_errors = 0  # Reset error counter on success
-
-        except SapoAPIError as e:
-            # Client error - don't retry, stop load
-            print(f"❌ Client error at page {page}: {e}")
-            break
-
-        except requests.RequestException as e:
-            # Retry exhausted
-            print(f"❌ Failed to fetch page {page} after retries: {e}")
-            consecutive_errors += 1
-
-            if consecutive_errors >= MAX_ERRORS:
-                print(f"❌ Too many consecutive errors ({MAX_ERRORS}), stopping")
-                break
-
-            # Skip this page and continue
-            page += 1
-            continue
-
-        orders = data.get("orders", [])
-
-        if not orders:
-            print(f"📭 Page {page}: Empty")
-            break
-
-        # Filter new items
-        new_orders = [
-            order for order in orders
-            if order["created_on"] > created_on.last_value
-        ]
-
-        print(f"📄 Page {page}: {len(new_orders)}/{len(orders)} new")
-
-        if new_orders:
-            yield new_orders
-            no_new_pages = 0
-        else:
-            no_new_pages += 1
-
-        # Early stop
-        if no_new_pages > OVERLAP and page > OVERLAP:
-            print(f"✅ Early stop at page {page}")
+        # 4. Check Stop Condition (Items-based)
+        # "Stop if we've seen enough continuous old items"
+        if consecutive_old_items >= min_overlap_items:
+            print(f"✅ Safe to stop. Seen {consecutive_old_items} old items.")
             break
 
         page += 1
+````
 
-    print(f"🏁 Load completed")
-```
+### 5.2 Why this is better?
+
+| Feature             | Old Logic (Pages)              | New Logic (Items)        |
+| :------------------ | :----------------------------- | :----------------------- |
+| **Logic**           | `no_new_pages > 2`             | `consecutive_old >= 500` |
+| **Case: limit=250** | Buffer = 500 items             | Buffer = 500 items       |
+| **Case: limit=10**  | ⚠️ Buffer = 20 items (Danger!) | ✅ Buffer = 500 items    |
+| **Conclusion**      | **Unsafe** if limit changes    | **Always Safe**          |
 
 ---
 
@@ -788,357 +461,119 @@ def orders_with_retry(
 ### 6.1 Complete Source Definition
 
 ```python
-"""
-Sapo Orders Source - Production Implementation
-DESC Strategy with Full Features
-"""
-
 import dlt
 import requests
-from typing import Iterator, Dict, Any, Optional
-from datetime import datetime, timedelta
-from dataclasses import dataclass, asdict
-import logging
-
-# Setup logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
-
+from typing import Iterator, Dict, Any, List, Optional
+from dataclasses import dataclass
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 @dataclass
-class LoadConfig:
-    """Configuration for incremental load"""
+class SapoConfig:
     page_size: int = 250
-    overlap_pages: int = 2
-    max_pages: int = 100
-    initial_load_date: str = "2020-01-01T00:00:00Z"
-    timeout_seconds: int = 30
-    max_retries: int = 3
-    retry_delay_seconds: int = 2
-
-
-@dataclass
-class LoadStats:
-    """Statistics for load operation"""
-    run_id: str
-    start_time: datetime
-    end_time: Optional[datetime] = None
-    checkpoint_start: Optional[str] = None
-    checkpoint_end: Optional[str] = None
-    pages_processed: int = 0
-    items_fetched: int = 0
-    items_new: int = 0
-    items_skipped: int = 0
-    api_calls: int = 0
-    api_errors: int = 0
-    early_stop_triggered: bool = False
-
-    def to_dict(self) -> Dict[str, Any]:
-        """Convert to dictionary for logging"""
-        data = asdict(self)
-        # Convert datetimes to ISO strings
-        if self.start_time:
-            data['start_time'] = self.start_time.isoformat()
-        if self.end_time:
-            data['end_time'] = self.end_time.isoformat()
-            data['duration_seconds'] = (
-                self.end_time - self.start_time
-            ).total_seconds()
-        return data
-
+    min_overlap_items: int = 500
+    max_pages: int = 1000
 
 @dlt.source
-class SapoOrdersSource:
-    """
-    Sapo Orders data source with DESC incremental loading strategy
-    """
+def sapo_source(
+    config: SapoConfig = SapoConfig()
+):
+    return orders(config=config)
 
-    def __init__(
-        self,
-        api_key: str,
-        base_url: str = "https://api.sapo.vn",
-        config: Optional[LoadConfig] = None
-    ):
-        """
-        Initialize Sapo Orders source
+@dlt.resource(
+    primary_key="id",
+    write_disposition="merge",
+    table_format="delta"
+)
+def orders(
+    config: SapoConfig,
+    created_on=dlt.sources.incremental("created_on")
+) -> Iterator[List[Dict[str, Any]]]:
 
-        Args:
-            api_key: Sapo API authentication key
-            base_url: API base URL
-            config: Load configuration (uses defaults if not provided)
-        """
-        self.api_key = api_key
-        self.base_url = base_url
-        self.config = config or LoadConfig()
+    client = get_sapo_client() # Assume this exists
 
-        logger.info("Initialized SapoOrdersSource")
-        logger.info(f"Config: {asdict(self.config)}")
+    page = 1
+    consecutive_old_items = 0
+    last_value = created_on.last_value
 
-    @dlt.resource(
-        primary_key="id",
-        write_disposition="merge",
-        columns={
-            "id": {"data_type": "bigint"},
-            "code": {"data_type": "text"},
-            "created_on": {"data_type": "timestamp"},
-            "modified_on": {"data_type": "timestamp"},
-            "issued_on": {"data_type": "timestamp"},
-            "status": {"data_type": "text"},
-            "tenant_id": {"data_type": "bigint"}
-        }
-    )
-    def orders(
-        self,
-        created_on=dlt.sources.incremental("created_on")
-    ) -> Iterator[Dict[Any, Any]]:
-        """
-        Load orders incrementally using DESC strategy
+    print(f"🚀 Starting Load. Checkpoint: {last_value}")
+    print(f"   Config: size={config.page_size}, overlap_items={config.min_overlap_items}")
 
-        Strategy Details:
-        1. Sort by created_on DESC (newest first)
-        2. Client-side filter: created_on > checkpoint
-        3. Early stop after N consecutive empty pages
-        4. Overlap safety buffer
-
-        Yields:
-            Batches of new order dictionaries
-        """
-        # Initialize stats
-        stats = LoadStats(
-            run_id=f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            start_time=datetime.now(),
-            checkpoint_start=created_on.last_value
-        )
-
-        # Set initial checkpoint if not exists
-        if created_on.initial_value is None:
-            created_on.initial_value = self.config.initial_load_date
-
-        logger.info(f"Starting incremental load: {stats.run_id}")
-        logger.info(f"Checkpoint: {created_on.last_value}")
-
-        # State variables
-        page = 1
-        no_new_pages = 0
-
+    while page <= config.max_pages:
         try:
-            while page <= self.config.max_pages:
-                # Fetch page
-                try:
-                    orders_batch = self._fetch_page(page)
-                    stats.api_calls += 1
-                except Exception as e:
-                    logger.error(f"Error fetching page {page}: {e}")
-                    stats.api_errors += 1
-                    break
+            # Fetch
+            data = client.fetch_orders(
+                page=page,
+                limit=config.page_size,
+                sort_by="created_on desc"
+            )
 
-                # Check for end of data
-                if not orders_batch:
-                    logger.info(f"No data at page {page}")
-                    break
+            if not data:
+                print("End of data stream.")
+                break
 
-                stats.pages_processed = page
-                stats.items_fetched += len(orders_batch)
+            # Process
+            batch_new_items = []
 
-                # Filter new items
-                new_orders = self._filter_new_orders(
-                    orders_batch,
-                    created_on.last_value
-                )
+            for item in data:
+                item_date = item["created_on"]
 
-                stats.items_new += len(new_orders)
-                stats.items_skipped += len(orders_batch) - len(new_orders)
-
-                # Log progress
-                efficiency = (
-                    len(new_orders) / len(orders_batch) * 100
-                    if orders_batch else 0
-                )
-                logger.info(
-                    f"Page {page}: {len(new_orders)}/{len(orders_batch)} new "
-                    f"({efficiency:.1f}%) [no_new={no_new_pages}]"
-                )
-
-                # Yield new items
-                if new_orders:
-                    yield new_orders
-                    no_new_pages = 0
+                if last_value is None or item_date > last_value:
+                    batch_new_items.append(item)
+                    consecutive_old_items = 0 # RESET counter
                 else:
-                    no_new_pages += 1
+                    consecutive_old_items += 1 # Increment counter
 
-                # Check early stop condition
-                if self._should_stop(page, no_new_pages):
-                    stats.early_stop_triggered = True
-                    logger.info(
-                        f"Early stop triggered at page {page} "
-                        f"(no_new_pages={no_new_pages})"
-                    )
-                    break
+            # Yield
+            if batch_new_items:
+                yield batch_new_items
 
-                page += 1
+            print(f"Page {page}: {len(batch_new_items)} new. "
+                  f"Consecutive Old: {consecutive_old_items}/{config.min_overlap_items}")
 
-        finally:
-            # Finalize stats
-            stats.end_time = datetime.now()
-            stats.checkpoint_end = created_on.last_value
+            # Stop Condition
+            if consecutive_old_items >= config.min_overlap_items:
+                print(f"✅ Early Stop Triggered. Safety buffer satisfied.")
+                break
 
-            # Log summary
-            self._log_summary(stats)
+            page += 1
 
-    def _fetch_page(self, page: int) -> list:
-        """
-        Fetch single page from API with retry logic
+        except exception as e:
+            # Handle error...
+            break
+```
 
-        Args:
-            page: Page number to fetch
+### 6.2 Configuration Management
 
-        Returns:
-            List of order dictionaries
-        """
-        url = f"{self.base_url}/orders"
-        headers = {
-            "Authorization": f"Bearer {self.api_key}",
-            "Content-Type": "application/json"
-        }
-        params = {
-            "page": page,
-            "limit": self.config.page_size,
-            "sort": "created_on",
-            "order": "desc"
-        }
+Now you can adjust safety without changing code:
 
-        for attempt in range(self.config.max_retries):
-            try:
-                response = requests.get(
-                    url,
-                    headers=headers,
-                    params=params,
-                    timeout=self.config.timeout_seconds
-                )
-                response.raise_for_status()
-                data = response.json()
-                return data.get("orders", [])
+```yaml
+# config.yaml
 
-            except requests.RequestException as e:
-                if attempt < self.config.max_retries - 1:
-                    logger.warning(
-                        f"Attempt {attempt + 1} failed, retrying: {e}"
-                    )
-                    import time
-                    time.sleep(self.config.retry_delay_seconds)
-                else:
-                    logger.error(f"All retry attempts failed: {e}")
-                    raise
+sources:
+  sapo:
+    config:
+      page_size: 250 # Can change to 50 if timeout
+      min_overlap_items: 500 # Safety always guaranteed!
+```
 
-    def _filter_new_orders(
-        self,
-        orders: list,
-        checkpoint: str
-    ) -> list:
-        """
-        Filter orders created after checkpoint
+---
 
-        Args:
-            orders: List of order dictionaries
-            checkpoint: ISO timestamp string
+## 7. Metrics & Monitoring
 
-        Returns:
-            List of new orders
-        """
-        return [
-            order for order in orders
-            if order["created_on"] > checkpoint
-        ]
+Changes in metrics tracking:
 
-    def _should_stop(self, page: int, no_new_pages: int) -> bool:
-        """
-        Determine if loading should stop
+- **Remove:** `no_new_pages_streak` (No longer relevant).
+- **Add:** `current_overlap_buffer` (Current count of consecutive old items).
+- **Alert:** If `current_overlap_buffer` resets to 0 frequently deep in pagination, it means we have "gaps" or "drift" happening effectively.
 
-        Args:
-            page: Current page number
-            no_new_pages: Count of consecutive pages with no new items
+### 7.1 New Key Metrics
 
-        Returns:
-            True if should stop, False otherwise
-        """
-        return (
-            no_new_pages > self.config.overlap_pages
-            and page > self.config.overlap_pages
-        )
-
-    def _log_summary(self, stats: LoadStats):
-        """Log comprehensive load summary"""
-        logger.info("="*60)
-        logger.info("Load Summary")
-        logger.info("="*60)
-
-        summary = stats.to_dict()
-        for key, value in summary.items():
-            logger.info(f"{key}: {value}")
-
-        # Calculate derived metrics
-        if stats.items_fetched > 0:
-            efficiency = (stats.items_new / stats.items_fetched) * 100
-            logger.info(f"efficiency_percent: {efficiency:.2f}")
-
-        logger.info("="*60)
-
-
-# Pipeline setup
-def create_pipeline(
-    pipeline_name: str = "sapo_orders",
-    destination: str = "postgres",
-    dataset_name: str = "sapo_raw"
-) -> dlt.Pipeline:
-    """
-    Create and configure dlt pipeline
-
-    Args:
-        pipeline_name: Name of the pipeline
-        destination: Destination database type
-        dataset_name: Target dataset/schema name
-
-    Returns:
-        Configured dlt Pipeline instance
-    """
-    return dlt.pipeline(
-        pipeline_name=pipeline_name,
-        destination=destination,
-        dataset_name=dataset_name,
-        progress="log",
-        full_refresh=False
-    )
-
-
-# Main execution
-if __name__ == "__main__":
-    # Configuration
-    config = LoadConfig(
-        page_size=250,
-        overlap_pages=2,
-        max_pages=100,
-        initial_load_date="2024-01-01T00:00:00Z"
-    )
-
-    # Initialize source
-    source = SapoOrdersSource(
-        api_key=dlt.secrets.get("sources.sapo.api_key"),
-        base_url="https://api.sapo.vn",
-        config=config
-    )
-
-    # Create pipeline
-    pipeline = create_pipeline()
-
-    # Run load
-    logger.info("Starting pipeline execution")
-    load_info = pipeline.run(source.orders())
-
-    # Log results
-    logger.info(f"Pipeline completed: {load_info}")
+```python
+@dataclass
+class LoadMetrics:
+    # ...
+    max_consecutive_old_items: int = 0
+    overlap_resets_count: int = 0 # How many times we found new items after old items
 ```
 
 ### 6.2 Configuration File

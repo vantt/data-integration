@@ -15,19 +15,6 @@ def query_lake(query=None):
         # But duckdb globbing handles it reasonably well usually. 
         # Let's just try running a count first to confirm data presence.
         
-        try:
-            count_query = "SELECT COUNT(*) FROM 'data_lake/sapo_data/orders/**/*.parquet'"
-            count = con.execute(count_query).fetchone()[0]
-            print(f"Total rows in 'data_lake/sapo_data/orders': {count}")
-        except Exception as e:
-            print(f"Error accessing data files: {e}")
-            print("Ensure you are in the correct directory 'data-integration2/dlt' and data exists in 'data_lake/sapo_data/orders'.")
-            return
-
-        if count == 0:
-            print("No data found.")
-            return
-
         # Execute the main query
         print("\nQuery Results:")
         try:
