@@ -32,6 +32,7 @@ def sapo_customers_source(
     primary_key="id",
     write_disposition="append",
     table_format="delta",
+    name="customer", # Renamed from customers
     columns={
         "id": {"data_type": "bigint"},
         "tenant_id": {"data_type": "bigint"},
@@ -64,6 +65,7 @@ def sapo_customers_source(
         "total_expense": {"data_type": "double"},
         "loyalty_customer": {"data_type": "json"},
         "sale_order": {"data_type": "json"},
+        "entity_type": {"data_type": "text"}, # Partition removed
         "source": {"data_type": "text", "partition": True},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True},
@@ -182,6 +184,7 @@ def customers(
                         customer["year"] = str(dt.year)
                         customer["month"] = str(dt.month)
                         customer["source"] = "batch_sync"
+                        customer["entity_type"] = "customer"
 
                         new_customers.append(customer)
 

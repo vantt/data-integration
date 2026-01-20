@@ -33,8 +33,10 @@ def sapo_orders_source(
     primary_key="id",
     write_disposition="append",
     table_format="delta",
+    name="order", # Renamed from orders
     columns={
         "id": {"data_type": "bigint"},
+        # ... (other cols remain same, checked via diff)
         "code": {"data_type": "text"},
         "created_on": {"data_type": "timestamp"},
         "modified_on": {"data_type": "timestamp"},
@@ -50,6 +52,7 @@ def sapo_orders_source(
         "customer_id": {"data_type": "bigint"},
         "account_id": {"data_type": "bigint"},
         "assignee_id": {"data_type": "bigint"},
+        "entity_type": {"data_type": "text"}, # Partition removed
         "source": {"data_type": "text", "partition": True},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True},
@@ -175,6 +178,7 @@ def orders(
                         order["year"] = str(dt.year)
                         order["month"] = str(dt.month)
                         order["source"] = "batch_sync"
+                        order["entity_type"] = "order"
 
                         new_orders.append(order)
 
