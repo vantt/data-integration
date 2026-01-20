@@ -50,6 +50,7 @@ def sapo_orders_source(
         "customer_id": {"data_type": "bigint"},
         "account_id": {"data_type": "bigint"},
         "assignee_id": {"data_type": "bigint"},
+        "source": {"data_type": "text", "partition": True},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True},
         # Prevent normalization of nested fields
@@ -73,30 +74,30 @@ def orders(
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
     Load orders incrementally using DESC strategy
-    
+
     Strategy:
     1. Sort DESC (newest first)
     2. Filter client-side by created_on > checkpoint
     3. Early stop with Items-based overlap safety
     """
-    
+
     # Initialize client
     try:
         from .client import get_sapo_client
     except ImportError:
         from sapo.client import get_sapo_client
-        
+
     client = get_sapo_client()
     base_url = client.base_url
     request_delay = client.request_delay
-    
+
     # State
     page = 1
     # Count consecutive old items to determine safety buffer
     consecutive_old_items = 0
     consecutive_errors = 0
     MAX_ERRORS = 3
-    
+
     last_value = created_on.last_value
     print(f"🚀 Starting incremental load from: {last_value}")
     print(f"   Config: page_size={page_size}, min_overlap_items={min_overlap_items}")
@@ -111,19 +112,19 @@ def orders(
     def fetch_page_with_retry(page_num: int, current_session) -> Dict[str, Any]:
         """Fetch single page with exponential backoff retry"""
         url = f"{base_url}/orders.json"
-        
+
         # Apply rate limiting delay
         if request_delay > 0:
             import time
             time.sleep(request_delay)
-            
+
         params = {
             "page": page_num,
             "limit": page_size,
-            "sort_by": "created_on", 
-            "order": "desc" 
+            "sort_by": "created_on",
+            "order": "desc"
         }
-        
+
         params["sort_by"] = "created_on desc"
 
         response = current_session.get(url, params=params, timeout=30)
@@ -132,10 +133,10 @@ def orders(
              # Cookies might be expired if session management missed it
              # Force refresh
              print("🔄 Session expired, refreshing cookies...")
-             
+
              # Refresh using client helper
              client.refresh_session(current_session)
-             
+
              print(f"↻ Retrying with new session info. UA: {current_session.headers.get('User-Agent')}")
              response = current_session.get(url, params=params, timeout=30)
 
@@ -146,26 +147,26 @@ def orders(
         try:
             data = fetch_page_with_retry(page, session)
             consecutive_errors = 0
-            
+
             # Sapo response structure: {"orders": [...], "metadata": {...}}
             orders_data = data.get("orders", [])
-            
+
             if not orders_data:
                 print(f"📭 Page {page}: Empty")
                 break
-                
+
             # Filter new items
             new_orders = []
-            
+
             for order in orders_data:
                 # User's created_on format check needed?
                 # Usually ISO. dlt handles string comparison for ISO timestamps correctly.
                 order_created_on = order.get("created_on")
-                
+
                 # Check for None just in case
                 if not order_created_on:
                     continue
-                
+
                 if last_value is None or order_created_on > last_value:
                     # New Item found - Enrich with partition columns
                     try:
@@ -173,9 +174,10 @@ def orders(
                         dt = datetime.fromisoformat(order_created_on.replace("Z", "+00:00"))
                         order["year"] = str(dt.year)
                         order["month"] = str(dt.month)
-                        
+                        order["source"] = "batch_sync"
+
                         new_orders.append(order)
-                        
+
                         # IMPORTANT: Reset counter because we found a gap-filler!
                         consecutive_old_items = 0
                     except ValueError:

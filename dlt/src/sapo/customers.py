@@ -64,6 +64,7 @@ def sapo_customers_source(
         "total_expense": {"data_type": "double"},
         "loyalty_customer": {"data_type": "json"},
         "sale_order": {"data_type": "json"},
+        "source": {"data_type": "text", "partition": True},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True},
         # Prevent normalization of nested fields
@@ -73,7 +74,7 @@ def sapo_customers_source(
         "customer_group": {"data_type": "json"},
         "group_ids": {"data_type": "json"},
         "tags": {"data_type": "json"},
-        "social_customers": {"data_type": "json"},
+        "social_customers": {"data_type": "json"}
     }
 )
 def customers(
@@ -84,30 +85,30 @@ def customers(
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
     Load customers incrementally using DESC strategy
-    
+
     Strategy:
     1. Sort DESC (newest first)
     2. Filter client-side by created_on > checkpoint
     3. Early stop with Items-based overlap safety
     """
-    
+
     # Initialize client
     try:
         from .client import get_sapo_client
     except ImportError:
         from sapo.client import get_sapo_client
-        
+
     client = get_sapo_client()
     base_url = client.base_url
     request_delay = client.request_delay
-    
+
     # State
     page = 1
     # Checkpoint safety buffer
     consecutive_old_items = 0
     consecutive_errors = 0
     MAX_ERRORS = 3
-    
+
     last_value = created_on.last_value
     print(f"🚀 Starting incremental load from: {last_value}")
     print(f"   Config: page_size={page_size}, min_overlap_items={min_overlap_items}")
@@ -122,16 +123,16 @@ def customers(
     def fetch_page_with_retry(page_num: int, current_session) -> Dict[str, Any]:
         """Fetch single page with exponential backoff retry"""
         url = f"{base_url}/customers/doSearch.json"
-        
+
         # Apply rate limiting delay
         if request_delay > 0:
             import time
             time.sleep(request_delay)
-            
+
         params = {
             "page": page_num,
             "limit": page_size,
-            "sort": "created_on,desc", 
+            "sort": "created_on,desc",
             "condition_type": "must"
         }
 
@@ -141,10 +142,10 @@ def customers(
              # Cookies might be expired if session management missed it
              # Force refresh
              print("🔄 Session expired, refreshing cookies...")
-             
+
              # Refresh using client helper
              client.refresh_session(current_session)
-             
+
              print(f"↻ Retrying with new session info. UA: {current_session.headers.get('User-Agent')}")
              response = current_session.get(url, params=params, timeout=30)
 
@@ -155,24 +156,24 @@ def customers(
         try:
             data = fetch_page_with_retry(page, session)
             consecutive_errors = 0
-            
+
             # Sapo response structure: {"customers": [...], "metadata": {...}}
             customers_data = data.get("customers", [])
-            
+
             if not customers_data:
                 print(f"📭 Page {page}: Empty")
                 break
-                
+
             # Filter new items
             new_customers = []
-            
+
             for customer in customers_data:
                 customer_created_on = customer.get("created_on")
-                
+
                 # Check for None just in case
                 if not customer_created_on:
                     continue
-                
+
                 if last_value is None or customer_created_on > last_value:
                     # New Item found - Enrich with partition columns
                     try:
@@ -180,9 +181,10 @@ def customers(
                         dt = datetime.fromisoformat(customer_created_on.replace("Z", "+00:00"))
                         customer["year"] = str(dt.year)
                         customer["month"] = str(dt.month)
-                        
+                        customer["source"] = "batch_sync"
+
                         new_customers.append(customer)
-                        
+
                         # IMPORTANT: Reset counter because we found a gap-filler!
                         consecutive_old_items = 0
                     except ValueError:

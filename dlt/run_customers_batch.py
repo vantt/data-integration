@@ -23,8 +23,8 @@ def run():
     )
     
     pipeline = dlt.pipeline(
-        pipeline_name="sapo_customers",
-        dataset_name="sapo_customers"
+        pipeline_name="sapo_customers_batch",
+        dataset_name="sapo_raw"
     )
 
     # The source returns the "customers" resource
