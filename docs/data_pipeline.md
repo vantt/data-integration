@@ -277,6 +277,33 @@ ORDER BY entity_id, modified_on ASC;
 2.  **No Data Duplication:** Không cần sao chép dữ liệu ra file mới để sort.
 3.  **Dynamic Consistency:** Khi có file Parquet mới (ví dụ từ History Log Poller trám vào quá khứ), View này tự động sắp xếp lại đúng vị trí của nó trong lịch sử mà không cần chạy job migrate dữ liệu.
 
+#### **Design FAQ: Merge Strategy & Data Nature**
+
+> **Q1: Bản chất dữ liệu tại Hop 3 là "Delta" (chỉ chứa thay đổi) hay "Full Snapshot"?**
+>
+> **A: Full Snapshot.**
+> Tất cả các nguồn (Webhook, History Log, Batch Sync) đều cung cấp toàn bộ trạng thái của Entity tại thời điểm thu thập. Chúng ta không sử dụng CDC (Change Data Capture) dạng transaction diff. Do đó, mỗi bản ghi trong Parquet là một bức tranh hoàn chỉnh của dữ liệu tại thời điểm đó.
+>
+> **Q2: DuckDB có tự động Merge/Deduplicate dữ liệu không?**
+>
+> **A: Không.**
+> DuckDB tại Hop 4 đóng vai trò là Compute Engine, nhìn thấy toàn bộ các file Parquet như một tập dữ liệu "Append-only". Nó sẽ trả về 3 bản ghi cho cùng 1 Order nếu Order đó được cập nhật 3 lần. Việc Merge/Deduplicate là trách nhiệm của Logic (dbt hoặc SQL View) tại Hop 5.
+>
+> **Q3: Cơ chế Gộp (Merge) là "Replay" hay "Selection"?**
+>
+> **A: Selection (Last Known Good State).**
+> Vì mỗi bản ghi là một Full Snapshot, chúng ta **không cần** phải cộng dồn tuần tự các thay đổi (Replay) để tái tạo trạng thái cuối.
+> Chiến lược là **Selection**: Chỉ cần tìm và chọn bản ghi có `modified_on` lớn nhất (Latest Timestamp).
+>
+> - _Logic:_ `ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY modified_on DESC) as rn` -> `WHERE rn = 1`.
+>
+> **Q4: Tại sao vẫn cần lưu tất cả bản ghi (append-only) mà không chỉ lưu bản mới nhất?**
+>
+> **A:** Việc lưu trữ lịch sử thay đổi (Historical Snapshots) mang lại 2 giá trị lớn mà chiến lược "Ghi đè" không có:
+>
+> 1.  **Chống sai lệch do Out-of-order:** Nếu Webhook A (Mới) đến sau Webhook B (Hoàn thành) do độ trễ mạng, việc lưu cả hai cho phép dbt sắp xếp lại đúng trình tự `modified_on` trước khi chọn. Nếu ghi đè ngay lúc nhận, ta sẽ mất bản ghi đúng (B) và giữ lại bản ghi sai (A).
+> 2.  **Phát hiện chuyển đổi trạng thái (State Transition Analysis):** Giúp phân tích hành trình (Journey) của đơn hàng. Ví dụ: _"Trung bình mất bao lâu để đi từ trạng thái `pending` sang `shipping`?"_. Nếu chỉ giữ lại bản ghi cuối cùng, ta mất vĩnh viễn thông tin về thời điểm và trạng thái trung gian này.
+
 ### **HOP 5: Data Cleaning & Validation**
 
 **Technology:** dbt with DuckDB adapter
