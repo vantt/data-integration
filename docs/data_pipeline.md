@@ -186,24 +186,66 @@ Chúng ta đã lựa chọn chiến lược **Source-First** sau khi cân nhắc
 
 ```json
 {
-    "id": "whk_123",
-    "type": "webhook_log",
-    "entity_type": "order",
-    "entity_id": "ord_456",
-    "action": "order.paid",
-    "action_group": "financial",
-    "source_system": "stripe",
-    "source_timestamp": "2024-01-20T10:30:00Z",
-    "payload": {...},
-    "raw_request": {...},
-    "status": "received",
-    "received_at": "2024-01-20T10:30:01Z",
-    "payload_hash": "abc123...",
-    "tenant_id": "tenant_1",
-    "processing_priority": "high",
-    "schema_version": "1.0"
+    "entity_id": "ord_12345",              // (Primary Key) ID thực thể duy nhất
+    "entity_type": "order",                // Loại thực thể: order, customer, ...
+    "payload": {                           // Original Data (Full Snapshot)
+        "id": 12345,
+        "code": "ORD-001",
+        "created_on": "2024-01-20T10:00:00Z",
+        "modified_on": "2024-01-20T10:30:00Z",
+        "total": 500000,
+        ...
+    },
+    "sync_metadata": {                     // Metadata của quá trình Sync
+        "source": "webhook",               // Nguồn: webhook, batch_sync, history_log
+        "event_type": "update",            // Loại sự kiện: create, update, delete, snapshot
+        "event_timestamp": "2024-01-20T10:30:00Z", // "Business Time" của sự kiện
+        "processing_timestamp": "2024-01-20T10:30:05Z", // Thời điểm DLT ghi file
+        "original_event_id": "evt_abc123"  // ID của Webhook/Log gốc (nếu có)
+    }
 }
 ```
+
+### **Standardization Strategy (Unified Envelope)**
+
+Mọi nguồn dữ liệu (Webhook, History Log, Batch Sync) đều được chuẩn hóa về cấu trúc **Envelope** trên trước khi ghi xuống Parquet. Điều này đảm bảo:
+
+1.  **Uniformity:** Downstream (Hop 4-5) chỉ cần biết đọc `payload` mà không cần xử lý riêng từng nguồn.
+2.  **Replayability:** Có thể tái hiện lại lịch sử thay đổi nhờ `sync_metadata`.
+3.  **Traceability:** Biết chính xác bản ghi này đến từ đâu, vào lúc nào.
+
+### **Data Strategy: Time & Scheduling**
+
+Để đảm bảo tính nhất quán (Consistency) và khả năng tái hiện (Replayability) trên toàn bộ pipeline, chúng ta sử dụng một bộ các trường thời gian chuẩn hóa.
+
+#### **1. Time Fields & Purpose (Các trường thời gian)**
+
+| Field Name                 | Origin                     | Type     | Description                                                         | Goal / Usage                                                                                                                              |
+| :------------------------- | :------------------------- | :------- | :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------- |
+| **`created_on`**           | Source (Sapo)              | Business | Thời điểm thực thể được sinh ra.                                    | **Analytics:** Phân tích Cohort, tuổi thọ khách hàng/đơn hàng.                                                                            |
+| **`modified_on`**          | Source (Sapo)              | Business | Thời điểm trạng thái thay đổi lần cuối trên nguồn.                  | **Merge Logic:** Dùng để xác định "Latest State" trong thuật toán Deduplication (Hop 4).                                                  |
+| **`event_timestamp`**      | Pipeline (`sync_metadata`) | Logical  | Thời điểm sự kiện _xảy ra_ (Webhook timestamp hoặc Log `occur_at`). | **Ordering:** Sắp xếp chuỗi sự kiện lịch sử một cách chính xác (tránh out-of-order). **Cursor:** DLT dùng trường này để Incremental Load. |
+| **`processing_timestamp`** | Pipeline (`sync_metadata`) | System   | Thời điểm DLT ghi file xuống đĩa.                                   | **Audit/Debug:** Dùng để truy vết sự cố pipeline hoặc độ trễ (Latency).                                                                   |
+| **`year/month`**           | Partition                  | System   | Thời gian _ghi nhận_ dữ liệu.                                       | **Performance:** Cắt nhỏ dữ liệu (Data Pruning) giúp tăng tốc query DuckDB.                                                               |
+
+#### **2. Scheduling & Source Synchronization (Chiến lược đồng bộ)**
+
+Mỗi nguồn dữ liệu có đặc tính thời gian khác nhau nhưng đều đổ về cùng một cấu trúc hợp nhất:
+
+- **Webhook (Real-time):**
+  - _Trigger:_ Sự kiện sinh ra ngay lập tức.
+  - _Time:_ `event_timestamp` ≈ `modified_on`.
+  - _Goal:_ Cung cấp độ trễ thấp nhất (< 5 phút) cho Operational App.
+
+- **History Log (Near Real-time Batch):**
+  - _Trigger:_ Poll mỗi 10-15 phút.
+  - _Time:_ `event_timestamp` = `occur_at` (Chính xác thời điểm action).
+  - _Goal:_ Lấp đầy các khoảng trống mà Webhook có thể bỏ lỡ (Reliability).
+
+- **Batch Sync (Scheduled):**
+  - _Trigger:_ Chạy định kỳ (Hàng ngày/Tuần).
+  - _Time:_ `event_timestamp` = `modified_on` (Snapshot).
+  - _Goal:_ Đảm bảo tính toàn vẹn dữ liệu (Consistency Check) và sửa sai cho quá khứ.
 
 ### **HOP 4: Query & Processing Layer**
 

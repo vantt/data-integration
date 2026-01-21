@@ -112,30 +112,36 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
                 table_name = et_lower
             
             # 3. Parse Payload
-            # Important for Envelope: `payload` MUST be a dict (the entity)
-            raw_payload = msg.get('payload')
-            if isinstance(raw_payload, str):
+            # The 'payload' column in D1 is a JSON string containing the wrapper:
+            # { "source_system": "...", "entity_type": "...", "action": "...", "received_at": "...", "payload": { ...real_data... } }
+            raw_payload_str = msg.get('payload')
+            wrapper = {}
+            if isinstance(raw_payload_str, str):
                 try:
-                    payload_dict = json.loads(raw_payload)
+                    wrapper = json.loads(raw_payload_str)
                 except json.JSONDecodeError:
                     print(f"⚠️ Failed to decode payload for {msg_id}. Skipping.")
                     continue
-            elif isinstance(raw_payload, dict):
-                payload_dict = raw_payload
-            else:
-                payload_dict = {}
+            elif isinstance(raw_payload_str, dict):
+                wrapper = raw_payload_str
+            
+            # Extract Inner Payload (The actual Entity)
+            inner_payload = wrapper.get('payload')
+            if not isinstance(inner_payload, dict):
+                 # Fallback: maybe the wrapper IS the payload if structure changed?
+                 # But based on index.ts, it is nested.
+                 print(f"⚠️ No inner payload dict found for {msg_id}. Skipping.")
+                 continue
 
             # 4. Extract Entity ID
-            # Usually in payload['id']
-            entity_id = payload_dict.get('id')
+            entity_id = inner_payload.get('id')
             if not entity_id:
-                # Fallback to msg_id if no entity id? No, that breaks the "Entity Log" concept.
-                # If we cannot identify the entity, it's garbage.
-                print(f"⚠️ No entity ID in payload for {msg_id}. Skipping.")
+                print(f"⚠️ No entity ID in inner payload for {msg_id}. Skipping.")
                 continue
 
             # 5. Metadata & Partitioning
-            received_at_str = msg.get('received_at')
+            # received_at is in the WRAPPER, not the D1 row message
+            received_at_str = wrapper.get('received_at')
             if received_at_str:
                 try:
                     dt = datetime.fromisoformat(received_at_str.replace("Z", "+00:00"))
@@ -147,19 +153,17 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
             # 6. Construct Envelope
             envelope = {
                 "entity_id": str(entity_id),
-                "entity_type": table_name, # Normalized type
+                "entity_type": table_name,
                 "source": "webhook",
                 "year": str(dt.year),
                 "month": str(dt.month),
-                "payload": payload_dict,
+                "payload": inner_payload, # Use the unwrapped entity data
                 "sync_metadata": {
                     "source": "webhook",
-                    "event_type": msg.get("action", "unknown"), # e.g. orders/create
+                    "event_type": wrapper.get("action", "unknown"),
                     "event_timestamp": received_at_str or datetime.utcnow().isoformat(),
                     "processing_timestamp": datetime.utcnow().isoformat(),
-                    "original_event_id": str(msg_id),
-                    "topic": msg.get("topic"),
-                    "webhook_id": msg.get("webhook_id")
+                    "original_event_id": str(msg_id)
                 }
             }
 
