@@ -19,7 +19,9 @@ def run():
     # API limit is 20 per request for this endpoint
     source = sapo_history_log_source(
         page_size=100, 
-        min_overlap_items=500
+        min_overlap_items=500,
+        limit=10,
+        debug=True
     )
     
     # Run pipeline

@@ -12,18 +12,9 @@ def run():
     """
     Run the Sapo orders pipeline.
     """
-    # Configure safe layout
-    from dlt.destinations import filesystem
-    import os
-    abs_path = os.path.abspath("data_lake")
-    
-    dest = filesystem(
-        destination_name="filesystem",
-        bucket_url=f"file:///{abs_path}"
-    )
-    
     pipeline = dlt.pipeline(
         pipeline_name="sapo_orders_batch",
+        destination="filesystem",
         dataset_name="sapo_raw"
     )
 
@@ -31,7 +22,7 @@ def run():
     source = sapo_orders_source(max_pages=1000)
 
     # Run the pipeline
-    load_info = pipeline.run(source, destination=dest, loader_file_format="parquet")
+    load_info = pipeline.run(source, loader_file_format="parquet")
     
     print(load_info)
 

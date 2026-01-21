@@ -1,39 +1,9 @@
 """
 Sapo Customers Source - Production Implementation
-"""
+Unified Transaction Log Strategy (Envelope Schema)
 
-import dlt
-import requests
-from typing import Iterator, Dict, Any, List
-from datetime import datetime
-from tenacity import (
-    retry,
-    stop_after_attempt,
-    wait_exponential,
-    retry_if_exception_type
-)
-
-@dlt.source
-def sapo_customers_source(
-    max_pages: int = 1000, 
-    page_size: int = 100, 
-    min_overlap_items: int = 500
-):
-    """
-    Sapo customers source function.
-    """
-    return customers(
-        max_pages=max_pages, 
-        page_size=page_size, 
-        min_overlap_items=min_overlap_items
-    )
-
-@dlt.resource(
-    primary_key="id",
-    write_disposition="append",
-    table_format="delta",
-    name="customer", # Renamed from customers
-    columns={
+SAPO Customer Response Structure:
+{
         "id": {"data_type": "bigint"},
         "tenant_id": {"data_type": "bigint"},
         "default_location_id": {"data_type": "bigint"},
@@ -78,23 +48,62 @@ def sapo_customers_source(
         "tags": {"data_type": "json"},
         "social_customers": {"data_type": "json"}
     }
+
+"""
+
+import dlt
+import requests
+from typing import Iterator, Dict, Any, List
+from datetime import datetime
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type
+)
+
+@dlt.source
+def sapo_customers_source(
+    max_pages: int = 1000, 
+    page_size: int = 100, 
+    min_overlap_items: int = 500
+):
+    """
+    Sapo customers source function.
+    """
+    return customers(
+        max_pages=max_pages, 
+        page_size=page_size, 
+        min_overlap_items=min_overlap_items
+    )
+
+@dlt.resource(
+    primary_key="entity_id",
+    write_disposition="append",
+    table_format="delta",
+    name="customer", 
+    columns={
+        "entity_id": {"data_type": "text"},
+        "entity_type": {"data_type": "text"},
+        "payload": {"data_type": "json"},
+        "sync_metadata": {"data_type": "json"},
+        "source": {"data_type": "text", "partition": True},
+        "year": {"data_type": "text", "partition": True},
+        "month": {"data_type": "text", "partition": True}
+    }
 )
 def customers(
     max_pages: int = 1000,
     page_size: int = 100,
     min_overlap_items: int = 500,
-    created_on=dlt.sources.incremental("created_on")
+    first_timestamp=dlt.sources.incremental("sync_metadata.event_timestamp")
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
-    Load customers incrementally using DESC strategy
-
-    Strategy:
-    1. Sort DESC (newest first)
-    2. Filter client-side by created_on > checkpoint
-    3. Early stop with Items-based overlap safety
+    Load customers incrementally using DESC strategy.
+    
+    Outputs standardized Envelope Schema.
     """
 
-    # Initialize client
     try:
         from .client import get_sapo_client
     except ImportError:
@@ -106,12 +115,13 @@ def customers(
 
     # State
     page = 1
+
     # Checkpoint safety buffer
     consecutive_old_items = 0
     consecutive_errors = 0
     MAX_ERRORS = 3
 
-    last_value = created_on.last_value
+    last_value = first_timestamp.last_value
     print(f"🚀 Starting incremental load from: {last_value}")
     print(f"   Config: page_size={page_size}, min_overlap_items={min_overlap_items}")
 
@@ -141,15 +151,14 @@ def customers(
         response = current_session.get(url, params=params, timeout=30)
 
         if response.status_code == 401 or response.status_code == 403:
-             # Cookies might be expired if session management missed it
-             # Force refresh
-             print("🔄 Session expired, refreshing cookies...")
+            # Cookies might be expired if session management missed it
+            # Force refresh
+            print("🔄 Session expired, refreshing cookies...")
+            # Refresh using client helper
+            client.refresh_session(current_session)
 
-             # Refresh using client helper
-             client.refresh_session(current_session)
-
-             print(f"↻ Retrying with new session info. UA: {current_session.headers.get('User-Agent')}")
-             response = current_session.get(url, params=params, timeout=30)
+            print(f"↻ Retrying with new session info. UA: {current_session.headers.get('User-Agent')}")
+            response = current_session.get(url, params=params, timeout=30)
 
         response.raise_for_status()
         return response.json()
@@ -167,42 +176,51 @@ def customers(
                 break
 
             # Filter new items
-            new_customers = []
+            new_envelopes = []
 
-            for customer in customers_data:
-                customer_created_on = customer.get("created_on")
+            for raw_customer in customers_data:
+                customer_created_on = raw_customer.get("created_on")
 
-                # Check for None just in case
                 if not customer_created_on:
                     continue
 
                 if last_value is None or customer_created_on > last_value:
-                    # New Item found - Enrich with partition columns
                     try:
-                        # created_on format example: "2024-01-15T08:30:00Z"
+                        # 1. Parse Timestamp
                         dt = datetime.fromisoformat(customer_created_on.replace("Z", "+00:00"))
-                        customer["year"] = str(dt.year)
-                        customer["month"] = str(dt.month)
-                        customer["source"] = "batch_sync"
-                        customer["entity_type"] = "customer"
+                        
+                        # 2. Construct Envelope
+                        entity_id = raw_customer.get("id")
+                        
+                        envelope = {
+                            "entity_id": str(entity_id),
+                            "entity_type": "customer",
+                            "source": "batch_sync",
+                            "year": str(dt.year),
+                            "month": str(dt.month),
+                            "payload": raw_customer,
+                            "sync_metadata": {
+                                "source": "batch_sync",
+                                "event_type": "snapshot",
+                                "event_timestamp": customer_created_on,
+                                "processing_timestamp": datetime.utcnow().isoformat(),
+                                "original_event_id": None
+                            }
+                        }
 
-                        new_customers.append(customer)
-
-                        # IMPORTANT: Reset counter because we found a gap-filler!
+                        new_envelopes.append(envelope)
                         consecutive_old_items = 0
                     except ValueError:
                         print(f"⚠️ Could not parse created_on: {customer_created_on}")
                         continue
                 else:
-                    # Old Item found
                     consecutive_old_items += 1
             
-            print(f"📄 Page {page}: {len(new_customers)}/{len(customers_data)} new. Old stream: {consecutive_old_items}/{min_overlap_items}")
+            print(f"📄 Page {page}: {len(new_envelopes)}/{len(customers_data)} new. Old stream: {consecutive_old_items}/{min_overlap_items}")
 
-            if new_customers:
-                yield new_customers
+            if new_envelopes:
+                yield new_envelopes
             
-            # Early stop based on ITEMS count
             if consecutive_old_items >= min_overlap_items:
                 print(f"✅ Early stop triggered. Safety buffer satistied ({consecutive_old_items} old items seen).")
                 break

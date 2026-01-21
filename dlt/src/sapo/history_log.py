@@ -1,6 +1,7 @@
 """
 Sapo History Log Source
 Fetches activity logs from Sapo to track changes on entities.
+Unified Transaction Log Strategy (Envelope Schema)
 """
 
 import dlt
@@ -18,47 +19,45 @@ from tenacity import (
 def infer_uri(root_type: str, root_id: int) -> Optional[str]:
     """
     Infers the URI for a Sapo entity based on its type and ID.
-    
-    Args:
-        root_type: The type of the entity (e.g., 'order', 'customer', 'product')
-        root_id: The ID of the entity
-        
-    Returns:
-        The inferred API URI string, or None if unknown.
     """
     if not root_type or not root_id:
         return None
         
-    # Normalize type just in case
     r_type = root_type.lower().strip()
     
     mappings = {
         'order': 'orders',
         'customer': 'customers',
         'product': 'products',
-        'variant': 'variants', # Note: variants usually need product_id context for full path, but checking single resource access
+        'variant': 'variants',
         'collect': 'collects',
         'custom_collection': 'custom_collections',
         'smart_collection': 'smart_collections',
         'page': 'pages',
         'blog': 'blogs',
         'article': 'articles',
-        # Add more mappings as discovered
+        'fulfillment': 'fulfillments',
+        'purchase_order': 'purchase_orders',
+        'stock_adjustment': 'stock_adjustments',
+        'delivery_service_provider': 'delivery_service_providers',
+        'order_return': 'order_returns',
+        'fulfillment_print_forms': 'fulfillment_print_forms',
+        'account_authentication': 'account_authentications',
     }
     
     resource = mappings.get(r_type)
     if resource:
         return f"/admin/{resource}/{root_id}.json"
     
-    # Fallback/Generic heuristic: add 's' ?
-    # Safest is to return generic structure or None
     return f"/admin/{r_type}s/{root_id}.json"
 
 @dlt.source
 def sapo_history_log_source(
     max_pages: int = 1000, 
-    page_size: int = 20, # API fixed limit seems to be 20 for this endpoint? User said limit=20.
-    min_overlap_items: int = 50
+    page_size: int = 100,
+    min_overlap_items: int = 50,
+    limit: int = None,
+    debug: bool = False
 ):
     """
     Sapo history log source function.
@@ -66,39 +65,36 @@ def sapo_history_log_source(
     return history_log(
         max_pages=max_pages, 
         page_size=page_size, 
-        min_overlap_items=min_overlap_items
+        min_overlap_items=min_overlap_items,
+        limit=limit,
+        debug=debug
     )
 
 @dlt.resource(
-    primary_key="id",
+    primary_key="entity_id",
     write_disposition="append",
     table_format="delta",
     columns={
-        "id": {"data_type": "bigint"},
-        "tenant_id": {"data_type": "bigint"},
-        "occur_at": {"data_type": "timestamp"},
-        "entity_type": {"data_type": "text"}, # Partition removed (handled by table name)
-        "root_id": {"data_type": "bigint"},
-        "action_name": {"data_type": "text"},
+        "entity_id": {"data_type": "text"},
+        "entity_type": {"data_type": "text"},
+        "payload": {"data_type": "json"},
+        "sync_metadata": {"data_type": "json"},
         "source": {"data_type": "text", "partition": True},
         "year": {"data_type": "text", "partition": True},
-        "month": {"data_type": "text", "partition": True},
-        # Metadata
-        "inferred_uri": {"data_type": "text"},
-        # Raw data (json)
-        "description_data": {"data_type": "json"},
-        "data": {"data_type": "json"}
+        "month": {"data_type": "text", "partition": True}
     }
 )
 def history_log(
     max_pages: int = 1000,
     page_size: int = 20,
     min_overlap_items: int = 50,
-    occur_at=dlt.sources.incremental("occur_at")
+    limit: int = None,
+    debug: bool = False,
+    first_timestamp=dlt.sources.incremental("sync_metadata.event_timestamp")
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
-    Load history logs incrementally.
-    
+    Load history logs incrementally and output Envelope Schema.
+
     Strategy:
     1. API returns logs sorted by newest first (DESC).
     2. We iterate pages 1, 2, 3... (moving backwards in time).
@@ -107,7 +103,6 @@ def history_log(
     5. If we see `min_overlap_items` old items, we stop.
     """
 
-    # Initialize client
     try:
         from .client import get_sapo_client
     except ImportError:
@@ -115,6 +110,7 @@ def history_log(
 
     client = get_sapo_client()
     base_url = client.base_url
+
     # Special URL for logs as per request
     # "https://fwg.mysapogo.com/admin/settings/get_logs"
     # Usually clients configure base_url to be .../admin. 
@@ -124,13 +120,13 @@ def history_log(
     # If client.base_url already has /orders or similar, we might need to strip.
     # Safe bet: assume client.base_url is top level admin api root or reconstruct.
     # The client.base_url in `client.py` defaults to `https://{domain}/admin`.
-    
+    domain_base = base_url.rsplit('/admin', 1)[0]
     logs_url = f"{client.base_url}/settings/get_logs"
     
     print(f"🚀 Starting History Log load from: {logs_url}")
-    last_value = occur_at.last_value
+    last_value = first_timestamp.last_value
     print(f"   State (Last occur_at): {last_value}")
-    print(f"   Config: page_size={page_size}, min_overlap_items={min_overlap_items}")
+    print(f"   Config: page_size={page_size}, min_overlap_items={min_overlap_items}, limit={limit}, debug={debug}")
 
     session = client.session
     request_delay = client.request_delay
@@ -139,6 +135,18 @@ def history_log(
     consecutive_old_items = 0
     consecutive_errors = 0
     MAX_ERRORS = 3
+    
+    # Statistics
+    stats = {
+        "processed": 0,
+        "yielded": 0,
+        "skipped_no_occur_at": 0,
+        "skipped_not_new": 0,
+        "skipped_parse_error": 0,
+        "skipped_no_uri_or_payload": 0,
+        "fetched_success": 0,
+        "fetched_failure": 0
+    }
 
     @retry(
         stop=stop_after_attempt(3),
@@ -146,7 +154,7 @@ def history_log(
         retry=retry_if_exception_type(requests.RequestException)
     )
     def fetch_page_with_retry(page_num: int, current_session) -> Dict[str, Any]:
-        
+
         # Apply rate limiting delay
         if request_delay > 0:
             time.sleep(request_delay)
@@ -157,13 +165,14 @@ def history_log(
         }
 
         response = current_session.get(logs_url, params=params, timeout=30)
-            
+
         # Check for redirects
         if response.url.find("/login") != -1:
             print(f"⚠️ Redirected to login page: {response.url}")
         elif "accessdenied" in response.url:
             raise PermissionError(f"❌ Access Denied: The user does not have permission to access {logs_url}. Redirected to: {response.url}")
 
+            
         if response.status_code == 401 or response.status_code == 403:
              print("🔄 Session expired, refreshing cookies...")
              client.refresh_session(current_session)
@@ -172,12 +181,27 @@ def history_log(
         
         response.raise_for_status()
         return response.json()
+    
+    def fetch_entity_data(uri: str, current_session) -> Optional[Dict[str, Any]]:
+        """Fetching full entity state"""
+        if not uri:
+            return None
+        target_url = f"{domain_base}{uri}"
+        try:
+            if request_delay > 0:
+                time.sleep(request_delay)
+            resp = current_session.get(target_url, timeout=10)
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                return None
+        except Exception:
+            return None
 
     while page <= max_pages:
         try:
             data = fetch_page_with_retry(page, session)
             consecutive_errors = 0
-            
             # User response structure: { "logs": [...], "pageModel": {...} }
             logs_list = data.get("logs", [])
             
@@ -185,45 +209,26 @@ def history_log(
                 print(f"📭 Page {page}: Empty")
                 break
             
-            new_items_batch = []
+            new_envelopes = []
             
             for item in logs_list:
                 item_occur_at = item.get("occurAt")
-                
-                # Check cleanliness
+
+                stats["processed"] += 1
                 if not item_occur_at:
+                    stats["skipped_no_occur_at"] += 1
                     continue
                 
-                # Normalize key names to snake_case for consistency with schema? 
-                # DLT might do this automatically if we defined columns, but let's be explicit with the ones we rely on.
-                # Actually, DLT's `columns` def simply types them. The dict keys must match.
-                # The user provided JSON has camelCase: `occurAt`, `rootType` etc.
-                # But our schema uses `occur_at`, `root_type`.
-                # We should re-map or update schema. 
-                # Best practice: Transform to snake_case in python to match analytics standards.
+                # Check Limit Early
+                if limit and (stats["yielded"] + len(new_envelopes)) >= limit:
+                    # We have enough pending envelopes to reach the limit
+                    # Stop processing this page
+                    # The yield loop below will yield up to limit and stop
+                    if debug:
+                        print(f"   🛑 Limit of {limit} will be reached with current batch.")
+                    break
                 
-                transformed_item = {
-                    "id": item.get("id"),
-                    "tenant_id": item.get("tenantId"),
-                    "occur_at": item.get("occurAt"),
-                    "entity_type": item.get("rootType"), # Renamed from root_type
-                    "root_id": item.get("rootId"),
-                    "action_name": item.get("actionName"),
-                    "description": item.get("description"),
-                    "method": item.get("method"),
-                    "user_agent": item.get("userAgent"),
-                    "ip_address": item.get("ipAddress"),
-                    "actor_id": item.get("actorId"),
-                    "actor_name": item.get("actorName"),
-                    "actor_source": item.get("actorSource"),
-                    "description_data": item.get("descriptionData"), # Complex
-                    "data": item.get("data") # Complex
-                }
-
-                # Infer URI
-                transformed_item["inferred_uri"] = infer_uri(transformed_item["entity_type"], transformed_item["root_id"])
-
-                # Incremental Logic
+                # Check Incremental
                 is_new = False
                 if last_value is None:
                     is_new = True
@@ -234,31 +239,101 @@ def history_log(
                     else:
                         is_new = False
                 
+                if debug and not is_new:
+                     # Verbose: show we skipped
+                     # print(f"   Skipold: {item_occur_at} <= {last_value}")
+                     pass
+
                 if is_new:
-                    # Enrich partition cols
                     try:
-                        # "2026-01-20T08:04:22Z"
+                        # 1. Parse Date for Partitioning
                         dt = datetime.fromisoformat(item_occur_at.replace("Z", "+00:00"))
-                        transformed_item["year"] = str(dt.year)
-                        transformed_item["month"] = str(dt.month)
-                        transformed_item["source"] = "history_log"
                         
-                        new_items_batch.append(transformed_item)
+                        # 2. Prepare Envelope
+                        root_id = item.get("rootId")
+                        root_type = item.get("rootType", "").lower() # Normalize
+                        inferred_uri = infer_uri(root_type, root_id)
+                        
+                        if debug:
+                            print(f"   Item {item.get('id')} [{item_occur_at}] -> {root_type}:{root_id}")
+                            if not inferred_uri:
+                                print(f"   ⚠️ Could not infer URI for {root_type}:{root_id}")
+
+                        # Fetch Entity State (Payload)
+                        entity_payload = None
+                        if inferred_uri:
+                            if debug:
+                                print(f"   🔎 Fetching entity: {inferred_uri}")
+                            raw_entity_data = fetch_entity_data(inferred_uri, session)
+                            if raw_entity_data:
+                                stats["fetched_success"] += 1
+                                # Often the data is wrapped { "order": { ... } }
+                                # We want the inner dict if possible?
+                                # `webhook` puts { ... } directly.
+                                # `orders.py` puts { ... } directly.
+                                # `fetch_entity_data` returns { "order": { ... } } usually.
+                                # Let's try to unwrap if 1 key matches singular entity type?
+                                # For safety, let's keep it as is, or normalize later.
+                                # The Unified Schema expects `payload` to be THE entity.
+                                # If I have { "order": {...} }, I should probably unwrap it to match Batch Sync which returns {...}.
+                                keys = list(raw_entity_data.keys())
+                                if len(keys) == 1 and keys[0].lower() == root_type:
+                                    entity_payload = raw_entity_data[keys[0]]
+                                else:
+                                    entity_payload = raw_entity_data
+                            else:
+                                stats["fetched_failure"] += 1
+                                if debug:
+                                    print(f"      ❌ Failed to fetch {inferred_uri}")
+                        
+                        if not entity_payload:
+                             if debug:
+                                 print(f"   ⚠️ Skipping {root_type} {root_id}: No entity data found.")
+                             stats["skipped_no_uri_or_payload"] += 1
+                             continue
+
+                        envelope = {
+                            "entity_id": str(root_id),
+                            "entity_type": root_type,
+                            "source": "history_log",
+                            "year": str(dt.year),
+                            "month": str(dt.month),
+                            "payload": entity_payload,
+                            "sync_metadata": {
+                                "source": "history_log",
+                                "event_type": item.get("actionName"), # e.g. "update", "create"
+                                "event_timestamp": item_occur_at,
+                                "processing_timestamp": datetime.utcnow().isoformat(),
+                                "original_event_id": str(item.get("id")),
+                                # Store other log details if needed
+                                "actor_name": item.get("actorName"),
+                                "description": item.get("description")
+                            }
+                        }
+                        
+                        if debug:
+                             print(f"      ✅ Prepared envelope for {root_type}:{root_id}")
+
+                        new_envelopes.append(envelope)
                         consecutive_old_items = 0 
                     except ValueError:
                         print(f"⚠️ Date parse error: {item_occur_at}")
+                        stats["skipped_parse_error"] += 1
                         continue
                 else:
+                    stats["skipped_not_new"] += 1
                     consecutive_old_items += 1
             
-            print(f"📄 Page {page}: {len(new_items_batch)}/{len(logs_list)} new. Safety overlap: {consecutive_old_items}/{min_overlap_items}")
+            print(f"📄 Page {page}: {len(new_envelopes)}/{len(logs_list)} new. Safety overlap: {consecutive_old_items}/{min_overlap_items}")
 
-            if new_items_batch:
-                # Yield with dynamic table name based on entity_type
-                for item in new_items_batch:
-                    raw_type = item.get("entity_type", "").lower()
-                    # Enforce singular naming for known entities
-                    # If unknown, keep as is (or default to history_log?)
+            if new_envelopes:
+                for env in new_envelopes:
+                    if limit and stats["yielded"] >= limit:
+                        print(f"🛑 Limit of {limit} reached.")
+                        break
+
+                    # Dynamic Table Name Routing based on entity_type
+                    raw_type = env["entity_type"]
                     if raw_type in ["order", "orders"]:
                         table_name = "order"
                     elif raw_type in ["customer", "customers"]:
@@ -268,9 +343,12 @@ def history_log(
                     else:
                         table_name = raw_type if raw_type else "history_log"
                     
-                    yield dlt.mark.with_table_name(item, table_name)
+                    yield dlt.mark.with_table_name(env, table_name)
+                    stats["yielded"] += 1
             
-            # Early stop
+            if limit and stats["yielded"] >= limit:
+                break
+            
             if consecutive_old_items >= min_overlap_items:
                  print(f"✅ Early stop triggered. Reached {consecutive_old_items} old items.")
                  break
@@ -284,3 +362,13 @@ def history_log(
                 print("Too many errors, giving up.")
                 break
             page += 1
+
+    print("\n📊 Run Summary:")
+    print(f"Items Processed from API: {stats['processed']}")
+    print(f"Items Yielded:            {stats['yielded']}")
+    print(f"Entities Fetched Successfully: {stats['fetched_success']}")
+    print(f"Skipped (No occurAt):      {stats['skipped_no_occur_at']}")
+    print(f"Skipped (Not New):         {stats['skipped_not_new']}")
+    print(f"Skipped (Parse Error):     {stats['skipped_parse_error']}")
+    print(f"Skipped (No URI/Payload):  {stats['skipped_no_uri_or_payload']}")
+

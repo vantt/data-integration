@@ -1,6 +1,7 @@
 """
 Sapo Webhook Consumer Source
 Consumes webhooks from Cloudflare D1 and dispatches them to dynamic tables.
+Unified Transaction Log Strategy (Envelope Schema)
 """
 
 import dlt
@@ -58,16 +59,28 @@ def sapo_webhook_source(worker_url: str, source_system: str = None, poll_limit: 
     """
     return webhook_dispatcher(worker_url, source_system, poll_limit)
 
-@dlt.resource(write_disposition="append", table_format="delta")
+@dlt.resource(
+    primary_key="entity_id",
+    write_disposition="append", 
+    table_format="delta",
+    columns={
+        "entity_id": {"data_type": "text"},
+        "entity_type": {"data_type": "text"},
+        "payload": {"data_type": "json"},
+        "sync_metadata": {"data_type": "json"},
+        "source": {"data_type": "text", "partition": True},
+        "year": {"data_type": "text", "partition": True},
+        "month": {"data_type": "text", "partition": True}
+    }
+)
 def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: int = 100) -> Iterator[Any]:
     """
-    Polls messages and yields them with dynamic table names.
+    Polls messages and yields them with dynamic table names using Envelope Schema.
     """
     client = CloudflareWorkerClient(worker_url)
     
     print(f"Polling D1 Webhooks from {worker_url}...")
     
-    # We fetch one batch per run. The runner script handles the loop.
     messages = client.poll_messages(source_system=source_system, limit=poll_limit)
     
     if not messages:
@@ -84,13 +97,10 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
             if msg_id:
                 ids_to_ack.append(msg_id)
             
-            # 2. Determine Entity Type for Routing
-            # Default to 'unknowns' if missing
+            # 2. Determine Entity Type
             entity_type = msg.get('entity_type', 'unknown')
-            msg['entity_type'] = entity_type # Ensure it exists in record
             
-            # Map valid entities to singular table names to match refined schema
-            # Ensure singularization
+            # Singularize
             et_lower = entity_type.lower()
             if et_lower in ['order', 'orders']:
                 table_name = 'order'
@@ -101,39 +111,65 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
             else:
                 table_name = et_lower
             
-            # 3. Parse Payload if it's a string
-            payload = msg.get('payload')
-            if isinstance(payload, str):
+            # 3. Parse Payload
+            # Important for Envelope: `payload` MUST be a dict (the entity)
+            raw_payload = msg.get('payload')
+            if isinstance(raw_payload, str):
                 try:
-                    msg['payload'] = json.loads(payload)
+                    payload_dict = json.loads(raw_payload)
                 except json.JSONDecodeError:
-                    pass # Keep as string
-            
-            # 4. Partitioning & Metadata Injection
-            # We need 'source', 'year', 'month' for partition layout
-            # Use 'received_at' or current time (as fallback)
+                    print(f"⚠️ Failed to decode payload for {msg_id}. Skipping.")
+                    continue
+            elif isinstance(raw_payload, dict):
+                payload_dict = raw_payload
+            else:
+                payload_dict = {}
+
+            # 4. Extract Entity ID
+            # Usually in payload['id']
+            entity_id = payload_dict.get('id')
+            if not entity_id:
+                # Fallback to msg_id if no entity id? No, that breaks the "Entity Log" concept.
+                # If we cannot identify the entity, it's garbage.
+                print(f"⚠️ No entity ID in payload for {msg_id}. Skipping.")
+                continue
+
+            # 5. Metadata & Partitioning
             received_at_str = msg.get('received_at')
             if received_at_str:
                 try:
-                    # Support ISO format
                     dt = datetime.fromisoformat(received_at_str.replace("Z", "+00:00"))
                 except ValueError:
                     dt = datetime.utcnow()
             else:
-                 dt = datetime.utcnow()
+                dt = datetime.utcnow()
 
-            msg['source'] = 'webhook'
-            msg['year'] = str(dt.year)
-            msg['month'] = str(dt.month)
-            
-            # 5. Yield with Dynamic Table Name
-            yield dlt.mark.with_table_name(msg, table_name)
+            # 6. Construct Envelope
+            envelope = {
+                "entity_id": str(entity_id),
+                "entity_type": table_name, # Normalized type
+                "source": "webhook",
+                "year": str(dt.year),
+                "month": str(dt.month),
+                "payload": payload_dict,
+                "sync_metadata": {
+                    "source": "webhook",
+                    "event_type": msg.get("action", "unknown"), # e.g. orders/create
+                    "event_timestamp": received_at_str or datetime.utcnow().isoformat(),
+                    "processing_timestamp": datetime.utcnow().isoformat(),
+                    "original_event_id": str(msg_id),
+                    "topic": msg.get("topic"),
+                    "webhook_id": msg.get("webhook_id")
+                }
+            }
+
+            yield dlt.mark.with_table_name(envelope, table_name)
             
         except Exception as e:
             print(f"Error processing message {msg.get('msg_id')}: {e}")
             # Continue to next message, don't break batch
     
-    # 6. ACK processed messages
+    # 7. ACK processed messages
     # In dlt resource, we yield items. The pipeline runs.
     # We should ACK *after* successful yield? 
     # Technically dlt runs extraction first. If we ACK here, it means we ACK when extracted.
@@ -149,4 +185,3 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
     
     if ids_to_ack:
         client.batch_ack(ids_to_ack)
-
