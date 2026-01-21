@@ -36,6 +36,8 @@ def run():
     load_info = pipeline.run(source)
     
     print(load_info)
+    return load_info
+
 
 if __name__ == "__main__":
     run()

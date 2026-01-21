@@ -4,7 +4,10 @@ Handles configuration loading, authentication, and session management for Sapo.
 """
 import dlt
 from typing import Dict, Any, Optional
-from utils.shared_cookie_manager import get_cookie_manager
+try:
+    from utils.shared_cookie_manager import get_cookie_manager
+except ImportError:
+    from src.utils.shared_cookie_manager import get_cookie_manager
 try:
     from .login import sapo_login_strategy
 except ImportError:

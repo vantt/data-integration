@@ -25,6 +25,7 @@ def run():
     load_info = pipeline.run(source, loader_file_format="parquet")
     
     print(load_info)
+    return load_info
 
 if __name__ == "__main__":
     run()

@@ -69,5 +69,34 @@ def run():
             print(f"❌ Pipeline Error: {e}")
             time.sleep(sleep_interval)
 
+def run_once():
+    """
+    Run a single polling cycle. Used for orchestration (e.g. Dagster).
+    Returns LoadInfo or None.
+    """
+    # Configuration duplication (TODO: centralize config)
+    worker_url = os.getenv("WORKER_URL") 
+    if not worker_url:
+        try:
+             worker_url = dlt.secrets["sources.sapo_webhook_source.worker_url"]
+        except (KeyError, dlt.common.configuration.specs.config_providers.ConfigProviderException):
+             pass
+    
+    if not worker_url:
+        raise ValueError("WORKER_URL is missing")
+
+    poll_limit = int(os.getenv("POLL_LIMIT", "100"))
+
+    pipeline = dlt.pipeline(
+        pipeline_name="sapo_webhook_consumer",
+        destination="filesystem",
+        dataset_name="sapo_raw"
+    )
+
+    source = sapo_webhook_source(worker_url=worker_url, poll_limit=poll_limit)
+    load_info = pipeline.run(source, loader_file_format="parquet")
+    return load_info
+
+
 if __name__ == "__main__":
     run()

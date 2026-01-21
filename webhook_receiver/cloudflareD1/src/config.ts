@@ -34,5 +34,5 @@ export const SOURCE_CONFIGS: Record<string, SourceConfig> = {
 export const DEFAULT_CONFIG: SourceConfig = {
      secretKey: 'WEBHOOK_SECRET',
      headerNames: ['x-hub-signature-256'], // Will be overridden by HMAC_HEADER_NAME env var if present in logic
-     encoding: 'auto'
+     encoding: 'auto'   
 };
