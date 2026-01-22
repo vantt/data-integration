@@ -36,7 +36,7 @@ SAPO Customer Response Structure:
         "loyalty_customer": {"data_type": "json"},
         "sale_order": {"data_type": "json"},
         "entity_type": {"data_type": "text"}, # Partition removed
-        "source": {"data_type": "text", "partition": True},
+        "ingest_method": {"data_type": "text", "partition": True},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True},
         # Prevent normalization of nested fields
@@ -86,8 +86,12 @@ def sapo_customers_source(
         "entity_id": {"data_type": "text"},
         "entity_type": {"data_type": "text"},
         "payload": {"data_type": "json"},
+        "payload": {"data_type": "json"},
         "sync_metadata": {"data_type": "json"},
-        "source": {"data_type": "text", "partition": True},
+        "ingest_method": {"data_type": "text", "partition": True},
+        "event_type": {"data_type": "text"},
+        "event_timestamp": {"data_type": "timestamp"},
+        "payload_hash": {"data_type": "text"},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True}
     }
@@ -103,6 +107,9 @@ def customers(
     
     Outputs standardized Envelope Schema.
     """
+    
+    import hashlib
+    import json
 
     try:
         from .client import get_sapo_client
@@ -192,16 +199,22 @@ def customers(
                         # 2. Construct Envelope
                         entity_id = raw_customer.get("id")
                         
+                        # Calculate Payload Hash
+                        payload_str = json.dumps(raw_customer, sort_keys=True)
+                        payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
+
                         envelope = {
                             "entity_id": str(entity_id),
                             "entity_type": "customer",
-                            "source": "batch_sync",
+                            "ingest_method": "batch_sync",
+                            "event_type": "snapshot",
+                            "event_timestamp": customer_created_on,
+                            "payload_hash": payload_hash,
                             "year": str(dt.year),
                             "month": str(dt.month),
                             "payload": raw_customer,
                             "sync_metadata": {
-                                "source": "batch_sync",
-                                "event_type": "snapshot",
+                                "source_system": "sapo",
                                 "event_timestamp": customer_created_on,
                                 "processing_timestamp": datetime.utcnow().isoformat(),
                                 "original_event_id": None

@@ -2,6 +2,8 @@ import dlt
 import sys
 import os
 os.environ["DESTINATION__FILESYSTEM__LOADER_FILE_FORMAT"] = "parquet"
+os.environ["DESTINATION__FILESYSTEM__LAYOUT"] = "{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}"
+os.environ["DESTINATION__FILESYSTEM__EXTRA_PLACEHOLDERS"] = '{"ingest_method": "text", "year": "text", "month": "text"}'
 
 # Add src to path so imports work
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))

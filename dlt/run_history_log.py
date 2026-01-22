@@ -1,5 +1,8 @@
 import sys
 import os
+os.environ["DESTINATION__FILESYSTEM__LOADER_FILE_FORMAT"] = "parquet"
+os.environ["DESTINATION__FILESYSTEM__LAYOUT"] = "{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}"
+os.environ["DESTINATION__FILESYSTEM__EXTRA_PLACEHOLDERS"] = '{"ingest_method": "text", "year": "text", "month": "text"}'
 
 # Add src to path so imports work
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -20,7 +23,7 @@ def run():
     source = sapo_history_log_source(
         page_size=100, 
         min_overlap_items=500,
-        limit=10,
+        #limit=10,
         debug=True
     )
     
@@ -33,7 +36,10 @@ def run():
     
     #pipeline.drop() # Uncomment to reset state and load everything from scratch
     
-    load_info = pipeline.run(source)
+    # Using 'replace' to force reset state and reload data.
+    # load_info = pipeline.run(source, loader_file_format="parquet")
+
+    load_info = pipeline.run(source, loader_file_format="parquet")
     
     print(load_info)
     return load_info

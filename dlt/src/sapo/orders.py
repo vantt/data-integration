@@ -22,7 +22,7 @@ SAPO Order Response Structure:
         "account_id": {"data_type": "bigint"},
         "assignee_id": {"data_type": "bigint"},
         "entity_type": {"data_type": "text"}, # Partition removed
-        "source": {"data_type": "text", "partition": True},
+        "ingest_method": {"data_type": "text", "partition": True},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True},
         # Prevent normalization of nested fields
@@ -77,7 +77,10 @@ def sapo_orders_source(
         "payload": {"data_type": "json"},
         "sync_metadata": {"data_type": "json"},
         # Retention of Partition Columns at Root Level
-        "source": {"data_type": "text", "partition": True},
+        "ingest_method": {"data_type": "text", "partition": True},
+        "event_type": {"data_type": "text"},
+        "event_timestamp": {"data_type": "timestamp"},
+        "payload_hash": {"data_type": "text"},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True}
     }
@@ -95,13 +98,20 @@ def orders(
     {
         "entity_id": str,
         "entity_type": "order",
+        "entity_id": str,
+        "entity_type": "order",
         "payload": json_dict,
         "sync_metadata": { ... },
-        "source": "batch_sync",
+        "ingest_method": "batch_sync",
+        "event_type": "snapshot",
+        "payload_hash": "md5...",
         "year": YYYY,
         "month": MM
     }
     """
+    
+    import hashlib
+    import json
 
     # Initialize client
     try:
@@ -197,16 +207,27 @@ def orders(
                         # 2. Construct Envelope
                         entity_id = raw_order.get("id")
                         
+                        # Calculate Payload Hash
+                        payload_str = json.dumps(raw_order, sort_keys=True)
+                        payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
+
                         envelope = {
                             "entity_id": str(entity_id),
                             "entity_type": "order",
-                            "source": "batch_sync",
+                            "ingest_method": "batch_sync",
+                            "event_type": "snapshot",
+                            "event_timestamp": order_modified_on,
+                            "payload_hash": payload_hash,
                             "year": str(dt.year),
                             "month": str(dt.month),
                             "payload": raw_order, # Full raw data
                             "sync_metadata": {
-                                "source": "batch_sync",
-                                "event_type": "snapshot",
+                                "source_system": "sapo",
+                                "source": "batch_sync", # Deprecated but kept for backward compat inside JSON if needed, or remove? Plan says remove 'source' from Envelop root, but inside sync_metadata we can keep 'source_system'. Let's follow the plan:
+                                # "source_system": "sapo", 
+                                # Wait, plan said 'source' in sync_metadata is replaced by 'source_system'. 
+                                # Code below:
+                                "source_system": "sapo",
                                 "event_timestamp": order_modified_on, # Syncing by Modified Time
                                 "processing_timestamp": datetime.utcnow().isoformat(),
                                 "original_event_id": None # Not applicable for batch

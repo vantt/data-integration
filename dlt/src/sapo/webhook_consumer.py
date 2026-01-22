@@ -8,6 +8,7 @@ import dlt
 import requests
 import json
 import time
+import hashlib
 from typing import Iterator, Dict, Any, List, Optional
 from datetime import datetime
 
@@ -68,7 +69,10 @@ def sapo_webhook_source(worker_url: str, source_system: str = None, poll_limit: 
         "entity_type": {"data_type": "text"},
         "payload": {"data_type": "json"},
         "sync_metadata": {"data_type": "json"},
-        "source": {"data_type": "text", "partition": True},
+        "ingest_method": {"data_type": "text", "partition": True},
+        "event_type": {"data_type": "text"},
+        "event_timestamp": {"data_type": "timestamp"},
+        "payload_hash": {"data_type": "text"},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True}
     }
@@ -151,16 +155,25 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
                 dt = datetime.utcnow()
 
             # 6. Construct Envelope
+            
+            # Calculate Payload Hash
+            payload_str = json.dumps(inner_payload, sort_keys=True)
+            payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
+            
+            event_type = wrapper.get("action", "unknown")
+
             envelope = {
                 "entity_id": str(entity_id),
                 "entity_type": table_name,
-                "source": "webhook",
+                "ingest_method": "webhook",
+                "event_type": event_type,
+                "event_timestamp": received_at_str or datetime.utcnow().isoformat(),
+                "payload_hash": payload_hash,
                 "year": str(dt.year),
                 "month": str(dt.month),
                 "payload": inner_payload, # Use the unwrapped entity data
                 "sync_metadata": {
-                    "source": "webhook",
-                    "event_type": wrapper.get("action", "unknown"),
+                    "source_system": source_system or "sapo", # Use arg or default
                     "event_timestamp": received_at_str or datetime.utcnow().isoformat(),
                     "processing_timestamp": datetime.utcnow().isoformat(),
                     "original_event_id": str(msg_id)

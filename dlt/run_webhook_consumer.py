@@ -9,6 +9,10 @@ import time
 from dlt.common.pipeline import LoadInfo
 from src.sapo.webhook_consumer import sapo_webhook_source
 
+os.environ["DESTINATION__FILESYSTEM__LOADER_FILE_FORMAT"] = "parquet"
+os.environ["DESTINATION__FILESYSTEM__LAYOUT"] = "{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}"
+os.environ["DESTINATION__FILESYSTEM__EXTRA_PLACEHOLDERS"] = '{"ingest_method": "text", "year": "text", "month": "text"}'
+
 def run():
     # Configuration
     # Ensure WORKER_URL is set in .dlt/secrets.toml or env var
@@ -31,7 +35,9 @@ def run():
         return
 
     poll_limit = int(os.getenv("POLL_LIMIT", "100"))
-    sleep_interval = int(os.getenv("SLEEP_INTERVAL", "10"))
+    min_sleep = int(os.getenv("MIN_SLEEP_INTERVAL", "10"))
+    max_sleep = int(os.getenv("MAX_SLEEP_INTERVAL", "60"))
+    current_sleep = min_sleep
     
     # Initialize Pipeline
     # dataset_name="sapo_raw" to write into the unified data lake
@@ -58,16 +64,20 @@ def run():
             
             if load_info:
                 print(load_info)
+                # Reset sleep interval on success
+                current_sleep = min_sleep
             else:
-                print(f"💤 No new data. Sleeping {sleep_interval}s...")
-                time.sleep(sleep_interval)
+                print(f"💤 No new data. Sleeping {current_sleep}s...")
+                time.sleep(current_sleep)
+                # Exponential backoff: double sleep time, capped at max_sleep
+                current_sleep = min(current_sleep * 2, max_sleep)
                 
         except KeyboardInterrupt:
             print("🛑 Consumer stopped by user.")
             break
         except Exception as e:
             print(f"❌ Pipeline Error: {e}")
-            time.sleep(sleep_interval)
+            time.sleep(current_sleep)
 
 def run_once():
     """

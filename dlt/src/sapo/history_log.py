@@ -7,6 +7,8 @@ Unified Transaction Log Strategy (Envelope Schema)
 import dlt
 import requests
 import time
+import hashlib
+import json
 from typing import Iterator, Dict, Any, List, Optional
 from datetime import datetime
 from tenacity import (
@@ -79,7 +81,12 @@ def sapo_history_log_source(
         "entity_type": {"data_type": "text"},
         "payload": {"data_type": "json"},
         "sync_metadata": {"data_type": "json"},
-        "source": {"data_type": "text", "partition": True},
+        "payload": {"data_type": "json"},
+        "sync_metadata": {"data_type": "json"},
+        "ingest_method": {"data_type": "text", "partition": True},
+        "event_type": {"data_type": "text"},
+        "event_timestamp": {"data_type": "timestamp"},
+        "payload_hash": {"data_type": "text"},
         "year": {"data_type": "text", "partition": True},
         "month": {"data_type": "text", "partition": True}
     }
@@ -292,16 +299,23 @@ def history_log(
                              stats["skipped_no_uri_or_payload"] += 1
                              continue
 
+                        # Calculate Payload Hash
+                        payload_str = json.dumps(entity_payload, sort_keys=True)
+                        payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
+
                         envelope = {
                             "entity_id": str(root_id),
                             "entity_type": root_type,
-                            "source": "history_log",
+                            "ingest_method": "history_log",
+                            "event_type": str(item.get("actionName")),
+                            "event_timestamp": item_occur_at,
+                            "payload_hash": payload_hash,
                             "year": str(dt.year),
                             "month": str(dt.month),
                             "payload": entity_payload,
                             "sync_metadata": {
+                                "source_system": "sapo",
                                 "source": "history_log",
-                                "event_type": item.get("actionName"), # e.g. "update", "create"
                                 "event_timestamp": item_occur_at,
                                 "processing_timestamp": datetime.utcnow().isoformat(),
                                 "original_event_id": str(item.get("id")),

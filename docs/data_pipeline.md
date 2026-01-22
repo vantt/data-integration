@@ -140,30 +140,34 @@ flowchart TB
 
 **Technology:** Parquet Files
 
-**Storage Structure (Unified Dataset, Segregated Sources):**
+**Storage Structure (Unified Dataset, Segregated Ingestion Methods):**
 
 ```text
-/data_lake/sapo_raw/orders/                   <-- Dataset Name (Unified)
+/data_lake/sapo_raw/orders/                   <-- Dataset Name (Implicit Source System: Sapo)
     │
-    ├── source=webhook/                       <-- Partition Key 1: Source
+    ├── ingest_method=webhook/                <-- Partition Key 1: Ingestion Method
     │   ├── year=2024/month=01/day=20/        <-- Partition Key 2,3,4: Date
     │   │   └── 103000_uuid.parquet
     │
-    ├── source=batch_sync/
+    ├── ingest_method=batch_sync/
     │   ├── year=2024/month=01/day=20/
     │   │   └── full_dump_001.parquet
     │
-    └── source=history_log/
+    └── ingest_method=history_log/
         ├── year=2024/month=01/day=20/
         │   │   └── retry_log_abc.parquet
 ```
 
 **Partitioning Strategy:**
 
-- **Level 1:** `source` (webhook, batch_sync, history_log) - Quan trọng để phân loại nguồn gốc và provenance.
+- **Level 1:** `ingest_method` (webhook, batch_sync, history_log) - Phân loại theo phương thức lấy dữ liệu (Technical Source).
 - **Level 2:** `year` (YYYY)
 - **Level 3:** `month` (MM)
 - **Level 4:** `day` (DD) - Optional, tùy volume dữ liệu.
+
+**Note on Source System:**
+
+- `source_system` (vd: sapo, shopee) được quy định ngầm định bởi tên Dataset (`sapo_raw`, `shopee_raw`) để tách biệt vật lý ngay từ đầu.
 
 **Lợi ích:**
 
@@ -174,13 +178,13 @@ flowchart TB
 
 Chúng ta đã lựa chọn chiến lược **Source-First** sau khi cân nhắc kỹ lưỡng các yếu tố:
 
-| Feature               | Option 1: Source-First (Selected)                                                                                    | Option 2: Time-First (Alternative)                                                                |
-| :-------------------- | :------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
-| **Structure**         | `sapo_raw/{entity}/source=xxx/year=yyyy/...`                                                                         | `sapo_raw/{entity}/year=yyyy/source=xxx/...`                                                      |
-| **Data Ops**          | **Excellent.** Dễ dàng xóa/re-ingest toàn bộ 1 nguồn (vd: `rm -rf source=batch_sync`) mà không ảnh hưởng nguồn khác. | **Hard.** Dữ liệu nguồn nằm rải rác trong từng folder thời gian. Rủi ro cao khi cleanup thủ công. |
-| **File Management**   | **Clean.** Tách biệt nguồn sinh nhiều file nhỏ (Webhook) và nguồn sinh ít file lớn (Batch).                          | **Messy.** Trộn lẫn file nhỏ và lớn trong cùng folder tháng.                                      |
-| **Query Performance** | **Good.** DuckDB discovery nhanh. Tối ưu cho query lọc theo source.                                                  | **Good.** Tối ưu nhẹ cho query lọc theo thời gian thuần túy (Time-range scan).                    |
-| **Recommendation**    | ✅ **Chosen.** Phù hợp nhất với yêu cầu "Segregated Sources".                                                        | ❌ Không chọn vì khó vận hành.                                                                    |
+| Feature               | Option 1: Method-First (Selected)                                                                                           | Option 2: Time-First (Alternative)                                                                |
+| :-------------------- | :-------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------ |
+| **Structure**         | `sapo_raw/{entity}/ingest_method=xxx/year=yyyy/...`                                                                         | `sapo_raw/{entity}/year=yyyy/ingest_method=xxx/...`                                               |
+| **Data Ops**          | **Excellent.** Dễ dàng xóa/re-ingest toàn bộ 1 luồng (vd: `rm -rf ingest_method=batch_sync`) mà không ảnh hưởng luồng khác. | **Hard.** Dữ liệu luồng nằm rải rác trong từng folder thời gian. Rủi ro cao khi cleanup thủ công. |
+| **File Management**   | **Clean.** Tách biệt luồng sinh nhiều file nhỏ (Webhook), luồng trung bình (History Log) và luồng sinh ít file lớn (Batch). | **Messy.** Trộn lẫn file nhỏ và lớn trong cùng folder tháng.                                      |
+| **Query Performance** | **Good.** DuckDB discovery nhanh. Tối ưu cho query lọc theo method.                                                         | **Good.** Tối ưu nhẹ cho query lọc theo thời gian thuần túy (Time-range scan).                    |
+| **Recommendation**    | ✅ **Chosen.** Phù hợp nhất với yêu cầu "Segregated Ingestion Methods".                                                     | ❌ Không chọn vì khó vận hành.                                                                    |
 
 **Schema Example:**
 
@@ -188,6 +192,12 @@ Chúng ta đã lựa chọn chiến lược **Source-First** sau khi cân nhắc
 {
     "entity_id": "ord_12345",              // (Primary Key) ID thực thể duy nhất
     "entity_type": "order",                // Loại thực thể: order, customer, ...
+    "ingest_method": "webhook",            // (Partition Key) Cách lấy: webhook, batch_sync, history_log
+    "event_type": "update",                // [PROMOTED] Loại sự kiện: create, update, delete, snapshot
+    "event_timestamp": "2024-01-20T10:30:00Z", // [PROMOTED] "Business Time" của sự kiện
+    "payload_hash": "a1b2c3d4...",         // [PROMOTED] Hash của payload để deduplicate nhanh
+    "year": "2024",                        // (Partition Key)
+    "month": "01",                         // (Partition Key)
     "payload": {                           // Original Data (Full Snapshot)
         "id": 12345,
         "code": "ORD-001",
@@ -196,9 +206,8 @@ Chúng ta đã lựa chọn chiến lược **Source-First** sau khi cân nhắc
         "total": 500000,
         ...
     },
-    "sync_metadata": {                     // Metadata của quá trình Sync
-        "source": "webhook",               // Nguồn: webhook, batch_sync, history_log
-        "event_type": "update",            // Loại sự kiện: create, update, delete, snapshot
+    "sync_metadata": {                     // Audit Metadata (Chi tiết kỹ thuật)
+        "source_system": "sapo",           // Nguồn business: sapo, shopee
         "event_timestamp": "2024-01-20T10:30:00Z", // "Business Time" của sự kiện
         "processing_timestamp": "2024-01-20T10:30:05Z", // Thời điểm DLT ghi file
         "original_event_id": "evt_abc123"  // ID của Webhook/Log gốc (nếu có)
@@ -220,32 +229,21 @@ Mọi nguồn dữ liệu (Webhook, History Log, Batch Sync) đều được chu
 
 #### **1. Time Fields & Purpose (Các trường thời gian)**
 
-| Field Name                 | Origin                     | Type     | Description                                                         | Goal / Usage                                                                                                                              |
-| :------------------------- | :------------------------- | :------- | :------------------------------------------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------- |
-| **`created_on`**           | Source (Sapo)              | Business | Thời điểm thực thể được sinh ra.                                    | **Analytics:** Phân tích Cohort, tuổi thọ khách hàng/đơn hàng.                                                                            |
-| **`modified_on`**          | Source (Sapo)              | Business | Thời điểm trạng thái thay đổi lần cuối trên nguồn.                  | **Merge Logic:** Dùng để xác định "Latest State" trong thuật toán Deduplication (Hop 4).                                                  |
-| **`event_timestamp`**      | Pipeline (`sync_metadata`) | Logical  | Thời điểm sự kiện _xảy ra_ (Webhook timestamp hoặc Log `occur_at`). | **Ordering:** Sắp xếp chuỗi sự kiện lịch sử một cách chính xác (tránh out-of-order). **Cursor:** DLT dùng trường này để Incremental Load. |
-| **`processing_timestamp`** | Pipeline (`sync_metadata`) | System   | Thời điểm DLT ghi file xuống đĩa.                                   | **Audit/Debug:** Dùng để truy vết sự cố pipeline hoặc độ trễ (Latency).                                                                   |
-| **`year/month`**           | Partition                  | System   | Thời gian _ghi nhận_ dữ liệu.                                       | **Performance:** Cắt nhỏ dữ liệu (Data Pruning) giúp tăng tốc query DuckDB.                                                               |
+| Field Name                 | Origin                     | Type     | Description                                                         | Goal / Usage                                                                                                         |
+| :------------------------- | :------------------------- | :------- | :------------------------------------------------------------------ | :------------------------------------------------------------------------------------------------------------------- |
+| **`created_on`**           | Source (Sapo)              | Business | Thời điểm thực thể được sinh ra.                                    | **Analytics:** Phân tích Cohort, tuổi thọ khách hàng/đơn hàng.                                                       |
+| **`modified_on`**          | Source (Sapo)              | Business | Thời điểm trạng thái thay đổi lần cuối trên nguồn.                  | **Merge Logic:** Dùng để xác định "Latest State" trong thuật toán Deduplication (Hop 4).                             |
+| **`event_timestamp`**      | Pipeline (Promoted)        | Logical  | Thời điểm sự kiện _xảy ra_ (Webhook timestamp hoặc Log `occur_at`). | **Ordering:** Sắp xếp chuỗi sự kiện lịch sử một cách chính xác. **Cursor:** DLT dùng trường này để Incremental Load. |
+| **`processing_timestamp`** | Pipeline (`sync_metadata`) | System   | Thời điểm DLT ghi file xuống đĩa.                                   | **Audit/Debug:** Dùng để truy vết sự cố pipeline hoặc độ trễ (Latency).                                              |
+| **`year/month`**           | Partition                  | System   | Thời gian _ghi nhận_ dữ liệu.                                       | **Performance:** Cắt nhỏ dữ liệu (Data Pruning) giúp tăng tốc query DuckDB.                                          |
 
-#### **2. Scheduling & Source Synchronization (Chiến lược đồng bộ)**
+#### **2. Support Multiple Ingestion Methods**
 
-Mỗi nguồn dữ liệu có đặc tính thời gian khác nhau nhưng đều đổ về cùng một cấu trúc hợp nhất:
+Mỗi phương thức lấy data có đặc tính riêng nhưng đều đổ về cùng cấu trúc Envelope:
 
-- **Webhook (Real-time):**
-  - _Trigger:_ Sự kiện sinh ra ngay lập tức.
-  - _Time:_ `event_timestamp` ≈ `modified_on`.
-  - _Goal:_ Cung cấp độ trễ thấp nhất (< 5 phút) cho Operational App.
-
-- **History Log (Near Real-time Batch):**
-  - _Trigger:_ Poll mỗi 10-15 phút.
-  - _Time:_ `event_timestamp` = `occur_at` (Chính xác thời điểm action).
-  - _Goal:_ Lấp đầy các khoảng trống mà Webhook có thể bỏ lỡ (Reliability).
-
-- **Batch Sync (Scheduled):**
-  - _Trigger:_ Chạy định kỳ (Hàng ngày/Tuần).
-  - _Time:_ `event_timestamp` = `modified_on` (Snapshot).
-  - _Goal:_ Đảm bảo tính toàn vẹn dữ liệu (Consistency Check) và sửa sai cho quá khứ.
+- **Webhook (Real-time):** `event_timestamp` ≈ `modified_on`.
+- **History Log (Near Real-time Batch):** `event_timestamp` = Log `occur_at`.
+- **Batch Sync (Scheduled):** `event_timestamp` = `modified_on` (Snapshot).
 
 ### **HOP 4: Query & Processing Layer**
 
