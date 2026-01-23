@@ -12,15 +12,28 @@ all_assets = load_assets_from_modules([sapo_assets])
 # Job Definitions (implicit jobs from assets)
 # We define explicit jobs to attach schedules to them.
 
-sapo_batch_job = define_asset_job(name="sapo_batch_sync_job", selection=["sapo_batch_sync_asset"])
-sapo_history_job = define_asset_job(name="sapo_history_log_job", selection=["sapo_history_log_asset"])
+sapo_orders_batch_job = define_asset_job(name="sapo_orders_batch_job", selection=["sapo_orders_batch_asset"])
+sapo_customers_batch_job = define_asset_job(name="sapo_customers_batch_job", selection=["sapo_customers_batch_asset"])
+sapo_history_job = define_asset_job(
+    name="sapo_history_log_job", 
+    selection=["sapo_history_log_asset"],
+    # Prevent retries from piling up if the job takes too long or fails
+    tags={"dagster/max_retries": "0"},
+)
 sapo_webhook_job = define_asset_job(name="sapo_webhook_consumer_job", selection=["sapo_webhook_consumer_asset"])
 
 # Schedules
-# 1. Batch Sync: Daily at 2:00 AM
-batch_schedule = ScheduleDefinition(
-    job=sapo_batch_job,
-    cron_schedule="0 2 * * *",
+# 1. Orders Batch Sync: Daily at 2:00 AM
+orders_batch_schedule = ScheduleDefinition(
+    job=sapo_orders_batch_job,
+    cron_schedule="0 4 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh"
+)
+
+# 2. Customers Batch Sync: Daily at 2:00 AM (Parallel with Orders)
+customers_batch_schedule = ScheduleDefinition(
+    job=sapo_customers_batch_job,
+    cron_schedule="0 5 * * *",
     execution_timezone="Asia/Ho_Chi_Minh"
 )
 
@@ -40,5 +53,5 @@ webhook_schedule = ScheduleDefinition(
 
 defs = Definitions(
     assets=all_assets,
-    schedules=[batch_schedule, history_schedule, webhook_schedule]
+    schedules=[orders_batch_schedule, customers_batch_schedule, history_schedule, webhook_schedule]
 )

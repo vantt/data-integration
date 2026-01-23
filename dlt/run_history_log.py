@@ -36,9 +36,7 @@ def run():
     
     #pipeline.drop() # Uncomment to reset state and load everything from scratch
     
-    # Using 'replace' to force reset state and reload data.
-    # load_info = pipeline.run(source, loader_file_format="parquet")
-
+    # Using default write_disposition (append) to allow incremental loading.
     load_info = pipeline.run(source, loader_file_format="parquet")
     
     print(load_info)
