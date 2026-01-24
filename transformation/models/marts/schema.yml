@@ -15,16 +15,9 @@ models:
         tests: [unique, not_null]
 
   - name: dim_channels
-    config:
-      contract:
-        enforce: true
-    constraints:
-      - type: primary_key
-        columns: [channel_key]
     description: "Sales channel dimension."
     columns:
       - name: channel_key
-        data_type: varchar
         tests: [unique, not_null]
       - name: channel_name
         data_type: varchar
@@ -140,20 +133,11 @@ models:
                 field: date_key
 
   - name: fact_orders
-    config:
-      contract:
-        enforce: true
-    constraints:
-      - type: foreign_key
-        columns: [channel_key]
-        expression: "main.dim_channels (channel_key)"
     description: "Aggregated order fact."
     columns:
       - name: order_id
-        data_type: bigint
         tests: [unique, not_null]
       - name: customer_key
-        data_type: varchar
         tests:
           - relationships:
               arguments:

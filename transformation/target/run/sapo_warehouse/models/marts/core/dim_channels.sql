@@ -1,26 +1,7 @@
--- CUSTOM LOGIC: Directly inject CREATE TABLE logic with FKs here instead of calling generic create_table_as
-    
-        
-        
-        create table "data_integration2"."main_marts"."dim_channels__dbt_tmp"
-        
-          as (
-            
 
-WITH orders AS (
-    SELECT * FROM "data_integration2"."main_staging"."std_orders"
-)
-
-SELECT DISTINCT
-    -- Surrogate Key
-    md5(channel) as channel_key,
-    
-    channel as channel_name,
-    channel as channel_code, -- Placeholder
-    'Sales Channel' as channel_type -- Placeholder
-
-FROM orders
-WHERE channel IS NOT NULL
-          );
+      create or replace view "data_integration2"."main_marts"."dim_channels__dbt_int" as (
+        select * from read_parquet('D:\_1.FWG_PARA\1.Projects\dev\dataware_house\data-integration2\data_lake\export\marts\v_20260124_161825/dim_channels.parquet', union_by_name=False)
+        -- if relation is empty, filter by all columns having null values
         
+      );
     

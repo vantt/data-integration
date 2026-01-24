@@ -39,7 +39,9 @@ models:
 
     marts:
       +schema: marts
-      +materialized: table
+      +materialized: external
+      +options:
+        format: 'parquet'
       +tags: ["olap"]
 
 vars:

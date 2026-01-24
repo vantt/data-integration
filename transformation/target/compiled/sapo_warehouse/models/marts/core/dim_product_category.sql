@@ -1,0 +1,20 @@
+
+
+WITH items AS (
+    SELECT * FROM "data_integration2"."main_staging"."std_order_items"
+)
+
+SELECT DISTINCT
+    -- Surrogate Key
+    md5(coalesce(product_type, 'Uncategorized')) as category_key,
+    
+    -- Business Key
+    coalesce(product_type, 'Uncategorized') as category_name,
+    product_type,
+    
+    -- Hierarchy placeholders (can be enriched later)
+    cast(null as string) as parent_category_name,
+    cast(1 as int) as category_level
+
+FROM items
+WHERE product_type IS NOT NULL OR product_type IS NULL

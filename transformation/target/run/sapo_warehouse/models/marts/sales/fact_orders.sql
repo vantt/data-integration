@@ -1,11 +1,13 @@
--- CUSTOM LOGIC: Directly inject CREATE TABLE logic with FKs here instead of calling generic create_table_as
+
+  
     
-        
-        
-        create table "data_integration2"."main_marts"."fact_orders__dbt_tmp"
-        
-          as (
-            
+    
+
+    create  table
+      "data_integration2"."main_marts"."fact_orders__dbt_tmp"
+  
+    as (
+      
 
 WITH orders AS (
     SELECT * FROM "data_integration2"."main_staging"."std_orders"
@@ -57,6 +59,6 @@ SELECT
 
 FROM orders
 LEFT JOIN valid_customers vc ON md5(coalesce(cast(orders.customer_id as varchar), 'Unknown')) = vc.customer_key
-          );
-        
-    
+    );
+  
+  
