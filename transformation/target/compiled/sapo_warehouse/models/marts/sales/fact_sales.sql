@@ -16,7 +16,6 @@ SELECT
     md5(coalesce(i.product_type, 'Uncategorized')) as category_key,
     COALESCE(vc.customer_key, md5('Unknown')) as customer_key,
     md5(cast(o.location_id as string)) as branch_location_key,
-    md5(cast(o.location_id as string)) as location_key, -- Alias for backward compatibility
     md5(o.channel) as channel_key,
     md5(o.salesperson_id) as staff_key,
     md5(o.status) as status_key,

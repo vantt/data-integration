@@ -27,7 +27,6 @@ SELECT
     -- Simplification: Just take the first code if present, or NULL.
     md5(json_extract_string(json_extract_string(discount_codes, '$[0]'), '$.code')) as promotion_key,
     md5(cast(location_id as string)) as branch_location_key,
-    md5(cast(location_id as string)) as location_key, -- Alias for backward compatibility
     md5(channel) as channel_key,
     md5(salesperson_id) as staff_key,
     md5(status) as status_key,

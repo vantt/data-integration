@@ -84,25 +84,6 @@ def generate_serving_db():
         # On Linux: /data_lake resolves to Root /data_lake
         con.sql(f"CREATE OR REPLACE VIEW {table_name} AS SELECT * FROM '{portable_path}'")
         
-    # 2.1 Backward Compatibility: dim_locations -> dim_branch_location
-    # Old reports expect dim_locations with location_id, location_key
-    # New table is dim_branch_location with branch_location_id, branch_location_key
-    try:
-        # Check if dim_branch_location was created
-        result = con.sql("SELECT count(*) FROM information_schema.tables WHERE table_name = 'dim_branch_location'").fetchone()
-        if result and result[0] > 0:
-            print("  [+] Creating Backward Compatibility View: dim_locations -> dim_branch_location")
-            con.sql("""
-                CREATE OR REPLACE VIEW dim_locations AS 
-                SELECT 
-                    *,
-                    branch_location_key AS location_key,
-                    branch_location_id AS location_id
-                FROM dim_branch_location
-            """)
-    except Exception as e:
-        print(f"  [!] Failed to create compatibility view dim_locations: {e}")
-
     con.close()
     
     # 3. Cleanup
