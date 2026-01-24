@@ -1,0 +1,31 @@
+id,name,type
+1958913,Quẹt thẻ,mpos
+1958912,Thanh toán bằng điểm,point
+1958911,COD,cod
+1958910,Chuyển khoản,transfer
+1958909,Tiền mặt,cash
+3183903,Giảm trừ công nợ,installment
+3183897,ACB - 5576037 - FGO,transfer
+3077429,ACB - 5576038 - FG CARE,transfer
+3049202,Chuyển Khoản FGO  ACB 5576037,transfer
+3018776,Chuyển khoản FG Care ACB 5576038,transfer
+2969660,Sapo Web - Thanh toán qua VNPAY-QR,payment_gateway
+2952090,Trả góp Payon,online
+2952089,Payon-link,online
+2952088,Payon-QR,online
+2948221,Ví Tiki,transfer
+2947566,Ví Tiktok,transfer
+2925681,Chuyển khoản MBBank 5331353352855 Trần Thị Ngọc Bích,transfer
+2925680,Chuyển khoản MBBank 0980760088928 Trần Thị Ngọc Bích,transfer
+2925679,Chuyển khoản MBBank 2102732102 Trần Thị Ngọc Bích,transfer
+2925678,Chuyển khoản MBBank 00021031973 Trần Thị Ngọc Bích,transfer
+2925677,Chuyển khoản MBBank 0358261525 Trần Thị Ngọc Bích,transfer
+2925676,Chuyển khoản TechcomBank 19039125701013 Trần Thị Ngọc Bích,transfer
+2917184,Ví Lazada,transfer
+2917071,Chuyển khoản 333111666 Ngân hàng ACB Trần Vạn Lợi,transfer
+2839674,VIMO-POS,online
+2829371,VNPAY-QR,online
+2829206,ShopeePay,online
+2301450,Sapo Web - OnePay - Thanh toán online qua thẻ quốc tế (Visa/Master Card),payment_gateway
+2177902,Sapo Web - OnePay - Thanh toán online qua thẻ nội địa (ATM),payment_gateway
+1980088,Ví Shopee,transfer

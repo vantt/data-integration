@@ -1,0 +1,24 @@
+version: 2
+
+sources:
+  - name: sapo_raw
+    schema: main
+    # Cấu hình Meta chung cho Source này
+    # external_location: Quy định cách DuckDB đọc file. 
+    # **/*.parquet nghĩa là đọc đệ quy tất cả file parquet trong thư mục con.
+    meta:
+      external_location: "read_parquet('../data_lake/sapo_raw/{entity}/**/*.parquet')"
+    tables:
+      # Bảng 1: Orders
+      - name: orders
+        description: "Raw orders data from Parquet files"
+        # Overwrite location cụ thể cho bảng orders
+        meta:
+          external_location: "read_parquet('../data_lake/sapo_raw/order/**/*.parquet')"
+      
+      # Bảng 2: Customers
+      - name: customers
+        description: "Raw customers data from Parquet files"
+        # Overwrite location cụ thể cho bảng customers
+        meta:
+          external_location: "read_parquet('../data_lake/sapo_raw/customer/**/*.parquet')"

@@ -8,3 +8,5 @@ poc
 data_lake
 .tmp_dagster_home_*
 dagster_home/
+*.duckdb
+*.log

@@ -1,0 +1,210 @@
+version: 2
+
+models:
+  # Dimensions
+  - name: dim_customers
+    description: "Customer dimension (SCD Type 1)."
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+
+  - name: dim_products
+    description: "Product dimension derived from sales."
+    columns:
+      - name: product_key
+        tests: [unique, not_null]
+
+  - name: dim_channels
+    config:
+      contract:
+        enforce: true
+    constraints:
+      - type: primary_key
+        columns: [channel_key]
+    description: "Sales channel dimension."
+    columns:
+      - name: channel_key
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: channel_name
+        data_type: varchar
+      - name: channel_code
+        data_type: varchar
+      - name: channel_type
+        data_type: varchar
+
+  - name: dim_staff
+    description: "Salesperson/Staff dimension."
+    columns:
+      - name: staff_key
+        tests: [unique, not_null]
+
+  - name: dim_date
+    description: "Calendar date dimension."
+    columns:
+      - name: date_key
+        description: "Integer date key (YYYYMMDD)"
+        tests: [unique, not_null]
+      - name: date_actual
+        description: "Actual date value"
+
+  - name: dim_locations
+    description: "Location/Warehouse dimension."
+    columns:
+      - name: location_key
+        tests: [unique, not_null]
+
+  - name: dim_payment_methods
+    description: "Payment method dimension."
+    columns:
+      - name: payment_method_key
+        tests: [unique, not_null]
+
+  - name: dim_order_status
+    description: "Order status dimension (Static)."
+    columns:
+      - name: status_key
+        tests: [unique, not_null]
+
+  - name: dim_product_category
+    description: "Product category dimension."
+    columns:
+      - name: category_key
+        tests: [unique, not_null]
+
+  - name: dim_promotions
+    description: "Promotion dimension."
+    columns:
+      - name: promotion_key
+        tests: [unique, not_null]
+
+  - name: dim_geography
+    description: "Geography dimension."
+    columns:
+      - name: geography_key
+        tests: [unique, not_null]
+
+  # Facts
+  - name: fact_sales
+    description: "Transactional sales fact (line item grain)."
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: product_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_key
+      - name: category_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_product_category')
+                field: category_key
+      - name: staff_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_staff')
+                field: staff_key
+      - name: status_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_order_status')
+                field: status_key
+      - name: customer_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_key
+      - name: location_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_locations')
+                field: location_key
+      - name: channel_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_channels')
+                field: channel_key
+      - name: date_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+  - name: fact_orders
+    config:
+      contract:
+        enforce: true
+    constraints:
+      - type: foreign_key
+        columns: [channel_key]
+        expression: "main.dim_channels (channel_key)"
+    description: "Aggregated order fact."
+    columns:
+      - name: order_id
+        data_type: bigint
+        tests: [unique, not_null]
+      - name: customer_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_key
+      - name: geography_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+      - name: channel_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_channels')
+                field: channel_key
+      - name: promotion_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_promotions')
+                field: promotion_key
+      - name: staff_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_staff')
+                field: staff_key
+      - name: status_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_order_status')
+                field: status_key
+      - name: location_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_locations')
+                field: location_key
+      - name: date_key
+        data_type: integer
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key

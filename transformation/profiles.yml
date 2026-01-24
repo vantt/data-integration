@@ -1,0 +1,12 @@
+sapo_warehouse:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: '../data_integration2.duckdb'  # Persistent DuckDB file in root
+      extensions:
+        - parquet
+        - httpfs # if reading from S3/remote in future
+      external_root: "{{ env_var('DBT_EXPORT_PATH') }}"
+      # settings:
+        # memory_limit: '10GB'

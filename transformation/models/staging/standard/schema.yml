@@ -1,0 +1,67 @@
+version: 2
+
+models:
+  - name: std_orders
+    description: "Standardized Order entity v2.0."
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['OPEN', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'DRAFT']
+      - name: payment_status
+        tests:
+          - accepted_values:
+              values: ['PAID', 'PENDING', 'PARTIALLY_PAID', 'REFUNDED', 'VOIDED', 'UNPAID']
+      - name: fulfillment_status
+        tests:
+          - accepted_values:
+              values: ['FULFILLED', 'UNFULFILLED', 'PARTIALLY_FULFILLED', 'RETURNED', 'SHIPPING']
+
+  - name: std_order_items
+    description: "Line items v2.0"
+    columns:
+      - name: item_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests:
+          - relationships:
+              to: ref('std_orders')
+              field: order_id
+
+  - name: std_customers
+    description: "Standardized Customers."
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+
+  - name: std_fulfillments
+    description: "Standardized Fulfillments (Shipments)."
+    columns:
+      - name: fulfillment_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests:
+          - relationships:
+              to: ref('std_orders')
+              field: order_id
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['DELIVERED', 'SHIPPING', 'PACKED', 'CANCELLED', 'FAILED', 'PENDING']
+
+  - name: std_payments
+    description: "Standardized Payments (Transactions)."
+    columns:
+      - name: payment_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests:
+          - relationships:
+              to: ref('std_orders')
+              field: order_id
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED']

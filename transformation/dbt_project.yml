@@ -1,0 +1,46 @@
+name: 'sapo_warehouse'
+version: '1.0.0'
+config-version: 2
+
+profile: 'sapo_warehouse'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+
+# Dispatch configuration
+dispatch:
+  - macro_namespace: dbt
+    search_order: ['sapo_warehouse', 'dbt']
+
+target-path: "target"  # directory which will store compiled SQL files
+clean-targets:         # directories to be removed by 'dbt clean'
+  - "target"
+  - "dbt_packages"
+
+models:
+  sapo_warehouse:
+    # Config for all models
+    +materialized: view  # Default to view for lightweight transformations
+    
+    staging:
+      +schema: staging
+      +materialized: view
+      +tags: ["otp"]
+    
+    # intermediate:
+    #   +schema: intermediate
+    #   +materialized: table
+    #   +tags: ["otp"]
+
+    marts:
+      +schema: marts
+      +materialized: table
+      +tags: ["olap"]
+
+vars:
+  external_root: "D:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake/export/marts"
