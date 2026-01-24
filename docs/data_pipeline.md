@@ -12,6 +12,19 @@
 
 Hệ thống data pipeline gồm **7 hops chính** để xử lý data từ nguồn Sapo đến các database phục vụ analytics (OLAP) và operations (OLTP).
 
+### Architecture Transition (Evolution)
+
+Chúng ta đang chuyển dịch từ kiến trúc cũ (Postgres-centric) sang kiến trúc mới (Local Data Lakehouse).
+
+| Feature              | Old (Postgres-centric)          | New (Local Data Lakehouse)             |
+| :------------------- | :------------------------------ | :------------------------------------- |
+| **Ingestion**        | Node.js Consumer (Complex)      | **dlt** (Python - Simple/Robust)       |
+| **Raw Storage**      | Postgres `webhook_logs` (Heavy) | **Parquet Files** (Lightweight)        |
+| **Transform Engine** | Postgres (Slow for OLAP)        | **DuckDB** (Vectorized - Fast)         |
+| **Serving (OLAP)**   | Postgres (Shared resource)      | **DuckDB** (Serverless, View-based)    |
+| **Serving (OLTP)**   | Postgres (Shared resource)      | **Postgres** (Clean, App-only data)    |
+| **Cost**             | Medium (Always-on DB resources) | **Very Low** (Static Files, No Server) |
+
 ### Nguyên Tắc Thiết Kế
 
 - **Separation of Concerns:** Tách biệt collection, storage, processing, và serving
@@ -84,7 +97,12 @@ flowchart TB
     DBT_INT -->|Transform| DBT_OLAP
     DBT_INT -->|Transform| DBT_OLTP
 
-    DBT_OLAP -->|COPY/Export| PG_OLAP
+    DBT_INT -->|Transform| DBT_OLTP
+
+    DBT_OLAP -->|Export Parquet| PARQUET_MART[(📊 Exported Marts<br/>Parquet Files)]
+    SERVING[(DuckDB Serving<br/>Views Only)] -.->|Read| PARQUET_MART
+
+    SERVING -->|Query via BI| BI_TOOL[Metabase / BI]
     DBT_OLTP -->|COPY/Export| PG_OLTP
 
     %% Styling
@@ -97,10 +115,10 @@ flowchart TB
 
     class WH,HL,JA sourceNode
     class VWH,HLP,JAP collectNode
-    class PARQUET storageNode
-    class DUCK processNode
+    class PARQUET,PARQUET_MART storageNode
+    class DUCK,SERVING processNode
     class DBT_SRC,DBT_STG,DBT_INT,DBT_OLAP,DBT_OLTP transformNode
-    class PG_OLAP,PG_OLTP targetNode
+    class PG_OLTP,BI_TOOL targetNode
 ```
 
 ---
@@ -123,11 +141,12 @@ flowchart TB
 
 ### **HOP 2: Data Collection Layer**
 
-| Node                       | Technology         | Purpose          | Location          |
-| -------------------------- | ------------------ | ---------------- | ----------------- |
-| **2A: Webhook Handler**    | Vercel Serverless  | Receive webhooks | Cloud (free tier) |
-| **2B: History Log Poller** | Python/Node Script | Poll API logs    | Local (scheduled) |
-| **2C: JSON API Sync**      | Python/Node Script | Full sync        | Local (weekly)    |
+| Node                       | Technology    | Purpose          | Location          |
+| -------------------------- | ------------- | ---------------- | ----------------- |
+| **2A: Webhook Handler**    | Cloudflare/D1 | Receive webhooks | Cloud (free tier) |
+| **2B: History Log Poller** | Python/DLT    | Poll API logs    | Local (scheduled) |
+| **2C: JSON API Sync**      | Python/DLT    | Full sync        | Local (weekly)    |
+| **2D: Webhook Consumer**   | Python/DLT    | Poll D1 Queue    | Local (Scheduled) |
 
 **Functions:**
 
@@ -135,6 +154,18 @@ flowchart TB
 - Transform to standard schema
 - Write to Parquet files
 - Handle errors and retries
+
+#### **2D: Webhook Consumer (Cloudflare D1 + DLT)**
+
+- **Architecture**: Pull-based (Poller).
+- **Source**: Cloudflare Worker (D1 Database as Queue).
+- **Mechanism**:
+  - `dlt` pipeline (Python) running locally or on a scheduler.
+  - Periodic `GET /poll` requests to fetch batches of webhooks.
+  - `POST /ack-batch` to confirm processing and remove from D1.
+- **Benefits**:
+  - **Reliability**: No data loss if local machine is down (D1 buffers events).
+  - **Control**: Rate-limited processing (e.g., process 1000 events/min).
 
 ### **HOP 3: Raw Data Storage**
 
@@ -158,16 +189,16 @@ flowchart TB
         │   │   └── retry_log_abc.parquet
 ```
 
+**Note on Source System:**
+
+- `source_system` (vd: sapo, shopee) được quy định ngầm định bởi tên Dataset (`sapo_raw`, `shopee_raw`) để tách biệt vật lý ngay từ đầu.
+
 **Partitioning Strategy:**
 
 - **Level 1:** `ingest_method` (webhook, batch_sync, history_log) - Phân loại theo phương thức lấy dữ liệu (Technical Source).
 - **Level 2:** `year` (YYYY)
 - **Level 3:** `month` (MM)
 - **Level 4:** `day` (DD) - Optional, tùy volume dữ liệu.
-
-**Note on Source System:**
-
-- `source_system` (vd: sapo, shopee) được quy định ngầm định bởi tên Dataset (`sapo_raw`, `shopee_raw`) để tách biệt vật lý ngay từ đầu.
 
 **Lợi ích:**
 
@@ -247,40 +278,14 @@ Mỗi phương thức lấy data có đặc tính riêng nhưng đều đổ v�
 
 ### **HOP 4: Query & Processing Layer**
 
-**Technology:** DuckDB (In-Process Analytical Database)
+**Technology:** DuckDB (Persistent File: `data_integration2.duckdb`)
 
 **Capabilities:**
 
-- Query Parquet files directly (no import needed)
-- Fast analytical queries
-- SQL interface
-- ACID transactions
-- No separate server required
-- Low memory footprint
-
-**Example Queries:**
-
-```sql
--- Read all orders from specific date
-CREATE VIEW raw_orders AS
-SELECT * FROM read_parquet('/data/2024-01-20/orders/*.parquet');
-
--- Deduplicate by payload_hash
-CREATE TABLE deduplicated_orders AS
-SELECT DISTINCT ON (payload_hash) *
-FROM read_parquet('/data/*/orders/*.parquet')
-ORDER BY payload_hash, received_at DESC;
-
--- Fast aggregation
-SELECT
-    DATE_TRUNC('day', source_timestamp) as order_date,
-    COUNT(*) as order_count,
-    SUM(CAST(json_extract_string(payload, '$.total') AS DECIMAL)) as total_sales
-FROM read_parquet('/data/*/orders/*.parquet')
-WHERE entity_type = 'order'
-  AND action = 'order.created'
-GROUP BY order_date;
-```
+- **Transformation Engine:** Đóng vai trò là "Data Warehouse Compute".
+- **State Storage:** Lưu trữ `staging`, `seeds` và metadata của quá trình dbt.
+- **Processing:** Thực thi các query biến đổi data từ Raw Parquet -> Final Models.
+- **Output:** KHÔNG lưu data cuối cùng (Marts) mà Export ra file Parquet để Serving Layer sử dụng.
 
 ### **Concept: Virtual Sorted Log (Logical Hop 3.5)**
 
@@ -604,76 +609,72 @@ SELECT
 FROM {{ ref('stg_order_items') }}
 ```
 
-### **HOP 7: Target Databases**
+### **HOP 7: Target / Serving Layer**
 
-**Technology:** PostgreSQL (Dual-Purpose)
+**Strategy:** Separation of Storage and Compute (Serverless OLAP)
 
-#### **7A: PostgreSQL OLAP (Analytics & Reporting)**
+Thay vì sử dụng một Database Server (như PostgreSQL) để chứa dữ liệu OLAP, chúng ta sử dụng kiến trúc **File-based Data Warehouse** kết hợp với **DuckDB** làm query engine.
 
-**Purpose:** Data warehouse cho analytics, reporting, dashboards
+#### **7A: OLAP Serving (DuckDB + Parquet)**
 
-**Characteristics:**
+**Concept:**
 
-- Read-heavy workload
-- Complex analytical queries
-- Historical data (years)
-- Denormalized/dimensional schema
-- Optimized for aggregations
+- **Storage:** Dữ liệu đã xử lý (Marts) được dbt xuất ra thành các file **Parquet** tĩnh.
+- **Compute (Serving):** Một file DuckDB (`olap.duckdb`) dùng riêng cho Serving. Nó **TÁCH BIỆT HOÀN TOÀN** với DB xử lý (`data_integration2.duckdb`).
+- **Access:** Metabase (chạy Docker) mount folder chứa Parquet và query thông qua `olap.duckdb`.
 
-**Configuration:**
+**Folder Structure (Unified Mount Point):**
 
-```yaml
-# profiles.yml
-postgres_olap:
-  target: prod
-  outputs:
-    prod:
-      type: postgres
-      host: localhost
-      port: 5432
-      database: analytics_db
-      schema: public
-      user: analytics_user
-      password: "{{ env_var('OLAP_PASSWORD') }}"
-      threads: 4
-      keepalives_idle: 0
-```
+Để đảm bảo tính nhất quán giữa môi trường Host (Windows) và Container (Metabase), chúng ta tổ chức folder như sau:
 
-**Schema:**
+| Environment           | Mount Point        | Path to Marts                   |
+| :-------------------- | :----------------- | :------------------------------ |
+| **Host (Windows)**    | `D:\...\data_lake` | `D:\...\data_lake\export\marts` |
+| **Docker (Metabase)** | `/data_lake`       | `/data_lake/export/marts`       |
 
-```sql
--- Fact Tables
-CREATE TABLE fact_orders (
-    order_key SERIAL PRIMARY KEY,
-    customer_key INTEGER REFERENCES dim_customers(customer_key),
-    product_key INTEGER REFERENCES dim_products(product_key),
-    location_key INTEGER REFERENCES dim_locations(location_key),
-    time_key INTEGER REFERENCES dim_time(time_key),
-    order_total DECIMAL(15,2),
-    order_tax DECIMAL(15,2),
-    order_discount DECIMAL(15,2),
-    net_total DECIMAL(15,2),
-    loaded_at TIMESTAMP
-);
+**Implementation:**
 
--- Dimension Tables
-CREATE TABLE dim_customers (
-    customer_key SERIAL PRIMARY KEY,
-    customer_id VARCHAR(50),
-    customer_name VARCHAR(200),
-    customer_group VARCHAR(100),
-    valid_from DATE,
-    valid_to DATE,
-    is_current BOOLEAN
-);
+1.  **dbt (Transform & Export):**
+    - Chạy model và export kết quả ra file Parquet:
+    - `dbt run --select tag:olap` -> Writes to `data_lake/export/marts/*.parquet`
 
--- Indexes for performance
-CREATE INDEX idx_fact_orders_time ON fact_orders(time_key);
-CREATE INDEX idx_fact_orders_customer ON fact_orders(customer_key);
-CREATE INDEX idx_fact_orders_location ON fact_orders(location_key);
-```
+2.  **Serving Database Setup (`olap.duckdb`):**
+    - Đây là database đích cho Metabase kết nối.
+    - Nó không chứa bảng dữ liệu (Table), chỉ chứa **VIEW**.
+    - View trỏ đến đường dẫn **bên trong Docker**.
 
-#### **7B: PostgreSQL OLTP (Operations & Applications)**
+    ```sql
+    -- Example View Definition in olap.duckdb
+    -- Note: Path starts with /data_lake (Docker path)
+    CREATE OR REPLACE VIEW dim_customers AS
+    SELECT * FROM '/data_lake/export/marts/dim_customers/*.parquet';
+
+    CREATE OR REPLACE VIEW fact_orders AS
+    SELECT * FROM '/data_lake/export/marts/fact_orders/*.parquet';
+    ```
+
+**Ưu điểm:**
+
+- **Zero Locking:** dbt ghi file Parquet mới, Metabase đọc file Parquet cũ (hoặc file mới khi refresh). Không bao giờ bị lỗi `Database Locked`.
+- **High Performance:** DuckDB đọc Parquet trực tiếp (Zero-copy).
+- **Cost:** $0. Không tốn resource cho DB Server chờ.
+
+**Configuration for User:**
+
+- **Metabase Docker Compose:**
+
+  ```yaml
+  volumes:
+    - ./data_lake:/data_lake # Map Host folder to Docker Path
+  ```
+
+- **Metabase Database Connection:**
+  - **Database Type:** DuckDB
+  - **Path:** `/data_lake/serving/olap.duckdb`
+
+#### **7B: PostgreSQL OLTP (Operations Only)**
+
+_(Giữ nguyên cho các ứng dụng vận hành cần Transaction)_
 
 **Purpose:** Operational database cho internal apps, notifications, workflows
 
@@ -744,6 +745,46 @@ CREATE INDEX idx_order_items_order ON order_items(order_id);
 ---
 
 ## 🔄 Processing Workflows
+
+### **Lifecycle Sequence Diagram (DLT Focus)**
+
+```mermaid
+sequenceDiagram
+    participant D1 as Cloudflare D1
+    participant DLT as dlt (Local)
+    participant FS as FileSystem (Parquet)
+    participant Duck as dbt + DuckDB
+    participant PG as Postgres (OLTP)
+
+    Note over D1, FS: 1. Ingestion Phase
+    DLT->>D1: GET /poll?limit=1000
+    D1-->>DLT: Return JSON Batch
+    DLT->>FS: Write /raw/part-001.parquet
+    alt Write Success
+        DLT->>D1: POST /ack-batch (IDs)
+        D1->>D1: Delete/Update Status
+    else Write Fail
+        Note right of DLT: Do nothing (Msg reappears after timeout)
+    end
+
+    Note over FS, Duck: 2. Transformation Phase
+    Duck->>FS: Read /raw/*.parquet
+    Duck->>Duck: Calculate & Join
+    Duck->>FS: Write /inter/*.parquet
+    Duck->>FS: Write /marts/*.parquet
+
+    Note over FS, PG: 3. Serving Phase (Split)
+    rect rgb(200, 255, 200)
+    Note right of Duck: OLAP Path (Direct Read)
+    Duck->>FS: Query Marts (BI Tools)
+    end
+
+    rect rgb(200, 200, 255)
+    Note right of DLT: OLTP Path (Sync)
+    DLT->>FS: Read /marts/*.parquet
+    DLT->>PG: Insert/Update Tables
+    end
+```
 
 ### **Workflow 1: Real-time Path (Webhooks → OLTP)**
 

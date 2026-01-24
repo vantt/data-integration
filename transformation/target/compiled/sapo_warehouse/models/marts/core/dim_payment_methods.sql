@@ -1,12 +1,13 @@
 
 
-WITH payments AS (
-    SELECT * FROM "data_integration2"."main_staging"."std_payments"
+WITH payment_methods AS (
+    SELECT * FROM "data_integration2"."main"."ref_payment_methods"
 )
 
 SELECT DISTINCT
-    md5(payment_method_id) as payment_method_key,
-    payment_method_id,
-    payment_method_type
-FROM payments
-WHERE payment_method_id IS NOT NULL
+    md5(cast(id as string)) as payment_method_key,
+    cast(id as integer) as payment_method_id,
+    name as payment_method_name,
+    type as payment_method_type
+FROM payment_methods
+WHERE id IS NOT NULL

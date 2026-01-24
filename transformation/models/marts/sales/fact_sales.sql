@@ -17,7 +17,8 @@ SELECT
     md5(i.product_id || '-' || i.variant_id) as product_key,
     md5(coalesce(i.product_type, 'Uncategorized')) as category_key,
     COALESCE(vc.customer_key, md5('Unknown')) as customer_key,
-    md5(o.location_id) as location_key,
+    md5(cast(o.location_id as string)) as branch_location_key,
+    md5(cast(o.location_id as string)) as location_key, -- Alias for backward compatibility
     md5(o.channel) as channel_key,
     md5(o.salesperson_id) as staff_key,
     md5(o.status) as status_key,
@@ -31,6 +32,17 @@ SELECT
     i.quantity,
     i.total_price as revenue,
     i.weight_grams,
+    
+    -- Addresses
+    o.shipping_province,
+    o.shipping_district,
+    o.shipping_ward,
+    o.shipping_address1,
+    
+    o.billing_province,
+    o.billing_district,
+    o.billing_ward,
+    o.billing_address1,
     
     -- Pro-rated amounts (Simple logic for now)
     -- Ideally we'd allocate order-level discount to items here

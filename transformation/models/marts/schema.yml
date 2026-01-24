@@ -41,10 +41,10 @@ models:
       - name: date_actual
         description: "Actual date value"
 
-  - name: dim_locations
+  - name: dim_branch_location
     description: "Location/Warehouse dimension."
     columns:
-      - name: location_key
+      - name: branch_location_key
         tests: [unique, not_null]
 
   - name: dim_payment_methods
@@ -113,12 +113,12 @@ models:
               arguments:
                 to: ref('dim_customers')
                 field: customer_key
-      - name: location_key
+      - name: branch_location_key
         tests:
           - relationships:
               arguments:
-                to: ref('dim_locations')
-                field: location_key
+                to: ref('dim_branch_location')
+                field: branch_location_key
       - name: channel_key
         tests:
           - relationships:
@@ -178,13 +178,13 @@ models:
               arguments:
                 to: ref('dim_order_status')
                 field: status_key
-      - name: location_key
+      - name: branch_location_key
         data_type: varchar
         tests:
           - relationships:
               arguments:
-                to: ref('dim_locations')
-                field: location_key
+                to: ref('dim_branch_location')
+                field: branch_location_key
       - name: date_key
         data_type: integer
         tests:

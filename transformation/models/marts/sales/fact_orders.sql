@@ -1,6 +1,7 @@
 {{ config(
     tags=['mart', 'fact'],
-    materialized='table'
+    materialized='external',
+    options={'format': 'parquet'}
 ) }}
 
 WITH orders AS (
@@ -29,7 +30,8 @@ SELECT
     -- or just bridge it later. For now, we leave NULL or specific handling if needed. 
     -- Simplification: Just take the first code if present, or NULL.
     md5(json_extract_string(json_extract_string(discount_codes, '$[0]'), '$.code')) as promotion_key,
-    md5(location_id) as location_key,
+    md5(cast(location_id as string)) as branch_location_key,
+    md5(cast(location_id as string)) as location_key, -- Alias for backward compatibility
     md5(channel) as channel_key,
     md5(salesperson_id) as staff_key,
     md5(status) as status_key,

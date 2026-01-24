@@ -64,7 +64,7 @@ else {
 # 5. Run dbt Build
 Write-Host "[Pipeline] Running dbt build using $DbtCmd..."
 Set-Location "$ProjectRoot\transformation"
-& $DbtCmd build --select tag:mart
+& $DbtCmd build --select +tag:mart
 if ($LASTEXITCODE -ne 0) {
     Write-Error "dbt build failed!"
 }

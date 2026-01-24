@@ -11,7 +11,10 @@ unnested_promos AS (
         order_id,
         unnest(from_json(discount_codes, '["JSON"]')) as promo_json
     FROM orders
-    WHERE discount_codes IS NOT NULL
+    WHERE discount_codes IS NOT NULL 
+      AND discount_codes != '' 
+      AND discount_codes != '[]'
+      AND discount_codes != 'null'
 )
 
 SELECT DISTINCT

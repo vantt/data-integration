@@ -41,6 +41,20 @@
     - **Tech:** TypeScript, Node.js.
     - **Path:** `/webhook_consumer/supabase_consumer/`
 
+### 5. Transformation (`data-integration2/transformation`)
+
+- **Purpose:** Clean, enrich, and model data (Hops 4-6) using ELT pattern.
+- **Tech:** dbt (Data Build Tool), DuckDB.
+- **Context:** SQL models (`.sql`) and YAML configurations.
+- **Dependencies:** `dbt-duckdb`.
+
+### 4. Orchestration (`data-integration2/orchestration`)
+
+- **Purpose:** Manage schedules, sensors, and pipeline coordination.
+- **Tech:** Dagster.
+- **Context:** Python-based assets, jobs, and sensors.
+- **Dependencies:** `dagster`, `dagster-duckdb` (managed via root python environment or venv).
+
 ---
 
 ## AI Agent Rules for Multi-Project Repos
@@ -53,6 +67,8 @@
     - **DLT** files ONLY in `/dlt/`
     - **Receiver** files ONLY in `/webhook_receiver/`
     - **Consumer** files ONLY in `/webhook_consumer/`
+    - **Transformation** files ONLY in `/transformation/`
+    - **Orchestration** files ONLY in `/orchestration/`
     - **NEVER** mix dependencies (e.g., do not verify `package.json` if working in a Python `dlt` folder).
 
 **When User Context is Ambiguous:**
@@ -64,3 +80,19 @@
 
 - **NEVER** move files between sub-projects without explicit instruction.
 - **When searching:** Scope grep/search to the relevant sub-project directory to avoid false positives from sibling projects.
+
+## Bug đang cần xử lý
+
+Item 15132336653 [2026-01-19T23:26:35Z] -> account_authentication:1280476
+🔎 Fetching entity: /admin/account_authentications/1280476.json
+❌ Failed to fetch /admin/account_authentications/1280476.json
+⚠️ Skipping account_authentication 1280476: No entity data found.
+
+Item 15119346778 [2026-01-19T07:04:17Z] -> customer_address:841526439
+🔎 Fetching entity: /admin/customer_addresss/841526439.json
+❌ Failed to fetch /admin/customer_addresss/841526439.json
+⚠️ Skipping customer_address 841526439: No entity data found.
+
+Item 15117015670 [2026-01-19T05:02:32Z] -> tenant_role:2346928
+🔎 Fetching entity: /admin/tenant_roles/2346928.json
+❌ Failed to fetch /admin/tenant_roles/2346928.json

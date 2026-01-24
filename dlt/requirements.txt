@@ -3,3 +3,7 @@ playwright
 requests
 tenacity
 duckdb
+dagster
+dagster-webserver
+dagster-dbt
+dbt-duckdb

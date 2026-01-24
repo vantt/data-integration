@@ -23,6 +23,15 @@ DIR_PATTERN = re.compile(r'^v_(\d{8}_\d{6})$')
 
 def generate_serving_db():
     print(f"Generating Serving DB at: {SERVING_DB_PATH}")
+    
+    # 0. Reset DB (Remove stale views)
+    if os.path.exists(SERVING_DB_PATH):
+        try:
+            os.remove(SERVING_DB_PATH)
+            print("  [x] Removed existing serving database to clear stale views.")
+        except Exception as e:
+            print(f"  [!] Could not remove existing DB: {e}")
+
     os.makedirs(SERVING_DIR, exist_ok=True)
     
     # 1. Scan/Find Versions
@@ -54,10 +63,13 @@ def generate_serving_db():
     # 2. Update Views from Latest Directory
     parquet_files = glob.glob(os.path.join(latest_path, "*.parquet"))
     
-    print("Updating Views...")
+    print(f"Updating Views from {latest_path}...")
     
-    for f in parquet_files:
-        filename = os.path.basename(f)
+    parquet_files = glob.glob(os.path.join(latest_path, "*.parquet"))
+    print(f"  Found {len(parquet_files)} parquet files.")
+    for p in parquet_files:
+        print(f"    - {os.path.basename(p)}")
+        filename = os.path.basename(p)
         table_name = os.path.splitext(filename)[0]
         
         # Construct PORTABLE Path
@@ -72,6 +84,25 @@ def generate_serving_db():
         # On Linux: /data_lake resolves to Root /data_lake
         con.sql(f"CREATE OR REPLACE VIEW {table_name} AS SELECT * FROM '{portable_path}'")
         
+    # 2.1 Backward Compatibility: dim_locations -> dim_branch_location
+    # Old reports expect dim_locations with location_id, location_key
+    # New table is dim_branch_location with branch_location_id, branch_location_key
+    try:
+        # Check if dim_branch_location was created
+        result = con.sql("SELECT count(*) FROM information_schema.tables WHERE table_name = 'dim_branch_location'").fetchone()
+        if result and result[0] > 0:
+            print("  [+] Creating Backward Compatibility View: dim_locations -> dim_branch_location")
+            con.sql("""
+                CREATE OR REPLACE VIEW dim_locations AS 
+                SELECT 
+                    *,
+                    branch_location_key AS location_key,
+                    branch_location_id AS location_id
+                FROM dim_branch_location
+            """)
+    except Exception as e:
+        print(f"  [!] Failed to create compatibility view dim_locations: {e}")
+
     con.close()
     
     # 3. Cleanup

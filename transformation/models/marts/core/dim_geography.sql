@@ -2,18 +2,30 @@
     tags=['mart', 'dim']
 ) }}
 
-WITH orders AS (
-    SELECT * FROM {{ ref('std_orders') }}
+WITH orders_locs AS (
+    SELECT DISTINCT
+        shipping_province as province,
+        shipping_district as district,
+        shipping_ward as ward,
+        shipping_country as country
+    FROM {{ ref('std_orders') }}
+    WHERE shipping_province IS NOT NULL AND shipping_province != ''
 ),
 
-distinct_locs AS (
+customers_locs AS (
     SELECT DISTINCT
-        json_extract_string(shipping_address, '$.province') as province,
-        json_extract_string(shipping_address, '$.district') as district,
-        json_extract_string(shipping_address, '$.ward') as ward,
-        json_extract_string(shipping_address, '$.country') as country
-    FROM orders
-    WHERE shipping_address IS NOT NULL
+        province,
+        district,
+        ward,
+        country
+    FROM {{ ref('dim_customers') }}
+    WHERE province IS NOT NULL AND province != '' AND province != 'Unknown'
+),
+
+unioned_locs AS (
+    SELECT * FROM orders_locs
+    UNION
+    SELECT * FROM customers_locs
 )
 
 SELECT DISTINCT
@@ -30,12 +42,10 @@ SELECT DISTINCT
     ward,
     coalesce(country, 'Vietnam') as country -- Defaulting
 
-FROM distinct_locs
+FROM unioned_locs
 WHERE 
-    (province IS NOT NULL AND province != '') 
-    AND (district IS NOT NULL AND district != '')
     -- Prevent collision with the hardcoded 'Unknown' row below
-    AND NOT (
+    NOT (
         coalesce(province,'') = 'Unknown' AND 
         coalesce(district,'') = 'Unknown' AND 
         coalesce(ward,'') = 'Unknown'

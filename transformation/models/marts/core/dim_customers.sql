@@ -18,6 +18,14 @@ SELECT
     email,
     phone,
     
+    -- Address
+    city,
+    province,
+    district,
+    ward,
+    address1,
+    country,
+    
     -- We can categorize customers based on spending here if needed
     CASE 
         WHEN total_spent > 10000000 THEN 'VIP'
@@ -41,6 +49,12 @@ SELECT
     'Unknown' as full_name,
     'Unknown' as email,
     'Unknown' as phone,
+    'Unknown' as city,
+    'Unknown' as province,
+    'Unknown' as district,
+    'Unknown' as ward,
+    'Unknown' as address1,
+    'Unknown' as country,
     'Unknown' as customer_segment,
     0 as lifetime_value,
     0 as total_orders_count,

@@ -17,6 +17,14 @@ SELECT
     full_name,
     email,
     phone_number as phone,
+
+    -- Address
+    city,
+    province,
+    district,
+    ward,
+    address1,
+    country,
     
     -- Metrics
     coalesce(total_spent, 0) as total_spent,

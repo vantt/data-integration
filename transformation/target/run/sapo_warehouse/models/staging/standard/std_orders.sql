@@ -72,6 +72,28 @@ SELECT
     -- DuckDB maintains JSON type, useful for downstream parsing if needed.
     billing_address_json as billing_address,
     shipping_address_json as shipping_address,
+
+    shipping_province,
+    shipping_district,
+    shipping_ward,
+    shipping_address1,
+    shipping_address2,
+    shipping_city,
+    shipping_zip,
+    shipping_country,
+    shipping_phone,
+    shipping_name,
+
+    billing_province,
+    billing_district,
+    billing_ward,
+    billing_address1,
+    billing_address2,
+    billing_city,
+    billing_zip,
+    billing_company,
+    billing_phone,
+    billing_tax_code,
     discount_codes_json as discount_codes,
     
     tags,

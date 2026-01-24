@@ -32,6 +32,15 @@ SELECT
     json_extract_string(payload, '$.birthday') as birthday,
     json_extract_string(payload, '$.gender') as gender,
     
+    -- Address (Taking the default array item if available, or just addresses[0])
+    -- Assuming addresses is an array of objects
+    json_extract_string(payload, '$.addresses[0].city') as city,
+    json_extract_string(payload, '$.addresses[0].province') as province,
+    json_extract_string(payload, '$.addresses[0].district') as district,
+    json_extract_string(payload, '$.addresses[0].ward') as ward,
+    json_extract_string(payload, '$.addresses[0].address1') as address1,
+    json_extract_string(payload, '$.addresses[0].country') as country,
+    
     -- Financials
     try_cast(json_extract_string(payload, '$.total_expense') as DECIMAL(18,2)) as total_spent,
     try_cast(json_extract_string(payload, '$.order_count') as INTEGER) as orders_count, -- Check if this field exists or needs calculation
