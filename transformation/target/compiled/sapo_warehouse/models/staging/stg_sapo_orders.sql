@@ -93,7 +93,15 @@ json_parsed AS (
         -- FKs
         json_extract_string(payload, '$.customer_id') as customer_id,
         json_extract_string(payload, '$.assignee_id') as assignee_id,
+        json_extract_string(payload, '$.assignee.name') as assignee_name,
+        json_extract_string(payload, '$.assignee.full_name') as assignee_full_name,
+        json_extract_string(payload, '$.assignee.email') as assignee_email,
+        
         json_extract_string(payload, '$.account_id') as account_id, -- Salesperson
+        json_extract_string(payload, '$.account.name') as account_name,
+        json_extract_string(payload, '$.account.full_name') as account_full_name,
+        json_extract_string(payload, '$.account.email') as account_email,
+        json_extract_string(payload, '$.user_name') as user_name,
         json_extract_string(payload, '$.expected_payment_method_id') as payment_method_id,
         json_extract_string(payload, '$.source_id') as source_id,
         json_extract_string(payload, '$.location_id') as location_id,

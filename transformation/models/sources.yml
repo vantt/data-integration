@@ -22,3 +22,9 @@ sources:
         # Overwrite location cụ thể cho bảng customers
         meta:
           external_location: "read_parquet('../data_lake/sapo_raw/customer/**/*.parquet')"
+
+      # Bảng 3: Accounts (Staff)
+      - name: account
+        description: "Raw accounts/staff data from Parquet files"
+        meta:
+          external_location: "read_parquet('../data_lake/sapo_raw/account/**/*.parquet')"

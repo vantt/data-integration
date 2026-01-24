@@ -26,7 +26,11 @@ SELECT
     -- Foreign Keys
     customer_id,
     location_id,
-    account_id as salesperson_id,
+    customer_id,
+    location_id,
+    coalesce(assignee_id, account_id) as salesperson_id,
+    coalesce(assignee_full_name, assignee_name, account_full_name, account_name, user_name) as salesperson_name,
+    coalesce(assignee_email, account_email) as salesperson_email,
     
     -- Timestamps - Lifecycle
     try_cast(created_on as TIMESTAMP) as created_at,

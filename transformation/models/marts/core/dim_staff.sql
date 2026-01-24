@@ -2,19 +2,29 @@
     tags=['mart', 'dim']
 ) }}
 
-WITH orders AS (
-    SELECT * FROM {{ ref('std_orders') }}
+WITH staff_source AS (
+    SELECT * FROM {{ ref('stg_sapo_accounts') }}
 )
 
 SELECT DISTINCT
     -- Surrogate Key
-    md5(salesperson_id) as staff_key,
+    md5(account_id) as staff_key,
     
-    salesperson_id as staff_id,
+    account_id as staff_id,
     
-    -- Placeholder for name until we have a proper HR source
-    'Staff ' || salesperson_id as full_name,
-    cast(null as string) as email
+    -- Name and Email from Accounts API
+    staff_name as full_name,
+    staff_email as email,
+    staff_phone as phone_number
 
-FROM orders
-WHERE salesperson_id IS NOT NULL
+FROM staff_source
+WHERE account_id IS NOT NULL
+
+UNION ALL
+
+SELECT
+    md5('Unknown') as staff_key,
+    '-1' as staff_id,
+    'Unknown Staff' as full_name,
+    'unknown@example.com' as email,
+    NULL as phone_number

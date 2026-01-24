@@ -13,6 +13,7 @@ all_assets = load_assets_from_modules([sapo_assets, dbt])
 # Job Definitions
 sapo_orders_batch_job = define_asset_job(name="sapo_orders_batch_job", selection=["sapo_orders_batch_asset"])
 sapo_customers_batch_job = define_asset_job(name="sapo_customers_batch_job", selection=["sapo_customers_batch_asset"])
+sapo_accounts_batch_job = define_asset_job(name="sapo_accounts_batch_job", selection=["sapo_accounts_batch_asset"])
 sapo_history_job = define_asset_job(
     name="sapo_history_log_job", 
     selection=["sapo_history_log_asset"],
@@ -48,6 +49,12 @@ customers_batch_schedule = ScheduleDefinition(
     execution_timezone="Asia/Ho_Chi_Minh"
 )
 
+accounts_batch_schedule = ScheduleDefinition(
+    job=sapo_accounts_batch_job,
+    cron_schedule="0 6 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh"
+)
+
 history_schedule = ScheduleDefinition(
     job=sapo_history_job,
     cron_schedule="*/10 * * * *",
@@ -79,6 +86,7 @@ defs = Definitions(
     schedules=[
         orders_batch_schedule, 
         customers_batch_schedule, 
+        accounts_batch_schedule, 
         history_schedule, 
         webhook_schedule, 
         dbt_otp_schedule, 

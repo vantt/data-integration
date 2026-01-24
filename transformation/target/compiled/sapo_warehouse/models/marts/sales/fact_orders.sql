@@ -43,7 +43,7 @@ SELECT
     md5(json_extract_string(json_extract_string(discount_codes, '$[0]'), '$.code')) as promotion_key,
     md5(cast(location_id as string)) as branch_location_key,
     md5(channel) as channel_key,
-    md5(salesperson_id) as staff_key,
+    COALESCE(ds.staff_key, md5('Unknown')) as staff_key,
     md5(status) as status_key,
     coalesce(cast(strftime(created_at, '%Y%m%d') as integer), 19000101) as date_key,
     
@@ -65,3 +65,4 @@ SELECT
 
 FROM orders
 LEFT JOIN valid_customers vc ON md5(coalesce(cast(orders.customer_id as varchar), 'Unknown')) = vc.customer_key
+LEFT JOIN "data_integration2"."main_marts"."dim_staff" ds ON md5(orders.salesperson_id) = ds.staff_key

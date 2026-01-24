@@ -15,6 +15,7 @@ try:
     import run_history_log
     import run_webhook_consumer
     import run_customers_batch
+    import run_accounts_batch
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
 
@@ -54,6 +55,26 @@ def sapo_customers_batch_asset(context):
     context.log.info(f"Customers Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Customers Batch Sync Completed", 
+        metadata={
+            "load_info": str(load_info)
+        }
+    )
+
+@asset(group_name="sapo_ingestion")
+def sapo_accounts_batch_asset(context):
+    """
+    Daily batch sync for Sapo Accounts (Staff).
+    """
+    context.log.info("Starting Sapo Accounts Batch Sync...")
+    cwd = os.getcwd()
+    try:
+        os.chdir(DLT_DIR)
+        load_info = run_accounts_batch.run()
+    finally:
+        os.chdir(cwd)
+    context.log.info(f"Accounts Batch Sync Finished. Info: {load_info}")
+    return Output(
+        value="Accounts Batch Sync Completed", 
         metadata={
             "load_info": str(load_info)
         }

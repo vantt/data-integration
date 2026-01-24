@@ -10,3 +10,8 @@ data_lake
 dagster_home/
 *.duckdb
 *.log
+**/venv/
+**/__pycache__/
+**/target/
+**/dbt_packages/
+.DS_Store

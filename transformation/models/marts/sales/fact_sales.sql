@@ -19,7 +19,7 @@ SELECT
     COALESCE(vc.customer_key, md5('Unknown')) as customer_key,
     md5(cast(o.location_id as string)) as branch_location_key,
     md5(o.channel) as channel_key,
-    md5(o.salesperson_id) as staff_key,
+    COALESCE(ds.staff_key, md5('Unknown')) as staff_key,
     md5(o.status) as status_key,
     coalesce(cast(strftime(o.created_at, '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD
     
@@ -63,3 +63,4 @@ SELECT
 FROM items i
 JOIN orders o ON i.order_id = o.order_id
 LEFT JOIN valid_customers vc ON md5(o.customer_id) = vc.customer_key
+LEFT JOIN {{ ref('dim_staff') }} ds ON md5(o.salesperson_id) = ds.staff_key
