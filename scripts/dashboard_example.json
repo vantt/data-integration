@@ -1,0 +1,55 @@
+{
+  "dashboard": {
+    "name": "Revenue Overview",
+    "description": "Generated via API",
+    "collection_id": null
+  },
+  "cards": [
+    {
+      "name": "Total Revenue",
+      "display": "scalar",
+      "dataset_query": {
+        "database": null,
+        "type": "native",
+        "native": {
+          "query": "SELECT sum(amount) FROM orders WHERE status = 'completed'"
+        }
+      },
+      "visualization_settings": {
+        "column_settings": {
+            "[\"name\",\"sum\"]": {
+                "number_style": "currency",
+                "currency": "VND"
+            }
+        }
+      },
+      "position": {
+        "size_x": 4,
+        "size_y": 4,
+        "col": 0,
+        "row": 0
+      }
+    },
+    {
+      "name": "Orders by Date",
+      "display": "line",
+      "dataset_query": {
+        "database": null,
+        "type": "native",
+        "native": {
+          "query": "SELECT date_trunc('day', created_at) as day, count(*) FROM orders GROUP BY 1 ORDER BY 1"
+        }
+      },
+       "visualization_settings": {
+         "graph.dimensions": [ "day" ],
+         "graph.metrics": [ "count" ]
+       },
+       "position": {
+        "size_x": 8,
+        "size_y": 6,
+        "col": 4,
+        "row": 0
+      }
+    }
+  ]
+}
