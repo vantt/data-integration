@@ -35,7 +35,7 @@ SELECT
     -- Address (Taking the default array item if available, or just addresses[0])
     -- Assuming addresses is an array of objects
     json_extract_string(payload, '$.addresses[0].city') as city,
-    json_extract_string(payload, '$.addresses[0].province') as province,
+    coalesce(json_extract_string(payload, '$.addresses[0].province'), json_extract_string(payload, '$.addresses[0].city')) as province,
     json_extract_string(payload, '$.addresses[0].district') as district,
     json_extract_string(payload, '$.addresses[0].ward') as ward,
     json_extract_string(payload, '$.addresses[0].address1') as address1,

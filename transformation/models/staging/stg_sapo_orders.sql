@@ -60,7 +60,7 @@ json_parsed AS (
         json_extract_string(payload, '$.shipping_address') as shipping_address_json,
 
         -- Extract Detailed Shipping Address
-        json_extract_string(payload, '$.shipping_address.province') as shipping_province,
+        coalesce(json_extract_string(payload, '$.shipping_address.province'), json_extract_string(payload, '$.shipping_address.city')) as shipping_province,
         json_extract_string(payload, '$.shipping_address.district') as shipping_district,
         json_extract_string(payload, '$.shipping_address.ward') as shipping_ward,
         json_extract_string(payload, '$.shipping_address.address1') as shipping_address1,
@@ -72,13 +72,14 @@ json_parsed AS (
         json_extract_string(payload, '$.shipping_address.name') as shipping_name,
 
         -- Extract Detailed Billing Address
-        json_extract_string(payload, '$.billing_address.province') as billing_province,
+        coalesce(json_extract_string(payload, '$.billing_address.province'), json_extract_string(payload, '$.billing_address.city')) as billing_province,
         json_extract_string(payload, '$.billing_address.district') as billing_district,
         json_extract_string(payload, '$.billing_address.ward') as billing_ward,
         json_extract_string(payload, '$.billing_address.address1') as billing_address1,
         json_extract_string(payload, '$.billing_address.address2') as billing_address2,
         json_extract_string(payload, '$.billing_address.city') as billing_city,
         json_extract_string(payload, '$.billing_address.zip') as billing_zip,
+        json_extract_string(payload, '$.billing_address.country') as billing_country,
         json_extract_string(payload, '$.billing_address.company') as billing_company,
         json_extract_string(payload, '$.billing_address.phone') as billing_phone,
         json_extract_string(payload, '$.billing_address.tax_code') as billing_tax_code,

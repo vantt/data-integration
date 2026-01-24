@@ -1,0 +1,1 @@
+select order_code, shipping_province from "data_integration2"."main_staging"."stg_sapo_orders" where order_code = 'SON00136'

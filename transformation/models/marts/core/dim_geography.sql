@@ -2,7 +2,7 @@
     tags=['mart', 'dim']
 ) }}
 
-WITH orders_locs AS (
+WITH orders_shipping_locs AS (
     SELECT DISTINCT
         shipping_province as province,
         shipping_district as district,
@@ -10,6 +10,16 @@ WITH orders_locs AS (
         shipping_country as country
     FROM {{ ref('std_orders') }}
     WHERE shipping_province IS NOT NULL AND shipping_province != ''
+),
+
+orders_billing_locs AS (
+    SELECT DISTINCT
+        billing_province as province,
+        billing_district as district,
+        billing_ward as ward,
+        billing_country as country
+    FROM {{ ref('std_orders') }}
+    WHERE billing_province IS NOT NULL AND billing_province != ''
 ),
 
 customers_locs AS (
@@ -23,7 +33,9 @@ customers_locs AS (
 ),
 
 unioned_locs AS (
-    SELECT * FROM orders_locs
+    SELECT * FROM orders_shipping_locs
+    UNION
+    SELECT * FROM orders_billing_locs
     UNION
     SELECT * FROM customers_locs
 )
@@ -33,7 +45,8 @@ SELECT DISTINCT
     md5(
         coalesce(province,'') || '-' || 
         coalesce(district,'') || '-' || 
-        coalesce(ward,'')
+        coalesce(ward,'') || '-' ||
+        coalesce(country, 'Vietnam')
     ) as geography_key,
     
     -- Hierarchy

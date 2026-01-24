@@ -31,15 +31,27 @@ SELECT
     i.weight_grams,
     
     -- Addresses
-    o.shipping_province,
-    o.shipping_district,
-    o.shipping_ward,
-    o.shipping_address1,
-    
-    o.billing_province,
-    o.billing_district,
-    o.billing_ward,
-    o.billing_address1,
+    md5(
+        CASE 
+            WHEN o.shipping_province IS NULL THEN 'Unknown'
+            ELSE
+                coalesce(o.shipping_province,'') || '-' || 
+                coalesce(o.shipping_district,'') || '-' || 
+                coalesce(o.shipping_ward,'') || '-' ||
+                coalesce(o.shipping_country, 'Vietnam')
+        END
+    ) as shipping_geography_key,
+
+    md5(
+        CASE 
+            WHEN o.billing_province IS NULL THEN 'Unknown'
+            ELSE
+                coalesce(o.billing_province,'') || '-' || 
+                coalesce(o.billing_district,'') || '-' || 
+                coalesce(o.billing_ward,'') || '-' ||
+                coalesce(o.billing_country, 'Vietnam')
+        END
+    ) as billing_geography_key,
     
     -- Pro-rated amounts (Simple logic for now)
     -- Ideally we'd allocate order-level discount to items here

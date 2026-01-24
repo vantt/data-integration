@@ -18,14 +18,29 @@ SELECT
     COALESCE(vc.customer_key, md5('Unknown')) as customer_key,
     md5(
         CASE 
-            WHEN shipping_address IS NULL OR json_extract_string(shipping_address, '$.province') IS NULL 
-            THEN 'Unknown'
+            WHEN shipping_province IS NULL THEN 'Unknown'
             ELSE
-                coalesce(json_extract_string(shipping_address, '$.province'),'') || '-' || 
-                coalesce(json_extract_string(shipping_address, '$.district'),'') || '-' || 
-                coalesce(json_extract_string(shipping_address, '$.ward'),'')
+                coalesce(shipping_province,'') || '-' || 
+                coalesce(shipping_district,'') || '-' || 
+                coalesce(shipping_ward,'') || '-' ||
+                coalesce(shipping_country, 'Vietnam')
         END
-    ) as geography_key,
+    ) as shipping_geography_key,
+
+    md5(
+        CASE 
+            WHEN billing_province IS NULL THEN 'Unknown'
+            ELSE
+                coalesce(billing_province,'') || '-' || 
+                coalesce(billing_district,'') || '-' || 
+                coalesce(billing_ward,'') || '-' ||
+                coalesce(billing_country, 'Vietnam')
+        END
+    ) as billing_geography_key,
+
+    -- Full Address Strings
+    coalesce(shipping_address1, '') || ', ' || coalesce(shipping_ward, '') || ', ' || coalesce(shipping_district, '') || ', ' || coalesce(shipping_province, '') || ', ' || coalesce(shipping_country, 'Vietnam') as shipping_address,
+    coalesce(billing_address1, '') || ', ' || coalesce(billing_ward, '') || ', ' || coalesce(billing_district, '') || ', ' || coalesce(billing_province, '') || ', ' || coalesce(billing_country, 'Vietnam') as billing_address,
     -- Note: Orders can have multiple promotions. To keep 1:1, we might pick the primary one 
     -- or just bridge it later. For now, we leave NULL or specific handling if needed. 
     -- Simplification: Just take the first code if present, or NULL.

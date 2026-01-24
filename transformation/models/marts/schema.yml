@@ -131,6 +131,18 @@ models:
               arguments:
                 to: ref('dim_date')
                 field: date_key
+      - name: shipping_geography_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+      - name: billing_geography_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
 
   - name: fact_orders
     description: "Aggregated order fact."
@@ -143,7 +155,14 @@ models:
               arguments:
                 to: ref('dim_customers')
                 field: customer_key
-      - name: geography_key
+      - name: shipping_geography_key
+        data_type: varchar
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
+      - name: billing_geography_key
         data_type: varchar
         tests:
           - relationships:

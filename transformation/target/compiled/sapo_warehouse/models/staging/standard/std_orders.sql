@@ -88,6 +88,7 @@ SELECT
     billing_address2,
     billing_city,
     billing_zip,
+    billing_country,
     billing_company,
     billing_phone,
     billing_tax_code,
