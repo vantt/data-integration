@@ -54,6 +54,8 @@ SELECT
     json_extract_string(item_json, '$.grams') as weight,
     json_extract_string(item_json, '$.vendor') as vendor,
     json_extract_string(item_json, '$.product_type') as product_type,
+    json_extract_string(item_json, '$.barcode') as barcode,
+    json_extract_string(item_json, '$.unit') as unit,
     
     json_extract_string(item_json, '$.product_type') as product_type,
     

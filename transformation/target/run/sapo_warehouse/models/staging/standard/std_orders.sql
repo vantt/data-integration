@@ -59,11 +59,28 @@ SELECT
     END as payment_status,
     
     CASE 
-        WHEN fulfillment_status = 'fulfilled' THEN 'FULFILLED'
-        WHEN fulfillment_status = 'partial' THEN 'PARTIALLY_FULFILLED'
+        -- 1. Order Lifecycle (Top Priority)
+        WHEN order_status = 'cancelled' THEN 'CANCELLED'
+        
+        -- 2. Sapo Specific Logistics Status
         WHEN fulfillment_status = 'restocked' THEN 'RETURNED'
-        WHEN fulfillment_status = 'shipping' THEN 'SHIPPING'
-        ELSE 'UNFULFILLED'
+        WHEN fulfillment_status = 'partial' THEN 'PARTIALLY_FULFILLED'
+        
+        -- 3. Legacy Composite Logic (Money + Logistics)
+        -- Completed = Paid + Packed + Received
+        WHEN financial_status = 'paid' AND packed_status = 'packed' AND received_status = 'received' THEN 'COMPLETED'
+        
+        -- Shipped (Paid) = Paid + Packed
+        WHEN financial_status = 'paid' AND packed_status = 'packed' THEN 'SHIPPED_PAID'
+        
+        -- Shipped (Unpaid/COD) = Packed (but not paid)
+        WHEN packed_status = 'packed' THEN 'SHIPPED_COD'
+        
+        -- Paid (Processing) = Paid (but not packed)
+        WHEN financial_status = 'paid' THEN 'PAID_PROCESSING'
+        
+        -- 4. Fallback
+        ELSE 'IN_PROGRESS'
     END as fulfillment_status,
     
     -- Financials

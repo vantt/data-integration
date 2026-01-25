@@ -17,7 +17,7 @@ models:
       - name: fulfillment_status
         tests:
           - accepted_values:
-              values: ['FULFILLED', 'UNFULFILLED', 'PARTIALLY_FULFILLED', 'RETURNED', 'SHIPPING']
+              values: ['FULFILLED', 'UNFULFILLED', 'PARTIALLY_FULFILLED', 'RETURNED', 'SHIPPING', 'CANCELLED', 'COMPLETED', 'SHIPPED_PAID', 'SHIPPED_COD', 'PAID_PROCESSING', 'IN_PROGRESS']
 
   - name: std_order_items
     description: "Line items v2.0"

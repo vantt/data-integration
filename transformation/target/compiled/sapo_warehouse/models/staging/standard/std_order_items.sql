@@ -17,7 +17,8 @@ SELECT
     
     -- Product Info
     sku,
-    -- barcode, -- Add if available in staging later
+    barcode,
+    unit,
     product_name,
     variant_name,
     
