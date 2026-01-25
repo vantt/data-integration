@@ -1,5 +1,6 @@
 import sys
 import os
+import shutil
 
 # Add project root to sys.path to allow absolute imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -95,7 +96,10 @@ nightly_schedule = ScheduleDefinition(
 # ------------------------------------------------------------------------------
 
 # Resolve DBT Executable
-dbt_exe = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dlt", "venv", "Scripts", "dbt.exe")
+# Use shutil.which to find dbt on path, fallback to venv path if not found
+dbt_exe = shutil.which("dbt")
+if not dbt_exe:
+    dbt_exe = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dlt", "venv", "Scripts", "dbt.exe")
 
 defs = Definitions(
     assets=all_assets,

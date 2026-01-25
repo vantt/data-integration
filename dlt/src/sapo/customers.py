@@ -86,7 +86,6 @@ def sapo_customers_source(
         "entity_id": {"data_type": "text"},
         "entity_type": {"data_type": "text"},
         "payload": {"data_type": "json"},
-        "payload": {"data_type": "json"},
         "sync_metadata": {"data_type": "json"},
         "ingest_method": {"data_type": "text", "partition": True},
         "event_type": {"data_type": "text"},
@@ -151,7 +150,7 @@ def customers(
         params = {
             "page": page_num,
             "limit": page_size,
-            "sort": "created_on,desc",
+            "sort": "modified_on,desc",
             "condition_type": "must"
         }
 
@@ -186,15 +185,15 @@ def customers(
             new_envelopes = []
 
             for raw_customer in customers_data:
-                customer_created_on = raw_customer.get("created_on")
+                customer_modified_on = raw_customer.get("modified_on")
 
-                if not customer_created_on:
+                if not customer_modified_on:
                     continue
 
-                if last_value is None or customer_created_on > last_value:
+                if last_value is None or customer_modified_on > last_value:
                     try:
                         # 1. Parse Timestamp
-                        dt = datetime.fromisoformat(customer_created_on.replace("Z", "+00:00"))
+                        dt = datetime.fromisoformat(customer_modified_on.replace("Z", "+00:00"))
                         
                         # 2. Construct Envelope
                         entity_id = raw_customer.get("id")
@@ -208,14 +207,14 @@ def customers(
                             "entity_type": "customer",
                             "ingest_method": "batch_sync",
                             "event_type": "snapshot",
-                            "event_timestamp": customer_created_on,
+                            "event_timestamp": customer_modified_on,
                             "payload_hash": payload_hash,
                             "year": str(dt.year),
                             "month": str(dt.month),
                             "payload": raw_customer,
                             "sync_metadata": {
                                 "source_system": "sapo",
-                                "event_timestamp": customer_created_on,
+                                "event_timestamp": customer_modified_on,
                                 "processing_timestamp": datetime.utcnow().isoformat(),
                                 "original_event_id": None
                             }
@@ -224,7 +223,7 @@ def customers(
                         new_envelopes.append(envelope)
                         consecutive_old_items = 0
                     except ValueError:
-                        print(f"⚠️ Could not parse created_on: {customer_created_on}")
+                        print(f"⚠️ Could not parse modified_on: {customer_modified_on}")
                         continue
                 else:
                     consecutive_old_items += 1

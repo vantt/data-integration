@@ -31,8 +31,8 @@ SELECT
     END as billing_geography_key,
 
     -- Full Address Strings
-    coalesce(shipping_address1, '') || ', ' || coalesce(shipping_ward, '') || ', ' || coalesce(shipping_district, '') || ', ' || coalesce(shipping_province, '') || ', ' || coalesce(shipping_country, 'Vietnam') as shipping_address,
-    coalesce(billing_address1, '') || ', ' || coalesce(billing_ward, '') || ', ' || coalesce(billing_district, '') || ', ' || coalesce(billing_province, '') || ', ' || coalesce(billing_country, 'Vietnam') as billing_address,
+    concat_ws(', ', nullif(shipping_address1, ''), nullif(shipping_ward, ''), nullif(shipping_district, ''), nullif(shipping_province, ''), coalesce(nullif(shipping_country, ''), 'Vietnam')) as shipping_address,
+    concat_ws(', ', nullif(billing_address1, ''), nullif(billing_ward, ''), nullif(billing_district, ''), nullif(billing_province, ''), coalesce(nullif(billing_country, ''), 'Vietnam')) as billing_address,
     -- Note: Orders can have multiple promotions. To keep 1:1, we might pick the primary one 
     -- or just bridge it later. For now, we leave NULL or specific handling if needed. 
     -- Simplification: Just take the first code if present, or NULL.

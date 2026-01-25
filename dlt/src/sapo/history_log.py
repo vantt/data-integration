@@ -85,8 +85,6 @@ def sapo_history_log_source(
         "entity_type": {"data_type": "text"},
         "payload": {"data_type": "json"},
         "sync_metadata": {"data_type": "json"},
-        "payload": {"data_type": "json"},
-        "sync_metadata": {"data_type": "json"},
         "ingest_method": {"data_type": "text", "partition": True},
         "event_type": {"data_type": "text"},
         "event_timestamp": {"data_type": "timestamp"},

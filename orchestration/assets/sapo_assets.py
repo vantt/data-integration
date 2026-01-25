@@ -26,13 +26,13 @@ def sapo_orders_batch_asset(context):
     Captures 'modified_on' updates.
     """
     context.log.info("Starting Sapo Orders Batch Sync...")
-    cwd = os.getcwd()
-    try:
-        os.chdir(DLT_DIR)
+    # cwd = os.getcwd()
+    # try:
+    #     os.chdir(DLT_DIR)
         # Pass empty list to ignore sys.argv (Dagster args)
-        load_info = run_orders_batch.run(argv=[])
-    finally:
-        os.chdir(cwd)
+    load_info = run_orders_batch.run(argv=[])
+    # finally:
+    #     os.chdir(cwd)
     context.log.info(f"Orders Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Orders Batch Sync Completed", 
@@ -47,12 +47,12 @@ def sapo_customers_batch_asset(context):
     Daily batch sync for Sapo Customers.
     """
     context.log.info("Starting Sapo Customers Batch Sync...")
-    cwd = os.getcwd()
-    try:
-        os.chdir(DLT_DIR)
-        load_info = run_customers_batch.run(argv=[])
-    finally:
-        os.chdir(cwd)
+    # cwd = os.getcwd()
+    # try:
+    #     os.chdir(DLT_DIR)
+    load_info = run_customers_batch.run(argv=[])
+    # finally:
+    #     os.chdir(cwd)
     context.log.info(f"Customers Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Customers Batch Sync Completed", 
@@ -67,12 +67,12 @@ def sapo_accounts_batch_asset(context):
     Daily batch sync for Sapo Accounts (Staff).
     """
     context.log.info("Starting Sapo Accounts Batch Sync...")
-    cwd = os.getcwd()
-    try:
-        os.chdir(DLT_DIR)
-        load_info = run_accounts_batch.run(argv=[])
-    finally:
-        os.chdir(cwd)
+    # cwd = os.getcwd()
+    # try:
+    #     os.chdir(DLT_DIR)
+    load_info = run_accounts_batch.run(argv=[])
+    # finally:
+    #     os.chdir(cwd)
     context.log.info(f"Accounts Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Accounts Batch Sync Completed", 
@@ -88,12 +88,12 @@ def sapo_history_log_asset(context):
     Runs every 10 minutes to capture events.
     """
     context.log.info("Starting History Log Poll...")
-    cwd = os.getcwd()
-    try:
-        os.chdir(DLT_DIR)
-        load_info = run_history_log.run(argv=[])
-    finally:
-        os.chdir(cwd)
+    # cwd = os.getcwd()
+    # try:
+    #     os.chdir(DLT_DIR)
+    load_info = run_history_log.run(argv=[])
+    # finally:
+    #     os.chdir(cwd)
     context.log.info(f"History Log Finished. Info: {load_info}")
     return Output(
         value="History Log Completed",
@@ -109,13 +109,13 @@ def sapo_webhook_consumer_asset(context):
     Runs every minute.
     """
     context.log.info("Starting Webhook Consumer One-Off Run...")
-    cwd = os.getcwd()
-    try:
-        os.chdir(DLT_DIR)
+    # cwd = os.getcwd()
+    # try:
+    #     os.chdir(DLT_DIR)
         # Use --once flag
-        load_info = run_webhook_consumer.run(argv=['--once'])
-    finally:
-        os.chdir(cwd)
+    load_info = run_webhook_consumer.run(argv=['--once'])
+    # finally:
+    #     os.chdir(cwd)
     context.log.info(f"Webhook Poll Finished. Info: {load_info}")
     return Output(
         value="Webhook Poll Completed",

@@ -76,13 +76,25 @@ def run_pipeline(
         pass
 
     # 6. Run Pipeline
-    try:
-        # Instantiate source
-        source = source_factory(**source_args)
-        
-        info = pipeline.run(source, loader_file_format=loader_file_format)
-        print(info)
-        return info
-    except Exception as e:
-        print(f"[Pipeline Runner] Error running pipeline: {e}")
-        sys.exit(1)
+    # 6. Run Pipeline
+    import time
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            # Instantiate source
+            source = source_factory(**source_args)
+            
+            info = pipeline.run(source, loader_file_format=loader_file_format)
+            print(info)
+            return info
+        except Exception as e:
+            print(f"[Pipeline Runner] Error running pipeline (Attempt {attempt+1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                wait_time = 2 ** attempt
+                print(f"Waiting {wait_time}s before retrying...")
+                time.sleep(wait_time)
+            else:
+                print("[Pipeline Runner] Max retries reached. Pipeline failed.")
+                # We raise the error instead of sys.exit so Dagster can handle it as a failure 
+                # or upper layers can catch it.
+                raise e

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"D:\\\\_1.FWG_PARA\\\\1.Projects\\\\dev\\\\dataware_house\\\\data-integration2\" status --short)"
+    ]
+  }
+}
