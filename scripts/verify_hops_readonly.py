@@ -1,10 +1,10 @@
 import duckdb
 import os
 
-db_path = 'data_integration2.duckdb'
+db_path = 'data_lake/sapo_warehouse.duckdb'
 if not os.path.exists(db_path):
     # Try parent directory
-    db_path = '../data_integration2.duckdb'
+    db_path = '../data_lake/sapo_warehouse.duckdb'
 
 if not os.path.exists(db_path):
     print(f"❌ Error: Database file not found at '{db_path}' or in current dir.")

@@ -3,7 +3,7 @@ import pandas as pd
 
 # Connect to the persistent DuckDB file
 # Note: Ensure no other process (like dbt or dagster) is currently writing to it to avoid lock issues
-con = duckdb.connect('data_integration2.duckdb', read_only=True)
+con = duckdb.connect('data_lake/sapo_warehouse.duckdb', read_only=True)
 
 print("=== 1. Checking Tables in Marts Schema ===")
 tables = con.sql("SHOW TABLES").fetchall()

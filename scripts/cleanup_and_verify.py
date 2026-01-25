@@ -1,6 +1,6 @@
 import duckdb
 
-con = duckdb.connect('data_integration2.duckdb')
+con = duckdb.connect('data_lake/sapo_warehouse.duckdb')
 
 print("=== 1. Current Tables in 'main_staging' & 'main_marts' ===")
 tables = con.sql("""

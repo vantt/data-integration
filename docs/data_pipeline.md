@@ -278,7 +278,7 @@ Mỗi phương thức lấy data có đặc tính riêng nhưng đều đổ v�
 
 ### **HOP 4: Query & Processing Layer**
 
-**Technology:** DuckDB (Persistent File: `data_integration2.duckdb`)
+**Technology:** DuckDB (Persistent File: `data_lake/sapo_warehouse.duckdb`)
 
 **Capabilities:**
 
@@ -286,6 +286,22 @@ Mỗi phương thức lấy data có đặc tính riêng nhưng đều đổ v�
 - **State Storage:** Lưu trữ `staging`, `seeds` và metadata của quá trình dbt.
 - **Processing:** Thực thi các query biến đổi data từ Raw Parquet -> Final Models.
 - **Output:** KHÔNG lưu data cuối cùng (Marts) mà Export ra file Parquet để Serving Layer sử dụng.
+
+### **Stateless Architecture (Compute vs Storage)**
+
+Đây là điểm cốt lõi của kiến trúc. Hãy hình dung `sapo_warehouse.duckdb` như **CPU (Bộ não)**, còn `data_lake` là **HDD (Kho chứa)**.
+
+1.  **Staging Layer (Logic ảo - Views):**
+    - dbt được cấu hình `materialized: view`.
+    - DuckDB **KHÔNG** sao chép dữ liệu từ Raw Parquet vào file database.
+    - Nó chỉ lưu trữ **câu lệnh SQL** (Metadata).
+    - _Lợi ích:_ Không tốn dung lượng lưu trữ trùng lặp, dữ liệu luôn tươi mới (real-time read).
+
+2.  **Marts Layer (External Output):**
+    - dbt được cấu hình `materialized: external` (format `parquet`).
+    - Sau khi tính toán (Join/Agg), DuckDB **KHÔNG** lưu kết quả vào trong file database của nó.
+    - Nó ghi kết quả ra các file Parquet mới tại `data_lake/export/marts`.
+    - _Lợi ích:_ File `sapo_warehouse.duckdb` luôn nhẹ (chỉ chứa metadata), tránh bị phình to (bloat), và tránh lỗi lock file khi nhiều bên cùng truy cập.
 
 ### **Concept: Virtual Sorted Log (Logical Hop 3.5)**
 

@@ -3,7 +3,7 @@ sapo_warehouse:
   outputs:
     dev:
       type: duckdb
-      path: '../data_integration2.duckdb'  # Persistent DuckDB file in root
+      path: '../data_lake/sapo_warehouse.duckdb'  # Persistent DuckDB file in data_lake
       extensions:
         - parquet
         - httpfs # if reading from S3/remote in future
