@@ -13,7 +13,7 @@ WITH customers AS (
 
 SELECT
     -- Surrogate Key (using md5 for stability)
-    md5(customer_id) as customer_key,
+    {{ dbt_utils.generate_surrogate_key(['customer_id']) }} as customer_key,
     
     -- Natural Keys
     customer_id,
@@ -49,7 +49,7 @@ FROM customers
 UNION ALL
 
 SELECT
-    md5('Unknown') as customer_key,
+    {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as customer_key,
     'Unknown' as customer_id,
     'Unknown' as full_name,
     'Unknown' as email,

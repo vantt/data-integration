@@ -19,7 +19,7 @@ try:
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
 
-@asset(group_name="sapo_ingestion")
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
 def sapo_orders_batch_asset(context):
     """
     Daily batch sync for Sapo Orders.
@@ -41,7 +41,7 @@ def sapo_orders_batch_asset(context):
         }
     )
 
-@asset(group_name="sapo_ingestion")
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
 def sapo_customers_batch_asset(context):
     """
     Daily batch sync for Sapo Customers.
@@ -61,7 +61,7 @@ def sapo_customers_batch_asset(context):
         }
     )
 
-@asset(group_name="sapo_ingestion")
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
 def sapo_accounts_batch_asset(context):
     """
     Daily batch sync for Sapo Accounts (Staff).
@@ -81,7 +81,7 @@ def sapo_accounts_batch_asset(context):
         }
     )
 
-@asset(group_name="sapo_ingestion")
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
 def sapo_history_log_asset(context):
     """
     Incremental poll of Sapo History Logs.
@@ -102,7 +102,7 @@ def sapo_history_log_asset(context):
         }
     )
 
-@asset(group_name="sapo_ingestion")
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
 def sapo_webhook_consumer_asset(context):
     """
     High-frequency poll of Cloudflare D1 Webhooks.

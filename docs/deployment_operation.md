@@ -155,11 +155,15 @@ Toàn bộ quy trình được điều phối tự động bởi **Dagster**.
 Hệ thống mặc định chạy tự động. Người vận hành giám sát qua **Dagster UI**.
 
 - **Truy cập**: `http://localhost:3000` (hoặc IP server triển khai).
+- **Cách chạy**:
+  ```powershell
+  # Tại thư mục gốc project
+  ./run_dagster.ps1
+  ```
 - **Các Job Chính**:
-  - `sapo_history_log_job` (10 phút/lần): Kéo log lịch sử thay đổi.
-  - `sapo_webhook_consumer_job` (1 phút/lần): Xử lý webhook realtime.
-  - `sapo_orders_batch_job`, `sapo_customers_batch_job` (Hàng ngày - 4:00/5:00 AM): Đồng bộ lại toàn bộ dữ liệu để đảm bảo chính xác.
-  - `sapo_dbt_olap_job` (Hàng giờ): Chạy biến đổi DBT và update Serving Layer.
+  - `sapo_realtime_sync_job` (1 phút/lần): Ingestion Webhook + Transformation (Staging). Đảm bảo đơn mới lên báo cáo ngay lập tức.
+  - `sapo_incremental_sync_job` (10 phút/lần): Ingestion History Log + Transformation (Staging). Bắt các thay đổi bị miss bởi webhook.
+  - `sapo_nightly_reconciliation_job` (Hàng ngày - 4:00 AM): Ingestion Full Batch (Orders/Customers/Accounts) + Full Transformation (All Layers). Đồng bộ lại toàn bộ dữ liệu chuẩn.
 
 ### Kiểm tra trạng thái
 

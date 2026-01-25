@@ -8,7 +8,7 @@ WITH order_items AS (
     SELECT * FROM {{ ref('std_order_items') }}
     {% if is_incremental() %}
     -- Only process items extracted since the last run
-    WHERE cast(extracted_at as TIMESTAMP) > (SELECT MAX(last_seen_at) FROM {{ this }})
+    WHERE cast(extracted_at as TIMESTAMP) > (SELECT MAX(cast(last_seen_at as TIMESTAMP)) FROM {{ this }})
     {% endif %}
 ),
 
@@ -29,7 +29,7 @@ ranked_products AS (
 
 SELECT
     -- Surrogate Key
-    md5(product_id || '-' || coalesce(variant_id, '')) as product_key,
+    {{ dbt_utils.generate_surrogate_key(["product_id || '-' || coalesce(variant_id, '')"]) }} as product_key,
     
     -- Natural Keys
     product_id,

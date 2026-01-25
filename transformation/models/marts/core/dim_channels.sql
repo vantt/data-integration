@@ -8,7 +8,7 @@ WITH orders AS (
 
 SELECT DISTINCT
     -- Surrogate Key
-    md5(channel) as channel_key,
+    {{ dbt_utils.generate_surrogate_key(['channel']) }} as channel_key,
     
     channel as channel_name,
     channel as channel_code, -- Placeholder
@@ -20,7 +20,7 @@ WHERE channel IS NOT NULL
 UNION ALL
 
 SELECT
-    md5('Unknown') as channel_key,
+    {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as channel_key,
     'Unknown' as channel_name,
     'Unknown' as channel_code,
     'Unknown' as channel_type

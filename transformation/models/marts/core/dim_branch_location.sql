@@ -8,7 +8,7 @@ WITH locations AS (
 
 SELECT DISTINCT
     -- Surrogate Key
-    md5(cast(id as string)) as branch_location_key,
+    {{ dbt_utils.generate_surrogate_key(['cast(id as string)']) }} as branch_location_key,
     
     cast(id as integer) as branch_location_id,
     name as branch_location_name,

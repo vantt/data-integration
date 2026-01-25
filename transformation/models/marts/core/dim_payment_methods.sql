@@ -7,7 +7,7 @@ WITH payment_methods AS (
 )
 
 SELECT DISTINCT
-    md5(cast(id as string)) as payment_method_key,
+    {{ dbt_utils.generate_surrogate_key(['cast(id as string)']) }} as payment_method_key,
     cast(id as integer) as payment_method_id,
     name as payment_method_name,
     type as payment_method_type

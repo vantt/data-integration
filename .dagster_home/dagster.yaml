@@ -1,1 +1,9 @@
-# Empty configuration file to use default local behavior and silence warnings.
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 5
+    tag_concurrency_limits:
+      - key: "concurrency_group"
+        value: "dbt_rw"
+        limit: 1

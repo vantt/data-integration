@@ -59,12 +59,7 @@ unioned_locs AS (
 
 SELECT DISTINCT
     -- Surrogate Key
-    md5(
-        coalesce(province,'') || '-' || 
-        coalesce(district,'') || '-' || 
-        coalesce(ward,'') || '-' ||
-        coalesce(country, 'Vietnam')
-    ) as geography_key,
+    {{ dbt_utils.generate_surrogate_key(["coalesce(province,'')", "coalesce(district,'')", "coalesce(ward,'')", "coalesce(country, 'Vietnam')"]) }} as geography_key,
     
     -- Hierarchy
     province,
@@ -88,7 +83,7 @@ GROUP BY 1, 2, 3, 4, 5
 UNION ALL
 
 SELECT
-    md5('Unknown') as geography_key,
+    {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as geography_key,
     'Unknown' as province,
     'Unknown' as district,
     'Unknown' as ward,

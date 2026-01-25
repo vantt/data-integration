@@ -4,6 +4,7 @@ sapo_warehouse:
     dev:
       type: duckdb
       path: '../data_lake/sapo_warehouse.duckdb'  # Persistent DuckDB file in data_lake
+      threads: 1
       extensions:
         - parquet
         - httpfs # if reading from S3/remote in future

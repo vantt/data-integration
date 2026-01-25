@@ -19,7 +19,7 @@ unnested_promos AS (
 
 SELECT DISTINCT
     -- Surrogate Key
-    md5(json_extract_string(promo_json, '$.code')) as promotion_key,
+    {{ dbt_utils.generate_surrogate_key(["json_extract_string(promo_json, '$.code')"]) }} as promotion_key,
     
     -- Attributes
     json_extract_string(promo_json, '$.code') as promotion_code,

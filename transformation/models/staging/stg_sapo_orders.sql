@@ -85,7 +85,6 @@ json_parsed AS (
         json_extract_string(payload, '$.billing_address.company') as billing_company,
         json_extract_string(payload, '$.billing_address.phone') as billing_phone,
         json_extract_string(payload, '$.billing_address.tax_code') as billing_tax_code,
-        json_extract_string(payload, '$.fulfillment_status') as fulfillment_status,
         json_extract_string(payload, '$.note') as note,
         json_extract_string(payload, '$.tags') as tags,
         json_extract_string(payload, '$.discount_codes') as discount_codes_json,
