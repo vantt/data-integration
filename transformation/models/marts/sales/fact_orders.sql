@@ -1,11 +1,15 @@
 {{ config(
     tags=['mart', 'fact'],
-    materialized='external',
+    materialized='incremental',
+    unique_key='order_id',
     options={'format': 'parquet'}
 ) }}
 
 WITH orders AS (
     SELECT * FROM {{ ref('std_orders') }}
+    {% if is_incremental() %}
+    WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
+    {% endif %}
 ),
 
 valid_customers AS (
@@ -65,7 +69,8 @@ SELECT
     -- timestamps difference in hours
     date_diff('hour', created_at, completed_at) as time_to_complete_hours,
     
-    created_at as order_timestamp
+    created_at as order_timestamp,
+    updated_at
 
 FROM orders
 LEFT JOIN valid_customers vc ON md5(coalesce(cast(orders.customer_id as varchar), 'Unknown')) = vc.customer_key

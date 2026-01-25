@@ -81,6 +81,89 @@
 - **NEVER** move files between sub-projects without explicit instruction.
 - **When searching:** Scope grep/search to the relevant sub-project directory to avoid false positives from sibling projects.
 
+---
+
+# AI Agent Operation Protocol (machine-readable context)
+
+## System Identity
+
+**System Name**: Data Integration Pipeline v2
+**Context**: ETL pipeline syncing Sapo retail data to DuckDB Lakehouse.
+**OS**: Windows
+**Shell**: PowerShell
+
+## Architecture Map
+
+- **Root**: `d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2`
+- **Component: Ingestion (DLT)**
+  - Path: `./dlt`
+  - Interpreter: `./dlt/venv/Scripts/python.exe`
+  - Entry Points:
+    - `run_orders_batch.py`: Batch sync for orders.
+    - `run_customers_batch.py`: Batch sync for customers.
+    - `run_accounts_batch.py`: Batch sync for accounts.
+    - `run_history_log.py`: Batch sync for history log for all kind of entities.
+    - `run_webhook_consumer.py`: Webhook processor (Args: `--once`, `--loop`) for all kind of entities.
+- **Component: Transformation (DBT)**
+  - Path: `./transformation`
+  - Wrapper Script: `./transformation/scripts/run_dbt.py`
+  - Execution Command: `python transformation/scripts/run_dbt.py [args]`
+- **Component: Serving (Provisioning)**
+  - Path: `./scripts/provisioning`
+  - Generator: `generate_serving_db.py`
+- **Orchestrator**: Dagster (`./orchestration`)
+
+## Operation Interface
+
+### 1. Ingestion Actions
+
+To run ingestion tasks, ALWAYS use the venv python.
+Pattern: `{venv_python} dlt/{script_name} [args]`
+
+**Verification Output**: Look for `LoadInfo` object printed to stdout.
+
+### 2. Verification Protocol (Self-Test)
+
+When asked to "verify system health", execute the following sequence:
+
+1.  **Check Read-Only Data Hops**:
+
+    ```powershell
+    python scripts/testing/verify_hops_readonly.py
+    ```
+
+    _Expectation_: Output should show row counts > 0 for `stg_sapo_orders` and `fact_orders`.
+
+2.  **Dry-Run DBT**:
+
+    ```powershell
+    python transformation/scripts/run_dbt.py --select +tag:mart --target dev
+    ```
+
+    _Expectation_: Exit code 0.
+
+3.  **Check Dagster Validity**:
+    ```powershell
+    dagster definitions validate
+    ```
+    _Expectation_: "Definitions validated" message.
+
+## Troubleshooting Logic
+
+- **Issue**: `ModuleNotFoundError`
+  - **Fix**: Ensure you are using `dlt/venv/Scripts/python.exe`, NOT system python.
+- **Issue**: `dbt not found`
+  - **Fix**: The wrapper `run_dbt.py` handles this. Do not run `dbt` directly. Use the wrapper.
+- **Issue**: Locked Database
+  - **Fix**: The serving script usually handles this, but if persistent, suggest user restart Metabase container.
+
+## Important Constraints
+
+- **Windows Paths**: Always use backslashes `\` or `os.path.join` compatibility.
+- **Environment API**: Credentials are loaded from `.dlt/secrets.toml` or OS Environment Variables. Do not hardcode secrets.
+
+---
+
 ## Bug đang cần xử lý
 
 Item 15132336653 [2026-01-19T23:26:35Z] -> account_authentication:1280476

@@ -287,21 +287,20 @@ Mỗi phương thức lấy data có đặc tính riêng nhưng đều đổ v�
 - **Processing:** Thực thi các query biến đổi data từ Raw Parquet -> Final Models.
 - **Output:** KHÔNG lưu data cuối cùng (Marts) mà Export ra file Parquet để Serving Layer sử dụng.
 
-### **Stateless Architecture (Compute vs Storage)**
+### **Hybrid Architecture (Stateless Staging + Stateful Marts)**
 
-Đây là điểm cốt lõi của kiến trúc. Hãy hình dung `sapo_warehouse.duckdb` như **CPU (Bộ não)**, còn `data_lake` là **HDD (Kho chứa)**.
+Chúng ta chuyển dịch từ "Stateless" sang **"Hybrid"** để cân bằng giữa Performance và Storage:
 
-1.  **Staging Layer (Logic ảo - Views):**
-    - dbt được cấu hình `materialized: view`.
-    - DuckDB **KHÔNG** sao chép dữ liệu từ Raw Parquet vào file database.
-    - Nó chỉ lưu trữ **câu lệnh SQL** (Metadata).
-    - _Lợi ích:_ Không tốn dung lượng lưu trữ trùng lặp, dữ liệu luôn tươi mới (real-time read).
+1.  **Staging Layer (Stateless - Views):**
+    - `materialized: view`.
+    - DuckDB **KHÔNG** sao chép dữ liệu raw.
+    - Giữ nguyên lợi ích: Zero storage duplication, always fresh.
 
-2.  **Marts Layer (External Output):**
-    - dbt được cấu hình `materialized: external` (format `parquet`).
-    - Sau khi tính toán (Join/Agg), DuckDB **KHÔNG** lưu kết quả vào trong file database của nó.
-    - Nó ghi kết quả ra các file Parquet mới tại `data_lake/export/marts`.
-    - _Lợi ích:_ File `sapo_warehouse.duckdb` luôn nhẹ (chỉ chứa metadata), tránh bị phình to (bloat), và tránh lỗi lock file khi nhiều bên cùng truy cập.
+2.  **Marts Layer (Stateful - Incremental Tables):**
+    - `materialized: incremental`.
+    - **Change:** DuckDB **LƯU TRỮ** bảng kết quả (`fact_orders`, `dim_customers`) bên trong file `sapo_warehouse.duckdb`.
+    - **Lý do:** Để thực hiện logic **Incremental Merge** (so sánh cũ/mới) hiệu quả, DuckDB cần truy cập nhanh vào state hiện tại (Table) thay vì quét hàng nghìn file Parquet mỗi lần chạy.
+    - **Trade-off:** File `.duckdb` sẽ tăng dung lượng, nhưng đổi lại Tốc độ xử lý (Run time) giảm từ N phút xuống vài giây.
 
 ### **Concept: Virtual Sorted Log (Logical Hop 3.5)**
 
@@ -404,7 +403,7 @@ WHERE entity_type = 'order'
 
 ### **HOP 6: Data Transformation**
 
-**Technology:** dbt with DuckDB adapter
+**Technology:** dbt with DuckDB adapter (Incremental Strategy)
 
 **Transformation Layers:**
 

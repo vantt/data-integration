@@ -29,7 +29,8 @@ def sapo_orders_batch_asset(context):
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_orders_batch.run()
+        # Pass empty list to ignore sys.argv (Dagster args)
+        load_info = run_orders_batch.run(argv=[])
     finally:
         os.chdir(cwd)
     context.log.info(f"Orders Batch Sync Finished. Info: {load_info}")
@@ -49,7 +50,7 @@ def sapo_customers_batch_asset(context):
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_customers_batch.run()
+        load_info = run_customers_batch.run(argv=[])
     finally:
         os.chdir(cwd)
     context.log.info(f"Customers Batch Sync Finished. Info: {load_info}")
@@ -69,7 +70,7 @@ def sapo_accounts_batch_asset(context):
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_accounts_batch.run()
+        load_info = run_accounts_batch.run(argv=[])
     finally:
         os.chdir(cwd)
     context.log.info(f"Accounts Batch Sync Finished. Info: {load_info}")
@@ -90,7 +91,7 @@ def sapo_history_log_asset(context):
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_history_log.run()
+        load_info = run_history_log.run(argv=[])
     finally:
         os.chdir(cwd)
     context.log.info(f"History Log Finished. Info: {load_info}")
@@ -111,7 +112,8 @@ def sapo_webhook_consumer_asset(context):
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_webhook_consumer.run_once()
+        # Use --once flag
+        load_info = run_webhook_consumer.run(argv=['--once'])
     finally:
         os.chdir(cwd)
     context.log.info(f"Webhook Poll Finished. Info: {load_info}")

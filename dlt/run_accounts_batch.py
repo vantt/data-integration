@@ -1,34 +1,32 @@
-import dlt
-from dlt.common.pipeline import LoadInfo
-from src.sapo.accounts import sapo_accounts_source
+import sys
 import os
 
-def run():
-    # 1. Pipeline define
-    pipeline = dlt.pipeline(
+# Add src to path so imports work
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
+
+from sapo.accounts import sapo_accounts_source
+from utils.pipeline_runner import run_pipeline
+import argparse
+
+def run(argv=None):
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument("--page-size", type=int, default=50)
+    parser.add_argument("--limit", type=int, default=1000)
+    args, _ = parser.parse_known_args(argv)
+
+    # Configure source arguments
+    source_args = {
+        "max_pages": args.limit,
+        "page_size": args.page_size
+    }
+
+    run_pipeline(
         pipeline_name="sapo_accounts_batch",
-        destination="filesystem",
-        dataset_name="sapo_raw", # -> data_lake/sapo_raw
+        dataset_name="sapo_raw",
+        source_factory=sapo_accounts_source,
+        source_args=source_args,
+        argv=argv
     )
-
-    # 2. Configure Source
-    source = sapo_accounts_source(
-        max_pages=1000, 
-        page_size=50
-    )
-
-    # 3. Explicitly configure layout to match Unified Dataset structure
-    # sapo_raw/{entity}/ingest_method={method}/year={yyyy}/month={mm}/{file}
-    # Note: 'entity' is derived from table name.
-    
-    # We must set this env var so filesystem destination uses it
-    os.environ['DESTINATION__FILESYSTEM__LOADER_FILE_FORMAT'] = 'parquet'
-    os.environ['DESTINATION__FILESYSTEM__LAYOUT'] = '{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}'
-    os.environ['DESTINATION__FILESYSTEM__EXTRA_PLACEHOLDERS'] = '{"ingest_method": "text", "year": "text", "month": "text"}'
-
-    # 4. Run
-    load_info = pipeline.run(source)
-    print(load_info)
 
 if __name__ == "__main__":
     run()

@@ -14,14 +14,14 @@ sources:
         description: "Raw orders data from Parquet files"
         # Overwrite location cụ thể cho bảng orders
         meta:
-          external_location: "read_parquet('../data_lake/sapo_raw/order/**/*.parquet')"
+          external_location: "read_parquet('../data_lake/sapo_raw/orders/**/*.parquet')"
       
       # Bảng 2: Customers
       - name: customers
         description: "Raw customers data from Parquet files"
         # Overwrite location cụ thể cho bảng customers
         meta:
-          external_location: "read_parquet('../data_lake/sapo_raw/customer/**/*.parquet')"
+          external_location: "read_parquet('../data_lake/sapo_raw/customers/**/*.parquet')"
 
       # Bảng 3: Accounts (Staff)
       - name: account

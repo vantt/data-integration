@@ -43,6 +43,7 @@ models:
       +options:
         format: 'parquet'
       +tags: ["olap"]
+      +on_schema_change: sync_all_columns
 
 vars:
   external_root: "D:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake/export/marts"

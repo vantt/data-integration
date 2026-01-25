@@ -1,5 +1,7 @@
 {{ config(
-    tags=['mart', 'fact']
+    tags=['mart', 'fact'],
+    materialized='incremental',
+    unique_key=['order_id', 'item_id']
 ) }}
 
 WITH items AS (
@@ -7,6 +9,9 @@ WITH items AS (
 ),
 orders AS (
     SELECT * FROM {{ ref('std_orders') }}
+    {% if is_incremental() %}
+    WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
+    {% endif %}
 ),
 valid_customers AS (
     SELECT customer_key FROM {{ ref('dim_customers') }}
@@ -58,7 +63,8 @@ SELECT
     -- Pro-rated amounts (Simple logic for now)
     -- Ideally we'd allocate order-level discount to items here
     
-    o.created_at as sol_timestamp
+    o.created_at as sol_timestamp,
+    o.updated_at
 
 FROM items i
 JOIN orders o ON i.order_id = o.order_id

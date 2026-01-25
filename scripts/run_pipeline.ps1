@@ -49,22 +49,18 @@ elseif ((Get-Item $GlobalDataLake).Target -ne $LocalDataLake) {
 # 3. Set Environment Variable for dbt
 $env:DBT_EXPORT_PATH = $FullExportPath
 
-# 4. Resolve dbt command
-$DbtCmd = "dbt"
-if (Get-Command dbt -ErrorAction SilentlyContinue) {
-    $DbtCmd = "dbt"
+# 4. Resolve Python Environment (Use dlt venv)
+$PythonCmd = "python"
+if (Test-Path "$ProjectRoot\dlt\venv\Scripts\python.exe") {
+    $PythonCmd = "$ProjectRoot\dlt\venv\Scripts\python.exe"
 }
-elseif (Test-Path "$ProjectRoot\dlt\venv\Scripts\dbt.exe") {
-    $DbtCmd = "$ProjectRoot\dlt\venv\Scripts\dbt.exe"
-}
-else {
-    Write-Error "dbt not found in PATH or dlt\venv directory."
-}
+Write-Host "[Pipeline] Using Python Executable: $PythonCmd"
 
-# 5. Run dbt Build
-Write-Host "[Pipeline] Running dbt build using $DbtCmd..."
-Set-Location "$ProjectRoot\transformation"
-& $DbtCmd build --select +tag:mart
+# 5. Run dbt Build (via wrapper script)
+Write-Host "[Pipeline] Execution dbt build via wrapper..."
+$DbtWrapper = "$ProjectRoot\transformation\scripts\run_dbt.py"
+
+& $PythonCmd $DbtWrapper --select +tag:mart
 if ($LASTEXITCODE -ne 0) {
     Write-Error "dbt build failed!"
 }
@@ -88,7 +84,7 @@ if ($MetabaseId) {
 
 Write-Host "[Pipeline] Updating Serving Layer..."
 Set-Location "$ProjectRoot"
-python scripts/generate_serving_db.py
+python scripts/provisioning/generate_serving_db.py
 
 if ($MetabaseId) {
     Write-Host "[Pipeline] Restarting Metabase..."

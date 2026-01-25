@@ -42,9 +42,12 @@ graph TD
 
     %% Marts Layer (Hop 6 - Serving)
     subgraph Marts [Layer 3: Analytical Marts]
-        %% Dimensions
+        direction TB
+        %% Dimensions (Incremental)
         dim_cust[dim_customers]
         dim_prod[dim_products]
+
+        %% Dimensions (Static/Type 1)
         dim_staff[dim_staff]
         dim_time[dim_time]
         dim_date[dim_date]
@@ -52,7 +55,7 @@ graph TD
         dim_chan[dim_channels]
         dim_pay[dim_payment_methods]
 
-        %% Facts
+        %% Facts (Incremental)
         fact_orders[fact_orders]
         fact_sales[fact_sales]
 
@@ -142,3 +145,25 @@ _Path: `models/marts/sales/`_
 Since we do not sync Products directly, we define a Product as:
 
 > "The appearance of a `product_id` + `variant_id` in the MOST RECENT Order Item line."
+
+## 5. Incremental Strategy (Performance Optimization)
+
+### Concept
+
+Instead of re-processing the entire dataset every run (Full Refresh), we switch to an **Incremental Strategy** to process only changed data.
+
+### 1. Partition Pruning (The "Big Filter")
+
+- **Mechanism**: `dlt` partitions raw data by `year/month` derived from `modified_on`.
+- **Effect**: When `dbt` runs an incremental model with `WHERE updated_at > :last_run`, DuckDB automatically skips reading folders from older years/months. This reduces I/O by 90-99%.
+
+### 2. Merge Logic (Implemented as Delete+Insert)
+
+- **Models**: `fact_orders`, `fact_sales`, `dim_customers`, `dim_products`, `dim_geography`.
+- **Method**: Default `dbt-duckdb` incremental strategy (`delete+insert`).
+- **Key**: `unique_key` (e.g., `order_id`).
+- **Logic**:
+  1.  Read only _new_ records from Source (based on `updated_at` or `extracted_at`).
+  2.  Delete existing records in `sapo_warehouse.duckdb` that match the keys of new records.
+  3.  Insert the new records.
+  4.  _Note_: This achieves an "Upsert" effect efficiently without needing explicit `MERGE` SQL support.

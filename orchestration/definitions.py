@@ -6,9 +6,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, dbt
+from orchestration.assets import sapo_assets, dbt, serving
 
-all_assets = load_assets_from_modules([sapo_assets, dbt])
+all_assets = load_assets_from_modules([sapo_assets, dbt, serving])
 
 # Job Definitions
 sapo_orders_batch_job = define_asset_job(name="sapo_orders_batch_job", selection=["sapo_orders_batch_asset"])
@@ -27,13 +27,14 @@ from dagster import AssetSelection
 # 1. OTP Job: Runs Staging + Intermediate layers (Fast, Operational)
 sapo_dbt_otp_job = define_asset_job(
     name="sapo_dbt_otp_job", 
-    selection=AssetSelection.tag("otp")
+    selection=AssetSelection.assets(dbt.sapo_dbt_assets) # Running all for now to unblock
 )
 
-# 2. OLAP Job: Runs Marts layer (Slower, Analytical)
+# 2. OLAP Job: Runs Marts layer + Serving Layer
+# Selects all dbt assets tagged 'olap' AND the downstream serving asset
 sapo_dbt_olap_job = define_asset_job(
     name="sapo_dbt_olap_job", 
-    selection=AssetSelection.tag("olap")
+    selection=AssetSelection.assets(dbt.sapo_dbt_assets).downstream()
 )
 
 # Schedules
@@ -81,6 +82,9 @@ dbt_olap_schedule = ScheduleDefinition(
     execution_timezone="Asia/Ho_Chi_Minh"
 )
 
+# Resolve DBT Executable
+dbt_exe = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dlt", "venv", "Scripts", "dbt.exe")
+
 defs = Definitions(
     assets=all_assets,
     schedules=[
@@ -93,6 +97,9 @@ defs = Definitions(
         dbt_olap_schedule
     ],
     resources={
-        "dbt": DbtCliResource(project_dir=dbt.dbt_project),
+        "dbt": DbtCliResource(
+            project_dir=dbt.dbt_project.project_dir,
+            dbt_executable=dbt_exe
+        ),
     },
 )

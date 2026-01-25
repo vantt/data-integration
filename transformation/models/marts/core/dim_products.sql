@@ -1,9 +1,15 @@
 {{ config(
-    tags=['mart', 'dim']
+    tags=['mart', 'dim'],
+    materialized='incremental',
+    unique_key='product_key'
 ) }}
 
 WITH order_items AS (
     SELECT * FROM {{ ref('std_order_items') }}
+    {% if is_incremental() %}
+    -- Only process items extracted since the last run
+    WHERE extracted_at > (SELECT MAX(last_seen_at) FROM {{ this }})
+    {% endif %}
 ),
 
 ranked_products AS (

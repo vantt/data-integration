@@ -86,63 +86,53 @@ models:
       - name: product_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_products')
-                field: product_key
+              to: ref('dim_products')
+              field: product_key
       - name: category_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_product_category')
-                field: category_key
+              to: ref('dim_product_category')
+              field: category_key
       - name: staff_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_staff')
-                field: staff_key
+              to: ref('dim_staff')
+              field: staff_key
       - name: status_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_order_status')
-                field: status_key
+              to: ref('dim_order_status')
+              field: status_key
       - name: customer_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_customers')
-                field: customer_key
+              to: ref('dim_customers')
+              field: customer_key
       - name: branch_location_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_branch_location')
-                field: branch_location_key
+              to: ref('dim_branch_location')
+              field: branch_location_key
       - name: channel_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_channels')
-                field: channel_key
+              to: ref('dim_channels')
+              field: channel_key
       - name: date_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_date')
-                field: date_key
+              to: ref('dim_date')
+              field: date_key
       - name: shipping_geography_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_geography')
-                field: geography_key
+              to: ref('dim_geography')
+              field: geography_key
       - name: billing_geography_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_geography')
-                field: geography_key
+              to: ref('dim_geography')
+              field: geography_key
 
   - name: fact_orders
     description: "Aggregated order fact."
@@ -152,62 +142,53 @@ models:
       - name: customer_key
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_customers')
-                field: customer_key
+              to: ref('dim_customers')
+              field: customer_key
       - name: shipping_geography_key
         data_type: varchar
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_geography')
-                field: geography_key
+              to: ref('dim_geography')
+              field: geography_key
       - name: billing_geography_key
         data_type: varchar
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_geography')
-                field: geography_key
+              to: ref('dim_geography')
+              field: geography_key
       - name: channel_key
         data_type: varchar
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_channels')
-                field: channel_key
+              to: ref('dim_channels')
+              field: channel_key
       - name: promotion_key
         data_type: varchar
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_promotions')
-                field: promotion_key
+              to: ref('dim_promotions')
+              field: promotion_key
       - name: staff_key
         data_type: varchar
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_staff')
-                field: staff_key
+              to: ref('dim_staff')
+              field: staff_key
       - name: status_key
         data_type: varchar
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_order_status')
-                field: status_key
+              to: ref('dim_order_status')
+              field: status_key
       - name: branch_location_key
         data_type: varchar
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_branch_location')
-                field: branch_location_key
+              to: ref('dim_branch_location')
+              field: branch_location_key
       - name: date_key
         data_type: integer
         tests:
           - relationships:
-              arguments:
-                to: ref('dim_date')
-                field: date_key
+              to: ref('dim_date')
+              field: date_key

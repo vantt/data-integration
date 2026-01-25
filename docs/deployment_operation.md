@@ -129,3 +129,114 @@ con.sql("CREATE OR REPLACE VIEW fact_orders AS SELECT * FROM '/data_lake/export/
 
 con.close()
 ```
+
+---
+
+---
+
+# Hướng Dẫn Vận Hành Hệ Thống Data Pipeline (Operator Guide)
+
+Tài liệu này hướng dẫn chi tiết cách vận hành, giám sát và xử lý sự cố cho hệ thống tích hợp dữ liệu (Data Integration Pipeline).
+
+## 1. Tổng Quan Hệ Kiến Trúc
+
+Hệ thống được chia thành 3 tầng chính:
+
+1.  **Ingestion (DLT)**: Kéo dữ liệu từ nguồn (Sapo API, Webhook) về Data Lake (Parquet).
+2.  **Transformation (DBT)**: Làm sạch và mô hình hóa dữ liệu (Staging -> Marts).
+3.  **Serving (DuckDB/Metabase)**: Tạo database OLAP tối ưu cho báo cáo và deploy lên Metabase.
+
+Toàn bộ quy trình được điều phối tự động bởi **Dagster**.
+
+---
+
+## 2. Vận Hành Tự Động (Dagster)
+
+Hệ thống mặc định chạy tự động. Người vận hành giám sát qua **Dagster UI**.
+
+- **Truy cập**: `http://localhost:3000` (hoặc IP server triển khai).
+- **Các Job Chính**:
+  - `sapo_history_log_job` (10 phút/lần): Kéo log lịch sử thay đổi.
+  - `sapo_webhook_consumer_job` (1 phút/lần): Xử lý webhook realtime.
+  - `sapo_orders_batch_job`, `sapo_customers_batch_job` (Hàng ngày - 4:00/5:00 AM): Đồng bộ lại toàn bộ dữ liệu để đảm bảo chính xác.
+  - `sapo_dbt_olap_job` (Hàng giờ): Chạy biến đổi DBT và update Serving Layer.
+
+### Kiểm tra trạng thái
+
+Trong tab **Runs** của Dagster UI:
+
+- ✅ **Success**: Hệ thống bình thường.
+- ❌ **Failure**: Click vào Job ID để xem log chi tiết lỗi.
+
+---
+
+## 3. Vận Hành Thủ Công (Manual Operations)
+
+Trong trường hợp cần chạy gấp hoặc fix lỗi, có thể chạy thủ công bằng dòng lệnh (CLI).
+
+### 3.1. Chạy Ingestion (DLT)
+
+Sử dụng môi trường ảo Python của DLT:
+
+```powershell
+# Kích hoạt venv (nếu chưa)
+.\dlt\venv\Scripts\activate
+
+# Chạy kéo Orders (giới hạn 100 trang test)
+python dlt/run_orders_batch.py --limit 100
+
+# Chạy Webhook Consumer (chế độ chạy 1 lần rồi thoát)
+python dlt/run_webhook_consumer.py --once
+
+# Chạy Webhook Consumer (chế độ lặp vô tận - service)
+python dlt/run_webhook_consumer.py --loop
+```
+
+### 3.2. Chạy Transformation (DBT)
+
+Sử dụng script wrapper đã chuẩn hóa:
+
+```powershell
+# Chạy toàn bộ các model Mart
+python transformation/scripts/run_dbt.py --select +tag:mart
+
+# Chạy full-refresh (xóa bảng làm lại từ đầu)
+python transformation/scripts/run_dbt.py --full-refresh
+```
+
+### 3.3. Chạy Full Deployment (Pipeline Khẩn Cấp)
+
+Nếu muốn chạy lại quy trình deploy (DBT + Update Serving DB) thủ công:
+
+```powershell
+# Script này sẽ tự tìm dbt/python trong venv để chạy
+./scripts/run_pipeline.ps1
+```
+
+---
+
+## 4. Xử Lý Sự Cố Thường Gặp
+
+### Lỗi: "Metabase bị lock database"
+
+Nếu `generate_serving_db.py` báo lỗi không thể ghi đè file `olap.duckdb` do đang được sử dụng.
+
+- **Giải pháp**: Pipeline tự động có cơ chế stop/start container Metabase. Nếu vẫn lỗi, hãy chạy thủ công:
+  ```powershell
+  docker restart metabase
+  ./scripts/run_pipeline.ps1
+  ```
+
+### Lỗi: "DLT thiếu dữ liệu"
+
+Nếu thấy báo cáo thiếu đơn hàng mới.
+
+1.  Kiểm tra `sapo_history_log_job` trong Dagster xem có lỗi không.
+2.  Chạy thủ công `sapo_orders_batch_job` (nút **Materialize** trong Dagster) để kéo lại toàn bộ dữ liệu.
+
+### Lỗi: "Schema Mismatch"
+
+Nếu API Sapo thay đổi cấu trúc dữ liệu làm DLT lỗi.
+
+1.  Cập nhật code DLT trong `dlt/src/sapo/`.
+2.  Chạy pipeline với cờ `--full-refresh` (hoặc drop state trong Dagster) để tái tạo schema.

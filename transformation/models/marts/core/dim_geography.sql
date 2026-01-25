@@ -1,5 +1,7 @@
 {{ config(
-    tags=['mart', 'dim']
+    tags=['mart', 'dim'],
+    materialized='incremental',
+    unique_key='geography_key'
 ) }}
 
 WITH orders_shipping_locs AS (
@@ -7,9 +9,14 @@ WITH orders_shipping_locs AS (
         shipping_province as province,
         shipping_district as district,
         shipping_ward as ward,
-        shipping_country as country
+        shipping_country as country,
+        MAX(updated_at) as last_seen_at
     FROM {{ ref('std_orders') }}
     WHERE shipping_province IS NOT NULL AND shipping_province != ''
+    {% if is_incremental() %}
+    AND updated_at > (SELECT MAX(last_seen_at) FROM {{ this }})
+    {% endif %}
+    GROUP BY 1, 2, 3, 4
 ),
 
 orders_billing_locs AS (
@@ -17,9 +24,14 @@ orders_billing_locs AS (
         billing_province as province,
         billing_district as district,
         billing_ward as ward,
-        billing_country as country
+        billing_country as country,
+        MAX(updated_at) as last_seen_at
     FROM {{ ref('std_orders') }}
     WHERE billing_province IS NOT NULL AND billing_province != ''
+    {% if is_incremental() %}
+    AND updated_at > (SELECT MAX(last_seen_at) FROM {{ this }})
+    {% endif %}
+    GROUP BY 1, 2, 3, 4
 ),
 
 customers_locs AS (
@@ -27,16 +39,21 @@ customers_locs AS (
         province,
         district,
         ward,
-        country
+        country,
+        MAX(updated_at) as last_seen_at
     FROM {{ ref('dim_customers') }}
     WHERE province IS NOT NULL AND province != '' AND province != 'Unknown'
+    {% if is_incremental() %}
+    AND updated_at > (SELECT MAX(last_seen_at) FROM {{ this }})
+    {% endif %}
+    GROUP BY 1, 2, 3, 4
 ),
 
 unioned_locs AS (
     SELECT * FROM orders_shipping_locs
-    UNION
+    UNION ALL
     SELECT * FROM orders_billing_locs
-    UNION
+    UNION ALL
     SELECT * FROM customers_locs
 )
 
@@ -53,7 +70,10 @@ SELECT DISTINCT
     province,
     district,
     ward,
-    coalesce(country, 'Vietnam') as country -- Defaulting
+    coalesce(country, 'Vietnam') as country, -- Defaulting
+    
+    -- Metadata
+    MAX(last_seen_at) as last_seen_at
 
 FROM unioned_locs
 WHERE 
@@ -63,6 +83,7 @@ WHERE
         coalesce(district,'') = 'Unknown' AND 
         coalesce(ward,'') = 'Unknown'
     )
+GROUP BY 1, 2, 3, 4, 5
 
 UNION ALL
 
@@ -71,4 +92,5 @@ SELECT
     'Unknown' as province,
     'Unknown' as district,
     'Unknown' as ward,
-    'Unknown' as country
+    'Unknown' as country,
+    NULL as last_seen_at
