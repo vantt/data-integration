@@ -16,3 +16,11 @@ SELECT DISTINCT
 
 FROM orders
 WHERE channel IS NOT NULL
+
+UNION ALL
+
+SELECT
+    md5('Unknown') as channel_key,
+    'Unknown' as channel_name,
+    'Unknown' as channel_code,
+    'Unknown' as channel_type

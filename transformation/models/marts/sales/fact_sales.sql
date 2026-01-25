@@ -19,11 +19,11 @@ valid_customers AS (
 
 SELECT
     -- Surrogate Keys (Foreign Keys to Dims)
-    md5(i.product_id || '-' || i.variant_id) as product_key,
-    md5(coalesce(i.product_type, 'Uncategorized')) as category_key,
+    md5(i.product_id || '-' || coalesce(i.variant_id, '')) as product_key,
+    md5(coalesce(i.product_type, 'Unknown')) as category_key,
     COALESCE(vc.customer_key, md5('Unknown')) as customer_key,
     md5(cast(o.location_id as string)) as branch_location_key,
-    md5(o.channel) as channel_key,
+    coalesce(md5(o.channel), md5('Unknown')) as channel_key,
     COALESCE(ds.staff_key, md5('Unknown')) as staff_key,
     md5(o.status) as status_key,
     coalesce(cast(strftime(o.created_at, '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD

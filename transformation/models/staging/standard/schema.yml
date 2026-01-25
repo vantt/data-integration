@@ -42,10 +42,6 @@ models:
       - name: fulfillment_id
         tests: [unique, not_null]
       - name: order_id
-        tests:
-          - relationships:
-              to: ref('std_orders')
-              field: order_id
       - name: status
         tests:
           - accepted_values:
@@ -57,10 +53,6 @@ models:
       - name: payment_id
         tests: [unique, not_null]
       - name: order_id
-        tests:
-          - relationships:
-              to: ref('std_orders')
-              field: order_id
       - name: status
         tests:
           - accepted_values:

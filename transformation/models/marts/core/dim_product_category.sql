@@ -8,10 +8,10 @@ WITH items AS (
 
 SELECT DISTINCT
     -- Surrogate Key
-    md5(coalesce(product_type, 'Uncategorized')) as category_key,
+    md5(coalesce(product_type, 'Unknown')) as category_key,
     
     -- Business Key
-    coalesce(product_type, 'Uncategorized') as category_name,
+    coalesce(product_type, 'Unknown') as category_name,
     product_type,
     
     -- Hierarchy placeholders (can be enriched later)

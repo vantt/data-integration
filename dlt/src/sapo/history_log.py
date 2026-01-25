@@ -45,6 +45,10 @@ def infer_uri(root_type: str, root_id: int) -> Optional[str]:
         'order_return': 'order_returns',
         'fulfillment_print_forms': 'fulfillment_print_forms',
         'account_authentication': 'account_authentications',
+        'customer_address': 'customer_addresses',
+        'tenant_role': 'tenant_roles',
+        'user': 'users',
+        'policy': 'policies',
     }
     
     resource = mappings.get(r_type)

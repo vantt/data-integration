@@ -3,6 +3,7 @@ import os
 
 # Add project root to sys.path to allow absolute imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dlt", "src"))
 
 from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job
 from dagster_dbt import DbtCliResource
