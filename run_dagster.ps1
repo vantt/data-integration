@@ -44,4 +44,4 @@ $DbtExe = "$ScriptDir\dlt\venv\Scripts\dbt.exe"
 Set-Location $ScriptDir
 
 Write-Host "-> Running dagster dev..." -ForegroundColor Green
-dagster dev -f orchestration/definitions.py
+dagster dev -f orchestration/definitions.py -p 3001

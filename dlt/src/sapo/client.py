@@ -2,6 +2,7 @@
 Sapo Client Module
 Handles configuration loading, authentication, and session management for Sapo.
 """
+import os
 import dlt
 from typing import Dict, Any, Optional
 try:
@@ -51,11 +52,20 @@ def get_sapo_client() -> Any:
     if config.get('login_selectors'):
         login_selectors.update(config.get('login_selectors'))
 
+    # Credentials Fallback
+    username = config.get('username') or os.environ.get("SOURCES__SAPO__USERNAME")
+    password = config.get('password') or os.environ.get("SOURCES__SAPO__PASSWORD")
+
+    if not username:
+        raise ValueError("Missing 'username' in secrets.toml or SOURCES__SAPO__USERNAME env var")
+    if not password:
+        raise ValueError("Missing 'password' in secrets.toml or SOURCES__SAPO__PASSWORD env var")
+
     # Initialize cookie manager
     cookie_manager = get_cookie_manager('sapo', {
         'login_url': login_url,
-        'username': config['username'],
-        'password': config['password'],
+        'username': username,
+        'password': password,
         'cookie_ttl_hours': 6,
         'headless': config.get("headless", True),
         'login_selectors': login_selectors
