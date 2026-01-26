@@ -13,7 +13,6 @@ data_lake
 .dagster_home/schedules
 .dagster_home/storage
 .dagster_home/logs
-.dagster_home/telemetry
 
 *.duckdb
 *.log

@@ -27,6 +27,8 @@ class CloudflareWorkerClient:
         url = f"{self.worker_url}/poll"
         try:
             response = requests.get(url, params=params, timeout=30)
+            print(f"Response Status: {response.status_code}")
+            print(f"Response Text: {response.text}")
             response.raise_for_status()
             data = response.json()
             return data.get('messages', [])
@@ -124,23 +126,26 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
                 try:
                     wrapper = json.loads(raw_payload_str)
                 except json.JSONDecodeError:
-                    print(f"⚠️ Failed to decode payload for {msg_id}. Skipping.")
+                    print(f"⚠️ Failed to decode payload for {msg_id}. Skipping. Raw content: {raw_payload_str[:100]}...")
                     continue
             elif isinstance(raw_payload_str, dict):
                 wrapper = raw_payload_str
+            else:
+                print(f"Unexpected payload type for {msg_id}: {type(raw_payload_str)}. Skipping.")
+                continue
             
             # Extract Inner Payload (The actual Entity)
             inner_payload = wrapper.get('payload')
             if not isinstance(inner_payload, dict):
                  # Fallback: maybe the wrapper IS the payload if structure changed?
                  # But based on index.ts, it is nested.
-                 print(f"⚠️ No inner payload dict found for {msg_id}. Skipping.")
+                 print(f"⚠️ No inner payload dict found for {msg_id}. Wrapper keys: {wrapper.keys()}. Skipping.")
                  continue
 
             # 4. Extract Entity ID
             entity_id = inner_payload.get('id')
             if not entity_id:
-                print(f"⚠️ No entity ID in inner payload for {msg_id}. Skipping.")
+                print(f"⚠️ No entity ID in inner payload for {msg_id}. Payload keys: {inner_payload.keys()}. Skipping.")
                 continue
 
             # 5. Metadata & Partitioning

@@ -14,7 +14,7 @@
 WITH raw_data AS (
     -- Bước 1: Đọc từ source 'sapo_raw.customers' (xem models/sources.yml)
     SELECT *
-    FROM {{ source('sapo_raw', 'customers') }}
+    FROM {{ source('sapo_raw', 'customer') }}
 ),
 
 deduplicated AS (

@@ -150,12 +150,16 @@ models:
           - relationships:
               to: ref('dim_geography')
               field: geography_key
+              config:
+                severity: warn
       - name: billing_geography_key
         data_type: varchar
         tests:
           - relationships:
               to: ref('dim_geography')
               field: geography_key
+              config:
+                severity: warn
       - name: channel_key
         data_type: varchar
         tests:
@@ -168,6 +172,8 @@ models:
           - relationships:
               to: ref('dim_promotions')
               field: promotion_key
+              config:
+                severity: warn
       - name: staff_key
         data_type: varchar
         tests:

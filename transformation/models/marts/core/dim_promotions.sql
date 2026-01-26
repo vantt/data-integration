@@ -28,3 +28,11 @@ SELECT DISTINCT
 
 FROM unnested_promos
 WHERE json_extract_string(promo_json, '$.code') IS NOT NULL
+
+UNION ALL
+
+SELECT
+    {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as promotion_key,
+    'Unknown' as promotion_code,
+    0 as discount_amount,
+    'Unknown' as promotion_type

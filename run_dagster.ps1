@@ -1,6 +1,13 @@
 $ScriptDir = Split-Path $MyInvocation.MyCommand.Path
 Set-Location $ScriptDir
 
+# Set DBT Environment Variables
+# Pointing to data_lake/export/marts
+$Env:DAGSTER_HOME = "$ScriptDir\.dagster_home"
+$Env:DAGSTER_PORT = "3001"
+$Env:DBT_EXPORT_PATH = "$ScriptDir\data_lake\export\marts"
+$Env:DBT_DATA_LAKE_PATH = "$ScriptDir\data_lake"
+
 Write-Host "-> Starting Dagster Dev Server..." -ForegroundColor Cyan
 
 # Check if venv exists
@@ -13,7 +20,6 @@ if (Test-Path $VenvPath) {
 }
 
 # Run Dagster
-$Env:DAGSTER_HOME = "$ScriptDir\.dagster_home"
 if (-not (Test-Path $Env:DAGSTER_HOME)) {
     New-Item -ItemType Directory -Force -Path $Env:DAGSTER_HOME | Out-Null
 }
@@ -24,10 +30,6 @@ Write-Host "-> DAGSTER_HOME: $Env:DAGSTER_HOME" -ForegroundColor Cyan
 Write-Host "-> Cleaning up old Python processes..." -ForegroundColor Gray
 Get-Process python -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "*venv*" } | Stop-Process -Force
 Get-Process dbt -ErrorAction SilentlyContinue | Stop-Process -Force
-
-# Set DBT Environment Variables
-# Pointing to data_lake/export/marts
-$Env:DBT_EXPORT_PATH = "$ScriptDir\data_lake\export\marts"
 
 # Clean up stale dbt locks
 $DbtLockFile = "$ScriptDir\transformation\target\manifest.concurrent-update-lock"
@@ -44,4 +46,4 @@ $DbtExe = "$ScriptDir\dlt\venv\Scripts\dbt.exe"
 Set-Location $ScriptDir
 
 Write-Host "-> Running dagster dev..." -ForegroundColor Green
-dagster dev -f orchestration/definitions.py -p 3001
+dagster dev -f orchestration/definitions.py -p $Env:DAGSTER_PORT

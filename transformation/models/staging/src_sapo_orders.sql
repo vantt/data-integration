@@ -19,7 +19,7 @@ WITH raw_data AS (
         *,
         -- Tạo partition date ảo nếu cần dùng để lọc (DuckDB tự động nhận partition từ đường dẫn thư mục)
         strptime(year || '-' || month || '-01', '%Y-%m-%d') as partition_date
-    FROM {{ source('sapo_raw', 'orders') }}
+    FROM {{ source('sapo_raw', 'order') }}
 ),
 
 deduplicated AS (

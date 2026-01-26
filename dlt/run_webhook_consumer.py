@@ -43,6 +43,7 @@ def run(argv=None):
     print(f"🚀 Starting Webhook Consumer Pipeline ({'ONCE' if args.once else 'LOOP'})")
     print(f"   Worker URL: {worker_url}")
     print(f"   Target Dataset: {dataset_name}")
+    print(f"   Destination Bucket: {os.getenv('DESTINATION__FILESYSTEM__BUCKET_URL', 'Not Set')}")
 
     min_sleep = int(os.getenv("MIN_SLEEP_INTERVAL", "10"))
     max_sleep = int(os.getenv("MAX_SLEEP_INTERVAL", "60"))
@@ -58,7 +59,7 @@ def run(argv=None):
                 print(info)
                 current_sleep = min_sleep
             else:
-                print(f"💤 No new data. Sleeping {current_sleep}s..." if not args.once else "💤 No new data.")
+                print(f"💤 No new data. Sleeping {current_sleep}s..." if not args.once else "No new data.")
                 if not args.once:
                     time.sleep(current_sleep)
                     current_sleep = min(current_sleep * 2, max_sleep)

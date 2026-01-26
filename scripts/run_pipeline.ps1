@@ -48,6 +48,7 @@ elseif ((Get-Item $GlobalDataLake).Target -ne $LocalDataLake) {
 
 # 3. Set Environment Variable for dbt
 $env:DBT_EXPORT_PATH = $FullExportPath
+$env:DBT_DATA_LAKE_PATH = "$ProjectRoot\data_lake"
 
 # 4. Resolve Python Environment (Use dlt venv)
 $PythonCmd = "python"
