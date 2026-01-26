@@ -27,8 +27,8 @@ class CloudflareWorkerClient:
         url = f"{self.worker_url}/poll"
         try:
             response = requests.get(url, params=params, timeout=30)
-            print(f"Response Status: {response.status_code}")
-            print(f"Response Text: {response.text}")
+            # print(f"Response Status: {response.status_code}")
+            # print(f"Response Text: {response.text}")
             response.raise_for_status()
             data = response.json()
             return data.get('messages', [])

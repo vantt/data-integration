@@ -87,16 +87,9 @@ def generate_serving_db():
     con.close()
     
     # 3. Cleanup
-    KEEP_COUNT = 2
-    if len(versions) > KEEP_COUNT:
-        to_delete = versions[KEEP_COUNT:]
-        for batch, path in to_delete:
-            print(f"  [d] Cleanup old version: {batch}")
-            try:
-                import shutil
-                shutil.rmtree(path)
-            except Exception as e:
-                print(f"    Error deleting {path}: {e}")
+    # Cleanup is now handled centrally by scripts/utils/version_manager.py
+    # invoked during the DBT/Ingestion phase.
+    pass
 
     print("Done.")
 
