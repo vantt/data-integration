@@ -7,7 +7,14 @@ node_modules
 poc
 data_lake
 .tmp_dagster_home_*
-dagster_home/
+.dagster_home/.nux
+.dagster_home/.telemetry
+.dagster_home/history
+.dagster_home/schedules
+.dagster_home/storage
+.dagster_home/logs
+.dagster_home/telemetry
+
 *.duckdb
 *.log
 **/venv/
