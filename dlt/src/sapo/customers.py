@@ -150,7 +150,7 @@ def customers(
         params = {
             "page": page_num,
             "limit": page_size,
-            "sort": "modified_on,desc",
+            "sort": "created_on,desc", # IMPORTANT: Use created_on instead of modified_on, sapo api doesn't support sort by modified_on
             "condition_type": "must"
         }
 
