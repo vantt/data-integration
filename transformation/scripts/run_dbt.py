@@ -2,6 +2,10 @@ import os
 import sys
 import subprocess
 import argparse
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 def find_dbt_executable():
     """
@@ -37,30 +41,38 @@ def find_dbt_executable():
 
 def run_dbt():
     parser = argparse.ArgumentParser(description="Run DBT Pipeline")
-    parser.add_argument("--select", help="Model selection (passed to dbt build --select)", default="+tag:mart")
+    parser.add_argument("--select", nargs='+', help="Model selection (passed to dbt build --select)", default=["+tag:mart"])
     parser.add_argument("--full-refresh", action="store_true", help="Pass --full-refresh to dbt")
     parser.add_argument("--target", help="DBT target", default=None)
+    
     args = parser.parse_args()
 
     # 1. Resolve Executable
     dbt_exe = find_dbt_executable()
     if not dbt_exe:
-        print("❌ Error: Could not find 'dbt' executable.")
+        print("Error: Could not find 'dbt' executable.")
         sys.exit(1)
         
-    print(f"🚀 Using dbt executable: {dbt_exe}")
+    print(f"Using dbt executable: {dbt_exe}")
     
     # 2. Set Working Directory to transformation/
     # script is in transformation/scripts/
     script_dir = os.path.dirname(os.path.abspath(__file__))
     transformation_dir = os.path.dirname(script_dir)
-    print(f"📂 Working directory: {transformation_dir}")
+    print(f"Working directory: {transformation_dir}")
     
     # 3. Construct Command
     cmd = [dbt_exe, "build"]
     
     if args.select:
-        cmd.extend(["--select", args.select])
+        # Handle cases where multiple args are passed or space-separated strings
+        # Flatten the list of selects
+        flat_selects = []
+        for item in args.select:
+            flat_selects.extend(item.split())
+            
+        cmd.append("--select")
+        cmd.extend(flat_selects)
         
     if args.full_refresh:
         cmd.append("--full-refresh")
@@ -72,17 +84,17 @@ def run_dbt():
     # Pass environment variables relative to this process
     env = os.environ.copy()
     
-    print(f"▶️  Running: {' '.join(cmd)}")
+    print(f"Running: {' '.join(cmd)}")
     try:
         # shell=True on Windows can help with some path issues, but direct execution is safer if we have full path
         # Using shell=False and full path to exe
         process = subprocess.run(cmd, cwd=transformation_dir, env=env, check=True)
-        print("✅ DBT Build Completed Successfully.")
+        print("DBT Build Completed Successfully.")
     except subprocess.CalledProcessError as e:
-        print(f"❌ DBT Build Failed (Exit Code: {e.returncode})")
+        print(f"DBT Build Failed (Exit Code: {e.returncode})")
         sys.exit(e.returncode)
     except Exception as e:
-        print(f"❌ Error running dbt: {e}")
+        print(f"Error running dbt: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

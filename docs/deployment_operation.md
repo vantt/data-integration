@@ -208,14 +208,25 @@ python transformation/scripts/run_dbt.py --select +tag:mart
 python transformation/scripts/run_dbt.py --full-refresh
 ```
 
-### 3.3. Chạy Full Deployment (Pipeline Khẩn Cấp)
+### 3.3. Chạy Pipeline (Chuẩn hóa)
 
-Nếu muốn chạy lại quy trình deploy (DBT + Update Serving DB) thủ công:
+Đây là cách **khuyến nghị** để chạy hệ thống, đảm bảo biến môi trường và versioning được xử lý đúng chuẩn.
 
-```powershell
-# Script này sẽ tự tìm dbt/python trong venv để chạy
-./scripts/run_pipeline.ps1
-```
+Script: `scripts/run_pipeline.ps1`
+
+- **Chạy Full (Production/Deploy)**:
+  Tự động chạy toàn bộ dbt models và cập nhật Serving DB.
+
+  ```powershell
+  ./scripts/run_pipeline.ps1
+  ```
+
+- **Chạy Partial (Development/Debug)**:
+  Chỉ chạy các bảng được chỉ định (nhanh hơn). Hỗ trợ cú pháp select của dbt.
+  ```powershell
+  # Ví dụ: Chỉ chạy bảng Orders và Accounts ở tầng Staging
+  ./scripts/run_pipeline.ps1 --select stg_sapo_orders stg_sapo_accounts
+  ```
 
 ---
 

@@ -7,7 +7,7 @@ sources:
     # Tự động map tên bảng vào đường dẫn: external_location: Quy định cách DuckDB đọc file. 
     # **/*.parquet nghĩa là đọc đệ quy tất cả file parquet trong thư mục con.
     meta:
-      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/sapo_raw/{name}/**/*.parquet')"
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/sapo_raw/{name}/**/*.parquet', hive_partitioning=1)"
 
     tables:
       # Bảng 1: Orders

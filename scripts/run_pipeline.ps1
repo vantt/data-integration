@@ -1,3 +1,21 @@
+param(
+    # TECHNIQUE: "Argument Passthrough"
+    # Using ValueFromRemainingArguments allows us to capture ALL arguments (like --select, --full-refresh)
+    # properly without PowerShell mistakenly parsing them as partial parameter matches.
+    # This acts as a robust proxy to the underlying Python script.
+    [Parameter(ValueFromRemainingArguments=$true)]
+    [string[]]$PassthroughArgs
+)
+
+# Default to running marts if no args provided
+if ($null -eq $PassthroughArgs -or $PassthroughArgs.Count -eq 0) {
+    Write-Host "[Pipeline] No arguments provided. Defaulting to: --select +tag:mart"
+    $PassthroughArgs = @("--select", "+tag:mart")
+}
+else {
+    Write-Host "[Pipeline] Passing arguments to dbt: $($PassthroughArgs -join ' ')"
+}
+
 $ErrorActionPreference = "Stop"
 
 # Configuration
@@ -61,7 +79,7 @@ Write-Host "[Pipeline] Using Python Executable: $PythonCmd"
 Write-Host "[Pipeline] Execution dbt build via wrapper..."
 $DbtWrapper = "$ProjectRoot\transformation\scripts\run_dbt.py"
 
-& $PythonCmd $DbtWrapper --select +tag:mart
+& $PythonCmd $DbtWrapper $PassthroughArgs
 if ($LASTEXITCODE -ne 0) {
     Write-Error "dbt build failed!"
 }

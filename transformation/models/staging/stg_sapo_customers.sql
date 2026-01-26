@@ -1,5 +1,7 @@
 {{ config(
-    materialized='view',
+    materialized='incremental',
+    unique_key='entity_id',
+    incremental_strategy='delete+insert',
     tags=['staging', 'customers']
 ) }}
 
@@ -9,11 +11,50 @@
 -- Mục đích:
 -- 1. Chuẩn hóa thông tin khách hàng từ JSON.
 -- 2. Định dạng lại số điện thoại, email, ngày sinh (nếu cần).
+-- 3. Xử lý Incremental & Deduplication từ Raw Source.
 -- =================================================================================================
 
-WITH raw_source AS (
-    -- Đọc từ Hop 4
-    SELECT * FROM {{ ref('src_sapo_customers') }}
+WITH raw_data AS (
+    SELECT 
+        *,
+        -- DuckDB hive_partitioning=1 columns
+        ingest_method,
+        year,
+        month
+    FROM {{ source('sapo_raw', 'customer') }}
+
+    {% if is_incremental() %}
+    -- LOGIC INCREMENTAL (Tăng trưởng): 
+    -- 1. Chỉ lấy dữ liệu mới hơn dữ liệu đã có trong bảng đích ({{ this }})
+    -- 2. Dựa trên cột 'event_timestamp' (thời gian sự kiện xảy ra trên nguồn)
+    WHERE event_timestamp > (SELECT MAX(event_timestamp) FROM {{ this }})
+    {% endif %}
+),
+
+deduped AS (
+    -- BƯỚC 2: DE-DUPLICATION (LỌC TRÙNG)
+    -- Mục tiêu: Lấy bản ghi "chất lượng nhất" cho mỗi khách hàng (entity_id).
+    SELECT
+        *,
+        ROW_NUMBER() OVER (
+            PARTITION BY entity_id
+            ORDER BY
+                event_timestamp DESC, -- Ưu tiên bản ghi mới nhất
+                -- Tie-breaker (Quy tắc phụ): Ưu tiên nguồn tin cậy hơn
+                CASE
+                    WHEN ingest_method = 'webhook' THEN 3     -- Realtime (tin cậy nhất)
+                    WHEN ingest_method = 'history_log' THEN 2 -- Lịch sử (bổ sung)
+                    ELSE 1                                    -- Batch (quét định kỳ)
+                END DESC
+        ) AS rn
+    FROM raw_data
+),
+
+final_source AS (
+    -- Chỉ giữ lại bản ghi số 1
+    SELECT * EXCLUDE (rn)
+    FROM deduped
+    WHERE rn = 1
 )
 
 SELECT 
@@ -22,8 +63,10 @@ SELECT
     event_timestamp,
     
     -- =========================================================================================
-    -- JSON EXTRACTION
+    -- JSON EXTRACTION (TRÍCH XUẤT DỮ LIỆU)
     -- =========================================================================================
+    -- json_extract_string: Trả về chuỗi raw text từ JSON.
+    -- coalesce: Lấy giá trị đầu tiên không null (dùng để fallback).
     
     json_extract_string(payload, '$.id') as sapo_customer_id,
     json_extract_string(payload, '$.code') as customer_code,
@@ -36,7 +79,6 @@ SELECT
     json_extract_string(payload, '$.gender') as gender,
     
     -- Address (Taking the default array item if available, or just addresses[0])
-    -- Assuming addresses is an array of objects
     json_extract_string(payload, '$.addresses[0].city') as city,
     coalesce(json_extract_string(payload, '$.addresses[0].province'), json_extract_string(payload, '$.addresses[0].city')) as province,
     json_extract_string(payload, '$.addresses[0].district') as district,
@@ -46,7 +88,7 @@ SELECT
     
     -- Financials
     try_cast(json_extract_string(payload, '$.total_expense') as DECIMAL(18,2)) as total_spent,
-    try_cast(json_extract_string(payload, '$.order_count') as INTEGER) as orders_count, -- Check if this field exists or needs calculation
+    try_cast(json_extract_string(payload, '$.order_count') as INTEGER) as orders_count,
     try_cast(json_extract_string(payload, '$.debt') as DECIMAL(18,2)) as debt,
     
     json_extract_string(payload, '$.created_on') as created_on,
@@ -54,4 +96,4 @@ SELECT
     
     payload
 
-FROM raw_source
+FROM final_source

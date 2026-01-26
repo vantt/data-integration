@@ -9,5 +9,7 @@ sapo_warehouse:
         - parquet
         - httpfs # if reading from S3/remote in future
       external_root: "{{ env_var('DBT_EXPORT_PATH') }}"
-      # settings:
-        # memory_limit: '10GB'
+      settings:
+        memory_limit: '24GB'
+        preserve_insertion_order: false
+        temp_directory: 'dbt_tmp'
