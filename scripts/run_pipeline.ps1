@@ -22,35 +22,25 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Resolve-Path "$PSScriptRoot\.."
 $ExportBaseDir = "$ProjectRoot\data_lake\export\marts"
 
-# 1. Generate Timestamp
-$Timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$VersionDirName = "v_$Timestamp"
-$FullExportPath = "$ExportBaseDir\$VersionDirName"
-
-Write-Host "[Pipeline] Starting Zero-Downtime Deployment"
-Write-Host "[Pipeline] Version: $VersionDirName"
-
-# 2. Create Directory
-if (-not (Test-Path $FullExportPath)) {
-    Write-Host "[Pipeline] Creating Export Directory: $FullExportPath"
-    New-Item -ItemType Directory -Force -Path $FullExportPath | Out-Null
+# 2. Generate Version Path via Shared Python Utility
+Write-Host "[Pipeline] Resolving version path via shared utility..."
+$VersionManager = "$ProjectRoot\scripts\utils\version_manager.py"
+$PythonCmd = "python"
+if (Test-Path "$ProjectRoot\dlt\venv\Scripts\python.exe") {
+    $PythonCmd = "$ProjectRoot\dlt\venv\Scripts\python.exe"
 }
 
-# 2.1 Cleanup Old Versions (Keep last 5)
-$KeepVersions = 5
-Write-Host "[Pipeline] Checking for old versions to cleanup (Keep: $KeepVersions)..."
-$AllVersions = Get-ChildItem -Path $ExportBaseDir -Directory -Filter "v_*" | Sort-Object Name -Descending
+# Call utility to Create + Cleanup (Keep 5)
+$FullExportPath = & $PythonCmd $VersionManager --action create_and_cleanup --base-dir $ExportBaseDir --keep 5
+# Trim whitespace just in case
+$FullExportPath = $FullExportPath.Trim()
 
-if ($AllVersions.Count -gt $KeepVersions) {
-    $VersionsToRemove = $AllVersions | Select-Object -Skip $KeepVersions
-    foreach ($v in $VersionsToRemove) {
-        Write-Host "[Pipeline] Removing old version: $($v.Name)"
-        Remove-Item -Path $v.FullName -Recurse -Force
-    }
+if (-not $FullExportPath) {
+    Write-Error "Failed to generate export path from version_manager.py"
 }
-else {
-    Write-Host "[Pipeline] Version count ($($AllVersions.Count)) is within limit."
-}
+
+Write-Host "[Pipeline] Target Export (Versioned): $FullExportPath"
+$VersionDirName = Split-Path $FullExportPath -Leaf
 
 # 2b. Create Symbolic Link / Junction for Cross-Compatibility
 # Map D:\data_lake -> Current Project data_lake
