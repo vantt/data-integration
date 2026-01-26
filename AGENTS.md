@@ -164,6 +164,78 @@ When asked to "verify system health", execute the following sequence:
 
 ---
 
+# AI Context - Data Engineering & Sapo Domain
+
+## 1. Sapo Data Sources & Channels
+
+Understanding where data comes from is crucial for debugging and extending the pipeline.
+
+| Source          | Method        | Characteristics                                                                                                                                      |
+| :-------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Batch API**   | `json_api`    | **High Latency, High Volume.** Used for daily/hourly snapshots. Good for Orders (modified_on), weak for Customers (can't reliable sort by modified). |
+| **Webhook**     | `webhook`     | **Real-time.** The "gold standard" for updates. Pushed to Cloudflare/Supabase -> consumed by DLT.                                                    |
+| **History Log** | `history_log` | **Gap Filling.** Polls `/admin/settings/get_logs` every 5-10 mins to catch events missed by webhooks. Critical redundancy.                           |
+
+## 2. Data Flow & Partitioning Mechanism
+
+The ingestion layer (DLT) is **Append-Only** and uses a **Segregated Storage** strategy.
+
+### Partition Structure
+
+`sapo_raw/{entity}/ingest_method={method}/year={YYYY}/month={MM}/{file_id}.parquet`
+
+- **Level 1 (`ingest_method`)**: Separates data by source (`batch_sync`, `webhook`, `history_log`).
+  - _Benefit_: Allows selective re-syncing/deletion of a specific source without affecting others.
+- **Level 2/3 (`year`/`month`)**: Time-based partitioning for efficient pruning by DuckDB.
+
+### Ingestion Logic
+
+- **No Merging**: DLT does not merge data. It simply capturing snapshots.
+- **Redundancy**: A single order update might appear in all 3 channels. This is expected.
+
+## 3. Transformation & Deduplication (The "Magic")
+
+The "One Truth" is constructed in the **DBT Staging Layer**, not during ingestion.
+
+### Deduplication Logic
+
+Since we have multiple streams of the same entity, we use a `Last-Write-Wins` strategy based on `event_timestamp`.
+
+**Algorithm:**
+
+1. **Union** all partitions (via DuckDB hive partitioning).
+2. **Window Function**:
+   ```sql
+   ROW_NUMBER() OVER (
+       PARTITION BY entity_id
+       ORDER BY
+           event_timestamp DESC,      -- Latest business event wins
+           CASE ingest_method         -- Source Priority as tie-breaker
+               WHEN 'webhook' THEN 3
+               WHEN 'history_log' THEN 2
+               ELSE 1
+           END DESC
+   )
+   ```
+3. **Filter**: Keep only `rn = 1`.
+
+## 4. Incremental Mechanism
+
+- **Ingestion (DLT)**:
+  - **Batch**: Cursor-based on `modified_on` (Orders) or `created_on` (Customers).
+  - **History Log**: Cursor-based on `occur_at`.
+- **Transformation (DBT)**:
+  - Uses DuckDB's ability to prune Parquet files.
+  - Logic: `WHERE event_timestamp > (SELECT MAX(event_timestamp) FROM {{ this }})`.
+  - **Caveat**: Must handle "Late Arriving Data" (e.g., a history log fetching an old order). The partition structure helps, but reliable `event_timestamp` is key.
+
+## 5. Domain Specifics
+
+- **Orders**: Immutable ID. Transactional. `modified_on` is reliable.
+- **Customers**: accurate updates are hard via Batch. Rely heavily on Webhooks/History Logs for profile updates (addresses, tags).
+
+---
+
 ## Bug đang cần xử lý
 
 Item 15132336653 [2026-01-19T23:26:35Z] -> account_authentication:1280476
