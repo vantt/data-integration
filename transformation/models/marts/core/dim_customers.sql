@@ -1,14 +1,10 @@
 {{ config(
-    tags=['mart', 'dim'],
-    materialized='incremental',
-    unique_key='customer_id'
+    tags=['mart', 'dim']
 ) }}
 
 WITH customers AS (
     SELECT * FROM {{ ref('std_customers') }}
-    {% if is_incremental() %}
-    WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
-    {% endif %}
+
 )
 
 SELECT

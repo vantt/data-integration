@@ -1,7 +1,5 @@
 {{ config(
-    tags=['mart', 'fact'],
-    materialized='incremental',
-    unique_key=['order_id', 'item_id']
+    tags=['mart', 'fact']
 ) }}
 
 WITH items AS (
@@ -9,9 +7,7 @@ WITH items AS (
 ),
 orders AS (
     SELECT * FROM {{ ref('std_orders') }}
-    {% if is_incremental() %}
-    WHERE updated_at > (SELECT MAX(updated_at) FROM {{ this }})
-    {% endif %}
+
 ),
 valid_customers AS (
     SELECT customer_key FROM {{ ref('dim_customers') }}
@@ -19,7 +15,10 @@ valid_customers AS (
 
 SELECT
     -- Surrogate Keys (Foreign Keys to Dims)
-    {{ dbt_utils.generate_surrogate_key(["i.product_id || '-' || coalesce(i.variant_id, '')"]) }} as product_key,
+    CASE 
+        WHEN i.product_id IS NULL OR i.product_id = '' THEN {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
+        ELSE {{ dbt_utils.generate_surrogate_key(["i.product_id || '-' || coalesce(i.variant_id, '')"]) }}
+    END as product_key,
     {{ dbt_utils.generate_surrogate_key(["coalesce(i.product_type, 'Unknown')"]) }} as category_key,
     COALESCE(vc.customer_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as customer_key,
     {{ dbt_utils.generate_surrogate_key(['cast(o.location_id as string)']) }} as branch_location_key,

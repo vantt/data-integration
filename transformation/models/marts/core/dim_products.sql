@@ -1,15 +1,10 @@
 {{ config(
-    tags=['mart', 'dim'],
-    materialized='incremental',
-    unique_key='product_key'
+    tags=['mart', 'dim']
 ) }}
 
 WITH order_items AS (
     SELECT * FROM {{ ref('std_order_items') }}
-    {% if is_incremental() %}
-    -- Only process items extracted since the last run
-    WHERE cast(extracted_at as TIMESTAMP) > (SELECT MAX(cast(last_seen_at as TIMESTAMP)) FROM {{ this }})
-    {% endif %}
+
 ),
 
 ranked_products AS (
@@ -17,6 +12,7 @@ ranked_products AS (
     -- Since we don't have a dedicated Product Sync yet, we extract products from Order Items.
     -- We use ROW_NUMBER() ordered by extracted_at DESC to always get the LATEST version of the product 
     -- (e.g., if name or price changed, we get the new one).
+    -- Todo: Update this when we have a dedicated Product Sync
     SELECT 
         *,
         ROW_NUMBER() OVER (
@@ -50,3 +46,19 @@ SELECT
 
 FROM ranked_products
 WHERE rn = 1
+
+UNION ALL
+
+SELECT
+    {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as product_key,
+    'Unknown' as product_id,
+    'Unknown' as variant_id,
+    'Unknown' as sku,
+    'Unknown' as barcode,
+    'Unknown' as product_name,
+    'Unknown' as variant_name,
+    'Unknown' as product_type,
+    'Unknown' as unit,
+    0 as weight_grams,
+    0 as last_sold_price,
+    NULL as last_seen_at

@@ -1,7 +1,5 @@
 {{ config(
-    tags=['mart', 'dim'],
-    materialized='incremental',
-    unique_key='geography_key'
+    tags=['mart', 'dim']
 ) }}
 
 WITH orders_shipping_locs AS (
@@ -13,9 +11,7 @@ WITH orders_shipping_locs AS (
         MAX(updated_at) as last_seen_at
     FROM {{ ref('std_orders') }}
     WHERE shipping_province IS NOT NULL AND shipping_province != ''
-    {% if is_incremental() %}
-    AND updated_at > (SELECT MAX(last_seen_at) FROM {{ this }})
-    {% endif %}
+
     GROUP BY 1, 2, 3, 4
 ),
 
@@ -28,9 +24,7 @@ orders_billing_locs AS (
         MAX(updated_at) as last_seen_at
     FROM {{ ref('std_orders') }}
     WHERE billing_province IS NOT NULL AND billing_province != ''
-    {% if is_incremental() %}
-    AND updated_at > (SELECT MAX(last_seen_at) FROM {{ this }})
-    {% endif %}
+
     GROUP BY 1, 2, 3, 4
 ),
 
@@ -43,9 +37,7 @@ customers_locs AS (
         MAX(updated_at) as last_seen_at
     FROM {{ ref('dim_customers') }}
     WHERE province IS NOT NULL AND province != '' AND province != 'Unknown'
-    {% if is_incremental() %}
-    AND updated_at > (SELECT MAX(last_seen_at) FROM {{ this }})
-    {% endif %}
+
     GROUP BY 1, 2, 3, 4
 ),
 
@@ -59,7 +51,7 @@ unioned_locs AS (
 
 SELECT DISTINCT
     -- Surrogate Key
-    {{ dbt_utils.generate_surrogate_key(["coalesce(province,'')", "coalesce(district,'')", "coalesce(ward,'')", "coalesce(country, 'Vietnam')"]) }} as geography_key,
+    {{ dbt_utils.generate_surrogate_key(["trim(coalesce(province,''))", "trim(coalesce(district,''))", "trim(coalesce(ward,''))", "trim(coalesce(country, 'Vietnam'))"]) }} as geography_key,
     
     -- Hierarchy
     province,
