@@ -79,6 +79,12 @@ def generate_serving_db():
         latest_filename = get_latest_file(table_dir)
         if not latest_filename:
             print(f"  [!] Empty folder: {table_name}")
+            if not db_locked and con:
+                try:
+                    con.sql(f"DROP VIEW IF EXISTS {table_name}")
+                    print(f"      [Cleanup] Dropped empty view: {table_name}")
+                except Exception as e:
+                    print(f"      [!] Failed to drop view: {e}")
             continue
             
         print(f"  [+] Table: {table_name}")
@@ -97,7 +103,7 @@ def generate_serving_db():
             sql = f"""
             CREATE OR REPLACE VIEW {table_name} AS 
             WITH source_files AS (
-                SELECT *, filename FROM read_parquet('{portable_glob}', filename=true, hive_partitioning=0)
+                SELECT * FROM read_parquet('{portable_glob}', filename=true, hive_partitioning=0)
             ),
             latest AS (
                 SELECT max(filename) as max_fn FROM source_files
