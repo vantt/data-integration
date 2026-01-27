@@ -4,6 +4,27 @@
     tags=['mart', 'dim', 'base']
 ) }}
 
+/*
+    ARCHITECTURAL NOTE: ROLE OF DIM_CUSTOMERS_BASE
+    
+    1. Single Source of Truth for Keys:
+       This model generates the canonical `customer_key` (Surrogate Key) for the entire data warehouse.
+       All downstream models (Facts, Dimensions) must reference this key to ensure consistency.
+
+    2. Circular Dependency Breaker:
+       - `fact_orders` needs a `customer_key` to link orders to customers.
+       - `dim_customers` (the final Mart) needs `fact_orders` to calculate metrics (e.g., total spend, VIP status).
+       - DIRECT LINK would cause: dim_customers -> fact_orders -> dim_customers (CIRCULAR ERROR).
+       - SOLUTION:
+            dim_customers_base (Keys & Profile) --> fact_orders
+                                                      |
+            dim_customers (Final) <-------------------+
+       
+    3. Not for Serving:
+       This model is an internal building block. It is NOT exported to the Serving Layer (Metabase).
+       End users should only use `dim_customers`, which includes all fields from Base + calculated Metrics.
+*/
+
 WITH customers AS (
     SELECT * FROM {{ ref('std_customers') }}
 )

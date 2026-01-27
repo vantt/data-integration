@@ -2,96 +2,124 @@ import duckdb
 import os
 import glob
 import re
+import shutil
+import time
 
 # Configuration
 # HOST PATHS
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 DATA_LAKE_DIR = os.path.join(PROJECT_ROOT, 'data_lake')
 SERVING_DIR = os.path.join(DATA_LAKE_DIR, 'serving')
-EXPORT_BASE_DIR = os.path.join(DATA_LAKE_DIR, 'export', 'marts')
+# Point to Stable Rolling Directory
+ROLLING_DIR = os.path.join(DATA_LAKE_DIR, 'export', 'marts', 'rolling')
 SERVING_DB_PATH = os.path.join(SERVING_DIR, 'olap.duckdb')
 
 # DOCKER / PORTABLE PATH
-# This path must exist on BOTH Host (via Junction) and Docker (via Mount)
-# Host: D:\data_lake (Junction to Project/data_lake)
-# Docker: /data_lake (Mounted volume)
-# We assume the junction is setup by run_pipeline.ps1
 PORTABLE_ROOT = "/data_lake"
 
-# Pattern: v_YYYYMMDD_HHMMSS
-DIR_PATTERN = re.compile(r'^v_(\d{8}_\d{6})$')
+def garbage_collect(folder_path, latest_file):
+    """
+    Deletes all files in folder_path EXCEPT the latest_file.
+    Silently ignores PermissionError (Windows Locking).
+    """
+    files = glob.glob(os.path.join(folder_path, "*.parquet"))
+    for f in files:
+        if os.path.basename(f) == latest_file:
+            continue
+            
+        try:
+            os.remove(f)
+            print(f"    [GC] Deleted old file: {os.path.basename(f)}")
+        except PermissionError:
+            print(f"    [GC] SKIP Locked file (In Use): {os.path.basename(f)}")
+        except Exception as e:
+            print(f"    [GC] Error deleting {os.path.basename(f)}: {e}")
+
+def get_latest_file(folder_path):
+    """Finds the lexically latest parquet file in a folder."""
+    files = glob.glob(os.path.join(folder_path, "*.parquet"))
+    if not files:
+        return None
+    files.sort()
+    return os.path.basename(files[-1])
 
 def generate_serving_db():
-    print(f"Generating Serving DB at: {SERVING_DB_PATH}")
-    
-    # 0. Reset DB (Remove stale views)
-    if os.path.exists(SERVING_DB_PATH):
-        try:
-            os.remove(SERVING_DB_PATH)
-            print("  [x] Removed existing serving database to clear stale views.")
-        except Exception as e:
-            print(f"  [!] Could not remove existing DB: {e}")
+    print(f"Updating Serving DB at: {SERVING_DB_PATH}")
+    print(f"Scanning Rolling Directory: {ROLLING_DIR}")
 
     os.makedirs(SERVING_DIR, exist_ok=True)
     
-    # 1. Scan/Find Versions
-    if not os.path.exists(EXPORT_BASE_DIR):
-        print(f"Export dir {EXPORT_BASE_DIR} does not exist.")
+    if not os.path.exists(ROLLING_DIR):
+        print(f"Rolling dir {ROLLING_DIR} does not exist. Pipeline might not have run yet.")
         return
 
-    subdirs = [d for d in os.listdir(EXPORT_BASE_DIR) if os.path.isdir(os.path.join(EXPORT_BASE_DIR, d))]
-    versions = []
+    # 1. Try to Connect to DB for View Updates (Best Effort)
+    con = None
+    db_locked = False
+    try:
+        con = duckdb.connect(SERVING_DB_PATH)
+    except Exception as e:
+        print(f"  [!] WARNING: Could not connect to DuckDB ({e}).")
+        print(f"      Assuming DB is locked by a reader. Skipping View Definition updates.")
+        print(f"      This is SAFE if Smart Views were already created previously.")
+        db_locked = True
+
+    # 2. Iterate through Table Folders
+    subdirs = [d for d in os.listdir(ROLLING_DIR) if os.path.isdir(os.path.join(ROLLING_DIR, d))]
     
-    for d in subdirs:
-        match = DIR_PATTERN.match(d)
-        if match:
-            versions.append((match.group(1), os.path.join(EXPORT_BASE_DIR, d)))
+    if not subdirs:
+        print("No table directories found in rolling/.")
+        if con: con.close()
+        return
+
+    for table_name in subdirs:
+        table_dir = os.path.join(ROLLING_DIR, table_name)
+        
+        # A. Find Latest File (Filesystem check)
+        latest_filename = get_latest_file(table_dir)
+        if not latest_filename:
+            print(f"  [!] Empty folder: {table_name}")
+            continue
             
-    if not versions:
-        print("No versioned directories found.")
-        return
+        print(f"  [+] Table: {table_name}")
+        print(f"      Latest: {latest_filename}")
         
-    # Sort
-    versions.sort(key=lambda x: x[0], reverse=True)
-    latest_batch, latest_path = versions[0]
-    
-    print(f"Detected Latest Version: {latest_batch}")
-    
-    # Connect
-    con = duckdb.connect(SERVING_DB_PATH)
-    
-    # 2. Update Views from Latest Directory
-    parquet_files = glob.glob(os.path.join(latest_path, "*.parquet"))
-    
-    print(f"Updating Views from {latest_path}...")
-    
-    parquet_files = glob.glob(os.path.join(latest_path, "*.parquet"))
-    print(f"  Found {len(parquet_files)} parquet files.")
-    for p in parquet_files:
-        print(f"    - {os.path.basename(p)}")
-        filename = os.path.basename(p)
-        table_name = os.path.splitext(filename)[0]
+        # B. Create Smart View (If DB available)
+        if not db_locked and con:
+            # Construct PORTABLE Pattern for Smart View
+            # We use a glob pattern matching ALL parquet files in the folder
+            # /data_lake/export/marts/rolling/table_name/*.parquet
+            portable_glob = f"{PORTABLE_ROOT}/export/marts/rolling/{table_name}/*.parquet"
+            
+            # SMART VIEW LOGIC:
+            # Select max(filename) from the glob scan, then filter by that filename.
+            # This makes the view "Auto-Updating" as long as the latest file exists and is max string.
+            sql = f"""
+            CREATE OR REPLACE VIEW {table_name} AS 
+            WITH source_files AS (
+                SELECT *, filename FROM read_parquet('{portable_glob}', filename=true, hive_partitioning=0)
+            ),
+            latest AS (
+                SELECT max(filename) as max_fn FROM source_files
+            )
+            SELECT * EXCLUDE (filename) 
+            FROM source_files 
+            WHERE filename = (SELECT max_fn FROM latest)
+            """
+            
+            try:
+                con.sql(sql)
+                # print(f"      [View] Smart View Updated.")
+            except Exception as e:
+                print(f"      [!] Failed to update view: {e}")
         
-        # Construct PORTABLE Path
-        # /data_lake/export/marts/v_BATCH/filename
-        # Force forward slashes
-        portable_path = f"{PORTABLE_ROOT}/export/marts/v_{latest_batch}/{filename}"
+        # C. Garbage Collection (Always run)
+        garbage_collect(table_dir, latest_filename)
         
-        print(f"  [+] View: {table_name} -> {portable_path}")
+    if con:
+        con.close()
         
-        # Create View
-        # On Windows: /data_lake resolves to CurrentDrive:\data_lake which matches the Junction D:\data_lake
-        # On Linux: /data_lake resolves to Root /data_lake
-        con.sql(f"CREATE OR REPLACE VIEW {table_name} AS SELECT * FROM '{portable_path}'")
-        
-    con.close()
-    
-    # 3. Cleanup
-    # Cleanup is now handled centrally by scripts/utils/version_manager.py
-    # invoked during the DBT/Ingestion phase.
-    pass
-
-    print("Done.")
+    print("Serving Update & GC Completed.")
 
 if __name__ == "__main__":
     generate_serving_db()

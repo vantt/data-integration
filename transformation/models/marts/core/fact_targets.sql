@@ -1,6 +1,7 @@
 {{ config(
     materialized='table',
-    tags=['mart', 'core', 'targets']
+    tags=['mart', 'core', 'targets'],
+    location="{{ env_var('DBT_EXPORT_PATH') }}/{{ this.name }}/{{ this.name }}_{{ run_started_at.strftime('%Y%m%d%H%M%S') }}.parquet"
 ) }}
 
 WITH staged AS (

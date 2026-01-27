@@ -49,187 +49,73 @@ Dưới đây là ma trận chi tiết cách dữ liệu chảy từ Sapo về D
 
 ---
 
-## 2. Chiến Lược Transformation (DBT + DuckDB)
+## 2. Chiến Lược Transformation & Serving (Zero-Downtime Architecture)
 
-Thách thức chính là làm sao để DBT đọc dữ liệu từ các partitions này một cách **Incremental** và **Hợp nhất (Merge)** chính xác để tạo ra "Golden Record".
+Để đảm bảo khả năng phục vụ dữ liệu liên tục (High Availability) trên môi trường Windows (nơi file locking là vấn đề nghiêm trọng) và hỗ trợ cập nhật tần suất cao (1 phút/lần), chúng ta áp dụng chiến lược **"Rolling Snapshots"**.
 
-### A. Định Nghĩa Source (External Tables)
+### A. Vấn Đề Của Chiến Lược Cũ (Folder Swapping)
 
-Trong `sources.yml`, ta định nghĩa source pattern bao phủ tất cả partition nhưng expose các cột partition (`ingest_method`, `year`, `month`) để DuckDB có thể prune (lọc bớt file) khi query.
+Chiến lược cũ tạo folder `v_YYYYMMDD_HHMMSS` mới cho mỗi lần chạy và switch symlink/view:
 
-```yaml
-sources:
-  - name: sapo
-    tables:
-      - name: orders_raw
-        external:
-          # QUAN TRỌNG: Cần enable hive_partitioning=1 để DuckDB nhận diện ingest_method, year, month thành cột
-          location: "read_parquet('sapo_raw/order/**/*.parquet', hive_partitioning=1)"
-```
+1.  **Downtime**: Để switch file `.duckdb` đang được Metabase lock, phải Stop Container -> Swap -> Start Container. Gây gián đoạn dịch vụ mỗi phút.
+2.  **Locking**: Trên Windows, không thể ghi đè (overwrite) lên file Parquet nếu Metabase đang query nó.
+3.  **Missing Data**: Các model `incremental` chỉ update state nội bộ của DuckDB mà không tự động export ra folder version mới, dẫn đến serving layer bị thiếu dữ liệu.
 
-### B. Chiến Lược Incremental Model (Staging/Mart)
+### B. Chiến Lược Mới: Rolling Snapshots (Immutable Append)
 
-Chúng ta không thể chỉ đơn giản dùng `timestamp > max(timestamp)` bởi vì dữ liệu đến từ 3 nguồn với đặc tính khác nhau (Customers Batch thiếu updates).
+Thay vì cố gắng ghi đè hay tráo đổi folder, chúng ta coi Storage là một **Log** các bản Snapshots.
 
-**Mô hình xử lý:** `Deduplication` & `Last-Write-Wins`.
+#### 1. Nguyên Lý Hoạt Động
 
-#### Bước 1: Filter đầu vào (Performance Optimization)
-
-```sql
--- models/staging/stg_sapo__customers.sql
-{{
-  config(
-    materialized='incremental',
-    unique_key='entity_id',
-    incremental_strategy='delete+insert'
+- **Stable Storage**: Sử dụng một thư mục cố định `data_lake/export/marts/rolling/`.
+- **Immutable Writes**: Mỗi lần pipeline chạy, tạo một file Parquet **MỚI** với timestamp (VD: `dim_customers_20240127_1001.parquet`). Không bao giờ ghi đè file cũ.
+- **Smart Views**: DuckDB Serving Layer sử dụng View động để luôn đọc file mới nhất:
+  ```sql
+  CREATE VIEW dim_customers AS
+  WITH source AS (
+      SELECT *, filename FROM read_parquet('.../dim_customers/*.parquet', filename=True)
   )
-}}
+  SELECT * EXCLUDE (filename)
+  FROM source
+  WHERE filename = (SELECT MAX(filename) FROM source)
+  ```
+- **Lazy Cleanup**: Sau khi update View, hệ thống sẽ thử xóa các file cũ.
+  - Nếu file cũ đang được Metabase đọc (Locked) -> **Bỏ qua**, để lại cho lần chạy sau xóa.
+  - Nếu file rảnh -> **Xóa ngay**.
+  - Kết quả: Hệ thống luôn duy trì 1-3 file mới nhất, không bao giờ crash do lock.
 
-WITH raw_data AS (
-    SELECT
-        *,
-        -- Cột này tự động có sẵn nếu dùng hive_partitioning=1
-        ingest_method,
-        year,
-        month
-    FROM {{ source('sapo', 'customer_raw') }}
+### C. Áp Dụng Chi Tiết
 
-    {% if is_incremental() %}
-    -- LOGIC INCREMENTAL THÔNG MINH:
-    -- DuckDB sẽ tự động "Prune" (bỏ qua) các thư mục year/month cũ
-    -- nếu event_timestamp tương quan chặt với partition time.
-    WHERE event_timestamp > (SELECT MAX(event_timestamp) FROM {{ this }})
-    {% endif %}
-),
-```
+#### 1. Dimensions (VD: `dim_customers`)
 
-#### Bước 2: Hợp Nhất Đa Chiều (Deduplication Logic)
+- **Dữ liệu**: Nhỏ (< 1GB), thay đổi chậm hoặc vừa.
+- **Cách Export**: **Full Rolling Snapshot**.
+- **Cơ chế**:
+  - DBT chạy `incremental` để update bảng nội bộ `sapo_warehouse.duckdb` (Merge logic).
+  - `post-hook` thực hiện `COPY ... TO ...` để dump toàn bộ bảng ra file Parquet mới.
+- **Ưu điểm**: Đơn giản, đảm bảo tính nhất quán (Consistency).
 
-Đây là bước quan trọng nhất để xử lý việc `Batch` thiếu update. Ta gộp chung tất cả nguồn, và dùng `window function` để chọn bản ghi mới nhất.
+#### 2. Facts (VD: `fact_orders`)
 
-> **Quan Trọng**: Logic này sẽ được thực hiện và **hoàn tất ngay tại tầng Staging**.
->
-> - Output của Staging là một tập dữ liệu "Golden Record" (mỗi entity 1 dòng duy nhất và mới nhất).
-> - Các tầng sau (Intermediate/Marts) chỉ việc `SELECT * FROM {{ ref('stg_sapo__customers') }}` mà không cần quan tâm đến việc data đến từ Batch hay Webhook, hay phải deduplicate lại.
-
-```sql
-deduped AS (
-    SELECT
-        *,
-        ROW_NUMBER() OVER (
-            PARTITION BY entity_id
-            ORDER BY
-                event_timestamp DESC, -- Ưu tiên bản ghi mới nhất (quan trọng nhất)
-                -- Tie-breaker: Nếu cùng timestamp, ưu tiên Webhook > History > Batch
-                CASE
-                    WHEN ingest_method = 'webhook' THEN 3
-                    WHEN ingest_method = 'history_log' THEN 2
-                    ELSE 1
-                END DESC
-        ) AS rn
-    FROM raw_data
-)
-SELECT * EXCLUDE (rn)
-FROM deduped
-WHERE rn = 1
-```
-
-### C. Xử Lý Trường Hợp Đặc Biệt: Backfill & Late Arriving Data
-
-Do partition theo `event_timestamp`, việc "Incremental by timestamp" hoạt động tốt miễn là không có **Late Arriving Data** nằm quá xa trong quá khứ (vào các partition cũ mà DuckDB có thể đã skip nếu ta filter path thủ công, nhưng filter `WHERE` trên cột thì DuckDB vẫn phải check stats).
-
-**Giải pháp:**
-
-- Tin tưởng vào cơ chế `min/max` stats của file Parquet.
-- Khi chạy incremental, DuckDB sẽ đọc metadata của các file parquet. Nếu `max(event_timestamp)` của file < `watermark`, file đó sẽ được skip hoàn toàn. Điều này đảm bảo hiệu năng kể cả khi folder data lớn dần.
+- **Dữ liệu**: Lớn, tăng trưởng nhanh theo thời gian.
+- **Thách thức**: Dump toàn bộ 10GB+ mỗi phút là lãng phí và chậm.
+- **Cách Export**: **Hybrid Partitioning (Future Scoping)**
+  - **History (Các tháng cũ)**: Lưu tĩnh (Static Files), ví dụ `orders_2023.parquet`. Không bao giờ ghi lại trừ khi backfill.
+  - **Current (Tháng hiện tại)**: Áp dụng **Rolling Snapshot**. Chỉ dump dữ liệu tháng này ra file mới (VD: `orders_current_v1001.parquet`).
+  - **Serving View**: `SELECT * FROM read_parquet('history/*.parquet') UNION ALL SELECT * FROM read_parquet('current/*.parquet')`.
 
 ---
 
-## 3. Tích Hợp Dagster (Orchestration)
+## 3. Tích Hợp Dagster & Pipeline
 
-Để đảm bảo việc tính toán incremental hoạt động trơn tru trong pipeline tự động hóa, Dagster cần được cấu hình như sau:
-
-### Cơ Chế Trigger
-
-Hiện tại đang có 3 jobs chính (`orchestration/definitions.py`):
-
-1.  **Realtime Job** (Webhook + DBT): Chạy mỗi phút.
-2.  **Incremental Job** (History Log + DBT): Chạy mỗi 10 phút.
-3.  **Nightly Job** (Batch Sync + DBT): Chạy 04:00 AM.
-
-### Vấn Đề Lock & Concurrency (Quan Trọng)
-
-Do cả 3 jobs đều trigger `dbt build` (ghi vào cùng file DuckDB `.duckdb`), cần kiểm soát concurrency để tránh lỗi `DuckDB Lock Error` (vì DuckDB single-writer).
-
-**Giải pháp hiện tại (Đã kiểm tra):**
-
-- Các job đã được gắn tag `concurrency_group: dbt_rw`.
-- Điều này đảm bảo tại một thời điểm chỉ có 1 tiến trình được phép ghi vào DB. (Cần đảm bảo file `dagster.yaml` của instance có cấu hình limit cho tag này, hoặc dùng `run_queue` configuration).
-
-### Chiến Lược Retry
-
-- Đối với **Realtime/Incremental Job**: Nên set `max_retries: 0` hoặc thấp (1). Vì nếu fail do lock, job sau sẽ chạy ngay lập tức (1-10 phút sau). Retry liên tục sẽ làm tắc nghẽn hàng đợi.
-- Đối với **Nightly Job**: Có thể cho phép retry 1-2 lần vì đây là job quan trọng chạy 1 lần/ngày.
-
-### Deployment Note
-
-Kịch bản chạy lý tưởng:
-
-1.  **DLT Step**: Capture dữ liệu mới vào Parquet (Append-only, rất nhanh, không lock).
-2.  **DBT Step**:
-    - Dagster check lock `dbt_rw`.
-    - Thực thi `dbt build --select tag:otp`.
-    - DBT đọc Parquet mới -> Update Staging -> Update Marts -> Release Lock.
+1.  **DbtAsset**: Cấu hình `DBT_EXPORT_PATH` trỏ tới `.../rolling`.
+2.  **Models**:
+    - Config `incremental` để giữ hiệu năng tính toán.
+    - Sử dụng `post-hook` hoặc `location` config động để ghi file có timestamp.
+3.  **Serving Asset**: Chạy script `generate_serving_db.py` với chế độ "Update & GC" (Update View và Garbage Collect file thừa).
 
 ---
 
-## 4. Quản Lý Thực Thi Pipeline (Script Runner)
+## 4. Tổng Kết
 
-Hiện tại, việc chạy DLT được quản lý tốt bởi framework (pipeline wrapper). Đối với DBT, ta cần đảm bảo tính nhất quán tương tự.
-
-### Đánh giá Script `run_dbt.py`
-
-Hiện tại đang có script `transformation/scripts/run_dbt.py`.
-
-- **Ưu điểm**:
-  - Tự động tìm kiếm `dbt executable` trong môi trường ảo (venv) của DLT. Điều này rất tốt để đảm bảo không phụ thuộc vào global python.
-  - Set đúng `cwd` (current working directory) để chạy dbt.
-- **Điểm cần cải thiện**:
-  - **Environment Variables**: Chưa thấy logic load `.env` (ví dụ: `DBT_DATA_LAKE_PATH`, `DBT_EXPORT_PATH`). Nếu chạy thủ công mà quên load env, dbt sẽ lỗi path.
-  - **Logging**: Basic print. Cần log rõ ràng hơn nếu tích hợp vào hệ thống lớn.
-
-### Đề xuất Cải Tiến
-
-Cần nâng cấp `run_dbt.py` để trở thành một "Generic Runner" mạnh mẽ hơn hoặc dùng wrapper của DLT nếu có thể, cụ thể:
-
-1.  **Auto-load .env**: Sử dụng `python-dotenv` để load file `.env` từ root project trước khi chạy dbt command. Điều này cực kỳ quan trọng cho DuckDB path.
-2.  **Error Handling**: Capture stderr/stdout tốt hơn để debug khi pipeline fail trong Dagster (mặc dù Dagster asset đã handle, nhưng script độc lập cũng cần).
-
----
-
-## 5. Đánh Giá Kỹ Thuật & Dự Trù Rủi Ro
-
-Sau khi scan codebase hiện tại (`models/sources.yml`, `profiles.yml`), đây là các đánh giá kỹ thuật cho việc triển khai:
-
-### A. Khả Thi & Thuận Lợi
-
-1.  **DuckDB Adapter**: Đã được cấu hình (`profiles.yml`). DuckDB xử lý file Parquet cực tốt, đặc biệt là các thao tác Window Function và Filter Pushdown cần thiết cho chiến lược này.
-2.  **Codebase DLT**: Đã có cấu trúc partition chuẩn (`ingest_method/year/month`). Đây là tiền đề bắt buộc để DBT hoạt động hiệu quả.
-
-### B. Rủi Ro & Điều Chỉnh Cần Thiết
-
-1.  **Cấu hình Source (`sources.yml`)**:
-    - Hiện tại: `read_parquet('.../**/*.parquet')` (chưa rõ options).
-    - **Vấn đề**: DuckDB có thể không tự động nhận diện các cột partition (`ingest_method`, `year`, `month`) từ đường dẫn file nếu không bật `hive_partitioning`.
-    - **Khắc phục**: Cần sửa lại `sources.yml` để thêm option `hive_partitioning=1`.
-    - Ví dụ: `read_parquet('.../**/*.parquet', hive_partitioning=1)`
-2.  **Performance khi lượng file lớn**:
-    - Pattern `**/*.parquet` có thể khiến DuckDB phải list toàn bộ file system mỗi lần chạy, gây chậm.
-    - **Khắc phục**: Nếu sau này chậm, có thể chuyển sang dùng biến môi trường DBT để chỉ định cụ thể partition cần đọc (ví dụ: chỉ đọc `year=2024`). Nhưng hiện tại với volume < 1GB/ngày thì chưa đáng lo.
-3.  **Schema Evolution**:
-    - Vì đọc "Schema-on-read" từ Parquet, nếu các file Parquet cũ và mới có schema lệch nhau (thêm/bớt cột), DuckDB có thể cần option `union_by_name=True`.
-    - **Dự trù**: Cần theo dõi log DBT, nếu lỗi schema thì thêm option này vào `read_parquet`.
-
-### C. Kết Luận
-
-Chiến lược hoàn toàn khả thi trên nền tảng code hiện tại. Chỉ cần một điều chỉnh nhỏ trong `sources.yml` để kích hoạt tính năng partition của DuckDB.
+Chiến lược này giải quyết triệt để bài toán **Zero Downtime** trên Windows bằng cách tuân thủ nguyên tắc "First Principle": **Không bao giờ ghi vào file đang được đọc. Luôn ghi vào file mới.**

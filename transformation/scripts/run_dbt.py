@@ -62,6 +62,24 @@ def run_dbt():
     print(f"Working directory: {transformation_dir}")
     
     # 3. Construct Command
+    # Pre-create Rolling Directories (Crucial for COPY command)
+    dbt_export_path = os.environ.get("DBT_EXPORT_PATH")
+    if dbt_export_path:
+        print(f"Ensuring export directories in: {dbt_export_path}")
+        if not os.path.exists(dbt_export_path):
+            os.makedirs(dbt_export_path)
+            
+        # Scan transformation/models/marts
+        # We are in transformation/scripts, so models is ../models
+        models_dir = os.path.join(transformation_dir, "models", "marts")
+        if os.path.exists(models_dir):
+            for root, dirs, files in os.walk(models_dir):
+                for file in files:
+                    if file.endswith(".sql"):
+                        model_name = os.path.splitext(file)[0]
+                        model_path = os.path.join(dbt_export_path, model_name)
+                        os.makedirs(model_path, exist_ok=True)
+
     cmd = [dbt_exe, "build"]
     
     if args.select:

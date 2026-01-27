@@ -22,25 +22,15 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Resolve-Path "$PSScriptRoot\.."
 $ExportBaseDir = "$ProjectRoot\data_lake\export\marts"
 
-# 2. Generate Version Path via Shared Python Utility
-Write-Host "[Pipeline] Resolving version path via shared utility..."
-$VersionManager = "$ProjectRoot\scripts\utils\version_manager.py"
-$PythonCmd = "python"
-if (Test-Path "$ProjectRoot\dlt\venv\Scripts\python.exe") {
-    $PythonCmd = "$ProjectRoot\dlt\venv\Scripts\python.exe"
+# 2. Export Path (Stable Rolling)
+Write-Host "[Pipeline] Setting Export Path to Rolling Directory..."
+$FullExportPath = "$ExportBaseDir\rolling"
+if (-not (Test-Path $FullExportPath)) {
+    New-Item -ItemType Directory -Force -Path $FullExportPath | Out-Null
 }
 
-# Call utility to Create + Cleanup (Keep 5)
-$FullExportPath = & $PythonCmd $VersionManager --action create_and_cleanup --base-dir $ExportBaseDir --keep 5
-# Trim whitespace just in case
-$FullExportPath = $FullExportPath.Trim()
-
-if (-not $FullExportPath) {
-    Write-Error "Failed to generate export path from version_manager.py"
-}
-
-Write-Host "[Pipeline] Target Export (Versioned): $FullExportPath"
-$VersionDirName = Split-Path $FullExportPath -Leaf
+Write-Host "[Pipeline] Target Export (Stable): $FullExportPath"
+$VersionDirName = "rolling"
 
 # 2b. Create Symbolic Link / Junction for Cross-Compatibility
 # Map D:\data_lake -> Current Project data_lake
@@ -74,31 +64,11 @@ if ($LASTEXITCODE -ne 0) {
     Write-Error "dbt build failed!"
 }
 
-# 6. Run Serving Update (with Lock handling)
-Write-Host "[Pipeline] Identifying Metabase Container..."
-# Robust method: Get ID and Image, filter in PowerShell
-$Containers = docker ps --format "{{.ID}} {{.Image}}"
-$MetabaseId = $null
-foreach ($line in $Containers) {
-    if ($line -match "metabase") {
-        $MetabaseId = $line.Split(" ")[0]
-        break
-    }
-}
-
-if ($MetabaseId) {
-    Write-Host "[Pipeline] Stopping Metabase ($MetabaseId) to release DB lock..."
-    docker stop $MetabaseId | Out-Null
-}
-
-Write-Host "[Pipeline] Updating Serving Layer..."
+# 6. Run Serving Update (Rolling Snapshot / Zero Downtime)
+Write-Host "[Pipeline] Updating Serving Layer (Rolling Mode)..."
 Set-Location "$ProjectRoot"
 python scripts/provisioning/generate_serving_db.py
 
-if ($MetabaseId) {
-    Write-Host "[Pipeline] Restarting Metabase..."
-    docker start $MetabaseId | Out-Null
-    Write-Host "[Pipeline] Metabase restarted."
-}
+Write-Host "[Pipeline] Deployment Completed Successfully."
 
 Write-Host "[Pipeline] Deployment Completed Successfully."

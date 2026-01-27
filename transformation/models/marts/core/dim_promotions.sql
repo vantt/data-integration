@@ -1,5 +1,6 @@
 {{ config(
-    tags=['mart', 'dim']
+    tags=['mart', 'dim'],
+    location="{{ env_var('DBT_EXPORT_PATH') }}/{{ this.name }}/{{ this.name }}_{{ run_started_at.strftime('%Y%m%d%H%M%S') }}.parquet"
 ) }}
 
 WITH orders AS (

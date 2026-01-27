@@ -1,7 +1,10 @@
 {{ config(
     materialized='incremental',
     unique_key='customer_key',
-    tags=['mart', 'dim']
+    tags=['mart', 'dim'],
+    post_hook=[
+      "COPY (SELECT * FROM {{ this }}) TO '{{ env_var('DBT_EXPORT_PATH') }}/dim_customers/dim_customers_{{ run_started_at.strftime('%Y%m%d%H%M%S') }}.parquet' (FORMAT PARQUET)"
+    ]
 ) }}
 
 WITH customers AS (

@@ -1,8 +1,8 @@
-name: 'sapo_warehouse'
-version: '1.0.0'
+name: "sapo_warehouse"
+version: "1.0.0"
 config-version: 2
 
-profile: 'sapo_warehouse'
+profile: "sapo_warehouse"
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -11,27 +11,26 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
-
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt
-    search_order: ['sapo_warehouse', 'dbt']
+    search_order: ["sapo_warehouse", "dbt"]
 
-target-path: "target"  # directory which will store compiled SQL files
-clean-targets:         # directories to be removed by 'dbt clean'
+target-path: "target" # directory which will store compiled SQL files
+clean-targets: # directories to be removed by 'dbt clean'
   - "target"
   - "dbt_packages"
 
 models:
   sapo_warehouse:
     # Config for all models
-    +materialized: view  # Default to view for lightweight transformations
-    
+    +materialized: view # Default to view for lightweight transformations
+
     staging:
       +schema: staging
       +materialized: view
       +tags: ["otp"]
-    
+
     # intermediate:
     #   +schema: intermediate
     #   +materialized: table
@@ -41,7 +40,7 @@ models:
       +schema: marts
       +materialized: external
       +options:
-        format: 'parquet'
+        format: "parquet"
       +tags: ["olap"]
       +on_schema_change: sync_all_columns
 
