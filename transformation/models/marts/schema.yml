@@ -3,7 +3,21 @@ version: 2
 models:
   # Dimensions
   - name: dim_customers
-    description: "Customer dimension (SCD Type 1)."
+    description: "Customer dimension with CLV and RFM metrics."
+    columns:
+      - name: customer_key
+        tests: [unique, not_null]
+      - name: lifetime_value
+        description: "Total value of orders (GMV) for this customer. Formula: SUM(fact_orders.gmv)"
+      - name: recency_days
+        description: "Days since last order. Formula: CURRENT_DATE - MAX(order_date)"
+      - name: frequency
+        description: "Total count of distinct orders. Formula: COUNT(order_id)"
+      - name: customer_status
+        description: "RFM Status. Logic: Active (<=30 days), At Risk (31-90 days), Churned (>90 days)"
+
+  - name: dim_customers_base
+    description: "Base customer dimension (SCD Type 1) without circular dependencies."
     columns:
       - name: customer_key
         tests: [unique, not_null]
@@ -106,7 +120,7 @@ models:
       - name: customer_key
         tests:
           - relationships:
-              to: ref('dim_customers')
+              to: ref('dim_customers_base')
               field: customer_key
       - name: branch_location_key
         tests:
@@ -142,7 +156,7 @@ models:
       - name: customer_key
         tests:
           - relationships:
-              to: ref('dim_customers')
+              to: ref('dim_customers_base')
               field: customer_key
       - name: shipping_geography_key
         data_type: varchar

@@ -15,7 +15,9 @@ try:
     import run_history_log
     import run_webhook_consumer
     import run_customers_batch
+    import run_customers_batch
     import run_accounts_batch
+    import gsheet_targets
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
 
@@ -245,5 +247,31 @@ def sapo_webhook_consumer_asset(context):
         value="Webhook Poll Completed",
         metadata={
             "load_info": str(load_info) if load_info else "No Data"
+        }
+    )
+
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
+def sapo_targets_asset(context):
+    """
+    Manual/Scheduled sync for Google Sheet Targets.
+    """
+    context.log.info("Starting Google Sheet Targets Sync...")
+    load_dlt_configuration(context.log.info)
+    cwd = os.getcwd()
+    try:
+        os.chdir(DLT_DIR)
+        gsheet_targets.run()
+        load_info = "Success"
+    except Exception as e:
+        context.log.error(f"Error: {e}")
+        raise e
+    finally:
+        os.chdir(cwd)
+    
+    context.log.info(f"Targets Sync Finished.")
+    return Output(
+        value="Targets Sync Completed", 
+        metadata={
+            "status": "Success"
         }
     )

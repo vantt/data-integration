@@ -55,6 +55,13 @@ sapo_incremental_sync_job = define_asset_job(
     tags={"dagster/max_retries": "0", "concurrency_group": "dbt_rw"},
 )
 
+# 2.5 Targets Job (Manual)
+sapo_targets_sync_job = define_asset_job(
+    name="sapo_targets_sync_job",
+    selection=AssetSelection.assets(sapo_assets.sapo_targets_asset) | AssetSelection.keys("stg_targets", "fact_targets"),
+    tags={"concurrency_group": "dbt_rw"},
+)
+
 # 3. Nightly Reconciliation Job (Batch)
 # Triggered at 04:00 AM.
 sapo_nightly_reconciliation_job = define_asset_job(
@@ -63,6 +70,7 @@ sapo_nightly_reconciliation_job = define_asset_job(
         AssetSelection.assets(sapo_assets.sapo_orders_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
+        AssetSelection.assets(sapo_assets.sapo_targets_asset) |
         all_dbt_assets |
         AssetSelection.assets(serving.sapo_serving_db)
     ),

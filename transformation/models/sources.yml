@@ -21,3 +21,7 @@ sources:
       # Bảng 3: Accounts (Staff)
       - name: account
         description: "Raw accounts/staff data from Parquet files"
+
+      # Bảng 4: Targets (Google Sheets)
+      - name: targets_raw
+        description: "Target goals ingested from Google Sheets"

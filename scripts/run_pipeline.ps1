@@ -3,7 +3,7 @@ param(
     # Using ValueFromRemainingArguments allows us to capture ALL arguments (like --select, --full-refresh)
     # properly without PowerShell mistakenly parsing them as partial parameter matches.
     # This acts as a robust proxy to the underlying Python script.
-    [Parameter(ValueFromRemainingArguments=$true)]
+    [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$PassthroughArgs
 )
 

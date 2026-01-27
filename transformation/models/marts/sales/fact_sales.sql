@@ -10,7 +10,7 @@ orders AS (
 
 ),
 valid_customers AS (
-    SELECT customer_key FROM {{ ref('dim_customers') }}
+    SELECT customer_key FROM {{ ref('dim_customers_base') }}
 )
 
 SELECT
