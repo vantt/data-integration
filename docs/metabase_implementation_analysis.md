@@ -36,7 +36,7 @@ Các reports sẽ được xây dựng chính trên: `fact_orders`, `fact_sales`
   ), targets AS (
       SELECT period_date as month, sum(target_val) as target
       FROM fact_targets
-      WHERE metric_code = 'gmv' AND is_current = true
+      WHERE metric_code = 'gmv'
       GROUP BY 1
   )
   SELECT
@@ -98,7 +98,7 @@ Các reports sẽ được xây dựng chính trên: `fact_orders`, `fact_sales`
       ), targets AS (
           SELECT period_date as month, sum(target_val) as target
           FROM fact_targets
-          WHERE metric_code = 'gmv' AND is_current = true
+          WHERE metric_code = 'gmv'
           GROUP BY 1
       )
       SELECT
@@ -111,3 +111,7 @@ Các reports sẽ được xây dựng chính trên: `fact_orders`, `fact_sales`
 3.  **Chart: Revenue by Channel**: Pie/Donut.
 4.  **Chart: Top Stores**: Table with formatting.
 5.  **Dashboard**: Gom tất cả vào "Sales Executive Dashboard".
+
+"How was performance in Q4 2024?" (Date Filter)
+"How is the Online channel performing?" (Category Filter)
+"Which stores are doing best in Ho Chi Minh?" (Location Filter)

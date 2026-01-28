@@ -1,4 +1,4 @@
-# Global Agent Rules
+# Global Agent Rules, Context & Configuration
 
 **IMPORTANT:** _MUST READ_ and _MUST COMPLY_ with all _INSTRUCTIONS_ in project based on the context.
 
@@ -6,16 +6,54 @@
 
 - **Implementation Plan Approval**: Even if the general review policy is set to `Auto-proceeded`, you MUST ALWAYS obtain explicit user approval for any `implementation_plan.md` before proceeding to execution. Do not auto-proceed with implementation plans under any circumstances.
 
+---
+
+## Documentation Map
+
+Comprehensive documentation is available following a **progressive disclosure** model:
+
+### Quick Reference
+
+| Document | Purpose | Location |
+|----------|---------|----------|
+| **README.md** | Project overview, quick start | `/README.md` |
+| **docs/README.md** | Documentation navigation hub | `/docs/README.md` |
+| **AGENTS.md** | AI agent context (this file) | `/AGENTS.md` |
+
+### System-Level Documentation (`/docs/`)
+
+| Document | Description |
+|----------|-------------|
+| `ARCHITECTURE.md` | System design, components, principles |
+| `DATA_FLOW.md` | 7-hop pipeline flow |
+| `DATA_DICTIONARY.md` | Schema, entities, business metrics |
+| `DEPLOYMENT.md` | Setup and configuration |
+| `OPERATIONS.md` | Daily operations, monitoring |
+| `TROUBLESHOOTING.md` | Common issues, recovery |
+| `CONTRIBUTING.md` | Development workflow |
+| `GLOSSARY.md` | Terminology, conventions |
+
+### Component Documentation
+
+| Component | Path | Key Files |
+|-----------|------|-----------|
+| **Ingestion** | `/ingestion/docs/` | PIPELINES, CONFIGURATION, SOURCES, INCREMENTAL |
+| **Transformation** | `/transformation/docs/` | MODELS, DEDUPLICATION, TESTING, MATERIALIZATION |
+| **Orchestration** | `/orchestration/docs/` | ASSETS, JOBS, SCHEDULES, RESOURCES |
+| **Webhook Receiver** | `/webhook_receiver/docs/` | API, SECURITY |
+
+---
+
 ## Multi-Project Repository Structure: `data-integration2`
 
 **CRITICAL:** `data-integration2` is a monorepo containing THREE main independent functional areas with specific sub-projects:
 
-### 1. DLT Pipelines (`data-integration2/dlt`)
+### 1. Ingestion Pipelines (`data-integration2/ingestion`)
 
 - **Purpose:** General data extraction pipelines (e.g., Sapo orders).
 - **Tech:** Python, `dlt` (Data Load Tool), `playwright`.
 - **Context:** Python-based ETL scripts.
-- **Dependencies:** Independent `requirements.txt` in `/dlt/`.
+- **Dependencies:** Independent `requirements.txt` in `/ingestion/`.
 
 ### 2. Webhook Receiver (`data-integration2/webhook_receiver`)
 
@@ -64,12 +102,12 @@
 1.  **Verify Current Context:** Always check which sub-project/folder the user is working on.
 2.  **Check Working Directory:** Use `pwd` or context clues to determine the location.
 3.  **Respect Project Boundaries:**
-    - **DLT** files ONLY in `/dlt/`
+    - **DLT** files ONLY in `/ingestion/`
     - **Receiver** files ONLY in `/webhook_receiver/`
     - **Consumer** files ONLY in `/webhook_consumer/`
     - **Transformation** files ONLY in `/transformation/`
     - **Orchestration** files ONLY in `/orchestration/`
-    - **NEVER** mix dependencies (e.g., do not verify `package.json` if working in a Python `dlt` folder).
+    - **NEVER** mix dependencies (e.g., do not verify `package.json` if working in a Python `ingestion` folder).
 
 **When User Context is Ambiguous:**
 
@@ -96,8 +134,8 @@
 
 - **Root**: `d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2`
 - **Component: Ingestion (DLT)**
-  - Path: `./dlt`
-  - Interpreter: `./dlt/venv/Scripts/python.exe`
+  - Path: `./ingestion`
+  - Interpreter: `./ingestion/venv/Scripts/python.exe`
   - Entry Points:
     - `run_orders_batch.py`: Batch sync for orders.
     - `run_customers_batch.py`: Batch sync for customers.
@@ -118,7 +156,7 @@
 ### 1. Ingestion Actions
 
 To run ingestion tasks, ALWAYS use the venv python.
-Pattern: `{venv_python} dlt/{script_name} [args]`
+Pattern: `{venv_python} ingestion/{script_name} [args]`
 
 **Verification Output**: Look for `LoadInfo` object printed to stdout.
 
@@ -151,7 +189,7 @@ When asked to "verify system health", execute the following sequence:
 ## Troubleshooting Logic
 
 - **Issue**: `ModuleNotFoundError`
-  - **Fix**: Ensure you are using `dlt/venv/Scripts/python.exe`, NOT system python.
+  - **Fix**: Ensure you are using `ingestion/venv/Scripts/python.exe`, NOT system python.
 - **Issue**: `dbt not found`
   - **Fix**: The wrapper `run_dbt.py` handles this. Do not run `dbt` directly. Use the wrapper.
 - **Issue**: Locked Database
@@ -160,7 +198,7 @@ When asked to "verify system health", execute the following sequence:
 ## Important Constraints
 
 - **Windows Paths**: Always use backslashes `\` or `os.path.join` compatibility.
-- **Environment API**: Credentials are loaded from `.dlt/secrets.toml` or OS Environment Variables. Do not hardcode secrets.
+- **Environment API**: Credentials are loaded from `ingestion/.dlt/secrets.toml` or OS Environment Variables. Do not hardcode secrets.
 
 ---
 
@@ -235,6 +273,29 @@ Since we have multiple streams of the same entity, we use a `Last-Write-Wins` st
 - **Customers**: accurate updates are hard via Batch. Rely heavily on Webhooks/History Logs for profile updates (addresses, tags).
 
 ---
+
+## Metabase MCP Configuration
+
+The Metabase MCP server is configured and active for this project.
+
+### Connection Details
+
+- **Server Name:** `metabase`
+- **MCP Tool:** `metabase-ai-assistant`
+- **URL:** `http://127.0.0.1:3000/`
+- **Status:** Connected (Verified 2026-01-28)
+
+### Database Information
+
+| ID  | Name            | Type   | Key Schemas | Notes                   |
+| --- | --------------- | ------ | ----------- | ----------------------- |
+| 1   | Sample Database | h2     | PUBLIC      | Metabase default sample |
+| 2   | Sapo DuckDB     | duckdb | main        | Primary Data Warehouse  |
+
+### Usage Notes
+
+- Use `mcp_metabase_db_schemas(database_id=2)` to explore the main warehouse schemas.
+- Many administrative/write tools are disabled in `mcp_config.json` to reduce context noise and safety.
 
 ## Bug đang cần xử lý
 

@@ -50,8 +50,8 @@ $env:DBT_DATA_LAKE_PATH = "$ProjectRoot\data_lake"
 
 # 4. Resolve Python Environment (Use dlt venv)
 $PythonCmd = "python"
-if (Test-Path "$ProjectRoot\dlt\venv\Scripts\python.exe") {
-    $PythonCmd = "$ProjectRoot\dlt\venv\Scripts\python.exe"
+if (Test-Path "$ProjectRoot\ingestion\venv\Scripts\python.exe") {
+    $PythonCmd = "$ProjectRoot\ingestion\venv\Scripts\python.exe"
 }
 Write-Host "[Pipeline] Using Python Executable: $PythonCmd"
 

@@ -3,9 +3,9 @@ import sys
 import os
 
 # Add dlt dir to path
-# orchestration/assets/sapo_assets.py -> ../../dlt
+# orchestration/assets/sapo_assets.py -> ../../ingestion
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-DLT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../../dlt"))
+DLT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../../ingestion"))
 
 if DLT_DIR not in sys.path:
     sys.path.append(DLT_DIR)

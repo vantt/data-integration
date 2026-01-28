@@ -11,11 +11,12 @@ $Env:DBT_DATA_LAKE_PATH = "$ScriptDir\data_lake"
 Write-Host "-> Starting Dagster Dev Server..." -ForegroundColor Cyan
 
 # Check if venv exists
-$VenvPath = "$ScriptDir\dlt\venv\Scripts\Activate.ps1"
+$VenvPath = "$ScriptDir\ingestion\venv\Scripts\Activate.ps1"
 if (Test-Path $VenvPath) {
     Write-Host "   Activating virtual environment..." -ForegroundColor Green
     & $VenvPath
-} else {
+}
+else {
     Write-Host "   WARNING: Virtual environment not found at $VenvPath" -ForegroundColor Yellow
 }
 
@@ -40,8 +41,8 @@ if (Test-Path $DbtLockFile) {
 
 # Pre-parse DBT Manifest (Single Threaded to avoid race conditions later)
 Write-Host "-> Pre-parsing dbt project..." -ForegroundColor Cyan
-Set-Location "$ScriptDir\dlt"
-$DbtExe = "$ScriptDir\dlt\venv\Scripts\dbt.exe"
+Set-Location "$ScriptDir\ingestion"
+$DbtExe = "$ScriptDir\ingestion\venv\Scripts\dbt.exe"
 & $DbtExe parse --project-dir "$ScriptDir\transformation" --profiles-dir "$ScriptDir\transformation"
 Set-Location $ScriptDir
 

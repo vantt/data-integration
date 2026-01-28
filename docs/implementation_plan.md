@@ -7,7 +7,7 @@ Implement the **Sales Executive Dashboard** in Metabase to visualize the "Sales 
 ## User Review Required
 
 > [!NOTE]
-> This plan uses the `metabase-server` MCP tools to programmatically create content. I will need the Metabase Server to be running and accessible via the MCP connection.
+> This plan uses the `metabase` MCP tools to programmatically create content. I will need the Metabase Server to be running and accessible via the MCP connection.
 
 ## Proposed Changes
 
@@ -33,7 +33,8 @@ I will create the following Native SQL Questions in the `Sales Analytics` collec
     ), targets AS (
         SELECT period_date as month, sum(target_val) as target
         FROM fact_targets
-        WHERE metric_code = 'gmv' AND is_current = true
+        WHERE metric_code = 'gmv'
+        -- Note: 'is_current' filter removed (Schema V1)
         GROUP BY 1
     )
     SELECT
@@ -59,9 +60,35 @@ I will create the following Native SQL Questions in the `Sales Analytics` collec
 
 ### Automated Verification
 
-- Use `list_collections` to verify "Sales Analytics" exists.
-- Use `list_cards` to verify questions were created.
-- Use `get_dashboard_cards` to verify the dashboard is populated.
+- Use the **Metabase Automation Skill** (`usage_example.js`) to verify connection and basic resource creation.
+- Check Metadata in Metabase admin manually.
+
+### Phase 4: Daily Sales Performance
+
+Dashboard: `Daily Sales Performance`
+
+#### 2.1 Metrics (Single Row / Multiple Cards)
+
+- **Source**: `fact_orders` & `dim_customers`.
+- **Filters**: `order_timestamp` = Today.
+- **Metrics**:
+  - Revenue (GMV)
+  - Orders Count
+  - AOV (GMV / Orders)
+  - New Customers (First order today)
+  - Return Customers (Active today but first order < today)
+
+#### 2.2 Hourly Sales Trend (Line Chart)
+
+- **Comparison**: Today vs Yesterday.
+- **X-Axis**: Hour of Day (0-23).
+- **Y-Axis**: GMV.
+- **Series**: "Today", "Yesterday".
+
+#### 2.3 Top Selling Tables
+
+- **Channels**: Group by `channel_name` (from `dim_channels`), Sort by GMV DESC.
+- **Products**: Group by `product_name` (from `dim_products`), Sort by Revenue DESC.
 
 ### Manual Verification
 

@@ -1,0 +1,527 @@
+# Data Flow Documentation
+
+> End-to-end data flow through the 7-hop pipeline
+
+## Table of Contents
+
+1. [Overview Diagram](#overview-diagram)
+2. [Ingestion Channels (Hop 1-2)](#ingestion-channels-hop-1-2)
+3. [Storage Layer (Hop 3)](#storage-layer-hop-3)
+4. [Transformation (Hop 4-6)](#transformation-hop-4-6)
+5. [Serving (Hop 7)](#serving-hop-7)
+6. [Data Lineage](#data-lineage)
+
+---
+
+## Overview Diagram
+
+```mermaid
+flowchart TB
+    subgraph HOP1["HOP 1: SAPO SOURCES"]
+        BA[Batch API<br/>modified_on cursor]
+        WH[Webhooks<br/>Real-time events]
+        HL[History Log<br/>occur_at cursor]
+    end
+
+    subgraph HOP2["HOP 2: COLLECTION"]
+        DLT_B[dlt Batch<br/>run_*_batch.py]
+        CF[Cloudflare Worker<br/>D1 Buffer]
+        DLT_H[dlt History<br/>run_history_log.py]
+        DLT_W[dlt Webhook<br/>run_webhook_consumer.py]
+    end
+
+    subgraph HOP3["HOP 3: RAW STORAGE"]
+        PQ[Parquet Files<br/>sapo_raw/]
+    end
+
+    subgraph HOP4["HOP 4: QUERY LAYER"]
+        DUCK[DuckDB<br/>sapo_warehouse.duckdb]
+    end
+
+    subgraph HOP5["HOP 5: STAGING"]
+        STG[dbt Staging<br/>Deduplication]
+    end
+
+    subgraph HOP6["HOP 6: TRANSFORMATION"]
+        INT[dbt Intermediate<br/>Business Logic]
+        MART[dbt Marts<br/>Star Schema]
+    end
+
+    subgraph HOP7["HOP 7: SERVING"]
+        SERVE[DuckDB Serving<br/>olap.duckdb]
+        MB[Metabase<br/>Dashboards]
+    end
+
+    BA --> DLT_B
+    WH --> CF
+    HL --> DLT_H
+    CF --> DLT_W
+
+    DLT_B --> PQ
+    DLT_W --> PQ
+    DLT_H --> PQ
+
+    PQ --> DUCK
+    DUCK --> STG
+    STG --> INT
+    INT --> MART
+    MART --> SERVE
+    SERVE --> MB
+```
+
+### Latency by Hop
+
+| Path | Hop 1→2 | Hop 2→3 | Hop 3→7 | Total |
+|------|---------|---------|---------|-------|
+| **Real-time (Webhook)** | ~1s | ~1 min | ~2 min | **~3 min** |
+| **Near Real-time (History)** | 5-10 min | ~1 min | ~2 min | **~13 min** |
+| **Batch (Daily)** | Scheduled | ~5 min | ~10 min | **~15 min** |
+
+---
+
+## Ingestion Channels (Hop 1-2)
+
+### Channel 1: Batch API
+
+**Purpose:** Reliable daily/hourly synchronization with cursor-based incremental loading.
+
+```
+┌─────────────────┐     GET /admin/orders.json?modified_on_min=X
+│   Sapo API      │◄────────────────────────────────────────────────
+│                 │─────────────────────────────────────────────────►
+└─────────────────┘     JSON Response (up to 250 items)
+         │
+         │
+         ▼
+┌─────────────────┐
+│  dlt Pipeline   │
+│  run_*_batch.py │
+│                 │
+│  • Paginate     │
+│  • Transform    │
+│  • Track cursor │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Parquet File   │
+│  ingest_method  │
+│  =batch_sync    │
+└─────────────────┘
+```
+
+**Entities & Cursors:**
+
+| Entity | Cursor Field | Reliability | Notes |
+|--------|--------------|-------------|-------|
+| Orders | `modified_on` | High | Updates captured reliably |
+| Customers | `created_on` | Medium | Updates may be missed |
+| Accounts | N/A (full scan) | High | Small dataset |
+
+**Schedule:**
+- Orders: Daily at 04:00 AM (nightly reconciliation)
+- Customers: Daily at 04:30 AM
+- Accounts: Weekly
+
+**Volume Estimates:**
+- ~1,000 orders/day
+- ~200 customers/day
+- ~50 accounts total
+
+---
+
+### Channel 2: Webhooks
+
+**Purpose:** Real-time event capture with high availability buffering.
+
+```
+┌─────────────────┐     POST /webhook/sapo/order/update
+│  Sapo Platform  │─────────────────────────────────────►
+└─────────────────┘     { entity_id, action, payload }
+         │
+         ▼
+┌─────────────────────────────────────────────────────┐
+│              Cloudflare Worker                       │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  1. Validate HMAC signature                   │  │
+│  │  2. Generate UUID                             │  │
+│  │  3. INSERT INTO messages (pending)            │  │
+│  │  4. Return 200 OK immediately                 │  │
+│  └───────────────────────────────────────────────┘  │
+└───────────────────────────┬─────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────┐
+│                    D1 Database                       │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  messages table:                              │  │
+│  │  • id (UUID)                                  │  │
+│  │  • status (pending/processing/done)          │  │
+│  │  • source, entity, action                    │  │
+│  │  • payload (JSON)                            │  │
+│  │  • created_at, locked_until                  │  │
+│  └───────────────────────────────────────────────┘  │
+└───────────────────────────┬─────────────────────────┘
+                            │
+         Poll every 1 min   │  GET /poll?limit=1000
+                            ▼
+┌─────────────────────────────────────────────────────┐
+│           dlt Webhook Consumer                       │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  1. Fetch pending messages (with lock)        │  │
+│  │  2. Transform to envelope format              │  │
+│  │  3. Write to Parquet                          │  │
+│  │  4. POST /ack-batch (mark done)              │  │
+│  └───────────────────────────────────────────────┘  │
+└───────────────────────────┬─────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────┐
+│                   Parquet File                       │
+│              ingest_method=webhook                   │
+└─────────────────────────────────────────────────────┘
+```
+
+**Subscribed Events:**
+
+| Entity | Events |
+|--------|--------|
+| Order | create, update, status_change, paid, shipped |
+| Customer | create, update |
+| Product | create, update |
+
+**Reliability:**
+- D1 provides at-least-once delivery
+- Messages locked during processing (5 min TTL)
+- Failed messages auto-retry after lock expires
+
+---
+
+### Channel 3: History Log
+
+**Purpose:** Gap filling - catch events missed by webhooks.
+
+```
+┌─────────────────┐     GET /admin/settings/get_logs?from=X
+│  Sapo History   │◄────────────────────────────────────────
+│  Log API        │─────────────────────────────────────────►
+└─────────────────┘     Array of change events
+         │
+         │
+         ▼
+┌─────────────────────────────────────────────────────┐
+│           dlt History Log Pipeline                   │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  For each log entry:                          │  │
+│  │  1. Parse entity_type, entity_id, action      │  │
+│  │  2. Fetch full entity via API                 │  │
+│  │  3. Wrap in envelope format                   │  │
+│  │  4. Write to Parquet                          │  │
+│  └───────────────────────────────────────────────┘  │
+└───────────────────────────┬─────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────┐
+│                   Parquet File                       │
+│            ingest_method=history_log                 │
+└─────────────────────────────────────────────────────┘
+```
+
+**Cursor:** `occur_at` (when the change happened)
+
+**Schedule:** Every 10 minutes
+
+**Coverage:** All entity types that appear in the log
+
+---
+
+## Storage Layer (Hop 3)
+
+### Partition Structure
+
+```
+data_lake/sapo_raw/
+├── order/
+│   ├── ingest_method=batch_sync/
+│   │   ├── year=2026/
+│   │   │   ├── month=01/
+│   │   │   │   ├── 20260128_040015_abc123.parquet
+│   │   │   │   └── 20260127_040012_def456.parquet
+│   │   │   └── month=02/
+│   │   └── year=2025/
+│   ├── ingest_method=webhook/
+│   │   └── year=2026/
+│   │       └── month=01/
+│   │           ├── 20260128_100530_ghi789.parquet
+│   │           └── 20260128_100630_jkl012.parquet
+│   └── ingest_method=history_log/
+│       └── year=2026/
+│           └── month=01/
+│               └── 20260128_101000_mno345.parquet
+├── customer/
+│   └── ... (same structure)
+└── account/
+    └── ... (same structure)
+```
+
+### File Naming Convention
+
+```
+{YYYYMMDD}_{HHMMSS}_{load_id}.parquet
+```
+
+- `YYYYMMDD_HHMMSS` - Processing timestamp
+- `load_id` - dlt load identifier (for traceability)
+
+### Envelope Schema
+
+Every record follows this structure:
+
+```json
+{
+  "entity_id": "12345",
+  "entity_type": "order",
+  "ingest_method": "webhook",
+  "event_type": "update",
+  "event_timestamp": "2026-01-28T10:05:30Z",
+  "payload": {
+    "id": 12345,
+    "code": "ORD-001",
+    "status": "confirmed",
+    "total": 500000,
+    "...": "full entity snapshot"
+  },
+  "_dlt_load_id": "abc123",
+  "_dlt_id": "unique-record-id",
+  "year": "2026",
+  "month": "01"
+}
+```
+
+### Retention Policy
+
+| Data Type | Retention | Action |
+|-----------|-----------|--------|
+| Raw Parquet | 2 years | Archive to cold storage |
+| Export Parquet | 30 days | Delete old snapshots |
+| DuckDB state | Indefinite | Part of warehouse |
+
+---
+
+## Transformation (Hop 4-6)
+
+### Hop 4: Query Layer (DuckDB)
+
+DuckDB reads Parquet files using hive partitioning:
+
+```sql
+-- DuckDB automatically discovers partitions
+SELECT * FROM read_parquet(
+    'data_lake/sapo_raw/order/**/*.parquet',
+    hive_partitioning = true
+);
+
+-- Efficient partition pruning
+SELECT * FROM read_parquet(...)
+WHERE ingest_method = 'webhook'
+  AND year = '2026'
+  AND month = '01';
+```
+
+### Hop 5: Staging Layer (dbt)
+
+**Purpose:** Deduplication and basic cleaning
+
+**Strategy:** Strict Late Materialization
+
+```sql
+-- Step 1: Get unique entity keys (lightweight)
+WITH ranked_keys AS (
+    SELECT
+        entity_id,
+        _dlt_id,
+        ROW_NUMBER() OVER (
+            PARTITION BY entity_id
+            ORDER BY
+                event_timestamp DESC,
+                CASE ingest_method
+                    WHEN 'webhook' THEN 3
+                    WHEN 'history_log' THEN 2
+                    ELSE 1
+                END DESC
+        ) AS rn
+    FROM {{ source('sapo_raw', 'order') }}
+),
+
+-- Step 2: Filter to winners only
+winners AS (
+    SELECT entity_id, _dlt_id
+    FROM ranked_keys
+    WHERE rn = 1
+)
+
+-- Step 3: Join back to get full payload (memory efficient)
+SELECT src.*
+FROM {{ source('sapo_raw', 'order') }} src
+INNER JOIN winners w
+    ON src._dlt_id = w._dlt_id
+```
+
+**Output:** One row per entity with latest state
+
+---
+
+### Hop 6: Transformation Layer (dbt)
+
+#### Intermediate Layer
+
+```sql
+-- int_orders_enriched.sql
+SELECT
+    o.order_id,
+    o.order_code,
+    o.status,
+    o.total,
+    o.discount,
+    o.total - o.discount AS net_total,
+
+    -- Customer info
+    c.customer_name,
+    c.customer_group,
+
+    -- Geography
+    g.province,
+    g.district,
+
+    -- Time
+    o.created_at,
+    o.modified_at
+
+FROM {{ ref('stg_sapo_orders') }} o
+LEFT JOIN {{ ref('stg_sapo_customers') }} c
+    ON o.customer_id = c.customer_id
+LEFT JOIN {{ ref('dim_geography') }} g
+    ON o.shipping_ward_id = g.ward_id
+```
+
+#### Marts Layer (Star Schema)
+
+**Dimensions:**
+
+| Table | Grain | Key Columns |
+|-------|-------|-------------|
+| `dim_date` | One row per day | date_key, year, month, quarter |
+| `dim_customers` | One row per customer | customer_key, name, group, tier |
+| `dim_products` | One row per product | product_key, name, category |
+| `dim_geography` | One row per ward | geography_key, province, district |
+| `dim_staff` | One row per staff | staff_key, name, role |
+
+**Facts:**
+
+| Table | Grain | Measures |
+|-------|-------|----------|
+| `fact_orders` | One row per order | total, discount, net_total |
+| `fact_sales` | One row per line item | quantity, amount, cost |
+| `fact_targets` | One row per target period | target_amount |
+
+---
+
+## Serving (Hop 7)
+
+### Rolling Snapshot Strategy
+
+```
+data_lake/export/marts/rolling/
+├── dim_customers/
+│   ├── dim_customers_20260127_0400.parquet  (old)
+│   ├── dim_customers_20260128_0400.parquet  (current)
+│   └── ...
+├── fact_orders/
+│   ├── fact_orders_20260127_0400.parquet    (old)
+│   ├── fact_orders_20260128_0400.parquet    (current)
+│   └── ...
+└── ...
+```
+
+### Smart View Generation
+
+```sql
+-- olap.duckdb automatically selects latest file
+CREATE OR REPLACE VIEW dim_customers AS
+SELECT * FROM read_parquet(
+    '/data_lake/export/marts/rolling/dim_customers/*.parquet'
+)
+WHERE _snapshot_ts = (
+    SELECT MAX(_snapshot_ts)
+    FROM read_parquet('/data_lake/export/marts/rolling/dim_customers/*.parquet')
+);
+```
+
+### Metabase Connection
+
+```
+┌─────────────────────────────────────────────────────┐
+│              Metabase (Docker)                       │
+│                                                     │
+│  Database Connection:                               │
+│  • Type: DuckDB                                     │
+│  • Path: /data_lake/serving/olap.duckdb            │
+│                                                     │
+│  Volume Mount:                                      │
+│  • Host: ./data_lake → Container: /data_lake       │
+└─────────────────────────────────────────────────────┘
+```
+
+---
+
+## Data Lineage
+
+### Order Entity Lineage
+
+```
+Sapo Order
+    │
+    ├── [Batch API] ──► sapo_raw/order/ingest_method=batch_sync/
+    ├── [Webhook]   ──► sapo_raw/order/ingest_method=webhook/
+    └── [History]   ──► sapo_raw/order/ingest_method=history_log/
+            │
+            ▼
+    src_sapo_orders (UNION ALL partitions)
+            │
+            ▼
+    stg_sapo_orders (Deduplicated)
+            │
+            ├──► int_orders_enriched (+ customer, geography)
+            │           │
+            │           ▼
+            │    fact_orders (Star schema)
+            │           │
+            │           ▼
+            │    dim_customers, dim_products, etc.
+            │
+            └──► Export to Parquet
+                        │
+                        ▼
+                 olap.duckdb VIEW
+                        │
+                        ▼
+                 Metabase Dashboard
+```
+
+### Column Lineage (Key Fields)
+
+| Final Column | Source | Transformation |
+|--------------|--------|----------------|
+| `fact_orders.order_id` | `payload.id` | Type cast to VARCHAR |
+| `fact_orders.order_total` | `payload.total` | Type cast to DECIMAL |
+| `fact_orders.customer_key` | `stg_customers.customer_key` | Surrogate key lookup |
+| `dim_customers.customer_name` | `payload.name` | Direct mapping |
+| `dim_geography.province` | Seed data | Static lookup by ward_id |
+
+---
+
+## Related Documents
+
+- [Architecture](./ARCHITECTURE.md) - System design overview
+- [Data Dictionary](./DATA_DICTIONARY.md) - Schema reference
+- [Transformation Details](../transformation/docs/README.md) - dbt model docs

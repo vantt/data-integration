@@ -10,9 +10,9 @@ This document provides guidelines for deploying and operating the Data Warehouse
 
 DLT uses a hierarchical configuration system.
 
-- **Secrets (`dlt/.dlt/secrets.toml`)**: Contains sensitive information like database credentials, API keys, and specific destination paths.
+- **Secrets (`ingestion/.dlt/secrets.toml`)**: Contains sensitive information like database credentials, API keys, and specific destination paths.
   - _Example_: `bucket_url` for filesystem destination, Sapo credentials.
-- **Config (`dlt/.dlt/config.toml`)**: Contains non-sensitive, shared configurations.
+- **Config (`ingestion/.dlt/config.toml`)**: Contains non-sensitive, shared configurations.
 - **`bucket_url`**: Defines where the Parquet files are stored (Data Lake path).
   - Location: `[destination.filesystem]` in `secrets.toml`.
   - Value: `file:///d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake`
@@ -39,7 +39,7 @@ DLT maintains "State" to track what data has been loaded (Incremental Loading).
 
 #### Common CLI Commands
 
-Run from `dlt/` with `venv` activated.
+Run from `ingestion/` with `venv` activated.
 
 - `dlt pipeline <pipeline_name> info`: Check status.
 - `dlt pipeline <pipeline_name> sync`: Sync state.
@@ -184,16 +184,16 @@ Sử dụng môi trường ảo Python của DLT:
 
 ```powershell
 # Kích hoạt venv (nếu chưa)
-.\dlt\venv\Scripts\activate
+.\ingestion\venv\Scripts\activate
 
 # Chạy kéo Orders (giới hạn 100 trang test)
-python dlt/run_orders_batch.py --limit 100
+python ingestion/run_orders_batch.py --limit 100
 
 # Chạy Webhook Consumer (chế độ chạy 1 lần rồi thoát)
-python dlt/run_webhook_consumer.py --once
+python ingestion/run_webhook_consumer.py --once
 
 # Chạy Webhook Consumer (chế độ lặp vô tận - service)
-python dlt/run_webhook_consumer.py --loop
+python ingestion/run_webhook_consumer.py --loop
 ```
 
 ### 3.2. Chạy Transformation (DBT)
@@ -253,5 +253,5 @@ Nếu thấy báo cáo thiếu đơn hàng mới.
 
 Nếu API Sapo thay đổi cấu trúc dữ liệu làm DLT lỗi.
 
-1.  Cập nhật code DLT trong `dlt/src/sapo/`.
+1.  Cập nhật code DLT trong `ingestion/src/sapo/`.
 2.  Chạy pipeline với cờ `--full-refresh` (hoặc drop state trong Dagster) để tái tạo schema.

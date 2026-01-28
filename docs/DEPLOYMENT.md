@@ -1,0 +1,463 @@
+# Deployment Guide
+
+> Complete setup and configuration guide for the Data Integration Pipeline
+
+## Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Environment Setup](#environment-setup)
+3. [Component Deployment](#component-deployment)
+4. [Initial Data Load](#initial-data-load)
+5. [Verification](#verification)
+6. [Production Checklist](#production-checklist)
+
+---
+
+## Prerequisites
+
+### System Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| OS | Windows 10 / Linux | Windows 11 / Ubuntu 22.04 |
+| CPU | 2 cores | 4+ cores |
+| RAM | 8 GB | 16 GB |
+| Disk | 20 GB free | 50+ GB SSD |
+| Python | 3.10+ | 3.11+ |
+| Docker | 20.10+ | Latest |
+
+### External Services
+
+| Service | Purpose | Required |
+|---------|---------|----------|
+| Sapo Account | API access | Yes |
+| Cloudflare Account | Webhook buffering | For webhooks |
+| Google Sheets | Targets data | Optional |
+
+### Required Credentials
+
+Before starting, gather these credentials:
+
+1. **Sapo API**
+   - Store URL (e.g., `https://yourstore.mysapo.net`)
+   - API Key
+   - API Secret
+
+2. **Cloudflare** (for webhooks)
+   - Account ID
+   - D1 Database ID
+   - API Token
+
+---
+
+## Environment Setup
+
+### Step 1: Clone Repository
+
+```bash
+git clone <repository-url>
+cd data-integration2
+```
+
+### Step 2: Python Virtual Environment
+
+```bash
+# Navigate to ingestion folder
+cd ingestion
+
+# Create virtual environment
+python -m venv venv
+
+# Activate (Windows)
+.\venv\Scripts\activate
+
+# Activate (Linux/Mac)
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Step 3: Configuration Files
+
+#### 3.1 dlt Secrets (`ingestion/.dlt/secrets.toml`)
+
+```bash
+# Copy template
+cp .dlt/secrets.toml.example .dlt/secrets.toml
+```
+
+Edit `secrets.toml`:
+
+```toml
+[sources.sapo]
+api_key = "your_api_key"
+api_secret = "your_api_secret"
+store_url = "https://yourstore.mysapo.net"
+
+[sources.cloudflare_d1]
+api_token = "your_cloudflare_api_token"
+account_id = "your_account_id"
+database_id = "your_d1_database_id"
+worker_url = "https://your-worker.workers.dev"
+
+[destination.filesystem]
+bucket_url = "file://D:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake/sapo_raw"
+```
+
+#### 3.2 dlt Config (`ingestion/.dlt/config.toml`)
+
+```toml
+[runtime]
+log_level = "INFO"
+
+[extract]
+max_parallel_items = 5
+
+[normalize]
+loader_file_format = "parquet"
+
+[load]
+raise_on_failed_jobs = true
+```
+
+#### 3.3 Environment Variables (`.env`)
+
+Create `.env` at repository root:
+
+```bash
+# Data paths
+DATA_LAKE_PATH=D:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake
+DBT_EXPORT_PATH=D:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake/export/marts
+
+# Metabase
+METABASE_URL=http://127.0.0.1:3000
+METABASE_API_KEY=your_metabase_api_key
+
+# Timezone
+TZ=Asia/Ho_Chi_Minh
+```
+
+#### 3.4 dbt Profile (`transformation/profiles.yml`)
+
+```yaml
+sapo_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DATA_LAKE_PATH') }}/sapo_warehouse.duckdb"
+      schema: main
+      threads: 4
+      extensions:
+        - parquet
+        - json
+```
+
+---
+
+## Component Deployment
+
+### Deploy Ingestion Layer
+
+```bash
+cd ingestion
+
+# Verify configuration
+python -c "import dlt; print(dlt.__version__)"
+
+# Test Sapo connection
+python -c "
+from src.sapo_client import SapoClient
+client = SapoClient()
+print('Connection OK' if client.test_connection() else 'Failed')
+"
+```
+
+### Deploy Transformation Layer
+
+```bash
+cd transformation
+
+# Install dbt packages
+python scripts/run_dbt.py deps
+
+# Verify dbt connection
+python scripts/run_dbt.py debug
+
+# Expected output:
+# All checks passed!
+```
+
+### Deploy Orchestration Layer
+
+```bash
+cd orchestration
+
+# Validate Dagster definitions
+dagster definitions validate
+
+# Expected output:
+# Definitions validated.
+
+# Start Dagster UI (development)
+dagster dev
+# Open http://localhost:3000
+```
+
+### Deploy Webhook Receiver (Cloudflare)
+
+```bash
+cd webhook_receiver/cloudflareD1
+
+# Install dependencies
+npm install
+
+# Deploy to Cloudflare
+npx wrangler publish
+
+# Verify deployment
+curl https://your-worker.workers.dev/health
+# Expected: {"status":"ok"}
+```
+
+### Deploy Metabase (Docker)
+
+```bash
+# From repository root
+docker build -t metabase-duckdb .
+
+# Run container
+docker run -d \
+  --name metabase \
+  -p 3000:3000 \
+  -v ./data_lake:/data_lake \
+  metabase-duckdb
+
+# Check logs
+docker logs -f metabase
+```
+
+**Metabase Configuration:**
+
+1. Open http://localhost:3000
+2. Complete initial setup wizard
+3. Add Database:
+   - Type: DuckDB
+   - Path: `/data_lake/serving/olap.duckdb`
+4. Name: "Sapo DuckDB"
+
+---
+
+## Initial Data Load
+
+### Step 1: Run Historical Backfill
+
+```bash
+cd ingestion
+
+# Backfill orders (last 30 days)
+python run_orders_batch.py --backfill --days 30
+
+# Backfill customers
+python run_customers_batch.py --backfill --days 30
+
+# Sync accounts (full)
+python run_accounts_batch.py
+```
+
+### Step 2: Run Initial Transformation
+
+```bash
+cd transformation
+
+# Build all models
+python scripts/run_dbt.py run --full-refresh
+
+# Run tests
+python scripts/run_dbt.py test
+```
+
+### Step 3: Generate Serving Layer
+
+```bash
+cd scripts/provisioning
+
+# Generate serving database
+python generate_serving_db.py
+```
+
+### Step 4: Verify Data Flow
+
+```bash
+# Check data at each hop
+python scripts/testing/verify_hops_readonly.py
+```
+
+Expected output:
+
+```
+=== HOP 3: Raw Storage ===
+Orders: 1,234 records
+Customers: 567 records
+Accounts: 23 records
+
+=== HOP 5-6: Staging & Marts ===
+stg_sapo_orders: 1,000 rows
+stg_sapo_customers: 500 rows
+fact_orders: 1,000 rows
+dim_customers: 500 rows
+
+=== HOP 7: Serving ===
+Views available: 8
+Latest snapshot: 2026-01-28 04:00:00
+```
+
+---
+
+## Verification
+
+### Verify Ingestion
+
+```bash
+cd ingestion
+
+# Check dlt state
+python -c "
+import dlt
+from dlt.common.storages.load_info import LoadInfo
+pipeline = dlt.pipeline(pipeline_name='sapo_orders')
+print(pipeline.last_trace)
+"
+```
+
+### Verify Transformation
+
+```bash
+cd transformation
+
+# List models
+python scripts/run_dbt.py ls --select tag:mart
+
+# Run tests
+python scripts/run_dbt.py test
+
+# Generate docs
+python scripts/run_dbt.py docs generate
+python scripts/run_dbt.py docs serve
+```
+
+### Verify Orchestration
+
+```bash
+# Start Dagster
+dagster dev
+
+# In UI:
+# 1. Navigate to Assets
+# 2. Click "Materialize all"
+# 3. Check job runs completed successfully
+```
+
+### Verify Serving
+
+```bash
+# Query serving database
+python -c "
+import duckdb
+conn = duckdb.connect('data_lake/serving/olap.duckdb', read_only=True)
+print(conn.execute('SHOW TABLES').fetchall())
+conn.close()
+"
+```
+
+### End-to-End Test
+
+```bash
+# Run full pipeline
+python scripts/testing/test_olap_queries.py
+
+# Expected: All queries complete without errors
+```
+
+---
+
+## Production Checklist
+
+### Security
+
+- [ ] API credentials stored in `secrets.toml` (gitignored)
+- [ ] `.env` file excluded from git
+- [ ] Metabase admin password changed from default
+- [ ] Cloudflare Worker HMAC validation enabled
+- [ ] Data lake folder permissions restricted
+
+### Reliability
+
+- [ ] Historical backfill completed
+- [ ] All dbt tests passing
+- [ ] Dagster schedules configured
+- [ ] Monitoring alerts configured
+- [ ] Backup procedure documented
+
+### Performance
+
+- [ ] DuckDB memory settings optimized
+- [ ] Parquet file sizes reasonable (<100MB each)
+- [ ] Metabase queries under 3 seconds
+- [ ] Batch jobs complete within SLA
+
+### Operations
+
+- [ ] Runbook documented ([OPERATIONS.md](./OPERATIONS.md))
+- [ ] On-call contacts defined
+- [ ] Troubleshooting guide available ([TROUBLESHOOTING.md](./TROUBLESHOOTING.md))
+- [ ] Recovery procedures tested
+
+### Monitoring
+
+- [ ] Dagster UI accessible
+- [ ] Data freshness alerts configured
+- [ ] Error notification channel setup
+- [ ] Dashboard health checks enabled
+
+---
+
+## Quick Start Summary
+
+```bash
+# 1. Setup environment
+cd ingestion && python -m venv venv && .\venv\Scripts\activate
+pip install -r requirements.txt
+
+# 2. Configure credentials
+cp .dlt/secrets.toml.example .dlt/secrets.toml
+# Edit secrets.toml with your credentials
+
+# 3. Run initial load
+python run_orders_batch.py --backfill --days 30
+
+# 4. Transform data
+cd ../transformation
+python scripts/run_dbt.py run --full-refresh
+
+# 5. Generate serving layer
+cd ../scripts/provisioning
+python generate_serving_db.py
+
+# 6. Start orchestrator
+cd ../orchestration
+dagster dev
+
+# 7. Access dashboards
+# Dagster: http://localhost:3000
+# Metabase: http://localhost:3000 (after Docker setup)
+```
+
+---
+
+## Next Steps
+
+- [Operations Manual](./OPERATIONS.md) - Daily operations guide
+- [Troubleshooting](./TROUBLESHOOTING.md) - Common issues and fixes
+- [Architecture](./ARCHITECTURE.md) - Understand system design

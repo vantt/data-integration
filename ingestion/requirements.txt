@@ -1,4 +1,4 @@
-dlt[delta]
+dlt[deltalake,parquet]
 playwright
 requests
 tenacity
@@ -7,3 +7,4 @@ dagster
 dagster-webserver
 dagster-dbt
 dbt-duckdb
+pandas
