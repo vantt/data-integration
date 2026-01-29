@@ -6,7 +6,7 @@ import shutil
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ingestion", "src"))
 
-from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job, AssetSelection
+from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job, AssetSelection, schedule
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, dbt, serving
 
@@ -91,11 +91,37 @@ sapo_nightly_reconciliation_job = define_asset_job(
 # SCHEDULES
 # ------------------------------------------------------------------------------
 
-realtime_schedule = ScheduleDefinition(
+@schedule(
     job=sapo_realtime_sync_job,
     cron_schedule="* * * * *",
     execution_timezone="Asia/Ho_Chi_Minh"
 )
+def realtime_schedule(context):
+    """
+    Schedule that skips execution if a previous run of the job is still active.
+    """
+    from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
+
+    # Check for active runs (not terminated)
+    active_runs = context.instance.get_runs(
+        filters=RunsFilter(
+            job_name="sapo_realtime_sync_job",
+            statuses=[
+                DagsterRunStatus.STARTING,
+                DagsterRunStatus.STARTED,
+                DagsterRunStatus.QUEUED,
+                DagsterRunStatus.NOT_STARTED
+            ]
+        ),
+        limit=1
+    )
+
+    if len(active_runs) > 0:
+        return SkipReason(
+            f"Skipping run because a previous run (Run ID: {active_runs[0].run_id}) is still active."
+        )
+
+    return RunRequest(run_key=None)
 
 incremental_schedule = ScheduleDefinition(
     job=sapo_incremental_sync_job,
