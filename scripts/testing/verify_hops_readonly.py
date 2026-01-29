@@ -1,10 +1,15 @@
 import duckdb
 import os
 
-db_path = 'data_lake/sapo_warehouse.duckdb'
-if not os.path.exists(db_path):
-    # Try parent directory
-    db_path = '../data_lake/sapo_warehouse.duckdb'
+data_lake_path = os.environ.get('DBT_DATA_LAKE_PATH')
+
+if data_lake_path:
+    db_path = os.path.join(data_lake_path, 'sapo_warehouse.duckdb')
+else:
+    # Fallback for local testing if env var not set
+    db_path = 'data_lake/sapo_warehouse.duckdb'
+    if not os.path.exists(db_path):
+        db_path = '../data_lake/sapo_warehouse.duckdb'
 
 if not os.path.exists(db_path):
     print(f"❌ Error: Database file not found at '{db_path}' or in current dir.")

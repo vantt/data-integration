@@ -11,6 +11,16 @@ from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, dbt, serving
 
 # Load all assets
+# Load all assets
+# [Auto-Setup] Ensure dbt directories exist before loading assets
+try:
+    from scripts.ensure_dbt_directories import ensure_directories
+    ensure_directories()
+except ImportError:
+    print("[WARN] Could not import ensure_directories script. Skipping auto-check.")
+except Exception as e:
+    print(f"[WARN] Auto-check failed: {e}")
+
 all_assets = load_assets_from_modules([sapo_assets, dbt, serving])
 
 # ------------------------------------------------------------------------------
@@ -43,7 +53,7 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 # Triggered every minute.
 sapo_realtime_sync_job = define_asset_job(
     name="sapo_realtime_sync_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets,
+    selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
     tags={"concurrency_group": "dbt_rw"},
 )
 
@@ -51,14 +61,14 @@ sapo_realtime_sync_job = define_asset_job(
 # Triggered every 10 minutes.
 sapo_incremental_sync_job = define_asset_job(
     name="sapo_incremental_sync_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets,
+    selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
     tags={"dagster/max_retries": "0", "concurrency_group": "dbt_rw"},
 )
 
 # 2.5 Targets Job (Manual)
 sapo_targets_sync_job = define_asset_job(
     name="sapo_targets_sync_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_targets_asset) | AssetSelection.keys("stg_targets", "fact_targets"),
+    selection=AssetSelection.assets(sapo_assets.sapo_targets_asset) | AssetSelection.keys("stg_targets", "fact_targets") | AssetSelection.assets(serving.sapo_serving_db),
     tags={"concurrency_group": "dbt_rw"},
 )
 

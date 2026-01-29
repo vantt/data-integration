@@ -6,16 +6,24 @@ import shutil
 import time
 
 # Configuration
-# HOST PATHS
-PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-DATA_LAKE_DIR = os.path.join(PROJECT_ROOT, 'data_lake')
-SERVING_DIR = os.path.join(DATA_LAKE_DIR, 'serving')
-# Point to Stable Rolling Directory
-ROLLING_DIR = os.path.join(DATA_LAKE_DIR, 'export', 'marts', 'rolling')
-SERVING_DB_PATH = os.path.join(SERVING_DIR, 'olap.duckdb')
+# Read paths from Environment Variables (set in .env.docker)
+# Defaults provided for fallback are based on Docker container paths.
 
-# DOCKER / PORTABLE PATH
-PORTABLE_ROOT = "/data_lake"
+# Base Data Lake Path (e.g., /app/data_lake)
+DATA_LAKE_ROOT = os.environ.get("DBT_DATA_LAKE_PATH", "/app/data_lake")
+
+# Export Path for Marts (e.g., /app/data_lake/export/marts)
+DBT_EXPORT_PATH = os.environ.get("DBT_EXPORT_PATH", os.path.join(DATA_LAKE_ROOT, "export", "marts"))
+
+# Derived Paths
+SERVING_DIR = os.path.join(DATA_LAKE_ROOT, "serving")
+ROLLING_DIR = os.path.join(DBT_EXPORT_PATH, "rolling")
+SERVING_DB_PATH = os.path.join(SERVING_DIR, "olap.duckdb")
+
+# PORTABLE_ROOT is used inside the SQL View definition.
+# It MUST match the path that DuckDB (inside the container) uses to read files.
+# In our Docker setup, this is exactly the DATA_LAKE_ROOT.
+PORTABLE_ROOT = DATA_LAKE_ROOT
 
 def garbage_collect(folder_path, latest_file):
     """

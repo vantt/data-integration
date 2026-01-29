@@ -5,7 +5,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$EnvFile = ".env.prod"
+$EnvFile = ".env.docker"
 $ExampleFile = ".env.example"
 
 Write-Host "-> Starting Secure Deployment..." -ForegroundColor Cyan

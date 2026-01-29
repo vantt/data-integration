@@ -6,7 +6,15 @@ import requests
 import io
 
 # Configuration
-DATA_LAKE_PATH = "d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake"
+# Load environment variables explicitly if needed, but rely on os.environ
+DATA_LAKE_PATH = os.environ.get("DBT_DATA_LAKE_PATH")
+
+if not DATA_LAKE_PATH:
+    # Fallback for local testing without env vars set, relative to this script
+    # ingestion/src/gsheet_targets.py -> ../../app_data/data_lake
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    DATA_LAKE_PATH = os.path.abspath(os.path.join(current_dir, "../../../app_data/data_lake"))
+    print(f"Warning: DBT_DATA_LAKE_PATH not set. Using calculated path: {DATA_LAKE_PATH}")
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1ZHt2iAD88OGgSRopVOkqEgusja-JpP4XqtiH4anhax4/edit?usp=sharing"
 
 def fetch_and_save_targets():

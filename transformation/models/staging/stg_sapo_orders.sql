@@ -70,10 +70,43 @@ winner_keys AS (
     WHERE rn = 1
 ),
 
--- BƯỚC 3: LATE MATERIALIZATION (JOIN BACK)
--- Sau khi đã xác định được danh sách Key cần lấy (đã lọc bớt rất nhiều rác),
--- ta mới JOIN ngược lại vào bảng gốc để lấy cột 'payload'.
--- Kỹ thuật này giúp giảm 90% lượng dữ liệu nặng phải di chuyển qua bộ nhớ.
+-- BƯỚC 3: BUSINESS DEDUPLICATION PREP (MINIMAL EXTRACTION)
+-- Chỉ extract các trường cần thiết để dedup theo business logic (order_id)
+-- Tránh extract toàn bộ 50+ cột trc khi dedup xong.
+pre_dedup_source AS (
+    SELECT 
+        s.entity_id, 
+        s.entity_type,
+        s.event_timestamp,
+        s.ingest_method,
+        -- s.payload (REMOVED to save memory)
+        -- Extract just enough for dedup
+        json_extract_string(s.payload, '$.id') as order_id,
+        json_extract_string(s.payload, '$.modified_on') as modified_on
+    FROM {{ source('sapo_raw', 'order') }} s
+    INNER JOIN winner_keys k 
+    ON s.entity_id = k.entity_id 
+    AND s.event_timestamp = k.event_timestamp
+    AND s.ingest_method = k.ingest_method
+),
+
+final_dedup_keys AS (
+    -- BƯỚC 4: LỌC TRÙNG NGHIỆP VỤ (BUSINESS DEDUPLICATION)
+    -- Lọc theo order_id ngay tại đây, khi dữ liệu còn nhẹ.
+    SELECT 
+        entity_id,
+        event_timestamp,
+        ingest_method
+    FROM pre_dedup_source
+    QUALIFY ROW_NUMBER() OVER (
+        PARTITION BY order_id
+        ORDER BY event_timestamp DESC, modified_on DESC
+    ) = 1
+),
+
+-- BƯỚC 5: FINAL HEAVY EXTRACTION (LATE MATERIALIZATION 2)
+-- Bây giờ mới join lại để lấy full payload và extract 50+ cột.
+-- Chỉ làm việc này cho các dòng đã qua 2 vòng lọc (Winner Keys + Final Dedup).
 final_source AS (
     SELECT 
         s.entity_id, 
@@ -82,10 +115,12 @@ final_source AS (
         s.payload,
         s.ingest_method
     FROM {{ source('sapo_raw', 'order') }} s
-    INNER JOIN winner_keys k 
+    INNER JOIN final_dedup_keys k 
     ON s.entity_id = k.entity_id 
     AND s.event_timestamp = k.event_timestamp
     AND s.ingest_method = k.ingest_method
+    -- Handle exact duplicates in source causing 1-to-many join explosion
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY s.entity_id ORDER BY s.event_timestamp) = 1
 ),
 
 json_parsed AS (
@@ -95,11 +130,8 @@ json_parsed AS (
         event_timestamp,
         
         -- =========================================================================================
-        -- BƯỚC 4: JSON EXTRACTION & TYPE CASTING
+        -- BƯỚC 6: JSON EXTRACTION & TYPE CASTING
         -- =========================================================================================
-        -- Lưu ý cú pháp DuckDB: 
-        --   json_extract_string(json_col, '$.path.to.field') -> Trả về TEXT
-        --   Sau đó dùng try_cast() để chuyển sang kiểu số/ngày tháng an toàn (tránh lỗi crash).
         
         json_extract_string(payload, '$.id') as order_id,
         json_extract_string(payload, '$.code') as order_code,
@@ -184,30 +216,18 @@ json_parsed AS (
         json_extract_string(payload, '$.channel') as channel_name,  -- Có thể null
         
         -- Payment Method (Lấy phần tử đầu tiên nếu có)
-        json_extract_string(payload, '$.expected_payment_method_id') as payment_method_id,
+        json_extract_string(payload, '$.expected_payment_method_id') as payment_method_id
 
-        payload
+        -- payload (REMOVED)
 
     FROM final_source
-),
-
-final_dedup AS (
-    -- BƯỚC 5: LỌC TRÙNG NGHIỆP VỤ (BUSINESS DEDUPLICATION)
-    -- Vì 1 order_id (Business Key) có thể bị sinh ra bởi nhiều entity_id khác nhau trong hệ thống cũ,
-    -- nên ta cần lọc 1 lần nữa theo order_id để đảm bảo UNIQUE tuyệt đối cho các bảng facts sau này.
-    SELECT *
-    FROM json_parsed
-    QUALIFY ROW_NUMBER() OVER (
-        PARTITION BY order_id
-        ORDER BY event_timestamp DESC, modified_on DESC
-    ) = 1
 )
 
 SELECT
     o.*,
     
     -- =============================================================================================
-    -- BƯỚC 6: LÀM GIÀU DỮ LIỆU (DATA ENRICHMENT)
+    -- BƯỚC 7: LÀM GIÀU DỮ LIỆU (DATA ENRICHMENT)
     -- =============================================================================================
     -- Join với các bảng tham chiếu (Seed files) để lấy tên hiển thị thay vì chỉ có ID.
     
@@ -215,7 +235,7 @@ SELECT
     s.name as source_name,
     l.name as location_name
     
-FROM final_dedup o
+FROM json_parsed o
 LEFT JOIN {{ ref('ref_payment_methods') }} pm ON try_cast(o.payment_method_id as BIGINT) = pm.id
 LEFT JOIN {{ ref('ref_order_sources') }} s ON try_cast(o.source_id as BIGINT) = s.id
 LEFT JOIN {{ ref('ref_locations') }} l ON try_cast(o.location_id as BIGINT) = l.id

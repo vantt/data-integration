@@ -14,33 +14,33 @@ Comprehensive documentation is available following a **progressive disclosure** 
 
 ### Quick Reference
 
-| Document | Purpose | Location |
-|----------|---------|----------|
-| **README.md** | Project overview, quick start | `/README.md` |
-| **docs/README.md** | Documentation navigation hub | `/docs/README.md` |
-| **AGENTS.md** | AI agent context (this file) | `/AGENTS.md` |
+| Document           | Purpose                       | Location          |
+| ------------------ | ----------------------------- | ----------------- |
+| **README.md**      | Project overview, quick start | `/README.md`      |
+| **docs/README.md** | Documentation navigation hub  | `/docs/README.md` |
+| **AGENTS.md**      | AI agent context (this file)  | `/AGENTS.md`      |
 
 ### System-Level Documentation (`/docs/`)
 
-| Document | Description |
-|----------|-------------|
-| `ARCHITECTURE.md` | System design, components, principles |
-| `DATA_FLOW.md` | 7-hop pipeline flow |
-| `DATA_DICTIONARY.md` | Schema, entities, business metrics |
-| `DEPLOYMENT.md` | Setup and configuration |
-| `OPERATIONS.md` | Daily operations, monitoring |
-| `TROUBLESHOOTING.md` | Common issues, recovery |
-| `CONTRIBUTING.md` | Development workflow |
-| `GLOSSARY.md` | Terminology, conventions |
+| Document             | Description                           |
+| -------------------- | ------------------------------------- |
+| `ARCHITECTURE.md`    | System design, components, principles |
+| `DATA_FLOW.md`       | 7-hop pipeline flow                   |
+| `DATA_DICTIONARY.md` | Schema, entities, business metrics    |
+| `DEPLOYMENT.md`      | Setup and configuration               |
+| `OPERATIONS.md`      | Daily operations, monitoring          |
+| `TROUBLESHOOTING.md` | Common issues, recovery               |
+| `CONTRIBUTING.md`    | Development workflow                  |
+| `GLOSSARY.md`        | Terminology, conventions              |
 
 ### Component Documentation
 
-| Component | Path | Key Files |
-|-----------|------|-----------|
-| **Ingestion** | `/ingestion/docs/` | PIPELINES, CONFIGURATION, SOURCES, INCREMENTAL |
-| **Transformation** | `/transformation/docs/` | MODELS, DEDUPLICATION, TESTING, MATERIALIZATION |
-| **Orchestration** | `/orchestration/docs/` | ASSETS, JOBS, SCHEDULES, RESOURCES |
-| **Webhook Receiver** | `/webhook_receiver/docs/` | API, SECURITY |
+| Component            | Path                      | Key Files                                       |
+| -------------------- | ------------------------- | ----------------------------------------------- |
+| **Ingestion**        | `/ingestion/docs/`        | PIPELINES, CONFIGURATION, SOURCES, INCREMENTAL  |
+| **Transformation**   | `/transformation/docs/`   | MODELS, DEDUPLICATION, TESTING, MATERIALIZATION |
+| **Orchestration**    | `/orchestration/docs/`    | ASSETS, JOBS, SCHEDULES, RESOURCES              |
+| **Webhook Receiver** | `/webhook_receiver/docs/` | API, SECURITY                                   |
 
 ---
 
@@ -297,18 +297,51 @@ The Metabase MCP server is configured and active for this project.
 - Use `mcp_metabase_db_schemas(database_id=2)` to explore the main warehouse schemas.
 - Many administrative/write tools are disabled in `mcp_config.json` to reduce context noise and safety.
 
-## Bug đang cần xử lý
+## 6. Architecture & Deployment Criticals
 
-Item 15132336653 [2026-01-19T23:26:35Z] -> account_authentication:1280476
-🔎 Fetching entity: /admin/account_authentications/1280476.json
-❌ Failed to fetch /admin/account_authentications/1280476.json
-⚠️ Skipping account_authentication 1280476: No entity data found.
+### Dual DuckDB Strategy (IMPORTANT)
 
-Item 15119346778 [2026-01-19T07:04:17Z] -> customer_address:841526439
-🔎 Fetching entity: /admin/customer_addresss/841526439.json
-❌ Failed to fetch /admin/customer_addresss/841526439.json
-⚠️ Skipping customer_address 841526439: No entity data found.
+The system uses TWO distinct DuckDB files to separate **Transformation (Write)** from **Serving (Read)** to prevent locking and ensure stability.
 
-Item 15117015670 [2026-01-19T05:02:32Z] -> tenant_role:2346928
-🔎 Fetching entity: /admin/tenant_roles/2346928.json
-❌ Failed to fetch /admin/tenant_roles/2346928.json
+1.  **Warehouse DB (`sapo_warehouse.duckdb`)**:
+    - **Location**: `data_lake/sapo_warehouse.duckdb`
+    - **Purpose**: The "Write" database. `dbt` builds models here.
+    - **Paths**: Uses `/app/data_lake/export/...` (Absolute Docker Path).
+
+2.  **Serving DB (`serving/olap.duckdb`)**:
+    - **Location**: `data_lake/serving/olap.duckdb`
+    - **Purpose**: The "Read" database for Metabase/BI.
+    - **Mechanism**: Contains "Smart Views" that point to the _latest_ parquet export of the Warehouse.
+    - **Sync**: Must be updated via `scripts/provisioning/generate_serving_db.py` after dbt runs.
+
+**Critical Rule**:
+
+- When fixing "Path not found" errors in Metabase, you are likely looking at `olap.duckdb`.
+- Fixing `dbt` only updates `sapo_warehouse.duckdb`.
+- You **MUST** run `generate_serving_db.py` to propagate changes/paths to `olap.duckdb`.
+- Ensure `PORTABLE_ROOT` in the script matches the Docker mount path (e.g., `/app/data_lake`).
+
+### Script Updates
+
+- **Note**: The `scripts/` folder is baked into the Docker image (usually). If you edit a script locally, you must **Rebuild Container** or **Docker CP** it to apply changes immediately.
+
+## 7. dbt & DuckDB OOM Optimization Guide
+
+**Problem**: `dbt build --full-refresh` crashes with OOM (Out Of Memory) on large models (e.g., `stg_sapo_orders`).
+
+**Root Cause**: DuckDB aggressively uses RAM for Window Functions and Sorts. If a table has huge JSON columns (`payload`), carrying them through a deduplication step will explode memory usage.
+
+**Optimization Strategies (Applied & Proven):**
+
+1.  **Strict Late Materialization (Double Deduplication)**:
+    - **Concept**: Never `SELECT *` or select heavy columns (JSON) in the deduplication CTE.
+    - **Step 1**: Extract ONLY lightweight keys (`id`, `timestamp`) -> Dedup -> Get `winner_ids`.
+    - **Step 2**: Join `winner_ids` back to Source to get Payload -> Extract fields -> **DROP Payload immediately**.
+    - **Step 3 (Critical)**: Ensure NO further sorting/deduplication happens after the heavy payload is read. Using `QUALIFY` on the final dataset triggers a massive sort -> **OOM**.
+
+2.  **Profile Tuning (`profiles.yml`)**:
+    - **`memory_limit`**: Set LOWER than container limit (e.g., `5GB` or `7GB` for a 16GB machine). This forces DuckDB to **Spill to Disk** early instead of crashing.
+    - **`threads`**: Set to `1` or `2`. High threads = High concurrent buffer usage = OOM. Sequential processing is slower but stable.
+
+3.  **Handling Exact Duplicates**:
+    - If source has 100% duplicate rows, a JOIN will multiply them. Use `QUALIFY ROW_NUMBER() ... = 1` solely on the UNIQUE ID constraint at the very end, but ensure the dataset is ALREADY pruned of heavy columns if possible.
