@@ -3,10 +3,10 @@ Set-Location $ScriptDir
 
 # Set DBT Environment Variables
 # Pointing to data_lake/export/marts
-$Env:DAGSTER_HOME = "$ScriptDir\.dagster_home"
+$Env:DAGSTER_HOME = "$ScriptDir\app_data\dagster_home"
 $Env:DAGSTER_PORT = "3001"
-$Env:DBT_EXPORT_PATH = "$ScriptDir\data_lake\export\marts"
-$Env:DBT_DATA_LAKE_PATH = "$ScriptDir\data_lake"
+$Env:DBT_EXPORT_PATH = "$ScriptDir\app_data\data_lake\export\marts"
+$Env:DBT_DATA_LAKE_PATH = "$ScriptDir\app_data\data_lake"
 
 Write-Host "-> Starting Dagster Dev Server..." -ForegroundColor Cyan
 

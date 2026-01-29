@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  data_platform:
+    build:
+      context: .
+      dockerfile: Dockerfile.dataplatform
+    container_name: data_platform
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - .env.prod
+    environment:
+      - DAGSTER_HOME=/app/.dagster_home
+    volumes:
+      - ./transformation/target:/app/transformation/target
+      - ./app_data/data_lake:/app/data_lake      
+      - ./app_data/dagster_home:/app/.dagster_home
+      - ./app_data/logs:/app/logs
+    command: dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py
+
+  metabase:
+    build:
+      context: .
+      dockerfile: Dockerfile.metabase
+    container_name: metabase
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.prod
+    environment:
+      # Force H2 and point to the mounted data volume
+      - MB_DB_TYPE=h2
+      - MB_DB_FILE=/home/metabase/data/metabase.db # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)
+    volumes:
+      - ./app_data/metabase_data:/home/metabase/data
+      # Mount data lake so Metabase can read DuckDB/Parquet files
+      - ./app_data/data_lake:/data_lake
+
+# H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)
+

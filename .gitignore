@@ -6,6 +6,7 @@ node_modules
 .wrangler
 poc
 data_lake
+app_data
 .tmp_dagster_home_*
 .dagster_home/.nux
 .dagster_home/.telemetry
