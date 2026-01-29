@@ -22,20 +22,21 @@ RUN pip install --no-cache-dir -r webhook_consumer/cloudflared1_consumer/require
 # We limit to chromium to save space, remove "chromium" to install all
 RUN playwright install --with-deps chromium
 
-# Create directories for Dagster and dbt
 RUN mkdir -p /app/data_lake /app/.dagster_home /app/logs
-
 # Copy source code
 COPY ingestion /app/ingestion
 COPY transformation /app/transformation
 COPY orchestration /app/orchestration
 COPY webhook_consumer /app/webhook_consumer
+COPY scripts /app/scripts
 # Copy DLT project files (if any at root or needed)
 # COPY .dlt /app/.dlt # un-comment if .dlt config is at root and needed
 
 # Set Environment Variables
 ENV DAGSTER_HOME=/app/.dagster_home
 ENV PYTHONPATH=/app
+ENV DBT_PROJECT_DIR=/app/transformation
+ENV DBT_PROFILES_DIR=/app/transformation
 
 # Default command (can be overridden in docker-compose)
 CMD ["dagster", "dev", "-h", "0.0.0.0", "-p", "3001", "-f", "orchestration/definitions.py"]

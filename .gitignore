@@ -3,6 +3,7 @@ node_modules
 .vscode
 .env
 .env.local
+.env.docker
 .wrangler
 poc
 data_lake
