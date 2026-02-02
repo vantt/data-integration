@@ -67,7 +67,10 @@ def get_sapo_client() -> Any:
         'password': password,
         'cookie_ttl_hours': 6,
         'headless': config.get("headless", True),
-        'login_selectors': login_selectors
+        'cookie_ttl_hours': 6,
+        'headless': config.get("headless", True),
+        'login_selectors': login_selectors,
+        'domain': domain
     }, login_strategy=sapo_login_strategy)
     
     # Return a helper object or just the manager+base_url to use?

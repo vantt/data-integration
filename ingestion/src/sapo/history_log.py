@@ -9,6 +9,7 @@ import requests
 import time
 import hashlib
 import json
+import re
 from typing import Iterator, Dict, Any, List, Optional
 from datetime import datetime
 from tenacity import (
@@ -261,7 +262,28 @@ def history_log(
                         # 2. Prepare Envelope
                         root_id = item.get("rootId")
                         root_type = item.get("rootType", "").lower() # Normalize
+                        
+                        # [Modified] Custom Logic for specific types
+                        if "fulfillment_print_form" in root_type or root_type == "account_authentication":
+                             if debug:
+                                 print(f"   Skipping ignored type: {root_type}")
+                             continue
+
                         inferred_uri = infer_uri(root_type, root_id)
+                        
+                        if root_type == "customer_address":
+                             # Reload customer details instead of address
+                             # User logic: Extract from item url which is like /admin/customers/{id}/addresses.json
+                             # Convert to /admin/customers/{id}.json
+                             source_uri = item.get("uri")
+                             if source_uri and "/addresses.json" in source_uri:
+                                 inferred_uri = source_uri.replace("/addresses.json", ".json")
+                             else:
+                                 # Fallback: try regex if strict matching fails or just log warning
+                                 if debug:
+                                     print(f"   ⚠️ Could not extract customer URI from url: {source_uri}")
+                                 inferred_uri = None
+
                         
                         if debug:
                             print(f"   Item {item.get('id')} [{item_occur_at}] -> {root_type}:{root_id}")

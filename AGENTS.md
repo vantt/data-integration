@@ -369,3 +369,28 @@ We use Dagster's **Global Concurrency Limits** to lock ONLY the `dbt` step.
 
 3.  **Handling Exact Duplicates**:
     - If source has 100% duplicate rows, a JOIN will multiply them. Use `QUALIFY ROW_NUMBER() ... = 1` solely on the UNIQUE ID constraint at the very end, but ensure the dataset is ALREADY pruned of heavy columns if possible.
+
+## 8. Proven Solutions & Common Pitfalls (Lessons Learned)
+
+These are hard-earned lessons from debugging the system. **IGNORE THEM AT YOUR PERIL.**
+
+### A. Concurrency & Locking
+1.  **DuckDB is Single-Writer**: Never run dbt models in parallel threads if they write to the same `.duckdb` file.
+    *   **Bad**: `threads: 8` in profiles.yml.
+    *   **Bad**: job-level `concurrency_group` (blocks parallel ingestion).
+    *   **Good**: Asset-level locking (`op_tags={"dagster/concurrency_key": "duckdb_lock"}`) on dbt assets only.
+2.  **Multiprocessing on Windows**:
+    *   **Import Side-Effects**: Logic in `definitions.py` (like `ensure_directories()`) runs **every time** a process spawns. **Fix**: Move setup logic to `run_dagster.ps1` or Docker `command` chain.
+
+### B. Process Management (Zombie Jobs)
+1.  **Background Threads**: If a Dagster job finishes logic but hangs in `Started` state, a child thread is keeping the process alive.
+    *   **Culprit**: `DLT` and `dbt` telemetry threads.
+    *   **Fix**: Set `DLT_TELEMETRY_DISABLED=true` and `DBT_SEND_ANONYMOUS_USAGE_STATS=false` in generic environment variables.
+2.  **Scheduling Overlaps**:
+    *   **Issue**: Incremental jobs taking longer than schedule interval pile up.
+    *   **Fix**: Use `context.instance.get_runs()` in the `@schedule` function to `SkipReason` if a run is already active.
+
+### C. Docker & CLI
+1.  **CLI Versioning**: Commands like `set-concurrency-limit` might change between Dagster versions. **Always verify** commands inside the container (`docker compose run ... --help`) before codifying them in scripts.
+2.  **Network Timeouts**: Docker build failing on TLS handshake? Allow `up -d` to continue if code is mounted via volumes (hot-reload).
+

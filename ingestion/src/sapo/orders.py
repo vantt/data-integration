@@ -69,7 +69,6 @@ def sapo_orders_source(
 @dlt.resource(
     primary_key="entity_id",
     write_disposition="append",
-    table_format="delta",
     name="order", 
     columns={
         "entity_id": {"data_type": "text"},

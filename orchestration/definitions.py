@@ -13,13 +13,13 @@ from orchestration.assets import sapo_assets, dbt, serving
 # Load all assets
 # Load all assets
 # [Auto-Setup] Ensure dbt directories exist before loading assets
-try:
-    from scripts.ensure_dbt_directories import ensure_directories
-    ensure_directories()
-except ImportError:
-    print("[WARN] Could not import ensure_directories script. Skipping auto-check.")
-except Exception as e:
-    print(f"[WARN] Auto-check failed: {e}")
+# try:
+#     from scripts.ensure_dbt_directories import ensure_directories
+#     ensure_directories()
+# except ImportError:
+#     print("[WARN] Could not import ensure_directories script. Skipping auto-check.")
+# except Exception as e:
+#     print(f"[WARN] Auto-check failed: {e}")
 
 all_assets = load_assets_from_modules([sapo_assets, dbt, serving])
 
@@ -54,7 +54,7 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 sapo_realtime_sync_job = define_asset_job(
     name="sapo_realtime_sync_job",
     selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
-    tags={"concurrency_group": "dbt_rw"},
+    # tags={"concurrency_group": "dbt_rw"}, # Removed: Using Asset-level locking
 )
 
 # 2. Incremental Job (History Log)
@@ -62,14 +62,15 @@ sapo_realtime_sync_job = define_asset_job(
 sapo_incremental_sync_job = define_asset_job(
     name="sapo_incremental_sync_job",
     selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
-    tags={"dagster/max_retries": "0", "concurrency_group": "dbt_rw"},
+    tags={"dagster/max_retries": "0"}, # Removed: concurrency_group
 )
 
+# 2.5 Targets Job (Manual)
 # 2.5 Targets Job (Manual)
 sapo_targets_sync_job = define_asset_job(
     name="sapo_targets_sync_job",
     selection=AssetSelection.assets(sapo_assets.sapo_targets_asset) | AssetSelection.keys("stg_targets", "fact_targets") | AssetSelection.assets(serving.sapo_serving_db),
-    tags={"concurrency_group": "dbt_rw"},
+    # tags={"concurrency_group": "dbt_rw"},
 )
 
 # 3. Nightly Reconciliation Job (Batch)
@@ -84,7 +85,7 @@ sapo_nightly_reconciliation_job = define_asset_job(
         all_dbt_assets |
         AssetSelection.assets(serving.sapo_serving_db)
     ),
-    tags={"concurrency_group": "dbt_rw"},
+    # tags={"concurrency_group": "dbt_rw"},
 )
 
 # ------------------------------------------------------------------------------
@@ -123,17 +124,67 @@ def realtime_schedule(context):
 
     return RunRequest(run_key=None)
 
-incremental_schedule = ScheduleDefinition(
+@schedule(
     job=sapo_incremental_sync_job,
     cron_schedule="*/10 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh"
 )
+def incremental_schedule(context):
+    """
+    Schedule that skips execution if a previous run of the job is still active.
+    """
+    from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
 
-nightly_schedule = ScheduleDefinition(
+    active_runs = context.instance.get_runs(
+        filters=RunsFilter(
+            job_name="sapo_incremental_sync_job",
+            statuses=[
+                DagsterRunStatus.STARTING,
+                DagsterRunStatus.STARTED,
+                DagsterRunStatus.QUEUED,
+                DagsterRunStatus.NOT_STARTED
+            ]
+        ),
+        limit=1
+    )
+
+    if len(active_runs) > 0:
+        return SkipReason(
+            f"Skipping run because a previous run (Run ID: {active_runs[0].run_id}) is still active."
+        )
+
+    return RunRequest(run_key=None)
+
+@schedule(
     job=sapo_nightly_reconciliation_job,
     cron_schedule="0 4 * * *",
     execution_timezone="Asia/Ho_Chi_Minh"
 )
+def nightly_schedule(context):
+    """
+    Schedule that skips execution if a previous run of the job is still active.
+    """
+    from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
+
+    active_runs = context.instance.get_runs(
+        filters=RunsFilter(
+            job_name="sapo_nightly_reconciliation_job",
+            statuses=[
+                DagsterRunStatus.STARTING,
+                DagsterRunStatus.STARTED,
+                DagsterRunStatus.QUEUED,
+                DagsterRunStatus.NOT_STARTED
+            ]
+        ),
+        limit=1
+    )
+
+    if len(active_runs) > 0:
+        return SkipReason(
+            f"Skipping run because a previous run (Run ID: {active_runs[0].run_id}) is still active."
+        )
+
+    return RunRequest(run_key=None)
 
 # ------------------------------------------------------------------------------
 # RESOURCES & DEFINITIONS

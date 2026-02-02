@@ -48,7 +48,6 @@ def sapo_accounts_source(
 @dlt.resource(
     primary_key="entity_id",
     write_disposition="append",
-    table_format="delta",
     name="account", 
     columns={
         "entity_id": {"data_type": "text"},

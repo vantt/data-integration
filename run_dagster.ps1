@@ -7,6 +7,8 @@ $Env:DAGSTER_HOME = "$ScriptDir\app_data\dagster_home"
 $Env:DAGSTER_PORT = "3001"
 $Env:DBT_EXPORT_PATH = "$ScriptDir\app_data\data_lake\export\marts"
 $Env:DBT_DATA_LAKE_PATH = "$ScriptDir\app_data\data_lake"
+$Env:DLT_TELEMETRY_DISABLED = "true"
+$Env:DBT_SEND_ANONYMOUS_USAGE_STATS = "false"
 
 Write-Host "-> Starting Dagster Dev Server..." -ForegroundColor Cyan
 
@@ -38,6 +40,15 @@ if (Test-Path $DbtLockFile) {
     Write-Host "-> Removing stale dbt lock file..." -ForegroundColor Yellow
     Remove-Item -Path $DbtLockFile -Force
 }
+
+# Run Setup Script (Ensure Directories)
+Write-Host "-> Ensuring output directories exist..." -ForegroundColor Cyan
+$PythonExe = "$ScriptDir\ingestion\venv\Scripts\python.exe"
+& $PythonExe "$ScriptDir\scripts\ensure_dbt_directories.py"
+
+# Configure Global Concurrency Limit for DuckDB
+Write-Host "-> Setting global concurrency limit for DuckDB..." -ForegroundColor Cyan
+dagster instance concurrency set duckdb_lock 1
 
 # Pre-parse DBT Manifest (Single Threaded to avoid race conditions later)
 Write-Host "-> Pre-parsing dbt project..." -ForegroundColor Cyan

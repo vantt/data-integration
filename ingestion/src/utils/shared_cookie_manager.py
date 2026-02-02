@@ -74,7 +74,8 @@ class SharedCookieManager:
         cookie_ttl_hours: int = 6,
         login_selectors: Optional[Dict[str, str]] = None,
         headless: bool = True,
-        login_strategy: Optional[Callable[[Any, str, str, Dict[str, str]], None]] = None
+        login_strategy: Optional[Callable[[Any, str, str, Dict[str, str]], None]] = None,
+        domain: Optional[str] = None
     ):
         """
         Initialize cookie manager.
@@ -89,6 +90,7 @@ class SharedCookieManager:
             login_selectors: Custom CSS selectors for login form
             headless: Run browser in headless mode (default: True)
             login_strategy: Custom callable(page, username, password, selectors) to handle login interaction
+            domain: Optional domain or identifier to distinguish cookies for same source (e.g. store1.myshopify.com)
         """
         self.source = source
         self.login_url = login_url
@@ -100,6 +102,7 @@ class SharedCookieManager:
         self.headless = headless
         self.login_strategy = login_strategy
         self.user_agent = None
+        self.domain = domain
 
         # Default login selectors (can be overridden)
         self.login_selectors = login_selectors or {
@@ -109,10 +112,31 @@ class SharedCookieManager:
         }
 
         # Cookie file path
-        # Use absolute path relative to the project root if possible, or CWD
-        self.cookie_dir = Path(cookie_dir).resolve()
+        # Use absolute path relative to the PROJECT ROOT (ingestion folder)
+        # This ensures all processes (dbt, dagster, ad-hoc scripts) share the same file location
+        # regardless of where they are invoked from.
+        if os.path.isabs(cookie_dir):
+             self.cookie_dir = Path(cookie_dir)
+        else:
+             # Assume 'ingestion' is the project root we want to anchor to.
+             # Get the directory of THIS file (src/utils/shared_cookie_manager.py)
+             # Go up 2 levels to get to 'ingestion'
+             current_file_dir = Path(__file__).resolve().parent
+             # ingestion/src/utils -> ingestion/src -> ingestion
+             project_root = current_file_dir.parent.parent
+             self.cookie_dir = project_root / cookie_dir
+        
         self.cookie_dir.mkdir(parents=True, exist_ok=True)
-        self.cookie_file = self.cookie_dir / f"{source}_cookies.json"
+        
+        # Construct filename with domain if present
+        if domain:
+            # Sanitize domain for filename
+            safe_domain = "".join([c for c in domain if c.isalnum() or c in ('-', '_', '.')]).strip()
+            filename = f"{source}_{safe_domain}_cookies.json"
+        else:
+            filename = f"{source}_cookies.json"
+            
+        self.cookie_file = self.cookie_dir / filename
 
         self.cookies = None
         self.cookie_expiry = None
@@ -459,5 +483,6 @@ def get_cookie_manager(source: str, config: Dict, login_strategy: Optional[Calla
         cookie_ttl_hours=config.get('cookie_ttl_hours', 6),
         login_selectors=config.get('login_selectors'),
         headless=config.get('headless', True),
-        login_strategy=login_strategy
+        login_strategy=login_strategy,
+        domain=config.get('domain')
     )

@@ -80,7 +80,6 @@ def sapo_customers_source(
 @dlt.resource(
     primary_key="entity_id",
     write_disposition="append",
-    table_format="delta",
     name="customer", 
     columns={
         "entity_id": {"data_type": "text"},
