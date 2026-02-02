@@ -19,11 +19,10 @@ def get_sapo_client() -> Any:
     Constructs and returns a configured requests Session (via SharedCookieManager) for Sapo.
     Reads configuration from dlt.secrets.
     """
-    config = dlt.secrets.get("sources.sapo")
-    if not config:
-         raise ValueError("Missing 'sources.sapo' in secrets.toml")
+    # Try to get config from dlt config (merges config.toml + secrets.toml + env)
+    config = dlt.config.get("sources.sapo") or {}
 
-    domain = config.get("domain")
+    domain = config.get("domain") or os.environ.get("SOURCES__SAPO__DOMAIN")
     base_url = config.get("base_url")
     login_url = config.get("login_url")
     

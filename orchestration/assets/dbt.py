@@ -19,17 +19,65 @@ dbt_project = DbtProject(
 
 class SapoDbtTranslator(DagsterDbtTranslator):
     def get_asset_key(self, dbt_resource_props: Mapping[str, Any]) -> AssetKey:
-        # Default behavior for everything else
+        resource_type = dbt_resource_props.get("resource_type")
+        source_name = dbt_resource_props.get("source_name")
+        name = dbt_resource_props.get("name")
+
+        if resource_type == "source" and source_name == "sapo_raw":
+            if name == "order":
+                print(f"[DEBUG] Mapping source sapo_raw.order -> sapo/sapo_orders_batch_asset")
+                return AssetKey(["sapo", "sapo_orders_batch_asset"])
+            elif name == "customer":
+                print(f"[DEBUG] Mapping source sapo_raw.customer -> sapo/sapo_customers_batch_asset")
+                return AssetKey(["sapo", "sapo_customers_batch_asset"])
+            elif name == "account":
+                print(f"[DEBUG] Mapping source sapo_raw.account -> sapo/sapo_accounts_batch_asset")
+                return AssetKey(["sapo", "sapo_accounts_batch_asset"])
+            elif name == "targets_raw":
+                 return AssetKey(["sapo", "sapo_targets_asset"])
+
         return super().get_asset_key(dbt_resource_props)
 
     def get_upstream_asset_keys(self, dbt_resource_props: Mapping[str, Any]) -> set[AssetKey]:
-        # We are manually managing dependencies via Jobs for now.
-        # This keeps the assets decoupled in definition but coupled in execution.
-        return super().get_upstream_asset_keys(dbt_resource_props)
+        upstream_keys = super().get_upstream_asset_keys(dbt_resource_props)
+        name = dbt_resource_props.get("name")
+
+        # ----------------------------------------------------------------------
+        # SYSTEM INSIGHT: HYBRID JOB RACE CONDITION FIX
+        # ----------------------------------------------------------------------
+        # Problem:
+        # In `sapo_incremental_sync_job`, we run `sapo_history_log_asset` (Incremental) 
+        # and `dbt_assets`. However, dbt models like `stg_sapo_orders` declare their 
+        # source as `source('sapo_raw', 'order')`, which `get_asset_key` maps to 
+        # `sapo_orders_batch_asset`.
+        #
+        # Since `sapo_orders_batch_asset` is NOT part of the incremental job, Dagster 
+        # normally sees no active dependency for `stg_sapo_orders` within this job, 
+        # causing dbt to start immediately in parallel with Ingestion.
+        #
+        # Solution:
+        # We explicitly inject `sapo_history_log_asset` and `sapo_webhook_consumer_asset`
+        # as upstream dependencies for the Staging Layer. This forces Dagster to wait 
+        # for ALL ingestion tasks in the current job to finish before starting dbt.
+        # ----------------------------------------------------------------------
+        
+        # Explicitly link dbt staging models to History Log and Webhook assets
+        if name in [
+            "stg_sapo_orders", "stg_sapo_customers", "stg_sapo_accounts",
+            "src_sapo_orders", "src_sapo_customers", "src_sapo_accounts"
+        ]:
+            upstream_keys.add(AssetKey(["sapo", "sapo_history_log_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "sapo_webhook_consumer_asset"]))
+            
+        elif name == "stg_targets":
+            upstream_keys.add(AssetKey(["sapo", "sapo_targets_asset"]))
+        
+        return upstream_keys
 
 @dbt_assets(
     manifest=dbt_project.manifest_path,
-    dagster_dbt_translator=SapoDbtTranslator()
+    dagster_dbt_translator=SapoDbtTranslator(),
+    op_tags={"dagster/concurrency_key": "duckdb_lock"}
 )
 def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # Base Export Dir (Same as in run_pipeline.ps1)

@@ -30,6 +30,7 @@ Comprehensive documentation is available following a **progressive disclosure** 
 | `DEPLOYMENT.md`      | Setup and configuration               |
 | `OPERATIONS.md`      | Daily operations, monitoring          |
 | `TROUBLESHOOTING.md` | Common issues, recovery               |
+| `dagster_dependencies.md` | Dependency logic & race conditions    | `/docs/dagster_dependencies.md` |
 | `CONTRIBUTING.md`    | Development workflow                  |
 | `GLOSSARY.md`        | Terminology, conventions              |
 
@@ -321,9 +322,32 @@ The system uses TWO distinct DuckDB files to separate **Transformation (Write)**
 - You **MUST** run `generate_serving_db.py` to propagate changes/paths to `olap.duckdb`.
 - Ensure `PORTABLE_ROOT` in the script matches the Docker mount path (e.g., `/app/data_lake`).
 
+### Dagster Concurrency & DuckDB Locking (CRITICAL)
+
+DuckDB single-file storage (`sapo_warehouse.duckdb`) DOES NOT support concurrent writes.
+However, **Ingestion (DLT)** writes to files and IS safe to run in parallel.
+
+**Strategy: Asset-Level Locking**
+We use Dagster's **Global Concurrency Limits** to lock ONLY the `dbt` step.
+
+- **Key**: `duckdb_lock`
+- **Limit**: `1`
+- **Implementation**:
+  - `run_dagster.ps1` sets the limit on startup.
+  - `orchestration/assets/dbt.py` applies `op_tags={"dagster/concurrency_key": "duckdb_lock"}`.
+
+**DO NOT** add `concurrency_group` tags to Jobs anymore. This blocks parallel ingestion.
+**DO NOT** remove the `set-concurrency-limit` command from startup scripts.
+
 ### Script Updates
 
 - **Note**: The `scripts/` folder is baked into the Docker image (usually). If you edit a script locally, you must **Rebuild Container** or **Docker CP** it to apply changes immediately.
+
+### Explicit Dependencies (Hybrid Jobs)
+
+- **Issue**: dbt models start before specific ingestion assets finish in a job that runs a subset of ingestion (e.g., Incremental).
+- **Cause**: Dagster only respects `get_asset_key` source mappings. If the source maps to a Batch asset (excluded from job), Dagster assumes no dependency for the active job.
+- **Fix**: Must manually inject `sapo_history_log_asset` (or relevant ingestion asset) into `upstream_keys` in `dbt.py` for Staging/Source models. **Always check `dagster_dependencies.md`**.
 
 ## 7. dbt & DuckDB OOM Optimization Guide
 

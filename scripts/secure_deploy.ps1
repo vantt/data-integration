@@ -26,7 +26,10 @@ if (-not (Test-Path $EnvFile)) {
 Write-Host "-> Running Docker Compose (Build & Up)..." -ForegroundColor Cyan
 try {
     docker compose up -d --build
+    
     Write-Host "-> Deployment Successful!" -ForegroundColor Green
+    
+    exit 0
 }
 catch {
     Write-Host "-> Deployment Failed!" -ForegroundColor Red
