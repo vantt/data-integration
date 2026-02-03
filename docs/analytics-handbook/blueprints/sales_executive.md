@@ -1,14 +1,14 @@
-# ≡ƒôÿ Sales Analytics Blueprint
+# 📘 Sales Analytics Blueprint
 
 **Playbook**: [Sales Executive Overview](../playbooks/sales_executive.md)
 
 This document defines the core sales dashboards and metrics.
 
-## ≡ƒôé Collection: Sales Analytics
+## 📂 Collection: Sales Analytics
 
 This collection contains all top-level sales reports for executives.
 
-### ≡ƒºè Model: Fact Orders
+### 🧊 Model: Fact Orders
 
 The central table for all order-related analysis.
 
@@ -16,7 +16,7 @@ The central table for all order-related analysis.
 SELECT * FROM fact_orders
 ```
 
-#### ≡ƒôÅ Metric: Total Revenue
+#### 📏 Metric: Total Revenue
 
 Gross Merchandise Value (GMV).
 
@@ -28,11 +28,11 @@ SUM(total)
 
 ---
 
-### ≡ƒûÑ∩╕Å Dashboard: Daily Sales Performance
+### 🖥️ Dashboard: Daily Sales Performance
 
 **Description**: High-level daily overview of sales performance.
 
-#### Γ¥ô Question: Daily Revenue Trend
+#### ❓ Question: Daily Revenue Trend
 
 Line chart showing revenue over the last 30 days.
 
@@ -69,7 +69,7 @@ ORDER BY 1
 }
 ```
 
-#### Γ¥ô Question: Sales by Channel
+#### ❓ Question: Sales by Channel
 
 Breakdown of revenue by sales channel.
 
@@ -99,7 +99,7 @@ ORDER BY 2 DESC
 }
 ```
 
-#### Γ¥ô Question: Recent Orders
+#### ❓ Question: Recent Orders
 
 List of the latest 10 orders.
 
@@ -125,7 +125,7 @@ LIMIT 10
 }
 ```
 
-#### Γ¥ô Question: Sales by Region
+#### ❓ Question: Sales by Region
 
 Revenue breakdown by geographic region.
 
@@ -157,7 +157,7 @@ GROUP BY 1
 }
 ```
 
-#### Γ¥ô Question: Promotion Performance
+#### ❓ Question: Promotion Performance
 
 Revenue and usage count by promotion.
 

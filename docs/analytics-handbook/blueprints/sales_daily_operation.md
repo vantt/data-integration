@@ -1,14 +1,14 @@
-# ≡ƒôÿ Daily Sales Performance Blueprint
+# 📘 Daily Sales Performance Blueprint
 
-≡ƒôû **Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)shboard]
+📖 **Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)shboard]
 
 This blueprint creates a real-time sales monitoring dashboard for daily operations.
 
-## ≡ƒôé Collection: Daily Operations
+## 📂 Collection: Daily Operations
 
 This collection contains operational dashboards updated in real-time.
 
-### ≡ƒºè Model: Today's Orders
+### 🧊 Model: Today's Orders
 
 Orders from the current date for real-time monitoring.
 
@@ -19,11 +19,11 @@ WHERE date(order_timestamp) = current_date
 
 ---
 
-### ≡ƒûÑ∩╕Å Dashboard: Daily Sales Performance
+### 🖥️ Dashboard: Daily Sales Performance
 
 **Description**: Real-time monitoring of today's sales performance with hourly breakdown.
 
-#### Γ¥ô Question: Daily Metrics Summary
+#### ❓ Question: Daily Metrics Summary
 
 Key metrics for today's performance.
 
@@ -59,7 +59,7 @@ WHERE date(o.order_timestamp) = current_date
 }
 ```
 
-#### Γ¥ô Question: Hourly Sales Trend
+#### ❓ Question: Hourly Sales Trend
 
 Compare today's hourly performance with yesterday.
 
@@ -109,7 +109,7 @@ ORDER BY 1
 }
 ```
 
-#### Γ¥ô Question: Top Channels Today
+#### ❓ Question: Top Channels Today
 
 Revenue breakdown by sales channel.
 
@@ -144,7 +144,7 @@ ORDER BY 2 DESC
 }
 ```
 
-#### Γ¥ô Question: Top Products Today
+#### ❓ Question: Top Products Today
 
 Best selling products by revenue.
 
@@ -185,7 +185,7 @@ LIMIT 10
 }
 ```
 
-#### Γ¥ô Question: Payment Method Distribution
+#### ❓ Question: Payment Method Distribution
 
 Breakdown of transaction volume by payment method.
 
@@ -219,7 +219,7 @@ GROUP BY 1
 }
 ```
 
-#### Γ¥ô Question: Hourly Heatmap
+#### ❓ Question: Hourly Heatmap
 
 Sales intensity by Hour of Day and Day of Week.
 
