@@ -211,6 +211,31 @@
   GROUP BY 1
   ```
 
+## Context: Sales Targets
+
+> **Description:** Comparison of actual performance against defined goals.
+> **dbt Source:** `fact_targets`
+
+### 15. Target Achievement Rate
+
+> **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
+
+- **Business Definition:** Percentage of target achieved (Actual Revenue / Target Revenue).
+- **Logic (Metabase SQL):**
+  ```sql
+  SUM(actual_revenue) / NULLIF(SUM(target_revenue), 0)
+  ```
+
+### 16. Variance to Target
+
+> **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
+
+- **Business Definition:** Absolute difference between Actual and Target.
+- **Logic (Metabase SQL):**
+  ```sql
+  SUM(actual_revenue) - SUM(target_revenue)
+  ```
+
 ## Context: Location Analysis
 
 ### 15. Sales by Region/Location

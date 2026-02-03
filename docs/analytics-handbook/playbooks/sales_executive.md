@@ -14,28 +14,28 @@
 
 ## Data Lineage
 
-- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_targets`](../../../transformation/models/marts/sales/fact_targets.sql)
 - **Dimensions:** `dim_customers`, `dim_locations`, `dim_channels`
 
 ## Visualizations
 
 ### Section 1: Monthly KPIs
 
-| Chart Title     | Visualization Type | Metric Reference (Link to Domain)                    | Notes/Config                     |
-| :-------------- | :----------------- | :--------------------------------------------------- | :------------------------------- |
-| **MTD Revenue** | Scalar / Trend     | [Net Revenue](../domains/sales.md#2-net-revenue)     | Show growth % vs Previous Month. |
-| **MTD Orders**  | Scalar             | [Total Orders](../domains/sales.md#3-total-orders)   |                                  |
-| **Average AOV** | Scalar             | [AOV](../domains/sales.md#4-aov-average-order-value) |                                  |
+| Chart Title     | Visualization Type | Metric Reference (Link to Domain)                    | Notes/Config                                       |
+| :-------------- | :----------------- | :--------------------------------------------------- | :------------------------------------------------- |
+| **MTD Revenue** | Scalar / Trend     | [Net Revenue](../domains/sales.md#2-net-revenue)     | Show growth % vs Previous Month & **vs Target %**. |
+| **MTD Orders**  | Scalar             | [Total Orders](../domains/sales.md#3-total-orders)   |                                                    |
+| **Average AOV** | Scalar             | [AOV](../domains/sales.md#4-aov-average-order-value) |                                                    |
 
 ### Section 2: Strategic Analysis
 
-| Chart Title               | Visualization Type | Metric Reference (Link to Domain)                                     | Notes/Config                                            |
-| :------------------------ | :----------------- | :-------------------------------------------------------------------- | :------------------------------------------------------ |
-| **Monthly Revenue Trend** | Combo Chart        | [Net Revenue](../domains/sales.md#2-net-revenue)                      | Bar: Current Year, Line: Previous Year. Group by Month. |
-| **Channel Performance**   | Table / Pivot      | [Sales by Channel](../domains/sales.md#6-sales-by-channel)            | Include metrics: Revenue, Orders, AOV per Channel.      |
-| **Sales by Region**       | Map / Table        | [Sales by Region](../domains/sales.md#13-sales-by-regionlocation)     | Revenue by Region.                                      |
-| **Promotion Impact**      | Table              | [Promotion Performance](../domains/sales.md#12-promotion-performance) | Revenue and Usage by Promo.                             |
-| **Discount Overview**     | Scalar             | [Discount Impact](../domains/sales.md#11-discount-impact)             | Total Discount Value & Avg Discount %.                  |
+| Chart Title               | Visualization Type | Metric Reference (Link to Domain)                                     | Notes/Config                                       |
+| :------------------------ | :----------------- | :-------------------------------------------------------------------- | :------------------------------------------------- |
+| **Monthly Revenue Trend** | Combo Chart        | [Net Revenue](../domains/sales.md#2-net-revenue)                      | Bar: Actual, Line: Target. Group by Month.         |
+| **Channel Performance**   | Table / Pivot      | [Sales by Channel](../domains/sales.md#6-sales-by-channel)            | Include metrics: Revenue, Orders, AOV per Channel. |
+| **Sales by Region**       | Map / Table        | [Sales by Region](../domains/sales.md#13-sales-by-regionlocation)     | Revenue by Region.                                 |
+| **Promotion Impact**      | Table              | [Promotion Performance](../domains/sales.md#12-promotion-performance) | Revenue and Usage by Promo.                        |
+| **Discount Overview**     | Scalar             | [Discount Impact](../domains/sales.md#11-discount-impact)             | Total Discount Value & Avg Discount %.             |
 
 ## Visualization Configs
 
@@ -48,7 +48,7 @@
   "y_axis": "revenue",
   "visualization_settings": {
     "graph.dimensions": ["order_date"],
-    "graph.metrics": ["revenue"]
+    "graph.metrics": ["revenue", "target"]
   }
 }
 ```
