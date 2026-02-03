@@ -11,8 +11,10 @@
 
 ### 1. Gross Revenue
 
+> **dbt Model:** `fact_invoices` (Planned)
+
 - **Business Definition:** Total invoice amount issued.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SUM(invoice_amount)
   ```
@@ -22,8 +24,11 @@
 
 ### 2. Net Revenue
 
+> **dbt Model:** `fact_gl_entries` (Planned)
+
 - **Business Definition:** Gross Revenue minus Returns and Allowances. Recognized revenue.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
+  ```sql
   -- P&L Logic
   SUM(CASE
   WHEN account_type = 'Revenue' THEN -amount -- Credit balances are negative in some systems, adjust as needed
@@ -31,12 +36,12 @@
   END)
   ```
 
-  ```
+### 3. Revenue Breakdown (Waterfall Components)
 
-### 2.1 Revenue Breakdown (Waterfall Components)
+> **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Components of revenue flow for waterfall chart.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT 'Gross Revenue', SUM(total) FROM orders
   UNION ALL SELECT 'Discounts', -SUM(total_discount) FROM orders
@@ -45,35 +50,43 @@
   UNION ALL SELECT 'Shipping', SUM(delivery_fee) FROM fulfillments
   ```
 
-### 3. Gross Margin %
+### 4. Gross Margin %
+
+> **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Percentage of Revenue retained after COGS.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   (SUM(Revenue) - SUM(COGS)) / SUM(Revenue) * 100
   ```
 
-### 4. Operating Margin %
+### 5. Operating Margin %
+
+> **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Operating Income (EBIT) as a percentage of Revenue.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   -- EBIT / Revenue
   (SUM(Revenue) - SUM(COGS) - SUM(Opex)) / SUM(Revenue) * 100
   ```
 
-### 5. Net Margin %
+### 6. Net Margin %
+
+> **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Net Income as a percentage of Revenue.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SUM(Net_Income) / SUM(Revenue) * 100
   ```
 
-### 6. EBITDA
+### 7. EBITDA
+
+> **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Earnings Before Interest, Taxes, Depreciation, and Amortization.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   Net_Income + Interest + Taxes + Depreciation + Amortization
   ```
@@ -91,6 +104,7 @@
   SUM(CASE WHEN account_type = 'Current Asset' THEN balance ELSE 0 END) /
   NULLIF(SUM(CASE WHEN account_type = 'Current Liability' THEN balance ELSE 0 END), 0)
   FROM fact_account_balances
+
   ```
 
   ```
@@ -128,6 +142,7 @@
   SUM(CASE WHEN type = 'outflow' THEN amount ELSE 0 END)) as net_movement
   FROM fact_payments
   GROUP BY 1
+
   ```
 
   ```

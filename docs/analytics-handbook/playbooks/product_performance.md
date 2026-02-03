@@ -6,6 +6,11 @@
 - **Goal:** Monitor sales velocity and revenue contribution by product.
 - **Metabase Collection:** `Product Analytics`
 
+## Data Lineage
+
+- **Core Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+- **Dimensions:** [`dim_products`](../../../transformation/models/marts/core/dim_products.sql)
+
 ## Filters
 
 - **Category:** Filter by Product Category.
@@ -25,7 +30,7 @@
 | Chart Title            | Visualization Type | Metric Reference (Link to Domain)                          | Notes/Config                 |
 | :--------------------- | :----------------- | :--------------------------------------------------------- | :--------------------------- |
 | **Category Mix Trend** | Stacked Area       | [Product Revenue](../domains/product.md#2-product-revenue) | Group by Category Over Time. |
-| **Return Rate by Cat** | Bar Chart          | [Return Rate](../domains/product.md#3-return-rate)         |                              |
+| **Return Rate by Cat** | Bar Chart          | [Return Rate](../domains/product.md#4-return-rate)         |                              |
 
 ## Implementation Notes
 

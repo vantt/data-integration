@@ -6,6 +6,11 @@
 - **Goal:** Track retention rates and identify churn risks.
 - **Metabase Collection:** `Customer Analytics`
 
+## Data Lineage
+
+- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+- **Dimensions:** [`dim_customers`](../../../transformation/models/marts/core/dim_customers.sql)
+
 ## Filters
 
 - **Cohort Month:** Monthly cohorts.

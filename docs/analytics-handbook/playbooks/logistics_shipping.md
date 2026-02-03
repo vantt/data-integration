@@ -6,6 +6,11 @@
 - **Goal:** Monitor carrier performance and return reasons.
 - **Metabase Collection:** `Logistics`
 
+## Data Lineage
+
+- **Core Model:** `fact_shipments` (Planned)
+- **Dimensions:** `dim_carriers` (Planned)
+
 ## Filters
 
 - **Carrier:** Filter by Delivery Provider.

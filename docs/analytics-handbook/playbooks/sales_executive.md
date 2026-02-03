@@ -5,11 +5,17 @@
 - **Audience:** Executives, Leadership
 - **Goal:** Strategic overview of sales performance, growth, and high-level KPIs.
 - **Metabase Collection:** `Sales Analytics`
+- **Blueprint:** [Technical Spec](../blueprints/sales_executive.md)
 
 ## Filters
 
 - **Date Range:** Default to This Month.
 - **Comparison:** vs Last Month / vs Same Month Last Year.
+
+## Data Lineage
+
+- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+- **Dimensions:** `dim_customers`, `dim_locations`, `dim_channels`
 
 ## Visualizations
 
@@ -23,10 +29,13 @@
 
 ### Section 2: Strategic Analysis
 
-| Chart Title               | Visualization Type | Metric Reference (Link to Domain)                          | Notes/Config                                            |
-| :------------------------ | :----------------- | :--------------------------------------------------------- | :------------------------------------------------------ |
-| **Monthly Revenue Trend** | Combo Chart        | [Net Revenue](../domains/sales.md#2-net-revenue)           | Bar: Current Year, Line: Previous Year. Group by Month. |
-| **Channel Performance**   | Table / Pivot      | [Sales by Channel](../domains/sales.md#6-sales-by-channel) | Include metrics: Revenue, Orders, AOV per Channel.      |
+| Chart Title               | Visualization Type | Metric Reference (Link to Domain)                                     | Notes/Config                                            |
+| :------------------------ | :----------------- | :-------------------------------------------------------------------- | :------------------------------------------------------ |
+| **Monthly Revenue Trend** | Combo Chart        | [Net Revenue](../domains/sales.md#2-net-revenue)                      | Bar: Current Year, Line: Previous Year. Group by Month. |
+| **Channel Performance**   | Table / Pivot      | [Sales by Channel](../domains/sales.md#6-sales-by-channel)            | Include metrics: Revenue, Orders, AOV per Channel.      |
+| **Sales by Region**       | Map / Table        | [Sales by Region](../domains/sales.md#13-sales-by-regionlocation)     | Revenue by Region.                                      |
+| **Promotion Impact**      | Table              | [Promotion Performance](../domains/sales.md#12-promotion-performance) | Revenue and Usage by Promo.                             |
+| **Discount Overview**     | Scalar             | [Discount Impact](../domains/sales.md#11-discount-impact)             | Total Discount Value & Avg Discount %.                  |
 
 ## Visualization Configs
 
@@ -41,6 +50,16 @@
     "graph.dimensions": ["order_date"],
     "graph.metrics": ["revenue"]
   }
+}
+```
+
+### Sales by Region (Map)
+
+```json
+{
+  "display": "map",
+  "map.region": "us_states",
+  "map.metric": "revenue"
 }
 ```
 

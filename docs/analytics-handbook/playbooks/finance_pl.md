@@ -6,6 +6,11 @@
 - **Goal:** Monthly Profit & Loss analysis with drill-down capability.
 - **Metabase Collection:** `Finance Analytics`
 
+## Data Lineage
+
+- **Core Model:** `fact_gl_entries` (Planned), [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+- **Dimensions:** [`dim_date`](../../../transformation/models/marts/core/dim_date.sql)
+
 ## Filters
 
 - **Date Range:** Month-to-Date (MTD), Year-to-Date (YTD).
@@ -18,7 +23,7 @@
 | Chart Title     | Visualization Type | Metric Reference (Link to Domain)                   | Notes/Config                             |
 | :-------------- | :----------------- | :-------------------------------------------------- | :--------------------------------------- |
 | **Revenue YTD** | Scalar             | [Net Revenue](../domains/finance.md#2-net-revenue)  | Filter: YTD                              |
-| **Profit YTD**  | Scalar             | [Net Margin %](../domains/finance.md#5-net-margin-) | Display absolute Net Income or Margin %. |
+| **Profit YTD**  | Scalar             | [Net Margin %](../domains/finance.md#6-net-margin-) | Display absolute Net Income or Margin %. |
 
 ### Section 2: Trends & Breakdowns
 
@@ -26,7 +31,7 @@
 | :---------------------- | :----------------- | :-------------------------------------------------------------- | :---------------------------------------------------------- |
 | **Monthly P&L Trend**   | Waterfall Chart    | [Net Revenue](../domains/finance.md#2-net-revenue)              | Breakdown by Revenue, COGS, Opex, Other to show Net Income. |
 | **Revenue by Category** | Stacked Bar        | [Gross Revenue](../domains/finance.md#1-gross-revenue)          | Group by Category (Product/Service).                        |
-| **Expense Breakdown**   | Treemap            | [Operating Margin %](../domains/finance.md#4-operating-margin-) | Breakdown Operating Expenses by Account Category.           |
+| **Expense Breakdown**   | Treemap            | [Operating Margin %](../domains/finance.md#5-operating-margin-) | Breakdown Operating Expenses by Account Category.           |
 
 ## Implementation Notes
 

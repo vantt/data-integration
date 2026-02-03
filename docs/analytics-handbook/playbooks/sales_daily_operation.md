@@ -5,11 +5,17 @@
 - **Audience:** Store Managers, Sales Team
 - **Goal:** Real-time monitoring of today's sales performance and operational anomalies.
 - **Metabase Collection:** `Daily Operations`
+- **Blueprint:** [Technical Spec](../blueprints/sales_daily_operation.md)
 
 ## Filters
 
 - **Date Range:** Default to Today (Real-time).
 - **Location:** Filter by Store/Region.
+
+## Data Lineage
+
+- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+- **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`
 
 ## Visualizations
 
@@ -23,12 +29,14 @@
 
 ### Section 2: Trends & Breakdowns
 
-| Chart Title            | Visualization Type | Metric Reference (Link to Domain)                                    | Notes/Config                                                       |
-| :--------------------- | :----------------- | :------------------------------------------------------------------- | :----------------------------------------------------------------- |
-| **Hourly Sales Trend** | Line Chart         | [Hourly Sales Trend](../domains/sales.md#5-hourly-sales-trend)       | Compare Today vs Yesterday. Color: Blue (Today), Grey (Yesterday). |
-| **Sales by Channel**   | Pie Chart          | [Sales by Channel](../domains/sales.md#6-sales-by-channel)           | Show % breakdown.                                                  |
-| **Top Products Today** | Table (Top 10)     | [Top Selling Products](../domains/sales.md#7-top-selling-products)   | Columns: Product Name, Units Sold, Revenue. Sort by Revenue DESC.  |
-| **New vs Returning**   | Bar / Number       | [New vs Returning](../domains/sales.md#8-new-vs-returning-customers) | Count of orders per segment.                                       |
+| Chart Title            | Visualization Type | Metric Reference (Link to Domain)                                                | Notes/Config                                                       |
+| :--------------------- | :----------------- | :------------------------------------------------------------------------------- | :----------------------------------------------------------------- |
+| **Hourly Sales Trend** | Line Chart         | [Hourly Sales Trend](../domains/sales.md#5-hourly-sales-trend)                   | Compare Today vs Yesterday. Color: Blue (Today), Grey (Yesterday). |
+| **Sales by Channel**   | Pie Chart          | [Sales by Channel](../domains/sales.md#6-sales-by-channel)                       | Show % breakdown.                                                  |
+| **Top Products Today** | Table (Top 10)     | [Top Selling Products](../domains/sales.md#7-top-selling-products)               | Columns: Product Name, Units Sold, Revenue. Sort by Revenue DESC.  |
+| **New vs Returning**   | Bar / Number       | [New vs Returning](../domains/sales.md#8-new-vs-returning-customers)             | Count of orders per segment.                                       |
+| **Payment Methods**    | Pie Chart          | [Payment Method Distribution](../domains/sales.md#9-payment-method-distribution) | Breakdown by method (Card, Cash, etc.)                             |
+| **Hourly Heatmap**     | Heatmap            | [Hourly Heatmap](../domains/sales.md#51-hourly-heatmap-day-of-week-analysis)     | Intensity by Hour vs Day of Week (if viewing longer range)         |
 
 ## Visualization Configs
 
@@ -60,5 +68,15 @@
   "display": "pie",
   "pie.dimension": "Channel",
   "pie.metric": "Revenue"
+}
+```
+
+### Payment Methods (Pie)
+
+```json
+{
+  "display": "pie",
+  "pie.dimension": "payment_method_name",
+  "pie.metric": "transaction_count"
 }
 ```

@@ -6,6 +6,11 @@
 - **Goal:** Visualize customer segments and demographic characteristics.
 - **Metabase Collection:** `Customer Analytics`
 
+## Data Lineage
+
+- **Core Model:** [`dim_customers`](../../../transformation/models/marts/core/dim_customers.sql)
+- **Dimensions:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+
 ## Filters
 
 - **Date Range:** Last 12 months.

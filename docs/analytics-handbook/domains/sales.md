@@ -11,8 +11,10 @@
 
 ### 1. GMV (Gross Merchandise Value)
 
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+
 - **Business Definition:** Total value of all confirmed orders, before deductions.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SUM(total) -- or SUM(gmv) depending on specific column availability in fact_orders
   ```
@@ -22,8 +24,10 @@
 
 ### 2. Net Revenue
 
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+
 - **Business Definition:** Actual money received (GMV - Returns - Discounts).
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SUM(total - COALESCE(discount_amount, 0)) -- Adjust based on return logic (e.g. JOIN returns)
   -- Legacy Logic: SUM(total) - SUM(discounts) - SUM(returns)
@@ -32,26 +36,32 @@
   - **Table:** `fact_orders`
   - **Field:** Custom Expression `Sum(Total) - Sum(Discount Amount)`
 
-### 2.1 Return Rate & Count
+### 3. Return Rate & Count
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Count of returned orders.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   COUNT(CASE WHEN return_status != 'unreturned' THEN 1 END)
   ```
 
-### 3. Total Orders
+### 4. Total Orders
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Count of unique confirmed orders.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   COUNT(DISTINCT order_id)
   ```
 
-### 4. AOV (Average Order Value)
+### 5. AOV (Average Order Value)
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Average revenue generated per order.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SUM(total) / COUNT(DISTINCT order_id)
   ```
@@ -60,10 +70,12 @@
 
 > **Description:** Analysis of sales patterns over time (hourly, daily) and by dimensions.
 
-### 5. Hourly Sales Trend
+### 6. Hourly Sales Trend
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Sales performance broken down by hour of the day, compared to previous periods.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT
       EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
@@ -72,10 +84,12 @@
   GROUP BY 1
   ```
 
-### 5.1 Hourly Heatmap (Day of Week Analysis)
+### 7. Hourly Heatmap (Day of Week Analysis)
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Sales intensity by Hour of Day and Day of Week.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT
       EXTRACT(HOUR FROM created_on) as hour_of_day,
@@ -87,10 +101,12 @@
   ORDER BY 2, 1
   ```
 
-### 6. Sales by Channel
+### 8. Sales by Channel
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue breakdown by acquisition channel (e.g., Website, Mobile App, Partner).
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT
       channel_name,
@@ -104,10 +120,12 @@
 
 > **Description:** Best selling products and category performance.
 
-### 7. Top Selling Products
+### 9. Top Selling Products
+
+> **dbt Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
 
 - **Business Definition:** Ranking of products by revenue or units sold.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT
       p.product_name,
@@ -121,27 +139,27 @@
 
 ## Context: Customer Engagement
 
-### 8. New vs Returning Customers
+### 10. New vs Returning Customers
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Categorization of orders based on whether the customer has purchased before.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   CASE
     WHEN date(c.first_order_date) = current_date THEN 'New'
     ELSE 'Returning'
   END
   ```
-  END
-  ```
-
-  ```
 
 ## Context: Payment Operations
 
-### 9. Payment Method Distribution
+### 11. Payment Method Distribution
+
+> **dbt Model:** [`stg_sapo_payments`](../../../transformation/models/staging/stg_sapo_payments.sql)
 
 - **Business Definition:** Transaction count and volume by payment method (Credit Card, COD, etc.).
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT
       pm.payment_method_name,
@@ -153,30 +171,36 @@
   GROUP BY 1
   ```
 
-### 10. Payment Status
+### 12. Payment Status
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Tracking of payment success/failure.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT payment_status, COUNT(*), SUM(total) FROM orders GROUP BY 1
   ```
 
 ## Context: Promotions & Discounts
 
-### 11. Discount Impact
+### 13. Discount Impact
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Value of discounts given and percentage of orders discounted.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SUM(CASE WHEN total_discount > 0 THEN 1 ELSE 0 END) as discounted_orders,
   SUM(total_discount) as total_discounts,
   AVG(total_discount * 100.0 / NULLIF(total, 0)) as avg_discount_pct
   ```
 
-### 12. Promotion Performance
+### 14. Promotion Performance
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue and usage by specific promotion campaign.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT
       pr.promotion_name,
@@ -189,10 +213,12 @@
 
 ## Context: Location Analysis
 
-### 13. Sales by Region/Location
+### 15. Sales by Region/Location
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue performance by geographic unit.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SELECT
       l.region,

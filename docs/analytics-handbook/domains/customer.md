@@ -10,16 +10,20 @@
 
 ### 1. Customer Acquisition Cost (CAC)
 
+> **dbt Model:** `fact_marketing_spend` (Planned), `dim_customers`
+
 - **Business Definition:** Average cost to acquire a new customer.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   Marketing_Spend / New_Customers
   ```
 
 ### 2. Customer Lifetime Value (CLV)
 
+> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql), [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
+
 - **Business Definition:** Projected revenue from a customer over their lifetime (e.g., 3 years).
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   -- AOV * Purchase Frequency * Lifespan
   (avg_order_value) * (purchase_freq_annual) * (lifespan_years)
@@ -45,8 +49,10 @@
 
 ### 3. ARPU (Average Revenue Per User)
 
+> **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
+
 - **Business Definition:** Total Revenue divided by Active Users.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   SUM(Revenue) / COUNT(Active_Users)
   ```
@@ -57,21 +63,25 @@
 
 ### 4. Monthly Active Users (MAU)
 
+> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
+
 - **Business Definition:** Unique users with activity in the last 30 days.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   COUNT(DISTINCT customer_id) WHERE last_active_date >= CURRENT_DATE - 30
   ```
 
 ### 5. Retention Rate
 
+> **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
+
 - **Business Definition:** Percentage of users who return in a subsequent period.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   -- Cohort Analysis Logic
   (Customers_End / Customers_Start) * 100
   ```
-- **Detailed Logic (SQL):**
+- **Detailed Logic (Metabase SQL):**
   ```sql
   WITH cohort_activity AS (
       SELECT
@@ -86,8 +96,10 @@
 
 ### 6. Churn Rate
 
+> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
+
 - **Business Definition:** Percentage of customers lost over a period.
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   Lost_Customers / Total_Customers * 100
   ```
@@ -98,8 +110,10 @@
 
 ### 7. RFM Segment
 
+> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
+
 - **Business Definition:** Recency, Frequency, Monetary segmentation (Champions, Loyal, At Risk, etc.).
-- **Logic (SQL):**
+- **Logic (Metabase SQL):**
   ```sql
   -- Logic requires calculating R, F, M scores (NTILE) and mapping to segments.
   WITH rfm_calc AS (

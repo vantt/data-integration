@@ -10,7 +10,8 @@ Your primary role here is **Analytics Architect**. You must maintain strict sepa
 **NEVER define a SQL formula or calculation logic inside a Playbook (Dashboard) file.**
 
 - Logic goes into `domains/*.md`.
-- Visualization goes into `playbooks/*.md`.
+- Visualization Story goes into `playbooks/*.md` (Human-readable "Why" & "What").
+- Technical Implementation (SQL/JSON) goes into `blueprints/*.md` (Machine-executable "How").
 
 If a user asks for "A dashboard showing Net Revenue", you must:
 
@@ -94,6 +95,72 @@ If a user asks for "A dashboard showing Net Revenue", you must:
 
 ---
 
+## 📂 3. Blueprint File Structure (`blueprints/*.md`)
+
+**Purpose:** Provide exact technical specifications for implementing complex dashboards, including raw SQL and visualization JSON.
+**Filename Convention:** `[topic].md` (e.g., `sales_daily.md`).
+
+### Template
+
+````markdown
+# Blueprint: [Dashboard Name]
+
+## Technical Spec
+
+### Chart: [Chart Name]
+
+**SQL Query:**
+
+```sql
+SELECT ...
+```
+````
+
+**Visualization JSON:**
+
+```json
+{
+  "display": "line",
+  ...
+}
+```
+
+```
+
+---
+
+---
+
+## 🛠️ Tools & Skills
+
+To implement Blueprints, use the **Metabase Automation Skill**.
+
+- **Skill Definition**: `.agent/skills/metabase-automation/SKILL.md`
+- **Capability**: Programmatically create Collections, Questions (Cards), and Dashboards from JSON/Markdown specs.
+
+### Available Workflows
+
+Use these slash commands to accelerate your work:
+
+- **/create_metabase_blueprint**: Generates a new Blueprint file from a template.
+- **/deploy_metabase_blueprint**: Deploys a specific Blueprint file to the Metabase instance.
+  - *Usage*: `node .agent/skills/metabase-automation/scripts/deploy_blueprint.js [path/to/blueprint.md]`
+- **/manage_metabase_resources**: General management (sync schemas, list collections).
+
+## 💡 Tips for Success
+
+1.  **Start Small**: Begin with one domain and expand.
+2.  **Naming Consistency**: Use `lowercase-with-hyphens` for all file names.
+3.  **Document Everything**: Future agents will thank you.
+4.  **Test Before Deploy**: Always verify SQL queries work in Metabase before creating a Blueprint.
+5.  **Use Cross-References**: Link between related documents (e.g., `[Metric](../domains/sales.md#metric)`).
+
+6.  **Maintain Traceability**: Ensure `Domain <--> Playbook <--> Blueprint` linkage is explicit.
+    - **Blueprint -> Domain**: Every SQL query in a Blueprint must link back to its definition in a Domain file.
+    - **Playbook -> Blueprint**: Every Playbook should link to its technical Blueprint if one exists.
+
+---
+
 ## ⚡ Workflow Checklist for Agents
 
 When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
@@ -104,3 +171,5 @@ When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
     - Add a row to the Visualization table.
     - **CRITICAL:** Insert the link: `[Customer LTV](../domains/customer.md#customer-ltv)`.
 3.  **Verify:** Ensure the link works and the logic is dbt-compliant.
+4.  **Deploy (Optional):** If a Blueprint is created, use `/deploy_metabase_blueprint` to push it to Metabase.
+```

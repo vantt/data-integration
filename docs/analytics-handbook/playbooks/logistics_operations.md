@@ -6,6 +6,11 @@
 - **Goal:** Real-time view of order processing pipeline.
 - **Metabase Collection:** `Logistics`
 
+## Data Lineage
+
+- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+- **Dimensions:** `dim_logistics` (Planned)
+
 ## Filters
 
 - **Date Range:** Today (Real-time).

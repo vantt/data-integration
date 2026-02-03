@@ -16,6 +16,12 @@ We follow a **"Domain-First"** approach.
     - Focuses on Layout, User Stories, and Visualization settings.
     - _Rule:_ Reference concepts from the Domain files. Do not repeat logic.
 
+3.  **Blueprints (`/blueprints`)**: The "SPECS" and "IMPLEMENTATION".
+    - Contains detailed technical specifications (SQL queries, JSON configs).
+    - Serves as the implementation reference for Machines/Agents.
+    - **Deployable:** Can be automatically pushed to Metabase using the `/deploy_metabase_blueprint` workflow.
+    - _Rule:_ While Playbooks are for humans (Why/What), Blueprints are for machines (How).
+
 ## Directory Structure
 
 ```text
@@ -28,6 +34,14 @@ docs/analytics-handbook/
 ├── playbooks/                  <-- The "Products" (Dashboards)
 │   ├── executive_overview.md
 │   ├── sales_daily_operation.md
+│   └── ...
+│
+├── blueprints/                 <-- The "Specs" (Technical Implementation)
+│   ├── sales_daily.md
+│   └── ...
+│
+├── guides/                     <-- The "Knowledge" (Concepts & Patterns)
+│   ├── metabase_concepts.md
 │   └── ...
 │
 ├── AGENTS.md                   <-- Instructions for AI Assistants
@@ -44,4 +58,5 @@ docs/analytics-handbook/
     - Add a new Chart section.
     - Link to the Domain definition.
     - Describe the visualization settings (Line chart, Green color, etc.).
-4.  **Step 3 (Implement):** Update dbt (if needed) and Configure Metabase.
+4.  **Step 3 (Spec):** If complex, create `blueprints/sales_dashboard.md` with exact SQL/JSON.
+5.  **Step 4 (Deploy):** Use the `/deploy_metabase_blueprint` workflow to push to Metabase.
