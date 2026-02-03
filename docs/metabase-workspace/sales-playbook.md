@@ -241,9 +241,76 @@ SELECT
     AVG(o.total) as aov
 FROM fact_orders o
 JOIN dim_locations l ON o.location_id = l.location_id
-WHERE o.created_on >= DATE_TRUNC('month', CURRENT_DATE)
 GROUP BY l.region, l.location_name
 ORDER BY revenue DESC
+```
+
+### Detailed Revenue by Location (Map)
+
+```sql
+SELECT
+    l.location_name,
+    l.city,
+    l.district,
+    COUNT(o.order_id) as orders,
+    SUM(o.total) as revenue
+FROM orders o
+JOIN locations l ON o.location_id = l.location_id
+GROUP BY l.location_id, l.location_name, l.city, l.district
+```
+
+### Payment Analysis
+
+```sql
+-- Payment Methods Distribution
+SELECT
+    pm.payment_method_name,
+    COUNT(*) as transaction_count,
+    SUM(p.amount) as total_amount
+FROM payments p
+JOIN payment_methods pm ON p.payment_method_id = pm.payment_method_id
+WHERE p.status = 'completed'
+GROUP BY pm.payment_method_name
+```
+
+```sql
+-- Payment Status Tracking
+SELECT
+    payment_status,
+    COUNT(*) as order_count,
+    SUM(total) as total_amount,
+    AVG(total) as avg_order_value
+FROM orders
+GROUP BY payment_status
+```
+
+### Discount & Promotion Analysis
+
+```sql
+-- Discount Impact Over Time
+SELECT
+    DATE_TRUNC('day', created_on) as date,
+    COUNT(*) as total_orders,
+    SUM(CASE WHEN total_discount > 0 THEN 1 ELSE 0 END) as discounted_orders,
+    SUM(total_discount) as total_discounts,
+    AVG(total_discount * 100.0 / NULLIF(total, 0)) as avg_discount_pct
+FROM orders
+GROUP BY date
+ORDER BY date
+```
+
+```sql
+-- Promotion Performance
+SELECT
+    pr.promotion_name,
+    COUNT(DISTINCT o.order_id) as orders_used,
+    SUM(pr.discount_amount) as total_discount,
+    SUM(o.total) as revenue_with_promo,
+    AVG(pr.discount_amount) as avg_discount_per_order
+FROM orders o
+JOIN promotion_redemptions pr ON o.order_id = pr.order_id
+GROUP BY pr.promotion_id, pr.promotion_name
+ORDER BY total_discount DESC
 ```
 
 ## 🚀 Implementation Notes

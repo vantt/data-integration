@@ -160,6 +160,53 @@ HAVING days_since_last_sale > 90 OR MAX(o.created_on) IS NULL
 ORDER BY inventory_value DESC
 ```
 
+### Product Category Analytics
+
+```sql
+-- Profit Margin by Category
+SELECT
+    p.category,
+    SUM(oli.line_amount) as revenue,
+    SUM(oli.quantity * p.cost_price) as cogs,
+    SUM(oli.line_amount - oli.quantity * p.cost_price) as gross_profit,
+    (SUM(oli.line_amount - oli.quantity * p.cost_price) * 100.0 /
+     NULLIF(SUM(oli.line_amount), 0)) as margin_pct
+FROM order_line_items oli
+JOIN products p ON oli.product_id = p.product_id
+GROUP BY p.category
+ORDER BY gross_profit DESC
+```
+
+```sql
+-- Revenue by Category (Stacked Bar)
+SELECT
+    DATE_TRUNC('month', o.created_on) as month,
+    p.category,
+    SUM(oli.line_amount) as revenue
+FROM orders o
+JOIN order_line_items oli ON o.order_id = oli.order_id
+JOIN products p ON oli.product_id = p.product_id
+GROUP BY month, p.category
+ORDER BY month, revenue DESC
+```
+
+### Product Lifecycle Analysis
+
+```sql
+-- Product Sales Trend (Lifecycle)
+SELECT
+    p.product_name,
+    DATE_TRUNC('week', o.created_on) as week,
+    SUM(oli.quantity) as units_sold,
+    SUM(oli.line_amount) as revenue
+FROM orders o
+JOIN order_line_items oli ON o.order_id = oli.order_id
+JOIN products p ON oli.product_id = p.product_id
+WHERE p.product_id IN (SELECT product_id FROM top_products) -- Replace with specific IDs
+GROUP BY p.product_name, week
+ORDER BY p.product_name, week
+```
+
 ## 🚀 Implementation Notes
 
 ### Best Practices

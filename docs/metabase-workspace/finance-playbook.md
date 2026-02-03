@@ -131,6 +131,22 @@ GROUP BY month
 ORDER BY month DESC;
 ```
 
+### Revenue Breakdown (Waterfall)
+
+```sql
+SELECT
+    'Gross Revenue' as category, SUM(total) as amount
+FROM orders
+UNION ALL
+SELECT 'Discounts', -SUM(total_discount) FROM orders
+UNION ALL
+SELECT 'Returns', -SUM(refund_amount) FROM order_returns
+UNION ALL
+SELECT 'Tax', SUM(total_tax) FROM orders
+UNION ALL
+SELECT 'Shipping', SUM(delivery_fee) FROM fulfillments
+```
+
 ### Year-over-Year Growth
 
 ```sql
