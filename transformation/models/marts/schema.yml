@@ -92,10 +92,10 @@ models:
       - name: status_key
         tests: [unique, not_null]
 
-  - name: dim_product_category
-    description: "Product category dimension."
+  - name: dim_product_types
+    description: "Product type dimension."
     columns:
-      - name: category_key
+      - name: product_type_key
         tests: [unique, not_null]
 
   - name: dim_promotions
@@ -121,11 +121,11 @@ models:
           - relationships:
               to: ref('dim_products')
               field: product_key
-      - name: category_key
+      - name: product_type_key
         tests:
           - relationships:
-              to: ref('dim_product_category')
-              field: category_key
+              to: ref('dim_product_types')
+              field: product_type_key
       - name: staff_key
         tests:
           - relationships:

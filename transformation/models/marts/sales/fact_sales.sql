@@ -20,7 +20,7 @@ SELECT
         WHEN i.product_id IS NULL OR i.product_id = '' THEN {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
         ELSE {{ dbt_utils.generate_surrogate_key(["i.product_id || '-' || coalesce(i.variant_id, '')"]) }}
     END as product_key,
-    {{ dbt_utils.generate_surrogate_key(["coalesce(i.product_type, 'Unknown')"]) }} as category_key,
+    {{ dbt_utils.generate_surrogate_key(["coalesce(i.product_type, 'Unknown')"]) }} as product_type_key,
     COALESCE(vc.customer_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as customer_key,
     {{ dbt_utils.generate_surrogate_key(['cast(o.location_id as string)']) }} as branch_location_key,
     {{ dbt_utils.generate_surrogate_key(["coalesce(o.channel, 'Unknown')"]) }} as channel_key,
