@@ -101,6 +101,18 @@ sapo_nightly_reconciliation_job = define_asset_job(
 def realtime_schedule(context):
     """
     Schedule that skips execution if a previous run of the job is still active.
+
+    [TRICK - SCHEDULE OFFSET]
+    We deliberately exclude the 0, 10, 20... minute marks from this cron schedule.
+    Why? To prevent a "Start-Time Race Condition" with the Incremental Job (which runs at */10).
+    
+    If both jobs trigger at exactly 10:00:00:
+    1. Both start logic execution.
+    2. Both check "Is the other running?" -> Both see "No" (because the other is also just starting).
+    3. Both proceed -> Deadlock at duckdb_lock or resource exhaustion.
+    
+    By forcing Realtime to run only at minutes 1-9, 11-19, etc., we physically guarantee
+    that at minute 10, ONLY the Incremental job can start.
     """
     from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
 
@@ -155,7 +167,9 @@ def realtime_schedule(context):
 
 @schedule(
     job=sapo_incremental_sync_job,
-    cron_schedule="*/10 * * * *",
+    # Run every 10 minutes, BUT skip the 4 AM hour (04:00 - 04:59) entirely.
+    # This guarantees the Nightly Job (04:00) runs without a start-time race.
+    cron_schedule="*/10 0-3,5-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh"
 )
 def incremental_schedule(context):
