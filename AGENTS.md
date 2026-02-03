@@ -398,6 +398,12 @@ These are hard-earned lessons from debugging the system. **IGNORE THEM AT YOUR P
         - **Incremental (10m)** yields to: Nightly, Manual Targets.
         - **Nightly** runs with exclusivity.
       - **Safety**: If Realtime runs overlap with Nightly (e.g., Nightly waiting on lock), Realtime might process the data first. This is **SAFE** because dbt operations are idempotent. It just means the Nightly job does redundant (but harmless) verification work when it finally acquires the lock.
+    - **Trick: Schedule Offset (Minute Splitting)**:
+      - **Problem**: Start-Time Race Condition. If Job A and Job B both schedule at `10:00:00`, they both start logic before either can register as "Active" in the DB. Cross-checks fail to detect the other.
+      - **Fix**: Physically separate start times via cron.
+        - **Incremental**: `*/10 ...` (Runs at :00, :10).
+        - **Realtime**: `1-9,11-19...` (Explicitly excludes :00, :10).
+      - **Result**: No race possible at startup. Only one job exists to acquire the lock.
 
 ### C. Docker & CLI
 
