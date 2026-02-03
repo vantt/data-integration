@@ -174,8 +174,28 @@ module.exports = {
 
 **2. Run the Helper**
 
+````bash
 ```bash
 node .agent/skills/metabase-automation/scripts/deploy_from_config.js ./dashboard_config.js
+````
+
+### 5. Literate Configuration (Markdown Blueprints)
+
+Define your analytics in Markdown and deploy them directly.
+
+**Template**: `.agent/skills/metabase-automation/templates/blueprint_template.md`
+
+**1. Create a Blueprint**
+
+```bash
+node .agent/skills/metabase-automation/scripts/create_blueprint.js <domain> <purpose>
+# Example: node .agent/skills/metabase-automation/scripts/create_blueprint.js sales daily
+```
+
+**2. Deploy a Blueprint**
+
+```bash
+node .agent/skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_metrics.md
 ```
 
 ## 🛠️ API Details

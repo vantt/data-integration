@@ -22,17 +22,17 @@ Comprehensive documentation is available following a **progressive disclosure** 
 
 ### System-Level Documentation (`/docs/`)
 
-| Document             | Description                           |
-| -------------------- | ------------------------------------- |
-| `ARCHITECTURE.md`    | System design, components, principles |
-| `DATA_FLOW.md`       | 7-hop pipeline flow                   |
-| `DATA_DICTIONARY.md` | Schema, entities, business metrics    |
-| `DEPLOYMENT.md`      | Setup and configuration               |
-| `OPERATIONS.md`      | Daily operations, monitoring          |
-| `TROUBLESHOOTING.md` | Common issues, recovery               |
+| Document                  | Description                           |
+| ------------------------- | ------------------------------------- | ------------------------------- |
+| `ARCHITECTURE.md`         | System design, components, principles |
+| `DATA_FLOW.md`            | 7-hop pipeline flow                   |
+| `DATA_DICTIONARY.md`      | Schema, entities, business metrics    |
+| `DEPLOYMENT.md`           | Setup and configuration               |
+| `OPERATIONS.md`           | Daily operations, monitoring          |
+| `TROUBLESHOOTING.md`      | Common issues, recovery               |
 | `dagster_dependencies.md` | Dependency logic & race conditions    | `/docs/dagster_dependencies.md` |
-| `CONTRIBUTING.md`    | Development workflow                  |
-| `GLOSSARY.md`        | Terminology, conventions              |
+| `CONTRIBUTING.md`         | Development workflow                  |
+| `GLOSSARY.md`             | Terminology, conventions              |
 
 ### Component Documentation
 
@@ -375,22 +375,46 @@ We use Dagster's **Global Concurrency Limits** to lock ONLY the `dbt` step.
 These are hard-earned lessons from debugging the system. **IGNORE THEM AT YOUR PERIL.**
 
 ### A. Concurrency & Locking
+
 1.  **DuckDB is Single-Writer**: Never run dbt models in parallel threads if they write to the same `.duckdb` file.
-    *   **Bad**: `threads: 8` in profiles.yml.
-    *   **Bad**: job-level `concurrency_group` (blocks parallel ingestion).
-    *   **Good**: Asset-level locking (`op_tags={"dagster/concurrency_key": "duckdb_lock"}`) on dbt assets only.
+    - **Bad**: `threads: 8` in profiles.yml.
+    - **Bad**: job-level `concurrency_group` (blocks parallel ingestion).
+    - **Good**: Asset-level locking (`op_tags={"dagster/concurrency_key": "duckdb_lock"}`) on dbt assets only.
 2.  **Multiprocessing on Windows**:
-    *   **Import Side-Effects**: Logic in `definitions.py` (like `ensure_directories()`) runs **every time** a process spawns. **Fix**: Move setup logic to `run_dagster.ps1` or Docker `command` chain.
+    - **Import Side-Effects**: Logic in `definitions.py` (like `ensure_directories()`) runs **every time** a process spawns. **Fix**: Move setup logic to `run_dagster.ps1` or Docker `command` chain.
 
 ### B. Process Management (Zombie Jobs)
+
 1.  **Background Threads**: If a Dagster job finishes logic but hangs in `Started` state, a child thread is keeping the process alive.
-    *   **Culprit**: `DLT` and `dbt` telemetry threads.
-    *   **Fix**: Set `DLT_TELEMETRY_DISABLED=true` and `DBT_SEND_ANONYMOUS_USAGE_STATS=false` in generic environment variables.
+    - **Culprit**: `DLT` and `dbt` telemetry threads.
+    - **Fix**: Set `DLT_TELEMETRY_DISABLED=true` and `DBT_SEND_ANONYMOUS_USAGE_STATS=false` in generic environment variables.
 2.  **Scheduling Overlaps**:
-    *   **Issue**: Incremental jobs taking longer than schedule interval pile up.
-    *   **Fix**: Use `context.instance.get_runs()` in the `@schedule` function to `SkipReason` if a run is already active.
+    - **Issue**: Incremental jobs taking longer than schedule interval pile up.
+    - **Fix**: Use `context.instance.get_runs()` in the `@schedule` function to `SkipReason` if a run is already active.
 
 ### C. Docker & CLI
+
 1.  **CLI Versioning**: Commands like `set-concurrency-limit` might change between Dagster versions. **Always verify** commands inside the container (`docker compose run ... --help`) before codifying them in scripts.
 2.  **Network Timeouts**: Docker build failing on TLS handshake? Allow `up -d` to continue if code is mounted via volumes (hot-reload).
 
+## 8. Analytics-as-Code (Literate Configuration)
+
+We treat Metabase configuration as code, defined in Markdown.
+
+### 1. The Strategy
+
+- **Documentation is Code**: We write blueprints in `docs/` that double as documentation and deployment configs.
+- **Execution**: `node .agent/skills/metabase-automation/scripts/deploy_from_markdown.js <file.md>`
+
+### 2. File Locations
+
+- **Blueprints**: `docs/blueprint_*.md` (e.g., `blueprint_sales.md`).
+- **Template**: `.agent/skills/metabase-automation/templates/blueprint_template.md` (Syntax Reference).
+- **Parsers**: `.agent/skills/metabase-automation/lib/markdown_parser.js`.
+
+### 3. Workflow
+
+1.  Discuss requirements in `docs/reports_and_metrics.md`.
+2.  Formalize agreed logic into a Blueprint Markdown file.
+3.  Deploy using the script.
+4.  Verify in Metabase UI.
