@@ -391,6 +391,13 @@ These are hard-earned lessons from debugging the system. **IGNORE THEM AT YOUR P
 2.  **Scheduling Overlaps**:
     - **Issue**: Incremental jobs taking longer than schedule interval pile up.
     - **Fix**: Use `context.instance.get_runs()` in the `@schedule` function to `SkipReason` if a run is already active.
+    - **Optimization (Priority Hierarchy)**:
+      - **Problem**: Frequent light jobs (Realtime/1m) starving heavy jobs (Nightly/Batch) of the `duckdb_lock`.
+      - **Fix**: Implement yielding logic in schedules.
+        - **Realtime (1m)** yields to: Nightly, Manual Targets, Incremental.
+        - **Incremental (10m)** yields to: Nightly, Manual Targets.
+        - **Nightly** runs with exclusivity.
+      - **Safety**: If Realtime runs overlap with Nightly (e.g., Nightly waiting on lock), Realtime might process the data first. This is **SAFE** because dbt operations are idempotent. It just means the Nightly job does redundant (but harmless) verification work when it finally acquires the lock.
 
 ### C. Docker & CLI
 

@@ -104,6 +104,34 @@ def realtime_schedule(context):
     from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
 
     # Check for active runs (not terminated)
+    # Define higher-priority jobs that this schedule should yield to
+    # Realtime yields to Nightly (Batch), Targets (Manual), and Incremental
+    priority_jobs = [
+        "sapo_nightly_reconciliation_job",
+        "sapo_targets_sync_job",
+        "sapo_incremental_sync_job"
+    ]
+
+    # Check for active runs of priority jobs
+    for job_name in priority_jobs:
+        active_priority_runs = context.instance.get_runs(
+            filters=RunsFilter(
+                job_name=job_name,
+                statuses=[
+                    DagsterRunStatus.STARTING,
+                    DagsterRunStatus.STARTED,
+                    DagsterRunStatus.QUEUED
+                ]
+            ),
+            limit=1
+        )
+        
+        if len(active_priority_runs) > 0:
+            return SkipReason(
+                f"Skipping run because higher-priority job '{job_name}' (Run ID: {active_priority_runs[0].run_id}) is active."
+            )
+
+    # Check for active runs of itself (standard overlap prevention)
     active_runs = context.instance.get_runs(
         filters=RunsFilter(
             job_name="sapo_realtime_sync_job",
@@ -119,7 +147,7 @@ def realtime_schedule(context):
 
     if len(active_runs) > 0:
         return SkipReason(
-            f"Skipping run because a previous run (Run ID: {active_runs[0].run_id}) is still active."
+            f"Skipping run because a previous run of this job (Run ID: {active_runs[0].run_id}) is still active."
         )
 
     return RunRequest(run_key=None)
@@ -134,6 +162,32 @@ def incremental_schedule(context):
     Schedule that skips execution if a previous run of the job is still active.
     """
     from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
+
+    # Define higher-priority jobs that this schedule should yield to
+    # Incremental yields to Nightly (Batch) and Targets (Manual)
+    priority_jobs = [
+        "sapo_nightly_reconciliation_job",
+        "sapo_targets_sync_job"
+    ]
+
+    # Check for active runs of priority jobs
+    for job_name in priority_jobs:
+        active_priority_runs = context.instance.get_runs(
+            filters=RunsFilter(
+                job_name=job_name,
+                statuses=[
+                    DagsterRunStatus.STARTING,
+                    DagsterRunStatus.STARTED,
+                    DagsterRunStatus.QUEUED
+                ]
+            ),
+            limit=1
+        )
+        
+        if len(active_priority_runs) > 0:
+            return SkipReason(
+                f"Skipping run because higher-priority job '{job_name}' (Run ID: {active_priority_runs[0].run_id}) is active."
+            )
 
     active_runs = context.instance.get_runs(
         filters=RunsFilter(
@@ -150,7 +204,7 @@ def incremental_schedule(context):
 
     if len(active_runs) > 0:
         return SkipReason(
-            f"Skipping run because a previous run (Run ID: {active_runs[0].run_id}) is still active."
+            f"Skipping run because a previous run of this job (Run ID: {active_runs[0].run_id}) is still active."
         )
 
     return RunRequest(run_key=None)
