@@ -94,7 +94,8 @@ sapo_nightly_reconciliation_job = define_asset_job(
 
 @schedule(
     job=sapo_realtime_sync_job,
-    cron_schedule="* * * * *",
+    # Run every minute EXCEPT the 0, 10, 20, 30, 40, 50 marks to avoid race with Incremental (*/10)
+    cron_schedule="1-9,11-19,21-29,31-39,41-49,51-59 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh"
 )
 def realtime_schedule(context):
@@ -164,10 +165,11 @@ def incremental_schedule(context):
     from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
 
     # Define higher-priority jobs that this schedule should yield to
-    # Incremental yields to Nightly (Batch) and Targets (Manual)
+    # Incremental now yields to Realtime as well to ensure strict mutual exclusion
     priority_jobs = [
         "sapo_nightly_reconciliation_job",
-        "sapo_targets_sync_job"
+        "sapo_targets_sync_job",
+        "sapo_realtime_sync_job"
     ]
 
     # Check for active runs of priority jobs
