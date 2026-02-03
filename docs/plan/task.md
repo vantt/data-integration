@@ -8,12 +8,13 @@
 - [ ] Plan Metabase Implementation <!-- id: 5 -->
   - [ ] Verify current Metabase state (Collections, DBs) <!-- id: 19 -->
   - [ ] Update & Consolidate `implementation_plan.md` <!-- id: 8 -->
-- [ ] Execute Metabase Implementation <!-- id: 9 -->
+- [x] Execute Metabase Implementation <!-- id: 9 -->
   - [x] Create Collection "Sales Analytics" <!-- id: 10 -->
   - [x] Create "Daily Sales Trend" Card <!-- id: 11 -->
   - [x] Create "Monthly Actual vs Target" Card <!-- id: 12 -->
   - [x] Create "Sales by Channel" Card <!-- id: 13 -->
-  - [x] Create "Top Stores" Card <!-- id: 14 -->
+  - [x] Refactoring Product Category to Product Types <!-- id: 1 -->
+- [ ] Updating Documentation <!-- id: 2 -->
   - [x] Create "Sales Executive Dashboard" <!-- id: 15 -->
 - [ ] Verify & Deliver <!-- id: 16 -->
   - [x] Verify Dashboard data <!-- id: 17 -->
