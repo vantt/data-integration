@@ -109,6 +109,9 @@ Comprehensive documentation is available following a **progressive disclosure** 
     - **Transformation** files ONLY in `/transformation/`
     - **Orchestration** files ONLY in `/orchestration/`
     - **NEVER** mix dependencies (e.g., do not verify `package.json` if working in a Python `ingestion` folder).
+4.  **Local Context Discovery**:
+    - **MANDATORY**: Before starting work in a sub-component (e.g., `transformation/`), check if a local `AGENTS.md` exists (e.g., `transformation/AGENTS.md`).
+    - **Action**: If it exists, YOU MUST READ IT. It contains specific constraints (like dbt config rules) that override or supplement this global file.
 
 **When User Context is Ambiguous:**
 
@@ -345,30 +348,14 @@ We use Dagster's **Global Concurrency Limits** to lock ONLY the `dbt` step.
 
 ### Explicit Dependencies (Hybrid Jobs)
 
-- **Issue**: dbt models start before specific ingestion assets finish in a job that runs a subset of ingestion (e.g., Incremental).
-- **Cause**: Dagster only respects `get_asset_key` source mappings. If the source maps to a Batch asset (excluded from job), Dagster assumes no dependency for the active job.
-- **Fix**: Must manually inject `sapo_history_log_asset` (or relevant ingestion asset) into `upstream_keys` in `dbt.py` for Staging/Source models. **Always check `dagster_dependencies.md`**.
+-   **Issue**: dbt models start before specific ingestion assets finish in a job that runs a subset of ingestion (e.g., Incremental).
+-   **Cause**: Dagster only respects `get_asset_key` source mappings. If the source maps to a Batch asset (excluded from job), Dagster assumes no dependency for the active job.
+-   **Fix**: Must manually inject `sapo_history_log_asset` (or relevant ingestion asset) into `upstream_keys` in `dbt.py` for Staging/Source models. **Always check `dagster_dependencies.md`**.
 
 ## 7. dbt & DuckDB OOM Optimization Guide
+ 
+ See `transformation/AGENTS.md` for detailed strategies.
 
-**Problem**: `dbt build --full-refresh` crashes with OOM (Out Of Memory) on large models (e.g., `stg_sapo_orders`).
-
-**Root Cause**: DuckDB aggressively uses RAM for Window Functions and Sorts. If a table has huge JSON columns (`payload`), carrying them through a deduplication step will explode memory usage.
-
-**Optimization Strategies (Applied & Proven):**
-
-1.  **Strict Late Materialization (Double Deduplication)**:
-    - **Concept**: Never `SELECT *` or select heavy columns (JSON) in the deduplication CTE.
-    - **Step 1**: Extract ONLY lightweight keys (`id`, `timestamp`) -> Dedup -> Get `winner_ids`.
-    - **Step 2**: Join `winner_ids` back to Source to get Payload -> Extract fields -> **DROP Payload immediately**.
-    - **Step 3 (Critical)**: Ensure NO further sorting/deduplication happens after the heavy payload is read. Using `QUALIFY` on the final dataset triggers a massive sort -> **OOM**.
-
-2.  **Profile Tuning (`profiles.yml`)**:
-    - **`memory_limit`**: Set LOWER than container limit (e.g., `5GB` or `7GB` for a 16GB machine). This forces DuckDB to **Spill to Disk** early instead of crashing.
-    - **`threads`**: Set to `1` or `2`. High threads = High concurrent buffer usage = OOM. Sequential processing is slower but stable.
-
-3.  **Handling Exact Duplicates**:
-    - If source has 100% duplicate rows, a JOIN will multiply them. Use `QUALIFY ROW_NUMBER() ... = 1` solely on the UNIQUE ID constraint at the very end, but ensure the dataset is ALREADY pruned of heavy columns if possible.
 
 ## 8. Proven Solutions & Common Pitfalls (Lessons Learned)
 
@@ -409,6 +396,15 @@ These are hard-earned lessons from debugging the system. **IGNORE THEM AT YOUR P
 
 1.  **CLI Versioning**: Commands like `set-concurrency-limit` might change between Dagster versions. **Always verify** commands inside the container (`docker compose run ... --help`) before codifying them in scripts.
 2.  **Network Timeouts**: Docker build failing on TLS handshake? Allow `up -d` to continue if code is mounted via volumes (hot-reload).
+
+### D. Development Heuristics (Golden Rules)
+
+1.  **Check Local Standards (Context First)**:
+    - When fixing or adding a model/script, **ALWAYS** comparison against a working "Golden Sample" in the same directory.
+    - **Example**: If `dim_products.sql` works and `dim_time.sql` fails, `diff` them FIRST. You likely missed a project-specific config (like `location="{{ get_rolling_location() }}"`).
+    - Do not assume `dbt_project.yml` handles everything implicitly. Explicit config patterns are common.
+2.  **Explicit > Implicit**:
+    - If you are unsure if a config is inherited, declare it explicitly to be safe, then refactor later.
 
 ## 8. Analytics-as-Code (Literate Configuration)
 

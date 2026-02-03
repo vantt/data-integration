@@ -1,5 +1,6 @@
 {{ config(
-    tags=['mart', 'dim']
+    tags=['mart', 'dim'],
+    location="{{ get_rolling_location() }}"
 ) }}
 
 WITH min_spawn AS (
