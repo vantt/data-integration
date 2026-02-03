@@ -27,6 +27,7 @@ SELECT
     COALESCE(ds.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as staff_key,
     {{ dbt_utils.generate_surrogate_key(['o.status']) }} as status_key,
     coalesce(cast(strftime(o.created_at, '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD
+    (extract(hour from o.created_at) * 100) + extract(minute from o.created_at) as time_key,
     
     -- Degenerate Keys
     i.order_id,

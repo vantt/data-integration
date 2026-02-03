@@ -46,6 +46,25 @@ models:
       - name: staff_key
         tests: [unique, not_null]
 
+  - name: dim_time
+    description: "Time dimension (Minute grain) with business hour flags."
+    columns:
+      - name: time_key
+        description: "Integer HHMM (e.g., 0930, 2359)"
+        tests: [unique, not_null]
+      - name: time_of_day_24
+        description: "HH:MM format"
+      - name: time_of_day_12
+        description: "HH:MM AM/PM format"
+      - name: hour_24
+        description: "Hour of day (0-23)"
+      - name: is_business_hour
+        description: "Boolean: Is between 09:00 and 17:00"
+      - name: is_peak_hour
+        description: "Boolean: Is Lunch (11-14) or Dinner (16-19)"
+      - name: day_period
+        description: "Morning, Afternoon, Evening, Night"
+
   - name: dim_date
     description: "Calendar date dimension."
     columns:
@@ -147,6 +166,11 @@ models:
           - relationships:
               to: ref('dim_geography')
               field: geography_key
+      - name: time_key
+        tests:
+          - relationships:
+              to: ref('dim_time')
+              field: time_key
 
   - name: fact_orders
     description: "Aggregated order fact."
@@ -212,3 +236,9 @@ models:
           - relationships:
               to: ref('dim_date')
               field: date_key
+      - name: time_key
+        data_type: integer
+        tests:
+          - relationships:
+              to: ref('dim_time')
+              field: time_key
