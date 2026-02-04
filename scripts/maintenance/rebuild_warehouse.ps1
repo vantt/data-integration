@@ -9,7 +9,7 @@
     3. Runs the `generate_serving_db.py` script to rotate the Serving Layer (DuckDB).
 
 .EXAMPLE
-    .\scripts\maintenance\full_refresh_and_serve.ps1
+    .\scripts\maintenance\rebuild_warehouse.ps1
 #>
 
 $ErrorActionPreference = "Stop"
