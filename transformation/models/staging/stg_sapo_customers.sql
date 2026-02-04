@@ -76,7 +76,12 @@ SELECT
     json_extract_string(payload, '$.status') as status,
     
     json_extract_string(payload, '$.birthday') as birthday,
-    json_extract_string(payload, '$.gender') as gender,
+    json_extract_string(payload, '$.dob') as dob,
+    
+    -- Consolidate Gender/Sex
+    coalesce(json_extract_string(payload, '$.sex'), json_extract_string(payload, '$.gender')) as sex,
+    
+    json_extract_string(payload, '$.customer_group') as customer_group,
     
     -- Address (Taking the default array item if available, or just addresses[0])
     json_extract_string(payload, '$.addresses[0].city') as city,
@@ -87,8 +92,9 @@ SELECT
     json_extract_string(payload, '$.addresses[0].country') as country,
     
     -- Financials
-    try_cast(json_extract_string(payload, '$.total_expense') as DECIMAL(18,2)) as total_spent,
+    try_cast(json_extract_string(payload, '$.total_expense') as DECIMAL(18,2)) as total_expense,
     try_cast(json_extract_string(payload, '$.order_count') as INTEGER) as orders_count,
+    try_cast(json_extract_string(payload, '$.loyalty_point') as INTEGER) as loyalty_point,
     try_cast(json_extract_string(payload, '$.debt') as DECIMAL(18,2)) as debt,
     
     json_extract_string(payload, '$.created_on') as created_on,

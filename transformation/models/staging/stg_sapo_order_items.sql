@@ -52,7 +52,11 @@ SELECT
     
     try_cast(json_extract_string(item_json, '$.quantity') as DECIMAL(18,2)) as quantity,
     try_cast(json_extract_string(item_json, '$.price') as DECIMAL(18,2)) as unit_price,
-    try_cast(json_extract_string(item_json, '$.line_amount') as DECIMAL(18,2)) as total_price,
+    try_cast(json_extract_string(item_json, '$.line_amount') as DECIMAL(18,2)) as line_amount,
+    
+    try_cast(json_extract_string(item_json, '$.discount_amount') as DECIMAL(18,2)) as discount_amount,
+    try_cast(json_extract_string(item_json, '$.distributed_discount_amount') as DECIMAL(18,2)) as distributed_discount_amount,
+    json_extract_string(item_json, '$.lots_dates') as lots_dates,
     
     json_extract_string(item_json, '$.grams') as weight,
     json_extract_string(item_json, '$.vendor') as vendor,

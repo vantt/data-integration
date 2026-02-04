@@ -44,6 +44,7 @@
 - **Logic (Metabase SQL):**
   ```sql
   COUNT(CASE WHEN return_status != 'unreturned' THEN 1 END)
+  -- Note: In fact_orders, check if `fulfillment_status` = 'RETURNED' (mapped from 'restocked').
   ```
 
 ### 4. Total Orders
@@ -232,9 +233,20 @@
 
 - **Business Definition:** Absolute difference between Actual and Target.
 - **Logic (Metabase SQL):**
+
   ```sql
   SUM(actual_revenue) - SUM(target_revenue)
   ```
+
+  SUM(actual_revenue) - SUM(target_revenue)
+
+  ```
+
+  ```
+
+> **Implementation Note:**
+> Do not attempt to join `fact_orders` and `fact_targets` directly in a Native Query as they have different grains (Order vs Month/Branch).
+> **Recommended Approach:** Create a **Metabase Model** (or dbt mart `mart_sales_actual_vs_target`) to pre-aggregate `fact_orders` to the same grain (Month, Branch, Channel) before joining with `fact_targets`.
 
 ## Context: Location Analysis
 

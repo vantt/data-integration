@@ -122,7 +122,8 @@ SELECT
     billing_company,
     billing_phone,
     billing_tax_code,
-    discount_codes_json as discount_codes,
+    discount_codes,
+    client_details,
     
     tags,
     note as note,

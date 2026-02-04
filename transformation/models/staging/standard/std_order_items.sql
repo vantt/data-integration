@@ -28,7 +28,11 @@ SELECT
     -- Quantity & Price
     quantity,
     unit_price,
-    total_price,
+    line_amount,
+    
+    discount_amount,
+    distributed_discount_amount,
+    lots_dates,
     
     -- Enriched Attributes (v2)
     try_cast(weight as DECIMAL(18,2)) as weight_grams,

@@ -29,8 +29,14 @@ SELECT
     address1,
     country,
     
+    -- Attributes
+    dob,
+    sex,
+    customer_group,
+    loyalty_point,
+
     -- Metrics
-    coalesce(total_spent, 0) as total_spent,
+    coalesce(total_expense, 0) as total_expense,
     coalesce(orders_count, 0) as total_orders_count,
     debt,
     

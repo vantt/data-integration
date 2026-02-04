@@ -21,6 +21,15 @@ models:
     columns:
       - name: customer_key
         tests: [unique, not_null]
+      - name: dob
+        description: "Date of Birth"
+      - name: sex
+        description: "Gender/Sex of the customer"
+      - name: customer_group
+        description: "Customer Group Code/Name"
+      - name: loyalty_point
+        description: "Loyalty points balance"
+
 
   - name: dim_products
     description: "Product dimension derived from sales."
@@ -171,6 +180,12 @@ models:
           - relationships:
               to: ref('dim_time')
               field: time_key
+      - name: revenue
+        description: "Total revenue (quantity * line_amount)"
+      - name: discount_amount
+        description: "Direct discount amount"
+      - name: distributed_discount_amount
+        description: "Distributed discount amount"
 
   - name: fact_orders
     description: "Aggregated order fact."
@@ -242,3 +257,7 @@ models:
           - relationships:
               to: ref('dim_time')
               field: time_key
+      - name: client_details
+        description: "JSON details about client (IP, User Agent)"
+      - name: discount_codes
+        description: "JSON list of discount codes"

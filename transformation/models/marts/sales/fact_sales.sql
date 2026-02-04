@@ -35,7 +35,9 @@ SELECT
     
     -- Metrics
     i.quantity,
-    i.total_price as revenue,
+    i.line_amount as revenue,
+    i.discount_amount,
+    i.distributed_discount_amount,
     i.weight_grams,
     
     -- Addresses

@@ -203,7 +203,8 @@ json_parsed AS (
         
         json_extract_string(payload, '$.note') as note,
         json_extract_string(payload, '$.tags') as tags,
-        json_extract_string(payload, '$.discount_codes') as discount_codes_json,
+        json_extract_string(payload, '$.discount_codes') as discount_codes,
+        json_extract_string(payload, '$.client_details') as client_details,
         
         json_extract_string(payload, '$.created_on') as created_on,
         json_extract_string(payload, '$.modified_on') as modified_on,

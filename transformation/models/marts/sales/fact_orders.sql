@@ -56,6 +56,9 @@ SELECT
     -- timestamps difference in hours
     date_diff('hour', created_at, completed_at) as time_to_complete_hours,
     
+    orders.client_details,
+    orders.discount_codes,
+    
     created_at as order_timestamp,
     updated_at
 
