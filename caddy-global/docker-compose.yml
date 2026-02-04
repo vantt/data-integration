@@ -27,3 +27,7 @@ services:
 
 volumes:
   caddy_data:
+
+
+# Dùng lệnh này để copy root.crt ra local
+# docker cp caddy-global:/data/caddy/pki/authorities/local/root.crt .
