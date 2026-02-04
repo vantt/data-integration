@@ -3,7 +3,7 @@
     unique_key='customer_key',
     tags=['mart', 'dim'],
     post_hook=[
-      "COPY (SELECT * FROM {{ this }}) TO '{{ env_var('DBT_EXPORT_PATH') }}/rolling/dim_customers/dim_customers_{{ run_started_at.strftime('%Y%m%d%H%M%S') }}.parquet' (FORMAT PARQUET)"
+      "COPY (SELECT * FROM {{ this }}) TO '{{ get_rolling_location() }}' (FORMAT PARQUET)"
     ]
 ) }}
 
