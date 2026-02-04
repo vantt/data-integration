@@ -1,5 +1,9 @@
 version: "3.8"
 
+networks:
+  caddy_net:
+    external: true
+
 services:
   data_platform:
     build:
@@ -15,6 +19,8 @@ services:
       - DAGSTER_HOME=/app/.dagster_home
       - DLT_TELEMETRY_DISABLED=true
       - DBT_SEND_ANONYMOUS_USAGE_STATS=false
+    networks:
+      - caddy_net
     volumes:
       - ./transformation:/app/transformation
       - ./transformation/target:/app/transformation/target
@@ -25,6 +31,9 @@ services:
       - ./app_data/dagster_home:/app/.dagster_home
       - ./app_data/logs:/app/logs
     command: sh -c "python scripts/ensure_dbt_directories.py && dagster instance concurrency set duckdb_lock 1 && dbt parse && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
+    labels:
+      caddy: etl.local
+      caddy.reverse_proxy: "{{upstreams 3001}}"
 
   metabase:
     build:
@@ -36,10 +45,13 @@ services:
       - "3000:3000"
     env_file:
       - .env.docker
+    networks:
+      - caddy_net
     volumes:
       - ./app_data/metabase_data:/home/metabase/data
-      # Mount data lake so Metabase can read DuckDB/Parquet files
       - ./app_data/data_lake:/app/data_lake
+    labels:
+      caddy: bi.local
+      caddy.reverse_proxy: "{{upstreams 3000}}"
 
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)
-
