@@ -16,6 +16,43 @@ The central table for all order-related analysis.
 SELECT * FROM fact_orders
 ```
 
+### 🧊 Model: Sales Actual vs Target
+
+This model joins `fact_targets` and `fact_orders` (aggregated) to enable comparison.
+
+```sql
+WITH targets AS (
+    SELECT
+        date_trunc('month', target_date) as month_start_date,
+        branch_key, -- Using Key directly for now
+        channel_key,
+        SUM(target_val) as target_revenue
+    FROM fact_targets
+    GROUP BY 1, 2, 3
+),
+
+actuals AS (
+    SELECT
+        date_trunc('month', order_timestamp) as month_start_date,
+        branch_location_key, -- Need JOIN to get Code/Name to match Targets
+        channel_key,
+        SUM(gmv) as actual_revenue
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+    GROUP BY 1, 2, 3
+)
+
+SELECT
+    COALESCE(t.month_start_date, a.month_start_date) as month_start_date,
+    COALESCE(t.target_revenue, 0) as target_revenue,
+    COALESCE(a.actual_revenue, 0) as actual_revenue,
+    COALESCE(a.actual_revenue, 0) / NULLIF(t.target_revenue, 0) as achievement_rate
+FROM targets t
+FULL OUTER JOIN actuals a
+    ON t.month_start_date = a.month_start_date
+    -- Note: complex logic might be needed for Branch/Channel mapping in SQL
+```
+
 #### 📏 Metric: Total Revenue
 
 Gross Merchandise Value (GMV).
@@ -23,7 +60,7 @@ Gross Merchandise Value (GMV).
 **Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
 
 ```sql --metric
-SUM(total)
+SUM(gmv)
 ```
 
 ---
@@ -40,10 +77,10 @@ Line chart showing revenue over the last 30 days.
 
 ```sql
 SELECT
-    created_on::date as order_date,
-    SUM(total) as revenue
+    order_timestamp::date as order_date,
+    SUM(gmv) as revenue
 FROM fact_orders
-WHERE created_on >= CURRENT_DATE - INTERVAL '30 days'
+WHERE order_timestamp >= CURRENT_DATE - INTERVAL '30 days'
 GROUP BY 1
 ORDER BY 1
 ```
@@ -77,9 +114,10 @@ Breakdown of revenue by sales channel.
 
 ```sql
 SELECT
-    channel,
-    SUM(total) as revenue
-FROM fact_orders
+    c.channel_name as channel,
+    SUM(o.gmv) as revenue
+FROM fact_orders o
+LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -104,9 +142,10 @@ ORDER BY 2 DESC
 List of the latest 10 orders.
 
 ```sql
-SELECT order_id, created_on, total, channel
-FROM fact_orders
-ORDER BY created_on DESC
+SELECT order_id, order_timestamp, gmv, c.channel_name
+FROM fact_orders o
+LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
+ORDER BY order_timestamp DESC
 LIMIT 10
 ```
 
@@ -133,10 +172,10 @@ Revenue breakdown by geographic region.
 
 ```sql
 SELECT
-    l.region as "Region",
-    SUM(o.total) as "Revenue"
+    l.branch_location_name as "Region",
+    SUM(o.gmv) as "Revenue"
 FROM fact_orders o
-JOIN dim_locations l USING (location_id)
+JOIN dim_branch_location l USING (branch_location_key)
 GROUP BY 1
 ```
 
@@ -165,11 +204,12 @@ Revenue and usage count by promotion.
 
 ```sql
 SELECT
-    pr.promotion_name as "Promotion",
+    COALESCE(p.promotion_code, 'No Promotion') as "Promotion",
     COUNT(DISTINCT o.order_id) as "Usage Count",
-    SUM(o.total) as "Revenue"
-FROM orders o
-JOIN promotion_redemptions pr USING (order_id)
+    SUM(o.gmv) as "Revenue"
+FROM fact_orders o
+LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
+WHERE p.promotion_code IS NOT NULL
 GROUP BY 1
 ORDER BY 3 DESC
 ```

@@ -63,6 +63,18 @@ async function main() {
 
   // 3. Execution
 
+  // We need a Database ID for SQL questions and Models.
+  // Limitation: The markdown syntax doesn't explicitly state "Which Database".
+  // We assume a default DB or we need to look it up.
+  // Let's assume the first available DB for now or env var?
+  const defaultDbId = await client.findDatabaseId(
+    process.env.METABASE_DB_NAME || "Sapo DuckDB",
+  );
+  if (!defaultDbId) {
+    console.error("❌ Could not find target Database. Set METABASE_DB_NAME.");
+    process.exit(1);
+  }
+
   // A. Collections
   const colMap = {}; // name -> id
   for (const col of config.collections) {
@@ -108,18 +120,6 @@ async function main() {
   // We iterate collections because hierarchies might be cleaner,
   // but the parser gave us a flat list of dashboards too?
   // Actually parser attached questions to dashboards.
-
-  // We need a Database ID for SQL questions.
-  // Limitation: The markdown syntax doesn't explicitly state "Which Database".
-  // We assume a default DB or we need to look it up.
-  // Let's assume the first available DB for now or env var?
-  const defaultDbId = await client.findDatabaseId(
-    process.env.METABASE_DB_NAME || "Sapo DuckDB",
-  );
-  if (!defaultDbId) {
-    console.error("❌ Could not find target Database. Set METABASE_DB_NAME.");
-    process.exit(1);
-  }
 
   for (const dashboard of config.dashboards) {
     const colId = colMap[dashboard.collection_name];
