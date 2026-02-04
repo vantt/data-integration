@@ -200,5 +200,29 @@ node .agent/skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_m
 
 ## 🛠️ API Details
 
-- **Idempotency**: `ensure()` methods check for existing items by name.
 - **Tables**: Use `client.table.find("name")` and `client.table.getFields(id)` to discover metadata.
+
+## ⚠️ Troubleshooting & Compatibility (v0.58+)
+
+### 1. Dashboard Cards Not Syncing
+
+**Symptoms**: Deployment success log but empty dashboard.
+**Cause**: Metabase v0.58+ deprecated `POST /api/dashboard/:id/cards` and `PUT` with `ordered_cards`.
+**Solution**:
+
+- Use `PUT /api/dashboard/:id` with `dashcards` payload.
+- **CRITICAL**: New cards must have a **negative integer ID** (e.g., `-1`, `-2`) in the payload. Creating a card without an ID causing the request to be rejected or ignored.
+
+### 2. "The object has been archived" Error
+
+**Symptoms**: API returns 400/404 with archive error message.
+**Cause**: Dashboards or Cards interactively "Archived" (Soft Deleted) in UI block API updates.
+**Solution**:
+
+- The Skill (`Dashboard.js`, `Card.js`) automatically checks for `archived: true` and unarchives resources before update.
+- Manually check "Archive" in Metabase Collection to restore items if needed.
+
+### 3. API Payload Differences
+
+- **Legacy**: `ordered_cards` (ignored in new versions).
+- **Modern**: `dashcards` (requires `id`).

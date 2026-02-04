@@ -12,7 +12,19 @@ class Dashboard {
         const existing = await this.find(name);
         if (existing) {
              console.log(`ℹ️ Dashboard '${name}' exists (ID: ${existing.id})`);
-             // Update parameters if needed? For now, simplistic ensure.
+             
+             // If archived, unarchive it
+             if (existing.archived) {
+                 console.log(`♻️ Unarchiving Dashboard '${name}'...`);
+                 await this.core.request(`/api/dashboard/${existing.id}`, 'PUT', { archived: false });
+             }
+             
+             // Ensure it's in the right collection (fix potential mismatch)
+             if (existing.collection_id !== collectionId) {
+                  console.log(`📦 Moving Dashboard '${name}' to collection ${collectionId}...`);
+                  await this.core.request(`/api/dashboard/${existing.id}`, 'PUT', { collection_id: collectionId });
+             }
+
              return existing;
         }
 
@@ -27,85 +39,89 @@ class Dashboard {
     }
 
     async syncCards(dashboardId, cardConfigs) {
+        // Version Check
+        const isModern = this.core.isVersionAtLeast("v0.58.0");
+        console.log(`ℹ️ Metabase Version: ${this.core.version} (Strategy: ${isModern ? 'Modern/Dashcards' : 'Legacy/OrderedCards'})`);
+
         // cardConfigs: [{ id, row, col, size_x, size_y, parameter_mappings }]
         
         const dashboard = await this.core.request(`/api/dashboard/${dashboardId}`);
-        let currentCards = dashboard.ordered_cards || [];
+        // Support both property names if Metabase version varies, but v0.58+ uses dashcards
+        let currentCards = dashboard.dashcards || dashboard.ordered_cards || [];
         
-        const payloadList = [];
+        let tempIdCounter = -1;
 
-        for (const config of cardConfigs) {
+        const cardPayload = cardConfigs.map(config => {
+            // Match by card_id (the Question ID)
             const existing = currentCards.find(dc => dc.card_id === config.id);
-            const mapping = config.parameter_mappings || [];
             
+            // Modern Logic: Negative IDs for new cards
+            // Legacy Logic: Usually just card_id is enough, but passing id doesn't hurt if we have it.
+            // If legacy and new, we don't *need* negative ID, but let's stick to standard unless it breaks legacy.
+            // Legacy `ordered_cards` usually ignores `id` for new cards and relies on `card_id`.
+            
+            let dashCardId;
             if (existing) {
-                payloadList.push({
-                    id: existing.id,
-                    card_id: config.id,
-                    row: config.row,
-                    col: config.col,
-                    size_x: config.size_x,
-                    size_y: config.size_y,
-                    visualization_settings: {},
-                    parameter_mappings: mapping
-                });
+                dashCardId = existing.id;
             } else {
-                payloadList.push({
-                    card_id: config.id,
-                    row: config.row,
-                    col: config.col,
-                    size_x: config.size_x,
-                    size_y: config.size_y,
-                    visualization_settings: {},
-                    parameter_mappings: mapping
-                });
+                dashCardId = isModern ? tempIdCounter-- : undefined; // Legacy might prefer undefined or ignore it
             }
-        }
 
-        // What about cards NOT in config? Keep them? Or Remove?
-        // "Sync" usually means "Make it match this".
-        // But removing might be dangerous if user added custom text cards.
-        // Let's Just Configured Cards + Existing Cards that are NOT in config? 
-        // Actually, if we PUT a list, it might replace the whole dashboard content.
-        // Let's try to append/update.
-        
-        // Add valid existing cards that are NOT in the config (preserve them)
-        // for (const existing of currentCards) {
-        //    if (!cardConfigs.find(c => c.id === existing.card_id)) {
-        //        payloadList.push(existing);
-        //    }
-        // }
-        
-        // Actually, Metabase PUT /api/dashboard/:id/cards *updates* the cards provided in the list.
-        // It does NOT delete omitted cards unless it's a "replace" endpoint which is rare for PUT :id/cards.
-        // Usually PUT :id updates dashboard properties. 
-        // PUT :id/cards updates the cards.
-        
-        // Let's safely try to just send the list of cards we want to update/create.
-        
-        // Strategy: Try PUT /api/dashboard/:id with ordered_cards
-        // This is a "Replace All" strategy if supported.
-        
-        const cardPayload = payloadList.map(c => ({
-            card_id: c.card_id,
-            row: c.row,
-            col: c.col,
-            size_x: c.size_x,
-            size_y: c.size_y,
-            visualization_settings: {},
-            parameter_mappings: [],
-            // id: c.id // Include id if existing
-            ...(c.id ? { id: c.id } : {}) 
-        }));
+            const cardObj = {
+                card_id: config.id,      // The Question ID
+                row: config.row,
+                col: config.col,
+                size_x: config.size_x,
+                size_y: config.size_y,
+                visualization_settings: {}, // Required
+                parameter_mappings: config.parameter_mappings || [], // Required
+                series: [] 
+            };
+            
+            // Only add 'id' if modern or if existing
+            if (dashCardId !== undefined) {
+                cardObj.id = dashCardId;
+            }
+
+            return cardObj;
+        });
 
         try {
-            await this.core.request(`/api/dashboard/${dashboardId}`, 'PUT', { 
-                ordered_cards: cardPayload 
-            });
-            console.log(`✅ Synced ${cardConfigs.length} cards to Dashboard ${dashboardId} (via PUT Dashboard check)`);
+            let payload;
+            
+            if (isModern) {
+                // v0.58+: Use 'dashcards'
+                payload = { 
+                    dashcards: cardPayload 
+                };
+            } else {
+                // Legacy: Use 'ordered_cards'
+                // Note: Legacy created new cards via POST /cards, but ordered_cards PUT also worked for reordering.
+                // Pure creation via ordered_cards might be risky on very old versions, but generally works for updates.
+                // If strict legacy support needed, we might re-introduce POST logic here.
+                // For now, assuming PUT ordered_cards is sufficient for v0.40+ updates.
+                payload = { 
+                    ordered_cards: cardPayload 
+                };
+            }
+
+            console.log(`Using '${isModern ? 'dashcards' : 'ordered_cards'}' payload...`);
+
+            const updatedDashboard = await this.core.request(`/api/dashboard/${dashboardId}`, 'PUT', payload);
+            
+            // Response might use differing keys
+            const count = (updatedDashboard.dashcards ? updatedDashboard.dashcards.length : 0) || 
+                          (updatedDashboard.ordered_cards ? updatedDashboard.ordered_cards.length : 0);
+            
+            console.log(`✅ Synced cards. Dashboard now has ${count} cards.`);
+            
+            if (count === 0 && cardPayload.length > 0) {
+                 console.warn("⚠️ Warning: Dashboard returned 0 cards. Payload might be rejected.", JSON.stringify(payload));
+            }
+
         } catch (e) {
-            console.error(`❌ Failed syncCards (PUT DB): ${e.message}`);
-            // If that fails, we might just be stuck manually adding in UI if API is stubborn.
+            console.error(`❌ Failed syncCards (PUT /api/dashboard/${dashboardId}): ${e.message}`);
+            if (e.data) console.error("Error Data:", JSON.stringify(e.data));
         }
     }
 }
