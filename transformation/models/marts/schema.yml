@@ -261,3 +261,24 @@ models:
         description: "JSON details about client (IP, User Agent)"
       - name: discount_codes
         description: "JSON list of discount codes"
+
+  - name: fact_payments
+    description: "Transactional payment fact (one row per payment attempt/transaction)."
+    columns:
+      - name: payment_key
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: payment_method_key
+        tests:
+          - relationships:
+              to: ref('dim_payment_methods')
+              field: payment_method_key
+      - name: amount
+        description: "Transaction amount"
+      - name: status
+        description: "Payment status (paid, pending, etc)"
+      - name: payment_timestamp
+        description: "Time of payment creation"
+      - name: paid_on
+        description: "Time of payment completion"

@@ -196,9 +196,9 @@ SELECT
     pm.payment_method_name as "Payment Method",
     COUNT(*) as "Transaction Count",
     SUM(p.amount) as "Total Amount"
-FROM payments p
-JOIN payment_methods pm USING (payment_method_id)
-WHERE date(p.created_at) = current_date
+FROM fact_payments p
+JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
+WHERE date(p.payment_timestamp) = current_date
 GROUP BY 1
 ```
 
@@ -227,11 +227,11 @@ Sales intensity by Hour of Day and Day of Week.
 
 ```sql
 SELECT
-    EXTRACT(HOUR FROM created_on) as "Hour",
-    EXTRACT(DOW FROM created_on) as "Day of Week",
+    EXTRACT(HOUR FROM order_timestamp) as "Hour",
+    EXTRACT(DOW FROM order_timestamp) as "Day of Week",
     COUNT(*) as "Orders"
 FROM fact_orders
-WHERE created_on >= date_trunc('week', current_date)
+WHERE order_timestamp >= date_trunc('week', current_date)
 GROUP BY 1, 2
 ORDER BY 2, 1
 ```
