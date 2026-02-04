@@ -19,7 +19,7 @@ WHERE date(order_timestamp) = current_date
 
 ---
 
-### 🖥️ Dashboard: Daily Sales Performance
+### 🖥️ Dashboard: Daily Sales Dashboard
 
 **Description**: Real-time monitoring of today's sales performance with hourly breakdown.
 

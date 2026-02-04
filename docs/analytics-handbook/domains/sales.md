@@ -66,6 +66,13 @@
   SUM(gmv) / COUNT(DISTINCT order_id)
   ```
 
+## Available Dashboards
+
+| Dashboard Name                | Audience              | Purpose                                                        | Link                            |
+| :---------------------------- | :-------------------- | :------------------------------------------------------------- | :------------------------------ |
+| **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Metabase ID 37](/dashboard/37) |
+| **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance and hourly trends. | [Metabase ID 38](/dashboard/38) |
+
 ## Context: Operational Trends
 
 > **Description:** Analysis of sales patterns over time (hourly, daily) and by dimensions.
