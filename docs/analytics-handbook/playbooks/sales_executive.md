@@ -6,6 +6,7 @@
 - **Goal:** Strategic overview of sales performance, growth, and high-level KPIs.
 - **Metabase Collection:** `Sales Analytics`
 - **Blueprint:** [Technical Spec](../blueprints/sales_executive.md)
+- **Related Process:** [Monthly Business Review](./sales_monthly_review.md)
 
 ## Filters
 

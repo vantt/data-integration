@@ -73,6 +73,13 @@
 | **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Metabase ID 37](/dashboard/37) |
 | **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance and hourly trends. | [Metabase ID 38](/dashboard/38) |
 
+## Related Playbooks
+
+| Playbook                                                           | Description                                                                           |
+| :----------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
+| **[Sales Monthly Review](../playbooks/sales_monthly_review.md)**   | Guide for conducting the Monthly Business Review (MBR) using the Executive Dashboard. |
+| **[Promotion Analysis](../playbooks/sales_promotion_analysis.md)** | Deep dive methodologies for validating campaign ROI and discount strategies.          |
+
 ## Context: Operational Trends
 
 > **Description:** Analysis of sales patterns over time (hourly, daily) and by dimensions.
@@ -189,6 +196,8 @@
   ```
 
 ## Context: Promotions & Discounts
+
+> **Playbook:** [Promotion Analysis](../playbooks/sales_promotion_analysis.md)
 
 ### 13. Discount Impact
 
