@@ -16,11 +16,11 @@
 - **Business Definition:** Total value of all confirmed orders, before deductions.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(total) -- or SUM(gmv) depending on specific column availability in fact_orders
+  SUM(gmv)
   ```
 - **Metabase Mapping:**
   - **Table:** `fact_orders`
-  - **Field:** `Total` (Aggregation: Sum)
+  - **Field:** `Gmv` (Aggregation: Sum)
 
 ### 2. Net Revenue
 
@@ -29,12 +29,11 @@
 - **Business Definition:** Actual money received (GMV - Returns - Discounts).
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(total - COALESCE(discount_amount, 0)) -- Adjust based on return logic (e.g. JOIN returns)
-  -- Legacy Logic: SUM(total) - SUM(discounts) - SUM(returns)
+  SUM(gmv - COALESCE(total_discount_amount, 0))
   ```
 - **Metabase Mapping:**
   - **Table:** `fact_orders`
-  - **Field:** Custom Expression `Sum(Total) - Sum(Discount Amount)`
+  - **Field:** Custom Expression `Sum(Gmv) - Sum(Total Discount Amount)`
 
 ### 3. Return Rate & Count
 
@@ -42,9 +41,9 @@
 
 - **Business Definition:** Count of returned orders.
 - **Logic (Metabase SQL):**
+- **Logic (Metabase SQL):**
   ```sql
-  COUNT(CASE WHEN return_status != 'unreturned' THEN 1 END)
-  -- Note: In fact_orders, check if `fulfillment_status` = 'RETURNED' (mapped from 'restocked').
+  COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END)
   ```
 
 ### 4. Total Orders
@@ -64,7 +63,7 @@
 - **Business Definition:** Average revenue generated per order.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(total) / COUNT(DISTINCT order_id)
+  SUM(gmv) / COUNT(DISTINCT order_id)
   ```
 
 ## Context: Operational Trends
@@ -96,7 +95,7 @@
       EXTRACT(HOUR FROM created_on) as hour_of_day,
       EXTRACT(DOW FROM created_on) as day_of_week, -- 0=Sunday
       COUNT(*) as order_count,
-      SUM(total) as revenue
+      SUM(gmv) as revenue
   FROM fact_orders
   GROUP BY 1, 2
   ORDER BY 2, 1
@@ -111,7 +110,7 @@
   ```sql
   SELECT
       channel_name,
-      SUM(total) as revenue
+      SUM(gmv) as revenue
   FROM fact_orders
   JOIN dim_channels USING (channel_key) -- or source_channel column
   GROUP BY 1
@@ -131,8 +130,8 @@
   SELECT
       p.product_name,
       SUM(oli.quantity) as units_sold,
-      SUM(oli.line_amount) as revenue
-  FROM order_line_items oli
+      SUM(oli.revenue) as revenue
+  FROM fact_sales oli -- mapped from order_line_items
   JOIN dim_products p USING (product_id)
   GROUP BY 1
   ORDER BY revenue DESC
@@ -166,7 +165,7 @@
       pm.payment_method_name,
       COUNT(*) as transaction_count,
       SUM(p.amount) as total_amount
-  FROM payments p
+  FROM stg_sapo_payments p
   JOIN payment_methods pm USING (payment_method_id)
   WHERE p.status = 'completed'
   GROUP BY 1
@@ -179,7 +178,7 @@
 - **Business Definition:** Tracking of payment success/failure.
 - **Logic (Metabase SQL):**
   ```sql
-  SELECT payment_status, COUNT(*), SUM(total) FROM orders GROUP BY 1
+  SELECT payment_status, COUNT(*), SUM(gmv) FROM fact_orders GROUP BY 1
   ```
 
 ## Context: Promotions & Discounts
@@ -191,9 +190,9 @@
 - **Business Definition:** Value of discounts given and percentage of orders discounted.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(CASE WHEN total_discount > 0 THEN 1 ELSE 0 END) as discounted_orders,
-  SUM(total_discount) as total_discounts,
-  AVG(total_discount * 100.0 / NULLIF(total, 0)) as avg_discount_pct
+  SUM(CASE WHEN total_discount_amount > 0 THEN 1 ELSE 0 END) as discounted_orders,
+  SUM(total_discount_amount) as total_discounts,
+  AVG(total_discount_amount * 100.0 / NULLIF(gmv, 0)) as avg_discount_pct
   ```
 
 ### 14. Promotion Performance
@@ -206,8 +205,8 @@
   SELECT
       pr.promotion_name,
       COUNT(DISTINCT o.order_id) as usage_count,
-      SUM(o.total) as revenue_with_promo
-  FROM orders o
+      SUM(o.gmv) as revenue_with_promo
+  FROM fact_orders o
   JOIN promotion_redemptions pr USING (order_id)
   GROUP BY 1
   ```
@@ -260,7 +259,7 @@
   SELECT
       l.region,
       l.location_name,
-      SUM(o.total) as revenue
+      SUM(o.gmv) as revenue
   FROM fact_orders o
   JOIN dim_locations l USING (location_id)
   GROUP BY 1, 2
