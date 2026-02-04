@@ -1,0 +1,29 @@
+version: "3.7"
+
+networks:
+  caddy_net:
+    external: true
+
+services:
+  caddy:
+    image: lucaslorentz/caddy-docker-proxy:ci-alpine
+    container_name: caddy-global
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - CADDY_INGRESS_NETWORKS=caddy_net
+    networks:
+      - caddy_net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - caddy_data:/data
+    # This label allows the dashboard/api of Caddy itself to be accessible if needed, 
+    # though usually we keep it hidden.
+    # labels:
+    #   caddy: proxy.local
+    #   caddy.reverse_proxy: "{{upstreams 2019}}"
+
+volumes:
+  caddy_data:
