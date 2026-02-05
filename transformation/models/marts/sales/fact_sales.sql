@@ -12,6 +12,9 @@ orders AS (
 ),
 valid_customers AS (
     SELECT customer_key FROM {{ ref('dim_customers_base') }}
+),
+source_definitions AS (
+    SELECT id, is_generic_source FROM {{ ref('ref_order_sources') }}
 )
 
 SELECT
@@ -23,7 +26,15 @@ SELECT
     {{ dbt_utils.generate_surrogate_key(["coalesce(i.product_type, 'Unknown')"]) }} as product_type_key,
     COALESCE(vc.customer_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as customer_key,
     {{ dbt_utils.generate_surrogate_key(['cast(o.location_id as string)']) }} as branch_location_key,
-    {{ dbt_utils.generate_surrogate_key(["coalesce(o.channel, 'Unknown')"]) }} as channel_key,
+    
+    -- Channel Key Logic (Must match dim_channels)
+    CASE
+        WHEN sd.is_generic_source = true THEN 
+            {{ dbt_utils.generate_surrogate_key(['cast(o.source_id as string)', "coalesce(cast(o.location_id as string), 'Unknown')"]) }}
+        ELSE 
+            {{ dbt_utils.generate_surrogate_key(['cast(o.source_id as string)', "'Unknown'"]) }}
+    END as channel_key,
+
     COALESCE(ds.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as staff_key,
     {{ dbt_utils.generate_surrogate_key(['o.status']) }} as status_key,
     coalesce(cast(strftime(o.created_at, '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD
@@ -62,3 +73,4 @@ FROM items i
 JOIN orders o ON i.order_id = o.order_id
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(['o.customer_id']) }} = vc.customer_key
 LEFT JOIN {{ ref('dim_staff') }} ds ON {{ dbt_utils.generate_surrogate_key(['o.salesperson_id']) }} = ds.staff_key
+LEFT JOIN source_definitions sd ON o.source_id = sd.id

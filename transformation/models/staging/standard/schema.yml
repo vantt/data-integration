@@ -9,15 +9,18 @@ models:
       - name: status
         tests:
           - accepted_values:
-              values: ['OPEN', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'DRAFT']
+              arguments:
+                values: ['OPEN', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'DRAFT']
       - name: payment_status
         tests:
           - accepted_values:
-              values: ['PAID', 'PENDING', 'PARTIALLY_PAID', 'REFUNDED', 'VOIDED', 'UNPAID']
+              arguments:
+                values: ['PAID', 'PENDING', 'PARTIALLY_PAID', 'REFUNDED', 'VOIDED', 'UNPAID']
       - name: fulfillment_status
         tests:
           - accepted_values:
-              values: ['FULFILLED', 'UNFULFILLED', 'PARTIALLY_FULFILLED', 'RETURNED', 'SHIPPING', 'CANCELLED', 'COMPLETED', 'SHIPPED_PAID', 'SHIPPED_COD', 'PAID_PROCESSING', 'IN_PROGRESS']
+              arguments:
+                values: ['FULFILLED', 'UNFULFILLED', 'PARTIALLY_FULFILLED', 'RETURNED', 'SHIPPING', 'CANCELLED', 'COMPLETED', 'SHIPPED_PAID', 'SHIPPED_COD', 'PAID_PROCESSING', 'IN_PROGRESS']
       - name: discount_codes
         description: "List of discount codes applied (JSON)"
       - name: client_details
@@ -33,8 +36,9 @@ models:
       - name: order_id
         tests:
           - relationships:
-              to: ref('std_orders')
-              field: order_id
+              arguments:
+                to: ref('std_orders')
+                field: order_id
       - name: line_amount
         description: "Total line item amount (quantity * price - discount)"
       - name: discount_amount
@@ -69,7 +73,8 @@ models:
       - name: status
         tests:
           - accepted_values:
-              values: ['DELIVERED', 'SHIPPING', 'PACKED', 'CANCELLED', 'FAILED', 'PENDING']
+              arguments:
+                values: ['DELIVERED', 'SHIPPING', 'PACKED', 'CANCELLED', 'FAILED', 'PENDING']
 
   - name: std_payments
     description: "Standardized Payments (Transactions)."
@@ -80,4 +85,5 @@ models:
       - name: status
         tests:
           - accepted_values:
-              values: ['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED']
+              arguments:
+                values: ['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED']

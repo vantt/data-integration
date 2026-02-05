@@ -27,8 +27,8 @@ SELECT
     -- 1. Get Source/Location from ref_marketing_channels using spend_code
     -- 2. Generate same Hash Key as dim_channels
     {{ dbt_utils.generate_surrogate_key([
-        "coalesce(cast(mc.map_id as string), 'Unknown')", -- source_id (if map_type=SOURCE)
-        "CASE WHEN mc.map_type = 'LOCATION' THEN cast(mc.map_id as string) ELSE 'Unknown' END" -- location_id
+        "coalesce(cast(mc.map_id as string), 'Unknown')",
+        "CASE WHEN mc.map_type = 'LOCATION' THEN cast(mc.map_id as string) ELSE 'Unknown' END"
     ]) }} as channel_key,
     
     s.spend_code,

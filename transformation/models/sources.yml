@@ -3,8 +3,8 @@ version: 2
 sources:
   - name: sapo_raw
     schema: main
-    # Cấu hình Meta chung cho Source này 
-    # Tự động map tên bảng vào đường dẫn: external_location: Quy định cách DuckDB đọc file. 
+    # Cấu hình Meta chung cho Source này
+    # Tự động map tên bảng vào đường dẫn: external_location: Quy định cách DuckDB đọc file.
     # **/*.parquet nghĩa là đọc đệ quy tất cả file parquet trong thư mục con.
     meta:
       external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/sapo_raw/{name}/**/*.parquet', hive_partitioning=1)"
@@ -25,3 +25,7 @@ sources:
       # Bảng 4: Targets (Google Sheets)
       - name: targets_raw
         description: "Target goals ingested from Google Sheets"
+
+      # Bảng 5: Marketing Spend (Google Sheets)
+      - name: marketing_spend_raw
+        description: "Marketing spend data ingested from Google Sheets"

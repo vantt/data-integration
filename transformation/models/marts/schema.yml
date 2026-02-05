@@ -128,58 +128,69 @@ models:
       - name: product_key
         tests:
           - relationships:
-              to: ref('dim_products')
-              field: product_key
+              arguments:
+                to: ref('dim_products')
+                field: product_key
       - name: product_type_key
         tests:
           - relationships:
-              to: ref('dim_product_types')
-              field: product_type_key
+              arguments:
+                to: ref('dim_product_types')
+                field: product_type_key
       - name: staff_key
         tests:
           - relationships:
-              to: ref('dim_staff')
-              field: staff_key
+              arguments:
+                to: ref('dim_staff')
+                field: staff_key
       - name: status_key
         tests:
           - relationships:
-              to: ref('dim_order_status')
-              field: status_key
+              arguments:
+                to: ref('dim_order_status')
+                field: status_key
       - name: customer_key
         tests:
           - relationships:
-              to: ref('dim_customers_base')
-              field: customer_key
+              arguments:
+                to: ref('dim_customers_base')
+                field: customer_key
       - name: branch_location_key
         tests:
           - relationships:
-              to: ref('dim_branch_location')
-              field: branch_location_key
+              arguments:
+                to: ref('dim_branch_location')
+                field: branch_location_key
       - name: channel_key
         tests:
           - relationships:
-              to: ref('dim_channels')
-              field: channel_key
+              arguments:
+                to: ref('dim_channels')
+                field: channel_key
       - name: date_key
         tests:
           - relationships:
-              to: ref('dim_date')
-              field: date_key
+              arguments:
+                to: ref('dim_date')
+                field: date_key
       - name: shipping_geography_key
         tests:
           - relationships:
-              to: ref('dim_geography')
-              field: geography_key
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
       - name: billing_geography_key
         tests:
           - relationships:
-              to: ref('dim_geography')
-              field: geography_key
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
       - name: time_key
         tests:
           - relationships:
-              to: ref('dim_time')
-              field: time_key
+              arguments:
+                to: ref('dim_time')
+                field: time_key
       - name: revenue
         description: "Total revenue (quantity * line_amount)"
       - name: discount_amount
@@ -195,68 +206,78 @@ models:
       - name: customer_key
         tests:
           - relationships:
-              to: ref('dim_customers_base')
-              field: customer_key
+              arguments:
+                to: ref('dim_customers_base')
+                field: customer_key
       - name: shipping_geography_key
         data_type: varchar
         tests:
           - relationships:
-              to: ref('dim_geography')
-              field: geography_key
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
               config:
                 severity: warn
       - name: billing_geography_key
         data_type: varchar
         tests:
           - relationships:
-              to: ref('dim_geography')
-              field: geography_key
+              arguments:
+                to: ref('dim_geography')
+                field: geography_key
               config:
                 severity: warn
       - name: channel_key
         data_type: varchar
         tests:
           - relationships:
-              to: ref('dim_channels')
-              field: channel_key
+              arguments:
+                to: ref('dim_channels')
+                field: channel_key
       - name: promotion_key
         data_type: varchar
         tests:
           - relationships:
-              to: ref('dim_promotions')
-              field: promotion_key
+              arguments:
+                to: ref('dim_promotions')
+                field: promotion_key
               config:
                 severity: warn
       - name: staff_key
         data_type: varchar
         tests:
           - relationships:
-              to: ref('dim_staff')
-              field: staff_key
+              arguments:
+                to: ref('dim_staff')
+                field: staff_key
       - name: status_key
         data_type: varchar
         tests:
           - relationships:
-              to: ref('dim_order_status')
-              field: status_key
+              arguments:
+                to: ref('dim_order_status')
+                field: status_key
       - name: branch_location_key
         data_type: varchar
         tests:
           - relationships:
-              to: ref('dim_branch_location')
-              field: branch_location_key
+              arguments:
+                to: ref('dim_branch_location')
+                field: branch_location_key
       - name: date_key
         data_type: integer
         tests:
           - relationships:
-              to: ref('dim_date')
-              field: date_key
+              arguments:
+                to: ref('dim_date')
+                field: date_key
       - name: time_key
         data_type: integer
         tests:
           - relationships:
-              to: ref('dim_time')
-              field: time_key
+              arguments:
+                to: ref('dim_time')
+                field: time_key
       - name: client_details
         description: "JSON details about client (IP, User Agent)"
       - name: discount_codes
@@ -272,8 +293,9 @@ models:
       - name: payment_method_key
         tests:
           - relationships:
-              to: ref('dim_payment_methods')
-              field: payment_method_key
+              arguments:
+                to: ref('dim_payment_methods')
+                field: payment_method_key
       - name: amount
         description: "Transaction amount"
       - name: status
