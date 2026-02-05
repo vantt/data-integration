@@ -64,10 +64,18 @@ class SapoDbtTranslator(DagsterDbtTranslator):
         # Explicitly link dbt staging models to History Log and Webhook assets
         if name in [
             "stg_sapo_orders", "stg_sapo_customers", "stg_sapo_accounts",
+            "stg_sapo_fulfillments", "stg_sapo_order_items", "stg_sapo_payments",
             "src_sapo_orders", "src_sapo_customers", "src_sapo_accounts"
         ]:
+            # Explicitly link dbt staging models to History Log and Webhook assets
+            # AND Batch items (to ensure Nightly Job runs strictly serial: Ingestion -> dbt)
             upstream_keys.add(AssetKey(["sapo", "sapo_history_log_asset"]))
             upstream_keys.add(AssetKey(["sapo", "sapo_webhook_consumer_asset"]))
+            
+            # Enforce "Ingestion Phase" completion
+            upstream_keys.add(AssetKey(["sapo", "sapo_orders_batch_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "sapo_customers_batch_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "sapo_accounts_batch_asset"]))
             
         elif name == "stg_targets":
             upstream_keys.add(AssetKey(["sapo", "sapo_targets_asset"]))
