@@ -439,6 +439,65 @@ Sales targets for performance tracking.
 
 ---
 
+### `fact_marketing_spend` (Planned: Manual Ingestion)
+
+> **Status:** Specification Only (Use Google Sheets Ingestion)
+> **Goal:** Track ad spend for CAC and ROAS calculations.
+> **Ingestion Method:** Google Sheets (Similar to `targets`).
+
+| Column         | Type          | Description                    |
+| -------------- | ------------- | ------------------------------ |
+| `spend_key`    | VARCHAR       | Surrogate key                  |
+| `date_key`     | INTEGER       | FK to dim_date                 |
+| `channel_key`  | VARCHAR       | FK to `dim_channels`           |
+| `channel_code` | VARCHAR       | Raw Code from Sheet (e.g 'fb') |
+| `campaign_id`  | VARCHAR       | Campaign identifier            |
+| `spend_amount` | DECIMAL(15,2) | Cost in VND                    |
+
+**Grain:** Daily per Campaign per Channel
+
+---
+
+## Reference Data (Seeds)
+
+### `ref_order_sources` (Enriched)
+
+Maps Sapo Source IDs to Platforms.
+
+| Column              | Description                        | Example                                  |
+| :------------------ | :--------------------------------- | :--------------------------------------- |
+| `id`                | **(PK)** Sapo Source ID            | `8075219`                                |
+| `name`              | Source Name                        | `FaceBookFJPTViet`                       |
+| `platform_group`    | **[NEW]** Aggregation Group        | `Social`, `Ecom`, `Retail`               |
+| `is_generic_source` | **[NEW]** Flag for POS/Marketplace | `true` (for POS), `false` (for Websites) |
+
+### `ref_branch_locations` (Renamed from `ref_locations`)
+
+List of physical stores and warehouses. Used for mapping generic sources (POS).
+
+| Column | Description          | Example          |
+| :----- | :------------------- | :--------------- |
+| `id`   | **(PK)** Location ID | `452566`         |
+| `name` | Branch/Store Name    | `16 Trương Định` |
+
+### `ref_marketing_spend_map` (Renamed from `ref_marketing_channels`)
+
+Maps Input Codes (from Google Sheets) to Data Warehouse Entities (Sources or Locations).
+**Logic:** Marketing Channel -> Sales Target (Source/Location) -> Platform (Auto-inherited).
+
+| Column         | Description                    | Example                  |
+| :------------- | :----------------------------- | :----------------------- |
+| `spend_code`   | **(PK)** Code entered in Sheet | `fb_fjpt`                |
+| `display_name` | User-friendly Name             | `Facebook Ads Main Page` |
+| `map_type`     | `SOURCE` or `LOCATION`         | `SOURCE`                 |
+| `map_id`       | Sapo Source ID or Location ID  | `8075219`                |
+
+> [!TIP] Mapping Strategy
+>
+> - If `map_type` = 'SOURCE', cost is linked to that specific Online Source.
+> - If `map_type` = 'LOCATION', cost is linked to that specific Retail Store (Branch) found in `ref_branch_locations`.
+> - **Platform** is automatically inherited from the linked Source/Location (e.g., linked Source belongs to 'Social').
+
 ## Business Metrics
 
 ### Sales Metrics

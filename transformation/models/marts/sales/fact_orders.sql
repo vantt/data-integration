@@ -36,7 +36,7 @@ SELECT
     -- Simplification: Just take the first code if present, or NULL.
     {{ dbt_utils.generate_surrogate_key(["coalesce(json_extract_string(json_extract_string(discount_codes, '$[0]'), '$.code'), 'Unknown')"]) }} as promotion_key,
     {{ dbt_utils.generate_surrogate_key(['location_id']) }} as branch_location_key,
-    {{ dbt_utils.generate_surrogate_key(["coalesce(channel, 'Unknown')"]) }} as channel_key,
+    {{ dbt_utils.generate_surrogate_key(["source_id", "coalesce(location_id, 'Unknown')"]) }} as channel_key,
     COALESCE(ds.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as staff_key,
     {{ dbt_utils.generate_surrogate_key(['status']) }} as status_key,
     coalesce(cast(strftime(created_at, '%Y%m%d') as integer), 19000101) as date_key,

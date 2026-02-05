@@ -4,7 +4,7 @@
 ) }}
 
 WITH locations AS (
-    SELECT * FROM {{ ref('ref_locations') }}
+    SELECT * FROM {{ ref('ref_branch_locations') }}
 )
 
 SELECT DISTINCT

@@ -47,6 +47,7 @@ elseif ((Get-Item $GlobalDataLake).Target -ne $LocalDataLake) {
 # 3. Set Environment Variable for dbt
 $env:DBT_EXPORT_PATH = $FullExportPath
 $env:DBT_DATA_LAKE_PATH = "$ProjectRoot\data_lake"
+$env:DBT_PROJECT_DIR = "$ProjectRoot\transformation"
 
 # 4. Resolve Python Environment (Use dlt venv)
 $PythonCmd = "python"
@@ -54,6 +55,13 @@ if (Test-Path "$ProjectRoot\ingestion\venv\Scripts\python.exe") {
     $PythonCmd = "$ProjectRoot\ingestion\venv\Scripts\python.exe"
 }
 Write-Host "[Pipeline] Using Python Executable: $PythonCmd"
+
+# 4b. Run Maintenance Scripts (Sync Seeds)
+Write-Host "[Pipeline] Syncing Seeds (Sources/Locations)..."
+& $PythonCmd "$ProjectRoot\scripts\maintenance\sync_seeds.py"
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Seed Sync encountered an issue (non-critical). Continuing..."
+}
 
 # 5. Run dbt Build (via wrapper script)
 Write-Host "[Pipeline] Execution dbt build via wrapper..."

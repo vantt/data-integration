@@ -239,4 +239,4 @@ SELECT
 FROM json_parsed o
 LEFT JOIN {{ ref('ref_payment_methods') }} pm ON try_cast(o.payment_method_id as BIGINT) = pm.id
 LEFT JOIN {{ ref('ref_order_sources') }} s ON try_cast(o.source_id as BIGINT) = s.id
-LEFT JOIN {{ ref('ref_locations') }} l ON try_cast(o.location_id as BIGINT) = l.id
+LEFT JOIN {{ ref('ref_branch_locations') }} l ON try_cast(o.location_id as BIGINT) = l.id
