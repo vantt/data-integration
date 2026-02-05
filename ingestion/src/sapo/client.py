@@ -68,7 +68,7 @@ def get_sapo_client() -> Any:
         'cookie_ttl_hours': 6,
         'headless': config.get("headless", True),
         'cookie_ttl_hours': 6,
-        'headless': config.get("headless", True),
+
         'login_selectors': login_selectors,
         'domain': domain
     }, login_strategy=sapo_login_strategy)

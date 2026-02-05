@@ -3,11 +3,21 @@ log_level = "INFO"
 
 [destination.filesystem]
 loader_file_format = "parquet"
+bucket_url = "file:///d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/app_data/data_lake"
 
 [sources.sapo]
 domain = "fwg.mysapogo.com" # Default domain, override with Env Var if needed
-request_delay = 2.0
+request_delay = 2.0 # Wait 1 second between requests
 headless = true
+login_url = "https://accounts.sapo.vn/login?domain=fwg" # cấu hình nếu muốn Overview
+
+[sources.sapo.login_selectors]
+username = "#pos-login-form #username"
+password = "#pos-login-form #password"
+submit = "#pos-login-form button.btn-login"
+
+[sources.sapo_webhook_source]
+worker_url = "https://webhook-receiver.admin-1d2.workers.dev/"
 
 [sources.spreadsheet_url]
 marketing_spend = "https://docs.google.com/spreadsheets/d/1wQpT4lCZWrPE7fnbRNTKiNDRFzVT2u_WhN-9uY9u3lc/edit?usp=sharing"
