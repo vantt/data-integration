@@ -3,30 +3,44 @@
 ## Overview
 
 - **Audience:** Customer Success, Executives
-- **Goal:** Track retention rates and identify churn risks.
-- **Metabase Collection:** `Customer Analytics`
+- **Goal:** Track retention rates, identify churn risks, and monitor cohort health.
+- **Metabase Collection:** `Customer Operations`
 
 ## Data Lineage
 
-- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
-- **Dimensions:** [`dim_customers`](../../../transformation/models/marts/core/dim_customers.sql)
+- **Core Model:** [`dim_customers`](../../../transformation/models/marts/core/dim_customers.sql)
+- **Dimensions:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) (for cohort analysis)
 
 ## Filters
 
-- **Cohort Month:** Monthly cohorts.
+- **Cohort Month:** Month of customer acquisition (First Order Date).
+- **Customer Segment:** VIP, Loyal, Regular.
+- **Geography:** Province/City (from `dim_customers`).
 
 ## Visualizations
 
-### Section 1: Retention Health
+### Section 1: Retention Health Top-line
 
-| Chart Title        | Visualization Type | Metric Reference (Link to Domain)                         | Notes/Config     |
-| :----------------- | :----------------- | :-------------------------------------------------------- | :--------------- |
-| **Retention Rate** | Scalar             | [Retention Rate](../domains/customer.md#5-retention-rate) | Overall average. |
-| **Churn Rate**     | Scalar / Trend     | [Churn Rate](../domains/customer.md#6-churn-rate)         | Monthly trend.   |
+| Chart Title                | Visualization Type | Metric Reference                                          | Notes/Config                     |
+| :------------------------- | :----------------- | :-------------------------------------------------------- | :------------------------------- |
+| **Overall Retention Rate** | Scalar             | [Retention Rate](../domains/customer.md#5-retention-rate) | % of customers who repurchased.  |
+| **Churn Rate (Monthly)**   | Trend Line         | [Churn Rate](../domains/customer.md#6-churn-rate)         | Trend of `Churned` status count. |
+| **At Risk Customers**      | Scalar             | Count of `At Risk`                                        | Immediate action required.       |
 
 ### Section 2: Cohort Analysis
 
-| Chart Title                 | Visualization Type        | Metric Reference (Link to Domain)                         | Notes/Config                                     |
-| :-------------------------- | :------------------------ | :-------------------------------------------------------- | :----------------------------------------------- |
-| **Cohort Retention Curves** | Line Chart (Multi-series) | [Retention Rate](../domains/customer.md#5-retention-rate) | Series: Cohort Month. X-Axis: Months since join. |
-| **Churn Reasons**           | Bar Chart                 | Count of Churn Events                                     | Group by Reason Code.                            |
+| Chart Title                  | Visualization Type | Metric Reference                                          | Notes/Config                                                    |
+| :--------------------------- | :----------------- | :-------------------------------------------------------- | :-------------------------------------------------------------- |
+| **Cohort Retention Heatmap** | Table / Heatmap    | [Retention Rate](../domains/customer.md#5-retention-rate) | Rows: Cohort Month, Cols: Months Since Join, Cell: % Retention. |
+| **Churn Reasons**            | Bar Chart          | Count of Churn Events                                     | (Future) Requires churn survey data.                            |
+
+### Section 3: Risk Watchlist
+
+| Chart Title                | Visualization Type | Columns                                                          | Notes/Config                                                          |
+| :------------------------- | :----------------- | :--------------------------------------------------------------- | :-------------------------------------------------------------------- |
+| **At Risk Customers List** | Table              | Name, Phone, **Last Order Date**, **Days Since Last Order**, LTV | Filter: Status = 'At Risk'. Sort by LTV DESC (Save high value first). |
+
+## Implementation Notes
+
+- **Cohort Logic:** Ensure the "Cohort Month" uses `first_order_date` truncated to the month.
+- **Action Item:** The "Risk Watchlist" is the most critical operational tool. Review it weekly.
