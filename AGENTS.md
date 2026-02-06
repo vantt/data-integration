@@ -45,9 +45,9 @@ Comprehensive documentation is available following a **progressive disclosure** 
 
 ---
 
-## Multi-Project Repository Structure: `data-integration2`
+## Multi-Project Repository Structure: 
 
-**CRITICAL:** `data-integration2` is a monorepo containing THREE main independent functional areas with specific sub-projects:
+**CRITICAL:** this folder is a monorepo containing THREE main independent functional areas with specific sub-projects:
 
 ### 1. Ingestion Pipelines (`data-integration2/ingestion`)
 
