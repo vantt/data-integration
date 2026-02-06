@@ -1,15 +1,14 @@
 # Resource Documentation
 
-> Dagster resource configurations for dbt, DuckDB, and external services
+> Dagster resource definitions and configurations
 
 ## Resource Overview
 
-Resources provide shared configurations and connections to assets and ops.
+Resources provide shared configurations and connections to assets. currently, we primarily use the `dbt` resource.
 
-| Resource | Purpose | Used By |
-|----------|---------|---------|
-| `dbt` | dbt CLI execution | dbt_assets |
-| `duckdb` | DuckDB connection | serving_database |
+| Resource | Purpose                     | Used By          |
+| -------- | --------------------------- | ---------------- |
+| `dbt`    | dbt CLI execution interface | `all_dbt_assets` |
 
 ---
 
@@ -17,291 +16,49 @@ Resources provide shared configurations and connections to assets and ops.
 
 ### Configuration
 
-```python
-from dagster_dbt import DbtCliResource
-
-dbt_resource = DbtCliResource(
-    project_dir=Path(__file__).parent.parent / "transformation",
-    profiles_dir=Path(__file__).parent.parent / "transformation",
-    target="dev"
-)
-```
-
-### Path Resolution
-
-The dbt executable is resolved in this order:
-
-1. System PATH
-2. Virtual environment: `ingestion/venv/Scripts/dbt.exe`
-3. Fallback error
+Defined in `orchestration/definitions.py`, configured to use the project's dbt environment.
 
 ```python
-def resolve_dbt_path():
-    # Check PATH first
-    if shutil.which("dbt"):
-        return "dbt"
-
-    # Check venv
-    venv_dbt = Path(__file__).parent.parent / "ingestion/venv/Scripts/dbt.exe"
-    if venv_dbt.exists():
-        return str(venv_dbt)
-
-    raise FileNotFoundError("dbt not found")
+resources={
+    "dbt": DbtCliResource(
+        project_dir=dbt.dbt_project.project_dir,
+        dbt_executable=dbt_exe
+    ),
+}
 ```
 
-### Environment Variables
+### Executable Resolution
 
-```python
-dbt_resource = DbtCliResource(
-    project_dir=...,
-    env={
-        "DATA_LAKE_PATH": os.environ.get("DATA_LAKE_PATH"),
-        "DBT_EXPORT_PATH": os.environ.get("DBT_EXPORT_PATH")
-    }
-)
-```
+The system dynamically resolves the `dbt` executable to ensure compatibility across environments (Docker, Local, Windows/Linux).
+
+1.  Checks system PATH (`shutil.which("dbt")`).
+2.  Fallbacks to the local `ingestion/venv/Scripts/dbt.exe` if not found globally.
 
 ### Usage in Assets
 
-```python
-from dagster_dbt import dbt_assets, DbtCliResource
+Used by the `@dbt_assets` decorator in `orchestration/assets/dbt.py` to trigger builds.
 
-@dbt_assets(manifest=manifest_path)
-def all_dbt_assets(context, dbt: DbtCliResource):
+```python
+@dbt_assets(
+    manifest=dbt_project.manifest_path,
+    dagster_dbt_translator=SapoDbtTranslator(),
+    op_tags={"dagster/concurrency_key": "duckdb_lock"}
+)
+def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
+    # Sets environment variables for export path
+    os.environ["DBT_EXPORT_PATH"] = export_base_dir
     yield from dbt.cli(["build"], context=context).stream()
 ```
 
 ---
 
-## DuckDB Resource
+## Other Integrations
 
-### Configuration
+While not strictly defined as Dagster "Resources", other integrations are handled directly within assets:
 
-```python
-from dagster import ConfigurableResource
-import duckdb
-
-class DuckDBResource(ConfigurableResource):
-    database_path: str
-
-    def get_connection(self, read_only: bool = False):
-        return duckdb.connect(self.database_path, read_only=read_only)
-```
-
-### Usage
-
-```python
-@asset
-def serving_database(duckdb: DuckDBResource):
-    conn = duckdb.get_connection()
-    conn.execute("CREATE VIEW ...")
-    conn.close()
-```
-
----
-
-## Resource Registration
-
-### definitions.py
-
-```python
-from dagster import Definitions
-
-defs = Definitions(
-    assets=[...],
-    jobs=[...],
-    schedules=[...],
-    resources={
-        "dbt": DbtCliResource(
-            project_dir=TRANSFORMATION_DIR,
-            profiles_dir=TRANSFORMATION_DIR
-        ),
-        "duckdb": DuckDBResource(
-            database_path=str(DATA_LAKE_PATH / "serving/olap.duckdb")
-        )
-    }
-)
-```
-
----
-
-## Environment Configuration
-
-### Development
-
-```python
-# Local development resources
-dev_resources = {
-    "dbt": DbtCliResource(
-        project_dir=TRANSFORMATION_DIR,
-        target="dev"
-    ),
-    "duckdb": DuckDBResource(
-        database_path="data_lake/serving/olap.duckdb"
-    )
-}
-```
-
-### Production
-
-```python
-# Production resources with different paths
-prod_resources = {
-    "dbt": DbtCliResource(
-        project_dir="/app/transformation",
-        target="prod"
-    ),
-    "duckdb": DuckDBResource(
-        database_path="/data/serving/olap.duckdb"
-    )
-}
-```
-
-### Environment-Based Selection
-
-```python
-import os
-
-env = os.environ.get("DAGSTER_ENV", "dev")
-
-resources = dev_resources if env == "dev" else prod_resources
-
-defs = Definitions(
-    assets=[...],
-    resources=resources
-)
-```
-
----
-
-## Custom Resources
-
-### Example: Sapo API Client
-
-```python
-from dagster import ConfigurableResource
-import requests
-
-class SapoResource(ConfigurableResource):
-    api_key: str
-    api_secret: str
-    store_url: str
-
-    def get_client(self):
-        from ingestion.src.sapo_client import SapoClient
-        return SapoClient(
-            api_key=self.api_key,
-            api_secret=self.api_secret,
-            store_url=self.store_url
-        )
-
-# Usage
-@asset
-def sapo_orders_batch(sapo: SapoResource):
-    client = sapo.get_client()
-    orders = client.get_orders()
-    ...
-```
-
-### Example: Cloudflare D1 Client
-
-```python
-class CloudflareD1Resource(ConfigurableResource):
-    api_token: str
-    account_id: str
-    database_id: str
-    worker_url: str
-
-    def poll_messages(self, limit: int = 1000):
-        response = requests.get(
-            f"{self.worker_url}/poll",
-            params={"limit": limit},
-            headers={"Authorization": f"Bearer {self.api_token}"}
-        )
-        return response.json()
-```
-
----
-
-## Secrets Management
-
-### From Environment
-
-```python
-import os
-
-defs = Definitions(
-    resources={
-        "sapo": SapoResource(
-            api_key=os.environ["SAPO_API_KEY"],
-            api_secret=os.environ["SAPO_API_SECRET"],
-            store_url=os.environ["SAPO_STORE_URL"]
-        )
-    }
-)
-```
-
-### From dlt Secrets
-
-```python
-import dlt
-
-secrets = dlt.secrets
-
-sapo_resource = SapoResource(
-    api_key=secrets["sources.sapo.api_key"],
-    api_secret=secrets["sources.sapo.api_secret"],
-    store_url=secrets["sources.sapo.store_url"]
-)
-```
-
----
-
-## Resource Dependencies
-
-Resources can depend on other resources:
-
-```python
-class AnalyticsResource(ConfigurableResource):
-    duckdb: DuckDBResource
-
-    def run_query(self, sql: str):
-        conn = self.duckdb.get_connection(read_only=True)
-        result = conn.execute(sql).fetchall()
-        conn.close()
-        return result
-```
-
----
-
-## Testing Resources
-
-### Mock Resources
-
-```python
-from unittest.mock import MagicMock
-
-def test_asset_with_mock_dbt():
-    mock_dbt = MagicMock(spec=DbtCliResource)
-    mock_dbt.cli.return_value.stream.return_value = iter([])
-
-    result = my_dbt_asset(dbt=mock_dbt)
-    assert result is not None
-```
-
-### Test Fixtures
-
-```python
-import pytest
-
-@pytest.fixture
-def test_duckdb():
-    return DuckDBResource(database_path=":memory:")
-
-def test_serving_database(test_duckdb):
-    result = serving_database(duckdb=test_duckdb)
-    assert result is not None
-```
+- **DuckDB**: Accessed via `subprocess` calls to provisioning scripts or direct connection within dlt pipelines (`sapo_serving_db`).
+- **Sapo API**: Configured via `load_dlt_configuration()` helper which loads `.env.local` and `.dlt/secrets.toml` directly into `os.environ`.
+- **Google Sheets**: Accessed via `dlt` sources with credentials from `secrets.toml`.
 
 ---
 

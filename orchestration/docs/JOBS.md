@@ -5,18 +5,19 @@
 ## Job Overview
 
 Jobs are collections of assets that execute together. Each job has:
+
 - **Name**: Unique identifier
 - **Selection**: Which assets to include
 - **Config**: Runtime configuration
 
 ## Active Jobs
 
-| Job | Schedule | Assets | Purpose |
-|-----|----------|--------|---------|
-| `sapo_realtime_sync_job` | */1 * * * * | Webhooks + dbt OTP | Real-time updates |
-| `sapo_incremental_sync_job` | */10 * * * * | History log + dbt OTP | Gap filling |
-| `sapo_nightly_reconciliation_job` | 0 4 * * * | All ingestion + dbt + serving | Full reconciliation |
-| `sapo_targets_sync_job` | Manual | Targets only | Google Sheets sync |
+| Job                               | Schedule        | Assets                        | Purpose             |
+| --------------------------------- | --------------- | ----------------------------- | ------------------- |
+| `sapo_realtime_sync_job`          | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates   |
+| `sapo_incremental_sync_job`       | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling         |
+| `sapo_nightly_reconciliation_job` | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation |
+| `sapo_targets_sync_job`           | Manual          | Targets only                  | Google Sheets sync  |
 
 ---
 
@@ -40,19 +41,28 @@ sapo_realtime_sync_job = define_asset_job(
 **Schedule:** Every 1 minute
 
 **Assets Included:**
+
 - `sapo_webhook_consumer`
 - `stg_sapo_orders`
 - `stg_sapo_customers`
 
 **Execution Flow:**
-```
-sapo_webhook_consumer
-         │
-         ▼
-    stg_sapo_orders
-         │
-         ▼
-  (OTP models updated)
+
+```mermaid
+graph TD
+    %% Assets
+    Webhook[sapo_webhook_consumer_asset]
+    Staging["dbt Staging Models<br/>(stg_sapo_orders, etc.)"]
+    OTP["dbt OTP Models"]
+
+    %% Dependencies
+    Webhook --> Staging
+    Staging --> OTP
+
+    %% Styling
+    style Webhook fill:#e1f5fe,stroke:#01579b
+    style Staging fill:#fff3e0,stroke:#e65100
+    style OTP fill:#fff3e0,stroke:#e65100
 ```
 
 ---
@@ -75,6 +85,7 @@ sapo_incremental_sync_job = define_asset_job(
 **Schedule:** Every 10 minutes
 
 **Assets Included:**
+
 - `sapo_history_log`
 - `stg_sapo_*`
 
@@ -101,28 +112,48 @@ sapo_nightly_reconciliation_job = define_asset_job(
 **Schedule:** 04:00 AM daily (Asia/Ho_Chi_Minh)
 
 **Assets Included:**
+
 - All batch ingestion assets
 - All dbt models (staging + marts)
 - Serving database generation
 
 **Execution Flow:**
-```
-┌──────────────────┐  ┌───────────────────┐  ┌─────────────────┐
-│ sapo_orders_batch│  │sapo_customers_batch│  │sapo_accounts_batch│
-└────────┬─────────┘  └─────────┬─────────┘  └────────┬────────┘
-         │                      │                     │
-         └──────────────────────┼─────────────────────┘
-                                │
-                                ▼
-                    ┌───────────────────────┐
-                    │      dbt_assets       │
-                    │  (staging → marts)    │
-                    └───────────┬───────────┘
-                                │
-                                ▼
-                    ┌───────────────────────┐
-                    │   serving_database    │
-                    └───────────────────────┘
+
+```mermaid
+graph TD
+    %% Ingestion Layer (Batch)
+    subgraph Ingestion ["Ingestion Layer"]
+        Orders[sapo_orders_batch_asset]
+        Customers[sapo_customers_batch_asset]
+        Accounts[sapo_accounts_batch_asset]
+    end
+
+    %% Transformation Layer (dbt)
+    subgraph Transformation ["Transformation Layer"]
+        Staging["dbt Staging Models"]
+        Marts["dbt Marts Models"]
+    end
+
+    %% Serving Layer
+    subgraph Serving ["Serving Layer"]
+        ServingDB[serving_database]
+    end
+
+    %% Dependencies (Explicit Serial Execution)
+    Orders --> Staging
+    Customers --> Staging
+    Accounts --> Staging
+
+    Staging --> Marts
+    Marts --> ServingDB
+
+    %% Styling
+    style Orders fill:#e1f5fe,stroke:#01579b
+    style Customers fill:#e1f5fe,stroke:#01579b
+    style Accounts fill:#e1f5fe,stroke:#01579b
+    style Staging fill:#fff3e0,stroke:#e65100
+    style Marts fill:#fff3e0,stroke:#e65100
+    style ServingDB fill:#e8f5e9,stroke:#1b5e20
 ```
 
 ---

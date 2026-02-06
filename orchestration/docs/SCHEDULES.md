@@ -4,11 +4,11 @@
 
 ## Schedule Overview
 
-| Schedule | Cron | Timezone | Job |
-|----------|------|----------|-----|
-| `realtime_schedule` | `*/1 * * * *` | Asia/Ho_Chi_Minh | sapo_realtime_sync_job |
-| `incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | sapo_incremental_sync_job |
-| `nightly_schedule` | `0 4 * * *` | Asia/Ho_Chi_Minh | sapo_nightly_reconciliation_job |
+| Schedule               | Cron           | Timezone         | Job                             |
+| ---------------------- | -------------- | ---------------- | ------------------------------- |
+| `realtime_schedule`    | `*/1 * * * *`  | Asia/Ho_Chi_Minh | sapo_realtime_sync_job          |
+| `incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | sapo_incremental_sync_job       |
+| `nightly_schedule`     | `0 4 * * *`    | Asia/Ho_Chi_Minh | sapo_nightly_reconciliation_job |
 
 ---
 
@@ -72,6 +72,7 @@ nightly_schedule = ScheduleDefinition(
 **Expected Duration:** 10-30 minutes
 
 **Why 04:00 AM:**
+
 - After business hours (store closes ~22:00)
 - Before morning reporting (starts ~07:00)
 - Low system load period
@@ -92,14 +93,14 @@ nightly_schedule = ScheduleDefinition(
 
 **Common Patterns:**
 
-| Pattern | Description |
-|---------|-------------|
-| `*/1 * * * *` | Every minute |
-| `*/10 * * * *` | Every 10 minutes |
-| `0 * * * *` | Every hour |
-| `0 4 * * *` | Daily at 04:00 |
-| `0 4 * * 0` | Weekly on Sunday at 04:00 |
-| `0 4 1 * *` | Monthly on 1st at 04:00 |
+| Pattern        | Description               |
+| -------------- | ------------------------- |
+| `*/1 * * * *`  | Every minute              |
+| `*/10 * * * *` | Every 10 minutes          |
+| `0 * * * *`    | Every hour                |
+| `0 4 * * *`    | Daily at 04:00            |
+| `0 4 * * 0`    | Weekly on Sunday at 04:00 |
+| `0 4 1 * *`    | Monthly on 1st at 04:00   |
 
 ---
 
@@ -123,11 +124,11 @@ ScheduleDefinition(
 
 ### Timezone Considerations
 
-| UTC Time | Vietnam Time | Event |
-|----------|--------------|-------|
-| 21:00 | 04:00 (+1 day) | Nightly job |
-| 00:00 | 07:00 | Morning |
-| 15:00 | 22:00 | Store closing |
+| UTC Time | Vietnam Time   | Event         |
+| -------- | -------------- | ------------- |
+| 21:00    | 04:00 (+1 day) | Nightly job   |
+| 00:00    | 07:00          | Morning       |
+| 15:00    | 22:00          | Store closing |
 
 ---
 
@@ -167,6 +168,55 @@ dagster schedule list
 ```bash
 # Trigger schedule immediately
 dagster schedule tick nightly_schedule
+```
+
+---
+
+## Project Schedule Architecture
+
+Our schedules are designed to work together without resource contention, using a combination of **Time Offsets** and **Asset Dependencies**.
+
+### 1. The "Start-Time" Race Condition Fix
+
+To prevent the _Realtime_ (every minute) and _Incremental_ (every 10 minutes) jobs from starting at the exact same second and fighting for resources:
+
+- **Realtime Job**: Runs at minutes `1-9`, `11-19`, etc. (Skips minute `0`, `10`, `20`...).
+- **Incremental Job**: Runs at minutes `0`, `10`, `20`, etc.
+
+This physical separation ensures that at the top of the 10-minute mark, _only_ the Incremental job starts.
+
+### 2. Universal Asset Dependencies
+
+Regardless of which schedule triggers the run, `dbt` models enforce strict dependencies to ensure data consistency. Staging models will **wait** for the relevant ingestion assets to complete before starting, even if those assets are part of the same job.
+
+```mermaid
+graph TD
+    subgraph Ingestion_Batch ["Nightly Batch"]
+        Batch[Orders/Customers/Accounts Batch]
+    end
+
+    subgraph Ingestion_Inc ["Incremental"]
+        History[History Log]
+    end
+
+    subgraph Ingestion_RT ["Realtime"]
+        Webhook[Webhook Consumer]
+    end
+
+    subgraph Transformation ["dbt Transformation"]
+        Staging[Staging Models]
+    end
+
+    %% All ingestion paths lead to Staging
+    Batch --> Staging
+    History --> Staging
+    Webhook --> Staging
+
+    %% Styling
+    style Batch fill:#e1f5fe,stroke:#01579b
+    style History fill:#e1f5fe,stroke:#01579b
+    style Webhook fill:#e1f5fe,stroke:#01579b
+    style Staging fill:#fff3e0,stroke:#e65100
 ```
 
 ---
@@ -231,11 +281,13 @@ def my_schedule(context):
 ### Schedule Not Running
 
 1. Check daemon is running:
+
    ```bash
    dagster-daemon status
    ```
 
 2. Check schedule is started:
+
    ```bash
    dagster schedule list
    ```
