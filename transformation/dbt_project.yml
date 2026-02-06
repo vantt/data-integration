@@ -11,6 +11,15 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
+seeds:
+  sapo_warehouse:
+    ref_order_sources:
+      +column_types:
+        id: integer
+        name: varchar
+        status: boolean
+        platform_group: varchar
+        is_generic_source: boolean
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt

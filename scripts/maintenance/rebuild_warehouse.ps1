@@ -19,6 +19,7 @@ docker compose up -d data_platform
 
 Write-Host "`n>>> [2/3] Running dbt Full Refresh (This may take a while)..." -ForegroundColor Cyan
 # Using --select tag:staging tag:standard tag:mart to target main layers, or omit for pure full build
+docker exec data_platform dbt deps
 docker exec data_platform dbt build --project-dir transformation --full-refresh
 
 if ($LASTEXITCODE -ne 0) {
