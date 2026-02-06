@@ -21,24 +21,31 @@
 
 ### Section 1: Retention Health Top-line
 
-| Chart Title                | Visualization Type | Metric Reference                                          | Notes/Config                     |
-| :------------------------- | :----------------- | :-------------------------------------------------------- | :------------------------------- |
-| **Overall Retention Rate** | Scalar             | [Retention Rate](../domains/customer.md#5-retention-rate) | % of customers who repurchased.  |
-| **Churn Rate (Monthly)**   | Trend Line         | [Churn Rate](../domains/customer.md#6-churn-rate)         | Trend of `Churned` status count. |
-| **At Risk Customers**      | Scalar             | Count of `At Risk`                                        | Immediate action required.       |
+> **Blueprint:** [Customer Retention Dashboard](../blueprints/customer_retention_dashboard.md)
+
+| Chart Title                | Visualization Type | Metric Reference                                          | Notes/Config                    |
+| :------------------------- | :----------------- | :-------------------------------------------------------- | :------------------------------ |
+| **Overall Retention Rate** | Scalar             | [Retention Rate](../domains/customer.md#5-retention-rate) | % of customers who repurchased. |
+| **Churn Rate Trend**       | Line Chart         | [Churn Rate](../domains/customer.md#6-churn-rate)         | Trend of new churn events.      |
+| **At Risk Customers**      | Scalar             | Count of `At Risk`                                        | Immediate action required.      |
 
 ### Section 2: Cohort Analysis
+
+> **Blueprint:** [Customer Retention Dashboard](../blueprints/customer_retention_dashboard.md)
 
 | Chart Title                  | Visualization Type | Metric Reference                                          | Notes/Config                                                    |
 | :--------------------------- | :----------------- | :-------------------------------------------------------- | :-------------------------------------------------------------- |
 | **Cohort Retention Heatmap** | Table / Heatmap    | [Retention Rate](../domains/customer.md#5-retention-rate) | Rows: Cohort Month, Cols: Months Since Join, Cell: % Retention. |
-| **Churn Reasons**            | Bar Chart          | Count of Churn Events                                     | (Future) Requires churn survey data.                            |
+| **Revenue by Cohort**        | Area (Stacked)     | Revenue                                                   | "Layer Cake" view of revenue contribution by cohort.            |
+| **Churn Reasons**            | Bar Chart          | Count of Churn Events                                     | **(Missing Data)** Requires churn survey data.                  |
 
 ### Section 3: Risk Watchlist
 
-| Chart Title                | Visualization Type | Columns                                                          | Notes/Config                                                          |
-| :------------------------- | :----------------- | :--------------------------------------------------------------- | :-------------------------------------------------------------------- |
-| **At Risk Customers List** | Table              | Name, Phone, **Last Order Date**, **Days Since Last Order**, LTV | Filter: Status = 'At Risk'. Sort by LTV DESC (Save high value first). |
+> **Blueprint:** [Customer Operational Dashboard](../blueprints/customer_operational_dashboard.md)
+
+| Chart Title           | Visualization Type | Columns                                                          | Notes/Config                                                          |
+| :-------------------- | :----------------- | :--------------------------------------------------------------- | :-------------------------------------------------------------------- |
+| **At Risk Watchlist** | Table              | Name, Phone, **Last Order Date**, **Days Since Last Order**, LTV | Filter: Status = 'At Risk'. Sort by LTV DESC (Save high value first). |
 
 ## Implementation Notes
 
