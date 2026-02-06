@@ -17,15 +17,22 @@ Assets represent data artifacts in the pipeline. Each asset has:
 
 Ingestion assets that extract data from Sapo or Google Sheets.
 
-| Asset                         | Description                           | Schedule       |
-| ----------------------------- | ------------------------------------- | -------------- |
-| `sapo_orders_batch_asset`     | Daily batch sync for Orders           | Nightly        |
-| `sapo_customers_batch_asset`  | Daily batch sync for Customers        | Nightly        |
-| `sapo_accounts_batch_asset`   | Daily batch sync for Accounts (Staff) | Nightly        |
-| `sapo_history_log_asset`      | Incremental poll of History Logs      | 10 min         |
-| `sapo_webhook_consumer_asset` | High-frequency webhook polling        | 1 min          |
-| `sapo_targets_asset`          | Google Sheet: Sales Targets           | Manual/Nightly |
-| `sapo_marketing_spend_asset`  | Google Sheet: Marketing Spend         | Manual         |
+| Asset                         | Description                           | Schedule |
+| ----------------------------- | ------------------------------------- | -------- |
+| `sapo_orders_batch_asset`     | Daily batch sync for Orders           | Nightly  |
+| `sapo_customers_batch_asset`  | Daily batch sync for Customers        | Nightly  |
+| `sapo_accounts_batch_asset`   | Daily batch sync for Accounts (Staff) | Nightly  |
+| `sapo_history_log_asset`      | Incremental poll of History Logs      | 10 min   |
+| `sapo_webhook_consumer_asset` | High-frequency webhook polling        | 1 min    |
+
+### sheets_ingestion
+
+Ingestion assets from Google Sheets.
+
+| Asset                          | Description                   | Schedule       |
+| ------------------------------ | ----------------------------- | -------------- |
+| `sheets_targets_asset`         | Google Sheet: Sales Targets   | Manual/Nightly |
+| `sheets_marketing_spend_asset` | Google Sheet: Marketing Spend | Manual/Nightly |
 
 ### dbt_assets
 
@@ -74,19 +81,19 @@ Polls Sapo History Log API to fill gaps from missed webhooks.
 - **Group**: `sapo_ingestion`
 - **Schedule**: Incremental (Every 10 minutes)
 
-#### sapo_targets_asset
+#### sheets_targets_asset
 
 Syncs Sales Targets from Google Sheets.
 
-- **Group**: `sapo_ingestion`
+- **Group**: `sheets_ingestion`
 - **Schedule**: Manual / Nightly
 
-#### sapo_marketing_spend_asset
+#### sheets_marketing_spend_asset
 
 Syncs Marketing Spend data from Google Sheets.
 
-- **Group**: `sapo_ingestion`
-- **Schedule**: Manual (Currently Unscheduled)
+- **Group**: `sheets_ingestion`
+- **Schedule**: Manual / Nightly
 
 ---
 

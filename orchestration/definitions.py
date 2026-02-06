@@ -8,7 +8,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 
 from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job, AssetSelection, schedule
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, dbt, serving
+from orchestration.assets import sapo_assets, sheets_assets, dbt, serving
 
 # Load all assets
 # Load all assets
@@ -21,7 +21,7 @@ from orchestration.assets import sapo_assets, dbt, serving
 # except Exception as e:
 #     print(f"[WARN] Auto-check failed: {e}")
 
-all_assets = load_assets_from_modules([sapo_assets, dbt, serving])
+all_assets = load_assets_from_modules([sapo_assets, sheets_assets, dbt, serving])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -65,12 +65,12 @@ sapo_incremental_sync_job = define_asset_job(
     tags={"dagster/max_retries": "0"}, # Removed: concurrency_group
 )
 
-# 2.5 Targets Job (Manual)
-# 2.5 Targets Job (Manual)
-sapo_targets_sync_job = define_asset_job(
-    name="sapo_targets_sync_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_targets_asset) | AssetSelection.keys("stg_targets", "fact_targets") | AssetSelection.assets(serving.sapo_serving_db),
-    # tags={"concurrency_group": "dbt_rw"},
+# 2.5 Sheets Job (Manual)
+# Ingests Google Sheets Data (Targets, Marketing Spend).
+# Raw Sync Only - NO DBT (dbt runs in Nightly or Manual triggers of dbt job)
+sheets_sync_job = define_asset_job(
+    name="sheets_sync_job",
+    selection=AssetSelection.assets(sheets_assets.sheets_targets_asset) | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset),
 )
 
 # 3. Nightly Reconciliation Job (Batch)
@@ -81,7 +81,9 @@ sapo_nightly_reconciliation_job = define_asset_job(
         AssetSelection.assets(sapo_assets.sapo_orders_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
-        AssetSelection.assets(sapo_assets.sapo_targets_asset) |
+        AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
+        AssetSelection.assets(sheets_assets.sheets_targets_asset) |
+        AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
         all_dbt_assets |
         AssetSelection.assets(serving.sapo_serving_db)
     ),
@@ -120,8 +122,8 @@ def realtime_schedule(context):
     # Define higher-priority jobs that this schedule should yield to
     # Realtime yields to Nightly (Batch), Targets (Manual), and Incremental
     priority_jobs = [
-        "sapo_nightly_reconciliation_job",
-        "sapo_targets_sync_job",
+        "sheets_sync_job",
+        "sapo_nightly_reconciliation_job",        
         "sapo_incremental_sync_job"
     ]
 
@@ -181,8 +183,8 @@ def incremental_schedule(context):
     # Define higher-priority jobs that this schedule should yield to
     # Incremental now yields to Realtime as well to ensure strict mutual exclusion
     priority_jobs = [
+        "sheets_sync_job",
         "sapo_nightly_reconciliation_job",
-        "sapo_targets_sync_job",
         "sapo_realtime_sync_job"
     ]
 

@@ -34,7 +34,9 @@ class SapoDbtTranslator(DagsterDbtTranslator):
                 print(f"[DEBUG] Mapping source sapo_raw.account -> sapo/sapo_accounts_batch_asset")
                 return AssetKey(["sapo", "sapo_accounts_batch_asset"])
             elif name == "targets_raw":
-                 return AssetKey(["sapo", "sapo_targets_asset"])
+                 return AssetKey(["sheets", "sheets_targets_asset"])
+            elif name == "marketing_spend_raw":
+                 return AssetKey(["sheets", "sheets_marketing_spend_asset"])
 
         return super().get_asset_key(dbt_resource_props)
 
@@ -78,7 +80,9 @@ class SapoDbtTranslator(DagsterDbtTranslator):
             upstream_keys.add(AssetKey(["sapo", "sapo_accounts_batch_asset"]))
             
         elif name == "stg_targets":
-            upstream_keys.add(AssetKey(["sapo", "sapo_targets_asset"]))
+            upstream_keys.add(AssetKey(["sheets", "sheets_targets_asset"]))
+        elif name == "stg_marketing_spend":
+            upstream_keys.add(AssetKey(["sheets", "sheets_marketing_spend_asset"]))
         
         return upstream_keys
 

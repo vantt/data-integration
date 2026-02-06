@@ -12,12 +12,12 @@ Jobs are collections of assets that execute together. Each job has:
 
 ## Active Jobs
 
-| Job                               | Schedule        | Assets                        | Purpose             |
-| --------------------------------- | --------------- | ----------------------------- | ------------------- |
-| `sapo_realtime_sync_job`          | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates   |
-| `sapo_incremental_sync_job`       | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling         |
-| `sapo_nightly_reconciliation_job` | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation |
-| `sapo_targets_sync_job`           | Manual          | Targets only                  | Google Sheets sync  |
+| Job                               | Schedule        | Assets                        | Purpose                  |
+| --------------------------------- | --------------- | ----------------------------- | ------------------------ |
+| `sapo_realtime_sync_job`          | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates        |
+| `sapo_incremental_sync_job`       | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling              |
+| `sapo_nightly_reconciliation_job` | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation      |
+| `sheets_sync_job`                 | Manual          | Targets + Marketing Spend     | Google Sheets (Raw Only) |
 
 ---
 
@@ -158,15 +158,18 @@ graph TD
 
 ---
 
-### sapo_targets_sync_job
+### sheets_sync_job
 
-**Purpose:** Manual sync of sales targets from Google Sheets.
+**Purpose:** Manual sync of Targets and Marketing Spend from Google Sheets (Raw Ingestion Only).
 
 ```python
-sapo_targets_sync_job = define_asset_job(
-    name="sapo_targets_sync_job",
-    selection=["sapo_targets"],
-    description="Sync sales targets from Google Sheets"
+sheets_sync_job = define_asset_job(
+    name="sheets_sync_job",
+    selection=[
+        "sheets_targets_asset",
+        "sheets_marketing_spend_asset"
+    ],
+    description="Sync Google Sheets (Raw Only)"
 )
 ```
 
