@@ -1,0 +1,49 @@
+# ==============================================================================
+# PURPOSE: OPTIMIZE DOCKER BUILD CONTEXT
+# ------------------------------------------------------------------------------
+# This file tells Docker which files to IGNORE when building the image.
+# The content of this directory is sent to the Docker daemon during build.
+# We exclude large directories like 'app_data/' (data lake), '.git', and 'venv'
+# to prevent the "transferring context" step from taking forever (e.g., 11GB upload).
+# ==============================================================================
+
+# Git
+.git
+.gitignore
+
+# Environment variables (security)
+.env
+.env.local
+.env.*
+!.env.example
+!.env.docker
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Data & Logs (The main culprits for large context)
+app_data/
+logs/
+data/
+
+# DBT
+transformation/**/target/
+transformation/**/dbt_packages/
+transformation/**/logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
