@@ -91,8 +91,8 @@ def fetch_and_save_marketing_spend():
         data = {
             'timestamp': ['2026-02-09 10:00:00', '2026-02-09 10:05:00', '2026-02-09 10:10:00', '2026-02-09 10:15:00'],
             'date': ['2026-01-01', '2026-01-01', '2026-01-02', '2026-01-02'],
-            'spend_category': ['Media Facebook', 'Media Google', 'Media Facebook', 'TheHealthyUs'], # Matches ref_spend_category
-            'target_channel': ['Facebook', 'Google Search Ads', '16 Trương Định', 'Pos - TheHealthyUs'], # Matches generated dropdowns
+            'spend_category': ['Media Facebook', 'Media Google', 'Media Facebook', 'Team Bonus'], # Matches ref_spend_category
+            'target_channel': ['Facebook', 'Facebook', '16 Trương Định', 'Pos - TheHealthyUs'], # Matches generated dropdowns
             'campaign_id': ['CMP_001', 'CMP_002', 'CMP_POS_01', 'CMP_POS_02'],
             'spend_amount': [1000000, 500000, 1200000, 800000],
             'clicks': [100, 50, 0, 0],
