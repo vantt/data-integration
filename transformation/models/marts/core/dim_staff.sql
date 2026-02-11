@@ -9,7 +9,8 @@ WITH staff_source AS (
 
 SELECT DISTINCT
     -- Surrogate Key
-    md5(account_id) as staff_key,
+    -- Surrogate Key
+    {{ dbt_utils.generate_surrogate_key(['account_id']) }} as staff_key,
     
     account_id as staff_id,
     
@@ -24,7 +25,7 @@ WHERE account_id IS NOT NULL
 UNION ALL
 
 SELECT
-    md5('Unknown') as staff_key,
+    {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as staff_key,
     '-1' as staff_id,
     'Unknown Staff' as full_name,
     'unknown@example.com' as email,

@@ -37,12 +37,12 @@ SELECT
     s.target_date,
     
     -- Organization Dimensions (Left Join to preserve targets even if dimension is missing)
-    coalesce(b.branch_location_key, md5('-1')) as branch_key,
-    coalesce(st.staff_key, md5('Unknown')) as staff_key,
+    coalesce(b.branch_location_key, {{ dbt_utils.generate_surrogate_key(["'-1'"]) }}) as branch_key,
+    coalesce(st.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as staff_key,
     
     -- Other Dimensions
-    coalesce(c.channel_key, md5('Unknown')) as channel_key,
-    coalesce(p.product_key, md5('Unknown')) as product_key,
+    coalesce(c.channel_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as channel_key,
+    coalesce(p.product_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as product_key,
     
     -- Team (Currently just raw code, pending Dimension)
     s.team_code,

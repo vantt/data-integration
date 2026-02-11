@@ -50,7 +50,7 @@ generated_keys AS (
 
 SELECT
     -- Technical Primary Key
-    md5(target_code) as target_key,
+    {{ dbt_utils.generate_surrogate_key(['target_code']) }} as target_key,
     
     target_code,
     
