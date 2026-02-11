@@ -10,10 +10,8 @@ import io
 DATA_LAKE_PATH = os.environ.get("DBT_DATA_LAKE_PATH")
 
 if not DATA_LAKE_PATH:
-    # Fallback for local testing
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    DATA_LAKE_PATH = os.path.abspath(os.path.join(current_dir, "../../../app_data/data_lake"))
-    print(f"Warning: DBT_DATA_LAKE_PATH not set. Using calculated path: {DATA_LAKE_PATH}")
+    # Strict check for production readiness
+    raise ValueError("DBT_DATA_LAKE_PATH environment variable is not set")
 
 # Replace with actual Marketing Spend Sheet URL
 # Should be set in .dlt/secrets.toml or .env.local as SOURCES__SPREADSHEET_URL__MARKETING_SPEND
@@ -23,10 +21,11 @@ def fetch_and_save_marketing_spend():
     print(f"Starting Marketing Spend Ingestion...")
     
     # 1. Fetch CSV
-    # Mocking URL transformation for export
+    # Transform URL to export format
     if "/edit" in SHEET_URL:
-        # Note: Ideally query parameters should be handled more robustly
-        csv_url = SHEET_URL.replace("/edit", "/export?format=csv")
+        # Strip everything after /edit (including query params) and append export format
+        base_url = SHEET_URL.split("/edit")[0]
+        csv_url = f"{base_url}/export?format=csv"
     else:
         csv_url = SHEET_URL
         
@@ -83,23 +82,18 @@ def fetch_and_save_marketing_spend():
     # --- MAPPING LOGIC END ---
 
     try:
-        # df = pd.read_csv(csv_url) # Uncomment when real URL is ready
+        df = pd.read_csv(csv_url)
+        print(f"Fetched {len(df)} rows from Google Sheet.")
         
-        # MOCK DATA FOR DEVELOPMENT (With Display Names)
-        # Note: Columns in Sheet should be: 
-        # Date, Spend Category, Target Channel, Campaign ID, Spend Amount, Clicks, Impressions
-        data = {
-            'timestamp': ['2026-02-09 10:00:00', '2026-02-09 10:05:00', '2026-02-09 10:10:00', '2026-02-09 10:15:00'],
-            'date': ['2026-01-01', '2026-01-01', '2026-01-02', '2026-01-02'],
-            'spend_category': ['Media Facebook', 'Media Google', 'Media Facebook', 'Team Bonus'], # Matches ref_spend_category
-            'target_channel': ['Facebook', 'Facebook', '16 Trương Định', 'Pos - TheHealthyUs'], # Matches generated dropdowns
-            'campaign_id': ['CMP_001', 'CMP_002', 'CMP_POS_01', 'CMP_POS_02'],
-            'spend_amount': [1000000, 500000, 1200000, 800000],
-            'clicks': [100, 50, 0, 0],
-            'impressions': [5000, 2000, 0, 0]
-        }
-        df = pd.DataFrame(data)
-        print(f"Generated {len(df)} rows (Mock Data).")
+        # 2. Clean and Standardize Columns
+        # Expected: Date, Spend Category, Target Channel, Campaign ID, Spend Amount, Clicks, Impressions
+        df.columns = [c.strip().lower().replace(' ', '_') for c in df.columns]
+        
+        # Validate Required Columns
+        required_cols = ['date', 'spend_category', 'target_channel', 'spend_amount']
+        missing_cols = [c for c in required_cols if c not in df.columns]
+        if missing_cols:
+            raise ValueError(f"Missing required columns in Google Sheet: {missing_cols}")
         
         # 3. Apply Mapping
         def get_spend_code(name):
@@ -127,10 +121,35 @@ def fetch_and_save_marketing_spend():
             print(f"WARNING: Unknown Target Channels found (Check Spelling or Update Seeds): {missing_channel}")
 
         # 2. Clean and Standardize
-        df['date'] = pd.to_datetime(df['date'])
+        def clean_date(val):
+            val = str(val).strip()
+            # Handle MM/DD or DD/MM (e.g. "12/25") by appending Year
+            # Heuristic: if length is short (e.g. 5 chars "12/25") and has /
+            if len(val) <= 5 and '/' in val:
+                return f"{val}/2026"
+            return val
+            
+        df['date'] = df['date'].apply(clean_date)
+        # Using dayfirst=True for Vietnam context (DD/MM/YYYY)
+        # errors='coerce' to safely handle bad data, but we hope clean_date fixes common issues
+        df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+        
+        # Check for NaT (failed parsing)
+        if df['date'].isna().any():
+            print(f"WARNING: {df['date'].isna().sum()} rows have invalid dates and will be dropped or ignored.")
+            # Optional: drop them
+            df = df.dropna(subset=['date'])
         
         # Partition Columns
         df['year'] = df['date'].dt.year.astype(int)
+
+        # Clean Numeric Columns
+        # Remove all non-digit characters (handling both comma and dot as thousand separators)
+        # This assumes values are integers (e.g. 5,000,000 or 5.000.000 -> 5000000)
+        for col in ['spend_amount', 'clicks', 'impressions']:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col].astype(str).str.replace(r'[^\d]', '', regex=True), errors='coerce').fillna(0)
+
         df['month'] = df['date'].dt.month.astype(int)
         
         # Format Date for Storage

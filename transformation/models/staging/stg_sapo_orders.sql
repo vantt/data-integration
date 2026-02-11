@@ -240,7 +240,7 @@ SELECT
     
     -- 7.1 Xử lý Source ID: Ưu tiên lấy từ Tag nếu khớp, ngược lại lấy ID gốc
     -- Logic: Nếu đơn hàng có tag 'Shopee_ShopA' -> Gán về ID `3988158_1` thay vì ID Shopee chung
-    coalesce(mt.id, cast(o.source_id as string)) as final_source_id,
+    coalesce(cast(mt.id as string), cast(o.source_id as string)) as final_source_id,
 
     pm.name as payment_method_name,
     s.name as source_name,
@@ -254,5 +254,5 @@ LEFT JOIN mapped_tags mt
 
 LEFT JOIN {{ ref('ref_payment_methods') }} pm ON try_cast(o.payment_method_id as BIGINT) = pm.id
 -- Join lại với Source để lấy tên (Join bằng String để hỗ trợ Suffix ID)
-LEFT JOIN {{ ref('ref_order_sources') }} s ON coalesce(mt.id, cast(o.source_id as string)) = cast(s.id as string)
+LEFT JOIN {{ ref('ref_order_sources') }} s ON coalesce(cast(mt.id as string), cast(o.source_id as string)) = cast(s.id as string)
 LEFT JOIN {{ ref('ref_branch_locations') }} l ON try_cast(o.location_id as BIGINT) = l.id
