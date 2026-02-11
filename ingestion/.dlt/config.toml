@@ -22,3 +22,10 @@ worker_url = "https://webhook-receiver.admin-1d2.workers.dev/"
 [sources.spreadsheet_url]
 marketing_spend = "https://docs.google.com/spreadsheets/d/1wQpT4lCZWrPE7fnbRNTKiNDRFzVT2u_WhN-9uY9u3lc/edit?usp=sharing"
 targets = "https://docs.google.com/spreadsheets/d/1ZHt2iAD88OGgSRopVOkqEgusja-JpP4XqtiH4anhax4/edit?usp=sharing"
+
+[sources.facebook_ads]
+access_token = "REPLACE_ME_OR_SET_ENV_VAR" # Required if not in environment
+account_id = "REPLACE_ME" # Used if running single account mode
+
+[sources.facebook_messenger]
+page_access_token = "REPLACE_ME_OR_SET_ENV_VAR" # Required if not in environment

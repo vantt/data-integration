@@ -22,6 +22,10 @@ SELECT
     
     ingest_method,
     
+    -- Channel Reference (Direct from Ingestion)
+    cast(source_id as VARCHAR) as source_id,
+    cast(location_id as VARCHAR) as location_id,
+    
     -- Metadata
     year,
     month

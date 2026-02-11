@@ -318,6 +318,21 @@ Location hierarchy for geographic analysis.
 
 ---
 
+### `dim_channels`
+
+Standardized sales and marketing channels (3-Level Hierarchy).
+
+| Column           | Type    | Description                                      |
+| ---------------- | ------- | ------------------------------------------------ |
+| `channel_key`    | VARCHAR | Surrogate key                                    |
+| `channel_name`   | VARCHAR | **Level 3**: Instance (Page Name, Store, Shop A) |
+| `platform`       | VARCHAR | **Level 2**: Platform (Facebook, Shopee, Retail) |
+| `platform_group` | VARCHAR | **Level 1**: Group (Social, E-com, Retail)       |
+| `source_id`      | VARCHAR | Original Source ID or Suffix ID                  |
+| `is_active`      | BOOLEAN | Channel status                                   |
+
+---
+
 ### `dim_staff`
 
 Staff dimension for sales attribution.
@@ -462,16 +477,30 @@ Sales targets for performance tracking.
 
 ### `ref_order_sources` (Enriched)
 
-Maps Sapo Source IDs to Platforms.
+The **Single Source of Truth** for all Sales and Marketing Channels.
+Contains both Sapo-defined sources and User-defined sub-channels (Suffix IDs).
 
-| Column              | Description                        | Example                                  |
-| :------------------ | :--------------------------------- | :--------------------------------------- |
-| `id`                | **(PK)** Sapo Source ID            | `8075219`                                |
-| `name`              | Source Name                        | `FaceBookFJPTViet`                       |
-| `platform_group`    | **[NEW]** Aggregation Group        | `Social`, `Ecom`, `Retail`               |
-| `is_generic_source` | **[NEW]** Flag for POS/Marketplace | `true` (for POS), `false` (for Websites) |
+| Column              | Description                                       | Example                 |
+| :------------------ | :------------------------------------------------ | :---------------------- |
+| `id`                | **(PK)** Source ID (BigInt) or Suffix ID (String) | `8075219` or `113567_1` |
+| `name`              | Source/Channel Name                               | `Shopee Shop A`         |
+| `platform`          | **[NEW]** Specific Platform                       | `Shopee`, `Facebook`    |
+| `platform_group`    | Aggregation Group                                 | `Social`, `Ecom`        |
+| `mapping_tag`       | **[NEW]** Tag used to map Orders to Suffix IDs    | `Shopee_ShopA`          |
+| `is_generic_source` | Flag for generic aggregators (requires splitting) | `false`                 |
 
-### `ref_branch_locations` (Renamed from `ref_locations`)
+### `ref_spend_category`
+
+Standardized Marketing Spend Categories for reporting.
+
+| Column                | Description      | Example          |
+| :-------------------- | :--------------- | :--------------- |
+| `spend_category_code` | **(PK)** Code    | `media_facebook` |
+| `spend_category_name` | Display Name     | `Media Facebook` |
+| `cost_group`          | High-level Group | `Media`, `KOLs`  |
+| `owning_department`   | Responsible Dept | `Performance`    |
+
+### `ref_branch_locations`
 
 List of physical stores and warehouses. Used for mapping generic sources (POS).
 
@@ -479,24 +508,6 @@ List of physical stores and warehouses. Used for mapping generic sources (POS).
 | :----- | :------------------- | :--------------- |
 | `id`   | **(PK)** Location ID | `452566`         |
 | `name` | Branch/Store Name    | `16 Trương Định` |
-
-### `ref_marketing_spend_map` (Renamed from `ref_marketing_channels`)
-
-Maps Input Codes (from Google Sheets) to Data Warehouse Entities (Sources or Locations).
-**Logic:** Marketing Channel -> Sales Target (Source/Location) -> Platform (Auto-inherited).
-
-| Column         | Description                    | Example                  |
-| :------------- | :----------------------------- | :----------------------- |
-| `spend_code`   | **(PK)** Code entered in Sheet | `fb_fjpt`                |
-| `display_name` | User-friendly Name             | `Facebook Ads Main Page` |
-| `map_type`     | `SOURCE` or `LOCATION`         | `SOURCE`                 |
-| `map_id`       | Sapo Source ID or Location ID  | `8075219`                |
-
-> [!TIP] Mapping Strategy
->
-> - If `map_type` = 'SOURCE', cost is linked to that specific Online Source.
-> - If `map_type` = 'LOCATION', cost is linked to that specific Retail Store (Branch) found in `ref_branch_locations`.
-> - **Platform** is automatically inherited from the linked Source/Location (e.g., linked Source belongs to 'Social').
 
 ## Business Metrics
 

@@ -222,6 +222,13 @@ json_parsed AS (
         -- payload (REMOVED)
 
     FROM final_source
+),
+
+-- BƯỚC 6.5: LẤY DANH SÁCH MAPPING TAGS (Để xử lý tách kênh con từ Source gộp)
+mapped_tags AS (
+    SELECT id, mapping_tag 
+    FROM {{ ref('ref_order_sources') }} 
+    WHERE mapping_tag IS NOT NULL
 )
 
 SELECT
@@ -230,13 +237,22 @@ SELECT
     -- =============================================================================================
     -- BƯỚC 7: LÀM GIÀU DỮ LIỆU (DATA ENRICHMENT)
     -- =============================================================================================
-    -- Join với các bảng tham chiếu (Seed files) để lấy tên hiển thị thay vì chỉ có ID.
     
+    -- 7.1 Xử lý Source ID: Ưu tiên lấy từ Tag nếu khớp, ngược lại lấy ID gốc
+    -- Logic: Nếu đơn hàng có tag 'Shopee_ShopA' -> Gán về ID `3988158_1` thay vì ID Shopee chung
+    coalesce(mt.id, cast(o.source_id as string)) as final_source_id,
+
     pm.name as payment_method_name,
     s.name as source_name,
     l.name as location_name
     
 FROM json_parsed o
+-- Join tìm mapping tag (chỉ chạy khi tag có giá trị)
+LEFT JOIN mapped_tags mt 
+    ON o.tags IS NOT NULL 
+    AND o.tags LIKE '%' || mt.mapping_tag || '%'
+
 LEFT JOIN {{ ref('ref_payment_methods') }} pm ON try_cast(o.payment_method_id as BIGINT) = pm.id
-LEFT JOIN {{ ref('ref_order_sources') }} s ON try_cast(o.source_id as BIGINT) = s.id
+-- Join lại với Source để lấy tên (Join bằng String để hỗ trợ Suffix ID)
+LEFT JOIN {{ ref('ref_order_sources') }} s ON coalesce(mt.id, cast(o.source_id as string)) = cast(s.id as string)
 LEFT JOIN {{ ref('ref_branch_locations') }} l ON try_cast(o.location_id as BIGINT) = l.id

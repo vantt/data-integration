@@ -1,0 +1,28 @@
+spend_category_code,spend_category_name,cost_group,owning_department
+media_facebook,Media Facebook,Media,Performance
+media_google,Media Google,Media,Performance
+media_tiktok,Media TikTok,Media,Performance
+media_shopee,Media Shopee,Media,E-com
+media_lazada,Media Lazada,Media,E-com
+media_others,Media Khác,Media,Performance
+kols_booking,KOLs Booking,KOLs,Branding
+kols_production,KOLs Production,KOLs,Branding
+pr_booking,PR Booking,KOLs,Branding
+seeding,Seeding,KOLs,Branding
+production_video,Production Video,Production,Content
+production_image,Production Image,Production,Content
+production_content,Production Content,Production,Content
+production_model,Production Model,Production,Content
+posm_printing,In ấn POSM,POSM,Trade
+posm_installation,Thi công POSM,POSM,Trade
+posm_design,Thiết kế POSM,POSM,Trade
+software_crm,Software CRM,Software,Tech
+software_design,Software Design,Software,Design
+software_marketing,Software Marketing,Software,Marketing
+software_data,Software Data,Software,Data
+affiliate_network,Affiliate Network,Affiliate,E-com
+affiliate_partner,Affiliate Partner,Affiliate,E-com
+team_bonus,Team Bonus,Opex,HR
+training,Training,Opex,HR
+event_internal,Internal Event,Opex,HR
+travel_expense,Công tác phí,Opex,HR

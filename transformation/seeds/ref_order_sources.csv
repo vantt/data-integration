@@ -1,30 +1,47 @@
-id,name,status,platform_group,is_generic_source
-8075219,FaceBookFJPTViet,false,Social,false
-8075218,FaceBookJPC,false,Social,false
-7737135,Gosumo,false,Other,false
-7503763,CS,false,System,false
-7312199,Tiki Cross Border,false,Ecom,false
-7165820,POPS,false,Ecom,false
-7139806,Leflair,false,Ecom,false
-7054173,Chợ sỉ,false,B2B,false
-6656236,Test Sản Phẩm,false,System,false
-6569908,Chiaki,false,Ecom,false
-6500681,TiktokShop,true,Ecom,false
-5686178,Selly,false,Ecom,false
-5384969,Ưu đãi Nhân Viên,false,System,false
-5384956,Quà Tặng,false,System,false
-4999848,GrabMart,true,Ecom,false
-4609259,WebOrder,true,Web,false
-4517138,Telesale,false,System,false
-4461848,Instagram,true,Social,false
-4164989,Đại Lý,false,B2B,false
-4110169,US,false,Other,false
-3988160,Sendo,true,Ecom,false
-3988159,Other,true,Other,false
-3988158,Shopee,true,Ecom,false
-3988157,Pos,true,Retail,true
-3988156,Tiki,true,Ecom,false
-3988155,Lazada,true,Ecom,false
-3988154,Zalo,true,Social,false
-3988153,Facebook,true,Social,false
-3988152,Web,true,Web,false
+id,name,status,platform_group,is_generic_source,platform,mapping_tag
+8075219,FaceBookFJPTViet,false,Social,false,Facebook,
+8075218,FaceBookJPC,false,Social,false,Facebook,
+7737135,Gosumo,false,Other,false,Other,
+7503763,CS,false,System,false,System,
+7312199,Tiki Cross Border,false,Ecom,false,Tiki,
+7165820,POPS,false,Ecom,false,Other,
+7139806,Leflair,false,Ecom,false,Leflair,
+7054173,Chợ sỉ,false,B2B,false,Wholesale,
+6656236,Test Sản Phẩm,false,System,false,System,
+6569908,Chiaki,false,Ecom,false,Chiaki,
+6500681,TiktokShop,true,Ecom,false,TikTok,
+5686178,Selly,false,Ecom,false,Selly,
+5384969,Ưu đãi Nhân Viên,false,System,false,System,
+5384956,Quà Tặng,false,System,false,System,
+4999848,GrabMart,true,Ecom,false,Grab,
+4609259,WebOrder,true,Web,false,Website,
+4517138,Telesale,false,System,false,Telesale,
+4461848,Instagram,true,Social,false,Instagram,
+4164989,Đại Lý,false,B2B,false,Wholesale,
+4110169,US,false,Other,false,Other,
+3988160,Sendo,true,Ecom,false,Sendo,
+3988159,Other,true,Other,false,Other,
+3988158,Shopee,true,Ecom,false,Shopee,
+3988157,Pos,true,Retail,true,Retail,
+3988156,Tiki,true,Ecom,false,Tiki,
+3988155,Lazada,true,Ecom,false,Lazada,
+3988154,Zalo,true,Social,false,Zalo,
+3988153,Facebook,true,Social,false,Facebook,
+3988152,Web,true,Web,false,Website,
+3988158_1,Shopee - Fine Japan Vietnam,true,Ecom,false,Shopee,"Shopee_Fine Japan Vietnam,"
+3988158_2,Shopee - thehealthyus,true,Ecom,false,Shopee,Shopee_thehealthyus
+3988158_3,Shopee - JPC SHOP,true,Ecom,false,Shopee,Shopee_JPC SHOP
+3988158_4,Shopee - JPC OFFICIAL,true,Ecom,false,Shopee,Shopee_JPC OFFICIAL
+3988158_5,Shopee - FG CARE,true,Ecom,false,Shopee,Shopee_FG CARE
+3988158_6,Shopee - FWG Vietnam,true,Ecom,false,Shopee,Shopee_FWG Vietnam
+3988158_7,Shopee - Fine Care,true,Ecom,false,Shopee,Shopee_Fine Care
+3988158_8,Shopee - FINE WORLD GROUP,true,Ecom,false,Shopee,Shopee_FINE WORLD GROUP
+3988155_1,Lazada - Fine Japan Vietnam,true,Ecom,false,Lazada,Lazada_Fine Japan Vietnam
+3988155_2,Lazada - JPC SHOP,true,Ecom,false,Lazada,Lazada_JPC SHOP
+3988155_3,Lazada - The Healthy Us,true,Ecom,false,Lazada,Lazada_The Healthy Us
+3988155_4,Lazada - Fine Japan store,true,Ecom,false,Lazada,Lazada_Fine Japan store
+3988155_5,Lazada - FINE WORLD GROUP,true,Ecom,false,Lazada,Lazada_FINE WORLD GROUP
+3988155_6,Lazada - FG CARE,true,Ecom,false,Lazada,Lazada_FG CARE
+3988155_7,Lazada - Fine Care,true,Ecom,false,Lazada,Lazada_Fine Care
+3988156_1,Tiki - FINE WORLD GROUP,true,Ecom,false,Tiki,Tiki_FINE WORLD GROUP
+3988156_2,Tiki - FG GLOBAL,true,Ecom,false,Tiki,Tiki_FG GLOBAL

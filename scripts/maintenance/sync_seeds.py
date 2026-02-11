@@ -36,7 +36,7 @@ def sync_seeds():
         if not new_sources_df.empty:
             print(f"Found {len(new_sources_df)} new sources. Appending...")
             # Heuristic Classification
-            def classify_platform(name):
+            def classify_platform_group(name):
                 n = str(name).lower()
                 if any(x in n for x in ['shopee', 'lazada', 'tiki', 'sendo', 'grab', 'tiktok']): return 'Ecom'
                 if any(x in n for x in ['facebook', 'fb', 'instagram', 'zalo', 'social']): return 'Social'
@@ -44,12 +44,31 @@ def sync_seeds():
                 if any(x in n for x in ['web', 'online']): return 'Web'
                 return 'Other'
 
+            def classify_platform(name):
+                n = str(name).lower()
+                if 'shopee' in n: return 'Shopee'
+                if 'lazada' in n: return 'Lazada'
+                if 'tiki' in n: return 'Tiki'
+                if 'tiktok' in n: return 'TikTok'
+                if 'facebook' in n or 'fb' in n: return 'Facebook'
+                if 'zalo' in n: return 'Zalo'
+                if 'web' in n: return 'Website'
+                if 'pos' in n or 'store' in n: return 'Retail'
+                return 'Other'
+
             new_sources_df['status'] = 'true'
-            new_sources_df['platform_group'] = new_sources_df['name'].apply(classify_platform)
-            # Retail/POS implies Generic Source (needs location split)
+            new_sources_df['platform_group'] = new_sources_df['name'].apply(classify_platform_group)
             new_sources_df['is_generic_source'] = new_sources_df['platform_group'].apply(
                 lambda x: 'true' if x == 'Retail' else 'false'
             )
+            # Add New Columns matching CSV Schema
+            new_sources_df['platform'] = new_sources_df['name'].apply(classify_platform)
+            new_sources_df['mapping_tag'] = '' # Default empty for auto-synced sources
+
+            # Ensure Column Order matches CSV: id,name,status,platform_group,is_generic_source,platform,mapping_tag
+            new_sources_df = new_sources_df[[
+                'id', 'name', 'status', 'platform_group', 'is_generic_source', 'platform', 'mapping_tag'
+            ]]
             
             # Append
             new_sources_df.to_csv(f"{SEEDS_DIR}/ref_order_sources.csv", mode='a', header=False, index=False)

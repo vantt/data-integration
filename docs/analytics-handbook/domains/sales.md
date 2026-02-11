@@ -79,6 +79,7 @@
 | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
 | **[Sales Monthly Review](../playbooks/sales_monthly_review.md)**   | Guide for conducting the Monthly Business Review (MBR) using the Executive Dashboard. |
 | **[Promotion Analysis](../playbooks/sales_promotion_analysis.md)** | Deep dive methodologies for validating campaign ROI and discount strategies.          |
+| **[Customer Support Domain](../domains/customer_support.md)**      | For "Social Commerce" and Inbound Sales specific metrics.                             |
 
 ## Context: Operational Trends
 

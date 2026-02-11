@@ -31,21 +31,101 @@ def fetch_and_save_marketing_spend():
         csv_url = SHEET_URL
         
     print(f"Downloading from: {csv_url}")
+    
+    # --- MAPPING LOGIC START ---
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    seeds_dir = os.path.join(base_dir, 'transformation', 'seeds')
+
+    def load_csv_as_df(filename):
+        return pd.read_csv(os.path.join(seeds_dir, filename))
+
+    # 1. Load Reference Data
+    try:
+        df_spend_cat = load_csv_as_df('ref_spend_category.csv')
+        df_sources = load_csv_as_df('ref_order_sources.csv')
+        df_locations = load_csv_as_df('ref_branch_locations.csv')
+    except Exception as e:
+        print(f"Error loading reference seeds: {e}")
+        raise e
+
+    # 2. Build Dictionaries for Lookup
+    
+    # Map 1: Spend Category Name -> Spend Category Code
+    # Key: 'Media Facebook', Value: 'media_facebook'
+    spend_map = dict(zip(df_spend_cat['spend_category_name'], df_spend_cat['spend_category_code']))
+
+    # Map 2: Target Channel Name -> (Source ID, Location ID)
+    # This must match EXACTLY the logic in generate_dropdown.py
+    channel_map = {}
+    
+    # 2a. Specific Sources
+    specific = df_sources[df_sources['is_generic_source'] == False]
+    for _, row in specific.iterrows():
+        channel_map[row['name']] = (str(row['id']), None)
+
+    # 2b. Generic Sources (Cross Join with Locations)
+    generic = df_sources[df_sources['is_generic_source'] == True]
+    for _, source_row in generic.iterrows():
+        source_name = source_row['name']
+        for _, loc_row in df_locations.iterrows():
+            loc_name = loc_row['name']
+            
+            # Combination Name: "{Source Name} - {Location Name}"
+            display_name = f"{source_name} - {loc_name}"
+            channel_map[display_name] = (str(source_row['id']), str(loc_row['id']))
+            
+            # Special Case: POS shortcut
+            if source_name == "Pos":
+                channel_map[loc_name] = (str(source_row['id']), str(loc_row['id']))
+
+    print(f"Loaded {len(spend_map)} Spend Categories and {len(channel_map)} Channels for mapping.")
+
+    # --- MAPPING LOGIC END ---
+
     try:
         # df = pd.read_csv(csv_url) # Uncomment when real URL is ready
         
-        # MOCK DATA FOR DEVELOPMENT (Until User provides real Sheet)date
+        # MOCK DATA FOR DEVELOPMENT (With Display Names)
+        # Note: Columns in Sheet should be: 
+        # Date, Spend Category, Target Channel, Campaign ID, Spend Amount, Clicks, Impressions
         data = {
-            'date': ['2026-01-01', '2026-01-01', '2026-01-02'],
-            'spend_code': ['fb_main', 'google_sa', 'fb_main'],
-            'campaign_id': ['CMP_001', 'CMP_002', 'CMP_001'],
-            'spend_amount': [1000000, 500000, 1200000],
-            'clicks': [100, 50, 110],
-            'impressions': [5000, 2000, 5500]
+            'timestamp': ['2026-02-09 10:00:00', '2026-02-09 10:05:00', '2026-02-09 10:10:00', '2026-02-09 10:15:00'],
+            'date': ['2026-01-01', '2026-01-01', '2026-01-02', '2026-01-02'],
+            'spend_category': ['Media Facebook', 'Media Google', 'Media Facebook', 'TheHealthyUs'], # Matches ref_spend_category
+            'target_channel': ['Facebook', 'Google Search Ads', '16 Trương Định', 'Pos - TheHealthyUs'], # Matches generated dropdowns
+            'campaign_id': ['CMP_001', 'CMP_002', 'CMP_POS_01', 'CMP_POS_02'],
+            'spend_amount': [1000000, 500000, 1200000, 800000],
+            'clicks': [100, 50, 0, 0],
+            'impressions': [5000, 2000, 0, 0]
         }
         df = pd.DataFrame(data)
         print(f"Generated {len(df)} rows (Mock Data).")
         
+        # 3. Apply Mapping
+        def get_spend_code(name):
+            return spend_map.get(name)
+
+        def get_source_id(name):
+            val = channel_map.get(name)
+            return val[0] if val else None
+
+        def get_location_id(name):
+            val = channel_map.get(name)
+            return val[1] if val else None
+
+        df['spend_code'] = df['spend_category'].apply(get_spend_code)
+        df['source_id'] = df['target_channel'].apply(get_source_id)
+        df['location_id'] = df['target_channel'].apply(get_location_id)
+
+        # Validation Report
+        missing_spend = df[df['spend_code'].isna()]['spend_category'].unique()
+        if len(missing_spend) > 0:
+            print(f"WARNING: Unknown Spend Categories found (Check Spelling or Update Seeds): {missing_spend}")
+            
+        missing_channel = df[df['source_id'].isna()]['target_channel'].unique()
+        if len(missing_channel) > 0:
+            print(f"WARNING: Unknown Target Channels found (Check Spelling or Update Seeds): {missing_channel}")
+
         # 2. Clean and Standardize
         df['date'] = pd.to_datetime(df['date'])
         
@@ -55,9 +135,13 @@ def fetch_and_save_marketing_spend():
         
         # Format Date for Storage
         df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+        # Format IDs for consistency (strings)
+        df['source_id'] = df['source_id'].astype(str)
+        # Location ID can be None/NaN, convert to string 'None' or empty? 
+        # Parquet handles nulls, but let's be careful. if it's None, it stays None (NaN in pandas Object column).
+        
         df['ingest_method'] = 'google_sheet'
         
-        # 3. Write to Data Lake (Parquet)
         # Target Path: sapo_raw/marketing_spend_raw
         grouped = df.groupby(['year', 'month'])
         
@@ -68,10 +152,14 @@ def fetch_and_save_marketing_spend():
                                       f"month={month}")
             os.makedirs(output_dir, exist_ok=True)
             
+            # Select only necessary columns to save
+            # We keep the raw names for debugging/audit if needed, but for now let's stick to schema
+            cols_to_save = ['date', 'spend_code', 'source_id', 'location_id', 'campaign_id', 'spend_amount', 'clicks', 'impressions', 'ingest_method', 'year', 'month']
+            
             file_path = os.path.join(output_dir, "marketing_spend.parquet")
             
             print(f"Writing {len(group)} rows to {file_path}")
-            group.to_parquet(file_path, index=False)
+            group[cols_to_save].to_parquet(file_path, index=False)
             
         print("Ingestion Complete.")
         

@@ -8,10 +8,6 @@ WITH staged AS (
     SELECT * FROM {{ ref('stg_marketing_spend') }}
 ),
 
-map_channels AS (
-    SELECT * FROM {{ ref('ref_marketing_spend_map') }}
-),
-
 dim_channels AS (
     SELECT channel_key, source_id, location_id 
     FROM {{ ref('dim_channels') }}
@@ -23,12 +19,11 @@ SELECT
     -- Date Mapping
     cast(strftime(cast(s.date as date), '%Y%m%d') as integer) as date_key,
     
-    -- Channel Mapping Logic
-    -- 1. Get Source/Location from ref_marketing_channels using spend_code
-    -- 2. Generate same Hash Key as dim_channels
+    -- Channel Mapping Logic (Direct)
+    -- The ingestion layer now guarantees accurate source_id and location_id
     {{ dbt_utils.generate_surrogate_key([
-        "coalesce(cast(mc.map_id as string), 'Unknown')",
-        "CASE WHEN mc.map_type = 'LOCATION' THEN cast(mc.map_id as string) ELSE 'Unknown' END"
+        "cast(s.source_id as string)",
+        "coalesce(cast(s.location_id as string), 'Unknown')" 
     ]) }} as channel_key,
     
     s.spend_code,
@@ -40,4 +35,3 @@ SELECT
     s.impressions
 
 FROM staged s
-LEFT JOIN map_channels mc ON s.spend_code = mc.spend_code
