@@ -1,6 +1,6 @@
 # 📘 Daily Sales Performance Blueprint
 
-📖 **Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)shboard]
+📖 **Playbook**: [Daily Sales Operations] (../playbooks/sales_daily_operation.md)
 
 This blueprint creates a real-time sales monitoring dashboard for daily operations.
 
@@ -22,6 +22,29 @@ WHERE date(order_timestamp) = current_date
 ### 🖥️ Dashboard: Daily Sales Dashboard
 
 **Description**: Real-time monitoring of today's sales performance with hourly breakdown.
+
+#### ❓ Question: Current Date Label
+
+Display the date being filtered for context.
+
+```sql
+SELECT to_char(current_date, 'YYYY-MM-DD') as "Date"
+```
+
+```json metabase-viz
+{
+  "display": "scalar"
+}
+```
+
+```json metabase-pos
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 4,
+  "size_y": 2
+}
+```
 
 #### ❓ Question: Daily Metrics Summary
 
@@ -52,7 +75,7 @@ WHERE date(o.order_timestamp) = current_date
 
 ```json metabase-pos
 {
-  "row": 0,
+  "row": 2,
   "col": 0,
   "size_x": 18,
   "size_y": 4
@@ -102,7 +125,7 @@ ORDER BY 1
 
 ```json metabase-pos
 {
-  "row": 4,
+  "row": 6,
   "col": 0,
   "size_x": 12,
   "size_y": 8
@@ -137,7 +160,7 @@ ORDER BY 2 DESC
 
 ```json metabase-pos
 {
-  "row": 4,
+  "row": 6,
   "col": 12,
   "size_x": 6,
   "size_y": 8
@@ -178,7 +201,7 @@ LIMIT 10
 
 ```json metabase-pos
 {
-  "row": 12,
+  "row": 14,
   "col": 0,
   "size_x": 18,
   "size_y": 6
@@ -212,7 +235,7 @@ GROUP BY 1
 
 ```json metabase-pos
 {
-  "row": 18,
+  "row": 20,
   "col": 0,
   "size_x": 6,
   "size_y": 6
@@ -247,7 +270,7 @@ ORDER BY 2, 1
 
 ```json metabase-pos
 {
-  "row": 18,
+  "row": 20,
   "col": 6,
   "size_x": 12,
   "size_y": 6

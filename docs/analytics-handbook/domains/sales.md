@@ -72,12 +72,14 @@
 | :---------------------------- | :-------------------- | :------------------------------------------------------------- | :------------------------------ |
 | **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Metabase ID 37](/dashboard/37) |
 | **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance and hourly trends. | [Metabase ID 38](/dashboard/38) |
+| **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review with DoD comparisons.               | TBD                             |
 
 ## Related Playbooks
 
 | Playbook                                                           | Description                                                                           |
 | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
 | **[Sales Monthly Review](../playbooks/sales_monthly_review.md)**   | Guide for conducting the Monthly Business Review (MBR) using the Executive Dashboard. |
+| **[Yesterday's Sales Ops](../playbooks/sales_yesterday_operation.md)** | Review finalized yesterday's performance with day-over-day comparisons.           |
 | **[Promotion Analysis](../playbooks/sales_promotion_analysis.md)** | Deep dive methodologies for validating campaign ROI and discount strategies.          |
 | **[Customer Support Domain](../domains/customer_support.md)**      | For "Social Commerce" and Inbound Sales specific metrics.                             |
 
