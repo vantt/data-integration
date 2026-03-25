@@ -73,6 +73,8 @@
 | **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Metabase ID 37](/dashboard/37) |
 | **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance and hourly trends. | [Metabase ID 38](/dashboard/38) |
 | **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review with DoD comparisons.               | TBD                             |
+| **Today's Orders List**         | Ops / Sales Reps    | Order-level list for real-time reconciliation with Sapo.        | TBD                             |
+| **Yesterday's Orders List**     | Ops / Store Managers | Finalized order-level list for reconciliation with Sapo.        | TBD                             |
 
 ## Related Playbooks
 
@@ -80,8 +82,40 @@
 | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
 | **[Sales Monthly Review](../playbooks/sales_monthly_review.md)**   | Guide for conducting the Monthly Business Review (MBR) using the Executive Dashboard. |
 | **[Yesterday's Sales Ops](../playbooks/sales_yesterday_operation.md)** | Review finalized yesterday's performance with day-over-day comparisons.           |
+| **[Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)** | Order-level listing for BI vs Sapo reconciliation (Today & Yesterday).    |
 | **[Promotion Analysis](../playbooks/sales_promotion_analysis.md)** | Deep dive methodologies for validating campaign ROI and discount strategies.          |
 | **[Customer Support Domain](../domains/customer_support.md)**      | For "Social Commerce" and Inbound Sales specific metrics.                             |
+
+## Context: Order List (Reconciliation)
+
+> **Description:** Row-level order listing for cross-checking BI records against the source sales system (Sapo). Used to verify data completeness and correctness.
+> **dbt Source:** `fact_orders` joined with `dim_channels`, `dim_customers`
+> **Grain:** Per Order
+
+### 17. Order Detail List
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+
+- **Business Definition:** Detailed order-level listing with key fields for reconciliation: order ID/code, timestamps, amounts, statuses, customer info, channel, and payment method.
+- **Key Fields:**
+
+| Field | Source | Purpose |
+| :---- | :----- | :------ |
+| `order_id` | `fact_orders` | Primary business key — match with Sapo order ID |
+| `order_code` | `stg_sapo_orders` | Human-readable code (e.g. `#1234`) — visible in Sapo UI |
+| `order_timestamp` | `fact_orders.order_timestamp` | Order creation time |
+| `status` | `fact_orders` | Order status (open, completed, cancelled) |
+| `payment_status` | `fact_orders` | paid, pending, refunded |
+| `fulfillment_status` | `fact_orders` | fulfilled, unfulfilled, returned |
+| `gmv` | `fact_orders` | Total order amount before deductions |
+| `total_discount_amount` | `fact_orders` | Discount applied |
+| `channel_name` | `dim_channels` | Sales channel (POS, Web, Shopee, etc.) |
+| `customer_name` | `stg_sapo_orders` | Customer name for quick identification |
+| `customer_phone` | `stg_sapo_orders` | Phone for cross-referencing |
+| `payment_method_name` | `stg_sapo_orders` | Cash, Card, Transfer, etc. |
+| `location_name` | `stg_sapo_orders` | Store/branch that processed the order |
+
+- **Playbook:** [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)
 
 ## Context: Operational Trends
 
