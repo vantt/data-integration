@@ -6,7 +6,7 @@ from dagster import DagsterInstance, RunsFilter, DagsterRunStatus
 
 def main():
     parser = argparse.ArgumentParser(description="Purge Dagster runs based on retention policy.")
-    parser.add_argument("--keep-days", type=int, default=1, help="Number of days of run history to keep (default: 30).")
+    parser.add_argument("--keep-days", type=int, default=1, help="Number of days of run history to keep (default: 1).")
     parser.add_argument("--status", type=str, help="Filter by run status (e.g., FAILURE, SUCCESS). If not set, all statuses are considered.")
     parser.add_argument("--force", action="store_true", help="Actually delete the runs. Without this, runs are only listed (dry-run).")
     
