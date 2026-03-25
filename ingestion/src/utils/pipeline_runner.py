@@ -8,10 +8,10 @@ def setup_dlt_env(dataset_name: str = "sapo_raw"):
     """
     Sets up the standard environment variables for file-based dlt pipelines.
     """
-    os.environ["DESTINATION__FILESYSTEM__LOADER_FILE_FORMAT"] = "parquet"
-    # Unified layout for segregation by source
-    os.environ["DESTINATION__FILESYSTEM__LAYOUT"] = "{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}"
-    os.environ["DESTINATION__FILESYSTEM__EXTRA_PLACEHOLDERS"] = '{"ingest_method": "text", "year": "text", "month": "text"}'
+    # os.environ["DESTINATION__FILESYSTEM__LOADER_FILE_FORMAT"] = "parquet" # Moved to config.toml
+    # Unified layout for segregation by source - Moved to config.toml
+    # os.environ["DESTINATION__FILESYSTEM__LAYOUT"] = "{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}"
+    # os.environ["DESTINATION__FILESYSTEM__EXTRA_PLACEHOLDERS"] = '{"ingest_method": "text", "year": "text", "month": "text"}'
 
 def run_pipeline(
     pipeline_name: str,
@@ -84,7 +84,7 @@ def run_pipeline(
             # Instantiate source
             source = source_factory(**source_args)
             
-            info = pipeline.run(source, loader_file_format=loader_file_format)
+            info = pipeline.run(source)
             print(info)
             return info
         except Exception as e:

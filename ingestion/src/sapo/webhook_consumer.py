@@ -64,7 +64,7 @@ def sapo_webhook_source(worker_url: str, source_system: str = None, poll_limit: 
 
 @dlt.resource(
     primary_key="entity_id",
-    write_disposition="append", 
+    write_disposition="append",
     table_format="delta",
     columns={
         "entity_id": {"data_type": "text"},

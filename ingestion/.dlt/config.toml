@@ -3,7 +3,9 @@ log_level = "INFO"
 
 [destination.filesystem]
 loader_file_format = "parquet"
-bucket_url = "file:///d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/app_data/data_lake"
+layout = "{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}"
+extra_placeholders = { "ingest_method" = "text", "year" = "text", "month" = "text" }
+# bucket_url = "file:///d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/app_data/data_lake"
 
 [sources.sapo]
 domain = "fwg.mysapogo.com" # Default domain, override with Env Var if needed
