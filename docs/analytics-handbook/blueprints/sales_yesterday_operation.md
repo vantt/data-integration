@@ -225,7 +225,7 @@ LIMIT 10
     {
       "columns": ["Revenue"],
       "type": "currency",
-      "currency": "USD"
+      "currency": "VND"
     }
   ]
 }
