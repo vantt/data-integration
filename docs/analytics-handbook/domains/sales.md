@@ -268,37 +268,33 @@
 
 > **Description:** Comparison of actual performance against defined goals.
 > **dbt Source:** `fact_targets`
+> **Input Guide:** [Targets Sheet Guide](../../guides/targets_sheet_guide.md)
+
+`fact_targets` stores target rules with flexible cycle types (`daily`, `weekly`, `monthly`, `quarterly`, `yearly`) and scope filters (branch, team, staff, channel, product). Each target has a `cycle_start_date`, `cycle_end_date`, and `cycle_type` derived automatically from the input sheet.
 
 ### 15. Target Achievement Rate
 
 > **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
 
-- **Business Definition:** Percentage of target achieved (Actual Revenue / Target Revenue).
+- **Business Definition:** Percentage of target achieved (Actual Revenue / Target Revenue) within a cycle.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(actual_revenue) / NULLIF(SUM(target_revenue), 0)
+  SUM(actual_revenue) / NULLIF(SUM(target_val), 0)
   ```
 
 ### 16. Variance to Target
 
 > **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
 
-- **Business Definition:** Absolute difference between Actual and Target.
+- **Business Definition:** Absolute difference between Actual and Target within a cycle.
 - **Logic (Metabase SQL):**
-
   ```sql
-  SUM(actual_revenue) - SUM(target_revenue)
-  ```
-
-  SUM(actual_revenue) - SUM(target_revenue)
-
-  ```
-
+  SUM(actual_revenue) - SUM(target_val)
   ```
 
 > **Implementation Note:**
-> Do not attempt to join `fact_orders` and `fact_targets` directly in a Native Query as they have different grains (Order vs Month/Branch).
-> **Recommended Approach:** Create a **Metabase Model** (or dbt mart `mart_sales_actual_vs_target`) to pre-aggregate `fact_orders` to the same grain (Month, Branch, Channel) before joining with `fact_targets`.
+> Do not attempt to join `fact_orders` and `fact_targets` directly in a Native Query as they have different grains (Order vs Cycle/Scope).
+> **Recommended Approach:** Create a **Metabase Model** (or dbt mart `mart_sales_actual_vs_target`) to pre-aggregate `fact_orders` to match the target's cycle and scope before joining with `fact_targets`.
 
 ## Context: Location Analysis
 

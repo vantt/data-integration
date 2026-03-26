@@ -32,6 +32,8 @@ Both dashboards cover basic sales metrics (GMV, Orders, AOV, Channel, Top Produc
 
 **Fix:** Add Net Revenue, Return Count, Discount Impact, and DoD % change to Daily dashboard (mirror Yesterday's Section 1 structure).
 
+**Reality check:** For a live dashboard, full-day DoD should not be the first comparison. A **same-hour pace vs yesterday** view is a better decision aid during the day, because it shows whether the team is behind schedule before the day closes.
+
 ### 2. Customer Understanding: Severely Underutilized
 
 `dim_customers` already has these fields **ready to use but NOT shown in either dashboard**:
@@ -65,16 +67,33 @@ ORDER BY 3 DESC
 
 #### B. Reactivated Customers (Yesterday dashboard)
 ```sql
-SELECT COUNT(DISTINCT o.customer_key) as "Reactivated Customers"
-FROM fact_orders o
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
-  AND c.customer_status IN ('At Risk', 'Churned')
-  AND date(c.first_order_date) < current_date - INTERVAL '1 day'
+WITH ordered_customers AS (
+    SELECT
+        customer_key,
+        order_id,
+        order_timestamp,
+        LAG(order_timestamp) OVER (
+            PARTITION BY customer_key
+            ORDER BY order_timestamp
+        ) as previous_order_timestamp
+    FROM fact_orders
+    WHERE date(order_timestamp) <= current_date - INTERVAL '1 day'
+)
+SELECT
+    COUNT(DISTINCT CASE
+        WHEN previous_order_timestamp IS NOT NULL
+         AND date_diff('day', previous_order_timestamp, order_timestamp) BETWEEN 31 AND 90
+        THEN customer_key END) as "Reactivated (31-90d gap)",
+    COUNT(DISTINCT CASE
+        WHEN previous_order_timestamp IS NOT NULL
+         AND date_diff('day', previous_order_timestamp, order_timestamp) > 90
+        THEN customer_key END) as "Reactivated (>90d gap)"
+FROM ordered_customers
+WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
-**Why:** Tracks win-back success. If a "Churned" customer buys again, that's a signal to replicate whatever brought them back.
+**Why:** `dim_customers.customer_status` is a current snapshot derived from `recency_days`, so it is not reliable for labeling historical orders. Using the gap since the previous order is more faithful to actual reactivation behavior.
 
-#### C. Customer Acquisition Quality
+#### C. Customer Acquisition Quality (Initial Heuristic)
 ```sql
 SELECT
     CASE
@@ -92,6 +111,43 @@ WHERE date(o.order_timestamp) = current_date
 GROUP BY 1
 ```
 **Why:** Replaces the simplistic "New vs Returning" with actionable segments. Shows if new customer AOV matches returning — if much lower, first-purchase offers may be too aggressive.
+
+**Reality check:** The SQL above uses current `dim_customers.customer_status`, which is a current-state snapshot. For historical day analysis, prefer gap-based classification from order history:
+
+```sql
+WITH ordered_customers AS (
+    SELECT
+        o.customer_key,
+        o.order_id,
+        o.order_timestamp,
+        o.gmv,
+        LAG(o.order_timestamp) OVER (
+            PARTITION BY o.customer_key
+            ORDER BY o.order_timestamp
+        ) as previous_order_timestamp
+    FROM fact_orders o
+),
+classified AS (
+    SELECT
+        CASE
+            WHEN previous_order_timestamp IS NULL THEN 'New'
+            WHEN date_diff('day', previous_order_timestamp, order_timestamp) > 90 THEN 'Reactivated (>90d gap)'
+            WHEN date_diff('day', previous_order_timestamp, order_timestamp) BETWEEN 31 AND 90 THEN 'Reactivated (31-90d gap)'
+            ELSE 'Active Returning'
+        END as "Customer Type",
+        order_id,
+        gmv
+    FROM ordered_customers
+    WHERE date(order_timestamp) = current_date
+)
+SELECT
+    "Customer Type",
+    COUNT(DISTINCT order_id) as "Orders",
+    SUM(gmv) as "Revenue",
+    ROUND(AVG(gmv), 0) as "Avg Order Value"
+FROM classified
+GROUP BY 1
+```
 
 ### 3. Missing Operational Metrics
 
@@ -111,14 +167,14 @@ GROUP BY 1, 2
 #### B. Staff Performance (Both dashboards)
 ```sql
 SELECT
-    s.staff_name as "Salesperson",
+    s.full_name as "Salesperson",
     COUNT(DISTINCT o.order_id) as "Orders",
     SUM(o.gmv) as "Revenue",
     ROUND(AVG(o.gmv), 0) as "AOV"
 FROM fact_orders o
 JOIN dim_staff s ON o.staff_key = s.staff_key
 WHERE date(o.order_timestamp) = current_date
-  AND s.staff_name != 'Unknown'
+  AND s.full_name != 'Unknown Staff'
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -127,7 +183,7 @@ ORDER BY 3 DESC
 #### C. Store/Location Comparison (Both dashboards)
 ```sql
 SELECT
-    bl.location_name as "Store",
+    bl.branch_location_name as "Store",
     COUNT(DISTINCT o.order_id) as "Orders",
     SUM(o.gmv) as "Revenue"
 FROM fact_orders o
@@ -138,7 +194,7 @@ ORDER BY 3 DESC
 ```
 **Why:** Multi-store businesses need per-store visibility. Underperforming store = investigate (staffing, stock, foot traffic).
 
-#### D. Target Achievement (Both dashboards)
+#### D. Target Achievement (Both dashboards, First-Pass Concept)
 Not currently possible at daily grain. `fact_targets` is monthly. But could show:
 ```sql
 -- Monthly target progress (cumulative)
@@ -154,6 +210,26 @@ WHERE date(o.order_timestamp) >= date_trunc('month', current_date)
 GROUP BY t.target_revenue
 ```
 **Why:** Without target context, revenue numbers are meaningless. "500K today" — is that good or bad?
+
+**Reality check:** The target example above is directionally useful but does not match the current schema exactly. `fact_targets` currently exposes `target_date`, `metric_code`, and `target_val`, so implementation should be validated against those fields before dashboard rollout. For branch/channel/staff target comparison, follow the Sales domain warning and use a pre-aggregated model rather than a direct order-to-target join.
+
+#### E. Payment Method Chart Needs Correction Before Decision-Making
+
+Current dashboard blueprints query `fact_payments` by date only, while the Sales domain definition specifies filtering to completed payments.
+
+```sql
+SELECT
+    pm.payment_method_name as "Payment Method",
+    COUNT(*) as "Transaction Count",
+    SUM(p.amount) as "Total Amount"
+FROM fact_payments p
+JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
+WHERE date(p.payment_timestamp) = current_date
+  AND p.status = 'completed'
+GROUP BY 1
+```
+
+**Why:** If pending or failed attempts are included, the payment mix can be distorted and lead to bad conclusions about customer payment behavior.
 
 ### 4. Geographic Insights (Missing entirely)
 
@@ -194,7 +270,22 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
 **Why:** Operational efficiency metric. Long fulfillment = customer dissatisfaction = fewer repeat orders.
 
-## Prioritized Recommendations
+### 7. Missing Decision Map For Sales Team
+
+The report is technically useful, but it becomes more actionable for sales when each signal is tied to an immediate action.
+
+| Signal on Dashboard | Likely Meaning | Immediate Sales / Ops Action |
+|--------|--------|--------|
+| **Behind same-hour pace** | Demand or conversion is soft today | Trigger outbound calls, live push, staff reallocation, campaign reminder |
+| **Cancelled / unpaid orders spike** | Payment friction or poor follow-up | Call high-GMV pending orders first, check payment issue, review staff handling |
+| **VIP revenue share drops** | Core customer base is cooling | Prioritize VIP outreach, check stock/service issues on high-value products |
+| **New customer AOV is much lower than returning** | Acquisition quality is weak or discounts too deep | Review first-order offers, tighten low-quality promotion channels |
+| **One store or one channel underperforms** | Local execution issue | Compare staffing, stock, and active promotions with better-performing peers |
+| **Discount value rises without order lift** | Promo is burning margin without creating demand | Pause or narrow discount scope, inspect products/channels absorbing discount cost |
+
+## Initial Prioritized Recommendations
+
+This table reflects the first pass of prioritization. For rollout, use the revised action-first order in the next section.
 
 | Priority | Change | Dashboard | Effort | Impact |
 |----------|--------|-----------|--------|--------|
@@ -209,6 +300,169 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 | **P3** | Add Time-to-Fulfill metric | Yesterday | Low | Medium — ops efficiency |
 | **P3** | Add Product Category rollup | Both | Low | Low — category trends |
 
+## Revised Priority Order For Sales Action
+
+After checking the report against the actual schema and dashboard usage, the action-first rollout order should be:
+
+| Priority | Change | Dashboard | Why it should move first |
+|--------|--------|--------|--------|
+| **P0** | Add same-hour Sales Pace vs Yesterday | Daily | Best real-time orientation metric for deciding whether the team is behind now |
+| **P0** | Add Revenue by Customer Segment (VIP/Loyal/Regular) | Both | Immediately improves customer understanding and revenue quality visibility |
+| **P1** | Add Order Status Health and rescue queue | Both | Most direct operational lever to recover orders before they are lost |
+| **P1** | Add Net Revenue, Returns, Discount Impact to Daily | Daily | Closes important blind spots in today's decision-making |
+| **P1** | Add DoD driver table by channel / store / segment | Yesterday | Helps managers understand why performance changed and what to fix today |
+| **P2** | Replace New vs Returning with gap-based customer type logic | Both | More accurate than current-state customer status for reactivation analysis |
+| **P2** | Correct Payment Method chart to completed payments only | Both | Prevents misleading interpretation of customer payment behavior |
+| **P2** | Add Staff / Store comparison | Both | Useful execution lever after core rescue and customer views are in place |
+| **P3** | Add MTD Target Achievement after validating `metric_code` | Both | Valuable, but should wait until target logic is confirmed against actual schema |
+| **P3** | Add geography / product-type rollups / time-to-fulfill | Both / Yesterday | Helpful secondary diagnostics after the main action loops are covered |
+
+## Additional Recommendations From Deeper Handbook Review
+
+These additions focus less on passive reporting and more on helping the team sell more orders today while understanding customer quality more deeply.
+
+### 1. Reframe Daily Dashboard Around Sales Rescue
+
+Current Daily dashboard is dominated by lagging outcomes (GMV, Orders, AOV). That is useful, but it does not tell managers where they can still recover missed orders during the day.
+
+**Recommended additions for Daily dashboard:**
+
+- **Sales Pace vs Same Hour Yesterday** - cumulative GMV and orders by hour to show whether the team is ahead or behind pace right now
+- **Order Status Funnel** - `status`, `payment_status`, `fulfillment_status` overview to detect where orders are getting stuck
+- **Pending / Unpaid / Cancelled Queue** - a small operational table sorted by newest or highest GMV first so teams can intervene quickly
+- **MTD Progress / Pace to Target** - even if target is monthly, managers need context for whether today's run rate is sufficient
+
+**Suggested SQL: Sales pace by hour**
+
+```sql
+WITH today_hourly AS (
+    SELECT
+        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
+        COUNT(DISTINCT order_id) as orders_today,
+        SUM(gmv) as revenue_today
+    FROM fact_orders
+    WHERE date(order_timestamp) = current_date
+    GROUP BY 1
+),
+yesterday_hourly AS (
+    SELECT
+        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
+        COUNT(DISTINCT order_id) as orders_yesterday,
+        SUM(gmv) as revenue_yesterday
+    FROM fact_orders
+    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    GROUP BY 1
+)
+SELECT
+    COALESCE(t.hour_of_day, y.hour_of_day) as hour_of_day,
+    SUM(COALESCE(t.revenue_today, 0)) OVER (ORDER BY COALESCE(t.hour_of_day, y.hour_of_day)) as cumulative_revenue_today,
+    SUM(COALESCE(y.revenue_yesterday, 0)) OVER (ORDER BY COALESCE(t.hour_of_day, y.hour_of_day)) as cumulative_revenue_yesterday,
+    SUM(COALESCE(t.orders_today, 0)) OVER (ORDER BY COALESCE(t.hour_of_day, y.hour_of_day)) as cumulative_orders_today,
+    SUM(COALESCE(y.orders_yesterday, 0)) OVER (ORDER BY COALESCE(t.hour_of_day, y.hour_of_day)) as cumulative_orders_yesterday
+FROM today_hourly t
+FULL OUTER JOIN yesterday_hourly y ON t.hour_of_day = y.hour_of_day
+ORDER BY 1
+```
+
+**Business value:** If the dashboard shows the team is behind pace by 14:00, they still have time to trigger outbound calls, staff reallocation, live-stream pushes, or remarketing.
+
+### 2. Make Yesterday Dashboard Explain the "Why", Not Only the "What"
+
+Yesterday dashboard already has DoD metrics, but it still behaves like a scoreboard. To improve next-day execution, it should explain the main drivers behind the change.
+
+**Recommended additions for Yesterday dashboard:**
+
+- **DoD Driver Table by Channel / Store / Customer Segment** - which slice created the gain or loss
+- **Lost Revenue Breakdown** - how much value was lost to cancellations, returns, and discounts
+- **Winners / Losers Table** - top improving and declining products, channels, or stores
+- **Direct drill-through to Orders Reconciliation** for the exact order list behind anomalies
+
+**Suggested SQL: DoD drivers by customer segment**
+
+```sql
+WITH yesterday AS (
+    SELECT
+        COALESCE(c.customer_segment, 'Unknown') as customer_segment,
+        COUNT(DISTINCT o.order_id) as orders_yesterday,
+        SUM(o.gmv) as revenue_yesterday
+    FROM fact_orders o
+    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+    GROUP BY 1
+),
+day_before AS (
+    SELECT
+        COALESCE(c.customer_segment, 'Unknown') as customer_segment,
+        COUNT(DISTINCT o.order_id) as orders_day_before,
+        SUM(o.gmv) as revenue_day_before
+    FROM fact_orders o
+    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) = current_date - INTERVAL '2 days'
+    GROUP BY 1
+)
+SELECT
+    COALESCE(y.customer_segment, d.customer_segment) as "Customer Segment",
+    COALESCE(y.orders_yesterday, 0) as "Orders Yesterday",
+    COALESCE(d.orders_day_before, 0) as "Orders Day Before",
+    COALESCE(y.revenue_yesterday, 0) as "Revenue Yesterday",
+    COALESCE(d.revenue_day_before, 0) as "Revenue Day Before",
+    COALESCE(y.revenue_yesterday, 0) - COALESCE(d.revenue_day_before, 0) as "Revenue Delta"
+FROM yesterday y
+FULL OUTER JOIN day_before d ON y.customer_segment = d.customer_segment
+ORDER BY 6 DESC
+```
+
+**Business value:** A manager can immediately see whether the drop came from VIP customers, a specific channel, or one weak store instead of reacting blindly to total revenue.
+
+### 3. Pull Operational Customer Watchlists Into Sales Dashboards
+
+The handbook already has a separate Customer Operational Dashboard with actionable lists, but the two sales dashboards do not reuse that logic enough.
+
+**High-value additions already supported by existing models:**
+
+- **Revenue by VIP / Loyal / Regular** - understand who is driving today's and yesterday's revenue quality
+- **VIP Watchlist** - high-value customers who bought today or yesterday, with `lifetime_value` and `last_order_date`
+- **At Risk Reactivation Watchlist** - customers with `customer_status = 'At Risk'` who returned to buy yesterday
+- **Customer Quality Table for New Buyers** - count of new customers, their AOV, and whether they are likely to become high-value segments later
+
+**Why this matters:** "New vs Returning" is too shallow. A day with more orders is not equally good if those orders come mostly from low-value one-time buyers with deep discounts.
+
+### 4. Reduce Dashboard Clutter and Prioritize Actionable Visuals
+
+The design guide says operations dashboards should follow a top-down flow and avoid too many primary charts. Today, both dashboards still spend prime space on charts that are more diagnostic than actionable.
+
+**Recommended layout changes:**
+
+- Keep first row as **scalar cards**, not a single wide summary table
+- Keep primary visuals to **6-8 main elements** maximum
+- Move **Payment Methods** and **Hourly Heatmap** below the fold or into a secondary section
+- Add **click-to-filter drill-down** from KPI cards and charts into detail tables
+- Link directly to `orders_today` / `orders_yesterday` reconciliation dashboards when anomalies are detected
+
+**Why:** Managers scan dashboards in seconds. The first screen should answer:
+
+1. Are we ahead or behind?
+2. Where are orders getting stuck?
+3. Which customers, stores, or channels need action now?
+
+### 5. Add Domain Definitions Before Blueprint Expansion
+
+Per `analytics-handbook/AGENTS.md`, new calculation logic should not be invented directly inside playbooks or blueprints.
+
+Before implementing the deeper improvements above, define or extend these metrics in the relevant domain files:
+
+- `domains/sales.md`
+  - Sales Pace vs Same Hour Yesterday
+  - Order Status Funnel / Queue Health
+  - Lost Revenue by Cancellation / Return / Discount
+  - DoD Driver by Channel / Store
+- `domains/customer.md`
+  - Revenue by Customer Segment
+  - Reactivated Customers
+  - Customer Acquisition Quality
+
+This keeps `Domain -> Playbook -> Blueprint` traceability clean and reduces future drift.
+
 ## Implementation Notes
 
 - All P0/P1 changes use **existing dbt models** — no new models needed
@@ -216,6 +470,9 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 - Playbook visualization tables need corresponding rows added
 - Currency should use VND (not USD — current blueprint has USD in column formatting)
 - Consider adding DoD % change to Daily dashboard scalars (requires CTE pattern from Yesterday blueprint)
+- Treat current `dim_customers.customer_status` and `customer_segment` as current-state attributes; for older-date analysis, historical classification may need window logic or a dedicated snapshot model
+
+- Follow the handbook golden rule: update metric definitions in `domains/*.md` before expanding `playbooks/*.md` or `blueprints/*.md`
 
 ## Unresolved Questions
 
