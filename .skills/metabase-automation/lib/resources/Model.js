@@ -4,11 +4,10 @@ class Model {
     }
 
     async find(name) {
-        // Models are Cards with dataset=true
-        // We can search /api/card?f=models maybe? Or just search all cards.
-        // Let's use /api/card and filter.
-        const cards = await this.core.request('/api/card');
-        return cards.find(c => c.name === name && c.dataset === true);
+        // Models are Cards with dataset=true — search as card, pick first exact match
+        const res = await this.core.request(`/api/search?q=${encodeURIComponent(name)}&models=card`);
+        const items = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+        return items.find(c => c.name === name) || null;
     }
 
     /**

@@ -4,42 +4,16 @@ class Card {
     }
 
     async find(name, collectionId = null) {
-        // Searching is tricky. /api/card returns valid cards.
-        // Or search /api/collection/:id/items
-        
         if (collectionId) {
-            // Note: /api/collection/:id/items might NOT return archived items by default.
-            // If we want to find archived ones, we might need ?archived=true (if API supports) 
-            // or use /api/search?q=name&archived=true
-            const items = await this.core.request(`/api/collection/${collectionId}/items?archived=true`); // Try to get everything
-            if (Array.isArray(items)) {
-                 const found = items.find(i => i.model === 'card' && i.name === name);
-                 
-                 // If found, ensure it is active
-                 if (found && found.id) {
-                     // Check if actually archived (the list item usually has 'archived' prop)
-                     // If we are not sure, we can just GET the card details
-                     // But optimization: just PUT { archived: false } if we suspect it.
-                     // Let's being safe:
-                     // The item from collection list might not have 'archived' field populated reliably? 
-                     // Let's Fetch details to be sure, or just Unarchive blindly?
-                     // Unarchive blindly is cheap.
-                     // Wait, we need to check if it IS archived to avoid spamming logs.
-                     // Assuming 'archived' prop exists in item list.
-                     
-                     // If strictly archived, restoring it.
-                     // But collection/items endpoint behavior regarding archived is complex.
-                     // Let's assume if we found it, we use it.
-                     // We will Unarchive just in case.
-                     // await this.core.request(`/api/card/${found.id}`, 'PUT', { archived: false });
-                     // Doing this in 'ensure' is better.
-                 }
-                 return found; 
-            }
+            const res = await this.core.request(`/api/collection/${collectionId}/items?models=card`);
+            const items = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+            return items.find(i => i.name === name) || null;
         } else {
-             // Search globally
+            // Search globally via /api/search
+            const res = await this.core.request(`/api/search?q=${encodeURIComponent(name)}&models=card`);
+            const items = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+            return items.find(i => i.name === name) || null;
         }
-        return null;
     }
 
     /**
