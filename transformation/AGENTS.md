@@ -85,7 +85,7 @@ When creating or Fixing a model, **ALWAYS** comparison against a working "Golden
      - `src_` model (INCREMENTAL): reads raw parquet, tech dedup by entity_id, extracts all JSON fields, biz dedup by order_id on flat data. Payload discarded after extraction.
      - `stg_` model (VIEW): reads from src_ (flat data, no payload). Only enrichment joins.
      - Memory peak of src_ ≈ 1.1GB. Memory peak of stg_ ≈ 210MB. Both well under 5GB limit.
-     - See `docs/troubleshooting_duckdb_oom_stg_sapo_orders.md` for full history.
+     - See `transformation/docs/ARCHITECTURE_DETAIL.md` for full architecture details.
 
  2.  **Profile Tuning (`profiles.yml`)**:
      - **`memory_limit`**: Set to `5GB` (lower than container limit). Forces DuckDB to **Spill to Disk** early instead of crashing.

@@ -76,6 +76,12 @@ models:
               arguments:
                 values: ['DELIVERED', 'SHIPPING', 'PACKED', 'CANCELLED', 'FAILED', 'PENDING']
 
+  - name: std_accounts
+    description: "Standardized Accounts (Staff/Salesperson)."
+    columns:
+      - name: account_id
+        tests: [unique, not_null]
+
   - name: std_payments
     description: "Standardized Payments (Transactions)."
     columns:

@@ -4,7 +4,7 @@
 ) }}
 
 WITH payments AS (
-    SELECT * FROM {{ ref('stg_sapo_payments') }}
+    SELECT * FROM {{ ref('std_payments') }}
 )
 
 SELECT
@@ -13,6 +13,6 @@ SELECT
     {{ dbt_utils.generate_surrogate_key(['payment_method_id']) }} as payment_method_key,
     amount,
     status,
-    created_on as payment_timestamp,
-    paid_on
+    created_at as payment_timestamp,
+    paid_at as paid_on
 FROM payments

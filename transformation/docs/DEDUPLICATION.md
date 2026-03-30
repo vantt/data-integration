@@ -267,7 +267,7 @@ GROUP BY ingest_method;
 2. Ensure payload is discarded after JSON extraction (not carried to biz dedup step)
 3. Reduce memory_limit to force earlier spill-to-disk (e.g. 4-5GB)
 4. For full refresh: may need temporarily higher memory_limit
-5. See `docs/troubleshooting_duckdb_oom_stg_sapo_orders.md` for detailed history
+5. See `transformation/docs/ARCHITECTURE_DETAIL.md` for architecture details
 
 ### Issue: Wrong Record Selected
 

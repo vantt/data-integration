@@ -235,18 +235,26 @@ The ingestion layer (DLT) is **Append-Only** and uses a **Segregated Storage** s
 - **No Merging**: DLT does not merge data. It simply capturing snapshots.
 - **Redundancy**: A single order update might appear in all 3 channels. This is expected.
 
-## 3. Transformation & Deduplication (The "Magic")
+## 3. Transformation & Deduplication — 4-Layer Architecture
 
-The "One Truth" is constructed in the **DBT Staging Layer**, not during ingestion.
+The "One Truth" is constructed via a **4-layer pipeline** (`src_ → stg_ → std_ → marts`), not during ingestion.
 
-### Deduplication Logic
+### Pipeline Flow
 
-Since we have multiple streams of the same entity, we use a `Last-Write-Wins` strategy based on `event_timestamp`.
+```
+source() → src_ (INCREMENTAL: extract JSON + tech/biz dedup, discard payload)
+    → stg_ (VIEW: enrichment joins, unnest, cleaning)
+        → std_ (VIEW: normalize, status mapping, standard interface)
+            → marts (dim_/fact_: dimensional models, exported as Parquet)
+```
 
-**Algorithm:**
+**Why 4 layers:** Each dbt model = 1 SQL query = 1 memory budget. Splitting heavy JSON extraction (`src_`) from lightweight enrichment (`stg_`) prevents OOM. `std_` provides a standard contract for all marts. See `transformation/AGENTS.md` for detailed strategies.
 
-1. **Union** all partitions (via DuckDB hive partitioning).
-2. **Window Function**:
+### Deduplication Logic (in src_ layer)
+
+Since we have multiple streams of the same entity, we use a 2-stage `Last-Write-Wins` strategy:
+
+1. **Tech dedup** (by `entity_id`): Removes raw duplicates from append-only ingestion.
    ```sql
    ROW_NUMBER() OVER (
        PARTITION BY entity_id
@@ -259,7 +267,14 @@ Since we have multiple streams of the same entity, we use a `Last-Write-Wins` st
            END DESC
    )
    ```
-3. **Filter**: Keep only `rn = 1`.
+2. **Biz dedup** (by business key, e.g. `order_id`): Keeps 1 row per business entity.
+   ```sql
+   QUALIFY ROW_NUMBER() OVER (
+       PARTITION BY order_id
+       ORDER BY event_timestamp DESC, modified_on DESC
+   ) = 1
+   ```
+3. Both stages run on flat extracted data (payload discarded after JSON extraction).
 
 ## 4. Incremental Mechanism
 

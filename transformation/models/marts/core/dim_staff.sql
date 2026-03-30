@@ -4,16 +4,15 @@
 ) }}
 
 WITH staff_source AS (
-    SELECT * FROM {{ ref('stg_sapo_accounts') }}
+    SELECT * FROM {{ ref('std_accounts') }}
 )
 
 SELECT DISTINCT
     -- Surrogate Key
-    -- Surrogate Key
     {{ dbt_utils.generate_surrogate_key(['account_id']) }} as staff_key,
-    
+
     account_id as staff_id,
-    
+
     -- Name and Email from Accounts API
     staff_name as full_name,
     staff_email as email,

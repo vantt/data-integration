@@ -37,10 +37,16 @@ graph TD
         std_orders[std_orders]
         std_items[std_order_items]
         std_cust[std_customers]
+        std_pay[std_payments]
+        std_ful[std_fulfillments]
+        std_acc[std_accounts]
 
         stg_orders --> std_orders
         stg_items --> std_items
         stg_cust --> std_cust
+        stg_pay --> std_pay
+        stg_ful --> std_ful
+        stg_acc --> std_acc
     end
 
     %% Marts Layer (Hop 6 - Serving)
@@ -61,16 +67,18 @@ graph TD
         %% Facts (Incremental)
         fact_orders[fact_orders]
         fact_sales[fact_sales]
+        fact_pay_mart[fact_payments]
 
         %% Dependencies
         std_cust --> dim_cust
         std_items --> dim_prod
-        stg_acc --> dim_staff
+        std_acc --> dim_staff
 
         %% Fact Construction
         std_orders --> fact_orders
         std_orders --> fact_sales
         std_items --> fact_sales
+        std_pay --> fact_pay_mart
 
         %% Joins for Facts (Conceptual)
         dim_cust -.-> fact_orders
@@ -94,8 +102,10 @@ _Path: `models/staging/sapo/`_
 | **stg_sapo_order_items** | Line items (VIEW, unnest).           | Unnests `order_line_items_json` from src_sapo_orders. Extracts `quantity`, `price`, `sku`.       |
 | **stg_sapo_payments**    | Payments (VIEW, unnest).             | Unnests `payments_json` from src_sapo_orders.                                                    |
 | **stg_sapo_fulfillments**| Fulfillments (VIEW, unnest).         | Unnests `fulfillments_json` from src_sapo_orders.                                                |
-| **stg_sapo_customers**   | Raw customer profiles.               | Extracts `name`, `email`, `phone` from Customer JSON.                                            |
-| **stg_sapo_accounts**    | System users (Staff).                | Flattened list of employees/accounts for Staff Dimension.                                        |
+| **src_sapo_customers**   | Extraction + dedup (INCREMENTAL).    | Reads parquet, extracts JSON fields, tech dedup (entity_id) + biz dedup (sapo_customer_id). Outputs flat columns. No payload. |
+| **stg_sapo_customers**   | Cleaning (VIEW).                     | Reads from src_, cleaning/formatting (consolidate dob/birthday). No JSON extraction.             |
+| **src_sapo_accounts**    | Extraction + dedup (INCREMENTAL).    | Reads parquet, extracts JSON fields, tech dedup (entity_id) + biz dedup (account_id). Outputs flat columns. No payload. |
+| **stg_sapo_accounts**    | Cleaning (VIEW).                     | Reads from src_, name coalescing (full_name/user_name/first+last). No JSON extraction.           |
 
 ### Layer 2: Standard (Business Logic)
 
@@ -106,6 +116,9 @@ _Path: `models/staging/standard/`_
 | **std_orders**      | The "Golden Record" for an Order. | **Hybrid Fulfillment Status**: Maps `financial_status` + `logistics_status` to business states (`COMPLETED`, `SHIPPED_COD`...). |
 | **std_order_items** | Standardized Line Items.          | Calculates `total_line_amount` if missing. Standardizes `product_type`.                                                         |
 | **std_customers**   | Unified Customer view.            | Deduplication of customers (if multiple sources exist in future).                                                               |
+| **std_payments**    | Standardized Payments.            | Status mapping (paid→SUCCESS, pending→PENDING, voided→FAILED, refunded→REFUNDED). Timestamp normalization.                     |
+| **std_fulfillments**| Standardized Fulfillments.        | Status mapping (DELIVERED, SHIPPING, PACKED, CANCELLED, FAILED, PENDING).                                                       |
+| **std_accounts**    | Standardized Accounts (Staff).    | Normalize account/staff data from Sapo. Standard interface for dim_staff.                                                       |
 
 ### Layer 3: Marts / Dimensions
 
@@ -115,7 +128,7 @@ _Path: `models/marts/core/`_
 | :---------------------- | :------------ | :------------------ | :-------------------------------------------------------------------------------------------------------------- |
 | **dim_products**        | **Virtual**   | `std_order_items`   | **Last Record Wins**: Uses `ROW_NUMBER()` to look back at history and pick the latest Product Name/Price by ID. |
 | **dim_customers**       | Type 1        | `std_customers`     | Current view of customer details.                                                                               |
-| **dim_staff**           | Type 1        | `stg_sapo_accounts` | List of salespeople/assignees.                                                                                  |
+| **dim_staff**           | Type 1        | `std_accounts`      | List of salespeople/assignees.                                                                                  |
 | **dim_time**            | **Generated** | SQL Loop            | Minute-level granularity (1,440 rows). Calculated flags: `is_peak_hour`, `is_business_hour`.                    |
 | **dim_date**            | **Generated** | `dbt_utils`         | Day-level calendar from 2000-2030.                                                                              |
 | **dim_branch_location** | Static        | `ref_locations`     | Loaded from Seeds (Physical stores/warehouses).                                                                 |
@@ -129,10 +142,11 @@ _Path: `models/marts/sales/`_
 | :-------------- | :--------- | :------------------------------- | :----------------------------------------------------------- |
 | **fact_orders** | Order      | High-level Sales performance.    | `gmv`, `total_discount`, `shipping_fee`, `time_to_complete`. |
 | **fact_sales**  | Order Item | Product-level Sales performance. | `quantity_sold`, `gross_revenue`, `net_revenue`, `margin`.   |
+| **fact_payments** | Payment  | Payment transactions.            | `amount`, `status`, `payment_method_key`. Source: `std_payments`. |
 
 ## 3. Dependency Rules
 
-1.  **Marts never touch Staging**: Marts must select from `std_` models (Standard Layer) or other Marts.
+1.  **Marts never touch Staging**: Marts must select from `std_` models (Standard Layer) or other Marts. All entities (orders, customers, accounts/staff, payments) go through the full `src_ → stg_ → std_ → marts` pipeline.
 2.  **Extraction in src_, enrichment in stg_, normalization in std_**: JSON extraction + dedup happens in `src_` (INCREMENTAL). Enrichment joins in `stg_` (VIEW). Business logic (status mapping) in `std_` (VIEW).
 3.  **src_ is single source of truth**: All stg_ models (orders, order_items, payments, fulfillments) read from `src_sapo_orders`. No model reads raw parquet directly except src_.
 4.  **Surrogate Keys**: All tables in Marts join via `md5` Surrogate Keys (`_key`), not integer IDs.
