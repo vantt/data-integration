@@ -69,48 +69,133 @@ GROUP BY s.entity_id, s.event_timestamp, s.ingest_method
 
 ---
 
-## 3. Kế hoạch dài hạn: Tách src_ → stg_ → std_
+## 3. Kế hoạch dài hạn: Kiến trúc 4-layer src_ → stg_ → std_ → marts
 
-### Tại sao cần tách
+### 3.1 Insight cốt lõi: 1 dbt model = 1 memory budget
 
-Một dbt model = một SQL query = **một memory budget**. Các CTE trong cùng 1 model KHÔNG được materialize giữa chừng. Tất cả operator chạy đồng thời, RAM cộng dồn.
+Một file `.sql` trong dbt, dù có bao nhiêu CTE (WITH), **biên dịch thành 1 câu SQL duy nhất** gửi cho DuckDB. Các CTE KHÔNG được materialize ra disk giữa chừng. Tất cả operator (parquet scan, hash join, sort) chạy **đồng thời trong cùng 1 pipeline**, RAM cộng dồn.
 
-Tách thành 2 model = 2 query tuần tự = **memory peak = max() thay vì sum()**.
+```
+Parquet Scan (~1GB) ──► Hash Join (~30MB) ──► Sort/ROW_NUMBER (~1GB)
+                                                    │
+                              Tất cả cùng lúc = ~2GB peak
+```
 
-### Kiến trúc đề xuất
+**Tách thành 2 model = 2 query tuần tự:**
+- Model 1 chạy xong → ghi disk → giải phóng TOÀN BỘ RAM
+- Model 2 bắt đầu → memory budget riêng
+- Peak = **max(model1, model2)** thay vì **sum()**
 
+Đây là lý do kỹ thuật buộc phải tách `src_` và `stg_` — không phải chỉ về naming.
+
+### 3.2 Vai trò 4 layers
+
+| Layer | Vai trò | Đọc từ | Materialization | Biết gì |
+|---|---|---|---|---|
+| **`src_`** | Extract JSON + tech dedup + **tích lũy** | `source()` (parquet) | **INCREMENTAL** | Cấu trúc JSON của source system |
+| **`stg_`** | Business dedup + enrichment | `src_` | VIEW hoặc incremental | Quy tắc dedup, ref tables |
+| **`std_`** | Normalize + status mapping + **standard interface** | `stg_` | VIEW | Business semantics (COMPLETED, SHIPPED, etc.) |
+| **`marts`** | Dimensional models | `std_` | EXTERNAL (parquet) | Star schema |
+
+**Tại sao giữ `std_` riêng (không gộp vào `stg_` hay `int_`):**
+- `std_` là **standard interface** — contract duy nhất mà tất cả marts nên đọc
+- Chứa business normalization phức tạp (VD: hybrid fulfillment logic 15-line CASE kết hợp financial_status + packed_status + received_status)
+- Nếu thêm source system khác (không phải Sapo), `std_` là nơi normalize vào cùng schema
+- `int_` dùng cho cross-entity transformations (VD: `int_customer_metrics` tính RFM từ fact_orders)
+
+**Tại sao `src_` và `stg_` là 2 layer riêng (không gộp):**
+- `src_` xử lý phần **I/O nặng** (đọc parquet, decompress payload, extract JSON) → cần materialize để tích lũy
+- `stg_` xử lý phần **logic nhẹ** (business dedup, join ref tables) → đọc từ bảng đã materialize, không OOM risk
+- Nếu gộp vào 1 model: tất cả operator chạy cùng lúc, RAM cộng dồn → OOM
+- `src_` cũng phục vụ nhiều consumer: `stg_sapo_order_items`, `stg_sapo_payments`, `stg_sapo_fulfillments` đều unnest từ `src_`
+
+**Khi nào cần thêm step trong cùng 1 layer (hiếm):** dùng double underscore: `stg_sapo_orders__deduped.sql`. Nhưng thường 3 prefix (src_, stg_, std_) đã đủ cover.
+
+### 3.3 Dependency graph hiện tại vs đề xuất
+
+**HIỆN TẠI (vấn đề):**
+```
+source('sapo_raw', 'order')
+    ├──► src_sapo_orders (VIEW — dedup, GIỮ payload)
+    │        ├──► stg_sapo_order_items → std_order_items → fact_sales, dim_products
+    │        ├──► stg_sapo_payments → std_payments (KHÔNG AI DÙNG)
+    │        │                      → fact_payments (đọc stg_ trực tiếp, BỎ QUA std_!)
+    │        └──► stg_sapo_fulfillments → std_fulfillments (KHÔNG AI DÙNG)
+    │
+    └──► stg_sapo_orders (INCREMENTAL — dedup RIÊNG + extract + enrich, KHÔNG dùng src_!)
+             └──► std_orders → fact_orders, fact_sales, dim_geography, dim_promotions
+
+source('sapo_raw', 'customer')
+    ├──► src_sapo_customers (VIEW — KHÔNG AI DÙNG... nhưng sẽ dùng sau)
+    └──► stg_sapo_customers (INCREMENTAL) → std_customers → dim_customers_base
+
+source('sapo_raw', 'account')
+    ├──► src_sapo_accounts (VIEW — KHÔNG AI DÙNG... nhưng sẽ dùng sau)
+    └──► stg_sapo_accounts (INCREMENTAL) → dim_staff (BỎ QUA std_!)
+```
+
+Vấn đề:
+- `src_` và `stg_` đọc cùng source độc lập (scan 2 lần)
+- `src_` là VIEW giữ payload → mỗi query downstream re-decompress payload
+- `fact_payments` và `dim_staff` bỏ qua `std_` layer
+- `std_payments` và `std_fulfillments` tồn tại nhưng không ai dùng
+
+**ĐỀ XUẤT:**
 ```
 source('sapo_raw', 'order')
     │
     ▼
-src_sapo_orders (INCREMENTAL TABLE)
-    │  Extract JSON + tech dedup + tích lũy
-    │  Source chỉ scan cho data mới → OOM-safe
-    │  Output: flat columns + nested JSON arrays (line_items, payments, fulfillments)
+src_sapo_orders (INCREMENTAL TABLE — extract ALL + tech dedup + tích lũy)
+    │  Output: flat columns + order_line_items_json, payments_json, fulfillments_json
+    │  KHÔNG CÒN payload
     │
     ├──► stg_sapo_order_items (VIEW — unnest order_line_items_json)
     ├──► stg_sapo_payments (VIEW — unnest payments_json)
     ├──► stg_sapo_fulfillments (VIEW — unnest fulfillments_json)
     │
     ▼
-stg_sapo_orders (VIEW)
-    │  Biz dedup (order_id) + enrichment (ref tables)
+stg_sapo_orders (VIEW — biz dedup by order_id + enrichment)
     │
     ▼
-std_orders (VIEW)
-    │  Status mapping + normalize + canonical schema
+std_orders (VIEW — status mapping + normalize)
     │
-    ▼
-fact_orders, fact_sales, ...
+    ├──► fact_orders
+    ├──► fact_sales (+ std_order_items)
+    ├──► dim_geography
+    └──► dim_promotions
+
+stg_sapo_order_items → std_order_items → fact_sales, dim_products, dim_product_types
+stg_sapo_payments → std_payments → fact_payments (fix: đọc std_ thay vì stg_)
+stg_sapo_fulfillments → std_fulfillments
+
+source('sapo_raw', 'customer')
+    → src_sapo_customers (INCREMENTAL — extract + tech dedup)
+        → stg_sapo_customers (VIEW — cleaning)
+            → std_customers → dim_customers_base
+
+source('sapo_raw', 'account')
+    → src_sapo_accounts (INCREMENTAL — extract + tech dedup)
+        → stg_sapo_accounts (VIEW — cleaning)
+            → std_accounts (MỚI) → dim_staff
 ```
 
-### Mapping model hiện tại → đề xuất
+### 3.4 Mapping model chi tiết
 
-| Hiện tại | Đề xuất | Thay đổi |
+| Model hiện tại | Đề xuất | Thay đổi |
 |---|---|---|
-| `src_sapo_orders` (VIEW, giữ payload) | `src_sapo_orders` (INCREMENTAL, extract JSON, không payload) | Vai trò mới: materialized extraction |
-| `stg_sapo_orders` (INCREMENTAL, extract + dedup + enrich) | `stg_sapo_orders` (VIEW, biz dedup + enrich only) | Đơn giản hóa: đọc từ src_ |
-| `std_orders` (VIEW) | `std_orders` (VIEW) | Giữ nguyên |
-| `stg_sapo_order_items` (đọc từ src_) | `stg_sapo_order_items` (đọc từ src_) | Giữ nguyên |
-| `src_sapo_customers` | `src_sapo_customers` (INCREMENTAL, extract) | Vai trò mới |
-| `src_sapo_accounts` | `src_sapo_accounts` (INCREMENTAL, extract) | Vai trò mới |
+| `src_sapo_orders` (VIEW, giữ payload) | `src_sapo_orders` (INCREMENTAL, extract JSON, không payload) | Vai trò mới: materialized extraction + tích lũy |
+| `stg_sapo_orders` (INCREMENTAL, extract + dedup + enrich) | `stg_sapo_orders` (VIEW, biz dedup + enrich only) | Đơn giản hóa, đọc từ src_ |
+| `std_orders` (VIEW) | `std_orders` (VIEW) | Giữ nguyên, hấp thụ thêm enrichment nếu cần |
+| `stg_sapo_order_items` (VIEW, đọc src_) | `stg_sapo_order_items` (VIEW, đọc src_) | Đổi unnest source: payload → order_line_items_json |
+| `stg_sapo_payments` (VIEW, đọc src_) | `stg_sapo_payments` (VIEW, đọc src_) | Đổi unnest source: payload → payments_json |
+| `stg_sapo_fulfillments` (VIEW, đọc src_) | `stg_sapo_fulfillments` (VIEW, đọc src_) | Đổi unnest source: payload → fulfillments_json |
+| `src_sapo_customers` (VIEW) | `src_sapo_customers` (INCREMENTAL, extract) | Vai trò mới: materialized extraction |
+| `src_sapo_accounts` (VIEW) | `src_sapo_accounts` (INCREMENTAL, extract) | Vai trò mới: materialized extraction |
+| — | `std_accounts` (MỚI) | Fix inconsistency: dim_staff đọc qua std_ |
+| `fact_payments` (đọc stg_) | `fact_payments` (đọc std_payments) | Fix inconsistency: đi qua std_ layer |
+
+### 3.5 Inconsistencies cần fix
+
+1. **`fact_payments`** đọc `stg_sapo_payments` trực tiếp → đổi sang đọc `std_payments`
+2. **`dim_staff`** đọc `stg_sapo_accounts` trực tiếp → tạo `std_accounts`, đổi dim_staff đọc qua std_
+3. **`std_payments`** và **`std_fulfillments`** tồn tại nhưng không ai dùng → kết nối vào marts
