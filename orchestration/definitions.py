@@ -96,8 +96,8 @@ sapo_nightly_reconciliation_job = define_asset_job(
 
 @schedule(
     job=sapo_realtime_sync_job,
-    # Run every minute EXCEPT the 0, 10, 20, 30, 40, 50 marks to avoid race with Incremental (*/10)
-    cron_schedule="1-9,11-19,21-29,31-39,41-49,51-59 * * * *",
+    # Run every ~3 minutes, avoiding 0,10,20,30,40,50 marks to prevent race with Incremental (*/10)
+    cron_schedule="1,4,7,11,14,17,21,24,27,31,34,37,41,44,47,51,54,57 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh"
 )
 def realtime_schedule(context):
