@@ -9,7 +9,7 @@ WITH raw_targets AS (
 
 sanitized AS (
     SELECT
-        -- 1. Cycle: start date + type
+        -- 1. Cycle: start date + type + repeat
         -- Column renamed from setup_date to cycle_start_date in the Sheet
         try_cast(
             coalesce(cycle_start_date, setup_date) as date
@@ -21,6 +21,9 @@ sanitized AS (
             nullif(lower(trim(cast(cycle_type as string))), ''),
             'monthly'
         ) as cycle_type,
+
+        -- Optional: repeat_until for recurring targets
+        try_cast(repeat_until as date) as repeat_until,
 
         -- 2. Scope Fields (empty = ALL = not constrained by that dimension)
         coalesce(nullif(trim(cast(branch_code as string)), ''), 'ALL') as branch_code,
@@ -42,25 +45,68 @@ sanitized AS (
     FROM raw_targets
 ),
 
+-- Step: derive the cycle interval for generate_series
+with_interval AS (
+    SELECT
+        *,
+        CASE cycle_type
+            WHEN 'daily'     THEN INTERVAL '1 day'
+            WHEN 'weekly'    THEN INTERVAL '1 week'
+            WHEN 'monthly'   THEN INTERVAL '1 month'
+            WHEN 'quarterly' THEN INTERVAL '3 months'
+            WHEN 'yearly'    THEN INTERVAL '1 year'
+            ELSE INTERVAL '1 month'
+        END as cycle_interval
+    FROM sanitized
+),
+
+-- Step: expand rows with repeat_until into one row per cycle
+-- If repeat_until is NULL, generate only the original cycle (1 row)
+expanded AS (
+    SELECT
+        -- The generated cycle_start for this specific cycle
+        gs.generate_series::date as cycle_start_date,
+
+        -- Carry forward all other fields from the original row
+        wi.cycle_type,
+        wi.branch_code,
+        wi.team_code,
+        wi.staff_email,
+        wi.sales_channel,
+        wi.product_sku,
+        wi.metric_code,
+        wi.target_val,
+        wi.description,
+        wi.ingest_method,
+        wi.year,
+        wi.month
+    FROM with_interval wi,
+    LATERAL generate_series(
+        wi.cycle_start_date,
+        coalesce(wi.repeat_until, wi.cycle_start_date),
+        wi.cycle_interval
+    ) as gs
+),
+
+-- Step: derive cycle_end_date for each expanded row
 with_cycle_end AS (
     SELECT
         *,
-        -- Derive cycle_end_date from cycle_start_date + cycle_type
         CASE cycle_type
             WHEN 'daily'     THEN cycle_start_date
-            WHEN 'weekly'    THEN cycle_start_date + INTERVAL '6 days'
+            WHEN 'weekly'    THEN (cycle_start_date + INTERVAL '1 week' - INTERVAL '1 day')::date
             WHEN 'monthly'   THEN (cycle_start_date + INTERVAL '1 month' - INTERVAL '1 day')::date
             WHEN 'quarterly' THEN (cycle_start_date + INTERVAL '3 months' - INTERVAL '1 day')::date
             WHEN 'yearly'    THEN (cycle_start_date + INTERVAL '1 year' - INTERVAL '1 day')::date
             ELSE (cycle_start_date + INTERVAL '1 month' - INTERVAL '1 day')::date
         END as cycle_end_date
-    FROM sanitized
+    FROM expanded
 ),
 
 generated_keys AS (
     SELECT
         *,
-        -- Generate Semantic Code: TGT-{CycleStart}-{Branch}-{Team}-{Staff}-{Metric}
+        -- Generate Semantic Code: TGT-{CycleStart}-{CycleType}-{Branch}-{Team}-{Staff}-{Metric}
         concat_ws('-',
             'TGT',
             strftime(coalesce(cycle_start_date, '1900-01-01'::date), '%Y%m%d'),

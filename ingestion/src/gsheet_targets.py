@@ -93,6 +93,25 @@ def _validate_rows(df):
                 ))
                 invalid_indices.add(idx)
 
+        # Optional: repeat_until — if filled, must be a valid date >= cycle_start_date
+        repeat_val = row.get("repeat_until")
+        if not pd.isna(repeat_val) and str(repeat_val).strip() != "":
+            try:
+                repeat_date = pd.to_datetime(str(repeat_val).strip())
+                start_date = pd.to_datetime(str(date_val).strip()) if not pd.isna(date_val) else None
+                if start_date and repeat_date < start_date:
+                    issues.append((
+                        row_num, "repeat_until",
+                        f'"{repeat_val}" is before cycle_start_date "{date_val}". Must be equal or later'
+                    ))
+                    invalid_indices.add(idx)
+            except (ValueError, TypeError):
+                issues.append((
+                    row_num, "repeat_until",
+                    f'Cannot parse "{repeat_val}" as a date. Use format: 2026-12-31'
+                ))
+                invalid_indices.add(idx)
+
         # Optional: staff_email — if filled, must look like an email
         staff = row.get("staff_email")
         if not pd.isna(staff) and str(staff).strip() != "":
@@ -172,6 +191,11 @@ def fetch_and_save_targets():
         # Normalize cycle_type to lowercase
         if "cycle_type" in df.columns:
             df["cycle_type"] = df["cycle_type"].astype(str).str.strip().str.lower()
+
+        # Clean repeat_until: parse as date string, ensure column always exists
+        if "repeat_until" not in df.columns:
+            df["repeat_until"] = pd.NaT
+        df["repeat_until"] = pd.to_datetime(df["repeat_until"], errors="coerce").dt.strftime("%Y-%m-%d")
 
         df["ingest_method"] = "google_sheet"
 
