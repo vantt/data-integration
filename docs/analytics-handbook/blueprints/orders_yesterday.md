@@ -24,7 +24,7 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 #### Question: Date Label
 
 ```sql
-SELECT to_char(current_date - INTERVAL '1 day', 'YYYY-MM-DD') as "Date"
+SELECT strftime(current_date - INTERVAL '1 day', '%Y-%m-%d') as "Date"
 ```
 
 ```json metabase-viz
@@ -94,21 +94,21 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 
 ```sql
 SELECT
-    stg.order_code as "Order Code",
-    to_char(o.order_timestamp, 'HH24:MI') as "Time",
+    o.order_id as "Order ID",
+    strftime(o.order_timestamp, '%H:%M') as "Time",
     o.status as "Status",
     o.payment_status as "Payment Status",
     o.fulfillment_status as "Fulfillment",
     o.gmv as "GMV",
     o.total_discount_amount as "Discount",
     ch.channel_name as "Channel",
-    stg.customer_name as "Customer",
-    stg.customer_phone as "Phone",
-    stg.payment_method_name as "Payment Method",
-    stg.location_name as "Store"
+    c.full_name as "Customer",
+    c.phone as "Phone",
+    bl.branch_location_name as "Store"
 FROM fact_orders o
-LEFT JOIN stg_sapo_orders stg ON cast(o.order_id as string) = stg.order_id
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
+LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ORDER BY o.order_timestamp DESC
 ```

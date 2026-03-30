@@ -28,7 +28,7 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 Display the date being reviewed for context.
 
 ```sql
-SELECT to_char(current_date - INTERVAL '1 day', 'YYYY-MM-DD') as "Date"
+SELECT strftime(current_date - INTERVAL '1 day', '%Y-%m-%d') as "Date"
 ```
 
 ```json metabase-viz

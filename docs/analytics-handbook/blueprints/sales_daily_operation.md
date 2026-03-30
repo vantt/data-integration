@@ -1,14 +1,14 @@
-# 📘 Daily Sales Performance Blueprint
+# Daily Sales Performance Blueprint
 
-📖 **Playbook**: [Daily Sales Operations] (../playbooks/sales_daily_operation.md)
+**Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)
 
 This blueprint creates a real-time sales monitoring dashboard for daily operations.
 
-## 📂 Collection: Daily Operations
+## Collection: Daily Operations
 
 This collection contains operational dashboards updated in real-time.
 
-### 🧊 Model: Today's Orders
+### Model: Today's Orders
 
 Orders from the current date for real-time monitoring.
 
@@ -19,16 +19,16 @@ WHERE date(order_timestamp) = current_date
 
 ---
 
-### 🖥️ Dashboard: Daily Sales Dashboard
+### Dashboard: Daily Sales Dashboard
 
-**Description**: Real-time monitoring of today's sales performance with hourly breakdown.
+**Description**: Real-time monitoring of today's sales performance with hourly breakdown and day-over-day comparisons.
 
-#### ❓ Question: Current Date Label
+#### Question: Current Date Label
 
 Display the date being filtered for context.
 
 ```sql
-SELECT to_char(current_date, 'YYYY-MM-DD') as "Date"
+SELECT strftime(current_date, '%Y-%m-%d') as "Date"
 ```
 
 ```json metabase-viz
@@ -46,23 +46,55 @@ SELECT to_char(current_date, 'YYYY-MM-DD') as "Date"
 }
 ```
 
-#### ❓ Question: Daily Metrics Summary
+#### Question: Daily Metrics Summary
 
-Key metrics for today's performance.
+Key metrics for today's performance with day-over-day (DoD) change vs yesterday.
 
-**Domain Reference**: [GMV (Total Revenue)](../domains/sales.md#1-gmv-gross-merchandise-value), [Orders](../domains/sales.md#3-total-orders), [AOV](../domains/sales.md#4-aov-average-order-value), [New vs Returning](../domains/sales.md#8-new-vs-returning-customers)
+**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value), [Net Revenue](../domains/sales.md#2-net-revenue), [Orders](../domains/sales.md#4-total-orders), [AOV](../domains/sales.md#5-aov-average-order-value), [Returns](../domains/sales.md#3-return-rate--count), [Discounts](../domains/sales.md#13-discount-impact)
 
 ```sql
+WITH today AS (
+    SELECT
+        count(distinct o.order_id) as total_orders,
+        coalesce(sum(o.gmv), 0) as total_revenue,
+        coalesce(sum(o.gmv - coalesce(o.total_discount_amount, 0)), 0) as net_revenue,
+        case when count(distinct o.order_id) = 0 then 0
+             else sum(o.gmv) / count(distinct o.order_id) end as aov,
+        count(case when o.fulfillment_status = 'RETURNED' then 1 end) as return_count,
+        sum(coalesce(o.total_discount_amount, 0)) as total_discounts,
+        count(distinct case when date(c.first_order_date) = current_date then o.customer_key end) as new_customers,
+        count(distinct case when date(c.first_order_date) < current_date then o.customer_key end) as return_customers
+    FROM fact_orders o
+    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) = current_date
+),
+yesterday AS (
+    SELECT
+        count(distinct order_id) as total_orders,
+        coalesce(sum(gmv), 0) as total_revenue,
+        coalesce(sum(gmv - coalesce(total_discount_amount, 0)), 0) as net_revenue,
+        case when count(distinct order_id) = 0 then 0
+             else sum(gmv) / count(distinct order_id) end as aov
+    FROM fact_orders
+    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+)
 SELECT
-    count(distinct o.order_id) as "Total Orders",
-    coalesce(sum(o.gmv), 0) as "Total Revenue",
-    case when count(distinct o.order_id) = 0 then 0
-         else sum(o.gmv) / count(distinct o.order_id) end as "AOV",
-    count(distinct case when date(c.first_order_date) = current_date then o.customer_key end) as "New Customers",
-    count(distinct case when date(c.first_order_date) < current_date then o.customer_key end) as "Return Customers"
-FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+    t.total_orders as "Total Orders",
+    t.total_revenue as "Total Revenue",
+    t.net_revenue as "Net Revenue",
+    t.aov as "AOV",
+    t.return_count as "Returns",
+    t.total_discounts as "Total Discounts",
+    t.new_customers as "New Customers",
+    t.return_customers as "Return Customers",
+    case when y.total_revenue = 0 then null
+         else round((t.total_revenue - y.total_revenue) * 100.0 / y.total_revenue, 1) end as "Revenue DoD %",
+    case when y.total_orders = 0 then null
+         else round((t.total_orders - y.total_orders) * 100.0 / y.total_orders, 1) end as "Orders DoD %",
+    case when y.aov = 0 then null
+         else round((t.aov - y.aov) * 100.0 / y.aov, 1) end as "AOV DoD %"
+FROM today t
+CROSS JOIN yesterday y
 ```
 
 ```json metabase-viz
@@ -82,11 +114,11 @@ WHERE date(o.order_timestamp) = current_date
 }
 ```
 
-#### ❓ Question: Hourly Sales Trend
+#### Question: Hourly Sales Trend
 
 Compare today's hourly performance with yesterday.
 
-**Domain Reference**: [Hourly Sales Trend](../domains/sales.md#5-hourly-sales-trend)
+**Domain Reference**: [Hourly Sales Trend](../domains/sales.md#6-hourly-sales-trend)
 
 ```sql
 WITH current_sales AS (
@@ -132,11 +164,11 @@ ORDER BY 1
 }
 ```
 
-#### ❓ Question: Top Channels Today
+#### Question: Top Channels Today
 
 Revenue breakdown by sales channel.
 
-**Domain Reference**: [Sales by Channel](../domains/sales.md#6-sales-by-channel)
+**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
 ```sql
 SELECT
@@ -167,11 +199,11 @@ ORDER BY 2 DESC
 }
 ```
 
-#### ❓ Question: Top Products Today
+#### Question: Top Products Today
 
 Best selling products by revenue.
 
-**Domain Reference**: [Top Selling Products](../domains/sales.md#7-top-selling-products)
+**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products)
 
 ```sql
 SELECT
@@ -208,11 +240,11 @@ LIMIT 10
 }
 ```
 
-#### ❓ Question: Payment Method Distribution
+#### Question: Payment Method Distribution
 
 Breakdown of transaction volume by payment method.
 
-**Domain Reference**: [Payment Method Distribution](../domains/sales.md#9-payment-method-distribution)
+**Domain Reference**: [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution)
 
 ```sql
 SELECT
@@ -242,29 +274,31 @@ GROUP BY 1
 }
 ```
 
-#### ❓ Question: Hourly Heatmap
+#### Question: New vs Returning Customers
 
-Sales intensity by Hour of Day and Day of Week.
+Customer acquisition breakdown for today.
 
-**Domain Reference**: [Hourly Heatmap](../domains/sales.md#51-hourly-heatmap-day-of-week-analysis)
+**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
 
 ```sql
 SELECT
-    EXTRACT(HOUR FROM order_timestamp) as "Hour",
-    EXTRACT(DOW FROM order_timestamp) as "Day of Week",
-    COUNT(*) as "Orders"
-FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date)
-GROUP BY 1, 2
-ORDER BY 2, 1
+    CASE
+        WHEN date(c.first_order_date) = current_date THEN 'New'
+        ELSE 'Returning'
+    END as "Customer Type",
+    COUNT(distinct o.order_id) as "Orders",
+    SUM(o.gmv) as "Revenue"
+FROM fact_orders o
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+GROUP BY 1
 ```
 
 ```json metabase-viz
 {
-  "display": "heatmap",
-  "heatmap.x_axis": "Hour",
-  "heatmap.y_axis": "Day of Week",
-  "heatmap.metric": "Orders"
+  "display": "bar",
+  "graph.dimensions": ["Customer Type"],
+  "graph.metrics": ["Orders", "Revenue"]
 }
 ```
 
@@ -272,7 +306,42 @@ ORDER BY 2, 1
 {
   "row": 20,
   "col": 6,
-  "size_x": 12,
+  "size_x": 6,
+  "size_y": 6
+}
+```
+
+#### Question: Discount Impact Today
+
+Discount usage and impact on revenue.
+
+**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
+
+```sql
+SELECT
+    COUNT(distinct order_id) as "Total Orders",
+    COUNT(distinct case when total_discount_amount > 0 then order_id end) as "Discounted Orders",
+    ROUND(COUNT(distinct case when total_discount_amount > 0 then order_id end) * 100.0
+        / NULLIF(COUNT(distinct order_id), 0), 1) as "Discount Rate %",
+    SUM(coalesce(total_discount_amount, 0)) as "Total Discounts",
+    ROUND(AVG(case when total_discount_amount > 0
+        then total_discount_amount * 100.0 / NULLIF(gmv, 0) end), 1) as "Avg Discount %"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "table.pivot": false
+}
+```
+
+```json metabase-pos
+{
+  "row": 20,
+  "col": 12,
+  "size_x": 6,
   "size_y": 6
 }
 ```
