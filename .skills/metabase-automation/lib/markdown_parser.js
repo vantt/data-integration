@@ -106,41 +106,47 @@ function parseMarkdownConfig(filePath) {
             continue;
         }
 
-        // 2. Handle Hierarchy Headers
-        if (trimmed.startsWith('## 📂 Collection:')) {
-            const name = cleanName(trimmed, '## 📂 Collection:');
+        // 2. Handle Hierarchy Headers (supports both emoji and plain formats)
+        const collectionMatch = trimmed.match(/^##\s+(?:📂\s+)?Collection:\s*(.+)/);
+        const modelMatch = trimmed.match(/^###\s+(?:🧊\s+)?Model:\s*(.+)/);
+        const metricMatch = trimmed.match(/^####\s+(?:📏\s+)?Metric:\s*(.+)/);
+        const dashboardMatch = trimmed.match(/^###\s+(?:🖥️\s*)?Dashboard:\s*(.+)/);
+        const questionMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
+
+        if (collectionMatch) {
+            const name = collectionMatch[1].trim();
             currentCollection = { name, dashboards: [], models: [] };
             config.collections.push(currentCollection);
             // Reset children context
             currentDashboard = null;
             currentModel = null;
-        } 
-        else if (trimmed.startsWith('### 🧊 Model:')) {
+        }
+        else if (modelMatch) {
             if (!currentCollection) continue; // Orphan model?
-            const name = cleanName(trimmed, '### 🧊 Model:');
+            const name = modelMatch[1].trim();
             currentModel = { name, metrics: [], collection_name: currentCollection.name };
             currentCollection.models.push(currentModel); // Link to collection
             config.models.push(currentModel); // Keep flat list too? Or just traverse tree.
             currentMetric = null; // Reset metric context
         }
-        else if (trimmed.startsWith('#### 📏 Metric:')) {
+        else if (metricMatch) {
             if (!currentModel) continue; // Metric needs model
-            const name = cleanName(trimmed, '#### 📏 Metric:');
+            const name = metricMatch[1].trim();
             currentMetric = { name };
             currentModel.metrics.push(currentMetric);
         }
-        else if (trimmed.startsWith('### 🖥️ Dashboard:')) {
+        else if (dashboardMatch) {
             if (!currentCollection) continue;
-            const name = cleanName(trimmed, '### 🖥️ Dashboard:');
+            const name = dashboardMatch[1].trim();
             // Look ahead for description? Simple for now.
             currentDashboard = { name, questions: [], collection_name: currentCollection.name };
             currentCollection.dashboards.push(currentDashboard);
             config.dashboards.push(currentDashboard);
             currentQuestion = null;
         }
-        else if (trimmed.startsWith('#### ❓ Question:')) {
+        else if (questionMatch) {
             if (!currentDashboard) continue;
-            const name = cleanName(trimmed, '#### ❓ Question:');
+            const name = questionMatch[1].trim();
             currentQuestion = { name };
             currentDashboard.questions.push(currentQuestion);
         }
