@@ -330,44 +330,24 @@ WHERE ingest_method = 'webhook'
 
 ### Hop 5: Staging Layer (dbt)
 
-**Purpose:** Deduplication and basic cleaning
+**Purpose:** JSON extraction, deduplication, enrichment, normalization
 
-**Strategy:** Strict Late Materialization
+**Strategy:** 2-Level Dedup in src_ (Incremental Extraction)
 
-```sql
--- Step 1: Get unique entity keys (lightweight)
-WITH ranked_keys AS (
-    SELECT
-        entity_id,
-        _dlt_id,
-        ROW_NUMBER() OVER (
-            PARTITION BY entity_id
-            ORDER BY
-                event_timestamp DESC,
-                CASE ingest_method
-                    WHEN 'webhook' THEN 3
-                    WHEN 'history_log' THEN 2
-                    ELSE 1
-                END DESC
-        ) AS rn
-    FROM {{ source('sapo_raw', 'order') }}
-),
-
--- Step 2: Filter to winners only
-winners AS (
-    SELECT entity_id, _dlt_id
-    FROM ranked_keys
-    WHERE rn = 1
-)
-
--- Step 3: Join back to get full payload (memory efficient)
-SELECT src.*
-FROM {{ source('sapo_raw', 'order') }} src
-INNER JOIN winners w
-    ON src._dlt_id = w._dlt_id
+```
+src_ (INCREMENTAL)                stg_ (VIEW)              std_ (VIEW)
+┌─────────────────────┐    ┌��─────────────────┐    ┌─────────────────┐
+│ Read raw parquet     │    │ Enrichment joins  │    │ Status mapping   │
+│ Tech dedup (entity)  │───►│ (ref tables)      │───►│ Normalization    │
+│ JSON extraction      │    │ Unnest models     │    │ Standard schema  │
+│ Biz dedup (order_id) │    │ (items/pay/ful)   │    │                 │
+│ Output: flat, 1/order│    └──────────────────┘    └─────────────────┘
+└─────────────────────┘
 ```
 
-**Output:** One row per entity with latest state
+Key design: src_ reads parquet + extracts + deduplicates → outputs flat data (no payload). stg_ and std_ work with lightweight flat columns only. This prevents OOM by ensuring the heavy payload processing is isolated in one incremental model.
+
+**Output:** One row per business entity (order_id) with all fields extracted
 
 ---
 
@@ -486,26 +466,22 @@ Sapo Order
     └── [History]   ──► sapo_raw/order/ingest_method=history_log/
             │
             ▼
-    src_sapo_orders (UNION ALL partitions)
+    src_sapo_orders (INCREMENTAL: extract JSON + tech dedup + biz dedup)
+            │  Output: flat columns, 1 row per order_id, no payload
+            │
+            ├──► stg_sapo_order_items (unnest line items)
+            ├──► stg_sapo_payments (unnest payments)
+            ├──► stg_sapo_fulfillments (unnest fulfillments)
             │
             ▼
-    stg_sapo_orders (Deduplicated)
+    stg_sapo_orders (VIEW: enrichment joins)
             │
-            ├──► int_orders_enriched (+ customer, geography)
-            │           │
-            │           ▼
-            │    fact_orders (Star schema)
-            │           │
-            │           ▼
-            │    dim_customers, dim_products, etc.
+            ▼
+    std_orders (VIEW: status mapping + normalization)
             │
-            └──► Export to Parquet
-                        │
-                        ▼
-                 olap.duckdb VIEW
-                        │
-                        ▼
-                 Metabase Dashboard
+            ├──► fact_orders ──► Export to Parquet ──► olap.duckdb
+            ├──► fact_sales
+            └──► dim_geography, dim_promotions
 ```
 
 ### Column Lineage (Key Fields)

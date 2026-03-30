@@ -8,9 +8,10 @@ Different model layers use different materialization strategies optimized for th
 
 | Layer | Materialization | Storage | Purpose |
 |-------|-----------------|---------|---------|
-| Sources | View | None | Read-through to Parquet |
-| Staging | View / Incremental | DuckDB | Deduplication |
-| Intermediate | Ephemeral | None | Reusable CTEs |
+| Sources (`src_`) | **Incremental** | DuckDB table | JSON extraction + dedup + accumulation |
+| Staging (`stg_`) | View | None | Enrichment joins, unnest |
+| Standard (`std_`) | View | None | Business normalization, status mapping |
+| Intermediate (`int_`) | Incremental / Ephemeral | DuckDB | Cross-entity metrics |
 | Marts | External (Parquet) | Parquet files | Serving layer |
 
 ## Materialization Types
@@ -105,27 +106,29 @@ SELECT * FROM {{ ref('source') }}
 
 ## Layer Configuration
 
-### dbt_project.yml
+### dbt_project.yml (conceptual)
 
 ```yaml
 models:
   sapo_analytics:
-    # Sources - read-through views
     staging:
+      # Sources - incremental extraction (JSON extract + dedup)
       src_sapo_orders:
-        +materialized: view
+        +materialized: incremental  # extract JSON, tech+biz dedup, accumulate
       src_sapo_customers:
-        +materialized: view
+        +materialized: view  # TODO: refactor to incremental
 
-      # Staging - deduplication
+      # Staging - lightweight views
       stg_sapo_orders:
-        +materialized: view  # or incremental for large data
-        +tags: ['staging', 'otp']
+        +materialized: view  # enrichment joins only
+        +tags: ['staging', 'orders']
+      stg_sapo_order_items:
+        +materialized: view  # unnest from src_ extracted columns
       stg_sapo_customers:
-        +materialized: view
-        +tags: ['staging', 'otp']
+        +materialized: incremental  # TODO: refactor to view on src_
+        +tags: ['staging', 'customers']
 
-    # Intermediate - ephemeral CTEs
+    # Intermediate
     intermediate:
       +materialized: ephemeral
       +tags: ['intermediate']
@@ -317,17 +320,28 @@ python scripts/run_dbt.py run --select tag:mart --full-refresh
 
 ## Model-Specific Configuration
 
-### stg_sapo_orders
+### src_sapo_orders (Incremental Extraction)
 
 ```sql
 {{ config(
-    materialized='view',  -- Start with view
-    -- Or for large data:
-    -- materialized='incremental',
-    -- unique_key='_dlt_id',
-    -- incremental_strategy='delete+insert'
-    tags=['staging', 'orders', 'otp']
+    materialized='incremental',
+    unique_key='order_id',
+    incremental_strategy='delete+insert',
+    tags=['source', 'sapo']
 ) }}
+-- Reads raw parquet, extracts all JSON fields, tech+biz dedup.
+-- Output: flat columns (no payload). 1 row per order_id.
+```
+
+### stg_sapo_orders (Enrichment View)
+
+```sql
+{{ config(
+    materialized='view',
+    tags=['staging', 'orders']
+) }}
+-- Reads from src_sapo_orders (already deduped + flat).
+-- Only adds enrichment joins (ref_order_sources, ref_payment_methods, etc.)
 ```
 
 ### fact_orders

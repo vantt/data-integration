@@ -1,5 +1,13 @@
 # Prompt: Fix OOM stg_sapo_orders — Tách src_ extraction layer
 
+> **Trạng thái: ✅ ĐÃ THỰC HIỆN (2026-03-30)**
+>
+> Bước 1-3, 4 (memory_limit 4GB→5GB), 5 đã hoàn tất. Thay đổi so với plan gốc:
+> - Biz dedup (by order_id) được **gom vào src_** thay vì để ở stg_, vì nếu để ở stg_ thì unnest models đọc từ src_ sẽ thấy nhiều versions → data inconsistency.
+> - `unique_key` đổi từ `entity_id` → `order_id` cho đúng semantic.
+> - `stg_sapo_orders` chỉ còn enrichment joins (không dedup).
+> - Full pipeline 109/109 PASS, 0 OOM.
+
 ## Tình huống
 
 `stg_sapo_orders` liên tục OOM dù đã tối ưu 3 lần trong single model (xem `docs/troubleshooting_duckdb_oom_stg_sapo_orders.md`). Quick fix trong 1 model đã cạn kiệt — vấn đề là 1 dbt model = 1 SQL query = 1 memory budget, không thể giải phóng RAM giữa chừng.

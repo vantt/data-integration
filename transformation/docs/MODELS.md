@@ -43,62 +43,66 @@
 
 ### src_sapo_orders
 
-**Type:** Source
-**Materialization:** View
+**Type:** Source Extraction
+**Materialization:** Incremental (delete+insert)
 **Path:** `models/staging/src_sapo_orders.sql`
+**Tags:** source, sapo
+**unique_key:** `order_id`
 
-```sql
-SELECT * FROM read_parquet(
-    '{{ var("data_lake_path") }}/sapo_raw/order/**/*.parquet',
-    hive_partitioning = true
-)
-```
+**Purpose:** Extract all JSON fields from raw parquet, tech dedup (entity_id) + biz dedup (order_id). Output is flat — no payload. Serves as single source of truth for all order-related models.
+
+**Key Logic:**
+1. Tech dedup: `ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY event_timestamp DESC, ingest_method_priority DESC) = 1`
+2. JSON extraction: 50+ scalar fields + 3 nested arrays as text
+3. Biz dedup: `QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY event_timestamp DESC, modified_on DESC) = 1`
 
 **Output Columns:**
-- entity_id, entity_type, ingest_method
-- event_type, event_timestamp
-- payload (JSON)
-- _dlt_load_id, _dlt_id
+- entity_id, entity_type, event_timestamp, ingest_method
+- order_id, order_code, modified_on
+- order_status, financial_status, fulfillment_status, packed_status, received_status
+- total_amount, total_discount, tax_amount
+- customer_id, source_id, location_id
+- assignee_*, account_*, customer_name/phone/email
+- shipping_*/billing_* address fields
+- note, tags, discount_codes, client_details
+- created_on, issued_on, finalized_on, cancelled_on, completed_on
+- channel_name, payment_method_id
+- **order_line_items_json, payments_json, fulfillments_json** (nested arrays as text for unnest models)
+
+**Consumers:**
+- `stg_sapo_orders` (enrichment joins)
+- `stg_sapo_order_items` (unnest order_line_items_json)
+- `stg_sapo_payments` (unnest payments_json)
+- `stg_sapo_fulfillments` (unnest fulfillments_json)
 
 ---
 
 ### stg_sapo_orders
 
 **Type:** Staging
-**Materialization:** View / Incremental
+**Materialization:** View
 **Path:** `models/staging/stg_sapo_orders.sql`
-**Tags:** staging, orders, otp
+**Tags:** staging, orders
 
-**Purpose:** Deduplicate orders from all ingestion methods.
+**Purpose:** Enrichment joins only. All dedup already done in src_sapo_orders.
 
 **Key Logic:**
-```sql
-ROW_NUMBER() OVER (
-    PARTITION BY entity_id
-    ORDER BY event_timestamp DESC,
-             ingest_method_priority DESC
-) = 1
-```
+- Reads from `ref('src_sapo_orders')` (flat, 1 row per order_id)
+- LEFT JOIN ref_order_sources (tag-based mapping)
+- LEFT JOIN ref_payment_methods, ref_order_sources, ref_branch_locations
 
 **Output Columns:**
+All columns from src_sapo_orders plus:
 | Column | Type | Description |
 |--------|------|-------------|
-| order_id | VARCHAR | Primary key |
-| order_code | VARCHAR | Business reference |
-| status | VARCHAR | Order status |
-| payment_status | VARCHAR | Payment status |
-| fulfillment_status | VARCHAR | Shipping status |
-| total | DECIMAL | Gross total |
-| total_discount | DECIMAL | Discount amount |
-| net_total | DECIMAL | Net amount |
-| customer_id | VARCHAR | FK to customers |
-| location_id | VARCHAR | FK to locations |
-| created_at | TIMESTAMP | Order creation |
-| modified_at | TIMESTAMP | Last update |
+| final_source_id | VARCHAR | Resolved source (tag mapping or original) |
+| payment_method_name | VARCHAR | From ref_payment_methods |
+| source_name | VARCHAR | From ref_order_sources |
+| location_name | VARCHAR | From ref_branch_locations |
 
 **Tests:**
 - unique: order_id
-- not_null: order_id, status, total
+- not_null: order_id
 
 ---
 
@@ -351,19 +355,22 @@ UNNEST(o.order_line_items) as item
 ## DAG Visualization
 
 ```
-src_sapo_orders ──► stg_sapo_orders ──┐
-                                      │
-src_sapo_customers ► stg_sapo_customers ┼─► int_orders_enriched ──► fact_orders
-                                      │                                  │
-dim_geography (seed) ─────────────────┘                                  │
-                                                                         ▼
-dim_date (seed) ──────────────────────────────────────────────────► fact_sales
-                                                                         │
-dim_products ────────────────────────────────────────────────────────────┘
+source('sapo_raw', 'order')
+    │
+    ▼
+src_sapo_orders (INCREMENTAL — extract + dedup)
+    ├──► stg_sapo_order_items ──► std_order_items ──► fact_sales, dim_products
+    ├──► stg_sapo_payments ──► std_payments ──► fact_payments
+    ├──► stg_sapo_fulfillments ──► std_fulfillments
+    │
+    ▼
+stg_sapo_orders (VIEW — enrichment) ──► std_orders ──► fact_orders, fact_sales
+
+src_sapo_customers ──► stg_sapo_customers ──► std_customers ──► dim_customers
 
 stg_sapo_accounts ──► dim_staff ──┐
                                   ├──► fact_targets
-stg_sapo_targets ─────────────────┘
+stg_targets ──────────────────────┘
 ```
 
 ---

@@ -115,11 +115,12 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 │ HOP 5: STAGING LAYER (dbt)                                                  │
 │                                                                             │
 │  models/staging/                                                            │
-│  ├── src_sapo_*.sql   (Source extraction)                                   │
-│  └── stg_sapo_*.sql   (Deduplication + Cleaning)                            │
+│  ├── src_sapo_*.sql   (INCREMENTAL: JSON extract + tech/biz dedup)          │
+│  ├── stg_sapo_*.sql   (VIEW: enrichment joins + unnest)                     │
+│  └── std_*.sql        (VIEW: business normalization)                        │
 │                                                                             │
-│  Key Logic: Last-Write-Wins deduplication                                   │
-│  ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY event_timestamp DESC)   │
+│  Key: src_ extracts + deduplicates, outputs flat data (no payload).         │
+│  stg_ and std_ work with lightweight flat columns only.                     │
 └─────────────────────────────────────┬───────────────────────────────────────┘
                                       │
                                       ▼
@@ -215,13 +216,14 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 
 | Layer | Path | Materialization | Purpose |
 |-------|------|-----------------|---------|
-| Sources | `staging/src_*.sql` | View | Read Parquet files |
-| Staging | `staging/stg_*.sql` | View/Incremental | Deduplication |
-| Intermediate | `intermediate/*.sql` | Ephemeral | Business logic |
+| Sources | `staging/src_*.sql` | **Incremental** | JSON extraction + dedup + accumulation |
+| Staging | `staging/stg_*.sql` | View | Enrichment, unnest |
+| Standard | `staging/std_*.sql` | View | Business normalization |
+| Intermediate | `intermediate/*.sql` | Incremental/Ephemeral | Cross-entity metrics |
 | Marts | `marts/**/*.sql` | External (Parquet) | Dimensional model |
 
 **Key Concepts:**
-- **Strict Late Materialization**: Memory-efficient deduplication for DuckDB
+- **2-Level Dedup in src_**: Tech dedup (entity_id) + biz dedup (order_id) in INCREMENTAL src_ model. Payload discarded after JSON extraction → OOM-safe.
 - **Rolling Snapshots**: Zero-downtime serving updates
 - **Kimball Star Schema**: Dimensional modeling for analytics
 
@@ -355,22 +357,26 @@ sapo_raw/order/
 - Clear data lineage
 - Source-aware deduplication
 
-### 4. Last-Write-Wins Deduplication
+### 4. 2-Level Deduplication in src_
 
-When the same entity appears multiple times, keep the latest version:
+All dedup happens in src_ models (INCREMENTAL tables), producing 1 row per business entity:
 
 ```sql
+-- Level 1: Tech dedup (remove duplicate ingestions of same event)
 ROW_NUMBER() OVER (
     PARTITION BY entity_id
-    ORDER BY
-        event_timestamp DESC,      -- Latest wins
-        CASE ingest_method
-            WHEN 'webhook' THEN 3  -- Webhook > History > Batch
-            WHEN 'history_log' THEN 2
-            ELSE 1
-        END DESC
+    ORDER BY event_timestamp DESC,
+        CASE ingest_method WHEN 'webhook' THEN 3 WHEN 'history_log' THEN 2 ELSE 1 END DESC
+) = 1
+
+-- Level 2: Biz dedup (keep latest version of same order, on flat extracted data)
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY order_id
+    ORDER BY event_timestamp DESC, modified_on DESC
 ) = 1
 ```
+
+Biz dedup runs on flat data (payload already discarded) → negligible memory overhead.
 
 ### 5. Zero-Downtime Serving
 

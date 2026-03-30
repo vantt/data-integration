@@ -1,77 +1,94 @@
 # Deduplication Strategy
 
-> Strict Late Materialization for memory-efficient deduplication in DuckDB
+> 2-level deduplication in the src_ extraction layer for memory-efficient processing in DuckDB
 
 ## The Problem
 
 With multiple ingestion channels (batch, webhook, history log), the same entity may appear multiple times in raw data. We need to deduplicate to a single "truth" row per entity.
 
 **Challenges:**
-1. DuckDB is memory-bound (no disk spill by default)
-2. Full payload is large (JSON with nested objects)
-3. Window functions need entire partition in memory
+1. DuckDB is memory-bound (limited spill-to-disk)
+2. Full payload is large (JSON with nested objects, KB-MB per row)
+3. Window functions carry all columns in memory during sort
+4. 1 dbt model = 1 SQL query = 1 memory budget (CTEs don't materialize to disk)
 
-## The Solution: Strict Late Materialization
+## The Solution: 2-Level Dedup in src_ (Incremental Extraction)
 
-Instead of applying window functions to full rows, we:
+All deduplication happens in `src_` models (INCREMENTAL tables), which:
+1. Read raw parquet with payload
+2. **Tech dedup** by `entity_id` (remove duplicate ingestions)
+3. Extract JSON fields → payload discarded
+4. **Biz dedup** by business key (e.g. `order_id`) on flat data → negligible memory
 
-1. **First:** Rank using only key columns (lightweight)
-2. **Then:** Filter to winners
-3. **Finally:** Join back to get full payload
+This produces 1 row per business entity with all fields extracted. Downstream `stg_` and `std_` models work with flat data only — no payload, no dedup.
 
-### Standard Approach (Memory-Heavy)
+### Why Both Dedup Levels in src_ (Not Split Across src_/stg_)
 
-```sql
--- BAD: Loads full payload into window function
-WITH ranked AS (
-    SELECT
-        *,  -- Full payload loaded
-        ROW_NUMBER() OVER (
-            PARTITION BY entity_id
-            ORDER BY event_timestamp DESC
-        ) as rn
-    FROM source
-)
-SELECT * FROM ranked WHERE rn = 1
-```
+- Tech dedup (entity_id): removes same event ingested via multiple channels
+- Biz dedup (order_id): keeps latest version when same order has multiple events
+- Biz dedup runs on **flat extracted data** (no payload) → negligible additional memory
+- If biz dedup were in stg_, unnest models reading src_ would see multiple versions of the same order → **data inconsistency**
 
-**Problem:** DuckDB loads entire `payload` column for all rows into memory for the window function.
-
-### Strict Late Materialization (Memory-Efficient)
+### Current Implementation (src_sapo_orders)
 
 ```sql
--- GOOD: Only keys in window function
-WITH ranked_keys AS (
-    SELECT
-        entity_id,
-        _dlt_id,  -- Unique row identifier
-        ROW_NUMBER() OVER (
-            PARTITION BY entity_id
-            ORDER BY
-                event_timestamp DESC,
-                CASE ingest_method
-                    WHEN 'webhook' THEN 3
-                    WHEN 'history_log' THEN 2
-                    ELSE 1
-                END DESC
-        ) AS rn
+{{ config(
+    materialized='incremental',
+    unique_key='order_id',
+    incremental_strategy='delete+insert',
+    tags=['source', 'sapo']
+) }}
+
+-- Step 1: Read raw data (incremental window)
+WITH raw_data AS (
+    SELECT entity_id, entity_type, event_timestamp, ingest_method, payload
     FROM {{ source('sapo_raw', 'order') }}
+    {% if is_incremental() %}
+    WHERE event_timestamp > (SELECT MAX(event_timestamp) - INTERVAL 7 DAY FROM {{ this }})
+    {% endif %}
 ),
 
-winners AS (
-    SELECT entity_id, _dlt_id
-    FROM ranked_keys
+-- Step 2: Tech dedup — one row per entity_id (latest event, webhook priority)
+deduped AS (
+    SELECT *,
+        ROW_NUMBER() OVER (
+            PARTITION BY entity_id
+            ORDER BY event_timestamp DESC,
+                CASE WHEN ingest_method = 'webhook' THEN 3
+                     WHEN ingest_method = 'history_log' THEN 2
+                     ELSE 1 END DESC
+        ) AS rn
+    FROM raw_data
+),
+
+-- Step 3: JSON extraction — payload read once, then discarded
+extracted AS (
+    SELECT
+        entity_id, entity_type, event_timestamp, ingest_method,
+        json_extract_string(payload, '$.id') as order_id,
+        json_extract_string(payload, '$.modified_on') as modified_on,
+        -- ... 50+ scalar fields ...
+        json_extract_string(payload, '$.order_line_items') as order_line_items_json,
+        json_extract_string(payload, '$.payments') as payments_json,
+        json_extract_string(payload, '$.fulfillments') as fulfillments_json
+    FROM deduped
     WHERE rn = 1
 )
 
--- Join back to get full payload
-SELECT src.*
-FROM {{ source('sapo_raw', 'order') }} src
-INNER JOIN winners w
-    ON src._dlt_id = w._dlt_id
+-- Step 4: Biz dedup — one row per order_id (flat data, no payload)
+SELECT * FROM extracted
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY order_id
+    ORDER BY event_timestamp DESC, modified_on DESC
+) = 1
 ```
 
-**Benefit:** Window function processes only lightweight columns. Full payload fetched only for winning rows.
+**Memory profile:**
+- Parquet scan (7-day window, with payload): ~500MB
+- ROW_NUMBER tech dedup (sorts rows carrying payload): ~200MB
+- JSON extraction (streaming, payload freed after): ~300MB
+- ROW_NUMBER biz dedup (flat data only): ~100MB
+- **Peak: ~1.1GB** (well under 5GB limit)
 
 ---
 
@@ -119,68 +136,35 @@ ROW_NUMBER() OVER (
 
 ## Model Examples
 
-### stg_sapo_orders
+### stg_sapo_orders (VIEW — enrichment only, no dedup)
 
 ```sql
-{{ config(
-    materialized='view',
-    tags=['staging', 'orders', 'otp']
-) }}
+{{ config(materialized='view', tags=['staging', 'orders']) }}
 
-WITH source AS (
+-- All dedup (tech + biz) already done in src_sapo_orders.
+-- This model only adds enrichment joins.
+
+WITH orders AS (
     SELECT * FROM {{ ref('src_sapo_orders') }}
 ),
 
--- Step 1: Lightweight ranking
-ranked_keys AS (
-    SELECT
-        entity_id,
-        _dlt_id,
-        ROW_NUMBER() OVER (
-            PARTITION BY entity_id
-            ORDER BY
-                event_timestamp DESC,
-                CASE ingest_method
-                    WHEN 'webhook' THEN 3
-                    WHEN 'history_log' THEN 2
-                    ELSE 1
-                END DESC
-        ) AS rn
-    FROM source
-),
-
--- Step 2: Get winner IDs
-winners AS (
-    SELECT _dlt_id
-    FROM ranked_keys
-    WHERE rn = 1
-),
-
--- Step 3: Fetch full data for winners only
-deduplicated AS (
-    SELECT s.*
-    FROM source s
-    INNER JOIN winners w ON s._dlt_id = w._dlt_id
+mapped_tags AS (
+    SELECT id, mapping_tag
+    FROM {{ ref('ref_order_sources') }}
+    WHERE mapping_tag IS NOT NULL
 )
 
--- Step 4: Extract and transform
 SELECT
-    CAST(entity_id AS VARCHAR) AS order_id,
-    payload->>'code' AS order_code,
-    payload->>'status' AS status,
-    payload->>'payment_status' AS payment_status,
-    payload->>'fulfillment_status' AS fulfillment_status,
-    CAST(payload->>'total' AS DECIMAL(15, 2)) AS total,
-    CAST(payload->>'total_discount' AS DECIMAL(15, 2)) AS total_discount,
-    CAST(payload->>'total' AS DECIMAL(15, 2))
-        - CAST(payload->>'total_discount' AS DECIMAL(15, 2)) AS net_total,
-    payload->>'customer_id' AS customer_id,
-    payload->>'location_id' AS location_id,
-    CAST(payload->>'created_on' AS TIMESTAMP) AS created_at,
-    CAST(payload->>'modified_on' AS TIMESTAMP) AS modified_at,
-    event_timestamp,
-    ingest_method
-FROM deduplicated
+    o.*,
+    coalesce(cast(mt.id as string), cast(o.source_id as string)) as final_source_id,
+    pm.name as payment_method_name,
+    s.name as source_name,
+    l.name as location_name
+FROM orders o
+LEFT JOIN mapped_tags mt ON o.tags LIKE '%' || mt.mapping_tag || '%'
+LEFT JOIN {{ ref('ref_payment_methods') }} pm ON try_cast(o.payment_method_id as BIGINT) = pm.id
+LEFT JOIN {{ ref('ref_order_sources') }} s ON coalesce(cast(mt.id as string), cast(o.source_id as string)) = cast(s.id as string)
+LEFT JOIN {{ ref('ref_branch_locations') }} l ON try_cast(o.location_id as BIGINT) = l.id
 ```
 
 ---
@@ -233,40 +217,40 @@ WHERE event_timestamp > (SELECT MAX(event_timestamp) FROM {{ this }})
 ### Check for Duplicates
 
 ```sql
--- Should return 0 rows
-SELECT entity_id, COUNT(*) as cnt
-FROM {{ ref('stg_sapo_orders') }}
-GROUP BY entity_id
+-- Should return 0 rows (src_ already deduped by order_id)
+SELECT order_id, COUNT(*) as cnt
+FROM {{ ref('src_sapo_orders') }}
+GROUP BY order_id
 HAVING COUNT(*) > 1;
 ```
 
 ### Check Deduplication Stats
 
 ```sql
--- Compare raw vs deduplicated counts
+-- Compare raw vs src_ (both dedup levels applied)
 SELECT
     'raw' as layer,
     COUNT(*) as total,
     COUNT(DISTINCT entity_id) as unique_entities
-FROM {{ ref('src_sapo_orders') }}
+FROM {{ source('sapo_raw', 'order') }}
 
 UNION ALL
 
 SELECT
-    'staged',
+    'src (deduped)',
     COUNT(*),
     COUNT(DISTINCT order_id)
-FROM {{ ref('stg_sapo_orders') }};
+FROM {{ ref('src_sapo_orders') }};
 ```
 
 ### Check Source Distribution
 
 ```sql
--- See which sources won
+-- See which ingest methods won after dedup
 SELECT
     ingest_method,
     COUNT(*) as winners
-FROM {{ ref('stg_sapo_orders') }}
+FROM {{ ref('src_sapo_orders') }}
 GROUP BY ingest_method;
 ```
 
@@ -276,12 +260,14 @@ GROUP BY ingest_method;
 
 ### Issue: Out of Memory
 
-**Symptoms:** DuckDB crashes during window function
+**Symptoms:** DuckDB crashes during window function or JSON extraction
 
 **Solutions:**
-1. Verify Strict Late Materialization is used
-2. Reduce memory limit: `memory_limit: '2GB'`
-3. Process in batches by time partition
+1. Ensure src_ model is INCREMENTAL with 7-day lookback window (not full scan)
+2. Ensure payload is discarded after JSON extraction (not carried to biz dedup step)
+3. Reduce memory_limit to force earlier spill-to-disk (e.g. 4-5GB)
+4. For full refresh: may need temporarily higher memory_limit
+5. See `docs/troubleshooting_duckdb_oom_stg_sapo_orders.md` for detailed history
 
 ### Issue: Wrong Record Selected
 

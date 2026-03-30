@@ -10,7 +10,7 @@ sapo_warehouse:
         - httpfs # if reading from S3/remote in future
       external_root: "{{ env_var('DBT_EXPORT_PATH') }}"
       settings:
-        memory_limit: '4GB'
+        memory_limit: '5GB'
         threads: 1
         preserve_insertion_order: false
 

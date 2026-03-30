@@ -34,6 +34,7 @@ SELECT
 
     -- Cycle
     d.date_key,
+    s.cycle_start_date as target_date,
     s.cycle_start_date,
     s.cycle_end_date,
     s.cycle_type,

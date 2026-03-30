@@ -9,22 +9,25 @@ The following Mermaid diagram illustrates the data flow from Raw Ingestion to An
 ```mermaid
 graph TD
     %% Source Layer (Hop 4)
-    subgraph Raw_Lake [Hop 4: Data Lake]
-        src_orders[src_sapo_orders]
-        src_items["src_sapo_order_items (via Unnest)"]
+    subgraph Source_Extract [Hop 4: Source Extraction]
+        src_orders["src_sapo_orders<br/>(INCREMENTAL: extract + dedup)"]
         src_cust[src_sapo_customers]
         src_acc[src_sapo_accounts]
     end
 
-    %% Staging Layer (Hop 5 - Cleaning)
+    %% Staging Layer (Hop 5 - Enrichment & Unnest)
     subgraph Staging [Layer 1: Staging]
-        stg_orders[stg_sapo_orders]
-        stg_items[stg_sapo_order_items]
+        stg_orders["stg_sapo_orders<br/>(VIEW: enrichment)"]
+        stg_items["stg_sapo_order_items<br/>(VIEW: unnest)"]
+        stg_pay["stg_sapo_payments<br/>(VIEW: unnest)"]
+        stg_ful["stg_sapo_fulfillments<br/>(VIEW: unnest)"]
         stg_cust[stg_sapo_customers]
         stg_acc[stg_sapo_accounts]
 
         src_orders --> stg_orders
         src_orders --> stg_items
+        src_orders --> stg_pay
+        src_orders --> stg_ful
         src_cust --> stg_cust
         src_acc --> stg_acc
     end
@@ -84,12 +87,15 @@ graph TD
 
 _Path: `models/staging/sapo/`_
 
-| Entity                   | Description            | Key Transformations                                                                              |
-| :----------------------- | :--------------------- | :----------------------------------------------------------------------------------------------- |
-| **stg_sapo_orders**      | Raw orders flattened.  | Extracts JSON fields (`billing`, `shipping`, `amounts`). Casts strings to `DECIMAL`/`TIMESTAMP`. |
-| **stg_sapo_order_items** | Line items (exploded). | `UNNEST` from Order JSON. Extracts `quantity`, `price`, `sku`.                                   |
-| **stg_sapo_customers**   | Raw customer profiles. | Extracts `name`, `email`, `phone` from Customer JSON.                                            |
-| **stg_sapo_accounts**    | System users (Staff).  | Flattened list of employees/accounts for Staff Dimension.                                        |
+| Entity                   | Description                          | Key Transformations                                                                              |
+| :----------------------- | :----------------------------------- | :----------------------------------------------------------------------------------------------- |
+| **src_sapo_orders**      | Extraction + dedup (INCREMENTAL).    | Reads parquet, extracts 50+ JSON fields, tech dedup (entity_id) + biz dedup (order_id). Outputs flat columns + 3 nested JSON arrays as text. No payload. |
+| **stg_sapo_orders**      | Enrichment (VIEW).                   | Reads from src_, adds enrichment joins (ref_order_sources, ref_payment_methods, ref_branch_locations). No dedup — already done in src_. |
+| **stg_sapo_order_items** | Line items (VIEW, unnest).           | Unnests `order_line_items_json` from src_sapo_orders. Extracts `quantity`, `price`, `sku`.       |
+| **stg_sapo_payments**    | Payments (VIEW, unnest).             | Unnests `payments_json` from src_sapo_orders.                                                    |
+| **stg_sapo_fulfillments**| Fulfillments (VIEW, unnest).         | Unnests `fulfillments_json` from src_sapo_orders.                                                |
+| **stg_sapo_customers**   | Raw customer profiles.               | Extracts `name`, `email`, `phone` from Customer JSON.                                            |
+| **stg_sapo_accounts**    | System users (Staff).                | Flattened list of employees/accounts for Staff Dimension.                                        |
 
 ### Layer 2: Standard (Business Logic)
 
@@ -127,8 +133,9 @@ _Path: `models/marts/sales/`_
 ## 3. Dependency Rules
 
 1.  **Marts never touch Staging**: Marts must select from `std_` models (Standard Layer) or other Marts.
-2.  **Standardization First**: All casting, renaming, and complex JSON extraction happens in `stg_`. Business logic (status mapping) happens in `std_`.
-3.  **Surrogate Keys**: All tables in Marts join via `md5` Surrogate Keys (`_key`), not integer IDs.
+2.  **Extraction in src_, enrichment in stg_, normalization in std_**: JSON extraction + dedup happens in `src_` (INCREMENTAL). Enrichment joins in `stg_` (VIEW). Business logic (status mapping) in `std_` (VIEW).
+3.  **src_ is single source of truth**: All stg_ models (orders, order_items, payments, fulfillments) read from `src_sapo_orders`. No model reads raw parquet directly except src_.
+4.  **Surrogate Keys**: All tables in Marts join via `md5` Surrogate Keys (`_key`), not integer IDs.
 
 ## 4. Key Logic Deep Dive
 

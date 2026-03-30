@@ -1,5 +1,13 @@
 # Prompt: Refactor dbt staging → 4-layer architecture (src_ → stg_ → std_ → marts)
 
+> **Trạng thái: ⏳ ĐANG THỰC HIỆN (cập nhật 2026-03-30)**
+>
+> - Bước 1-3: ✅ DONE (orders pipeline refactored, biz dedup gom vào src_)
+> - Bước 4-7: ⏳ TODO (customers, accounts chưa refactor)
+> - Bước 8: ⏳ TODO (std_ inconsistencies: fact_payments, dim_staff)
+> - Bước 9: ✅ DONE (memory_limit: 5GB)
+> - Bước 10: ✅ DONE (109/109 PASS)
+
 ## Bối cảnh
 
 Đọc tài liệu kiến trúc tại:

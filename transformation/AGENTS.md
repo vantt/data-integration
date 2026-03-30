@@ -38,9 +38,12 @@ When creating or Fixing a model, **ALWAYS** comparison against a working "Golden
 
 ### 3. Materialization Rules
 
-- **Staging (`models/staging/`)**:
+- **Sources (`models/staging/src_*`)**:
+  - Default: `incremental` (delete+insert)
+  - Purpose: JSON extraction + dedup from raw parquet. Output flat columns, no payload.
+- **Staging (`models/staging/stg_*`)**:
   - Default: `view`
-  - Purpose: Deduplication and cleaning. Lightweight.
+  - Purpose: Enrichment joins, unnest. Reads from src_ (flat data). Lightweight.
 - **Intermediate (`models/intermediate/`)**:
   - Default: `ephemeral` or `table` (if reused heavily).
   - Purpose: Business logic, heavy joins.
@@ -73,23 +76,27 @@ When creating or Fixing a model, **ALWAYS** comparison against a working "Golden
 
 ### dbt OOM (Out of Memory)
 
-- **Cause**: Deduplicating heavy JSON columns (`payload`) in DuckDB.
-- **Fix**: Use Strict Late Materialization.
+- **Cause**: Processing heavy JSON payload + dedup + enrichment in a single model = single SQL query = single memory budget. CTEs don't materialize to disk.
+- **Fix**: Split into `src_` (INCREMENTAL: extract + dedup) and `stg_` (VIEW: enrichment). Each model = separate query = separate memory budget. Peak = max(model1, model2) instead of sum().
 
 ### Optimization Strategies (Applied & Proven)
 
- 1.  **Strict Late Materialization (Double Deduplication)**:
-     - **Concept**: Never `SELECT *` or select heavy columns (JSON) in the deduplication CTE.
-     - **Step 1**: Extract ONLY lightweight keys (`id`, `timestamp`) -> Dedup -> Get `winner_ids`.
-     - **Step 2**: Join `winner_ids` back to Source to get Payload -> Extract fields -> **DROP Payload immediately**.
-     - **Step 3 (Critical)**: Ensure NO further sorting/deduplication happens after the heavy payload is read. Using `QUALIFY` on the final dataset triggers a massive sort -> **OOM**.
- 
+ 1.  **src_/stg_ Split (Primary OOM Fix)**:
+     - `src_` model (INCREMENTAL): reads raw parquet, tech dedup by entity_id, extracts all JSON fields, biz dedup by order_id on flat data. Payload discarded after extraction.
+     - `stg_` model (VIEW): reads from src_ (flat data, no payload). Only enrichment joins.
+     - Memory peak of src_ ≈ 1.1GB. Memory peak of stg_ ≈ 210MB. Both well under 5GB limit.
+     - See `docs/troubleshooting_duckdb_oom_stg_sapo_orders.md` for full history.
+
  2.  **Profile Tuning (`profiles.yml`)**:
-     - **`memory_limit`**: Set LOWER than container limit (e.g., `5GB` or `7GB` for a 16GB machine). This forces DuckDB to **Spill to Disk** early instead of crashing.
-     - **`threads`**: Set to `1` or `2`. High threads = High concurrent buffer usage = OOM. Sequential processing is slower but stable.
- 
- 3.  **Handling Exact Duplicates**:
-     - If source has 100% duplicate rows, a JOIN will multiply them. Use `QUALIFY ROW_NUMBER() ... = 1` solely on the UNIQUE ID constraint at the very end, but ensure the dataset is ALREADY pruned of heavy columns if possible.
+     - **`memory_limit`**: Set to `5GB` (lower than container limit). Forces DuckDB to **Spill to Disk** early instead of crashing.
+     - **`threads`**: Set to `1`. High threads = High concurrent buffer usage = OOM. Sequential processing is slower but stable.
+
+ 3.  **Incremental Processing**:
+     - src_ models use 7-day lookback window: `WHERE event_timestamp > (SELECT MAX(event_timestamp) - INTERVAL 7 DAY FROM {{ this }})`
+     - Full refresh processes all data — may need temporarily higher memory_limit.
+
+ 4.  **Handling Exact Duplicates**:
+     - Use `QUALIFY ROW_NUMBER() ... = 1` on flat extracted data (no payload). Safe because biz dedup runs AFTER JSON extraction.
 
 ---
 **Note**: These rules supplement the global `AGENTS.md`. In case of conflict regarding *dbt specifics*, this file takes precedence.
