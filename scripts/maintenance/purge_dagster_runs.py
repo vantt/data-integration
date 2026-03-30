@@ -1,6 +1,5 @@
 import sys
 import argparse
-import time
 from datetime import datetime, timedelta
 from dagster import DagsterInstance, RunsFilter, DagsterRunStatus
 
@@ -19,7 +18,6 @@ def main():
 
     # Calculate cutoff
     cutoff_date = datetime.now() - timedelta(days=args.keep_days)
-    cutoff_timestamp = cutoff_date.timestamp()
     
     print(f"--- Dagster Run Purge Tool ---")
     print(f"Policy: Keep last {args.keep_days} days.")
@@ -61,29 +59,39 @@ def main():
 
     print(f"Found {count} runs created before {cutoff_date.strftime('%Y-%m-%d %H:%M:%S')}.")
 
+    def format_ts(ts):
+        """Format create_timestamp which may be datetime or float."""
+        if isinstance(ts, datetime):
+            return ts.strftime('%Y-%m-%d %H:%M:%S')
+        return datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M:%S')
+
     if not args.force:
         print("\n[DRY RUN] No runs were deleted.")
         print("Use --force to actually delete these runs.")
         print("\nRuns that would be deleted (oldest first):")
         for rec in records[:10]:
-            created = datetime.fromtimestamp(rec.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
             run = rec.dagster_run
-            print(f"  {created}  {run.run_id[:12]}  [{run.status.name}]  {run.job_name}")
+            print(f"  {format_ts(rec.create_timestamp)}  {run.run_id[:12]}  [{run.status.name}]  {run.job_name}")
         if count > 10:
             print(f"  ... and {count - 10} more.")
     else:
         print(f"\n[EXECUTING] Deleting {count} runs (oldest first)...")
         deleted_count = 0
         for i, rec in enumerate(records):
+            run_id = rec.dagster_run.run_id
             try:
-                instance.delete_run(rec.dagster_run.run_id)
+                # Delete run metadata and event logs separately to handle SQLite datetime issues
+                instance._run_storage.delete_run(run_id)
+                try:
+                    instance._event_storage.delete_events(run_id)
+                except TypeError:
+                    pass  # SQLite datetime conversion issue in event storage, run record already deleted
                 deleted_count += 1
                 if (i + 1) % 10 == 0:
-                    created = datetime.fromtimestamp(rec.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                    print(f"Deleted {i + 1}/{count} (up to {created})...")
+                    print(f"Deleted {i + 1}/{count} (up to {format_ts(rec.create_timestamp)})...")
             except Exception as e:
-                print(f"Failed to delete run {rec.dagster_run.run_id}: {e}")
-        
+                print(f"Failed to delete run {run_id}: {e}")
+
         print(f"\nCompleted. Deleted {deleted_count} runs.")
 
 if __name__ == "__main__":
