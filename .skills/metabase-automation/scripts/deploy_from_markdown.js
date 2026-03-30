@@ -126,6 +126,16 @@ async function main() {
     console.log(`🖥️  Ensuring Dashboard: ${dashboard.name}`);
     const dashRemote = await client.dashboard.ensure(dashboard.name, "", colId);
 
+    // Fetch existing dashboard cards to scope updates by dashboard (not just collection)
+    const dashDetail = await client.core.request(`/api/dashboard/${dashRemote.id}`);
+    const existingDashCards = dashDetail.dashcards || dashDetail.ordered_cards || [];
+    const dashCardMap = {}; // question name -> card object
+    for (const dc of existingDashCards) {
+      if (dc.card && dc.card.name) {
+        dashCardMap[dc.card.name] = dc.card;
+      }
+    }
+
     const cardConfigs = [];
 
     // Process Questions
@@ -135,11 +145,44 @@ async function main() {
         continue;
       }
 
-      // Create Card
-      const card = await client.card.ensure(q.name, q.sql, defaultDbId, colId, {
-        display: q.viz ? q.viz.display : "table",
-        visualization_settings: q.viz || {},
-      });
+      let card;
+      const existingCard = dashCardMap[q.name];
+
+      if (existingCard) {
+        // Update existing card already on this dashboard
+        console.log(`ℹ️ Question '${q.name}' exists on dashboard (ID: ${existingCard.id})`);
+        try {
+          await client.core.request(`/api/card/${existingCard.id}`, 'PUT', { archived: false });
+        } catch (e) { /* ignore */ }
+
+        card = await client.core.request(`/api/card/${existingCard.id}`, 'PUT', {
+          name: q.name,
+          collection_id: colId,
+          dataset_query: {
+            type: "native",
+            native: { query: q.sql, "template-tags": {} },
+            database: defaultDbId
+          },
+          display: q.viz ? q.viz.display : "table",
+          visualization_settings: q.viz || {}
+        });
+        console.log(`✅ Updated Question '${q.name}' (ID: ${card.id})`);
+      } else {
+        // Create new card (not found on this dashboard — always create, never reuse from other dashboards)
+        const payload = {
+          name: q.name,
+          collection_id: colId,
+          dataset_query: {
+            type: "native",
+            native: { query: q.sql, "template-tags": {} },
+            database: defaultDbId
+          },
+          display: q.viz ? q.viz.display : "table",
+          visualization_settings: q.viz || {}
+        };
+        card = await client.core.request('/api/card', 'POST', payload);
+        console.log(`✅ Created Question '${q.name}' (ID: ${card.id})`);
+      }
 
       // Prepare for Dashboard Sync
       const pos = q.pos || { row: 0, col: 0, size_x: 4, size_y: 4 };
