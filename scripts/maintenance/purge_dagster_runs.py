@@ -50,12 +50,11 @@ def main():
         statuses=[status_filter] if status_filter else None
     )
 
-    # Fetch runs, sorted oldest-first for predictable deletion order
+    # Fetch run records sorted oldest-first (RunRecord has create_timestamp, DagsterRun does not)
     print("Fetching runs to purge (this may take a moment)...")
-    runs_to_delete = instance.get_runs(filters=filters)
-    runs_to_delete.sort(key=lambda r: r.create_timestamp)
-    count = len(runs_to_delete)
-    
+    records = instance.get_run_records(filters=filters, ascending=True)
+    count = len(records)
+
     if count == 0:
         print("No runs found matching the criteria.")
         return
@@ -65,25 +64,25 @@ def main():
     if not args.force:
         print("\n[DRY RUN] No runs were deleted.")
         print("Use --force to actually delete these runs.")
-        # Print sample
         print("\nRuns that would be deleted (oldest first):")
-        for run in runs_to_delete[:10]:
-            created = datetime.fromtimestamp(run.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+        for rec in records[:10]:
+            created = datetime.fromtimestamp(rec.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            run = rec.dagster_run
             print(f"  {created}  {run.run_id[:12]}  [{run.status.name}]  {run.job_name}")
         if count > 10:
             print(f"  ... and {count - 10} more.")
     else:
-        print(f"\n[EXECUTING] Deleting {count} runs...")
+        print(f"\n[EXECUTING] Deleting {count} runs (oldest first)...")
         deleted_count = 0
-        for i, run in enumerate(runs_to_delete):
+        for i, rec in enumerate(records):
             try:
-                created = datetime.fromtimestamp(run.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
-                instance.delete_run(run.run_id)
+                instance.delete_run(rec.dagster_run.run_id)
                 deleted_count += 1
                 if (i + 1) % 10 == 0:
-                    print(f"Deleted {i + 1}/{count} (oldest: {created})...")
+                    created = datetime.fromtimestamp(rec.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+                    print(f"Deleted {i + 1}/{count} (up to {created})...")
             except Exception as e:
-                print(f"Failed to delete run {run.run_id}: {e}")
+                print(f"Failed to delete run {rec.dagster_run.run_id}: {e}")
         
         print(f"\nCompleted. Deleted {deleted_count} runs.")
 
