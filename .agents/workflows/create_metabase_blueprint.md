@@ -18,7 +18,7 @@ First, clearly state what you want to build.
 
 Ask the Agent to create the file for you.
 
-> "Create a new blueprint `docs/metabase-workspace/{domain}-blueprint-{purpose}.md` based on the template `.agent/skills/metabase-automation/templates/blueprint_template.md`. Include the following metrics: [List specific metrics]."
+> "Create a new blueprint `docs/metabase-workspace/{domain}-blueprint-{purpose}.md` based on the template `.skills/metabase-automation/templates/blueprint_template.md`. Include the following metrics: [List specific metrics]."
 
 **Example Prompt:**
 

@@ -22,7 +22,7 @@ This workflow deploys analytics configurations (Dashboards, Questions, Models) f
     Replace `<file_path>` with your blueprint path.
 
     ```bash
-    node .agent/skills/metabase-automation/scripts/deploy_from_markdown.js docs/metabase-workspace/sales-blueprint-daily.md
+    node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/metabase-workspace/sales-blueprint-daily.md
     ```
 
     _Tip: To deploy a different file, just change the path argument._

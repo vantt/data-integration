@@ -1,6 +1,6 @@
 ---
 name: setup_metabase_mcp
-description: Instructions to setup and configure the Metabase MCP server for Antigravity or other MCP clients.
+description: Instructions to setup and configure the Metabase MCP server for AI coding agents (Claude Code, Antigravity, etc.).
 ---
 
 # Setup Metabase MCP
@@ -15,9 +15,11 @@ This skill guides you through checking and configuring the Metabase MCP server u
 - Metabase instance running (default: http://127.0.0.1:3000/)
 - Metabase API Key available (Admin -> Settings -> API Key or User Account -> Settings)
 
-### 2. Configuration for `mcp_config.json`
+### 2. Configuration
 
-Add or update the `metabase` entry in your `mcp_config.json`.
+Add the `metabase` MCP server entry to your agent's config file:
+- **Claude Code**: `.claude/settings.local.json` (under `mcpServers`)
+- **Antigravity**: `mcp_config.json`
 
 **Critical**: Use the `disabledTools` list to exclude high-volume or irrelevant tools that can clutter the context window.
 
@@ -146,6 +148,6 @@ Add or update the `metabase` entry in your `mcp_config.json`.
 
 After updating the configuration:
 
-1. Restart the MCP client (Antigravity).
+1. Restart your MCP client (Claude Code, Antigravity, or other).
 2. Run `mcp_metabase_db_list` to verify connectivity.
 3. Check `mcp_metabase_db_schemas` for your target database.

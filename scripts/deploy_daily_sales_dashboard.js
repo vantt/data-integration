@@ -1,5 +1,5 @@
 // require('dotenv').config(); // Using node --env-file=.env instead
-const MetabaseClient = require('../.agent/skills/metabase-automation/scripts/metabase_client');
+const MetabaseClient = require('../.skills/metabase-automation/scripts/metabase_client');
 
 // Configuration
 const METABASE_URL = process.env.METABASE_URL;

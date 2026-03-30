@@ -1,13 +1,16 @@
 ---
 name: Metabase Automation (Modular Node.js)
-description: A robust, modular skill for programmatically managing Metabase Collections, Questions, Dashboards, Metrics, and Models.
+description: A robust, modular skill for programmatically managing Metabase Collections, Questions, Dashboards, Metrics, and Models. Shared by Claude Code and Antigravity.
 ---
 
 # Metabase Automation Skill
 
+> **Location**: `.skills/metabase-automation/` — agent-agnostic shared tooling.
+> Both Claude Code (`.claude/commands/`) and Antigravity (`.agents/skills/`) reference this directory.
+
 ## 🧠 Cognitive Framework (How to Think)
 
-**READ FIRST**: `STRATEGY.md`
+**READ FIRST**: `.skills/metabase-automation/STRATEGY.md`
 This skill is not just a tool; it enforces Analytics Engineering best practices.
 
 - **Archetypes**: Decide between _Pulse_, _Cockpit_, or _Tool_.
@@ -18,16 +21,16 @@ This skill provides a high-level Node.js client for automating Metabase content 
 
 ## 📂 Structure
 
-- `scripts/metabase_client.js`: Main entry point.
-- `lib/metabase_core.js`: Low-level API client.
-- `lib/resources/`: Resource managers.
+- `.skills/metabase-automation/scripts/metabase_client.js`: Main entry point.
+- `.skills/metabase-automation/lib/metabase_core.js`: Low-level API client.
+- `.skills/metabase-automation/lib/resources/`: Resource managers.
 
 ## 🚀 Usage
 
 ### 1. Import the Client
 
 ```javascript
-const MetabaseClient = require("./.agent/skills/metabase-automation/scripts/metabase_client");
+const MetabaseClient = require("./.skills/metabase-automation/scripts/metabase_client");
 
 // Option A: API Key (Standard)
 const client = new MetabaseClient(METABASE_URL, API_KEY);
@@ -176,26 +179,26 @@ module.exports = {
 
 ````bash
 ```bash
-node .agent/skills/metabase-automation/scripts/deploy_from_config.js ./dashboard_config.js
+node .skills/metabase-automation/scripts/deploy_from_config.js ./dashboard_config.js
 ````
 
 ### 5. Literate Configuration (Markdown Blueprints)
 
 Define your analytics in Markdown and deploy them directly.
 
-**Template**: `.agent/skills/metabase-automation/templates/blueprint_template.md`
+**Template**: `.skills/metabase-automation/templates/blueprint_template.md`
 
 **1. Create a Blueprint**
 
 ```bash
-node .agent/skills/metabase-automation/scripts/create_blueprint.js <domain> <purpose>
-# Example: node .agent/skills/metabase-automation/scripts/create_blueprint.js sales daily
+node .skills/metabase-automation/scripts/create_blueprint.js <domain> <purpose>
+# Example: node .skills/metabase-automation/scripts/create_blueprint.js sales daily
 ```
 
 **2. Deploy a Blueprint**
 
 ```bash
-node .agent/skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_metrics.md
+node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_metrics.md
 ```
 
 ## 🛠️ API Details

@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git -C \"D:\\\\_1.FWG_PARA\\\\1.Projects\\\\dev\\\\dataware_house\\\\data-integration2\" status --short)",
       "Bash(git -C \"D:\\\\_1.FWG_PARA\\\\1.Projects\\\\dev\\\\dataware_house\\\\data-integration2\" diff --stat)",
-      "Bash(git -C \"D:\\\\_1.FWG_PARA\\\\1.Projects\\\\dev\\\\dataware_house\\\\data-integration2\" diff HEAD --name-only)"
+      "Bash(git -C \"D:\\\\_1.FWG_PARA\\\\1.Projects\\\\dev\\\\dataware_house\\\\data-integration2\" diff HEAD --name-only)",
+      "Bash(git mv:*)",
+      "Bash(git add:*)"
     ]
   }
 }

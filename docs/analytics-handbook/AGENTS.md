@@ -135,7 +135,7 @@ SELECT ...
 
 To implement Blueprints, use the **Metabase Automation Skill**.
 
-- **Skill Definition**: `.agent/skills/metabase-automation/SKILL.md`
+- **Skill Definition**: `.skills/metabase-automation/SKILL.md`
 - **Capability**: Programmatically create Collections, Questions (Cards), and Dashboards from JSON/Markdown specs.
 
 ### Available Workflows
@@ -144,7 +144,7 @@ Use these slash commands to accelerate your work:
 
 - **/create_metabase_blueprint**: Generates a new Blueprint file from a template.
 - **/deploy_metabase_blueprint**: Deploys a specific Blueprint file to the Metabase instance.
-  - *Usage*: `node .agent/skills/metabase-automation/scripts/deploy_blueprint.js [path/to/blueprint.md]`
+  - *Usage*: `node .skills/metabase-automation/scripts/deploy_blueprint.js [path/to/blueprint.md]`
 - **/manage_metabase_resources**: General management (sync schemas, list collections).
 
 ## 💡 Tips for Success

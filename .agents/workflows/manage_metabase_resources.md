@@ -8,12 +8,12 @@ This workflow provides a standardized process for managing Metabase content as c
 
 ## Prerequisites
 
-- **Metabase Automation Skill**: `.agent/skills/metabase-automation/`
+- **Metabase Automation Skill**: `.skills/metabase-automation/`
 - **Node.js Environment**: Available to run scripts.
 
 ## Step 1: Strategic Planning (The "Think" Phase)
 
-**STOP**: Before writing code, consult `.agent/skills/metabase-automation/STRATEGY.md`.
+**STOP**: Before writing code, consult `.skills/metabase-automation/STRATEGY.md`.
 
 1.  **classify Archetype**:
     - _Pulse_ (High-level)? _Cockpit_ (Action-oriented)? _Tool_ (Exploratory)?
@@ -43,7 +43,7 @@ Create a script file (e.g., `scripts/manage_resources.js`) using the appropriate
 ### Template A: Semantic Layer
 
 ```javascript
-const MetabaseClient = require("../.agent/skills/metabase-automation/scripts/metabase_client");
+const MetabaseClient = require("./.skills/metabase-automation/scripts/metabase_client");
 const client = new MetabaseClient(URL, KEY);
 await client.connect();
 

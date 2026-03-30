@@ -413,13 +413,13 @@ We treat Metabase configuration as code, defined in Markdown.
 ### 1. The Strategy
 
 - **Documentation is Code**: We write blueprints in `docs/` that double as documentation and deployment configs.
-- **Execution**: `node .agent/skills/metabase-automation/scripts/deploy_from_markdown.js <file.md>`
+- **Execution**: `node .skills/metabase-automation/scripts/deploy_from_markdown.js <file.md>`
 
 ### 2. File Locations
 
 - **Blueprints**: `docs/blueprint_*.md` (e.g., `blueprint_sales.md`).
-- **Template**: `.agent/skills/metabase-automation/templates/blueprint_template.md` (Syntax Reference).
-- **Parsers**: `.agent/skills/metabase-automation/lib/markdown_parser.js`.
+- **Template**: `.skills/metabase-automation/templates/blueprint_template.md` (Syntax Reference).
+- **Parsers**: `.skills/metabase-automation/lib/markdown_parser.js`.
 
 ### 3. Workflow
 
