@@ -50,9 +50,10 @@ def main():
         statuses=[status_filter] if status_filter else None
     )
 
-    # Fetch runs
+    # Fetch runs, sorted oldest-first for predictable deletion order
     print("Fetching runs to purge (this may take a moment)...")
     runs_to_delete = instance.get_runs(filters=filters)
+    runs_to_delete.sort(key=lambda r: r.create_timestamp)
     count = len(runs_to_delete)
     
     if count == 0:
@@ -65,21 +66,22 @@ def main():
         print("\n[DRY RUN] No runs were deleted.")
         print("Use --force to actually delete these runs.")
         # Print sample
-        print("\nSample of runs that would be deleted:")
-        print("\nSample of runs that would be deleted:")
-        for run in runs_to_delete[:5]:
-            print(f" - {run.run_id} [{run.status}]")
-        if count > 5:
-            print(f" ... and {count - 5} more.")
+        print("\nRuns that would be deleted (oldest first):")
+        for run in runs_to_delete[:10]:
+            created = datetime.fromtimestamp(run.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            print(f"  {created}  {run.run_id[:12]}  [{run.status.name}]  {run.job_name}")
+        if count > 10:
+            print(f"  ... and {count - 10} more.")
     else:
         print(f"\n[EXECUTING] Deleting {count} runs...")
         deleted_count = 0
         for i, run in enumerate(runs_to_delete):
             try:
+                created = datetime.fromtimestamp(run.create_timestamp).strftime('%Y-%m-%d %H:%M:%S')
                 instance.delete_run(run.run_id)
                 deleted_count += 1
                 if (i + 1) % 10 == 0:
-                    print(f"Deleted {i + 1}/{count}...")
+                    print(f"Deleted {i + 1}/{count} (oldest: {created})...")
             except Exception as e:
                 print(f"Failed to delete run {run.run_id}: {e}")
         
