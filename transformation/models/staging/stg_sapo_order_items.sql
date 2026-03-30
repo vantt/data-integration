@@ -25,8 +25,6 @@ unnested_items AS (
         entity_id as order_entity_id,
         json_extract_string(payload, '$.id') as order_id,
         json_extract_string(payload, '$.code') as order_code,
-        json_extract_string(payload, '$.id') as order_id,
-        json_extract_string(payload, '$.code') as order_code,
         event_timestamp,
         
         -- UNNEST the items array
@@ -63,8 +61,6 @@ SELECT
     json_extract_string(item_json, '$.product_type') as product_type,
     json_extract_string(item_json, '$.barcode') as barcode,
     json_extract_string(item_json, '$.unit') as unit,
-    
-    json_extract_string(item_json, '$.product_type') as product_type,
     
     event_timestamp as source_timestamp
 

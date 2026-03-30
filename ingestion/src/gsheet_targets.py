@@ -46,7 +46,7 @@ def _validate_rows(df):
         row_num = idx + 2
 
         # Required: cycle_start_date
-        date_col = "cycle_start_date" if "cycle_start_date" in df.columns else "setup_date"
+        date_col = "cycle_start_date"
         date_val = row.get(date_col)
         if pd.isna(date_val) or str(date_val).strip() == "":
             issues.append((row_num, date_col, "Missing. Enter the first day of the cycle (e.g. 2026-03-01)"))
@@ -172,9 +172,9 @@ def fetch_and_save_targets():
         df = valid_df
 
         # 3. Clean and Standardize
-        date_col = "cycle_start_date" if "cycle_start_date" in df.columns else "setup_date"
+        date_col = "cycle_start_date"
         df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
-
+        
         # Partition columns
         df["year"] = df[date_col].dt.year.fillna(datetime.now().year).astype(int)
         df["month"] = df[date_col].dt.month.fillna(datetime.now().month).astype(int)

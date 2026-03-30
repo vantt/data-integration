@@ -37,9 +37,8 @@ WITH meta_keys AS (
     
     {% if is_incremental() %}
     -- LOGIC INCREMENTAL (Tăng trưởng):
-    -- Chỉ lấy các bản ghi có thời gian mới hơn lần chạy trước.
-    -- Dựa vào MAX(event_timestamp) của chính bảng đích này ({{ this }}).
-    WHERE event_timestamp > (SELECT MAX(event_timestamp) FROM {{ this }})
+    -- Chỉ lấy các bản ghi có thời gian mới hơn lần chạy trước (lùi 7 ngày cho late arriving data).
+    WHERE event_timestamp > (SELECT MAX(event_timestamp) - INTERVAL 7 DAY FROM {{ this }})
     {% endif %}
 ),
 

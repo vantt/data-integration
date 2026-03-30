@@ -21,6 +21,7 @@ seeds:
         platform: varchar
         platform_group: varchar
         is_generic_source: boolean
+        mapping_tag: varchar
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt

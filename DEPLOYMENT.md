@@ -45,7 +45,7 @@ Open **PowerShell** or **Command Prompt** in the project directory.
 Run this if you manage the server securely and want easy updates:
 
 ```powershell
-docker compose up -d --build
+docker compose up -d --build --remove-orphans
 ```
 
 #### Option B: High Security (Delete .env.prod)
@@ -93,7 +93,13 @@ You should see 3 services running: `data_platform`, `webhook_consumer`, `metabas
 If you modify code in `ingestion`, `transformation`, etc., you need to rebuild:
 
 ```powershell
-docker compose up -d --build data_platform
+docker compose up -d data_platform --build --remove-orphans
+```
+
+### Cleanup Old Dagster Runs
+
+```
+docker compose exec data_platform python scripts/maintenance/purge_dagster_runs.py --keep-days <số ngày> --force
 ```
 
 ### Viewing Logs

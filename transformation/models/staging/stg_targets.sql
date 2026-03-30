@@ -10,10 +10,7 @@ WITH raw_targets AS (
 sanitized AS (
     SELECT
         -- 1. Cycle: start date + type + repeat
-        -- Column renamed from setup_date to cycle_start_date in the Sheet
-        try_cast(
-            coalesce(cycle_start_date, setup_date) as date
-        ) as cycle_start_date,
+        try_cast(cycle_start_date as date) as cycle_start_date,
 
         -- Cycle type: daily, weekly, monthly, quarterly, yearly
         -- Default to 'monthly' for backward compatibility with old rows
