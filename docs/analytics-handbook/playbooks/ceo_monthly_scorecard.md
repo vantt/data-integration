@@ -7,7 +7,7 @@
 - **Cadence:** 1st–3rd of each month, reviewing the closed month.
 - **Archetype:** Executive Pulse + Strategic Analysis
 - **Metabase Collection:** `Executive` > `Monthly Reports`
-- **Related:** [Monthly Business Review Process](./sales_monthly_review.md), [Sales Executive Dashboard](./sales_executive.md)
+- **Related:** [Monthly Business Review Process](./sales_monthly_review.md)
 
 ## Key Questions
 

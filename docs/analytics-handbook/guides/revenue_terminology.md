@@ -130,8 +130,11 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 |-----------|-------|---------|
 | **Đơn nội bộ** | Ưu đãi nhân viên, quà tặng, test | `channel_category = 'Internal'` |
 | **Đơn 100% discount** | total_collected = 0, toàn bộ là chiết khấu | Quà tặng, sampling, đơn nội bộ |
+| **Đơn US (Export)** | Đơn xuất khẩu B2B, 100% discount nội bộ | `channel_name = 'US'` |
 
-> **Quy ước báo cáo:** Đơn nội bộ (Internal) **không nên tính vào doanh thu kinh doanh** trừ khi CEO yêu cầu. Các dashboard mặc định lọc `channel_category != 'Internal'` hoặc `status NOT IN ('CANCELLED', 'Voided')`.
+> **Quy ước báo cáo:**
+> - Đơn nội bộ (Internal) **không nên tính vào doanh thu kinh doanh** trừ khi CEO yêu cầu. Các dashboard mặc định lọc `channel_category != 'Internal'` hoặc `status NOT IN ('CANCELLED', 'Voided')`.
+> - Đơn kênh **US** (Export/B2B, 100% discount) **phải loại khỏi dashboard Executive** vì làm méo chỉ số doanh thu. Filter: `channel_key != (SELECT channel_key FROM dim_channels WHERE channel_name = 'US')`.
 
 ---
 
@@ -180,35 +183,35 @@ Khi đọc dashboard, nhớ:
 
 | Sapo API field | Sapo field name | Thuật ngữ chuẩn | Ghi chú |
 |---------------|----------------|-----------------|---------|
-| `$.total` | `total_amount` | **Total Collected** | Đã trừ discount, ĐÃ cộng thuế |
+| `$.total` | `total_amount` | **Net Revenue** | Đã trừ discount, KHÔNG gồm thuế = SUM(price×qty) − discount |
 | `$.total_discount` | `total_discount` | **Discount Amount** | Tổng chiết khấu |
 | `$.tax_amount` | `tax_amount` | **Tax Amount** | VAT (8% hoặc 10%) |
-| *Không có field riêng* | `total_amount + total_discount` | **Gross Revenue** | Phải tự tính |
-| *Không có field riêng* | `total_amount - tax_amount` | **Net Revenue** | Phải tự tính |
+| *Không có field riêng* | `total_amount + total_discount` | **Gross Revenue** | = SUM(price×qty), phải tự tính |
+| *Không có field riêng* | `total_amount + tax_amount` | **Total Collected** | Tổng thu từ khách, phải tự tính |
 
 ### 6.2. Pipeline: Sapo → Staging → Mart
 
 ```
 Sapo API                   std_orders                 fact_orders
 ─────────────────────────────────────────────────────────────────
-$.total                 →  total_amount            →  total_collected
+$.total                 →  total_amount            →  net_revenue (trực tiếp)
 $.total_discount        →  total_discount_amount   →  discount_amount
 $.tax_amount            →  total_tax_amount        →  tax_amount
-(computed)              →  (computed)              →  gross_revenue
-(computed)              →  (computed)              →  net_revenue
+(computed)              →  (computed)              →  gross_revenue = net_revenue + discount
+(computed)              →  (computed)              →  total_collected = net_revenue + tax
 ```
 
 ### 6.3. Công thức trong fact_orders
 
 ```sql
--- Giá niêm yết (trước chiết khấu, gồm thuế)
-gross_revenue    = total_collected + discount_amount
+-- Doanh thu thuần (sau chiết khấu, trước thuế) — field gốc từ Sapo $.total
+net_revenue      = total_amount
 
--- Doanh thu thuần (sau chiết khấu, trước thuế)
-net_revenue      = total_collected - tax_amount
+-- Giá niêm yết = SUM(price × qty), trước chiết khấu & thuế
+gross_revenue    = total_amount + total_discount_amount
 
--- Tổng thu từ khách (sau chiết khấu, gồm thuế) — field gốc từ Sapo
-total_collected  = total_amount (từ Sapo)
+-- Tổng thu từ khách (sau chiết khấu, gồm thuế)
+total_collected  = total_amount + total_tax_amount
 
 -- Tỷ lệ chiết khấu
 discount_rate    = discount_amount / gross_revenue × 100%

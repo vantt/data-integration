@@ -69,11 +69,11 @@ SELECT
     
     -- Financial Metrics (Revenue Waterfall)
     -- See: docs/analytics-handbook/guides/revenue_terminology.md
-    total_amount + total_discount_amount as gross_revenue,   -- Giá niêm yết (trước chiết khấu, gồm thuế)
+    total_amount + total_discount_amount as gross_revenue,    -- Giá niêm yết = SUM(price × qty), trước chiết khấu & thuế
     total_discount_amount as discount_amount,                -- Chiết khấu
-    total_amount - total_tax_amount as net_revenue,          -- Doanh thu thuần (sau chiết khấu, trước thuế)
+    total_amount as net_revenue,                             -- Doanh thu thuần (sau chiết khấu, trước thuế) = Sapo $.total
     total_tax_amount as tax_amount,                          -- Thuế VAT
-    total_amount as total_collected,                         -- Tổng thu từ khách (sau chiết khấu, gồm thuế)
+    total_amount + total_tax_amount as total_collected,      -- Tổng thu từ khách (sau chiết khấu, gồm thuế)
     
     -- Performance Metrics
     fs.first_shipped_at,                                     -- Ngày xuất kho đầu tiên
