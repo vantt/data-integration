@@ -49,6 +49,7 @@ Extend and improve the system.
 | Document | Description |
 |----------|-------------|
 | [Contributing](./CONTRIBUTING.md) | Development workflow, code standards, PR process |
+| [Architecture Decisions](./decisions/) | ADRs — lý do đằng sau các quyết định thiết kế quan trọng |
 
 ---
 
