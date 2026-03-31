@@ -2,9 +2,10 @@
 
 **Playbook**: [CEO Weekly Pulse](../playbooks/ceo_weekly_pulse.md)
 
-> **Target Collection:** `Executive` > `Weekly Reports`
+> **Target Collection:** `Executive`
 > **Role:** CEO, Co-Founders
 > **Archetype:** Executive Pulse
+> **Captured from:** Metabase Dashboard ID 11 (2026-03-31)
 
 ## 📂 Collection: Executive
 
@@ -27,16 +28,24 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar"
+}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 ---
 
 #### ❓ Question: Weekly Gross Revenue
+
 
 Tổng giá trị hàng hóa (trước chiết khấu) tuần qua.
 
@@ -56,7 +65,10 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Gross Revenue": { "number_style": "currency", "currency": "VND" }
+      "Gross Revenue": {
+        "number_style": "currency",
+        "currency": "VND"
+      }
     }
   }
 }
@@ -72,6 +84,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 #### ❓ Question: Weekly Net Revenue
+
 
 Doanh thu thuần (sau chiết khấu, trước thuế) tuần qua.
 
@@ -91,7 +104,10 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Weekly Net Revenue": { "number_style": "currency", "currency": "VND" }
+      "Weekly Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND"
+      }
     }
   }
 }
@@ -107,6 +123,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 #### ❓ Question: Weekly Total Orders
+
 
 Order count for the last 7 days.
 
@@ -138,6 +155,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 #### ❓ Question: Weekly AOV
 
+
 Average order value for the last 7 days.
 
 **Domain Reference**: [AOV](../domains/sales.md#5-aov-average-order-value)
@@ -157,7 +175,10 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "AOV": { "number_style": "currency", "currency": "VND" }
+      "AOV": {
+        "number_style": "currency",
+        "currency": "VND"
+      }
     }
   }
 }
@@ -174,7 +195,124 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ---
 
+#### ❓ Question: Cancelled Orders
+
+```sql
+SELECT
+    COUNT(DISTINCT order_id) as "Cancelled Orders"
+FROM fact_orders
+WHERE status = 'CANCELLED'
+  AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND order_timestamp < date_trunc('week', current_date)
+```
+
+```json metabase-viz
+{
+  "display": "scalar"
+}
+```
+
+```json metabase-pos
+{
+  "row": 5,
+  "col": 0,
+  "size_x": 5,
+  "size_y": 3
+}
+```
+
+#### ❓ Question: Return Count
+
+```sql
+SELECT
+    COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as "Returns"
+FROM fact_orders
+WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND order_timestamp < date_trunc('week', current_date)
+```
+
+```json metabase-viz
+{
+  "display": "scalar"
+}
+```
+
+```json metabase-pos
+{
+  "row": 5,
+  "col": 5,
+  "size_x": 5,
+  "size_y": 3
+}
+```
+
+#### ❓ Question: New Customers This Week
+
+```sql
+SELECT
+    COUNT(DISTINCT customer_key) as "New Customers"
+FROM dim_customers
+WHERE date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND date(first_order_date) < date_trunc('week', current_date)
+```
+
+```json metabase-viz
+{
+  "display": "scalar"
+}
+```
+
+```json metabase-pos
+{
+  "row": 5,
+  "col": 10,
+  "size_x": 4,
+  "size_y": 3
+}
+```
+
+#### ❓ Question: Returning Customer Revenue %
+
+```sql
+SELECT
+    ROUND(
+        SUM(CASE WHEN date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days' THEN o.net_revenue ELSE 0 END) * 100.0
+        / NULLIF(SUM(o.net_revenue), 0), 1
+    ) as "Returning Revenue %"
+FROM fact_orders o
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.order_timestamp < date_trunc('week', current_date)
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Returning Revenue %": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{
+  "row": 5,
+  "col": 14,
+  "size_x": 4,
+  "size_y": 3
+}
+```
+
+---
+
 #### ❓ Question: MTD Revenue vs Target Pace
+
 
 Month-to-date revenue with expected pace toward monthly target.
 
@@ -210,13 +348,24 @@ CROSS JOIN monthly_target t
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false,
   "visualization_settings": {
+    "table.pivot": false,
     "column_settings": {
-      "MTD Revenue": { "number_style": "currency", "currency": "VND" },
-      "Monthly Target": { "number_style": "currency", "currency": "VND" },
-      "Achievement %": { "number_style": "percent", "decimals": 1 },
-      "Pace Index": { "decimals": 2 }
+      "MTD Revenue": {
+        "number_style": "currency",
+        "currency": "VND"
+      },
+      "Monthly Target": {
+        "number_style": "currency",
+        "currency": "VND"
+      },
+      "Achievement %": {
+        "number_style": "percent",
+        "decimals": 1
+      },
+      "Pace Index": {
+        "decimals": 2
+      }
     }
   }
 }
@@ -224,16 +373,17 @@ CROSS JOIN monthly_target t
 
 ```json metabase-pos
 {
-  "row": 5,
+  "row": 8,
   "col": 0,
   "size_x": 18,
-  "size_y": 3
+  "size_y": 4
 }
 ```
 
 ---
 
 #### ❓ Question: Daily Revenue Trend (14 Days)
+
 
 Revenue by day for the last 14 days — current week vs previous week side-by-side.
 
@@ -255,9 +405,15 @@ ORDER BY 1
 {
   "display": "line",
   "visualization_settings": {
-    "graph.dimensions": ["order_date"],
-    "graph.metrics": ["revenue"],
-    "graph.colors": ["#509EE3"],
+    "graph.dimensions": [
+      "order_date"
+    ],
+    "graph.metrics": [
+      "revenue"
+    ],
+    "graph.colors": [
+      "#509EE3"
+    ],
     "graph.y_axis.title_text": "Revenue (VND)",
     "graph.x_axis.title_text": ""
   }
@@ -266,14 +422,17 @@ ORDER BY 1
 
 ```json metabase-pos
 {
-  "row": 8,
+  "row": 12,
   "col": 0,
-  "size_x": 12,
-  "size_y": 8
+  "size_x": 18,
+  "size_y": 7
 }
 ```
 
+---
+
 #### ❓ Question: Revenue by Channel Category
+
 
 Revenue split by Ecommerce / Offline / Internal with WoW comparison.
 
@@ -316,12 +475,20 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false,
   "visualization_settings": {
+    "table.pivot": false,
     "column_settings": {
-      "This Week": { "number_style": "currency", "currency": "VND" },
-      "Last Week": { "number_style": "currency", "currency": "VND" },
-      "WoW %": { "number_style": "percent" }
+      "This Week": {
+        "number_style": "currency",
+        "currency": "VND"
+      },
+      "Last Week": {
+        "number_style": "currency",
+        "currency": "VND"
+      },
+      "WoW %": {
+        "number_style": "percent"
+      }
     }
   }
 }
@@ -329,84 +496,17 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 
 ```json metabase-pos
 {
-  "row": 8,
-  "col": 12,
-  "size_x": 6,
-  "size_y": 8
+  "row": 19,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
 }
 ```
 
 ---
 
-#### ❓ Question: New Customers This Week
-
-Count of first-time customers this week.
-
-**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
-
-```sql
-SELECT
-    COUNT(DISTINCT customer_key) as "New Customers"
-FROM dim_customers
-WHERE date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND date(first_order_date) < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{
-  "display": "scalar"
-}
-```
-
-```json metabase-pos
-{
-  "row": 16,
-  "col": 0,
-  "size_x": 4,
-  "size_y": 3
-}
-```
-
-#### ❓ Question: Returning Customer Revenue %
-
-Percentage of weekly revenue from returning customers.
-
-**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
-
-```sql
-SELECT
-    ROUND(
-        SUM(CASE WHEN date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days' THEN o.net_revenue ELSE 0 END) * 100.0
-        / NULLIF(SUM(o.net_revenue), 0), 1
-    ) as "Returning Revenue %"
-FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "Returning Revenue %": { "suffix": "%", "decimals": 1 }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{
-  "row": 16,
-  "col": 4,
-  "size_x": 4,
-  "size_y": 3
-}
-```
-
 #### ❓ Question: New vs Returning Daily Trend
+
 
 Daily breakdown of orders by new vs returning customers over 14 days.
 
@@ -433,12 +533,20 @@ ORDER BY 1, 2
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["order_date"],
-    "graph.metrics": ["orders"],
+    "graph.dimensions": [
+      "order_date"
+    ],
+    "graph.metrics": [
+      "orders"
+    ],
     "stackable.stack_type": "stacked",
     "series_settings": {
-      "New": { "color": "#88BDE6" },
-      "Returning": { "color": "#509EE3" }
+      "New": {
+        "color": "#88BDE6"
+      },
+      "Returning": {
+        "color": "#509EE3"
+      }
     }
   }
 }
@@ -446,45 +554,15 @@ ORDER BY 1, 2
 
 ```json metabase-pos
 {
-  "row": 16,
-  "col": 8,
-  "size_x": 10,
+  "row": 25,
+  "col": 0,
+  "size_x": 12,
   "size_y": 6
 }
 ```
 
----
-
-#### ❓ Question: Return Count
-
-Returns this week vs last week.
-
-**Domain Reference**: [Return Rate](../domains/sales.md#3-return-rate--count)
-
-```sql
-SELECT
-    COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as "Returns"
-FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{
-  "display": "scalar"
-}
-```
-
-```json metabase-pos
-{
-  "row": 22,
-  "col": 0,
-  "size_x": 6,
-  "size_y": 3
-}
-```
-
 #### ❓ Question: Discount Rate
+
 
 Discount as percentage of Gross Revenue this week.
 
@@ -504,7 +582,10 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Discount Rate %": { "suffix": "%", "decimals": 1 }
+      "Discount Rate %": {
+        "suffix": "%",
+        "decimals": 1
+      }
     }
   }
 }
@@ -512,35 +593,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 {
-  "row": 22,
-  "col": 6,
-  "size_x": 6,
-  "size_y": 3
-}
-```
-
-#### ❓ Question: Cancelled Orders
-
-Cancelled order count this week.
-
-```sql
-SELECT
-    COUNT(DISTINCT order_id) as "Cancelled Orders"
-FROM fact_orders
-WHERE status = 'CANCELLED'
-  AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{
-  "display": "scalar"
-}
-```
-
-```json metabase-pos
-{
-  "row": 22,
+  "row": 25,
   "col": 12,
   "size_x": 6,
   "size_y": 3
