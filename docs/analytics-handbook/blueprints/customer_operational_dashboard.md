@@ -252,7 +252,7 @@ Which channels bring in the most new customers this month?
 SELECT
     c.channel_name as "Channel",
     COUNT(DISTINCT o.customer_key) as "New Customers",
-    SUM(o.gmv) as "First-Order Revenue"
+    SUM(o.net_revenue) as "First-Order Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key

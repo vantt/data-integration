@@ -25,7 +25,7 @@ customer_orders AS (
         o.customer_key,
         o.order_id,
         o.order_timestamp,
-        o.gmv
+        o.total_collected
     FROM orders o
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
@@ -50,9 +50,9 @@ aggregated AS (
         COUNT(DISTINCT order_id) as frequency,
         
         -- [METRIC] Monetary Value (Lifetime Value component)
-        -- Formula: SUM(gmv)
-        -- Definition: Gross Merchandise Value. All-time total spending including tax and shipping, before returns.
-        SUM(gmv) as monetary_value
+        -- Formula: SUM(total_collected)
+        -- Definition: Total amount collected from customer (after discounts, including tax).
+        SUM(total_collected) as monetary_value
     FROM customer_orders
     GROUP BY customer_key
 )

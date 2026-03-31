@@ -37,12 +37,12 @@ WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
 { "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
 ```
 
-#### ❓ Question: Monthly GMV
+#### ❓ Question: Monthly Revenue
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gross-revenue-gmv)
 
 ```sql
-SELECT COALESCE(SUM(gmv), 0) as "Monthly GMV"
+SELECT COALESCE(SUM(net_revenue), 0) as "Monthly Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -53,7 +53,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Monthly GMV": { "number_style": "currency", "currency": "VND" } }
+    "column_settings": { "Monthly Revenue": { "number_style": "currency", "currency": "VND" } }
   }
 }
 ```
@@ -244,7 +244,7 @@ Products with the most returns in the closed month.
 SELECT
     p.product_name as "Product",
     COUNT(DISTINCT o.order_id) as "Return Count",
-    SUM(o.gmv) as "Return Revenue"
+    SUM(o.net_revenue) as "Return Revenue"
 FROM fact_orders o
 JOIN fact_sales s ON o.order_id = s.order_id
 JOIN dim_products p ON s.product_key = p.product_key
@@ -320,7 +320,7 @@ ORDER BY 2 DESC
 **Domain Reference**: [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume)
 
 ```sql
-SELECT COALESCE(SUM(o.gmv), 0) as "Social Revenue"
+SELECT COALESCE(SUM(o.net_revenue), 0) as "Social Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -371,7 +371,7 @@ Monthly social revenue over 6 months.
 ```sql
 SELECT
     date_trunc('month', o.order_timestamp)::date as month,
-    SUM(o.gmv) as "Social Revenue"
+    SUM(o.net_revenue) as "Social Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -405,11 +405,11 @@ Monthly social commerce staff leaderboard.
 SELECT
     st.full_name as "Staff",
     COUNT(DISTINCT o.order_id) as "Social Orders",
-    SUM(o.gmv) as "Social Revenue",
+    SUM(o.net_revenue) as "Social Revenue",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-         ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as "AOV",
-    ROUND(SUM(o.gmv) * 100.0 / NULLIF(
-        (SELECT SUM(o2.gmv) FROM fact_orders o2
+         ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as "AOV",
+    ROUND(SUM(o.net_revenue) * 100.0 / NULLIF(
+        (SELECT SUM(o2.net_revenue) FROM fact_orders o2
          JOIN dim_channels c2 ON o2.channel_key = c2.channel_key
          WHERE o2.status NOT IN ('CANCELLED', 'Voided')
            AND c2.platform_group IN ('Facebook', 'Zalo')
@@ -455,7 +455,7 @@ Operational health by channel — completion, cancellation, return rates.
 SELECT
     c.channel_name as "Channel",
     COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.gmv) as "Revenue",
+    SUM(o.net_revenue) as "Revenue",
     ROUND(COUNT(DISTINCT CASE WHEN o.status = 'COMPLETED' THEN o.order_id END) * 100.0
         / NULLIF(COUNT(DISTINCT o.order_id), 0), 1) as "Completion %",
     ROUND(COUNT(DISTINCT CASE WHEN o.status = 'CANCELLED' THEN o.order_id END) * 100.0
@@ -567,7 +567,7 @@ ORDER BY 1, 3 DESC
 SELECT
     payment_status as "Status",
     COUNT(DISTINCT order_id) as "Orders",
-    SUM(gmv) as "Total Amount",
+    SUM(net_revenue) as "Total Amount",
     ROUND(COUNT(DISTINCT order_id) * 100.0 / NULLIF(
         (SELECT COUNT(DISTINCT order_id) FROM fact_orders
          WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -606,9 +606,9 @@ Monthly staff productivity across all channels.
 SELECT
     st.full_name as "Staff",
     COUNT(DISTINCT o.order_id) as "Total Orders",
-    SUM(o.gmv) as "Total Revenue",
+    SUM(o.net_revenue) as "Total Revenue",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-         ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as "AOV",
+         ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as "AOV",
     ROUND(COUNT(DISTINCT CASE WHEN o.status = 'COMPLETED' THEN o.order_id END) * 100.0
         / NULLIF(COUNT(DISTINCT o.order_id), 0), 1) as "Completion %"
 FROM fact_orders o

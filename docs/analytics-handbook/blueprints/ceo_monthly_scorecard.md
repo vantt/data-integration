@@ -20,12 +20,12 @@ Aggregated monthly sales with MoM comparison.
 WITH current_month AS (
     SELECT
         COUNT(DISTINCT order_id) as total_orders,
-        COALESCE(SUM(gmv), 0) as total_gmv,
-        COALESCE(SUM(gmv - COALESCE(total_discount_amount, 0)), 0) as net_revenue,
+        COALESCE(SUM(net_revenue), 0) as total_revenue,
+        COALESCE(SUM(net_revenue), 0) as net_revenue,
         COUNT(DISTINCT customer_key) as unique_customers,
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(gmv) / COUNT(DISTINCT order_id) END as aov,
-        SUM(COALESCE(total_discount_amount, 0)) as total_discounts,
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov,
+        SUM(COALESCE(discount_amount, 0)) as total_discounts,
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as return_count
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
@@ -35,11 +35,11 @@ WITH current_month AS (
 prev_month AS (
     SELECT
         COUNT(DISTINCT order_id) as total_orders,
-        COALESCE(SUM(gmv), 0) as total_gmv,
-        COALESCE(SUM(gmv - COALESCE(total_discount_amount, 0)), 0) as net_revenue,
+        COALESCE(SUM(net_revenue), 0) as total_revenue,
+        COALESCE(SUM(net_revenue), 0) as net_revenue,
         COUNT(DISTINCT customer_key) as unique_customers,
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(gmv) / COUNT(DISTINCT order_id) END as aov
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
@@ -56,15 +56,15 @@ SELECT * FROM current_month CROSS JOIN prev_month
 
 ---
 
-#### ❓ Question: Monthly GMV
+#### ❓ Question: Monthly Revenue
 
-Total GMV for the last closed month.
+Total revenue for the last closed month.
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gmv-gross-merchandise-value)
 
 ```sql
 SELECT
-    COALESCE(SUM(gmv), 0) as "Monthly GMV"
+    COALESCE(SUM(net_revenue), 0) as "Monthly Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -76,7 +76,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Monthly GMV": { "number_style": "currency", "currency": "VND" }
+      "Monthly Revenue": { "number_style": "currency", "currency": "VND" }
     }
   }
 }
@@ -93,13 +93,13 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 #### ❓ Question: Monthly Net Revenue
 
-Net revenue (GMV minus discounts) for the last closed month.
+Doanh thu thuần (sau chiết khấu, trước thuế) for the last closed month.
 
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue)
 
 ```sql
 SELECT
-    COALESCE(SUM(gmv - COALESCE(total_discount_amount, 0)), 0) as "Monthly Net Revenue"
+    COALESCE(SUM(net_revenue), 0) as "Monthly Net Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -149,7 +149,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```sql
 SELECT
     CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-         ELSE SUM(gmv) / COUNT(DISTINCT order_id) END as "AOV"
+         ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as "AOV"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -199,7 +199,7 @@ Weekly revenue bars with cumulative target line for the closed month.
 WITH weekly_actuals AS (
     SELECT
         date_trunc('week', order_timestamp)::date as week_start,
-        SUM(gmv) as actual_revenue
+        SUM(net_revenue) as actual_revenue
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -254,8 +254,8 @@ Monthly revenue for the last 6 months.
 ```sql
 SELECT
     date_trunc('month', order_timestamp)::date as month,
-    SUM(gmv) as "GMV",
-    SUM(gmv - COALESCE(total_discount_amount, 0)) as "Net Revenue"
+    SUM(gross_revenue) as "Gross Revenue",
+    SUM(net_revenue) as "Net Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
@@ -269,7 +269,7 @@ ORDER BY 1
   "display": "line",
   "visualization_settings": {
     "graph.dimensions": ["month"],
-    "graph.metrics": ["GMV", "Net Revenue"],
+    "graph.metrics": ["Gross Revenue", "Net Revenue"],
     "graph.colors": ["#509EE3", "#84BB4C"]
   }
 }
@@ -295,7 +295,7 @@ Donut chart — Ecommerce / Offline / Internal split.
 ```sql
 SELECT
     c.channel_category as "Channel Category",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -336,10 +336,10 @@ Full channel breakdown with MoM comparison.
 WITH this_month AS (
     SELECT
         c.channel_name,
-        SUM(o.gmv) as revenue,
+        SUM(o.net_revenue) as revenue,
         COUNT(DISTINCT o.order_id) as orders,
         CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-             ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as aov
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -350,7 +350,7 @@ WITH this_month AS (
 last_month AS (
     SELECT
         c.channel_name,
-        SUM(o.gmv) as revenue
+        SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -490,7 +490,7 @@ Revenue contribution by VIP / Loyal / Regular.
 ```sql
 SELECT
     c.customer_segment as "Segment",
-    SUM(o.gmv) as "Revenue",
+    SUM(o.net_revenue) as "Revenue",
     COUNT(DISTINCT o.order_id) as "Orders"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
@@ -568,15 +568,15 @@ LIMIT 10
 
 #### ❓ Question: Revenue Waterfall
 
-GMV → Discounts → Returns → Net Revenue breakdown.
+Gross Revenue → Discounts → Returns → Net Revenue breakdown.
 
 **Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact), [Return Rate](../domains/sales.md#3-return-rate--count)
 
 ```sql
 SELECT
-    'GMV' as "Component",
+    'Gross Revenue' as "Component",
     1 as sort_order,
-    SUM(gmv) as "Amount"
+    SUM(gross_revenue) as "Amount"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -587,7 +587,7 @@ UNION ALL
 SELECT
     '(-) Discounts' as "Component",
     2 as sort_order,
-    -SUM(COALESCE(total_discount_amount, 0)) as "Amount"
+    -SUM(COALESCE(discount_amount, 0)) as "Amount"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -598,7 +598,7 @@ UNION ALL
 SELECT
     '(-) Returns' as "Component",
     3 as sort_order,
-    -SUM(CASE WHEN fulfillment_status = 'RETURNED' THEN gmv ELSE 0 END) as "Amount"
+    -SUM(CASE WHEN fulfillment_status = 'RETURNED' THEN net_revenue ELSE 0 END) as "Amount"
 FROM fact_orders
 WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND order_timestamp < date_trunc('month', current_date)
@@ -608,7 +608,7 @@ UNION ALL
 SELECT
     '= Net Revenue' as "Component",
     4 as sort_order,
-    SUM(gmv - COALESCE(total_discount_amount, 0)) - SUM(CASE WHEN fulfillment_status = 'RETURNED' THEN gmv ELSE 0 END) as "Amount"
+    SUM(net_revenue) as "Amount"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -645,13 +645,13 @@ ORDER BY sort_order
 
 #### ❓ Question: Discount Rate
 
-Discount as percentage of GMV for the closed month.
+Discount as percentage of Gross Revenue for the closed month.
 
 **Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
 
 ```sql
 SELECT
-    ROUND(SUM(COALESCE(total_discount_amount, 0)) * 100.0 / NULLIF(SUM(gmv), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'

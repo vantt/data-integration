@@ -37,12 +37,12 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 { "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
 ```
 
-#### ❓ Question: Total GMV
+#### ❓ Question: Total Revenue
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gross-revenue-gmv)
 
 ```sql
-SELECT COALESCE(SUM(gmv), 0) as "Total GMV"
+SELECT COALESCE(SUM(net_revenue), 0) as "Total Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -53,7 +53,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Total GMV": { "number_style": "currency", "currency": "VND" } }
+    "column_settings": { "Total Revenue": { "number_style": "currency", "currency": "VND" } }
   }
 }
 ```
@@ -69,7 +69,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```sql
 SELECT
     CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-         ELSE SUM(gmv) / COUNT(DISTINCT order_id) END as "AOV"
+         ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as "AOV"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -299,7 +299,7 @@ Order count (not revenue) by channel — workload view.
 SELECT
     c.channel_name as "Channel",
     COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -331,7 +331,7 @@ Order count per physical branch location.
 SELECT
     bl.branch_location_name as "Branch",
     COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -364,7 +364,7 @@ Revenue from Facebook + Zalo channels this week.
 **Domain Reference**: [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume)
 
 ```sql
-SELECT COALESCE(SUM(o.gmv), 0) as "Social Revenue"
+SELECT COALESCE(SUM(o.net_revenue), 0) as "Social Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -414,9 +414,9 @@ Staff leaderboard for social commerce channels.
 SELECT
     st.full_name as "Staff",
     COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.gmv) as "Revenue",
+    SUM(o.net_revenue) as "Revenue",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-         ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as "AOV"
+         ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as "AOV"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff st ON o.staff_key = st.staff_key
@@ -456,7 +456,7 @@ Revenue per staff member across all channels.
 SELECT
     st.full_name as "Staff",
     COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_staff st ON o.staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -525,7 +525,7 @@ ORDER BY 2 DESC
 SELECT
     payment_status as "Status",
     COUNT(DISTINCT order_id) as "Orders",
-    SUM(gmv) as "Total Amount"
+    SUM(net_revenue) as "Total Amount"
 FROM fact_orders
 WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND order_timestamp < date_trunc('week', current_date)

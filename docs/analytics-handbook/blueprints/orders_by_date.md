@@ -1,30 +1,40 @@
-# Yesterday's Orders List Blueprint
+# Orders by Date Blueprint
 
-**Playbook**: [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)
+**Based on**: [Today's Orders List](orders_today.md)
 
-Finalized order-level listing of yesterday's orders for reconciliation with the Sapo sales system.
+Order-level listing for any selected date — same layout as Today's Orders but with a date picker filter.
 
 ## 📂 Collection: Operations > Daily Monitoring
 
-### Model: Yesterday's Orders (Detail)
+### Model: Orders by Date (Detail)
 
-All orders from the previous date — finalized, no further changes expected.
+All orders with key reconciliation fields, filterable by date.
 
 ```sql
 SELECT * FROM fact_orders
-WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ---
 
-### Dashboard: Yesterday's Orders
+### Dashboard: Orders by Date
 
-**Description**: Finalized order listing for yesterday. Cross-check with Sapo admin to verify data completeness.
+**Description**: Order listing for any date. Use the date filter to pick the day you want to review. Defaults to today.
+
+#### Filter: Date
+
+```json metabase-filter
+{
+  "name": "Date",
+  "slug": "date",
+  "type": "date/single",
+  "default": "today"
+}
+```
 
 #### Question: Date Label
 
 ```sql
-SELECT strftime(current_date - INTERVAL '1 day', '%Y-%m-%d') as "Date"
+SELECT strftime({{date}}, '%Y-%m-%d') as "Date"
 ```
 
 ```json metabase-viz
@@ -47,7 +57,7 @@ SELECT strftime(current_date - INTERVAL '1 day', '%Y-%m-%d') as "Date"
 ```sql
 SELECT count(distinct o.order_id) as "Total Orders"
 FROM fact_orders o
-WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(o.order_timestamp) = {{date}}
 ```
 
 ```json metabase-viz
@@ -70,7 +80,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```sql
 SELECT coalesce(sum(o.net_revenue), 0) as "Total Revenue"
 FROM fact_orders o
-WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(o.order_timestamp) = {{date}}
 ```
 
 ```json metabase-viz
@@ -109,7 +119,7 @@ FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(o.order_timestamp) = {{date}}
 ORDER BY o.order_timestamp DESC
 ```
 

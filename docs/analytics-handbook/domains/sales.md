@@ -9,31 +9,45 @@
 > **dbt Source:** `fact_orders`
 > **Grain:** Per Order
 
-### 1. GMV (Gross Merchandise Value)
+### 1. Gross Revenue (GMV)
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **Terminology Guide:** [Revenue Terminology](../guides/revenue_terminology.md)
 
-- **Business Definition:** Total value of all confirmed orders, before deductions.
+- **Business Definition:** Tổng giá trị hàng hóa theo giá niêm yết, trước chiết khấu. Dùng để đánh giá quy mô giao dịch.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(gmv)
+  SUM(gross_revenue)
   ```
 - **Metabase Mapping:**
   - **Table:** `fact_orders`
-  - **Field:** `Gmv` (Aggregation: Sum)
+  - **Field:** `Gross Revenue` (Aggregation: Sum)
 
 ### 2. Net Revenue
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
-- **Business Definition:** Actual money received (GMV - Returns - Discounts).
+- **Business Definition:** Doanh thu thuần — số tiền khách trả cho hàng hóa sau chiết khấu, trước thuế. Đây là con số quan trọng nhất cho phân tích kinh doanh.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(gmv - COALESCE(total_discount_amount, 0))
+  SUM(net_revenue)
   ```
 - **Metabase Mapping:**
   - **Table:** `fact_orders`
-  - **Field:** Custom Expression `Sum(Gmv) - Sum(Total Discount Amount)`
+  - **Field:** `Net Revenue` (Aggregation: Sum)
+
+### 2b. Total Collected
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+
+- **Business Definition:** Tổng tiền thu từ khách (bao gồm thuế VAT). Dùng để đối soát với kế toán/ngân hàng.
+- **Logic (Metabase SQL):**
+  ```sql
+  SUM(total_collected)
+  ```
+- **Metabase Mapping:**
+  - **Table:** `fact_orders`
+  - **Field:** `Total Collected` (Aggregation: Sum)
 
 ### 3. Return Rate & Count
 
@@ -63,7 +77,7 @@
 - **Business Definition:** Average revenue generated per order.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(gmv) / COUNT(DISTINCT order_id)
+  SUM(net_revenue) / COUNT(DISTINCT order_id)
   ```
 
 ## Available Dashboards
@@ -119,8 +133,9 @@
 | `status` | `fact_orders` | Order status (open, completed, cancelled) |
 | `payment_status` | `fact_orders` | paid, pending, refunded |
 | `fulfillment_status` | `fact_orders` | fulfilled, unfulfilled, returned |
-| `gmv` | `fact_orders` | Total order amount before deductions |
-| `total_discount_amount` | `fact_orders` | Discount applied |
+| `net_revenue` | `fact_orders` | Doanh thu thuần (sau chiết khấu, trước thuế) |
+| `total_collected` | `fact_orders` | Tổng thu từ khách (gồm thuế) |
+| `discount_amount` | `fact_orders` | Chiết khấu |
 | `channel_name` | `dim_channels` | Sales channel (POS, Web, Shopee, etc.) |
 | `customer_name` | `stg_sapo_orders` | Customer name for quick identification |
 | `customer_phone` | `stg_sapo_orders` | Phone for cross-referencing |
@@ -142,7 +157,7 @@
   ```sql
   SELECT
       EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-      SUM(gmv) as sales
+      SUM(net_revenue) as sales
   FROM fact_orders
   GROUP BY 1
   ```
@@ -158,7 +173,7 @@
       EXTRACT(HOUR FROM created_on) as hour_of_day,
       EXTRACT(DOW FROM created_on) as day_of_week, -- 0=Sunday
       COUNT(*) as order_count,
-      SUM(gmv) as revenue
+      SUM(net_revenue) as revenue
   FROM fact_orders
   GROUP BY 1, 2
   ORDER BY 2, 1
@@ -173,7 +188,7 @@
   ```sql
   SELECT
       channel_name,
-      SUM(gmv) as revenue
+      SUM(net_revenue) as revenue
   FROM fact_orders
   JOIN dim_channels USING (channel_key) -- or source_channel column
   GROUP BY 1
@@ -241,7 +256,7 @@
 - **Business Definition:** Tracking of payment success/failure.
 - **Logic (Metabase SQL):**
   ```sql
-  SELECT payment_status, COUNT(*), SUM(gmv) FROM fact_orders GROUP BY 1
+  SELECT payment_status, COUNT(*), SUM(total_collected) FROM fact_orders GROUP BY 1
   ```
 
 ## Context: Promotions & Discounts
@@ -255,9 +270,9 @@
 - **Business Definition:** Value of discounts given and percentage of orders discounted.
 - **Logic (Metabase SQL):**
   ```sql
-  SUM(CASE WHEN total_discount_amount > 0 THEN 1 ELSE 0 END) as discounted_orders,
-  SUM(total_discount_amount) as total_discounts,
-  AVG(total_discount_amount * 100.0 / NULLIF(gmv, 0)) as avg_discount_pct
+  SUM(CASE WHEN discount_amount > 0 THEN 1 ELSE 0 END) as discounted_orders,
+  SUM(discount_amount) as total_discounts,
+  AVG(discount_amount * 100.0 / NULLIF(gross_revenue, 0)) as avg_discount_pct
   ```
 
 ### 14. Promotion Performance
@@ -270,7 +285,7 @@
   SELECT
       pr.promotion_name,
       COUNT(DISTINCT o.order_id) as usage_count,
-      SUM(o.gmv) as revenue_with_promo
+      SUM(o.net_revenue) as revenue_with_promo
   FROM fact_orders o
   JOIN promotion_redemptions pr USING (order_id)
   GROUP BY 1
@@ -320,7 +335,7 @@
   SELECT
       l.region,
       l.location_name,
-      SUM(o.gmv) as revenue
+      SUM(o.net_revenue) as revenue
   FROM fact_orders o
   JOIN dim_locations l USING (location_id)
   GROUP BY 1, 2

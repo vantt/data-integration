@@ -50,18 +50,18 @@ SELECT strftime(current_date - INTERVAL '1 day', '%Y-%m-%d') as "Date"
 
 Key metrics for yesterday with day-over-day (DoD) change.
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value), [Net Revenue](../domains/sales.md#2-net-revenue), [Orders](../domains/sales.md#4-total-orders), [AOV](../domains/sales.md#5-aov-average-order-value), [Returns](../domains/sales.md#3-return-rate--count), [Discounts](../domains/sales.md#13-discount-impact)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gross-revenue-gmv), [Net Revenue](../domains/sales.md#2-net-revenue), [Orders](../domains/sales.md#4-total-orders), [AOV](../domains/sales.md#5-aov-average-order-value), [Returns](../domains/sales.md#3-return-rate--count), [Discounts](../domains/sales.md#13-discount-impact)
 
 ```sql
 WITH yesterday AS (
     SELECT
         count(distinct o.order_id) as total_orders,
-        coalesce(sum(o.gmv), 0) as total_revenue,
-        coalesce(sum(o.gmv - coalesce(o.total_discount_amount, 0)), 0) as net_revenue,
+        coalesce(sum(o.net_revenue), 0) as total_revenue,
+        coalesce(sum(o.net_revenue), 0) as net_revenue,
         case when count(distinct o.order_id) = 0 then 0
-             else sum(o.gmv) / count(distinct o.order_id) end as aov,
+             else sum(o.net_revenue) / count(distinct o.order_id) end as aov,
         count(case when o.fulfillment_status = 'RETURNED' then 1 end) as return_count,
-        sum(coalesce(o.total_discount_amount, 0)) as total_discounts,
+        sum(coalesce(o.discount_amount, 0)) as total_discounts,
         count(distinct case when date(c.first_order_date) = current_date - INTERVAL '1 day' then o.customer_key end) as new_customers,
         count(distinct case when date(c.first_order_date) < current_date - INTERVAL '1 day' then o.customer_key end) as return_customers
     FROM fact_orders o
@@ -71,10 +71,10 @@ WITH yesterday AS (
 day_before AS (
     SELECT
         count(distinct order_id) as total_orders,
-        coalesce(sum(gmv), 0) as total_revenue,
-        coalesce(sum(gmv - coalesce(total_discount_amount, 0)), 0) as net_revenue,
+        coalesce(sum(net_revenue), 0) as total_revenue,
+        coalesce(sum(net_revenue), 0) as net_revenue,
         case when count(distinct order_id) = 0 then 0
-             else sum(gmv) / count(distinct order_id) end as aov
+             else sum(net_revenue) / count(distinct order_id) end as aov
     FROM fact_orders
     WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
 )
@@ -124,7 +124,7 @@ Compare yesterday's hourly performance with the day before.
 WITH yesterday_sales AS (
     SELECT
         EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        SUM(gmv) as sales_yesterday
+        SUM(net_revenue) as sales_yesterday
     FROM fact_orders
     WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
     GROUP BY 1
@@ -132,7 +132,7 @@ WITH yesterday_sales AS (
 day_before_sales AS (
     SELECT
         EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        SUM(gmv) as sales_day_before
+        SUM(net_revenue) as sales_day_before
     FROM fact_orders
     WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
     GROUP BY 1
@@ -173,7 +173,7 @@ Revenue breakdown by sales channel.
 ```sql
 SELECT
     c.channel_name as "Channel",
-    SUM(o.gmv) as "Revenue",
+    SUM(o.net_revenue) as "Revenue",
     COUNT(distinct o.order_id) as "Orders"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -287,7 +287,7 @@ SELECT
         ELSE 'Returning'
     END as "Customer Type",
     COUNT(distinct o.order_id) as "Orders",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
@@ -320,12 +320,12 @@ Discount usage and impact on revenue.
 ```sql
 SELECT
     COUNT(distinct order_id) as "Total Orders",
-    COUNT(distinct case when total_discount_amount > 0 then order_id end) as "Discounted Orders",
-    ROUND(COUNT(distinct case when total_discount_amount > 0 then order_id end) * 100.0
+    COUNT(distinct case when discount_amount > 0 then order_id end) as "Discounted Orders",
+    ROUND(COUNT(distinct case when discount_amount > 0 then order_id end) * 100.0
         / NULLIF(COUNT(distinct order_id), 0), 1) as "Discount Rate %",
-    SUM(coalesce(total_discount_amount, 0)) as "Total Discounts",
-    ROUND(AVG(case when total_discount_amount > 0
-        then total_discount_amount * 100.0 / NULLIF(gmv, 0) end), 1) as "Avg Discount %"
+    SUM(coalesce(discount_amount, 0)) as "Total Discounts",
+    ROUND(AVG(case when discount_amount > 0
+        then discount_amount * 100.0 / NULLIF(net_revenue, 0) end), 1) as "Avg Discount %"
 FROM fact_orders
 WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```

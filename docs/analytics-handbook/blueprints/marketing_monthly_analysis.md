@@ -20,10 +20,10 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 #### ❓ Question: Monthly Revenue
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gmv-gross-merchandise-value)
 
 ```sql
-SELECT COALESCE(SUM(gmv), 0) as "Monthly Revenue"
+SELECT COALESCE(SUM(net_revenue), 0) as "Monthly Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -85,7 +85,7 @@ WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 
 **Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
 
 ```sql
-SELECT ROUND(SUM(COALESCE(total_discount_amount, 0)) * 100.0 / NULLIF(SUM(gmv), 0), 1) as "Discount Rate %"
+SELECT ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -117,7 +117,7 @@ Monthly revenue stacked by channel category over 6 months.
 SELECT
     date_trunc('month', o.order_timestamp)::date as month,
     c.channel_category,
-    SUM(o.gmv) as revenue
+    SUM(o.net_revenue) as revenue
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -152,10 +152,10 @@ Full platform breakdown with MoM comparison.
 WITH this_month AS (
     SELECT
         c.platform,
-        SUM(o.gmv) as revenue,
+        SUM(o.net_revenue) as revenue,
         COUNT(DISTINCT o.order_id) as orders,
         CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-             ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as aov,
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov,
         COUNT(DISTINCT CASE WHEN date(cust.first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
                              AND date(cust.first_order_date) < date_trunc('month', current_date)
                         THEN o.customer_key END) as new_customers
@@ -170,7 +170,7 @@ WITH this_month AS (
 last_month AS (
     SELECT
         c.platform,
-        SUM(o.gmv) as revenue,
+        SUM(o.net_revenue) as revenue,
         COUNT(DISTINCT o.order_id) as orders
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -390,10 +390,10 @@ WITH promo_orders AS (
     SELECT
         COALESCE(p.promotion_code, 'Unknown') as promo_code,
         COUNT(DISTINCT o.order_id) as usage_count,
-        SUM(o.gmv) as revenue,
-        ROUND(AVG(COALESCE(o.total_discount_amount, 0) * 100.0 / NULLIF(o.gmv, 0)), 1) as avg_discount_pct,
+        SUM(o.net_revenue) as revenue,
+        ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.net_revenue, 0)), 1) as avg_discount_pct,
         CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-             ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as promo_aov
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as promo_aov
     FROM fact_orders o
     JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -405,7 +405,7 @@ WITH promo_orders AS (
 baseline AS (
     SELECT
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(gmv) / COUNT(DISTINCT order_id) END as non_promo_aov
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as non_promo_aov
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND promotion_key IS NULL
@@ -454,7 +454,7 @@ Monthly discount rate over 6 months.
 ```sql
 SELECT
     date_trunc('month', order_timestamp)::date as month,
-    ROUND(SUM(COALESCE(total_discount_amount, 0)) * 100.0 / NULLIF(SUM(gmv), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
@@ -490,8 +490,8 @@ Monthly split of discounted vs full-price revenue.
 ```sql
 SELECT
     date_trunc('month', order_timestamp)::date as month,
-    SUM(CASE WHEN total_discount_amount > 0 THEN gmv ELSE 0 END) as "Discounted Revenue",
-    SUM(CASE WHEN COALESCE(total_discount_amount, 0) = 0 THEN gmv ELSE 0 END) as "Full-Price Revenue"
+    SUM(CASE WHEN discount_amount > 0 THEN net_revenue ELSE 0 END) as "Discounted Revenue",
+    SUM(CASE WHEN COALESCE(discount_amount, 0) = 0 THEN net_revenue ELSE 0 END) as "Full-Price Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
@@ -628,7 +628,7 @@ SELECT
     EXTRACT(DOW FROM order_timestamp) as day_of_week,
     EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
     COUNT(DISTINCT order_id) as order_count,
-    SUM(gmv) as revenue
+    SUM(net_revenue) as revenue
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'

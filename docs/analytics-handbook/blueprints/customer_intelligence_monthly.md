@@ -312,7 +312,7 @@ SELECT
     cust.customer_segment as "Segment",
     ch.channel_name as "Channel",
     COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.gmv) as "Revenue",
+    SUM(o.net_revenue) as "Revenue",
     COUNT(DISTINCT o.customer_key) as "Unique Customers"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
@@ -437,7 +437,7 @@ SELECT
     date_trunc('month', o.order_timestamp)::date as month,
     cust.customer_segment as segment,
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-         ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as aov
+         ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -474,7 +474,7 @@ WITH first_orders AS (
     SELECT
         date_trunc('month', c.first_order_date)::date as cohort_month,
         c.customer_key,
-        o.gmv as first_order_gmv
+        o.net_revenue as first_order_value
     FROM dim_customers c
     JOIN fact_orders o ON c.customer_key = o.customer_key
         AND o.order_timestamp = c.first_order_date
@@ -496,7 +496,7 @@ repeat_30d AS (
 SELECT
     fo.cohort_month as month,
     COUNT(DISTINCT fo.customer_key) as "New Customers",
-    ROUND(AVG(fo.first_order_gmv), 0) as "Avg First Order",
+    ROUND(AVG(fo.first_order_value), 0) as "Avg First Order",
     ROUND(
         COUNT(DISTINCT r.customer_key) * 100.0 / NULLIF(COUNT(DISTINCT fo.customer_key), 0), 1
     ) as "30-day Repeat %"

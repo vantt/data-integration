@@ -20,10 +20,10 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 #### ❓ Question: Weekly Revenue
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gmv-gross-merchandise-value)
 
 ```sql
-SELECT COALESCE(SUM(gmv), 0) as "Weekly Revenue"
+SELECT COALESCE(SUM(net_revenue), 0) as "Weekly Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -48,7 +48,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 **Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
 ```sql
-SELECT COALESCE(SUM(o.gmv), 0) as "Ecommerce Revenue"
+SELECT COALESCE(SUM(o.net_revenue), 0) as "Ecommerce Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -75,7 +75,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 **Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
 ```sql
-SELECT COALESCE(SUM(o.gmv), 0) as "Offline Revenue"
+SELECT COALESCE(SUM(o.net_revenue), 0) as "Offline Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -127,7 +127,7 @@ Revenue broken down by platform (Shopee, Lazada, TikTok, Facebook, POS, Web, etc
 ```sql
 SELECT
     c.platform as "Platform",
-    SUM(o.gmv) as "Revenue",
+    SUM(o.net_revenue) as "Revenue",
     COUNT(DISTINCT o.order_id) as "Orders"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -164,9 +164,9 @@ WITH this_week AS (
     SELECT
         c.channel_name,
         COUNT(DISTINCT o.order_id) as orders,
-        SUM(o.gmv) as revenue,
+        SUM(o.net_revenue) as revenue,
         CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-             ELSE SUM(o.gmv) / COUNT(DISTINCT o.order_id) END as aov
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -178,7 +178,7 @@ last_week AS (
     SELECT
         c.channel_name,
         COUNT(DISTINCT o.order_id) as orders,
-        SUM(o.gmv) as revenue
+        SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -228,8 +228,8 @@ Daily revenue, 2 lines: Ecommerce vs Offline.
 ```sql
 SELECT
     date(o.order_timestamp) as order_date,
-    SUM(CASE WHEN c.channel_category = 'Ecommerce' THEN o.gmv ELSE 0 END) as "Ecommerce",
-    SUM(CASE WHEN c.channel_category = 'Offline' THEN o.gmv ELSE 0 END) as "Offline"
+    SUM(CASE WHEN c.channel_category = 'Ecommerce' THEN o.net_revenue ELSE 0 END) as "Ecommerce",
+    SUM(CASE WHEN c.channel_category = 'Offline' THEN o.net_revenue ELSE 0 END) as "Offline"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -261,7 +261,7 @@ Revenue by channel brand (JPC, Fine Japan, The Healthy Us, etc.).
 ```sql
 SELECT
     c.channel_brand as "Brand",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -367,7 +367,7 @@ ORDER BY 2 DESC
 
 ```sql
 SELECT
-    ROUND(SUM(COALESCE(total_discount_amount, 0)) * 100.0 / NULLIF(SUM(gmv), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -393,7 +393,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```sql
 SELECT
-    CASE WHEN total_discount_amount > 0 THEN 'Discounted' ELSE 'Full Price' END as "Type",
+    CASE WHEN discount_amount > 0 THEN 'Discounted' ELSE 'Full Price' END as "Type",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
@@ -427,8 +427,8 @@ Top 5 active promotions this week.
 SELECT
     COALESCE(p.promotion_code, 'Unknown') as "Promo Code",
     COUNT(DISTINCT o.order_id) as "Usage Count",
-    SUM(o.gmv) as "Revenue",
-    ROUND(AVG(COALESCE(o.total_discount_amount, 0) * 100.0 / NULLIF(o.gmv, 0)), 1) as "Avg Discount %"
+    SUM(o.net_revenue) as "Revenue",
+    ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.net_revenue, 0)), 1) as "Avg Discount %"
 FROM fact_orders o
 JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -465,7 +465,7 @@ Revenue from social commerce channels this week.
 **Domain Reference**: [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume)
 
 ```sql
-SELECT COALESCE(SUM(o.gmv), 0) as "Social Revenue"
+SELECT COALESCE(SUM(o.net_revenue), 0) as "Social Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')

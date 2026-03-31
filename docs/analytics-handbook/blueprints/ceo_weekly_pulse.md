@@ -18,15 +18,15 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 
 ---
 
-#### ❓ Question: Weekly GMV
+#### ❓ Question: Weekly Revenue
 
 Total revenue for the last 7 days with week-over-week comparison.
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gmv-gross-merchandise-value)
 
 ```sql
 SELECT
-    SUM(gmv) as "Weekly GMV"
+    SUM(net_revenue) as "Weekly Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -38,7 +38,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Weekly GMV": { "number_style": "currency", "currency": "VND" }
+      "Weekly Revenue": { "number_style": "currency", "currency": "VND" }
     }
   }
 }
@@ -55,13 +55,13 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 #### ❓ Question: Weekly Net Revenue
 
-Net revenue (GMV minus discounts) for the last 7 days.
+Doanh thu thuần (sau chiết khấu, trước thuế) for the last 7 days.
 
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue)
 
 ```sql
 SELECT
-    SUM(gmv - COALESCE(total_discount_amount, 0)) as "Weekly Net Revenue"
+    SUM(net_revenue) as "Weekly Net Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -127,7 +127,7 @@ Average order value for the last 7 days.
 ```sql
 SELECT
     CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-         ELSE SUM(gmv) / COUNT(DISTINCT order_id) END as "AOV"
+         ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as "AOV"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -165,7 +165,7 @@ Month-to-date revenue with expected pace toward monthly target.
 ```sql
 WITH mtd_actual AS (
     SELECT
-        COALESCE(SUM(gmv), 0) as mtd_revenue
+        COALESCE(SUM(net_revenue), 0) as mtd_revenue
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND order_timestamp >= date_trunc('month', current_date)
@@ -219,12 +219,12 @@ CROSS JOIN monthly_target t
 
 Revenue by day for the last 14 days — current week vs previous week side-by-side.
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gmv-gross-merchandise-value)
 
 ```sql
 SELECT
     date(order_timestamp) as order_date,
-    SUM(gmv) as revenue
+    SUM(net_revenue) as revenue
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= current_date - INTERVAL '14 days'
@@ -265,7 +265,7 @@ Revenue split by Ecommerce / Offline / Internal with WoW comparison.
 WITH this_week AS (
     SELECT
         c.channel_category,
-        SUM(o.gmv) as revenue
+        SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -276,7 +276,7 @@ WITH this_week AS (
 last_week AS (
     SELECT
         c.channel_category,
-        SUM(o.gmv) as revenue
+        SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -358,8 +358,8 @@ Percentage of weekly revenue from returning customers.
 ```sql
 SELECT
     ROUND(
-        SUM(CASE WHEN date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days' THEN o.gmv ELSE 0 END) * 100.0
-        / NULLIF(SUM(o.gmv), 0), 1
+        SUM(CASE WHEN date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days' THEN o.net_revenue ELSE 0 END) * 100.0
+        / NULLIF(SUM(o.net_revenue), 0), 1
     ) as "Returning Revenue %"
 FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
@@ -468,13 +468,13 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 
 #### ❓ Question: Discount Rate
 
-Discount as percentage of GMV this week.
+Discount as percentage of Gross Revenue this week.
 
 **Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
 
 ```sql
 SELECT
-    ROUND(SUM(COALESCE(total_discount_amount, 0)) * 100.0 / NULLIF(SUM(gmv), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'

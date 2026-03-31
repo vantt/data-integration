@@ -36,7 +36,7 @@ actuals AS (
         date_trunc('month', order_timestamp) as month_start_date,
         branch_location_key, -- Need JOIN to get Code/Name to match Targets
         channel_key,
-        SUM(gmv) as actual_revenue
+        SUM(net_revenue) as actual_revenue
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1, 2, 3
@@ -55,12 +55,12 @@ FULL OUTER JOIN actuals a
 
 #### 📏 Metric: Total Revenue
 
-Gross Merchandise Value (GMV).
+Net Revenue (doanh thu thuần).
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gross-revenue-gmv)
 
 ```sql --metric
-SUM(gmv)
+SUM(net_revenue)
 ```
 
 ---
@@ -73,12 +73,12 @@ SUM(gmv)
 
 Line chart showing revenue over the last 30 days.
 
-**Domain Reference**: [GMV](../domains/sales.md#1-gmv-gross-merchandise-value)
+**Domain Reference**: [Revenue](../domains/sales.md#1-gross-revenue-gmv)
 
 ```sql
 SELECT
     order_timestamp::date as order_date,
-    SUM(gmv) as revenue
+    SUM(net_revenue) as revenue
 FROM fact_orders
 WHERE order_timestamp >= CURRENT_DATE - INTERVAL '30 days'
 GROUP BY 1
@@ -115,7 +115,7 @@ Breakdown of revenue by sales channel.
 ```sql
 SELECT
     c.channel_name as channel,
-    SUM(o.gmv) as revenue
+    SUM(o.net_revenue) as revenue
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
 GROUP BY 1
@@ -142,7 +142,7 @@ ORDER BY 2 DESC
 List of the latest 10 orders.
 
 ```sql
-SELECT order_id, order_timestamp, gmv, c.channel_name
+SELECT order_id, order_timestamp, net_revenue, c.channel_name
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
 ORDER BY order_timestamp DESC
@@ -173,7 +173,7 @@ Revenue breakdown by geographic region.
 ```sql
 SELECT
     l.branch_location_name as "Region",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_branch_location l USING (branch_location_key)
 GROUP BY 1
@@ -206,7 +206,7 @@ Revenue and usage count by promotion.
 SELECT
     COALESCE(p.promotion_code, 'No Promotion') as "Promotion",
     COUNT(DISTINCT o.order_id) as "Usage Count",
-    SUM(o.gmv) as "Revenue"
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE p.promotion_code IS NOT NULL

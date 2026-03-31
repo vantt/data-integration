@@ -65,10 +65,10 @@ WHERE date(o.order_timestamp) = current_date
 }
 ```
 
-#### Question: Total GMV
+#### Question: Total Revenue
 
 ```sql
-SELECT coalesce(sum(o.gmv), 0) as "Total GMV"
+SELECT coalesce(sum(o.net_revenue), 0) as "Total Revenue"
 FROM fact_orders o
 WHERE date(o.order_timestamp) = current_date
 ```
@@ -99,8 +99,8 @@ SELECT
     o.status as "Status",
     o.payment_status as "Payment Status",
     o.fulfillment_status as "Fulfillment",
-    o.gmv as "GMV",
-    o.total_discount_amount as "Discount",
+    o.net_revenue as "Revenue",
+    o.discount_amount as "Discount",
     ch.channel_name as "Channel",
     c.full_name as "Customer",
     c.phone as "Phone",
@@ -119,7 +119,7 @@ ORDER BY o.order_timestamp DESC
   "table.pivot": false,
   "table.column_formatting": [
     {
-      "columns": ["GMV", "Discount"],
+      "columns": ["Revenue", "Discount"],
       "type": "currency",
       "currency": "VND"
     }
