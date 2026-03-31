@@ -75,8 +75,7 @@ collections:
         dashboards:
           - Daily Sales Dashboard
           - "Yesterday's Sales Dashboard"
-          - "Today's Orders List"
-          - "Yesterday's Orders List"
+          - "Orders"  # Tabbed: Today / Yesterday / By Date
 
       - name: Periodic Reviews
         description: "Weekly and monthly operational summaries for team leads."
