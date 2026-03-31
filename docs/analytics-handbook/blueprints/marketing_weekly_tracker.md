@@ -367,7 +367,7 @@ ORDER BY 2 DESC
 
 ```sql
 SELECT
-    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -428,7 +428,7 @@ SELECT
     COALESCE(p.promotion_code, 'Unknown') as "Promo Code",
     COUNT(DISTINCT o.order_id) as "Usage Count",
     SUM(o.net_revenue) as "Revenue",
-    ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.net_revenue, 0)), 1) as "Avg Discount %"
+    ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.gross_revenue, 0)), 1) as "Avg Discount %"
 FROM fact_orders o
 JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')

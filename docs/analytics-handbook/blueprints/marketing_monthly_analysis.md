@@ -85,7 +85,7 @@ WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 
 **Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
 
 ```sql
-SELECT ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
+SELECT ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -391,7 +391,7 @@ WITH promo_orders AS (
         COALESCE(p.promotion_code, 'Unknown') as promo_code,
         COUNT(DISTINCT o.order_id) as usage_count,
         SUM(o.net_revenue) as revenue,
-        ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.net_revenue, 0)), 1) as avg_discount_pct,
+        ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.gross_revenue, 0)), 1) as avg_discount_pct,
         CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as promo_aov
     FROM fact_orders o
@@ -454,7 +454,7 @@ Monthly discount rate over 6 months.
 ```sql
 SELECT
     date_trunc('month', order_timestamp)::date as month,
-    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'

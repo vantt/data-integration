@@ -651,7 +651,7 @@ Discount as percentage of Gross Revenue for the closed month.
 
 ```sql
 SELECT
-    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'

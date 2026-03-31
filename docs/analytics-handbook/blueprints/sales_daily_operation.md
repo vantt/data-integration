@@ -325,7 +325,7 @@ SELECT
         / NULLIF(COUNT(distinct order_id), 0), 1) as "Discount Rate %",
     SUM(coalesce(discount_amount, 0)) as "Total Discounts",
     ROUND(AVG(case when discount_amount > 0
-        then discount_amount * 100.0 / NULLIF(net_revenue, 0) end), 1) as "Avg Discount %"
+        then discount_amount * 100.0 / NULLIF(gross_revenue, 0) end), 1) as "Avg Discount %"
 FROM fact_orders
 WHERE date(order_timestamp) = current_date
 ```

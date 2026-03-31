@@ -18,15 +18,33 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 
 ---
 
-#### ❓ Question: Weekly Revenue
-
-Total revenue for the last 7 days with week-over-week comparison.
-
-**Domain Reference**: [Revenue](../domains/sales.md#1-gmv-gross-merchandise-value)
+#### ❓ Question: Report Period
 
 ```sql
 SELECT
-    SUM(net_revenue) as "Weekly Revenue"
+    strftime(date_trunc('week', current_date) - INTERVAL '7 days', '%d/%m') || ' — ' ||
+    strftime(date_trunc('week', current_date) - INTERVAL '1 day', '%d/%m/%Y') as "Period"
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+---
+
+#### ❓ Question: Weekly Gross Revenue
+
+Tổng giá trị hàng hóa (trước chiết khấu) tuần qua.
+
+**Domain Reference**: [Revenue](../domains/sales.md#1-gross-revenue-gmv)
+
+```sql
+SELECT
+    SUM(gross_revenue) as "Gross Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -38,7 +56,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Weekly Revenue": { "number_style": "currency", "currency": "VND" }
+      "Gross Revenue": { "number_style": "currency", "currency": "VND" }
     }
   }
 }
@@ -46,7 +64,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 {
-  "row": 0,
+  "row": 2,
   "col": 0,
   "size_x": 5,
   "size_y": 3
@@ -55,7 +73,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 #### ❓ Question: Weekly Net Revenue
 
-Doanh thu thuần (sau chiết khấu, trước thuế) for the last 7 days.
+Doanh thu thuần (sau chiết khấu, trước thuế) tuần qua.
 
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue)
 
@@ -81,7 +99,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 {
-  "row": 0,
+  "row": 2,
   "col": 5,
   "size_x": 5,
   "size_y": 3
@@ -111,7 +129,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 {
-  "row": 0,
+  "row": 2,
   "col": 10,
   "size_x": 4,
   "size_y": 3
@@ -147,7 +165,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 {
-  "row": 0,
+  "row": 2,
   "col": 14,
   "size_x": 4,
   "size_y": 3
@@ -206,7 +224,7 @@ CROSS JOIN monthly_target t
 
 ```json metabase-pos
 {
-  "row": 3,
+  "row": 5,
   "col": 0,
   "size_x": 18,
   "size_y": 3
@@ -248,7 +266,7 @@ ORDER BY 1
 
 ```json metabase-pos
 {
-  "row": 6,
+  "row": 8,
   "col": 0,
   "size_x": 12,
   "size_y": 8
@@ -311,7 +329,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 
 ```json metabase-pos
 {
-  "row": 6,
+  "row": 8,
   "col": 12,
   "size_x": 6,
   "size_y": 8
@@ -342,7 +360,7 @@ WHERE date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 d
 
 ```json metabase-pos
 {
-  "row": 14,
+  "row": 16,
   "col": 0,
   "size_x": 4,
   "size_y": 3
@@ -381,7 +399,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 {
-  "row": 14,
+  "row": 16,
   "col": 4,
   "size_x": 4,
   "size_y": 3
@@ -428,7 +446,7 @@ ORDER BY 1, 2
 
 ```json metabase-pos
 {
-  "row": 14,
+  "row": 16,
   "col": 8,
   "size_x": 10,
   "size_y": 6
@@ -459,7 +477,7 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 
 ```json metabase-pos
 {
-  "row": 20,
+  "row": 22,
   "col": 0,
   "size_x": 6,
   "size_y": 3
@@ -474,7 +492,7 @@ Discount as percentage of Gross Revenue this week.
 
 ```sql
 SELECT
-    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) as "Discount Rate %"
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -494,7 +512,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 {
-  "row": 20,
+  "row": 22,
   "col": 6,
   "size_x": 6,
   "size_y": 3
@@ -522,7 +540,7 @@ WHERE status = 'CANCELLED'
 
 ```json metabase-pos
 {
-  "row": 20,
+  "row": 22,
   "col": 12,
   "size_x": 6,
   "size_y": 3

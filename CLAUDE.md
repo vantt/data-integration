@@ -12,6 +12,7 @@ Shared skills live in `tools/` and are available as slash commands via `.claude/
 | --- | --- |
 | `/create-metabase-blueprint` | Create a new analytics blueprint (Markdown) |
 | `/deploy-metabase-blueprint` | Deploy a blueprint to Metabase |
+| `/capture-metabase-dashboard` | Capture live dashboard → blueprint (layout, SQL, viz) |
 | `/manage-metabase-resources` | Programmatically manage Metabase resources |
 | `/setup-metabase-mcp` | Configure the Metabase MCP server |
 | `/purge-dagster-runs` | Clean up old Dagster run history |
@@ -34,6 +35,9 @@ node .skills/metabase-automation/scripts/deploy_from_config.js <config.js>
 
 # Scaffold a new blueprint
 node .skills/metabase-automation/scripts/create_blueprint.js <domain> <purpose>
+
+# Capture live dashboard → blueprint
+node .skills/metabase-automation/scripts/capture_dashboard.js <dashboard_id> [output.md]
 ```
 
 ### Environment Variables (Metabase)

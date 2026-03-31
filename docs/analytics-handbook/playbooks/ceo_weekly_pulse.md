@@ -10,7 +10,7 @@
 
 ## Key Questions
 
-1. **Revenue:** Tổng doanh thu tuần này so với tuần trước và cùng kỳ? Có đang on-track để đạt target tháng không?
+1. **Revenue:** Gross Revenue (trước chiết khấu) và Net Revenue (sau chiết khấu) tuần này so với tuần trước? Có đang on-track để đạt target tháng không?
 2. **Growth Drivers:** Kênh nào tăng, kênh nào giảm so với tuần trước?
 3. **Customer Health:** Có bao nhiêu khách mới? Tỷ lệ New vs Returning thay đổi thế nào?
 4. **Operational Flags:** Có gì bất thường cần chú ý (hoàn trả tăng đột biến, discount quá nhiều)?
@@ -27,12 +27,18 @@
 
 ## Visualizations
 
+### Section 0: Report Period Label
+
+| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+| :--- | :--- | :--- | :--- |
+| **Report Period** | Scalar (full width) | — | Hiển thị `dd/mm — dd/mm/yyyy` cho tuần báo cáo. |
+
 ### Section 1: Weekly Headline KPIs (Scalar Row)
 
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Weekly GMV** | Scalar + Trend | [GMV](../domains/sales.md#1-gmv-gross-merchandise-value) | Show WoW % change. Color: Green if +, Red if −. |
-| **Weekly Net Revenue** | Scalar + Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | Show WoW % change. |
+| **Gross Revenue** | Scalar + Trend | [Gross Revenue](../domains/sales.md#1-gross-revenue-gmv) | Giá trị hàng hóa trước chiết khấu. WoW % change. |
+| **Net Revenue** | Scalar + Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | Doanh thu thuần (sau chiết khấu, trước thuế). WoW % change. |
 | **Total Orders** | Scalar + Trend | [Total Orders](../domains/sales.md#4-total-orders) | Show WoW % change. |
 | **AOV** | Scalar + Trend | [AOV](../domains/sales.md#5-aov-average-order-value) | Show WoW % change. |
 
@@ -47,7 +53,7 @@
 
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Daily Revenue Trend (Last 14 Days)** | Line Chart | [GMV](../domains/sales.md#1-gmv-gross-merchandise-value) | 2-week window so CEO sees current week vs previous week side-by-side. Color: Blue (this week), Grey (last week). |
+| **Daily Revenue Trend (Last 14 Days)** | Line Chart | [Net Revenue](../domains/sales.md#2-net-revenue) | 2-week window so CEO sees current week vs previous week side-by-side. Color: Blue. |
 | **Revenue by Channel Category** | Horizontal Bar | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Group by `channel_category` (Ecommerce / Offline / Internal). Show WoW change per category. |
 | **Top 5 Channels by Revenue** | Table | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Columns: Channel Name, This Week Revenue, Last Week Revenue, WoW Change %. Sort by Revenue DESC. |
 
@@ -64,7 +70,7 @@
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
 | **Return Count** | Scalar + Trend | [Return Rate](../domains/sales.md#3-return-rate--count) | Flag RED if > 2× previous week. |
-| **Discount Rate %** | Scalar | [Discount Impact](../domains/sales.md#13-discount-impact) | `Total Discount / GMV × 100`. Flag RED if > 15%. |
+| **Discount Rate %** | Scalar | [Discount Impact](../domains/sales.md#13-discount-impact) | `Discount / Gross Revenue × 100`. Flag RED if > 15%. |
 | **Cancelled Orders** | Scalar | _Derived from_ [Total Orders](../domains/sales.md#4-total-orders) | Count where `status = 'CANCELLED'`. WoW comparison. |
 
 ## Visualization Configs
@@ -75,7 +81,7 @@
 {
   "display": "line",
   "graph.dimensions": ["order_date"],
-  "graph.metrics": ["gmv"],
+  "graph.metrics": ["revenue"],
   "graph.colors": ["#509EE3"],
   "graph.x_axis.title_text": "",
   "graph.y_axis.title_text": "Revenue (VND)"
