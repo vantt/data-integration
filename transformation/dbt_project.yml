@@ -22,6 +22,14 @@ seeds:
         platform_group: varchar
         is_generic_source: boolean
         mapping_tag: varchar
+        channel_brand: varchar
+        market: varchar
+        customer_segment: varchar
+    ref_brands:
+      +column_types:
+        vendor_raw: varchar
+        brand_name: varchar
+        brand_code: varchar
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt

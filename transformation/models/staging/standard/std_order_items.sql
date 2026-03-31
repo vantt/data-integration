@@ -37,6 +37,8 @@ SELECT
     -- Enriched Attributes (v2)
     try_cast(weight as DECIMAL(18,2)) as weight_grams,
     
+    vendor,
+
     -- Standard Fields
     -- MRP Price, Discount Amount could be calculated here if raw data supports it.
     product_type,

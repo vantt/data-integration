@@ -11,3 +11,13 @@ seeds:
         is_generic_source: boolean
         platform: varchar
         mapping_tag: varchar
+        channel_brand: varchar
+        market: varchar
+        customer_segment: varchar
+
+  - name: ref_brands
+    config:
+      column_types:
+        vendor_raw: varchar
+        brand_name: varchar
+        brand_code: varchar

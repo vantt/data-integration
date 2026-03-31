@@ -20,7 +20,10 @@ branch_locations AS (
             name as channel_name,
             name as channel_code,
             platform_group,
-            platform,  -- Added Platform
+            platform,
+            channel_brand,
+            market,
+            customer_segment,
             status as is_active
         FROM source_definitions
         WHERE is_generic_source = false
@@ -32,10 +35,13 @@ branch_locations AS (
         SELECT
             cast(s.id as string) as source_id,
             cast(l.id as string) as location_id,
-            l.name as channel_name, -- Use Branch Name as Channel Name
+            l.name as channel_name,
             l.code as channel_code,
             s.platform_group,
-            s.platform, -- Added Platform (Inherited from Source)
+            s.platform,
+            s.channel_brand,
+            s.market,
+            s.customer_segment,
             s.status as is_active
         FROM source_definitions s
         CROSS JOIN branch_locations l
@@ -57,13 +63,28 @@ SELECT
 
     channel_name,
     channel_code,
+
+    -- Channel classification
+    CASE platform_group
+        WHEN 'Ecom'   THEN 'Ecommerce'
+        WHEN 'Social' THEN 'Ecommerce'
+        WHEN 'Web'    THEN 'Ecommerce'
+        WHEN 'Retail' THEN 'Offline'
+        WHEN 'B2B'    THEN 'Offline'
+        WHEN 'System' THEN 'Internal'
+        ELSE 'Other'
+    END as channel_category,
     platform_group,
-    platform, -- Exposed Platform
-    
+    platform,
+    channel_brand,
+    market,
+    customer_segment,
+    platform_group != 'System' as is_sales_channel,
+
     -- Lineage Links
     source_id,
     location_id,
-    
+
     is_active
 
 FROM unioned
@@ -75,8 +96,13 @@ SELECT
     {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as channel_key,
     'Unknown' as channel_name,
     'UNK' as channel_code,
+    'Other' as channel_category,
     'Other' as platform_group,
     'Other' as platform,
+    cast(null as varchar) as channel_brand,
+    'Domestic' as market,
+    'B2C' as customer_segment,
+    false as is_sales_channel,
     cast(null as string) as source_id,
     cast(null as string) as location_id,
     true as is_active

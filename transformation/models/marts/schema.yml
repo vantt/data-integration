@@ -36,6 +36,12 @@ models:
     columns:
       - name: product_key
         tests: [unique, not_null]
+      - name: brand_name
+        description: "Standardized product brand name"
+        data_type: varchar
+      - name: brand_code
+        description: "Product brand abbreviation code"
+        data_type: varchar
 
   - name: dim_channels
     description: "Sales channel dimension."
@@ -46,8 +52,25 @@ models:
         data_type: varchar
       - name: channel_code
         data_type: varchar
-      - name: channel_type
+      - name: channel_category
+        description: "Ecommerce / Offline / Internal / Other"
         data_type: varchar
+      - name: platform_group
+        data_type: varchar
+      - name: platform
+        data_type: varchar
+      - name: channel_brand
+        description: "Brand that owns this channel"
+        data_type: varchar
+      - name: market
+        description: "Domestic / Export"
+        data_type: varchar
+      - name: customer_segment
+        description: "B2C / B2B"
+        data_type: varchar
+      - name: is_sales_channel
+        description: "true = real sales channel (not System/Internal)"
+        data_type: boolean
 
   - name: dim_staff
     description: "Salesperson/Staff dimension."
