@@ -38,7 +38,37 @@ class Dashboard {
         return created;
     }
 
-    async syncCards(dashboardId, cardConfigs) {
+    /**
+     * Build tabs payload for a dashboard. Returns { tabsPayload, tabMap }.
+     * tabMap maps tab names to IDs (negative temp IDs for new tabs).
+     * IMPORTANT: Metabase requires tabs and dashcards in the same PUT request.
+     */
+    buildTabsPayload(existingTabs, tabNames) {
+        const tabsPayload = [];
+        const tabMap = new Map();
+
+        // Reuse existing tabs by name
+        for (const tab of existingTabs) {
+            if (tabNames.includes(tab.name)) {
+                tabsPayload.push({ id: tab.id, name: tab.name });
+                tabMap.set(tab.name, tab.id);
+            }
+        }
+
+        // Add new tabs with negative temp IDs
+        let tempId = -1;
+        for (const name of tabNames) {
+            if (!tabMap.has(name)) {
+                tabsPayload.push({ id: tempId, name });
+                tabMap.set(name, tempId);
+                tempId--;
+            }
+        }
+
+        return { tabsPayload, tabMap };
+    }
+
+    async syncCards(dashboardId, cardConfigs, tabNames = []) {
         // Version Check
         const isModern = this.core.isVersionAtLeast("v0.58.0");
         console.log(`ℹ️ Metabase Version: ${this.core.version} (Strategy: ${isModern ? 'Modern/Dashcards' : 'Legacy/OrderedCards'})`);
@@ -48,7 +78,18 @@ class Dashboard {
         const dashboard = await this.core.request(`/api/dashboard/${dashboardId}`);
         // Support both property names if Metabase version varies, but v0.58+ uses dashcards
         let currentCards = dashboard.dashcards || dashboard.ordered_cards || [];
-        
+        const existingTabs = dashboard.tabs || [];
+
+        // Build tabs payload if tab names are provided
+        let tabsPayload = null;
+        let tabMap = new Map();
+        if (tabNames.length > 0) {
+            const result = this.buildTabsPayload(existingTabs, tabNames);
+            tabsPayload = result.tabsPayload;
+            tabMap = result.tabMap;
+            console.log(`📑 Tab payload: ${tabsPayload.map(t => `${t.name}(${t.id})`).join(', ')}`);
+        }
+
         let tempIdCounter = -1;
 
         const cardPayload = cardConfigs.map(config => {
@@ -75,8 +116,15 @@ class Dashboard {
                 size_y: config.size_y,
                 visualization_settings: {}, // Required
                 parameter_mappings: config.parameter_mappings || [], // Required
-                series: [] 
+                series: []
             };
+
+            // Assign to tab: use tab name to look up ID from tabMap
+            if (config.tab && tabMap.has(config.tab)) {
+                cardObj.dashboard_tab_id = tabMap.get(config.tab);
+            } else if (config.dashboard_tab_id) {
+                cardObj.dashboard_tab_id = config.dashboard_tab_id;
+            }
             
             // Only add 'id' if modern or if existing
             if (dashCardId !== undefined) {
@@ -90,19 +138,14 @@ class Dashboard {
             let payload;
             
             if (isModern) {
-                // v0.58+: Use 'dashcards'
-                payload = { 
-                    dashcards: cardPayload 
-                };
+                payload = { dashcards: cardPayload };
             } else {
-                // Legacy: Use 'ordered_cards'
-                // Note: Legacy created new cards via POST /cards, but ordered_cards PUT also worked for reordering.
-                // Pure creation via ordered_cards might be risky on very old versions, but generally works for updates.
-                // If strict legacy support needed, we might re-introduce POST logic here.
-                // For now, assuming PUT ordered_cards is sufficient for v0.40+ updates.
-                payload = { 
-                    ordered_cards: cardPayload 
-                };
+                payload = { ordered_cards: cardPayload };
+            }
+
+            // Include tabs in the same PUT (Metabase requires tabs+cards together)
+            if (tabsPayload) {
+                payload.tabs = tabsPayload;
             }
 
             console.log(`Using '${isModern ? 'dashcards' : 'ordered_cards'}' payload...`);

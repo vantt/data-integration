@@ -12,14 +12,16 @@ const fs = require('fs');
  *   collection: "Sales Analytics",
  *   dashboard: {
  *     name: "Daily Sales Performance",
- *     description: "..."
+ *     description: "...",
+ *     tabs: ["Overview", "Details"]  // optional — tab names
  *   },
  *   questions: [
  *     {
  *       name: "Total Orders",
  *       display: "scalar",
  *       sql: `SELECT ...`,
- *       pos: { row: 0, col: 0, size_x: 4, size_y: 4 }
+ *       pos: { row: 0, col: 0, size_x: 4, size_y: 4 },
+ *       tab: "Overview"  // optional — assigns to tab
  *     }
  *   ]
  * };
@@ -147,19 +149,27 @@ async function main() {
         console.log(`🔄 Configuring Dashboard: ${dashName}...`);
         const dash = await client.dashboard.ensure(dashName, dashDesc, colId);
 
+        // Collect tab names from config
+        const tabNames = (config.dashboard.tabs) || [];
+        if (tabNames.length > 0) {
+            console.log(`📑 Dashboard has ${tabNames.length} tab(s): ${tabNames.join(', ')}`);
+        }
+
         // Sync Cards
         const dashCards = [];
         for (const q of config.questions) {
             if (cardMap[q.name] && q.pos) {
-                dashCards.push({
+                const cardConfig = {
                     id: cardMap[q.name].id,
                     ...q.pos
-                });
+                };
+                if (q.tab) cardConfig.tab = q.tab;
+                dashCards.push(cardConfig);
             }
         }
 
         if (dashCards.length > 0) {
-            await client.dashboard.syncCards(dash.id, dashCards);
+            await client.dashboard.syncCards(dash.id, dashCards, tabNames);
             console.log(`✅ Synced ${dashCards.length} cards to dashboard.`);
             console.log(`🔗 Dashboard Link: ${METABASE_URL}/dashboard/${dash.id}`);
         }

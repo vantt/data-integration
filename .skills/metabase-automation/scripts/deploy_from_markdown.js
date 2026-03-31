@@ -8,6 +8,21 @@ const fs = require("fs");
  * Usage: node deploy_from_markdown.js <path-to-docs.md> [--dry-run]
  */
 
+/**
+ * Flatten a viz block from the blueprint into Metabase's expected format.
+ * Blueprints may nest settings under "visualization_settings" for readability,
+ * but Metabase expects them flat at the top level.
+ * Also strips "display" since it's a separate card property, not a viz setting.
+ */
+function flattenViz(viz) {
+  if (!viz) return {};
+  const { display, visualization_settings, ...rest } = viz;
+  if (visualization_settings && typeof visualization_settings === 'object') {
+    return { ...rest, ...visualization_settings };
+  }
+  return rest;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const filePath = args[0];
@@ -138,6 +153,11 @@ async function main() {
       }
     }
 
+    const tabNames = dashboard.tabs || [];
+    if (tabNames.length > 0) {
+      console.log(`📑 Dashboard has ${tabNames.length} tab(s): ${tabNames.join(', ')}`);
+    }
+
     const cardConfigs = [];
 
     // Process Questions
@@ -166,7 +186,7 @@ async function main() {
             database: defaultDbId
           },
           display: q.viz ? q.viz.display : "table",
-          visualization_settings: q.viz || {}
+          visualization_settings: flattenViz(q.viz)
         });
         console.log(`✅ Updated Question '${q.name}' (ID: ${card.id})`);
       } else {
@@ -180,7 +200,7 @@ async function main() {
             database: defaultDbId
           },
           display: q.viz ? q.viz.display : "table",
-          visualization_settings: q.viz || {}
+          visualization_settings: flattenViz(q.viz)
         };
         card = await client.core.request('/api/card', 'POST', payload);
         console.log(`✅ Created Question '${q.name}' (ID: ${card.id})`);
@@ -188,15 +208,19 @@ async function main() {
 
       // Prepare for Dashboard Sync
       const pos = q.pos || { row: 0, col: 0, size_x: 4, size_y: 4 };
-      cardConfigs.push({
-        id: card.id,
-        ...pos,
-      });
+      const cardConfig = { id: card.id, ...pos };
+
+      // Pass tab name — syncCards will resolve to tab ID
+      if (q.tab) {
+        cardConfig.tab = q.tab;
+      }
+
+      cardConfigs.push(cardConfig);
     }
 
-    // Sync to Dashboard
+    // Sync to Dashboard (tabs and cards in one PUT)
     if (cardConfigs.length > 0) {
-      await client.dashboard.syncCards(dashRemote.id, cardConfigs);
+      await client.dashboard.syncCards(dashRemote.id, cardConfigs, tabNames);
     }
   }
 

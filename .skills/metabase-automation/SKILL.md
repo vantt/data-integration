@@ -113,6 +113,23 @@ await client.dashboard.syncCards(dash.id, [
 ]);
 ```
 
+#### Dashboard Tabs
+
+Organize cards into tabs. Tabs and cards must be sent in a **single PUT** request.
+
+```javascript
+// Sync cards with tabs — tab names are resolved to IDs automatically
+await client.dashboard.syncCards(dash.id, [
+  { id: q1.id, row: 0, col: 0, size_x: 6, size_y: 4, tab: "Overview" },
+  { id: q2.id, row: 0, col: 0, size_x: 6, size_y: 4, tab: "Details" },
+], ["Overview", "Details"]); // tab names array as 3rd argument
+```
+
+**Key points:**
+- New tabs use negative temp IDs; existing tabs are reused by name.
+- Each card's `tab` field is a tab name string, resolved internally to `dashboard_tab_id`.
+- Metabase requires all tabs + all dashcards in one `PUT /api/dashboard/:id` payload.
+
 #### Models & Metrics
 
 Manage semantic layer.
@@ -229,3 +246,9 @@ node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_metrics
 
 - **Legacy**: `ordered_cards` (ignored in new versions).
 - **Modern**: `dashcards` (requires `id`).
+
+### 4. Tabs Not Appearing After Deployment
+
+**Symptoms**: Cards deployed but all on one flat view, no tabs.
+**Cause**: Tabs and dashcards must be sent in a **single PUT** request. Sending tabs separately is silently ignored by Metabase v0.58+.
+**Solution**: Use `dashboard.syncCards(id, cardConfigs, tabNames)` which combines both in one payload. The `deploy_from_markdown.js` script handles this automatically when `### 📑 Tab:` headers are present in the blueprint.

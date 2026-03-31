@@ -364,11 +364,23 @@ function renderTabGroups(lines, tabGroups, cardCache, existingQuestions) {
     // Group cards by tab
     const tabGroups = [];
     if (tabs.length > 0) {
+      const tabIds = new Set(tabs.map((t) => t.id));
       for (const tab of tabs) {
         const tabCards = dashcards
           .filter((dc) => dc.dashboard_tab_id === tab.id)
           .sort((a, b) => a.row - b.row || a.col - b.col);
         tabGroups.push({ name: tab.name, cards: tabCards });
+      }
+      // Warn about orphaned cards (cards not assigned to any tab)
+      const orphaned = dashcards.filter((dc) => !dc.dashboard_tab_id || !tabIds.has(dc.dashboard_tab_id));
+      if (orphaned.length > 0) {
+        console.error(`⚠️ ${orphaned.length} card(s) not assigned to any tab — placing in first tab:`);
+        for (const dc of orphaned) {
+          const card = cardCache[dc.card_id];
+          console.error(`   - ${card ? card.name : `card_id=${dc.card_id}`}`);
+        }
+        // Add orphaned cards to first tab so they're not lost
+        tabGroups[0].cards.push(...orphaned.sort((a, b) => a.row - b.row || a.col - b.col));
       }
     } else {
       const sorted = [...dashcards].sort((a, b) => a.row - b.row || a.col - b.col);

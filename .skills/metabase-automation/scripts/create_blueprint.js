@@ -2,31 +2,32 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * usage: node create_blueprint.js <domain> <purpose>
+ * usage: node create_blueprint.js <domain> <purpose> [--tabs]
  * example: node create_blueprint.js sales daily
- * result: docs/metabase-workspace/sales-blueprint-daily.md
+ * example: node create_blueprint.js sales daily --tabs
+ * result: docs/analytics-handbook/blueprints/<domain>_<purpose>.md
  */
 
 const args = process.argv.slice(2);
-if (args.length < 2) {
-    console.error("Usage: node create_blueprint.js <domain> <purpose>");
+const flags = args.filter(a => a.startsWith('--'));
+const positional = args.filter(a => !a.startsWith('--'));
+
+if (positional.length < 2) {
+    console.error("Usage: node create_blueprint.js <domain> <purpose> [--tabs]");
     console.error("Example: node create_blueprint.js sales daily");
+    console.error("Example: node create_blueprint.js sales daily --tabs");
     process.exit(1);
 }
 
-const domain = args[0].toLowerCase();
-const purpose = args[1].toLowerCase();
-const filename = `${domain}-blueprint-${purpose}.md`;
+const domain = positional[0].toLowerCase();
+const purpose = positional[1].toLowerCase();
+const withTabs = flags.includes('--tabs');
+const filename = `${domain}_${purpose}.md`;
 
-// Target directory: docs/metabase-workspace/
-// Assuming we run this from project root or .agent/skills/...
-// We'll try to resolve relative to process.cwd()
-const targetDir = path.resolve(process.cwd(), 'docs', 'metabase-workspace');
+const targetDir = path.resolve(process.cwd(), 'docs', 'analytics-handbook', 'blueprints');
 
 if (!fs.existsSync(targetDir)) {
-    console.error(`❌ Target directory not found: ${targetDir}`);
-    console.error("Please run this script from the project root.");
-    process.exit(1);
+    fs.mkdirSync(targetDir, { recursive: true });
 }
 
 const targetPath = path.join(targetDir, filename);
@@ -36,57 +37,88 @@ if (fs.existsSync(targetPath)) {
     process.exit(1);
 }
 
-const template = `# ${domain.charAt(0).toUpperCase() + domain.slice(1)} ${purpose.charAt(0).toUpperCase() + purpose.slice(1)} Blueprint
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const domainCap = cap(domain);
+const purposeCap = cap(purpose);
 
-📖 **Playbook**: [${domain}-playbook.md#key-metrics]
+let template;
 
-## 📂 Collection: ${domain.charAt(0).toUpperCase() + domain.slice(1)} Analytics
+if (withTabs) {
+    template = `# ${domainCap} ${purposeCap} Blueprint
 
-### 🧊 Model: Main Model
+**Playbook**: [${domainCap} ${purposeCap}](../playbooks/${domain}_${purpose}.md)
 
-Description of the data model.
+## 📂 Collection: ${domainCap} Analytics
 
-\`\`\`sql
-SELECT * FROM public.fact_${domain}
-\`\`\`
+### 🖥️ Dashboard: ${domainCap} ${purposeCap}
 
-#### ⚙️ Settings
-
-\`\`\`json metabase-model
-{
-  "description": "Core ${domain} data",
-  "columns": {
-    "id": { "semantic_type": "type/PK" }
-  }
-}
-\`\`\`
+**Description**: TODO
 
 ---
 
-### 🖥️ Dashboard: ${purpose.charAt(0).toUpperCase() + purpose.slice(1)} Overview
+### 📑 Tab: Overview
 
 #### ❓ Question: Total Count
 
 \`\`\`sql
-SELECT count(*) FROM public.fact_${domain}
+SELECT count(*) as "Total" FROM fact_${domain}
 \`\`\`
 
 \`\`\`json metabase-viz
-{
-  "display": "scalar",
-  "scalar.field": "count"
-}
+{ "display": "scalar" }
 \`\`\`
 
 \`\`\`json metabase-pos
-{
-  "row": 0,
-  "col": 0,
-  "size_x": 4,
-  "size_y": 4
-}
+{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
+\`\`\`
+
+---
+
+### 📑 Tab: Details
+
+#### ❓ Question: Detail Table
+
+\`\`\`sql
+SELECT * FROM fact_${domain} LIMIT 100
+\`\`\`
+
+\`\`\`json metabase-viz
+{ "display": "table" }
+\`\`\`
+
+\`\`\`json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 8 }
 \`\`\`
 `;
+} else {
+    template = `# ${domainCap} ${purposeCap} Blueprint
+
+**Playbook**: [${domainCap} ${purposeCap}](../playbooks/${domain}_${purpose}.md)
+
+## 📂 Collection: ${domainCap} Analytics
+
+### 🖥️ Dashboard: ${domainCap} ${purposeCap}
+
+**Description**: TODO
+
+#### ❓ Question: Total Count
+
+\`\`\`sql
+SELECT count(*) as "Total" FROM fact_${domain}
+\`\`\`
+
+\`\`\`json metabase-viz
+{ "display": "scalar" }
+\`\`\`
+
+\`\`\`json metabase-pos
+{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
+\`\`\`
+`;
+}
 
 fs.writeFileSync(targetPath, template);
 console.log(`✅ Created blueprint: ${targetPath}`);
+if (withTabs) {
+    console.log(`📑 Scaffolded with 2 tabs (Overview, Details). Add more with: ### 📑 Tab: <Name>`);
+}

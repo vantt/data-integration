@@ -9,14 +9,14 @@ This workflow deploys analytics configurations (Dashboards, Questions, Models) f
 ## Prerequisites
 
 1.  **Metabase Container**: Must be running (`docker ps` to check).
-2.  **Blueprint File**: A valid Markdown file in `docs/metabase-workspace/` (e.g., `docs/metabase-workspace/sales-blueprint-daily.md`).
+2.  **Blueprint File**: A valid Markdown file in `docs/analytics-handbook/blueprints/` (e.g., `docs/analytics-handbook/blueprints/sales_daily_operation.md`).
 
 ## Steps
 
 1.  **Verify Configuration**
     Check that the blueprint follows the literate configuration syntax.
-    - Headers: `## 📂`, `### 🖥️`, `#### ❓`
-    - Code: `sql`, `json metabase-viz`
+    - Headers: `## 📂`, `### 🖥️`, `### 📑` (tabs), `#### ❓`
+    - Code: `sql`, `json metabase-viz`, `json metabase-pos`
 
 2.  **Run Deployment**
     Replace `<file_path>` with your blueprint path.

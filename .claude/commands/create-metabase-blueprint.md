@@ -16,16 +16,19 @@ Read these files before proceeding:
    - **Dashboards**: e.g., "Daily Operations", "Executive Overview"
 
 2. **Generate the Blueprint File**:
-   - Target path: `docs/metabase-workspace/{domain}-blueprint-{purpose}.md`
+   - Target path: `docs/analytics-handbook/blueprints/{domain}_{purpose}.md`
    - Or use the scaffold script:
      ```bash
      node .skills/metabase-automation/scripts/create_blueprint.js <domain> <purpose>
+     # With tabs:
+     node .skills/metabase-automation/scripts/create_blueprint.js <domain> <purpose> --tabs
      ```
 
 3. **Refine the Blueprint**:
    - Ensure SQL table names match dbt models
    - Check `json metabase-viz` blocks for correct chart types
    - Add business context in plain text
+   - Use `### 📑 Tab: <Name>` to organize questions into tabs (optional)
 
 4. **Deploy** when ready using `/deploy-metabase-blueprint`
 

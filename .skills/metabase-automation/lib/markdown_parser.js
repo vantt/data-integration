@@ -10,7 +10,8 @@ const path = require('path');
  * - ### 🧊 Model: <Name>     -> (Dependent on Collection)
  * - #### 📏 Metric: <Name>   -> (Dependent on Model)
  * - ### 🖥️ Dashboard: <Name> -> (Dependent on Collection)
- * - #### ❓ Question: <Name> -> (Dependent on Dashboard)
+ * - ### 📑 Tab: <Name>       -> (Dependent on Dashboard) Groups subsequent questions
+ * - #### ❓ Question: <Name> -> (Dependent on Dashboard, optionally scoped to a Tab)
  *
  * Code Blocks:
  * - ```sql -> The logic
@@ -22,6 +23,12 @@ const path = require('path');
  *   "## Collection: Operations > Daily Monitoring"
  *   creates "Operations" (if needed) then "Daily Monitoring" as a child.
  *   The dashboard is placed in the LAST segment (leaf collection).
+ *
+ * Tab Syntax:
+ *   "### 📑 Tab: Overview" placed after a Dashboard header.
+ *   All subsequent Questions belong to that tab until the next Tab header.
+ *   Questions get a `tab` property; the dashboard gets a `tabs[]` array.
+ *   Tabs are optional — dashboards without tabs work as single flat layouts.
  */
 
 function parseMarkdownConfig(filePath) {
@@ -39,6 +46,7 @@ function parseMarkdownConfig(filePath) {
     let currentDashboard = null;
     let currentQuestion = null;
     let currentMetric = null;
+    let currentTab = null;
 
     let inCodeBlock = false;
     let codeBlockType = null; // 'sql', 'json-viz', 'json-pos', 'json-model'
@@ -117,6 +125,7 @@ function parseMarkdownConfig(filePath) {
         const modelMatch = trimmed.match(/^###\s+(?:🧊\s+)?Model:\s*(.+)/);
         const metricMatch = trimmed.match(/^####\s+(?:📏\s+)?Metric:\s*(.+)/);
         const dashboardMatch = trimmed.match(/^###\s+(?:🖥️\s*)?Dashboard:\s*(.+)/);
+        const tabMatch = trimmed.match(/^###\s+(?:📑\s+)?Tab:\s*(.+)/);
         const questionMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
 
         if (collectionMatch) {
@@ -163,17 +172,39 @@ function parseMarkdownConfig(filePath) {
         else if (dashboardMatch) {
             if (!currentCollection) continue;
             const name = dashboardMatch[1].trim();
-            // Look ahead for description? Simple for now.
-            currentDashboard = { name, questions: [], collection_name: currentCollection.name };
+            currentDashboard = { name, questions: [], tabs: [], collection_name: currentCollection.name };
             currentCollection.dashboards.push(currentDashboard);
             config.dashboards.push(currentDashboard);
+            currentQuestion = null;
+            currentTab = null;
+        }
+        else if (tabMatch) {
+            if (!currentDashboard) continue;
+            const name = tabMatch[1].trim();
+            currentTab = name;
+            if (!currentDashboard.tabs.includes(name)) {
+                currentDashboard.tabs.push(name);
+            }
             currentQuestion = null;
         }
         else if (questionMatch) {
             if (!currentDashboard) continue;
             const name = questionMatch[1].trim();
             currentQuestion = { name };
+            if (currentTab) currentQuestion.tab = currentTab;
             currentDashboard.questions.push(currentQuestion);
+        }
+    }
+
+    // Validate: warn about questions without tab in a tabbed dashboard
+    for (const dashboard of config.dashboards) {
+        if (dashboard.tabs.length > 0) {
+            const untabbed = dashboard.questions.filter(q => !q.tab);
+            if (untabbed.length > 0) {
+                console.warn(`⚠️ Dashboard '${dashboard.name}' has ${dashboard.tabs.length} tab(s) but ${untabbed.length} question(s) without a tab:`);
+                untabbed.forEach(q => console.warn(`   - ${q.name}`));
+                console.warn(`   These questions will appear outside any tab.`);
+            }
         }
     }
 

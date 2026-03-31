@@ -85,8 +85,8 @@
 | Dashboard Name                | Audience              | Purpose                                                        | Link                            |
 | :---------------------------- | :-------------------- | :------------------------------------------------------------- | :------------------------------ |
 | **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Metabase ID 37](/dashboard/37) |
-| **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance and hourly trends. | [Metabase ID 38](/dashboard/38) |
-| **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review with DoD comparisons.               | TBD                             |
+| **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Metabase ID 2](/dashboard/2) |
+| **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Metabase ID 5](/dashboard/5) |
 | **Today's Orders List**         | Ops / Sales Reps    | Order-level list for real-time reconciliation with Sapo.        | TBD                             |
 | **Yesterday's Orders List**     | Ops / Store Managers | Finalized order-level list for reconciliation with Sapo.        | TBD                             |
 | **CEO Weekly Pulse**            | CEO / Founders       | 5-min weekly check-in: revenue pace, channel shifts, customer health. | TBD                       |
