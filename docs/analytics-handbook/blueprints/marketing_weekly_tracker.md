@@ -40,7 +40,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: Ecommerce Revenue
@@ -67,7 +67,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: Offline Revenue
@@ -94,7 +94,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: New Customers This Week
@@ -113,7 +113,7 @@ WHERE date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 d
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -484,7 +484,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 31, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 31, "col": 0, "size_x": 9, "size_y": 3 }
 ```
 
 #### ❓ Question: Social Orders
@@ -504,7 +504,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 31, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 31, "col": 9, "size_x": 9, "size_y": 3 }
 ```
 
 #### ❓ Question: Top 10 Products This Week

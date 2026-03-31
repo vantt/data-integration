@@ -4,7 +4,7 @@
 
 Order-level listing of today's orders for reconciliation with the Sapo sales system.
 
-## Collection: Daily Operations
+## 📂 Collection: Operations > Daily Monitoring
 
 ### Model: Today's Orders (Detail)
 
@@ -37,7 +37,7 @@ SELECT strftime(current_date, '%Y-%m-%d') as "Date"
 {
   "row": 0,
   "col": 0,
-  "size_x": 4,
+  "size_x": 6,
   "size_y": 2
 }
 ```
@@ -59,8 +59,8 @@ WHERE date(o.order_timestamp) = current_date
 ```json metabase-pos
 {
   "row": 0,
-  "col": 4,
-  "size_x": 4,
+  "col": 6,
+  "size_x": 6,
   "size_y": 2
 }
 ```
@@ -82,8 +82,8 @@ WHERE date(o.order_timestamp) = current_date
 ```json metabase-pos
 {
   "row": 0,
-  "col": 8,
-  "size_x": 4,
+  "col": 12,
+  "size_x": 6,
   "size_y": 2
 }
 ```

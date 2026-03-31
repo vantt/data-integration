@@ -57,7 +57,8 @@ collections:
       - Marketing Weekly Tracker
       - Marketing Monthly Analysis
       - Customer Operational Dashboard
-      - "Customer Retention & Churn"
+      - "Customer Retention & Lifecycle"
+      - Customer Intelligence Monthly
 
   # ---------------------------------------------------------------------------
   # OPERATIONS — "Hôm nay cần làm gì?"

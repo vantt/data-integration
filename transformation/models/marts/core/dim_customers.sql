@@ -28,6 +28,10 @@ joined_data AS (
         c.ward,
         c.address1,
         c.country,
+        c.dob,
+        c.sex,
+        c.customer_group,
+        c.loyalty_point,
         c.created_at,
         c.updated_at as source_updated_at,
         
@@ -82,6 +86,12 @@ SELECT
         WHEN monetary_value > 5000000 THEN 'Loyal'
         ELSE 'Regular'
     END as customer_segment,
+
+    -- Demographics
+    dob,
+    sex,
+    customer_group,
+    loyalty_point,
 
     -- CLV & RFM
     COALESCE(monetary_value, 0) as lifetime_value,

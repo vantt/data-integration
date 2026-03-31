@@ -2,7 +2,7 @@
 
 **Playbook**: [Sales Ops Weekly Review](../playbooks/sales_ops_weekly_review.md)
 
-> **Target Collection:** `Daily Operations` > `Weekly Reports`
+> **Target Collection:** `Operations` > `Periodic Reviews`
 > **Role:** Sales Operator, Customer Support Lead
 > **Archetype:** Operational Cockpit
 
@@ -34,7 +34,7 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: Total GMV
@@ -59,7 +59,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: AOV
@@ -86,7 +86,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Completed Orders %
@@ -114,7 +114,7 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -199,7 +199,7 @@ WHERE status = 'CANCELLED'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Return Count
@@ -218,7 +218,7 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 6, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---

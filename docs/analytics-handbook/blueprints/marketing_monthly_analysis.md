@@ -40,7 +40,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -58,7 +58,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: Monthly New Customers
@@ -77,7 +77,7 @@ WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Monthly Discount Rate
@@ -102,7 +102,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---

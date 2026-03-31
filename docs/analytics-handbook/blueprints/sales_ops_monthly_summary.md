@@ -2,7 +2,7 @@
 
 **Playbook**: [Sales Ops Monthly Summary](../playbooks/sales_ops_monthly_summary.md)
 
-> **Target Collection:** `Daily Operations` > `Monthly Reports`
+> **Target Collection:** `Operations` > `Periodic Reviews`
 > **Role:** Sales Operator, Operations Manager
 > **Archetype:** Operational Cockpit + Analytical
 
@@ -34,7 +34,7 @@ WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: Monthly GMV
@@ -59,7 +59,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
 ```
 
 #### ❓ Question: Completion Rate
@@ -87,7 +87,7 @@ WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Avg Time to Complete
@@ -114,7 +114,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---

@@ -4,7 +4,7 @@
 
 This blueprint creates a real-time sales monitoring dashboard for daily operations.
 
-## Collection: Daily Operations
+## 📂 Collection: Operations > Daily Monitoring
 
 This collection contains operational dashboards updated in real-time.
 
@@ -41,7 +41,7 @@ SELECT strftime(current_date, '%Y-%m-%d') as "Date"
 {
   "row": 0,
   "col": 0,
-  "size_x": 4,
+  "size_x": 18,
   "size_y": 2
 }
 ```

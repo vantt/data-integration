@@ -4,7 +4,7 @@
 
 This document defines the core sales dashboards and metrics.
 
-## 📂 Collection: Sales Analytics
+## 📂 Collection: Executive
 
 This collection contains all top-level sales reports for executives.
 
@@ -101,7 +101,7 @@ ORDER BY 1
 {
   "row": 0,
   "col": 0,
-  "size_x": 12,
+  "size_x": 18,
   "size_y": 6
 }
 ```
@@ -132,7 +132,7 @@ ORDER BY 2 DESC
 {
   "row": 6,
   "col": 0,
-  "size_x": 6,
+  "size_x": 9,
   "size_y": 6
 }
 ```
@@ -158,8 +158,8 @@ LIMIT 10
 ```json metabase-pos
 {
   "row": 6,
-  "col": 6,
-  "size_x": 6,
+  "col": 9,
+  "size_x": 9,
   "size_y": 6
 }
 ```

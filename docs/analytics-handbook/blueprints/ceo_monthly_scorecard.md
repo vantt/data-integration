@@ -86,7 +86,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 {
   "row": 0,
   "col": 0,
-  "size_x": 3,
+  "size_x": 4,
   "size_y": 3
 }
 ```
@@ -120,8 +120,8 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```json metabase-pos
 {
   "row": 0,
-  "col": 3,
-  "size_x": 3,
+  "col": 4,
+  "size_x": 4,
   "size_y": 3
 }
 ```
@@ -141,7 +141,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 8, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Monthly AOV
@@ -166,7 +166,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
 ```
 
 #### ❓ Question: Unique Customers
@@ -184,7 +184,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 15, "size_x": 3, "size_y": 3 }
 ```
 
 ---
@@ -516,7 +516,7 @@ ORDER BY 2 DESC
 {
   "row": 20,
   "col": 6,
-  "size_x": 6,
+  "size_x": 12,
   "size_y": 6
 }
 ```

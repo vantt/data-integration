@@ -4,7 +4,7 @@
 
 This blueprint creates a finalized sales review dashboard for yesterday's operations with day-over-day comparisons.
 
-## Collection: Daily Operations
+## 📂 Collection: Operations > Daily Monitoring
 
 This collection contains operational dashboards. Yesterday's dashboard uses finalized (complete) data.
 
@@ -41,7 +41,7 @@ SELECT strftime(current_date - INTERVAL '1 day', '%Y-%m-%d') as "Date"
 {
   "row": 0,
   "col": 0,
-  "size_x": 4,
+  "size_x": 18,
   "size_y": 2
 }
 ```
