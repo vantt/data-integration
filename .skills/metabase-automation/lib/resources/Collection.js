@@ -12,25 +12,29 @@ class Collection {
     }
 
     /**
-     * Flatten collection tree to find by name easily
+     * Flatten collection tree to find by name.
+     * @param {string} name - Collection name to search for
+     * @param {object} options - { parent_id } to scope the search to a specific parent
      */
-    async find(name) {
-        // Simple BFS/DFS to find collection by name
-        // Warning: Names are not unique in Metabase, this finds the first match.
+    async find(name, options = {}) {
         const root = await this.list();
-        // The root response is a list of root collections.
-        
+        const parentId = options.parent_id || null;
+
         let queue = [...root];
         while (queue.length > 0) {
             const current = queue.shift();
-            if (current.name === name) return current;
-            
-            // Metabase API usually doesn't return full children tree in list unless requested?
-            // Actually /api/collection returns "tree".
-            // Let's assume standard structure.
-             if (current.children) {
-                 queue.push(...current.children);
-             }
+
+            // Match by name AND parent scope (if provided)
+            const nameMatch = current.name === name;
+            const parentMatch = parentId === null
+                ? true  // No parent filter — accept any match (backwards-compatible)
+                : (current.location === `/${parentId}/` || current.parent_id === parentId);
+
+            if (nameMatch && parentMatch) return current;
+
+            if (current.children) {
+                queue.push(...current.children);
+            }
         }
         return null;
     }
@@ -41,7 +45,7 @@ class Collection {
      * @param {object} options - { parent_id, color, description }
      */
     async ensure(name, options = {}) {
-        const existing = await this.find(name);
+        const existing = await this.find(name, { parent_id: options.parent_id || null });
         if (existing) {
             console.log(`✅ Collection '${name}' exists (ID: ${existing.id})`);
             return existing;

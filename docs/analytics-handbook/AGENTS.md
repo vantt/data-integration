@@ -20,6 +20,35 @@ If a user asks for "A dashboard showing Net Revenue", you must:
 
 ---
 
+## 📐 Naming Conventions
+
+### File Naming
+
+| Type | Pattern | Examples |
+|:---|:---|:---|
+| Domain | `[domain].md` | `sales.md`, `finance.md`, `customer_support.md` |
+| Playbook | `[audience]_[cadence]_[topic].md` | `ceo_weekly_pulse.md`, `marketing_monthly_analysis.md`, `sales_ops_weekly_review.md` |
+| Blueprint | Same as playbook | `ceo_weekly_pulse.md`, `sales_ops_monthly_summary.md` |
+
+- Use `lowercase_with_underscores` for all file names.
+- Playbook and its corresponding blueprint MUST have the **same filename** (in different directories).
+- Audience prefix: `ceo_`, `marketing_`, `sales_ops_`, `sales_`, `customer_`.
+- Cadence: `daily_`, `weekly_`, `monthly_` (omit if the dashboard has no fixed cadence).
+
+### Dashboard Naming
+
+- Dashboard name = human-readable title. Cadence is part of the name.
+- Good: `CEO Weekly Pulse`, `Marketing Monthly Analysis`, `Sales Ops Weekly Review`
+- Bad: `Weekly Report`, `Monthly Dashboard`, `New Dashboard`
+
+### Question (Card) Naming
+
+- Descriptive, standalone-readable. Include time scope if relevant.
+- Good: `Revenue by Channel Category`, `Top 10 Products by Revenue`, `Cancellation Rate Trend (6M)`
+- Bad: `Chart 1`, `Query`, `Revenue`
+
+---
+
 ## 📂 1. Domain File Structure (`domains/*.md`)
 
 **Purpose:** Group metrics by Business Domain Context, often tying back to a specific dbt Source Model.
@@ -97,37 +126,149 @@ If a user asks for "A dashboard showing Net Revenue", you must:
 
 ## 📂 3. Blueprint File Structure (`blueprints/*.md`)
 
-**Purpose:** Provide exact technical specifications for implementing complex dashboards, including raw SQL and visualization JSON.
-**Filename Convention:** `[topic].md` (e.g., `sales_daily.md`).
+**Purpose:** Deployable technical specification — parsed by `deploy_from_markdown.js` to create Metabase resources automatically.
+**Filename Convention:** Same as playbook (e.g., `ceo_weekly_pulse.md`).
 
 ### Template
 
 ````markdown
-# Blueprint: [Dashboard Name]
+# 📘 Blueprint: [Dashboard Name]
 
-## Technical Spec
+**Playbook**: [Link to playbook](../playbooks/[same_name].md)
 
-### Chart: [Chart Name]
+> **Target Collection:** `[Collection Path from registry]`
+> **Role:** [Audience]
+> **Archetype:** [Executive Pulse / Operational Cockpit / Exploratory Tool]
 
-**SQL Query:**
+## 📂 Collection: [Parent] > [Child]
+
+[One-line description of this collection.]
+
+### 🧊 Model: [Model Name]   ← optional, only if dashboard needs a pre-aggregated model
+
+[Description of what this model does.]
+
+```sql
+SELECT ... FROM ...
+```
+
+### 🖥️ Dashboard: [Dashboard Name]
+
+**Description**: [One sentence explaining the dashboard purpose.]
+
+#### ❓ Question: [Question Name]
+
+[Optional description or domain reference link.]
+
+**Domain Reference**: [Metric Name](../domains/[domain].md#[anchor])
 
 ```sql
 SELECT ...
+FROM fact_orders
+WHERE status NOT IN ('CANCELLED', 'Voided')
+  AND order_timestamp >= ...
 ```
-````
 
-**Visualization JSON:**
-
-```json
+```json metabase-viz
 {
   "display": "line",
-  ...
+  "visualization_settings": { ... }
 }
 ```
 
+```json metabase-pos
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 12,
+  "size_y": 6
+}
 ```
+````
+
+### Blueprint Code Block Reference
+
+| Block | Purpose | Required? |
+|:---|:---|:---|
+| `` ```sql `` | The SQL query for the question/model | **Yes** |
+| `` ```json metabase-viz `` | Visualization settings (display type, colors, axes) | Recommended |
+| `` ```json metabase-pos `` | Grid position on the dashboard (`row`, `col`, `size_x`, `size_y`) | Recommended |
+| `` ```json metabase-model `` | Model column metadata (display names, semantic types) | Optional |
+| `` ```sql --metric `` | Metric formula (for Metabase Metric layer) | Optional |
+
+### Dashboard Grid System
+
+- Grid width: **18 units**.
+- Scalar KPIs: `size_x: 3–4`, `size_y: 3`. Place 4–6 across the top row.
+- Charts (line, bar, pie): `size_x: 6–12`, `size_y: 6–8`.
+- Tables: `size_x: 9–18`, `size_y: 6`.
+- Rows increment by the height of the tallest card in that visual row.
 
 ---
+
+---
+
+## 🗄️ SQL Conventions for Blueprints
+
+All SQL in blueprints targets **DuckDB** (via Metabase Native Query). Follow these rules:
+
+### Filtering
+
+```sql
+-- ALWAYS exclude cancelled/voided orders for revenue metrics
+WHERE status NOT IN ('CANCELLED', 'Voided')
+
+-- Date ranges: use date_trunc + INTERVAL, never hardcoded dates
+AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+AND order_timestamp < date_trunc('month', current_date)
+```
+
+### Date Functions (DuckDB syntax)
+
+| Operation | DuckDB Syntax | ❌ NOT this |
+|:---|:---|:---|
+| Truncate to month | `date_trunc('month', ts)` | `DATE_FORMAT(ts, '%Y-%m-01')` |
+| Date difference | `date_diff('day', start, end)` | `DATEDIFF(start, end)` |
+| Extract part | `EXTRACT(HOUR FROM ts)` | `HOUR(ts)` |
+| Format date | `strftime(ts, '%Y-%m-%d')` | `DATE_FORMAT(ts, ...)` |
+| Interval | `INTERVAL '7 days'` | `INTERVAL 7 DAY` |
+| Cast to date | `date(ts)` or `CAST(ts AS DATE)` | `DATE(ts)` (MySQL) |
+
+### Joins & Keys
+
+- All dimension joins use **surrogate keys** (MD5 hashes from `dbt_utils.generate_surrogate_key()`).
+- Always use `LEFT JOIN` for dimensions to avoid losing fact rows when dimension is 'Unknown'.
+- Example: `JOIN dim_channels c ON o.channel_key = c.channel_key`
+
+### Comparisons (WoW, MoM)
+
+Use CTE pattern — `this_period` vs `last_period`:
+
+```sql
+WITH this_week AS (
+    SELECT ... WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+                 AND order_timestamp < date_trunc('week', current_date)
+),
+last_week AS (
+    SELECT ... WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+                 AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+)
+SELECT ..., ROUND((tw.value - lw.value) * 100.0 / NULLIF(lw.value, 0), 1) as "WoW %"
+FROM this_week tw LEFT JOIN last_week lw ON ...
+```
+
+### Formatting
+
+- Currency columns: `{ "number_style": "currency", "currency": "VND" }`
+- Percent columns: `{ "suffix": "%", "decimals": 1 }` or `{ "number_style": "percent" }`
+- Column aliases: Use `"Double Quoted"` for human-readable names in SELECT.
+- Sort: Always add `ORDER BY` — revenue DESC for rankings, date ASC for trends.
+
+### Safety
+
+- Always use `NULLIF(denominator, 0)` to prevent division by zero.
+- Use `COALESCE(nullable_field, 0)` for discount/tax amounts.
+- `COUNT(DISTINCT order_id)` — not `COUNT(*)` — for order counts (avoid duplicate rows).
 
 ---
 
@@ -161,6 +302,76 @@ Use these slash commands to accelerate your work:
 
 ---
 
+## 📂 Collection Governance
+
+### The Problem
+Creating collections ad-hoc leads to a messy Metabase sidebar (orphan "Weekly Reports" that mixes CEO + Marketing + Ops dashboards). Users can't find their dashboards.
+
+### The Rule
+**ALWAYS read [`collection_registry.yml`](./collection_registry.yml) before creating a blueprint.** This file is the single source of truth for the Metabase collection hierarchy.
+
+> **Why this structure?** See [`guides/collection_organization.md`](./guides/collection_organization.md) for the full rationale — organized by audience, not topic or cadence.
+
+### Collection Architecture (3 Collections)
+
+With a small team (~5 users) where people wear multiple hats, we use **3 top-level collections**, each answering one core question:
+
+```
+📁 Executive                          ← "Công ty đang thế nào?"
+│   ├── CEO Weekly Pulse
+│   ├── CEO Monthly Scorecard
+│   └── Sales Executive Dashboard
+│
+📁 Marketing & Customers              ← "Kênh/Khách thế nào?"
+│   ├── Marketing Weekly Tracker
+│   ├── Marketing Monthly Analysis
+│   ├── Customer Operational Dashboard
+│   └── Customer Retention & Churn
+│
+📁 Operations                         ← "Hôm nay cần làm gì?"
+│   ├── Daily Monitoring/
+│   │   ├── Daily Sales, Yesterday's Sales
+│   │   └── Today's Orders, Yesterday's Orders
+│   ├── Periodic Reviews/
+│   │   ├── Sales Ops Weekly Review
+│   │   └── Sales Ops Monthly Summary
+│   └── Social Commerce Operations
+```
+
+### Collection Placement Workflow
+
+1. **Identify the audience** of the dashboard.
+2. **Ask the decision question:**
+
+   | Question | Collection Path |
+   |:---|:---|
+   | "Is this for **strategic oversight**?" (CEO, Board, Sales Director) | `Executive` |
+   | "Is this for **channel/customer analysis**?" (Marketing, CS) | `Marketing & Customers` |
+   | "Is this for **daily action items**?" (Store Manager, Ops) | `Operations > Daily Monitoring` |
+   | "Is this for **weekly/monthly ops review**?" (Sales Ops, CS Lead) | `Operations > Periodic Reviews` |
+   | "Is this for **social commerce**?" (CS Lead) | `Operations` |
+
+3. **Use the path in the blueprint** with `>` syntax:
+   ```markdown
+   ## 📂 Collection: Operations > Periodic Reviews
+   ```
+   The deploy script will create "Operations" (if needed), then "Periodic Reviews" as a child.
+
+4. **If no collection matches** the audience → update `collection_registry.yml` first, then create the blueprint. Never invent ad-hoc collection names.
+
+### Key Principles
+- **Organize by AUDIENCE** (who uses it), not by cadence (daily/weekly/monthly).
+- **Cadence goes in the dashboard name**, not the collection name.
+- **Max 2 levels deep**. No `A > B > C > D` nesting.
+- **Collection names must be unique within the same parent.
+
+### When to Split
+- Team > 15 people with dedicated Customer Success → split `Marketing & Customers` into `Marketing` + `Customer Analytics`
+- Sales Director ≠ CEO, needs separate permissions → split `Executive` into `Executive` + `Sales Analytics`
+- Any collection exceeds ~8 dashboards → add sub-collections or new top-level
+
+---
+
 ## ⚡ Workflow Checklist for Agents
 
 When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
@@ -170,6 +381,6 @@ When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
 2.  **Update Playbook:** Open `playbooks/executive_dashboard.md`.
     - Add a row to the Visualization table.
     - **CRITICAL:** Insert the link: `[Customer LTV](../domains/customer.md#customer-ltv)`.
-3.  **Verify:** Ensure the link works and the logic is dbt-compliant.
-4.  **Deploy (Optional):** If a Blueprint is created, use `/deploy_metabase_blueprint` to push it to Metabase.
-```
+3.  **Check Collection Registry:** Read `collection_registry.yml` to confirm the target collection path.
+4.  **Create Blueprint:** Use the correct `## Collection: <path>` syntax from the registry.
+5.  **Deploy (Optional):** If a Blueprint is created, use `/deploy_metabase_blueprint` to push it to Metabase.

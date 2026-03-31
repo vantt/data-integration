@@ -75,11 +75,13 @@ async function main() {
     process.exit(1);
   }
 
-  // A. Collections
+  // A. Collections (supports nested paths via "parent" field from parser)
   const colMap = {}; // name -> id
   for (const col of config.collections) {
-    console.log(`📂 Ensuring Collection: ${col.name}`);
-    const remote = await client.collection.ensure(col.name);
+    const parentId = col.parent ? colMap[col.parent] || null : null;
+    const pathLabel = col.parent ? `${col.parent} > ${col.name}` : col.name;
+    console.log(`📂 Ensuring Collection: ${pathLabel}`);
+    const remote = await client.collection.ensure(col.name, { parent_id: parentId });
     colMap[col.name] = remote.id;
   }
 

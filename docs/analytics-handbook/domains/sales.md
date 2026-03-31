@@ -75,6 +75,12 @@
 | **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review with DoD comparisons.               | TBD                             |
 | **Today's Orders List**         | Ops / Sales Reps    | Order-level list for real-time reconciliation with Sapo.        | TBD                             |
 | **Yesterday's Orders List**     | Ops / Store Managers | Finalized order-level list for reconciliation with Sapo.        | TBD                             |
+| **CEO Weekly Pulse**            | CEO / Founders       | 5-min weekly check-in: revenue pace, channel shifts, customer health. | TBD                       |
+| **CEO Monthly Scorecard**       | CEO / Board          | Comprehensive monthly review: targets, channels, segments, efficiency. | TBD                      |
+| **Marketing Weekly Tracker**    | Marketing Manager    | Weekly channel performance, acquisition, promotions, social commerce.  | TBD                      |
+| **Marketing Monthly Analysis**  | Marketing / CMO      | Monthly deep dive: channel strategy, cohort retention, campaign ROI.   | TBD                      |
+| **Sales Ops Weekly Review**     | Sales Ops / CS Lead  | Weekly order processing, team performance, channel workload.           | TBD                      |
+| **Sales Ops Monthly Summary**   | Sales Ops / Ops Mgr  | Monthly operational efficiency, staff KPIs, payment reconciliation.    | TBD                      |
 
 ## Related Playbooks
 
@@ -85,6 +91,12 @@
 | **[Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)** | Order-level listing for BI vs Sapo reconciliation (Today & Yesterday).    |
 | **[Promotion Analysis](../playbooks/sales_promotion_analysis.md)** | Deep dive methodologies for validating campaign ROI and discount strategies.          |
 | **[Customer Support Domain](../domains/customer_support.md)**      | For "Social Commerce" and Inbound Sales specific metrics.                             |
+| **[CEO Weekly Pulse](../playbooks/ceo_weekly_pulse.md)**           | CEO's Monday morning 5-minute weekly check-in dashboard.                              |
+| **[CEO Monthly Scorecard](../playbooks/ceo_monthly_scorecard.md)** | CEO's comprehensive monthly performance scorecard.                                    |
+| **[Marketing Weekly Tracker](../playbooks/marketing_weekly_tracker.md)** | Marketing Manager's weekly channel & acquisition tracker.                       |
+| **[Marketing Monthly Analysis](../playbooks/marketing_monthly_analysis.md)** | Marketing's monthly strategic analysis with cohort & campaign deep dive.   |
+| **[Sales Ops Weekly Review](../playbooks/sales_ops_weekly_review.md)** | CS/Sales Ops weekly operational review & team performance.                        |
+| **[Sales Ops Monthly Summary](../playbooks/sales_ops_monthly_summary.md)** | CS/Sales Ops monthly operations summary & staff KPIs.                        |
 
 ## Context: Order List (Reconciliation)
 

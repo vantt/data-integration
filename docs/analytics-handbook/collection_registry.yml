@@ -1,0 +1,111 @@
+# =============================================================================
+# Metabase Collection Registry — Single Source of Truth
+# =============================================================================
+#
+# PURPOSE:
+#   Defines the canonical collection hierarchy in Metabase.
+#   AI Agents MUST read this file before creating any blueprint.
+#   The deploy script uses this to resolve collection paths and set parent_id.
+#
+# RULES:
+#   1. Every dashboard MUST live inside a registered collection path.
+#   2. Never create a collection that isn't defined here.
+#   3. To add a new collection, update this file FIRST, then create the blueprint.
+#   4. Collection names must be unique within the same parent.
+#   5. Top-level collections are organized by AUDIENCE (who uses it), not by cadence.
+#
+# SYNTAX IN BLUEPRINTS:
+#   Use ">" to express the path from root to target collection:
+#     ## Collection: Operations > Daily Monitoring
+#   The deploy script will ensure "Operations" exists, then ensure "Daily Monitoring"
+#   as a child of "Operations".
+#
+# DESIGN GUIDE:
+#   See guides/collection_organization.md for full rationale (Vietnamese).
+#   Summary: 3 collections organized by AUDIENCE, not topic or cadence.
+#     Executive             → "Công ty đang thế nào?"
+#     Marketing & Customers → "Kênh/Khách thế nào?"
+#     Operations            → "Hôm nay cần làm gì?"
+#
+# LAST UPDATED: 2026-03-31
+# =============================================================================
+
+collections:
+
+  # ---------------------------------------------------------------------------
+  # EXECUTIVE — "Công ty đang thế nào?"
+  # CEO, Co-Founders, Board, Sales Director
+  # ---------------------------------------------------------------------------
+  - name: Executive
+    description: "Strategic dashboards for leadership — company performance, targets, and high-level KPIs."
+    audience: [CEO, Co-Founders, Board, Sales Director]
+    color: "#7C3AED"  # Purple — authority
+    dashboards:
+      - CEO Weekly Pulse
+      - CEO Monthly Scorecard
+      - Sales Executive Dashboard
+
+  # ---------------------------------------------------------------------------
+  # MARKETING & CUSTOMERS — "Kênh/Khách thế nào?"
+  # Marketing Manager, Brand Manager, CMO, Customer Success
+  # ---------------------------------------------------------------------------
+  - name: Marketing & Customers
+    description: "Channel performance, customer acquisition, retention, segmentation, and campaign analysis."
+    audience: [Marketing Manager, Brand Manager, CMO, Customer Success]
+    color: "#F9A825"  # Yellow — energy
+    dashboards:
+      - Marketing Weekly Tracker
+      - Marketing Monthly Analysis
+      - Customer Operational Dashboard
+      - "Customer Retention & Churn"
+
+  # ---------------------------------------------------------------------------
+  # OPERATIONS — "Hôm nay cần làm gì?"
+  # Store Managers, Sales Operators, Customer Support Lead
+  # ---------------------------------------------------------------------------
+  - name: Operations
+    description: "Daily/weekly/monthly operational dashboards for frontline teams."
+    audience: [Store Managers, Sales Operators, CS Lead]
+    color: "#84BB4C"  # Green — go/action
+    children:
+
+      - name: Daily Monitoring
+        description: "Real-time and yesterday's dashboards. Checked multiple times per day."
+        dashboards:
+          - Daily Sales Dashboard
+          - "Yesterday's Sales Dashboard"
+          - "Today's Orders List"
+          - "Yesterday's Orders List"
+
+      - name: Periodic Reviews
+        description: "Weekly and monthly operational summaries for team leads."
+        dashboards:
+          - Sales Ops Weekly Review
+          - Sales Ops Monthly Summary
+
+    dashboards:
+      - Social Commerce Operations
+
+
+# =============================================================================
+# LOOKUP TABLE — Quick reference for agents
+# =============================================================================
+# Use this to find the right collection path for a new dashboard:
+#
+# | Audience                    | Collection Path              |
+# |-----------------------------|------------------------------|
+# | CEO / Board / Sales Director| Executive                    |
+# | Marketing Manager / CMO     | Marketing & Customers        |
+# | Customer Success            | Marketing & Customers        |
+# | Store Manager (daily ops)   | Operations > Daily Monitoring|
+# | Sales Ops / CS Lead (weekly)| Operations > Periodic Reviews|
+# | CS Lead (social commerce)   | Operations                   |
+#
+# DECISION GUIDE — which collection?
+#   "Is this for strategic oversight?"        → Executive
+#   "Is this for channel/customer analysis?"  → Marketing & Customers
+#   "Is this for daily/weekly action items?"  → Operations (pick sub-collection)
+#
+# If the audience doesn't match any existing collection, STOP and update this
+# registry first. Do not create ad-hoc collections.
+# =============================================================================

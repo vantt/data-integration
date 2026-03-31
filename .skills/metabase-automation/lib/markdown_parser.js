@@ -3,19 +3,25 @@ const path = require('path');
 
 /**
  * Parses a "Literate Configuration" Markdown file into a Metabase Config object.
- * 
+ *
  * Syntax:
- * - ## 📂 Collection: <Name>
+ * - ## 📂 Collection: <Name>              -> Top-level collection
+ * - ## 📂 Collection: <Parent> > <Child>   -> Nested collection (child under parent)
  * - ### 🧊 Model: <Name>     -> (Dependent on Collection)
  * - #### 📏 Metric: <Name>   -> (Dependent on Model)
  * - ### 🖥️ Dashboard: <Name> -> (Dependent on Collection)
  * - #### ❓ Question: <Name> -> (Dependent on Dashboard)
- * 
+ *
  * Code Blocks:
  * - ```sql -> The logic
  * - ```json metabase-viz -> Viz Settings
  * - ```json metabase-pos -> Dashboard Position
  * - ```json metabase-model -> Model Metadata
+ *
+ * Collection Path Syntax:
+ *   "## Collection: Operations > Daily Monitoring"
+ *   creates "Operations" (if needed) then "Daily Monitoring" as a child.
+ *   The dashboard is placed in the LAST segment (leaf collection).
  */
 
 function parseMarkdownConfig(filePath) {
@@ -114,10 +120,29 @@ function parseMarkdownConfig(filePath) {
         const questionMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
 
         if (collectionMatch) {
-            const name = collectionMatch[1].trim();
-            currentCollection = { name, dashboards: [], models: [] };
-            config.collections.push(currentCollection);
-            // Reset children context
+            const rawName = collectionMatch[1].trim();
+
+            // Support path syntax: "Parent > Child > Grandchild"
+            // Splits on ">" and trims each segment.
+            // Each segment becomes a collection entry with a `parent` reference.
+            const segments = rawName.split('>').map(s => s.trim()).filter(Boolean);
+
+            let parentName = null;
+            for (const segment of segments) {
+                // Avoid duplicates: reuse existing collection if same name+parent
+                const existing = config.collections.find(
+                    c => c.name === segment && c.parent === parentName
+                );
+                if (existing) {
+                    currentCollection = existing;
+                } else {
+                    currentCollection = { name: segment, parent: parentName, dashboards: [], models: [] };
+                    config.collections.push(currentCollection);
+                }
+                parentName = segment;
+            }
+
+            // currentCollection is now the LEAF (deepest segment) — dashboards go here
             currentDashboard = null;
             currentModel = null;
         }
