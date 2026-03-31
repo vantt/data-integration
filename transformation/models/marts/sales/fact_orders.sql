@@ -15,11 +15,19 @@ valid_customers AS (
 
 source_definitions AS (
     SELECT id, is_generic_source FROM {{ ref('ref_order_sources') }}
+),
+
+first_shipment AS (
+    SELECT order_id, MIN(shipped_at) as first_shipped_at
+    FROM {{ ref('std_fulfillments') }}
+    WHERE shipped_at IS NOT NULL
+    GROUP BY order_id
 )
 
 SELECT
     -- Keys
     orders.order_id,
+    orders.order_code,
     COALESCE(vc.customer_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as customer_key,
     CASE 
         WHEN shipping_province IS NULL OR shipping_province = '' OR shipping_province = 'Unknown' THEN {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
@@ -68,7 +76,7 @@ SELECT
     total_amount as total_collected,                         -- Tổng thu từ khách (sau chiết khấu, gồm thuế)
     
     -- Performance Metrics
-    -- timestamps difference in hours
+    fs.first_shipped_at,                                     -- Ngày xuất kho đầu tiên
     date_diff('hour', created_at, completed_at) as time_to_complete_hours,
     
     orders.client_details,
@@ -81,3 +89,4 @@ FROM orders
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = vc.customer_key
 LEFT JOIN {{ ref('dim_staff') }} ds ON {{ dbt_utils.generate_surrogate_key(['orders.salesperson_id']) }} = ds.staff_key
 LEFT JOIN source_definitions sd ON orders.source_id = sd.id
+LEFT JOIN first_shipment fs ON orders.order_id = fs.order_id
