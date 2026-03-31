@@ -23,21 +23,9 @@ This collection contains operational dashboards updated in real-time.
 **Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv)
 
 ```sql
-WITH today AS (
-    SELECT COALESCE(SUM(gross_revenue), 0) as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date
-),
-yesterday AS (
-    SELECT COALESCE(SUM(gross_revenue), 0) as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
-)
-SELECT
-    t.val as "Gross Revenue",
-    CASE WHEN y.val = 0 THEN NULL
-         ELSE ROUND((t.val - y.val) * 100.0 / y.val, 1) END as "DoD %"
-FROM today t CROSS JOIN yesterday y
+SELECT COALESCE(SUM(gross_revenue), 0) as "Gross Revenue"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-viz
@@ -45,7 +33,7 @@ FROM today t CROSS JOIN yesterday y
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
+{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Net Revenue
@@ -53,21 +41,9 @@ FROM today t CROSS JOIN yesterday y
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue)
 
 ```sql
-WITH today AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date
-),
-yesterday AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
-)
-SELECT
-    t.val as "Net Revenue",
-    CASE WHEN y.val = 0 THEN NULL
-         ELSE ROUND((t.val - y.val) * 100.0 / y.val, 1) END as "DoD %"
-FROM today t CROSS JOIN yesterday y
+SELECT COALESCE(SUM(net_revenue), 0) as "Net Revenue"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-viz
@@ -75,27 +51,33 @@ FROM today t CROSS JOIN yesterday y
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
+{ "row": 0, "col": 4, "size_x": 4, "size_y": 3 }
+```
+
+#### Question: Total Collected
+
+**Domain Reference**: [Total Collected](../domains/sales.md#2b-total-collected)
+
+```sql
+SELECT COALESCE(SUM(total_collected), 0) as "Total Collected"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 8, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Total Orders
 
 ```sql
-WITH today AS (
-    SELECT COUNT(DISTINCT order_id) as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date
-),
-yesterday AS (
-    SELECT COUNT(DISTINCT order_id) as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
-)
-SELECT
-    t.val as "Total Orders",
-    CASE WHEN y.val = 0 THEN NULL
-         ELSE ROUND((t.val - y.val) * 100.0 / y.val, 1) END as "DoD %"
-FROM today t CROSS JOIN yesterday y
+SELECT COUNT(DISTINCT order_id) as "Total Orders"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-viz
@@ -103,29 +85,16 @@ FROM today t CROSS JOIN yesterday y
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: AOV
 
 ```sql
-WITH today AS (
-    SELECT CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-                ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date
-),
-yesterday AS (
-    SELECT CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-                ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
-)
-SELECT
-    ROUND(t.val, 0) as "AOV",
-    CASE WHEN y.val = 0 THEN NULL
-         ELSE ROUND((t.val - y.val) * 100.0 / y.val, 1) END as "DoD %"
-FROM today t CROSS JOIN yesterday y
+SELECT CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+            ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as "AOV"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-viz
@@ -133,12 +102,12 @@ FROM today t CROSS JOIN yesterday y
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 15, "size_x": 3, "size_y": 3 }
 ```
 
-#### Question: New Customers
+---
 
-**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
+#### Question: New Customers
 
 ```sql
 SELECT COUNT(DISTINCT o.customer_key) as "New Customers"
@@ -153,7 +122,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returning Customers
@@ -171,7 +140,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returns
@@ -188,7 +157,25 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 3, "size_y": 3 }
+```
+
+#### Question: Items per Order
+
+```sql
+SELECT ROUND(
+    SUM(s.quantity)::FLOAT / NULLIF(COUNT(DISTINCT s.order_id), 0), 1
+) as "Items/Order"
+FROM fact_sales s
+WHERE date(s.sol_timestamp) = current_date
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 3, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Discount Rate
@@ -225,6 +212,62 @@ WHERE date(order_timestamp) = current_date
 
 ```json metabase-pos
 { "row": 3, "col": 15, "size_x": 3, "size_y": 3 }
+```
+
+---
+
+#### Question: DoD Comparison
+
+Day-over-day comparison of key metrics: today vs yesterday.
+
+```sql
+WITH today AS (
+    SELECT
+        COALESCE(SUM(gross_revenue), 0) as gross_revenue,
+        COALESCE(SUM(net_revenue), 0) as net_revenue,
+        COALESCE(SUM(total_collected), 0) as total_collected,
+        COUNT(DISTINCT order_id) as total_orders,
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as aov
+    FROM fact_orders
+    WHERE date(order_timestamp) = current_date
+),
+yesterday AS (
+    SELECT
+        COALESCE(SUM(gross_revenue), 0) as gross_revenue,
+        COALESCE(SUM(net_revenue), 0) as net_revenue,
+        COALESCE(SUM(total_collected), 0) as total_collected,
+        COUNT(DISTINCT order_id) as total_orders,
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as aov
+    FROM fact_orders
+    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+)
+SELECT
+    t.gross_revenue as "Gross Revenue",
+    y.gross_revenue as "Yesterday",
+    CASE WHEN y.gross_revenue = 0 THEN NULL ELSE ROUND((t.gross_revenue - y.gross_revenue) * 100.0 / y.gross_revenue, 1) END as "GR DoD %",
+    t.net_revenue as "Net Revenue",
+    y.net_revenue as "Yest. Net",
+    CASE WHEN y.net_revenue = 0 THEN NULL ELSE ROUND((t.net_revenue - y.net_revenue) * 100.0 / y.net_revenue, 1) END as "NR DoD %",
+    t.total_orders as "Orders",
+    y.total_orders as "Yest. Orders",
+    CASE WHEN y.total_orders = 0 THEN NULL ELSE ROUND((t.total_orders - y.total_orders) * 100.0 / y.total_orders, 1) END as "Orders DoD %",
+    t.aov as "AOV",
+    y.aov as "Yest. AOV",
+    CASE WHEN y.aov = 0 THEN NULL ELSE ROUND((t.aov - y.aov) * 100.0 / y.aov, 1) END as "AOV DoD %"
+FROM today t CROSS JOIN yesterday y
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "table.pivot": false
+}
+```
+
+```json metabase-pos
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 3 }
 ```
 
 ---
@@ -273,7 +316,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 12, "size_y": 8 }
+{ "row": 9, "col": 0, "size_x": 12, "size_y": 8 }
 ```
 
 #### Question: Cumulative Revenue
@@ -324,7 +367,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 12, "size_x": 6, "size_y": 8 }
+{ "row": 9, "col": 12, "size_x": 6, "size_y": 8 }
 ```
 
 ---
@@ -332,8 +375,6 @@ ORDER BY 1
 ### 📑 Tab: Kênh bán hàng
 
 #### Question: Revenue by Channel
-
-Revenue breakdown by sales channel.
 
 **Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
@@ -360,13 +401,14 @@ ORDER BY 2 DESC
 { "row": 0, "col": 0, "size_x": 9, "size_y": 8 }
 ```
 
-#### Question: Orders by Channel
+#### Question: Revenue by Channel Category
 
-Order count breakdown by sales channel.
+Online vs Offline vs Internal breakdown.
 
 ```sql
 SELECT
-    c.channel_name as "Channel",
+    c.channel_category as "Category",
+    SUM(o.net_revenue) as "Revenue",
     COUNT(DISTINCT o.order_id) as "Orders"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -378,8 +420,8 @@ ORDER BY 2 DESC
 ```json metabase-viz
 {
   "display": "bar",
-  "graph.dimensions": ["Channel"],
-  "graph.metrics": ["Orders"]
+  "graph.dimensions": ["Category"],
+  "graph.metrics": ["Revenue", "Orders"]
 }
 ```
 
@@ -436,13 +478,40 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 { "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
+#### Question: Sales by Branch
+
+Revenue and order count by store/branch location.
+
+```sql
+SELECT
+    bl.branch_location_name as "Branch",
+    COUNT(DISTINCT o.order_id) as "Orders",
+    COALESCE(SUM(o.net_revenue), 0) as "Revenue",
+    CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+         ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
+FROM fact_orders o
+JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
+WHERE date(o.order_timestamp) = current_date
+GROUP BY 1
+ORDER BY 3 DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "table.pivot": false
+}
+```
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
 ---
 
 ### 📑 Tab: Sản phẩm
 
 #### Question: Top 10 Products by Revenue
-
-Best selling products today by revenue.
 
 **Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products)
 
@@ -472,8 +541,6 @@ LIMIT 10
 
 #### Question: Top 10 Products by Quantity
 
-Products with the highest unit sales today.
-
 ```sql
 SELECT
     p.product_name as "Product",
@@ -500,8 +567,6 @@ LIMIT 10
 
 #### Question: Revenue by Product Type
 
-Revenue breakdown by product category/type.
-
 ```sql
 SELECT
     COALESCE(p.product_type, 'Unknown') as "Product Type",
@@ -527,8 +592,6 @@ ORDER BY 2 DESC
 ```
 
 #### Question: Product Performance Table
-
-Full product performance detail with quantity, revenue, and average price.
 
 ```sql
 SELECT
@@ -562,8 +625,6 @@ LIMIT 20
 
 #### Question: New vs Returning Customers
 
-Customer acquisition breakdown for today.
-
 **Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
 
 ```sql
@@ -589,12 +650,81 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### Question: Revenue by Customer Segment
+
+Breakdown by RFM-based customer segments: VIP, Loyal, Regular.
+
+```sql
+SELECT
+    COALESCE(c.customer_segment, 'Unknown') as "Segment",
+    COUNT(DISTINCT o.order_id) as "Orders",
+    SUM(o.net_revenue) as "Revenue",
+    CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+         ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
+FROM fact_orders o
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+GROUP BY 1
+ORDER BY 3 DESC
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "graph.dimensions": ["Segment"],
+  "graph.metrics": ["Revenue", "Orders"]
+}
+```
+
+```json metabase-pos
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+#### Question: Returning Customer Rate
+
+Tỷ lệ đơn hàng từ khách quay lại — nếu giảm dần, đây là red flag lớn nhất.
+
+```sql
+SELECT
+    ROUND(
+        COUNT(DISTINCT CASE WHEN date(c.first_order_date) < current_date THEN o.customer_key END) * 100.0
+        / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
+    ) as "Returning Rate %"
+FROM fact_orders o
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 9, "size_x": 4, "size_y": 3 }
+```
+
+#### Question: At Risk Customers
+
+Khách hàng có nguy cơ mất — đã mua trước đây nhưng không quay lại gần đây.
+
+```sql
+SELECT COUNT(*) as "At Risk Customers"
+FROM dim_customers
+WHERE customer_status = 'At Risk'
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 13, "size_x": 5, "size_y": 3 }
 ```
 
 #### Question: Orders by Status
-
-Order status distribution for today.
 
 ```sql
 SELECT
@@ -616,12 +746,10 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Payment Method Distribution
-
-Breakdown of transaction volume by payment method.
 
 **Domain Reference**: [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution)
 
@@ -646,12 +774,10 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Discount Impact
-
-Discount usage and impact on revenue.
 
 **Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
 
@@ -676,5 +802,5 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 4 }
 ```

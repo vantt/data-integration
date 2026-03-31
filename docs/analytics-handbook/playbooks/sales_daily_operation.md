@@ -76,9 +76,19 @@ The landing tab — designed for a 10-second status check.
 
 ### Tab 4: Khách hàng & Thanh toán (Customers & Payments)
 
+**Customer Health (top row):**
+
+| Chart Title | Type | Notes |
+|-------------|------|-------|
+| **Returning Customer Rate %** | Scalar | Tỷ lệ khách quay lại — red flag nếu giảm dần |
+| **At Risk Customers** | Scalar | Tổng khách đang có nguy cơ mất (RFM-based) |
+
+**Detail charts:**
+
 | Chart Title | Type | Metric Reference |
 |-------------|------|------------------|
 | **New vs Returning Customers** | Bar | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) |
+| **Revenue by Customer Segment** | Bar | VIP / Loyal / Regular breakdown |
 | **Orders by Status** | Pie | Order status distribution |
 | **Payment Method Distribution** | Pie | [Payment Methods](../domains/sales.md#11-payment-method-distribution) |
 | **Discount Impact** | Table | [Discount Impact](../domains/sales.md#13-discount-impact) |
