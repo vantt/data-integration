@@ -1,3 +1,5 @@
+> **[DEPRECATED]** — This Supabase Queue implementation is no longer in active use. The active webhook receiver is [Cloudflare Workers + D1](../cloudflareD1/README.md).
+
 ## Install supabase cli
 
 # For Windows (using PowerShell)

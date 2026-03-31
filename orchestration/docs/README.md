@@ -210,5 +210,5 @@ defs = Definitions(
 ## Related
 
 - [Main Documentation](../../docs/README.md)
-- [Operations Manual](../../docs/OPERATIONS.md)
-- [Architecture](../../docs/ARCHITECTURE.md)
+- [Operations Manual](../../docs/operations/operations.md)
+- [Architecture](../../docs/architecture/overview.md)

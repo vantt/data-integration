@@ -215,4 +215,4 @@ Logs are written to:
 
 - [Pipelines](./PIPELINES.md)
 - [Sources](./SOURCES.md)
-- [Troubleshooting](../../docs/TROUBLESHOOTING.md)
+- [Troubleshooting](../../docs/operations/troubleshooting.md)

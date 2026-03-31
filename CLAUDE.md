@@ -21,7 +21,7 @@ Shared skills live in `tools/` and are available as slash commands via `.claude/
 - **Skill Documentation**: `.skills/metabase-automation/SKILL.md`
 - **Strategy Guide**: `.skills/metabase-automation/STRATEGY.md`
 - **Blueprint Template**: `.skills/metabase-automation/templates/blueprint_template.md`
-- **Existing Blueprints**: `docs/metabase-workspace/`
+- **Existing Blueprints**: `docs/analytics-handbook/blueprints/`
 
 ### Deployment Commands
 

@@ -423,7 +423,7 @@ Brief description of changes
    transformation/models/marts/*/new_model.sql
 
 5. Update documentation
-   docs/DATA_DICTIONARY.md
+   docs/architecture/data-dictionary.md
 ```
 
 ### Adding New Pipelines
@@ -451,13 +451,13 @@ Brief description of changes
 
 - **Documentation**: Start with [docs/README.md](./README.md)
 - **Code Questions**: Search existing code for patterns
-- **Architecture**: Review [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **Architecture**: Review [ARCHITECTURE.md](../architecture/overview.md)
 - **Team**: Reach out to data-eng@company.com
 
 ---
 
 ## Related Documents
 
-- [Architecture](./ARCHITECTURE.md) - System design
-- [Data Dictionary](./DATA_DICTIONARY.md) - Schema reference
-- [Glossary](./GLOSSARY.md) - Terminology
+- [Architecture](../architecture/overview.md) - System design
+- [Data Dictionary](../architecture/data-dictionary.md) - Schema reference
+- [Glossary](./glossary.md) - Terminology

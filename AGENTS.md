@@ -22,17 +22,12 @@ Comprehensive documentation is available following a **progressive disclosure** 
 
 ### System-Level Documentation (`/docs/`)
 
-| Document                  | Description                           |
-| ------------------------- | ------------------------------------- | ------------------------------- |
-| `ARCHITECTURE.md`         | System design, components, principles |
-| `DATA_FLOW.md`            | 7-hop pipeline flow                   |
-| `DATA_DICTIONARY.md`      | Schema, entities, business metrics    |
-| `DEPLOYMENT.md`           | Setup and configuration               |
-| `OPERATIONS.md`           | Daily operations, monitoring          |
-| `TROUBLESHOOTING.md`      | Common issues, recovery               |
-| `dagster_dependencies.md` | Dependency logic & race conditions    | `/docs/dagster_dependencies.md` |
-| `CONTRIBUTING.md`         | Development workflow                  |
-| `GLOSSARY.md`             | Terminology, conventions              |
+| Group | Documents |
+| ----- | --------- |
+| **Architecture** | `architecture/overview.md`, `architecture/data-flow.md`, `architecture/data-dictionary.md` |
+| **Operations** | `operations/deployment.md`, `operations/operations.md`, `operations/troubleshooting.md`, `operations/migration.md` |
+| **Development** | `development/contributing.md`, `development/glossary.md` |
+| **Context** | `context/sapo-platform.md`, `context/channel-classification.md`, `context/marketing-spend-setup.md` |
 
 ### Component Documentation
 
@@ -42,10 +37,17 @@ Comprehensive documentation is available following a **progressive disclosure** 
 | **Transformation**   | `/transformation/docs/`   | MODELS, DEDUPLICATION, TESTING, MATERIALIZATION |
 | **Orchestration**    | `/orchestration/docs/`    | ASSETS, JOBS, SCHEDULES, RESOURCES              |
 | **Webhook Receiver** | `/webhook_receiver/docs/` | API, SECURITY                                   |
+| **Analytics**        | `/docs/analytics-handbook/` | domains/, playbooks/, blueprints/, guides/     |
+
+### Architecture Decisions
+
+| Path | Description |
+| ---- | ----------- |
+| `/docs/decisions/` | 13 ADRs covering pipeline design, concurrency, analytics patterns, technology choices |
 
 ---
 
-## Multi-Project Repository Structure: 
+## Multi-Project Repository Structure
 
 **CRITICAL:** this folder is a monorepo containing THREE main independent functional areas with specific sub-projects:
 
@@ -60,32 +62,15 @@ Comprehensive documentation is available following a **progressive disclosure** 
 
 - **Purpose:** Service endpoints to receive and buffer incoming webhooks.
 - **Implementations:**
-  - **`cloudflareD1` (Recommended):**
-    - **Tech:** TypeScript, Cloudflare Workers, SQLite (D1).
-    - **Path:** `/webhook_receiver/cloudflareD1/`
-    - **Docs:** `/webhook_receiver/cloudflareD1/README.md`
-  - **`supabase_queue` (Legacy):**
-    - **Tech:** Supabase Edge Functions, PostgreSQL (PGMQ).
-    - **Path:** `/webhook_receiver/supabase_queue/`
+  - **`cloudflareD1` (Active):** TypeScript, Cloudflare Workers, SQLite (D1). Path: `/webhook_receiver/cloudflareD1/`
+  - **`supabase_queue` (Deprecated):** Supabase Edge Functions, PostgreSQL (PGMQ). Path: `/webhook_receiver/supabase_queue/`
 
 ### 3. Webhook Consumer (`data-integration2/webhook_consumer`)
 
 - **Purpose:** Workers that polling/consume buffered webhooks and load them into the warehouse.
 - **Implementations:**
-  - **`cloudflared1_consumer`:**
-    - **Tech:** Python, `dlt`.
-    - **Mechanism:** Polls the Cloudflare Worker API.
-    - **Path:** `/webhook_consumer/cloudflared1_consumer/`
-  - **`supabase_consumer`:**
-    - **Tech:** TypeScript, Node.js.
-    - **Path:** `/webhook_consumer/supabase_consumer/`
-
-### 5. Transformation (`data-integration2/transformation`)
-
-- **Purpose:** Clean, enrich, and model data (Hops 4-6) using ELT pattern.
-- **Tech:** dbt (Data Build Tool), DuckDB.
-- **Context:** SQL models (`.sql`) and YAML configurations.
-- **Dependencies:** `dbt-duckdb`.
+  - **`cloudflared1_consumer` (Active):** Python, `dlt`. Polls the Cloudflare Worker API. Path: `/webhook_consumer/cloudflared1_consumer/`
+  - **`supabase_consumer` (Deprecated):** TypeScript, Node.js. Path: `/webhook_consumer/supabase_consumer/`
 
 ### 4. Orchestration (`data-integration2/orchestration`)
 
@@ -93,6 +78,13 @@ Comprehensive documentation is available following a **progressive disclosure** 
 - **Tech:** Dagster.
 - **Context:** Python-based assets, jobs, and sensors.
 - **Dependencies:** `dagster`, `dagster-duckdb` (managed via root python environment or venv).
+
+### 5. Transformation (`data-integration2/transformation`)
+
+- **Purpose:** Clean, enrich, and model data (Hops 4-6) using ELT pattern.
+- **Tech:** dbt (Data Build Tool), DuckDB.
+- **Context:** SQL models (`.sql`) and YAML configurations.
+- **Dependencies:** `dbt-duckdb`.
 
 ---
 
@@ -140,12 +132,7 @@ Comprehensive documentation is available following a **progressive disclosure** 
 - **Component: Ingestion (DLT)**
   - Path: `./ingestion`
   - Interpreter: `./ingestion/venv/Scripts/python.exe`
-  - Entry Points:
-    - `run_orders_batch.py`: Batch sync for orders.
-    - `run_customers_batch.py`: Batch sync for customers.
-    - `run_accounts_batch.py`: Batch sync for accounts.
-    - `run_history_log.py`: Batch sync for history log for all kind of entities.
-    - `run_webhook_consumer.py`: Webhook processor (Args: `--once`, `--loop`) for all kind of entities.
+  - Entry Points: `run_orders_batch.py`, `run_customers_batch.py`, `run_accounts_batch.py`, `run_history_log.py`, `run_webhook_consumer.py` (`--once`, `--loop`)
 - **Component: Transformation (DBT)**
   - Path: `./transformation`
   - Wrapper Script: `./transformation/scripts/run_dbt.py`
@@ -166,279 +153,140 @@ Pattern: `{venv_python} ingestion/{script_name} [args]`
 
 ### 2. Verification Protocol (Self-Test)
 
-When asked to "verify system health", execute the following sequence:
+When asked to "verify system health", execute:
 
-1.  **Check Read-Only Data Hops**:
-
-    ```powershell
-    python scripts/testing/verify_hops_readonly.py
-    ```
-
-    _Expectation_: Output should show row counts > 0 for `stg_sapo_orders` and `fact_orders`.
-
-2.  **Dry-Run DBT**:
-
-    ```powershell
-    python transformation/scripts/run_dbt.py --select +tag:mart --target dev
-    ```
-
-    _Expectation_: Exit code 0.
-
-3.  **Check Dagster Validity**:
-    ```powershell
-    dagster definitions validate
-    ```
-    _Expectation_: "Definitions validated" message.
+1.  **Check Data Hops**: `python scripts/testing/verify_hops_readonly.py` — Expect row counts > 0.
+2.  **Dry-Run DBT**: `python transformation/scripts/run_dbt.py --select +tag:mart --target dev` — Expect exit 0.
+3.  **Check Dagster**: `dagster definitions validate` — Expect "Definitions validated".
 
 ## Troubleshooting Logic
 
-- **Issue**: `ModuleNotFoundError`
-  - **Fix**: Ensure you are using `ingestion/venv/Scripts/python.exe`, NOT system python.
-- **Issue**: `dbt not found`
-  - **Fix**: The wrapper `run_dbt.py` handles this. Do not run `dbt` directly. Use the wrapper.
-- **Issue**: Locked Database
-  - **Fix**: The serving script usually handles this, but if persistent, suggest user restart Metabase container.
+- **`ModuleNotFoundError`**: Ensure you are using `ingestion/venv/Scripts/python.exe`, NOT system python.
+- **`dbt not found`**: Use the wrapper `run_dbt.py`, do not run `dbt` directly.
+- **Locked Database**: The serving script usually handles this. If persistent, suggest user restart Metabase container.
 
 ## Important Constraints
 
 - **Windows Paths**: Always use backslashes `\` or `os.path.join` compatibility.
-- **Environment API**: Credentials are loaded from `ingestion/.dlt/secrets.toml` or OS Environment Variables. Do not hardcode secrets.
+- **Environment API**: Credentials from `ingestion/.dlt/secrets.toml` or OS env vars. Do not hardcode secrets.
 
 ---
 
 # AI Context - Data Engineering & Sapo Domain
 
-## 1. Sapo Data Sources & Channels
+## Data Sources & Pipeline Overview
 
-Understanding where data comes from is crucial for debugging and extending the pipeline.
+Three ingestion channels feed an append-only Parquet data lake with segregated storage:
 
-| Source          | Method        | Characteristics                                                                                                                                      |
-| :-------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Batch API**   | `json_api`    | **High Latency, High Volume.** Used for daily/hourly snapshots. Good for Orders (modified_on), weak for Customers (can't reliable sort by modified). |
-| **Webhook**     | `webhook`     | **Real-time.** The "gold standard" for updates. Pushed to Cloudflare/Supabase -> consumed by DLT.                                                    |
-| **History Log** | `history_log` | **Gap Filling.** Polls `/admin/settings/get_logs` every 5-10 mins to catch events missed by webhooks. Critical redundancy.                           |
+| Source          | Method        | Key Characteristic |
+| :-------------- | :------------ | :----------------- |
+| **Batch API**   | `json_api`    | High latency, high volume — daily/hourly snapshots |
+| **Webhook**     | `webhook`     | Real-time — pushed to Cloudflare D1 → consumed by DLT |
+| **History Log** | `history_log` | Gap filling — polls every 5-10 mins for missed events |
 
-## 2. Data Flow & Partitioning Mechanism
+→ **Full detail:** [docs/context/sapo-platform.md](docs/context/sapo-platform.md) | [ingestion/docs/SOURCES.md](ingestion/docs/SOURCES.md)
 
-The ingestion layer (DLT) is **Append-Only** and uses a **Segregated Storage** strategy.
+## Transformation Architecture
 
-### Partition Structure
+4-layer pipeline: `src_ → stg_ → std_ → marts` using Kimball star schema.
 
-`sapo_raw/{entity}/ingest_method={method}/year={YYYY}/month={MM}/{file_id}.parquet`
+→ **Full detail:** [transformation/docs/ARCHITECTURE_DETAIL.md](transformation/docs/ARCHITECTURE_DETAIL.md) | [transformation/docs/DEDUPLICATION.md](transformation/docs/DEDUPLICATION.md)
 
-- **Level 1 (`ingest_method`)**: Separates data by source (`batch_sync`, `webhook`, `history_log`).
-  - _Benefit_: Allows selective re-syncing/deletion of a specific source without affecting others.
-- **Level 2/3 (`year`/`month`)**: Time-based partitioning for efficient pruning by DuckDB.
+**CRITICAL CONSTRAINTS (keep inline):**
+- `src_` models are INCREMENTAL tables — they extract JSON + deduplicate + discard payload (OOM-safe)
+- `stg_` and `std_` are VIEWS only — lightweight, no materialization
+- ALWAYS use `location="{{ get_rolling_location() }}"` for marts
+- Never `SELECT *` from raw Parquet (OOM risk)
+- See `transformation/AGENTS.md` for detailed dbt rules
 
-### Ingestion Logic
-
-- **No Merging**: DLT does not merge data. It simply capturing snapshots.
-- **Redundancy**: A single order update might appear in all 3 channels. This is expected.
-
-## 3. Transformation & Deduplication — 4-Layer Architecture
-
-The "One Truth" is constructed via a **4-layer pipeline** (`src_ → stg_ → std_ → marts`), not during ingestion.
-
-### Pipeline Flow
-
-```
-source() → src_ (INCREMENTAL: extract JSON + tech/biz dedup, discard payload)
-    → stg_ (VIEW: enrichment joins, unnest, cleaning)
-        → std_ (VIEW: normalize, status mapping, standard interface)
-            → marts (dim_/fact_: dimensional models, exported as Parquet)
-```
-
-**Why 4 layers:** Each dbt model = 1 SQL query = 1 memory budget. Splitting heavy JSON extraction (`src_`) from lightweight enrichment (`stg_`) prevents OOM. `std_` provides a standard contract for all marts. See `transformation/AGENTS.md` for detailed strategies.
-
-### Deduplication Logic (in src_ layer)
-
-Since we have multiple streams of the same entity, we use a 2-stage `Last-Write-Wins` strategy:
-
-1. **Tech dedup** (by `entity_id`): Removes raw duplicates from append-only ingestion.
-   ```sql
-   ROW_NUMBER() OVER (
-       PARTITION BY entity_id
-       ORDER BY
-           event_timestamp DESC,      -- Latest business event wins
-           CASE ingest_method         -- Source Priority as tie-breaker
-               WHEN 'webhook' THEN 3
-               WHEN 'history_log' THEN 2
-               ELSE 1
-           END DESC
-   )
-   ```
-2. **Biz dedup** (by business key, e.g. `order_id`): Keeps 1 row per business entity.
-   ```sql
-   QUALIFY ROW_NUMBER() OVER (
-       PARTITION BY order_id
-       ORDER BY event_timestamp DESC, modified_on DESC
-   ) = 1
-   ```
-3. Both stages run on flat extracted data (payload discarded after JSON extraction).
-
-## 4. Incremental Mechanism
-
-- **Ingestion (DLT)**:
-  - **Batch**: Cursor-based on `modified_on` (Orders) or `created_on` (Customers).
-  - **History Log**: Cursor-based on `occur_at`.
-- **Transformation (DBT)**:
-  - Uses DuckDB's ability to prune Parquet files.
-  - Logic: `WHERE event_timestamp > (SELECT MAX(event_timestamp) FROM {{ this }})`.
-  - **Caveat**: Must handle "Late Arriving Data" (e.g., a history log fetching an old order). The partition structure helps, but reliable `event_timestamp` is key.
-
-## 5. Domain Specifics
+## Domain Specifics
 
 - **Orders**: Immutable ID. Transactional. `modified_on` is reliable.
-- **Customers**: accurate updates are hard via Batch. Rely heavily on Webhooks/History Logs for profile updates (addresses, tags).
+- **Customers**: Accurate updates are hard via Batch. Rely on Webhooks/History Logs for profile updates.
 
 ---
 
 ## Metabase MCP Configuration
 
-The Metabase MCP server is configured and active for this project.
+- **Server Name:** `metabase` | **Tool:** `metabase-ai-assistant` | **URL:** `http://127.0.0.1:3000/`
+- **Primary DB:** Sapo DuckDB (ID=2, type=duckdb, schema=main)
+- Use `mcp_metabase_db_schemas(database_id=2)` to explore schemas.
+- Many admin/write tools disabled in `mcp_config.json` for safety.
 
-### Connection Details
+---
 
-- **Server Name:** `metabase`
-- **MCP Tool:** `metabase-ai-assistant`
-- **URL:** `http://127.0.0.1:3000/`
-- **Status:** Connected (Verified 2026-01-28)
-
-### Database Information
-
-| ID  | Name            | Type   | Key Schemas | Notes                   |
-| --- | --------------- | ------ | ----------- | ----------------------- |
-| 1   | Sample Database | h2     | PUBLIC      | Metabase default sample |
-| 2   | Sapo DuckDB     | duckdb | main        | Primary Data Warehouse  |
-
-### Usage Notes
-
-- Use `mcp_metabase_db_schemas(database_id=2)` to explore the main warehouse schemas.
-- Many administrative/write tools are disabled in `mcp_config.json` to reduce context noise and safety.
-
-## 6. Architecture & Deployment Criticals
+## Architecture & Deployment Criticals
 
 ### Dual DuckDB Strategy (IMPORTANT)
 
-The system uses TWO distinct DuckDB files to separate **Transformation (Write)** from **Serving (Read)** to prevent locking and ensure stability.
+Two distinct DuckDB files separate **Write** from **Read** to prevent locking:
 
-1.  **Warehouse DB (`sapo_warehouse.duckdb`)**:
-    - **Location**: `data_lake/sapo_warehouse.duckdb`
-    - **Purpose**: The "Write" database. `dbt` builds models here.
-    - **Paths**: Uses `/app/data_lake/export/...` (Absolute Docker Path).
+1.  **Warehouse DB** (`data_lake/sapo_warehouse.duckdb`): dbt writes here. Uses Docker paths.
+2.  **Serving DB** (`data_lake/serving/olap.duckdb`): Metabase reads here. Contains smart views pointing to latest Parquet exports.
 
-2.  **Serving DB (`serving/olap.duckdb`)**:
-    - **Location**: `data_lake/serving/olap.duckdb`
-    - **Purpose**: The "Read" database for Metabase/BI.
-    - **Mechanism**: Contains "Smart Views" that point to the _latest_ parquet export of the Warehouse.
-    - **Sync**: Must be updated via `scripts/provisioning/generate_serving_db.py` after dbt runs.
-
-**Critical Rule**:
-
-- When fixing "Path not found" errors in Metabase, you are likely looking at `olap.duckdb`.
-- Fixing `dbt` only updates `sapo_warehouse.duckdb`.
-- You **MUST** run `generate_serving_db.py` to propagate changes/paths to `olap.duckdb`.
-- Ensure `PORTABLE_ROOT` in the script matches the Docker mount path (e.g., `/app/data_lake`).
+**Critical Rule**: Fixing `dbt` only updates warehouse DB. You **MUST** run `generate_serving_db.py` to propagate changes to serving DB. Ensure `PORTABLE_ROOT` matches the Docker mount path.
 
 ### Dagster Concurrency & DuckDB Locking (CRITICAL)
 
-DuckDB single-file storage (`sapo_warehouse.duckdb`) DOES NOT support concurrent writes.
-However, **Ingestion (DLT)** writes to files and IS safe to run in parallel.
+DuckDB single-file storage DOES NOT support concurrent writes. Ingestion (DLT) writes to Parquet files and IS safe to run in parallel.
 
-**Strategy: Asset-Level Locking**
-We use Dagster's **Global Concurrency Limits** to lock ONLY the `dbt` step.
+**Strategy: Asset-Level Locking** via Dagster Global Concurrency Limits:
+- **Key**: `duckdb_lock` | **Limit**: `1`
+- `run_dagster.ps1` sets the limit on startup.
+- `orchestration/assets/dbt.py` applies `op_tags={"dagster/concurrency_key": "duckdb_lock"}`.
 
-- **Key**: `duckdb_lock`
-- **Limit**: `1`
-- **Implementation**:
-  - `run_dagster.ps1` sets the limit on startup.
-  - `orchestration/assets/dbt.py` applies `op_tags={"dagster/concurrency_key": "duckdb_lock"}`.
-
-**DO NOT** add `concurrency_group` tags to Jobs anymore. This blocks parallel ingestion.
+**DO NOT** add `concurrency_group` tags to Jobs (blocks parallel ingestion).
 **DO NOT** remove the `set-concurrency-limit` command from startup scripts.
-
-### Script Updates
-
-- **Note**: The `scripts/` folder is baked into the Docker image (usually). If you edit a script locally, you must **Rebuild Container** or **Docker CP** it to apply changes immediately.
 
 ### Explicit Dependencies (Hybrid Jobs)
 
--   **Issue**: dbt models start before specific ingestion assets finish in a job that runs a subset of ingestion (e.g., Incremental).
--   **Cause**: Dagster only respects `get_asset_key` source mappings. If the source maps to a Batch asset (excluded from job), Dagster assumes no dependency for the active job.
--   **Fix**: Must manually inject `sapo_history_log_asset` (or relevant ingestion asset) into `upstream_keys` in `dbt.py` for Staging/Source models. **Always check `dagster_dependencies.md`**.
+dbt models may start before ingestion finishes in subset jobs. **Fix**: Manually inject ingestion assets into `upstream_keys` in `dbt.py`.
+→ See [orchestration/docs/ASSETS.md](orchestration/docs/ASSETS.md) | [orchestration/docs/SCHEDULES.md](orchestration/docs/SCHEDULES.md)
 
-## 7. dbt & DuckDB OOM Optimization Guide
- 
- See `transformation/AGENTS.md` for detailed strategies.
+---
 
+## Proven Solutions & Common Pitfalls (Lessons Learned)
 
-## 8. Proven Solutions & Common Pitfalls (Lessons Learned)
-
-These are hard-earned lessons from debugging the system. **IGNORE THEM AT YOUR PERIL.**
+**IGNORE THEM AT YOUR PERIL.**
 
 ### A. Concurrency & Locking
 
-1.  **DuckDB is Single-Writer**: Never run dbt models in parallel threads if they write to the same `.duckdb` file.
-    - **Bad**: `threads: 8` in profiles.yml.
-    - **Bad**: job-level `concurrency_group` (blocks parallel ingestion).
-    - **Good**: Asset-level locking (`op_tags={"dagster/concurrency_key": "duckdb_lock"}`) on dbt assets only.
-2.  **Multiprocessing on Windows**:
-    - **Import Side-Effects**: Logic in `definitions.py` (like `ensure_directories()`) runs **every time** a process spawns. **Fix**: Move setup logic to `run_dagster.ps1` or Docker `command` chain.
+1.  **DuckDB is Single-Writer**: Never run dbt models in parallel threads to same `.duckdb` file.
+    - **Bad**: `threads: 8` in profiles.yml. **Bad**: job-level `concurrency_group`.
+    - **Good**: Asset-level locking (`op_tags`) on dbt assets only.
+2.  **Multiprocessing on Windows**: Logic in `definitions.py` (like `ensure_directories()`) runs every process spawn. Move setup logic to `run_dagster.ps1` or Docker `command` chain.
 
 ### B. Process Management (Zombie Jobs)
 
-1.  **Background Threads**: If a Dagster job finishes logic but hangs in `Started` state, a child thread is keeping the process alive.
-    - **Culprit**: `DLT` and `dbt` telemetry threads.
-    - **Fix**: Set `DLT_TELEMETRY_DISABLED=true` and `DBT_SEND_ANONYMOUS_USAGE_STATS=false` in generic environment variables.
-2.  **Scheduling Overlaps**:
-    - **Issue**: Incremental jobs taking longer than schedule interval pile up.
-    - **Fix**: Use `context.instance.get_runs()` in the `@schedule` function to `SkipReason` if a run is already active.
-    - **Optimization (Priority Hierarchy)**:
-      - **Problem**: Frequent light jobs (Realtime/1m) starving heavy jobs (Nightly/Batch) of the `duckdb_lock`.
-      - **Fix**: Implement yielding logic in schedules.
-        - **Realtime (1m)** yields to: Nightly, Manual Targets, Incremental.
-        - **Incremental (10m)** yields to: Nightly, Manual Targets.
-        - **Nightly** runs with exclusivity.
-      - **Safety**: If Realtime runs overlap with Nightly (e.g., Nightly waiting on lock), Realtime might process the data first. This is **SAFE** because dbt operations are idempotent. It just means the Nightly job does redundant (but harmless) verification work when it finally acquires the lock.
-    - **Trick: Schedule Offset (Minute Splitting)**:
-      - **Problem**: Start-Time Race Condition. If Job A and Job B both schedule at `10:00:00`, they both start logic before either can register as "Active" in the DB. Cross-checks fail to detect the other.
-      - **Fix**: Physically separate start times via cron.
-        - **Incremental**: `*/10 ...` (Runs at :00, :10).
-        - **Realtime**: `1-9,11-19...` (Explicitly excludes :00, :10).
-      - **Result**: No race possible at startup. Only one job exists to acquire the lock.
+1.  **Background Threads**: DLT/dbt telemetry threads keep processes alive. **Fix**: `DLT_TELEMETRY_DISABLED=true`, `DBT_SEND_ANONYMOUS_USAGE_STATS=false`.
+2.  **Scheduling Overlaps**: Use `context.instance.get_runs()` to `SkipReason` if already active.
+    - **Priority Hierarchy**: Realtime(1m) yields to Nightly/Incremental. Nightly runs with exclusivity.
+    - **Schedule Offset**: Incremental at `*/10`, Realtime at `1-9,11-19...` to prevent start-time races.
 
 ### C. Docker & CLI
 
-1.  **CLI Versioning**: Commands like `set-concurrency-limit` might change between Dagster versions. **Always verify** commands inside the container (`docker compose run ... --help`) before codifying them in scripts.
-2.  **Network Timeouts**: Docker build failing on TLS handshake? Allow `up -d` to continue if code is mounted via volumes (hot-reload).
+1.  **CLI Versioning**: Commands like `set-concurrency-limit` may change between Dagster versions. **Always verify** inside container.
+2.  **Network Timeouts**: Docker build TLS failures? Allow `up -d` to continue if code is volume-mounted.
 
-### D. Development Heuristics (Golden Rules)
+### D. Development Heuristics
 
-1.  **Check Local Standards (Context First)**:
-    - When fixing or adding a model/script, **ALWAYS** comparison against a working "Golden Sample" in the same directory.
-    - **Example**: If `dim_products.sql` works and `dim_time.sql` fails, `diff` them FIRST. You likely missed a project-specific config (like `location="{{ get_rolling_location() }}"`).
-    - Do not assume `dbt_project.yml` handles everything implicitly. Explicit config patterns are common.
-2.  **Explicit > Implicit**:
-    - If you are unsure if a config is inherited, declare it explicitly to be safe, then refactor later.
+1.  **Check Local Standards First**: When fixing/adding a model, **ALWAYS** compare against a working "Golden Sample" in the same directory. Don't assume `dbt_project.yml` handles everything.
+2.  **Explicit > Implicit**: If unsure if a config is inherited, declare it explicitly.
 
-## 8. Analytics-as-Code (Literate Configuration)
+---
+
+## Analytics-as-Code (Literate Configuration)
 
 We treat Metabase configuration as code, defined in Markdown.
 
-### 1. The Strategy
-
-- **Documentation is Code**: We write blueprints in `docs/` that double as documentation and deployment configs.
+- **Strategy**: Blueprints in `docs/analytics-handbook/blueprints/` double as documentation and deployment configs.
 - **Execution**: `node .skills/metabase-automation/scripts/deploy_from_markdown.js <file.md>`
+- **Template**: `.skills/metabase-automation/templates/blueprint_template.md`
 
-### 2. File Locations
+### Workflow
 
-- **Blueprints**: `docs/blueprint_*.md` (e.g., `blueprint_sales.md`).
-- **Template**: `.skills/metabase-automation/templates/blueprint_template.md` (Syntax Reference).
-- **Parsers**: `.skills/metabase-automation/lib/markdown_parser.js`.
-
-### 3. Workflow
-
-1.  Discuss requirements in `docs/reports_and_metrics.md`.
-2.  Formalize agreed logic into a Blueprint Markdown file.
-3.  Deploy using the script.
-4.  Verify in Metabase UI.
+1.  Define requirements via domain metrics in `docs/analytics-handbook/domains/`.
+2.  Create a playbook in `docs/analytics-handbook/playbooks/`.
+3.  Formalize into a Blueprint Markdown file in `docs/analytics-handbook/blueprints/`.
+4.  Deploy using the script.
+5.  Verify in Metabase UI.

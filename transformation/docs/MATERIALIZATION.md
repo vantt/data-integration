@@ -400,4 +400,4 @@ Error: Cannot write to location
 
 - [Models Catalog](./MODELS.md)
 - [Deduplication](./DEDUPLICATION.md)
-- [Architecture](../../docs/ARCHITECTURE.md)
+- [Architecture](../../docs/architecture/overview.md)

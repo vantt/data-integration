@@ -153,12 +153,12 @@ data-integration2/
 
 | Document | Description |
 |----------|-------------|
-| [Architecture](docs/ARCHITECTURE.md) | System design & principles |
-| [Data Flow](docs/DATA_FLOW.md) | End-to-end pipeline flow |
-| [Data Dictionary](docs/DATA_DICTIONARY.md) | Schema & entity reference |
-| [Deployment](docs/DEPLOYMENT.md) | Setup & configuration guide |
-| [Operations](docs/OPERATIONS.md) | Daily operations & monitoring |
-| [Troubleshooting](docs/TROUBLESHOOTING.md) | Problem solving guide |
+| [Architecture](docs/architecture/overview.md) | System design & principles |
+| [Data Flow](docs/architecture/data-flow.md) | End-to-end pipeline flow |
+| [Data Dictionary](docs/architecture/data-dictionary.md) | Schema & entity reference |
+| [Deployment](docs/operations/deployment.md) | Setup & configuration guide |
+| [Operations](docs/operations/operations.md) | Daily operations & monitoring |
+| [Troubleshooting](docs/operations/troubleshooting.md) | Problem solving guide |
 
 ### Component Documentation
 
@@ -166,6 +166,8 @@ data-integration2/
 - [Transformation Layer](transformation/docs/README.md) - dbt model documentation
 - [Orchestration Layer](orchestration/docs/README.md) - Dagster jobs & schedules
 - [Webhook Receiver](webhook_receiver/docs/README.md) - Cloudflare Worker setup
+- [Analytics Handbook](docs/analytics-handbook/README.md) - BI domains, playbooks, blueprints
+- [Architecture Decisions](docs/decisions/) - 13 ADRs documenting design rationale
 
 ## Common Commands
 
@@ -190,7 +192,7 @@ python scripts/provisioning/generate_serving_db.py
 
 ## Development
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow, code standards, and PR process.
+See [CONTRIBUTING.md](docs/development/contributing.md) for development workflow, code standards, and PR process.
 
 ### Running Tests
 

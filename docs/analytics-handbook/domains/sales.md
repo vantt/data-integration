@@ -280,7 +280,7 @@
 
 > **Description:** Comparison of actual performance against defined goals.
 > **dbt Source:** `fact_targets`
-> **Input Guide:** [Targets Sheet Guide](../../guides/targets_sheet_guide.md)
+> **Input Guide:** [Targets Sheet Guide](../../guides/targets-sheet.md)
 
 `fact_targets` stores target rules with flexible cycle types (`daily`, `weekly`, `monthly`, `quarterly`, `yearly`) and scope filters (branch, team, staff, channel, product). Each target has a `cycle_start_date`, `cycle_end_date`, and `cycle_type` derived automatically from the input sheet.
 

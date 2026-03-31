@@ -196,5 +196,5 @@ python scripts/run_dbt.py run --select model_name --debug
 ## Related
 
 - [Main Documentation](../../docs/README.md)
-- [Data Dictionary](../../docs/DATA_DICTIONARY.md)
-- [Data Flow](../../docs/DATA_FLOW.md)
+- [Data Dictionary](../../docs/architecture/data-dictionary.md)
+- [Data Flow](../../docs/architecture/data-flow.md)

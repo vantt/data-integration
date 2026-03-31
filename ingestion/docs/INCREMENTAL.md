@@ -331,4 +331,4 @@ ORDER BY e.dt;
 
 - [Pipelines](./PIPELINES.md)
 - [Configuration](./CONFIGURATION.md)
-- [Data Flow](../../docs/DATA_FLOW.md)
+- [Data Flow](../../docs/architecture/data-flow.md)

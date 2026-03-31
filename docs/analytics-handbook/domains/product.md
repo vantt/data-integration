@@ -70,7 +70,17 @@
   COGS / Avg_Inventory
   ```
 
-### 6. Days of Supply
+### 6. Sell-through Rate
+
+> **dbt Model:** `fact_inventory`
+
+- **Business Definition:** Percentage of inventory sold relative to what was available in a period.
+- **Logic (Metabase SQL):**
+  ```sql
+  Units_Sold / (Start_Stock + Received)
+  ```
+
+### 7. Days of Supply
 
 > **dbt Model:** `fact_inventory`
 
@@ -80,7 +90,7 @@
   Current_Stock / Daily_Sales_Rate
   ```
 
-### 7. Out of Stock (OOS) Rate
+### 8. Out of Stock (OOS) Rate
 
 > **dbt Model:** `fact_inventory`
 
@@ -90,7 +100,7 @@
   Count(OOS_SKUs) / Total_SKUs
   ```
 
-### 8. Inventory Value
+### 9. Inventory Value
 
 > **dbt Model:** `fact_inventory`
 
@@ -100,7 +110,7 @@
   SUM(quantity * cost_price)
   ```
 
-### 9. Slow-Moving Stock (Dead Stock)
+### 10. Slow-Moving Stock (Dead Stock)
 
 > **dbt Model:** `fact_inventory`
 

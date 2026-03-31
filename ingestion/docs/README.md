@@ -145,5 +145,5 @@ python run_orders_batch.py
 ## Related
 
 - [Main Documentation](../../docs/README.md)
-- [Data Flow](../../docs/DATA_FLOW.md)
-- [Architecture](../../docs/ARCHITECTURE.md)
+- [Data Flow](../../docs/architecture/data-flow.md)
+- [Architecture](../../docs/architecture/overview.md)

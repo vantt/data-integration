@@ -292,4 +292,4 @@ ORDER BY event_timestamp DESC;
 
 - [Models Catalog](./MODELS.md)
 - [Testing](./TESTING.md)
-- [Data Flow](../../docs/DATA_FLOW.md)
+- [Data Flow](../../docs/architecture/data-flow.md)

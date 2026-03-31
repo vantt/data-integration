@@ -208,4 +208,4 @@ curl -X POST https://your-worker.workers.dev/release-all
 
 - [Main Documentation](../../docs/README.md)
 - [Ingestion Layer](../../ingestion/docs/README.md)
-- [Data Flow](../../docs/DATA_FLOW.md)
+- [Data Flow](../../docs/architecture/data-flow.md)

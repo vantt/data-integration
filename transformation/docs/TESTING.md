@@ -325,4 +325,4 @@ def dbt_assets(context, dbt):
 
 - [Models Catalog](./MODELS.md)
 - [Deduplication](./DEDUPLICATION.md)
-- [Data Dictionary](../../docs/DATA_DICTIONARY.md)
+- [Data Dictionary](../../docs/architecture/data-dictionary.md)

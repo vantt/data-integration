@@ -2,7 +2,7 @@
 
 > **Trạng thái:** Accepted
 > **Ngày:** 2026-03-31
-> **Tham chiếu:** [`AGENTS.md` §Dual DuckDB](../../AGENTS.md), [`ARCHITECTURE.md`](../ARCHITECTURE.md)
+> **Tham chiếu:** [`AGENTS.md` §Dual DuckDB](../../AGENTS.md), [`ARCHITECTURE.md`](../architecture/overview.md)
 
 ## Bối cảnh
 

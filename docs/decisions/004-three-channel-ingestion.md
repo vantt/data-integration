@@ -2,7 +2,7 @@
 
 > **Trạng thái:** Accepted
 > **Ngày:** 2026-03-31
-> **Tham chiếu:** [`AGENTS.md` §Sapo Data Sources](../../AGENTS.md), [`DATA_FLOW.md`](../DATA_FLOW.md)
+> **Tham chiếu:** [`AGENTS.md` §Sapo Data Sources](../../AGENTS.md), [`DATA_FLOW.md`](../architecture/data-flow.md)
 
 ## Bối cảnh
 

@@ -544,7 +544,7 @@ List of physical stores and warehouses. Used for mapping generic sources (POS).
 
 ## Naming Conventions
 
-See [GLOSSARY.md](./GLOSSARY.md#naming-conventions) for detailed naming standards.
+See [GLOSSARY.md](../development/glossary.md#naming-conventions) for detailed naming standards.
 
 ### Quick Reference
 

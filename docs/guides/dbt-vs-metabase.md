@@ -61,6 +61,6 @@ We use the **Metabase Automation Skill** to treat your `docs/metabase-workspace/
 
 To align with this architecture, we should:
 
-1.  **Refactor dbt**: Move calculations like `net_revenue` from the SQL queries in `reports_and_metrics.md` (now Playbooks) into `fact_orders.sql`.
+1.  **Refactor dbt**: Move calculations like `net_revenue` from the SQL queries in `docs/analytics-handbook/` (now Playbooks) into `fact_orders.sql`.
 2.  **Simplify Playbooks**: Update the Playbooks to use the new simple columns (e.g. `SUM(net_revenue)` instead of formula).
 3.  **Automate**: Use the Metabase Automation Agent to deploy these Playbooks.

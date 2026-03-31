@@ -498,6 +498,6 @@ Sapo Order
 
 ## Related Documents
 
-- [Architecture](./ARCHITECTURE.md) - System design overview
-- [Data Dictionary](./DATA_DICTIONARY.md) - Schema reference
+- [Architecture](./overview.md) - System design overview
+- [Data Dictionary](./data-dictionary.md) - Schema reference
 - [Transformation Details](../transformation/docs/README.md) - dbt model docs

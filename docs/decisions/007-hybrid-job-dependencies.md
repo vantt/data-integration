@@ -2,7 +2,7 @@
 
 > **Trạng thái:** Accepted
 > **Ngày:** 2026-03-31
-> **Tham chiếu:** [`dagster_dependencies.md`](../dagster_dependencies.md)
+> **Tham chiếu:** [`dagster_dependencies.md`](../archive/dagster_dependencies.md)
 
 ## Bối cảnh
 

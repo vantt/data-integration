@@ -526,6 +526,6 @@ cat transformation/target/compiled/sapo_analytics/models/staging/stg_sapo_orders
 
 ## Related Documents
 
-- [Operations Manual](./OPERATIONS.md) - Daily operations
-- [Architecture](./ARCHITECTURE.md) - System design
-- [Data Flow](./DATA_FLOW.md) - Pipeline flow
+- [Operations Manual](./operations.md) - Daily operations
+- [Architecture](../architecture/overview.md) - System design
+- [Data Flow](../architecture/data-flow.md) - Pipeline flow

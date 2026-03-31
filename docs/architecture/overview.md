@@ -502,7 +502,7 @@ Internet
 
 ## Related Documents
 
-- [Data Flow](./DATA_FLOW.md) - Detailed pipeline flow
-- [Data Dictionary](./DATA_DICTIONARY.md) - Schema reference
-- [Deployment](./DEPLOYMENT.md) - Setup guide
+- [Data Flow](./data-flow.md) - Detailed pipeline flow
+- [Data Dictionary](./data-dictionary.md) - Schema reference
+- [Deployment](../operations/deployment.md) - Setup guide
 - [Component Documentation](#core-components) - Links above

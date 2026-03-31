@@ -408,6 +408,6 @@ docker logs -f metabase
 
 ## Related Documents
 
-- [Troubleshooting](./TROUBLESHOOTING.md) - Common issues and fixes
-- [Deployment](./DEPLOYMENT.md) - Initial setup guide
-- [Architecture](./ARCHITECTURE.md) - System design
+- [Troubleshooting](./troubleshooting.md) - Common issues and fixes
+- [Deployment](./deployment.md) - Initial setup guide
+- [Architecture](../architecture/overview.md) - System design

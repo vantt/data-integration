@@ -2,7 +2,7 @@
 
 > **Trạng thái:** Accepted
 > **Ngày:** 2026-03-31
-> **Tham chiếu:** [`ARCHITECTURE.md`](../ARCHITECTURE.md), [`DATA_FLOW.md`](../DATA_FLOW.md)
+> **Tham chiếu:** [`ARCHITECTURE.md`](../architecture/overview.md), [`DATA_FLOW.md`](../architecture/data-flow.md)
 
 ## Bối cảnh
 

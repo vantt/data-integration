@@ -2,7 +2,7 @@
 
 > **Trạng thái:** Accepted
 > **Ngày:** 2026-03-31
-> **Tham chiếu:** [`ARCHITECTURE.md` §Technology Decisions](../ARCHITECTURE.md)
+> **Tham chiếu:** [`ARCHITECTURE.md` §Technology Decisions](../architecture/overview.md)
 
 ## Bối cảnh
 

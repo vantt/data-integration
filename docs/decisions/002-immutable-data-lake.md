@@ -2,7 +2,7 @@
 
 > **Trạng thái:** Accepted
 > **Ngày:** 2026-03-31
-> **Tham chiếu:** [`ARCHITECTURE.md` §Immutable Data Lake](../ARCHITECTURE.md), [`AGENTS.md` §Data Flow](../../AGENTS.md)
+> **Tham chiếu:** [`ARCHITECTURE.md` §Immutable Data Lake](../architecture/overview.md), [`AGENTS.md` §Data Flow](../../AGENTS.md)
 
 ## Bối cảnh
 

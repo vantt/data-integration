@@ -5,7 +5,7 @@ Dùng prompt bên dưới để bắt đầu một chat session mới với Clau
 ---
 
 ```
-Đọc tài liệu `docs/analytics-handbook/guides/channel_classification.md` — đặc biệt phần 6 (Tài liệu kỹ thuật). Đây là kết quả thiết kế đã được duyệt. Hãy triển khai theo đúng thiết kế, không thay đổi kiến trúc.
+Đọc tài liệu `docs/context/channel-classification.md` — đặc biệt phần 6 (Tài liệu kỹ thuật). Đây là kết quả thiết kế đã được duyệt. Hãy triển khai theo đúng thiết kế, không thay đổi kiến trúc.
 
 ## Phạm vi triển khai
 
