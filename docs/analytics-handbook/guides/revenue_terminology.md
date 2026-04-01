@@ -143,7 +143,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 |-----------|-------|---------|
 | **Đơn nội bộ** | Ưu đãi nhân viên, quà tặng, test | `channel_category = 'Internal'` |
 | **Đơn 100% discount** | total_collected = 0, toàn bộ là chiết khấu | Quà tặng, sampling, đơn nội bộ |
-| **Đơn US (Export)** | Đơn xuất khẩu B2B, 100% discount nội bộ | `channel_name = 'US'` |
+| **Đơn US (Export)** | Đơn xuất khẩu B2B, 100% discount (chuyển hàng nội bộ tập đoàn). **Không phải** `channel_category = 'Internal'` — filter bằng `channel_name = 'US'` | `channel_name = 'US'` |
 
 > **Quy ước báo cáo — Bộ lọc mặc định:**
 > - **Tất cả dashboard doanh thu** mặc định lọc:
@@ -204,7 +204,7 @@ Khi đọc dashboard, nhớ:
 |---------------|----------------|-----------------|---------|
 | `$.total` | `total_amount` | **Net Revenue** | Đã trừ discount, KHÔNG gồm thuế = SUM(price×qty) − discount |
 | `$.total_discount` | `total_discount` | **Discount Amount** | Tổng chiết khấu |
-| `$.tax_amount` | `tax_amount` | **Tax Amount** | VAT (8% hoặc 10%) |
+| `$.tax_amount` | `tax_amount` | **Tax Amount** | VAT (0%, 5%, 8% hoặc 10% tùy mặt hàng) |
 | *Không có field riêng* | `total_amount + total_discount` | **Gross Revenue** | = SUM(price×qty), phải tự tính |
 | *Không có field riêng* | `total_amount + tax_amount` | **Total Collected** | Tổng thu từ khách, phải tự tính |
 
