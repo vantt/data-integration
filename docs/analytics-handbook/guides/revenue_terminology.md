@@ -24,11 +24,11 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 │     Coupon, khuyến mãi, combo, giảm giá nhân viên...         │
 ├──────────────────────────────────────────────────────────────┤
 │  = ③ Net Revenue (Doanh thu thuần)                            │
-│     Số tiền khách thực sự trả cho hàng hóa, chưa tính thuế. │
+│     Doanh thu sau chiết khấu, trước thuế.                    │
 │     Đây là con số quan trọng nhất cho phân tích kinh doanh.  │
 ├──────────────────────────────────────────────────────────────┤
 │  + ④ Tax Amount (Thuế VAT)                                   │
-│     8% hoặc 10% tùy mặt hàng.                                │
+│     0%, 5%, 8% hoặc 10% tùy mặt hàng (0% cho xuất khẩu).    │
 ├──────────────────────────────────────────────────────────────┤
 │  = ⑤ Total Collected (Tổng thu)                              │
 │     Số tiền thực tế thu từ khách (bao gồm thuế).             │
@@ -50,7 +50,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 |------|--------|-----------|-----------|
 | ① Gross Revenue | Giá niêm yết × SL | 1,000,000 | 500,000 |
 | ② Discount | Coupon 20% | −200,000 | 0 |
-| ③ Net Revenue | Khách trả (trước thuế) | 800,000 | 500,000 |
+| ③ Net Revenue | Sau chiết khấu, trước thuế | 800,000 | 500,000 |
 | ④ Tax (10%) | VAT | +80,000 | +50,000 |
 | ⑤ Total Collected | Tổng thu | 880,000 | 550,000 |
 | ⑥ Returns | Trả hàng | 0 | −550,000 |
@@ -68,7 +68,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 
 | Chỉ số | Công thức | Ý nghĩa |
 |--------|-----------|---------|
-| **GMV** | = Gross Revenue | Thuật ngữ thông dụng, đồng nghĩa Doanh thu gộp |
+| **GMV** | = Gross Revenue | Đồng nghĩa Doanh thu gộp (cho kênh nội bộ). GMV theo sàn TMĐT tính rộng hơn — xem mục 3.1 |
 | **AOV** (Average Order Value) | = Net Revenue ÷ Số đơn | Giá trị trung bình mỗi đơn |
 | **Discount Rate** | = Discount ÷ Gross Revenue × 100% | Tỷ lệ chiết khấu so với giá gốc |
 | **Return Rate** | = Số đơn trả ÷ Tổng đơn × 100% | Tỷ lệ trả hàng |
@@ -172,7 +172,7 @@ Khi đọc dashboard, nhớ:
 | Bạn thấy | Nghĩa là | Gồm thuế? | Gồm discount? |
 |-----------|----------|-----------|---------------|
 | **Gross Revenue** | Giá niêm yết × SL | Không | Chưa trừ |
-| **Net Revenue** | Khách trả cho hàng | Không | Đã trừ |
+| **Net Revenue** | Sau chiết khấu, trước thuế | Không | Đã trừ |
 | **Total Collected** | Tiền thu từ khách | **Có** | Đã trừ |
 | **Realized Revenue** | Thực thu ròng (sau trả hàng) | **Có** | Đã trừ |
 | **Discount Amount** | Số tiền giảm giá | — | — |
@@ -206,8 +206,8 @@ Sapo API                   std_orders                 fact_orders
 $.total                 →  total_amount            →  net_revenue (trực tiếp)
 $.total_discount        →  total_discount_amount   →  discount_amount
 $.tax_amount            →  total_tax_amount        →  tax_amount
-(computed)              →  (computed)              →  gross_revenue = net_revenue + discount
-(computed)              →  (computed)              →  total_collected = net_revenue + tax
+(computed)              →  (computed)              →  gross_revenue = net_revenue + discount_amount
+(computed)              →  (computed)              →  total_collected = net_revenue + tax_amount
 ```
 
 ### 6.3. Công thức trong fact_orders
