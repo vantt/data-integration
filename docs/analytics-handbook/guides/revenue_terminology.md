@@ -7,6 +7,8 @@
 
 Tài liệu này thống nhất cách gọi tên các chỉ số tài chính trong báo cáo. Mỗi khi đọc dashboard hoặc thảo luận về doanh thu, mọi người dùng chung một ngôn ngữ.
 
+> **Phạm vi dữ liệu:** Tất cả đơn hàng từ **mọi kênh** (sàn TMĐT, social, website, cửa hàng, B2B) đều qua Sapo và nằm trong cùng bảng dữ liệu (`fact_orders`). Các thuật ngữ dưới đây áp dụng **xuyên suốt mọi kênh** — dùng filter kênh khi cần xem riêng từng kênh.
+
 ---
 
 ## 1. Dòng chảy doanh thu (Revenue Waterfall)
@@ -92,13 +94,16 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 | **Voucher seller** | Seller tự chi, nằm trong discount | Nằm trong Discount Amount của ta (cùng với coupon, combo, giảm giá nhân viên...) |
 | **Freeship** | Miễn phí vận chuyển | Không track riêng |
 
-**Lưu ý quan trọng:** Doanh thu trên Seller Center của sàn sẽ **thấp hơn** Net Revenue của ta vì sàn đã trừ commission. Khi đối soát, cần tính thêm phí sàn.
+**Lưu ý quan trọng khi đối soát:**
+> - **"Doanh thu đơn hàng"** trên Seller Center (tổng giá trị đơn, gồm phí ship) thường **cao hơn** Net Revenue của ta.
+> - **"Số tiền nhận về"** trên Seller Center (sau khi sàn trừ commission) thường **thấp hơn** Net Revenue của ta.
+> - Cần xác định rõ đang so sánh **con số nào** trên Seller Center với **con số nào** trong dashboard nội bộ.
 
 ### 3.2. Social Commerce (Facebook, Instagram, Zalo)
 
 | Thuật ngữ | Nghĩa | Ghi chú |
 |-----------|-------|---------|
-| **Doanh thu social** | Đơn hàng đến từ kênh Facebook/Zalo/Instagram | = Net Revenue filter theo `platform_group IN ('Facebook', 'Zalo', 'Instagram')` |
+| **Doanh thu social** | Đơn hàng đến từ kênh Facebook/Zalo/Instagram | = Net Revenue filter theo `platform IN ('Facebook', 'Zalo', 'Instagram')` hoặc `platform_group = 'Social'` |
 | **Inbox order** | Đơn nhân viên CS tạo từ tin nhắn | Tạo trên Sapo POS, gán kênh Facebook/Zalo |
 | **COD** | Thanh toán khi nhận hàng | Phổ biến trên social, xem payment_status |
 | **Chi phí quảng cáo** | Facebook Ads, Zalo Ads | Track riêng trong `fact_marketing_spend` |
@@ -140,9 +145,14 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 | **Đơn 100% discount** | total_collected = 0, toàn bộ là chiết khấu | Quà tặng, sampling, đơn nội bộ |
 | **Đơn US (Export)** | Đơn xuất khẩu B2B, 100% discount nội bộ | `channel_name = 'US'` |
 
-> **Quy ước báo cáo:**
-> - Đơn nội bộ (Internal) **không nên tính vào doanh thu kinh doanh** trừ khi CEO yêu cầu. Các dashboard mặc định lọc `channel_category != 'Internal'` hoặc `status NOT IN ('CANCELLED', 'Voided')`.
-> - Đơn kênh **US** (Export/B2B, 100% discount) **phải loại khỏi dashboard Executive** vì làm méo chỉ số doanh thu. Filter: `channel_key != (SELECT channel_key FROM dim_channels WHERE channel_name = 'US')`.
+> **Quy ước báo cáo — Bộ lọc mặc định:**
+> - **Tất cả dashboard doanh thu** mặc định lọc:
+>   - `status NOT IN ('CANCELLED', 'Voided')` — loại đơn hủy/void
+>   - `channel_category != 'Internal'` — loại đơn nội bộ (nhân viên, quà tặng, test)
+> - **Dashboard Executive** thêm lọc:
+>   - Loại đơn kênh **US** (`channel_name = 'US'` trong dim_channels) — đơn xuất khẩu B2B, 100% discount, làm méo chỉ số doanh thu
+>
+> Mỗi dashboard chọn tổ hợp bộ lọc phù hợp — xem Business Constraints trong Design Spec hoặc Blueprint tương ứng.
 
 ---
 
