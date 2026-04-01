@@ -1,33 +1,27 @@
-# Metabase Implementation Strategy (The Brain)
+# Metabase Implementation Strategy (Engineer Brain)
 
-This document provides the **Cognitive Framework** for implementing analytics. Do not just execute code; apply these patterns to deliver value.
+This document provides the **Metabase-specific** strategy for implementing analytics. For **design thinking** (archetypes, viz selection, composition, visual language), see `.skills/analytics-design/SKILL.md`.
 
-## 1. Dashboard Archetypes (Architecture)
+## 1. 2-Skill Collaboration
 
-Before coding, identify the **Archetype** of the dashboard:
+Trước khi tạo blueprint, agent phải hoàn thành Phase 0-6 (Analytics Design) để có Design Spec.
 
-| Archetype                 | Purpose                    | Layout Strategy                                                                                                                                      |
-| :------------------------ | :------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Executive "Pulse"**     | High-level health check.   | **Top:** Big Number KPIs (Growth %).<br>**Middle:** Trend Lines (Year-over-Year).<br>**Bottom:** No tables, only alerts.                             |
-| **Operational "Cockpit"** | Daily management / Action. | **Top:** Global Filters (Date, Region).<br>**Middle:** Bar Charts (Categorical breakdowns).<br>**Bottom:** High-density Table (transaction details). |
-| **Exploratory "tool"**    | Deep dive analysis.        | **Sidebar:** Many filters.<br>**Main:** Large Pivot Table or Scatter Plot.<br>**Goal:** Allow slicing/dicing.                                        |
+**Quy trình đầy đủ:**
 
-**👉 Rule:** If the user asks for "Sales Dashboard", default to **Operational "Cockpit"** unless specified otherwise.
+```
+Phase 0-6 (Analytics Design)  →  Design Spec  →  Phase 7-10 (Metabase Automation)
+```
 
-## 2. Visualization Heuristics (Design Thinking)
+| Phase | Agent đọc | Agent KHÔNG đọc |
+|-------|-----------|-----------------|
+| 0-6 (Analyst) | `.skills/analytics-design/*` | `.skills/metabase-automation/*` |
+| 7-10 (Engineer) | `.skills/metabase-automation/*`, Design Spec, domain files | `.skills/analytics-design/*` |
 
-Choose the right tool for the data shape:
+**Input cho Phase 7**: Design Spec tại `docs/analytics-handbook/designs/<name>.md` — chứa standard viz terms, color/size tokens, composition table.
 
-- **Time Series**:
-  - _< 3 Categories_: Multi-line Chart.
-  - _Many Categories_: Stacked Area Chart.
-- **Comparison**:
-  - _Nominal (Product A vs B)_: Horizontal Bar Chart (readable labels).
-  - _Part-to-Whole_: Donut Chart (Max 5 slices, otherwise use Table).
-- **KPIS**:
-  - Always enable "Trend" comparison if previous period data exists.
+**Translation reference**: `METABASE_VIZ_CATALOG.md` — mapping standard vocab → Metabase settings.
 
-## 3. Semantic Layer Strategy (Data Modeling)
+## 2. Semantic Layer Strategy (Data Modeling)
 
 Do not pollute Metabase with raw SQL fragments. Use the **Pyramid Principle**:
 
@@ -38,11 +32,35 @@ Do not pollute Metabase with raw SQL fragments. Use the **Pyramid Principle**:
 3.  **Top (Questions)**: Only visuals should be "Questions".
     - _Rule_: A Dashboard Question should rarely have raw SQL. It should query a **Model**.
 
-## 4. Automation Workflow
+## 3. Automation Workflow
 
-When receiving a request:
+When receiving a request to create/update a blueprint:
 
-1.  **Classify**: Is this a _Pulse_, _Cockpit_, or _Tool_?
-2.  **Model**: Does a `Model` already exist for this data? If no, **Create Model First**.
-3.  **Visualize**: Apply Heuristics to choose charts.
-4.  **Assemble**: Script the deployment.
+1.  **Verify Design Spec exists** — Check `docs/analytics-handbook/designs/`. If missing, run Phase 0-6 first (or use `/design-dashboard`).
+2.  **Check Semantic Layer** — Does a `Model` already exist for this data? If no, **Create Model First**.
+3.  **Translate** — Map standard vocab → Metabase display types using `METABASE_VIZ_CATALOG.md`.
+4.  **Configure** — Generate `metabase-viz` JSON with full settings (colors, axes, formatting).
+5.  **Assemble** — Write blueprint with SQL + viz + pos blocks.
+6.  **Deploy** — Use `deploy_from_markdown.js`.
+
+### Pre-deploy Check (Phase 10)
+
+Before deploying, verify design spec staleness:
+
+1. Find corresponding design spec (`designs/<name>.md`)
+2. Compare `last_modified` dates in frontmatter (blueprint vs design spec)
+3. If blueprint is newer → warn: "Blueprint modified directly after design spec. Design spec may be out-of-sync."
+4. If no design spec exists (legacy blueprint) → info: "No design spec for this blueprint."
+5. Warning is **informational only** — does not block deploy.
+
+## 4. Dashboard Archetypes (Quick Reference)
+
+For full archetype definitions, card roles, and composition patterns, see `.skills/analytics-design/COMPOSITION_PATTERNS.md`.
+
+| Archetype | Default For | Key Trait |
+|-----------|-------------|-----------|
+| **Executive Pulse** | CEO/Board asks | ≤10 cards, glanceable, no tables |
+| **Operational Cockpit** | "Sales Dashboard" (default) | Filters + breakdowns + detail table |
+| **Exploratory Tool** | Deep-dive requests | Many filters, pivot/scatter |
+
+**Rule:** If user asks for "Sales Dashboard" without specifying → default to **Operational Cockpit**.

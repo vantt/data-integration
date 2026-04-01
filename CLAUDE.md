@@ -6,11 +6,17 @@ This file provides Claude Code with project-specific context. For full project d
 
 Shared skills live in `tools/` and are available as slash commands via `.claude/commands/`.
 
-### Metabase Automation
+### Analytics Design (Tool-Agnostic)
 
 | Command | Purpose |
 | --- | --- |
-| `/create-metabase-blueprint` | Create a new analytics blueprint (Markdown) |
+| `/design-dashboard` | Design a dashboard (Phase 0-6 only, outputs Design Spec) |
+| `/create-metabase-blueprint` | Full pipeline: Design (Phase 0-6) → Metabase Blueprint (Phase 7-10) |
+
+### Metabase Automation (Implementation)
+
+| Command | Purpose |
+| --- | --- |
 | `/deploy-metabase-blueprint` | Deploy a blueprint to Metabase |
 | `/capture-metabase-dashboard` | Capture live dashboard → blueprint (layout, SQL, viz) |
 | `/manage-metabase-resources` | Programmatically manage Metabase resources |
@@ -19,10 +25,14 @@ Shared skills live in `tools/` and are available as slash commands via `.claude/
 
 ### Key References
 
-- **Skill Documentation**: `.skills/metabase-automation/SKILL.md`
-- **Strategy Guide**: `.skills/metabase-automation/STRATEGY.md`
+- **Analytics Design Skill**: `.skills/analytics-design/SKILL.md`
+- **Visualization Vocabulary**: `.skills/analytics-design/VISUALIZATION_VOCABULARY.md`
+- **Metabase Skill**: `.skills/metabase-automation/SKILL.md`
+- **Metabase Strategy**: `.skills/metabase-automation/STRATEGY.md`
+- **Metabase Viz Catalog**: `.skills/metabase-automation/METABASE_VIZ_CATALOG.md`
 - **Blueprint Template**: `.skills/metabase-automation/templates/blueprint_template.md`
 - **Existing Blueprints**: `docs/analytics-handbook/blueprints/`
+- **Design Specs**: `docs/analytics-handbook/designs/`
 
 ### Deployment Commands
 
@@ -50,5 +60,6 @@ node .skills/metabase-automation/scripts/capture_dashboard.js <dashboard_id> [ou
 ## Important
 
 - **Always read `AGENTS.md`** for full project context (architecture, constraints, multi-project rules).
-- **Read `.skills/metabase-automation/STRATEGY.md`** before designing any Metabase dashboard.
+- **Read `.skills/analytics-design/SKILL.md`** before designing any dashboard (Phase 0-6).
+- **Read `.skills/metabase-automation/STRATEGY.md`** before implementing in Metabase (Phase 7-10).
 - **Read sub-project `AGENTS.md`** files (e.g., `transformation/AGENTS.md`) before working in a sub-component.

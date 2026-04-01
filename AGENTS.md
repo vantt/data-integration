@@ -37,7 +37,25 @@ Comprehensive documentation is available following a **progressive disclosure** 
 | **Transformation**   | `/transformation/docs/`   | MODELS, DEDUPLICATION, TESTING, MATERIALIZATION |
 | **Orchestration**    | `/orchestration/docs/`    | ASSETS, JOBS, SCHEDULES, RESOURCES              |
 | **Webhook Receiver** | `/webhook_receiver/docs/` | API, SECURITY                                   |
-| **Analytics**        | `/docs/analytics-handbook/` | domains/, playbooks/, blueprints/, guides/     |
+| **Analytics**        | `/docs/analytics-handbook/` | domains/, playbooks/, blueprints/, guides/, designs/ |
+
+### Analytics 2-Skill Architecture
+
+| Skill | Path | Role | Phases |
+|-------|------|------|--------|
+| **Analytics Design** | `.skills/analytics-design/` | Tool-agnostic analyst brain — THINK, DEFINE, DESIGN | Phase 0-6 |
+| **Metabase Automation** | `.skills/metabase-automation/` | Metabase-specific engineer brain — TRANSLATE, BUILD, DEPLOY | Phase 7-10 |
+
+**Agent Orchestration**: One agent runs both skills sequentially in a single conversation:
+- **Phase 0-6**: Read only `.skills/analytics-design/*`. Output: domain, playbook, design spec.
+- **Phase 7-10**: Read only `.skills/metabase-automation/*` + Design Spec + domain files. Output: blueprint.
+- Do NOT read metabase-automation docs during Phase 0-6 (prevents tool-specific anchoring).
+
+**Artifact ownership**:
+- `domains/`, `playbooks/`, `guides/`, `designs/` → created under analytics-design knowledge
+- `blueprints/` → created under metabase-automation knowledge
+
+See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 
 ### Architecture Decisions
 

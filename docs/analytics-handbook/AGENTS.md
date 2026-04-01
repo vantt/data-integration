@@ -372,6 +372,50 @@ With a small team (~5 users) where people wear multiple hats, we use **3 top-lev
 
 ---
 
+## 📂 4. Design Spec File Structure (`designs/*.md`) — NEW
+
+**Purpose:** Tool-agnostic design specification — contract between Analytics Design (Phase 0-6) and Metabase Automation (Phase 7-10).
+**Filename Convention:** Same as playbook/blueprint (e.g., `ceo_weekly_pulse.md`).
+**Created by:** Analytics Design Skill (`.skills/analytics-design/`)
+
+### Template
+
+```yaml
+---
+title: [Dashboard Title]
+archetype: [Executive Pulse / Operational Cockpit / Exploratory Tool]
+status: [final / draft / draft-from-capture]
+last_modified: YYYY-MM-DD
+domain_refs: [domains/sales.md, domains/customer.md]
+---
+```
+
+Sections: Brief, Constraints & Filters, Views, Composition (table with Role, Viz Type, Color tokens, Size tokens).
+
+See full template: `.skills/analytics-design/templates/design_spec_template.md`
+
+**Key traits:**
+- Uses **YAML frontmatter** (unlike domains/playbooks which use blockquote metadata) — needed for staleness detection
+- Uses **standard vocabulary** for viz types (not Metabase display types)
+- Uses **semantic tokens** for colors and sizes (not hex codes or pixels)
+- `status: draft-from-capture` marks reverse-generated specs that need analyst review
+
+---
+
+## 📋 Artifact Ownership
+
+| Directory | Owned by | Skill knowledge |
+|-----------|----------|-----------------|
+| `domains/` | Analytics Design | `.skills/analytics-design/*` |
+| `playbooks/` | Analytics Design | `.skills/analytics-design/*` |
+| `guides/` | Analytics Design | `.skills/analytics-design/*` |
+| `designs/` | Analytics Design | `.skills/analytics-design/*` |
+| `blueprints/` | Metabase Automation | `.skills/metabase-automation/*` |
+
+**Creation order**: domain → playbook → [guide] → design spec → blueprint → deploy
+
+---
+
 ## ⚡ Workflow Checklist for Agents
 
 When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
@@ -381,6 +425,9 @@ When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
 2.  **Update Playbook:** Open `playbooks/executive_dashboard.md`.
     - Add a row to the Visualization table.
     - **CRITICAL:** Insert the link: `[Customer LTV](../domains/customer.md#customer-ltv)`.
-3.  **Check Collection Registry:** Read `collection_registry.yml` to confirm the target collection path.
-4.  **Create Blueprint:** Use the correct `## Collection: <path>` syntax from the registry.
-5.  **Deploy (Optional):** If a Blueprint is created, use `/deploy_metabase_blueprint` to push it to Metabase.
+3.  **Update Design Spec:** Open `designs/executive_dashboard.md` (if exists).
+    - Add new card to Composition table with role, viz type, color/size tokens.
+    - Update `last_modified` in frontmatter.
+4.  **Check Collection Registry:** Read `collection_registry.yml` to confirm the target collection path.
+5.  **Create/Update Blueprint:** Translate Design Spec → blueprint using `METABASE_VIZ_CATALOG.md`.
+6.  **Deploy (Optional):** Use `/deploy-metabase-blueprint` to push to Metabase.
