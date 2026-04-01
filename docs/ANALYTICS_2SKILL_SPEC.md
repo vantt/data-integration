@@ -1,6 +1,6 @@
 # Analytics 2-Skill Architecture — Specification
 
-> **Status**: v12 — fixed 2 more issues (single-view card threshold inconsistency, filter example redundant hardcoded date)
+> **Status**: v13 — added 2 missing color token mappings (series-emphasis, conditional-range) in Phase 7 table
 > **Created**: 2026-04-01
 > **Updated**: 2026-04-01
 > **Location**: `docs/ANALYTICS_2SKILL_SPEC.md` — meta-document, không thuộc riêng skill nào
@@ -860,8 +860,10 @@ Khi Metabase không hỗ trợ, skill phải:
 | `series-3` | `#A989C5` | Metabase palette slot 3 |
 | `series-4` | `#F2A86F` | Orange — tránh trùng `negative` (#EF8C8C) trên cùng dashboard |
 | `series-5` | `#F9D45C` | Metabase palette slot 5 |
+| `series-emphasis` | `#509EE3` | Dùng `primary` hex cho series cần nhấn mạnh; kết hợp với `muted` (#C2D2E9) cho các series còn lại để tạo contrast |
 | `conditional-above` | `#84BB4C` | Table conditional formatting |
 | `conditional-below` | `#EF8C8C` | Table conditional formatting |
+| `conditional-range` | `#FFFFFF` → `#509EE3` | Gradient: Metabase `table.column_formatting` dùng `type: "range"`, `colors: ["#FFFFFF", "#509EE3"]`. Customize min/max colors theo semantic (vd: `#FFFFFF` → `#EF8C8C` cho "intensity = risk") |
 
 **Quy tắc**: Tokens **trong cùng context group** phải map sang hex khác nhau (vd: status colors phải khác nhau, hierarchy colors phải khác nhau). Cross-group overlap là chấp nhận được — `series-1` có thể trùng `primary` vì chúng không bao giờ xuất hiện trên cùng 1 element (series dùng cho charts, hierarchy dùng cho card-level). Bảng trên là Metabase defaults — có thể customize theo brand palette trong `METABASE_VIZ_CATALOG.md`.
 
