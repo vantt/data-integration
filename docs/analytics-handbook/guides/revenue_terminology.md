@@ -1,7 +1,7 @@
 # Thuật ngữ Doanh thu & Tài chính Đơn hàng
 
 > **Đối tượng:** CEO, Sales Ops, Marketing, Kế toán
-> **Cập nhật:** 2026-03-31
+> **Cập nhật:** 2026-04-01
 
 ## Mục đích
 
@@ -37,8 +37,10 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 │  − ⑥ Returns / Refunds (Trả hàng / Hoàn tiền)               │
 │     Giá trị các đơn bị trả lại.                              │
 ├──────────────────────────────────────────────────────────────┤
-│  = ⑦ Realized Revenue (Doanh thu thực nhận)                  │
-│     Con số cuối cùng — tiền thực sự giữ lại sau mọi khấu trừ│
+│  = ⑦ Realized Revenue (Thực thu ròng)                         │
+│     = Total Collected − Returns.                              │
+│     ⚠ Vẫn gồm VAT (thuế phải nộp Nhà nước).                 │
+│     Đây là góc nhìn dòng tiền, KHÔNG phải doanh thu kế toán. │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -52,7 +54,13 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 | ④ Tax (10%) | VAT | +80,000 | +50,000 |
 | ⑤ Total Collected | Tổng thu | 880,000 | 550,000 |
 | ⑥ Returns | Trả hàng | 0 | −550,000 |
-| ⑦ Realized Revenue | Thực nhận | 880,000 | 0 |
+| ⑦ Realized Revenue | Thực thu ròng | 880,000 | 0 |
+
+> **⚠ Lưu ý về Realized Revenue:**
+> - Con số này **vẫn gồm VAT** (thuế phải nộp Nhà nước). Ở Đơn hàng A: thực thu 880k nhưng trong đó có 80k VAT → doanh thu thực tế giữ lại = 800k (= Net Revenue).
+> - Realized Revenue là **góc nhìn dòng tiền** (bao nhiêu tiền thu được từ khách sau trả hàng), **không phải doanh thu kế toán**.
+> - Field này **không có sẵn** trong `fact_orders`. Muốn tính, dùng: `total_collected − giá trị đơn trả hàng`.
+> - Để phân tích kinh doanh (so sánh kênh, tính AOV...), luôn dùng **Net Revenue** — không dùng Realized Revenue.
 
 ---
 
@@ -81,7 +89,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 | **Commission / Phí sàn** | Phí % sàn thu trên mỗi đơn | Chúng ta **không có** field này — Sapo không track |
 | **Phí vận chuyển** | Phí ship khách trả hoặc seller chịu | Chúng ta **không có** field này |
 | **Voucher sàn** | Sàn tự chi trả, không ảnh hưởng seller | Không nằm trong discount của ta |
-| **Voucher seller** | Seller tự chi, nằm trong discount | = Discount Amount của ta |
+| **Voucher seller** | Seller tự chi, nằm trong discount | Nằm trong Discount Amount của ta (cùng với coupon, combo, giảm giá nhân viên...) |
 | **Freeship** | Miễn phí vận chuyển | Không track riêng |
 
 **Lưu ý quan trọng:** Doanh thu trên Seller Center của sàn sẽ **thấp hơn** Net Revenue của ta vì sàn đã trừ commission. Khi đối soát, cần tính thêm phí sàn.
@@ -166,6 +174,7 @@ Khi đọc dashboard, nhớ:
 | **Gross Revenue** | Giá niêm yết × SL | Không | Chưa trừ |
 | **Net Revenue** | Khách trả cho hàng | Không | Đã trừ |
 | **Total Collected** | Tiền thu từ khách | **Có** | Đã trừ |
+| **Realized Revenue** | Thực thu ròng (sau trả hàng) | **Có** | Đã trừ |
 | **Discount Amount** | Số tiền giảm giá | — | — |
 | **Tax Amount** | Thuế VAT | — | — |
 
