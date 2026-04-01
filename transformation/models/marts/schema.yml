@@ -302,7 +302,7 @@ models:
                 to: ref('dim_time')
                 field: time_key
       - name: gross_revenue
-        description: "Giá niêm yết (trước chiết khấu, gồm thuế). Formula: total_collected + discount_amount"
+        description: "Giá bán × SL (trước chiết khấu & thuế). Formula: net_revenue + discount_amount"
       - name: discount_amount
         description: "Tổng chiết khấu (coupon, promotion, combo)"
       - name: net_revenue
