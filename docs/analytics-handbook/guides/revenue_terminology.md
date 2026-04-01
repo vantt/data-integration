@@ -13,12 +13,12 @@ Tài liệu này thống nhất cách gọi tên các chỉ số tài chính tro
 
 ## 1. Dòng chảy doanh thu (Revenue Waterfall)
 
-Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến số tiền thực thu ròng:
+Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc cho đến số tiền thực thu ròng:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  ① Gross Revenue (Doanh thu gộp)                             │
-│     = Giá niêm yết × Số lượng                                │
+│     = Giá bán × Số lượng (trước chiết khấu)                                │
 │     Con số lớn nhất, chưa trừ gì cả.                         │
 │     Dùng để đánh giá quy mô giao dịch trước chiết khấu.     │
 ├──────────────────────────────────────────────────────────────┤
@@ -50,7 +50,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 
 | Bước | Mô tả | Đơn hàng A | Đơn hàng B |
 |------|--------|-----------|-----------|
-| ① Gross Revenue | Giá niêm yết × SL | 1,000,000 | 500,000 |
+| ① Gross Revenue | Giá bán × SL (trước CK) | 1,000,000 | 500,000 |
 | ② Discount | Coupon 20% | −200,000 | 0 |
 | ③ Net Revenue | Sau chiết khấu, trước thuế | 800,000 | 500,000 |
 | ④ Tax (10%) | VAT | +80,000 | +50,000 |
@@ -181,7 +181,7 @@ Khi đọc dashboard, nhớ:
 
 | Bạn thấy | Nghĩa là | Gồm thuế? | Gồm discount? |
 |-----------|----------|-----------|---------------|
-| **Gross Revenue** | Giá niêm yết × SL | Không | Chưa trừ |
+| **Gross Revenue** | Giá bán × SL (trước CK) | Không | Chưa trừ |
 | **Net Revenue** | Sau chiết khấu, trước thuế | Không | Đã trừ |
 | **Total Collected** | Tiền thu từ khách | **Có** | Đã trừ |
 | **Realized Revenue** | Thực thu ròng (sau trả hàng) | **Có** | Đã trừ |
@@ -226,7 +226,7 @@ $.total_tax             →  total_tax_amount        →  tax_amount
 -- Doanh thu thuần (sau chiết khấu, trước thuế) — field gốc từ Sapo $.total
 net_revenue      = total_amount
 
--- Giá niêm yết = SUM(price × qty), trước chiết khấu & thuế
+-- Giá bán × số lượng = SUM(price × qty), trước chiết khấu & thuế
 gross_revenue    = total_amount + total_discount_amount
 
 -- Tổng thu từ khách (sau chiết khấu, gồm thuế)
