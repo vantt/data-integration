@@ -14,7 +14,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 > **Terminology Guide:** [Revenue Terminology](../guides/revenue_terminology.md)
 
-- **Business Definition:** Tổng giá trị hàng hóa theo giá niêm yết, trước chiết khấu. Dùng để đánh giá quy mô giao dịch.
+- **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu. Dùng để đánh giá quy mô giao dịch.
 - **Logic (Metabase SQL):**
   ```sql
   SUM(gross_revenue)
