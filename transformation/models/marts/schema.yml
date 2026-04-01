@@ -306,11 +306,11 @@ models:
       - name: discount_amount
         description: "Tổng chiết khấu (coupon, promotion, combo)"
       - name: net_revenue
-        description: "Doanh thu thuần (sau chiết khấu, trước thuế). Formula: total_collected - tax_amount"
+        description: "Doanh thu thuần (sau chiết khấu, trước thuế). Field gốc từ Sapo $.total"
       - name: tax_amount
         description: "Thuế VAT (8% hoặc 10%)"
       - name: total_collected
-        description: "Tổng thu từ khách (sau chiết khấu, gồm thuế). Đây là field gốc $.total từ Sapo"
+        description: "Tổng thu từ khách (sau chiết khấu, gồm thuế). Formula: net_revenue + tax_amount"
       - name: client_details
         description: "JSON details about client (IP, User Agent)"
       - name: discount_codes
