@@ -1,6 +1,6 @@
 # Analytics 2-Skill Architecture — Specification
 
-> **Status**: v10 — fixed 10 issues (gauge SQL, scalar.comparisons native SQL, row grouping, grid math, view-group separation, filter example, reverse disambiguation, staleness clarify, accent color, SQL dialect)
+> **Status**: v11 — fixed 5 more issues (Row F overflow, design spec frontmatter, pivot reverse disambiguation, planned metric lifecycle, e2e example size sync)
 > **Created**: 2026-04-01
 > **Updated**: 2026-04-01
 > **Location**: `docs/ANALYTICS_2SKILL_SPEC.md` — meta-document, không thuộc riêng skill nào
@@ -152,6 +152,14 @@ docs/analytics-handbook/               ← Artifact store — OWNED by analytics
 Design Spec là artifact trung gian — output của Analytics Design, input của Metabase Automation. Dùng **thuật ngữ chuẩn**, không đề cập tool nào:
 
 ```markdown
+---
+title: CEO Weekly Pulse
+archetype: Executive Pulse
+status: final
+last_modified: 2026-04-01
+domain_refs: [domains/sales.md, domains/customer.md]
+---
+
 ## Design Spec: CEO Weekly Pulse
 
 ### Brief
@@ -193,12 +201,13 @@ Single view (≤10 cards, glanceable executive dashboard).
 | 6 | C | "Trend & Direction" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 7 | D | Revenue 14-day | trend | line-chart | primary, muted (previous week) | full-width × medium | "Xu hướng 2 tuần" | implicit (visual) |
 | 8 | E | "What's Driving Results" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
-| 9 | F | Revenue by Channel | breakdown | horizontal-bar | series-1..3 | two-thirds × medium | "Kênh nào đóng góp nhiều nhất" | WoW% per category |
-| 10 | F | New vs Returning | breakdown | stacked-bar-time | series-emphasis (Returning), muted (New) | two-thirds × medium | "Cơ cấu khách thay đổi thế nào" | over time |
+| 9 | F | Revenue by Channel | breakdown | horizontal-bar | series-1..3 | half × medium | "Kênh nào đóng góp nhiều nhất" | WoW% per category |
+| 10 | F | New vs Returning | breakdown | stacked-bar-time | series-emphasis (Returning), muted (New) | half × medium | "Cơ cấu khách thay đổi thế nào" | over time |
 ```
 
 **Đặc điểm quan trọng**:
-- **Row column** chỉ rõ cards nào cùng hàng — cùng Row letter = cùng 1 hàng. Tổng width trong mỗi row phải = `full-width` (vd: Row B = one-third + one-quarter×3 = 6+4+4+4 = 18 ✓)
+- **Frontmatter bắt buộc**: `title`, `archetype`, `status` (`final` | `draft` | `draft-from-capture`), `last_modified` (YYYY-MM-DD), `domain_refs` (danh sách domain files tham chiếu). Agent cập nhật `last_modified` mỗi khi sửa file.
+- **Row column** chỉ rõ cards nào cùng hàng — cùng Row letter = cùng 1 hàng. Tổng width trong mỗi row phải = `full-width` (vd: Row B = one-third + one-quarter×3 = 6+4+4+4 = 18 ✓, Row F = half + half = 9+9 = 18 ✓)
 - Không có `"display"`, `metabase-viz`, `metabase-pos`, hay bất kỳ JSON nào
 - Text annotations có nội dung cụ thể ("Revenue Performance This Week"), không generic ("KPIs")
 - Filters, Views, Composition đều dùng **thuần ngôn ngữ analyst**
@@ -531,6 +540,16 @@ Trong thực tế, **1 Claude agent duy nhất** chạy toàn bộ pipeline tron
 - 1 domain file = 1 business domain (sales, customer, logistics, finance...)
 - Không duplicate metric definitions — nếu metric đã có trong domain khác, tham chiếu thay vì copy
 - Mỗi metric phải có: tên, định nghĩa 1 dòng, công thức, đơn vị, source
+
+**Metric status lifecycle** — mỗi metric trong domain file có thể mang 1 trong 3 trạng thái:
+
+| Status | Ý nghĩa | Khi nào |
+|--------|---------|---------|
+| `active` | Metric đã có dbt model/table, sẵn sàng query | Mặc định khi tạo metric từ source đã tồn tại |
+| `planned` | Metric được định nghĩa nhưng chưa có data source | Khi Phase 0 cần metric mà dbt model chưa tồn tại (xem failure modes, Section IX) |
+| `deprecated` | Metric không còn dùng, giữ lại để tham khảo | Khi metric bị thay thế bởi metric khác |
+
+Chuyển trạng thái: `planned` → `active` khi dbt model được tạo và data đã populate. Engineer (hoặc dbt developer) cập nhật status trong domain file sau khi model deploy thành công. Agent kiểm tra status trước khi viết SQL — nếu metric là `planned`, ghi rõ trong blueprint: "⚠️ Metric chưa có data source, SQL dùng giá trị ước lượng hoặc placeholder."
 
 ### Phase 1 — Playbook Creation
 
@@ -1160,6 +1179,8 @@ Live Dashboard
 | `scalar` | no comparisons | `single-value` |
 | `table` | has `table.column_formatting` | `data-table-formatted` |
 | `table` | default | `data-table` |
+| `pivot` | has `table.column_formatting` (conditional formatting as intensity encoding) | `heatmap` |
+| `pivot` | default (no conditional formatting, or formatting for alerts only) | `pivot-table` |
 | `pie` | — | `donut` |
 | text dashcard | — | `text-annotation` |
 | dashboard tab | — | `view-group` |
@@ -1194,7 +1215,7 @@ Dưới đây là 3 cards từ canonical Design Spec (Section IV) được dịc
 |---|-----|------|------|----------|-------|------|------------|
 | 2 | B | Revenue vs Target | hero | gauge | positive/warning/negative (zones) | one-third × medium | vs monthly target, 3 zones |
 | 3 | B | Net Revenue | supporting | single-value-with-trend | primary, trend: positive/negative | one-quarter × short | vs previous week |
-| 9 | F | Revenue by Channel | breakdown | horizontal-bar | series-1..3 | two-thirds × medium | WoW% per category |
+| 9 | F | Revenue by Channel | breakdown | horizontal-bar | series-1..3 | half × medium | WoW% per category |
 
 ### Blueprint (output — Metabase-specific)
 
@@ -1349,14 +1370,14 @@ ORDER BY t.revenue DESC
 ```
 
 ```json metabase-pos
-{ "size_x": 12, "size_y": 6 }
+{ "size_x": 9, "size_y": 6 }
 ```
 ````
 
 Translation notes:
 - `horizontal-bar` → Metabase `row` (native)
 - `series-1..3` → `graph.colors: ["#509EE3", "#88BDE6", "#A989C5"]`
-- `two-thirds` → `size_x: 12`, `medium` → `size_y: 6`
+- `half` → `size_x: 9`, `medium` → `size_y: 6`
 
 ### Filter example: Dashboard có interactive filters
 
