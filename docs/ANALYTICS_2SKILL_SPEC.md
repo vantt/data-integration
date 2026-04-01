@@ -1,6 +1,6 @@
 # Analytics 2-Skill Architecture — Specification
 
-> **Status**: v11 — fixed 5 more issues (Row F overflow, design spec frontmatter, pivot reverse disambiguation, planned metric lifecycle, e2e example size sync)
+> **Status**: v12 — fixed 2 more issues (single-view card threshold inconsistency, filter example redundant hardcoded date)
 > **Created**: 2026-04-01
 > **Updated**: 2026-04-01
 > **Location**: `docs/ANALYTICS_2SKILL_SPEC.md` — meta-document, không thuộc riêng skill nào
@@ -639,8 +639,8 @@ Chuyển trạng thái: `planned` → `active` khi dbt model được tạo và 
 
 | Pattern | Khi nào | Ví dụ |
 |---------|---------|-------|
-| **Single view** | ≤8 cards, audience đọc nhanh | Executive Pulse |
-| **Multi-view** | >8 cards, hoặc có nhiều audience/purpose | Daily Ops (Overview → Trends → Analysis → Details) |
+| **Single view** | ≤10 cards (kể cả text annotations), audience đọc nhanh | Executive Pulse (10 cards: 7 data + 3 annotations) |
+| **Multi-view** | >10 cards, hoặc có nhiều audience/purpose | Daily Ops (Overview → Trends → Analysis → Details) |
 
 Mỗi view-group có:
 - Tên view (tool-agnostic — Metabase sẽ dịch thành tabs)
@@ -1431,8 +1431,7 @@ Ví dụ trên (CEO Weekly Pulse) không có interactive filters. Dưới đây 
 ```sql
 SELECT SUM(net_revenue) AS net_revenue
 FROM fact_orders
-WHERE order_date >= DATE_TRUNC('week', CURRENT_DATE)
-  AND channel_category != 'US'
+WHERE channel_category != 'US'
   [[AND {{date_range}}]]
   [[AND channel_category = {{channel}}]]
 ```
