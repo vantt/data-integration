@@ -147,7 +147,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 
 > **Quy ước báo cáo — Bộ lọc mặc định:**
 > - **Tất cả dashboard doanh thu** mặc định lọc:
->   - `status NOT IN ('CANCELLED', 'Voided')` — loại đơn hủy/void
+>   - `status = 'CANCELLED'` hoặc `payment_status = 'VOIDED'` — loại đơn hủy/void
 >   - `channel_category != 'Internal'` — loại đơn nội bộ (nhân viên, quà tặng, test)
 > - **Dashboard Executive** thêm lọc:
 >   - Loại đơn kênh **US** (`channel_name = 'US'` trong dim_channels) — đơn xuất khẩu B2B, 100% discount, làm méo chỉ số doanh thu
@@ -204,7 +204,7 @@ Khi đọc dashboard, nhớ:
 |---------------|----------------|-----------------|---------|
 | `$.total` | `total_amount` | **Net Revenue** | Đã trừ discount, KHÔNG gồm thuế = SUM(price×qty) − discount |
 | `$.total_discount` | `total_discount` | **Discount Amount** | Tổng chiết khấu |
-| `$.tax_amount` | `tax_amount` | **Tax Amount** | VAT (0%, 5%, 8% hoặc 10% tùy mặt hàng) |
+| `$.total_tax` | `tax_amount` | **Tax Amount** | VAT (0%, 5%, 8% hoặc 10% tùy mặt hàng) |
 | *Không có field riêng* | `total_amount + total_discount` | **Gross Revenue** | = SUM(price×qty), phải tự tính |
 | *Không có field riêng* | `total_amount + tax_amount` | **Total Collected** | Tổng thu từ khách, phải tự tính |
 
@@ -215,7 +215,7 @@ Sapo API                   std_orders                 fact_orders
 ─────────────────────────────────────────────────────────────────
 $.total                 →  total_amount            →  net_revenue (trực tiếp)
 $.total_discount        →  total_discount_amount   →  discount_amount
-$.tax_amount            →  total_tax_amount        →  tax_amount
+$.total_tax             →  total_tax_amount        →  tax_amount
 (computed)              →  (computed)              →  gross_revenue = net_revenue + discount_amount
 (computed)              →  (computed)              →  total_collected = net_revenue + tax_amount
 ```
@@ -232,8 +232,8 @@ gross_revenue    = total_amount + total_discount_amount
 -- Tổng thu từ khách (sau chiết khấu, gồm thuế)
 total_collected  = total_amount + total_tax_amount
 
--- Tỷ lệ chiết khấu
-discount_rate    = discount_amount / gross_revenue × 100%
+-- Tỷ lệ chiết khấu (công thức tham khảo, không phải column trong fact_orders)
+-- discount_rate = discount_amount / gross_revenue × 100%
 ```
 
 ### 6.4. Line-item level (fact_sales)
@@ -241,7 +241,6 @@ discount_rate    = discount_amount / gross_revenue × 100%
 | Field | Nghĩa |
 |-------|-------|
 | `quantity` | Số lượng mua |
-| `unit_price` | Giá đơn vị (niêm yết) |
 | `revenue` | = `line_amount` (giá trị dòng sau line-level discount) |
 | `discount_amount` | Chiết khấu trực tiếp trên dòng |
 | `distributed_discount_amount` | Phần chiết khấu order-level phân bổ xuống dòng |
