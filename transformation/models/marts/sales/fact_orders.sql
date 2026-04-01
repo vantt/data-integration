@@ -69,7 +69,7 @@ SELECT
     
     -- Financial Metrics (Revenue Waterfall)
     -- See: docs/analytics-handbook/guides/revenue_terminology.md
-    total_amount + total_discount_amount as gross_revenue,    -- Giá niêm yết = SUM(price × qty), trước chiết khấu & thuế
+    total_amount + total_discount_amount as gross_revenue,    -- Giá bán × SL = SUM(price × qty), trước chiết khấu & thuế
     total_discount_amount as discount_amount,                -- Chiết khấu
     total_amount as net_revenue,                             -- Doanh thu thuần (sau chiết khấu, trước thuế) = Sapo $.total
     total_tax_amount as tax_amount,                          -- Thuế VAT
