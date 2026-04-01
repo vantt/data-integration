@@ -1,6 +1,6 @@
 # Analytics 2-Skill Architecture — Specification
 
-> **Status**: v13 — added 2 missing color token mappings (series-emphasis, conditional-range) in Phase 7 table
+> **Status**: v14 — fixed filter example: `date/range` → `date/all-options` to match Phase 9b mapping rule
 > **Created**: 2026-04-01
 > **Updated**: 2026-04-01
 > **Location**: `docs/ANALYTICS_2SKILL_SPEC.md` — meta-document, không thuộc riêng skill nào
@@ -1415,7 +1415,7 @@ Ví dụ trên (CEO Weekly Pulse) không có interactive filters. Dưới đây 
     "name": "Date Range",
     "slug": "date_range",
     "id": "date_range_param",
-    "type": "date/range",
+    "type": "date/all-options",
     "default": "past7days"
   },
   {
@@ -1440,7 +1440,7 @@ WHERE channel_category != 'US'
 ````
 
 Translation notes:
-- `date/range` → Metabase `date/range` parameter type, SQL dùng `{{date_range}}` field filter
+- `date/range` → Metabase `date/all-options` parameter type (hỗ trợ relative dates như `past7days`), SQL dùng `{{date_range}}` field filter
 - `category/single-select` → Metabase `string/=`, SQL dùng `{{channel}}` template tag
 - `[[...]]` = Metabase optional clause syntax — khi filter trống, clause bị bỏ qua
 - `parameter_mappings` trong mỗi dashcard wires parameter → card's template tag
