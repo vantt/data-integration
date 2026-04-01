@@ -127,8 +127,32 @@ curl -X PUT "$METABASE_URL/api/dashboard/:id" \
 
 ### 5.3 Dashboard Update vs Create
 
-Deploy script (`deploy_from_markdown.js`) luôn **tạo dashboard MỚI** nếu không tìm thấy dashboard cùng tên (chưa archived) trong collection. Nếu muốn cập nhật dashboard hiện tại:
+Deploy script **HỖ TRỢ overwrite/update** — KHÔNG cần tạo mới + archive cũ.
 
-- Script sẽ reuse dashboard nếu tên trùng khớp chính xác
-- Nếu đổi tên dashboard → script tạo mới → cần archive dashboard cũ thủ công
-- Archive dashboard + questions qua API: `PUT /api/dashboard/:id {"archived": true}` và `PUT /api/card/:id {"archived": true}`
+**Cơ chế hoạt động:**
+
+1. `Dashboard.ensure(name)` tìm dashboard theo tên (toàn hệ thống, không chỉ collection) → nếu tồn tại thì reuse (kể cả unarchive nếu cần)
+2. Mỗi question được match theo `(tab_name, card_name)` → nếu đã tồn tại thì **PUT update SQL/viz**, không tạo mới
+3. `syncCards()` PUT toàn bộ dashcards → **overwrite layout hoàn toàn**
+
+**Khi nào script tạo mới (thay vì update):**
+
+- Đổi tên dashboard trong blueprint (ví dụ: `Orders` → `Order Listing`) → `find("Order Listing")` không tìm thấy "Orders" → tạo mới
+- Archive dashboard cũ trước khi deploy → `find()` không thấy → tạo mới
+
+**Quy trình đúng khi đổi tên dashboard:**
+
+1. Đổi tên trên Metabase trước (qua API): `PUT /api/dashboard/:id {"name": "Order Listing"}`
+2. Rồi deploy blueprint với tên mới → script tìm thấy → overwrite
+
+**Quy trình đúng khi update dashboard (không đổi tên):**
+
+1. Sửa blueprint (SQL, viz, positions)
+2. Deploy lại → script tự tìm dashboard + questions hiện tại → update in-place
+
+**Chỉ cần archive thủ công khi:** muốn xóa dashboard hoàn toàn (không phải khi update).
+```bash
+# Archive dashboard + questions
+curl -X PUT "$METABASE_URL/api/dashboard/:id" -d '{"archived": true}'
+curl -X PUT "$METABASE_URL/api/card/:id" -d '{"archived": true}'
+```
