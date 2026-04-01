@@ -6,8 +6,7 @@
 - **Goal:** Verify that orders recorded in the BI system match the source sales system (Sapo). Detect missing, duplicate, or mismatched orders.
 - **Metabase Collection:** `Daily Operations`
 - **Blueprints:**
-  - [Today's Orders](../blueprints/orders_today.md)
-  - [Yesterday's Orders](../blueprints/orders_yesterday.md)
+  - [Order Listing](../blueprints/order_listing.md)
 
 ## Use Cases
 
