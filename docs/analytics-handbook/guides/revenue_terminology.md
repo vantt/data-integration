@@ -70,7 +70,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 
 | Chỉ số | Công thức | Ý nghĩa |
 |--------|-----------|---------|
-| **GMV** | = Gross Revenue | Đồng nghĩa Doanh thu gộp (cho kênh nội bộ). GMV theo sàn TMĐT tính rộng hơn — xem mục 3.1 |
+| **GMV** | = Gross Revenue | Đồng nghĩa Doanh thu gộp (theo hệ thống của ta). GMV theo sàn TMĐT tính rộng hơn — xem mục 3.1 |
 | **AOV** (Average Order Value) | = Net Revenue ÷ Số đơn | Giá trị trung bình mỗi đơn |
 | **Discount Rate** | = Discount ÷ Gross Revenue × 100% | Tỷ lệ chiết khấu so với giá gốc |
 | **Return Rate** | = Số đơn trả ÷ Tổng đơn × 100% | Tỷ lệ trả hàng |
