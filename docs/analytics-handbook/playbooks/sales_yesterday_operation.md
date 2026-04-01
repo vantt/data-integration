@@ -30,6 +30,13 @@ The dashboard is organized into **4 tabs** for focused analysis:
 
 ### Tab 1: Tổng quan (Overview)
 
+**Health Score (top row):**
+
+| Chart Title | Type | Notes |
+|-------------|------|-------|
+| **Health Score** | Scalar | 0-100 composite score: 75+ Khỏe mạnh, 50-74 Cần chú ý, <50 Báo động |
+| **Health Breakdown** | Table | 4 components: Revenue WoW, Orders WoW, Customer Loyalty, AOV Stability |
+
 **Date Label:** Shows the date under review (yesterday).
 
 **KPI Row (scalars with DoD% vs day-before-yesterday):**

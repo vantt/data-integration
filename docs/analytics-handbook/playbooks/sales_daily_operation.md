@@ -32,7 +32,14 @@ The dashboard is organized into **4 tabs** for focused analysis:
 
 The landing tab — designed for a 10-second status check.
 
-**KPI Row (scalars with DoD% comparison):**
+**Health Score (top row):**
+
+| Chart Title | Type | Notes |
+|-------------|------|-------|
+| **Health Score** | Scalar | 0-100 composite score: 75+ Khỏe mạnh, 50-74 Cần chú ý, <50 Báo động |
+| **Health Breakdown** | Table | 4 components: Revenue WoW, Orders WoW, Customer Loyalty, AOV Stability |
+
+**KPI Row (scalars):**
 
 | Chart Title | Type | Metric Reference |
 |-------------|------|------------------|

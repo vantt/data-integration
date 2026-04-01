@@ -18,6 +18,163 @@ This collection contains operational dashboards updated in real-time.
 
 ### 📑 Tab: Tổng quan
 
+#### Question: Health Score
+
+Điểm sức khỏe kinh doanh (0-100) dựa trên 4 chỉ số: Revenue Momentum, Order Momentum, Customer Loyalty, AOV Stability. So sánh 7 ngày gần nhất vs 7 ngày trước đó.
+
+```sql
+WITH
+recent AS (
+    SELECT
+        COALESCE(SUM(net_revenue), 0) as revenue,
+        COUNT(DISTINCT order_id) as orders,
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
+    FROM fact_orders
+    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+),
+previous AS (
+    SELECT
+        COALESCE(SUM(net_revenue), 0) as revenue,
+        COUNT(DISTINCT order_id) as orders,
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
+    FROM fact_orders
+    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+),
+customer_loyalty AS (
+    SELECT
+        ROUND(
+            COUNT(DISTINCT CASE WHEN date(c.first_order_date) < current_date - INTERVAL '6 days' THEN o.customer_key END) * 100.0
+            / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
+        ) as returning_rate
+    FROM fact_orders o
+    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+),
+scores AS (
+    SELECT
+        CASE
+            WHEN p.revenue = 0 THEN 0
+            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= 5 THEN 25
+            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= 0 THEN 20
+            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= -10 THEN 15
+            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= -25 THEN 8
+            ELSE 0
+        END as revenue_score,
+        CASE
+            WHEN p.orders = 0 THEN 0
+            WHEN (r.orders - p.orders) * 100.0 / p.orders >= 5 THEN 25
+            WHEN (r.orders - p.orders) * 100.0 / p.orders >= 0 THEN 20
+            WHEN (r.orders - p.orders) * 100.0 / p.orders >= -10 THEN 15
+            WHEN (r.orders - p.orders) * 100.0 / p.orders >= -25 THEN 8
+            ELSE 0
+        END as orders_score,
+        CASE
+            WHEN cl.returning_rate >= 50 THEN 25
+            WHEN cl.returning_rate >= 35 THEN 20
+            WHEN cl.returning_rate >= 20 THEN 12
+            ELSE 5
+        END as loyalty_score,
+        CASE
+            WHEN p.aov = 0 THEN 12
+            WHEN (r.aov - p.aov) * 100.0 / p.aov BETWEEN -5 AND 15 THEN 25
+            WHEN (r.aov - p.aov) * 100.0 / p.aov BETWEEN -15 AND -5 THEN 15
+            WHEN (r.aov - p.aov) * 100.0 / p.aov > 15 THEN 20
+            ELSE 5
+        END as aov_score
+    FROM recent r, previous p, customer_loyalty cl
+)
+SELECT revenue_score + orders_score + loyalty_score + aov_score as "Health Score"
+FROM scores
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 4, "size_y": 4 }
+```
+
+#### Question: Health Breakdown
+
+Chi tiết từng thành phần của Health Score: điểm, WoW%, và trạng thái.
+
+```sql
+WITH
+recent AS (
+    SELECT
+        COALESCE(SUM(net_revenue), 0) as revenue,
+        COUNT(DISTINCT order_id) as orders,
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
+    FROM fact_orders
+    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+),
+previous AS (
+    SELECT
+        COALESCE(SUM(net_revenue), 0) as revenue,
+        COUNT(DISTINCT order_id) as orders,
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
+    FROM fact_orders
+    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+),
+customer_loyalty AS (
+    SELECT
+        ROUND(
+            COUNT(DISTINCT CASE WHEN date(c.first_order_date) < current_date - INTERVAL '6 days' THEN o.customer_key END) * 100.0
+            / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
+        ) as returning_rate
+    FROM fact_orders o
+    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+),
+raw_scores AS (
+    SELECT
+        CASE WHEN p.revenue = 0 THEN NULL ELSE ROUND((r.revenue - p.revenue) * 100.0 / p.revenue, 1) END as rev_wow,
+        CASE WHEN p.orders = 0 THEN NULL ELSE ROUND((r.orders - p.orders) * 100.0 / p.orders, 1) END as ord_wow,
+        cl.returning_rate,
+        CASE WHEN p.aov = 0 THEN NULL ELSE ROUND((r.aov - p.aov) * 100.0 / p.aov, 1) END as aov_wow,
+        CASE WHEN p.revenue = 0 THEN 0 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 5 THEN 25 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 0 THEN 20 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -10 THEN 15 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -25 THEN 8 ELSE 0 END as rev_sc,
+        CASE WHEN p.orders = 0 THEN 0 WHEN (r.orders-p.orders)*100.0/p.orders >= 5 THEN 25 WHEN (r.orders-p.orders)*100.0/p.orders >= 0 THEN 20 WHEN (r.orders-p.orders)*100.0/p.orders >= -10 THEN 15 WHEN (r.orders-p.orders)*100.0/p.orders >= -25 THEN 8 ELSE 0 END as ord_sc,
+        CASE WHEN cl.returning_rate >= 50 THEN 25 WHEN cl.returning_rate >= 35 THEN 20 WHEN cl.returning_rate >= 20 THEN 12 ELSE 5 END as loy_sc,
+        CASE WHEN p.aov = 0 THEN 12 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -5 AND 15 THEN 25 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -15 AND -5 THEN 15 WHEN (r.aov-p.aov)*100.0/p.aov > 15 THEN 20 ELSE 5 END as aov_sc
+    FROM recent r, previous p, customer_loyalty cl
+)
+SELECT * FROM (
+    SELECT 1 as sort, 'Doanh thu (WoW)' as "Component", rev_wow as "Change %",
+        CASE WHEN rev_sc >= 20 THEN 'OK' WHEN rev_sc >= 15 THEN 'Chú ý' ELSE 'Báo động' END as "Status"
+    FROM raw_scores
+    UNION ALL
+    SELECT 2, 'Đơn hàng (WoW)', ord_wow,
+        CASE WHEN ord_sc >= 20 THEN 'OK' WHEN ord_sc >= 15 THEN 'Chú ý' ELSE 'Báo động' END
+    FROM raw_scores
+    UNION ALL
+    SELECT 3, 'Khách quay lại', returning_rate,
+        CASE WHEN loy_sc >= 20 THEN 'OK' WHEN loy_sc >= 12 THEN 'Chú ý' ELSE 'Báo động' END
+    FROM raw_scores
+    UNION ALL
+    SELECT 4, 'AOV ổn định', aov_wow,
+        CASE WHEN aov_sc >= 20 THEN 'OK' WHEN aov_sc >= 15 THEN 'Chú ý' ELSE 'Báo động' END
+    FROM raw_scores
+) t ORDER BY sort
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "table.pivot": false
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 4, "size_x": 14, "size_y": 4 }
+```
+
+---
+
 #### Question: Gross Revenue
 
 **Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv)
@@ -33,7 +190,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 0, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Net Revenue
@@ -51,7 +208,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 4, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Total Collected
@@ -69,7 +226,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 8, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Total Orders
@@ -85,7 +242,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 4, "col": 12, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: AOV
@@ -102,7 +259,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 15, "size_x": 3, "size_y": 3 }
+{ "row": 4, "col": 15, "size_x": 3, "size_y": 3 }
 ```
 
 ---
@@ -122,7 +279,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returning Customers
@@ -140,7 +297,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 3, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returns
@@ -157,7 +314,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 6, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Items per Order
@@ -175,7 +332,7 @@ WHERE date(s.sol_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 9, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Discount Rate
@@ -195,7 +352,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 12, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Total Discounts
@@ -211,7 +368,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 15, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 15, "size_x": 3, "size_y": 3 }
 ```
 
 ---
@@ -225,7 +382,6 @@ WITH today AS (
     SELECT
         COALESCE(SUM(gross_revenue), 0) as gross_revenue,
         COALESCE(SUM(net_revenue), 0) as net_revenue,
-        COALESCE(SUM(total_collected), 0) as total_collected,
         COUNT(DISTINCT order_id) as total_orders,
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as aov
@@ -236,27 +392,29 @@ yesterday AS (
     SELECT
         COALESCE(SUM(gross_revenue), 0) as gross_revenue,
         COALESCE(SUM(net_revenue), 0) as net_revenue,
-        COALESCE(SUM(total_collected), 0) as total_collected,
         COUNT(DISTINCT order_id) as total_orders,
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as aov
     FROM fact_orders
     WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 )
-SELECT
-    t.gross_revenue as "Gross Revenue",
-    y.gross_revenue as "Yesterday",
-    CASE WHEN y.gross_revenue = 0 THEN NULL ELSE ROUND((t.gross_revenue - y.gross_revenue) * 100.0 / y.gross_revenue, 1) END as "GR DoD %",
-    t.net_revenue as "Net Revenue",
-    y.net_revenue as "Yest. Net",
-    CASE WHEN y.net_revenue = 0 THEN NULL ELSE ROUND((t.net_revenue - y.net_revenue) * 100.0 / y.net_revenue, 1) END as "NR DoD %",
-    t.total_orders as "Orders",
-    y.total_orders as "Yest. Orders",
-    CASE WHEN y.total_orders = 0 THEN NULL ELSE ROUND((t.total_orders - y.total_orders) * 100.0 / y.total_orders, 1) END as "Orders DoD %",
-    t.aov as "AOV",
-    y.aov as "Yest. AOV",
-    CASE WHEN y.aov = 0 THEN NULL ELSE ROUND((t.aov - y.aov) * 100.0 / y.aov, 1) END as "AOV DoD %"
-FROM today t CROSS JOIN yesterday y
+SELECT * FROM (
+    SELECT 1 as sort, 'Gross Revenue' as "Metric", t.gross_revenue as "Today", y.gross_revenue as "Yesterday",
+        CASE WHEN y.gross_revenue = 0 THEN NULL ELSE ROUND((t.gross_revenue - y.gross_revenue) * 100.0 / y.gross_revenue, 1) END as "Change %"
+    FROM today t, yesterday y
+    UNION ALL
+    SELECT 2, 'Net Revenue', t.net_revenue, y.net_revenue,
+        CASE WHEN y.net_revenue = 0 THEN NULL ELSE ROUND((t.net_revenue - y.net_revenue) * 100.0 / y.net_revenue, 1) END
+    FROM today t, yesterday y
+    UNION ALL
+    SELECT 3, 'Orders', t.total_orders, y.total_orders,
+        CASE WHEN y.total_orders = 0 THEN NULL ELSE ROUND((t.total_orders - y.total_orders) * 100.0 / y.total_orders, 1) END
+    FROM today t, yesterday y
+    UNION ALL
+    SELECT 4, 'AOV', t.aov, y.aov,
+        CASE WHEN y.aov = 0 THEN NULL ELSE ROUND((t.aov - y.aov) * 100.0 / y.aov, 1) END
+    FROM today t, yesterday y
+) t ORDER BY sort
 ```
 
 ```json metabase-viz
@@ -267,7 +425,7 @@ FROM today t CROSS JOIN yesterday y
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 3 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 3 }
 ```
 
 ---
@@ -316,7 +474,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 12, "size_y": 8 }
+{ "row": 13, "col": 0, "size_x": 12, "size_y": 8 }
 ```
 
 #### Question: Cumulative Revenue
@@ -367,7 +525,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 12, "size_x": 6, "size_y": 8 }
+{ "row": 13, "col": 12, "size_x": 6, "size_y": 8 }
 ```
 
 ---

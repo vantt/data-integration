@@ -96,6 +96,16 @@
 | **Sales Ops Weekly Review**     | Sales Ops / CS Lead  | Weekly order processing, team performance, channel workload.           | TBD                      |
 | **Sales Ops Monthly Summary**   | Sales Ops / Ops Mgr  | Monthly operational efficiency, staff KPIs, payment reconciliation.    | TBD                      |
 
+## Composite Metrics
+
+### Health Score (Business Health)
+
+> **Guide:** [Health Score — Chỉ số Sức khỏe Kinh doanh](../guides/health_score.md)
+
+- **Business Definition:** Điểm tổng hợp 0-100 đánh giá sức khỏe kinh doanh dựa trên 4 chiều: Revenue Momentum (WoW), Order Momentum (WoW), Customer Loyalty (Returning Rate), AOV Stability. Hiển thị tại tab Tổng quan của Daily/Yesterday dashboards.
+- **Thang điểm:** 75-100 Khỏe mạnh | 50-74 Cần chú ý | 0-49 Báo động
+- **Source Tables:** `fact_orders`, `dim_customers`
+
 ## Related Playbooks
 
 | Playbook                                                           | Description                                                                           |
