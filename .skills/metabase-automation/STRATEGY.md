@@ -64,3 +64,71 @@ For full archetype definitions, card roles, and composition patterns, see `.skil
 | **Exploratory Tool** | Deep-dive requests | Many filters, pivot/scatter |
 
 **Rule:** If user asks for "Sales Dashboard" without specifying → default to **Operational Cockpit**.
+
+## 5. Parser Limitations & Post-Deploy Workarounds
+
+Markdown parser (`lib/markdown_parser.js`) chỉ hỗ trợ một số block types. Các tính năng sau **KHÔNG được parser xử lý** và cần workaround thủ công.
+
+### 5.1 Text Annotations (CRITICAL)
+
+**Parser KHÔNG hỗ trợ `#### Text:` headers.** Khi blueprint chứa `#### Text:` với `metabase-pos` block, parser sẽ gán position đó cho question card trước đó → **ghi đè position, gây sai layout toàn bộ**.
+
+**Quy tắc:** KHÔNG bao giờ đặt `#### Text:` sections trong blueprint. Thay vào đó:
+
+1. Viết blueprint chỉ với `#### Question:` sections (không có text annotations)
+2. Deploy blueprint bình thường
+3. Thêm text cards qua API sau deploy:
+
+```javascript
+// Shift existing cards down để tạo chỗ cho text headings
+// Rồi PUT /api/dashboard/:id với dashcards bao gồm text cards:
+{
+  id: -1,              // negative ID cho card mới
+  card_id: null,       // null = text card, không phải question
+  dashboard_tab_id: tabId,
+  row: 0, col: 0, size_x: 18, size_y: 1,
+  visualization_settings: {
+    virtual_card: {
+      name: null, display: "text",
+      visualization_settings: {}, dataset_query: {}, archived: false
+    },
+    text: "# Section Heading"
+  },
+  parameter_mappings: []
+}
+```
+
+**Lưu ý:** PUT `/api/dashboard/:id` phải gửi cả `tabs` VÀ `dashcards` cùng lúc (Metabase yêu cầu).
+
+### 5.2 Dashboard Filters (`metabase-filter`)
+
+**Parser KHÔNG xử lý `metabase-filter` blocks.** Template tags trong SQL (`{{date}}`) được tạo tự động, nhưng dashboard-level parameter và mapping thì không.
+
+**Quy trình sau deploy:**
+
+1. Thêm dashboard parameter:
+```bash
+curl -X PUT "$METABASE_URL/api/dashboard/:id" \
+  -d '{"parameters": [{"id": "date_filter", "name": "Date", "slug": "date", "type": "date/single"}]}'
+```
+
+2. Map parameter tới cards bằng PUT dashboard với `tabs` + `dashcards` (thêm `parameter_mappings` cho mỗi card cần filter):
+```json
+{
+  "parameter_mappings": [{
+    "parameter_id": "date_filter",
+    "card_id": 123,
+    "target": ["variable", ["template-tag", "date"]]
+  }]
+}
+```
+
+**Lưu ý:** PUT `/api/dashboard/:id/cards` (endpoint riêng) KHÔNG hoạt động cho việc update parameter_mappings. Phải dùng PUT `/api/dashboard/:id` với full payload `{ tabs, dashcards }`.
+
+### 5.3 Dashboard Update vs Create
+
+Deploy script (`deploy_from_markdown.js`) luôn **tạo dashboard MỚI** nếu không tìm thấy dashboard cùng tên (chưa archived) trong collection. Nếu muốn cập nhật dashboard hiện tại:
+
+- Script sẽ reuse dashboard nếu tên trùng khớp chính xác
+- Nếu đổi tên dashboard → script tạo mới → cần archive dashboard cũ thủ công
+- Archive dashboard + questions qua API: `PUT /api/dashboard/:id {"archived": true}` và `PUT /api/card/:id {"archived": true}`
