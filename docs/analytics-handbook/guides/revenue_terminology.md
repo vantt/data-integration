@@ -11,7 +11,7 @@ Tài liệu này thống nhất cách gọi tên các chỉ số tài chính tro
 
 ## 1. Dòng chảy doanh thu (Revenue Waterfall)
 
-Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến số tiền thực nhận:
+Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến số tiền thực thu ròng:
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
