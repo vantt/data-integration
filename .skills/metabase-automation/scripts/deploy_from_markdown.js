@@ -14,13 +14,48 @@ const fs = require("fs");
  * but Metabase expects them flat at the top level.
  * Also strips "display" since it's a separate card property, not a viz setting.
  */
+/**
+ * Auto-detect {{variable}} placeholders in SQL and build Metabase template-tags.
+ * Maps common variable names to appropriate types (date, number, text).
+ */
+function buildTemplateTags(sql) {
+  const tags = {};
+  const regex = /\{\{(\w+)\}\}/g;
+  let match;
+  while ((match = regex.exec(sql)) !== null) {
+    const name = match[1];
+    if (tags[name]) continue;
+    // Infer type from name
+    let type = 'text';
+    if (/date|day|month|year|start|end|from|to/i.test(name)) type = 'date';
+    else if (/id|count|num|amount|limit|offset/i.test(name)) type = 'number';
+    tags[name] = {
+      id: name,
+      name: name,
+      'display-name': name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+      type: type
+    };
+  }
+  return tags;
+}
+
 function flattenViz(viz) {
   if (!viz) return {};
   const { display, visualization_settings, ...rest } = viz;
-  if (visualization_settings && typeof visualization_settings === 'object') {
-    return { ...rest, ...visualization_settings };
+  const merged = visualization_settings && typeof visualization_settings === 'object'
+    ? { ...rest, ...visualization_settings }
+    : rest;
+  // Transform column_settings keys from plain names to Metabase's ["name","X"] format
+  if (merged.column_settings && typeof merged.column_settings === 'object') {
+    const transformed = {};
+    for (const [key, value] of Object.entries(merged.column_settings)) {
+      // If key is already in JSON array format, keep it; otherwise wrap it
+      const newKey = key.startsWith('[') ? key : JSON.stringify(["name", key]);
+      transformed[newKey] = value;
+    }
+    merged.column_settings = transformed;
   }
-  return rest;
+  return merged;
 }
 
 async function main() {
@@ -146,10 +181,26 @@ async function main() {
     // Fetch existing dashboard cards to scope updates by dashboard (not just collection)
     const dashDetail = await client.core.request(`/api/dashboard/${dashRemote.id}`);
     const existingDashCards = dashDetail.dashcards || dashDetail.ordered_cards || [];
-    const dashCardMap = {}; // question name -> card object
+    const existingTabs = dashDetail.tabs || [];
+
+    // Build tab ID lookup from existing dashboard tabs
+    const existingTabIdByName = {};
+    for (const t of existingTabs) {
+      existingTabIdByName[t.name] = t.id;
+    }
+
+    // Build dashcard map scoped by (tab_id, card_name) for tab-aware lookup
+    // Each dashcard entry includes the card object AND the dashcard's tab assignment
+    const dashCardByTabAndName = {}; // "tabId::name" -> { card, dashcard }
+    const dashCardByName = {};       // "name" -> { card, dashcard } (fallback for non-tabbed)
+    const usedCardIds = new Set();   // track card IDs already claimed
     for (const dc of existingDashCards) {
       if (dc.card && dc.card.name) {
-        dashCardMap[dc.card.name] = dc.card;
+        const key = `${dc.dashboard_tab_id || ''}::${dc.card.name}`;
+        dashCardByTabAndName[key] = { card: dc.card, dashcard: dc };
+        if (!dashCardByName[dc.card.name]) {
+          dashCardByName[dc.card.name] = { card: dc.card, dashcard: dc };
+        }
       }
     }
 
@@ -160,19 +211,24 @@ async function main() {
 
     const cardConfigs = [];
 
-    // Process Questions
+    // Process Questions — tab-aware: each tab gets its own card
     for (const q of dashboard.questions) {
       if (!q.sql) {
         console.warn(`⚠️ Skipping question '${q.name}': No SQL found.`);
         continue;
       }
 
-      let card;
-      const existingCard = dashCardMap[q.name];
+      // Resolve existing card scoped by tab
+      const tabId = q.tab ? (existingTabIdByName[q.tab] || null) : null;
+      const scopedKey = `${tabId || ''}::${q.name}`;
+      const existing = dashCardByTabAndName[scopedKey];
+      const existingCard = existing && !usedCardIds.has(existing.card.id) ? existing.card : null;
+      if (existingCard) usedCardIds.add(existingCard.id);
 
+      let card;
       if (existingCard) {
-        // Update existing card already on this dashboard
-        console.log(`ℹ️ Question '${q.name}' exists on dashboard (ID: ${existingCard.id})`);
+        // Update existing card already on this dashboard tab
+        console.log(`ℹ️ Question '${q.name}' exists on tab '${q.tab || '-'}' (ID: ${existingCard.id})`);
         try {
           await client.core.request(`/api/card/${existingCard.id}`, 'PUT', { archived: false });
         } catch (e) { /* ignore */ }
@@ -182,7 +238,7 @@ async function main() {
           collection_id: colId,
           dataset_query: {
             type: "native",
-            native: { query: q.sql, "template-tags": {} },
+            native: { query: q.sql, "template-tags": buildTemplateTags(q.sql) },
             database: defaultDbId
           },
           display: q.viz ? q.viz.display : "table",
@@ -190,13 +246,13 @@ async function main() {
         });
         console.log(`✅ Updated Question '${q.name}' (ID: ${card.id})`);
       } else {
-        // Create new card (not found on this dashboard — always create, never reuse from other dashboards)
+        // Create new card for this tab
         const payload = {
           name: q.name,
           collection_id: colId,
           dataset_query: {
             type: "native",
-            native: { query: q.sql, "template-tags": {} },
+            native: { query: q.sql, "template-tags": buildTemplateTags(q.sql) },
             database: defaultDbId
           },
           display: q.viz ? q.viz.display : "table",

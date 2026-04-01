@@ -91,10 +91,17 @@ class Dashboard {
         }
 
         let tempIdCounter = -1;
+        const usedDashCardIds = new Set();
 
         const cardPayload = cardConfigs.map(config => {
-            // Match by card_id (the Question ID)
-            const existing = currentCards.find(dc => dc.card_id === config.id);
+            // Match by card_id AND tab — avoid reusing the same dashcard across tabs
+            const tabId = config.tab && tabMap.has(config.tab) ? tabMap.get(config.tab) : (config.dashboard_tab_id || null);
+            const existing = currentCards.find(dc =>
+                dc.card_id === config.id
+                && !usedDashCardIds.has(dc.id)
+                && (tabId == null || dc.dashboard_tab_id === tabId)
+            );
+            if (existing) usedDashCardIds.add(existing.id);
             
             // Modern Logic: Negative IDs for new cards
             // Legacy Logic: Usually just card_id is enough, but passing id doesn't hurt if we have it.
@@ -115,7 +122,7 @@ class Dashboard {
                 size_x: config.size_x,
                 size_y: config.size_y,
                 visualization_settings: {}, // Required
-                parameter_mappings: config.parameter_mappings || [], // Required
+                parameter_mappings: config.parameter_mappings || (existing ? existing.parameter_mappings : []) || [], // Preserve existing mappings
                 series: []
             };
 

@@ -37,6 +37,23 @@ WHERE date(order_timestamp) = current_date
 { "row": 0, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
+#### ❓ Question: Gross Revenue
+
+```sql
+SELECT COALESCE(SUM(gross_revenue), 0) as "Gross Revenue"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
+  AND status NOT IN ('CANCELLED', 'Voided')
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 3, "size_x": 3, "size_y": 3 }
+```
+
 #### ❓ Question: Net Revenue
 
 ```sql
@@ -56,7 +73,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
 ```
 
 #### ❓ Question: Total Collected
@@ -80,7 +97,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 #### ❓ Question: Total Discount
@@ -102,7 +119,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 12, "size_x": 2, "size_y": 3 }
 ```
 
 #### ❓ Question: Cancelled Orders
@@ -119,7 +136,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 14, "size_x": 2, "size_y": 3 }
 ```
 
 #### ❓ Question: Returns
@@ -135,7 +152,7 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 15, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 16, "size_x": 2, "size_y": 3 }
 ```
 
 ---
@@ -293,17 +310,17 @@ Danh sách đầy đủ để đối soát từng đơn với Sapo.
 
 ```sql
 SELECT
-    o.order_id as "Order ID",
+    o.order_code as "Order Code",
     strftime(o.order_timestamp, '%H:%M') as "Time",
     o.status as "Status",
-    o.payment_status as "Payment",
-    o.fulfillment_status as "Fulfillment",
     o.gross_revenue as "Gross",
     o.discount_amount as "Discount",
     o.net_revenue as "Net Revenue",
     o.tax_amount as "Tax",
     o.total_collected as "Collected",
     ch.channel_name as "Channel",
+    o.payment_status as "Payment",
+    o.fulfillment_status as "Fulfillment",
     c.full_name as "Customer",
     c.phone as "Phone",
     bl.branch_location_name as "Store"
@@ -355,6 +372,23 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 { "row": 0, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
+#### ❓ Question: Gross Revenue
+
+```sql
+SELECT COALESCE(SUM(gross_revenue), 0) as "Gross Revenue"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+  AND status NOT IN ('CANCELLED', 'Voided')
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 3, "size_x": 3, "size_y": 3 }
+```
+
 #### ❓ Question: Net Revenue
 
 ```sql
@@ -374,7 +408,7 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
 ```
 
 #### ❓ Question: Total Collected
@@ -396,7 +430,7 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 #### ❓ Question: Total Discount
@@ -418,7 +452,7 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 12, "size_x": 2, "size_y": 3 }
 ```
 
 #### ❓ Question: Cancelled Orders
@@ -435,7 +469,7 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 14, "size_x": 2, "size_y": 3 }
 ```
 
 #### ❓ Question: Returns
@@ -451,7 +485,7 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 15, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 16, "size_x": 2, "size_y": 3 }
 ```
 
 ---
@@ -597,17 +631,17 @@ ORDER BY o.discount_amount DESC
 
 ```sql
 SELECT
-    o.order_id as "Order ID",
+    o.order_code as "Order Code",
     strftime(o.order_timestamp, '%H:%M') as "Time",
     o.status as "Status",
-    o.payment_status as "Payment",
-    o.fulfillment_status as "Fulfillment",
     o.gross_revenue as "Gross",
     o.discount_amount as "Discount",
     o.net_revenue as "Net Revenue",
     o.tax_amount as "Tax",
     o.total_collected as "Collected",
     ch.channel_name as "Channel",
+    o.payment_status as "Payment",
+    o.fulfillment_status as "Fulfillment",
     c.full_name as "Customer",
     c.phone as "Phone",
     bl.branch_location_name as "Store"
@@ -670,6 +704,23 @@ WHERE date(order_timestamp) = {{date}}
 { "row": 0, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
+#### ❓ Question: Gross Revenue
+
+```sql
+SELECT COALESCE(SUM(gross_revenue), 0) as "Gross Revenue"
+FROM fact_orders
+WHERE date(order_timestamp) = {{date}}
+  AND status NOT IN ('CANCELLED', 'Voided')
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 3, "size_x": 3, "size_y": 3 }
+```
+
 #### ❓ Question: Net Revenue
 
 ```sql
@@ -689,7 +740,7 @@ WHERE date(order_timestamp) = {{date}}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
 ```
 
 #### ❓ Question: Total Collected
@@ -711,7 +762,7 @@ WHERE date(order_timestamp) = {{date}}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 #### ❓ Question: Total Discount
@@ -733,7 +784,7 @@ WHERE date(order_timestamp) = {{date}}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 12, "size_x": 2, "size_y": 3 }
 ```
 
 #### ❓ Question: Cancelled Orders
@@ -750,7 +801,7 @@ WHERE date(order_timestamp) = {{date}}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 14, "size_x": 2, "size_y": 3 }
 ```
 
 #### ❓ Question: Returns
@@ -766,7 +817,7 @@ WHERE date(order_timestamp) = {{date}}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 15, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 16, "size_x": 2, "size_y": 3 }
 ```
 
 ---
@@ -912,17 +963,17 @@ ORDER BY o.discount_amount DESC
 
 ```sql
 SELECT
-    o.order_id as "Order ID",
+    o.order_code as "Order Code",
     strftime(o.order_timestamp, '%H:%M') as "Time",
     o.status as "Status",
-    o.payment_status as "Payment",
-    o.fulfillment_status as "Fulfillment",
     o.gross_revenue as "Gross",
     o.discount_amount as "Discount",
     o.net_revenue as "Net Revenue",
     o.tax_amount as "Tax",
     o.total_collected as "Collected",
     ch.channel_name as "Channel",
+    o.payment_status as "Payment",
+    o.fulfillment_status as "Fulfillment",
     c.full_name as "Customer",
     c.phone as "Phone",
     bl.branch_location_name as "Store"
