@@ -1,26 +1,30 @@
-# Daily Sales Performance Blueprint
+# Daily Sales Performance Blueprint (Redesign v2)
 
+**Design Spec**: [Daily Sales Dashboard (Redesign)](../designs/sales_daily_operation.md)
 **Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)
 
-This blueprint creates a real-time sales monitoring dashboard for daily operations, organized into tabs for clarity.
+Redesigned dashboard with integrated DoD comparisons, gauge health score, section headings, and improved viz choices. Real-time monitoring — data for today, compared with yesterday.
 
 ## 📂 Collection: Operations > Daily Monitoring
 
-This collection contains operational dashboards updated in real-time.
-
----
-
 ### Dashboard: Daily Sales Dashboard
 
-**Description**: Real-time monitoring of today's sales performance — KPIs, hourly trends, channels, products, customers, and payments across 4 organized tabs.
+**Description**: Real-time monitoring of today's sales — Health Score gauge, KPIs with integrated DoD trends, hourly patterns, channel/product/customer breakdowns across 4 tabs.
 
 ---
 
 ### 📑 Tab: Tổng quan
 
+<!-- Text annotations to add manually in Metabase:
+     - Row 0: "Sức khỏe kinh doanh" (full-width, height 1)
+     - Row 6: "Kết quả hôm nay (real-time)" (full-width, height 1)
+     - Row 10: "Chỉ số phụ" (full-width, height 1)
+     - Row 14: "Doanh thu theo giờ" (full-width, height 1)
+-->
+
 #### Question: Health Score
 
-Điểm sức khỏe kinh doanh (0-100) dựa trên 4 chỉ số: Revenue Momentum, Order Momentum, Customer Loyalty, AOV Stability. So sánh 7 ngày gần nhất vs 7 ngày trước đó.
+Điểm sức khỏe kinh doanh (0-100) dựa trên 4 chỉ số: Revenue Momentum, Order Momentum, Customer Loyalty, AOV Stability. So sánh 7 ngày gần nhất (kể cả hôm nay) vs 7 ngày trước đó.
 
 ```sql
 WITH
@@ -54,35 +58,10 @@ customer_loyalty AS (
 ),
 scores AS (
     SELECT
-        CASE
-            WHEN p.revenue = 0 THEN 0
-            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= 5 THEN 25
-            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= 0 THEN 20
-            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= -10 THEN 15
-            WHEN (r.revenue - p.revenue) * 100.0 / p.revenue >= -25 THEN 8
-            ELSE 0
-        END as revenue_score,
-        CASE
-            WHEN p.orders = 0 THEN 0
-            WHEN (r.orders - p.orders) * 100.0 / p.orders >= 5 THEN 25
-            WHEN (r.orders - p.orders) * 100.0 / p.orders >= 0 THEN 20
-            WHEN (r.orders - p.orders) * 100.0 / p.orders >= -10 THEN 15
-            WHEN (r.orders - p.orders) * 100.0 / p.orders >= -25 THEN 8
-            ELSE 0
-        END as orders_score,
-        CASE
-            WHEN cl.returning_rate >= 50 THEN 25
-            WHEN cl.returning_rate >= 35 THEN 20
-            WHEN cl.returning_rate >= 20 THEN 12
-            ELSE 5
-        END as loyalty_score,
-        CASE
-            WHEN p.aov = 0 THEN 12
-            WHEN (r.aov - p.aov) * 100.0 / p.aov BETWEEN -5 AND 15 THEN 25
-            WHEN (r.aov - p.aov) * 100.0 / p.aov BETWEEN -15 AND -5 THEN 15
-            WHEN (r.aov - p.aov) * 100.0 / p.aov > 15 THEN 20
-            ELSE 5
-        END as aov_score
+        CASE WHEN p.revenue = 0 THEN 0 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 5 THEN 25 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 0 THEN 20 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -10 THEN 15 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -25 THEN 8 ELSE 0 END as revenue_score,
+        CASE WHEN p.orders = 0 THEN 0 WHEN (r.orders-p.orders)*100.0/p.orders >= 5 THEN 25 WHEN (r.orders-p.orders)*100.0/p.orders >= 0 THEN 20 WHEN (r.orders-p.orders)*100.0/p.orders >= -10 THEN 15 WHEN (r.orders-p.orders)*100.0/p.orders >= -25 THEN 8 ELSE 0 END as orders_score,
+        CASE WHEN cl.returning_rate >= 50 THEN 25 WHEN cl.returning_rate >= 35 THEN 20 WHEN cl.returning_rate >= 20 THEN 12 ELSE 5 END as loyalty_score,
+        CASE WHEN p.aov = 0 THEN 12 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -5 AND 15 THEN 25 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -15 AND -5 THEN 15 WHEN (r.aov-p.aov)*100.0/p.aov > 15 THEN 20 ELSE 5 END as aov_score
     FROM recent r, previous p, customer_loyalty cl
 )
 SELECT revenue_score + orders_score + loyalty_score + aov_score as "Health Score"
@@ -90,16 +69,25 @@ FROM scores
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "gauge",
+  "visualization_settings": {
+    "gauge.segments": [
+      { "min": 0, "max": 49, "color": "#EF8C8C", "label": "Báo động" },
+      { "min": 49, "max": 74, "color": "#F9D45C", "label": "Chú ý" },
+      { "min": 74, "max": 100, "color": "#84BB4C", "label": "Khỏe mạnh" }
+    ]
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
 ```
 
 #### Question: Health Breakdown
 
-Chi tiết từng thành phần của Health Score: điểm, WoW%, và trạng thái.
+Chi tiết từng thành phần của Health Score với conditional formatting.
 
 ```sql
 WITH
@@ -144,19 +132,19 @@ raw_scores AS (
     FROM recent r, previous p, customer_loyalty cl
 )
 SELECT * FROM (
-    SELECT 1 as sort, 'Doanh thu (WoW)' as "Component", rev_wow as "Change %",
+    SELECT 1 as sort, 'Doanh thu (WoW)' as "Thành phần", rev_wow as "Thay đổi %", rev_sc as "Điểm",
         CASE WHEN rev_sc >= 20 THEN 'OK' WHEN rev_sc >= 15 THEN 'Chú ý' ELSE 'Báo động' END as "Status"
     FROM raw_scores
     UNION ALL
-    SELECT 2, 'Đơn hàng (WoW)', ord_wow,
+    SELECT 2, 'Đơn hàng (WoW)', ord_wow, ord_sc,
         CASE WHEN ord_sc >= 20 THEN 'OK' WHEN ord_sc >= 15 THEN 'Chú ý' ELSE 'Báo động' END
     FROM raw_scores
     UNION ALL
-    SELECT 3, 'Khách quay lại', returning_rate,
+    SELECT 3, 'Khách quay lại', returning_rate, loy_sc,
         CASE WHEN loy_sc >= 20 THEN 'OK' WHEN loy_sc >= 12 THEN 'Chú ý' ELSE 'Báo động' END
     FROM raw_scores
     UNION ALL
-    SELECT 4, 'AOV ổn định', aov_wow,
+    SELECT 4, 'AOV ổn định', aov_wow, aov_sc,
         CASE WHEN aov_sc >= 20 THEN 'OK' WHEN aov_sc >= 15 THEN 'Chú ý' ELSE 'Báo động' END
     FROM raw_scores
 ) t ORDER BY sort
@@ -165,101 +153,205 @@ SELECT * FROM (
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false
+  "visualization_settings": {
+    "table.pivot": false,
+    "table.columns": [
+      { "name": "Thành phần", "enabled": true },
+      { "name": "Thay đổi %", "enabled": true },
+      { "name": "Điểm", "enabled": true },
+      { "name": "Status", "enabled": true },
+      { "name": "sort", "enabled": false }
+    ],
+    "table.column_formatting": [
+      {
+        "columns": ["Điểm"],
+        "type": "single",
+        "operator": ">=",
+        "value": 20,
+        "color": "#84BB4C",
+        "highlight_row": true
+      },
+      {
+        "columns": ["Điểm"],
+        "type": "single",
+        "operator": "<",
+        "value": 12,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      }
+    ]
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 4, "size_x": 14, "size_y": 4 }
+{ "row": 1, "col": 6, "size_x": 12, "size_y": 5 }
 ```
 
 ---
 
-#### Question: Gross Revenue
-
-**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv)
-
-```sql
-SELECT COALESCE(SUM(gross_revenue), 0) as "Gross Revenue"
-FROM fact_orders
-WHERE date(order_timestamp) = current_date
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 4, "size_y": 3 }
-```
-
 #### Question: Net Revenue
 
-**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue)
+**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison vs yesterday.
 
 ```sql
-SELECT COALESCE(SUM(net_revenue), 0) as "Net Revenue"
+SELECT
+    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date THEN net_revenue END), 0) as "Net Revenue",
+    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN net_revenue END), 0) as "Hôm qua"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date
+WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(order_timestamp) <= current_date
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "dod",
+        "type": "anotherColumn",
+        "column": "Hôm qua",
+        "label": "vs hôm qua"
+      }
+    ],
+    "column_settings": {
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 7, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
-#### Question: Total Collected
+#### Question: Gross Revenue
 
-**Domain Reference**: [Total Collected](../domains/sales.md#2b-total-collected)
+**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI with DoD.
 
 ```sql
-SELECT COALESCE(SUM(total_collected), 0) as "Total Collected"
+SELECT
+    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date THEN gross_revenue END), 0) as "Gross Revenue",
+    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN gross_revenue END), 0) as "Hôm qua"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date
+WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(order_timestamp) <= current_date
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "dod",
+        "type": "anotherColumn",
+        "column": "Hôm qua",
+        "label": "vs hôm qua"
+      }
+    ],
+    "column_settings": {
+      "Gross Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 7, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Total Orders
 
+Supporting KPI with DoD comparison.
+
 ```sql
-SELECT COUNT(DISTINCT order_id) as "Total Orders"
+SELECT
+    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date THEN order_id END) as "Total Orders",
+    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN order_id END) as "Hôm qua"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date
+WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(order_timestamp) <= current_date
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "dod",
+        "type": "anotherColumn",
+        "column": "Hôm qua",
+        "label": "vs hôm qua"
+      }
+    ]
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: AOV
 
+Supporting KPI with DoD comparison.
+
 ```sql
-SELECT CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-            ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as "AOV"
+SELECT
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date THEN order_id END) = 0 THEN 0
+         ELSE ROUND(
+            SUM(CASE WHEN date(order_timestamp) = current_date THEN net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date THEN order_id END), 0
+         ) END as "AOV",
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN order_id END) = 0 THEN 0
+         ELSE ROUND(
+            SUM(CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN order_id END), 0
+         ) END as "Hôm qua"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date
+WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(order_timestamp) <= current_date
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "dod",
+        "type": "anotherColumn",
+        "column": "Hôm qua",
+        "label": "vs hôm qua"
+      }
+    ],
+    "column_settings": {
+      "AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 15, "size_x": 3, "size_y": 3 }
+{ "row": 7, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -279,7 +371,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 3, "size_y": 3 }
+{ "row": 11, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returning Customers
@@ -297,7 +389,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 11, "col": 3, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returns
@@ -314,25 +406,37 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 6, "size_x": 3, "size_y": 3 }
+{ "row": 11, "col": 6, "size_x": 3, "size_y": 3 }
 ```
 
-#### Question: Items per Order
+#### Question: Total Collected
+
+**Domain Reference**: [Total Collected](../domains/sales.md#2b-total-collected)
 
 ```sql
-SELECT ROUND(
-    SUM(s.quantity)::FLOAT / NULLIF(COUNT(DISTINCT s.order_id), 0), 1
-) as "Items/Order"
-FROM fact_sales s
-WHERE date(s.sol_timestamp) = current_date
+SELECT COALESCE(SUM(total_collected), 0) as "Total Collected"
+FROM fact_orders
+WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Total Collected": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 3, "size_y": 3 }
+{ "row": 11, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Discount Rate
@@ -352,15 +456,17 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 12, "size_x": 3, "size_y": 3 }
+{ "row": 11, "col": 12, "size_x": 3, "size_y": 3 }
 ```
 
-#### Question: Total Discounts
+#### Question: Items per Order
 
 ```sql
-SELECT COALESCE(SUM(discount_amount), 0) as "Total Discounts"
-FROM fact_orders
-WHERE date(order_timestamp) = current_date
+SELECT ROUND(
+    SUM(s.quantity)::FLOAT / NULLIF(COUNT(DISTINCT s.order_id), 0), 1
+) as "Items/Order"
+FROM fact_sales s
+WHERE date(s.sol_timestamp) = current_date
 ```
 
 ```json metabase-viz
@@ -368,71 +474,14 @@ WHERE date(order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 15, "size_x": 3, "size_y": 3 }
-```
-
----
-
-#### Question: DoD Comparison
-
-Day-over-day comparison of key metrics: today vs yesterday.
-
-```sql
-WITH today AS (
-    SELECT
-        COALESCE(SUM(gross_revenue), 0) as gross_revenue,
-        COALESCE(SUM(net_revenue), 0) as net_revenue,
-        COUNT(DISTINCT order_id) as total_orders,
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as aov
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date
-),
-yesterday AS (
-    SELECT
-        COALESCE(SUM(gross_revenue), 0) as gross_revenue,
-        COALESCE(SUM(net_revenue), 0) as net_revenue,
-        COUNT(DISTINCT order_id) as total_orders,
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE ROUND(SUM(net_revenue) / COUNT(DISTINCT order_id), 0) END as aov
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
-)
-SELECT * FROM (
-    SELECT 1 as sort, 'Gross Revenue' as "Metric", t.gross_revenue as "Today", y.gross_revenue as "Yesterday",
-        CASE WHEN y.gross_revenue = 0 THEN NULL ELSE ROUND((t.gross_revenue - y.gross_revenue) * 100.0 / y.gross_revenue, 1) END as "Change %"
-    FROM today t, yesterday y
-    UNION ALL
-    SELECT 2, 'Net Revenue', t.net_revenue, y.net_revenue,
-        CASE WHEN y.net_revenue = 0 THEN NULL ELSE ROUND((t.net_revenue - y.net_revenue) * 100.0 / y.net_revenue, 1) END
-    FROM today t, yesterday y
-    UNION ALL
-    SELECT 3, 'Orders', t.total_orders, y.total_orders,
-        CASE WHEN y.total_orders = 0 THEN NULL ELSE ROUND((t.total_orders - y.total_orders) * 100.0 / y.total_orders, 1) END
-    FROM today t, yesterday y
-    UNION ALL
-    SELECT 4, 'AOV', t.aov, y.aov,
-        CASE WHEN y.aov = 0 THEN NULL ELSE ROUND((t.aov - y.aov) * 100.0 / y.aov, 1) END
-    FROM today t, yesterday y
-) t ORDER BY sort
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "table.pivot": false
-}
-```
-
-```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 3 }
+{ "row": 11, "col": 15, "size_x": 3, "size_y": 3 }
 ```
 
 ---
 
 #### Question: Hourly Sales Trend
 
-Compare today's hourly performance with yesterday.
+Compare today's hourly performance with yesterday — real-time.
 
 **Domain Reference**: [Hourly Sales Trend](../domains/sales.md#6-hourly-sales-trend)
 
@@ -455,8 +504,8 @@ previous_sales AS (
 )
 SELECT
     COALESCE(c.hour_of_day, p.hour_of_day) as "Hour",
-    COALESCE(c.sales_today, 0) as "Today",
-    COALESCE(p.sales_yesterday, 0) as "Yesterday"
+    COALESCE(c.sales_today, 0) as "Hôm nay",
+    COALESCE(p.sales_yesterday, 0) as "Hôm qua"
 FROM current_sales c
 FULL OUTER JOIN previous_sales p ON c.hour_of_day = p.hour_of_day
 ORDER BY 1
@@ -465,21 +514,23 @@ ORDER BY 1
 ```json metabase-viz
 {
   "display": "line",
-  "graph.dimensions": ["Hour"],
-  "graph.metrics": ["Today", "Yesterday"],
-  "graph.colors": ["#509EE3", "#CCCCCC"],
-  "graph.x_axis.title_text": "Hour of Day",
-  "graph.y_axis.title_text": "Revenue"
+  "visualization_settings": {
+    "graph.dimensions": ["Hour"],
+    "graph.metrics": ["Hôm nay", "Hôm qua"],
+    "graph.colors": ["#509EE3", "#C2D2E9"],
+    "graph.x_axis.title_text": "Giờ trong ngày",
+    "graph.y_axis.title_text": "Doanh thu"
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 12, "size_y": 8 }
+{ "row": 15, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Cumulative Revenue
 
-Running total of revenue throughout the day — today vs yesterday.
+Running total — today vs yesterday, real-time.
 
 ```sql
 WITH hours AS (
@@ -503,43 +554,49 @@ yesterday_hourly AS (
 )
 SELECT
     h.hour_of_day as "Hour",
-    COALESCE(SUM(t.revenue) OVER (ORDER BY h.hour_of_day), 0) as "Today (Cumulative)",
-    COALESCE(SUM(y.revenue) OVER (ORDER BY h.hour_of_day), 0) as "Yesterday (Cumulative)"
+    COALESCE(SUM(t.revenue) OVER (ORDER BY h.hour_of_day), 0) as "Hôm nay (Lũy kế)",
+    COALESCE(SUM(y.revenue) OVER (ORDER BY h.hour_of_day), 0) as "Hôm qua (Lũy kế)"
 FROM hours h
 LEFT JOIN today_hourly t ON h.hour_of_day = t.hour_of_day
 LEFT JOIN yesterday_hourly y ON h.hour_of_day = y.hour_of_day
-WHERE h.hour_of_day <= EXTRACT(HOUR FROM NOW()) + 1
-   OR EXISTS (SELECT 1 FROM yesterday_hourly yy WHERE yy.hour_of_day = h.hour_of_day)
 ORDER BY 1
 ```
 
 ```json metabase-viz
 {
   "display": "line",
-  "graph.dimensions": ["Hour"],
-  "graph.metrics": ["Today (Cumulative)", "Yesterday (Cumulative)"],
-  "graph.colors": ["#88BF4D", "#CCCCCC"],
-  "graph.x_axis.title_text": "Hour of Day",
-  "graph.y_axis.title_text": "Cumulative Revenue"
+  "visualization_settings": {
+    "graph.dimensions": ["Hour"],
+    "graph.metrics": ["Hôm nay (Lũy kế)", "Hôm qua (Lũy kế)"],
+    "graph.colors": ["#88BF4D", "#C2D2E9"],
+    "graph.x_axis.title_text": "Giờ trong ngày",
+    "graph.y_axis.title_text": "Doanh thu lũy kế"
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 12, "size_x": 6, "size_y": 8 }
+{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Kênh bán hàng
 
+<!-- Text annotations to add manually:
+     - Row 0: "Doanh thu theo kênh" (full-width, height 1)
+     - Row 7: "Hiệu suất kênh so với hôm qua" (full-width, height 1)
+     - Row 14: "Doanh thu theo chi nhánh" (full-width, height 1)
+-->
+
 #### Question: Revenue by Channel
 
-**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
+**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel) — Horizontal bar for ranking.
 
 ```sql
 SELECT
-    c.channel_name as "Channel",
-    SUM(o.net_revenue) as "Revenue"
+    c.channel_name as "Kênh",
+    SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE date(o.order_timestamp) = current_date
@@ -549,14 +606,25 @@ ORDER BY 2 DESC
 
 ```json metabase-viz
 {
-  "display": "pie",
-  "pie.dimension": ["Channel"],
-  "pie.metric": "Revenue"
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Kênh"],
+    "graph.metrics": ["Doanh thu"],
+    "graph.colors": ["#509EE3"],
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 9, "size_y": 8 }
+{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Channel Category
@@ -565,9 +633,9 @@ Online vs Offline vs Internal breakdown.
 
 ```sql
 SELECT
-    c.channel_category as "Category",
-    SUM(o.net_revenue) as "Revenue",
-    COUNT(DISTINCT o.order_id) as "Orders"
+    c.channel_category as "Loại kênh",
+    SUM(o.net_revenue) as "Doanh thu",
+    COUNT(DISTINCT o.order_id) as "Đơn hàng"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE date(o.order_timestamp) = current_date
@@ -578,18 +646,21 @@ ORDER BY 2 DESC
 ```json metabase-viz
 {
   "display": "bar",
-  "graph.dimensions": ["Category"],
-  "graph.metrics": ["Revenue", "Orders"]
+  "visualization_settings": {
+    "graph.dimensions": ["Loại kênh"],
+    "graph.metrics": ["Doanh thu", "Đơn hàng"],
+    "graph.colors": ["#509EE3", "#A989C5"]
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 9, "size_y": 8 }
+{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Channel Performance vs Yesterday
 
-Channel-level comparison: today vs yesterday with change %.
+DoD comparison by channel with conditional formatting on change %.
 
 ```sql
 WITH today AS (
@@ -613,13 +684,13 @@ yesterday AS (
     GROUP BY 1
 )
 SELECT
-    COALESCE(t.channel_name, y.channel_name) as "Channel",
-    COALESCE(t.orders, 0) as "Orders Today",
-    COALESCE(y.orders, 0) as "Orders Yesterday",
-    COALESCE(t.revenue, 0) as "Revenue Today",
-    COALESCE(y.revenue, 0) as "Revenue Yesterday",
+    COALESCE(t.channel_name, y.channel_name) as "Kênh",
+    COALESCE(t.orders, 0) as "Đơn hôm nay",
+    COALESCE(y.orders, 0) as "Đơn hôm qua",
+    COALESCE(t.revenue, 0) as "DT hôm nay",
+    COALESCE(y.revenue, 0) as "DT hôm qua",
     CASE WHEN COALESCE(y.revenue, 0) = 0 THEN NULL
-         ELSE ROUND((COALESCE(t.revenue, 0) - y.revenue) * 100.0 / y.revenue, 1) END as "Revenue Change %"
+         ELSE ROUND((COALESCE(t.revenue, 0) - y.revenue) * 100.0 / y.revenue, 1) END as "Thay đổi %"
 FROM today t
 FULL OUTER JOIN yesterday y ON t.channel_name = y.channel_name
 ORDER BY COALESCE(t.revenue, 0) DESC
@@ -628,7 +699,41 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false
+  "visualization_settings": {
+    "table.pivot": false,
+    "table.column_formatting": [
+      {
+        "columns": ["Thay đổi %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 0,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Thay đổi %"],
+        "type": "single",
+        "operator": "<",
+        "value": 0,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "DT hôm nay": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "DT hôm qua": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
 }
 ```
 
@@ -638,13 +743,11 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 
 #### Question: Sales by Branch
 
-Revenue and order count by store/branch location.
-
 ```sql
 SELECT
-    bl.branch_location_name as "Branch",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    COALESCE(SUM(o.net_revenue), 0) as "Revenue",
+    bl.branch_location_name as "Chi nhánh",
+    COUNT(DISTINCT o.order_id) as "Đơn hàng",
+    COALESCE(SUM(o.net_revenue), 0) as "Doanh thu",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
@@ -657,52 +760,86 @@ ORDER BY 3 DESC
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Sản phẩm
 
+<!-- Text annotations to add manually:
+     - Row 0: "Top 10 sản phẩm bán chạy" (full-width, height 1)
+     - Row 7: "Phân bổ theo loại sản phẩm" (full-width, height 1)
+-->
+
 #### Question: Top 10 Products by Revenue
 
-**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products)
+**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products) — Horizontal bar for visual ranking.
 
 ```sql
 SELECT
-    p.product_name as "Product",
-    SUM(s.quantity) as "Units Sold",
-    SUM(s.revenue) as "Revenue"
+    p.product_name as "Sản phẩm",
+    SUM(s.revenue) as "Doanh thu"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE date(s.sol_timestamp) = current_date
 GROUP BY 1
-ORDER BY 3 DESC
+ORDER BY 2 DESC
 LIMIT 10
 ```
 
 ```json metabase-viz
 {
-  "display": "table",
-  "table.pivot": false
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Sản phẩm"],
+    "graph.metrics": ["Doanh thu"],
+    "graph.colors": ["#509EE3"],
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 12, "size_y": 8 }
+{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Top 10 Products by Quantity
 
+Horizontal bar for quantity ranking.
+
 ```sql
 SELECT
-    p.product_name as "Product",
-    SUM(s.quantity) as "Units Sold"
+    p.product_name as "Sản phẩm",
+    SUM(s.quantity) as "Số lượng"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE date(s.sol_timestamp) = current_date
@@ -713,23 +850,27 @@ LIMIT 10
 
 ```json metabase-viz
 {
-  "display": "bar",
-  "graph.dimensions": ["Product"],
-  "graph.metrics": ["Units Sold"]
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Sản phẩm"],
+    "graph.metrics": ["Số lượng"],
+    "graph.colors": ["#88BDE6"]
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 6, "size_y": 8 }
+{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Product Type
 
+Horizontal bar replacing pie chart.
+
 ```sql
 SELECT
-    COALESCE(p.product_type, 'Unknown') as "Product Type",
-    SUM(s.revenue) as "Revenue",
-    SUM(s.quantity) as "Units Sold"
+    COALESCE(p.product_type, 'Unknown') as "Loại SP",
+    SUM(s.revenue) as "Doanh thu"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE date(s.sol_timestamp) = current_date
@@ -739,9 +880,20 @@ ORDER BY 2 DESC
 
 ```json metabase-viz
 {
-  "display": "pie",
-  "pie.dimension": ["Product Type"],
-  "pie.metric": "Revenue"
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Loại SP"],
+    "graph.metrics": ["Doanh thu"],
+    "graph.colors": ["#A989C5"],
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
 }
 ```
 
@@ -751,13 +903,15 @@ ORDER BY 2 DESC
 
 #### Question: Product Performance Table
 
+Full detail with Qty, Revenue, Avg Price.
+
 ```sql
 SELECT
-    p.product_name as "Product",
-    COALESCE(p.product_type, 'Unknown') as "Type",
-    SUM(s.quantity) as "Qty",
-    SUM(s.revenue) as "Revenue",
-    ROUND(SUM(s.revenue) / NULLIF(SUM(s.quantity), 0), 0) as "Avg Price"
+    p.product_name as "Sản phẩm",
+    COALESCE(p.product_type, 'Unknown') as "Loại",
+    SUM(s.quantity) as "SL",
+    SUM(s.revenue) as "Doanh thu",
+    ROUND(SUM(s.revenue) / NULLIF(SUM(s.quantity), 0), 0) as "Giá TB"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE date(s.sol_timestamp) = current_date
@@ -769,7 +923,22 @@ LIMIT 20
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Giá TB": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0
+      }
+    }
+  }
 }
 ```
 
@@ -781,69 +950,12 @@ LIMIT 20
 
 ### 📑 Tab: Khách hàng & Thanh toán
 
-#### Question: New vs Returning Customers
-
-**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
-
-```sql
-SELECT
-    CASE
-        WHEN date(c.first_order_date) = current_date THEN 'New'
-        ELSE 'Returning'
-    END as "Customer Type",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.net_revenue) as "Revenue"
-FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
-GROUP BY 1
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "graph.dimensions": ["Customer Type"],
-  "graph.metrics": ["Orders", "Revenue"]
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
-```
-
-#### Question: Revenue by Customer Segment
-
-Breakdown by RFM-based customer segments: VIP, Loyal, Regular.
-
-```sql
-SELECT
-    COALESCE(c.customer_segment, 'Unknown') as "Segment",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.net_revenue) as "Revenue",
-    CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-         ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
-FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
-GROUP BY 1
-ORDER BY 3 DESC
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "graph.dimensions": ["Segment"],
-  "graph.metrics": ["Revenue", "Orders"]
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
-```
+<!-- Text annotations to add manually:
+     - Row 0: "Chân dung khách hàng hôm nay" (full-width, height 1)
+     - Row 10: "Thanh toán & Chiết khấu" (full-width, height 1)
+-->
 
 #### Question: Returning Customer Rate
-
-Tỷ lệ đơn hàng từ khách quay lại — nếu giảm dần, đây là red flag lớn nhất.
 
 ```sql
 SELECT
@@ -861,12 +973,10 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: At Risk Customers
-
-Khách hàng có nguy cơ mất — đã mua trước đây nhưng không quay lại gần đây.
 
 ```sql
 SELECT COUNT(*) as "At Risk Customers"
@@ -879,16 +989,97 @@ WHERE customer_status = 'At Risk'
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 13, "size_x": 5, "size_y": 3 }
+{ "row": 1, "col": 3, "size_x": 3, "size_y": 3 }
+```
+
+#### Question: New vs Returning Customers
+
+**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
+
+```sql
+SELECT
+    CASE
+        WHEN date(c.first_order_date) = current_date THEN 'Khách mới'
+        ELSE 'Khách quay lại'
+    END as "Loại KH",
+    COUNT(DISTINCT o.order_id) as "Đơn hàng",
+    SUM(o.net_revenue) as "Doanh thu"
+FROM fact_orders o
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+GROUP BY 1
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Loại KH"],
+    "graph.metrics": ["Đơn hàng", "Doanh thu"],
+    "graph.colors": ["#509EE3", "#88BF4D"],
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 6, "size_x": 12, "size_y": 3 }
+```
+
+#### Question: Revenue by Customer Segment
+
+Breakdown by RFM-based customer segments.
+
+```sql
+SELECT
+    COALESCE(c.customer_segment, 'Unknown') as "Phân khúc",
+    COUNT(DISTINCT o.order_id) as "Đơn hàng",
+    SUM(o.net_revenue) as "Doanh thu",
+    CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+         ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
+FROM fact_orders o
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+GROUP BY 1
+ORDER BY 3 DESC
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Phân khúc"],
+    "graph.metrics": ["Doanh thu", "Đơn hàng"],
+    "graph.colors": ["#509EE3", "#A989C5"],
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Orders by Status
 
 ```sql
 SELECT
-    status as "Status",
-    COUNT(DISTINCT order_id) as "Orders",
-    COALESCE(SUM(net_revenue), 0) as "Revenue"
+    status as "Trạng thái",
+    COUNT(DISTINCT order_id) as "Đơn hàng"
 FROM fact_orders
 WHERE date(order_timestamp) = current_date
 GROUP BY 1
@@ -898,13 +1089,15 @@ ORDER BY 2 DESC
 ```json metabase-viz
 {
   "display": "pie",
-  "pie.dimension": ["Status"],
-  "pie.metric": "Orders"
+  "visualization_settings": {
+    "pie.dimension": ["Trạng thái"],
+    "pie.metric": "Đơn hàng"
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Payment Method Distribution
@@ -913,9 +1106,9 @@ ORDER BY 2 DESC
 
 ```sql
 SELECT
-    pm.payment_method_name as "Payment Method",
-    COUNT(*) as "Transactions",
-    COALESCE(SUM(p.amount), 0) as "Amount"
+    pm.payment_method_name as "PTTT",
+    COUNT(*) as "Giao dịch",
+    COALESCE(SUM(p.amount), 0) as "Số tiền"
 FROM fact_payments p
 JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
 WHERE date(p.payment_timestamp) = current_date
@@ -926,13 +1119,15 @@ ORDER BY 3 DESC
 ```json metabase-viz
 {
   "display": "pie",
-  "pie.dimension": ["Payment Method"],
-  "pie.metric": "Transactions"
+  "visualization_settings": {
+    "pie.dimension": ["PTTT"],
+    "pie.metric": "Giao dịch"
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Discount Impact
@@ -941,13 +1136,13 @@ ORDER BY 3 DESC
 
 ```sql
 SELECT
-    COUNT(DISTINCT order_id) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) as "Discounted Orders",
+    COUNT(DISTINCT order_id) as "Tổng đơn",
+    COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) as "Đơn có CK",
     ROUND(COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) * 100.0
-        / NULLIF(COUNT(DISTINCT order_id), 0), 1) as "Discount Rate %",
-    SUM(COALESCE(discount_amount, 0)) as "Total Discounts",
+        / NULLIF(COUNT(DISTINCT order_id), 0), 1) as "Tỷ lệ CK %",
+    SUM(COALESCE(discount_amount, 0)) as "Tổng CK",
     ROUND(AVG(CASE WHEN discount_amount > 0
-        THEN discount_amount * 100.0 / NULLIF(gross_revenue, 0) END), 1) as "Avg Discount %"
+        THEN discount_amount * 100.0 / NULLIF(gross_revenue, 0) END), 1) as "TB CK %"
 FROM fact_orders
 WHERE date(order_timestamp) = current_date
 ```
@@ -955,10 +1150,20 @@ WHERE date(order_timestamp) = current_date
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "Tổng CK": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
 }
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 4 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 3 }
 ```
