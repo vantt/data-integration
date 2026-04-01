@@ -39,6 +39,28 @@ Tabs organize dashboard cards into separate views. Place `### 📑 Tab:` headers
 - Tab positions reset per tab — each tab has its own `row`/`col` grid starting at (0,0)
 - Tabs and cards are deployed in a single API call to Metabase
 
+### Filter Support
+
+Dashboard-level filters (parameters) are defined using `#### Filter:` headers with a `metabase-filter` JSON block. Place them before any Tab or Question headers.
+
+**Auto-wiring:** The deploy script automatically maps dashboard filters to SQL `{{template_tags}}` by matching the filter `slug` to the template tag name. For example, a filter with `slug: "date_range"` will auto-wire to any question containing `{{date_range}}` in its SQL.
+
+**Example:**
+
+```
+#### Filter: Date Range
+
+\`\`\`json metabase-filter
+{
+  "slug": "date_range",
+  "type": "date/all-options",
+  "default": "past7days"
+}
+\`\`\`
+```
+
+**Supported filter types:** `date/all-options`, `date/single`, `string/=`, `string/contains`, `number/=`, `number/between`
+
 ---
 
 ## 📂 Collection: Engineering Analytics

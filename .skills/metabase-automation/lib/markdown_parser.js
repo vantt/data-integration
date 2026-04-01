@@ -18,6 +18,7 @@ const path = require('path');
  * - ```json metabase-viz -> Viz Settings
  * - ```json metabase-pos -> Dashboard Position
  * - ```json metabase-model -> Model Metadata
+ * - ```json metabase-filter -> Dashboard Filter/Parameter definition
  *
  * Collection Path Syntax:
  *   "## Collection: Operations > Daily Monitoring"
@@ -47,6 +48,7 @@ function parseMarkdownConfig(filePath) {
     let currentQuestion = null;
     let currentMetric = null;
     let currentTab = null;
+    let currentFilter = null;
 
     let inCodeBlock = false;
     let codeBlockType = null; // 'sql', 'json-viz', 'json-pos', 'json-model'
@@ -78,6 +80,17 @@ function parseMarkdownConfig(filePath) {
                  try { currentModel.metadata = JSON.parse(code); }
                  catch(e) { console.warn(`⚠️ Invalid JSON in Model block for ${currentModel.name}`); }
             }
+        } else if (codeBlockType === 'json-filter') {
+            if (currentFilter && currentDashboard) {
+                try {
+                    const filterDef = JSON.parse(code);
+                    // Merge name from header if not in JSON
+                    if (!filterDef.name) filterDef.name = currentFilter.name;
+                    if (!filterDef.slug) filterDef.slug = filterDef.name.toLowerCase().replace(/\s+/g, '_');
+                    if (!filterDef.id) filterDef.id = filterDef.slug;
+                    Object.assign(currentFilter, filterDef);
+                } catch(e) { console.warn(`⚠️ Invalid JSON in Filter block for ${currentFilter.name}`); }
+            }
         } else if (codeBlockType === 'metric-sql') {
              if (currentMetric) currentMetric.sql = code;
         }
@@ -106,6 +119,7 @@ function parseMarkdownConfig(filePath) {
                 else if (lang.includes('metabase-viz')) codeBlockType = 'json-viz';
                 else if (lang.includes('metabase-pos')) codeBlockType = 'json-pos';
                 else if (lang.includes('metabase-model')) codeBlockType = 'json-model';
+                else if (lang.includes('metabase-filter')) codeBlockType = 'json-filter';
                 else codeBlockType = 'ignore';
 
                 if (codeBlockType !== 'ignore') {
@@ -127,6 +141,7 @@ function parseMarkdownConfig(filePath) {
         const dashboardMatch = trimmed.match(/^###\s+(?:🖥️\s*)?Dashboard:\s*(.+)/);
         const tabMatch = trimmed.match(/^###\s+(?:📑\s+)?Tab:\s*(.+)/);
         const questionMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
+        const filterMatch = trimmed.match(/^####\s+(?:🔍\s+)?Filter:\s*(.+)/);
 
         if (collectionMatch) {
             const rawName = collectionMatch[1].trim();
@@ -187,12 +202,21 @@ function parseMarkdownConfig(filePath) {
             }
             currentQuestion = null;
         }
+        else if (filterMatch) {
+            if (!currentDashboard) continue;
+            const name = filterMatch[1].trim();
+            currentFilter = { name, slug: name.toLowerCase().replace(/\s+/g, '_') };
+            if (!currentDashboard.filters) currentDashboard.filters = [];
+            currentDashboard.filters.push(currentFilter);
+            currentQuestion = null; // Filter is not a question
+        }
         else if (questionMatch) {
             if (!currentDashboard) continue;
             const name = questionMatch[1].trim();
             currentQuestion = { name };
             if (currentTab) currentQuestion.tab = currentTab;
             currentDashboard.questions.push(currentQuestion);
+            currentFilter = null; // Question is not a filter
         }
     }
 

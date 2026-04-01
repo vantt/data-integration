@@ -27,7 +27,7 @@ Skill này **KHÔNG BIẾT** gì về Metabase, Superset, Looker, hay bất kỳ
 | Phase 0 | `DOMAIN_MODELING.md` | Cách định nghĩa metrics, domains, formulas |
 | Phase 3-4 | `COMPOSITION_PATTERNS.md` | Archetypes, card roles, narrative flow, filter design |
 | Phase 5 | `VISUALIZATION_VOCABULARY.md` | 25 viz types + decision tree |
-| Phase 5-6 | `VISUAL_LANGUAGE.md` | Color & size semantic tokens |
+| Phase 5-6 | `VISUAL_LANGUAGE.md` | Design principles, color & size semantic tokens, visual polish checklist |
 | Phase 6 | `COMPARATIVE_FRAMING.md` | Quy tắc so sánh, ngữ cảnh hóa KPI |
 
 **Quy tắc**: Chỉ đọc document cần thiết cho phase hiện tại. KHÔNG đọc `.skills/metabase-automation/*` trong Phase 0-6 (trừ khi cần kiểm tra tool feasibility — xem Exception bên dưới).
@@ -124,7 +124,8 @@ Dùng decision tree trong `VISUALIZATION_VOCABULARY.md`. Anti-pattern check bắ
 
 - 6a: Comparative Framing — mọi KPI cần ≥1 so sánh
 - 6b: Data Completeness cho viz type đã chọn
-- 6c: Narrative Support (text cards, labels)
+- 6c: Narrative Support — viết annotation content theo templates trong `COMPOSITION_PATTERNS.md` Section 8
+- 6d: **Visual Polish Checklist** — chạy checklist trong `VISUAL_LANGUAGE.md` Section 6 trước khi finalize
 
 **Output**: Design Spec → lưu tại `docs/analytics-handbook/designs/<name>.md`
 

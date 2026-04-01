@@ -176,7 +176,25 @@ async function main() {
   for (const dashboard of config.dashboards) {
     const colId = colMap[dashboard.collection_name];
     console.log(`🖥️  Ensuring Dashboard: ${dashboard.name}`);
-    const dashRemote = await client.dashboard.ensure(dashboard.name, "", colId);
+    // Build dashboard-level parameters from parsed filters
+    const dashParams = (dashboard.filters || []).map(f => ({
+      id: f.id || f.slug,
+      name: f.name,
+      slug: f.slug,
+      type: f.type || 'date/all-options',
+      default: f.default || null,
+      sectionId: f.sectionId || undefined,
+    }));
+
+    const dashRemote = await client.dashboard.ensure(dashboard.name, "", colId, dashParams);
+
+    // If filters exist and dashboard was pre-existing, update parameters via PUT
+    if (dashParams.length > 0) {
+      console.log(`🔍 Syncing ${dashParams.length} filter(s): ${dashParams.map(p => p.name).join(', ')}`);
+      await client.core.request(`/api/dashboard/${dashRemote.id}`, 'PUT', {
+        parameters: dashParams
+      });
+    }
 
     // Fetch existing dashboard cards to scope updates by dashboard (not just collection)
     const dashDetail = await client.core.request(`/api/dashboard/${dashRemote.id}`);
@@ -269,6 +287,28 @@ async function main() {
       // Pass tab name — syncCards will resolve to tab ID
       if (q.tab) {
         cardConfig.tab = q.tab;
+      }
+
+      // Auto-wire parameter_mappings: match dashboard filters to SQL template tags
+      if (dashParams.length > 0 && q.sql) {
+        const templateTags = buildTemplateTags(q.sql);
+        const mappings = [];
+        for (const param of dashParams) {
+          // Match by slug: dashboard filter slug should match SQL {{variable_name}}
+          const tagName = Object.keys(templateTags).find(t =>
+            t === param.slug || t === param.slug.replace(/-/g, '_')
+          );
+          if (tagName) {
+            mappings.push({
+              parameter_id: param.id || param.slug,
+              card_id: card.id,
+              target: ["variable", ["template-tag", tagName]]
+            });
+          }
+        }
+        if (mappings.length > 0) {
+          cardConfig.parameter_mappings = mappings;
+        }
       }
 
       cardConfigs.push(cardConfig);

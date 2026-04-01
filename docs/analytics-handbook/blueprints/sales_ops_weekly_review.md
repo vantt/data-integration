@@ -1,97 +1,202 @@
-# 📘 Blueprint: Sales Ops Weekly Review
+# Sales Ops Weekly Review Blueprint (Redesign)
 
+**Design Spec**: [Sales Ops Weekly Review (Redesign)](../designs/sales_ops_weekly_review.md)
 **Playbook**: [Sales Ops Weekly Review](../playbooks/sales_ops_weekly_review.md)
 
-> **Target Collection:** `Operations` > `Periodic Reviews`
-> **Role:** Sales Operator, Customer Support Lead
-> **Archetype:** Operational Cockpit
+Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completion rate, combo-chart for daily trends, heatmap for peak hours, and conditional formatting throughout. Weekly operational review for Sales Ops / CS Lead.
 
-## 📂 Collection: Operations > Periodic Reviews
+## Collection: Operations > Periodic Reviews
 
-Weekly and monthly operational summaries for team leads.
+### Dashboard: Sales Ops Weekly Review
 
----
-
-### 🖥️ Dashboard: Sales Ops Weekly Review
-
-**Description**: Weekly operational review — order processing health, channel workload, social commerce, team performance, and payment status.
+**Description**: Weekly operational review — order processing health, channel workload, team performance, payment status. 3 tabs: Tong quan, Kenh & Chi nhanh, Doi ngu & Thanh toan.
 
 ---
 
-#### ❓ Question: Total Orders
+#### Filter: Date Range
 
-**Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders)
-
-```sql
-SELECT COUNT(DISTINCT order_id) as "Total Orders"
-FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
-```
-
-#### ❓ Question: Total Revenue
-
-**Domain Reference**: [Revenue](../domains/sales.md#1-gross-revenue-gmv)
-
-```sql
-SELECT COALESCE(SUM(net_revenue), 0) as "Total Revenue"
-FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
+```json metabase-filter
 {
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": { "Total Revenue": { "number_style": "currency", "currency": "VND" } }
-  }
+  "slug": "date_range",
+  "type": "date/all-options",
+  "default": "past7days"
 }
 ```
 
-```json metabase-pos
-{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
+#### Filter: Branch
+
+```json metabase-filter
+{
+  "slug": "branch",
+  "type": "string/="
+}
 ```
 
-#### ❓ Question: AOV
+---
 
-**Domain Reference**: [AOV](../domains/sales.md#5-aov-average-order-value)
+### Tab: Tong quan tuan
+
+<!-- Text annotations to add manually after deploy:
+     - Row 0: "Ket qua tuan (Mon-Sun)" (full-width, height 1)
+     - Row 4: "Trang thai don hang" (full-width, height 1)
+     - Row 11: "Xu huong don hang (14 ngay)" (full-width, height 1)
+-->
+
+#### Question: Total Orders
+
+**Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders) — Hero metric with WoW comparison.
 
 ```sql
+WITH
+this_week AS (
+    SELECT COUNT(DISTINCT order_id) as val
+    FROM fact_orders
+    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+last_week AS (
+    SELECT COUNT(DISTINCT order_id) as val
+    FROM fact_orders
+    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
-    CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-         ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as "AOV"
-FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
+    tw.val as "Total Orders",
+    lw.val as "Tuan truoc"
+FROM this_week tw, last_week lw
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "AOV": { "number_style": "currency", "currency": "VND" } }
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
-#### ❓ Question: Completed Orders %
+#### Question: Net Revenue
 
-Percentage of orders with COMPLETED status.
+**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Supporting KPI with WoW.
+
+```sql
+WITH
+this_week AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+last_week AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    tw.val as "Net Revenue",
+    lw.val as "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ],
+    "column_settings": {
+      "Net Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+```
+
+#### Question: AOV
+
+**Domain Reference**: [AOV](../domains/sales.md#5-aov-average-order-value) — Supporting KPI with WoW.
+
+```sql
+WITH
+this_week AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+last_week AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    tw.val as "AOV",
+    lw.val as "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ],
+    "column_settings": {
+      "AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+```
+
+#### Question: Completed %
+
+Gauge showing order completion rate with 3 zones: green (>=90%), yellow (80-89%), red (<80%).
 
 ```sql
 SELECT
@@ -102,26 +207,31 @@ SELECT
 FROM fact_orders
 WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ```
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "gauge",
   "visualization_settings": {
-    "column_settings": { "Completed %": { "suffix": "%", "decimals": 1 } }
+    "gauge.segments": [
+      { "min": 0, "max": 80, "color": "#EF8C8C", "label": "Thap" },
+      { "min": 80, "max": 90, "color": "#F9D45C", "label": "Chu y" },
+      { "min": 90, "max": 100, "color": "#84BB4C", "label": "Tot" }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
 
-#### ❓ Question: Order Status Distribution
+#### Question: Order Status Distribution
 
-Breakdown of orders by status.
+Donut chart showing breakdown of order statuses.
 
 ```sql
 SELECT
@@ -130,6 +240,7 @@ SELECT
 FROM fact_orders
 WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -145,17 +256,19 @@ ORDER BY 2 DESC
       "COMPLETED": "#84BB4C",
       "OPEN": "#509EE3",
       "CANCELLED": "#EF8C8C",
-      "ARCHIVED": "#CCCCCC"
+      "ARCHIVED": "#C2D2E9"
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
-#### ❓ Question: Fulfilment Status Breakdown
+#### Question: Fulfilment Status Breakdown
+
+Horizontal bar ranking fulfilment statuses by volume.
 
 ```sql
 SELECT
@@ -165,86 +278,16 @@ FROM fact_orders
 WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND order_timestamp < date_trunc('week', current_date)
   AND fulfillment_status IS NOT NULL
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
 
 ```json metabase-viz
 {
-  "display": "bar",
+  "display": "row",
   "visualization_settings": {
     "graph.dimensions": ["Fulfilment Status"],
-    "graph.metrics": ["Orders"],
-    "graph.x_axis.axis_enabled": true
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 6, "size_y": 6 }
-```
-
-#### ❓ Question: Cancelled Orders
-
-```sql
-SELECT COUNT(DISTINCT order_id) as "Cancelled Orders"
-FROM fact_orders
-WHERE status = 'CANCELLED'
-  AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 3, "col": 12, "size_x": 6, "size_y": 3 }
-```
-
-#### ❓ Question: Return Count
-
-**Domain Reference**: [Return Rate](../domains/sales.md#3-return-rate--count)
-
-```sql
-SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as "Returns"
-FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 6, "col": 12, "size_x": 6, "size_y": 3 }
-```
-
----
-
-#### ❓ Question: Daily Orders (14 Days)
-
-Daily order count for trend spotting.
-
-**Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders)
-
-```sql
-SELECT
-    date(order_timestamp) as order_date,
-    COUNT(DISTINCT order_id) as "Orders"
-FROM fact_orders
-WHERE order_timestamp >= current_date - INTERVAL '14 days'
-  AND order_timestamp < current_date
-GROUP BY 1
-ORDER BY 1
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["order_date"],
     "graph.metrics": ["Orders"],
     "graph.colors": ["#509EE3"]
   }
@@ -252,249 +295,727 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 5, "col": 6, "size_x": 6, "size_y": 6 }
 ```
 
-#### ❓ Question: Peak Hour Analysis
+#### Question: Cancelled & Returns
 
-Order count by hour × day of week for shift planning.
-
-**Domain Reference**: [Hourly Heatmap](../domains/sales.md#7-hourly-heatmap-day-of-week-analysis)
+Formatted table showing cancelled orders and returns with WoW change flags.
 
 ```sql
-SELECT
-    EXTRACT(DOW FROM order_timestamp) as day_of_week,
-    EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-    COUNT(DISTINCT order_id) as order_count
-FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-GROUP BY 1, 2
-ORDER BY 1, 2
+WITH
+this_week AS (
+    SELECT
+        COUNT(DISTINCT CASE WHEN status = 'CANCELLED' THEN order_id END) as cancelled,
+        COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
+    FROM fact_orders
+    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+last_week AS (
+    SELECT
+        COUNT(DISTINCT CASE WHEN status = 'CANCELLED' THEN order_id END) as cancelled,
+        COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
+    FROM fact_orders
+    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT * FROM (
+    SELECT 1 as sort, 'Don huy' as "Chi so", tw.cancelled as "Tuan nay", lw.cancelled as "Tuan truoc",
+        CASE WHEN lw.cancelled = 0 THEN NULL
+             ELSE ROUND((tw.cancelled - lw.cancelled) * 100.0 / lw.cancelled, 1) END as "WoW %"
+    FROM this_week tw, last_week lw
+    UNION ALL
+    SELECT 2, 'Don tra hang', tw.returns, lw.returns,
+        CASE WHEN lw.returns = 0 THEN NULL
+             ELSE ROUND((tw.returns - lw.returns) * 100.0 / lw.returns, 1) END
+    FROM this_week tw, last_week lw
+) t ORDER BY sort
 ```
 
 ```json metabase-viz
 {
   "display": "table",
   "visualization_settings": {
-    "table.pivot": true,
-    "table.cell_column": "order_count"
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 9, "col": 12, "size_x": 6, "size_y": 6 }
-```
-
----
-
-#### ❓ Question: Orders by Channel
-
-Order count (not revenue) by channel — workload view.
-
-**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
-
-```sql
-SELECT
-    c.channel_name as "Channel",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.net_revenue) as "Revenue"
-FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
-GROUP BY 1
-ORDER BY 2 DESC
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["Channel"],
-    "graph.metrics": ["Orders"],
-    "graph.x_axis.axis_enabled": true
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 9, "size_y": 6 }
-```
-
-#### ❓ Question: Orders by Branch
-
-Order count per physical branch location.
-
-```sql
-SELECT
-    bl.branch_location_name as "Branch",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.net_revenue) as "Revenue"
-FROM fact_orders o
-JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
-GROUP BY 1
-ORDER BY 2 DESC
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["Branch"],
-    "graph.metrics": ["Orders"],
-    "graph.x_axis.axis_enabled": true
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 15, "col": 9, "size_x": 9, "size_y": 6 }
-```
-
----
-
-#### ❓ Question: Social Revenue
-
-Revenue from Facebook + Zalo channels this week.
-
-**Domain Reference**: [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume)
-
-```sql
-SELECT COALESCE(SUM(o.net_revenue), 0) as "Social Revenue"
-FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.platform_group IN ('Facebook', 'Zalo')
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": { "Social Revenue": { "number_style": "currency", "currency": "VND" } }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 4, "size_y": 3 }
-```
-
-#### ❓ Question: Social Orders
-
-```sql
-SELECT COUNT(DISTINCT o.order_id) as "Social Orders"
-FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.platform_group IN ('Facebook', 'Zalo')
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 21, "col": 4, "size_x": 4, "size_y": 3 }
-```
-
-#### ❓ Question: Top Staff by Revenue (Social Channels)
-
-Staff leaderboard for social commerce channels.
-
-```sql
-SELECT
-    st.full_name as "Staff",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.net_revenue) as "Revenue",
-    CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-         ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as "AOV"
-FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
-JOIN dim_staff st ON o.staff_key = st.staff_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.platform_group IN ('Facebook', 'Zalo')
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
-  AND st.staff_key IS NOT NULL
-GROUP BY 1
-ORDER BY 3 DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "table.pivot": false,
-  "visualization_settings": {
+    "table.pivot": false,
+    "table.columns": [
+      { "name": "Chi so", "enabled": true },
+      { "name": "Tuan nay", "enabled": true },
+      { "name": "Tuan truoc", "enabled": true },
+      { "name": "WoW %", "enabled": true },
+      { "name": "sort", "enabled": false }
+    ],
+    "table.column_formatting": [
+      {
+        "columns": ["WoW %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 100,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      },
+      {
+        "columns": ["WoW %"],
+        "type": "single",
+        "operator": "<",
+        "value": 0,
+        "color": "#84BB4C",
+        "highlight_row": false
+      }
+    ],
     "column_settings": {
-      "Revenue": { "number_style": "currency", "currency": "VND" },
-      "AOV": { "number_style": "currency", "currency": "VND" }
+      "WoW %": { "suffix": "%", "decimals": 1 }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 21, "col": 8, "size_x": 10, "size_y": 6 }
+{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
 
-#### ❓ Question: Staff Revenue Comparison (All Channels)
+#### Question: Daily Orders (14 Days)
 
-Revenue per staff member across all channels.
+Combo chart: daily order bars (this week blue, last week grey) + AOV line.
 
 ```sql
 SELECT
-    st.full_name as "Staff",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.net_revenue) as "Revenue"
+    date(order_timestamp) as "Ngay",
+    COUNT(DISTINCT order_id) as "Don hang",
+    CASE WHEN COUNT(DISTINCT CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN order_id END) = 0 THEN 0
+         ELSE SUM(CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN net_revenue ELSE 0 END)
+              / COUNT(DISTINCT CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN order_id END) END as "AOV"
+FROM fact_orders
+WHERE order_timestamp >= current_date - INTERVAL '14 days'
+  AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "combo",
+  "visualization_settings": {
+    "graph.dimensions": ["Ngay"],
+    "graph.metrics": ["Don hang", "AOV"],
+    "series_settings": {
+      "Don hang": { "display": "bar", "color": "#509EE3" },
+      "AOV": { "display": "line", "color": "#7172AD", "line.style": "dashed" }
+    },
+    "graph.y_axis.auto_split": true,
+    "column_settings": {
+      "AOV": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 12, "col": 0, "size_x": 12, "size_y": 6 }
+```
+
+#### Question: Peak Hour Heatmap
+
+Order intensity by hour x day of week — pivot table with conditional formatting as heatmap fallback.
+
+```sql
+SELECT
+    CASE EXTRACT(DOW FROM order_timestamp)
+        WHEN 0 THEN 'CN'
+        WHEN 1 THEN 'T2'
+        WHEN 2 THEN 'T3'
+        WHEN 3 THEN 'T4'
+        WHEN 4 THEN 'T5'
+        WHEN 5 THEN 'T6'
+        WHEN 6 THEN 'T7'
+    END as "Thu",
+    EXTRACT(DOW FROM order_timestamp) as dow_sort,
+    LPAD(CAST(EXTRACT(HOUR FROM order_timestamp) AS VARCHAR), 2, '0') || 'h' as "Gio",
+    COUNT(DISTINCT order_id) as "Don"
+FROM fact_orders
+WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1, 2, 3
+ORDER BY 2, 3
+```
+
+```json metabase-viz
+{
+  "display": "pivot",
+  "visualization_settings": {
+    "pivot_table.column_split": {
+      "rows": ["Thu"],
+      "columns": ["Gio"],
+      "values": ["Don"]
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Don"],
+        "type": "range",
+        "colors": ["#FFFFFF", "#509EE3"],
+        "min_type": "all",
+        "max_type": "all"
+      }
+    ],
+    "table.columns": [
+      { "name": "dow_sort", "enabled": false }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 12, "col": 12, "size_x": 6, "size_y": 6 }
+```
+
+---
+
+### Tab: Kenh & Chi nhanh
+
+<!-- Text annotations to add manually after deploy:
+     - Row 0: "Phan bo don hang theo kenh" (full-width, height 1)
+     - Row 7: "Hieu suat kenh so voi tuan truoc" (full-width, height 1)
+     - Row 15: "Phan bo theo chi nhanh" (full-width, height 1)
+-->
+
+#### Question: Orders by Channel
+
+Horizontal bar ranking channels by order volume.
+
+**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
+
+```sql
+SELECT
+    c.channel_name as "Kenh",
+    COUNT(DISTINCT o.order_id) as "Don hang"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Kenh"],
+    "graph.metrics": ["Don hang"],
+    "graph.colors": ["#509EE3"]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### Question: Revenue by Channel
+
+Horizontal bar ranking channels by revenue.
+
+```sql
+SELECT
+    c.channel_name as "Kenh",
+    COALESCE(SUM(o.net_revenue), 0) as "Doanh thu"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Kenh"],
+    "graph.metrics": ["Doanh thu"],
+    "graph.colors": ["#88BDE6"],
+    "column_settings": {
+      "Doanh thu": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+---
+
+#### Question: Channel Performance Table
+
+Formatted table with WoW comparison — highlights channels with >30% change.
+
+```sql
+WITH
+this_week AS (
+    SELECT
+        c.channel_name as channel,
+        COUNT(DISTINCT o.order_id) as orders,
+        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    GROUP BY 1
+),
+last_week AS (
+    SELECT
+        c.channel_name as channel,
+        COUNT(DISTINCT o.order_id) as orders,
+        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    GROUP BY 1
+)
+SELECT
+    COALESCE(tw.channel, lw.channel) as "Kenh",
+    COALESCE(tw.orders, 0) as "Don hang",
+    COALESCE(tw.revenue, 0) as "Doanh thu",
+    CASE WHEN COALESCE(tw.orders, 0) = 0 THEN 0
+         ELSE ROUND(COALESCE(tw.revenue, 0) * 1.0 / tw.orders, 0) END as "AOV",
+    CASE WHEN COALESCE(lw.orders, 0) = 0 THEN NULL
+         ELSE ROUND((COALESCE(tw.orders, 0) - lw.orders) * 100.0 / lw.orders, 1) END as "Don WoW %",
+    CASE WHEN COALESCE(lw.revenue, 0) = 0 THEN NULL
+         ELSE ROUND((COALESCE(tw.revenue, 0) - lw.revenue) * 100.0 / lw.revenue, 1) END as "DT WoW %"
+FROM this_week tw
+FULL OUTER JOIN last_week lw ON tw.channel = lw.channel
+ORDER BY COALESCE(tw.orders, 0) DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "table.column_formatting": [
+      {
+        "columns": ["Don WoW %", "DT WoW %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 30,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Don WoW %", "DT WoW %"],
+        "type": "single",
+        "operator": "<=",
+        "value": -30,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "Doanh thu": { "number_style": "currency", "currency": "VND", "compact": true },
+      "AOV": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Don WoW %": { "suffix": "%", "decimals": 1 },
+      "DT WoW %": { "suffix": "%", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 7 }
+```
+
+---
+
+#### Question: Orders by Branch
+
+Horizontal bar ranking branches by order volume.
+
+```sql
+SELECT
+    bl.branch_location_name as "Chi nhanh",
+    COUNT(DISTINCT o.order_id) as "Don hang"
+FROM fact_orders o
+JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
+WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Chi nhanh"],
+    "graph.metrics": ["Don hang"],
+    "graph.colors": ["#509EE3"]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 16, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### Question: Branch Performance Table
+
+Branch performance with WoW change.
+
+```sql
+WITH
+this_week AS (
+    SELECT
+        bl.branch_location_name as branch,
+        COUNT(DISTINCT o.order_id) as orders,
+        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+    FROM fact_orders o
+    JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
+    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    GROUP BY 1
+),
+last_week AS (
+    SELECT
+        bl.branch_location_name as branch,
+        COUNT(DISTINCT o.order_id) as orders,
+        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+    FROM fact_orders o
+    JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
+    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    GROUP BY 1
+)
+SELECT
+    COALESCE(tw.branch, lw.branch) as "Chi nhanh",
+    COALESCE(tw.orders, 0) as "Don hang",
+    COALESCE(tw.revenue, 0) as "Doanh thu",
+    CASE WHEN COALESCE(lw.orders, 0) = 0 THEN NULL
+         ELSE ROUND((COALESCE(tw.orders, 0) - lw.orders) * 100.0 / lw.orders, 1) END as "WoW %"
+FROM this_week tw
+FULL OUTER JOIN last_week lw ON tw.branch = lw.branch
+ORDER BY COALESCE(tw.orders, 0) DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "table.column_formatting": [
+      {
+        "columns": ["WoW %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 0,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["WoW %"],
+        "type": "single",
+        "operator": "<",
+        "value": 0,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "Doanh thu": { "number_style": "currency", "currency": "VND", "compact": true },
+      "WoW %": { "suffix": "%", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 16, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+---
+
+### Tab: Doi ngu & Thanh toan
+
+<!-- Text annotations to add manually after deploy:
+     - Row 0: "Social Commerce (Facebook + Zalo)" (full-width, height 1)
+     - Row 4: "Hieu suat nhan vien" (full-width, height 1)
+     - Row 11: "Thanh toan & Doi soat" (full-width, height 1)
+-->
+
+#### Question: Social Revenue
+
+**Domain Reference**: [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) — Social channel revenue with WoW.
+
+```sql
+WITH
+this_week AS (
+    SELECT COALESCE(SUM(o.net_revenue), 0) as val
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+last_week AS (
+    SELECT COALESCE(SUM(o.net_revenue), 0) as val
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    tw.val as "Social Revenue",
+    lw.val as "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ],
+    "column_settings": {
+      "Social Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+```
+
+#### Question: Social Orders
+
+**Domain Reference**: [Social Order Count](../domains/customer_support.md#2-social-order-count) — Social order count with WoW.
+
+```sql
+WITH
+this_week AS (
+    SELECT COUNT(DISTINCT o.order_id) as val
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+last_week AS (
+    SELECT COUNT(DISTINCT o.order_id) as val
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    tw.val as "Social Orders",
+    lw.val as "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+```
+
+#### Question: Social AOV
+
+Social channel AOV with WoW comparison.
+
+```sql
+WITH
+this_week AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as val
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+last_week AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as val
+    FROM fact_orders o
+    JOIN dim_channels c ON o.channel_key = c.channel_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    tw.val as "Social AOV",
+    lw.val as "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ],
+    "column_settings": {
+      "Social AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+```
+
+---
+
+#### Question: Staff Revenue (All Channels)
+
+Horizontal bar ranking staff by revenue across all channels.
+
+```sql
+SELECT
+    st.full_name as "Nhan vien",
+    SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_staff st ON o.staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.order_timestamp < date_trunc('week', current_date)
   AND st.staff_key IS NOT NULL
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Nhan vien"],
+    "graph.metrics": ["Doanh thu"],
+    "graph.colors": ["#509EE3"],
+    "column_settings": {
+      "Doanh thu": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 5, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### Question: Top Staff - Social Channels
+
+Staff leaderboard for social commerce — formatted table with top performers highlighted.
+
+```sql
+SELECT
+    st.full_name as "Nhan vien",
+    COUNT(DISTINCT o.order_id) as "Don hang",
+    SUM(o.net_revenue) as "Doanh thu",
+    CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+         ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+JOIN dim_staff st ON o.staff_key = st.staff_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND c.platform_group IN ('Facebook', 'Zalo')
+  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.order_timestamp < date_trunc('week', current_date)
+  AND st.staff_key IS NOT NULL
+      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 3 DESC
 ```
 
 ```json metabase-viz
 {
-  "display": "bar",
+  "display": "table",
   "visualization_settings": {
-    "graph.dimensions": ["Staff"],
-    "graph.metrics": ["Revenue"],
-    "graph.x_axis.axis_enabled": true
+    "table.pivot": false,
+    "column_settings": {
+      "Doanh thu": { "number_style": "currency", "currency": "VND", "compact": true },
+      "AOV": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 27, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
 
-#### ❓ Question: Payment Method Distribution
+#### Question: Payment Method Distribution
 
-Transaction count by payment method this week.
+Donut chart showing payment method breakdown by transaction count.
 
 **Domain Reference**: [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution)
 
 ```sql
 SELECT
-    pm.payment_method_name as "Payment Method",
-    COUNT(*) as "Transactions",
-    SUM(p.amount) as "Total Amount"
+    pm.payment_method_name as "Phuong thuc",
+    COUNT(*) as "Giao dich"
 FROM fact_payments p
 JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
 WHERE date(p.payment_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -507,44 +1028,71 @@ ORDER BY 2 DESC
 {
   "display": "pie",
   "visualization_settings": {
-    "pie.dimension": "Payment Method",
-    "pie.metric": "Transactions"
+    "pie.dimension": "Phuong thuc",
+    "pie.metric": "Giao dich",
+    "pie.show_legend": true
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 33, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
-#### ❓ Question: Payment Status Summary
+#### Question: Payment Status Summary
+
+Formatted table with pending payment threshold alert (>5% = red flag).
 
 **Domain Reference**: [Payment Status](../domains/sales.md#12-payment-status)
 
 ```sql
+WITH
+summary AS (
+    SELECT
+        payment_status as status,
+        COUNT(DISTINCT order_id) as orders,
+        SUM(net_revenue) as amount
+    FROM fact_orders
+    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    GROUP BY 1
+),
+total AS (
+    SELECT SUM(orders) as total_orders FROM summary
+)
 SELECT
-    payment_status as "Status",
-    COUNT(DISTINCT order_id) as "Orders",
-    SUM(net_revenue) as "Total Amount"
-FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
-GROUP BY 1
-ORDER BY 2 DESC
+    s.status as "Trang thai",
+    s.orders as "Don hang",
+    s.amount as "So tien",
+    ROUND(s.orders * 100.0 / NULLIF(t.total_orders, 0), 1) as "Ty le %"
+FROM summary s, total t
+ORDER BY s.orders DESC
 ```
 
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false,
   "visualization_settings": {
+    "table.pivot": false,
+    "table.column_formatting": [
+      {
+        "columns": ["Ty le %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 5,
+        "color": "#F9D45C",
+        "highlight_row": true
+      }
+    ],
     "column_settings": {
-      "Total Amount": { "number_style": "currency", "currency": "VND" }
+      "So tien": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Ty le %": { "suffix": "%", "decimals": 1 }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 33, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 12, "col": 6, "size_x": 12, "size_y": 6 }
 ```

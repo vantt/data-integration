@@ -6,6 +6,73 @@
 
 ---
 
+## 0. Foundational Design Principles
+
+Bảy nguyên tắc nền tảng — mọi quyết định visual trong skill này đều trace back về đây.
+Dẫn chiếu từ Edward Tufte ("The Visual Display of Quantitative Information") và Cole Nussbaumer Knaflic ("Storytelling with Data").
+
+### Principle 1: Data-Ink Ratio (Tufte)
+
+Maximize tỷ lệ "ink dùng để truyền tải data" / "tổng ink trên trang". Loại bỏ mọi thứ không mang thông tin:
+- Bỏ gridlines trừ khi cần thiết cho đọc giá trị chính xác
+- Bỏ borders/boxes quanh charts trừ khi phân tách logic groups
+- Bỏ legend nếu chart chỉ có 1 series (dùng title thay thế)
+- Bỏ axis labels nếu đã rõ ràng từ context (ví dụ: trục X là tháng, ai cũng hiểu)
+
+### Principle 2: Chartjunk Elimination (Tufte)
+
+KHÔNG BAO GIỜ dùng:
+- 3D charts — bóp méo perception, không thêm thông tin
+- Decorative images/icons trong data area
+- Shadow, gradient, bevel trên data elements (bars, lines, slices)
+- Animated transitions chỉ vì đẹp mà không giúp hiểu data
+
+### Principle 3: Pre-attentive Attributes (Knaflic)
+
+Não xử lý một số visual attributes TRƯỚC khi ý thức nhận ra — dùng chúng có chủ đích:
+- **Color intensity**: đậm = quan trọng, nhạt = background
+- **Size**: lớn = focal, nhỏ = supporting
+- **Position**: top-left = đọc đầu tiên (F-pattern reading)
+- **Enclosure**: border/background nhẹ để nhóm related elements
+
+Chỉ dùng 1-2 pre-attentive attributes cho mỗi card. Dùng nhiều hơn = hủy tác dụng.
+
+### Principle 4: Cognitive Load Minimization
+
+Mỗi dashboard có "quỹ chú ý" hữu hạn:
+- Tối đa 5-7 data elements cần reader xử lý cùng lúc trên một card
+- Tối đa 3-4 cards visible cùng lúc mà không cần scroll
+- Mọi text label phải đọc được trong < 2 giây
+- Nếu cần giải thích dài → tách thành annotation card riêng
+
+### Principle 5: Whitespace is Data (Tufte)
+
+Khoảng trống KHÔNG phải lãng phí — nó giúp reader:
+- Phân biệt groups (spacing > borders cho separation)
+- Nghỉ mắt giữa các data-dense sections
+- Tạo visual hierarchy (Hero card nổi bật nhờ space xung quanh)
+
+Không lấp đầy mọi pixel — dashboard quá đầy = reader bỏ cuộc.
+
+### Principle 6: Context Over Decoration (Knaflic)
+
+Thay vì trang trí chart cho đẹp, hãy thêm CONTEXT:
+- Reference line (target, average, benchmark) > gradient fill
+- Annotation callout giải thích anomaly > icon decorative
+- Comparison period (previous month) > background pattern
+
+Mỗi visual element phải trả lời: "element này giúp reader hiểu data TỐT HƠN không?"
+
+### Principle 7: Consistency Across Dashboard
+
+Cùng một thứ phải trông GIỐNG nhau trên toàn dashboard:
+- Cùng metric → cùng color token (xem Rule 4 trong Color Usage Rules)
+- Cùng time axis → cùng date format, cùng grain
+- Cùng unit → cùng number format (abbreviation, decimal places)
+- Cùng viz type cho cùng loại question (tất cả breakdown đều dùng bar, không mix bar + donut + table)
+
+---
+
 ## 1. Color Semantics
 
 Mọi color trong design spec phải dùng một trong các semantic token dưới đây.
@@ -187,6 +254,51 @@ viz catalog. For example:
 - `positive` → tool-specific green hex code
 - `one-third` → tool-specific grid columns (e.g., 6 on 18-col grid)
 - `prominent` → tool-specific font size (e.g., 2rem or 32px)
+
+---
+
+## 6. Visual Polish Checklist
+
+Checklist cuối cùng trước khi finalize Design Spec. Scan nhanh — nếu vi phạm bất kỳ mục nào, sửa trước khi chuyển cho Engineer.
+
+### 6a. Chart Hygiene
+
+- [ ] **No 3D charts** — tuyệt đối không, dù client/user yêu cầu (Principle 2)
+- [ ] **No dual-pie/donut** — không đặt 2 pie charts cạnh nhau để so sánh (dùng stacked-bar hoặc grouped-bar)
+- [ ] **Y-axis starts at 0 cho bar charts** — truncated axis bóp méo perception
+- [ ] **Line chart Y-axis**: có thể không bắt đầu từ 0 nếu range hẹp, nhưng phải ghi rõ
+- [ ] **Max 5-7 colors trên 1 chart** — nếu >7 categories, gom "Others" (Rule 3)
+- [ ] **No gridlines nếu không cần** — giữ lại chỉ khi reader cần đọc giá trị chính xác
+- [ ] **Legend chỉ khi >1 series** — single series dùng chart title, không cần legend
+
+### 6b. Typography & Labels
+
+- [ ] **Mọi chart có title** — title mô tả insight, không chỉ metric name ("Revenue đang tăng 15% WoW" > "Revenue")
+- [ ] **Axis labels có unit** — "Revenue (M VND)" không chỉ "Revenue"
+- [ ] **Number formatting nhất quán** — cùng abbreviation style xuyên suốt (1.2M vs 1,200,000 — chọn 1)
+- [ ] **Date format nhất quán** — DD/MM, MMM DD, hoặc YYYY-MM — chọn 1 cho toàn dashboard
+- [ ] **Text size hierarchy rõ** — prominent > standard > compact > caption, không skip levels
+
+### 6c. Layout & Whitespace
+
+- [ ] **Row width = full-width** — không gap, không overflow (Rule 5 trong Size)
+- [ ] **Hero visually dominant** — lớn nhất, top position (Rule 1 trong Size)
+- [ ] **Related cards adjacent** — cards cùng topic nằm cạnh nhau
+- [ ] **Không lấp đầy mọi pixel** — breathing room giữa sections (Principle 5)
+- [ ] **Scroll depth hợp lý** — Executive Pulse: no scroll. Cockpit: max 2-3 scrolls
+
+### 6d. Color & Accessibility
+
+- [ ] **Color KHÔNG phải kênh duy nhất** — luôn kèm text/icon ▲/▼ (Rule 5)
+- [ ] **Colorblind safe** — không dùng red+green mà thiếu text label (Rule 6)
+- [ ] **Max 2 status colors per card** — tránh Christmas tree effect (Rule 2)
+- [ ] **Consistent color meaning** — `primary` = cùng metric trên mọi card (Rule 4)
+
+### 6e. Data Integrity
+
+- [ ] **Mọi KPI có ≥1 comparison** — vs previous period ở minimum (xem COMPARATIVE_FRAMING.md)
+- [ ] **Không so sánh periods không tương đương** — "3 ngày tuần này vs 7 ngày tuần trước" = misleading
+- [ ] **Source/timestamp visible** — ghi rõ "Data updated: ..." hoặc "Source: ..." ở footer
 
 ---
 

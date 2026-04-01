@@ -42,9 +42,31 @@
 
 ## How to Read
 
-1. **Nhìn đâu trước:** [e.g., "Start with Hero metric at top-left"]
-2. **Flow đọc:** [e.g., "Top → check status, Middle → trend direction, Bottom → breakdowns"]
-3. **Actions:** Khi thấy [signal X] → [hành động Y]
+> Follow the **Context → Key Finding → Evidence → Implications → Actions** flow.
+> Xem `COMPOSITION_PATTERNS.md` Section 8b cho chi tiết.
+
+1. **Context:** [Tại sao dashboard này tồn tại — 1 câu]
+2. **Key Finding:** [Nhìn đâu trước — Hero metric cho biết điều gì]
+3. **Evidence:** [Trend/Breakdown nào support — "scroll xuống section X để xem"]
+4. **Implications:** [Nếu số liệu thế này → business impact gì]
+5. **Actions:** Khi thấy [signal X] → [hành động Y]
+
+## Key Insights
+
+> Dùng format **"What / So What / Now What"** cho mỗi insight quan trọng.
+> Xem `COMPOSITION_PATTERNS.md` Section 8a cho template.
+
+### Insight 1: [Headline — action-oriented finding]
+
+- **What:** [Phát hiện — 1 câu mô tả sự thật từ data]
+- **So What:** [Tại sao quan trọng — impact lên business]
+- **Now What:** [Hành động đề xuất — next step cụ thể]
+
+### Insight 2: [Headline]
+
+- **What:** [...]
+- **So What:** [...]
+- **Now What:** [...]
 
 ## Implementation Notes
 

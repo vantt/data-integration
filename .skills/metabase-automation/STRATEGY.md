@@ -102,28 +102,25 @@ Markdown parser (`lib/markdown_parser.js`) chỉ hỗ trợ một số block typ
 
 ### 5.2 Dashboard Filters (`metabase-filter`)
 
-**Parser KHÔNG xử lý `metabase-filter` blocks.** Template tags trong SQL (`{{date}}`) được tạo tự động, nhưng dashboard-level parameter và mapping thì không.
+**Parser HỖ TRỢ `#### Filter:` headers và `metabase-filter` JSON blocks.**
 
-**Quy trình sau deploy:**
+Khai báo filters trong blueprint trước các Tab/Question headers:
 
-1. Thêm dashboard parameter:
-```bash
-curl -X PUT "$METABASE_URL/api/dashboard/:id" \
-  -d '{"parameters": [{"id": "date_filter", "name": "Date", "slug": "date", "type": "date/single"}]}'
-```
+```markdown
+#### Filter: Date Range
 
-2. Map parameter tới cards bằng PUT dashboard với `tabs` + `dashcards` (thêm `parameter_mappings` cho mỗi card cần filter):
-```json
+\`\`\`json metabase-filter
 {
-  "parameter_mappings": [{
-    "parameter_id": "date_filter",
-    "card_id": 123,
-    "target": ["variable", ["template-tag", "date"]]
-  }]
+  "slug": "date_range",
+  "type": "date/all-options",
+  "default": "past7days"
 }
+\`\`\`
 ```
 
-**Lưu ý:** PUT `/api/dashboard/:id/cards` (endpoint riêng) KHÔNG hoạt động cho việc update parameter_mappings. Phải dùng PUT `/api/dashboard/:id` với full payload `{ tabs, dashcards }`.
+**Auto-wiring:** Deploy script tự động match filter `slug` với SQL `{{template_tag}}` cùng tên. Ví dụ: filter slug `date_range` → auto-wire tới `{{date_range}}` trong SQL.
+
+**Supported types:** `date/all-options`, `date/single`, `string/=`, `string/contains`, `number/=`, `number/between`.
 
 ### 5.3 Dashboard Update vs Create
 

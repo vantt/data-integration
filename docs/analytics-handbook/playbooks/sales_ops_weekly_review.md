@@ -6,7 +6,8 @@
 - **Goal:** Weekly operational review — order processing health, channel order volumes, social commerce performance, and team productivity.
 - **Cadence:** Every Monday, reviewing previous Mon–Sun.
 - **Archetype:** Operational Cockpit
-- **Metabase Collection:** `Daily Operations` > `Weekly Reports`
+- **Metabase Collection:** `Operations` > `Periodic Reviews`
+- **Design Spec:** [designs/sales_ops_weekly_review.md](../designs/sales_ops_weekly_review.md)
 - **Related:** [Daily Sales Operations](./sales_daily_operation.md), [Social Commerce Operations](./customer_support_social_commerce.md)
 
 ## Key Questions

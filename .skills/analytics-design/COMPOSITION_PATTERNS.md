@@ -218,7 +218,71 @@ Sau khi layout xong, kiểm tra xem dashboard còn thiếu card nào không:
 
 ---
 
-## 8. Design Brief Template (Phase 3)
+## 8. Insight Communication Templates
+
+Khi viết nội dung cho Annotation cards, Playbook findings, hoặc Dashboard descriptions — dùng các template dưới đây thay vì free-form text.
+
+### 8a. "What / So What / Now What" — cho từng Insight
+
+Compact format — dùng cho mỗi finding trong Playbook, hoặc cho Annotation cards cần giải thích insight.
+
+```markdown
+**What:** [Phát hiện — 1 câu mô tả sự thật từ data]
+**So What:** [Tại sao quan trọng — impact lên business]
+**Now What:** [Hành động đề xuất — next step cụ thể]
+```
+
+#### Ví dụ
+
+```markdown
+**What:** Tỷ lệ hủy đơn tăng từ 5% lên 12% trong 2 tuần qua, tập trung ở kênh Online.
+**So What:** Mất ~80M VND/tuần doanh thu, ảnh hưởng trực tiếp đến target Q2.
+**Now What:** Kiểm tra UX checkout flow kênh Online + review inventory sync.
+```
+
+### 8b. Presentation Flow — cho Playbook "How to Read" section
+
+Khi viết phần "How to Read" trong Playbook, follow structure này:
+
+```
+1. CONTEXT    — Tại sao dashboard này tồn tại? Đang trả lời câu hỏi gì?
+2. KEY FINDING — Nhìn đâu trước? Hero metric cho biết điều gì?
+3. EVIDENCE    — Trend/Breakdown nào support finding đó?
+4. IMPLICATIONS — Nếu số liệu thế này thì business bị ảnh hưởng thế nào?
+5. ACTIONS     — Viewer nên làm gì tiếp theo?
+```
+
+### 8c. Dashboard Subtitle Template
+
+Mỗi dashboard nên có subtitle (Annotation card đầu tiên) theo format:
+
+```
+[Audience] — [Primary Question] — [Default Time Range]
+```
+
+Ví dụ:
+- "CEO Weekly Brief — Tuần qua kinh doanh có on-track không? — Last 7 days"
+- "Sales Ops Daily — Hôm nay cần xử lý đơn hàng nào? — Today"
+
+### 8d. Annotation Card Content Patterns
+
+| Vị trí | Content Pattern | Ví dụ |
+|--------|----------------|-------|
+| Dashboard header | Subtitle (8c format) | "CEO Weekly — Revenue vs Target pace — Last 7 days" |
+| Section divider | Section purpose + what to look for | "Revenue Trend — xem hướng đi và momentum WoW" |
+| Callout (next to chart) | "What / So What" mini (bỏ "Now What") | "Online channel đang drive 68% tổng revenue, tăng từ 55% tháng trước" |
+| Footer | Data source + freshness + caveats | "Source: fact_orders · Updated hourly · Excludes internal orders" |
+
+### Quy tắc chung
+
+- **Lead with insight, not description** — "Revenue tăng 15%" > "Biểu đồ này thể hiện revenue"
+- **Dùng số cụ thể** — "tăng 15% WoW" > "tăng đáng kể"
+- **Action-oriented khi có thể** — "Cần review kênh Online" > "Kênh Online có vấn đề"
+- **Ngắn gọn** — mỗi annotation tối đa 2 dòng. Nếu cần dài hơn → tách thành Playbook/Guide
+
+---
+
+## 9. Design Brief Template (Phase 3)
 
 Design Brief là output đầu tiên của Phase 3 — xác định mục đích trước khi thiết kế.
 
