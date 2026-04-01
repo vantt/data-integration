@@ -73,7 +73,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 | **GMV** | = Gross Revenue | Đồng nghĩa Doanh thu gộp (theo hệ thống của ta). GMV theo sàn TMĐT tính rộng hơn — xem mục 3.1 |
 | **AOV** (Average Order Value) | = Net Revenue ÷ Số đơn | Giá trị trung bình mỗi đơn |
 | **Discount Rate** | = Discount ÷ Gross Revenue × 100% | Tỷ lệ chiết khấu so với giá gốc |
-| **Return Rate** | = Số đơn trả ÷ Tổng đơn × 100% | Tỷ lệ trả hàng |
+| **Return Rate** | = Số đơn trả ÷ Tổng đơn × 100% | Tỷ lệ trả hàng (tính theo số đơn, không theo giá trị) |
 | **Basket Size** | = Tổng sản phẩm ÷ Số đơn | Số sản phẩm trung bình mỗi đơn |
 | **Completion Rate** | = Đơn hoàn thành ÷ Tổng đơn × 100% | Tỷ lệ hoàn tất đơn hàng |
 | **Revenue per Customer** | = Net Revenue ÷ Số khách | Doanh thu trung bình mỗi khách |
@@ -147,7 +147,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 
 > **Quy ước báo cáo — Bộ lọc mặc định:**
 > - **Tất cả dashboard doanh thu** mặc định lọc:
->   - `status = 'CANCELLED'` hoặc `payment_status = 'VOIDED'` — loại đơn hủy/void
+>   - Loại đơn hủy/void: `status != 'CANCELLED'` và `payment_status != 'VOIDED'`
 >   - `channel_category != 'Internal'` — loại đơn nội bộ (nhân viên, quà tặng, test)
 > - **Dashboard Executive** thêm lọc:
 >   - Loại đơn kênh **US** (`channel_name = 'US'` trong dim_channels) — đơn xuất khẩu B2B, 100% discount, làm méo chỉ số doanh thu
