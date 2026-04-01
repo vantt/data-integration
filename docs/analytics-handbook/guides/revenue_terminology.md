@@ -106,8 +106,8 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 | **Doanh thu social** | Đơn hàng đến từ kênh Facebook/Zalo/Instagram | = Net Revenue filter theo `platform IN ('Facebook', 'Zalo', 'Instagram')` hoặc `platform_group = 'Social'` |
 | **Inbox order** | Đơn nhân viên CS tạo từ tin nhắn | Tạo trên Sapo POS, gán kênh Facebook/Zalo |
 | **COD** | Thanh toán khi nhận hàng | Phổ biến trên social, xem payment_status |
-| **Chi phí quảng cáo** | Facebook Ads, Zalo Ads | Track riêng trong `fact_marketing_spend` |
-| **ROAS** (Return on Ad Spend) | Net Revenue ÷ Chi phí quảng cáo | Tính từ 2 bảng: `fact_orders` + `fact_marketing_spend` |
+| **Chi phí quảng cáo** | Facebook Ads, Zalo Ads | Chưa có trong pipeline (planned: `fact_marketing_spend`) |
+| **ROAS** (Return on Ad Spend) | Net Revenue ÷ Chi phí quảng cáo | Chưa tính tự động — cần `fact_marketing_spend` (planned) |
 
 ### 3.3. Website (weborder)
 
@@ -141,7 +141,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá niêm yết cho đến s�
 
 | Thuật ngữ | Nghĩa | Ghi chú |
 |-----------|-------|---------|
-| **Đơn nội bộ** | Ưu đãi nhân viên, quà tặng, test | `channel_category = 'Internal'` |
+| **Đơn nội bộ** | Ưu đãi nhân viên, quà tặng, test, CS, Telesale (tất cả kênh `platform_group = 'System'`) | `channel_category = 'Internal'` |
 | **Đơn 100% discount** | total_collected = 0, toàn bộ là chiết khấu | Quà tặng, sampling, đơn nội bộ |
 | **Đơn US (Export)** | Đơn xuất khẩu B2B, 100% discount (chuyển hàng nội bộ tập đoàn). **Không phải** `channel_category = 'Internal'` — filter bằng `channel_name = 'US'` | `channel_name = 'US'` |
 
