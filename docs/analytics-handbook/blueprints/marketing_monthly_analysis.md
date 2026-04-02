@@ -1,10 +1,11 @@
 # 📘 Blueprint: Marketing Monthly Analysis
 
 **Playbook**: [Marketing Monthly Analysis](../playbooks/marketing_monthly_analysis.md)
+**Design Spec**: [Marketing Monthly Analysis Design](../designs/marketing_monthly_analysis.md)
 
-> **Target Collection:** `Marketing` > `Monthly Reports`
-> **Role:** Marketing Manager, CMO
-> **Archetype:** Exploratory Tool + Executive Pulse
+> **Target Collection:** `Marketing & Customers`
+> **Role:** Marketing Manager, Brand Manager, CMO
+> **Archetype:** Operational Cockpit (4 tabs)
 
 ## 📂 Collection: Marketing & Customers
 
@@ -14,78 +15,217 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 🖥️ Dashboard: Marketing Monthly Analysis
 
-**Description**: Monthly deep dive — channel strategy, customer acquisition, cohort retention, campaign ROI, and product-brand performance.
+**Description**: Monthly deep dive — channel strategy, customer acquisition, cohort retention, campaign ROI, brand performance. 4 tabs: Monthly Pulse, Channel & Brand, Customer Intelligence, Campaigns & Products.
+
+<!-- Filters removed: date/all-options and string/= types don't work with native SQL template tags in DuckDB.
+     Date scoping is hardcoded in each SQL (last closed month). Channel filtering would require field filters. -->
 
 ---
 
-#### ❓ Question: Monthly Revenue
+### 📑 Tab: Monthly Pulse
 
-**Domain Reference**: [Revenue](../domains/sales.md#1-gmv-gross-merchandise-value)
+#### ❓ Question: Monthly Net Revenue
+
+Monthly net revenue with MoM comparison.
 
 ```sql
-SELECT COALESCE(SUM(net_revenue), 0) as "Monthly Revenue"
-FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND order_timestamp < date_trunc('month', current_date)
+WITH this_month AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "Net Revenue",
+    CASE WHEN lm.value = 0 THEN NULL
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
+FROM this_month tm, last_month lm
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Monthly Revenue": { "number_style": "currency", "currency": "VND" } }
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ],
+    "column_settings": {
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
+{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Monthly Total Orders
 
 ```sql
-SELECT COUNT(DISTINCT order_id) as "Total Orders"
-FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND order_timestamp < date_trunc('month', current_date)
+WITH this_month AS (
+    SELECT COUNT(DISTINCT order_id) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT COUNT(DISTINCT order_id) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "Total Orders",
+    CASE WHEN lm.value = 0 THEN NULL
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
+FROM this_month tm, last_month lm
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ]
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
+{ "row": 0, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Monthly New Customers
 
-**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
-
 ```sql
-SELECT COUNT(DISTINCT customer_key) as "New Customers"
-FROM dim_customers
-WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND date(first_order_date) < date_trunc('month', current_date)
+WITH this_month AS (
+    SELECT COUNT(DISTINCT customer_key) as value
+    FROM dim_customers
+    WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(first_order_date) < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT COUNT(DISTINCT customer_key) as value
+    FROM dim_customers
+    WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND date(first_order_date) < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "New Customers",
+    CASE WHEN lm.value = 0 THEN NULL
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
+FROM this_month tm, last_month lm
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ]
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 0, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
-#### ❓ Question: Monthly Discount Rate
-
-**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
+#### ❓ Question: Monthly AOV
 
 ```sql
-SELECT ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
+WITH this_month AS (
+    SELECT CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+                ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+                ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "AOV",
+    CASE WHEN lm.value = 0 THEN NULL
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ],
+    "column_settings": {
+      "AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 14, "size_x": 4, "size_y": 4 }
+```
+
+#### ❓ Question: Discount Rate Gauge
+
+Monthly discount rate as percentage with gauge zones.
+
+```sql
+SELECT ROUND(
+    SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1
+) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -94,30 +234,158 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "gauge",
   "visualization_settings": {
-    "column_settings": { "Discount Rate %": { "suffix": "%", "decimals": 1 } }
+    "gauge.segments": [
+      { "min": 0, "max": 10, "color": "#84BB4C", "label": "Healthy" },
+      { "min": 10, "max": 15, "color": "#F9D45C", "label": "Caution" },
+      { "min": 15, "max": 50, "color": "#EF8C8C", "label": "High" }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 5 }
+```
+
+#### ❓ Question: Revenue Trend (6M)
+
+Monthly revenue with MoM growth rate — combo chart (bar + line).
+
+```sql
+WITH monthly AS (
+    SELECT
+        date_trunc('month', order_timestamp)::date as month,
+        SUM(net_revenue) as revenue
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND order_timestamp < date_trunc('month', current_date)
+    GROUP BY 1
+)
+SELECT
+    m.month,
+    m.revenue as "Revenue",
+    CASE WHEN LAG(m.revenue) OVER (ORDER BY m.month) = 0 THEN NULL
+         ELSE ROUND((m.revenue - LAG(m.revenue) OVER (ORDER BY m.month)) * 100.0
+              / LAG(m.revenue) OVER (ORDER BY m.month), 1) END as "MoM Growth %"
+FROM monthly m
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "combo",
+  "visualization_settings": {
+    "graph.dimensions": ["month"],
+    "graph.metrics": ["Revenue", "MoM Growth %"],
+    "series_settings": {
+      "Revenue": { "display": "bar", "color": "#509EE3" },
+      "MoM Growth %": { "display": "line", "color": "#7172AD", "line.marker_enabled": true }
+    },
+    "graph.y_axis.auto_split": true,
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 4, "col": 6, "size_x": 12, "size_y": 5 }
+```
+
+#### ❓ Question: Channel Revenue Share
+
+Revenue share by channel category — donut.
+
+```sql
+SELECT
+    c.channel_category as "Channel",
+    SUM(o.net_revenue) as "Revenue"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.order_timestamp < date_trunc('month', current_date)
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "pie",
+  "visualization_settings": {
+    "pie.show_legend": true,
+    "pie.show_total": true,
+    "pie.percent_visibility": "inside",
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 9, "col": 0, "size_x": 6, "size_y": 6 }
+```
+
+#### ❓ Question: Revenue by Channel (MoM)
+
+Side-by-side comparison of channel revenue: this month vs last month.
+
+```sql
+SELECT
+    c.channel_category as "Channel",
+    SUM(CASE WHEN o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+                  AND o.order_timestamp < date_trunc('month', current_date) THEN o.net_revenue ELSE 0 END) as "This Month",
+    SUM(CASE WHEN o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+                  AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month' THEN o.net_revenue ELSE 0 END) as "Last Month"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Channel"],
+    "graph.metrics": ["This Month", "Last Month"],
+    "series_settings": {
+      "This Month": { "color": "#509EE3" },
+      "Last Month": { "color": "#C2D2E9" }
+    },
+    "column_settings": {
+      "This Month": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Last Month": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 9, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
 
-#### ❓ Question: Channel Mix Trend (6 Months)
+### 📑 Tab: Channel & Brand
+
+#### ❓ Question: Channel Mix Trend (6M)
 
 Monthly revenue stacked by channel category over 6 months.
-
-**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
 ```sql
 SELECT
     date_trunc('month', o.order_timestamp)::date as month,
-    c.channel_category,
-    SUM(o.net_revenue) as revenue
+    c.channel_category as "Channel",
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -131,22 +399,23 @@ ORDER BY 1, 2
 {
   "display": "area",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["revenue"],
-    "stackable.stack_type": "stacked"
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["month", "Channel"],
+    "graph.metrics": ["Revenue"],
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 12, "size_y": 8 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### ❓ Question: Platform Performance Matrix
 
 Full platform breakdown with MoM comparison.
-
-**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
 ```sql
 WITH this_month AS (
@@ -186,9 +455,9 @@ SELECT
     tm.aov as "AOV",
     tm.new_customers as "New Customers",
     CASE WHEN COALESCE(lm.revenue, 0) = 0 THEN NULL
-         ELSE ROUND((tm.revenue - COALESCE(lm.revenue, 0)) * 100.0 / lm.revenue, 1) END as "MoM Revenue %",
+         ELSE ROUND((tm.revenue - COALESCE(lm.revenue, 0)) * 100.0 / lm.revenue, 1) END as "MoM Rev %",
     CASE WHEN COALESCE(lm.orders, 0) = 0 THEN NULL
-         ELSE ROUND((tm.orders - COALESCE(lm.orders, 0)) * 100.0 / lm.orders, 1) END as "MoM Orders %"
+         ELSE ROUND((tm.orders - COALESCE(lm.orders, 0)) * 100.0 / lm.orders, 1) END as "MoM Ord %"
 FROM this_month tm
 LEFT JOIN last_month lm ON tm.platform = lm.platform
 ORDER BY tm.revenue DESC
@@ -197,369 +466,128 @@ ORDER BY tm.revenue DESC
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false,
   "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["MoM Rev %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 10,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["MoM Rev %"],
+        "type": "single",
+        "operator": "<",
+        "value": -10,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["MoM Ord %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 10,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["MoM Ord %"],
+        "type": "single",
+        "operator": "<",
+        "value": -10,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
     "column_settings": {
-      "Revenue": { "number_style": "currency", "currency": "VND" },
-      "AOV": { "number_style": "currency", "currency": "VND" }
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true },
+      "AOV": { "number_style": "currency", "currency": "VND", "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 12, "size_x": 6, "size_y": 8 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
----
+#### ❓ Question: Channel Brand Revenue
 
-#### ❓ Question: New Customer Acquisition Trend (6M)
-
-Monthly new customer count over 6 months.
-
-**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
+Top channel brands ranked by revenue.
 
 ```sql
 SELECT
-    date_trunc('month', first_order_date)::date as month,
-    COUNT(DISTINCT customer_key) as "New Customers"
-FROM dim_customers
-WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND date(first_order_date) < date_trunc('month', current_date)
-GROUP BY 1
-ORDER BY 1
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["New Customers"],
-    "graph.colors": ["#509EE3"]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
-```
-
-#### ❓ Question: New Customers by Channel (Monthly)
-
-Which channels acquired the most new customers in the closed month?
-
-**Domain Reference**: [New vs Returning](../domains/sales.md#10-new-vs-returning-customers)
-
-```sql
-SELECT
-    c.channel_name as "Channel",
-    COUNT(DISTINCT o.customer_key) as "New Customers"
+    c.channel_brand as "Channel Brand",
+    SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND date(cust.first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND date(cust.first_order_date) < date_trunc('month', current_date)
-  AND date(cust.first_order_date) = date(o.order_timestamp)
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND o.order_timestamp < date_trunc('month', current_date)
+  AND c.channel_brand IS NOT NULL
 GROUP BY 1
 ORDER BY 2 DESC
 ```
 
 ```json metabase-viz
 {
-  "display": "bar",
+  "display": "row",
   "visualization_settings": {
-    "graph.dimensions": ["Channel"],
-    "graph.metrics": ["New Customers"],
-    "graph.x_axis.axis_enabled": true
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
-```
-
----
-
-#### ❓ Question: Customer Segment Movement
-
-Customer segments with MoM comparison.
-
-**Domain Reference**: [RFM Segment](../domains/customer.md#7-rfm-segment)
-
-```sql
-SELECT
-    customer_segment as "Segment",
-    customer_status as "Status",
-    COUNT(*) as "Customer Count",
-    SUM(lifetime_value) as "Total LTV"
-FROM dim_customers
-WHERE customer_id IS NOT NULL
-GROUP BY 1, 2
-ORDER BY 1, 3 DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "table.pivot": false,
-  "visualization_settings": {
+    "graph.dimensions": ["Channel Brand"],
+    "graph.metrics": ["Revenue"],
+    "graph.colors": ["#509EE3"],
     "column_settings": {
-      "Total LTV": { "number_style": "currency", "currency": "VND" }
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
-#### ❓ Question: Cohort Retention Heatmap
+#### ❓ Question: Revenue by Market
 
-Month-over-month retention by acquisition cohort (last 12 months).
-
-**Domain Reference**: [Retention Rate](../domains/customer.md#5-retention-rate)
+Domestic vs Export revenue split.
 
 ```sql
-WITH cohort_sizes AS (
-    SELECT
-        date_trunc('month', first_order_date) as cohort_month,
-        COUNT(DISTINCT customer_id) as original_size
-    FROM dim_customers
-    WHERE first_order_date >= (current_date - INTERVAL '12' MONTH)
-    GROUP BY 1
-),
-retention_activity AS (
-    SELECT
-        date_trunc('month', c.first_order_date) as cohort_month,
-        date_diff('month', c.first_order_date, o.order_timestamp) as month_number,
-        COUNT(DISTINCT c.customer_id) as active_customers
-    FROM dim_customers c
-    JOIN fact_orders o ON c.customer_key = o.customer_key
-    WHERE c.first_order_date >= (current_date - INTERVAL '12' MONTH)
-      AND o.order_timestamp >= c.first_order_date
-      AND o.status NOT IN ('CANCELLED', 'Voided')
-    GROUP BY 1, 2
-)
 SELECT
-    strftime(r.cohort_month, '%Y-%m') as "Cohort",
-    r.month_number as "Month #",
-    s.original_size as "Cohort Size",
-    r.active_customers as "Active",
-    ROUND(CAST(r.active_customers AS FLOAT) / s.original_size * 100, 1) as "Retention %"
-FROM retention_activity r
-JOIN cohort_sizes s ON r.cohort_month = s.cohort_month
-WHERE r.month_number <= 6
-ORDER BY 1, 2
+    c.market as "Market",
+    SUM(o.net_revenue) as "Revenue"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND c.market IS NOT NULL
+GROUP BY 1
+ORDER BY 2 DESC
 ```
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "pie",
   "visualization_settings": {
-    "table.pivot": true,
-    "table.cell_column": "Retention %",
-    "table.columns": [
-      { "name": "Cohort", "enabled": true },
-      { "name": "Month #", "enabled": true },
-      { "name": "Retention %", "enabled": true }
-    ]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 17, "col": 9, "size_x": 9, "size_y": 6 }
-```
-
----
-
-#### ❓ Question: Promotion Leaderboard (Monthly)
-
-Top promotions ranked by revenue for the closed month.
-
-**Domain Reference**: [Promotion Performance](../domains/sales.md#14-promotion-performance)
-
-```sql
-WITH promo_orders AS (
-    SELECT
-        COALESCE(p.promotion_code, 'Unknown') as promo_code,
-        COUNT(DISTINCT o.order_id) as usage_count,
-        SUM(o.net_revenue) as revenue,
-        ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.gross_revenue, 0)), 1) as avg_discount_pct,
-        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as promo_aov
-    FROM fact_orders o
-    JOIN dim_promotions p ON o.promotion_key = p.promotion_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND p.promotion_code IS NOT NULL
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp < date_trunc('month', current_date)
-    GROUP BY 1
-),
-baseline AS (
-    SELECT
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as non_promo_aov
-    FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND promotion_key IS NULL
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
-)
-SELECT
-    po.promo_code as "Promo Code",
-    po.usage_count as "Usage Count",
-    po.revenue as "Revenue",
-    po.avg_discount_pct as "Avg Discount %",
-    po.promo_aov as "Promo AOV",
-    b.non_promo_aov as "Non-Promo AOV"
-FROM promo_orders po
-CROSS JOIN baseline b
-ORDER BY po.revenue DESC
-LIMIT 10
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "table.pivot": false,
-  "visualization_settings": {
+    "pie.show_legend": true,
+    "pie.show_total": true,
+    "pie.percent_visibility": "inside",
     "column_settings": {
-      "Revenue": { "number_style": "currency", "currency": "VND" },
-      "Promo AOV": { "number_style": "currency", "currency": "VND" },
-      "Non-Promo AOV": { "number_style": "currency", "currency": "VND" }
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 18, "size_y": 6 }
-```
-
----
-
-#### ❓ Question: Discount Trend (6M)
-
-Monthly discount rate over 6 months.
-
-**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
-
-```sql
-SELECT
-    date_trunc('month', order_timestamp)::date as month,
-    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
-FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND order_timestamp < date_trunc('month', current_date)
-GROUP BY 1
-ORDER BY 1
-```
-
-```json metabase-viz
-{
-  "display": "line",
-  "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["Discount Rate %"],
-    "graph.colors": ["#F9A825"],
-    "graph.goal_value": 15,
-    "graph.show_goal": true,
-    "graph.goal_label": "Target < 15%"
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 29, "col": 0, "size_x": 9, "size_y": 6 }
-```
-
-#### ❓ Question: Revenue — Discounted vs Full-Price (6M)
-
-Monthly split of discounted vs full-price revenue.
-
-**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
-
-```sql
-SELECT
-    date_trunc('month', order_timestamp)::date as month,
-    SUM(CASE WHEN discount_amount > 0 THEN net_revenue ELSE 0 END) as "Discounted Revenue",
-    SUM(CASE WHEN COALESCE(discount_amount, 0) = 0 THEN net_revenue ELSE 0 END) as "Full-Price Revenue"
-FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND order_timestamp < date_trunc('month', current_date)
-GROUP BY 1
-ORDER BY 1
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["Discounted Revenue", "Full-Price Revenue"],
-    "stackable.stack_type": "stacked",
-    "series_settings": {
-      "Discounted Revenue": { "color": "#F9A825" },
-      "Full-Price Revenue": { "color": "#509EE3" }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 29, "col": 9, "size_x": 9, "size_y": 6 }
-```
-
----
-
-#### ❓ Question: Top 15 Products by Revenue (Monthly)
-
-**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products)
-
-```sql
-SELECT
-    p.product_name as "Product",
-    p.brand_name as "Brand",
-    SUM(s.quantity) as "Units",
-    SUM(s.revenue) as "Revenue"
-FROM fact_sales s
-JOIN dim_products p ON s.product_key = p.product_key
-WHERE date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND date(s.sol_timestamp) < date_trunc('month', current_date)
-GROUP BY 1, 2
-ORDER BY 4 DESC
-LIMIT 15
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.column_formatting": [{
-      "columns": ["Revenue"],
-      "type": "currency",
-      "currency": "VND"
-    }]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 35, "col": 0, "size_x": 9, "size_y": 8 }
+{ "row": 12, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Brand Performance Summary
 
-Revenue by product brand for the closed month.
+Product brand performance with MoM comparison.
 
 ```sql
 WITH this_month AS (
@@ -590,7 +618,7 @@ SELECT
     tm.units as "Units",
     tm.order_count as "Orders",
     CASE WHEN tm.order_count = 0 THEN 0
-         ELSE tm.revenue / tm.order_count END as "AOV",
+         ELSE ROUND(tm.revenue / tm.order_count) END as "AOV",
     CASE WHEN COALESCE(lm.revenue, 0) = 0 THEN NULL
          ELSE ROUND((tm.revenue - COALESCE(lm.revenue, 0)) * 100.0 / lm.revenue, 1) END as "MoM %"
 FROM this_month tm
@@ -601,52 +629,957 @@ ORDER BY tm.revenue DESC
 ```json metabase-viz
 {
   "display": "table",
-  "table.pivot": false,
   "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["MoM %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 15,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["MoM %"],
+        "type": "single",
+        "operator": "<",
+        "value": -15,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
     "column_settings": {
-      "Revenue": { "number_style": "currency", "currency": "VND" },
-      "AOV": { "number_style": "currency", "currency": "VND" }
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true },
+      "AOV": { "number_style": "currency", "currency": "VND", "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 35, "col": 9, "size_x": 9, "size_y": 8 }
+{ "row": 18, "col": 0, "size_x": 12, "size_y": 6 }
+```
+
+#### ❓ Question: Revenue by Customer Segment
+
+B2C vs B2B revenue split.
+
+```sql
+SELECT
+    c.customer_segment as "Segment",
+    SUM(o.net_revenue) as "Revenue"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND c.customer_segment IS NOT NULL
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "pie",
+  "visualization_settings": {
+    "pie.show_legend": true,
+    "pie.show_total": true,
+    "pie.percent_visibility": "inside",
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 18, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
 
-#### ❓ Question: Order Heatmap by Day x Hour
+### 📑 Tab: Customer Intelligence
 
-Peak ordering windows for marketing scheduling.
+#### ❓ Question: New Customers (Month)
 
-**Domain Reference**: [Hourly Heatmap](../domains/sales.md#7-hourly-heatmap-day-of-week-analysis)
+Hero metric for customer tab with MoM.
+
+```sql
+WITH this_month AS (
+    SELECT COUNT(DISTINCT customer_key) as value
+    FROM dim_customers
+    WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(first_order_date) < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT COUNT(DISTINCT customer_key) as value
+    FROM dim_customers
+    WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND date(first_order_date) < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "New Customers",
+    CASE WHEN lm.value = 0 THEN NULL
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Returning Customers (Month)
+
+```sql
+WITH this_month AS (
+    SELECT COUNT(DISTINCT o.customer_key) as value
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.order_timestamp < date_trunc('month', current_date)
+      AND date(c.first_order_date) < date_trunc('month', current_date) - INTERVAL '1 month'
+),
+last_month AS (
+    SELECT COUNT(DISTINCT o.customer_key) as value
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(c.first_order_date) < date_trunc('month', current_date) - INTERVAL '2 months'
+)
+SELECT
+    tm.value as "Returning Customers",
+    CASE WHEN lm.value = 0 THEN NULL
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 6, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: New Customer Revenue Share
+
+Percentage of revenue from new customers.
+
+```sql
+WITH this_month AS (
+    SELECT
+        ROUND(SUM(CASE WHEN date(c.first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
+                            AND date(c.first_order_date) < date_trunc('month', current_date)
+                       THEN o.net_revenue ELSE 0 END) * 100.0
+              / NULLIF(SUM(o.net_revenue), 0), 1) as value
+    FROM fact_orders o
+    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.order_timestamp < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT
+        ROUND(SUM(CASE WHEN date(c.first_order_date) >= date_trunc('month', current_date) - INTERVAL '2 months'
+                            AND date(c.first_order_date) < date_trunc('month', current_date) - INTERVAL '1 month'
+                       THEN o.net_revenue ELSE 0 END) * 100.0
+              / NULLIF(SUM(o.net_revenue), 0), 1) as value
+    FROM fact_orders o
+    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "New Customer Rev %",
+    ROUND(tm.value - lm.value, 1) as "MoM pp Change"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM pp Change",
+        "label": "vs last month (pp)"
+      }
+    ],
+    "column_settings": {
+      "New Customer Rev %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 12, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: New Customer Acquisition Trend (6M)
+
+Monthly new customers with MoM growth rate — combo chart.
+
+```sql
+WITH monthly AS (
+    SELECT
+        date_trunc('month', first_order_date)::date as month,
+        COUNT(DISTINCT customer_key) as new_customers
+    FROM dim_customers
+    WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND date(first_order_date) < date_trunc('month', current_date)
+    GROUP BY 1
+)
+SELECT
+    m.month,
+    m.new_customers as "New Customers",
+    CASE WHEN LAG(m.new_customers) OVER (ORDER BY m.month) = 0 THEN NULL
+         ELSE ROUND((m.new_customers - LAG(m.new_customers) OVER (ORDER BY m.month)) * 100.0
+              / LAG(m.new_customers) OVER (ORDER BY m.month), 1) END as "MoM Growth %"
+FROM monthly m
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "combo",
+  "visualization_settings": {
+    "graph.dimensions": ["month"],
+    "graph.metrics": ["New Customers", "MoM Growth %"],
+    "series_settings": {
+      "New Customers": { "display": "bar", "color": "#509EE3" },
+      "MoM Growth %": { "display": "line", "color": "#7172AD", "line.marker_enabled": true }
+    },
+    "graph.y_axis.auto_split": true
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 12, "size_y": 6 }
+```
+
+#### ❓ Question: New Customers by Channel
+
+Which channels acquired the most new customers this month?
 
 ```sql
 SELECT
-    EXTRACT(DOW FROM order_timestamp) as day_of_week,
-    EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-    COUNT(DISTINCT order_id) as order_count,
-    SUM(net_revenue) as revenue
-FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND order_timestamp < date_trunc('month', current_date)
+    c.channel_name as "Channel",
+    COUNT(DISTINCT o.customer_key) as "New Customers"
+FROM fact_orders o
+JOIN dim_channels c ON o.channel_key = c.channel_key
+JOIN dim_customers cust ON o.customer_key = cust.customer_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND date(cust.first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND date(cust.first_order_date) < date_trunc('month', current_date)
+  AND date(cust.first_order_date) = date(o.order_timestamp)
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.order_timestamp < date_trunc('month', current_date)
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Channel"],
+    "graph.metrics": ["New Customers"],
+    "graph.colors": ["#88BDE6"]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 4, "col": 12, "size_x": 6, "size_y": 6 }
+```
+
+#### ❓ Question: At Risk Customers
+
+Count of at-risk customers with MoM change.
+
+```sql
+WITH current_count AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE customer_status = 'At Risk'
+),
+-- Approximate last month by checking customers whose status would have been at risk
+-- based on recency shifting by 30 days
+prev_count AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE customer_status IN ('At Risk', 'Churned')
+      AND recency_days BETWEEN 61 AND 120
+)
+SELECT
+    c.value as "At Risk Customers",
+    CASE WHEN p.value = 0 THEN NULL
+         ELSE ROUND((c.value - p.value) * 100.0 / p.value, 1) END as "MoM %"
+FROM current_count c, prev_count p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Churn Rate Gauge
+
+```sql
+SELECT
+    ROUND(
+        COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0
+        / NULLIF(COUNT(*), 0), 1
+    ) as "Churn Rate %"
+FROM dim_customers
+WHERE customer_id IS NOT NULL
+```
+
+```json metabase-viz
+{
+  "display": "gauge",
+  "visualization_settings": {
+    "gauge.segments": [
+      { "min": 0, "max": 5, "color": "#84BB4C", "label": "Healthy" },
+      { "min": 5, "max": 15, "color": "#F9D45C", "label": "Watch" },
+      { "min": 15, "max": 100, "color": "#EF8C8C", "label": "Critical" }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 6, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Active Customer Rate
+
+Percentage of customers active in last 30 days.
+
+```sql
+WITH stats AS (
+    SELECT
+        COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) as active,
+        COUNT(*) as total
+    FROM dim_customers
+    WHERE customer_id IS NOT NULL
+),
+prev AS (
+    SELECT
+        COUNT(CASE WHEN recency_days BETWEEN 1 AND 60 THEN 1 END) as active,
+        COUNT(*) as total
+    FROM dim_customers
+    WHERE customer_id IS NOT NULL
+)
+SELECT
+    ROUND(s.active * 100.0 / NULLIF(s.total, 0), 1) as "Active Rate %",
+    ROUND(s.active * 100.0 / NULLIF(s.total, 0) - p.active * 100.0 / NULLIF(p.total, 0), 1) as "MoM pp"
+FROM stats s, prev p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM pp",
+        "label": "vs last month (pp)"
+      }
+    ],
+    "column_settings": {
+      "Active Rate %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 12, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Customer Segment Movement
+
+Segment breakdown with customer count and LTV.
+
+```sql
+SELECT
+    customer_segment as "Segment",
+    customer_status as "Status",
+    COUNT(*) as "Customers",
+    SUM(lifetime_value) as "Total LTV",
+    ROUND(AVG(lifetime_value)) as "Avg LTV"
+FROM dim_customers
+WHERE customer_id IS NOT NULL
 GROUP BY 1, 2
-ORDER BY 1, 2
+ORDER BY 1, 3 DESC
 ```
 
 ```json metabase-viz
 {
   "display": "table",
   "visualization_settings": {
-    "table.pivot": true,
-    "table.cell_column": "order_count"
+    "column_settings": {
+      "Total LTV": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Avg LTV": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 43, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 14, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: Cohort Retention Heatmap
+
+Month-over-month retention by acquisition cohort.
+
+```sql
+WITH cohort_sizes AS (
+    SELECT
+        date_trunc('month', first_order_date) as cohort_month,
+        COUNT(DISTINCT customer_id) as original_size
+    FROM dim_customers
+    WHERE first_order_date >= (current_date - INTERVAL '12' MONTH)
+    GROUP BY 1
+),
+retention_activity AS (
+    SELECT
+        date_trunc('month', c.first_order_date) as cohort_month,
+        date_diff('month', c.first_order_date, o.order_timestamp) as month_number,
+        COUNT(DISTINCT c.customer_id) as active_customers
+    FROM dim_customers c
+    JOIN fact_orders o ON c.customer_key = o.customer_key
+    WHERE c.first_order_date >= (current_date - INTERVAL '12' MONTH)
+      AND o.order_timestamp >= c.first_order_date
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+    GROUP BY 1, 2
+)
+SELECT
+    strftime(r.cohort_month, '%Y-%m') as "Cohort",
+    r.month_number as "Month #",
+    ROUND(CAST(r.active_customers AS FLOAT) / s.original_size * 100, 1) as "Retention %"
+FROM retention_activity r
+JOIN cohort_sizes s ON r.cohort_month = s.cohort_month
+WHERE r.month_number <= 6
+ORDER BY 1, 2
+```
+
+```json metabase-viz
+{
+  "display": "pivot",
+  "visualization_settings": {
+    "table.pivot": true,
+    "table.cell_column": "Retention %",
+    "pivot.show_column_totals": false,
+    "pivot.show_row_totals": false,
+    "table.column_formatting": [
+      {
+        "columns": ["Retention %"],
+        "type": "range",
+        "colors": ["#FFFFFF", "#509EE3"],
+        "min_type": "custom",
+        "min_value": 0,
+        "max_type": "custom",
+        "max_value": 100
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 14, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+---
+
+### 📑 Tab: Campaigns & Products
+
+#### ❓ Question: Total Discount Amount
+
+```sql
+WITH this_month AS (
+    SELECT COALESCE(SUM(discount_amount), 0) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+    ),
+last_month AS (
+    SELECT COALESCE(SUM(discount_amount), 0) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "Discount Amount",
+    CASE WHEN lm.value = 0 THEN NULL
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM %",
+        "label": "vs last month"
+      }
+    ],
+    "column_settings": {
+      "Discount Amount": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Discounted Order Percentage
+
+```sql
+WITH this_month AS (
+    SELECT ROUND(COUNT(CASE WHEN discount_amount > 0 THEN 1 END) * 100.0
+           / NULLIF(COUNT(*), 0), 1) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT ROUND(COUNT(CASE WHEN discount_amount > 0 THEN 1 END) * 100.0
+           / NULLIF(COUNT(*), 0), 1) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "Discounted %",
+    ROUND(tm.value - lm.value, 1) as "MoM pp"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM pp",
+        "label": "vs last month (pp)"
+      }
+    ],
+    "column_settings": {
+      "Discounted %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 6, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Average Discount Depth
+
+```sql
+WITH this_month AS (
+    SELECT ROUND(AVG(CASE WHEN discount_amount > 0
+                THEN discount_amount * 100.0 / NULLIF(gross_revenue, 0) END), 1) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+),
+last_month AS (
+    SELECT ROUND(AVG(CASE WHEN discount_amount > 0
+                THEN discount_amount * 100.0 / NULLIF(gross_revenue, 0) END), 1) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.value as "Avg Discount %",
+    ROUND(tm.value - lm.value, 1) as "MoM pp"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "MoM pp",
+        "label": "vs last month (pp)"
+      }
+    ],
+    "column_settings": {
+      "Avg Discount %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 12, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Promotion Leaderboard
+
+Top promotions ranked by revenue.
+
+```sql
+WITH promo_orders AS (
+    SELECT
+        COALESCE(p.promotion_code, 'Unknown') as promo_code,
+        COUNT(DISTINCT o.order_id) as usage_count,
+        SUM(o.net_revenue) as revenue,
+        ROUND(AVG(COALESCE(o.discount_amount, 0) * 100.0 / NULLIF(o.gross_revenue, 0)), 1) as avg_discount_pct,
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as promo_aov
+    FROM fact_orders o
+    JOIN dim_promotions p ON o.promotion_key = p.promotion_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND p.promotion_code IS NOT NULL
+      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.order_timestamp < date_trunc('month', current_date)
+    GROUP BY 1
+),
+baseline AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as non_promo_aov
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND promotion_key IS NULL
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+)
+SELECT
+    po.promo_code as "Promo Code",
+    po.usage_count as "Usage",
+    po.revenue as "Revenue",
+    po.avg_discount_pct as "Avg Discount %",
+    po.promo_aov as "Promo AOV",
+    b.non_promo_aov as "Non-Promo AOV"
+FROM promo_orders po
+CROSS JOIN baseline b
+ORDER BY po.revenue DESC
+LIMIT 10
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Promo AOV": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Non-Promo AOV": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### ❓ Question: Discount Trend (6M)
+
+Monthly discount rate with 15% goal line.
+
+```sql
+SELECT
+    date_trunc('month', order_timestamp)::date as month,
+    ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
+FROM fact_orders
+WHERE status NOT IN ('CANCELLED', 'Voided')
+  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND order_timestamp < date_trunc('month', current_date)
+GROUP BY 1
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "line",
+  "visualization_settings": {
+    "graph.dimensions": ["month"],
+    "graph.metrics": ["Discount Rate %"],
+    "graph.colors": ["#F9D45C"],
+    "graph.goal_value": 15,
+    "graph.show_goal": true,
+    "graph.goal_label": "Target < 15%",
+    "line.marker_enabled": true
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: Revenue Discounted vs Full-Price (6M)
+
+Monthly revenue split: discounted orders vs full-price.
+
+```sql
+SELECT
+    date_trunc('month', order_timestamp)::date as month,
+    SUM(CASE WHEN COALESCE(discount_amount, 0) = 0 THEN net_revenue ELSE 0 END) as "Full-Price Revenue",
+    SUM(CASE WHEN discount_amount > 0 THEN net_revenue ELSE 0 END) as "Discounted Revenue"
+FROM fact_orders
+WHERE status NOT IN ('CANCELLED', 'Voided')
+  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND order_timestamp < date_trunc('month', current_date)
+GROUP BY 1
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["month"],
+    "graph.metrics": ["Full-Price Revenue", "Discounted Revenue"],
+    "series_settings": {
+      "Full-Price Revenue": { "color": "#509EE3" },
+      "Discounted Revenue": { "color": "#F9D45C" }
+    },
+    "column_settings": {
+      "Full-Price Revenue": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Discounted Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: Top 15 Products by Revenue
+
+Top products with MoM comparison.
+
+```sql
+WITH this_month AS (
+    SELECT
+        p.product_name,
+        p.brand_name,
+        SUM(s.quantity) as units,
+        SUM(s.revenue) as revenue
+    FROM fact_sales s
+    JOIN dim_products p ON s.product_key = p.product_key
+    WHERE date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(s.sol_timestamp) < date_trunc('month', current_date)
+    GROUP BY 1, 2
+),
+last_month AS (
+    SELECT
+        p.product_name,
+        SUM(s.revenue) as revenue
+    FROM fact_sales s
+    JOIN dim_products p ON s.product_key = p.product_key
+    WHERE date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND date(s.sol_timestamp) < date_trunc('month', current_date) - INTERVAL '1 month'
+    GROUP BY 1
+)
+SELECT
+    tm.product_name as "Product",
+    tm.brand_name as "Brand",
+    tm.units as "Units",
+    tm.revenue as "Revenue",
+    CASE WHEN COALESCE(lm.revenue, 0) = 0 THEN NULL
+         ELSE ROUND((tm.revenue - COALESCE(lm.revenue, 0)) * 100.0 / lm.revenue, 1) END as "MoM %"
+FROM this_month tm
+LEFT JOIN last_month lm ON tm.product_name = lm.product_name
+ORDER BY tm.revenue DESC
+LIMIT 15
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["MoM %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 20,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["MoM %"],
+        "type": "single",
+        "operator": "<",
+        "value": -20,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### ❓ Question: Revenue by Province (Top 10)
+
+Top 10 provinces by revenue from shipping address.
+
+```sql
+SELECT
+    g.province as "Province",
+    SUM(o.net_revenue) as "Revenue"
+FROM fact_orders o
+JOIN dim_geography g ON o.shipping_geography_key = g.geography_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND g.province IS NOT NULL
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Province"],
+    "graph.metrics": ["Revenue"],
+    "graph.colors": ["#509EE3"],
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 24, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: Order Heatmap — Day x Hour
+
+Peak ordering windows for marketing scheduling.
+
+```sql
+SELECT
+    CASE EXTRACT(DOW FROM order_timestamp)
+        WHEN 0 THEN 'Sun' WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue'
+        WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri'
+        WHEN 6 THEN 'Sat' END as "Day",
+    EXTRACT(HOUR FROM order_timestamp)::int as "Hour",
+    COUNT(DISTINCT order_id) as "Orders"
+FROM fact_orders
+WHERE status NOT IN ('CANCELLED', 'Voided')
+  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND order_timestamp < date_trunc('month', current_date)
+GROUP BY 1, 2, EXTRACT(DOW FROM order_timestamp)
+ORDER BY EXTRACT(DOW FROM order_timestamp), 2
+```
+
+```json metabase-viz
+{
+  "display": "pivot",
+  "visualization_settings": {
+    "table.pivot": true,
+    "table.cell_column": "Orders",
+    "pivot.show_column_totals": false,
+    "pivot.show_row_totals": false,
+    "table.column_formatting": [
+      {
+        "columns": ["Orders"],
+        "type": "range",
+        "colors": ["#FFFFFF", "#509EE3"],
+        "min_type": "all",
+        "max_type": "all"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 24, "col": 9, "size_x": 9, "size_y": 6 }
 ```

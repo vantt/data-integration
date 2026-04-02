@@ -5,9 +5,10 @@
 - **Audience:** Marketing Manager, Brand Manager, CMO
 - **Goal:** Monthly deep dive into channel effectiveness, customer segments, campaign ROI, and strategic recommendations for next month.
 - **Cadence:** 3rd–5th of each month, reviewing the closed month.
-- **Archetype:** Exploratory Tool + Executive Pulse
-- **Metabase Collection:** `Marketing` > `Monthly Reports`
+- **Archetype:** Operational Cockpit (multi-view, 4 tabs)
+- **Collection:** `Marketing & Customers`
 - **Related:** [Promotion Analysis](./sales_promotion_analysis.md), [Customer Retention](./customer_retention.md)
+- **Design Spec:** [Marketing Monthly Analysis Design](../designs/marketing_monthly_analysis.md)
 
 ## Key Questions
 
@@ -28,6 +29,13 @@
 
 - **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_marketing_spend`](../../../transformation/models/marts/sales/fact_marketing_spend.sql), [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
 - **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_geography`
+
+## Dashboard Structure (4 Tabs)
+
+1. **Monthly Pulse** — Executive-level monthly snapshot (5-7 min). Hero revenue + KPIs + 6M trends + channel mix overview.
+2. **Channel & Brand Strategy** — Channel deep dive: mix trends, platform matrix, brand portfolio, market/segment splits.
+3. **Customer Intelligence** — Acquisition trends, channel attribution, segment health, cohort retention heatmap, at-risk alerts.
+4. **Campaigns & Products** — Promotion ROI, discount analysis, top products, brand performance, geographic insights, ordering patterns.
 
 ## Visualizations
 

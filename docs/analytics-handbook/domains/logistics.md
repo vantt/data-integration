@@ -13,7 +13,7 @@
 > **dbt Model:** `fact_orders` (Planned)
 
 - **Business Definition:** Percentage of orders shipped vs total orders.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   Shipped_Count / Total_Orders * 100
   ```
@@ -23,11 +23,11 @@
 > **dbt Model:** `fact_fulfillments` (Planned)
 
 - **Business Definition:** Time taken from Order Creation to Shipment.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   Shipped_Timestamp - Created_Timestamp
   ```
-- **Detailed Logic (Metabase SQL):**
+- **Detailed Logic (SQL):**
   ```sql
   AVG(EXTRACT(EPOCH FROM (f.shipped_on - f.created_on))/3600) as avg_processing_hours
   ```
@@ -37,11 +37,11 @@
 > **dbt Model:** `fact_fulfillments` (Planned)
 
 - **Business Definition:** Percentage of orders shipped on the same day they were placed (before cutoff).
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   Count(Same_Day_Shipped) / Total_Orders
   ```
-- **Detailed Logic (Metabase SQL):**
+- **Detailed Logic (SQL):**
   ```sql
   COUNT(CASE WHEN f.shipped_on <= f.created_on + INTERVAL '24 hours' THEN 1 END) * 100.0 /
   COUNT(*) as same_day_fulfillment_rate
@@ -57,7 +57,7 @@
 > **dbt Model:** `fact_shipments` (Planned)
 
 - **Business Definition:** Average time from Shipment to Delivery.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   AVG(Delivered_Timestamp - Shipped_Timestamp)
   ```
@@ -67,7 +67,7 @@
 > **dbt Model:** `fact_shipments` (Planned)
 
 - **Business Definition:** Percentage of orders delivered by the promised date.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   Count(Delivered_Start <= Promised_Date) / Total_Delivered
   ```
@@ -77,7 +77,7 @@
 > **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Percentage of shipped orders that are returned.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   Returns / Shipped_Orders
   ```
@@ -89,7 +89,7 @@
 > **dbt Model:** [dim_staff](../../../transformation/models/marts/core/dim_staff.sql)
 
 - **Business Definition:** Orders processed and revenue handled by staff member.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       a.account_name,

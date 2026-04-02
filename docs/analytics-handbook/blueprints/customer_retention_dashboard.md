@@ -1,8 +1,9 @@
-# 📘 Blueprint: Customer Retention Dashboard
+# 📘 Blueprint: Customer Retention & Lifecycle
 
 > **Target Collection:** `Marketing & Customers`
-> **Role:** Customer Success / Executives
-> **Archetype:** Operational Cockpit + Analytical
+> **Design Spec:** `designs/customer_retention_lifecycle.md`
+> **Role:** Marketing Manager, Customer Success, CEO
+> **Archetype:** Operational Cockpit (3 tabs)
 
 ## 📂 Collection: Marketing & Customers
 
@@ -12,109 +13,365 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 🖥️ Dashboard: Customer Retention & Lifecycle
 
-**Description**: Strategic retention analytics — repeat purchase rates, churn trends with targets, cohort retention heatmap, revenue layer cake, purchase frequency distribution, and reactivation tracking.
+**Description**: Strategic retention analytics — repeat purchase rates, churn trends, cohort retention heatmap, revenue layer cake, purchase frequency distribution, reactivation tracking, and at-risk watchlist. 3 tabs: Suc khoe Retention, Phan tich Cohort, Hanh vi & Reactivation.
 
 ---
 
+#### Filter: Segment
+
+```json metabase-filter
+{
+  "slug": "segment",
+  "type": "string/="
+}
+```
+
+---
+
+### 📑 Tab: Suc khoe Retention
+
+<!-- Text annotations to add manually after deploy:
+     - Row 0: "Retention Health — Repeat rate, churn, and lifecycle status at a glance" (full-width, height 1)
+     - Row 4: "Lifecycle Status — Distribution of Active, At Risk, and Churned customers" (full-width, height 1)
+     - Row 11: "Retention & Churn Trends — 6-month directional view with targets" (full-width, height 1)
+     - Row 18: "Retention Scorecard — Segment-level retention vitals" (full-width, height 1)
+-->
+
 #### ❓ Question: Repeat Purchase Rate
 
-Percentage of customers who have made more than one purchase.
+Hero metric — percentage of customers who have made more than one purchase, with MoM comparison.
 
 ```sql
+WITH current_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+),
+previous_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN total_orders_count > 1
+                       AND last_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+                  THEN 1 END) * 100.0
+            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+)
 SELECT
-    ROUND(
-        COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
-    ) as "Repeat Rate %"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+    c.value as "Repeat Rate %",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
     "column_settings": { "Repeat Rate %": { "suffix": "%", "decimals": 1 } }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 5, "size_y": 3 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
-#### ❓ Question: Avg Orders per Customer
+#### ❓ Question: Churn Rate
 
-Average number of orders among customers who have purchased.
+Percentage of customers churned (90+ days inactive), with MoM comparison. Lower is better.
 
 ```sql
+WITH current_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0
+            / NULLIF(COUNT(*), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+),
+previous_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN recency_days + 30 > 90 THEN 1 END) * 100.0
+            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+)
 SELECT
-    ROUND(AVG(total_orders_count), 1) as "Avg Orders"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 5, "size_x": 5, "size_y": 3 }
-```
-
-#### ❓ Question: Avg Customer Lifespan
-
-Average days between first and last order for repeat customers.
-
-```sql
-SELECT
-    ROUND(AVG(lifespan_days), 0) as "Avg Lifespan (days)"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 1
-  AND lifespan_days > 0
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": { "Avg Lifespan (days)": { "suffix": " days" } }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
-```
-
-#### ❓ Question: Churn Rate (Current)
-
-Percentage of customers who are churned (90+ days inactive) among all customers with orders.
-
-```sql
-SELECT
-    ROUND(
-        COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0
-        / NULLIF(COUNT(*), 0), 1
-    ) as "Churn Rate %"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+    c.value as "Churn Rate %",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
     "column_settings": { "Churn Rate %": { "suffix": "%", "decimals": 1 } }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: Avg Customer Lifespan
+
+Average days between first and last order for repeat customers, with MoM comparison.
+
+```sql
+WITH current_period AS (
+    SELECT ROUND(AVG(lifespan_days), 0) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 1
+      AND lifespan_days > 0
+      [[AND customer_segment = {{segment}}]]
+),
+previous_period AS (
+    SELECT ROUND(AVG(lifespan_days), 0) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 1
+      AND lifespan_days > 0
+      AND last_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+      [[AND customer_segment = {{segment}}]]
+)
+SELECT
+    c.value as "Avg Lifespan (days)",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
+    "column_settings": { "Avg Lifespan (days)": { "suffix": " days" } }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: Active Customer Rate
+
+Percentage of paying customers active in last 30 days, with MoM comparison.
+
+```sql
+WITH current_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0
+            / NULLIF(COUNT(*), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+),
+previous_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN recency_days BETWEEN 31 AND 60 THEN 1 END) * 100.0
+            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+)
+SELECT
+    c.value as "Active Rate %",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
+    "column_settings": { "Active Rate %": { "suffix": "%", "decimals": 1 } }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+```
+
+---
+
+#### ❓ Question: Customer Lifecycle Distribution
+
+Donut chart showing Active / At Risk / Churned distribution.
+
+```sql
+SELECT
+    customer_status as "Status",
+    COUNT(*) as "Customers"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+  AND customer_status IN ('Active', 'At Risk', 'Churned')
+  [[AND customer_segment = {{segment}}]]
+GROUP BY 1
+ORDER BY
+    CASE customer_status
+        WHEN 'Active' THEN 1
+        WHEN 'At Risk' THEN 2
+        WHEN 'Churned' THEN 3
+    END
+```
+
+```json metabase-viz
+{
+  "display": "pie",
+  "visualization_settings": {
+    "pie.dimension": ["Status"],
+    "pie.metric": "Customers",
+    "pie.colors": {
+      "Active": "#509EE3",
+      "At Risk": "#F9D45C",
+      "Churned": "#EF8C8C"
+    },
+    "pie.show_legend": true,
+    "pie.show_total": true,
+    "pie.percent_visibility": "inside"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
+```
+
+#### ❓ Question: Revenue by Lifecycle Status
+
+Total lifetime value concentrated in each lifecycle status.
+
+```sql
+SELECT
+    customer_status as "Status",
+    SUM(lifetime_value) as "Total LTV"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+  AND customer_status IN ('Active', 'At Risk', 'Churned')
+  [[AND customer_segment = {{segment}}]]
+GROUP BY 1
+ORDER BY
+    CASE customer_status
+        WHEN 'Active' THEN 1
+        WHEN 'At Risk' THEN 2
+        WHEN 'Churned' THEN 3
+    END
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Status"],
+    "graph.metrics": ["Total LTV"],
+    "graph.colors": ["#509EE3", "#F9D45C", "#EF8C8C"],
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "Lifetime Value (VND)",
+    "column_settings": {
+      "Total LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 5, "col": 6, "size_x": 6, "size_y": 6 }
+```
+
+#### ❓ Question: Segment x Status Matrix
+
+Stacked bar showing lifecycle status distribution within each customer segment.
+
+```sql
+SELECT
+    customer_segment as "Segment",
+    customer_status as "Status",
+    COUNT(*) as "Customers"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+  AND customer_status IN ('Active', 'At Risk', 'Churned')
+  [[AND customer_segment = {{segment}}]]
+GROUP BY 1, 2
+ORDER BY
+    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END,
+    CASE customer_status WHEN 'Active' THEN 1 WHEN 'At Risk' THEN 2 ELSE 3 END
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Segment"],
+    "graph.metrics": ["Customers"],
+    "graph.group_by": ["Status"],
+    "stackable.stack_type": "stacked",
+    "graph.colors": ["#509EE3", "#F9D45C", "#EF8C8C"]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -123,21 +380,21 @@ WHERE customer_id != 'Unknown'
 
 Monthly churn rate with goal line — target below 40%.
 
-_Note: Approximates churn date as 90 days after last order._
-
 ```sql
 SELECT
     date_trunc('month', last_order_date + INTERVAL '90' DAY)::date as month,
     COUNT(customer_id) as churned_customers,
     ROUND(
         COUNT(customer_id) * 100.0 / NULLIF(
-            (SELECT COUNT(*) FROM dim_customers WHERE total_orders_count > 0), 0
+            (SELECT COUNT(*) FROM dim_customers WHERE total_orders_count > 0 AND customer_id != 'Unknown'), 0
         ), 1
     ) as "Churn Rate %"
 FROM dim_customers
 WHERE customer_status = 'Churned'
   AND (last_order_date + INTERVAL '90' DAY) >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND (last_order_date + INTERVAL '90' DAY) < date_trunc('month', current_date)
+  AND customer_id != 'Unknown'
+  [[AND customer_segment = {{segment}}]]
 GROUP BY 1
 ORDER BY 1
 ```
@@ -147,162 +404,23 @@ ORDER BY 1
   "display": "line",
   "visualization_settings": {
     "graph.dimensions": ["month"],
-    "graph.metrics": ["churned_customers"],
+    "graph.metrics": ["Churn Rate %"],
     "graph.colors": ["#EF8C8C"],
-    "graph.goal_value": 50,
+    "graph.goal_value": 40,
     "graph.show_goal": true,
-    "graph.goal_label": "Target < 50 churned/month"
+    "graph.goal_label": "Target < 40%",
+    "graph.y_axis.title_text": "Churn Rate %"
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
 ```
-
-#### ❓ Question: Purchase Frequency Distribution
-
-How many orders do customers typically place? Understand one-time vs repeat behavior.
-
-```sql
-SELECT
-    CASE
-        WHEN total_orders_count = 1 THEN '1 order'
-        WHEN total_orders_count = 2 THEN '2 orders'
-        WHEN total_orders_count = 3 THEN '3 orders'
-        WHEN total_orders_count BETWEEN 4 AND 5 THEN '4-5 orders'
-        WHEN total_orders_count BETWEEN 6 AND 10 THEN '6-10 orders'
-        ELSE '11+ orders'
-    END as "Order Count",
-    COUNT(*) as "Customers",
-    ROUND(
-        COUNT(*) * 100.0 / NULLIF(
-            (SELECT COUNT(*) FROM dim_customers WHERE total_orders_count > 0 AND customer_id != 'Unknown'), 0
-        ), 1
-    ) as "% of Total"
-FROM dim_customers
-WHERE total_orders_count > 0
-  AND customer_id != 'Unknown'
-GROUP BY 1
-ORDER BY MIN(total_orders_count)
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["Order Count"],
-    "graph.metrics": ["Customers"],
-    "graph.colors": ["#A989C5"]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
-```
-
----
-
-#### ❓ Question: Cohort Retention Heatmap
-
-Percentage of customers returning in subsequent months after their first purchase (12-month lookback).
-
-```sql
-WITH cohort_sizes AS (
-    SELECT
-        date_trunc('month', first_order_date) as cohort_month,
-        COUNT(DISTINCT customer_id) as original_size
-    FROM dim_customers
-    WHERE first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
-      AND customer_id != 'Unknown'
-    GROUP BY 1
-),
-retention_activity AS (
-    SELECT
-        date_trunc('month', c.first_order_date) as cohort_month,
-        date_diff('month', c.first_order_date, o.order_timestamp) as month_number,
-        COUNT(DISTINCT c.customer_id) as active_customers
-    FROM dim_customers c
-    JOIN fact_orders o ON c.customer_key = o.customer_key
-    WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
-      AND o.order_timestamp >= c.first_order_date
-      AND c.customer_id != 'Unknown'
-    GROUP BY 1, 2
-)
-SELECT
-    r.cohort_month as "Cohort",
-    r.month_number as "Month #",
-    s.original_size as "Cohort Size",
-    r.active_customers as "Active",
-    ROUND(CAST(r.active_customers AS FLOAT) / s.original_size * 100, 1) as "Retention %"
-FROM retention_activity r
-JOIN cohort_sizes s ON r.cohort_month = s.cohort_month
-WHERE r.month_number <= 12
-ORDER BY 1, 2
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": true,
-    "table.pivot_column": "Month #",
-    "table.cell_column": "Retention %",
-    "table.columns": [
-      { "name": "Cohort", "enabled": true },
-      { "name": "Month #", "enabled": true },
-      { "name": "Retention %", "enabled": true }
-    ]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 8 }
-```
-
----
-
-#### ❓ Question: Revenue by Cohort (Layer Cake)
-
-Total revenue generated by each acquisition cohort over time — shows how recent cohorts contribute vs legacy customers.
-
-```sql
-SELECT
-    date_trunc('month', o.order_timestamp)::date as revenue_month,
-    date_trunc('month', c.first_order_date)::date as cohort,
-    SUM(o.net_revenue) as revenue
-FROM fact_orders o
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '12 months'
-  AND c.customer_id != 'Unknown'
-GROUP BY 1, 2
-ORDER BY 1, 2
-```
-
-```json metabase-viz
-{
-  "display": "area",
-  "visualization_settings": {
-    "graph.dimensions": ["revenue_month"],
-    "graph.metrics": ["revenue"],
-    "graph.group_by": ["cohort"],
-    "stackable.stack_type": "stacked"
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 6 }
-```
-
----
 
 #### ❓ Question: Repeat Purchase Rate Trend (6M)
 
-Monthly trend of the percentage of customers making a repeat purchase.
+Monthly trend of repeat purchase rate among buyers each month.
 
 ```sql
 WITH monthly_buyers AS (
@@ -334,18 +452,379 @@ ORDER BY 1
   "visualization_settings": {
     "graph.dimensions": ["month"],
     "graph.metrics": ["Repeat %"],
-    "graph.colors": ["#84BB4C"]
+    "graph.colors": ["#84BB4C"],
+    "graph.y_axis.title_text": "Repeat %"
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### ❓ Question: New vs Returning Revenue Split (6M)
+---
 
-Monthly revenue contribution from new customers (first order) vs returning customers.
+#### ❓ Question: Retention Health Scorecard
+
+Per-segment retention vitals with conditional formatting.
+
+```sql
+SELECT
+    customer_segment as "Segment",
+    COUNT(*) as "Customers",
+    ROUND(COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Active %",
+    ROUND(COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "At Risk %",
+    ROUND(COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Churned %",
+    ROUND(COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Repeat Rate %",
+    ROUND(AVG(lifetime_value), 0) as "Avg LTV",
+    ROUND(AVG(recency_days), 0) as "Avg Recency (days)"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+  [[AND customer_segment = {{segment}}]]
+GROUP BY 1
+ORDER BY CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["Active %"],
+        "type": "range",
+        "colors": ["#EF8C8C", "#F9D45C", "#84BB4C"],
+        "min_type": "custom",
+        "min_value": 0,
+        "max_type": "custom",
+        "max_value": 100
+      },
+      {
+        "columns": ["Churned %"],
+        "type": "range",
+        "colors": ["#84BB4C", "#F9D45C", "#EF8C8C"],
+        "min_type": "custom",
+        "min_value": 0,
+        "max_type": "custom",
+        "max_value": 100
+      }
+    ],
+    "column_settings": {
+      "Avg LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Active %": { "suffix": "%" },
+      "At Risk %": { "suffix": "%" },
+      "Churned %": { "suffix": "%" },
+      "Repeat Rate %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+---
+
+### 📑 Tab: Phan tich Cohort
+
+<!-- Text annotations to add manually after deploy:
+     - Row 0: "Cohort Analysis — Track how each acquisition cohort retains over time" (full-width, height 1)
+     - Row 4: "Cohort Retention Matrix — Month-by-month retention rates" (full-width, height 1)
+     - Row 14: "Revenue by Cohort — Layer cake view of cohort revenue contribution" (full-width, height 1)
+     - Row 21: "New vs Returning — Monthly revenue and customer split" (full-width, height 1)
+-->
+
+#### ❓ Question: Avg Month-1 Retention
+
+Average M1 retention rate across recent cohorts — early lifecycle health indicator.
+
+```sql
+WITH cohort_sizes AS (
+    SELECT
+        date_trunc('month', first_order_date) as cohort_month,
+        COUNT(DISTINCT customer_id) as original_size
+    FROM dim_customers
+    WHERE first_order_date >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND customer_id != 'Unknown'
+    GROUP BY 1
+),
+m1_retention AS (
+    SELECT
+        date_trunc('month', c.first_order_date) as cohort_month,
+        COUNT(DISTINCT c.customer_id) as retained
+    FROM dim_customers c
+    JOIN fact_orders o ON c.customer_key = o.customer_key
+    WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND c.first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND c.customer_id != 'Unknown'
+      AND date_diff('month', c.first_order_date, o.order_timestamp) = 1
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+    GROUP BY 1
+)
+SELECT
+    ROUND(AVG(CAST(r.retained AS FLOAT) / s.original_size * 100), 1) as "Avg M1 Retention %"
+FROM cohort_sizes s
+LEFT JOIN m1_retention r ON s.cohort_month = r.cohort_month
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": { "Avg M1 Retention %": { "suffix": "%", "decimals": 1 } }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+```
+
+#### ❓ Question: Best Cohort (M1 Retention)
+
+Which acquisition month had the highest Month-1 retention rate.
+
+```sql
+WITH cohort_sizes AS (
+    SELECT
+        date_trunc('month', first_order_date) as cohort_month,
+        COUNT(DISTINCT customer_id) as original_size
+    FROM dim_customers
+    WHERE first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
+      AND first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND customer_id != 'Unknown'
+    GROUP BY 1
+),
+m1_retention AS (
+    SELECT
+        date_trunc('month', c.first_order_date) as cohort_month,
+        COUNT(DISTINCT c.customer_id) as retained
+    FROM dim_customers c
+    JOIN fact_orders o ON c.customer_key = o.customer_key
+    WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
+      AND c.first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND c.customer_id != 'Unknown'
+      AND date_diff('month', c.first_order_date, o.order_timestamp) = 1
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+    GROUP BY 1
+)
+SELECT
+    strftime(s.cohort_month, '%Y-%m') as "Best Cohort",
+    ROUND(CAST(r.retained AS FLOAT) / s.original_size * 100, 1) as "M1 %"
+FROM cohort_sizes s
+LEFT JOIN m1_retention r ON s.cohort_month = r.cohort_month
+ORDER BY 2 DESC
+LIMIT 1
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": { "M1 %": { "suffix": "%" } }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: Avg Orders per Customer
+
+Average number of orders among paying customers, with MoM comparison.
+
+```sql
+WITH current_period AS (
+    SELECT ROUND(AVG(total_orders_count), 1) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+),
+previous_period AS (
+    SELECT ROUND(AVG(total_orders_count), 1) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      AND first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    c.value as "Avg Orders",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: Returning Revenue Ratio
+
+Percentage of total revenue coming from returning customers.
+
+```sql
+SELECT
+    ROUND(
+        SUM(CASE
+            WHEN date_trunc('month', o.order_timestamp) != date_trunc('month', c.first_order_date)
+            THEN o.net_revenue ELSE 0
+        END) * 100.0 / NULLIF(SUM(o.net_revenue), 0), 1
+    ) as "Returning Revenue %"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND c.customer_id != 'Unknown'
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": { "Returning Revenue %": { "suffix": "%", "decimals": 1 } }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+```
+
+---
+
+#### ❓ Question: Cohort Retention Heatmap
+
+Percentage of customers returning in subsequent months after first purchase (12-month lookback).
+
+```sql
+WITH cohort_sizes AS (
+    SELECT
+        date_trunc('month', first_order_date) as cohort_month,
+        COUNT(DISTINCT customer_id) as original_size
+    FROM dim_customers
+    WHERE first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
+      AND customer_id != 'Unknown'
+    GROUP BY 1
+),
+retention_activity AS (
+    SELECT
+        date_trunc('month', c.first_order_date) as cohort_month,
+        date_diff('month', c.first_order_date, o.order_timestamp) as month_number,
+        COUNT(DISTINCT c.customer_id) as active_customers
+    FROM dim_customers c
+    JOIN fact_orders o ON c.customer_key = o.customer_key
+    WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
+      AND o.order_timestamp >= c.first_order_date
+      AND c.customer_id != 'Unknown'
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+    GROUP BY 1, 2
+)
+SELECT
+    strftime(r.cohort_month, '%Y-%m') as "Cohort",
+    r.month_number as "Month #",
+    s.original_size as "Cohort Size",
+    r.active_customers as "Active",
+    ROUND(CAST(r.active_customers AS FLOAT) / s.original_size * 100, 1) as "Retention %"
+FROM retention_activity r
+JOIN cohort_sizes s ON r.cohort_month = s.cohort_month
+WHERE r.month_number BETWEEN 0 AND 12
+ORDER BY 1, 2
+```
+
+```json metabase-viz
+{
+  "display": "pivot",
+  "visualization_settings": {
+    "pivot_table.column_split": {
+      "rows": ["Cohort"],
+      "columns": ["Month #"],
+      "values": ["Retention %"]
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Retention %"],
+        "type": "range",
+        "colors": ["#EF8C8C", "#F9D45C", "#84BB4C"],
+        "min_type": "custom",
+        "min_value": 0,
+        "max_type": "custom",
+        "max_value": 100
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 9 }
+```
+
+---
+
+#### ❓ Question: Revenue by Cohort (Layer Cake)
+
+Total revenue by acquisition cohort over time — shows legacy vs new contribution.
+
+```sql
+SELECT
+    date_trunc('month', o.order_timestamp)::date as revenue_month,
+    strftime(date_trunc('month', c.first_order_date), '%Y-%m') as cohort,
+    SUM(o.net_revenue) as revenue
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '12 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND c.customer_id != 'Unknown'
+GROUP BY 1, 2
+ORDER BY 1, 2
+```
+
+```json metabase-viz
+{
+  "display": "area",
+  "visualization_settings": {
+    "graph.dimensions": ["revenue_month"],
+    "graph.metrics": ["revenue"],
+    "graph.group_by": ["cohort"],
+    "stackable.stack_type": "stacked",
+    "graph.y_axis.title_text": "Revenue (VND)",
+    "column_settings": {
+      "revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+---
+
+#### ❓ Question: New vs Returning Revenue (6M)
+
+Monthly revenue split by new customers (first order month) vs returning customers.
 
 ```sql
 SELECT
@@ -374,16 +853,334 @@ ORDER BY 1, 2
     "graph.metrics": ["revenue"],
     "graph.group_by": ["customer_type"],
     "stackable.stack_type": "stacked",
-    "graph.colors": ["#509EE3", "#84BB4C"]
+    "graph.colors": ["#509EE3", "#84BB4C"],
+    "graph.y_axis.title_text": "Revenue (VND)",
+    "column_settings": {
+      "revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 22, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: New vs Returning Customers (6M)
+
+Monthly count of new vs returning purchasers.
+
+```sql
+SELECT
+    date_trunc('month', o.order_timestamp)::date as month,
+    CASE
+        WHEN date_trunc('month', o.order_timestamp) = date_trunc('month', c.first_order_date)
+        THEN 'New Customer'
+        ELSE 'Returning Customer'
+    END as customer_type,
+    COUNT(DISTINCT c.customer_id) as customers
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND c.customer_id != 'Unknown'
+GROUP BY 1, 2
+ORDER BY 1, 2
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["month"],
+    "graph.metrics": ["customers"],
+    "graph.group_by": ["customer_type"],
+    "stackable.stack_type": "stacked",
+    "graph.colors": ["#509EE3", "#84BB4C"],
+    "graph.y_axis.title_text": "Customers"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 22, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
+
+### 📑 Tab: Hanh vi & Reactivation
+
+<!-- Text annotations to add manually after deploy:
+     - Row 0: "Purchase Behavior & Reactivation — Buying patterns and win-back performance" (full-width, height 1)
+     - Row 4: "Purchase Frequency — How many orders do customers typically place?" (full-width, height 1)
+     - Row 11: "Reactivation Tracking — Monthly win-back performance (6M)" (full-width, height 1)
+     - Row 18: "At-Risk Watchlist — High-value customers needing immediate outreach" (full-width, height 1)
+-->
+
+#### ❓ Question: Avg Days Between Purchases
+
+Hero metric — average inter-purchase gap for repeat customers, with MoM comparison.
+
+```sql
+WITH purchase_gaps AS (
+    SELECT
+        o.customer_key,
+        date_diff('day',
+            CAST(LAG(o.order_timestamp) OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) AS DATE),
+            CAST(o.order_timestamp AS DATE)
+        ) as days_between
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_id != 'Unknown'
+      [[AND c.customer_segment = {{segment}}]]
+),
+current_val AS (
+    SELECT ROUND(AVG(days_between), 0) as value
+    FROM purchase_gaps
+    WHERE days_between > 0
+),
+prev_gaps AS (
+    SELECT
+        o.customer_key,
+        date_diff('day',
+            CAST(LAG(o.order_timestamp) OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) AS DATE),
+            CAST(o.order_timestamp AS DATE)
+        ) as days_between
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_id != 'Unknown'
+      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      [[AND c.customer_segment = {{segment}}]]
+),
+prev_val AS (
+    SELECT ROUND(AVG(days_between), 0) as value
+    FROM prev_gaps
+    WHERE days_between > 0
+)
+SELECT
+    c.value as "Avg Gap (days)",
+    p.value as "Prev Month"
+FROM current_val c, prev_val p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
+    "column_settings": { "Avg Gap (days)": { "suffix": " days" } }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+```
+
+#### ❓ Question: Reactivated Customers (Last Month)
+
+Customers who returned after 30+ days gap, with MoM comparison.
+
+```sql
+WITH reactivated_current AS (
+    SELECT COUNT(DISTINCT o.customer_key) as value
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    JOIN (
+        SELECT customer_key, MAX(order_timestamp) as prev_order
+        FROM fact_orders
+        WHERE status NOT IN ('CANCELLED', 'Voided')
+          AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+        GROUP BY 1
+    ) prev ON o.customer_key = prev.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.order_timestamp < date_trunc('month', current_date)
+      AND c.customer_id != 'Unknown'
+      AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
+      [[AND c.customer_segment = {{segment}}]]
+),
+reactivated_prev AS (
+    SELECT COUNT(DISTINCT o.customer_key) as value
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    JOIN (
+        SELECT customer_key, MAX(order_timestamp) as prev_order
+        FROM fact_orders
+        WHERE status NOT IN ('CANCELLED', 'Voided')
+          AND order_timestamp < date_trunc('month', current_date) - INTERVAL '2 months'
+        GROUP BY 1
+    ) prev ON o.customer_key = prev.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND c.customer_id != 'Unknown'
+      AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
+      [[AND c.customer_segment = {{segment}}]]
+)
+SELECT
+    c.value as "Reactivated",
+    p.value as "Prev Month"
+FROM reactivated_current c, reactivated_prev p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: At-Risk Customers Count
+
+Count of customers in At Risk status (31-90 days since last purchase).
+
+```sql
+SELECT
+    COUNT(*) as "At Risk"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND customer_status = 'At Risk'
+  AND total_orders_count > 0
+  [[AND customer_segment = {{segment}}]]
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {}
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: One-Time Buyer Rate
+
+Percentage of customers with exactly 1 order — conversion opportunity. Lower is better.
+
+```sql
+WITH current_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN total_orders_count = 1 THEN 1 END) * 100.0
+            / NULLIF(COUNT(*), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+),
+previous_period AS (
+    SELECT
+        ROUND(
+            COUNT(CASE WHEN total_orders_count = 1
+                       AND first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
+                  THEN 1 END) * 100.0
+            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
+        ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      [[AND customer_segment = {{segment}}]]
+)
+SELECT
+    c.value as "One-Time %",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
+    "column_settings": { "One-Time %": { "suffix": "%", "decimals": 1 } }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+```
+
+---
+
+#### ❓ Question: Purchase Frequency Distribution
+
+How many orders do customers typically place? Understand one-time vs repeat behavior.
+
+```sql
+SELECT
+    CASE
+        WHEN total_orders_count = 1 THEN '1 order'
+        WHEN total_orders_count = 2 THEN '2 orders'
+        WHEN total_orders_count = 3 THEN '3 orders'
+        WHEN total_orders_count BETWEEN 4 AND 5 THEN '4-5 orders'
+        WHEN total_orders_count BETWEEN 6 AND 10 THEN '6-10 orders'
+        ELSE '11+ orders'
+    END as "Order Count",
+    COUNT(*) as "Customers",
+    ROUND(
+        COUNT(*) * 100.0 / NULLIF(
+            (SELECT COUNT(*) FROM dim_customers WHERE total_orders_count > 0 AND customer_id != 'Unknown'), 0
+        ), 1
+    ) as "% of Total"
+FROM dim_customers
+WHERE total_orders_count > 0
+  AND customer_id != 'Unknown'
+  [[AND customer_segment = {{segment}}]]
+GROUP BY 1
+ORDER BY MIN(total_orders_count)
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Order Count"],
+    "graph.metrics": ["Customers"],
+    "graph.colors": ["#509EE3"],
+    "graph.x_axis.title_text": "Order Frequency",
+    "graph.y_axis.title_text": "Customers"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 5, "col": 0, "size_x": 9, "size_y": 6 }
+```
 
 #### ❓ Question: Days Between Purchases Distribution
 
@@ -392,15 +1189,16 @@ For repeat customers, how long between purchases? Helps set reactivation timing.
 ```sql
 WITH purchase_gaps AS (
     SELECT
-        customer_key,
-        order_timestamp,
-        LAG(order_timestamp) OVER (PARTITION BY customer_key ORDER BY order_timestamp) as prev_order,
+        o.customer_key,
         date_diff('day',
-            CAST(LAG(order_timestamp) OVER (PARTITION BY customer_key ORDER BY order_timestamp) AS DATE),
-            CAST(order_timestamp AS DATE)
+            CAST(LAG(o.order_timestamp) OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) AS DATE),
+            CAST(o.order_timestamp AS DATE)
         ) as days_between
-    FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_id != 'Unknown'
+      [[AND c.customer_segment = {{segment}}]]
 )
 SELECT
     CASE
@@ -428,49 +1226,53 @@ ORDER BY MIN(days_between)
   "visualization_settings": {
     "graph.dimensions": ["Gap"],
     "graph.metrics": ["Occurrences"],
-    "graph.colors": ["#88BF4D"]
+    "graph.colors": ["#88BDE6"],
+    "graph.x_axis.title_text": "Days Between Purchases",
+    "graph.y_axis.title_text": "Occurrences"
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 29, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### ❓ Question: Reactivation Tracking (6M)
+---
 
-Monthly count of customers who were At Risk/Churned but placed a new order — measures win-back success.
+#### ❓ Question: Reactivation Trend (6M)
+
+Monthly count of reactivated customers (returned after 30+ day gap) with revenue contribution.
 
 ```sql
-WITH customer_monthly_status AS (
+WITH reactivated AS (
     SELECT
-        date_trunc('month', o.order_timestamp)::date as order_month,
+        date_trunc('month', o.order_timestamp)::date as month,
         o.customer_key,
-        c.recency_days,
-        MIN(o.order_timestamp) as first_order_in_month
+        SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
+    JOIN (
+        SELECT
+            customer_key,
+            order_timestamp,
+            LAG(order_timestamp) OVER (PARTITION BY customer_key ORDER BY order_timestamp) as prev_order
+        FROM fact_orders
+        WHERE status NOT IN ('CANCELLED', 'Voided')
+    ) gaps ON o.customer_key = gaps.customer_key
+        AND o.order_timestamp = gaps.order_timestamp
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND gaps.prev_order IS NOT NULL
+      AND date_diff('day', CAST(gaps.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND o.order_timestamp < date_trunc('month', current_date)
-    GROUP BY 1, 2, 3
-),
-reactivated AS (
-    SELECT
-        cms.order_month,
-        cms.customer_key
-    FROM customer_monthly_status cms
-    JOIN fact_orders prev ON cms.customer_key = prev.customer_key
-        AND prev.order_timestamp < cms.first_order_in_month
+      AND c.customer_id != 'Unknown'
+      [[AND c.customer_segment = {{segment}}]]
     GROUP BY 1, 2
-    HAVING date_diff('day',
-        CAST(MAX(prev.order_timestamp) AS DATE),
-        CAST(MIN(cms.first_order_in_month) AS DATE)
-    ) > 30
 )
 SELECT
-    order_month as month,
-    COUNT(DISTINCT customer_key) as "Reactivated Customers"
+    month,
+    COUNT(DISTINCT customer_key) as "Reactivated Customers",
+    SUM(revenue) as "Reactivation Revenue"
 FROM reactivated
 GROUP BY 1
 ORDER BY 1
@@ -478,15 +1280,79 @@ ORDER BY 1
 
 ```json metabase-viz
 {
-  "display": "bar",
+  "display": "combo",
   "visualization_settings": {
     "graph.dimensions": ["month"],
-    "graph.metrics": ["Reactivated Customers"],
-    "graph.colors": ["#F9A825"]
+    "graph.metrics": ["Reactivated Customers", "Reactivation Revenue"],
+    "series_settings": {
+      "Reactivated Customers": { "display": "bar", "color": "#84BB4C" },
+      "Reactivation Revenue": { "display": "line", "color": "#7172AD" }
+    },
+    "graph.y_axis.title_text": "Customers",
+    "column_settings": {
+      "Reactivation Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 29, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+---
+
+#### ❓ Question: At-Risk Customer Watchlist
+
+High-value At Risk customers needing outreach — sorted by LTV descending.
+
+```sql
+SELECT
+    full_name as "Customer",
+    phone as "Phone",
+    customer_segment as "Segment",
+    last_order_date as "Last Order",
+    recency_days as "Days Since",
+    lifetime_value as "Lifetime Value",
+    total_orders_count as "Orders"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND customer_status = 'At Risk'
+  AND total_orders_count > 0
+  [[AND customer_segment = {{segment}}]]
+ORDER BY lifetime_value DESC
+LIMIT 50
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["Lifetime Value"],
+        "type": "range",
+        "colors": ["#FFFFFF", "#7172AD"],
+        "min_type": "min",
+        "max_type": "max"
+      },
+      {
+        "columns": ["Days Since"],
+        "type": "range",
+        "colors": ["#F9D45C", "#EF8C8C"],
+        "min_type": "custom",
+        "min_value": 31,
+        "max_type": "custom",
+        "max_value": 90
+      }
+    ],
+    "column_settings": {
+      "Lifetime Value": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 8 }
 ```

@@ -4,7 +4,7 @@
 
 - **Audience:** CFO, Finance Managers
 - **Goal:** Monthly Profit & Loss analysis with drill-down capability.
-- **Metabase Collection:** `Finance Analytics`
+- **Collection:** `Finance Analytics`
 
 ## Data Lineage
 

@@ -15,11 +15,11 @@
 > **Terminology Guide:** [Revenue Terminology](../guides/revenue_terminology.md)
 
 - **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu. Dùng để đánh giá quy mô giao dịch.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(gross_revenue)
   ```
-- **Metabase Mapping:**
+- **Source Mapping:**
   - **Table:** `fact_orders`
   - **Field:** `Gross Revenue` (Aggregation: Sum)
 
@@ -28,11 +28,11 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Doanh thu thuần — số tiền khách trả cho hàng hóa sau chiết khấu, trước thuế. Đây là con số quan trọng nhất cho phân tích kinh doanh.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(net_revenue)
   ```
-- **Metabase Mapping:**
+- **Source Mapping:**
   - **Table:** `fact_orders`
   - **Field:** `Net Revenue` (Aggregation: Sum)
 
@@ -41,11 +41,11 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Tổng tiền thu từ khách (bao gồm thuế VAT). Dùng để đối soát với kế toán/ngân hàng.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(total_collected)
   ```
-- **Metabase Mapping:**
+- **Source Mapping:**
   - **Table:** `fact_orders`
   - **Field:** `Total Collected` (Aggregation: Sum)
 
@@ -54,8 +54,8 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Count of returned orders.
-- **Logic (Metabase SQL):**
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
+- **Logic (SQL):**
   ```sql
   COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END)
   ```
@@ -65,7 +65,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Count of unique confirmed orders.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   COUNT(DISTINCT order_id)
   ```
@@ -75,7 +75,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Average revenue generated per order.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(net_revenue) / COUNT(DISTINCT order_id)
   ```
@@ -84,9 +84,9 @@
 
 | Dashboard Name                | Audience              | Purpose                                                        | Link                            |
 | :---------------------------- | :-------------------- | :------------------------------------------------------------- | :------------------------------ |
-| **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Metabase ID 37](/dashboard/37) |
-| **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Metabase ID 2](/dashboard/2) |
-| **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Metabase ID 5](/dashboard/5) |
+| **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Dashboard 37](/dashboard/37) |
+| **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Dashboard 2](/dashboard/2) |
+| **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Dashboard 5](/dashboard/5) |
 | **Today's Orders List**         | Ops / Sales Reps    | Order-level list for real-time reconciliation with Sapo.        | TBD                             |
 | **Yesterday's Orders List**     | Ops / Store Managers | Finalized order-level list for reconciliation with Sapo.        | TBD                             |
 | **CEO Weekly Pulse**            | CEO / Founders       | 5-min weekly check-in: revenue pace, channel shifts, customer health. | TBD                       |
@@ -163,7 +163,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Sales performance broken down by hour of the day, compared to previous periods.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
@@ -177,7 +177,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Sales intensity by Hour of Day and Day of Week.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       EXTRACT(HOUR FROM created_on) as hour_of_day,
@@ -194,7 +194,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue breakdown by acquisition channel (e.g., Website, Mobile App, Partner).
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       channel_name,
@@ -213,7 +213,7 @@
 > **dbt Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
 
 - **Business Definition:** Ranking of products by revenue or units sold.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       p.product_name,
@@ -232,7 +232,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Categorization of orders based on whether the customer has purchased before.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   CASE
     WHEN date(c.first_order_date) = current_date THEN 'New'
@@ -247,7 +247,7 @@
 > **dbt Model:** [`stg_sapo_payments`](../../../transformation/models/staging/stg_sapo_payments.sql)
 
 - **Business Definition:** Transaction count and volume by payment method (Credit Card, COD, etc.).
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       pm.payment_method_name,
@@ -264,7 +264,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Tracking of payment success/failure.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT payment_status, COUNT(*), SUM(total_collected) FROM fact_orders GROUP BY 1
   ```
@@ -278,7 +278,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Value of discounts given and percentage of orders discounted.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(CASE WHEN discount_amount > 0 THEN 1 ELSE 0 END) as discounted_orders,
   SUM(discount_amount) as total_discounts,
@@ -290,7 +290,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue and usage by specific promotion campaign.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       pr.promotion_name,
@@ -314,7 +314,7 @@
 > **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
 
 - **Business Definition:** Percentage of target achieved (Actual Revenue / Target Revenue) within a cycle.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(actual_revenue) / NULLIF(SUM(target_val), 0)
   ```
@@ -324,14 +324,14 @@
 > **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
 
 - **Business Definition:** Absolute difference between Actual and Target within a cycle.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(actual_revenue) - SUM(target_val)
   ```
 
 > **Implementation Note:**
 > Do not attempt to join `fact_orders` and `fact_targets` directly in a Native Query as they have different grains (Order vs Cycle/Scope).
-> **Recommended Approach:** Create a **Metabase Model** (or dbt mart `mart_sales_actual_vs_target`) to pre-aggregate `fact_orders` to match the target's cycle and scope before joining with `fact_targets`.
+> **Recommended Approach:** Create a **semantic data model** (or dbt mart `mart_sales_actual_vs_target`) to pre-aggregate `fact_orders` to match the target's cycle and scope before joining with `fact_targets`.
 
 ## Context: Location Analysis
 
@@ -340,7 +340,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Revenue performance by geographic unit.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       l.region,

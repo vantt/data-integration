@@ -4,7 +4,7 @@
 
 - **Audience:** Marketing Manager, Sales Ops, Finance
 - **Goal:** Evaluate the effectiveness of promotions, manage discount spending, and analyze payment costs.
-- **Metabase Collection:** `Sales Analytics` > `Promotions`
+- **Collection:** `Sales Analytics` > `Promotions`
 - **Data Source:** `fact_orders`, `promotion_redemptions`, `payment_methods`
 
 ## Metrics & KPIs

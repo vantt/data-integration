@@ -1,47 +1,43 @@
-# Playbook: Customer Operational Profile
+# Playbook: Customer Intelligence Monthly
 
 ## Overview
 
-- **Audience:** Customer Success, Sales Operations
-- **Goal:** View customer lists, demographic profiles, and operational segments (VIP/Loyal).
-- **Metabase Collection:** `Customer Operations`
+- **Audience:** CEO, Marketing Manager, Sales Ops
+- **Goal:** Monthly deep-dive into customer health, value concentration, segment dynamics, purchase behavior, and acquisition quality.
+- **Collection:** `Marketing & Customers`
+- **Cadence:** Monthly review (first week of each month)
 
 ## Data Lineage
 
 - **Core Model:** [`dim_customers`](../../../transformation/models/marts/core/dim_customers.sql)
-- **Dimensions:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) (for aggregation)
+- **Fact Tables:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+- **Dimensions:** `dim_channels`, `dim_products`
 
-## Filters
+## Dashboard Structure (3 Tabs)
 
-- **Created Date:** Date range for new user analysis.
-- **Customer Segment:** VIP, Loyal, Regular (Rule-based).
-- **Customer Status:** Active, At Risk, Churned.
-- **Location:** City, Province.
+### Tab 1: Overview & Health
+- **Purpose:** Answer "How healthy is our customer base this month?"
+- **Hero:** Total Customers with MoM trend
+- **Key visuals:** KPI row with MoM comparisons, customer status donut, health scorecard with conditional formatting, acquisition vs churn trend
 
-## Visualizations
+### Tab 2: Value & Segmentation
+- **Purpose:** Answer "Where is our revenue concentrated and how are segments performing?"
+- **Key visuals:** LTV distribution histogram, segment revenue donut, AOV by segment trend, segment migration indicators
 
-### Section 1: Growth & Overview
+### Tab 3: Behavior & Insights
+- **Purpose:** Answer "What are customers buying and through which channels?"
+- **Key visuals:** Channel preference by segment, top products by VIP vs first-time buyers, new customer quality cohort trend, demographics
 
-| Chart Title                 | Visualization Type | Metric Reference                                         | Notes/Config                  |
-| :-------------------------- | :----------------- | :------------------------------------------------------- | :---------------------------- |
-| **Total Customers**         | Scalar             | Count Distinct `customer_id`                             | All time.                     |
-| **New Customers (Monthly)** | Scalar / Trend     | Count `customer_id` where `created_at` = This Month      | Comparison vs Previous Month. |
-| **Active Users (MAU)**      | Scalar             | [MAU](../domains/customer.md#4-monthly-active-users-mau) | Users active in last 30 days. |
+## How to Read
 
-### Section 2: Segmentation (Operational)
-
-| Chart Title              | Visualization Type | Metric Reference                                       | Notes/Config                                         |
-| :----------------------- | :----------------- | :----------------------------------------------------- | :--------------------------------------------------- |
-| **Customers by Segment** | Donut Chart        | [Rule-Based RFM](../domains/customer.md#7-rfm-segment) | Group by `customer_segment`.                         |
-| **Customers by Status**  | Bar Chart          | [Rule-Based RFM](../domains/customer.md#7-rfm-segment) | Group by `customer_status` (Active/At Risk/Churned). |
-
-### Section 3: Customer List
-
-| Chart Title              | Visualization Type | Columns                                                                 | Notes/Config                                       |
-| :----------------------- | :----------------- | :---------------------------------------------------------------------- | :------------------------------------------------- |
-| **Customer Detail List** | Table              | Name, Email, Phone, City, **Segment**, **Status**, Last Order Date, LTV | Enable "Click to filter" on Segment/Status charts. |
+1. **CONTEXT** — This dashboard exists to monitor customer base health monthly and detect early signals of value erosion or growth opportunities.
+2. **KEY FINDING** — Start with Tab 1: the KPI row tells you total customers, active rate, and one-time buyer rate vs last month. Red = declining, green = improving.
+3. **EVIDENCE** — The acquisition vs churn chart shows net growth momentum. The health scorecard breaks down each segment's vitals.
+4. **IMPLICATIONS** — If one-time buyer rate is rising, conversion programs need attention. If VIP churn increases, escalate to retention team.
+5. **ACTIONS** — Use Tab 2 to identify which segments need intervention. Use Tab 3 to understand what products and channels drive different segments.
 
 ## Implementation Notes
 
-- **Actionability:** This dashboard is designed for **action**. CS agents should click "At Risk" in the Bar Chart to see the list of customers they need to contact.
-- **Exports:** Ensure the "Customer Detail List" is exportable to CSV for email marketing tools.
+- **Design Spec:** [designs/customer_intelligence_monthly.md](../designs/customer_intelligence_monthly.md)
+- **Blueprint:** [blueprints/customer_intelligence_monthly.md](../blueprints/customer_intelligence_monthly.md)
+- **Domain Reference:** [domains/customer.md](../domains/customer.md)

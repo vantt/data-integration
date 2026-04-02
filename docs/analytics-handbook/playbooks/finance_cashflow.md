@@ -4,7 +4,7 @@
 
 - **Audience:** CFO, Treasury
 - **Goal:** Track cash movements, forecast, and monitor liquidity.
-- **Metabase Collection:** `Finance Analytics`
+- **Collection:** `Finance Analytics`
 
 ## Data Lineage
 

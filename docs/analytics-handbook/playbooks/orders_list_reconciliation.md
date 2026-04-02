@@ -4,7 +4,7 @@
 
 - **Audience:** Store Managers, Sales Ops, Data Team
 - **Goal:** Verify that orders recorded in the BI system match the source sales system (Sapo). Detect missing, duplicate, or mismatched orders.
-- **Metabase Collection:** `Daily Operations`
+- **Collection:** `Daily Operations`
 - **Blueprints:**
   - [Order Listing](../blueprints/order_listing.md)
 
@@ -71,7 +71,7 @@
 
 ## Reconciliation Workflow
 
-1. Open **Today's Orders** (or Yesterday's) dashboard in Metabase.
+1. Open **Today's Orders** (or Yesterday's) dashboard.
 2. Note the **Total Orders** count and **Total GMV**.
 3. Open Sapo Admin > Orders, filter same date.
 4. Compare counts. If mismatch > 0, use order code search to identify gaps.

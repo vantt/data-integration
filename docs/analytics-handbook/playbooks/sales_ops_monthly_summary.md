@@ -3,132 +3,97 @@
 ## Overview
 
 - **Audience:** Sales Operator, Customer Support Lead, Operations Manager
-- **Goal:** Monthly operational summary — order processing efficiency, social commerce results, team KPIs, and channel operational health for the closed month.
-- **Cadence:** 2nd–3rd of each month, reviewing the closed month.
-- **Archetype:** Operational Cockpit + Analytical
-- **Metabase Collection:** `Daily Operations` > `Monthly Reports`
+- **Goal:** Monthly operational summary — order processing efficiency, quality analysis, social commerce results, channel & branch health, staff productivity, and payment reconciliation for the closed month.
+- **Cadence:** 2nd-3rd of each month, reviewing the closed month.
+- **Archetype:** Operational Cockpit (3 tabs)
+- **Collection:** `Operations` > `Periodic Reviews`
+- **Design Spec:** [Sales Ops Monthly Summary (Redesign)](../designs/sales_ops_monthly_summary.md)
 - **Related:** [Sales Ops Weekly Review](./sales_ops_weekly_review.md), [Social Commerce Operations](./customer_support_social_commerce.md), [Orders Reconciliation](./orders_list_reconciliation.md)
 
 ## Key Questions
 
-1. **Processing Efficiency:** Tỷ lệ hoàn thành đơn hàng tháng này? Thời gian xử lý trung bình cải thiện hay tệ hơn?
-2. **Order Quality:** Return rate và cancellation rate tháng này ra sao? So với tháng trước?
-3. **Social Commerce Results:** Tổng doanh thu social commerce tháng này? Mỗi nhân viên CS đóng góp bao nhiêu?
-4. **Channel Operations:** Kênh nào chiếm nhiều workload nhất? Kênh nào có tỷ lệ vấn đề cao nhất?
-5. **Payment Reconciliation:** Tổng thanh toán đã thu vs pending? Phương thức nào phổ biến nhất?
-6. **Staff Productivity:** Nhân viên nào xử lý nhiều đơn nhất? AOV trung bình mỗi nhân viên?
+1. **Processing Efficiency:** Ty le hoan thanh don hang thang nay? Thoi gian xu ly trung binh cai thien hay te hon?
+2. **Order Quality:** Return rate va cancellation rate thang nay ra sao? So voi thang truoc?
+3. **Social Commerce Results:** Tong doanh thu social commerce thang nay? Moi nhan vien CS dong gop bao nhieu?
+4. **Channel Operations:** Kenh nao chiem nhieu workload nhat? Kenh nao co ty le van de cao nhat?
+5. **Branch Performance:** Chi nhanh nao xu ly nhieu don nhat? Chi nhanh nao can cai thien?
+6. **Payment Reconciliation:** Tong thanh toan da thu vs pending? Phuong thuc nao pho bien nhat?
+7. **Staff Productivity:** Nhan vien nao xu ly nhieu don nhat? AOV trung binh moi nhan vien?
 
 ## Filters
 
 - **Date Range:** Default = Last Closed Month. Comparison = Previous Month.
 - **Branch/Location:** Filter by `dim_branch_location`.
-- **Channel Category:** Ecommerce / Offline / All.
 
 ## Data Lineage
 
 - **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql)
-- **Dimensions:** `dim_channels`, `dim_staff`, `dim_branch_location`, `dim_customers`, `dim_payment_methods`, `dim_order_status`
+- **Dimensions:** `dim_channels`, `dim_staff`, `dim_branch_location`, `dim_customers`, `dim_payment_methods`, `dim_order_status`, `dim_products`
 
-## Visualizations
+## Dashboard Structure (3 Tabs)
 
-### Section 1: Monthly Operations KPIs (Scalar Row)
+### Tab 1: Tong quan thang (Monthly Overview)
 
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+**Purpose:** Tong the thang — KPIs chinh, chat luong don hang, xu huong 6 thang.
+
+| Chart Title | Visualization Type | Metric Reference | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Total Orders** | Scalar + Trend | [Total Orders](../domains/sales.md#4-total-orders) | MoM % change. |
-| **Total GMV** | Scalar + Trend | [GMV](../domains/sales.md#1-gmv-gross-merchandise-value) | MoM % change. |
-| **Completion Rate** | Scalar | _Derived_ | `COMPLETED / Total Orders × 100%`. Green if > 90%. |
-| **Avg Time to Complete** | Scalar + Trend | _Derived from `fact_orders.time_to_complete_hours`_ | Average hours from order creation to completion. MoM comparison. |
+| **Total Orders** | Scalar + MoM Trend | [Total Orders](../domains/sales.md#4-total-orders) | Hero metric. MoM % change. |
+| **Net Revenue** | Scalar + MoM Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | MoM % change. Currency VND. |
+| **AOV** | Scalar + MoM Trend | [AOV](../domains/sales.md#5-aov-average-order-value) | MoM % change. Currency VND. |
+| **Completion Rate** | Gauge (3 zones) | _Derived_ | Green >=90%, Yellow 80-89%, Red <80%. |
+| **Order Status Distribution** | Donut | _Derived_ | COMPLETED (green), OPEN (teal), CANCELLED (red), ARCHIVED (grey). |
+| **Avg Time to Complete** | Scalar + MoM Trend | _Derived from `time_to_complete_hours`_ | Lower = better. MoM comparison. |
+| **Cancelled & Returns Summary** | Formatted Table | _Derived_ | MoM % change. RED highlight if increasing. |
+| **Cancellation Rate Trend (6M)** | Line Chart | _Derived_ | Goal line at 5%. Red series. |
+| **Return Rate Trend (6M)** | Line Chart | [Return Rate](../domains/sales.md#3-return-rate--count) | Goal line at 3%. Yellow series. |
+| **Top 10 Returned Products** | Formatted Table | _Derived_ | Product, Return Count, Return Revenue. |
 
-### Section 2: Order Quality Analysis
+### Tab 2: Kenh & Chi nhanh (Channels & Branches)
 
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+**Purpose:** Phan bo workload va hieu suat van hanh theo kenh va chi nhanh.
+
+| Chart Title | Visualization Type | Metric Reference | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Order Status Breakdown (MoM)** | Grouped Bar | _Derived_ | X: Status (Completed, Cancelled, Open, Archived). 2 bars per group: This Month (Blue) vs Last Month (Grey). |
-| **Cancellation Rate Trend (6M)** | Line Chart | _Derived_ | Monthly `CANCELLED / Total × 100`. Shows if cancellation is trending up. |
-| **Return Rate Trend (6M)** | Line Chart | [Return Rate](../domains/sales.md#3-return-rate--count) | Monthly `RETURNED / Total × 100`. 6-month window. |
-| **Top Returned Products** | Table (Top 10) | _Derived_ | Columns: Product Name, Return Count, Return Revenue, % of Total Returns. From `fact_orders` where `fulfillment_status = 'RETURNED'`. |
-| **Cancellation by Channel** | Horizontal Bar | _Derived_ | Cancellation count per channel. Identifies problematic channels. |
+| **Orders by Channel** | Horizontal Bar | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ranking by volume. |
+| **Revenue by Channel** | Horizontal Bar | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ranking by revenue. Currency VND. |
+| **Channel Operations Matrix** | Formatted Table | _Derived_ | Channel, Orders, Revenue, Completion %, Cancel %, Return %, Avg Complete hrs. Conditional: Completion <85% = red, Cancel >5% = red, Return >3% = yellow. |
+| **Cancellation by Channel** | Horizontal Bar | _Derived_ | Red bars. Ranking by cancellation count. |
+| **Cancellation Share by Channel** | Donut | _Derived_ | % contribution to total cancellations. |
+| **Orders by Branch** | Horizontal Bar | _Derived_ | Ranking branches by volume. |
+| **Branch Performance Table** | Formatted Table | _Derived_ | Branch, Orders, Revenue, Completion %, Cancel %. Conditional formatting same as channel matrix. |
 
-### Section 3: Social Commerce Monthly Results
+### Tab 3: Doi ngu & Thanh toan (Team & Payments)
 
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+**Purpose:** Social commerce results, staff productivity toan kenh, doi soat thanh toan.
+
+| Chart Title | Visualization Type | Metric Reference | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Social Revenue (Monthly)** | Scalar + Trend | [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) | MoM change. |
-| **Social Orders (Monthly)** | Scalar + Trend | [Social Order Count](../domains/customer_support.md#2-social-order-count) | MoM change. |
-| **Social Revenue Trend (6M)** | Line Chart | [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) | Monthly social revenue over 6 months. |
-| **Social Revenue by Platform** | Donut Chart | [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) | Facebook vs Zalo monthly split. |
-| **CS Staff Leaderboard** | Table | _Derived_ | Columns: Staff Name, Social Orders, Social Revenue, AOV, % Contribution. Ranked by Revenue DESC. Filter: Social channels. |
-
-### Section 4: Channel Operational Health
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Orders by Channel (Monthly)** | Horizontal Bar | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Order count by channel. Operational workload view. |
-| **Channel Operations Matrix** | Table | _Derived_ | Columns: Channel, Orders, Revenue, Completion %, Cancel %, Return %, Avg Time to Complete. Identifies channels with operational issues. |
-| **Orders by Branch** | Horizontal Bar | _Derived_ | Monthly order count per branch location. |
-| **Branch Performance Table** | Table | _Derived_ | Columns: Branch, Orders, Revenue, Completion %, Cancel %. |
-
-### Section 5: Payment Operations
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Payment Method Mix** | Donut Chart | [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution) | Monthly transaction count by payment method. |
-| **Payment Method Trend (6M)** | Stacked Area | [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution) | Monthly transaction count stacked by method. Shows shift in payment preferences. |
-| **Payment Status Summary** | Table | [Payment Status](../domains/sales.md#12-payment-status) | Columns: Status, Order Count, Total Amount, % of Total. Flag pending > 5%. |
-
-### Section 6: Staff Productivity (All Channels)
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Staff Performance Table** | Table | _Derived_ | Columns: Staff Name, Total Orders, Total Revenue, AOV, Completion %, MoM Orders Change. All channels. Sort by Revenue DESC. |
-| **Staff Revenue Distribution** | Horizontal Bar | _Derived_ | Revenue per staff. Identifies top performers and those needing support. |
-| **Orders per Staff per Day** | Scalar | _Derived_ | `Total Assigned Orders / Staff Count / Working Days`. Productivity benchmark. |
-
-## Visualization Configs
-
-### Cancellation Rate Trend
-
-```json
-{
-  "display": "line",
-  "graph.dimensions": ["month"],
-  "graph.metrics": ["cancellation_rate"],
-  "graph.colors": ["#EF8C8C"],
-  "graph.y_axis.title_text": "Cancellation Rate %",
-  "graph.goal_value": 5,
-  "graph.show_goal": true,
-  "graph.goal_label": "Target < 5%"
-}
-```
-
-### Channel Operations Matrix
-
-```json
-{
-  "display": "table",
-  "table.pivot": false,
-  "column_settings": {
-    "revenue": { "number_style": "currency", "currency": "VND" },
-    "completion_pct": { "number_style": "percent", "decimals": 1 },
-    "cancel_pct": { "number_style": "percent", "decimals": 1 },
-    "return_pct": { "number_style": "percent", "decimals": 1 }
-  }
-}
-```
+| **Social Revenue** | Scalar + MoM Trend | [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) | MoM change. Currency VND. |
+| **Social Orders** | Scalar + MoM Trend | [Social Order Count](../domains/customer_support.md#2-social-order-count) | MoM change. |
+| **Social AOV** | Scalar + MoM Trend | _Derived_ | MoM change. Currency VND. |
+| **Social Revenue by Platform** | Donut | [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) | Facebook vs Zalo monthly split. |
+| **CS Staff Leaderboard** | Table | _Derived_ | Staff, Social Orders, Social Revenue, AOV, % Contribution. Ranked by Revenue DESC. |
+| **Staff Revenue Distribution** | Horizontal Bar | _Derived_ | Revenue per staff (all channels). Identifies top performers. |
+| **Staff Performance Table** | Formatted Table | _Derived_ | Staff, Orders, Revenue, AOV, Completion %. Conditional: >=95% = green, <80% = red. |
+| **Payment Method Distribution** | Donut | [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution) | Transaction count by payment method. |
+| **Payment Method Trend (6M)** | Stacked Area | [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution) | Monthly stacked by method. Shows shift in preferences. |
+| **Payment Status Summary** | Formatted Table | [Payment Status](../domains/sales.md#12-payment-status) | Status, Orders, Amount, % of Total. Flag pending > 5% yellow. |
 
 ## Operational Actions
 
 - **Completion Rate < 90%:** Deep dive into OPEN and stuck orders. Check fulfillment pipeline bottleneck.
 - **Cancellation Rate > 5%:** Analyze top cancellation reasons by channel. If marketplace-heavy, check stock sync issues.
 - **Return Rate > 3%:** Review top returned products. Escalate to product team if quality issue. Update product descriptions if mismatch issue.
-- **Staff Productivity Imbalance (> 3× between highest and lowest):** Review order assignment fairness. Consider workload redistribution.
+- **Staff Productivity Imbalance (> 3x between highest and lowest):** Review order assignment fairness. Consider workload redistribution.
 - **Pending Payments > 5%:** Escalate to finance team. Check bank transfer confirmation delays.
+- **Branch Completion < 85%:** Investigate branch-specific issues — staffing, inventory, fulfillment delays.
 
 ## Implementation Notes
 
-- **Differs from Sales Ops Weekly Review:** Weekly is a quick operational check. Monthly adds **6-month trends, staff leaderboard, and channel health matrix** for management decisions.
+- **Differs from Sales Ops Weekly Review:** Weekly is a quick operational check (WoW). Monthly adds **6-month trends, branch analysis, staff leaderboard, and channel health matrix** for management decisions (MoM).
 - **Differs from CEO Monthly Scorecard:** CEO sees strategic metrics (revenue, growth, segments). This shows **operational metrics** (completion rate, processing time, staff productivity, payment health).
+- **3-tab design:** Tab 1 is the quick monthly pulse (5-7 min). Tabs 2-3 are deep-dives for specific audiences (channel managers, team leads, finance).
 - **`time_to_complete_hours`:** Calculated in `fact_orders` as `DATEDIFF(hour, order_timestamp, completed_at)`. NULL for non-completed orders — exclude from average.
 - **Staff Data Caveat:** Not all orders have assigned staff (marketplace auto-orders). Filter to `staff_key IS NOT NULL` for meaningful staff comparisons.
-- Max ~20 visual elements. Operations Manager reviews in detail (20–30 min).
+- Max ~27 visual elements across 3 tabs (~9-10 per tab). Operations Manager reviews in detail (20-30 min).

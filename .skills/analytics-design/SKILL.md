@@ -81,6 +81,8 @@ Mỗi artifact downstream **tham chiếu** artifact upstream:
 1. Kiểm tra playbook đã tồn tại? → Quét `docs/analytics-handbook/playbooks/`
 2. Nếu đã có → Đọc, cập nhật nếu audience/purpose thay đổi
 3. Nếu chưa có → Tạo mới theo `templates/playbook_template.md`
+4. **Action Triggers table là BẮT BUỘC.** Mỗi metric chính phải có ít nhất 1 threshold + owner + action.
+5. **Reading Flow là BẮT BUỘC.** Mô tả đường đi từ hero card → investigation → escalation.
 
 **Output**: `docs/analytics-handbook/playbooks/<name>.md`
 
@@ -125,7 +127,8 @@ Dùng decision tree trong `VISUALIZATION_VOCABULARY.md`. Anti-pattern check bắ
 - 6a: Comparative Framing — mọi KPI cần ≥1 so sánh
 - 6b: Data Completeness cho viz type đã chọn
 - 6c: Narrative Support — viết annotation content theo templates trong `COMPOSITION_PATTERNS.md` Section 8
-- 6d: **Visual Polish Checklist** — chạy checklist trong `VISUAL_LANGUAGE.md` Section 6 trước khi finalize
+- 6d: **Action Map** — điền bảng Action Map cho mỗi card có signal quan trọng (xem `templates/design_spec_template.md`)
+- 6e: **Dashboard Finish Checklist** — chạy full checklist trong `VISUAL_LANGUAGE.md` Section 10 trước khi finalize
 
 **Output**: Design Spec → lưu tại `docs/analytics-handbook/designs/<name>.md`
 

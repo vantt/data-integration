@@ -4,7 +4,7 @@
 
 - **Audience:** Inventory Managers
 - **Goal:** Optimization of stock levels and dead stock identification.
-- **Metabase Collection:** `Product Analytics`
+- **Collection:** `Product Analytics`
 
 ## Filters
 

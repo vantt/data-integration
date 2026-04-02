@@ -14,11 +14,11 @@
 > **dbt Model:** `fact_invoices` (Planned)
 
 - **Business Definition:** Total invoice amount issued.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(invoice_amount)
   ```
-- **Metabase Mapping:**
+- **Source Mapping:**
   - **Table:** `fact_invoices`
   - **Field:** `Amount` (Sum)
 
@@ -27,7 +27,7 @@
 > **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Gross Revenue minus Returns and Allowances. Recognized revenue.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   -- P&L Logic
   SUM(CASE
@@ -41,7 +41,7 @@
 > **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Components of revenue flow for waterfall chart.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT 'Gross Revenue', SUM(total) FROM orders
   UNION ALL SELECT 'Discounts', -SUM(total_discount) FROM orders
@@ -55,7 +55,7 @@
 > **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Percentage of Revenue retained after COGS.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   (SUM(Revenue) - SUM(COGS)) / SUM(Revenue) * 100
   ```
@@ -65,7 +65,7 @@
 > **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Operating Income (EBIT) as a percentage of Revenue.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   -- EBIT / Revenue
   (SUM(Revenue) - SUM(COGS) - SUM(Opex)) / SUM(Revenue) * 100
@@ -76,7 +76,7 @@
 > **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Net Income as a percentage of Revenue.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SUM(Net_Income) / SUM(Revenue) * 100
   ```
@@ -86,7 +86,7 @@
 > **dbt Model:** `fact_gl_entries` (Planned)
 
 - **Business Definition:** Earnings Before Interest, Taxes, Depreciation, and Amortization.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   Net_Income + Interest + Taxes + Depreciation + Amortization
   ```

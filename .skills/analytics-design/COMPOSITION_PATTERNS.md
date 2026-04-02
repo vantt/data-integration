@@ -138,6 +138,8 @@ Quy tắc positioning tương đối — dùng 18-column grid.
 | `one-third + 3 × one-quarter` | 6 + 4 + 4 + 4 | Hero + 3 Supporting KPIs |
 | `6 × one-sixth` | 3 × 6 | Nhiều small KPIs trên 1 row |
 
+> **Density Budget**: Xem `VISUAL_LANGUAGE.md` Section 8 cho giới hạn số card/row/tab theo archetype. Executive Pulse max 10 cards/view, Cockpit max 16, Exploratory max 20.
+
 ### Invalid combinations
 
 | Combination | Column math | Why invalid |

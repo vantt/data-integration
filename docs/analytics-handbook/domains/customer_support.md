@@ -13,7 +13,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** GMV generated specifically from Social Media channels (Facebook, Zalo).
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT
       source_group,
@@ -29,7 +29,7 @@
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Number of successful orders originating from social channels.
-- **Logic (Metabase SQL):**
+- **Logic (SQL):**
   ```sql
   SELECT COUNT(DISTINCT order_id)
   FROM fact_orders

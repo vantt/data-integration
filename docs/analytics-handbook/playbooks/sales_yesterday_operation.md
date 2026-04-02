@@ -4,9 +4,9 @@
 
 - **Audience:** Store Managers, Sales Team, Operations Lead
 - **Goal:** Review yesterday's finalized sales performance, identify day-over-day changes, and spot anomalies for action.
-- **Metabase Collection:** `Operations > Daily Monitoring`
+- **Collection:** `Operations > Daily Monitoring`
 - **Blueprint:** [Technical Spec](../blueprints/sales_yesterday_operation.md)
-- **Dashboard:** [Metabase ID 5](/dashboard/5)
+- **Dashboard:** [Dashboard ID 5](/dashboard/5)
 
 ## Structure
 

@@ -18,6 +18,7 @@ It is parsed effectively by the `deploy_from_markdown.js` script to configure Me
 | `### 🖥️ Dashboard:` | Dashboard definition | `### 🖥️ Dashboard: Daily Sales` |
 | `### 📑 Tab:` | Dashboard tab (groups questions) | `### 📑 Tab: Overview` |
 | `#### ❓ Question:` | Card/question on a dashboard | `#### ❓ Question: Revenue` |
+| `#### 📝 Text:` | Text annotation / section heading | `#### 📝 Text: Revenue Performance` |
 | `#### 📏 Metric:` | Metric on a model | `#### 📏 Metric: Average Build Time` |
 
 ### Code Block Types
@@ -60,6 +61,28 @@ Dashboard-level filters (parameters) are defined using `#### Filter:` headers wi
 ```
 
 **Supported filter types:** `date/all-options`, `date/single`, `string/=`, `string/contains`, `number/=`, `number/between`
+
+### Text Annotation Support
+
+Text annotations (section headings, narrative dividers) are deployed as text cards on the dashboard. Use `#### 📝 Text:` headers with an optional `metabase-pos` block.
+
+**Example:**
+
+```
+#### 📝 Text: Revenue Performance This Week
+
+Track week-over-week revenue trends and identify anomalies.
+
+\`\`\`json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+\`\`\`
+```
+
+**Rules:**
+- Text content (lines after the heading) becomes the card's markdown content
+- If no text content is provided, the heading name is used as `# Heading Name`
+- Position block is optional — defaults to `row: 0, col: 0, size_x: 18, size_y: 1`
+- Text cards are tab-aware — place them after a `### Tab:` header to scope to that tab
 
 ---
 
@@ -108,6 +131,14 @@ Metadata for the model columns.
 
 ### 📑 Tab: Overview
 
+#### 📝 Text: Pipeline Health Overview
+
+Monitor build failures and performance trends.
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### ❓ Question: Recent Failed Runs
 
 Lists the last 10 failed model runs.
@@ -131,7 +162,7 @@ LIMIT 10
 
 ```json metabase-pos
 {
-  "row": 0,
+  "row": 1,
   "col": 0,
   "size_x": 12,
   "size_y": 6
@@ -160,7 +191,7 @@ GROUP BY 1
 
 ```json metabase-pos
 {
-  "row": 0,
+  "row": 1,
   "col": 12,
   "size_x": 6,
   "size_y": 6

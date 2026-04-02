@@ -12,6 +12,7 @@ const path = require('path');
  * - ### 🖥️ Dashboard: <Name> -> (Dependent on Collection)
  * - ### 📑 Tab: <Name>       -> (Dependent on Dashboard) Groups subsequent questions
  * - #### ❓ Question: <Name> -> (Dependent on Dashboard, optionally scoped to a Tab)
+ * - #### 📝 Text: <Name>     -> Text annotation card (no SQL, card_id = null)
  *
  * Code Blocks:
  * - ```sql -> The logic
@@ -49,6 +50,7 @@ function parseMarkdownConfig(filePath) {
     let currentMetric = null;
     let currentTab = null;
     let currentFilter = null;
+    let currentTextCard = null;
 
     let inCodeBlock = false;
     let codeBlockType = null; // 'sql', 'json-viz', 'json-pos', 'json-model'
@@ -74,6 +76,9 @@ function parseMarkdownConfig(filePath) {
             if (currentQuestion) {
                 try { currentQuestion.pos = JSON.parse(code); }
                 catch(e) { console.warn(`⚠️ Invalid JSON in Pos block for ${currentQuestion.name}`); }
+            } else if (currentTextCard) {
+                try { currentTextCard.pos = JSON.parse(code); }
+                catch(e) { console.warn(`⚠️ Invalid JSON in Pos block for text card '${currentTextCard.name}'`); }
             }
         } else if (codeBlockType === 'json-model') {
             if (currentModel) {
@@ -142,6 +147,7 @@ function parseMarkdownConfig(filePath) {
         const tabMatch = trimmed.match(/^###\s+(?:📑\s+)?Tab:\s*(.+)/);
         const questionMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
         const filterMatch = trimmed.match(/^####\s+(?:🔍\s+)?Filter:\s*(.+)/);
+        const textMatch = trimmed.match(/^####\s+(?:📝\s+)?Text:\s*(.+)/);
 
         if (collectionMatch) {
             const rawName = collectionMatch[1].trim();
@@ -169,6 +175,7 @@ function parseMarkdownConfig(filePath) {
             // currentCollection is now the LEAF (deepest segment) — dashboards go here
             currentDashboard = null;
             currentModel = null;
+            currentTextCard = null;
         }
         else if (modelMatch) {
             if (!currentCollection) continue; // Orphan model?
@@ -187,11 +194,12 @@ function parseMarkdownConfig(filePath) {
         else if (dashboardMatch) {
             if (!currentCollection) continue;
             const name = dashboardMatch[1].trim();
-            currentDashboard = { name, questions: [], tabs: [], collection_name: currentCollection.name };
+            currentDashboard = { name, questions: [], textCards: [], tabs: [], collection_name: currentCollection.name };
             currentCollection.dashboards.push(currentDashboard);
             config.dashboards.push(currentDashboard);
             currentQuestion = null;
             currentTab = null;
+            currentTextCard = null;
         }
         else if (tabMatch) {
             if (!currentDashboard) continue;
@@ -201,6 +209,7 @@ function parseMarkdownConfig(filePath) {
                 currentDashboard.tabs.push(name);
             }
             currentQuestion = null;
+            currentTextCard = null;
         }
         else if (filterMatch) {
             if (!currentDashboard) continue;
@@ -209,6 +218,17 @@ function parseMarkdownConfig(filePath) {
             if (!currentDashboard.filters) currentDashboard.filters = [];
             currentDashboard.filters.push(currentFilter);
             currentQuestion = null; // Filter is not a question
+            currentTextCard = null;
+        }
+        else if (textMatch) {
+            if (!currentDashboard) continue;
+            const name = textMatch[1].trim();
+            currentTextCard = { name, text: '' };
+            if (currentTab) currentTextCard.tab = currentTab;
+            if (!currentDashboard.textCards) currentDashboard.textCards = [];
+            currentDashboard.textCards.push(currentTextCard);
+            currentQuestion = null;
+            currentFilter = null;
         }
         else if (questionMatch) {
             if (!currentDashboard) continue;
@@ -217,6 +237,11 @@ function parseMarkdownConfig(filePath) {
             if (currentTab) currentQuestion.tab = currentTab;
             currentDashboard.questions.push(currentQuestion);
             currentFilter = null; // Question is not a filter
+            currentTextCard = null;
+        }
+        // Collect plain text content for text cards (lines that aren't headings or code blocks)
+        else if (currentTextCard && trimmed && !trimmed.startsWith('#')) {
+            currentTextCard.text += (currentTextCard.text ? '\n' : '') + trimmed;
         }
     }
 

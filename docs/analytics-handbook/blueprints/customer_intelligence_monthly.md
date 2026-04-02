@@ -1,8 +1,9 @@
 # 📘 Blueprint: Customer Intelligence Monthly
 
 > **Target Collection:** `Marketing & Customers`
+> **Design Spec:** `designs/customer_intelligence_monthly.md`
 > **Role:** CEO, Marketing Manager, Sales Ops
-> **Archetype:** Operational Cockpit + Analytical
+> **Archetype:** Operational Cockpit (3 tabs)
 
 ## 📂 Collection: Marketing & Customers
 
@@ -12,98 +13,283 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 🖥️ Dashboard: Customer Intelligence Monthly
 
-**Description**: Monthly deep-dive — customer value analysis, segment migration, purchase behavior, channel effectiveness by customer type, product affinity, and a comprehensive customer health scorecard.
+**Description**: Monthly deep-dive — customer health scorecard, value concentration, segment dynamics, purchase behavior, channel effectiveness, and acquisition quality across 3 focused tabs.
 
 ---
 
-#### ❓ Question: Total Customers (With Orders)
+### 📑 Tab: Overview & Health
 
-Total customers who have placed at least one order.
+#### ❓ Question: Total Customers
 
-```sql
-SELECT COUNT(*) as "Total Customers"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 3, "size_y": 3 }
-```
-
-#### ❓ Question: Total Customer LTV
-
-Cumulative lifetime value across all customers.
+Total customers with at least one order, with MoM comparison.
 
 ```sql
-SELECT SUM(lifetime_value) as "Total LTV"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
+WITH current_period AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+),
+previous_period AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    c.value as "Total Customers",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Total LTV": { "number_style": "currency", "currency": "VND" } }
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
-#### ❓ Question: Avg LTV per Customer
+#### ❓ Question: Active Customers (30d)
 
-Average lifetime value per customer.
+Customers with at least one order in the last 30 days, with MoM comparison.
 
 ```sql
-SELECT ROUND(AVG(lifetime_value), 0) as "Avg LTV"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+WITH current_period AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND customer_status = 'Active'
+),
+previous_period AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND recency_days BETWEEN 31 AND 60
+)
+SELECT
+    c.value as "Active (30d)",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Avg LTV": { "number_style": "currency", "currency": "VND" } }
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: New Customers (Last Month)
 
-Customers acquired in the previous calendar month.
+Customers acquired in the previous calendar month, with comparison to month before.
 
 ```sql
-SELECT COUNT(*) as "New (Last Month)"
-FROM dim_customers
-WHERE created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND created_at < date_trunc('month', current_date)
+WITH current_period AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND created_at < date_trunc('month', current_date)
+),
+previous_period AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE created_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    c.value as "New (Last Month)",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
 ```
 
 ```json metabase-viz
-{ "display": "scalar" }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ]
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 9, "size_x": 3, "size_y": 3 }
+{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: One-Time Buyer Rate
+
+Percentage of customers who only placed 1 order, with MoM comparison.
+
+```sql
+WITH current_period AS (
+    SELECT ROUND(
+        COUNT(CASE WHEN total_orders_count = 1 THEN 1 END) * 100.0
+        / NULLIF(COUNT(*), 0), 1
+    ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+),
+previous_period AS (
+    SELECT ROUND(
+        COUNT(CASE WHEN total_orders_count = 1 THEN 1 END) * 100.0
+        / NULLIF(COUNT(*), 0), 1
+    ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    c.value as "One-Time %",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
+    "column_settings": {
+      "One-Time %": { "suffix": "%", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
+```
+
+---
+
+#### ❓ Question: Customer Status Distribution
+
+Donut chart showing Active / At Risk / Churned split.
+
+```sql
+SELECT
+    customer_status as "Status",
+    COUNT(*) as "Customers"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+GROUP BY 1
+ORDER BY
+    CASE customer_status
+        WHEN 'Active' THEN 1
+        WHEN 'At Risk' THEN 2
+        WHEN 'Churned' THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "pie",
+  "visualization_settings": {
+    "pie.dimension": "Status",
+    "pie.metric": "Customers",
+    "pie.colors": {
+      "Active": "#84BB4C",
+      "At Risk": "#F9D45C",
+      "Churned": "#EF8C8C"
+    },
+    "pie.show_legend": true,
+    "pie.percent_visibility": "inside"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 6 }
+```
+
+#### ❓ Question: Customer Segment Distribution
+
+Donut chart showing VIP / Loyal / Regular split.
+
+```sql
+SELECT
+    customer_segment as "Segment",
+    COUNT(*) as "Customers"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+GROUP BY 1
+ORDER BY
+    CASE customer_segment
+        WHEN 'VIP' THEN 1
+        WHEN 'Loyal' THEN 2
+        WHEN 'Regular' THEN 3
+    END
+```
+
+```json metabase-viz
+{
+  "display": "pie",
+  "visualization_settings": {
+    "pie.dimension": "Segment",
+    "pie.metric": "Customers",
+    "pie.colors": {
+      "VIP": "#7172AD",
+      "Loyal": "#509EE3",
+      "Regular": "#88BDE6"
+    },
+    "pie.show_legend": true,
+    "pie.percent_visibility": "inside"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue from Top 20% Customers
 
-Revenue concentration — what % of revenue comes from top 20% of customers by LTV?
+Revenue concentration — Pareto indicator.
 
 ```sql
 WITH ranked AS (
@@ -126,134 +312,22 @@ FROM ranked
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Top 20% Revenue Share %": { "suffix": "%", "decimals": 1 } }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 3, "size_y": 3 }
-```
-
-#### ❓ Question: One-Time Buyer Rate
-
-Percentage of customers who only ever placed 1 order — conversion opportunity.
-
-```sql
-SELECT
-    ROUND(
-        COUNT(CASE WHEN total_orders_count = 1 THEN 1 END) * 100.0
-        / NULLIF(COUNT(*), 0), 1
-    ) as "One-Time %"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": { "One-Time %": { "suffix": "%", "decimals": 1 } }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 0, "col": 15, "size_x": 3, "size_y": 3 }
-```
-
----
-
-#### ❓ Question: Customer Value Distribution
-
-Histogram of customer lifetime value — understand the shape of your customer base.
-
-```sql
-SELECT
-    CASE
-        WHEN lifetime_value = 0 THEN '0 (No Revenue)'
-        WHEN lifetime_value < 500000 THEN '< 500K'
-        WHEN lifetime_value < 1000000 THEN '500K - 1M'
-        WHEN lifetime_value < 2000000 THEN '1M - 2M'
-        WHEN lifetime_value < 5000000 THEN '2M - 5M'
-        WHEN lifetime_value < 10000000 THEN '5M - 10M'
-        ELSE '10M+'
-    END as "LTV Range",
-    COUNT(*) as "Customers",
-    SUM(lifetime_value) as "Total LTV",
-    ROUND(
-        COUNT(*) * 100.0 / NULLIF(
-            (SELECT COUNT(*) FROM dim_customers WHERE customer_id != 'Unknown' AND total_orders_count > 0), 0
-        ), 1
-    ) as "% of Customers"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
-GROUP BY 1
-ORDER BY MIN(lifetime_value)
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["LTV Range"],
-    "graph.metrics": ["Customers"],
-    "graph.colors": ["#509EE3"]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
-```
-
-#### ❓ Question: Customer Segment Revenue Contribution
-
-Revenue share by customer segment — understand value concentration.
-
-```sql
-SELECT
-    customer_segment as "Segment",
-    COUNT(*) as "Customers",
-    SUM(lifetime_value) as "Total Revenue",
-    ROUND(
-        SUM(lifetime_value) * 100.0 / NULLIF(
-            (SELECT SUM(lifetime_value) FROM dim_customers WHERE customer_id != 'Unknown'), 0
-        ), 1
-    ) as "Revenue %",
-    ROUND(AVG(total_orders_count), 1) as "Avg Orders",
-    ROUND(AVG(recency_days), 0) as "Avg Recency"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
-GROUP BY 1
-ORDER BY 3 DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "table.pivot": false,
-  "visualization_settings": {
     "column_settings": {
-      "Total Revenue": { "number_style": "currency", "currency": "VND" },
-      "Revenue %": { "suffix": "%" }
+      "Top 20% Revenue Share %": { "suffix": "%", "decimals": 1 }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
 
-#### ❓ Question: Monthly Customer Acquisition vs Churn (6M)
+#### ❓ Question: Monthly Acquisition vs Churn (6M)
 
-Net customer growth — new customers acquired vs customers entering churned state each month.
+Net customer growth — combo chart with bars for volume, line for net growth.
 
 ```sql
 WITH new_customers AS (
@@ -277,7 +351,7 @@ churned_customers AS (
     GROUP BY 1
 )
 SELECT
-    COALESCE(n.month, c.month) as month,
+    COALESCE(n.month, c.month) as "Month",
     COALESCE(n.acquired, 0) as "Acquired",
     COALESCE(c.churned, 0) as "Churned",
     COALESCE(n.acquired, 0) - COALESCE(c.churned, 0) as "Net Growth"
@@ -288,11 +362,17 @@ ORDER BY 1
 
 ```json metabase-viz
 {
-  "display": "bar",
+  "display": "combo",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
+    "graph.dimensions": ["Month"],
     "graph.metrics": ["Acquired", "Churned", "Net Growth"],
-    "graph.colors": ["#84BB4C", "#EF8C8C", "#509EE3"]
+    "series_settings": {
+      "Acquired": { "display": "bar", "color": "#84BB4C" },
+      "Churned": { "display": "bar", "color": "#EF8C8C" },
+      "Net Growth": { "display": "line", "color": "#509EE3", "line.interpolate": "cardinal" }
+    },
+    "graph.y_axis.title_text": "Customers",
+    "graph.x_axis.title_text": ""
   }
 }
 ```
@@ -303,141 +383,363 @@ ORDER BY 1
 
 ---
 
-#### ❓ Question: Customer Channel Preference Matrix
+#### ❓ Question: Customer Health Scorecard
 
-Which channels do different customer segments prefer? Helps target marketing spend.
+Per-segment vitals with conditional formatting.
 
 ```sql
 SELECT
-    cust.customer_segment as "Segment",
-    ch.channel_name as "Channel",
-    COUNT(DISTINCT o.order_id) as "Orders",
-    SUM(o.net_revenue) as "Revenue",
-    COUNT(DISTINCT o.customer_key) as "Unique Customers"
-FROM fact_orders o
-JOIN dim_customers cust ON o.customer_key = cust.customer_key
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
-  AND cust.customer_id != 'Unknown'
-GROUP BY 1, 2
+    customer_segment as "Segment",
+    COUNT(*) as "Customers",
+    ROUND(COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Active %",
+    ROUND(COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "At Risk %",
+    ROUND(COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Churned %",
+    ROUND(COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Repeat %",
+    ROUND(AVG(lifetime_value), 0) as "Avg LTV",
+    ROUND(AVG(total_orders_count), 1) as "Avg Orders",
+    ROUND(AVG(recency_days), 0) as "Avg Recency"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+GROUP BY 1
 ORDER BY
-    CASE cust.customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END,
-    4 DESC
+    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
 ```
 
 ```json metabase-viz
 {
   "display": "table",
   "visualization_settings": {
-    "table.pivot": true,
-    "table.pivot_column": "Channel",
-    "table.cell_column": "Revenue",
+    "table.column_formatting": [
+      {
+        "columns": ["Active %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 50,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Churned %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 30,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["At Risk %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 25,
+        "color": "#F9D45C",
+        "highlight_row": false
+      }
+    ],
     "column_settings": {
-      "Revenue": { "number_style": "currency", "currency": "VND" }
+      "Avg LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Active %": { "suffix": "%" },
+      "At Risk %": { "suffix": "%" },
+      "Churned %": { "suffix": "%" },
+      "Repeat %": { "suffix": "%" }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 ---
 
-#### ❓ Question: Top Products by Customer Segment (VIP)
+### 📑 Tab: Value & Segmentation
 
-What do VIP customers buy most? Guide product strategy and VIP exclusive offers.
+#### ❓ Question: Total Customer LTV
+
+Cumulative lifetime value with MoM comparison.
 
 ```sql
+WITH current_period AS (
+    SELECT SUM(lifetime_value) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+),
+previous_period AS (
+    SELECT SUM(lifetime_value) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+)
 SELECT
-    p.product_name as "Product",
-    COUNT(DISTINCT s.order_id) as "Orders",
-    SUM(s.quantity) as "Units Sold",
-    SUM(s.revenue) as "Revenue"
-FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
-JOIN dim_customers cust ON o.customer_key = cust.customer_key
-JOIN dim_products p ON s.product_key = p.product_key
-WHERE cust.customer_segment = 'VIP'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
-GROUP BY 1
-ORDER BY 4 DESC
-LIMIT 15
+    c.value as "Total LTV",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
 ```
 
 ```json metabase-viz
 {
-  "display": "table",
-  "table.pivot": false,
+  "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
     "column_settings": {
-      "Revenue": { "number_style": "currency", "currency": "VND" }
+      "Total LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 0, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
-#### ❓ Question: Top Products for First-Time Buyers
+#### ❓ Question: Avg LTV per Customer
 
-What products do new customers buy first? Guide acquisition funnels and landing pages.
+Average lifetime value with MoM comparison.
 
 ```sql
+WITH current_period AS (
+    SELECT ROUND(AVG(lifetime_value), 0) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+),
+previous_period AS (
+    SELECT ROUND(AVG(lifetime_value), 0) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+)
 SELECT
-    p.product_name as "Product",
-    COUNT(DISTINCT s.order_id) as "First Orders",
-    SUM(s.quantity) as "Units",
-    SUM(s.revenue) as "Revenue"
-FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
-JOIN dim_customers cust ON o.customer_key = cust.customer_key
-JOIN dim_products p ON s.product_key = p.product_key
-WHERE date_trunc('month', o.order_timestamp) = date_trunc('month', cust.first_order_date)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
-  AND cust.customer_id != 'Unknown'
-GROUP BY 1
-ORDER BY 2 DESC
-LIMIT 15
+    c.value as "Avg LTV",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
 ```
 
 ```json metabase-viz
 {
-  "display": "table",
-  "table.pivot": false,
+  "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
     "column_settings": {
-      "Revenue": { "number_style": "currency", "currency": "VND" }
+      "Avg LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 21, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 0, "col": 6, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: Avg Orders per Customer
+
+Average order count with MoM comparison.
+
+```sql
+WITH current_period AS (
+    SELECT ROUND(AVG(total_orders_count), 1) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+),
+previous_period AS (
+    SELECT ROUND(AVG(total_orders_count), 1) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    c.value as "Avg Orders",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
+```
+
+#### ❓ Question: Repeat Purchase Rate
+
+Percentage of customers with more than 1 order, with MoM comparison.
+
+```sql
+WITH current_period AS (
+    SELECT ROUND(
+        COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0
+        / NULLIF(COUNT(*), 0), 1
+    ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+),
+previous_period AS (
+    SELECT ROUND(
+        COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0
+        / NULLIF(COUNT(*), 0), 1
+    ) as value
+    FROM dim_customers
+    WHERE customer_id != 'Unknown'
+      AND total_orders_count > 0
+      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    c.value as "Repeat %",
+    p.value as "Prev Month"
+FROM current_period c, previous_period p
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_month",
+        "type": "anotherColumn",
+        "column": "Prev Month",
+        "label": "vs prev month"
+      }
+    ],
+    "column_settings": {
+      "Repeat %": { "suffix": "%", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
 
-#### ❓ Question: Customer AOV by Segment Trend (6M)
+#### ❓ Question: Customer Value Distribution
 
-How does average order value trend across segments? Detect upsell opportunities or spending decline.
+Histogram of customer lifetime value — understand the shape of the base.
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as month,
-    cust.customer_segment as segment,
+    CASE
+        WHEN lifetime_value = 0 THEN '0 (No Revenue)'
+        WHEN lifetime_value < 500000 THEN '< 500K'
+        WHEN lifetime_value < 1000000 THEN '500K - 1M'
+        WHEN lifetime_value < 2000000 THEN '1M - 2M'
+        WHEN lifetime_value < 5000000 THEN '2M - 5M'
+        WHEN lifetime_value < 10000000 THEN '5M - 10M'
+        ELSE '10M+'
+    END as "LTV Range",
+    COUNT(*) as "Customers",
+    ROUND(
+        COUNT(*) * 100.0 / NULLIF(
+            (SELECT COUNT(*) FROM dim_customers WHERE customer_id != 'Unknown' AND total_orders_count > 0), 0
+        ), 1
+    ) as "% of Customers"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+GROUP BY 1
+ORDER BY MIN(lifetime_value)
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["LTV Range"],
+    "graph.metrics": ["Customers"],
+    "graph.colors": ["#509EE3"],
+    "graph.x_axis.title_text": "Lifetime Value Range",
+    "graph.y_axis.title_text": "Customer Count"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: Segment Revenue Share
+
+Revenue contribution donut by customer segment.
+
+```sql
+SELECT
+    customer_segment as "Segment",
+    SUM(lifetime_value) as "Revenue"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+GROUP BY 1
+ORDER BY
+    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
+```
+
+```json metabase-viz
+{
+  "display": "pie",
+  "visualization_settings": {
+    "pie.dimension": "Segment",
+    "pie.metric": "Revenue",
+    "pie.colors": {
+      "VIP": "#7172AD",
+      "Loyal": "#509EE3",
+      "Regular": "#88BDE6"
+    },
+    "pie.show_legend": true,
+    "pie.percent_visibility": "inside"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+---
+
+#### ❓ Question: AOV by Segment Trend (6M)
+
+Average order value trend by segment over 6 months.
+
+```sql
+SELECT
+    date_trunc('month', o.order_timestamp)::date as "Month",
+    cust.customer_segment as "Segment",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
-         ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
+         ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
@@ -453,21 +755,268 @@ ORDER BY 1, 2
 {
   "display": "line",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["aov"],
-    "graph.group_by": ["segment"],
-    "graph.colors": ["#EF8C8C", "#F9A825", "#84BB4C"]
+    "graph.dimensions": ["Month"],
+    "graph.metrics": ["AOV"],
+    "graph.series_order_dimension": "Segment",
+    "series_settings": {
+      "VIP": { "color": "#7172AD" },
+      "Loyal": { "color": "#509EE3" },
+      "Regular": { "color": "#88BDE6" }
+    },
+    "graph.y_axis.title_text": "AOV (VND)",
+    "graph.x_axis.title_text": "",
+    "column_settings": {
+      "AOV": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 27, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
 ```
+
+#### ❓ Question: Revenue by Segment Trend (6M)
+
+Revenue composition by segment over time — stacked area.
+
+```sql
+SELECT
+    date_trunc('month', o.order_timestamp)::date as "Month",
+    cust.customer_segment as "Segment",
+    SUM(o.net_revenue) as "Revenue"
+FROM fact_orders o
+JOIN dim_customers cust ON o.customer_key = cust.customer_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND cust.customer_id != 'Unknown'
+  AND cust.total_orders_count > 0
+GROUP BY 1, 2
+ORDER BY 1, 2
+```
+
+```json metabase-viz
+{
+  "display": "area",
+  "visualization_settings": {
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["Month", "Segment"],
+    "graph.metrics": ["Revenue"],
+    "series_settings": {
+      "VIP": { "color": "#7172AD" },
+      "Loyal": { "color": "#509EE3" },
+      "Regular": { "color": "#88BDE6" }
+    },
+    "graph.y_axis.title_text": "Revenue (VND)",
+    "graph.x_axis.title_text": "",
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+---
+
+#### ❓ Question: Segment Revenue & Metrics Detail
+
+Comprehensive metrics per segment with conditional formatting.
+
+```sql
+SELECT
+    customer_segment as "Segment",
+    COUNT(*) as "Customers",
+    SUM(lifetime_value) as "Total Revenue",
+    ROUND(
+        SUM(lifetime_value) * 100.0 / NULLIF(
+            (SELECT SUM(lifetime_value) FROM dim_customers WHERE customer_id != 'Unknown'), 0
+        ), 1
+    ) as "Revenue %",
+    ROUND(AVG(lifetime_value), 0) as "Avg LTV",
+    ROUND(AVG(total_orders_count), 1) as "Avg Orders",
+    ROUND(AVG(recency_days), 0) as "Avg Recency"
+FROM dim_customers
+WHERE customer_id != 'Unknown'
+  AND total_orders_count > 0
+GROUP BY 1
+ORDER BY 3 DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["Revenue %"],
+        "type": "range",
+        "colors": ["#FFFFFF", "#509EE3"],
+        "min_type": "all",
+        "max_type": "all",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Avg Recency"],
+        "type": "single",
+        "operator": ">=",
+        "value": 60,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "Total Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Avg LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Revenue %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 5 }
+```
+
+---
+
+### 📑 Tab: Behavior & Insights
+
+#### ❓ Question: Channel Revenue by Segment
+
+Which channels drive revenue for each segment — stacked bar (last 3 months).
+
+```sql
+SELECT
+    ch.channel_name as "Channel",
+    cust.customer_segment as "Segment",
+    SUM(o.net_revenue) as "Revenue"
+FROM fact_orders o
+JOIN dim_customers cust ON o.customer_key = cust.customer_key
+JOIN dim_channels ch ON o.channel_key = ch.channel_key
+WHERE o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND cust.customer_id != 'Unknown'
+GROUP BY 1, 2
+ORDER BY 1, 3 DESC
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["Channel", "Segment"],
+    "graph.metrics": ["Revenue"],
+    "series_settings": {
+      "VIP": { "color": "#7172AD" },
+      "Loyal": { "color": "#509EE3" },
+      "Regular": { "color": "#88BDE6" }
+    },
+    "graph.y_axis.title_text": "Revenue (VND)",
+    "graph.x_axis.title_text": "",
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+---
+
+#### ❓ Question: Top 10 Products — VIP Customers
+
+What VIP customers buy most — guide retention offers (last 3 months).
+
+```sql
+SELECT
+    p.product_name as "Product",
+    SUM(s.revenue) as "Revenue"
+FROM fact_sales s
+JOIN fact_orders o ON s.order_id = o.order_id
+JOIN dim_customers cust ON o.customer_key = cust.customer_key
+JOIN dim_products p ON s.product_key = p.product_key
+WHERE cust.customer_segment = 'VIP'
+  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Product"],
+    "graph.metrics": ["Revenue"],
+    "graph.colors": ["#7172AD"],
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: Top 10 Products — First-Time Buyers
+
+Entry products for new customers — guide acquisition funnels (last 3 months).
+
+```sql
+SELECT
+    p.product_name as "Product",
+    SUM(s.revenue) as "Revenue"
+FROM fact_sales s
+JOIN fact_orders o ON s.order_id = o.order_id
+JOIN dim_customers cust ON o.customer_key = cust.customer_key
+JOIN dim_products p ON s.product_key = p.product_key
+WHERE date_trunc('month', o.order_timestamp) = date_trunc('month', cust.first_order_date)
+  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND cust.customer_id != 'Unknown'
+GROUP BY 1
+ORDER BY 2 DESC
+LIMIT 10
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Product"],
+    "graph.metrics": ["Revenue"],
+    "graph.colors": ["#509EE3"],
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+---
 
 #### ❓ Question: New Customer Quality Trend (6M)
 
-Are new customers getting better or worse? Track first-order AOV and 30-day repeat rate by cohort.
+Cohort quality: new customer volume + first-order AOV + 30-day repeat rate.
 
 ```sql
 WITH first_orders AS (
@@ -477,14 +1026,14 @@ WITH first_orders AS (
         o.net_revenue as first_order_value
     FROM dim_customers c
     JOIN fact_orders o ON c.customer_key = o.customer_key
-        AND o.order_timestamp = c.first_order_date
+        AND date_trunc('month', o.order_timestamp) = date_trunc('month', c.first_order_date)
     WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND c.first_order_date < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
       AND o.status NOT IN ('CANCELLED', 'Voided')
 ),
 repeat_30d AS (
-    SELECT
+    SELECT DISTINCT
         fo.cohort_month,
         fo.customer_key
     FROM first_orders fo
@@ -494,12 +1043,12 @@ repeat_30d AS (
         AND o2.status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT
-    fo.cohort_month as month,
+    fo.cohort_month as "Month",
     COUNT(DISTINCT fo.customer_key) as "New Customers",
     ROUND(AVG(fo.first_order_value), 0) as "Avg First Order",
     ROUND(
         COUNT(DISTINCT r.customer_key) * 100.0 / NULLIF(COUNT(DISTINCT fo.customer_key), 0), 1
-    ) as "30-day Repeat %"
+    ) as "30d Repeat %"
 FROM first_orders fo
 LEFT JOIN repeat_30d r ON fo.customer_key = r.customer_key AND fo.cohort_month = r.cohort_month
 GROUP BY 1
@@ -508,39 +1057,42 @@ ORDER BY 1
 
 ```json metabase-viz
 {
-  "display": "table",
-  "table.pivot": false,
+  "display": "combo",
   "visualization_settings": {
+    "graph.dimensions": ["Month"],
+    "graph.metrics": ["New Customers", "Avg First Order", "30d Repeat %"],
+    "series_settings": {
+      "New Customers": { "display": "bar", "color": "#509EE3" },
+      "Avg First Order": { "display": "line", "color": "#7172AD", "line.interpolate": "cardinal" },
+      "30d Repeat %": { "display": "line", "color": "#F9D45C", "line.interpolate": "cardinal" }
+    },
+    "graph.y_axis.title_text": "",
+    "graph.x_axis.title_text": "",
     "column_settings": {
-      "Avg First Order": { "number_style": "currency", "currency": "VND" },
-      "30-day Repeat %": { "suffix": "%" }
+      "Avg First Order": { "number_style": "currency", "currency": "VND", "compact": true },
+      "30d Repeat %": { "suffix": "%" }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 27, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
 
-#### ❓ Question: Customer Health Scorecard
+#### ❓ Question: Loyalty Point Distribution by Segment
 
-Comprehensive health view per segment: active rate, repeat rate, avg LTV, avg orders, churn risk.
+Loyalty engagement levels per segment — bar chart.
 
 ```sql
 SELECT
     customer_segment as "Segment",
-    COUNT(*) as "Customers",
-    ROUND(COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Active %",
-    ROUND(COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "At Risk %",
-    ROUND(COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Churned %",
-    ROUND(COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Repeat %",
-    ROUND(AVG(lifetime_value), 0) as "Avg LTV",
-    ROUND(AVG(total_orders_count), 1) as "Avg Orders",
-    ROUND(AVG(recency_days), 0) as "Avg Recency",
-    ROUND(AVG(lifespan_days), 0) as "Avg Lifespan"
+    COUNT(CASE WHEN loyalty_point = 0 THEN 1 END) as "0 Points",
+    COUNT(CASE WHEN loyalty_point BETWEEN 1 AND 999 THEN 1 END) as "1-999",
+    COUNT(CASE WHEN loyalty_point BETWEEN 1000 AND 4999 THEN 1 END) as "1K-5K",
+    COUNT(CASE WHEN loyalty_point >= 5000 THEN 1 END) as "5K+"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
@@ -551,69 +1103,31 @@ ORDER BY
 
 ```json metabase-viz
 {
-  "display": "table",
-  "table.pivot": false,
+  "display": "bar",
   "visualization_settings": {
-    "column_settings": {
-      "Avg LTV": { "number_style": "currency", "currency": "VND" },
-      "Active %": { "suffix": "%" },
-      "At Risk %": { "suffix": "%" },
-      "Churned %": { "suffix": "%" },
-      "Repeat %": { "suffix": "%" }
-    }
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["Segment"],
+    "graph.metrics": ["0 Points", "1-999", "1K-5K", "5K+"],
+    "graph.colors": ["#C2D2E9", "#88BDE6", "#509EE3", "#7172AD"],
+    "graph.y_axis.title_text": "Customers",
+    "graph.x_axis.title_text": ""
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 33, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 18, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
----
+#### ❓ Question: Gender Distribution by Segment
 
-#### ❓ Question: Customer Loyalty Point Distribution
-
-Loyalty points balance across customer segments — identify engagement levels.
-
-```sql
-SELECT
-    customer_segment as "Segment",
-    COUNT(*) as "Customers",
-    SUM(loyalty_point) as "Total Points",
-    ROUND(AVG(loyalty_point), 0) as "Avg Points",
-    MAX(loyalty_point) as "Max Points"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND loyalty_point > 0
-GROUP BY 1
-ORDER BY 3 DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "table.pivot": false
-}
-```
-
-```json metabase-pos
-{ "row": 38, "col": 0, "size_x": 9, "size_y": 5 }
-```
-
-#### ❓ Question: Customer Gender Distribution by Segment
-
-Demographic breakdown to inform marketing persona targeting.
+Demographic breakdown for marketing persona targeting.
 
 ```sql
 SELECT
     customer_segment as "Segment",
     COALESCE(NULLIF(sex, ''), 'Unknown') as "Gender",
-    COUNT(*) as "Customers",
-    ROUND(
-        COUNT(*) * 100.0 / NULLIF(
-            SUM(COUNT(*)) OVER (PARTITION BY customer_segment), 0
-        ), 1
-    ) as "% of Segment"
+    COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
@@ -625,16 +1139,18 @@ ORDER BY
 
 ```json metabase-viz
 {
-  "display": "table",
-  "table.pivot": false,
+  "display": "bar",
   "visualization_settings": {
-    "column_settings": {
-      "% of Segment": { "suffix": "%" }
-    }
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["Segment", "Gender"],
+    "graph.metrics": ["Customers"],
+    "graph.colors": ["#509EE3", "#F2A86F", "#A989C5"],
+    "graph.y_axis.title_text": "Customers",
+    "graph.x_axis.title_text": ""
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 38, "col": 9, "size_x": 9, "size_y": 5 }
+{ "row": 18, "col": 9, "size_x": 9, "size_y": 6 }
 ```

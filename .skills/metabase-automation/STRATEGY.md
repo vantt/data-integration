@@ -65,40 +65,29 @@ For full archetype definitions, card roles, and composition patterns, see `.skil
 
 **Rule:** If user asks for "Sales Dashboard" without specifying → default to **Operational Cockpit**.
 
-## 5. Parser Limitations & Post-Deploy Workarounds
+## 5. Parser Capabilities & Behavior Notes
 
-Markdown parser (`lib/markdown_parser.js`) chỉ hỗ trợ một số block types. Các tính năng sau **KHÔNG được parser xử lý** và cần workaround thủ công.
+Markdown parser (`lib/markdown_parser.js`) hỗ trợ các block types sau. Mục này ghi chú hành vi và lưu ý khi sử dụng.
 
-### 5.1 Text Annotations (CRITICAL)
+### 5.1 Text Annotations
 
-**Parser KHÔNG hỗ trợ `#### Text:` headers.** Khi blueprint chứa `#### Text:` với `metabase-pos` block, parser sẽ gán position đó cho question card trước đó → **ghi đè position, gây sai layout toàn bộ**.
+**Parser HỖ TRỢ `#### 📝 Text:` headers** và `metabase-pos` blocks cho text cards.
 
-**Quy tắc:** KHÔNG bao giờ đặt `#### Text:` sections trong blueprint. Thay vào đó:
+**Cú pháp trong blueprint:**
 
-1. Viết blueprint chỉ với `#### Question:` sections (không có text annotations)
-2. Deploy blueprint bình thường
-3. Thêm text cards qua API sau deploy:
+```markdown
+#### 📝 Text: Section Heading
 
-```javascript
-// Shift existing cards down để tạo chỗ cho text headings
-// Rồi PUT /api/dashboard/:id với dashcards bao gồm text cards:
-{
-  id: -1,              // negative ID cho card mới
-  card_id: null,       // null = text card, không phải question
-  dashboard_tab_id: tabId,
-  row: 0, col: 0, size_x: 18, size_y: 1,
-  visualization_settings: {
-    virtual_card: {
-      name: null, display: "text",
-      visualization_settings: {}, dataset_query: {}, archived: false
-    },
-    text: "# Section Heading"
-  },
-  parameter_mappings: []
-}
+Optional body text (markdown). If omitted, heading name is used as `# Heading Name`.
+
+\`\`\`json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+\`\`\`
 ```
 
-**Lưu ý:** PUT `/api/dashboard/:id` phải gửi cả `tabs` VÀ `dashcards` cùng lúc (Metabase yêu cầu).
+**Cách hoạt động:** Parser tạo text dashcard với `card_id: null` và `visualization_settings.text` chứa nội dung markdown. Deploy script tự động include text cards trong cùng PUT request với tabs + dashcards.
+
+**Lưu ý:** Text cards luôn được tạo mới khi redeploy (không match existing). Đây là hành vi expected vì text cards không có backing question ID.
 
 ### 5.2 Dashboard Filters (`metabase-filter`)
 

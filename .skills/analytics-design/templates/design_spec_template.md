@@ -47,6 +47,15 @@ domain_refs: [domains/sales.md, domains/customer.md]
 | 4 | C | "[Section Heading Text]" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 5 | D | [Card Name] | trend | [standard-viz-term] | [color tokens] | [width × height] | [Thông điệp] | [implicit/explicit] |
 
+### Action Map
+
+> Mỗi card có signal quan trọng PHẢI có recommended action. Tham chiếu Action Triggers trong playbook.
+
+| Card | Signal | Condition | Recommended Action |
+|------|--------|-----------|-------------------|
+| [Card Name] | [e.g., Drop] | [e.g., WoW < -10%] | [e.g., Check breakdown by channel/product] |
+| [Card Name] | [e.g., Spike] | [e.g., WoW > +30%] | [e.g., Verify no duplicates, check promo impact] |
+
 <!--
 Composition Table Rules:
 - Row column: same letter = same horizontal row. Total width per row = full-width.

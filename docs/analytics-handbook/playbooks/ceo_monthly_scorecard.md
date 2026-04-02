@@ -5,8 +5,9 @@
 - **Audience:** CEO, Co-Founders, Board
 - **Goal:** Comprehensive monthly performance review — answer "How did we do this month?" and "What should we change next month?"
 - **Cadence:** 1st–3rd of each month, reviewing the closed month.
-- **Archetype:** Executive Pulse + Strategic Analysis
-- **Metabase Collection:** `Executive` > `Monthly Reports`
+- **Archetype:** Executive Pulse (multi-view — 3 tabs)
+- **Collection:** `Executive`
+- **Design Spec:** [CEO Monthly Scorecard](../designs/ceo_monthly_scorecard.md)
 - **Related:** [Monthly Business Review Process](./sales_monthly_review.md)
 
 ## Key Questions
@@ -20,110 +21,66 @@
 
 ## Filters
 
-- **Date Range:** Default = Last Closed Month. Comparison = Previous Month AND Same Month Last Year.
-- **No drill-down filters** — full-company view.
+- **Date Range:** Default = Last Closed Month. Comparison = Previous Month (MoM).
+- **No drill-down filters** — full-company view, zero-interaction.
 
 ## Data Lineage
 
 - **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
-- **Dimensions:** `dim_channels`, `dim_customers`, `dim_products`, `dim_geography`
+- **Dimensions:** `dim_channels`, `dim_customers`, `dim_products`
 
-## Visualizations
+## Dashboard Structure (3 Tabs)
 
-### Section 1: Monthly Headline KPIs (Scalar Row)
+### Tab 1: Hiệu suất tháng
 
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+Focus: The big picture — "Tháng vừa rồi thế nào?"
+
+| Chart Title | Visualization Type | Metric Reference | Notes |
 | :--- | :--- | :--- | :--- |
-| **Monthly GMV** | Scalar + Trend | [GMV](../domains/sales.md#1-gmv-gross-merchandise-value) | MoM % change + YoY % change. |
-| **Monthly Net Revenue** | Scalar + Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | MoM % change. |
-| **Total Orders** | Scalar + Trend | [Total Orders](../domains/sales.md#4-total-orders) | MoM % change. |
-| **AOV** | Scalar + Trend | [AOV](../domains/sales.md#5-aov-average-order-value) | MoM % change. |
-| **Unique Customers** | Scalar + Trend | _Derived_ | `COUNT(DISTINCT customer_key)` from `fact_orders`. MoM change. |
+| **Monthly Net Revenue** | Scalar + MoM Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | Hero metric. MoM % change. |
+| **Monthly GMV** | Scalar + MoM Trend | [GMV](../domains/sales.md#1-gross-revenue-gmv) | MoM % change. |
+| **Total Orders** | Scalar + MoM Trend | [Total Orders](../domains/sales.md#4-total-orders) | MoM % change. |
+| **AOV** | Scalar + MoM Trend | [AOV](../domains/sales.md#5-aov-average-order-value) | MoM % change. |
+| **Unique Customers** | Scalar + MoM Trend | _Derived_ | MoM change. |
+| **Target Achievement** | Progress Bar | [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Actual vs monthly target. |
+| **Target Variance** | Scalar | [Variance to Target](../domains/sales.md#16-variance-to-target) | Absolute gap. |
+| **Revenue vs Target (Weekly)** | Combo Chart (Bar + Line) | [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Bar: Weekly actual. Line: Monthly target (dashed). |
+| **6-Month Revenue Trend** | Multi-line Chart | [Net Revenue](../domains/sales.md#2-net-revenue) | Gross + Net Revenue, 6-month window. |
+| **Revenue Waterfall** | Waterfall Chart | [Revenue Breakdown](../domains/finance.md#3-revenue-breakdown-waterfall-components) | GMV → Discounts → Returns → Net Revenue. |
 
-### Section 2: Target Achievement Scorecard
+### Tab 2: Kênh & Khách hàng
 
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+Focus: "Điều gì đang drive growth? Khách hàng ra sao?"
+
+| Chart Title | Visualization Type | Metric Reference | Notes |
 | :--- | :--- | :--- | :--- |
-| **Revenue vs Target** | Combo Chart (Bar + Line) | [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Bar: Actual Revenue by week. Line: Cumulative Target. Show achievement %. |
-| **Target Variance** | Scalar | [Variance to Target](../domains/sales.md#16-variance-to-target) | Absolute gap. Green if positive, Red if negative. |
-| **6-Month Revenue Trend** | Line Chart | [Net Revenue](../domains/sales.md#2-net-revenue) | Monthly aggregation, 6-month window. Show trendline. |
+| **Revenue by Channel Category** | Donut Chart | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ecommerce / Offline / Internal. Max 3 slices. |
+| **Channel Performance Table** | Table + Conditional Formatting | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Revenue, Orders, AOV, MoM %. Green/Red conditional on MoM. |
+| **Channel Mix Trend (6M)** | Stacked Area | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Monthly revenue stacked by channel_category. |
+| **New Customers** | Scalar + MoM Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | MoM change. |
+| **At Risk Customers** | Scalar | [Churn Rate](../domains/customer.md#6-churn-rate) | ⚠ prefix. |
+| **Churned Customers** | Scalar | [Churn Rate](../domains/customer.md#6-churn-rate) | — |
+| **Customer Segment Distribution** | Donut Chart | [RFM Segment](../domains/customer.md#7-rfm-segment) | VIP / Loyal / Regular breakdown. |
+| **Revenue by Customer Segment** | Horizontal Bar | [RFM Segment](../domains/customer.md#7-rfm-segment) | Revenue contribution per segment. |
 
-### Section 3: Channel Performance Matrix
+### Tab 3: Sản phẩm & Vận hành
 
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+Focus: "Product mix + operational health"
+
+| Chart Title | Visualization Type | Metric Reference | Notes |
 | :--- | :--- | :--- | :--- |
-| **Revenue by Channel Category** | Donut Chart | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ecommerce / Offline / Internal. Max 5 slices. |
-| **Channel Performance Table** | Table (Pivot-style) | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Columns: Channel, Revenue, Orders, AOV, MoM Revenue Change %. Sort by Revenue DESC. |
-| **Channel Mix Trend (6M)** | Stacked Area | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Monthly revenue stacked by `channel_category`. Shows structural shift over time. |
-
-### Section 4: Customer Portfolio Health
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **New Customers (MTD)** | Scalar + Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Count with `first_order_date` in this month. MoM change. |
-| **Customer Segment Distribution** | Donut Chart | [RFM Segment](../domains/customer.md#7-rfm-segment) | VIP / Loyal / Regular breakdown by customer count. |
-| **Revenue by Customer Segment** | Horizontal Bar | [RFM Segment](../domains/customer.md#7-rfm-segment) | Revenue contribution per segment (VIP, Loyal, Regular). |
-| **At Risk & Churned Count** | Scalar | [Churn Rate](../domains/customer.md#6-churn-rate) | Count of customers with `customer_status` = At Risk or Churned. Flag if increasing MoM. |
-
-### Section 5: Product & Brand Performance
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Top 10 Products by Revenue** | Table | [Top Selling Products](../domains/sales.md#9-top-selling-products) | Columns: Product Name, Units Sold, Revenue, MoM Change %. From `fact_sales`. |
-| **Revenue by Brand** | Horizontal Bar | _Derived from_ [Top Selling Products](../domains/sales.md#9-top-selling-products) | Group by `brand_name` from `dim_products`. |
-
-### Section 6: Operational Efficiency
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Discount Rate %** | Scalar + Trend | [Discount Impact](../domains/sales.md#13-discount-impact) | `Total Discount / GMV × 100`. Flag RED if > 15%. MoM comparison. |
-| **Total Discount Amount** | Scalar | [Discount Impact](../domains/sales.md#13-discount-impact) | Absolute VND amount given away. |
-| **Return Count** | Scalar + Trend | [Return Rate](../domains/sales.md#3-return-rate--count) | MoM comparison. |
-| **Revenue Waterfall** | Table (Waterfall-style) | [Revenue Breakdown](../domains/finance.md#3-revenue-breakdown-waterfall-components) | GMV → Discounts → Returns → Net Revenue. Show each component. |
-
-## Visualization Configs
-
-### Revenue vs Target (Combo)
-
-```json
-{
-  "display": "combo",
-  "graph.dimensions": ["week"],
-  "graph.metrics": ["actual_revenue", "cumulative_target"],
-  "series_settings": {
-    "actual_revenue": { "display": "bar", "color": "#509EE3" },
-    "cumulative_target": { "display": "line", "color": "#EF8C8C", "line.style": "dashed" }
-  }
-}
-```
-
-### Channel Mix Trend (Stacked Area)
-
-```json
-{
-  "display": "area",
-  "graph.dimensions": ["month"],
-  "graph.metrics": ["revenue"],
-  "stackable.stack_type": "stacked",
-  "series_settings": {}
-}
-```
-
-### Customer Segment Distribution (Donut)
-
-```json
-{
-  "display": "pie",
-  "pie.dimension": "customer_segment",
-  "pie.metric": "customer_count",
-  "pie.show_legend": true,
-  "pie.percent_visibility": "inside"
-}
-```
+| **Top 10 Products by Revenue** | Table + Conditional Formatting | [Top Selling Products](../domains/sales.md#9-top-selling-products) | Product, Brand, Units, Revenue, MoM %. Green/Red on MoM. |
+| **Revenue by Brand** | Horizontal Bar | _Derived from_ [Top Selling Products](../domains/sales.md#9-top-selling-products) | Top 10 brands by revenue. |
+| **Discount Rate %** | Scalar + MoM Trend | [Discount Impact](../domains/sales.md#13-discount-impact) | Flag RED if > 15%. |
+| **Total Discount Amount** | Scalar | [Discount Impact](../domains/sales.md#13-discount-impact) | Absolute VND. |
+| **Return Count** | Scalar + MoM Trend | [Return Rate](../domains/sales.md#3-return-rate--count) | MoM comparison. |
+| **Revenue Breakdown Table** | Table | [Revenue Breakdown](../domains/finance.md#3-revenue-breakdown-waterfall-components) | GMV → Discounts → Returns → Net. Detailed table companion. |
 
 ## Implementation Notes
 
-- **Differs from Sales Executive Dashboard:** This is a **read-only scorecard** with fixed month comparisons. The Sales Executive dashboard has interactive date filters for ad-hoc exploration.
-- **Differs from MBR Process:** The [Monthly Business Review](./sales_monthly_review.md) is a **meeting agenda guide**. This playbook is the **dashboard specification** that feeds data into that meeting.
+- **3-tab structure**: Each tab is self-contained with its own narrative flow. CEO can review Tab 1 only (3 min) or go deeper into Tabs 2-3.
+- **All KPIs have MoM comparison**: Every scalar shows trend arrow with vs tháng trước.
+- **Waterfall chart**: Waterfall visualization for revenue decomposition (GMV → Net).
+- **Conditional formatting**: Channel table and Product table highlight positive/negative MoM changes.
 - **Auto-subscription:** Email push on the 2nd of each month at 9:00 AM.
-- **Max 15–18 visual elements.** Dense but scannable — CEO reviews once, then delegates follow-ups.
+- **Max ~25 cards across 3 tabs** — ~10 per tab, scannable within time budget.

@@ -309,9 +309,39 @@ async function main() {
         if (mappings.length > 0) {
           cardConfig.parameter_mappings = mappings;
         }
+        // Warn about unmatched filters for this question
+        const unmapped = dashParams.filter(p => !mappings.find(m => m.parameter_id === (p.id || p.slug)));
+        if (unmapped.length > 0) {
+          console.warn(`   ⚠️ '${q.name}': ${unmapped.length} filter(s) not mapped (no matching {{template_tag}}): ${unmapped.map(p => p.slug).join(', ')}`);
+        }
       }
 
       cardConfigs.push(cardConfig);
+    }
+
+    // Process Text Cards (section headings, annotations)
+    for (const tc of (dashboard.textCards || [])) {
+      const pos = tc.pos || { row: 0, col: 0, size_x: 18, size_y: 1 };
+      // Build text content: use collected text, or fall back to heading name as markdown heading
+      const textContent = tc.text || `# ${tc.name}`;
+      const textCardConfig = {
+        id: null, // null = text card (no backing question)
+        ...pos,
+        visualization_settings: {
+          virtual_card: {
+            name: null,
+            display: "text",
+            visualization_settings: {},
+            dataset_query: {},
+            archived: false
+          },
+          text: textContent
+        },
+        parameter_mappings: []
+      };
+      if (tc.tab) textCardConfig.tab = tc.tab;
+      cardConfigs.push(textCardConfig);
+      console.log(`📝 Text card: "${tc.name}" at row ${pos.row}, col ${pos.col}`);
     }
 
     // Sync to Dashboard (tabs and cards in one PUT)

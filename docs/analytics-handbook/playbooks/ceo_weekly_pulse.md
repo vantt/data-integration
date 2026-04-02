@@ -3,106 +3,67 @@
 ## Overview
 
 - **Audience:** CEO, Co-Founders
-- **Goal:** 5-minute weekly check-in — answer "Are we on track this week?" across Sales, Customers, and Operations.
+- **Goal:** 5-minute weekly check-in — answer "Are we on track this week?" across Revenue, Channels, and Customer Health.
 - **Cadence:** Every Monday morning, reviewing the previous Mon–Sun.
 - **Archetype:** Executive Pulse
-- **Metabase Collection:** `Executive` > `Weekly Reports`
+- **Collection:** `Executive`
+- **Design Spec:** [CEO Weekly Pulse (Redesign)](../designs/ceo_weekly_pulse.md)
 
 ## Key Questions
 
-1. **Revenue:** Gross Revenue (trước chiết khấu) và Net Revenue (sau chiết khấu) tuần này so với tuần trước? Có đang on-track để đạt target tháng không?
-2. **Growth Drivers:** Kênh nào tăng, kênh nào giảm so với tuần trước?
-3. **Customer Health:** Có bao nhiêu khách mới? Tỷ lệ New vs Returning thay đổi thế nào?
-4. **Operational Flags:** Có gì bất thường cần chú ý (hoàn trả tăng đột biến, discount quá nhiều)?
+1. **Revenue:** Net Revenue va Gross Revenue tuan nay so voi tuan truoc? Dang on-track de dat target thang khong?
+2. **Growth Drivers:** Kenh nao tang, kenh nao giam so voi tuan truoc? Cau truc Ecommerce/Offline thay doi the nao?
+3. **Customer Health:** Bao nhieu khach moi? Ty le doanh thu tu khach cu co healthy (> 60%)?
+4. **Operational Flags:** Co gi bat thuong can chu y (hoan tra tang dot bien, discount qua nhieu, don huy tang)?
+
+## Dashboard Structure (3 Tabs)
+
+### Tab 1 — Doanh thu & Target (Primary)
+CEO mo tab nay dau tien — tra loi "tuan nay on khong?" trong 2 phut.
+
+- **Hero:** Net Revenue voi WoW trend arrow
+- **Supporting KPIs:** Gross Revenue, Total Orders, AOV — tat ca co WoW %
+- **MTD Progress:** Progress bar visual — da dat bao nhieu % target thang
+- **Pace Index:** Ahead/Behind indicator — so sanh toc do hien tai voi expected pace
+- **14-Day Trend:** Area chart doanh thu 14 ngay — this week vs previous week
+
+### Tab 2 — Kenh ban hang
+CEO chuyen sang tab nay khi muon biet "kenh nao dang drive?"
+
+- **Channel Mix Donut:** Ecommerce / Offline / Internal — part-to-whole
+- **WoW Comparison:** Grouped bar — so sanh truc tiep this week vs last week theo category
+- **Top Channels:** Horizontal bar chart — ranking kenh theo revenue
+- **Performance Table:** Chi tiet tung kenh voi WoW %, conditional formatting highlight bien dong lon
+
+### Tab 3 — Khach hang & Canh bao
+CEO chuyen sang tab nay khi muon kiem tra customer health va red flags.
+
+- **New Customers:** So khach moi voi WoW trend
+- **Returning Revenue %:** Gauge — healthy > 60%, warning 40-60%, alert < 40%
+- **New vs Returning Trend:** Stacked bar 14 ngay — cau thanh don hang theo ngay
+- **Red Flags Row:** Cancelled Orders, Returns, Discount Rate — co conditional coloring
 
 ## Filters
 
-- **Date Range:** Default = Last 7 Days (Mon–Sun). Comparison = Previous Week.
-- **No drill-down filters** — CEO sees the full picture, no store/channel filter.
+- **No interactive filters** — Executive Pulse can zero-interaction. CEO mo va doc.
+- **Business constraint:** Loai bo don kenh US (internal, 100% discount).
 
 ## Data Lineage
 
 - **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
-- **Dimensions:** `dim_channels`, `dim_customers`, `dim_products`
+- **Dimensions:** `dim_channels`, `dim_customers`
 
-## Visualizations
+## How to Read This Dashboard
 
-### Section 0: Report Period Label
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Report Period** | Scalar (full width) | — | Hiển thị `dd/mm — dd/mm/yyyy` cho tuần báo cáo. |
-
-### Section 1: Weekly Headline KPIs (Scalar Row)
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Gross Revenue** | Scalar + Trend | [Gross Revenue](../domains/sales.md#1-gross-revenue-gmv) | Giá trị hàng hóa trước chiết khấu. WoW % change. |
-| **Net Revenue** | Scalar + Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | Doanh thu thuần (sau chiết khấu, trước thuế). WoW % change. |
-| **Total Orders** | Scalar + Trend | [Total Orders](../domains/sales.md#4-total-orders) | Show WoW % change. |
-| **AOV** | Scalar + Trend | [AOV](../domains/sales.md#5-aov-average-order-value) | Show WoW % change. |
-
-### Section 2: Monthly Target Pace
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **MTD Revenue vs Target** | Progress Bar / Gauge | [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Show % achieved of monthly target. Highlight red if pace < expected (e.g., < week_number/4 × 100%). |
-| **Revenue Pace Indicator** | Scalar | _Derived_ | `MTD Actual / (Monthly Target × Days Elapsed / Days in Month)`. If > 1.0 = "Ahead", < 1.0 = "Behind". |
-
-### Section 3: Weekly Trends & Channel Mix
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Daily Revenue Trend (Last 14 Days)** | Line Chart | [Net Revenue](../domains/sales.md#2-net-revenue) | 2-week window so CEO sees current week vs previous week side-by-side. Color: Blue. |
-| **Revenue by Channel Category** | Horizontal Bar | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Group by `channel_category` (Ecommerce / Offline / Internal). Show WoW change per category. |
-| **Top 5 Channels by Revenue** | Table | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Columns: Channel Name, This Week Revenue, Last Week Revenue, WoW Change %. Sort by Revenue DESC. |
-
-### Section 4: Customer Health Pulse
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **New Customers This Week** | Scalar + Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Count of customers with `first_order_date` in this week. WoW comparison. |
-| **New vs Returning Orders** | Stacked Bar | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Daily breakdown: New (Blue) vs Returning (Grey) order count. |
-| **Returning Customer Revenue %** | Scalar | _Derived from_ [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | % of weekly revenue from returning customers. Healthy benchmark > 60%. |
-
-### Section 5: Operational Red Flags
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Return Count** | Scalar + Trend | [Return Rate](../domains/sales.md#3-return-rate--count) | Flag RED if > 2× previous week. |
-| **Discount Rate %** | Scalar | [Discount Impact](../domains/sales.md#13-discount-impact) | `Discount / Gross Revenue × 100`. Flag RED if > 15%. |
-| **Cancelled Orders** | Scalar | _Derived from_ [Total Orders](../domains/sales.md#4-total-orders) | Count where `status = 'CANCELLED'`. WoW comparison. |
-
-## Visualization Configs
-
-### Daily Revenue Trend (14-day)
-
-```json
-{
-  "display": "line",
-  "graph.dimensions": ["order_date"],
-  "graph.metrics": ["revenue"],
-  "graph.colors": ["#509EE3"],
-  "graph.x_axis.title_text": "",
-  "graph.y_axis.title_text": "Revenue (VND)"
-}
-```
-
-### Channel Category Bar
-
-```json
-{
-  "display": "bar",
-  "graph.dimensions": ["channel_category"],
-  "graph.metrics": ["revenue"],
-  "graph.x_axis.axis_enabled": true,
-  "graph.y_axis.axis_enabled": true
-}
-```
+1. **CONTEXT:** Dashboard nay ton tai de CEO kiem tra suc khoe kinh doanh moi sang thu Hai. Tra loi: "Tuan qua co on-track khong?"
+2. **KEY FINDING:** Nhin Net Revenue (Hero) va WoW arrow truoc. Xanh len = tot. Do xuong = can chu y.
+3. **EVIDENCE:** MTD Progress bar cho biet dang ahead hay behind target thang. Pace Index > 1.0 = dang vuot toc do can thiet.
+4. **IMPLICATIONS:** Neu behind target + kenh chinh giam → can tang marketing hoac khuyen mai.
+5. **ACTIONS:** Neu Red Flags (Tab 3) co bat thuong → chuyen thong tin cho team lien quan xu ly trong tuan.
 
 ## Implementation Notes
 
-- **Max 10–12 visual elements** on this dashboard. CEO scans, doesn't drill.
-- Use **Metabase "compare to previous period"** feature on all scalar KPIs for automatic WoW arrows.
+- **Max ~26 visual elements** across 3 tabs (~10 per tab). CEO scans, doesn't drill.
+- Use **"compare to previous period"** feature on all scalar KPIs for automatic WoW arrows.
 - Consider **auto-subscription**: Email/Slack push every Monday 8:00 AM.
 - This dashboard does NOT replace the daily ops dashboard — it provides the "so what?" summary.

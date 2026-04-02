@@ -6,7 +6,8 @@
 - **Goal:** [Dashboard trả lời câu hỏi gì — 1 dòng]
 - **Cadence:** [Frequency + timing, e.g., "Weekly, Monday morning"]
 - **Archetype:** [Executive Pulse / Operational Cockpit / Exploratory Tool]
-- **Metabase Collection:** `[Collection Path from registry]`
+- **Collection:** `[Collection Path]`
+- **Design Spec:** [`design`](../designs/design.md)
 - **Domain References:** [`domain`](../domains/domain.md)
 
 ## Key Questions
@@ -39,6 +40,26 @@
 | Chart Title | Visualization Type | Metric Reference | Notes |
 |-------------|-------------------|------------------|-------|
 | ... | ... | ... | ... |
+
+## Action Triggers
+
+> Mỗi metric chính PHẢI có ít nhất 1 threshold + owner + action.
+> Bảng này biến dashboard từ "giải thích tình hình" thành "thôi thúc hành động".
+
+| Signal | Threshold | Severity | Owner | Immediate Action | Follow-up |
+|--------|-----------|----------|-------|-----------------|-----------|
+| [e.g., Revenue drop WoW] | [e.g., > -10%] | [Warning / Critical] | [Role] | [Action ngay — 1 câu] | [Điều tra / escalation] |
+| [e.g., Churn spike] | [e.g., > 5% monthly] | [Warning / Critical] | [Role] | [Action ngay] | [Follow-up] |
+
+## Reading Flow
+
+> Mô tả đường đi của người đọc từ Hero → Investigation → Escalation.
+> Dùng card names cụ thể, không chung chung.
+
+1. **Bắt đầu:** Nhìn [Hero Card Name] — trả lời "[câu hỏi chính]"
+2. **Nếu** [condition, e.g., Revenue giảm > 10%] → chuyển sang [Tab/Card Name] để xem breakdown
+3. **Nếu** [condition, e.g., vấn đề ở 1 kênh cụ thể] → escalate cho [Owner] với context từ [Card Name]
+4. **Nếu** bình thường → scan [Supporting Cards] rồi đóng dashboard
 
 ## How to Read
 

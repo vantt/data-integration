@@ -4,7 +4,7 @@
 
 - **Audience:** Customer Success Manager, Sales Ops — daily operational check
 - **Goal:** Monitor customer health, identify at-risk customers for proactive outreach, track acquisition quality, and prioritize reactivation efforts.
-- **Metabase Collection:** `Marketing & Customers`
+- **Collection:** `Marketing & Customers`
 - **Cadence:** Daily check (Tab 1: 5 min), Weekly deep-dive (Tab 2-3: 15-20 min)
 
 ## Data Lineage

@@ -94,35 +94,33 @@ class Dashboard {
         const usedDashCardIds = new Set();
 
         const cardPayload = cardConfigs.map(config => {
+            const isTextCard = config.id === null;
+
             // Match by card_id AND tab — avoid reusing the same dashcard across tabs
+            // Text cards (card_id=null) are not matched — always recreated
             const tabId = config.tab && tabMap.has(config.tab) ? tabMap.get(config.tab) : (config.dashboard_tab_id || null);
-            const existing = currentCards.find(dc =>
+            const existing = isTextCard ? null : currentCards.find(dc =>
                 dc.card_id === config.id
                 && !usedDashCardIds.has(dc.id)
                 && (tabId == null || dc.dashboard_tab_id === tabId)
             );
             if (existing) usedDashCardIds.add(existing.id);
-            
-            // Modern Logic: Negative IDs for new cards
-            // Legacy Logic: Usually just card_id is enough, but passing id doesn't hurt if we have it.
-            // If legacy and new, we don't *need* negative ID, but let's stick to standard unless it breaks legacy.
-            // Legacy `ordered_cards` usually ignores `id` for new cards and relies on `card_id`.
-            
+
             let dashCardId;
             if (existing) {
                 dashCardId = existing.id;
             } else {
-                dashCardId = isModern ? tempIdCounter-- : undefined; // Legacy might prefer undefined or ignore it
+                dashCardId = isModern ? tempIdCounter-- : undefined;
             }
 
             const cardObj = {
-                card_id: config.id,      // The Question ID
+                card_id: config.id,      // The Question ID (null for text cards)
                 row: config.row,
                 col: config.col,
                 size_x: config.size_x,
                 size_y: config.size_y,
-                visualization_settings: {}, // Required
-                parameter_mappings: config.parameter_mappings || (existing ? existing.parameter_mappings : []) || [], // Preserve existing mappings
+                visualization_settings: config.visualization_settings || {},
+                parameter_mappings: config.parameter_mappings || (existing ? existing.parameter_mappings : []) || [],
                 series: []
             };
 

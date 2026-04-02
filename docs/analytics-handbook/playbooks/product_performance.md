@@ -4,7 +4,7 @@
 
 - **Audience:** Merchandising, Management
 - **Goal:** Monitor sales velocity and revenue contribution by product.
-- **Metabase Collection:** `Product Analytics`
+- **Collection:** `Product Analytics`
 
 ## Data Lineage
 

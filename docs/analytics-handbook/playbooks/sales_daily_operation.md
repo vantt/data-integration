@@ -4,9 +4,9 @@
 
 - **Audience:** Store Managers, Sales Team
 - **Goal:** Real-time monitoring of today's sales performance and operational anomalies.
-- **Metabase Collection:** `Operations > Daily Monitoring`
+- **Collection:** `Operations > Daily Monitoring`
 - **Blueprint:** [Technical Spec](../blueprints/sales_daily_operation.md)
-- **Dashboard:** [Metabase ID 2](/dashboard/2)
+- **Dashboard:** [Dashboard ID 2](/dashboard/2)
 
 ## Structure
 

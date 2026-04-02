@@ -302,6 +302,137 @@ Checklist cuối cùng trước khi finalize Design Spec. Scan nhanh — nếu v
 
 ---
 
+## 7. Title & Copy Discipline
+
+Quy tắc viết text trên dashboard — tạo cảm giác professional, nhất quán.
+
+### Card Titles
+
+- Pattern: `[Metric] [Comparison]` — ví dụ: "Net Revenue vs Last Week"
+- KHÔNG dùng "Chart of...", "Graph showing...", "A look at..."
+- KHÔNG dùng viết tắt trừ khi là term chuẩn (KPI, WoW, MoM, YoY, ARPU, AOV, CLV)
+- Max 50 ký tự. Nếu dài hơn → rút gọn hoặc dùng subtitle
+- Title mô tả insight khi có thể: "Revenue tăng 15% WoW" > "Revenue" (chỉ áp dụng cho annotation, không áp dụng cho dynamic card titles)
+
+### Card Subtitles
+
+- Chỉ dùng khi cần giải thích điều kiện lọc hoặc đơn vị
+- Pattern: `[Filter context] · [Unit]` — ví dụ: "Excluding US channel · VND"
+- Max 80 ký tự
+- Không lặp lại thông tin đã có trong title
+
+### Section Headings (Text Annotations)
+
+- Dùng imperative voice: "Monitor revenue trends" không phải "Revenue Trends Section"
+- Dùng sentence case, KHÔNG dùng Title Case (trừ proper nouns)
+- Không kết thúc bằng dấu chấm
+- Mỗi section heading giải thích WHY section này quan trọng, không chỉ WHAT nó chứa
+
+### Annotation Content
+
+- 1-2 câu ngắn. Mỗi câu < 15 từ.
+- Giải thích WHY section này quan trọng, không phải WHAT nó chứa
+- Tone: direct, professional, không casual
+- KHÔNG dùng emoji trong annotation (trừ khi user yêu cầu rõ ràng)
+
+---
+
+## 8. Spacing & Density Budget
+
+Quy tắc về mật độ thông tin — quá nhiều card = reader bỏ cuộc.
+
+### Row Spacing
+
+- Giữa các row: 0 (tool tự thêm gap)
+- Text annotation luôn bắt đầu ở col 0, width full-width
+- Sau mỗi annotation heading: cards bắt đầu ở row tiếp theo
+
+### Density Limits by Archetype
+
+| Archetype | Max cards/view | Max rows | Max tabs | Scroll depth |
+|-----------|---------------|----------|----------|-------------|
+| Executive Pulse | 10 | 5 | 2 | Không scroll (above the fold) |
+| Operational Cockpit | 16 | 8 | 4 | Max 2-3 scrolls |
+| Exploratory Tool | 20 | 10 | 5 | Tùy ý nhưng có section dividers |
+
+### Whitespace Rules
+
+- Hero row: max 3 cards (hero + 1-2 supporting)
+- Không đặt > 4 cards cùng 1 row (trừ data-table full-width)
+- Mỗi view PHẢI có ít nhất 1 text annotation làm section divider
+- Giữa các nhóm logic (e.g., Revenue group vs Channel group): luôn có annotation separator
+
+---
+
+## 9. Chart Labeling Rules
+
+Quy tắc label cho từng loại chart — giảm cognitive load, tăng readability.
+
+### Axes
+
+- Y-axis: luôn có label + unit — "Revenue (VND)", "Orders (#)"
+- X-axis: ẩn label nếu là thời gian (tháng/tuần/ngày hiển thị tự động)
+- Luôn bắt đầu y-axis từ 0 cho bar charts (truncated axis bóp méo perception)
+- Line charts có thể KHÔNG bắt đầu từ 0 nếu range hẹp, nhưng phải ghi rõ trong spec
+
+### Legends
+
+- Ẩn legend nếu chỉ có 1 series (dùng title thay thế)
+- Đặt legend ở bottom nếu > 3 series
+- Không để legend che chart area
+
+### Data Labels
+
+- BẬT cho: donut (%), horizontal-bar (value), progress (goal value)
+- TẮT cho: line-chart, area-chart (dùng tooltip thay thế)
+- Gauge: hiển thị value + unit trong center
+- Scalar: hiển thị comparison arrow + % change
+
+### Number Formatting
+
+- Chọn 1 abbreviation style cho toàn dashboard: "1.2M" hoặc "1,200,000" — KHÔNG mix
+- Currency: luôn kèm ký hiệu (₫, $) hoặc suffix (VND, USD)
+- Percentage: 1 decimal place (12.3%), không dùng 12.34%
+- Đếm (orders, customers): không decimal, có thousands separator
+
+---
+
+## 10. Dashboard Finish Checklist
+
+Checklist toàn diện trước khi finalize Design Spec. Mở rộng từ Section 6 (Visual Polish Checklist).
+
+### Content
+
+- [ ] Mỗi card có title theo Title Discipline (Section 7)
+- [ ] Mỗi KPI có ít nhất 1 comparison (xem COMPARATIVE_FRAMING.md)
+- [ ] Text annotations dùng imperative voice
+- [ ] Không có card orphan (không thuộc narrative flow nào)
+- [ ] Action Map trong design spec đầy đủ cho cards có signal quan trọng
+
+### Layout
+
+- [ ] Hero card ở row đầu tiên, nổi bật nhất
+- [ ] Row widths sum = full-width (18 cols)
+- [ ] Density trong giới hạn archetype (Section 8)
+- [ ] Mỗi view có ít nhất 1 section divider (text annotation)
+- [ ] Scroll depth phù hợp archetype
+
+### Visual
+
+- [ ] Color tokens nhất quán trong toàn dashboard
+- [ ] Không dùng > 5 màu distinct trong 1 view
+- [ ] Structural color cho elements phụ (dividers, muted labels)
+- [ ] Size hierarchy rõ: hero > supporting > detail
+- [ ] Number formatting nhất quán (Section 9)
+
+### Action
+
+- [ ] Action Triggers table trong playbook đầy đủ
+- [ ] Action Map trong design spec đầy đủ
+- [ ] Reading Flow mô tả đường đi từ hero → investigation → escalation
+
+---
+
 ## Style Notes
 
 - Document này dùng CHỈ semantic tokens — không hex codes, không pixel values, không tool names

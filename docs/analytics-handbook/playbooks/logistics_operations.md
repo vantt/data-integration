@@ -4,7 +4,7 @@
 
 - **Audience:** Operations Manager
 - **Goal:** Real-time view of order processing pipeline.
-- **Metabase Collection:** `Logistics`
+- **Collection:** `Logistics`
 
 ## Data Lineage
 

@@ -4,7 +4,7 @@
 
 - **Audience:** Sales Director, CFO, Regional Managers
 - **Goal:** Comprehensive review of last month's performance, variance analysis against targets, and strategic planning.
-- **Metabase Collection:** `Sales Analytics` > `Monthly Reports`
+- **Collection:** `Sales Analytics` > `Monthly Reports`
 - **Related Playbook:** [CEO Weekly Pulse](./ceo_weekly_pulse.md)
 
 ## Review Structure
@@ -28,7 +28,7 @@ The Monthly Business Review should follow this standard agenda:
 | **Target Achievement** | [Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Which regions missed the target significantly (< 80%)?  |
 | **Variance**           | [Variance to Target](../domains/sales.md#16-variance-to-target)    | Absolute value gap to close.                            |
 
-### Visualization Strategy (Metabase)
+### Visualization Strategy
 
 - **Waterfall Chart:** Showing bridge from Target -> Actual (Volume impact vs Price impact).
 - **Trend Line:** 12-Month trailing revenue to see long-term trajectory.
