@@ -17,11 +17,29 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 
 ### Tab: Doanh thu & Target
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "CEO Weekly Pulse — Tuan qua kinh doanh co on-track khong?" (full-width, height 1)
-     - Row 4: "Tien do target thang" (full-width, height 1)
-     - Row 8: "Xu huong doanh thu (14 ngay)" (full-width, height 1)
--->
+#### 📝 Text: CEO Weekly Pulse — Tuan qua kinh doanh co on-track khong?
+
+# CEO Weekly Pulse — Tuan qua kinh doanh co on-track khong?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Tien do target thang
+
+# Tien do target thang
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Xu huong doanh thu (14 ngay)
+
+# Xu huong doanh thu (14 ngay)
+
+```json metabase-pos
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Net Revenue
 
@@ -363,10 +381,21 @@ ORDER BY 1
 
 ### Tab: Kenh ban hang
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Phan bo doanh thu theo kenh" (full-width, height 1)
-     - Row 7: "Top kenh ban hang" (full-width, height 1)
--->
+#### 📝 Text: Phan bo doanh thu theo kenh
+
+# Phan bo doanh thu theo kenh
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Top kenh ban hang
+
+# Top kenh ban hang
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Revenue by Channel Category
 
@@ -593,11 +622,29 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 
 ### Tab: Khach hang & Canh bao
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Suc khoe khach hang" (full-width, height 1)
-     - Row 4: "Xu huong New vs Returning (14 ngay)" (full-width, height 1)
-     - Row 11: "Canh bao van hanh" (full-width, height 1)
--->
+#### 📝 Text: Suc khoe khach hang
+
+# Suc khoe khach hang
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Xu huong New vs Returning (14 ngay)
+
+# Xu huong New vs Returning (14 ngay)
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Canh bao van hanh
+
+# Canh bao van hanh
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: New Customers
 

@@ -36,11 +36,29 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 
 ### Tab: Tong quan tuan
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Ket qua tuan (Mon-Sun)" (full-width, height 1)
-     - Row 4: "Trang thai don hang" (full-width, height 1)
-     - Row 11: "Xu huong don hang (14 ngay)" (full-width, height 1)
--->
+#### 📝 Text: Ket qua tuan (Mon-Sun)
+
+# Ket qua tuan (Mon-Sun)
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Trang thai don hang
+
+# Trang thai don hang
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Xu huong don hang (14 ngay)
+
+# Xu huong don hang (14 ngay)
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Total Orders
 
@@ -478,11 +496,29 @@ ORDER BY 2, 3
 
 ### Tab: Kenh & Chi nhanh
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Phan bo don hang theo kenh" (full-width, height 1)
-     - Row 7: "Hieu suat kenh so voi tuan truoc" (full-width, height 1)
-     - Row 15: "Phan bo theo chi nhanh" (full-width, height 1)
--->
+#### 📝 Text: Phan bo don hang theo kenh
+
+# Phan bo don hang theo kenh
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Hieu suat kenh so voi tuan truoc
+
+# Hieu suat kenh so voi tuan truoc
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Phan bo theo chi nhanh
+
+# Phan bo theo chi nhanh
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Orders by Channel
 
@@ -752,11 +788,29 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 
 ### Tab: Doi ngu & Thanh toan
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Social Commerce (Facebook + Zalo)" (full-width, height 1)
-     - Row 4: "Hieu suat nhan vien" (full-width, height 1)
-     - Row 11: "Thanh toan & Doi soat" (full-width, height 1)
--->
+#### 📝 Text: Social Commerce (Facebook + Zalo)
+
+# Social Commerce (Facebook + Zalo)
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Hieu suat nhan vien
+
+# Hieu suat nhan vien
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Thanh toan & Doi soat
+
+# Thanh toan & Doi soat
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Social Revenue
 

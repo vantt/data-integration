@@ -15,12 +15,37 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 
 ### 📑 Tab: Tổng quan
 
-<!-- Text annotations to add manually in Metabase:
-     - Row 0: "Sức khỏe kinh doanh" (full-width, height 1)
-     - Row 6: "Kết quả hôm nay (real-time)" (full-width, height 1)
-     - Row 10: "Chỉ số phụ" (full-width, height 1)
-     - Row 14: "Doanh thu theo giờ" (full-width, height 1)
--->
+#### 📝 Text: Sức khỏe kinh doanh
+
+# Sức khỏe kinh doanh
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Kết quả hôm nay (real-time)
+
+# Kết quả hôm nay (real-time)
+
+```json metabase-pos
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Chỉ số phụ
+
+# Chỉ số phụ
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Doanh thu theo giờ
+
+# Doanh thu theo giờ
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Health Score
 
@@ -583,11 +608,29 @@ ORDER BY 1
 
 ### 📑 Tab: Kênh bán hàng
 
-<!-- Text annotations to add manually:
-     - Row 0: "Doanh thu theo kênh" (full-width, height 1)
-     - Row 7: "Hiệu suất kênh so với hôm qua" (full-width, height 1)
-     - Row 14: "Doanh thu theo chi nhánh" (full-width, height 1)
--->
+#### 📝 Text: Doanh thu theo kênh
+
+# Doanh thu theo kênh
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Hiệu suất kênh so với hôm qua
+
+# Hiệu suất kênh so với hôm qua
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Doanh thu theo chi nhánh
+
+# Doanh thu theo chi nhánh
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Revenue by Channel
 
@@ -788,10 +831,21 @@ ORDER BY 3 DESC
 
 ### 📑 Tab: Sản phẩm
 
-<!-- Text annotations to add manually:
-     - Row 0: "Top 10 sản phẩm bán chạy" (full-width, height 1)
-     - Row 7: "Phân bổ theo loại sản phẩm" (full-width, height 1)
--->
+#### 📝 Text: Top 10 sản phẩm bán chạy
+
+# Top 10 sản phẩm bán chạy
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Phân bổ theo loại sản phẩm
+
+# Phân bổ theo loại sản phẩm
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Top 10 Products by Revenue
 
@@ -950,10 +1004,21 @@ LIMIT 20
 
 ### 📑 Tab: Khách hàng & Thanh toán
 
-<!-- Text annotations to add manually:
-     - Row 0: "Chân dung khách hàng hôm nay" (full-width, height 1)
-     - Row 10: "Thanh toán & Chiết khấu" (full-width, height 1)
--->
+#### 📝 Text: Chân dung khách hàng hôm nay
+
+# Chân dung khách hàng hôm nay
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Thanh toán & Chiết khấu
+
+# Thanh toán & Chiết khấu
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Returning Customer Rate
 

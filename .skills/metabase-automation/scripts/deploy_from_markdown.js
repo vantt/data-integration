@@ -1,5 +1,6 @@
 const MetabaseClient = require("./metabase_client");
 const parseMarkdownConfig = require("../lib/markdown_parser");
+const { slugify, injectTextId } = require("../lib/text-card-helpers");
 const path = require("path");
 const fs = require("fs");
 
@@ -320,10 +321,15 @@ async function main() {
     }
 
     // Process Text Cards (section headings, annotations)
+    const slugCounts = {};
     for (const tc of (dashboard.textCards || [])) {
       const pos = tc.pos || { row: 0, col: 0, size_x: 18, size_y: 1 };
-      // Build text content: use collected text, or fall back to heading name as markdown heading
-      const textContent = tc.text || `# ${tc.name}`;
+      // Build text content with stable identity marker for idempotent redeploy
+      const rawText = tc.text || `# ${tc.name}`;
+      let slug = slugify(tc.name);
+      slugCounts[slug] = (slugCounts[slug] || 0) + 1;
+      if (slugCounts[slug] > 1) slug = `${slug}-${slugCounts[slug]}`;
+      const textContent = injectTextId(rawText, slug);
       const textCardConfig = {
         id: null, // null = text card (no backing question)
         ...pos,

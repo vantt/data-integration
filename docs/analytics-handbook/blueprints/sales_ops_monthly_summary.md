@@ -36,11 +36,29 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
 
 ### Tab: Tong quan thang
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Ket qua thang (Monthly Review)" (full-width, height 1)
-     - Row 4: "Chat luong don hang" (full-width, height 1)
-     - Row 11: "Xu huong 6 thang" (full-width, height 1)
--->
+#### 📝 Text: Ket qua thang (Monthly Review)
+
+# Ket qua thang (Monthly Review)
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Chat luong don hang
+
+# Chat luong don hang
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Xu huong 6 thang
+
+# Xu huong 6 thang
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Total Orders
 
@@ -511,12 +529,37 @@ LIMIT 10
 
 ### Tab: Kenh & Chi nhanh
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Phan bo don hang theo kenh" (full-width, height 1)
-     - Row 7: "Hieu suat van hanh theo kenh" (full-width, height 1)
-     - Row 14: "Huy don theo kenh" (full-width, height 1)
-     - Row 21: "Phan bo theo chi nhanh" (full-width, height 1)
--->
+#### 📝 Text: Phan bo don hang theo kenh
+
+# Phan bo don hang theo kenh
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Hieu suat van hanh theo kenh
+
+# Hieu suat van hanh theo kenh
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Huy don theo kenh
+
+# Huy don theo kenh
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Phan bo theo chi nhanh
+
+# Phan bo theo chi nhanh
+
+```json metabase-pos
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Orders by Channel
 
@@ -815,12 +858,29 @@ ORDER BY 3 DESC
 
 ### Tab: Doi ngu & Thanh toan
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Social Commerce (Facebook + Zalo)" (full-width, height 1)
-     - Row 4: (no annotation, social platform donut + leaderboard)
-     - Row 10: "Hieu suat nhan vien (Toan kenh)" (full-width, height 1)
-     - Row 17: "Thanh toan & Doi soat" (full-width, height 1)
--->
+#### 📝 Text: Social Commerce (Facebook + Zalo)
+
+# Social Commerce (Facebook + Zalo)
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Hieu suat nhan vien (Toan kenh)
+
+# Hieu suat nhan vien (Toan kenh)
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Thanh toan & Doi soat
+
+# Thanh toan & Doi soat
+
+```json metabase-pos
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Social Revenue
 

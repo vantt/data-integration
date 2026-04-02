@@ -239,8 +239,8 @@ function parseMarkdownConfig(filePath) {
             currentFilter = null; // Question is not a filter
             currentTextCard = null;
         }
-        // Collect plain text content for text cards (lines that aren't headings or code blocks)
-        else if (currentTextCard && trimmed && !trimmed.startsWith('#')) {
+        // Collect text card content (allow markdown headings like "# Title" but not parser-structural headers)
+        else if (currentTextCard && trimmed) {
             currentTextCard.text += (currentTextCard.text ? '\n' : '') + trimmed;
         }
     }

@@ -18,6 +18,7 @@
  */
 
 const MetabaseClient = require("./metabase_client");
+const { deriveNameFromText, TEXT_ID_REGEX } = require("../lib/text-card-helpers");
 const fs = require("fs");
 const path = require("path");
 
@@ -129,13 +130,15 @@ function parseExistingBlueprint(filePath) {
   const lines = content.split("\n");
 
   const result = {
-    header: [],      // lines before the first #### Question
+    header: [],      // lines before the first #### Question or Text
     questions: {},   // name -> { prose: string[] } (lines between header and ```sql)
+    textCards: {},   // name -> { prose: string[] } (text card body lines)
     tabHeaders: {},  // tab name -> lines for the tab header section
   };
 
-  let section = "header"; // 'header' | 'question-prose' | 'code-block' | 'between'
+  let section = "header"; // 'header' | 'question-prose' | 'text-prose' | 'code-block' | 'between'
   let currentQuestion = null;
+  let currentTextCard = null;
   let currentTab = null;
   let inCodeBlock = false;
   let headerDone = false;
@@ -159,6 +162,20 @@ function parseExistingBlueprint(filePath) {
     const tabMatch = trimmed.match(/^###\s+📑\s+Tab:\s*(.+)/);
     if (tabMatch) {
       currentTab = tabMatch[1].trim();
+      currentQuestion = null;
+      currentTextCard = null;
+      continue;
+    }
+
+    // Text card header
+    const tMatch = trimmed.match(/^####\s+(?:📝\s+)?Text:\s*(.+)/);
+    if (tMatch) {
+      headerDone = true;
+      const name = tMatch[1].trim();
+      currentTextCard = name;
+      currentQuestion = null;
+      result.textCards[name] = { prose: [] };
+      section = "text-prose";
       continue;
     }
 
@@ -168,6 +185,7 @@ function parseExistingBlueprint(filePath) {
       headerDone = true;
       const name = qMatch[1].trim();
       currentQuestion = name;
+      currentTextCard = null;
       result.questions[name] = { prose: [] };
       section = "question-prose";
       continue;
@@ -177,13 +195,11 @@ function parseExistingBlueprint(filePath) {
     if (!headerDone) {
       result.header.push(line);
     } else if (section === "question-prose" && currentQuestion) {
-      // Collect prose lines until we hit a code block or another question
-      // (code blocks are skipped above, so these are pure prose lines)
-      if (trimmed === "---") {
-        // Section separator — keep as-is, not part of question prose
-        continue;
-      }
+      if (trimmed === "---") continue;
       result.questions[currentQuestion].prose.push(line);
+    } else if (section === "text-prose" && currentTextCard) {
+      if (trimmed === "---") continue;
+      result.textCards[currentTextCard].prose.push(line);
     }
   }
 
@@ -271,6 +287,28 @@ function renderTabGroups(lines, tabGroups, cardCache, existingQuestions) {
 
     let lastRow = -1;
     for (const dc of group.cards) {
+      // Handle text cards (card_id is null for virtual/text dashcards)
+      if (dc.card_id === null) {
+        const textContent = (dc.visualization_settings || {}).text;
+        if (!textContent || !textContent.trim()) continue;
+        const name = deriveNameFromText(textContent);
+        // Strip text-id marker from blueprint output (re-injected on deploy)
+        const cleanText = textContent.replace(TEXT_ID_REGEX, "").trim();
+        const pos = buildPosition(dc);
+        if (lastRow >= 0 && pos.row > lastRow + 1) {
+          lines.push("---");
+          lines.push("");
+        }
+        lastRow = pos.row;
+        lines.push(`#### 📝 Text: ${name}`);
+        lines.push("");
+        lines.push(cleanText);
+        lines.push("");
+        lines.push(jsonBlock("metabase-pos", pos));
+        lines.push("");
+        continue;
+      }
+
       const card = cardCache[dc.card_id];
       if (!card) continue;
 

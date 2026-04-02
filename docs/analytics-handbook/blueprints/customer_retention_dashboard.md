@@ -30,12 +30,37 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Suc khoe Retention
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Retention Health — Repeat rate, churn, and lifecycle status at a glance" (full-width, height 1)
-     - Row 4: "Lifecycle Status — Distribution of Active, At Risk, and Churned customers" (full-width, height 1)
-     - Row 11: "Retention & Churn Trends — 6-month directional view with targets" (full-width, height 1)
-     - Row 18: "Retention Scorecard — Segment-level retention vitals" (full-width, height 1)
--->
+#### 📝 Text: Retention Health — Repeat rate, churn, and lifecycle...
+
+# Retention Health — Repeat rate, churn, and lifecycle status at a glance
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Lifecycle Status — Distribution of Active, At Risk, and...
+
+# Lifecycle Status — Distribution of Active, At Risk, and Churned customers
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Retention & Churn Trends — 6-month directional view with...
+
+# Retention & Churn Trends — 6-month directional view with targets
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Retention Scorecard — Segment-level retention vitals
+
+# Retention Scorecard — Segment-level retention vitals
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Repeat Purchase Rate
 
@@ -529,12 +554,37 @@ ORDER BY CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
 
 ### 📑 Tab: Phan tich Cohort
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Cohort Analysis — Track how each acquisition cohort retains over time" (full-width, height 1)
-     - Row 4: "Cohort Retention Matrix — Month-by-month retention rates" (full-width, height 1)
-     - Row 14: "Revenue by Cohort — Layer cake view of cohort revenue contribution" (full-width, height 1)
-     - Row 21: "New vs Returning — Monthly revenue and customer split" (full-width, height 1)
--->
+#### 📝 Text: Cohort Analysis — Track how each acquisition cohort...
+
+# Cohort Analysis — Track how each acquisition cohort retains over time
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Cohort Retention Matrix — Month-by-month retention rates
+
+# Cohort Retention Matrix — Month-by-month retention rates
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Revenue by Cohort — Layer cake view of cohort revenue...
+
+# Revenue by Cohort — Layer cake view of cohort revenue contribution
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: New vs Returning — Monthly revenue and customer split
+
+# New vs Returning — Monthly revenue and customer split
+
+```json metabase-pos
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Avg Month-1 Retention
 
@@ -911,12 +961,37 @@ ORDER BY 1, 2
 
 ### 📑 Tab: Hanh vi & Reactivation
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "Purchase Behavior & Reactivation — Buying patterns and win-back performance" (full-width, height 1)
-     - Row 4: "Purchase Frequency — How many orders do customers typically place?" (full-width, height 1)
-     - Row 11: "Reactivation Tracking — Monthly win-back performance (6M)" (full-width, height 1)
-     - Row 18: "At-Risk Watchlist — High-value customers needing immediate outreach" (full-width, height 1)
--->
+#### 📝 Text: Purchase Behavior & Reactivation — Buying patterns and...
+
+# Purchase Behavior & Reactivation — Buying patterns and win-back performance
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Purchase Frequency — How many orders do customers...
+
+# Purchase Frequency — How many orders do customers typically place?
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Reactivation Tracking — Monthly win-back performance (6M)
+
+# Reactivation Tracking — Monthly win-back performance (6M)
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: At-Risk Watchlist — High-value customers needing...
+
+# At-Risk Watchlist — High-value customers needing immediate outreach
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Avg Days Between Purchases
 

@@ -1,3 +1,5 @@
+const { extractTextId } = require('../text-card-helpers');
+
 class Dashboard {
     constructor(core) {
         this.core = core;
@@ -97,13 +99,35 @@ class Dashboard {
             const isTextCard = config.id === null;
 
             // Match by card_id AND tab — avoid reusing the same dashcard across tabs
-            // Text cards (card_id=null) are not matched — always recreated
+            // Text cards: match by text-id marker + tab (idempotent redeploy)
             const tabId = config.tab && tabMap.has(config.tab) ? tabMap.get(config.tab) : (config.dashboard_tab_id || null);
-            const existing = isTextCard ? null : currentCards.find(dc =>
-                dc.card_id === config.id
-                && !usedDashCardIds.has(dc.id)
-                && (tabId == null || dc.dashboard_tab_id === tabId)
-            );
+            let existing;
+            if (isTextCard) {
+                const configTextId = extractTextId((config.visualization_settings || {}).text);
+                // Primary match: by text-id marker + tab
+                existing = configTextId ? currentCards.find(dc =>
+                    dc.card_id === null
+                    && !usedDashCardIds.has(dc.id)
+                    && (tabId == null || dc.dashboard_tab_id === tabId)
+                    && extractTextId((dc.visualization_settings || {}).text) === configTextId
+                ) : null;
+                // Fallback: match legacy text cards (no marker) by tab + position
+                if (!existing && configTextId) {
+                    existing = currentCards.find(dc =>
+                        dc.card_id === null
+                        && !usedDashCardIds.has(dc.id)
+                        && (tabId == null || dc.dashboard_tab_id === tabId)
+                        && !extractTextId((dc.visualization_settings || {}).text)
+                        && dc.row === config.row && dc.col === config.col
+                    ) || null;
+                }
+            } else {
+                existing = currentCards.find(dc =>
+                    dc.card_id === config.id
+                    && !usedDashCardIds.has(dc.id)
+                    && (tabId == null || dc.dashboard_tab_id === tabId)
+                );
+            }
             if (existing) usedDashCardIds.add(existing.id);
 
             let dashCardId;

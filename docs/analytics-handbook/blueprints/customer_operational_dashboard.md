@@ -15,11 +15,30 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, donuts for composi
 
 ### 📑 Tab: Tong quan
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "# Tong quan khach hang\nCustomer Health — Ai dang active, ai can cham soc?" (full-width, height 1)
-     - Row 4: "# Phan bo trang thai & Segment" (full-width, height 1)
-     - Row 11: "# Xu huong 6 thang" (full-width, height 1)
--->
+#### 📝 Text: Tong quan khach hang
+
+# Tong quan khach hang
+# Customer Health — Ai dang active, ai can cham soc?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Phan bo trang thai & Segment
+
+# Phan bo trang thai & Segment
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Xu huong 6 thang
+
+# Xu huong 6 thang
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: MAU (Monthly Active Customers)
 
@@ -333,11 +352,29 @@ ORDER BY 1
 
 ### 📑 Tab: Kenh & Dia ly
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "# Xu huong khach hang moi (6 thang)" (full-width, height 1)
-     - Row 7: "# Kenh acquisition (thang truoc)" (full-width, height 1)
-     - Row 14: "# Phan bo dia ly" (full-width, height 1)
--->
+#### 📝 Text: Xu huong khach hang moi (6 thang)
+
+# Xu huong khach hang moi (6 thang)
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Kenh acquisition (thang truoc)
+
+# Kenh acquisition (thang truoc)
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Phan bo dia ly
+
+# Phan bo dia ly
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Customer Acquisition Trend (6M)
 
@@ -539,12 +576,37 @@ LIMIT 15
 
 ### 📑 Tab: Watchlist & Hanh dong
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "# RFM Segment Health Matrix" (full-width, height 1)
-     - Row 6: "# VIP Watchlist — Cham soc chu dong" (full-width, height 1)
-     - Row 15: "# At-Risk Reactivation Priority" (full-width, height 1)
-     - Row 24: "# Churned High-Value — Co hoi recovery" (full-width, height 1)
--->
+#### 📝 Text: RFM Segment Health Matrix
+
+# RFM Segment Health Matrix
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: VIP Watchlist — Cham soc chu dong
+
+# VIP Watchlist — Cham soc chu dong
+
+```json metabase-pos
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: At-Risk Reactivation Priority
+
+# At-Risk Reactivation Priority
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Churned High-Value — Co hoi recovery
+
+# Churned High-Value — Co hoi recovery
+
+```json metabase-pos
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Segment x Status Health Matrix
 

@@ -25,11 +25,29 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 
 ### 📑 Tab: Hieu suat thang
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "# Báo cáo hiệu suất kinh doanh tháng" (full-width, height 1)
-     - Row 7: "## Doanh thu theo tuần vs Mục tiêu tháng" (full-width, height 1)
-     - Row 14: "## Cấu trúc doanh thu — Từ GMV đến Net Revenue" (full-width, height 1)
--->
+#### 📝 Text: Báo cáo hiệu suất kinh doanh tháng
+
+# Báo cáo hiệu suất kinh doanh tháng
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Doanh thu theo tuần vs Mục tiêu tháng
+
+## Doanh thu theo tuần vs Mục tiêu tháng
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Cấu trúc doanh thu — Từ GMV đến Net Revenue
+
+## Cấu trúc doanh thu — Từ GMV đến Net Revenue
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Monthly Net Revenue
 
@@ -572,11 +590,29 @@ ORDER BY sort_order
 
 ### 📑 Tab: Kenh & Khach hang
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "## Hiệu suất kênh bán hàng" (full-width, height 1)
-     - Row 7: "## Xu hướng cấu trúc kênh 6 tháng" (full-width, height 1)
-     - Row 14: "## Danh mục khách hàng" (full-width, height 1)
--->
+#### 📝 Text: Hiệu suất kênh bán hàng
+
+## Hiệu suất kênh bán hàng
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Xu hướng cấu trúc kênh 6 tháng
+
+## Xu hướng cấu trúc kênh 6 tháng
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Danh mục khách hàng
+
+## Danh mục khách hàng
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Revenue by Channel Category
 
@@ -922,10 +958,21 @@ ORDER BY 2 DESC
 
 ### 📑 Tab: San pham & Van hanh
 
-<!-- Text annotations to add manually after deploy:
-     - Row 0: "## Top sản phẩm & thương hiệu" (full-width, height 1)
-     - Row 15: "## Hiệu quả vận hành" (full-width, height 1)
--->
+#### 📝 Text: Top sản phẩm & thương hiệu
+
+## Top sản phẩm & thương hiệu
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Hiệu quả vận hành
+
+## Hiệu quả vận hành
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Top 10 Products by Revenue
 
