@@ -34,8 +34,8 @@ SELECT
     cod_amount,
     
     -- Timestamps
-    try_cast(created_on as TIMESTAMP) as created_at,
-    try_cast(shipped_on as TIMESTAMP) as shipped_at,
+    try_cast(created_on as TIMESTAMPTZ) as created_at,
+    try_cast(shipped_on as TIMESTAMPTZ) as shipped_at,
     -- delivered_at could be mapped from modified_on if status is success
     
     source_timestamp as extracted_at

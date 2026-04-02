@@ -32,12 +32,12 @@ SELECT
     coalesce(assignee_email, account_email) as salesperson_email,
     
     -- Timestamps - Lifecycle
-    try_cast(created_on as TIMESTAMP) as created_at,
-    try_cast(modified_on as TIMESTAMP) as updated_at,
-    try_cast(issued_on as TIMESTAMP) as issued_at,
-    try_cast(finalized_on as TIMESTAMP) as finalized_at,
-    try_cast(completed_on as TIMESTAMP) as completed_at,
-    try_cast(cancelled_on as TIMESTAMP) as cancelled_at,
+    try_cast(created_on as TIMESTAMPTZ) as created_at,
+    try_cast(modified_on as TIMESTAMPTZ) as updated_at,
+    try_cast(issued_on as TIMESTAMPTZ) as issued_at,
+    try_cast(finalized_on as TIMESTAMPTZ) as finalized_at,
+    try_cast(completed_on as TIMESTAMPTZ) as completed_at,
+    try_cast(cancelled_on as TIMESTAMPTZ) as cancelled_at,
     
     -- Status Mapping
     CASE 

@@ -13,4 +13,5 @@ sapo_warehouse:
         memory_limit: '5GB'
         threads: 1
         preserve_insertion_order: false
+        TimeZone: 'Asia/Ho_Chi_Minh'
 

@@ -34,8 +34,8 @@ SELECT
     reference_code,
     
     -- Timestamps
-    try_cast(created_on as TIMESTAMP) as created_at,
-    try_cast(paid_on as TIMESTAMP) as paid_at,
+    try_cast(created_on as TIMESTAMPTZ) as created_at,
+    try_cast(paid_on as TIMESTAMPTZ) as paid_at,
     
     source_timestamp as extracted_at
 

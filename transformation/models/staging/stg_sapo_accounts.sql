@@ -29,8 +29,8 @@ SELECT
     tenant_id,
 
     -- Timestamps
-    try_cast(created_on as TIMESTAMP) as created_at,
-    try_cast(modified_on as TIMESTAMP) as updated_at,
+    try_cast(created_on as TIMESTAMPTZ) as created_at,
+    try_cast(modified_on as TIMESTAMPTZ) as updated_at,
     event_timestamp,
     ingest_method
 

@@ -66,6 +66,7 @@ def generate_serving_db():
     db_locked = False
     try:
         con = duckdb.connect(SERVING_DB_PATH)
+        con.sql("SET TimeZone = 'Asia/Ho_Chi_Minh'")
     except Exception as e:
         print(f"  [!] WARNING: Could not connect to DuckDB ({e}).")
         print(f"      Assuming DB is locked by a reader. Skipping View Definition updates.")
