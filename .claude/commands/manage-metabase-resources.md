@@ -10,13 +10,13 @@ Read these files before proceeding:
 
 ## Steps
 
-### Step 1: Strategic Planning
+### Step 1: Verify Design Spec
 
-Before writing code, classify the request:
+Before writing code, confirm a Design Spec exists (from Phase 0-6 in `.skills/analytics-design/`):
 
-1. **Archetype**: _Pulse_ (high-level)? _Cockpit_ (action-oriented)? _Tool_ (exploratory)?
-2. **Data Strategy**: Reusable -> `Model` + `Metric`. One-off -> `Question`.
-3. **Visualization**: Use heuristics from STRATEGY.md
+1. **Archetype**: Specified in Design Spec (Pulse / Cockpit / Tool)
+2. **Data Strategy**: Reusable → `Model` + `Metric`. One-off → `Question`.
+3. **Visualization**: Mapped from Design Spec using `METABASE_VIZ_CATALOG.md`
 
 ### Step 2: Define Scope
 

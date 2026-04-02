@@ -23,14 +23,11 @@ Phase 0-6 (Analytics Design)  →  Design Spec  →  Phase 7-10 (Metabase Automa
 
 ## 2. Semantic Layer Strategy (Data Modeling)
 
-Do not pollute Metabase with raw SQL fragments. Use the **Pyramid Principle**:
+Use `Model` → `Metric` → `Question` hierarchy in Metabase:
 
-1.  **Base (Models)**: Create a "Trusted Dataset" (Model) (`dataset: true`) for core entities (e.g., `Official Orders`).
-    - _Why_: Hides complex Joins/Casting from non-technical users.
-2.  **Middle (Metrics)**: Define standard calculations (e.g., `Revenue`, `AOV`) on the Model.
-    - _Why_: Ensures "Revenue" is calculated identically everywhere.
-3.  **Top (Questions)**: Only visuals should be "Questions".
-    - _Rule_: A Dashboard Question should rarely have raw SQL. It should query a **Model**.
+1.  **Models** (`dataset: true`): Trusted datasets for core entities (e.g., `Official Orders`).
+2.  **Metrics**: Standard calculations (e.g., `Revenue`, `AOV`) defined on a Model.
+3.  **Questions**: Visual cards that query a Model. Avoid raw SQL in dashboard questions when a Model exists.
 
 ## 3. Automation Workflow
 
@@ -53,17 +50,11 @@ Before deploying, verify design spec staleness:
 4. If no design spec exists (legacy blueprint) → info: "No design spec for this blueprint."
 5. Warning is **informational only** — does not block deploy.
 
-## 4. Dashboard Archetypes (Quick Reference)
+## 4. Archetype Reference
 
-For full archetype definitions, card roles, and composition patterns, see `.skills/analytics-design/COMPOSITION_PATTERNS.md`.
+Archetype selection is decided in Phase 0-6 (Analytics Design). See `.skills/analytics-design/COMPOSITION_PATTERNS.md` for full definitions, card roles, and composition patterns.
 
-| Archetype | Default For | Key Trait |
-|-----------|-------------|-----------|
-| **Executive Pulse** | CEO/Board asks | ≤10 cards, glanceable, no tables |
-| **Operational Cockpit** | "Sales Dashboard" (default) | Filters + breakdowns + detail table |
-| **Exploratory Tool** | Deep-dive requests | Many filters, pivot/scatter |
-
-**Rule:** If user asks for "Sales Dashboard" without specifying → default to **Operational Cockpit**.
+This skill receives the archetype via the Design Spec and translates it to Metabase layout constraints.
 
 ## 5. Parser Capabilities & Behavior Notes
 
@@ -87,7 +78,7 @@ Optional body text (markdown). If omitted, heading name is used as `# Heading Na
 
 **Cách hoạt động:** Parser tạo text dashcard với `card_id: null` và `visualization_settings.text` chứa nội dung markdown. Deploy script tự động include text cards trong cùng PUT request với tabs + dashcards.
 
-**Lưu ý:** Text cards luôn được tạo mới khi redeploy (không match existing). Đây là hành vi expected vì text cards không có backing question ID.
+**Lưu ý:** Text cards are idempotent on redeploy — matched by `<!-- text-id:<slug> -->` marker injected into content. See `lib/text-card-helpers.js`.
 
 ### 5.2 Dashboard Filters (`metabase-filter`)
 

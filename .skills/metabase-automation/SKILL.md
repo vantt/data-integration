@@ -8,16 +8,15 @@ description: A robust, modular skill for programmatically managing Metabase Coll
 > **Location**: `.skills/metabase-automation/` — agent-agnostic shared tooling.
 > Both Claude Code (`.claude/commands/`) and Antigravity (`.agents/skills/`) reference this directory.
 
-## 🧠 Cognitive Framework (How to Think)
+## 🧠 How This Skill Fits
 
-**READ FIRST**: `.skills/metabase-automation/STRATEGY.md`
-This skill is not just a tool; it enforces Analytics Engineering best practices.
+This skill **implements** analytics configurations designed by `.skills/analytics-design/` (Phase 0-6).
+It assumes you have a **Design Spec** with archetype, viz selections, and composition already decided.
 
-- **Archetypes**: Decide between _Pulse_, _Cockpit_, or _Tool_.
-- **Modeling**: Always prefer `Model` -> `Metric` -> `Question` hierarchy.
-- **Visuals**: Use the heuristics in `STRATEGY.md` for chart selection.
+**Input**: Design Spec → **Output**: Metabase resources (Collections, Cards, Dashboards, Metrics, Models)
 
-This skill provides a high-level Node.js client for automating Metabase content creation (Collections, Cards, Dashboards, Metrics, Models).
+- **Strategy**: `.skills/metabase-automation/STRATEGY.md` — translation workflow, semantic layer, deploy mechanics
+- **Viz Catalog**: `.skills/metabase-automation/METABASE_VIZ_CATALOG.md` — standard vocab → Metabase settings
 
 ## 📂 Structure
 

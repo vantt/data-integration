@@ -4,17 +4,9 @@ Create a new Analytics Blueprint using the 2-skill pipeline: Analytics Design (P
 
 ## Step 1: Analytics Design (Phase 0-6)
 
-Read `.skills/analytics-design/SKILL.md` first. Execute Phase 0-6:
+Execute Phase 0-6 by reading `.skills/analytics-design/SKILL.md`. This produces the Design Spec with archetype, viz selections, composition, and narrative structure.
 
-1. **Phase 0 — Domain Modeling**: Check/create domain in `docs/analytics-handbook/domains/`
-2. **Phase 1 — Playbook Creation**: Check/create playbook in `docs/analytics-handbook/playbooks/`
-3. **Phase 2 — Guide Creation**: Only if complex concepts need explanation
-4. **Phase 3 — Design Brief**: Audience, hero metric, comparison frame, archetype
-5. **Phase 4 — Composition Design**: Card roles, narrative flow, filters, sizing
-6. **Phase 5 — Visualization Selection**: Standard vocabulary terms (decision tree)
-7. **Phase 6 — Enrichment Check**: Comparisons, data completeness, narrative
-
-**Output**: Design Spec saved to `docs/analytics-handbook/designs/<name>.md`
+**Output**: Design Spec at `docs/analytics-handbook/designs/<name>.md`
 
 ## Step 2: Metabase Automation (Phase 7-10)
 
@@ -26,10 +18,6 @@ Now read `.skills/metabase-automation/SKILL.md` and `METABASE_VIZ_CATALOG.md`. I
 4. **Phase 10 — Deploy** (optional): Use `/deploy-metabase-blueprint`
 
 **Output**: Blueprint saved to `docs/analytics-handbook/blueprints/<name>.md`
-
-## Fast-Track
-
-Skip Step 1 when domain + playbook already exist AND dashboard ≤5 cards. Collapse Phase 3-6 into one quick design spec.
 
 ## Scaffold (alternative)
 
