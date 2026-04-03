@@ -60,16 +60,16 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 1 | A | "Ket qua thang (Monthly Review)" | annotation | text-annotation | structural | full-width x minimal | Section heading — subtitle: "Sales Ops — Thang qua van hanh the nao?" | — |
+| 1 | A | "Review ket qua thang — doanh thu, don hang, chat luong van hanh" | annotation | text-annotation | structural | full-width x minimal | Section heading — subtitle: "Sales Ops — Thang qua van hanh the nao?" | — |
 | 2 | B | Total Orders | hero | single-value-with-trend | primary, positive/negative (MoM) | one-third x short, prominent | Tong don hang thang — con so van hanh quan trong nhat | vs previous period (MoM %) |
 | 3 | B | Net Revenue | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | Doanh thu thuan thang | vs previous period (MoM %) |
 | 4 | B | AOV | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | Gia tri trung binh moi don | vs previous period (MoM %) |
 | 5 | B | Completion Rate | supporting | gauge | positive/warning/negative (zones: 90-100/80-89/0-79) | one-quarter x short | Ty le don hoan thanh — target > 90% | vs benchmark (zones) |
-| 6 | C | "Chat luong don hang" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 6 | C | "Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 7 | D | Order Status Distribution | breakdown | donut | series-1..series-4 (COMPLETED=positive, OPEN=neutral, CANCELLED=negative, ARCHIVED=muted) | one-third x medium | Phan bo 4 trang thai don — nhin nhanh composition | composition |
 | 8 | D | Avg Time to Complete | supporting | single-value-with-trend | secondary, positive/negative (MoM, lower=positive) | one-third x medium, prominent | Thoi gian xu ly trung binh — cai thien hay te hon? | vs previous period (MoM) |
 | 9 | D | Cancelled & Returns Summary | supporting | data-table-formatted | conditional-above on MoM Change % (> 0% = negative) | one-third x medium, compact | Cancelled + Return count voi MoM flag — RED neu tang | vs previous period (MoM %) |
-| 10 | E | "Xu huong 6 thang" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 10 | E | "Theo doi xu huong 6 thang — cancellation va return rate vs target" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 11 | F | Cancellation Rate Trend (6M) | trend | line-chart | negative + muted (goal line) | half x medium | Ty le huy don 6 thang — target < 5% | vs target (goal line) |
 | 12 | F | Return Rate Trend (6M) | trend | line-chart | warning + muted (goal line) | half x medium | Ty le tra hang 6 thang — target < 3% | vs target (goal line) |
 | 13 | G | Top 10 Returned Products | detail | data-table-formatted | conditional-above on Return Count (top 3 = accent) | full-width x medium, compact | San pham bi tra nhieu nhat — can review chat luong | rank/position |
@@ -82,15 +82,15 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 14 | A | "Phan bo don hang theo kenh" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 14 | A | "Xac dinh kenh chiem workload — ranking orders va revenue" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 15 | B | Orders by Channel | breakdown | horizontal-bar | series-1..series-N | half x medium | Ranking kenh theo volume don hang | rank/position |
 | 16 | B | Revenue by Channel | breakdown | horizontal-bar | series-1..series-N | half x medium | Ranking kenh theo doanh thu | rank/position |
-| 17 | C | "Hieu suat van hanh theo kenh" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 17 | C | "Danh gia hieu suat van hanh kenh — completion, cancel, return rates" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 18 | D | Channel Operations Matrix | detail | data-table-formatted | conditional-below on Completion % (< 85% = negative), conditional-above on Cancel % (> 5% = negative) | full-width x medium | Channel, Orders, Revenue, Completion %, Cancel %, Return %, Avg Complete hrs — highlight kenh co van de | vs benchmark (thresholds) |
-| 19 | E | "Huy don theo kenh" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 19 | E | "Phan tich huy don theo kenh — kenh nao huy nhieu nhat?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 20 | F | Cancellation by Channel | breakdown | horizontal-bar | negative | two-thirds x medium | Ranking kenh huy don nhieu nhat | rank/position |
 | 21 | F | Cancellation by Channel (% of Total) | breakdown | donut | series-1..series-5 | one-third x medium | Ty le dong gop huy don moi kenh | composition |
-| 22 | G | "Phan bo theo chi nhanh" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 22 | G | "Danh gia hieu suat chi nhanh — volume va van de can xu ly" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 23 | H | Orders by Branch | breakdown | horizontal-bar | series-1..series-N | half x medium | Ranking chi nhanh theo volume | rank/position |
 | 24 | H | Branch Performance Table | detail | data-table-formatted | conditional-below on Completion % (< 85% = negative), conditional-above on Cancel % (> 5% = negative) | half x medium, compact | Branch, Orders, Revenue, Completion %, Cancel % — highlight chi nhanh co van de | vs benchmark (thresholds) |
 
@@ -102,21 +102,47 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 25 | A | "Social Commerce (Facebook + Zalo)" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 25 | A | "Theo doi hieu suat Social Commerce — revenue va nhan vien" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 26 | B | Social Revenue | supporting | single-value-with-trend | primary, positive/negative (MoM) | one-third x short, prominent | Doanh thu tu kenh social | vs previous period (MoM %) |
 | 27 | B | Social Orders | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-third x short, standard | So don tu social | vs previous period (MoM %) |
 | 28 | B | Social AOV | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-third x short, standard | AOV kenh social | vs previous period (MoM %) |
 | 29 | C | Social Revenue by Platform | breakdown | donut | series-1, series-2 (Facebook, Zalo) | one-third x medium | Facebook vs Zalo — ai dong gop nhieu hon? | composition |
 | 30 | C | CS Staff Leaderboard | detail | data-table-formatted | conditional-above on Revenue (top 3 = accent) | two-thirds x medium, compact | Staff, Orders, Revenue, AOV, % Contribution — highlight top 3 | rank/position |
-| 31 | D | "Hieu suat nhan vien (Toan kenh)" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 31 | D | "Danh gia hieu suat nhan vien toan kenh — ranking va completion" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 32 | E | Staff Revenue Distribution | breakdown | horizontal-bar | primary | half x medium | Ranking nhan vien theo doanh thu toan kenh | rank/position |
 | 33 | E | Staff Performance Table | detail | data-table-formatted | conditional-above on Completion % (> 95% = positive), conditional-below on Completion % (< 80% = negative) | half x medium, compact | Staff, Orders, Revenue, AOV, Completion % — highlight performance | vs benchmark (thresholds) |
-| 34 | F | "Thanh toan & Doi soat" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 34 | F | "Kiem tra xu huong thanh toan va doi soat — PTTT shift va pending alert" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 35 | G | Payment Method Distribution | breakdown | donut | series-1..series-5 | one-third x medium | Phan bo phuong thuc thanh toan | composition |
 | 36 | G | Payment Method Trend (6M) | trend | stacked-area | series-1..series-5 | two-thirds x medium | Xu huong phuong thuc thanh toan 6 thang — shift nao dang xay ra? | composition over time |
 | 37 | H | Payment Status Summary | detail | data-table-formatted | conditional-below on pending (> 5% total = negative) | full-width x medium, compact | Status, Orders, Amount, % — flag pending > 5% | vs benchmark (5% threshold) |
+| 38 | I | "Source: fact_orders · Updated monthly · Excludes incomplete current month" | annotation | text-annotation | structural | full-width x minimal | Data source & freshness | — |
 
 ---
+
+### Action Map
+
+| Card | Signal | Condition | Recommended Action |
+|------|--------|-----------|-------------------|
+| Total Orders (hero) | Drop | MoM < -10% | Kiem tra kenh va chi nhanh (View 2) |
+| Completion Rate (gauge) | Below warning | < 80% | Review quy trinh xu ly, kiem tra bottleneck |
+| Avg Time to Complete | Increase | MoM > +20% | Dieu tra toc do xu ly, kiem tra nhan luc |
+| Cancellation Rate Trend | Above target | > 5% for 3 months | Review nguyen nhan huy don, cai thien UX/stock |
+| Return Rate Trend | Above target | > 3% for 3 months | Kiem tra top returned products, review chat luong |
+| Channel Operations Matrix | Kenh co van de | Completion < 85% hoac Cancel > 5% | Lien he team kenh, xac dinh root cause |
+| CS Staff Leaderboard | Bat can xung | Top performer > 3x bottom | Dao tao va phan bo lai workload |
+| Payment Status Summary | Pending cao | > 5% total | Doi soat ke toan, kiem tra gateway |
+
+### Dashboard Finish Checklist
+
+- [x] Moi card co title theo Title Discipline
+- [x] Moi KPI co it nhat 1 comparison (MoM hoac target)
+- [x] Text annotations dung imperative voice
+- [x] Action Map day du
+- [x] Hero card noi bat
+- [x] Row widths sum = full-width
+- [x] Density Cockpit: V1=13, V2=12, V3=12
+- [x] Moi view co section divider
+- [x] Color tokens nhat quan
 
 ### Summary of Changes
 

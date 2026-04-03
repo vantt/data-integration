@@ -40,21 +40,22 @@ Single view — 10 data cards + 5 annotations = 15 cards total. Vua du cho Cockp
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 1 | A | "Doanh thu Social hom nay — doi social dang ban duoc bao nhieu?" | annotation | text-annotation | structural | full-width x minimal | Dashboard subtitle + primary question | — |
+| 1 | A | "Monitor doanh thu Social real-time — doi social dang ban duoc bao nhieu?" | annotation | text-annotation | structural | full-width x minimal | Dashboard subtitle + primary question | — |
 | 2 | B | Social Revenue Today | hero | single-value-with-trend | primary, positive/negative (DoD) | one-third x short, prominent | Tong GMV tu Social hom nay | vs previous period (DoD %) |
 | 3 | B | Social Orders Today | supporting | single-value-with-trend | secondary, positive/negative (DoD) | one-quarter x short, standard | So don tu Social | vs previous period (DoD %) |
 | 4 | B | Social AOV | supporting | single-value-with-trend | secondary, positive/negative (DoD) | one-quarter x short, standard | Gia tri trung binh don Social | vs previous period (DoD %) |
 | 5 | B | Social Share of Total | supporting | single-value | neutral | one-quarter x short, standard | % doanh thu Social / tong doanh thu | — |
-| 6 | C | "Kenh nao dang drive doanh thu — Facebook vs Zalo vs Instagram" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 6 | C | "Xac dinh kenh drive doanh thu — Facebook vs Zalo vs Instagram dong gop" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 7 | D | Revenue by Channel | breakdown | donut | series-1, series-2, series-3 | one-third x medium | Ty le dong gop FB vs Zalo vs Instagram | composition |
 | 8 | D | Revenue by Channel (7-day trend) | trend | multi-line-chart | series-1 (Facebook) + series-2 (Zalo) + series-3 (Instagram) | two-thirds x medium | Xu huong doanh thu theo kenh 7 ngay | vs previous period (implicit overlay) |
-| 9 | E | "Hieu suat nhan vien — ai dang ban tot, ai can ho tro" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 9 | E | "Danh gia hieu suat nhan vien — ranking va xu ly kip thoi" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 10 | F | Top Agents by Revenue | breakdown | horizontal-bar | primary | half x medium | Ranking nhan vien theo doanh thu Social | rank/position |
 | 11 | F | Top Agents by Orders | breakdown | horizontal-bar | secondary | half x medium | Ranking nhan vien theo so don Social | rank/position |
-| 12 | G | "Chi tiet theo nhan vien — doanh thu, so don, AOV" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 12 | G | "Review chi tiet nhan vien — xac dinh ai can ho tro them" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 13 | H | Agent Performance Table | detail | data-table-formatted | conditional-above/conditional-below on DoD Revenue Change % | full-width x medium, compact | Chi tiet: Agent, Revenue, Orders, AOV, DoD % | vs previous period (DoD) |
-| 14 | I | "Don hang gan nhat — kiem tra real-time" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 14 | I | "Kiem tra don hang moi nhat — xac nhan pipeline real-time" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 15 | J | Recent Social Orders | detail | data-table | neutral | full-width x medium, compact | 20 don moi nhat: time, order code, channel, agent, amount, status | — |
+| 16 | K | "Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: platform_group = Social" | annotation | text-annotation | structural | full-width x minimal | Data source & freshness | — |
 
 ### Action Map
 
@@ -68,6 +69,18 @@ Single view — 10 data cards + 5 annotations = 15 cards total. Vua du cho Cockp
 | Revenue by Channel | Channel imbalance | 1 kenh < 20% tong | Day manh kenh yeu — dang bai, tra loi tin nhan nhanh hon. |
 | Top Agents by Revenue | Agent underperform | Agent co 0 don sau 2h | Kiem tra agent co dang online/reply tin nhan. Phan bo lai tin nhan. |
 | Agent Performance Table | DoD drop > 30% | Revenue Change % < -30% | Trao doi truc tiep voi agent, kiem tra chat log. |
+
+### Dashboard Finish Checklist
+
+- [x] Moi card co title theo Title Discipline
+- [x] Moi KPI co it nhat 1 comparison (DoD)
+- [x] Text annotations dung imperative voice
+- [x] Action Map day du
+- [x] Hero card noi bat (one-third, prominent)
+- [x] Row widths sum = full-width (18 cols)
+- [x] Single view — 15 cards within Cockpit limit of 16
+- [x] Color tokens nhat quan
+- [x] Donut <= 5 slices (3 channels)
 
 <!--
 Composition Table Notes:

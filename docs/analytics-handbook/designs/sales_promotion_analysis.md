@@ -49,18 +49,18 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 1 | A | "Tong quan chi phi chiet khau — Chiet khau co dang duoc kiem soat?" | annotation | text-annotation | structural | full-width x minimal | Section heading + purpose | — |
+| 1 | A | "Kiem soat chi phi chiet khau — co vuot nguong va dang tang hay giam?" | annotation | text-annotation | structural | full-width x minimal | Section heading + purpose | — |
 | 2 | B | Total Discount Amount | hero | single-value-with-trend | primary, positive/negative (MoM) | one-third x short, prominent | Tong tien chiet khau ky nay | vs previous period (MoM %) |
 | 3 | B | Discount Rate % | supporting | single-value-with-trend | warning (khi > 15%), neutral | one-quarter x short, standard | Ty le CK/GMV | vs previous period (MoM %) |
 | 4 | B | Discount Frequency % | supporting | single-value-with-trend | neutral, positive/negative (MoM) | one-quarter x short, standard | % don co chiet khau | vs previous period (MoM %) |
 | 5 | B | Discounted Orders | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | So don co CK | vs previous period (MoM %) |
-| 6 | C | "So sanh Promo vs Non-Promo — Khuyen mai co tang gia tri don hang?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 6 | C | "So sanh Promo vs Non-Promo — khuyen mai co uplift AOV?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 7 | D | Promo vs Non-Promo Summary | breakdown | grouped-bar | series-1 (Promo) + series-2 (Non-Promo) | two-thirds x medium | So sanh Revenue, Orders, AOV giua 2 nhom | categorical (Promo vs Non-Promo) |
 | 8 | D | AOV Uplift | supporting | single-value-with-trend | positive/negative | one-third x medium, prominent | AOV(Promo) vs AOV(Non-Promo) delta | vs benchmark (Non-Promo AOV) |
-| 9 | E | "Phan bo do sau chiet khau — Co don nao bi chiet khau qua muc?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 9 | E | "Phan tich do sau chiet khau — phat hien don bat thuong > 30%" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 10 | F | Discount Depth Histogram | breakdown | vertical-bar | primary, accent (buckets > 30%) | two-thirds x medium | Phan bo don theo % CK (0-10%, 10-20%, ...) | composition |
 | 11 | F | Avg Discount % by Channel | breakdown | horizontal-bar | series-1..series-N | one-third x medium | Ranking kenh theo ty le CK trung binh | rank/position |
-| 12 | G | "Xu huong chiet khau theo thang — Chi phi CK dang tang hay giam?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 12 | G | "Theo doi xu huong chiet khau — trend amount va rate" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 13 | H | Discount Amount & Rate Trend | trend | combo-chart | primary (Discount Amount bar) + accent (Discount Rate % line) | full-width x medium | Xu huong tien CK va ty le CK theo thang | vs previous period (MoM overlay) |
 
 ---
@@ -71,17 +71,17 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 14 | A | "Bang xep hang khuyen mai — Chuong trinh nao mang lai nhieu doanh thu nhat?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 14 | A | "Xac dinh promotion hieu qua — ranking doanh thu va usage" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 15 | B | Total Promo Revenue | hero | single-value-with-trend | primary, positive/negative (MoM) | one-third x short, prominent | Tong doanh thu tu don co promo | vs previous period (MoM %) |
 | 16 | B | Promo Usage Count | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | Tong so don dung promo | vs previous period (MoM %) |
 | 17 | B | Unique Promos Active | supporting | single-value | neutral | one-quarter x short, standard | So chuong trinh dang active | — |
 | 18 | B | Avg Revenue per Promo | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | Doanh thu TB moi chuong trinh | vs previous period (MoM %) |
-| 19 | C | "Top 10 khuyen mai theo doanh thu" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 19 | C | "Review top 10 promotion — doanh thu va luot su dung" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 20 | D | Top 10 Promotions by Revenue | breakdown | horizontal-bar | primary | half x medium | Ranking CT khuyen mai theo doanh thu | rank/position |
 | 21 | D | Top 10 Promotions by Usage | breakdown | horizontal-bar | secondary | half x medium | Ranking CT khuyen mai theo luot su dung | rank/position |
-| 22 | E | "Chi tiet hieu suat tung khuyen mai" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 22 | E | "Tra cuu chi tiet promotion — code, usage, revenue, discount rate" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 23 | F | Promotion Performance Table | detail | data-table-formatted | conditional-above/conditional-below on Discount Rate % | full-width x tall | Code, Usage, Revenue, Discount, Discount Rate %, AOV, Type | rank/position |
-| 24 | G | "Xu huong su dung khuyen mai theo thang" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 24 | G | "Theo doi xu huong su dung promotion — top 5 codes" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 25 | H | Promo Usage Trend | trend | stacked-bar-time | series-1..series-5 (top 5 promos) | full-width x medium | Phan bo luot dung promo theo thang, chia theo top 5 codes | vs previous period (MoM) |
 
 ---
@@ -92,13 +92,14 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 26 | A | "Tac dong khuyen mai theo kenh — Kenh nao phu thuoc nhieu vao promo?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 26 | A | "Phan tich tac dong promo theo kenh — kenh nao phu thuoc nhieu?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 27 | B | Promo Revenue Share by Channel | breakdown | stacked-bar | series-1 (Promo Revenue) + series-2 (Non-Promo Revenue) | half x medium | Ty le doanh thu promo vs non-promo theo kenh | composition |
 | 28 | B | Discount Rate by Channel | breakdown | horizontal-bar | primary, accent (channels > 15% discount rate) | half x medium | Ranking kenh theo ty le CK | rank/position |
-| 29 | C | "Hieu suat kenh chi tiet — So sanh MoM cho tung kenh" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 29 | C | "So sanh hieu suat kenh MoM — highlight bien dong lon" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 30 | D | Channel Promo Performance Table | detail | data-table-formatted | conditional-above/conditional-below on MoM Change % | full-width x medium | Channel, Promo Orders, Promo Revenue, Discount Amount, Discount Rate %, MoM Change % | vs previous period (MoM) |
-| 31 | E | "Danh sach don hang co chiet khau cao — Kiem tra don bat thuong (CK > 30%)" | annotation | text-annotation | structural | full-width x minimal | Section heading + alert threshold | — |
+| 31 | E | "Dieu tra don chiet khau cao — flag don > 30% CK de audit" | annotation | text-annotation | structural | full-width x minimal | Section heading + alert threshold | — |
 | 32 | F | High-Discount Orders List | detail | data-table-formatted | conditional-above on Discount % (> 30% = accent) | full-width x tall | Order Code, Date, Channel, Promo Code, Gross Revenue, Discount, Discount %, Net Revenue | — |
+| 33 | G | "Source: fact_orders · dim_promotions · dim_channels · Updated daily · Excludes cancelled orders" | annotation | text-annotation | structural | full-width x minimal | Data source & freshness | — |
 
 ---
 
@@ -127,3 +128,17 @@ Multi-view — 3 views:
 - **Discount depth buckets:** `FLOOR((discount_amount / NULLIF(gross_revenue, 0)) * 10) * 10`
 - **Number format:** VND compact (1.2M), percentages 1 decimal (12.3%)
 - **Date format:** DD/MM/YYYY
+
+### Dashboard Finish Checklist
+
+- [x] Moi card co title theo Title Discipline
+- [x] Moi KPI co it nhat 1 comparison (MoM, Promo vs Non-Promo, hoac rank)
+- [x] Text annotations dung imperative voice
+- [x] Action Map day du (8 action items)
+- [x] Hero card noi bat (one-third, prominent)
+- [x] Row widths sum = full-width (18 cols)
+- [x] Density Exploratory Tool: V1=13, V2=12, V3=7
+- [x] Moi view co section divider
+- [x] Color tokens nhat quan
+- [x] Grouped-bar cho Promo vs Non-Promo comparison
+- [x] Number formatting: VND compact, percentage 1 decimal

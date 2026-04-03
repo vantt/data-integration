@@ -56,15 +56,15 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 1 | A | "Giam sat pipeline don hang — hom nay dang xu ly the nao?" | annotation | text-annotation | structural | full-width x minimal | Dashboard subtitle | — |
+| 1 | A | "Monitor pipeline don hang — trang thai xu ly va fulfillment rate" | annotation | text-annotation | structural | full-width x minimal | Dashboard subtitle | — |
 | 2 | B | Fulfillment Rate | hero | gauge | positive/warning/negative (zones: 95-100/85-94/0-84) | one-third x medium, prominent | Ty le don da xuat kho / tong don eligible | vs benchmark (zones) |
 | 3 | B | Total Orders Today | supporting | single-value-with-trend | secondary, positive/negative (DoD) | one-quarter x short, standard | Tong don hom nay | vs previous period (DoD %) |
 | 4 | B | Shipped Orders | supporting | single-value-with-trend | secondary, positive/negative (DoD) | one-quarter x short, standard | Don da xuat kho | vs previous period (DoD %) |
 | 5 | B | Avg Time to Complete | supporting | single-value-with-trend | secondary, positive/negative (DoD, inverted: lower=good) | one-quarter x short, standard | Thoi gian hoan thanh TB (gio) | vs previous period (DoD %) |
-| 6 | C | "Phan bo trang thai don hang" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 6 | C | "Kiem tra phan bo trang thai — drop-off o buoc nao?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 7 | D | Order Status Funnel | breakdown | funnel | series-1..series-5 | half x medium | Drop-off theo tung buoc pipeline | sequential conversion |
 | 8 | D | Fulfillment Status Breakdown | breakdown | donut | series-1..series-4 | half x medium | Ty le fulfilled/unfulfilled/partial | composition |
-| 9 | E | "Luong don theo gio hom nay" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 9 | E | "Phan tich luong don theo gio — peak hours va pattern DoD" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 10 | F | Hourly Order Intake | trend | multi-line-chart | primary (Today) + muted (Yesterday) | two-thirds x medium | Peak hours, real-time pattern | vs previous period (DoD overlay) |
 | 11 | F | Cumulative Orders | trend | multi-line-chart | accent (Today) + muted (Yesterday) | one-third x medium | Running total don hang | vs previous period (DoD overlay) |
 
@@ -76,15 +76,15 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 12 | A | "Hieu suat xu ly don hang — toc do va bottleneck" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 12 | A | "Danh gia toc do xu ly — time to ship va bottleneck" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 13 | B | Avg Hours to First Ship | hero | single-value-with-trend | primary, positive/negative (DoD, inverted: lower=good) | one-third x short, prominent | Thoi gian TB tu tao don den xuat kho dau tien | vs previous period (DoD %) |
 | 14 | B | Same-Day Ship Rate | supporting | single-value-with-trend | secondary, positive/negative (DoD) | one-quarter x short, standard | Ty le don xuat kho cung ngay | vs previous period (DoD %) |
 | 15 | B | Orders Pending > 24h | supporting | single-value | negative (khi > 0), neutral (khi = 0) | one-quarter x short, standard | Don bi nghen > 24h | — |
 | 16 | B | Completed Today | supporting | single-value-with-trend | secondary, positive/negative (DoD) | one-quarter x short, standard | Don hoan thanh hom nay | vs previous period (DoD %) |
-| 17 | C | "Xu huong toc do xu ly theo gio" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 17 | C | "Theo doi toc do xu ly theo gio — khi nao xu ly nhanh/cham?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 18 | D | Hourly Avg Processing Time | trend | multi-line-chart | primary (Today) + muted (Yesterday) | two-thirds x medium | Bien dong thoi gian xu ly theo gio | vs previous period (DoD overlay) |
 | 19 | D | Throughput Heatmap | breakdown | heatmap | conditional-range | one-third x medium | Cuong do xuat kho theo ngay x gio | intensity matrix |
-| 20 | E | "Don hang bi nghen (OPEN > 24h)" | annotation | text-annotation | structural | full-width x minimal | Section heading — escalation zone | — |
+| 20 | E | "Escalate don hang bi nghen — OPEN > 24h can xu ly ngay" | annotation | text-annotation | structural | full-width x minimal | Section heading — escalation zone | — |
 | 21 | F | Stuck Orders Detail | detail | data-table-formatted | conditional-below on age_hours (>24h red, >12h yellow) | full-width x medium, compact | Danh sach don OPEN qua 24h, sap xep theo thoi gian cho | — |
 
 ---
@@ -95,10 +95,10 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 22 | A | "Hieu suat nhan vien xu ly don" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 22 | A | "Danh gia hieu suat nhan vien — ranking volume va toc do" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 23 | B | Staff Performance — Orders Processed | breakdown | horizontal-bar | primary | half x medium | Ranking nhan vien theo so don xu ly | rank/position |
 | 24 | B | Staff Performance — Avg Processing Time | breakdown | horizontal-bar | secondary | half x medium | Ranking nhan vien theo toc do xu ly | rank/position |
-| 25 | C | "Chi tiet don hang hom nay" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 25 | C | "Tra cuu chi tiet don hang hom nay — full data lookup" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 26 | D | Order Detail Table | detail | data-table-formatted | conditional-above/conditional-below on status | full-width x tall, compact | Full detail don hang: ma don, trang thai, thoi gian, nhan vien | — |
 | 27 | E | "Source: fact_orders · Updated hourly · Excludes drafts" | annotation | text-annotation | structural | full-width x minimal | Data source & freshness | — |
 
@@ -115,6 +115,19 @@ Multi-view — 3 views:
 | Hourly Order Intake | Unusual spike | > 2x yesterday same hour | Alert warehouse to prepare for higher volume |
 | Staff Performance | Uneven distribution | Top performer > 3x bottom | Rebalance assignment, investigate blocking issues |
 | Stuck Orders Detail | High count | > 5 orders stuck | Escalate to Operations Manager, check system/inventory issues |
+
+### Dashboard Finish Checklist
+
+- [x] Moi card co title theo Title Discipline
+- [x] Moi KPI co it nhat 1 comparison (DoD hoac gauge zones)
+- [x] Text annotations dung imperative voice
+- [x] Action Map day du
+- [x] Hero card noi bat (gauge, one-third, prominent)
+- [x] Row widths sum = full-width (18 cols)
+- [x] Density Cockpit: V1=11, V2=10, V3=6
+- [x] Moi view co section divider
+- [x] Color tokens nhat quan
+- [x] Planned metrics documented (Data Availability Notes)
 
 ### Summary
 

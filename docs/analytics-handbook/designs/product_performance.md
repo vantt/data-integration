@@ -49,15 +49,15 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 1 | A | "Merchandising/Management — San pham dang ban the nao thang nay? — Last 30 Days" | annotation | text-annotation | structural | full-width x minimal | Dashboard subtitle | — |
+| 1 | A | "Review hieu suat san pham thang — doanh thu, velocity, va xu huong MoM" | annotation | text-annotation | structural | full-width x minimal | Dashboard subtitle | — |
 | 2 | B | Doanh thu san pham | hero | single-value-with-trend | primary, positive/negative (MoM) | one-third x short, prominent | Tong doanh thu tu san pham | vs previous period (MoM %) |
 | 3 | B | So luong ban | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | Tong quantity sold | vs previous period (MoM %) |
 | 4 | B | So san pham ban duoc | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | Distinct products co sales | vs previous period (MoM %) |
 | 5 | B | Doanh thu trung binh/san pham | supporting | single-value-with-trend | secondary, positive/negative (MoM) | one-quarter x short, standard | Revenue per distinct product | vs previous period (MoM %) |
-| 6 | C | "Theo doi xu huong doanh thu san pham — tang hay giam so voi thang truoc?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 6 | C | "Phan tich xu huong doanh thu san pham — momentum MoM" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 7 | D | Doanh thu san pham theo ngay | trend | multi-line-chart | primary (This month) + muted (Last month) | two-thirds x medium | Trend doanh thu hang ngay, overlay MoM | vs previous period (MoM overlay) |
 | 8 | D | So luong ban theo ngay | trend | multi-line-chart | secondary (This month) + muted (Last month) | one-third x medium | Trend quantity hang ngay | vs previous period (MoM overlay) |
-| 9 | E | "San pham dong gop vao doanh thu nhu the nao?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 9 | E | "Xac dinh dong gop theo loai san pham — ranking va composition" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 10 | F | Doanh thu theo loai san pham | breakdown | horizontal-bar | series-1..series-N | half x medium | Ranking loai SP theo doanh thu | rank/position |
 | 11 | F | Ty trong doanh thu theo loai san pham | breakdown | donut | series-1..series-5 | half x medium | Phan bo % doanh thu theo loai SP | composition |
 
@@ -69,11 +69,11 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 12 | A | "Loai san pham nao dang tang truong — dieu chinh product mix kip thoi" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 12 | A | "Danh gia tang truong theo loai san pham — dieu chinh product mix" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 13 | B | Tang truong doanh thu theo loai SP | breakdown | horizontal-bar | conditional-above/conditional-below | full-width x medium | MoM % change by category — highlight tang/giam | vs previous period (MoM %) |
-| 14 | C | "Xu huong dong gop cua tung loai san pham theo thoi gian" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 14 | C | "Theo doi category mix shift — loai nao dang chiem uu the?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 15 | D | Category Mix Trend | trend | stacked-area | series-1..series-N | full-width x medium | Cau thanh doanh thu theo loai SP qua thoi gian | composition over time |
-| 16 | E | "Chi tiet hieu suat tung loai san pham" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 16 | E | "Review chi tiet loai san pham — highlight tang/giam manh" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 17 | F | Bang hieu suat loai san pham | detail | data-table-formatted | conditional-above/conditional-below on MoM % | full-width x tall | Loai SP, Doanh thu, So luong, Revenue/unit, MoM % — highlight tang/giam | vs previous period (MoM) |
 
 ---
@@ -84,16 +84,17 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 18 | A | "Top 20 san pham ban chay — tap trung day manh nhom nay" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 18 | A | "Xac dinh top 20 san pham ban chay — focus marketing va stock" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 19 | B | Top 20 SP theo doanh thu | breakdown | horizontal-bar | primary | half x tall | Ranking san pham theo revenue | rank/position |
 | 20 | B | Top 20 SP theo so luong | breakdown | horizontal-bar | secondary | half x tall | Ranking san pham theo quantity | rank/position |
-| 21 | C | "San pham tang truong va sut giam manh nhat — canh bao som" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 21 | C | "Canh bao som — san pham tang truong va sut giam manh nhat" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 22 | D | Top 10 SP tang truong MoM | breakdown | horizontal-bar | positive | half x medium | San pham co % tang truong cao nhat | vs previous period (MoM %) |
 | 23 | D | Top 10 SP sut giam MoM | breakdown | horizontal-bar | negative | half x medium | San pham co % sut giam lon nhat | vs previous period (MoM %) |
-| 24 | E | "Toc do ban hang trung binh — san pham nao quay nhanh nhat?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 24 | E | "Phan tich velocity — san pham nao quay nhanh nhat?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 25 | F | Top 20 SP theo daily velocity | breakdown | horizontal-bar | accent | full-width x medium | Units/day — san pham quay nhanh | rank/position |
-| 26 | G | "Bang chi tiet san pham — tim kiem va sap xep tu do" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 26 | G | "Tra cuu chi tiet san pham — tim kiem, sap xep, loc tu do" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 27 | H | Bang chi tiet san pham | detail | data-table-formatted | conditional-above/conditional-below on MoM % | full-width x tall | Ten SP, Loai, Doanh thu, So luong, Velocity, MoM % | vs previous period (MoM) |
+| 28 | I | "Source: fact_orders · dim_products · Updated daily · Excludes cancelled orders" | annotation | text-annotation | structural | full-width x minimal | Data source & freshness | — |
 
 ---
 

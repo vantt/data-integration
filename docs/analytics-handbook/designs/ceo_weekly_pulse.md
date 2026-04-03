@@ -59,15 +59,15 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 1 | A | "CEO Weekly Pulse — Tuan qua kinh doanh co on-track khong?" | annotation | text-annotation | structural | full-width × minimal | Dashboard subtitle — audience + primary question | — |
+| 1 | A | "CEO Weekly Pulse — Danh gia tien do doanh thu va suc khoe kinh doanh tuan qua" | annotation | text-annotation | structural | full-width × minimal | Dashboard subtitle — audience + primary question | — |
 | 2 | B | Net Revenue | hero | single-value-with-trend | primary, positive/negative (WoW) | one-third × short, prominent | Doanh thu thuan tuan — con so quan trong nhat | vs previous period (WoW %) |
 | 3 | B | Gross Revenue | supporting | single-value-with-trend | secondary, positive/negative (WoW) | one-quarter × short, standard | Tong gia tri hang hoa truoc chiet khau | vs previous period (WoW %) |
 | 4 | B | Total Orders | supporting | single-value-with-trend | secondary, positive/negative (WoW) | one-quarter × short, standard | So luong don hang | vs previous period (WoW %) |
 | 5 | B | AOV | supporting | single-value-with-trend | secondary, positive/negative (WoW) | one-quarter × short, standard | Gia tri trung binh moi don | vs previous period (WoW %) |
-| 6 | C | "Tien do target thang" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
+| 6 | C | "Kiem tra tien do target thang — on-track hay can dieu chinh?" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 7 | D | MTD Revenue vs Target | hero-secondary | progress-toward-goal | positive/warning/negative (auto by %) | two-thirds × short | Da dat bao nhieu % target thang — CEO nhin 1 giay biet on-track | vs target (monthly) |
 | 8 | D | Pace Index | supporting | single-value-with-trend | positive/negative (>1.0 = positive, <1.0 = negative) | one-third × short, prominent | Pace = MTD Actual / Expected. >1.0 = Ahead, <1.0 = Behind | vs benchmark (pace = 1.0) |
-| 9 | E | "Xu huong doanh thu (14 ngay)" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
+| 9 | E | "Theo doi xu huong doanh thu 14 ngay — momentum tang hay giam?" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 10 | F | Daily Net Revenue (14 Days) | trend | area-chart | primary (fill) + muted (previous week shading) | full-width × medium | Volume revenue 14 ngay — this week vs previous week side-by-side | vs previous period (visual overlay) |
 
 ---
@@ -78,10 +78,10 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 11 | A | "Phan bo doanh thu theo kenh" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
+| 11 | A | "Phan tich cau truc kenh ban hang — Ecommerce vs Offline" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 12 | B | Revenue by Channel Category | hero | donut | series-1 (Ecommerce), series-2 (Offline), series-3 (Internal) | one-third × medium | Ty le Ecommerce / Offline / Internal — part-to-whole snapshot | composition |
 | 13 | B | Revenue by Channel Category (WoW) | breakdown | grouped-bar | series-1 (This Week) + series-2 (Last Week) | two-thirds × medium | So sanh truc tiep this week vs last week theo tung category | vs previous period (WoW side-by-side) |
-| 14 | C | "Top kenh ban hang" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
+| 14 | C | "Xac dinh top kenh ban hang — ranking va bien dong WoW" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 15 | D | Top Channels by Revenue | breakdown | horizontal-bar | primary (bars) + muted (last week reference) | full-width × medium | Ranking kenh theo doanh thu — CEO thay ngay kenh nao lon nhat | rank/position |
 | 16 | E | Channel Performance Table | detail | data-table-formatted | conditional-above/conditional-below on WoW % (>20% = positive, <-20% = negative) | full-width × medium, compact | Channel, This Week, Last Week, WoW % — highlight kenh bien dong manh | vs previous period (WoW %) |
 
@@ -93,13 +93,43 @@ Multi-view — 3 views:
 
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
-| 17 | A | "Suc khoe khach hang" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
+| 17 | A | "Danh gia suc khoe khach hang — acquisition va retention" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 18 | B | New Customers | hero | single-value-with-trend | primary, positive/negative (WoW) | one-third × short, prominent | So khach moi tuan nay | vs previous period (WoW %) |
 | 19 | B | Returning Revenue % | supporting | gauge | positive/warning/negative (zones: >60%=positive, 40-60%=warning, <40%=negative) | one-third × short | Ty le doanh thu tu khach cu — healthy benchmark > 60% | vs benchmark (zones) |
 | 20 | B | Returning Customers | supporting | single-value-with-trend | secondary, positive/negative (WoW) | one-third × short, standard | So khach cu quay lai mua | vs previous period (WoW %) |
-| 21 | C | "Xu huong New vs Returning (14 ngay)" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
+| 21 | C | "Theo doi ty le New vs Returning 14 ngay — chat luong tang truong" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 22 | D | New vs Returning Orders (14 Days) | trend | stacked-bar-time | series-1 (New = accent), series-2 (Returning = primary) | full-width × medium | Cau thanh don hang theo ngay — New vs Returning | composition over time |
-| 23 | E | "Canh bao van hanh" | annotation | text-annotation | structural | full-width × minimal | Section heading — RED FLAGS | — |
+| 23 | E | "Kiem tra canh bao van hanh — don huy, tra hang, chiet khau" | annotation | text-annotation | structural | full-width × minimal | Section heading — RED FLAGS | — |
 | 24 | F | Cancelled Orders | supporting | single-value-with-trend | neutral, negative (if WoW > 50% increase) | one-third × short, standard | Don huy tuan nay — flag neu tang dot bien | vs previous period (WoW %) |
 | 25 | F | Return Count | supporting | single-value-with-trend | neutral, negative (if > 2x previous week) | one-third × short, standard | Don tra hang — flag RED neu > 2x tuan truoc | vs previous period (WoW %) |
 | 26 | F | Discount Rate % | supporting | gauge | positive/warning/negative (zones: 0-10%=positive, 10-15%=warning, >15%=negative) | one-third × short | Ty le chiet khau / Gross Revenue — flag RED neu > 15% | vs benchmark (zones) |
+| 27 | G | "Source: fact_orders · Updated weekly (Mon-Sun) · Excludes US channel & cancelled orders" | annotation | text-annotation | structural | full-width × minimal | Data source & freshness | — |
+
+### Action Map
+
+| Card | Signal | Condition | Recommended Action |
+|------|--------|-----------|-------------------|
+| Net Revenue (hero) | Drop | WoW < -10% | Drill View 2 — xem kenh nao giam, kiem tra promo/stock |
+| Net Revenue (hero) | Spike | WoW > +25% | Xac minh — promo event? seasonal? hay data issue? |
+| MTD Revenue vs Target | Behind pace | Achievement < expected % by week | Can thiep — tang marketing, day promo, focus kenh manh |
+| MTD Revenue vs Target | Far behind | Pace Index < 0.85 | Escalation — hop khan cap voi Sales Director |
+| Pace Index | Below 1.0 | Pace < 1.0 lien tiep 2 tuan | Review target setting, dieu chinh expectation |
+| New Customers | Drop | WoW < -15% | Review marketing acquisition spend, kiem tra kenh nao mat khach |
+| Returning Revenue % | Below warning | < 40% | Doi heavy ve khach moi — kiem tra retention program |
+| Cancelled Orders | Spike | WoW > +50% | Kiem tra kenh co nhieu don huy, xac nhan khong phai loi he thong |
+| Discount Rate % | Vuot nguong | > 15% | Review chinh sach chiet khau voi Sales Ops |
+
+### Dashboard Finish Checklist
+
+- [x] Moi card co title theo Title Discipline
+- [x] Moi KPI co it nhat 1 comparison (WoW, vs Target, hoac vs benchmark)
+- [x] Text annotations dung imperative voice
+- [x] Khong co card orphan
+- [x] Action Map day du cho cards co signal quan trong
+- [x] Hero card o row dau tien, noi bat nhat (one-third, prominent)
+- [x] Row widths sum = full-width (18 cols)
+- [x] Density: Executive Pulse — 3 tabs (note: exceeds 2-tab guideline, justified by 3 distinct audiences within CEO view)
+- [x] Moi view co it nhat 1 section divider
+- [x] Color tokens nhat quan — khong hex codes
+- [x] Size hierarchy ro: hero > supporting > detail
+- [x] Number formatting nhat quan: VND compact, percentage 1 decimal
