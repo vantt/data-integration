@@ -24,6 +24,14 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Monthly Pulse
 
+#### 📝 Text: Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
+
+# Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### ❓ Question: Monthly Net Revenue
 
 Monthly net revenue with MoM comparison.
@@ -75,7 +83,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -119,7 +127,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Monthly New Customers
@@ -161,7 +169,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Monthly AOV
@@ -215,7 +223,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Discount Rate Gauge
@@ -246,7 +254,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 6, "size_y": 5 }
+{ "row": 5, "col": 0, "size_x": 6, "size_y": 5 }
 ```
 
 #### ❓ Question: Revenue Trend (6M)
@@ -293,7 +301,15 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 6, "size_x": 12, "size_y": 5 }
+{ "row": 5, "col": 6, "size_x": 12, "size_y": 5 }
+```
+
+#### 📝 Text: Xác định kênh nào đang drive revenue — composition và MoM change
+
+# Xác định kênh nào đang drive revenue — composition và MoM change
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Revenue Share
@@ -328,7 +344,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 11, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Channel (MoM)
@@ -370,12 +386,20 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 11, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Channel & Brand
+
+#### 📝 Text: Theo dõi structural shift kênh 6 tháng — Ecommerce đang chiếm ưu thế?
+
+# Theo dõi structural shift kênh 6 tháng — Ecommerce đang chiếm ưu thế?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Channel Mix Trend (6M)
 
@@ -410,7 +434,15 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 1, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### 📝 Text: Đánh giá hiệu suất platform — revenue, orders, khách mới, MoM
+
+# Đánh giá hiệu suất platform — revenue, orders, khách mới, MoM
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Platform Performance Matrix
@@ -510,7 +542,15 @@ ORDER BY tm.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### 📝 Text: Phân tích portfolio thương hiệu kênh — ai chiếm tỷ trọng lớn nhất?
+
+# Phân tích portfolio thương hiệu kênh — ai chiếm tỷ trọng lớn nhất?
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Brand Revenue
@@ -546,7 +586,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Market
@@ -582,7 +622,15 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
+```
+
+#### 📝 Text: Xác định brand tăng trưởng và brand cần đẩy mạnh marketing
+
+# Xác định brand tăng trưởng và brand cần đẩy mạnh marketing
+
+```json metabase-pos
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Brand Performance Summary
@@ -657,7 +705,7 @@ ORDER BY tm.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 22, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Customer Segment
@@ -693,12 +741,20 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 22, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Customer Intelligence
+
+#### 📝 Text: Đánh giá acquisition — khách mới có tăng và từ kênh nào?
+
+# Đánh giá acquisition — khách mới có tăng và từ kênh nào?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: New Customers (Month)
 
@@ -741,7 +797,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Returning Customers (Month)
@@ -789,7 +845,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Revenue Share
@@ -847,7 +903,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Acquisition Trend (6M)
@@ -890,7 +946,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 5, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: New Customers by Channel
@@ -926,7 +982,15 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
+```
+
+#### 📝 Text: Kiểm tra sức khỏe segment và retention — churn có kiểm soát?
+
+# Kiểm tra sức khỏe segment và retention — churn có kiểm soát?
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: At Risk Customers
@@ -971,7 +1035,7 @@ FROM current_count c, prev_count p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 12, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Churn Rate Gauge
@@ -1000,7 +1064,7 @@ WHERE customer_id IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 12, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Active Customer Rate
@@ -1048,7 +1112,7 @@ FROM stats s, prev p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 12, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Customer Segment Movement
@@ -1081,7 +1145,7 @@ ORDER BY 1, 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 16, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Cohort Retention Heatmap
@@ -1143,12 +1207,20 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 16, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Campaigns & Products
+
+#### 📝 Text: Phân tích ROI campaign — promotion nào mang lại giá trị?
+
+# Phân tích ROI campaign — promotion nào mang lại giá trị?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Total Discount Amount
 
@@ -1194,7 +1266,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Discounted Order Percentage
@@ -1242,7 +1314,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Average Discount Depth
@@ -1290,7 +1362,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Promotion Leaderboard
@@ -1351,7 +1423,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### ❓ Question: Discount Trend (6M)
@@ -1386,7 +1458,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue Discounted vs Full-Price (6M)
@@ -1426,7 +1498,15 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+#### 📝 Text: Xác định sản phẩm drive revenue và brand cần attention
+
+# Xác định sản phẩm drive revenue và brand cần attention
+
+```json metabase-pos
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Top 15 Products by Revenue
@@ -1499,7 +1579,15 @@ LIMIT 15
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### 📝 Text: Phân tích địa lý và peak hours — tối ưu marketing scheduling
+
+# Phân tích địa lý và peak hours — tối ưu marketing scheduling
+
+```json metabase-pos
+{ "row": 26, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Province (Top 10)
@@ -1536,7 +1624,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 27, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Order Heatmap — Day x Hour
@@ -1581,5 +1669,13 @@ ORDER BY EXTRACT(DOW FROM order_timestamp), 2
 ```
 
 ```json metabase-pos
-{ "row": 24, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 27, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+#### 📝 Text: Footer
+
+Source: fact_orders, dim_channels, dim_customers, dim_promotions, fact_sales · Updated daily · Excludes CANCELLED & Voided
+
+```json metabase-pos
+{ "row": 33, "col": 0, "size_x": 18, "size_y": 1 }
 ```

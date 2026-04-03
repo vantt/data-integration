@@ -15,26 +15,25 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, donuts for composi
 
 ### 📑 Tab: Tong quan
 
-#### 📝 Text: Tong quan khach hang
+#### 📝 Text: Danh gia suc khoe customer base — MAU, acquisition, at-risk, churn
 
-# Tong quan khach hang
-# Customer Health — Ai dang active, ai can cham soc?
+# Danh gia suc khoe customer base — MAU, acquisition, at-risk, churn
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Phan bo trang thai & Segment
+#### 📝 Text: Kiem tra phan bo trang thai va segment — dau la diem nong?
 
-# Phan bo trang thai & Segment
+# Kiem tra phan bo trang thai va segment — dau la diem nong?
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Xu huong 6 thang
+#### 📝 Text: Theo doi xu huong 6 thang — growth quality va MAU trajectory
 
-# Xu huong 6 thang
+# Theo doi xu huong 6 thang — growth quality va MAU trajectory
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -352,25 +351,25 @@ ORDER BY 1
 
 ### 📑 Tab: Kenh & Dia ly
 
-#### 📝 Text: Xu huong khach hang moi (6 thang)
+#### 📝 Text: Phan tich acquisition trend 6 thang — momentum tang hay giam?
 
-# Xu huong khach hang moi (6 thang)
+# Phan tich acquisition trend 6 thang — momentum tang hay giam?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Kenh acquisition (thang truoc)
+#### 📝 Text: Xac dinh kenh acquisition hieu qua — volume va revenue don dau
 
-# Kenh acquisition (thang truoc)
+# Xac dinh kenh acquisition hieu qua — volume va revenue don dau
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Phan bo dia ly
+#### 📝 Text: Phan tich phan bo dia ly — tinh nao co khach gia tri cao?
 
-# Phan bo dia ly
+# Phan tich phan bo dia ly — tinh nao co khach gia tri cao?
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -576,33 +575,33 @@ LIMIT 15
 
 ### 📑 Tab: Watchlist & Hanh dong
 
-#### 📝 Text: RFM Segment Health Matrix
+#### 📝 Text: Review ma tran suc khoe segment — xac dinh diem nong can hanh dong
 
-# RFM Segment Health Matrix
+# Review ma tran suc khoe segment — xac dinh diem nong can hanh dong
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: VIP Watchlist — Cham soc chu dong
+#### 📝 Text: Uu tien cham soc VIP — khach nao sap mat? Goi ngay!
 
-# VIP Watchlist — Cham soc chu dong
+# Uu tien cham soc VIP — khach nao sap mat? Goi ngay!
 
 ```json metabase-pos
 { "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: At-Risk Reactivation Priority
+#### 📝 Text: Sap xep uu tien reactivation — khach gia tri cao can giu truoc
 
-# At-Risk Reactivation Priority
+# Sap xep uu tien reactivation — khach gia tri cao can giu truoc
 
 ```json metabase-pos
 { "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Churned High-Value — Co hoi recovery
+#### 📝 Text: Xac dinh co hoi recovery — khach churned gia tri cao can win-back
 
-# Churned High-Value — Co hoi recovery
+# Xac dinh co hoi recovery — khach churned gia tri cao can win-back
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
@@ -814,4 +813,12 @@ LIMIT 50
 
 ```json metabase-pos
 { "row": 25, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### 📝 Text: Footer
+
+Source: dim_customers · fact_orders · Updated daily · Excludes Unknown customers & cancelled orders
+
+```json metabase-pos
+{ "row": 33, "col": 0, "size_x": 18, "size_y": 1 }
 ```

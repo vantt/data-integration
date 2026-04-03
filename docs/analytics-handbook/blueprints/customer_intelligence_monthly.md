@@ -19,6 +19,14 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Overview & Health
 
+#### 📝 Text: Monitor customer base health — growth, activity, and retention pulse check
+
+# Monitor customer base health — growth, activity, and retention pulse check
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### ❓ Question: Total Customers
 
 Total customers with at least one order, with MoM comparison.
@@ -60,7 +68,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Active Customers (30d)
@@ -103,7 +111,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: New Customers (Last Month)
@@ -146,7 +154,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: One-Time Buyer Rate
@@ -199,10 +207,18 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
+
+#### 📝 Text: Assess customer status distribution — identify at-risk concentration
+
+# Assess customer status distribution — identify at-risk concentration
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Customer Status Distribution
 
@@ -243,7 +259,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Customer Segment Distribution
@@ -284,7 +300,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 6, "size_y": 6 }
+{ "row": 5, "col": 6, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue from Top 20% Customers
@@ -320,10 +336,18 @@ FROM ranked
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Track growth dynamics — is acquisition outpacing churn?
+
+# Track growth dynamics — is acquisition outpacing churn?
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Monthly Acquisition vs Churn (6M)
 
@@ -378,10 +402,18 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Review segment health scorecard — flag segments with high churn or low activity
+
+# Review segment health scorecard — flag segments with high churn or low activity
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Customer Health Scorecard
 
@@ -448,12 +480,20 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 ---
 
 ### 📑 Tab: Value & Segmentation
+
+#### 📝 Text: Analyze customer value — where is revenue concentrated?
+
+# Analyze customer value — where is revenue concentrated?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Total Customer LTV
 
@@ -497,7 +537,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Avg LTV per Customer
@@ -544,7 +584,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Avg Orders per Customer
@@ -588,7 +628,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Repeat Purchase Rate
@@ -641,10 +681,18 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
+
+#### 📝 Text: Examine LTV distribution — identify value clusters and Pareto effect
+
+# Examine LTV distribution — identify value clusters and Pareto effect
+
+```json metabase-pos
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Customer Value Distribution
 
@@ -688,7 +736,7 @@ ORDER BY MIN(lifetime_value)
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 5, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Segment Revenue Share
@@ -725,10 +773,18 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Track segment performance trends — spending trajectory by segment
+
+# Track segment performance trends — spending trajectory by segment
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: AOV by Segment Trend (6M)
 
@@ -773,7 +829,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Segment Trend (6M)
@@ -818,10 +874,18 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Review segment detail — identify underperforming segments for action
+
+# Review segment detail — identify underperforming segments for action
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Segment Revenue & Metrics Detail
 
@@ -879,12 +943,28 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 ---
 
 ### 📑 Tab: Behavior & Insights
+
+#### 📝 Text: Analyze purchase behavior — channel and product preferences by segment
+
+# Analyze purchase behavior — channel and product preferences by segment
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Assess channel effectiveness — which channels serve which segments best?
+
+# Assess channel effectiveness — which channels serve which segments best?
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Channel Revenue by Segment
 
@@ -928,10 +1008,18 @@ ORDER BY 1, 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Compare product affinity — VIP vs first-time buyer preferences
+
+# Compare product affinity — VIP vs first-time buyer preferences
+
+```json metabase-pos
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Top 10 Products — VIP Customers
 
@@ -969,7 +1057,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 10 Products — First-Time Buyers
@@ -1009,10 +1097,18 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Evaluate new customer quality — are acquisition cohorts improving?
+
+# Evaluate new customer quality — are acquisition cohorts improving?
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: New Customer Quality Trend (6M)
 
@@ -1077,10 +1173,18 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Review demographics and loyalty — targeting and engagement signals
+
+# Review demographics and loyalty — targeting and engagement signals
+
+```json metabase-pos
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Loyalty Point Distribution by Segment
 
@@ -1116,7 +1220,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 23, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Gender Distribution by Segment
@@ -1152,5 +1256,13 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 23, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+#### 📝 Text: Footer
+
+Source: dim_customers · fact_orders · Updated monthly · Excludes Unknown customers & cancelled orders
+
+```json metabase-pos
+{ "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
 ```

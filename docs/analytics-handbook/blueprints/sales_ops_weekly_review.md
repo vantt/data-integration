@@ -36,25 +36,25 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 
 ### Tab: Tong quan tuan
 
-#### 📝 Text: Ket qua tuan (Mon-Sun)
+#### 📝 Text: Review ket qua tuan — doanh thu, don hang, chat luong xu ly
 
-# Ket qua tuan (Mon-Sun)
+# Review ket qua tuan — doanh thu, don hang, chat luong xu ly
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Trang thai don hang
+#### 📝 Text: Kiem tra trang thai don hang — completion rate va cancelled/returns
 
-# Trang thai don hang
+# Kiem tra trang thai don hang — completion rate va cancelled/returns
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Xu huong don hang (14 ngay)
+#### 📝 Text: Phan tich xu huong 14 ngay — volume, AOV, va gio cao diem
 
-# Xu huong don hang (14 ngay)
+# Phan tich xu huong 14 ngay — volume, AOV, va gio cao diem
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -496,25 +496,25 @@ ORDER BY 2, 3
 
 ### Tab: Kenh & Chi nhanh
 
-#### 📝 Text: Phan bo don hang theo kenh
+#### 📝 Text: Xac dinh kenh chiem workload — ranking orders va revenue
 
-# Phan bo don hang theo kenh
+# Xac dinh kenh chiem workload — ranking orders va revenue
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Hieu suat kenh so voi tuan truoc
+#### 📝 Text: So sanh hieu suat kenh WoW — highlight bien dong > 30%
 
-# Hieu suat kenh so voi tuan truoc
+# So sanh hieu suat kenh WoW — highlight bien dong > 30%
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Phan bo theo chi nhanh
+#### 📝 Text: Danh gia hieu suat chi nhanh — volume va WoW change
 
-# Phan bo theo chi nhanh
+# Danh gia hieu suat chi nhanh — volume va WoW change
 
 ```json metabase-pos
 { "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
@@ -788,25 +788,25 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 
 ### Tab: Doi ngu & Thanh toan
 
-#### 📝 Text: Social Commerce (Facebook + Zalo)
+#### 📝 Text: Theo doi hieu suat Social Commerce — revenue, orders, AOV
 
-# Social Commerce (Facebook + Zalo)
+# Theo doi hieu suat Social Commerce — revenue, orders, AOV
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Hieu suat nhan vien
+#### 📝 Text: Danh gia hieu suat nhan vien — ranking doanh thu va top social
 
-# Hieu suat nhan vien
+# Danh gia hieu suat nhan vien — ranking doanh thu va top social
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Thanh toan & Doi soat
+#### 📝 Text: Kiem tra thanh toan va doi soat — phan bo PTTT va pending alert
 
-# Thanh toan & Doi soat
+# Kiem tra thanh toan va doi soat — phan bo PTTT va pending alert
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1149,4 +1149,14 @@ ORDER BY s.orders DESC
 
 ```json metabase-pos
 { "row": 12, "col": 6, "size_x": 12, "size_y": 6 }
+```
+
+---
+
+#### 📝 Text: Footer
+
+Source: fact_orders · Updated weekly (Mon-Sun) · Excludes incomplete current week
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
 ```

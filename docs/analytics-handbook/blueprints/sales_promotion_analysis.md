@@ -25,9 +25,9 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Tong quan chiet khau
 
-#### 📝 Text: Tong quan chi phi chiet khau
+#### 📝 Text: Kiểm soát chi phí chiết khấu — có vượt ngưỡng và đang tăng hay giảm?
 
-## Tong quan chi phi chiet khau — Chiet khau co dang duoc kiem soat?
+## Kiểm soát chi phí chiết khấu — có vượt ngưỡng và đang tăng hay giảm?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -245,9 +245,9 @@ FROM this_period tp, prev_period pp
 { "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
-#### 📝 Text: So sanh Promo vs Non-Promo
+#### 📝 Text: So sánh Promo vs Non-Promo — khuyến mãi có uplift AOV?
 
-## So sanh Promo vs Non-Promo — Khuyen mai co tang gia tri don hang?
+## So sánh Promo vs Non-Promo — khuyến mãi có uplift AOV?
 
 ```json metabase-pos
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
@@ -384,9 +384,9 @@ FROM aov
 { "row": 6, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
-#### 📝 Text: Phan bo do sau chiet khau
+#### 📝 Text: Phân tích độ sâu chiết khấu — phát hiện đơn bất thường > 30%
 
-## Phan bo do sau chiet khau — Co don nao bi chiet khau qua muc?
+## Phân tích độ sâu chiết khấu — phát hiện đơn bất thường > 30%
 
 ```json metabase-pos
 { "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
@@ -481,9 +481,9 @@ ORDER BY 2 DESC
 { "row": 13, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
-#### 📝 Text: Xu huong chiet khau theo thang
+#### 📝 Text: Theo dõi xu hướng chiết khấu — trend amount và rate
 
-## Xu huong chiet khau theo thang — Chi phi CK dang tang hay giam?
+## Theo dõi xu hướng chiết khấu — trend amount và rate
 
 ```json metabase-pos
 { "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
@@ -541,9 +541,9 @@ ORDER BY 1
 
 ### 📑 Tab: Hieu suat khuyen mai
 
-#### 📝 Text: Bang xep hang khuyen mai
+#### 📝 Text: Xác định promotion hiệu quả — ranking doanh thu và usage
 
-## Bang xep hang khuyen mai — Chuong trinh nao mang lai nhieu doanh thu nhat?
+## Xác định promotion hiệu quả — ranking doanh thu và usage
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -743,9 +743,9 @@ FROM this_period tp, prev_period pp
 { "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
-#### 📝 Text: Top 10 khuyen mai theo doanh thu
+#### 📝 Text: Review top 10 promotion — doanh thu và lượt sử dụng
 
-## Top 10 khuyen mai theo doanh thu
+## Review top 10 promotion — doanh thu và lượt sử dụng
 
 ```json metabase-pos
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
@@ -829,9 +829,9 @@ LIMIT 10
 { "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### 📝 Text: Chi tiet hieu suat tung khuyen mai
+#### 📝 Text: Tra cứu chi tiết promotion — code, usage, revenue, discount rate
 
-## Chi tiet hieu suat tung khuyen mai
+## Tra cứu chi tiết promotion — code, usage, revenue, discount rate
 
 ```json metabase-pos
 { "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
@@ -914,9 +914,9 @@ ORDER BY "Doanh thu" DESC
 { "row": 13, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
-#### 📝 Text: Xu huong su dung khuyen mai theo thang
+#### 📝 Text: Theo dõi xu hướng sử dụng promotion — top 5 codes
 
-## Xu huong su dung khuyen mai theo thang
+## Theo dõi xu hướng sử dụng promotion — top 5 codes
 
 ```json metabase-pos
 { "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
@@ -976,9 +976,9 @@ ORDER BY 1, 2
 
 ### 📑 Tab: Phan tich kenh & chi tiet
 
-#### 📝 Text: Tac dong khuyen mai theo kenh
+#### 📝 Text: Phân tích tác động promo theo kênh — kênh nào phụ thuộc nhiều?
 
-## Tac dong khuyen mai theo kenh — Kenh nao phu thuoc nhieu vao promo?
+## Phân tích tác động promo theo kênh — kênh nào phụ thuộc nhiều?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1075,9 +1075,9 @@ ORDER BY 2 DESC
 { "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### 📝 Text: Hieu suat kenh chi tiet
+#### 📝 Text: So sánh hiệu suất kênh MoM — highlight biến động lớn
 
-## Hieu suat kenh chi tiet — So sanh MoM cho tung kenh
+## So sánh hiệu suất kênh MoM — highlight biến động lớn
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1177,9 +1177,9 @@ ORDER BY tp.promo_revenue DESC
 { "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
-#### 📝 Text: Danh sach don hang co chiet khau cao
+#### 📝 Text: Điều tra đơn chiết khấu cao — flag đơn > 30% CK để audit
 
-## Danh sach don hang co chiet khau cao — Kiem tra don bat thuong (CK > 30%)
+## Điều tra đơn chiết khấu cao — flag đơn > 30% CK để audit
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1254,4 +1254,12 @@ LIMIT 100
 
 ```json metabase-pos
 { "row": 15, "col": 0, "size_x": 18, "size_y": 9 }
+```
+
+#### 📝 Text: Footer
+
+Source: fact_orders · dim_promotions · dim_channels · Updated daily · Excludes cancelled orders
+
+```json metabase-pos
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
 ```

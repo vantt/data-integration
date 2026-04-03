@@ -33,17 +33,17 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Doanh thu theo tuần vs Mục tiêu tháng
+#### 📝 Text: Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
 
-## Doanh thu theo tuần vs Mục tiêu tháng
+## Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Cấu trúc doanh thu — Từ GMV đến Net Revenue
+#### 📝 Text: Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
 
-## Cấu trúc doanh thu — Từ GMV đến Net Revenue
+## Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -590,25 +590,25 @@ ORDER BY sort_order
 
 ### 📑 Tab: Kenh & Khach hang
 
-#### 📝 Text: Hiệu suất kênh bán hàng
+#### 📝 Text: Đánh giá hiệu suất kênh bán hàng — kênh nào cần đẩy mạnh?
 
-## Hiệu suất kênh bán hàng
+## Đánh giá hiệu suất kênh bán hàng — kênh nào cần đẩy mạnh?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Xu hướng cấu trúc kênh 6 tháng
+#### 📝 Text: Theo dõi structural shift kênh 6 tháng — Ecommerce đang lên?
 
-## Xu hướng cấu trúc kênh 6 tháng
+## Theo dõi structural shift kênh 6 tháng — Ecommerce đang lên?
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Danh mục khách hàng
+#### 📝 Text: Kiểm tra sức khỏe danh mục khách hàng — acquisition, at-risk, churn
 
-## Danh mục khách hàng
+## Kiểm tra sức khỏe danh mục khách hàng — acquisition, at-risk, churn
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -958,17 +958,17 @@ ORDER BY 2 DESC
 
 ### 📑 Tab: San pham & Van hanh
 
-#### 📝 Text: Top sản phẩm & thương hiệu
+#### 📝 Text: Xác định sản phẩm và thương hiệu drive growth
 
-## Top sản phẩm & thương hiệu
+## Xác định sản phẩm và thương hiệu drive growth
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Hiệu quả vận hành
+#### 📝 Text: Kiểm soát hiệu quả vận hành — chiết khấu, trả hàng có trong tầm?
 
-## Hiệu quả vận hành
+## Kiểm soát hiệu quả vận hành — chiết khấu, trả hàng có trong tầm?
 
 ```json metabase-pos
 { "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1307,4 +1307,12 @@ ORDER BY sort_order
 
 ```json metabase-pos
 { "row": 19, "col": 0, "size_x": 18, "size_y": 4 }
+```
+
+#### 📝 Text: Source & Freshness
+
+Source: fact_orders · Updated monthly · Excludes US channel & cancelled orders
+
+```json metabase-pos
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
 ```

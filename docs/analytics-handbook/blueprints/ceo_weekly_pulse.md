@@ -17,25 +17,25 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 
 ### Tab: Doanh thu & Target
 
-#### 📝 Text: CEO Weekly Pulse — Tuan qua kinh doanh co on-track khong?
+#### 📝 Text: CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
 
-# CEO Weekly Pulse — Tuan qua kinh doanh co on-track khong?
+# CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Tien do target thang
+#### 📝 Text: Kiểm tra tiến độ target tháng — on-track hay cần điều chỉnh?
 
-# Tien do target thang
+# Kiểm tra tiến độ target tháng — on-track hay cần điều chỉnh?
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Xu huong doanh thu (14 ngay)
+#### 📝 Text: Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
 
-# Xu huong doanh thu (14 ngay)
+# Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
 
 ```json metabase-pos
 { "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
@@ -381,17 +381,17 @@ ORDER BY 1
 
 ### Tab: Kenh ban hang
 
-#### 📝 Text: Phan bo doanh thu theo kenh
+#### 📝 Text: Phân tích cấu trúc kênh bán hàng — Ecommerce vs Offline
 
-# Phan bo doanh thu theo kenh
+# Phân tích cấu trúc kênh bán hàng — Ecommerce vs Offline
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Top kenh ban hang
+#### 📝 Text: Xác định top kênh bán hàng — ranking và biến động WoW
 
-# Top kenh ban hang
+# Xác định top kênh bán hàng — ranking và biến động WoW
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -622,25 +622,25 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 
 ### Tab: Khach hang & Canh bao
 
-#### 📝 Text: Suc khoe khach hang
+#### 📝 Text: Đánh giá sức khỏe khách hàng — acquisition và retention
 
-# Suc khoe khach hang
+# Đánh giá sức khỏe khách hàng — acquisition và retention
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Xu huong New vs Returning (14 ngay)
+#### 📝 Text: Theo dõi tỷ lệ New vs Returning 14 ngày — chất lượng tăng trưởng
 
-# Xu huong New vs Returning (14 ngay)
+# Theo dõi tỷ lệ New vs Returning 14 ngày — chất lượng tăng trưởng
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Canh bao van hanh
+#### 📝 Text: Kiểm tra cảnh báo vận hành — đơn hủy, trả hàng, chiết khấu
 
-# Canh bao van hanh
+# Kiểm tra cảnh báo vận hành — đơn hủy, trả hàng, chiết khấu
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -947,4 +947,12 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 
 ```json metabase-pos
 { "row": 12, "col": 12, "size_x": 6, "size_y": 3 }
+```
+
+#### 📝 Text: Source & Freshness
+
+Source: fact_orders · Updated weekly (Mon-Sun) · Excludes US channel & cancelled orders
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
 ```

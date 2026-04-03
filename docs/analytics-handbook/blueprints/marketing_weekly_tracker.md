@@ -51,6 +51,14 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Hieu suat Kenh
 
+#### 📝 Text: Đánh giá hiệu suất kênh tuần — kênh nào hiệu quả, kênh nào cần điều chỉnh?
+
+# Đánh giá hiệu suất kênh tuần — kênh nào hiệu quả, kênh nào cần điều chỉnh?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### ❓ Question: Weekly Revenue
 
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue)
@@ -102,7 +110,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Ecommerce Revenue
@@ -156,7 +164,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Offline Revenue
@@ -210,7 +218,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Ecom Share %
@@ -264,10 +272,18 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
+
+#### 📝 Text: Theo dõi xu hướng Ecommerce vs Offline — momentum và crossover
+
+# Theo dõi xu hướng Ecommerce vs Offline — momentum và crossover
+
+```json metabase-pos
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Ecommerce vs Offline Trend
 
@@ -308,7 +324,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 6, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Brand
@@ -346,10 +362,18 @@ LIMIT 5
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 6, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Xác định platform hiệu quả — ranking doanh thu và volume
+
+# Xác định platform hiệu quả — ranking doanh thu và volume
+
+```json metabase-pos
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Revenue by Platform
 
@@ -387,7 +411,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Orders by Platform
@@ -421,10 +445,18 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: So sánh chi tiết kênh WoW — highlight biến động > 20%
+
+# So sánh chi tiết kênh WoW — highlight biến động > 20%
+
+```json metabase-pos
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Channel Performance Table
 
@@ -526,12 +558,20 @@ ORDER BY tw.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---
 
 ### 📑 Tab: Khach hang & Acquisition
+
+#### 📝 Text: Đánh giá acquisition tuần — bao nhiêu khách mới và từ đâu?
+
+# Đánh giá acquisition tuần — bao nhiêu khách mới và từ đâu?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: New Customers
 
@@ -573,7 +613,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Returning Customers
@@ -620,7 +660,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Revenue
@@ -672,7 +712,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Share %
@@ -728,10 +768,18 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
+
+#### 📝 Text: Xác định kênh acquisition hiệu quả nhất
+
+# Xác định kênh acquisition hiệu quả nhất
+
+```json metabase-pos
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: New Customers by Channel
 
@@ -770,7 +818,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: New vs Returning Revenue
@@ -815,10 +863,18 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Theo dõi xu hướng acquisition 14 ngày — volume và chất lượng
+
+# Theo dõi xu hướng acquisition 14 ngày — volume và chất lượng
+
+```json metabase-pos
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: New Customer Acquisition Trend
 
@@ -877,7 +933,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Customer Type Split
@@ -911,12 +967,20 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Promotion & Social
+
+#### 📝 Text: Kiểm soát chi phí khuyến mãi — discount có hợp lý?
+
+# Kiểm soát chi phí khuyến mãi — discount có hợp lý?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Discount Rate %
 
@@ -945,7 +1009,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 6, "size_y": 5 }
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
 ```
 
 #### ❓ Question: Discounted Orders %
@@ -993,7 +1057,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Avg Discount Amount
@@ -1039,7 +1103,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Total Discount Given
@@ -1085,10 +1149,18 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
+
+#### 📝 Text: Đánh giá hiệu suất promotion — promo nào mang lại giá trị?
+
+# Đánh giá hiệu suất promotion — promo nào mang lại giá trị?
+
+```json metabase-pos
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Discounted vs Full Price
 
@@ -1118,7 +1190,7 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Promotion Leaderboard
@@ -1167,10 +1239,18 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 7, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
+
+#### 📝 Text: Theo dõi hiệu suất Social Commerce — Facebook vs Zalo
+
+# Theo dõi hiệu suất Social Commerce — Facebook vs Zalo
+
+```json metabase-pos
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### ❓ Question: Social Revenue
 
@@ -1223,7 +1303,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 14, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Social Orders
@@ -1270,7 +1350,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 14, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Social AOV
@@ -1322,7 +1402,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 14, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 ---
@@ -1361,7 +1441,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 18, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 10 Products This Week
@@ -1407,5 +1487,13 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 18, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+#### 📝 Text: Footer
+
+Source: fact_orders, dim_channels, dim_customers, dim_promotions · Updated daily · Excludes CANCELLED & Voided
+
+```json metabase-pos
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
 ```

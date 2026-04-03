@@ -22,6 +22,14 @@ Muc tieu: xac minh tinh dung dan va day du cua du lieu so voi Sapo.
 
 ### Tab: Today
 
+#### 📝 Text: Review tổng quan đơn hàng — đối soát số liệu với Sapo
+
+## Review tổng quan đơn hàng — đối soát số liệu với Sapo
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Total Orders
 
 ```sql
@@ -305,6 +313,14 @@ FROM current_period c, previous_period p
 
 ---
 
+#### 📝 Text: Kiểm tra phân bổ trạng thái, thanh toán, và kênh bán
+
+## Kiểm tra phân bổ trạng thái, thanh toán, và kênh bán
+
+```json metabase-pos
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Orders by Status
 
 Kiem tra phan bo trang thai — phat hien neu qua nhieu don OPEN/CANCELLED.
@@ -401,6 +417,14 @@ ORDER BY 3 DESC
 
 ---
 
+#### 📝 Text: Điều tra đơn bất thường — anomaly và data gap
+
+## Điều tra đơn bất thường — anomaly và data gap
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Flagged Orders
 
 Don hang bat thuong can kiem tra: 100% discount, revenue am, discount > revenue.
@@ -454,6 +478,14 @@ ORDER BY o.discount_amount DESC
 ```
 
 ---
+
+#### 📝 Text: Đối soát chi tiết đơn hàng — đối chiếu từng dòng với Sapo
+
+## Đối soát chi tiết đơn hàng — đối chiếu từng dòng với Sapo
+
+```json metabase-pos
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Order Detail List
 
@@ -1464,4 +1496,12 @@ ORDER BY o.order_timestamp DESC
 
 ```json metabase-pos
 { "row": 19, "col": 0, "size_x": 18, "size_y": 10 }
+```
+
+#### 📝 Text: Source & Freshness
+
+Source: fact_orders · Updated daily · All channels included
+
+```json metabase-pos
+{ "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
 ```

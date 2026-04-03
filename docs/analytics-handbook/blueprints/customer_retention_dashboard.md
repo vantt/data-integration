@@ -30,33 +30,33 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Suc khoe Retention
 
-#### 📝 Text: Retention Health — Repeat rate, churn, and lifecycle...
+#### 📝 Text: Monitor retention health — repeat rate, churn, and lifecycle status
 
-# Retention Health — Repeat rate, churn, and lifecycle status at a glance
+# Monitor retention health — repeat rate, churn, and lifecycle status
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Lifecycle Status — Distribution of Active, At Risk, and...
+#### 📝 Text: Assess lifecycle distribution — where are customers concentrating?
 
-# Lifecycle Status — Distribution of Active, At Risk, and Churned customers
+# Assess lifecycle distribution — where are customers concentrating?
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Retention & Churn Trends — 6-month directional view with...
+#### 📝 Text: Track retention and churn trends — are we improving toward target?
 
-# Retention & Churn Trends — 6-month directional view with targets
+# Track retention and churn trends — are we improving toward target?
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Retention Scorecard — Segment-level retention vitals
+#### 📝 Text: Review retention scorecard — flag segments with weak retention
 
-# Retention Scorecard — Segment-level retention vitals
+# Review retention scorecard — flag segments with weak retention
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -554,33 +554,33 @@ ORDER BY CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
 
 ### 📑 Tab: Phan tich Cohort
 
-#### 📝 Text: Cohort Analysis — Track how each acquisition cohort...
+#### 📝 Text: Analyze cohort retention — which cohorts stick, which churn early?
 
-# Cohort Analysis — Track how each acquisition cohort retains over time
+# Analyze cohort retention — which cohorts stick, which churn early?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Cohort Retention Matrix — Month-by-month retention rates
+#### 📝 Text: Examine cohort retention matrix — identify drop-off patterns
 
-# Cohort Retention Matrix — Month-by-month retention rates
+# Examine cohort retention matrix — identify drop-off patterns
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Revenue by Cohort — Layer cake view of cohort revenue...
+#### 📝 Text: Track revenue by cohort — are recent cohorts contributing enough?
 
-# Revenue by Cohort — Layer cake view of cohort revenue contribution
+# Track revenue by cohort — are recent cohorts contributing enough?
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: New vs Returning — Monthly revenue and customer split
+#### 📝 Text: Compare new vs returning — revenue dependency and growth quality
 
-# New vs Returning — Monthly revenue and customer split
+# Compare new vs returning — revenue dependency and growth quality
 
 ```json metabase-pos
 { "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
@@ -961,33 +961,33 @@ ORDER BY 1, 2
 
 ### 📑 Tab: Hanh vi & Reactivation
 
-#### 📝 Text: Purchase Behavior & Reactivation — Buying patterns and...
+#### 📝 Text: Analyze purchase behavior — timing signals and reactivation effectiveness
 
-# Purchase Behavior & Reactivation — Buying patterns and win-back performance
+# Analyze purchase behavior — timing signals and reactivation effectiveness
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Purchase Frequency — How many orders do customers...
+#### 📝 Text: Examine purchase frequency — distribution shape and conversion opportunity
 
-# Purchase Frequency — How many orders do customers typically place?
+# Examine purchase frequency — distribution shape and conversion opportunity
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Reactivation Tracking — Monthly win-back performance (6M)
+#### 📝 Text: Track reactivation performance — is win-back ROI improving?
 
-# Reactivation Tracking — Monthly win-back performance (6M)
+# Track reactivation performance — is win-back ROI improving?
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: At-Risk Watchlist — High-value customers needing...
+#### 📝 Text: Prioritize at-risk outreach — high-value customers needing action NOW
 
-# At-Risk Watchlist — High-value customers needing immediate outreach
+# Prioritize at-risk outreach — high-value customers needing action NOW
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1430,4 +1430,12 @@ LIMIT 50
 
 ```json metabase-pos
 { "row": 19, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### 📝 Text: Footer
+
+Source: dim_customers · fact_orders · Updated monthly · Excludes Unknown & cancelled orders
+
+```json metabase-pos
+{ "row": 27, "col": 0, "size_x": 18, "size_y": 1 }
 ```

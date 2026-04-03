@@ -15,13 +15,13 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 
 ### 📑 Tab: Tổng quan
 
-<!-- Note: Text annotations (section headings) are not deployed by deploy_from_markdown.js.
-     Add these manually in Metabase after deployment:
-     - Row 0: "Sức khỏe kinh doanh" (full-width, height 1)
-     - Row 6: "Kết quả ngày hôm qua" (full-width, height 1)
-     - Row 10: "Chỉ số phụ" (full-width, height 1)
-     - Row 14: "Doanh thu theo giờ" (full-width, height 1)
--->
+#### 📝 Text: Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
+
+# Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### Question: Health Score
 
@@ -191,6 +191,14 @@ SELECT * FROM (
 
 ---
 
+#### 📝 Text: Review kết quả hôm qua — doanh thu, đơn hàng, AOV so với hôm kia
+
+# Review kết quả hôm qua — doanh thu, đơn hàng, AOV so với hôm kia
+
+```json metabase-pos
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Net Revenue
 
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison.
@@ -357,6 +365,14 @@ WHERE date(order_timestamp) >= current_date - INTERVAL '2 days'
 
 ---
 
+#### 📝 Text: Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
+
+# Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: New Customers
 
 ```sql
@@ -480,6 +496,14 @@ WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
 
 ---
 
+#### 📝 Text: Phân tích doanh thu theo giờ — peak hours và so sánh với hôm kia
+
+# Phân tích doanh thu theo giờ — peak hours và so sánh với hôm kia
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Hourly Sales Trend
 
 Compare yesterday's hourly performance with the day before.
@@ -584,25 +608,25 @@ ORDER BY 1
 
 ### 📑 Tab: Kênh bán hàng
 
-#### 📝 Text: Doanh thu theo kênh
+#### 📝 Text: Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
 
-# Doanh thu theo kênh
+# Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Hiệu suất kênh so với hôm kia
+#### 📝 Text: So sánh hiệu suất kênh WoW — highlight kênh tăng/giảm mạnh
 
-# Hiệu suất kênh so với hôm kia
+# So sánh hiệu suất kênh WoW — highlight kênh tăng/giảm mạnh
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Doanh thu theo chi nhánh
+#### 📝 Text: Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
 
-# Doanh thu theo chi nhánh
+# Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -807,17 +831,17 @@ ORDER BY 3 DESC
 
 ### 📑 Tab: Sản phẩm
 
-#### 📝 Text: Top 10 sản phẩm bán chạy
+#### 📝 Text: Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
 
-# Top 10 sản phẩm bán chạy
+# Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Phân bổ theo loại sản phẩm
+#### 📝 Text: Phân tích đóng góp theo loại sản phẩm
 
-# Phân bổ theo loại sản phẩm
+# Phân tích đóng góp theo loại sản phẩm
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -980,17 +1004,17 @@ LIMIT 20
 
 ### 📑 Tab: Khách hàng & Thanh toán
 
-#### 📝 Text: Chân dung khách hàng hôm qua
+#### 📝 Text: Đánh giá chân dung khách hàng — new vs returning, segment
 
-# Chân dung khách hàng hôm qua
+# Đánh giá chân dung khách hàng — new vs returning, segment
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Thanh toán & Chiết khấu
+#### 📝 Text: Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
-# Thanh toán & Chiết khấu
+# Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
 ```json metabase-pos
 { "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1207,4 +1231,12 @@ WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
 
 ```json metabase-pos
 { "row": 17, "col": 0, "size_x": 18, "size_y": 3 }
+```
+
+#### 📝 Text: Source & Freshness
+
+Source: fact_orders · Updated daily · Excludes cancelled/voided orders
+
+```json metabase-pos
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```

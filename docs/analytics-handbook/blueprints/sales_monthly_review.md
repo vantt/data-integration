@@ -22,9 +22,9 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 
 ### 📑 Tab: Tong quan
 
-#### 📝 Text: Ket qua kinh doanh thang — dat target hay chua?
+#### 📝 Text: Review kết quả kinh doanh tháng — doanh thu vs target, gap analysis
 
-# Ket qua kinh doanh thang — dat target hay chua?
+# Review kết quả kinh doanh tháng — doanh thu vs target, gap analysis
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -226,9 +226,9 @@ FROM this_month tm, prev_month pm
 { "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
-#### 📝 Text: Chi so phu — buc tranh toan canh
+#### 📝 Text: Kiểm tra chỉ số phụ — gross revenue, thu tiền, khách hàng, hoàn trả
 
-## Chi so phu — buc tranh toan canh
+## Kiểm tra chỉ số phụ — gross revenue, thu tiền, khách hàng, hoàn trả
 
 ```json metabase-pos
 { "row": 4, "col": 6, "size_x": 12, "size_y": 1 }
@@ -535,9 +535,9 @@ FROM this_month tm, prev_month pm
 { "row": 8, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
-#### 📝 Text: Xu huong doanh thu 12 thang — trajectory dai han
+#### 📝 Text: Theo dõi trajectory doanh thu 12 tháng — momentum và target pace
 
-## Xu huong doanh thu 12 thang — trajectory dai han
+## Theo dõi trajectory doanh thu 12 tháng — momentum và target pace
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -655,9 +655,9 @@ ORDER BY 1
 
 ### 📑 Tab: Hieu suat tai chinh
 
-#### 📝 Text: Muc do hoan thanh target theo chi nhanh
+#### 📝 Text: Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
 
-# Muc do hoan thanh target theo chi nhanh
+# Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -717,9 +717,9 @@ ORDER BY "Achievement %" DESC
 { "row": 1, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
-#### 📝 Text: Phan tich chenh lech — dau la gap lon nhat?
+#### 📝 Text: Phân tích variance — yếu tố nào đóng góp chênh lệch target?
 
-## Phan tich chenh lech — dau la gap lon nhat?
+## Phân tích variance — yếu tố nào đóng góp chênh lệch target?
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -833,9 +833,9 @@ FROM this_month tm, prev_month pm
 { "row": 8, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
-#### 📝 Text: Chi tiet hieu suat theo chi nhanh
+#### 📝 Text: Review chi tiết chi nhánh — revenue, target, achievement, MoM
 
-## Chi tiet hieu suat theo chi nhanh
+## Review chi tiết chi nhánh — revenue, target, achievement, MoM
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -964,9 +964,9 @@ ORDER BY tm.revenue DESC
 
 ### 📑 Tab: Dong luc tang truong
 
-#### 📝 Text: Dong gop doanh thu theo kenh ban hang
+#### 📝 Text: Xác định kênh drive revenue — ranking và so sánh MoM
 
-# Dong gop doanh thu theo kenh ban hang
+# Xác định kênh drive revenue — ranking và so sánh MoM
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1069,9 +1069,9 @@ ORDER BY COALESCE(tm.revenue, 0) DESC
 { "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### 📝 Text: Xu huong cau truc kenh 6 thang — Online dang len?
+#### 📝 Text: Theo dõi structural shift kênh 6 tháng — Online đang chiếm ưu thế?
 
-## Xu huong cau truc kenh 6 thang — Online dang len?
+## Theo dõi structural shift kênh 6 tháng — Online đang chiếm ưu thế?
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1150,9 +1150,9 @@ ORDER BY "Net Revenue" DESC
 { "row": 8, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
-#### 📝 Text: Phan khuc khach hang — VIP co dang tang?
+#### 📝 Text: Đánh giá phân khúc khách hàng — VIP contribution và growth
 
-## Phan khuc khach hang — VIP co dang tang?
+## Đánh giá phân khúc khách hàng — VIP contribution và growth
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1253,9 +1253,9 @@ ORDER BY 1
 
 ### 📑 Tab: Suc khoe van hanh
 
-#### 📝 Text: Kiem soat chiet khau — co vuot 15% GMV?
+#### 📝 Text: Kiểm soát chiết khấu — có vượt ngưỡng 15% GMV?
 
-# Kiem soat chiet khau — co vuot 15% GMV?
+# Kiểm soát chiết khấu — có vượt ngưỡng 15% GMV?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1460,9 +1460,9 @@ FROM this_month tm, prev_month pm
 { "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
-#### 📝 Text: Top san pham — ban chay va can xu ly
+#### 📝 Text: Xác định top sản phẩm bán chạy và sản phẩm bị trả nhiều
 
-## Top san pham — ban chay va can xu ly
+## Xác định top sản phẩm bán chạy và sản phẩm bị trả nhiều
 
 ```json metabase-pos
 { "row": 4, "col": 6, "size_x": 12, "size_y": 1 }
@@ -1547,9 +1547,9 @@ LIMIT 5
 { "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### 📝 Text: Chi tiet san pham theo loai
+#### 📝 Text: Review chi tiết sản phẩm — revenue, quantity, MoM theo loại
 
-## Chi tiet san pham theo loai
+## Review chi tiết sản phẩm — revenue, quantity, MoM theo loại
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1704,4 +1704,12 @@ LIMIT 20
 
 ```json metabase-pos
 { "row": 12, "col": 9, "size_x": 9, "size_y": 9 }
+```
+
+#### 📝 Text: Footer
+
+Source: fact_orders · dim_customers · Closed month data · Completed orders only
+
+```json metabase-pos
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
 ```

@@ -12,9 +12,9 @@ Single-view Operational Cockpit for CS Team Leader — real-time social commerce
 
 ---
 
-#### 📝 Text: Doanh thu Social hôm nay
+#### 📝 Text: Monitor doanh thu Social real-time — đội social đang bán được bao nhiêu?
 
-# Doanh thu Social hôm nay — đội social đang bán được bao nhiêu?
+# Monitor doanh thu Social real-time — đội social đang bán được bao nhiêu?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -189,9 +189,9 @@ FROM total t, social s
 { "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
-#### 📝 Text: Kênh nào đang drive doanh thu
+#### 📝 Text: Xác định kênh drive doanh thu — Facebook vs Zalo vs Instagram đóng góp
 
-# Kênh nào đang drive doanh thu — Facebook vs Zalo vs Instagram
+# Xác định kênh drive doanh thu — Facebook vs Zalo vs Instagram đóng góp
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
@@ -282,9 +282,9 @@ ORDER BY 1, 2
 { "row": 5, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
-#### 📝 Text: Hiệu suất nhân viên
+#### 📝 Text: Đánh giá hiệu suất nhân viên — ranking và xử lý kịp thời
 
-# Hiệu suất nhân viên — ai đang bán tốt, ai cần hỗ trợ
+# Đánh giá hiệu suất nhân viên — ranking và xử lý kịp thời
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -363,9 +363,9 @@ ORDER BY 2 DESC
 { "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### 📝 Text: Chi tiết theo nhân viên
+#### 📝 Text: Review chi tiết nhân viên — xác định ai cần hỗ trợ thêm
 
-# Chi tiết theo nhân viên — doanh thu, số đơn, AOV
+# Review chi tiết nhân viên — xác định ai cần hỗ trợ thêm
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -480,9 +480,9 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 { "row": 19, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
-#### 📝 Text: Đơn hàng gần nhất
+#### 📝 Text: Kiểm tra đơn hàng mới nhất — xác nhận pipeline real-time
 
-# Đơn hàng gần nhất — kiểm tra real-time
+# Kiểm tra đơn hàng mới nhất — xác nhận pipeline real-time
 
 ```json metabase-pos
 { "row": 25, "col": 0, "size_x": 18, "size_y": 1 }
@@ -536,4 +536,14 @@ LIMIT 20
 
 ```json metabase-pos
 { "row": 26, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+---
+
+#### 📝 Text: Footer
+
+Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: platform_group = Social
+
+```json metabase-pos
+{ "row": 32, "col": 0, "size_x": 18, "size_y": 1 }
 ```

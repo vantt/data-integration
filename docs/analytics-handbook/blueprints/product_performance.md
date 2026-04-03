@@ -46,7 +46,7 @@ Dashboard theo doi hieu suat san pham — doanh thu, so luong, xu huong, phan ti
 
 #### 📝 Text: Overview Heading
 
-# Merchandising/Management — San pham dang ban the nao thang nay? — Last 30 Days
+# Review hieu suat san pham thang — doanh thu, velocity, va xu huong MoM
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -286,7 +286,7 @@ FROM this_period t, prev_period p
 
 #### 📝 Text: Trend Heading
 
-# Theo doi xu huong doanh thu san pham — tang hay giam so voi thang truoc?
+# Phan tich xu huong doanh thu san pham — momentum MoM
 
 ```json metabase-pos
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
@@ -432,7 +432,7 @@ ORDER BY "Ngay"
 
 #### 📝 Text: Contribution Heading
 
-# San pham dong gop vao doanh thu nhu the nao?
+# Xac dinh dong gop theo loai san pham — ranking va composition
 
 ```json metabase-pos
 { "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
@@ -522,7 +522,7 @@ ORDER BY "Doanh thu" DESC
 
 #### 📝 Text: Category Growth Heading
 
-# Loai san pham nao dang tang truong — dieu chinh product mix kip thoi
+# Danh gia tang truong theo loai san pham — dieu chinh product mix
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -600,7 +600,7 @@ ORDER BY "Tang truong MoM %" DESC NULLS LAST
 
 #### 📝 Text: Category Mix Heading
 
-# Xu huong dong gop cua tung loai san pham theo thoi gian
+# Theo doi category mix shift — loai nao dang chiem uu the?
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -656,7 +656,7 @@ ORDER BY "Ngay"
 
 #### 📝 Text: Category Detail Heading
 
-# Chi tiet hieu suat tung loai san pham
+# Review chi tiet loai san pham — highlight tang/giam manh
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -767,7 +767,7 @@ ORDER BY COALESCE(t.doanh_thu, 0) DESC
 
 #### 📝 Text: Top Products Heading
 
-# Top 20 san pham ban chay — tap trung day manh nhom nay
+# Xac dinh top 20 san pham ban chay — focus marketing va stock
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -859,7 +859,7 @@ LIMIT 20
 
 #### 📝 Text: Growth Decline Heading
 
-# San pham tang truong va sut giam manh nhat — canh bao som
+# Canh bao som — san pham tang truong va sut giam manh nhat
 
 ```json metabase-pos
 { "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
@@ -989,7 +989,7 @@ LIMIT 10
 
 #### 📝 Text: Velocity Heading
 
-# Toc do ban hang trung binh — san pham nao quay nhanh nhat?
+# Phan tich velocity — san pham nao quay nhanh nhat?
 
 ```json metabase-pos
 { "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1037,7 +1037,7 @@ LIMIT 20
 
 #### 📝 Text: Detail Table Heading
 
-# Bang chi tiet san pham — tim kiem va sap xep tu do
+# Tra cuu chi tiet san pham — tim kiem, sap xep, loc tu do
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1136,4 +1136,14 @@ ORDER BY t.doanh_thu DESC
 
 ```json metabase-pos
 { "row": 25, "col": 0, "size_x": 18, "size_y": 9 }
+```
+
+---
+
+#### 📝 Text: Footer
+
+Source: fact_orders · dim_products · Updated daily · Excludes cancelled orders
+
+```json metabase-pos
+{ "row": 34, "col": 0, "size_x": 18, "size_y": 1 }
 ```

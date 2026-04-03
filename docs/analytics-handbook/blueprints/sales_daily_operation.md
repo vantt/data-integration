@@ -15,33 +15,33 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 
 ### 📑 Tab: Tổng quan
 
-#### 📝 Text: Sức khỏe kinh doanh
+#### 📝 Text: Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
 
-# Sức khỏe kinh doanh
+# Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Kết quả hôm nay (real-time)
+#### 📝 Text: Review kết quả real-time — doanh thu, đơn hàng, AOV so với hôm qua
 
-# Kết quả hôm nay (real-time)
+# Review kết quả real-time — doanh thu, đơn hàng, AOV so với hôm qua
 
 ```json metabase-pos
 { "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Chỉ số phụ
+#### 📝 Text: Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
 
-# Chỉ số phụ
+# Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
 
 ```json metabase-pos
 { "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Doanh thu theo giờ
+#### 📝 Text: Phân tích doanh thu theo giờ — peak hours và so sánh real-time
 
-# Doanh thu theo giờ
+# Phân tích doanh thu theo giờ — peak hours và so sánh real-time
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -608,25 +608,25 @@ ORDER BY 1
 
 ### 📑 Tab: Kênh bán hàng
 
-#### 📝 Text: Doanh thu theo kênh
+#### 📝 Text: Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
 
-# Doanh thu theo kênh
+# Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Hiệu suất kênh so với hôm qua
+#### 📝 Text: So sánh hiệu suất kênh DoD — highlight kênh tăng/giảm mạnh
 
-# Hiệu suất kênh so với hôm qua
+# So sánh hiệu suất kênh DoD — highlight kênh tăng/giảm mạnh
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Doanh thu theo chi nhánh
+#### 📝 Text: Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
 
-# Doanh thu theo chi nhánh
+# Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
@@ -831,17 +831,17 @@ ORDER BY 3 DESC
 
 ### 📑 Tab: Sản phẩm
 
-#### 📝 Text: Top 10 sản phẩm bán chạy
+#### 📝 Text: Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
 
-# Top 10 sản phẩm bán chạy
+# Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Phân bổ theo loại sản phẩm
+#### 📝 Text: Phân tích đóng góp theo loại sản phẩm
 
-# Phân bổ theo loại sản phẩm
+# Phân tích đóng góp theo loại sản phẩm
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1004,17 +1004,17 @@ LIMIT 20
 
 ### 📑 Tab: Khách hàng & Thanh toán
 
-#### 📝 Text: Chân dung khách hàng hôm nay
+#### 📝 Text: Đánh giá chân dung khách hàng — new vs returning, segment
 
-# Chân dung khách hàng hôm nay
+# Đánh giá chân dung khách hàng — new vs returning, segment
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Thanh toán & Chiết khấu
+#### 📝 Text: Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
-# Thanh toán & Chiết khấu
+# Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
 ```json metabase-pos
 { "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1231,4 +1231,12 @@ WHERE date(order_timestamp) = current_date
 
 ```json metabase-pos
 { "row": 17, "col": 0, "size_x": 18, "size_y": 3 }
+```
+
+#### 📝 Text: Source & Freshness
+
+Source: fact_orders · Updated real-time · Excludes cancelled/voided orders
+
+```json metabase-pos
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```

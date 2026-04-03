@@ -14,9 +14,9 @@ Operational cockpit for monitoring order fulfillment pipeline — fulfillment ra
 
 ### 📑 Tab: Tổng quan
 
-#### 📝 Text: Pipeline hôm nay
+#### 📝 Text: Monitor pipeline đơn hàng — trạng thái xử lý và fulfillment rate
 
-# Giám sát pipeline đơn hàng — hôm nay đang xử lý thế nào?
+# Monitor pipeline đơn hàng — trạng thái xử lý và fulfillment rate
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -158,9 +158,9 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 
 ---
 
-#### 📝 Text: Phân bổ trạng thái đơn hàng
+#### 📝 Text: Kiểm tra phân bổ trạng thái — drop-off ở bước nào?
 
-# Phân bổ trạng thái đơn hàng
+# Kiểm tra phân bổ trạng thái — drop-off ở bước nào?
 
 ```json metabase-pos
 { "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
@@ -229,9 +229,9 @@ ORDER BY 2 DESC
 
 ---
 
-#### 📝 Text: Lượng đơn theo giờ hôm nay
+#### 📝 Text: Phân tích lượng đơn theo giờ — peak hours và pattern DoD
 
-# Lượng đơn theo giờ hôm nay
+# Phân tích lượng đơn theo giờ — peak hours và pattern DoD
 
 ```json metabase-pos
 { "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
@@ -343,9 +343,9 @@ ORDER BY 1
 
 ### 📑 Tab: Tốc độ xử lý
 
-#### 📝 Text: Hiệu suất xử lý đơn hàng
+#### 📝 Text: Đánh giá tốc độ xử lý — time to ship và bottleneck
 
-# Hiệu suất xử lý đơn hàng — tốc độ và bottleneck
+# Đánh giá tốc độ xử lý — time to ship và bottleneck
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -506,9 +506,9 @@ WHERE status NOT IN ('DRAFT')
 
 ---
 
-#### 📝 Text: Xu hướng tốc độ xử lý theo giờ
+#### 📝 Text: Theo dõi tốc độ xử lý theo giờ — khi nào xử lý nhanh/chậm?
 
-# Xu hướng tốc độ xử lý theo giờ
+# Theo dõi tốc độ xử lý theo giờ — khi nào xử lý nhanh/chậm?
 
 ```json metabase-pos
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
@@ -619,9 +619,9 @@ ORDER BY EXTRACT(DOW FROM order_timestamp), 2
 
 ---
 
-#### 📝 Text: Đơn hàng bị nghẽn (OPEN > 24h)
+#### 📝 Text: Escalate đơn hàng bị nghẽn — OPEN > 24h cần xử lý ngay
 
-# Đơn hàng bị nghẽn (OPEN > 24h)
+# Escalate đơn hàng bị nghẽn — OPEN > 24h cần xử lý ngay
 
 ```json metabase-pos
 { "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
@@ -683,9 +683,9 @@ ORDER BY "Chờ (giờ)" DESC
 
 ### 📑 Tab: Chi tiết & Nhân viên
 
-#### 📝 Text: Hiệu suất nhân viên xử lý đơn
+#### 📝 Text: Đánh giá hiệu suất nhân viên — ranking volume và tốc độ
 
-# Hiệu suất nhân viên xử lý đơn
+# Đánh giá hiệu suất nhân viên — ranking volume và tốc độ
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -758,9 +758,9 @@ ORDER BY 2 ASC
 
 ---
 
-#### 📝 Text: Chi tiết đơn hàng hôm nay
+#### 📝 Text: Tra cứu chi tiết đơn hàng hôm nay — full data lookup
 
-# Chi tiết đơn hàng hôm nay
+# Tra cứu chi tiết đơn hàng hôm nay — full data lookup
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }

@@ -36,25 +36,25 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
 
 ### Tab: Tong quan thang
 
-#### 📝 Text: Ket qua thang (Monthly Review)
+#### 📝 Text: Review ket qua thang — doanh thu, don hang, chat luong van hanh
 
-# Ket qua thang (Monthly Review)
+# Review ket qua thang — doanh thu, don hang, chat luong van hanh
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Chat luong don hang
+#### 📝 Text: Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
 
-# Chat luong don hang
+# Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
 
 ```json metabase-pos
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Xu huong 6 thang
+#### 📝 Text: Theo doi xu huong 6 thang — cancellation va return rate vs target
 
-# Xu huong 6 thang
+# Theo doi xu huong 6 thang — cancellation va return rate vs target
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -529,33 +529,33 @@ LIMIT 10
 
 ### Tab: Kenh & Chi nhanh
 
-#### 📝 Text: Phan bo don hang theo kenh
+#### 📝 Text: Xac dinh kenh chiem workload — ranking orders va revenue
 
-# Phan bo don hang theo kenh
+# Xac dinh kenh chiem workload — ranking orders va revenue
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Hieu suat van hanh theo kenh
+#### 📝 Text: Danh gia hieu suat van hanh kenh — completion, cancel, return rates
 
-# Hieu suat van hanh theo kenh
+# Danh gia hieu suat van hanh kenh — completion, cancel, return rates
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Huy don theo kenh
+#### 📝 Text: Phan tich huy don theo kenh — kenh nao huy nhieu nhat?
 
-# Huy don theo kenh
+# Phan tich huy don theo kenh — kenh nao huy nhieu nhat?
 
 ```json metabase-pos
 { "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Phan bo theo chi nhanh
+#### 📝 Text: Danh gia hieu suat chi nhanh — volume va van de can xu ly
 
-# Phan bo theo chi nhanh
+# Danh gia hieu suat chi nhanh — volume va van de can xu ly
 
 ```json metabase-pos
 { "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
@@ -858,25 +858,25 @@ ORDER BY 3 DESC
 
 ### Tab: Doi ngu & Thanh toan
 
-#### 📝 Text: Social Commerce (Facebook + Zalo)
+#### 📝 Text: Theo doi hieu suat Social Commerce — revenue va nhan vien
 
-# Social Commerce (Facebook + Zalo)
+# Theo doi hieu suat Social Commerce — revenue va nhan vien
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Hieu suat nhan vien (Toan kenh)
+#### 📝 Text: Danh gia hieu suat nhan vien toan kenh — ranking va completion
 
-# Hieu suat nhan vien (Toan kenh)
+# Danh gia hieu suat nhan vien toan kenh — ranking va completion
 
 ```json metabase-pos
 { "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Thanh toan & Doi soat
+#### 📝 Text: Kiem tra xu huong thanh toan va doi soat — PTTT shift va pending alert
 
-# Thanh toan & Doi soat
+# Kiem tra xu huong thanh toan va doi soat — PTTT shift va pending alert
 
 ```json metabase-pos
 { "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1345,4 +1345,14 @@ ORDER BY 2 DESC
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 5 }
+```
+
+---
+
+#### 📝 Text: Footer
+
+Source: fact_orders · Updated monthly · Excludes incomplete current month
+
+```json metabase-pos
+{ "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
 ```
