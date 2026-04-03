@@ -5,16 +5,36 @@
 - **Audience:** Merchandising, Management
 - **Goal:** Monitor sales velocity and revenue contribution by product.
 - **Collection:** `Product Analytics`
+- **Design Spec:** [designs/product_performance.md](../designs/product_performance.md)
 
 ## Data Lineage
 
 - **Core Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
-- **Dimensions:** [`dim_products`](../../../transformation/models/marts/core/dim_products.sql)
+- **Dimensions:** [`dim_products`](../../../transformation/models/marts/core/dim_products.sql), [`dim_product_types`](../../../transformation/models/marts/core/dim_product_types.sql)
+
+## Reading Flow
+
+1. **Tong quan** — Hero: Doanh thu san pham (MoM). On-track hay khong?
+2. **Trend** — Doanh thu theo ngay co duy tri momentum?
+3. **Category breakdown** — Loai SP nao drive tang truong, loai nao sut giam?
+4. **Top/Bottom products** — San pham cu the nao dang ban chay, san pham nao can can thiep?
+5. **Action** — Dieu chinh product mix, day kenh cho SP tiem nang, review SP sut giam.
 
 ## Filters
 
-- **Category:** Filter by Product Category.
-- **Date Range:** Last 30 Days.
+- **Khoang thoi gian:** Last 30 Days (default).
+- **Loai san pham:** Filter by Product Type.
+- **Kenh ban hang:** Filter by Channel.
+
+## Action Triggers
+
+| Metric | Threshold | Owner | Action |
+|--------|-----------|-------|--------|
+| Doanh thu san pham | MoM < -10% | Merchandising | Kiem tra breakdown theo loai SP va kenh ban hang |
+| Doanh thu san pham | MoM > +20% | Management | Xac minh nguon tang — promotion hay organic growth |
+| Tang truong loai SP | MoM < -15% cho bat ky loai nao | Merchandising | Review product mix, kiem tra ton kho |
+| SP sut giam | MoM < -30% | Merchandising | Canh bao gap, kiem tra het hang hay trend thi truong |
+| Daily velocity | < 1 unit/day cho SP chu luc | Merchandising | Review gia ban, vi tri trung bay, marketing |
 
 ## Visualizations
 
@@ -22,15 +42,25 @@
 
 | Chart Title              | Visualization Type | Metric Reference (Link to Domain)                          | Notes/Config               |
 | :----------------------- | :----------------- | :--------------------------------------------------------- | :------------------------- |
-| **Revenue Contribution** | Treemap            | [Product Revenue](../domains/product.md#2-product-revenue) | Size by Revenue.           |
-| **Top Movers**           | Bar Chart          | [Units Sold](../domains/product.md#1-units-sold)           | Top 20 products by volume. |
+| **Revenue Contribution** | Horizontal Bar     | [Product Revenue](../domains/product.md#2-product-revenue) | Top 20 products by revenue. Replaced Treemap for readability. |
+| **Top Movers**           | Horizontal Bar     | [Units Sold](../domains/product.md#1-units-sold)           | Top 20 products by volume. |
 
 ### Section 2: Category Analysis
 
 | Chart Title            | Visualization Type | Metric Reference (Link to Domain)                          | Notes/Config                 |
 | :--------------------- | :----------------- | :--------------------------------------------------------- | :--------------------------- |
 | **Category Mix Trend** | Stacked Area       | [Product Revenue](../domains/product.md#2-product-revenue) | Group by Category Over Time. |
-| **Return Rate by Cat** | Bar Chart          | [Return Rate](../domains/product.md#4-return-rate)         |                              |
+| **Category Growth MoM** | Horizontal Bar (conditional) | [Product Revenue](../domains/product.md#2-product-revenue) | MoM % change by category. |
+
+### Section 3: Planned — Inventory-dependent (requires `fact_inventory`)
+
+> **Status: Planned** — `fact_inventory` model does not exist yet. Metrics below will be added when inventory data pipeline is built.
+
+| Chart Title            | Visualization Type | Metric Reference (Link to Domain)                          | Notes/Config                 |
+| :--------------------- | :----------------- | :--------------------------------------------------------- | :--------------------------- |
+| **Return Rate by Cat** | Bar Chart          | [Return Rate](../domains/product.md#4-return-rate)         | Requires reliable return data at line-item level. Planned. |
+| **OOS Rate**           | Gauge              | [OOS Rate](../domains/product.md#8-out-of-stock-oos-rate)  | Requires `fact_inventory`. Planned. |
+| **Inventory Turnover** | Single Value       | [Inventory Turnover](../domains/product.md#5-inventory-turnover) | Requires `fact_inventory`. Planned. |
 
 ## Implementation Notes
 

@@ -16,12 +16,13 @@
 - **Logic (SQL):**
   ```sql
   SELECT
-      source_group,
+      platform_group,
+      channel_name,
       SUM(gmv)
   FROM fact_orders
   LEFT JOIN dim_channels USING (channel_key)
-  WHERE source_group IN ('Facebook', 'Zalo')
-  GROUP BY 1
+  WHERE platform_group = 'Social'
+  GROUP BY 1, 2
   ```
 
 ### 2. Social Order Count
@@ -34,7 +35,7 @@
   SELECT COUNT(DISTINCT order_id)
   FROM fact_orders
   LEFT JOIN dim_channels USING (channel_key)
-  WHERE source_group IN ('Facebook', 'Zalo')
+  WHERE platform_group = 'Social'
   ```
 
 ## Context: Support Efficiency (Planned)

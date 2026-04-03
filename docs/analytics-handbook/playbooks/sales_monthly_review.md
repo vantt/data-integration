@@ -63,6 +63,32 @@ Use this format to document decisions during the meeting:
 | _Example: Missed revenue target in North Region_ | _Stockout of top sellers_  | _Expedite transfer from Central Warehouse_ | _Ops Manager_  | _YYYY-MM-DD_ |
 | _Example: High returns on Product X_             | _Sizing issue description_ | _Update product page sizing guide_         | _Content Team_ | _YYYY-MM-DD_ |
 
+## Dashboard Reference
+
+- **Design Spec:** [Sales Monthly Review Design](../designs/sales_monthly_review.md)
+- **Dashboard:** Sales Analytics > Monthly Reports (TBD)
+
+## Reading Flow
+
+1. **CONTEXT** — MBR hop hang thang, review ket qua thang vua dong. Dashboard tra loi "Dat target chua?"
+2. **KEY FINDING** — Bat dau o View 1: Hero card "Net Revenue vs Target" (progress-toward-goal) cho biet ngay achievement rate. Xanh = on-track, do = miss.
+3. **EVIDENCE** — Supporting KPIs (Orders, AOV, New Customers) cho context. 12-Month Revenue Trend xac nhan trajectory.
+4. **IMPLICATIONS** — Neu miss target: chuyen sang View 2 (Tai chinh) de xem branch nao miss, waterfall cho gap analysis. Neu on-track: chuyen sang View 3 (Tang truong) de hieu dong luc.
+5. **ACTIONS** — View 4 (Van hanh) flag van de can xu ly: chiet khau > 15%, tra hang tang, san pham can clearance. Ghi action items vao Action Plan Template.
+
+## Action Triggers
+
+| Metric | Condition | Severity | Owner | Action |
+|--------|-----------|----------|-------|--------|
+| Target Achievement | < 80% | Red | Sales Director | Hop khan cap, root cause analysis, action plan 48h |
+| Target Achievement | 80-90% | Warning | Regional Manager | Review branch-level performance, identify quick wins |
+| Discount Rate % | > 15% GMV | Warning | Sales Director | Audit promo campaigns, review discount policy |
+| Discount Rate % | > 20% GMV | Red | CFO | Freeze non-essential promotions, margin recovery plan |
+| Return Rate | MoM > +50% | Warning | Ops Manager | Investigate top returned products, check quality/description |
+| New Customers | MoM < -15% | Warning | Marketing Manager | Review acquisition channels, check marketing spend |
+| Any Channel Revenue | MoM < -20% | Warning | Channel Owner | Channel-specific diagnosis: stock, marketing, competition |
+| Branch Achievement | < 80% for 2+ months | Red | Regional Manager | Performance improvement plan, resource reallocation |
+
 ## Data Preparation Checklist
 
 Before the MBR meeting, ensure:

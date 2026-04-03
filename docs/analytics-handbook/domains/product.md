@@ -57,6 +57,8 @@
 
 ## Context: Inventory Health
 
+> **Status: Planned** — `fact_inventory` model does not exist yet. All metrics below are planned and will be implemented when inventory data pipeline is built.
+
 > **Description:** Stock levels and efficiency.
 > **dbt Source:** `fact_inventory`
 

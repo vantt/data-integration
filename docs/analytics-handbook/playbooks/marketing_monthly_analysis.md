@@ -3,7 +3,7 @@
 ## Overview
 
 - **Audience:** Marketing Manager, Brand Manager, CMO
-- **Goal:** Monthly deep dive into channel effectiveness, customer segments, campaign ROI, and strategic recommendations for next month.
+- **Goal:** Monthly deep dive into channel effectiveness, customer segments, promotion analysis, and strategic recommendations for next month.
 - **Cadence:** 3rd–5th of each month, reviewing the closed month.
 - **Archetype:** Operational Cockpit (multi-view, 4 tabs)
 - **Collection:** `Marketing & Customers`
@@ -13,84 +13,80 @@
 ## Key Questions
 
 1. **Channel Strategy:** Kênh nào đang grow, kênh nào stagnant? Tỷ trọng Ecommerce/Offline thay đổi thế nào trong 6 tháng?
-2. **Campaign Effectiveness:** Campaign tháng này ROI bao nhiêu? Discount có ăn hết margin không?
+2. **Campaign Effectiveness:** Discount có ăn hết margin không? Promotion nào hiệu quả?
 3. **Customer Health:** Cohort retention ra sao? Bao nhiêu khách churn? VIP segment có ổn định không?
-4. **Acquisition Efficiency:** Chi phí có khách mới có hợp lý không? Kênh nào mang khách mới tốt nhất?
-5. **Brand Portfolio:** Brand nào đang drive growth? Brand nào cần push marketing?
+4. **Brand Portfolio:** Brand nào đang drive growth? Brand nào cần push marketing?
 
 ## Filters
 
-- **Date Range:** Default = Last Closed Month. Comparison = Previous Month AND Same Month Last Year.
-- **Channel Category:** Ecommerce / Offline / All.
-- **Brand (Channel):** Filter by `channel_brand`.
-- **Market:** Domestic / Export.
+> Filters removed — DuckDB native SQL template tags do not support `date/all-options` or `string/=` filter types. Date scoping is hardcoded in each query (last closed month).
 
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_marketing_spend`](../../../transformation/models/marts/sales/fact_marketing_spend.sql), [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
-- **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_geography`
+- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+- **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_promotions`, `dim_geography`
 
 ## Dashboard Structure (4 Tabs)
 
-1. **Monthly Pulse** — Executive-level monthly snapshot (5-7 min). Hero revenue + KPIs + 6M trends + channel mix overview.
-2. **Channel & Brand Strategy** — Channel deep dive: mix trends, platform matrix, brand portfolio, market/segment splits.
-3. **Customer Intelligence** — Acquisition trends, channel attribution, segment health, cohort retention heatmap, at-risk alerts.
-4. **Campaigns & Products** — Promotion ROI, discount analysis, top products, brand performance, geographic insights, ordering patterns.
+1. **Monthly Pulse** — Executive-level monthly snapshot (5-7 min). Hero revenue + KPIs + discount gauge + 6M trends + channel mix.
+2. **Channel & Brand** — Channel deep dive: mix trends, platform matrix, brand portfolio, market/segment splits.
+3. **Customer Intelligence** — Acquisition trends, channel attribution, segment health, cohort retention heatmap, at-risk/churn alerts.
+4. **Campaigns & Products** — Discount analysis, promotion leaderboard, top products, geographic insights, ordering patterns.
 
 ## Visualizations
 
-### Section 1: Monthly Overview KPIs
+### Tab 1: Monthly Pulse
 
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Monthly Revenue** | Scalar + Trend | [GMV](../domains/sales.md#1-gmv-gross-merchandise-value) | MoM + YoY change. |
-| **Total Orders** | Scalar + Trend | [Total Orders](../domains/sales.md#4-total-orders) | MoM change. |
-| **New Customers** | Scalar + Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | MoM change. |
-| **Discount Rate %** | Scalar | [Discount Impact](../domains/sales.md#13-discount-impact) | Flag RED if > 15%. |
+| **Monthly Net Revenue** | Scalar + MoM Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | MoM % change. |
+| **Monthly Total Orders** | Scalar + MoM Trend | [Total Orders](../domains/sales.md#4-total-orders) | MoM % change. |
+| **Monthly New Customers** | Scalar + MoM Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | MoM % change. From `dim_customers.first_order_date`. |
+| **Monthly AOV** | Scalar + MoM Trend | [AOV](../domains/sales.md#5-aov-average-order-value) | MoM % change. |
+| **Discount Rate Gauge** | Gauge | [Discount Impact](../domains/sales.md#13-discount-impact) | Zones: Green 0-10%, Yellow 10-15%, Red 15%+. |
+| **Revenue Trend (6M)** | Line Chart | [Net Revenue](../domains/sales.md#2-net-revenue) | Monthly net revenue, 6-month window. |
+| **Channel Revenue Share** | Donut | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ecommerce / Offline split. Max 3 slices. |
+| **Revenue by Channel (MoM)** | Multi-Line | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | 6-month trend, one line per channel_category. |
 
-### Section 2: Channel Strategy Analysis
+### Tab 2: Channel & Brand
 
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Channel Mix Trend (6 Months)** | Stacked Area | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Monthly revenue stacked by `channel_category`. Shows structural shifts. |
-| **Platform Performance Matrix** | Table | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Columns: Platform, Revenue, Orders, AOV, New Customers, MoM Revenue Change %, MoM Order Change %. Full detail. |
-| **Channel Brand Revenue** | Horizontal Bar | _Derived_ | Group by `channel_brand` (JPC, Fine Japan, etc.). Shows brand portfolio split. |
+| **Channel Mix Trend (6M)** | Stacked Area | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Monthly revenue stacked by `channel_category`. Shows structural shifts. |
+| **Platform Performance Matrix** | Table | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Columns: Platform, Revenue, Orders, AOV, New Customers, MoM Revenue %, MoM Orders %. |
+| **Channel Brand Revenue** | Horizontal Bar | _Derived_ | Group by `channel_brand` (JPC, Fine Japan, etc.). |
 | **Revenue by Market** | Donut Chart | _Derived_ | Domestic vs Export split. From `dim_channels.market`. |
+| **Brand Performance Summary** | Table | _Derived_ | Brand, This Month Revenue/Units, Last Month Revenue/Units, MoM Growth %. From `fact_sales`. |
 | **Revenue by Customer Segment (B2C/B2B)** | Donut Chart | _Derived_ | From `dim_channels.customer_segment`. |
 
-### Section 3: Customer Acquisition & Retention
+### Tab 3: Customer Intelligence
 
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **New Customer Acquisition Trend (6M)** | Bar Chart | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Monthly new customer count. 6-month window. |
+| **New Customers (Month)** | Scalar + MoM Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | From `dim_customers.first_order_date`. |
+| **Returning Customers (Month)** | Scalar + MoM Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Customers with orders this month who are not new. |
+| **New Customer Revenue Share** | Scalar + MoM Trend | _Derived_ | Revenue from first-time buyers as % of total. |
+| **New Customer Acquisition Trend (6M)** | Bar Chart | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Monthly new customer count, 6-month window. |
 | **New Customers by Channel** | Horizontal Bar | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Which channels acquired the most new customers this month? |
-| **Customer Segment Movement** | Table | [RFM Segment](../domains/customer.md#7-rfm-segment) | Columns: Segment (VIP/Loyal/Regular), Customer Count, Revenue, MoM Count Change. Shows segment health. |
-| **At Risk Customer Alert** | Scalar | [Churn Rate](../domains/customer.md#6-churn-rate) | Count of `customer_status = 'At Risk'`. MoM change. |
+| **At Risk Customers** | Scalar + MoM Trend | [Churn Rate](../domains/customer.md#6-churn-rate) | Count of `customer_status = 'At Risk'`. MoM change. |
+| **Churn Rate Gauge** | Gauge | [Churn Rate](../domains/customer.md#6-churn-rate) | Zones: Green 0-10%, Yellow 10-20%, Red 20%+. |
+| **Active Customer Rate** | Scalar + MoM Trend | _Derived_ | Active / total customers %. |
+| **Customer Segment Movement** | Table | [RFM Segment](../domains/customer.md#7-rfm-segment) | Segment, Customer Count, Revenue, MoM Count Change. |
 | **Cohort Retention Heatmap** | Pivot Table (Heatmap) | [Retention Rate](../domains/customer.md#5-retention-rate) | Month-0 to Month-6 retention by acquisition cohort. Color intensity = retention %. |
 
-### Section 4: Campaign & Promotion Deep Dive
+### Tab 4: Campaigns & Products
 
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
-| **Promotion Leaderboard** | Table | [Promotion Performance](../domains/sales.md#14-promotion-performance) | Columns: Promo Name, Usage Count, Revenue Generated, Avg Discount %, Uplift (Promo AOV vs Non-Promo AOV). |
-| **Discount Depth Distribution** | Histogram (Bar) | [Discount Impact](../domains/sales.md#13-discount-impact) | X: Discount bucket (0%, 10%, 20%…). Y: Order Count. See promotion analysis playbook for SQL. |
-| **Discount Trend (6M)** | Line Chart | [Discount Impact](../domains/sales.md#13-discount-impact) | Monthly `Discount Rate %` over 6 months. Goal: keep under 15% line. |
-| **Revenue: Discounted vs Full-Price** | Stacked Bar | [Discount Impact](../domains/sales.md#13-discount-impact) | Monthly revenue split: Discounted orders (Orange) vs Full-Price orders (Blue). |
-
-### Section 5: Product & Brand Insights
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
-| **Top 15 Products by Revenue** | Table | [Top Selling Products](../domains/sales.md#9-top-selling-products) | Columns: Product, Brand, Units, Revenue, MoM Change %. From `fact_sales`. |
-| **Brand Performance Summary** | Table | _Derived_ | Group by `brand_name`. Columns: Brand, Revenue, Units, Order Count, AOV, MoM Growth %. |
-| **Brand × Channel Matrix** | Pivot Table | _Derived_ | Rows: Brand. Columns: Channel Category (Ecommerce / Offline). Values: Revenue. Answers "which brands sell where?" |
-
-### Section 6: Geographic Insights
-
-| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
-| :--- | :--- | :--- | :--- |
+| **Total Discount Amount** | Scalar + MoM Trend | [Discount Impact](../domains/sales.md#13-discount-impact) | Absolute VND discounted. MoM change. |
+| **Discounted Order Percentage** | Scalar + MoM Trend | [Discount Impact](../domains/sales.md#13-discount-impact) | % of orders with discount. |
+| **Average Discount Depth** | Scalar + MoM Trend | [Discount Impact](../domains/sales.md#13-discount-impact) | Avg discount % per discounted order. |
+| **Promotion Leaderboard** | Table | [Promotion Performance](../domains/sales.md#14-promotion-performance) | Columns: Promo Code, Usage, Revenue, Avg Discount %, Promo AOV, Non-Promo AOV. Top 10. |
+| **Discount Trend (6M)** | Line Chart | [Discount Impact](../domains/sales.md#13-discount-impact) | Monthly Discount Rate % over 6 months. 15% goal line. |
+| **Revenue: Discounted vs Full-Price (6M)** | Stacked Bar | [Discount Impact](../domains/sales.md#13-discount-impact) | Monthly revenue split: Discounted (Orange) vs Full-Price (Blue). |
+| **Top 15 Products by Revenue** | Table | [Top Selling Products](../domains/sales.md#9-top-selling-products) | Product, Brand, This Month Units/Revenue, Last Month Units/Revenue, MoM %. From `fact_sales`. |
 | **Revenue by Province (Top 10)** | Horizontal Bar | [Sales by Region](../domains/sales.md#15-sales-by-regionlocation) | From `dim_geography.province` via shipping address. |
-| **Order Heatmap by Day × Hour** | Heatmap | [Hourly Heatmap](../domains/sales.md#7-hourly-heatmap-day-of-week-analysis) | Identifies peak ordering windows for marketing scheduling. |
+| **Order Heatmap — Day × Hour** | Heatmap | [Hourly Heatmap](../domains/sales.md#7-hourly-heatmap-day-of-week-analysis) | Peak ordering windows for marketing scheduling. |
 
 ## Visualization Configs
 
@@ -127,15 +123,16 @@
 
 ## Operational Actions
 
-- **Channel Declining 2+ Consecutive Months:** Schedule strategy review. Consider reallocating marketing spend.
+- **Channel Declining 2+ Consecutive Months:** Schedule strategy review.
 - **New Customer Acquisition Declining:** Audit ad spend, review landing page conversion, check competitor activity.
 - **Churn Increasing:** Trigger reactivation campaign for At Risk segment. Review product quality/pricing.
 - **Discount Rate > 15%:** Review active promotions. Propose tighter discount guardrails for next month.
-- **Brand Under-performing:** Cross-reference with inventory — is it a supply issue or demand issue?
+- **Brand Under-performing:** Cross-reference with inventory — supply issue or demand issue?
 
 ## Implementation Notes
 
-- **Differs from CEO Monthly Scorecard:** This dashboard is **much deeper** — includes cohort analysis, promotion drill-down, brand × channel matrix, and geographic data. CEO version is a summary.
+- **Differs from CEO Monthly Scorecard:** This dashboard is **much deeper** — includes cohort analysis, promotion drill-down, brand performance, and geographic data. CEO version is a summary.
 - **Differs from Promotion Analysis Playbook:** The [Promotion Analysis](./sales_promotion_analysis.md) is an **ad-hoc deep dive tool**. This playbook includes promotion as ONE section of a broader monthly review.
+- **No interactive filters** — DuckDB native SQL template tags don't support Metabase filter types. Date scoping hardcoded in SQL.
 - **Data Dependency:** Cohort retention and segment movement require `dim_customers` with accurate `first_order_date` and `customer_status`. Verify data freshness.
-- Max ~20 visual elements. Marketing Manager will spend 15–30 minutes reviewing.
+- Max ~30 visual elements across 4 tabs. Marketing Manager will spend 15–30 minutes reviewing.

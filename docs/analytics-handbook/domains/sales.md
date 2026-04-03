@@ -95,6 +95,7 @@
 | **Marketing Monthly Analysis**  | Marketing / CMO      | Monthly deep dive: channel strategy, cohort retention, campaign ROI.   | TBD                      |
 | **Sales Ops Weekly Review**     | Sales Ops / CS Lead  | Weekly order processing, team performance, channel workload.           | TBD                      |
 | **Sales Ops Monthly Summary**   | Sales Ops / Ops Mgr  | Monthly operational efficiency, staff KPIs, payment reconciliation.    | TBD                      |
+| **Promotion & Discount Analysis** | Marketing / Sales Ops / Finance | Deep-dive into promotion ROI, discount spending, promo vs non-promo, channel impact. | TBD |
 
 ## Composite Metrics
 

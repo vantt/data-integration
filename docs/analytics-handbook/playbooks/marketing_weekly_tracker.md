@@ -24,8 +24,8 @@
 
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_marketing_spend`](../../../transformation/models/marts/sales/fact_marketing_spend.sql)
-- **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`
+- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+- **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_promotions`
 
 ## Tab Structure
 
@@ -71,7 +71,7 @@
 | **Avg Discount Amount** | Scalar + WoW Trend | [Discount Impact](../domains/sales.md#13-discount-impact) | Trung binh tien discount moi don. WoW change. |
 | **Total Discount Given** | Scalar + WoW Trend | [Discount Impact](../domains/sales.md#13-discount-impact) | Tong tien discount da cap. WoW change. Giam = tot. |
 | **Discounted vs Full Price** | Donut | [Discount Impact](../domains/sales.md#13-discount-impact) | 2 slices: Discounted / Full Price order count. |
-| **Promotion Leaderboard** | Formatted Table | [Promotion Performance](../domains/sales.md#14-promotion-performance) | Top 10 promos: Code, Usage, Revenue, Avg Discount %. Flag > 20% discount. |
+| **Promotion Leaderboard** | Formatted Table | [Promotion Performance](../domains/sales.md#14-promotion-performance) | Top 10 promos: Promo Code, Usage Count, Revenue, Avg Discount %. Highlight > 20% discount. |
 | **Social Revenue** | Scalar + WoW Trend | [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) | WoW change. |
 | **Social Orders** | Scalar + WoW Trend | [Social Order Count](../domains/customer_support.md#2-social-order-count) | WoW change. |
 | **Social AOV** | Scalar + WoW Trend | _Derived_ | AOV kenh social. WoW change. |

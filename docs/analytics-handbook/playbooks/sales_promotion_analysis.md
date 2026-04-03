@@ -51,6 +51,31 @@
 2. Calculate cost per method (e.g., Credit Card 2% vs COD 0%).
 3. Identify opportunities to steer customers to lower-cost methods.
 
+## Action Triggers
+
+| Metric | Threshold | Owner | Action |
+| :----- | :-------- | :---- | :----- |
+| **Discount Rate %** | > 15% of GMV | Marketing Manager | Review top discount channels, check for abuse patterns |
+| **Discount Rate %** | > 25% of GMV | Finance | Escalate — margin erosion alert, freeze discretionary discounts |
+| **AOV Uplift** | Promo AOV < Non-Promo AOV | Marketing Manager | Re-evaluate promo targeting — attracting low-value orders |
+| **Top Promo Concentration** | Top 1 promo > 50% of promo revenue | Sales Ops | Diversify promo portfolio, reduce single-promo dependency |
+| **High-Discount Orders** | > 5 orders/week with CK > 30% from same branch | Sales Ops | Audit branch, check for discount abuse or system error |
+| **Promo Usage Count** | MoM drop > 30% | Marketing Manager | Check if promo expired, communicate with channels |
+| **Channel Discount Rate** | Any channel > 20% avg discount | Sales Ops | Review channel-specific discount policies |
+
+## Reading Flow
+
+1. **Start at View 1 — Discount Overview:** Check Total Discount Amount and Discount Rate % to assess overall discount health. If Discount Rate > 15%, investigate further.
+2. **Promo vs Non-Promo comparison:** Confirm promo orders generate higher AOV (positive uplift). Negative uplift = promo attracting low-value buyers.
+3. **Discount Depth Histogram:** Scan for concentration in high-discount buckets (> 30%). Heavy tail = potential abuse or overly generous campaigns.
+4. **Move to View 2 — Promotion Performance:** Identify top-performing promotions by revenue and usage. Cross-check efficiency in the Performance Table (high discount rate + low usage = inefficient).
+5. **Move to View 3 — Channel Impact:** Compare promo dependency by channel. High promo revenue share = channel too reliant on discounts.
+6. **High-Discount Orders List:** Drill into specific suspicious orders for audit. Filter by branch/staff if abuse pattern detected.
+
+## Design Spec
+
+See [Design Spec: Sales Promotion & Discount Analysis](../designs/sales_promotion_analysis.md).
+
 ## Visualization Configs
 
 ### Discount Depth Histogram

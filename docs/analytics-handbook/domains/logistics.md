@@ -3,58 +3,65 @@
 > **Owner:** Operations / Warehouse
 > **Update Frequency:** Real-time / Hourly
 
-## Context: Fulfillment
+## Context: Order Processing & Fulfillment
 
-> **Description:** Order processing efficiency.
-> **dbt Source:** `fulfillments`, `orders`
+> **Description:** Order processing efficiency — from order creation to first shipment.
+> **dbt Source:** `fact_orders` (via `std_orders` + `std_fulfillments`)
 
 ### 1. Fulfillment Rate
 
-> **dbt Model:** `fact_orders` (Planned)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — **Available**
 
-- **Business Definition:** Percentage of orders shipped vs total orders.
+- **Business Definition:** Percentage of eligible orders that have been fulfilled (shipped).
 - **Logic (SQL):**
   ```sql
-  Shipped_Count / Total_Orders * 100
+  COUNT(CASE WHEN fulfillment_status = 'fulfilled' THEN 1 END) * 100.0
+  / NULLIF(COUNT(*), 0)
+  -- WHERE status NOT IN ('DRAFT', 'CANCELLED')
   ```
 
 ### 2. Order Cycle Time
 
-> **dbt Model:** `fact_fulfillments` (Planned)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — **Available**
 
-- **Business Definition:** Time taken from Order Creation to Shipment.
+- **Business Definition:** Average time from order creation to first shipment.
 - **Logic (SQL):**
   ```sql
-  Shipped_Timestamp - Created_Timestamp
+  AVG(date_diff('hour', order_timestamp, first_shipped_at)) as avg_hours_to_first_ship
+  -- Only for orders WHERE first_shipped_at IS NOT NULL
   ```
-- **Detailed Logic (SQL):**
-  ```sql
-  AVG(EXTRACT(EPOCH FROM (f.shipped_on - f.created_on))/3600) as avg_processing_hours
-  ```
+- **Note:** `time_to_complete_hours` measures created-to-completed (different metric). Use `first_shipped_at` for shipping speed.
 
 ### 3. Same-Day Ship Rate
 
-> **dbt Model:** `fact_fulfillments` (Planned)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — **Available**
 
-- **Business Definition:** Percentage of orders shipped on the same day they were placed (before cutoff).
+- **Business Definition:** Percentage of orders shipped on the same calendar day they were created.
 - **Logic (SQL):**
   ```sql
-  Count(Same_Day_Shipped) / Total_Orders
-  ```
-- **Detailed Logic (SQL):**
-  ```sql
-  COUNT(CASE WHEN f.shipped_on <= f.created_on + INTERVAL '24 hours' THEN 1 END) * 100.0 /
-  COUNT(*) as same_day_fulfillment_rate
+  COUNT(CASE WHEN CAST(first_shipped_at AS DATE) = CAST(order_timestamp AS DATE) THEN 1 END) * 100.0
+  / NULLIF(COUNT(CASE WHEN first_shipped_at IS NOT NULL THEN 1 END), 0)
   ```
 
-## Context: Shipping & Delivery
+### 4. Time to Complete
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — **Available**
+
+- **Business Definition:** Average time from order creation to order completion (status = COMPLETED).
+- **Logic (SQL):**
+  ```sql
+  AVG(time_to_complete_hours) as avg_completion_hours
+  -- WHERE status = 'COMPLETED'
+  ```
+
+## Context: Shipping & Delivery (Planned)
 
 > **Description:** Carrier performance and customer receipt.
-> **dbt Source:** `shipments`
+> **Status:** **Planned** — requires `fact_shipments`, `dim_carriers`. No data sources available yet.
 
-### 4. Avg Delivery Time
+### 5. Avg Delivery Time
 
-> **dbt Model:** `fact_shipments` (Planned)
+> **dbt Model:** `fact_shipments` — **Planned** (model does not exist)
 
 - **Business Definition:** Average time from Shipment to Delivery.
 - **Logic (SQL):**
@@ -62,9 +69,9 @@
   AVG(Delivered_Timestamp - Shipped_Timestamp)
   ```
 
-### 5. On-Time Delivery Rate
+### 6. On-Time Delivery Rate
 
-> **dbt Model:** `fact_shipments` (Planned)
+> **dbt Model:** `fact_shipments` — **Planned** (model does not exist)
 
 - **Business Definition:** Percentage of orders delivered by the promised date.
 - **Logic (SQL):**
@@ -72,47 +79,55 @@
   Count(Delivered_Start <= Promised_Date) / Total_Delivered
   ```
 
-### 6. Return Rate
+### 7. Return Rate
 
-> **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — **Available** (partial)
 
 - **Business Definition:** Percentage of shipped orders that are returned.
 - **Logic (SQL):**
   ```sql
-  Returns / Shipped_Orders
+  -- Requires tracking return status in fulfillment_status or a separate returns model.
+  -- Currently estimable via status transitions but not precise.
   ```
+- **Note:** Accurate return tracking requires dedicated returns data source. Currently not reliably computable from `fact_orders` alone.
 
 ## Context: Staff & Operations
 
-### 7. Staff Performance
+### 8. Staff Performance
 
-> **dbt Model:** [dim_staff](../../../transformation/models/marts/core/dim_staff.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) JOIN [`dim_staff`](../../../transformation/models/marts/core/dim_staff.sql) — **Available**
 
-- **Business Definition:** Orders processed and revenue handled by staff member.
+- **Business Definition:** Orders processed and processing speed by staff member.
 - **Logic (SQL):**
   ```sql
   SELECT
-      a.account_name,
-      COUNT(DISTINCT o.order_id) as total_orders,
-      SUM(o.total) as total_revenue
-  FROM orders o JOIN accounts a USING (account_id)
+      ds.staff_name,
+      COUNT(DISTINCT fo.order_id) as total_orders,
+      AVG(fo.time_to_complete_hours) as avg_processing_hours
+  FROM fact_orders fo
+  JOIN dim_staff ds ON fo.staff_key = ds.staff_key
+  WHERE fo.status NOT IN ('DRAFT', 'CANCELLED')
   GROUP BY 1
   ```
 
-### 8. Order Status Funnel
+### 9. Order Status Funnel
 
-> **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — **Available**
 
-- **Business Definition:** Count of orders in each stage of pipeline.
+- **Business Definition:** Count of orders in each stage of the processing pipeline.
 - **Logic (Ordering):**
   ```sql
+  SELECT
+      status,
+      COUNT(*) as order_count
+  FROM fact_orders
+  WHERE status != 'DRAFT'
+  GROUP BY status
   ORDER BY
       CASE status
-          WHEN 'draft' THEN 1
-          WHEN 'pending' THEN 2
-          WHEN 'confirmed' THEN 3
-          WHEN 'processing' THEN 4
-          WHEN 'completed' THEN 5
-          WHEN 'cancelled' THEN 6
+          WHEN 'OPEN' THEN 1
+          WHEN 'COMPLETED' THEN 2
+          WHEN 'ARCHIVED' THEN 3
+          WHEN 'CANCELLED' THEN 4
       END
   ```
