@@ -165,34 +165,31 @@ if not latest_filename:
 
 ## Summary Table
 
-| # | Edge Case | Status | Severity |
-|---|-----------|--------|----------|
-| 1 | Dagster asset materialization order | Handled (minor caveat) | Low |
-| 2 | dbt asset key translation mismatches | Handled | None |
-| 3 | Serving DB before all marts materialized | Partial | Medium |
-| 4 | Python venv not found | Partial | Low-Medium |
-| 5 | Env var loading conflicts / comment parsing | Partial | Low |
-| 6 | Parquet GC race condition with concurrent dbt | Partial | Low-Medium (Linux) |
-| 7 | Empty rolling directories | Handled | None |
+| # | Edge Case | Status | Severity | Resolution (2026-04-03) |
+|---|-----------|--------|----------|------------------------|
+| 1 | Dagster asset materialization order | ✅ Resolved | Low | Nightly schedule now checks for active realtime/incremental jobs |
+| 2 | dbt asset key translation mismatches | ✅ Handled | None | No action needed |
+| 3 | Serving DB before all marts materialized | ✅ Resolved | Medium | serving.py parses stdout for error indicators, logs warnings, attaches to metadata |
+| 4 | Python venv not found | ✅ Resolved | Low-Medium | Platform-aware path: `bin/python` (Linux) vs `Scripts/python.exe` (Windows) |
+| 5 | Env var loading conflicts / comment parsing | ✅ Resolved | Low | Dead code removed, comment parser rewritten with quote-awareness |
+| 6 | Parquet GC race condition with concurrent dbt | ✅ Resolved | Low-Medium (Linux) | GC retries once after 0.5s on OSError for Linux compatibility |
+| 7 | Empty rolling directories | ✅ Handled | None | No action needed |
+| NEW | Duplicate `sapo_accounts_batch_asset` in nightly job | ✅ Resolved | Low | Removed duplicate line in definitions.py |
 
 ---
 
-## Recommended Actions (Prioritized)
+## Recommended Actions — ALL RESOLVED (2026-04-03)
 
-1. **[Medium] Partial dbt failure transparency** (`serving.py`): After `subprocess.run`, parse stdout for dbt error indicators or model failure count. Log a warning if serving is built from incomplete marts. Consider adding a dbt `--fail-fast` flag or checking the dbt invocation result object.
-
-2. **[Medium] Linux GC file locking** (`generate_serving_db.py`): On Linux, wrap `os.remove()` with a retry loop or use a swap pattern (write new file, update view, then delete old) to minimize the window between a reader accessing an old file and GC deleting it.
-
-3. **[Low] Dead code removal** (`utils.py` lines 32-35): Remove the `if "#" in line: pass` block - it does nothing and misleads readers. Decide whether to handle `KEY=value#comment` (no space) - if yes, strip at `#` not `" #"`.
-
-4. **[Low] Venv path cross-platform** (`serving.py`): The hardcoded `Scripts/python.exe` works on Windows but silently degrades on Linux. Consider a helper that resolves `bin/python` vs `Scripts/python.exe` based on `sys.platform`.
-
-5. **[Low] Nightly schedule overlap guard** (`definitions.py`): Add checks for active `sapo_realtime_sync_job` and `sapo_incremental_sync_job` in `nightly_schedule` to prevent any overlap if those jobs are long-running at 04:00.
+1. ~~**[Medium] Partial dbt failure transparency** (`serving.py`)~~ — ✅ Parses stdout for `error`/`[!]` markers, logs warnings, attaches to asset metadata
+2. ~~**[Medium] Linux GC file locking** (`generate_serving_db.py`)~~ — ✅ Retry-once pattern with 0.5s delay on OSError
+3. ~~**[Low] Dead code removal** (`utils.py`)~~ — ✅ Dead `pass` block removed, parser rewritten to handle quoted values and `#` without space
+4. ~~**[Low] Venv path cross-platform** (`serving.py`)~~ — ✅ `sys.platform` check resolves correct venv subdir
+5. ~~**[Low] Nightly schedule overlap guard** (`definitions.py`)~~ — ✅ Checks active realtime/incremental before launching
 
 ---
 
-## Unresolved Questions
+## Unresolved Questions (from original review)
 
-1. Does `dbt build` export parquet files atomically per model, or can a partial write exist if the process is interrupted mid-export? If non-atomic, GC could pick up a zero-byte or truncated parquet as "latest."
-2. Is `PORTABLE_ROOT` in `generate_serving_db.py` intentionally set to `DATA_LAKE_ROOT` (not `DBT_EXPORT_PATH`)? The constructed glob `{PORTABLE_ROOT}/export/marts/rolling/{table_name}/*.parquet` hardcodes `/export/marts/rolling` as a suffix, meaning `DBT_EXPORT_PATH` env var is effectively ignored for the view SQL path.
-3. The `SapoDbtTranslator.get_upstream_asset_keys()` adds all 5 ingestion assets as upstreams of every staging model. Does this cause Dagster to mark staging models as skipped in `sheets_sync_job` (which only runs sheets assets, not sapo batch assets)?
+1. **dbt parquet atomicity** — ⚠️ **Open** → tracked separately in [`plans/code-review/parquet-atomicity-investigation.md`](./parquet-atomicity-investigation.md)
+2. **PORTABLE_ROOT vs DBT_EXPORT_PATH** — ✅ **Closed (by-design)**: `PORTABLE_ROOT` is intentionally `DATA_LAKE_ROOT` because the SQL view path is relative to the container mount. `DBT_EXPORT_PATH` only affects where dbt writes; the view SQL hardcodes the known container path.
+3. **sheets_sync_job skipping** — ✅ **Closed (not an issue)**: `get_upstream_asset_keys()` adds sapo batch assets only to `stg_sapo_*` models. `sheets_sync_job` only selects sheets assets (no dbt), so no staging models run and no skip occurs.
