@@ -168,6 +168,15 @@ def orders(
 
              print(f"↻ Retrying with new session info. UA: {current_session.headers.get('User-Agent')}")
              response = current_session.get(url, params=params, timeout=30)
+             if response.status_code in (401, 403):
+                 raise requests.HTTPError(f"Auth failed after refresh: {response.status_code}", response=response)
+
+        if response.status_code == 429:
+            import time
+            retry_after = int(response.headers.get('Retry-After', 60))
+            print(f"⏳ Rate limited (429). Waiting {retry_after}s...")
+            time.sleep(retry_after)
+            response = current_session.get(url, params=params, timeout=30)
 
         response.raise_for_status()
         return response.json()
@@ -260,4 +269,4 @@ def orders(
             if consecutive_errors >= MAX_ERRORS:
                  print("Too many errors. Stopping.")
                  break
-            page += 1
+            # Do NOT increment page — retry the same page

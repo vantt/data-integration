@@ -126,7 +126,7 @@ def fetch_and_save_marketing_spend():
             # Handle MM/DD or DD/MM (e.g. "12/25") by appending Year
             # Heuristic: if length is short (e.g. 5 chars "12/25") and has /
             if len(val) <= 5 and '/' in val:
-                return f"{val}/2026"
+                return f"{val}/{datetime.now().year}"
             return val
             
         df['date'] = df['date'].apply(clean_date)
@@ -154,11 +154,8 @@ def fetch_and_save_marketing_spend():
         
         # Format Date for Storage
         df['date'] = df['date'].dt.strftime('%Y-%m-%d')
-        # Format IDs for consistency (strings)
-        df['source_id'] = df['source_id'].astype(str)
-        # Location ID can be None/NaN, convert to string 'None' or empty? 
-        # Parquet handles nulls, but let's be careful. if it's None, it stays None (NaN in pandas Object column).
-        
+        # Keep source_id as None (NaN) where mapping failed — casting to str turns NaN into "nan" corrupting FK joins
+        df['source_id'] = df['source_id'].where(df['source_id'].notna())
         df['ingest_method'] = 'google_sheet'
         
         # Target Path: sapo_raw/marketing_spend_raw
@@ -174,9 +171,11 @@ def fetch_and_save_marketing_spend():
             # Select only necessary columns to save
             # We keep the raw names for debugging/audit if needed, but for now let's stick to schema
             cols_to_save = ['date', 'spend_code', 'source_id', 'location_id', 'campaign_id', 'spend_amount', 'clicks', 'impressions', 'ingest_method', 'year', 'month']
-            
+            # Filter to columns that exist — campaign_id is optional in the sheet
+            cols_to_save = [c for c in cols_to_save if c in group.columns]
+
             file_path = os.path.join(output_dir, "marketing_spend.parquet")
-            
+
             print(f"Writing {len(group)} rows to {file_path}")
             group[cols_to_save].to_parquet(file_path, index=False)
             
