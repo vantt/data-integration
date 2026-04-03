@@ -41,6 +41,7 @@ class CloudflareWorkerClient:
     def batch_ack(self, message_ids: list):
         """
         Acknowledges a batch of messages, deleting them from the source.
+        Raises on failure so the caller can decide to retry or alert.
         """
         if not message_ids:
             return
@@ -54,6 +55,7 @@ class CloudflareWorkerClient:
             print(f"Error acknowledging messages: {e}")
             if hasattr(e, 'response') and e.response:
                 print(f"Response: {e.response.text}")
+            raise  # Let caller decide on retry/alert
 
 @dlt.source
 def sapo_webhook_source(worker_url: str, source_system: str = None, poll_limit: int = 100):
@@ -98,10 +100,8 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
     
     for msg in messages:
         try:
-            # 1. Capture ID for ACK
+            # 1. Capture ID for ACK (appended only after successful envelope construction)
             msg_id = msg.get('msg_id') or msg.get('id')
-            if msg_id:
-                ids_to_ack.append(msg_id)
             
             # 2. Determine Entity Type
             entity_type = msg.get('entity_type', 'unknown')
@@ -185,6 +185,9 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
                 }
             }
 
+            # ACK only successfully-parsed messages (P18: avoid silently deleting invalid messages)
+            if msg_id:
+                ids_to_ack.append(msg_id)
             yield dlt.mark.with_table_name(envelope, table_name)
             
         except Exception as e:

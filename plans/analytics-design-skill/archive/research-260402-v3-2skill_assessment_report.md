@@ -249,9 +249,21 @@ It remains unfixed because:
 
 This is why the issue feels like it "never gets fixed": every layer is only half-finished, so the ecosystem keeps snapping back to manual edits.
 
+## Implementation Status
+
+> Last reviewed: 2026-04-03
+
+| Item | Status | Evidence |
+|---|---|---|
+| P0 Text card idempotency + capture | ✅ Done | `text-card-helpers.js`, `syncCards()` matching, `capture_dashboard.js` extended, 8 blueprints migrated |
+| P1 Artifact validator + deploy gate | ✅ Done | `validate-analytics-artifacts.js` — checks playbooks, design specs, blueprints, archetype compliance |
+| P1 Skill boundary cleanup | ✅ Done | `SKILL.md`, `STRATEGY.md`, `manage-metabase-resources.md`, `create-metabase-blueprint.md` updated — analyst decisions deferred to analytics-design |
+| P2 Reverse-flow migration | ✅ Done | `generate-design-spec-from-dashboard.js` — live dashboard → draft design spec with composition tables |
+| P2 Executive-grade visual system | 🔄 In Progress | Separate plan: `plans/260402-1839-executive-grade-visual-system/plan.md` |
+
 ## Recommended Roadmap
 
-### P0. Stabilize narrative/text deployment as a first-class artifact loop
+### P0. Stabilize narrative/text deployment as a first-class artifact loop ✅ Done
 
 Target: 2-4 working days
 
@@ -294,7 +306,7 @@ Acceptance criteria:
 - capture preserves text cards
 - blueprint source contains actual `#### 📝 Text:` blocks, not manual comments
 
-### P1. Enforce actionability and archetype discipline
+### P1. Enforce actionability and archetype discipline ✅ Done
 
 Target: 3-5 working days
 
@@ -337,7 +349,7 @@ Acceptance criteria:
 - missing action sections are caught before merge/deploy
 - pulse dashboards cannot silently become cockpits
 
-### P1. Realign the 2-skill boundary in docs and commands
+### P1. Realign the 2-skill boundary in docs and commands ✅ Done
 
 Target: 1-2 working days
 
@@ -368,7 +380,7 @@ Acceptance criteria:
 - no Metabase command teaches the old 1-skill mindset
 - analyst decisions happen upstream
 
-### P2. Raise the aesthetic ceiling from "clean" to "executive-grade"
+### P2. Raise the aesthetic ceiling from "clean" to "executive-grade" 🔄 In Progress
 
 Target: 1-2 weeks
 
@@ -406,7 +418,7 @@ Acceptance criteria:
 - reviewers can reject "technically correct but visually mediocre" outputs
 - design quality becomes teachable and repeatable
 
-### P2. Complete the reverse-flow migration
+### P2. Complete the reverse-flow migration ✅ Done
 
 Target: 1 week
 

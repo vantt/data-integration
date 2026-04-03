@@ -57,6 +57,8 @@ def sapo_serving_db(context: AssetExecutionContext):
     if warnings:
         for w in warnings:
             context.log.warning(f"⚠️ {w}")
+        if any("error" in w.lower() for w in warnings):
+            raise Exception(f"Serving DB generation halted: {'; '.join(warnings)}")
 
     return Output(
         value="Serving DB Updated",

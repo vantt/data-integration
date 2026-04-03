@@ -148,6 +148,14 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
             received_at: new Date().toISOString()
         };
 
+        // Queue depth guard: reject if too many unprocessed messages
+        const depthResult = await env.DB.prepare(
+            "SELECT COUNT(*) as cnt FROM webhooks WHERE status = 'NEW'"
+        ).first<{ cnt: number }>();
+        if ((depthResult?.cnt ?? 0) > 10000) {
+            return new Response("Queue full", { status: 503 });
+        }
+
         const id = crypto.randomUUID();
         const now = Date.now();
 

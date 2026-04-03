@@ -1,6 +1,34 @@
 # Danh gia bo skill `analytics-design` va cac skill lien quan
 
 Ngay danh gia: 2026-04-02
+**Post-eval status review: 2026-04-03 — ARCHIVED**
+
+---
+
+## Ket qua sau khi thuc hien (so sanh voi 4 viec uu tien)
+
+| # | Hang muc | Status | Evidence |
+|---|----------|--------|----------|
+| 1 | Text annotations + dashboard filters first-class trong deployer | **DONE** | `text-card-helpers.js` (idempotent marker), parser support `#### 📝 Text:` + `metabase-filter`, commit `3f9769d` |
+| 2 | 2 pilot dashboards (CEO Weekly Pulse + Daily Sales) dong bo full artifact chain | **DONE** | 17 design specs upgraded (commit `634402a`), 17 blueprints synced (commit `00941cc`), 5 new dashboards deployed (commit `4f029ce`). Both CEO + Daily Sales co design + blueprint + designs dir |
+| 3 | Action-design contract (Signal, Threshold, Owner, Action) | **DONE** | `design_spec_template.md` co Action Map table, 17 design specs upgraded voi imperative annotations + finish checklists |
+| 4 | Visual Polish Spec | **DONE** | `VISUAL_LANGUAGE.md` sections 6-10: Visual Polish Checklist, Title & Copy Discipline, Spacing & Density Budget by archetype, Chart Labeling Rules, Dashboard Finish Checklist |
+
+### Cac hang muc bo sung da hoan thanh
+
+| Hang muc | Status | Evidence |
+|----------|--------|----------|
+| `.agents/*` dong bo voi 2-skill architecture | **DONE** | `create_metabase_blueprint.md` workflow rewritten theo 2-skill pipeline (commit `0937120`) |
+| Text card idempotency (match existing, khong recreate) | **DONE** | `text-card-helpers.js` + commit `3f9769d` |
+| Reverse-flow capture (live dashboard → design spec) | **DONE** | `generate-design-spec-from-dashboard.js` (commit `f2938ed`) |
+| Analytics artifact validator | **DONE** | `validate-analytics-artifacts.js` (commit `90acab1`) |
+
+### Van con mo (ongoing, khong phai blocker)
+
+- CEO Weekly Pulse archetype discipline: van labeled `Executive Pulse` nhung co 3 views + tables → vi pham rule. La design decision, chua co commit fix.
+- Premium visual polish / brand-level: semantic tokens da co, nhung chua co exemplar library hoac screenshot-based acceptance rubric.
+
+---
 
 ## Pham vi danh gia
 

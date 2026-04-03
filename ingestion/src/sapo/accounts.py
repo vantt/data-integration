@@ -89,6 +89,7 @@ def accounts(
     # For accounts, overlapping isn't as critical as orders but we use standard logic
     consecutive_errors = 0
     MAX_ERRORS = 3
+    empty_retries = 0
 
     last_value = first_timestamp.last_value
     print(f"🚀 Starting incremental load for Accounts from: {last_value}")
@@ -148,8 +149,15 @@ def accounts(
             items_data = data.get("accounts", [])
 
             if not items_data:
-                print(f"📭 Page {page}: Empty")
+                if empty_retries < 1:
+                    empty_retries += 1
+                    print(f"⚠️ Page {page}: Empty, retrying once...")
+                    import time
+                    time.sleep(2)
+                    continue
+                print(f"📭 Page {page}: Empty after retry, stopping.")
                 break
+            empty_retries = 0  # reset on successful page
 
             new_envelopes = []
 

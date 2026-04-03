@@ -1,7 +1,24 @@
 # Ke hoach toi uu bo skill analytics-design va cac skill lien quan
 
 Ngay: 2026-04-02
+Kiem tra lai: 2026-04-03
 Dua tren: `plans/analytics-design-skill/research-260402-v1-analytics-design-skill-evaluation.md`
+
+## Trang thai tong the: ✅ DONE (11/12 — 4.3 skip)
+
+| Hang muc | Trang thai |
+|----------|-----------|
+| 1.1 Text card parser | ✅ DONE |
+| 1.2 Blueprint template | ✅ DONE |
+| 1.3 Xoa comment "them thu cong" | ✅ DONE |
+| 2.1 Playbook template Action Triggers | ✅ DONE |
+| 2.2 Design spec template Action Map | ✅ DONE |
+| 2.3 SKILL.md mandatory flags | ✅ DONE |
+| 3.1 VISUAL_LANGUAGE.md Sections 7-10 | ✅ DONE |
+| 3.2 COMPOSITION_PATTERNS.md density ref | ✅ DONE |
+| 4.1 Clean tool-specific language | ✅ DONE |
+| 4.2 Sync .agents/workflows/ | ✅ DONE |
+| 4.3 Design Spec ref trong blueprint | ⚠️ SKIP — chi 2/17 blueprints co ref, template chua update; low priority |
 
 ---
 
@@ -15,7 +32,7 @@ Bao cao danh gia da xac dinh **7 diem yeu** va **4 viec uu tien**. Sau khi doc t
 
 > Muc tieu: Thu hep khoang cach giua design intent va dashboard that.
 
-### 1.1 — Them `#### Text:` support vao markdown parser
+### 1.1 ✅ — Them `#### Text:` support vao markdown parser
 
 **Van de**: `deploy_from_markdown.js` (327 dong) hien chi parse 3 loai heading: `#### ❓ Question:`, `#### 📏 Metric:`, `#### Filter:`. Khi gap `#### Text:`, parser gan `metabase-pos` block cho question truoc do → pha layout.
 
@@ -43,7 +60,7 @@ Bao cao danh gia da xac dinh **7 diem yeu** va **4 viec uu tien**. Sau khi doc t
 
 **Do phuc tap**: Trung binh. Parser can phan biet text heading khoi question heading, va text card can position nhung khong can SQL/viz.
 
-### 1.2 — Cap nhat blueprint template voi text annotation syntax
+### 1.2 ✅ — Cap nhat blueprint template voi text annotation syntax
 
 **Van de**: `templates/blueprint_template.md` (197 dong) khong co vi du text annotation. Agent tao blueprint se khong biet cach viet.
 
@@ -62,7 +79,7 @@ This section tracks week-over-week revenue trends.
 
 **Anh huong**: Sua 1 file: `templates/blueprint_template.md`
 
-### 1.3 — Xoa cac comment "them thu cong" trong blueprint hien tai
+### 1.3 ✅ — Xoa cac comment "them thu cong" trong blueprint hien tai
 
 **Van de**: Cac blueprint hien tai (vd: `ceo_weekly_pulse.md`) co comment `<!-- Text annotations to add manually after deploy -->`. Sau khi parser ho tro text, cac comment nay tro nen sai.
 
@@ -76,7 +93,7 @@ This section tracks week-over-week revenue trends.
 
 > Muc tieu: Dashboard khong chi "giai thich tinh hinh" ma "thoi thuc hanh dong".
 
-### 2.1 — Them Action Design section vao playbook template
+### 2.1 ✅ — Them Action Design section vao playbook template
 
 **Van de**: `templates/playbook_template.md` (75 dong) co muc `## Actions` nhung chi la placeholder chung chung. Khong co cau truc bat buoc cho: signal → threshold → owner → action.
 
@@ -108,7 +125,7 @@ This section tracks week-over-week revenue trends.
 - Sua 1 file: `SKILL.md` — Phase 1 instructions can nhac "Action Triggers table is required"
 - Cap nhat playbook hien tai: 7-8 file trong `docs/analytics-handbook/playbooks/`
 
-### 2.2 — Them Action Context vao design spec template
+### 2.2 ✅ — Them Action Context vao design spec template
 
 **Van de**: `templates/design_spec_template.md` (64 dong) co Composition Table nhung khong co cot nao lien quan den hanh dong. Card chi co "Communication" nhung khong co "What to do when this signal fires".
 
@@ -129,7 +146,7 @@ This section tracks week-over-week revenue trends.
 - Sua 1 file: `templates/design_spec_template.md`
 - Cap nhat design spec hien tai: 5-7 file trong `docs/analytics-handbook/designs/`
 
-### 2.3 — Formalize Phase 1 instruction trong SKILL.md
+### 2.3 ✅ — Formalize Phase 1 instruction trong SKILL.md
 
 **Van de**: SKILL.md Phase 1 chi noi "Tao moi theo templates/playbook_template.md" nhung khong nhan manh Action Triggers la bat buoc.
 
@@ -148,7 +165,7 @@ This section tracks week-over-week revenue trends.
 
 > Muc tieu: Dashboard khong chi "dung" ma "dep, professional, polished".
 
-### 3.1 — Mo rong VISUAL_LANGUAGE.md thanh day du design system
+### 3.1 ✅ — Mo rong VISUAL_LANGUAGE.md thanh day du design system
 
 **Van de**: `VISUAL_LANGUAGE.md` (312 dong) cover color semantics, size semantics, va mot vai quy tac hierarchy. Nhung thieu nhieu yeu to can thiet cho "looks professional":
 
@@ -278,7 +295,7 @@ Truoc khi finalize design spec, kiem tra:
 
 **Anh huong**: Sua 1 file: `.skills/analytics-design/VISUAL_LANGUAGE.md` (them ~150 dong)
 
-### 3.2 — Them density & labeling guidance vao COMPOSITION_PATTERNS.md
+### 3.2 ✅ — Them density & labeling guidance vao COMPOSITION_PATTERNS.md
 
 **Van de**: `COMPOSITION_PATTERNS.md` (310 dong) co Section 6 "Spatial Grouping" nhung chi noi ve relative sizing, khong co density budget.
 
@@ -296,7 +313,7 @@ Truoc khi finalize design spec, kiem tra:
 
 > Muc tieu: Xoa tool bias, dong bo entrypoints, lam sach artifact.
 
-### 4.1 — Lam sach tool-specific language trong domains va playbooks
+### 4.1 ✅ — Lam sach tool-specific language trong domains va playbooks
 
 **Van de**:
 
@@ -315,7 +332,7 @@ Truoc khi finalize design spec, kiem tra:
 - Sua 5-7 playbook files
 - Khong anh huong deploy (blueprint van giu Metabase-specific content)
 
-### 4.2 — Dong bo `.agents/workflows/` voi 2-skill architecture
+### 4.2 ✅ — Dong bo `.agents/workflows/` voi 2-skill architecture
 
 **Van de**:
 
@@ -336,7 +353,7 @@ Truoc khi finalize design spec, kiem tra:
 
 **Anh huong**: Sua hoac xoa 2-3 file trong `.agents/workflows/`
 
-### 4.3 — Them Design Spec reference bat buoc trong blueprint
+### 4.3 ⚠️ SKIP — Them Design Spec reference bat buoc trong blueprint
 
 **Van de**: Khong phai moi blueprint deu co link tro ve design spec. Khi design spec update, khong co cach biet blueprint da outdated.
 
