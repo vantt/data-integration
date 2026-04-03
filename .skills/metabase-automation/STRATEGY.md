@@ -80,6 +80,12 @@ Optional body text (markdown). If omitted, heading name is used as `# Heading Na
 
 **Lưu ý:** Text cards are idempotent on redeploy — matched by `<!-- text-id:<slug> -->` marker injected into content. See `lib/text-card-helpers.js`.
 
+**Legacy migration (first redeploy):** Dashboards created before text-id markers exist will have text cards without markers. On first redeploy, the deploy script injects markers into the new configs but existing Metabase cards lack them. A **position-based fallback** (tab + row/col) matches legacy cards to avoid duplication. If positions have changed since last deploy, legacy text cards may be orphaned — manually delete duplicates after first redeploy.
+
+**Known limitations:**
+- Renaming a text card (`#### 📝 Text: New Name`) changes its slug → old card orphaned, new one created. This is expected rename semantics.
+- Duplicate text card names within one dashboard get counter suffixes (`foo`, `foo-2`, `foo-3`). Removing/reordering duplicates shifts suffixes, causing recreation. Avoid duplicate names.
+
 ### 5.2 Dashboard Filters (`metabase-filter`)
 
 **Parser HỖ TRỢ `#### Filter:` headers và `metabase-filter` JSON blocks.**

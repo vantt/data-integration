@@ -254,7 +254,7 @@ function generateMerged(dash, tabGroups, cardCache, existing, params) {
   }
 
   renderParams(lines, params);
-  renderTabGroups(lines, tabGroups, cardCache, existing.questions);
+  renderTabGroups(lines, tabGroups, cardCache, existing.questions, existing.textCards);
 
   return lines.join("\n");
 }
@@ -278,7 +278,7 @@ function renderParams(lines, params) {
   }
 }
 
-function renderTabGroups(lines, tabGroups, cardCache, existingQuestions) {
+function renderTabGroups(lines, tabGroups, cardCache, existingQuestions, existingTextCards) {
   for (const group of tabGroups) {
     if (group.name) {
       lines.push(`### 📑 Tab: ${group.name}`);
@@ -302,8 +302,19 @@ function renderTabGroups(lines, tabGroups, cardCache, existingQuestions) {
         lastRow = pos.row;
         lines.push(`#### 📝 Text: ${name}`);
         lines.push("");
-        lines.push(cleanText);
-        lines.push("");
+        // Prose: use existing if available (preserve manual edits), otherwise from Metabase
+        const existingTC = existingTextCards && existingTextCards[name];
+        if (existingTC && existingTC.prose.length > 0) {
+          const prose = [...existingTC.prose];
+          while (prose.length > 0 && prose[prose.length - 1].trim() === "") prose.pop();
+          if (prose.length > 0) {
+            lines.push(...prose);
+            lines.push("");
+          }
+        } else {
+          lines.push(cleanText);
+          lines.push("");
+        }
         lines.push(jsonBlock("metabase-pos", pos));
         lines.push("");
         continue;
