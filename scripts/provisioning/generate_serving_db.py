@@ -85,13 +85,20 @@ def generate_serving_db():
 
     # 2. Iterate through Table Folders
     subdirs = [d for d in os.listdir(ROLLING_DIR) if os.path.isdir(os.path.join(ROLLING_DIR, d))]
-    
+
     if not subdirs:
         print("No table directories found in rolling/.")
         if con: con.close()
         return
 
+    # Allowlist: table names must be valid SQL identifiers (dbt output is always safe,
+    # but this guards against malicious directory names on a shared filesystem)
+    TABLE_NAME_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
+
     for table_name in subdirs:
+        if not TABLE_NAME_RE.match(table_name):
+            print(f"  [!] Skipping invalid table name: {table_name}")
+            continue
         table_dir = os.path.join(ROLLING_DIR, table_name)
         
         # A. Find Latest File (Filesystem check)

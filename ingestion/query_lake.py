@@ -8,13 +8,10 @@ def query_lake(query=None):
         query = "SELECT * FROM 'data_lake/sapo_data/orders/**/*.parquet' LIMIT 20"
 
     print(f"Executing query: {query}")
+    con = None
     try:
         con = duckdb.connect()
-        
-        # Check if files exist first to avoid confusing duckdb error if empty
-        # But duckdb globbing handles it reasonably well usually. 
-        # Let's just try running a count first to confirm data presence.
-        
+
         # Execute the main query
         print("\nQuery Results:")
         try:
@@ -29,13 +26,16 @@ def query_lake(query=None):
             result = con.execute(query)
             columns = [desc[0] for desc in result.description]
             rows = result.fetchall()
-            
+
             print(f"Columns: {columns}")
             for row in rows:
                 print(row)
 
     except Exception as e:
         print(f"Error executing query: {e}")
+    finally:
+        if con:
+            con.close()
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

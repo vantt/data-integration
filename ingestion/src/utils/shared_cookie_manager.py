@@ -4,10 +4,10 @@ Supports multi-source authentication with file-based cookie persistence
 """
 
 import json
-import json
 import time
 import os
 import sys
+import tempfile
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Callable, Any
@@ -127,6 +127,9 @@ class SharedCookieManager:
              self.cookie_dir = project_root / cookie_dir
         
         self.cookie_dir.mkdir(parents=True, exist_ok=True)
+        # Restrict directory permissions on Linux/Docker (no-op on Windows)
+        if os.name != 'nt':
+            os.chmod(self.cookie_dir, 0o700)
         
         # Construct filename with domain if present
         if domain:
@@ -209,45 +212,35 @@ class SharedCookieManager:
     def _write_cookie_file(self, data: Dict):
         """
         Write cookies to file with atomic operation and file locking.
-        
-        Uses temporary file + atomic rename to prevent corruption.
-        
+
+        Uses a unique temp file (mkstemp) to prevent concurrent-write collision,
+        then atomically replaces the target via os.replace (NTFS and POSIX safe).
+
         Args:
             data: Cookie data to write
         """
         try:
-            # Write to temp file first
-            temp_file = self.cookie_file.with_suffix('.tmp')
-            
-            with open(temp_file, 'w') as f:
-                # We can lock the temp file to be sure we are the only one writing to THIS temp file
-                # But since temp file is per-process usually... 
-                # Actually, if multiple processes try to write to same .tmp, we have issue.
-                
-                # Ideally use a random temp file.
-                # But for simplicity, let's lock the .tmp file.
+            # Unique temp file per write — eliminates concurrent-write collision
+            tmp_fd, tmp_path = tempfile.mkstemp(dir=str(self.cookie_dir), suffix='.tmp')
+            temp_file = Path(tmp_path)
+
+            with os.fdopen(tmp_fd, 'w') as f:
                 try:
                     self._acquire_lock(f)
                     json.dump(data, f, indent=2)
                     f.flush()
-                    os.fsync(f.fileno()) 
+                    os.fsync(f.fileno())
                 finally:
                     self._release_lock(f)
-            
-            # Atomic rename
-            # On Windows, replace might fail if dest exists.
-            if os.name == 'nt' and self.cookie_file.exists():
-                try:
-                    self.cookie_file.unlink()
-                except OSError:
-                    pass # Race condition
-            
-            # Only rename if we successfully wrote
-            try:
-                temp_file.replace(self.cookie_file)
-                print(f"💾 [{self.source}] Saved cookies to {self.cookie_file}")
-            except OSError as e:
-                 print(f"⚠️ [{self.source}] Error renaming cookie file: {e}")
+
+            # Atomic replace — os.replace is atomic on NTFS and POSIX; no pre-delete needed
+            temp_file.replace(self.cookie_file)
+
+            # Restrict file permissions on Linux/Docker (no-op on Windows)
+            if os.name != 'nt':
+                os.chmod(self.cookie_file, 0o600)
+
+            print(f"💾 [{self.source}] Saved cookies to {self.cookie_file}")
 
         except Exception as e:
             print(f"⚠️ [{self.source}] Error writing cookie file: {e}")
@@ -387,7 +380,6 @@ class SharedCookieManager:
                     'expiry': self.cookie_expiry.isoformat(),
                     'created_at': datetime.now().isoformat(),
                     'login_url': self.login_url,
-                    'username': self.username  # For debugging
                 }
 
                 self._write_cookie_file(cookie_data)
