@@ -23,3 +23,5 @@ app_data
 **/target/
 **/dbt_packages/
 .DS_Store
+.claude/settings.local.json
+.claude/session-state/
