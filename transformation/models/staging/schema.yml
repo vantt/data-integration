@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: stg_sapo_orders
+    columns:
+      - name: order_id
+        tests: [not_null]
+
+  - name: stg_sapo_order_items
+    columns:
+      - name: item_id
+        tests: [not_null]
+      - name: order_id
+        tests: [not_null]
+
+  - name: stg_sapo_payments
+    columns:
+      - name: payment_id
+        tests: [not_null]
+      - name: amount
+        tests: [not_null]
+
+  - name: stg_sapo_fulfillments
+    columns:
+      - name: fulfillment_id
+        tests: [not_null]
+
+  - name: stg_sapo_customers
+    columns:
+      - name: customer_id
+        tests: [not_null]

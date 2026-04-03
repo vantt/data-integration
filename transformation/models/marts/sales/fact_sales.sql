@@ -25,7 +25,7 @@ SELECT
     END as product_key,
     {{ dbt_utils.generate_surrogate_key(["coalesce(i.product_type, 'Unknown')"]) }} as product_type_key,
     COALESCE(vc.customer_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as customer_key,
-    {{ dbt_utils.generate_surrogate_key(['cast(o.location_id as string)']) }} as branch_location_key,
+    {{ dbt_utils.generate_surrogate_key(["coalesce(cast(o.location_id as string), 'Unknown')"]) }} as branch_location_key,
     
     -- Channel Key Logic (Must match dim_channels)
     CASE

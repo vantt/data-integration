@@ -22,6 +22,7 @@ unnested_payments AS (
         event_timestamp
     FROM raw_source
     WHERE payments_json IS NOT NULL
+      AND payments_json NOT IN ('[]', 'null', '')
 )
 
 SELECT

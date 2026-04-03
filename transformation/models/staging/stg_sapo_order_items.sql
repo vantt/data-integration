@@ -23,6 +23,7 @@ unnested_items AS (
         unnest(from_json(order_line_items_json, '["JSON"]')) as item_json
     FROM raw_source
     WHERE order_line_items_json IS NOT NULL
+      AND order_line_items_json NOT IN ('[]', 'null', '')
 )
 
 SELECT

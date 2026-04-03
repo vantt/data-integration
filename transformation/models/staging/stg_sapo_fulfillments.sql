@@ -22,6 +22,7 @@ unnested_fulfillments AS (
         event_timestamp
     FROM raw_source
     WHERE fulfillments_json IS NOT NULL
+      AND fulfillments_json NOT IN ('[]', 'null', '')
 )
 
 SELECT

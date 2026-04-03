@@ -47,7 +47,7 @@ SELECT
     -- or just bridge it later. For now, we leave NULL or specific handling if needed. 
     -- Simplification: Just take the first code if present, or NULL.
     {{ dbt_utils.generate_surrogate_key(["coalesce(json_extract_string(json_extract_string(discount_codes, '$[0]'), '$.code'), 'Unknown')"]) }} as promotion_key,
-    {{ dbt_utils.generate_surrogate_key(['location_id']) }} as branch_location_key,
+    {{ dbt_utils.generate_surrogate_key(["coalesce(cast(location_id as varchar), 'Unknown')"]) }} as branch_location_key,
 
     -- Channel Key Logic
     CASE

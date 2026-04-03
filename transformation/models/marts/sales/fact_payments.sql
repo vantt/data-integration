@@ -8,9 +8,9 @@ WITH payments AS (
 )
 
 SELECT
-    {{ dbt_utils.generate_surrogate_key(['payment_id']) }} as payment_key,
+    {{ dbt_utils.generate_surrogate_key(["coalesce(cast(payment_id as varchar), 'Unknown')"]) }} as payment_key,
     order_id,
-    {{ dbt_utils.generate_surrogate_key(['payment_method_id']) }} as payment_method_key,
+    {{ dbt_utils.generate_surrogate_key(["coalesce(cast(payment_method_id as varchar), 'Unknown')"]) }} as payment_method_key,
     amount,
     status,
     created_at as payment_timestamp,
