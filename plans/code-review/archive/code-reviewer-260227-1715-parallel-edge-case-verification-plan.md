@@ -168,13 +168,13 @@ Phase 1 (Webhook Integrity) ──→ Phase 2 (D1 Safety) ──→ Phase 3 (Ing
 
 ## Todo
 
-- [ ] Phase 1.1: Move ACK to post-load in webhook_consumer.py
-- [ ] Phase 1.2: Surface batch_ack failures
-- [ ] Phase 1.3: Evaluate append → merge (optional)
-- [ ] Phase 2.1: Add D1 queue depth guard
-- [ ] Phase 3.1: Add empty page retry to orders/customers/accounts
-- [ ] Phase 4.1: Fail serving asset on dbt errors
-- [ ] Phase 4.2: Fix connection leak in generate_serving_db.py
+- [x] Phase 1.1: Move ACK to post-load in webhook_consumer.py — **DEFERRED** → `deferred-260403-webhook-ack-after-load.md`
+- [x] Phase 1.2: Surface batch_ack failures — **DONE** (`webhook_consumer.py:58` raises on error)
+- [x] Phase 1.3: Evaluate append → merge (optional) — **DEFERRED** → `deferred-260403-webhook-ack-after-load.md`
+- [x] Phase 2.1: Add D1 queue depth guard — **DONE** (`index.ts:152-157`)
+- [x] Phase 3.1: Add empty page retry to orders/customers/accounts — **DONE** (all 3 files)
+- [x] Phase 4.1: Fail serving asset on dbt errors — **DONE** (`serving.py:57-61`)
+- [x] Phase 4.2: Fix connection leak in generate_serving_db.py — **DONE** (`generate_serving_db.py:150-152`)
 
 ## Unresolved Questions
 
