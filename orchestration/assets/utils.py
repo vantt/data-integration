@@ -24,27 +24,28 @@ def load_dlt_configuration(log_func=print):
             for line in f:
                 line = line.strip()
                 if not line or line.startswith("#"): continue
-                
-                # Remove inline comments if present (careful with quotes)
-                # Simple approach: split by # if not inside quotes. 
-                # For env files, usually # starts a comment.
-                
-                if "#" in line:
-                    # Very naive strip, assuming # is not part of the value unless quoted
-                    # But .env usually expects straightforward KEY=VALUE
-                    pass
-                
+
                 if "=" in line:
                     key, value = line.split("=", 1)
                     key = key.strip()
                     value = value.strip()
-                    
-                    # Handle inline comments for .env validation
-                    # value="secret" # comment -> value="secret"
-                    if " #" in value:
-                        value = value.split(" #", 1)[0].strip()
-                    
-                    value = value.strip('"').strip("'")
+
+                    # Strip inline comments: KEY=value # comment OR KEY=value#comment
+                    # But preserve # inside quoted values: KEY="val#ue"
+                    if value and value[0] in ('"', "'"):
+                        # Quoted value — find closing quote, ignore # inside
+                        quote_char = value[0]
+                        end_idx = value.find(quote_char, 1)
+                        if end_idx != -1:
+                            value = value[1:end_idx]
+                        else:
+                            value = value[1:]  # unclosed quote, strip opening
+                    else:
+                        # Unquoted — strip at first # (with or without leading space)
+                        comment_idx = value.find("#")
+                        if comment_idx != -1:
+                            value = value[:comment_idx].rstrip()
+
                     os.environ[key] = value
                     # log_func(f"  [ENV] Loaded {key}")
 

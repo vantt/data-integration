@@ -28,20 +28,30 @@ PORTABLE_ROOT = DATA_LAKE_ROOT
 def garbage_collect(folder_path, latest_file):
     """
     Deletes all files in folder_path EXCEPT the latest_file.
-    Silently ignores PermissionError (Windows Locking).
+    Retries once after a short delay to handle in-flight reads (Linux has no advisory locks).
+    Silently skips files still locked/in-use.
     """
     files = glob.glob(os.path.join(folder_path, "*.parquet"))
     for f in files:
         if os.path.basename(f) == latest_file:
             continue
-            
+
+        basename = os.path.basename(f)
         try:
             os.remove(f)
-            print(f"    [GC] Deleted old file: {os.path.basename(f)}")
+            print(f"    [GC] Deleted old file: {basename}")
         except PermissionError:
-            print(f"    [GC] SKIP Locked file (In Use): {os.path.basename(f)}")
+            print(f"    [GC] SKIP Locked file (In Use): {basename}")
+        except OSError:
+            # Linux: file may be read by another process. Retry once after brief delay.
+            time.sleep(0.5)
+            try:
+                os.remove(f)
+                print(f"    [GC] Deleted old file (retry): {basename}")
+            except Exception:
+                print(f"    [GC] SKIP file still in use: {basename}")
         except Exception as e:
-            print(f"    [GC] Error deleting {os.path.basename(f)}: {e}")
+            print(f"    [GC] Error deleting {basename}: {e}")
 
 def get_latest_file(folder_path):
     """Finds the lexically latest parquet file in a folder."""

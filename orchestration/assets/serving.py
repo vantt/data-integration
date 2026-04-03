@@ -11,7 +11,11 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../"))
 SCRIPT_PATH = os.path.join(PROJECT_ROOT, "scripts", "provisioning", "generate_serving_db.py")
 
 # Resolve Python Executable (Try to use dlt venv if available)
-VENV_PYTHON = os.path.join(PROJECT_ROOT, "dlt", "venv", "Scripts", "python.exe")
+# Use platform-appropriate venv path: Scripts/python.exe (Windows) vs bin/python (Linux)
+if sys.platform == "win32":
+    VENV_PYTHON = os.path.join(PROJECT_ROOT, "dlt", "venv", "Scripts", "python.exe")
+else:
+    VENV_PYTHON = os.path.join(PROJECT_ROOT, "dlt", "venv", "bin", "python")
 PYTHON_EXE = VENV_PYTHON if os.path.exists(VENV_PYTHON) else sys.executable
 
 @asset(
@@ -29,8 +33,6 @@ def sapo_serving_db(context: AssetExecutionContext):
 
     # Run the provisioner script
     try:
-        # We run from PROJECT_ROOT to ensure any relative path assumptions in the script (if any remain) are safe,
-        # though the script is robust with __file__.
         result = subprocess.run(
             [PYTHON_EXE, SCRIPT_PATH],
             cwd=PROJECT_ROOT,
@@ -43,9 +45,23 @@ def sapo_serving_db(context: AssetExecutionContext):
         context.log.error(f"Serving script failed: {e.stderr}")
         raise e
 
+    # Check for dbt partial failure indicators in upstream logs
+    # dbt exits 0 but may have logged errors for individual models
+    stdout_lower = result.stdout.lower()
+    warnings = []
+    if "error" in stdout_lower and "empty folder" not in stdout_lower:
+        warnings.append("dbt stdout contains 'error' — some models may have failed")
+    if "[!]" in result.stdout:
+        warnings.append("Serving script reported warnings (see [!] markers in output)")
+
+    if warnings:
+        for w in warnings:
+            context.log.warning(f"⚠️ {w}")
+
     return Output(
         value="Serving DB Updated",
         metadata={
-            "script_output": MetadataValue.md(result.stdout)
+            "script_output": MetadataValue.md(result.stdout),
+            **({"warnings": MetadataValue.md("\n".join(warnings))} if warnings else {})
         }
     )

@@ -81,7 +81,6 @@ sapo_nightly_reconciliation_job = define_asset_job(
         AssetSelection.assets(sapo_assets.sapo_orders_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
-        AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
         AssetSelection.assets(sheets_assets.sheets_targets_asset) |
         AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
         all_dbt_assets |
@@ -234,10 +233,33 @@ def incremental_schedule(context):
 )
 def nightly_schedule(context):
     """
-    Schedule that skips execution if a previous run of the job is still active.
+    Schedule that skips execution if a previous run or any other sync job is still active.
     """
     from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
 
+    # Check for active runs of other sync jobs that could conflict
+    conflict_jobs = [
+        "sapo_realtime_sync_job",
+        "sapo_incremental_sync_job",
+    ]
+    for job_name in conflict_jobs:
+        active_conflict = context.instance.get_runs(
+            filters=RunsFilter(
+                job_name=job_name,
+                statuses=[
+                    DagsterRunStatus.STARTING,
+                    DagsterRunStatus.STARTED,
+                    DagsterRunStatus.QUEUED
+                ]
+            ),
+            limit=1
+        )
+        if len(active_conflict) > 0:
+            return SkipReason(
+                f"Skipping nightly because '{job_name}' (Run ID: {active_conflict[0].run_id}) is still active."
+            )
+
+    # Check for active runs of itself
     active_runs = context.instance.get_runs(
         filters=RunsFilter(
             job_name="sapo_nightly_reconciliation_job",
