@@ -141,8 +141,8 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 
 **System Name**: Data Integration Pipeline v2
 **Context**: ETL pipeline syncing Sapo retail data to DuckDB Lakehouse.
-**OS**: Windows
-**Shell**: PowerShell
+**Runtime Environments**: Windows native (dev) | Docker Desktop with Linux containers on Windows host (prod/staging)
+**Shell**: PowerShell (Windows) | bash (Docker Linux container)
 
 ## Architecture Map
 
@@ -185,7 +185,9 @@ When asked to "verify system health", execute:
 
 ## Important Constraints
 
-- **Windows Paths**: Always use backslashes `\` or `os.path.join` compatibility.
+- **Cross-Platform Paths**: System runs on both Windows and Linux (Docker). ALWAYS use `os.path.join()` or forward slashes. Never hardcode backslashes or OS-specific path separators.
+- **Python venv resolution**: Windows = `venv/Scripts/python.exe`, Linux/Docker = `venv/bin/python`. Use `sys.platform` to resolve.
+- **File Locking**: Windows provides advisory locks (`PermissionError` on locked files). Linux containers do NOT — concurrent file access must be handled explicitly (retry, swap pattern, or graceful skip).
 - **Environment API**: Credentials from `ingestion/.dlt/secrets.toml` or OS env vars. Do not hardcode secrets.
 
 ---
@@ -234,6 +236,17 @@ Three ingestion channels feed an append-only Parquet data lake with segregated s
 ---
 
 ## Architecture & Deployment Criticals
+
+### Deployment Environment (IMPORTANT)
+
+The system operates in **two runtime modes** — all code MUST work in both:
+
+| Mode | OS | Python venv | File Locking | Path Style |
+|------|----|-------------|--------------|------------|
+| **Windows native** (dev) | Windows | `Scripts/python.exe` | Advisory locks (PermissionError) | `os.path.join()` or `/` |
+| **Docker Desktop** (prod/staging) | Linux container on Windows host | `bin/python` | No advisory locks — handle explicitly | Forward slashes only |
+
+**Rule**: When writing filesystem, subprocess, or path logic — always verify behavior under both modes. Docker = Linux container, but the host is always Windows (Docker Desktop).
 
 ### Dual DuckDB Strategy (IMPORTANT)
 
