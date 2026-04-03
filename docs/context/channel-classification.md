@@ -39,7 +39,7 @@ Tài liệu này thiết lập cách phân loại chuẩn cho toàn công ty.
                                                 B2C/B2B
 ```
 
-Khi muốn xem doanh thu theo góc nào, chỉ cần gom nhóm (GROUP BY) theo cột tương ứng. Không cần tạo báo cáo riêng — cùng một bộ dữ liệu, nhìn từ nhiều phía.
+Khi muốn xem doanh thu theo góc nhìn nào, chỉ cần gom nhóm (GROUP BY) theo cột tương ứng. Không cần tạo báo cáo riêng — cùng một bộ dữ liệu, nhìn từ nhiều phía.
 
 ---
 
@@ -76,7 +76,9 @@ Tầng 1 — Phân loại kênh (Ecommerce / Offline / Internal)
               └── (Nguồn đơn hàng cụ thể)
 ```
 
-Bảng phân loại đầy đủ:
+
+
+🌈Bảng phân loại đầy đủ:
 
 | Tầng 1: Phân loại kênh   | Tầng 2: Loại kênh    | Tầng 3: Nền tảng | Nguồn cụ thể (ví dụ)                          |
 | ---------------------------- | ----------------------- | ------------------- | -------------------------------------------------- |
@@ -537,8 +539,7 @@ Bảng tra cứu nhanh cho người tạo báo cáo trên Metabase hoặc SQL:
 #### Khi thêm nguồn đơn hàng mới (shop mới, page mới...)
 
 1. Tạo nguồn đơn hàng trên Sapo
-2. Thêm 1 dòng vào `ref_order_sources.csv`:
-   | Cột                  | Hành động                                                      |
+2. Thêm 1 dòng vào `ref_order_sources.csv`:| Cột                  | Hành động                                                      |
    | --------------------- | ----------------------------------------------------------------- |
    | `id`                | Lấy ID từ Sapo, hoặc tạo composite ID (ví dụ:`3988158_9`) |
    | `name`              | Đặt tên dạng "Platform - Shop Name"                           |
