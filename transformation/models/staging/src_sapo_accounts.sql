@@ -78,5 +78,5 @@ extracted AS (
 SELECT * FROM extracted
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY account_id
-    ORDER BY event_timestamp DESC, modified_on DESC
+    ORDER BY event_timestamp DESC, try_cast(modified_on AS TIMESTAMP) DESC NULLS LAST
 ) = 1

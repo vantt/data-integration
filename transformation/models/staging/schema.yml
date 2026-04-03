@@ -27,5 +27,5 @@ models:
 
   - name: stg_sapo_customers
     columns:
-      - name: customer_id
+      - name: sapo_customer_id
         tests: [not_null]

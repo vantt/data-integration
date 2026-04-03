@@ -26,6 +26,7 @@ ranked_products AS (
         ) as rn
     FROM order_items
     WHERE product_id IS NOT NULL
+      AND product_name IS NOT NULL
 )
 
 SELECT
