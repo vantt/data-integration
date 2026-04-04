@@ -141,8 +141,13 @@ $allBackups = Get-ChildItem -Path $BackupRoot -Directory |
 if ($allBackups.Count -gt $KeepCount) {
     $toDelete = $allBackups | Select-Object -Skip $KeepCount
     foreach ($old in $toDelete) {
-        Remove-Item $old.FullName -Recurse -Force
-        Log "Deleted old backup: $($old.Name)"
+        try {
+            Remove-Item $old.FullName -Recurse -Force
+            Log "Deleted old backup: $($old.Name)"
+        } catch {
+            Log "WARNING: Could not delete old backup '$($old.Name)': $($_.Exception.Message)"
+            $ExitCode = 1
+        }
     }
 }
 
@@ -150,7 +155,11 @@ if ($allBackups.Count -gt $KeepCount) {
 $allLogs = Get-ChildItem -Path $BackupRoot -Filter "backup-*.log" | Sort-Object Name -Descending
 if ($allLogs.Count -gt $KeepCount) {
     $allLogs | Select-Object -Skip $KeepCount | ForEach-Object {
-        Remove-Item $_.FullName -Force
+        try {
+            Remove-Item $_.FullName -Force
+        } catch {
+            Log "WARNING: Could not delete old log '$($_.Name)': $($_.Exception.Message)"
+        }
     }
 }
 
