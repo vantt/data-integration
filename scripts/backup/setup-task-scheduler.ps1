@@ -5,8 +5,11 @@
 #
 # Usage (run as Administrator):
 #   .\setup-task-scheduler.ps1
-#   .\setup-task-scheduler.ps1 -Time "03:00"     # Change time
-#   .\setup-task-scheduler.ps1 -Unregister        # Remove the task
+#   .\setup-task-scheduler.ps1 -Time "03:00"                  # Change time
+#   .\setup-task-scheduler.ps1 -ProjectRoot "E:\myproject"    # Override project path
+#   .\setup-task-scheduler.ps1 -BackupRoot "E:\backups"       # Override backup destination
+#   .\setup-task-scheduler.ps1 -KeepCount 14                  # Keep 14 backups
+#   .\setup-task-scheduler.ps1 -Unregister                    # Remove the task
 # =============================================================================
 
 param(

@@ -98,8 +98,12 @@ try {
     foreach ($f in $configFiles) {
         $src = Join-Path $ProjectRoot $f
         if (Test-Path $src) {
-            Copy-Item $src -Destination $configDst
-            $copiedCount++
+            try {
+                Copy-Item $src -Destination $configDst
+                $copiedCount++
+            } catch {
+                Log "WARNING: Could not copy config file '$f': $($_.Exception.Message)"
+            }
         }
     }
     if ($copiedCount -gt 0) {
