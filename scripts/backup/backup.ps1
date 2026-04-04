@@ -165,14 +165,16 @@ if ($allBackups.Count -gt $KeepCount) {
     }
 }
 
-# Clean old log files too (keep matching backup count)
-$allLogs = Get-ChildItem -Path $BackupRoot -Filter "backup-*.log" | Sort-Object Name -Descending
-if ($allLogs.Count -gt $KeepCount) {
-    $allLogs | Select-Object -Skip $KeepCount | ForEach-Object {
-        try {
-            Remove-Item $_.FullName -Force
-        } catch {
-            Log "WARNING: Could not delete old log '$($_.Name)': $($_.Exception.Message)"
+# Clean old log files too (keep matching backup count) — covers both backup-*.log and restore-*.log
+foreach ($logPattern in @("backup-*.log", "restore-*.log")) {
+    $allLogs = Get-ChildItem -Path $BackupRoot -Filter $logPattern | Sort-Object Name -Descending
+    if ($allLogs.Count -gt $KeepCount) {
+        $allLogs | Select-Object -Skip $KeepCount | ForEach-Object {
+            try {
+                Remove-Item $_.FullName -Force
+            } catch {
+                Log "WARNING: Could not delete old log '$($_.Name)': $($_.Exception.Message)"
+            }
         }
     }
 }
