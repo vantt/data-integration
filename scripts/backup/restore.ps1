@@ -6,21 +6,28 @@
 # Usage:
 #   .\restore.ps1 -BackupDir "D:\...\backups\20260404-020000"
 #   .\restore.ps1 -BackupDir "D:\...\backups\20260404-020000" -DryRun
+#   .\restore.ps1 -BackupDir "D:\...\backups\20260404-020000" -Force  # skip confirmation prompt
 # =============================================================================
 
 param(
     [Parameter(Mandatory)]
     [string]$BackupDir,
     [string]$ProjectRoot = "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\data-integration2",
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $ExitCode = 0
+$Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$BackupRoot = Split-Path $BackupDir -Parent
+$LogFile    = Join-Path $BackupRoot "restore-$Timestamp.log"
 
 function Log {
     param([string]$Message)
-    Write-Host "$(Get-Date -Format 'HH:mm:ss') $Message"
+    $entry = "$(Get-Date -Format 'HH:mm:ss') $Message"
+    Write-Host $entry
+    Add-Content -Path $LogFile -Value $entry
 }
 
 # --- Validate ---
@@ -57,10 +64,14 @@ Log "Contains: $($dirs -join ', ')"
 
 # --- Confirm ---
 if (-not $DryRun) {
-    $confirm = Read-Host "This will STOP containers and OVERWRITE app_data. Continue? (yes/no)"
-    if ($confirm -ne "yes") {
-        Log "Aborted."
-        exit 0
+    if ($Force) {
+        Log "Force flag set — skipping confirmation."
+    } else {
+        $confirm = Read-Host "This will STOP containers and OVERWRITE app_data. Continue? (yes/no)"
+        if ($confirm -ne "yes") {
+            Log "Aborted."
+            exit 0
+        }
     }
 }
 

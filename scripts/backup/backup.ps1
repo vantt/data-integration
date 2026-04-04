@@ -23,6 +23,7 @@ $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
 $BackupDir = Join-Path $BackupRoot $Timestamp
 $LogFile   = Join-Path $BackupRoot "backup-$Timestamp.log"
 $ExitCode  = 0
+$BackupDataSucceeded = $false
 
 # --- Pre-flight checks ---
 if ($KeepCount -lt 1) {
@@ -77,6 +78,7 @@ try {
             Log "ERROR: robocopy failed with exit code $LASTEXITCODE"
             $ExitCode = 1
         } else {
+            $BackupDataSucceeded = $true
             $size = (Get-ChildItem $appDataDst -Recurse -File | Measure-Object -Property Length -Sum).Sum
             $sizeMB = [math]::Round($size / 1MB, 1)
             Log "app_data backed up: ${sizeMB}MB"
@@ -117,7 +119,13 @@ try {
     Pop-Location
 }
 
-# --- Step 5: Rotate old backups ---
+# --- Step 5: Remove failed backup directory to avoid polluting rotation ---
+if (-not $BackupDataSucceeded) {
+    Log "Removing failed/empty backup directory: $BackupDir"
+    Remove-Item $BackupDir -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+# --- Step 6: Rotate old backups ---
 Log "Rotating backups (keeping last $KeepCount)..."
 $allBackups = Get-ChildItem -Path $BackupRoot -Directory |
     Where-Object { $_.Name -match '^\d{8}-\d{6}$' } |
@@ -142,8 +150,11 @@ if ($allLogs.Count -gt $KeepCount) {
 $stopwatch.Stop()
 if ($ExitCode -eq 0) {
     Log "=== Backup completed successfully in $([math]::Round($stopwatch.Elapsed.TotalSeconds, 1))s ==="
+    Log "Backup location: $BackupDir"
 } else {
     Log "=== Backup completed WITH ERRORS in $([math]::Round($stopwatch.Elapsed.TotalSeconds, 1))s ==="
+    if (-not $BackupDataSucceeded) {
+        Log "Failed backup directory was removed (no valid data)."
+    }
 }
-Log "Backup location: $BackupDir"
 exit $ExitCode

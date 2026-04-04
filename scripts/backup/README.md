@@ -67,6 +67,9 @@ Get-ChildItem "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\backups" -Directory
 
 # Actual restore (will prompt for confirmation)
 .\restore.ps1 -BackupDir "D:\...\backups\20260404-020000"
+
+# Non-interactive restore (skip confirmation prompt — for scripted use)
+.\restore.ps1 -BackupDir "D:\...\backups\20260404-020000" -Force
 ```
 
 ## Backup structure
@@ -103,4 +106,5 @@ backups/
 - **Caddy TLS certs** (`caddy_data` Docker volume) are NOT backed up — they auto-regenerate for local dev.
 - **Metabase H2 consistency**: Containers are stopped before backup to avoid corrupt H2 files. If you need zero-downtime, consider migrating Metabase to PostgreSQL.
 - **Source code** is NOT backed up here (use git for that).
-- Logs are in `backups/backup-{timestamp}.log`.
+- Backup logs: `backups/backup-{timestamp}.log`
+- Restore logs: `backups/restore-{timestamp}.log`
