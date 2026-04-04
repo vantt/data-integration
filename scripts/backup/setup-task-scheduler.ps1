@@ -14,6 +14,7 @@ param(
     [switch]$Unregister
 )
 
+$ErrorActionPreference = "Stop"
 $TaskName = "DataIntegration-Backup"
 $ScriptPath = Join-Path $PSScriptRoot "backup.ps1"
 
