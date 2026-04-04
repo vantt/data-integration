@@ -120,10 +120,12 @@ try {
 }
 
 # --- Step 5: Remove failed backup directory to avoid polluting rotation ---
+$BackupDirRemoved = $false
 if (-not $BackupDataSucceeded) {
     try {
         Remove-Item $BackupDir -Recurse -Force
         Log "Removed failed/empty backup directory: $BackupDir"
+        $BackupDirRemoved = $true
     } catch {
         Log "WARNING: Could not remove failed backup directory '$BackupDir': $($_.Exception.Message)"
         Log "WARNING: This may affect rotation — remove it manually to avoid displacing valid backups."
@@ -159,7 +161,11 @@ if ($ExitCode -eq 0) {
 } else {
     Log "=== Backup completed WITH ERRORS in $([math]::Round($stopwatch.Elapsed.TotalSeconds, 1))s ==="
     if (-not $BackupDataSucceeded) {
-        Log "Failed backup directory was removed (no valid data)."
+        if ($BackupDirRemoved) {
+            Log "Failed backup directory was removed (no valid data)."
+        } else {
+            Log "Failed backup directory could NOT be removed — remove manually to avoid affecting rotation."
+        }
     }
 }
 exit $ExitCode
