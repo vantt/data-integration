@@ -27,7 +27,7 @@ function Log {
     param([string]$Message)
     $entry = "$(Get-Date -Format 'HH:mm:ss') $Message"
     Write-Host $entry
-    Add-Content -Path $LogFile -Value $entry
+    try { Add-Content -Path $LogFile -Value $entry } catch { <# disk full / permissions — console output still works #> }
 }
 
 # --- Validate ---
