@@ -37,7 +37,12 @@ if (-not (Test-Path (Join-Path $ProjectRoot "docker-compose.yml"))) {
 }
 
 # Ensure backup root exists before first log write
-New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
+try {
+    New-Item -ItemType Directory -Path $BackupDir -Force | Out-Null
+} catch {
+    Write-Error "Failed to create backup directory '$BackupDir': $($_.Exception.Message)"
+    exit 1
+}
 
 function Log {
     param([string]$Message)
@@ -152,34 +157,43 @@ if (-not $BackupDataSucceeded) {
 
 # --- Step 6: Rotate old backups ---
 Log "Rotating backups (keeping last $KeepCount)..."
-$allBackups = Get-ChildItem -Path $BackupRoot -Directory |
-    Where-Object { $_.Name -match '^\d{8}-\d{6}$' } |
-    Sort-Object Name -Descending
+try {
+    $allBackups = Get-ChildItem -Path $BackupRoot -Directory |
+        Where-Object { $_.Name -match '^\d{8}-\d{6}$' } |
+        Sort-Object Name -Descending
 
-if ($allBackups.Count -gt $KeepCount) {
-    $toDelete = $allBackups | Select-Object -Skip $KeepCount
-    foreach ($old in $toDelete) {
-        try {
-            Remove-Item $old.FullName -Recurse -Force
-            Log "Deleted old backup: $($old.Name)"
-        } catch {
-            Log "WARNING: Could not delete old backup '$($old.Name)': $($_.Exception.Message)"
-            $ExitCode = 1
+    if ($allBackups.Count -gt $KeepCount) {
+        $toDelete = $allBackups | Select-Object -Skip $KeepCount
+        foreach ($old in $toDelete) {
+            try {
+                Remove-Item $old.FullName -Recurse -Force
+                Log "Deleted old backup: $($old.Name)"
+            } catch {
+                Log "WARNING: Could not delete old backup '$($old.Name)': $($_.Exception.Message)"
+                $ExitCode = 1
+            }
         }
     }
+} catch {
+    Log "WARNING: Could not enumerate backups for rotation: $($_.Exception.Message)"
+    $ExitCode = 1
 }
 
 # Clean old log files too (keep matching backup count) — covers both backup-*.log and restore-*.log
 foreach ($logPattern in @("backup-*.log", "restore-*.log")) {
-    $allLogs = Get-ChildItem -Path $BackupRoot -Filter $logPattern | Sort-Object Name -Descending
-    if ($allLogs.Count -gt $KeepCount) {
-        $allLogs | Select-Object -Skip $KeepCount | ForEach-Object {
-            try {
-                Remove-Item $_.FullName -Force
-            } catch {
-                Log "WARNING: Could not delete old log '$($_.Name)': $($_.Exception.Message)"
+    try {
+        $allLogs = Get-ChildItem -Path $BackupRoot -Filter $logPattern | Sort-Object Name -Descending
+        if ($allLogs.Count -gt $KeepCount) {
+            $allLogs | Select-Object -Skip $KeepCount | ForEach-Object {
+                try {
+                    Remove-Item $_.FullName -Force
+                } catch {
+                    Log "WARNING: Could not delete old log '$($_.Name)': $($_.Exception.Message)"
+                }
             }
         }
+    } catch {
+        Log "WARNING: Could not enumerate logs for rotation ($logPattern): $($_.Exception.Message)"
     }
 }
 
