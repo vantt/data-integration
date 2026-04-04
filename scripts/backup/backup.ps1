@@ -94,13 +94,19 @@ try {
     New-Item -ItemType Directory -Path $configDst -Force | Out-Null
 
     $configFiles = @(".env.docker", "docker-compose.yml", "Dockerfile.dataplatform", "Dockerfile.metabase")
+    $copiedCount = 0
     foreach ($f in $configFiles) {
         $src = Join-Path $ProjectRoot $f
         if (Test-Path $src) {
             Copy-Item $src -Destination $configDst
+            $copiedCount++
         }
     }
-    Log "Config files backed up."
+    if ($copiedCount -gt 0) {
+        Log "Config files backed up ($copiedCount of $($configFiles.Count) found)."
+    } else {
+        Log "WARNING: No config files found to back up (checked: $($configFiles -join ', '))."
+    }
 } finally {
     # --- Step 4: Always restart containers (unless SkipRestart) ---
     if (-not $SkipRestart) {

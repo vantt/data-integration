@@ -10,13 +10,23 @@
 # =============================================================================
 
 param(
-    [string]$Time = "02:00",
+    [string]$Time       = "02:00",
+    [string]$ProjectRoot = "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\data-integration2",
+    [string]$BackupRoot  = "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\backups",
+    [int]$KeepCount      = 7,
     [switch]$Unregister
 )
 
 $ErrorActionPreference = "Stop"
 $TaskName = "DataIntegration-Backup"
 $ScriptPath = Join-Path $PSScriptRoot "backup.ps1"
+
+# Require elevated privileges to register scheduled tasks
+$currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
+if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Error "This script must be run as Administrator to register a scheduled task."
+    exit 1
+}
 
 if ($Unregister) {
     Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
@@ -32,9 +42,14 @@ if (-not (Test-Path $ScriptPath)) {
 # Remove existing task if any
 Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 
+$BackupArgs = "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" +
+              " -ProjectRoot `"$ProjectRoot`"" +
+              " -BackupRoot `"$BackupRoot`"" +
+              " -KeepCount $KeepCount"
+
 $Action = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" `
+    -Argument $BackupArgs `
     -WorkingDirectory $PSScriptRoot
 
 $Trigger = New-ScheduledTaskTrigger -Daily -At $Time
@@ -56,8 +71,11 @@ Register-ScheduledTask `
 
 Write-Host ""
 Write-Host "Scheduled task '$TaskName' created successfully!"
-Write-Host "  Schedule: Daily at $Time"
-Write-Host "  Script:   $ScriptPath"
+Write-Host "  Schedule:    Daily at $Time"
+Write-Host "  Script:      $ScriptPath"
+Write-Host "  ProjectRoot: $ProjectRoot"
+Write-Host "  BackupRoot:  $BackupRoot"
+Write-Host "  KeepCount:   $KeepCount"
 Write-Host ""
 Write-Host "Verify with: Get-ScheduledTask -TaskName '$TaskName'"
 Write-Host "Test run:    Start-ScheduledTask -TaskName '$TaskName'"

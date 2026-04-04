@@ -60,7 +60,8 @@ $sizeMB = [math]::Round($size / 1MB, 1)
 Log "Backup size: ${sizeMB}MB"
 
 $dirs = Get-ChildItem $appDataBackup -Directory | ForEach-Object { $_.Name }
-Log "Contains: $($dirs -join ', ')"
+$dirsDisplay = if ($dirs.Count -gt 0) { $dirs -join ', ' } else { "(no subdirectories)" }
+Log "Contains: $dirsDisplay"
 
 # --- Confirm ---
 if (-not $DryRun) {
