@@ -15,12 +15,14 @@ const TEXT_ID_REGEX = /<!-- text-id:([a-z0-9-]+) -->/g;
  * Example: "Doanh thu & Target" → "doanh-thu-target"
  */
 function slugify(name) {
-  return name
+  const slug = name
     .normalize("NFD")                       // decompose diacritics
     .replace(/[\u0300-\u036f]/g, "")        // strip combining marks
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")           // non-alnum → hyphen
     .replace(/^-+|-+$/g, "");              // trim leading/trailing
+  // Fallback for names that produce empty slug (all symbols, whitespace, etc.)
+  return slug || "text";
 }
 
 /**
