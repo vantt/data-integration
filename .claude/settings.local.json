@@ -48,7 +48,8 @@
       "Bash(export METABASE_URL=\"http://127.0.0.1:3000/\")",
       "Bash(export METABASE_API_KEY=\"mb_buAQN9X7jRNYeum74PRgIJIirdmXM9hy2IDLDJtAmmA=\")",
       "Bash(export METABASE_DB_NAME=\"Sapo\")",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ]
   }
 }

@@ -84,7 +84,7 @@ Optional body text (markdown). If omitted, heading name is used as `# Heading Na
 
 **Known limitations:**
 - Renaming a text card (`#### 📝 Text: New Name`) changes its slug → old card orphaned, new one created. This is expected rename semantics.
-- Duplicate text card names within one dashboard get counter suffixes (`foo`, `foo-2`, `foo-3`). Removing/reordering duplicates shifts suffixes, causing recreation. Avoid duplicate names.
+- Duplicate text card names within the **same tab** get counter suffixes (`foo`, `foo-2`). Removing/reordering duplicates within a tab shifts suffixes, causing recreation. Avoid duplicate names within a tab. Duplicate names across different tabs are fine — slug scope is per-tab.
 
 ### 5.2 Dashboard Filters (`metabase-filter`)
 

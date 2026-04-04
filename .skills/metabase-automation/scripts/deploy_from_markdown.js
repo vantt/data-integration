@@ -321,14 +321,17 @@ async function main() {
     }
 
     // Process Text Cards (section headings, annotations)
-    const slugCounts = {};
+    // slugCounts is scoped per-tab to prevent slug shifts when removing/reordering
+    // cards in one tab from affecting slugs in other tabs.
+    const slugCounts = {}; // key = `${tab}::${slug}` or slug if no tab
     for (const tc of (dashboard.textCards || [])) {
       const pos = tc.pos || { row: 0, col: 0, size_x: 18, size_y: 1 };
       // Build text content with stable identity marker for idempotent redeploy
       const rawText = tc.text || `# ${tc.name}`;
       let slug = slugify(tc.name);
-      slugCounts[slug] = (slugCounts[slug] || 0) + 1;
-      if (slugCounts[slug] > 1) slug = `${slug}-${slugCounts[slug]}`;
+      const scopeKey = tc.tab ? `${tc.tab}::${slug}` : slug;
+      slugCounts[scopeKey] = (slugCounts[scopeKey] || 0) + 1;
+      if (slugCounts[scopeKey] > 1) slug = `${slug}-${slugCounts[scopeKey]}`;
       const textContent = injectTextId(rawText, slug);
       const textCardConfig = {
         id: null, // null = text card (no backing question)
