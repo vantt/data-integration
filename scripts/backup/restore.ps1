@@ -128,14 +128,22 @@ try {
     }
 } finally {
     # --- Always restart ---
+    # Wrapped in try/catch so a thrown error (e.g. docker not on PATH) never
+    # prevents Pop-Location from running and stranding the shell in $ProjectRoot.
     Log "Starting containers..."
-    docker compose start
-    if ($LASTEXITCODE -ne 0) {
-        Log "ERROR: Failed to start containers (exit code $LASTEXITCODE)"
+    try {
+        docker compose start
+        if ($LASTEXITCODE -ne 0) {
+            Log "ERROR: Failed to start containers (exit code $LASTEXITCODE)"
+            Log "Run manually: cd $ProjectRoot && docker compose start"
+            $ExitCode = 1
+        } else {
+            Log "Containers started."
+        }
+    } catch {
+        Log "ERROR: docker compose start threw an exception: $($_.Exception.Message)"
         Log "Run manually: cd $ProjectRoot && docker compose start"
         $ExitCode = 1
-    } else {
-        Log "Containers started."
     }
     Pop-Location
 }
