@@ -22,7 +22,19 @@ param(
 
 $ErrorActionPreference = "Stop"
 $TaskName = "DataIntegration-Backup"
+
+# Guard against empty $PSScriptRoot (happens when script is dot-sourced or Invoke-Expression'd
+# instead of run as a file). A relative ScriptPath would create a broken scheduled task action.
+if (-not $PSScriptRoot) {
+    Write-Error "PSScriptRoot is empty — run this script as a file (e.g. .\setup-task-scheduler.ps1), not via Invoke-Expression or dot-sourcing."
+    exit 1
+}
 $ScriptPath = Join-Path $PSScriptRoot "backup.ps1"
+
+if ($KeepCount -lt 1) {
+    Write-Error "KeepCount must be at least 1 (got $KeepCount)"
+    exit 1
+}
 
 # Require elevated privileges to register scheduled tasks
 $currentPrincipal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()

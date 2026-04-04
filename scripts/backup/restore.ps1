@@ -57,7 +57,7 @@ if ($DryRun) {
 # --- Show backup contents ---
 try {
     $size = (Get-ChildItem $appDataBackup -Recurse -File | Measure-Object -Property Length -Sum).Sum
-    $sizeMB = [math]::Round($size / 1MB, 1)
+    $sizeMB = [math]::Round(([long]($size ?? 0)) / 1MB, 1)
     Log "Backup size: ${sizeMB}MB"
 } catch {
     Log "Backup size: (unavailable: $($_.Exception.Message))"
@@ -113,7 +113,7 @@ try {
     } else {
         try {
             $restoredSize = (Get-ChildItem $appDataDst -Recurse -File | Measure-Object -Property Length -Sum).Sum
-            $restoredSizeMB = [math]::Round(($restoredSize / 1MB), 1)
+            $restoredSizeMB = [math]::Round(([long]($restoredSize ?? 0)) / 1MB, 1)
             Log "app_data restored: ${restoredSizeMB}MB"
         } catch {
             Log "app_data restored (size unavailable: $($_.Exception.Message))"
