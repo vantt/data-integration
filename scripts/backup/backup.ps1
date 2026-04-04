@@ -159,7 +159,7 @@ if (-not $BackupDataSucceeded) {
         $BackupDirRemoved = $true
     } catch {
         Log "WARNING: Could not remove failed backup directory '$BackupDir': $($_.Exception.Message)"
-        Log "WARNING: This may affect rotation — remove it manually to avoid displacing valid backups."
+        Log "WARNING: The failed directory will be excluded from rotation counts but remains on disk — remove it manually when possible."
     }
 }
 
