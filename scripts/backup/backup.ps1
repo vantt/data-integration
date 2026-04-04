@@ -91,25 +91,29 @@ try {
     # --- Step 3: Backup config files ---
     Log "Backing up config files..."
     $configDst = Join-Path $BackupDir "config"
-    New-Item -ItemType Directory -Path $configDst -Force | Out-Null
+    try {
+        New-Item -ItemType Directory -Path $configDst -Force | Out-Null
 
-    $configFiles = @(".env.docker", "docker-compose.yml", "Dockerfile.dataplatform", "Dockerfile.metabase")
-    $copiedCount = 0
-    foreach ($f in $configFiles) {
-        $src = Join-Path $ProjectRoot $f
-        if (Test-Path $src) {
-            try {
-                Copy-Item $src -Destination $configDst
-                $copiedCount++
-            } catch {
-                Log "WARNING: Could not copy config file '$f': $($_.Exception.Message)"
+        $configFiles = @(".env.docker", "docker-compose.yml", "Dockerfile.dataplatform", "Dockerfile.metabase")
+        $copiedCount = 0
+        foreach ($f in $configFiles) {
+            $src = Join-Path $ProjectRoot $f
+            if (Test-Path $src) {
+                try {
+                    Copy-Item $src -Destination $configDst
+                    $copiedCount++
+                } catch {
+                    Log "WARNING: Could not copy config file '$f': $($_.Exception.Message)"
+                }
             }
         }
-    }
-    if ($copiedCount -gt 0) {
-        Log "Config files backed up ($copiedCount of $($configFiles.Count) found)."
-    } else {
-        Log "WARNING: No config files found to back up (checked: $($configFiles -join ', '))."
+        if ($copiedCount -gt 0) {
+            Log "Config files backed up ($copiedCount of $($configFiles.Count) found)."
+        } else {
+            Log "WARNING: No config files found to back up (checked: $($configFiles -join ', '))."
+        }
+    } catch {
+        Log "WARNING: Config backup skipped — could not create config dir: $($_.Exception.Message)"
     }
 } finally {
     # --- Step 4: Always restart containers (unless SkipRestart) ---
@@ -179,12 +183,12 @@ if ($ExitCode -eq 0) {
     Log "Backup location: $BackupDir"
 } else {
     Log "=== Backup completed WITH ERRORS in $([math]::Round($stopwatch.Elapsed.TotalSeconds, 1))s ==="
-    if (-not $BackupDataSucceeded) {
-        if ($BackupDirRemoved) {
-            Log "Failed backup directory was removed (no valid data)."
-        } else {
-            Log "Failed backup directory could NOT be removed — remove manually to avoid affecting rotation."
-        }
+    if ($BackupDataSucceeded) {
+        Log "Backup location: $BackupDir"
+    } elseif ($BackupDirRemoved) {
+        Log "Failed backup directory was removed (no valid data)."
+    } else {
+        Log "Failed backup directory could NOT be removed — remove manually to avoid affecting rotation."
     }
 }
 exit $ExitCode
