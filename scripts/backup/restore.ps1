@@ -103,9 +103,13 @@ try {
         Log "WARNING: app_data may be in a PARTIAL state — do not rely on this data until a clean restore succeeds."
         $ExitCode = 1
     } else {
-        $restoredSize = (Get-ChildItem $appDataDst -Recurse -File | Measure-Object -Property Length -Sum).Sum
-        $restoredSizeMB = [math]::Round(($restoredSize / 1MB), 1)
-        Log "app_data restored: ${restoredSizeMB}MB"
+        try {
+            $restoredSize = (Get-ChildItem $appDataDst -Recurse -File | Measure-Object -Property Length -Sum).Sum
+            $restoredSizeMB = [math]::Round(($restoredSize / 1MB), 1)
+            Log "app_data restored: ${restoredSizeMB}MB"
+        } catch {
+            Log "app_data restored (size unavailable: $($_.Exception.Message))"
+        }
     }
 
     # --- Restore config files (optional, manual) ---

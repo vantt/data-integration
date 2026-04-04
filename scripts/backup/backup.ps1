@@ -79,9 +79,13 @@ try {
             $ExitCode = 1
         } else {
             $BackupDataSucceeded = $true
-            $size = (Get-ChildItem $appDataDst -Recurse -File | Measure-Object -Property Length -Sum).Sum
-            $sizeMB = [math]::Round($size / 1MB, 1)
-            Log "app_data backed up: ${sizeMB}MB"
+            try {
+                $size = (Get-ChildItem $appDataDst -Recurse -File | Measure-Object -Property Length -Sum).Sum
+                $sizeMB = [math]::Round($size / 1MB, 1)
+                Log "app_data backed up: ${sizeMB}MB"
+            } catch {
+                Log "app_data backed up (size unavailable: $($_.Exception.Message))"
+            }
         }
     } else {
         Log "WARNING: app_data not found at $appDataSrc"
