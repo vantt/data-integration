@@ -222,7 +222,7 @@ if ($ExitCode -eq 0) {
     } elseif ($BackupDirRemoved) {
         Log "Failed backup directory was removed (no valid data)."
     } else {
-        Log "Failed backup directory could NOT be removed — remove manually to avoid affecting rotation."
+        Log "Failed backup directory could NOT be removed — remove it manually when possible (excluded from rotation counts)."
     }
 }
 exit $ExitCode
