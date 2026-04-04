@@ -86,7 +86,7 @@ try {
             $BackupDataSucceeded = $true
             try {
                 $size = (Get-ChildItem $appDataDst -Recurse -File | Measure-Object -Property Length -Sum).Sum
-                $sizeMB = [math]::Round(([long]($size ?? 0)) / 1MB, 1)
+                $sizeMB = [math]::Round(([long](if ($null -eq $size) { 0 } else { $size })) / 1MB, 1)
                 Log "app_data backed up: ${sizeMB}MB"
             } catch {
                 Log "app_data backed up (size unavailable: $($_.Exception.Message))"
