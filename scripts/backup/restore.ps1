@@ -55,13 +55,21 @@ if ($DryRun) {
 }
 
 # --- Show backup contents ---
-$size = (Get-ChildItem $appDataBackup -Recurse -File | Measure-Object -Property Length -Sum).Sum
-$sizeMB = [math]::Round($size / 1MB, 1)
-Log "Backup size: ${sizeMB}MB"
+try {
+    $size = (Get-ChildItem $appDataBackup -Recurse -File | Measure-Object -Property Length -Sum).Sum
+    $sizeMB = [math]::Round($size / 1MB, 1)
+    Log "Backup size: ${sizeMB}MB"
+} catch {
+    Log "Backup size: (unavailable: $($_.Exception.Message))"
+}
 
-$dirs = Get-ChildItem $appDataBackup -Directory | ForEach-Object { $_.Name }
-$dirsDisplay = if ($dirs.Count -gt 0) { $dirs -join ', ' } else { "(no subdirectories)" }
-Log "Contains: $dirsDisplay"
+try {
+    $dirs = Get-ChildItem $appDataBackup -Directory | ForEach-Object { $_.Name }
+    $dirsDisplay = if ($dirs.Count -gt 0) { $dirs -join ', ' } else { "(no subdirectories)" }
+    Log "Contains: $dirsDisplay"
+} catch {
+    Log "Contains: (unavailable: $($_.Exception.Message))"
+}
 
 # --- Confirm ---
 if (-not $DryRun) {
