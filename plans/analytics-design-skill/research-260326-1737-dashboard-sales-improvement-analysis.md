@@ -287,50 +287,50 @@ The report is technically useful, but it becomes more actionable for sales when 
 
 This table reflects the first pass of prioritization. For rollout, use the revised action-first order in the next section.
 
-| Priority | Change | Dashboard | Effort | Impact |
-|----------|--------|-----------|--------|--------|
-| **P0** | Add Net Revenue, Returns, Discount Impact to Daily | Daily | Low | High — parity with Yesterday |
-| **P0** | Add Revenue by Customer Segment (VIP/Loyal/Regular) | Both | Low | High — understand who drives revenue |
-| **P1** | Replace "New vs Returning" with 4-way Customer Type split | Both | Low | High — actionable customer insight |
-| **P1** | Add Order Status Health (cancelled/returned breakdown) | Both | Low | High — catch operational issues |
-| **P1** | Add Staff Performance table | Both | Low | Medium — direct sales lever |
-| **P2** | Add Store/Location comparison | Both | Low | Medium — multi-store visibility |
-| **P2** | Add MTD Target Achievement | Both | Medium | High — revenue context |
-| **P2** | Add Geographic breakdown (Top provinces) | Both | Low | Medium — marketing insight |
-| **P3** | Add Time-to-Fulfill metric | Yesterday | Low | Medium — ops efficiency |
-| **P3** | Add Product Category rollup | Both | Low | Low — category trends |
+| Priority | Change | Dashboard | Effort | Impact | Status |
+|----------|--------|-----------|--------|--------|--------|
+| **P0** | Add Net Revenue, Returns, Discount Impact to Daily | Daily | Low | High — parity with Yesterday | ✅ Done |
+| **P0** | Add Revenue by Customer Segment (VIP/Loyal/Regular) | Both | Low | High — understand who drives revenue | ✅ Done |
+| **P1** | Replace "New vs Returning" with 4-way Customer Type split | Both | Low | High — actionable customer insight | ⚠️ Partial — segment breakdown added but uses current-state dim_customers, not gap-based logic |
+| **P1** | Add Order Status Health (cancelled/returned breakdown) | Both | Low | High — catch operational issues | ⚠️ Partial — Orders by Status pie added; no rescue queue/funnel |
+| **P1** | Add Staff Performance table | Both | Low | Medium — direct sales lever | ❌ Not done |
+| **P2** | Add Store/Location comparison | Both | Low | Medium — multi-store visibility | ✅ Done (Sales by Branch table) |
+| **P2** | Add MTD Target Achievement | Both | Medium | High — revenue context | ❌ Not done |
+| **P2** | Add Geographic breakdown (Top provinces) | Both | Low | Medium — marketing insight | ❌ Not done |
+| **P3** | Add Time-to-Fulfill metric | Yesterday | Low | Medium — ops efficiency | ❌ Not done |
+| **P3** | Add Product Category rollup | Both | Low | Low — category trends | ✅ Done (Revenue by Product Type) |
 
 ## Revised Priority Order For Sales Action
 
 After checking the report against the actual schema and dashboard usage, the action-first rollout order should be:
 
-| Priority | Change | Dashboard | Why it should move first |
-|--------|--------|--------|--------|
-| **P0** | Add same-hour Sales Pace vs Yesterday | Daily | Best real-time orientation metric for deciding whether the team is behind now |
-| **P0** | Add Revenue by Customer Segment (VIP/Loyal/Regular) | Both | Immediately improves customer understanding and revenue quality visibility |
-| **P1** | Add Order Status Health and rescue queue | Both | Most direct operational lever to recover orders before they are lost |
-| **P1** | Add Net Revenue, Returns, Discount Impact to Daily | Daily | Closes important blind spots in today's decision-making |
-| **P1** | Add DoD driver table by channel / store / segment | Yesterday | Helps managers understand why performance changed and what to fix today |
-| **P2** | Replace New vs Returning with gap-based customer type logic | Both | More accurate than current-state customer status for reactivation analysis |
-| **P2** | Correct Payment Method chart to completed payments only | Both | Prevents misleading interpretation of customer payment behavior |
-| **P2** | Add Staff / Store comparison | Both | Useful execution lever after core rescue and customer views are in place |
-| **P3** | Add MTD Target Achievement after validating `metric_code` | Both | Valuable, but should wait until target logic is confirmed against actual schema |
-| **P3** | Add geography / product-type rollups / time-to-fulfill | Both / Yesterday | Helpful secondary diagnostics after the main action loops are covered |
+| Priority | Change | Dashboard | Why it should move first | Status |
+|--------|--------|--------|--------|--------|
+| **P0** | Add same-hour Sales Pace vs Yesterday | Daily | Best real-time orientation metric for deciding whether the team is behind now | ✅ Done (Hourly Sales Trend + Cumulative Revenue charts) |
+| **P0** | Add Revenue by Customer Segment (VIP/Loyal/Regular) | Both | Immediately improves customer understanding and revenue quality visibility | ✅ Done |
+| **P1** | Add Order Status Health and rescue queue | Both | Most direct operational lever to recover orders before they are lost | ⚠️ Partial — status distribution done; rescue queue not added |
+| **P1** | Add Net Revenue, Returns, Discount Impact to Daily | Daily | Closes important blind spots in today's decision-making | ✅ Done |
+| **P1** | Add DoD driver table by channel / store / segment | Yesterday | Helps managers understand why performance changed and what to fix today | ⚠️ Partial — Channel Performance table done; no segment-level DoD breakdown |
+| **P2** | Replace New vs Returning with gap-based customer type logic | Both | More accurate than current-state customer status for reactivation analysis | ⚠️ Partial — segment breakdown exists but uses dim_customers snapshot, not gap-based |
+| **P2** | Correct Payment Method chart to completed payments only | Both | Prevents misleading interpretation of customer payment behavior | ❓ Unknown — not verified in blueprint SQL |
+| **P2** | Add Staff / Store comparison | Both | Useful execution lever after core rescue and customer views are in place | ⚠️ Partial — Store/Branch done; Staff Performance not added |
+| **P3** | Add MTD Target Achievement after validating `metric_code` | Both | Valuable, but should wait until target logic is confirmed against actual schema | ❌ Not done |
+| **P3** | Add geography / product-type rollups / time-to-fulfill | Both / Yesterday | Helpful secondary diagnostics after the main action loops are covered | ⚠️ Partial — Product Type done; geography and time-to-fulfill not added |
 
 ## Additional Recommendations From Deeper Handbook Review
 
 These additions focus less on passive reporting and more on helping the team sell more orders today while understanding customer quality more deeply.
 
-### 1. Reframe Daily Dashboard Around Sales Rescue
+### 1. Reframe Daily Dashboard Around Sales Rescue ⚠️ Partial
 
 Current Daily dashboard is dominated by lagging outcomes (GMV, Orders, AOV). That is useful, but it does not tell managers where they can still recover missed orders during the day.
 
 **Recommended additions for Daily dashboard:**
 
-- **Sales Pace vs Same Hour Yesterday** - cumulative GMV and orders by hour to show whether the team is ahead or behind pace right now
-- **Order Status Funnel** - `status`, `payment_status`, `fulfillment_status` overview to detect where orders are getting stuck
-- **Pending / Unpaid / Cancelled Queue** - a small operational table sorted by newest or highest GMV first so teams can intervene quickly
-- **MTD Progress / Pace to Target** - even if target is monthly, managers need context for whether today's run rate is sufficient
+- **Sales Pace vs Same Hour Yesterday** ✅ Done — Hourly Sales Trend + Cumulative Revenue charts added
+- **Order Status Funnel** ⚠️ Partial — Orders by Status pie added; no funnel view with payment_status + fulfillment_status breakdown
+- **Pending / Unpaid / Cancelled Queue** ❌ Not done — no rescue queue table
+- **MTD Progress / Pace to Target** ❌ Not done
 
 **Suggested SQL: Sales pace by hour**
 
@@ -366,16 +366,16 @@ ORDER BY 1
 
 **Business value:** If the dashboard shows the team is behind pace by 14:00, they still have time to trigger outbound calls, staff reallocation, live-stream pushes, or remarketing.
 
-### 2. Make Yesterday Dashboard Explain the "Why", Not Only the "What"
+### 2. Make Yesterday Dashboard Explain the "Why", Not Only the "What" ⚠️ Partial
 
 Yesterday dashboard already has DoD metrics, but it still behaves like a scoreboard. To improve next-day execution, it should explain the main drivers behind the change.
 
 **Recommended additions for Yesterday dashboard:**
 
-- **DoD Driver Table by Channel / Store / Customer Segment** - which slice created the gain or loss
-- **Lost Revenue Breakdown** - how much value was lost to cancellations, returns, and discounts
-- **Winners / Losers Table** - top improving and declining products, channels, or stores
-- **Direct drill-through to Orders Reconciliation** for the exact order list behind anomalies
+- **DoD Driver Table by Channel / Store / Customer Segment** ⚠️ Partial — Channel Performance vs Day Before exists; no store-level or segment-level DoD breakdown
+- **Lost Revenue Breakdown** ❌ Not done — Discount Impact table exists but no cancellation/return revenue loss breakdown
+- **Winners / Losers Table** ❌ Not done
+- **Direct drill-through to Orders Reconciliation** ❓ Unknown — not verified
 
 **Suggested SQL: DoD drivers by customer segment**
 
@@ -414,30 +414,30 @@ ORDER BY 6 DESC
 
 **Business value:** A manager can immediately see whether the drop came from VIP customers, a specific channel, or one weak store instead of reacting blindly to total revenue.
 
-### 3. Pull Operational Customer Watchlists Into Sales Dashboards
+### 3. Pull Operational Customer Watchlists Into Sales Dashboards ⚠️ Partial
 
 The handbook already has a separate Customer Operational Dashboard with actionable lists, but the two sales dashboards do not reuse that logic enough.
 
 **High-value additions already supported by existing models:**
 
-- **Revenue by VIP / Loyal / Regular** - understand who is driving today's and yesterday's revenue quality
-- **VIP Watchlist** - high-value customers who bought today or yesterday, with `lifetime_value` and `last_order_date`
-- **At Risk Reactivation Watchlist** - customers with `customer_status = 'At Risk'` who returned to buy yesterday
-- **Customer Quality Table for New Buyers** - count of new customers, their AOV, and whether they are likely to become high-value segments later
+- **Revenue by VIP / Loyal / Regular** ✅ Done — Revenue by Customer Segment chart added to both dashboards
+- **VIP Watchlist** ❌ Not done — no watchlist table with lifetime_value and last_order_date
+- **At Risk Reactivation Watchlist** ❌ Not done — At Risk Customers scalar exists but no watchlist table
+- **Customer Quality Table for New Buyers** ❌ Not done
 
 **Why this matters:** "New vs Returning" is too shallow. A day with more orders is not equally good if those orders come mostly from low-value one-time buyers with deep discounts.
 
-### 4. Reduce Dashboard Clutter and Prioritize Actionable Visuals
+### 4. Reduce Dashboard Clutter and Prioritize Actionable Visuals ⚠️ Partial
 
 The design guide says operations dashboards should follow a top-down flow and avoid too many primary charts. Today, both dashboards still spend prime space on charts that are more diagnostic than actionable.
 
 **Recommended layout changes:**
 
-- Keep first row as **scalar cards**, not a single wide summary table
-- Keep primary visuals to **6-8 main elements** maximum
-- Move **Payment Methods** and **Hourly Heatmap** below the fold or into a secondary section
-- Add **click-to-filter drill-down** from KPI cards and charts into detail tables
-- Link directly to `orders_today` / `orders_yesterday` reconciliation dashboards when anomalies are detected
+- Keep first row as **scalar cards**, not a single wide summary table ✅ Done — KPI scalars are the first row
+- Keep primary visuals to **6-8 main elements** maximum ❌ Not done — both dashboards have 18+ visual elements
+- Move **Payment Methods** and **Hourly Heatmap** below the fold or into a secondary section ❌ Not verified
+- Add **click-to-filter drill-down** from KPI cards and charts into detail tables ❌ Not done (Metabase limitation)
+- Link directly to `orders_today` / `orders_yesterday` reconciliation dashboards when anomalies are detected ❓ Unknown
 
 **Why:** Managers scan dashboards in seconds. The first screen should answer:
 
@@ -445,18 +445,18 @@ The design guide says operations dashboards should follow a top-down flow and av
 2. Where are orders getting stuck?
 3. Which customers, stores, or channels need action now?
 
-### 5. Add Domain Definitions Before Blueprint Expansion
+### 5. Add Domain Definitions Before Blueprint Expansion ❌ Not done
 
 Per `analytics-handbook/AGENTS.md`, new calculation logic should not be invented directly inside playbooks or blueprints.
 
 Before implementing the deeper improvements above, define or extend these metrics in the relevant domain files:
 
-- `domains/sales.md`
+- `domains/sales.md` ❌ Not updated
   - Sales Pace vs Same Hour Yesterday
   - Order Status Funnel / Queue Health
   - Lost Revenue by Cancellation / Return / Discount
   - DoD Driver by Channel / Store
-- `domains/customer.md`
+- `domains/customer.md` ❌ Not updated
   - Revenue by Customer Segment
   - Reactivated Customers
   - Customer Acquisition Quality
