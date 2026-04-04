@@ -89,7 +89,7 @@ try {
     if ($LASTEXITCODE -ge 8) {
         Log "ERROR: robocopy failed with exit code $LASTEXITCODE"
         Log "WARNING: app_data may be in a PARTIAL state — do not rely on this data until a clean restore succeeds."
-        exit 1
+        $ExitCode = 1
     }
 
     # --- Restore config files (optional, manual) ---
