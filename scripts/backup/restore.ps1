@@ -16,6 +16,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+$ExitCode = 0
 
 function Log {
     param([string]$Message)
@@ -104,10 +105,16 @@ try {
     if ($LASTEXITCODE -ne 0) {
         Log "ERROR: Failed to start containers (exit code $LASTEXITCODE)"
         Log "Run manually: cd $ProjectRoot && docker compose start"
+        $ExitCode = 1
     } else {
         Log "Containers started."
     }
     Pop-Location
 }
 
-Log "=== Restore complete ==="
+if ($ExitCode -eq 0) {
+    Log "=== Restore complete ==="
+} else {
+    Log "=== Restore completed WITH ERRORS ==="
+}
+exit $ExitCode
