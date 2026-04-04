@@ -28,6 +28,11 @@ if (-not (Test-Path $BackupDir)) {
     exit 1
 }
 
+if (-not (Test-Path (Join-Path $ProjectRoot "docker-compose.yml"))) {
+    Write-Error "docker-compose.yml not found in $ProjectRoot — is ProjectRoot correct?"
+    exit 1
+}
+
 $appDataBackup = Join-Path $BackupDir "app_data"
 if (-not (Test-Path $appDataBackup)) {
     Write-Error "No app_data found in backup: $BackupDir"
@@ -82,6 +87,7 @@ try {
     robocopy $appDataBackup $appDataDst /MIR /MT:4 /R:1 /W:1 /NFL /NDL /NJH /NJS /NP
     if ($LASTEXITCODE -ge 8) {
         Log "ERROR: robocopy failed with exit code $LASTEXITCODE"
+        Log "WARNING: app_data may be in a PARTIAL state — do not rely on this data until a clean restore succeeds."
         exit 1
     }
 
