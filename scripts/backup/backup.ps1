@@ -170,6 +170,12 @@ try {
         Where-Object { $_.Name -match '^\d{8}-\d{6}$' } |
         Sort-Object Name -Descending
 
+    # If this run's backup dir is still on disk but contains no valid data, exclude it from
+    # rotation so it cannot displace a real backup from the kept set.
+    if (-not $BackupDataSucceeded -and -not $BackupDirRemoved) {
+        $allBackups = @($allBackups | Where-Object { $_.FullName -ne $BackupDir })
+    }
+
     if ($allBackups.Count -gt $KeepCount) {
         $toDelete = $allBackups | Select-Object -Skip $KeepCount
         foreach ($old in $toDelete) {
