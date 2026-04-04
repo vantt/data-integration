@@ -69,6 +69,12 @@ Log "Stopping containers..."
 Push-Location $ProjectRoot
 try {
     docker compose stop
+    if ($LASTEXITCODE -ne 0) {
+        Log "WARNING: docker compose stop exited with code $LASTEXITCODE"
+        Log "Proceeding with restore (data may be inconsistent)."
+    } else {
+        Log "Containers stopped."
+    }
 
     # --- Restore app_data ---
     $appDataDst = Join-Path $ProjectRoot "app_data"
