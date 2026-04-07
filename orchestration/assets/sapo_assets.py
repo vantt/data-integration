@@ -33,11 +33,18 @@ def sapo_orders_batch_asset(context):
         load_info = run_orders_batch.run(argv=[])
     finally:
         os.chdir(cwd)
+        
+    info_dict = load_info.asdict() if hasattr(load_info, 'asdict') else {}
+    loaded_packages = info_dict.get('loads_ids', [])
+    records_status = "Data loaded" if len(loaded_packages) > 0 else "0 new records"
+
     context.log.info(f"Orders Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Orders Batch Sync Completed", 
         metadata={
-            "load_info": str(load_info)
+            "fetch_status": MetadataValue.text(records_status),
+            "packages_loaded": MetadataValue.int(len(loaded_packages)),
+            "load_info": MetadataValue.text(str(load_info))
         }
     )
 
@@ -54,11 +61,18 @@ def sapo_customers_batch_asset(context):
         load_info = run_customers_batch.run(argv=[])
     finally:
         os.chdir(cwd)
+        
+    info_dict = load_info.asdict() if hasattr(load_info, 'asdict') else {}
+    loaded_packages = info_dict.get('loads_ids', [])
+    records_status = "Data loaded" if len(loaded_packages) > 0 else "0 new records"
+
     context.log.info(f"Customers Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Customers Batch Sync Completed", 
         metadata={
-            "load_info": str(load_info)
+            "fetch_status": MetadataValue.text(records_status),
+            "packages_loaded": MetadataValue.int(len(loaded_packages)),
+            "load_info": MetadataValue.text(str(load_info))
         }
     )
 
@@ -75,11 +89,18 @@ def sapo_accounts_batch_asset(context):
         load_info = run_accounts_batch.run(argv=[])
     finally:
         os.chdir(cwd)
+        
+    info_dict = load_info.asdict() if hasattr(load_info, 'asdict') else {}
+    loaded_packages = info_dict.get('loads_ids', [])
+    records_status = "Data loaded" if len(loaded_packages) > 0 else "0 new records"
+
     context.log.info(f"Accounts Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Accounts Batch Sync Completed", 
         metadata={
-            "load_info": str(load_info)
+            "fetch_status": MetadataValue.text(records_status),
+            "packages_loaded": MetadataValue.int(len(loaded_packages)),
+            "load_info": MetadataValue.text(str(load_info))
         }
     )
 
@@ -97,11 +118,18 @@ def sapo_history_log_asset(context):
         load_info = run_history_log.run(argv=[])
     finally:
         os.chdir(cwd)
+        
+    info_dict = load_info.asdict() if hasattr(load_info, 'asdict') else {}
+    loaded_packages = info_dict.get('loads_ids', [])
+    records_status = "Data loaded" if len(loaded_packages) > 0 else "0 new records"
+
     context.log.info(f"History Log Finished. Info: {load_info}")
     return Output(
         value="History Log Completed",
         metadata={
-            "load_info": str(load_info)
+            "fetch_status": MetadataValue.text(records_status),
+            "packages_loaded": MetadataValue.int(len(loaded_packages)),
+            "load_info": MetadataValue.text(str(load_info))
         }
     )
 
@@ -120,10 +148,17 @@ def sapo_webhook_consumer_asset(context):
         load_info = run_webhook_consumer.run(argv=['--once'])
     finally:
         os.chdir(cwd)
+        
+    info_dict = load_info.asdict() if load_info and hasattr(load_info, 'asdict') else {}
+    loaded_packages = info_dict.get('loads_ids', [])
+    records_status = "Data loaded" if len(loaded_packages) > 0 else "0 new records"
+
     context.log.info(f"Webhook Poll Finished. Info: {load_info}")
     return Output(
         value="Webhook Poll Completed",
         metadata={
-            "load_info": str(load_info) if load_info else "No Data"
+            "fetch_status": MetadataValue.text(records_status),
+            "packages_loaded": MetadataValue.int(len(loaded_packages)),
+            "load_info": MetadataValue.text(str(load_info) if load_info else "No Data")
         }
     )
