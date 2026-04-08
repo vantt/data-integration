@@ -6,7 +6,18 @@ import shutil
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ingestion", "src"))
 
-from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job, AssetSelection, schedule, RunRequest
+from dagster import (
+    Definitions,
+    load_assets_from_modules,
+    ScheduleDefinition,
+    define_asset_job,
+    AssetSelection,
+    schedule,
+    RunRequest,
+    SkipReason,
+    RunsFilter,
+    DagsterRunStatus,
+)
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, dbt, serving
 from orchestration.sensors.failure_alerting import lark_failure_sensor
@@ -98,17 +109,44 @@ sapo_nightly_reconciliation_job = define_asset_job(
 # SCHEDULES
 # ------------------------------------------------------------------------------
 
-# Schedules are now minimal: QueuedRunCoordinator + tag_concurrency_limits
-# (dagster.yaml: concurrency_group=dbt_rw limit 1) handle mutual exclusion at
-# the instance level. When a slot is busy, new runs queue instead of racing.
-# No SkipReason logic needed — the coordinator is the single source of truth.
+# Schedule design notes:
+# - QueuedRunCoordinator + tag_concurrency_limits (dagster.yaml: dbt_rw=1) handles
+#   CROSS-JOB mutual exclusion at the instance level — no manual priority chain.
+# - But coordinator does NOT prevent queue buildup: every tick creates a new
+#   RunRequest, and if dequeue is blocked the queue grows unbounded.
+# - SELF-overlap skip: each schedule checks if a run for ITS OWN job is already
+#   active (queued/started). If yes, skip this tick — the existing run will
+#   eventually run and pick up the latest data.
+# - This is the minimal logic needed: cross-job = coordinator, self-overlap = schedule.
+
+# Active states: anything that hasn't terminated. NOT_STARTED is included
+# to catch runs that were created but haven't been picked up yet.
+_ACTIVE_STATUSES = [
+    DagsterRunStatus.QUEUED,
+    DagsterRunStatus.NOT_STARTED,
+    DagsterRunStatus.STARTING,
+    DagsterRunStatus.STARTED,
+]
+
+
+def _has_active_run(context, job_name: str) -> str | None:
+    """Return run_id of an active run for this job, or None if none active."""
+    runs = context.instance.get_runs(
+        filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES),
+        limit=1,
+    )
+    return runs[0].run_id if runs else None
+
 
 @schedule(
     job=sapo_realtime_sync_job,
     cron_schedule="*/3 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def realtime_schedule(_context):
+def realtime_schedule(context):
+    active = _has_active_run(context, "sapo_realtime_sync_job")
+    if active:
+        return SkipReason(f"realtime: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
@@ -116,11 +154,14 @@ def realtime_schedule(_context):
     job=sapo_incremental_sync_job,
     # Skip 4 AM hour entirely — nightly reconciliation runs then and holds the
     # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
-    # ticks from piling up in the queue while nightly is running.
+    # ticks from piling up while nightly is running.
     cron_schedule="*/10 0-3,5-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def incremental_schedule(_context):
+def incremental_schedule(context):
+    active = _has_active_run(context, "sapo_incremental_sync_job")
+    if active:
+        return SkipReason(f"incremental: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
@@ -129,7 +170,10 @@ def incremental_schedule(_context):
     cron_schedule="0 4 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def nightly_schedule(_context):
+def nightly_schedule(context):
+    active = _has_active_run(context, "sapo_nightly_reconciliation_job")
+    if active:
+        return SkipReason(f"nightly: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 # ------------------------------------------------------------------------------
