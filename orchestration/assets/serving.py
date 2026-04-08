@@ -9,7 +9,7 @@ from .dbt import sapo_dbt_assets
 # orchestration/assets/serving.py -> ../../
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../"))
-SCRIPT_PATH = os.path.join(PROJECT_ROOT, "scripts", "provisioning", "generate_serving_db.py")
+SCRIPT_PATH = os.path.join(PROJECT_ROOT, "scripts", "provisioning", "refresh_rolling.py")
 
 # Resolve Python Executable (Try to use dlt venv if available)
 # Use platform-appropriate venv path: Scripts/python.exe (Windows) vs bin/python (Linux)
@@ -24,9 +24,13 @@ PYTHON_EXE = VENV_PYTHON if os.path.exists(VENV_PYTHON) else sys.executable
 SERVING_TIMEOUT_SEC = int(os.environ.get("SERVING_TIMEOUT_SEC", "1800"))
 
 # Severity-based warning detector — only flag explicit severity markers,
-# avoid matching '[!] Empty folder' (nominal) or the word 'error' in '0 errors'.
+# avoid matching nominal info lines or the word 'error' in '0 errors'.
 # Matches markers like: [!] Failed..., [!] WARNING..., [!] ERROR...
 _WARN_MARKER_RE = re.compile(r"\[!\]\s+(Failed|WARNING|ERROR)", re.IGNORECASE)
+
+# Hard-error marker — schema drift requires manual bootstrap of views, so the
+# asset raises on this to fire run_failure_sensor → Lark alert → operator acts.
+_SCHEMA_DRIFT_RE = re.compile(r"\[!\]\s+SCHEMA_DRIFT")
 
 
 @asset(
@@ -84,6 +88,17 @@ def sapo_serving_db(context: AssetExecutionContext):
     if warnings:
         for w in warnings:
             context.log.warning(f"⚠️ {w}")
+
+    # Schema drift — new table folder appeared. Raise to trigger Lark alert
+    # so operator knows to run bootstrap_serving_views.py manually.
+    drifts = [line for line in output_lines if _SCHEMA_DRIFT_RE.search(line)]
+    if drifts:
+        raise Exception(
+            "Schema drift detected — new table folders in rolling/. "
+            "Run `docker compose exec data_platform python "
+            "scripts/provisioning/bootstrap_serving_views.py` to create views. "
+            f"Markers: {drifts}"
+        )
 
     result_stdout = "\n".join(output_lines)
     return Output(
