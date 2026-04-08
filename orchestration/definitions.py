@@ -9,6 +9,8 @@ sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job, AssetSelection, schedule, RunRequest
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, dbt, serving
+from orchestration.sensors.failure_alerting import lark_failure_sensor
+from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
 
 # Load all assets
 # Load all assets
@@ -145,7 +147,11 @@ defs = Definitions(
     schedules=[
         realtime_schedule,
         incremental_schedule,
-        nightly_schedule
+        nightly_schedule,
+    ],
+    sensors=[
+        lark_failure_sensor,
+        stuck_run_sensor,
     ],
     resources={
         "dbt": DbtCliResource(
