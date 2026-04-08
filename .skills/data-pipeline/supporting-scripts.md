@@ -8,7 +8,7 @@ Các script hỗ trợ cho data pipeline — không thuộc core ingestion/trans
 
 ### `scripts/provisioning/generate_serving_db.py`
 
-**Mục đích:** Tạo/update Smart Views trong `olap.duckdb` từ rolling parquets + garbage collect file cũ.
+**Mục đích:** Tạo/update Rolling Self-Refresh Views trong `olap.duckdb` từ rolling parquets + garbage collect file cũ.
 
 **Input:**
 - `DBT_DATA_LAKE_PATH` env (default `/app/data_lake`)

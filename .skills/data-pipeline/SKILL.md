@@ -7,7 +7,7 @@ Skill hỗ trợ thêm data source mới vào pipeline end-to-end:
 
 - "thêm source mới", "add new ingestion", "integrate [source_name]"
 - "tạo dbt model mới", "thêm src_/stg_/dim_/fact_ model"
-- Hỏi về envelope schema, dedup strategy, incremental dbt, OOM, rolling snapshots, smart views
+- Hỏi về envelope schema, dedup strategy, incremental dbt, OOM, rolling snapshots, rolling self-refresh views
 - Debug: dlt auth, dbt memory, Dagster asset fail, serving DB lock, empty folder
 
 ---
@@ -35,7 +35,7 @@ API Source ─┐
          DBT_EXPORT_PATH/rolling/{model}/{model}_{timestamp}.parquet
                               │
                               ▼
-              [generate_serving_db.py]  (Smart Views + GC)
+              [generate_serving_db.py]  (Rolling Self-Refresh Views + GC)
                               │
                               ▼
                data_lake/serving/olap.duckdb  (Metabase query here)
@@ -80,7 +80,7 @@ Xem `checklist.md` — thực hiện theo 6 phase.
 | `lessons-learned.md` | Lessons ingestion: dlt config, incremental, auth |
 | `dbt-patterns.md` | **Lessons dbt**: OOM fix, materialization, dedup, rolling location, partition pruning, time dim |
 | `dagster-patterns.md` | **Lessons Dagster**: hybrid job race, schedule offset, zombie threads, upstream injection |
-| `serving-layer.md` | **Cơ chế serving DB**: Smart Views, GC, zero-downtime swap |
+| `serving-layer.md` | **Cơ chế serving DB**: Rolling Self-Refresh Views, GC, zero-downtime swap |
 | `supporting-scripts.md` | **Supporting scripts**: generate_serving_db, run_dbt, clean_dlt_state... |
 | `troubleshooting.md` | Symptom → Cause → Fix (dlt + dbt + serving + Dagster) |
 
@@ -130,7 +130,7 @@ transformation/                        # dbt layer
 
 scripts/                               # Project-level scripts
 ├── provisioning/
-│   └── generate_serving_db.py         # Rolling → Smart Views + GC
+│   └── generate_serving_db.py         # Rolling → Rolling Self-Refresh Views + GC
 ├── ensure_dbt_directories.py          # Pre-create rolling/ dirs
 ├── clean_dlt_state.py                 # Drop pending dlt packages
 └── debug_duckdb.py                    # Query debugging
@@ -148,7 +148,7 @@ data_lake/                             # Runtime data
 ├── sapo_warehouse.duckdb              # dbt working DB
 ├── export/marts/rolling/              # dbt mart exports
 │   └── {model}/{model}_{ts}.parquet
-└── serving/olap.duckdb                # Smart Views (Metabase reads)
+└── serving/olap.duckdb                # Rolling Self-Refresh Views (Metabase reads)
 ```
 
 ---

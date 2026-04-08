@@ -142,7 +142,7 @@ Tách `generate_serving_db.py` thành 2 tác vụ:
 **A. `bootstrap_serving_views.py`** (chạy thủ công khi schema thay đổi):
 - Connect vào DB (chấp nhận cần dừng Metabase tạm thời, hoặc Metabase chưa kết nối)
 - Scan tất cả subdirs → `CREATE OR REPLACE VIEW` cho từng table
-- Smart View đã có sẵn logic `WHERE filename = max_fn` → tự pick parquet mới nhất
+- Rolling Self-Refresh View đã có sẵn logic `WHERE filename = max_fn` → tự pick parquet mới nhất
 - Đóng connection, exit
 
 **B. `refresh_rolling.py`** (chạy mỗi pipeline run, asset hiện tại):
@@ -162,7 +162,7 @@ User confirm: **không có table mới thường xuyên**, NHƯNG partition/roll
 - So với danh sách subdirs lần trước (lưu trong file marker `.serving_views.json`)
 - Nếu có subdir mới → log warning + (optional) trigger Phase 3 sensor để rebuild view
 
-Hoặc cách KISS hơn: smart view dùng glob pattern `rolling/<table>/*.parquet`. Nếu table folder đã tồn tại từ đầu, không cần update view khi có file mới (view auto-pick max). Chỉ cần rebuild view khi có **table folder** mới — chuyện hiếm.
+Hoặc cách KISS hơn: rolling self-refresh view dùng glob pattern `rolling/<table>/*.parquet`. Nếu table folder đã tồn tại từ đầu, không cần update view khi có file mới (view auto-pick max). Chỉ cần rebuild view khi có **table folder** mới — chuyện hiếm.
 
 → Viable: `refresh_rolling.py` ghi list subdirs hiện tại ra file marker. Nếu khác lần trước → emit log line `[!] SCHEMA_DRIFT: new table 'X'` → run_failure_sensor (Phase 2 của Dagster plan) sẽ alert qua Lark → người vận hành chạy `bootstrap_serving_views.py` thủ công 1 lần.
 
@@ -208,7 +208,7 @@ Giảm 90% log volume → giảm pipe pressure → giảm I/O → tốc độ pi
 | Metric | Before | After |
 |---|---|---|
 | Pipeline cần lock DuckDB lúc runtime | ✅ | ❌ |
-| Smart view stale khi Metabase chạy | ✅ | ❌ |
+| Rolling Self-Refresh View stale khi Metabase chạy | ✅ | ❌ |
 | Restart Metabase để sync schema | Không cần (vì view không update) | Chỉ cần khi schema drift (hiếm) |
 | GC log volume | ~N×M dòng | ~N dòng (1/table) |
 

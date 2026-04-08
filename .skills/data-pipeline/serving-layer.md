@@ -1,6 +1,12 @@
 # Serving Layer Mechanism
 
-Cơ chế serving DB cho DuckDB: **rolling snapshots + smart views + zero-downtime swap**.
+Cơ chế serving DB cho DuckDB: **rolling snapshots + Rolling Self-Refresh Views + zero-downtime swap**.
+
+> **Terminology note (2026-04-08):** Trước đây gọi là `Smart View` — tên cũ mơ hồ ("smart" chỗ nào?). Tên mới `Rolling Self-Refresh View`
+> nhấn mạnh cơ chế bên trong:
+> - **Rolling**: nhiều phiên bản parquet coexist trong `rolling/<table>/`, GC xóa dần cái cũ
+> - **Self-Refresh**: view scan glob và tự pick `max(filename)` mỗi query — không cần manual `CREATE OR REPLACE`
+> - **View**: DuckDB view object, không phải materialized
 
 ---
 
@@ -17,7 +23,7 @@ data_lake/export/marts/rolling/{model}/
                 │
                 │ [generate_serving_db.py]
                 │ 1. Scan each table folder
-                │ 2. Create/update Smart View in olap.duckdb
+                │ 2. Create/update Rolling Self-Refresh View in olap.duckdb
                 │ 3. Garbage collect old parquets
                 ▼
 data_lake/serving/olap.duckdb
@@ -46,13 +52,13 @@ rolling/dim_customers/dim_customers_20260407120000.parquet
 rolling/dim_customers/dim_customers_20260407130000.parquet  ← new run
 ```
 
-**Naming quan trọng:** Timestamp ở cuối filename → **lexical sort = chronological sort**. Smart view dùng `max(filename)` để pick latest.
+**Naming quan trọng:** Timestamp ở cuối filename → **lexical sort = chronological sort**. Rolling Self-Refresh View dùng `max(filename)` để pick latest.
 
 **Mỗi dbt run tạo file mới** — không overwrite. Zero-downtime vì old file vẫn valid cho các query đang chạy.
 
 ---
 
-## 2. Smart View Pattern
+## 2. Rolling Self-Refresh View Pattern
 
 **Core idea:** View tự động trỏ đến file mới nhất trong folder, không cần update view definition mỗi lần dbt chạy lại.
 
@@ -88,7 +94,7 @@ WHERE filename = (SELECT max_fn FROM latest)
 
 ## 3. Garbage Collection
 
-Sau khi smart view được update, script xóa các file cũ (giữ lại file mới nhất):
+Sau khi rolling self-refresh view được update, script xóa các file cũ (giữ lại file mới nhất):
 
 ```python
 def garbage_collect(folder_path, latest_file):
@@ -126,7 +132,7 @@ if not db_locked and con:
 ```
 
 **Lý do an toàn:**
-- Smart views đã được tạo từ trước → query vẫn trả về latest file (vì view definition là glob pattern, không phải static file path)
+- Rolling Self-Refresh Views đã được tạo từ trước → query vẫn trả về latest file (vì view definition là glob pattern, không phải static file path)
 - GC vẫn chạy được vì chỉ cần filesystem access
 - Lần chạy sau khi DB free → view definition được update nếu cần
 
@@ -189,7 +195,7 @@ sapo_accounts_batch_asset
 sapo_dbt_assets (build all models + export rolling parquets)
          │
          ▼
-sapo_serving_db (Smart Views + GC)
+sapo_serving_db (Rolling Self-Refresh Views + GC)
          │
          ▼
 [Metabase refreshes dashboards]
@@ -217,7 +223,7 @@ duckdb data_lake/serving/olap.duckdb -c "SELECT name FROM sqlite_master WHERE ty
 # Xem view definition
 python transformation/check_view.py   # hard-coded: dim_channels, fact_sales
 
-# Count rows trong smart view
+# Count rows trong rolling self-refresh view
 duckdb data_lake/serving/olap.duckdb -c "SELECT COUNT(*) FROM dim_customers"
 
 # Kiểm tra latest file trong rolling folder

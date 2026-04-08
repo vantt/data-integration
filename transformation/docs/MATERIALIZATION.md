@@ -180,7 +180,7 @@ FROM {{ ref('stg_sapo_customers') }}
 
 Output: `dim_customers/dim_customers_20260128_0400.parquet`
 
-### Smart View Generation
+### Rolling Self-Refresh View Generation
 
 Serving layer views auto-select latest snapshot:
 

@@ -253,7 +253,7 @@ The system operates in **two runtime modes** — all code MUST work in both:
 Two distinct DuckDB files separate **Write** from **Read** to prevent locking:
 
 1.  **Warehouse DB** (`data_lake/sapo_warehouse.duckdb`): dbt writes here. Uses Docker paths.
-2.  **Serving DB** (`data_lake/serving/olap.duckdb`): Metabase reads here. Contains smart views pointing to latest Parquet exports.
+2.  **Serving DB** (`data_lake/serving/olap.duckdb`): Metabase reads here. Contains rolling self-refresh views pointing to latest Parquet exports.
 
 **Critical Rule**: Fixing `dbt` only updates warehouse DB. You **MUST** run `generate_serving_db.py` to propagate changes to serving DB. Ensure `PORTABLE_ROOT` matches the Docker mount path.
 

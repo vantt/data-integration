@@ -120,7 +120,7 @@ Memory-efficient deduplication for DuckDB:
 Zero-downtime serving updates:
 
 1. Export marts to timestamped Parquet files
-2. Smart views auto-select latest snapshot
+2. Rolling Self-Refresh Views auto-select latest snapshot
 3. Old files cleaned up after confirmation
 
 ### Tags

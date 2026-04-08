@@ -184,7 +184,7 @@ Dùng trong ROW_NUMBER() ORDER BY phase tech dedup.
 
 **Output:** `rolling/dim_customers/dim_customers_20260407120000.parquet`
 
-Timestamp-versioned → mỗi dbt run tạo file mới → smart view pick up latest → zero-downtime swap.
+Timestamp-versioned → mỗi dbt run tạo file mới → rolling self-refresh view pick up latest → zero-downtime swap.
 
 ---
 

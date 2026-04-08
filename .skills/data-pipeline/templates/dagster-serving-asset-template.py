@@ -51,7 +51,7 @@ def {source}_serving_db(context: AssetExecutionContext):
     """
     Chạy generate_serving_db.py để:
       1. Scan rolling/{model}/ tìm latest parquet
-      2. Create/update Smart Views trong serving/olap.duckdb
+      2. Create/update Rolling Self-Refresh Views trong serving/olap.duckdb
       3. Garbage collect các parquet file cũ
     """
     context.log.info(f"Starting Serving Layer Generation...")

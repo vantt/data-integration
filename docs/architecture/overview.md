@@ -141,7 +141,7 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 │ HOP 7: SERVING LAYER                                                        │
 │                                                                             │
 │  data_lake/serving/olap.duckdb                                              │
-│  - Smart views pointing to latest Parquet snapshots                         │
+│  - Rolling Self-Refresh Views pointing to latest Parquet snapshots                         │
 │  - Zero-downtime updates (immutable files)                                  │
 │                                                                             │
 │  Metabase (Docker)                                                          │
@@ -316,7 +316,7 @@ data_lake/serving/olap.duckdb
 
 **Zero-Downtime Updates:**
 1. dbt creates new timestamped Parquet files
-2. Smart views auto-select latest files
+2. Rolling Self-Refresh Views auto-select latest files
 3. No locking, no interruption to queries
 
 ---

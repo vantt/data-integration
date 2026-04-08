@@ -75,8 +75,8 @@
 | View bị drop sau serving script | Folder trống → script tự drop view | Giống trên — fix source của vấn đề trong dbt model |
 | Metabase query fail `view does not exist` | View bị drop do empty folder | Re-run `generate_serving_db.py` sau khi fix dbt model |
 | `[GC] SKIP Locked file` | Linux reader đang đọc file cũ | Bình thường — next run sẽ retry. Không phải lỗi |
-| `WARNING: Could not connect to DuckDB` | `olap.duckdb` đang bị lock bởi reader | Bình thường (best-effort mode) — smart views đã có sẵn, query vẫn work |
-| Smart view trả data cũ | Latest file mới chưa được viết xong khi view query | Race condition hiếm — retry query sau vài giây |
+| `WARNING: Could not connect to DuckDB` | `olap.duckdb` đang bị lock bởi reader | Bình thường (best-effort mode) — rolling self-refresh views đã có sẵn, query vẫn work |
+| Rolling Self-Refresh View trả data cũ | Latest file mới chưa được viết xong khi view query | Race condition hiếm — retry query sau vài giây |
 | Rolling folder có nhiều file cũ | GC fail liên tục | Kiểm tra quyền folder, hoặc chạy manual `generate_serving_db.py` |
 
 ## Dagster — Asset / Job

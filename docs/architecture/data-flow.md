@@ -423,7 +423,7 @@ data_lake/export/marts/rolling/
 └── ...
 ```
 
-### Smart View Generation
+### Rolling Self-Refresh View Generation
 
 ```sql
 -- olap.duckdb automatically selects latest file

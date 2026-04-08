@@ -46,12 +46,17 @@ def _list_subdirs(path: str) -> list[str]:
     )
 
 
-def _make_smart_view_sql(table_name: str) -> str:
-    """Build a self-refreshing view SQL.
+def _build_rolling_view_sql(table_name: str) -> str:
+    """Build SQL for a Rolling Self-Refresh View.
 
-    The view scans all parquet files in the folder, computes max(filename),
-    and returns only rows from that latest file. No refresh needed when new
-    files arrive — the view auto-picks the latest on each query.
+    Mechanism:
+      - "Rolling":      multiple parquet versions coexist in rolling/<table>/,
+                        older files are GC'd after each pipeline run
+      - "Self-Refresh": view scans the folder glob and picks max(filename)
+                        at query time — no manual CREATE OR REPLACE needed
+                        when new parquet files arrive
+      - Zero-downtime:  Metabase queries continue to work during GC because
+                        the view always resolves to the latest surviving file
     """
     portable_glob = f"{PORTABLE_ROOT}/export/marts/rolling/{table_name}/*.parquet"
     return f"""
@@ -124,7 +129,7 @@ def bootstrap() -> None:
                 continue
 
             try:
-                con.sql(_make_smart_view_sql(table_name))
+                con.sql(_build_rolling_view_sql(table_name))
                 print(f"  {table_name}: CREATED/REPLACED")
                 created += 1
             except Exception as e:
