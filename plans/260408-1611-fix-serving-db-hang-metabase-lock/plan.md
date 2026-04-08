@@ -14,13 +14,22 @@ trigger: Job 2c6d50cf stuck 16h tại sapo_serving_db
 
 ## TL;DR
 
-Job stuck **không phải 1 bug, là 3 lỗi xếp chồng**:
+> **POST-MORTEM UPDATE (2026-04-08, after Day 4):** Original hypothesis about
+> Metabase JDBC lock was **WRONG**. Verification showed DuckDB read_only mode
+> does NOT acquire file locks, and RW connections succeed in 15ms while Metabase
+> is running. The ONLY root cause of the 16h hang is subprocess pipe deadlock
+> (Phase 1.2). Pattern C (Phase 2) was kept for design cleanliness and
+> schema-drift detection, not lock avoidance. See "Post-mortem" section below.
+
+Job stuck **thực tế chỉ có 1 nguyên nhân**:
 
 1. **Subprocess pipe deadlock** (root cause hang) — `capture_output=True` + không timeout + script in nhiều log → OS pipe đầy → child block → parent block forever.
-2. **Metabase JDBC giữ exclusive lock** trên `olap.duckdb` 24/7 → script provisioning không bao giờ update view được, chỉ chạy GC nhánh fallback.
+
+Các vấn đề khác phát hiện trong quá trình điều tra:
+2. ~~Metabase JDBC giữ exclusive lock~~ — **sai**, đã verify không có lock contention.
 3. **Warning detector quá lỏng** — flag `[!] Empty folder` (bình thường) thành warning, đồng thời `if "error" in stdout_lower` match cả "0 errors". Noise + false negative.
 
-Fix theo 3 phase, mỗi phase độc lập deploy được. **Phase 1 = stop the bleeding**. Phase 2-3 = root cause + observability.
+Fix theo 3 phase, mỗi phase độc lập deploy được. **Phase 1 = stop the bleeding** (ĐÚNG root cause). Phase 2-3 = design cleanup + observability (giá trị độc lập, không liên quan lock).
 
 ---
 
@@ -432,6 +441,43 @@ def stuck_run_sensor(context: SensorEvaluationContext):
 - Cursor dedup theo `run_id` → 1 run chỉ alert 1 lần, dù tick bao nhiêu lần.
 - Tick 10 phút + threshold 45 phút → worst case phát hiện sau ~55 phút. Spam được chống bằng cursor nên tick nhanh không gây noise.
 - Cursor giới hạn 100 run_id để không phình vô hạn. Run cũ sẽ rơi ra; không alert lại vì cũng không còn ở STARTED.
+
+## Post-mortem: Lock hypothesis was wrong
+
+Sau khi triển khai xong toàn bộ plan, user đặt câu hỏi: "Metabase dùng lớp
+serving_db, làm sao bị lock?". Verify thực tế phát hiện giả định ban đầu sai.
+
+**Test** (Metabase + data_platform cùng up, cùng dùng `/app/data_lake/serving/olap.duckdb`):
+```
+RW connect SUCCESS in 15.2ms
+RO connect SUCCESS (parallel)
+```
+
+**Kết luận kỹ thuật:**
+- DuckDB `read_only=true` mode **KHÔNG acquire file lock** — chỉ mmap file để
+  đọc. Khác với SQLite (dùng shared lock cho reader).
+- Metabase driver MotherDuck v1.4.4 với `read_only=true` cũng không giữ lock.
+- Writer mới có thể connect bất cứ lúc nào, kể cả khi Metabase đang query.
+
+**Hệ quả cho hypothesis cũ:**
+- Giả định "Metabase JDBC exclusive lock chặn pipeline" → SAI
+- Giả định "views không update được khi Metabase chạy" → SAI (không test được
+  từ đầu, chỉ suy luận sai từ catch block trong code cũ)
+- `[!] WARNING: Could not connect to DuckDB` catch trong `generate_serving_db.py`
+  có thể chưa bao giờ fire trong production hiện tại, chỉ là defensive code.
+
+**Tại sao Phase 2 (Pattern C) vẫn được giữ:**
+1. Runtime asset không cần import `duckdb` — smaller dependency surface
+2. Separation of concerns: bootstrap = schema lifecycle, refresh = data GC
+3. Schema drift detection via `.known_tables.json` — feature mới, không cũ
+4. Bootstrap explicit command rõ ràng trong runbook hơn "silent skip" cũ
+5. Code đã deploy và verified, revert sẽ churn thêm
+
+**Lessons learned:**
+- Hypothesis về locking cần verify bằng test thực tế trước khi build plan lớn
+- "Catch + warning" trong code cũ không tự động chứng minh bug tồn tại —
+  defensive code có thể không fire bao giờ
+- Root cause analysis cần phân biệt: "bug thực sự gây vụ việc" vs "bug tiềm năng"
 
 ## Additional Decisions (user-confirmed 2026-04-08, round 2)
 
