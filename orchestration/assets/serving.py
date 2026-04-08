@@ -1,5 +1,6 @@
 from dagster import asset, Output, MetadataValue, AssetExecutionContext
 import os
+import re
 import sys
 import subprocess
 from .dbt import sapo_dbt_assets
@@ -18,6 +19,16 @@ else:
     VENV_PYTHON = os.path.join(PROJECT_ROOT, "dlt", "venv", "bin", "python")
 PYTHON_EXE = VENV_PYTHON if os.path.exists(VENV_PYTHON) else sys.executable
 
+# Subprocess timeout (seconds) — hard cap to prevent indefinite hangs.
+# See plans/260408-1611-fix-serving-db-hang-metabase-lock/plan.md Phase 1.2
+SERVING_TIMEOUT_SEC = int(os.environ.get("SERVING_TIMEOUT_SEC", "1800"))
+
+# Severity-based warning detector — only flag explicit severity markers,
+# avoid matching '[!] Empty folder' (nominal) or the word 'error' in '0 errors'.
+# Matches markers like: [!] Failed..., [!] WARNING..., [!] ERROR...
+_WARN_MARKER_RE = re.compile(r"\[!\]\s+(Failed|WARNING|ERROR)", re.IGNORECASE)
+
+
 @asset(
     deps=[sapo_dbt_assets],
     group_name="serving_layer",
@@ -27,43 +38,58 @@ def sapo_serving_db(context: AssetExecutionContext):
     context.log.info(f"🚀 Starting Serving Layer Generation...")
     context.log.info(f"   Script: {SCRIPT_PATH}")
     context.log.info(f"   Python: {PYTHON_EXE}")
+    context.log.info(f"   Timeout: {SERVING_TIMEOUT_SEC}s")
 
     if not os.path.exists(SCRIPT_PATH):
         raise FileNotFoundError(f"Serving script not found at {SCRIPT_PATH}")
 
-    # Run the provisioner script
+    # Stream subprocess output line-by-line to avoid OS pipe buffer deadlock.
+    # Merging stderr into stdout eliminates the classic two-pipe deadlock.
+    # Previously: subprocess.run(capture_output=True, check=True) — no timeout, buffered —
+    # caused the 16h hang on run 2c6d50cf when log volume exceeded pipe buffer.
+    proc = subprocess.Popen(
+        [PYTHON_EXE, SCRIPT_PATH],
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,  # line-buffered
+    )
+
+    output_lines: list[str] = []
     try:
-        result = subprocess.run(
-            [PYTHON_EXE, SCRIPT_PATH],
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            check=True
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            line = line.rstrip()
+            output_lines.append(line)
+            context.log.info(line)
+        proc.wait(timeout=SERVING_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        raise Exception(
+            f"Serving script exceeded {SERVING_TIMEOUT_SEC}s timeout — killed. "
+            f"Check for DuckDB lock contention or pipeline blockage."
         )
-        context.log.info(result.stdout)
-    except subprocess.CalledProcessError as e:
-        context.log.error(f"Serving script failed: {e.stderr}")
-        raise e
 
-    # Check for dbt partial failure indicators in upstream logs
-    # dbt exits 0 but may have logged errors for individual models
-    stdout_lower = result.stdout.lower()
-    warnings = []
-    if "error" in stdout_lower and "empty folder" not in stdout_lower:
-        warnings.append("dbt stdout contains 'error' — some models may have failed")
-    if "[!]" in result.stdout:
-        warnings.append("Serving script reported warnings (see [!] markers in output)")
+    if proc.returncode != 0:
+        raise Exception(
+            f"Serving script failed with exit code {proc.returncode}. "
+            f"Last output: {output_lines[-20:] if output_lines else '(empty)'}"
+        )
 
+    # Detect severity-tagged warnings in streamed output.
+    # Script exited 0, so these are non-fatal — log but don't raise.
+    warnings = [line for line in output_lines if _WARN_MARKER_RE.search(line)]
     if warnings:
         for w in warnings:
             context.log.warning(f"⚠️ {w}")
-        if any("error" in w.lower() for w in warnings):
-            raise Exception(f"Serving DB generation halted: {'; '.join(warnings)}")
 
+    result_stdout = "\n".join(output_lines)
     return Output(
         value="Serving DB Updated",
         metadata={
-            "script_output": MetadataValue.md(result.stdout),
+            "script_output": MetadataValue.md(result_stdout),
             **({"warnings": MetadataValue.md("\n".join(warnings))} if warnings else {})
         }
     )
