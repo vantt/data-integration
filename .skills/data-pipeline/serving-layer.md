@@ -116,25 +116,28 @@ def garbage_collect(folder_path, latest_file):
 
 ---
 
-## 4. Best-Effort DB Lock Handling
+## 4. DuckDB Lock Behavior — KHÔNG phải vấn đề như từng nghĩ
 
-Nếu `olap.duckdb` đang bị lock (Metabase hoặc process khác đang connect), script **không fail**:
+> **Post-mortem update 2026-04-08:** Trước đây phần này mô tả "best-effort lock handling" như defensive cho lock contention. Verified empirically rằng giả định ban đầu **sai**.
 
-```python
-try:
-    con = duckdb.connect(SERVING_DB_PATH)
-except Exception:
-    db_locked = True  # Skip view updates, but vẫn chạy GC
+**Sự thật về DuckDB locking:**
+- DuckDB connection mode `read_only=true` **KHÔNG acquire bất kỳ file lock nào** — chỉ mmap để read
+- Khác SQLite (dùng shared lock cho readers)
+- Metabase MotherDuck JDBC driver v1.4.4 với `read_only=true` cũng không lock
+- **Test thực tế:** Metabase connected + holding session, Python `duckdb.connect(path)` (default RW) succeed trong 15ms. 2 reader + 1 writer cùng file = OK
 
-# Later:
-if not db_locked and con:
-    con.sql("CREATE OR REPLACE VIEW ...")
-```
+**Hệ quả:**
+- Pipeline writer (`bootstrap_serving_views.py`) + Metabase reader có thể coexist trên cùng `olap.duckdb`
+- Script cũ có catch `except Exception: db_locked = True` — defensive code, **rất hiếm khi fire** trong production hiện tại
+- Không cần stop Metabase trước khi chạy bootstrap (trừ khi muốn an toàn tuyệt đối)
 
-**Lý do an toàn:**
-- Rolling Self-Refresh Views đã được tạo từ trước → query vẫn trả về latest file (vì view definition là glob pattern, không phải static file path)
-- GC vẫn chạy được vì chỉ cần filesystem access
-- Lần chạy sau khi DB free → view definition được update nếu cần
+**Pattern hiện tại (sau Pattern C split):**
+1. `refresh_rolling.py` — chạy mỗi pipeline run, **không** mở DuckDB. Chỉ GC parquet files + detect schema drift.
+2. `bootstrap_serving_views.py` — chạy thủ công khi schema drift. Mở DB rw, `CREATE OR REPLACE VIEW` cho từng table.
+
+→ Runtime path không touch DB → kể cả nếu lock contention thực sự xảy ra (giả sử driver tương lai thay đổi behavior), pipeline vẫn không bị ảnh hưởng.
+
+**Reference:** `lessons-learned.md` L18 cho chi tiết verification + `plans/260408-1611-fix-serving-db-hang-metabase-lock/plan.md` post-mortem section.
 
 ---
 
@@ -170,19 +173,51 @@ rolling/fact_orders/
 
 ## 7. Dagster Integration
 
-**Asset DAG:**
+**Pattern C — Split runtime vs bootstrap:**
+
+| Script | Khi nào chạy | Mở DuckDB? |
+|---|---|---|
+| `scripts/provisioning/refresh_rolling.py` | Mỗi pipeline run (Dagster asset) | ❌ KHÔNG |
+| `scripts/provisioning/bootstrap_serving_views.py` | Thủ công khi schema drift | ✅ Có |
+
+**Asset code:**
 ```python
 # orchestration/assets/serving.py
-@asset(
-    deps=[sapo_dbt_assets],    # Chạy SAU khi dbt assets complete
-    group_name="serving_layer"
-)
-def sapo_serving_db(context):
-    subprocess.run(
-        [PYTHON_EXE, SCRIPT_PATH],   # scripts/provisioning/generate_serving_db.py
+@asset(deps=[sapo_dbt_assets], group_name="serving_layer")
+def sapo_serving_db(context: AssetExecutionContext):
+    # Streaming subprocess — see lessons-learned.md L17
+    proc = subprocess.Popen(
+        [PYTHON_EXE, "scripts/provisioning/refresh_rolling.py"],
         cwd=PROJECT_ROOT,
-        check=True
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
     )
+    output_lines = []
+    for line in proc.stdout:
+        output_lines.append(line.rstrip())
+        context.log.info(line.rstrip())
+    proc.wait(timeout=int(os.environ.get("SERVING_TIMEOUT_SEC", "1800")))
+    if proc.returncode != 0:
+        raise Exception(f"refresh_rolling exit {proc.returncode}")
+
+    # Schema drift → raise to fire run_failure_sensor → Lark alert
+    if any("[!] SCHEMA_DRIFT" in line for line in output_lines):
+        raise Exception("Schema drift — run bootstrap_serving_views.py")
+```
+
+**Schema drift detection:**
+- `refresh_rolling.py` ghi `.known_tables.json` marker file mỗi run
+- Nếu phát hiện table folder mới so với marker → emit `[!] SCHEMA_DRIFT: <table>`
+- Asset raise → `run_failure_sensor` (Lark) alert → operator chạy bootstrap thủ công
+
+**Bootstrap workflow:**
+```bash
+# Stop Metabase (optional với DuckDB read_only — xem mục 4)
+docker compose stop metabase
+docker compose exec data_platform python scripts/provisioning/bootstrap_serving_views.py
+docker compose start metabase
 ```
 
 **Asset chain (nightly job):**
@@ -195,7 +230,7 @@ sapo_accounts_batch_asset
 sapo_dbt_assets (build all models + export rolling parquets)
          │
          ▼
-sapo_serving_db (Rolling Self-Refresh Views + GC)
+sapo_serving_db (refresh_rolling.py — GC + drift detect)
          │
          ▼
 [Metabase refreshes dashboards]

@@ -75,7 +75,8 @@
 | View bị drop sau serving script | Folder trống → script tự drop view | Giống trên — fix source của vấn đề trong dbt model |
 | Metabase query fail `view does not exist` | View bị drop do empty folder | Re-run `generate_serving_db.py` sau khi fix dbt model |
 | `[GC] SKIP Locked file` | Linux reader đang đọc file cũ | Bình thường — next run sẽ retry. Không phải lỗi |
-| `WARNING: Could not connect to DuckDB` | `olap.duckdb` đang bị lock bởi reader | Bình thường (best-effort mode) — rolling self-refresh views đã có sẵn, query vẫn work |
+| `WARNING: Could not connect to DuckDB` | Defensive catch — verified empirically rất hiếm fire vì DuckDB read_only mode KHÔNG acquire file lock | Best-effort mode safe — không cần action. Xem `lessons-learned.md` L18 |
+| **Asset hang vô hạn (16h+) ở subprocess call** | `subprocess.run(capture_output=True)` deadlock pipe khi script in nhiều log | Đổi sang `Popen` + streaming read + `timeout=`. Xem `lessons-learned.md` L17 |
 | Rolling Self-Refresh View trả data cũ | Latest file mới chưa được viết xong khi view query | Race condition hiếm — retry query sau vài giây |
 | Rolling folder có nhiều file cũ | GC fail liên tục | Kiểm tra quyền folder, hoặc chạy manual `generate_serving_db.py` |
 
@@ -95,6 +96,9 @@
 | 2 schedule cùng trigger gây deadlock | Start-time race — cả hai check "other running?" cùng lúc | Offset cron minute marks (e.g., realtime: `1,4,7...`; incremental: `*/10 0-3,5-23`) — xem `dagster-patterns.md` Lesson 2 |
 | Schedule không skip khi job trước đó đang chạy | Thiếu check `NOT_STARTED` status | Include `DagsterRunStatus.NOT_STARTED` trong `statuses` filter của `get_runs()` |
 | dbt mart COPY fail với "directory not found" lần đầu | Rolling subfolder chưa tồn tại | Pre-create dirs trong `@dbt_assets` function (idempotent `os.makedirs(exist_ok=True)`) — không chỉ dựa vào standalone script |
+| **Queue tích lũy > N runs cho 1 job** | `tag_concurrency_limits` chỉ giới hạn dequeue, không giới hạn queue size — schedule cứ tick là queue thêm | Re-add self-overlap skip trong schedule body: `_has_active_run(context, job_name)` → `SkipReason`. Xem `lessons-learned.md` L19 |
+| **"Step blocked by limit for pool duckdb_lock"** sau khi cancel runs | Asset-level concurrency pool slot bị leak từ ghost run đã CANCELED — `report_run_canceled` không tự free slot | `docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py`. Xem `lessons-learned.md` L20 |
+| **2 runs cùng STARTED concurrent dù có concurrency tag** | Một run là pre-deploy ghost không có tag — coordinator không enforce trên runs cũ | Cancel ghost runs + chạy unstick_concurrency_pools.py. Tags chỉ áp dụng cho runs **launched after** deploy |
 
 ## Rate Limiting
 

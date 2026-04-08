@@ -321,3 +321,134 @@ def infer_uri(subject_type: str, subject_id: str) -> str:
 **Lý do dùng mapping table:** Một số entity type không follow convention (e.g., `inventory_item` → `/admin/inventory_items.json`). Hard-coded map an toàn hơn pluralize heuristic.
 
 **Gap-fill pattern:** History log dùng để catch events mà batch/webhook bỏ sót. Mọi entity đều đi qua cùng pipeline → envelope schema thống nhất, dedup ở dbt.
+
+---
+
+## Operational Hardening (post-mortem 2026-04-08)
+
+### L17 — Subprocess pipe deadlock từ `capture_output=True`
+
+**Symptom:** Job hang vô hạn (16h+) ở asset gọi subprocess. Không có log, không có error.
+
+**Root cause:** `subprocess.run(cmd, capture_output=True, check=True)` buffer stdout/stderr qua OS pipe (~64KB Linux/Windows). Khi child in nhiều log → pipe đầy → child block trên `print()` → parent block trên `check=True` chờ return → **classic deadlock, không có timeout cứu cánh**.
+
+**Fix pattern:**
+
+```python
+proc = subprocess.Popen(
+    cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.STDOUT,  # gộp 1 pipe → loại deadlock 2-pipe
+    text=True,
+    bufsize=1,                  # line-buffered
+)
+output_lines: list[str] = []
+try:
+    for line in proc.stdout:    # streaming read, không bao giờ đầy buffer
+        line = line.rstrip()
+        output_lines.append(line)
+        context.log.info(line)  # log ngay, không dump cuối
+    proc.wait(timeout=1800)     # HARD CAP — bắt buộc, không bỏ
+except subprocess.TimeoutExpired:
+    proc.kill(); proc.wait()
+    raise Exception(f"Script timeout after 1800s")
+if proc.returncode != 0:
+    raise Exception(f"Script failed exit={proc.returncode}")
+```
+
+**Rules:**
+1. **Không bao giờ** dùng `subprocess.run(capture_output=True)` cho command có thể in nhiều log
+2. Luôn có `timeout=` parameter — không có cứu cánh = hang vô hạn
+3. Gộp `stderr=STDOUT` thay vì 2 pipe riêng (đỡ deadlock)
+4. Stream read line-by-line, log real-time vào Dagster context
+
+Reference: `orchestration/assets/serving.py` post-fix.
+
+### L18 — DuckDB read_only mode KHÔNG acquire file lock
+
+**Misconception trước đó:** "Metabase JDBC giữ exclusive lock trên `olap.duckdb` → block writer". Sai.
+
+**Thực tế đã verified empirically:**
+- DuckDB driver mode `read_only=true` **không acquire bất kỳ file lock nào** — chỉ mmap để read
+- Khác SQLite (dùng shared lock cho readers)
+- Test: while Metabase up + giữ connection, Python `duckdb.connect(path)` (default RW) succeed trong 15ms
+- 2 reader + 1 writer cùng một file = OK, không xung đột
+
+**Hệ quả thiết kế:**
+- Pipeline writer + Metabase reader có thể coexist trên cùng `olap.duckdb`
+- Best-effort lock catch trong serving script là defensive only — trong production hiện tại có thể chưa bao giờ fire
+- Pattern C (split bootstrap + runtime refresh) vẫn có giá trị, nhưng vì design cleanliness chứ không phải vì lock contention
+
+**Cảnh báo:** Hypothesis về locking phải verify bằng test thực tế trước khi build plan lớn. "Catch + warning" trong code cũ không tự động chứng minh bug tồn tại — defensive code có thể không fire bao giờ.
+
+### L19 — QueuedRunCoordinator KHÔNG ngăn được queue buildup
+
+**Symptom:** Schedule tick mỗi 3 phút. Khi 1 run pending lâu, queue tích lũy unbounded — observed 28+ runs queued sau 1h20m.
+
+**Misconception:** "QueuedRunCoordinator + tag_concurrency_limits sẽ tự handle mutual exclusion → schedule có thể tối giản."
+
+**Thực tế:**
+- `tag_concurrency_limits` chỉ giới hạn **dequeue throughput** — chỉ N runs với cùng tag được LAUNCH cùng lúc
+- KHÔNG giới hạn **queue size** — schedule cứ tick là queue thêm
+- Queue tích lũy nhanh khi có run hung hoặc slow
+
+**Fix:** Vẫn cần self-overlap skip trong schedule body. Cross-job mutex giao cho coordinator (đơn giản hơn old priority chain), self-overlap giao cho schedule:
+
+```python
+_ACTIVE_STATUSES = [
+    DagsterRunStatus.QUEUED, DagsterRunStatus.NOT_STARTED,
+    DagsterRunStatus.STARTING, DagsterRunStatus.STARTED,
+]
+
+def _has_active_run(context, job_name: str) -> str | None:
+    runs = context.instance.get_runs(
+        filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES),
+        limit=1,
+    )
+    return runs[0].run_id if runs else None
+
+@schedule(...)
+def realtime_schedule(context):
+    active = _has_active_run(context, "sapo_realtime_sync_job")
+    if active:
+        return SkipReason(f"previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+```
+
+**Rule of thumb:**
+- Cross-job mutex → coordinator tag (`concurrency_group: dbt_rw`)
+- Self-overlap skip → schedule body check
+- **Không bao giờ** rely solely on coordinator để chống queue accumulation
+
+### L20 — Asset-level concurrency pool slot leak khi cancel runs
+
+**Symptom:** Sau khi cancel runs, runs mới `STARTED` nhưng kẹt với "Step blocked by limit for pool duckdb_lock". Pool show `slot_count=1 active=1 pending=N` — slot bị hold bởi run đã CANCELED.
+
+**Root cause:** Dagster `report_run_canceled()` **không tự release** asset-level concurrency pool slots (từ `op_tags={"dagster/concurrency_key": ...}`). Force-kill (container restart, OOM) cũng leak. Khác với tag-based run-level concurrency (coordinator handle release).
+
+**Verify state:**
+
+```python
+from dagster import DagsterInstance
+inst = DagsterInstance.get()
+els = inst.event_log_storage
+for key in els.get_concurrency_keys():
+    info = els.get_concurrency_info(key)
+    print(f"{key}: slot={info.slot_count} active={info.active_slot_count} "
+          f"pending={info.pending_step_count}")
+    print(f"  active_runs: {info.active_run_ids}")
+```
+
+**Fix:** Free slot manually từ run đã terminal:
+
+```python
+els.free_concurrency_slots_for_run(ghost_run_id)
+```
+
+**Tự động hóa:** Helper script `scripts/maintenance/unstick_concurrency_pools.py` scan mọi pool, free slot từ run không còn active. Idempotent. Chạy sau bất kỳ incident nào có cancel/kill runs.
+
+```bash
+docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py
+```
+
+**Rule:** Sau mỗi container restart hoặc cancel batch, **luôn** chạy unstick script trước khi resume schedules.

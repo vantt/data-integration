@@ -172,14 +172,92 @@ $Env:DBT_SEND_ANONYMOUS_USAGE_STATS = "false"
 
 ---
 
+## Lesson 5: QueuedRunCoordinator KHÔNG thay được self-overlap skip
+
+**Misconception (đã mắc phải):** "Sau khi có `QueuedRunCoordinator` + `tag_concurrency_limits`, có thể xóa toàn bộ SkipReason logic trong schedule. Coordinator sẽ tự handle."
+
+**Thực tế:**
+- `tag_concurrency_limits` enforce ở **launch time**, chỉ giới hạn N runs cùng tag được dequeue đồng thời
+- KHÔNG giới hạn queue size — schedule cứ tick là queue thêm
+- Khi 1 run pending lâu → queue tích lũy unbounded (observed: 28+ runs queued sau 1h20m)
+
+**Pattern đúng:**
+
+| Concern | Ai handle |
+|---|---|
+| Cross-job mutex (job A đang chạy, không cho job B chạy) | Coordinator `tag_concurrency_limits` + tag chung trong `define_asset_job(tags=...)` |
+| Self-overlap (job A đang chạy, không tạo thêm job A) | Schedule body với `_has_active_run()` check |
+| Queue size cap | Self-overlap skip (nếu đã có active run, không queue thêm) |
+
+**Code:**
+
+```python
+_ACTIVE_STATUSES = [
+    DagsterRunStatus.QUEUED, DagsterRunStatus.NOT_STARTED,
+    DagsterRunStatus.STARTING, DagsterRunStatus.STARTED,
+]
+
+def _has_active_run(context, job_name: str) -> str | None:
+    runs = context.instance.get_runs(
+        filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES),
+        limit=1,
+    )
+    return runs[0].run_id if runs else None
+
+@schedule(...)
+def realtime_schedule(context):
+    active = _has_active_run(context, "sapo_realtime_sync_job")
+    if active:
+        return SkipReason(f"previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+```
+
+**LOC tradeoff:** Schedule có ~5 dòng skip logic, nhưng đơn giản hơn old version với priority chain (~30 dòng). Cross-job priority đã delegate cho coordinator, schedule chỉ cần check self.
+
+---
+
+## Lesson 6: Asset-level concurrency pool slot leak khi cancel runs
+
+**Symptom:** Run mới chạy STARTED nhưng kẹt với log "Step blocked by limit for pool `duckdb_lock`". Dagster pool API hiển thị `active=1 pending=N` nhưng không có run nào active thực sự.
+
+**Root cause:** `report_run_canceled()` **không tự release** asset-level concurrency pool slots (từ `op_tags={"dagster/concurrency_key": "duckdb_lock"}`). Container restart, force-kill, OOM cũng leak. Khác với run-level tag concurrency (coordinator handle release).
+
+**Verify pool state:**
+
+```python
+from dagster import DagsterInstance
+inst = DagsterInstance.get()
+els = inst.event_log_storage
+for key in els.get_concurrency_keys():
+    info = els.get_concurrency_info(key)
+    print(f"{key}: slot={info.slot_count} active={info.active_slot_count} "
+          f"pending={info.pending_step_count}")
+    print(f"  active_runs: {info.active_run_ids}")
+```
+
+Nếu thấy `active_run_ids` chứa run đã CANCELED/FAILURE → leak.
+
+**Fix:** `els.free_concurrency_slots_for_run(run_id)` cho run terminal.
+
+**Tự động hóa:** `scripts/maintenance/unstick_concurrency_pools.py` — scan mọi pool, free slot cho mọi run không còn active. Idempotent. Chạy sau cancel batch hoặc container restart.
+
+```bash
+docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py
+```
+
+**Rule of thumb:** Cancel run ≠ release slot. Phải verify pool state sau bất kỳ incident nào.
+
+---
+
 ## Summary: Dagster Integration Checklist
 
 Khi add job/asset mới vào Dagster, kiểm tra:
 
 - [ ] Nếu job chứa nhiều ingestion methods → inject upstream keys trong `get_upstream_asset_keys()`
 - [ ] Cron schedule không collide với existing schedules (offset minute marks)
-- [ ] Schedule function check priority jobs + self active runs trước khi `RunRequest`
+- [ ] Schedule function check **self** active runs trước khi `RunRequest` (cross-job mutex giao cho coordinator tag, không cần priority chain) — xem Lesson 5
 - [ ] DuckDB writer assets có `op_tags={"dagster/concurrency_key": "duckdb_lock"}`
+- [ ] Sau mọi cancel batch / container restart: chạy `scripts/maintenance/unstick_concurrency_pools.py` để clear leaked slots — xem Lesson 6
 - [ ] `DLT_TELEMETRY_DISABLED=true` và `DBT_SEND_ANONYMOUS_USAGE_STATS=false` set ở process level
 - [ ] Ingestion assets: `argv=[]`, `os.chdir(DLT_DIR)`, `load_dlt_configuration()`
 - [ ] Mart dirs được pre-create trong `@dbt_assets` function
