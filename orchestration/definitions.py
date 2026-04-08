@@ -6,7 +6,7 @@ import shutil
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ingestion", "src"))
 
-from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job, AssetSelection, schedule
+from dagster import Definitions, load_assets_from_modules, ScheduleDefinition, define_asset_job, AssetSelection, schedule, RunRequest
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, dbt, serving
 
@@ -49,20 +49,23 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 # JOBS
 # ------------------------------------------------------------------------------
 
+# All sync jobs share the 'dbt_rw' concurrency group (limit 1 in dagster.yaml) —
+# this is the single-source-of-truth mutex for DuckDB writers. QueuedRunCoordinator
+# enforces it at the instance level, replacing the old manual SkipReason logic.
+SYNC_TAGS = {"concurrency_group": "dbt_rw"}
+
 # 1. Realtime Job (Webhook)
-# Triggered every minute.
 sapo_realtime_sync_job = define_asset_job(
     name="sapo_realtime_sync_job",
     selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
-    # tags={"concurrency_group": "dbt_rw"}, # Removed: Using Asset-level locking
+    tags=SYNC_TAGS,
 )
 
 # 2. Incremental Job (History Log)
-# Triggered every 10 minutes.
 sapo_incremental_sync_job = define_asset_job(
     name="sapo_incremental_sync_job",
     selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
-    tags={"dagster/max_retries": "0"}, # Removed: concurrency_group
+    tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
 # 2.5 Sheets Job (Manual)
@@ -71,10 +74,10 @@ sapo_incremental_sync_job = define_asset_job(
 sheets_sync_job = define_asset_job(
     name="sheets_sync_job",
     selection=AssetSelection.assets(sheets_assets.sheets_targets_asset) | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset),
+    tags=SYNC_TAGS,
 )
 
 # 3. Nightly Reconciliation Job (Batch)
-# Triggered at 04:00 AM.
 sapo_nightly_reconciliation_job = define_asset_job(
     name="sapo_nightly_reconciliation_job",
     selection=(
@@ -86,198 +89,45 @@ sapo_nightly_reconciliation_job = define_asset_job(
         all_dbt_assets |
         AssetSelection.assets(serving.sapo_serving_db)
     ),
-    # tags={"concurrency_group": "dbt_rw"},
+    tags=SYNC_TAGS,
 )
 
 # ------------------------------------------------------------------------------
 # SCHEDULES
 # ------------------------------------------------------------------------------
 
+# Schedules are now minimal: QueuedRunCoordinator + tag_concurrency_limits
+# (dagster.yaml: concurrency_group=dbt_rw limit 1) handle mutual exclusion at
+# the instance level. When a slot is busy, new runs queue instead of racing.
+# No SkipReason logic needed — the coordinator is the single source of truth.
+
 @schedule(
     job=sapo_realtime_sync_job,
-    # Run every ~3 minutes, avoiding 0,10,20,30,40,50 marks to prevent race with Incremental (*/10)
-    cron_schedule="1,4,7,11,14,17,21,24,27,31,34,37,41,44,47,51,54,57 * * * *",
-    execution_timezone="Asia/Ho_Chi_Minh"
+    cron_schedule="*/3 * * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
 )
-def realtime_schedule(context):
-    """
-    Schedule that skips execution if a previous run of the job is still active.
-
-    [TRICK - SCHEDULE OFFSET]
-    We deliberately exclude the 0, 10, 20... minute marks from this cron schedule.
-    Why? To prevent a "Start-Time Race Condition" with the Incremental Job (which runs at */10).
-    
-    If both jobs trigger at exactly 10:00:00:
-    1. Both start logic execution.
-    2. Both check "Is the other running?" -> Both see "No" (because the other is also just starting).
-    3. Both proceed -> Deadlock at duckdb_lock or resource exhaustion.
-    
-    By forcing Realtime to run only at minutes 1-9, 11-19, etc., we physically guarantee
-    that at minute 10, ONLY the Incremental job can start.
-    """
-    from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
-
-    # Check for active runs (not terminated)
-    # Define higher-priority jobs that this schedule should yield to
-    # Realtime yields to Nightly (Batch), Targets (Manual), and Incremental
-    priority_jobs = [
-        "sheets_sync_job",
-        "sapo_nightly_reconciliation_job",        
-        "sapo_incremental_sync_job"
-    ]
-
-    # Check for active runs of priority jobs
-    for job_name in priority_jobs:
-        active_priority_runs = context.instance.get_runs(
-            filters=RunsFilter(
-                job_name=job_name,
-                statuses=[
-                    DagsterRunStatus.STARTING,
-                    DagsterRunStatus.STARTED,
-                    DagsterRunStatus.QUEUED
-                ]
-            ),
-            limit=1
-        )
-        
-        if len(active_priority_runs) > 0:
-            return SkipReason(
-                f"Skipping run because higher-priority job '{job_name}' (Run ID: {active_priority_runs[0].run_id}) is active."
-            )
-
-    # Check for active runs of itself (standard overlap prevention)
-    active_runs = context.instance.get_runs(
-        filters=RunsFilter(
-            job_name="sapo_realtime_sync_job",
-            statuses=[
-                DagsterRunStatus.STARTING,
-                DagsterRunStatus.STARTED,
-                DagsterRunStatus.QUEUED,
-                DagsterRunStatus.NOT_STARTED
-            ]
-        ),
-        limit=1
-    )
-
-    if len(active_runs) > 0:
-        return SkipReason(
-            f"Skipping run because a previous run of this job (Run ID: {active_runs[0].run_id}) is still active."
-        )
-
+def realtime_schedule(_context):
     return RunRequest(run_key=None)
+
 
 @schedule(
     job=sapo_incremental_sync_job,
-    # Run every 10 minutes, BUT skip the 4 AM hour (04:00 - 04:59) entirely.
-    # This guarantees the Nightly Job (04:00) runs without a start-time race.
+    # Skip 4 AM hour entirely — nightly reconciliation runs then and holds the
+    # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
+    # ticks from piling up in the queue while nightly is running.
     cron_schedule="*/10 0-3,5-23 * * *",
-    execution_timezone="Asia/Ho_Chi_Minh"
+    execution_timezone="Asia/Ho_Chi_Minh",
 )
-def incremental_schedule(context):
-    """
-    Schedule that skips execution if a previous run of the job is still active.
-    """
-    from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
-
-    # Define higher-priority jobs that this schedule should yield to
-    # Incremental now yields to Realtime as well to ensure strict mutual exclusion
-    priority_jobs = [
-        "sheets_sync_job",
-        "sapo_nightly_reconciliation_job",
-        "sapo_realtime_sync_job"
-    ]
-
-    # Check for active runs of priority jobs
-    for job_name in priority_jobs:
-        active_priority_runs = context.instance.get_runs(
-            filters=RunsFilter(
-                job_name=job_name,
-                statuses=[
-                    DagsterRunStatus.STARTING,
-                    DagsterRunStatus.STARTED,
-                    DagsterRunStatus.QUEUED
-                ]
-            ),
-            limit=1
-        )
-        
-        if len(active_priority_runs) > 0:
-            return SkipReason(
-                f"Skipping run because higher-priority job '{job_name}' (Run ID: {active_priority_runs[0].run_id}) is active."
-            )
-
-    active_runs = context.instance.get_runs(
-        filters=RunsFilter(
-            job_name="sapo_incremental_sync_job",
-            statuses=[
-                DagsterRunStatus.STARTING,
-                DagsterRunStatus.STARTED,
-                DagsterRunStatus.QUEUED,
-                DagsterRunStatus.NOT_STARTED
-            ]
-        ),
-        limit=1
-    )
-
-    if len(active_runs) > 0:
-        return SkipReason(
-            f"Skipping run because a previous run of this job (Run ID: {active_runs[0].run_id}) is still active."
-        )
-
+def incremental_schedule(_context):
     return RunRequest(run_key=None)
+
 
 @schedule(
     job=sapo_nightly_reconciliation_job,
     cron_schedule="0 4 * * *",
-    execution_timezone="Asia/Ho_Chi_Minh"
+    execution_timezone="Asia/Ho_Chi_Minh",
 )
-def nightly_schedule(context):
-    """
-    Schedule that skips execution if a previous run or any other sync job is still active.
-    """
-    from dagster import RunRequest, SkipReason, RunsFilter, DagsterRunStatus
-
-    # Check for active runs of other sync jobs that could conflict
-    conflict_jobs = [
-        "sapo_realtime_sync_job",
-        "sapo_incremental_sync_job",
-    ]
-    for job_name in conflict_jobs:
-        active_conflict = context.instance.get_runs(
-            filters=RunsFilter(
-                job_name=job_name,
-                statuses=[
-                    DagsterRunStatus.STARTING,
-                    DagsterRunStatus.STARTED,
-                    DagsterRunStatus.QUEUED
-                ]
-            ),
-            limit=1
-        )
-        if len(active_conflict) > 0:
-            return SkipReason(
-                f"Skipping nightly because '{job_name}' (Run ID: {active_conflict[0].run_id}) is still active."
-            )
-
-    # Check for active runs of itself
-    active_runs = context.instance.get_runs(
-        filters=RunsFilter(
-            job_name="sapo_nightly_reconciliation_job",
-            statuses=[
-                DagsterRunStatus.STARTING,
-                DagsterRunStatus.STARTED,
-                DagsterRunStatus.QUEUED,
-                DagsterRunStatus.NOT_STARTED
-            ]
-        ),
-        limit=1
-    )
-
-    if len(active_runs) > 0:
-        return SkipReason(
-            f"Skipping run because a previous run (Run ID: {active_runs[0].run_id}) is still active."
-        )
-
+def nightly_schedule(_context):
     return RunRequest(run_key=None)
 
 # ------------------------------------------------------------------------------
