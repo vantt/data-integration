@@ -1,0 +1,81 @@
+# dbt schema.yml template — Tests by Layer
+#
+# Thêm vào: transformation/models/staging/schema.yml hoặc marts/schema.yml
+#
+# Thay thế:
+#   {source}, {entity}, {biz_key}, {fk_entity}, {status_values}
+
+version: 2
+
+models:
+  # ─── src_ layer: lightweight tests (nhanh, validate data shape) ────────────
+  - name: src_{source}_{entity}
+    description: "Source extraction của {entity} từ {source} — dedup + JSON extract"
+    columns:
+      - name: {biz_key}
+        description: "Business key của {entity}"
+        tests:
+          - unique
+          - not_null
+      - name: event_timestamp
+        tests:
+          - not_null
+
+  # ─── stg_ layer: chỉ basic not_null (view nên tests rẻ) ────────────────────
+  - name: stg_{source}_{entity}
+    description: "Staging {entity} — enriched với ref tables"
+    columns:
+      - name: {biz_key}
+        tests:
+          - not_null
+
+  # ─── std_ layer: comprehensive (golden layer) ──────────────────────────────
+  - name: std_{entity}
+    description: "Standardized {entity} — single source of truth"
+    columns:
+      - name: {entity}_id
+        tests:
+          - unique
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['OPEN', 'COMPLETED', 'CANCELLED', 'ARCHIVED', 'DRAFT']
+      - name: created_at
+        tests:
+          - not_null
+
+  # ─── dim_ layer: unique + relationships ────────────────────────────────────
+  - name: dim_{entity}
+    description: "{entity} dimension — BI-ready"
+    columns:
+      - name: {entity}_key
+        description: "Surrogate key (dbt_utils.generate_surrogate_key)"
+        tests:
+          - unique
+          - not_null
+      - name: {entity}_id
+        tests:
+          - not_null
+
+  # ─── fact_ layer: relationships tới dimensions ─────────────────────────────
+  - name: fact_{process}
+    description: "{process} fact table"
+    columns:
+      - name: {process}_id
+        tests:
+          - unique
+          - not_null
+      - name: {fk_entity}_key
+        description: "FK to dim_{fk_entity}"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_{fk_entity}')
+              field: {fk_entity}_key
+      - name: date_key
+        tests:
+          - not_null
+      - name: total_amount
+        tests:
+          - not_null

@@ -1,0 +1,40 @@
+# dbt sources config — External Parquet (dlt output)
+#
+# Thêm vào: transformation/models/sources.yml
+#
+# Thay thế:
+#   {SOURCE}  → source name (sapo, shopify, ...)
+#   {ENTITY}  → entity name (order, customer, ...)
+
+version: 2
+
+sources:
+  - name: {SOURCE}_raw
+    schema: main
+    description: "Raw data từ {SOURCE} dlt pipeline output (Parquet in data lake)"
+    meta:
+      external_location: "read_parquet(
+        '{{ env_var('DBT_DATA_LAKE_PATH') }}/{SOURCE}_raw/{name}/ingest_method=*/**/*.parquet',
+        hive_partitioning=1,
+        union_by_name=true
+      )"
+    tables:
+      - name: {ENTITY}
+        description: "Raw {ENTITY} envelope records"
+        # {name} placeholder trong external_location sẽ auto-map với table name này
+        # Files được đọc từ: data_lake/{SOURCE}_raw/{ENTITY}/ingest_method=*/year=*/month=*/*.parquet
+
+      # Thêm nhiều tables tại đây nếu source có nhiều entities:
+      # - name: customer
+      # - name: product
+
+# ─── Key patterns ────────────────────────────────────────────────────────────
+# external_location:
+#   - `{name}` placeholder → auto-map với table name trong section `tables`
+#   - `ingest_method=*/**/*.parquet` → recursive glob ignoring internal dirs
+#     (e.g., _delta_log của Delta Lake không bị match)
+#   - `hive_partitioning=1` → đọc partition values (year, month) từ folder names
+#   - `union_by_name=true` → safe union nếu schema evolution giữa các files
+#
+# Column types: Không khai báo ở đây. dbt infer từ Parquet schema.
+# Nếu cần enforce type, cast trong src_ model (TRY_CAST để an toàn).
