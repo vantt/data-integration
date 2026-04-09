@@ -142,6 +142,24 @@ duckdb data_lake/serving/olap.duckdb -c \
   "SELECT COUNT(*) FROM dim_customers"
 ```
 
+### Verify DuckDB file lock status empirically
+Dùng để refute/confirm hypothesis "writer X đang hold lock trên file Y" trước khi build kế hoạch sửa lớn. Metabase `read_only=true` **không** hold lock (L18) — test này sẽ confirm điều đó:
+
+```bash
+docker compose exec data_platform python -c "
+import duckdb, time
+t0 = time.time()
+try:
+    con = duckdb.connect('/app/data_lake/serving/olap.duckdb')  # default RW
+    print(f'RW connected in {(time.time()-t0)*1000:.1f}ms')
+    con.close()
+except Exception as e:
+    print(f'RW FAIL: {e}')
+"
+```
+
+Expected: `<50 ms`. Nếu hang hoặc `IO Error: Could not set lock on file` → thật sự có writer (dbt build đang chạy) giữ file. Nếu succeed nhanh trong khi Metabase đang query → xác nhận Metabase không lock, bài toán lock contention là fake, tìm root cause khác (subprocess deadlock, app-level bug...).
+
 ### Full pipeline dry run (local)
 ```bash
 # 1. Ingestion

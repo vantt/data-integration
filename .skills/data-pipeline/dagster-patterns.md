@@ -245,7 +245,22 @@ Nếu thấy `active_run_ids` chứa run đã CANCELED/FAILURE → leak.
 docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py
 ```
 
-**Rule of thumb:** Cancel run ≠ release slot. Phải verify pool state sau bất kỳ incident nào.
+**Wire vào container boot** (recommended — loại bỏ bước manual sau restart):
+
+```yaml
+# docker-compose.yml
+command: sh -c "... && dagster instance concurrency set duckdb_lock 1 \
+  && (python scripts/maintenance/unstick_concurrency_pools.py || true) \
+  && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
+```
+
+`|| true` quan trọng: first-boot chưa có pool → script báo "No concurrency pools configured" → exit 0, không block container. Nếu đã có pool và có slot leak → auto-free trước khi Dagster start. Verified 2026-04-09 boot log:
+```
+Pool 'duckdb_lock': slot=1 active=0 pending=0
+Total slots freed: 0
+```
+
+**Rule of thumb:** Cancel run ≠ release slot. Phải verify pool state sau bất kỳ incident nào. Wire auto-unstick vào boot để cover container restart case tự động.
 
 ---
 
@@ -257,7 +272,7 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] Cron schedule không collide với existing schedules (offset minute marks)
 - [ ] Schedule function check **self** active runs trước khi `RunRequest` (cross-job mutex giao cho coordinator tag, không cần priority chain) — xem Lesson 5
 - [ ] DuckDB writer assets có `op_tags={"dagster/concurrency_key": "duckdb_lock"}`
-- [ ] Sau mọi cancel batch / container restart: chạy `scripts/maintenance/unstick_concurrency_pools.py` để clear leaked slots — xem Lesson 6
+- [ ] `docker-compose.yml` command wire `unstick_concurrency_pools.py || true` trước `dagster dev` — auto-heal slot leak mỗi lần container restart — xem Lesson 6
 - [ ] `DLT_TELEMETRY_DISABLED=true` và `DBT_SEND_ANONYMOUS_USAGE_STATS=false` set ở process level
 - [ ] Ingestion assets: `argv=[]`, `os.chdir(DLT_DIR)`, `load_dlt_configuration()`
 - [ ] Mart dirs được pre-create trong `@dbt_assets` function
