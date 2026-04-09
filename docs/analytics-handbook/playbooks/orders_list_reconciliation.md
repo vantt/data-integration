@@ -20,15 +20,24 @@
 
 ## Dashboard Structure (3 Tabs)
 
-All 3 tabs share identical layout — only the date filter differs.
+All 3 tabs share **byte-identical layout** — only the date predicate differs. This is a non-negotiable invariant (Tab Parity rule — see design spec).
 
 | Tab | Date Scope | Comparison | Filter |
 |-----|-----------|------------|--------|
-| **Today** | `current_date` | vs Hom qua (DoD) | None (fixed) |
-| **Yesterday** | `current_date - 1` | vs Hom truoc (DoD) | None (fixed) |
+| **Today** | `current_date` (VN tz) | vs Hôm qua (DoD) | None (fixed) |
+| **Yesterday** | `current_date - 1` (VN tz) | vs Hôm trước (DoD) | None (fixed) |
 | **By Date** | User-selected | vs previous day (DoD) | Date picker (default: today) |
 
+**Drift prevention:** Any add/edit/delete on one tab MUST be mirrored on the other two in the same commit. The blueprint deploy script is the single source of truth — never hand-edit in the Metabase UI. A drift incident was identified and fixed on 2026-04-09 (Today had section annotations, Yesterday and By Date did not).
+
 ## Tab Layout (identical per tab)
+
+### Section: Reconciliation Affordance (Row A)
+
+| Card | Type | Notes |
+|------|------|-------|
+| **Reconciliation Checklist** | Text callout (bordered) | Explicit 5-step reconciliation workflow on-screen — user never has to remember the playbook |
+| **Data Freshness** | Single-value-label (scalar) | `MAX(fact_orders.updated_at)` age, conditional color: green <2h, amber 2-6h, red >6h |
 
 ### Section: Tong Quan Don Hang (KPIs)
 
@@ -84,8 +93,9 @@ All 3 tabs share identical layout — only the date filter differs.
 
 ## Reconciliation Workflow
 
+0. **Check Data Freshness first.** If > 2h, STOP — data may be mid-ingest. Check Dagster status before reconciling.
 1. Open **Today** tab (or Yesterday for morning review of prior day).
-2. Note **Total Orders** count and **Net Revenue** — compare with Sapo Admin > Orders for same date.
+2. Note **Total Orders** count and **Net Revenue** — compare with Sapo Admin > Đơn hàng for same date.
 3. Check **DoD arrows** on all KPIs — unusual swings indicate data issues or business anomalies.
 4. Scan **Orders by Status** donut — high CANCELLED % may signal ingestion or operational issues.
 5. Scan **Orders by Channel** bar — missing channel = potential ingestion gap.
