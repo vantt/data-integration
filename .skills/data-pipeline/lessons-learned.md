@@ -452,3 +452,139 @@ docker compose exec data_platform python scripts/maintenance/unstick_concurrency
 ```
 
 **Rule:** Sau mỗi container restart hoặc cancel batch, **luôn** chạy unstick script trước khi resume schedules.
+
+### L21 — Reactive sensor cho external source bằng content hash (không cần Drive API)
+
+**Vấn đề:** Google Sheets do analyst nhập tay, vài lần/tuần. Muốn dashboard refresh ngay sau edit mà không cần analyst bấm "Launch run". Options:
+- **Schedule định kỳ (5 min)**: 99% tick là no-op → lãng phí dbt cycle + log noise.
+- **Apps Script `onEdit` webhook → Dagster**: real-time nhưng overkill (setup từng sheet, expose endpoint, auth, 2 sheets không đáng).
+- **Drive API `files.get(modifiedTime)`**: cần service account / API key. **Cạm bẫy**: `modifiedTime` bump với mọi thao tác (format cell, sort, rename tab) → false positive trigger.
+- **Content hash polling** ✅ (chọn cái này).
+
+**Pattern:** Dagster `@sensor` poll public CSV export URL mỗi N phút, sha256 body, so với cursor:
+
+```python
+import hashlib, json, requests
+from dagster import sensor, RunRequest, SkipReason, DefaultSensorStatus
+
+SHEET_URLS = {"targets": "https://.../export?format=csv", "marketing_spend": "..."}
+
+def _fetch_hash(url: str) -> str | None:
+    try:
+        r = requests.get(url, timeout=15, allow_redirects=True)
+        r.raise_for_status()
+        return hashlib.sha256(r.content).hexdigest()
+    except Exception:
+        return None
+
+@sensor(
+    job_name="sheets_sync_job",
+    minimum_interval_seconds=300,
+    default_status=DefaultSensorStatus.RUNNING,  # auto-on sau deploy
+)
+def sheets_modified_sensor(context):
+    prev = json.loads(context.cursor) if context.cursor else {}
+    current, errors = {}, []
+    for name, url in SHEET_URLS.items():
+        h = _fetch_hash(url)
+        if h is None:
+            errors.append(name)
+            if name in prev:
+                current[name] = prev[name]  # giữ hash cũ, đừng trigger false
+            continue
+        current[name] = h
+
+    # Cold start: record baseline, không fire
+    if not prev:
+        context.update_cursor(json.dumps(current))
+        return SkipReason(f"Cold start — baseline {sorted(current)}")
+
+    changed = [k for k, v in current.items() if prev.get(k) != v]
+    if not changed:
+        return SkipReason("No changes")
+
+    context.update_cursor(json.dumps(current))
+    # run_key chứa hash → Dagster tự dedup nếu tick lại cùng hash
+    return RunRequest(
+        run_key="sheets-" + "-".join(f"{n}:{current[n][:12]}" for n in sorted(changed)),
+        tags={"concurrency_group": "dbt_rw", "source": "sheets_modified_sensor"},
+    )
+```
+
+**Điểm then chốt:**
+- **Cold start phải skip, không fire** → tránh ngập runs khi deploy mới hoặc clear cursor.
+- **Fetch error phải preserve cursor cũ** → error tạm thời không được gây false trigger khi endpoint recover.
+- **`run_key` chứa hash** → Dagster dedup tự động, không cần logic phụ.
+- **`default_status=RUNNING`** → sensor mới default STOPPED, phải set RUNNING không thì không tick.
+- **Content hash > `modifiedTime`** → format-only edit không đổi byte exported CSV → không false positive.
+- **Cost**: ~10KB × 2 sheets × 288 tick/day ≈ 5.7 MB/day — tiếng muỗi.
+
+**Chi phí: 0 new dependency (chỉ cần `requests`), 0 new credential.**
+
+### L22 — `AssetSelection.downstream()` cho cascade có chọn lọc
+
+**Vấn đề:** Muốn khi sheets update → tự động rebuild dbt models phụ thuộc + refresh serving, nhưng **không** muốn rebuild toàn bộ dbt graph (hàng trăm models).
+
+**Giải pháp:** Dagster `AssetSelection` hỗ trợ `.downstream()` để trace xuống asset graph — chỉ bao gồm descendants của selection gốc.
+
+```python
+# definitions.py
+_sheets_sources = (
+    AssetSelection.assets(sheets_assets.sheets_targets_asset)
+    | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset)
+)
+
+sheets_sync_job = define_asset_job(
+    name="sheets_sync_job",
+    selection=(
+        _sheets_sources
+        | _sheets_sources.downstream()           # staging + marts phụ thuộc
+        | AssetSelection.assets(serving.sapo_serving_db)  # refresh parquet rolling
+    ),
+    tags={"concurrency_group": "dbt_rw"},  # serialize với các dbt write khác
+)
+```
+
+Kết quả resolve: **7 assets** (2 raw sheets + 2 staging + 2 facts + 1 serving_db) thay vì 400+ models.
+
+**Kiểm tra selection đã resolve đúng:**
+
+```python
+from orchestration import definitions
+d = definitions.defs
+job = d.get_repository_def().get_job("sheets_sync_job")
+for k in sorted(str(x) for x in job.asset_layer.executable_asset_keys):
+    print(k)
+```
+
+**Rule:** Khi trigger job cho "source thay đổi" → luôn dùng `source | source.downstream()` để rebuild đúng những gì cần. Tránh full `all_dbt_assets` trừ nightly reconciliation.
+
+### L23 — `DagsterRun` không có `start_time`, phải dùng `get_run_records()`
+
+**Symptom:** Sensor code `inst.get_runs(filters=...)` rồi `run.start_time` raise `AttributeError: 'DagsterRun' object has no attribute 'start_time'`. Sensor daemon log spam errors mỗi tick, sensor **chưa bao giờ** fire được kể từ ngày viết.
+
+**Root cause:** Dagster 1.x+ tách `DagsterRun` (core run metadata) khỏi `RunRecord` (record + timestamps). `start_time` / `end_time` / `create_timestamp` / `update_timestamp` chỉ có trên `RunRecord`.
+
+**Fix:** Dùng `get_run_records()` thay vì `get_runs()`:
+
+```python
+# SAI
+runs = inst.get_runs(filters=RunsFilter(statuses=[DagsterRunStatus.STARTED]))
+for run in runs:
+    if run.start_time:  # AttributeError
+        ...
+
+# ĐÚNG
+records = inst.get_run_records(filters=RunsFilter(statuses=[DagsterRunStatus.STARTED]))
+for rec in records:
+    run = rec.dagster_run          # core metadata (run_id, job_name, status, tags)
+    if rec.start_time:              # epoch seconds (float)
+        age = datetime.now(timezone.utc) - datetime.fromtimestamp(rec.start_time, tz=timezone.utc)
+```
+
+**Lesson meta:** Sensor code phải được verify bằng **live tick** sau deploy — không chỉ dựa vào unit test. `stuck_run_sensor` silent-fail trong cả tháng vì không ai check log sensor daemon. Sau khi fix, thêm vào checklist verify post-deploy:
+
+```bash
+docker logs data_platform 2>&1 | grep -iE "sensor" | grep -iE "error|traceback" | head
+# Không có output = sensors healthy
+```

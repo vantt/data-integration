@@ -264,6 +264,100 @@ Total slots freed: 0
 
 ---
 
+## Lesson 7: Reactive trigger cho external source — hash polling beats schedule + beats Drive API
+
+**Khi nào:** Job cần chạy ngay khi external source thay đổi (Google Sheet, public CSV, REST dataset) thay vì chờ schedule định kỳ.
+
+**Anti-pattern 1:** Thêm schedule 5-phút → 99% tick là no-op, ngập log, lãng phí dbt cycle.
+
+**Anti-pattern 2:** Dùng Drive API `modifiedTime` → cần setup service account + API key. Tệ hơn: `modifiedTime` bump với mọi thao tác (format cell, sort, rename tab) → **false positive** trigger.
+
+**Pattern đúng:** Sensor poll content hash của source, fire RunRequest chỉ khi hash đổi thực sự.
+
+```python
+@sensor(
+    job_name="sheets_sync_job",
+    minimum_interval_seconds=300,
+    default_status=DefaultSensorStatus.RUNNING,  # auto-on — sensor mới default STOPPED
+)
+def sheets_modified_sensor(context):
+    prev = json.loads(context.cursor) if context.cursor else {}
+    current = {name: hashlib.sha256(requests.get(url).content).hexdigest()
+               for name, url in SHEET_URLS.items()}
+
+    if not prev:  # Cold start: record baseline, đừng fire
+        context.update_cursor(json.dumps(current))
+        return SkipReason("Cold start")
+
+    changed = [k for k, v in current.items() if prev.get(k) != v]
+    if not changed:
+        return SkipReason("No changes")
+
+    context.update_cursor(json.dumps(current))
+    return RunRequest(
+        run_key=f"sheets-{'-'.join(f'{n}:{current[n][:12]}' for n in sorted(changed))}",
+        tags={"concurrency_group": "dbt_rw", "source": "sheets_modified_sensor"},
+    )
+```
+
+**Key invariants:**
+- **Cold start phải skip** (không có `prev`) — tránh flood runs sau deploy.
+- **Fetch error phải preserve cursor cũ** — không được trigger false khi endpoint recover.
+- **`run_key` embed hash** → Dagster dedup tự động.
+- **`default_status=RUNNING`** → bắt buộc, không thì sensor mới tạo vẫn STOPPED.
+
+**Cascade job selection với `.downstream()`:** Khi sensor fire job, job phải rebuild **chỉ** những asset phụ thuộc vào source — không phải full dbt graph:
+
+```python
+_sources = AssetSelection.assets(sheets_targets_asset) | AssetSelection.assets(sheets_marketing_spend_asset)
+sheets_sync_job = define_asset_job(
+    name="sheets_sync_job",
+    selection=_sources | _sources.downstream() | AssetSelection.assets(serving.sapo_serving_db),
+    tags={"concurrency_group": "dbt_rw"},
+)
+```
+
+→ Resolve thành 7 assets (2 raw + 2 staging + 2 marts + 1 serving_db) thay vì 400+ models.
+
+**Gotcha bắt buộc verify sau deploy:** Sensor mới và sensor sửa logic phải `reloadRepositoryLocation` + theo dõi log daemon:
+
+```bash
+docker logs --since 5m data_platform 2>&1 | grep -iE "sensor" | grep -iE "error|traceback"
+# Không output = sensors healthy. Có output = fix trước khi đi ngủ.
+```
+
+**Template:** `.skills/data-pipeline/templates/dagster-reactive-sensor-template.py` — copy, replace 3 markers, done.
+
+**Chi tiết:** xem `lessons-learned.md` L21 (content-hash sensor), L22 (`AssetSelection.downstream()`), L23 (`get_run_records()` vs `get_runs()` — sensor `DagsterRun.start_time` trap).
+
+---
+
+## Lesson 8: `DagsterRun` không có `start_time` — sensor phải dùng `get_run_records()`
+
+**Symptom:** Sensor code `inst.get_runs(filters=...)` rồi `run.start_time` → `AttributeError: 'DagsterRun' object has no attribute 'start_time'`. Sensor daemon error spam mỗi tick. Đặc biệt nguy hiểm: sensor silent-fail, log chỉ ở daemon layer, không ai để ý cả tháng.
+
+**Root cause:** Dagster 1.x+ tách `DagsterRun` (run metadata core) khỏi `RunRecord` (record + timestamps). `start_time`/`end_time`/`create_timestamp` chỉ tồn tại trên `RunRecord`.
+
+**Fix:**
+
+```python
+# SAI
+runs = inst.get_runs(filters=RunsFilter(statuses=[DagsterRunStatus.STARTED]))
+for run in runs:
+    if run.start_time: ...  # AttributeError
+
+# ĐÚNG
+records = inst.get_run_records(filters=RunsFilter(statuses=[DagsterRunStatus.STARTED]))
+for rec in records:
+    run = rec.dagster_run
+    if rec.start_time:  # epoch seconds float
+        ...
+```
+
+**Rule:** Mọi sensor đụng vào run timing → dùng `get_run_records()`, không bao giờ `get_runs()`.
+
+---
+
 ## Summary: Dagster Integration Checklist
 
 Khi add job/asset mới vào Dagster, kiểm tra:
@@ -277,6 +371,11 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] Ingestion assets: `argv=[]`, `os.chdir(DLT_DIR)`, `load_dlt_configuration()`
 - [ ] Mart dirs được pre-create trong `@dbt_assets` function
 - [ ] Serving asset có `deps=[dbt_assets]`
+- [ ] **Sensor** mới có `default_status=DefaultSensorStatus.RUNNING` — sensor mới default STOPPED, phải set RUNNING không thì không tick — xem Lesson 7
+- [ ] **Sensor** targeting specific job → job phải có trong `Definitions(jobs=[...])` — không auto-discover từ schedules
+- [ ] **Sensor** đụng run timing → dùng `get_run_records()`, KHÔNG `get_runs()` (`DagsterRun` không có `start_time`) — xem Lesson 8
+- [ ] **Sau mỗi edit sensor/definitions.py** → `reloadRepositoryLocation` via GraphQL + verify log daemon không có sensor error
+- [ ] Job cascade "source → downstream" → dùng `_sources | _sources.downstream()`, không dùng full `all_dbt_assets`
 
 ---
 
@@ -285,7 +384,11 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 | File | Purpose |
 |------|---------|
 | `orchestration/assets/dbt.py` | `SapoDbtTranslator` với upstream injection + mart dir pre-create |
-| `orchestration/definitions.py` | Schedule offset + priority yielding logic |
+| `orchestration/definitions.py` | Schedule offset + priority yielding logic + explicit `jobs=[...]` cho sensors |
 | `orchestration/assets/serving.py` | Serving asset với `deps=[sapo_dbt_assets]` |
-| `docker-compose.yml` | Telemetry env vars (line 20-21) |
+| `orchestration/sensors/sheets_modified_sensor.py` | Reactive content-hash sensor — xem Lesson 7 |
+| `orchestration/sensors/stuck_run_alerter.py` | Hang detector dùng `get_run_records()` — xem Lesson 8 |
+| `orchestration/sensors/failure_alerting.py` | Lark alert cho terminal FAILURE runs |
+| `.skills/data-pipeline/templates/dagster-reactive-sensor-template.py` | Copy-paste starter cho reactive sensor mới |
+| `docker-compose.yml` | Telemetry env vars (line 20-21) + auto-unstick on boot (line 33) |
 | `run_dagster.ps1` | Windows local telemetry vars (line 10-11) |

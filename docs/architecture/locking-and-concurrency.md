@@ -1,19 +1,21 @@
 # Locking & Concurrency Architecture
 
 > Audit date: 2026-04-08
+> Status refresh: 2026-04-09 (post-hardening sweep — see §Status Refresh)
 > Scope: every lock / mutex / concurrency primitive in the `data-integration` repo
 > Methodology: code scan + empirical verification inside live `data_platform` container
 
 ## Executive Summary
 
-- **Overall posture: healthy, with 1 known leak and 1 landmine.**
+- **Overall posture: healthy. All P0/P1 findings from 2026-04-08 are now remediated.** Landmine fixed, pool leak auto-remediated at boot, docstring corrected.
 - **DuckDB writer serialization** works: `duckdb_lock` op pool (slot=1) + `dbt_rw` coordinator tag. No contention seen on `sapo_warehouse.duckdb` today.
-- **Metabase + serving `olap.duckdb` coexistence is a non-problem.** Empirically verified today: DuckDB `read_only=true` does not acquire any file lock; RW connect while Metabase up = **13.3 ms, no error**. Historical "Metabase JDBC exclusive lock" narrative is refuted.
-- **Subprocess hang risk (16h incident) is fixed** in `orchestration/assets/serving.py` via Popen + streaming read + 1800s timeout + merged stderr. Only one residual non-timeout subprocess exists (`transformation/scripts/run_dbt.py`), and it is standalone-only.
-- **One known leak:** Dagster asset-level concurrency pool slots (e.g. `duckdb_lock`) are NOT released on run cancel / container kill. Mitigation: `scripts/maintenance/unstick_concurrency_pools.py` (manual, must run after any incident).
-- **One landmine:** `.skills/data-pipeline/templates/dagster-serving-asset-template.py:66` still uses the deadlock-prone `capture_output=True` pattern — any asset copied from this template will inherit the bug.
-- **Defensive dead code** in `bootstrap_serving_views.py` docstring still warns "Metabase must NOT be connected" — contradicts the verified behavior and should be updated.
-- **Schedules self-overlap check is in place** on all 3 scheduled jobs after today's fix (`realtime`, `incremental`, `nightly`). Coordinator tag `dbt_rw` is applied to all 4 jobs including the manual-only `sheets_sync_job`.
+- **Metabase + serving `olap.duckdb` coexistence is a non-problem.** Empirically verified: DuckDB `read_only=true` does not acquire any file lock; RW connect while Metabase up = **13.3 ms, no error**. Historical "Metabase JDBC exclusive lock" narrative is refuted.
+- **Subprocess hang risk (16h incident) is fixed** in `orchestration/assets/serving.py` via Popen + streaming read + 1800s timeout + merged stderr. `transformation/scripts/run_dbt.py` now also has `timeout=3600` (2026-04-09).
+- **Pool slot leak auto-remediated:** `unstick_concurrency_pools.py` now runs on every container boot before `dagster dev` (docker-compose.yml, commit b2659fb). Manual operator action no longer required after cancel batches.
+- **Landmine fixed:** `.skills/data-pipeline/templates/dagster-serving-asset-template.py` replaced with Popen+streaming+timeout pattern (commit 593aa5c).
+- **`bootstrap_serving_views.py` docstring rewritten** to reflect the verified "Metabase read_only=true holds no file lock → safe to run while Metabase is up" reality (commit b2659fb).
+- **Schedules self-overlap check** in place on all 3 scheduled jobs (`realtime`, `incremental`, `nightly`). Coordinator tag `dbt_rw` applied to all 4 jobs including manual-only `sheets_sync_job`.
+- **Two sensors** monitor run health: `lark_failure_sensor` (terminal failures) + `stuck_run_sensor` (45-min STARTED threshold, cursor-dedup). Together they cover both crash-path and hang-path failure modes.
 
 ## Layer Map
 
@@ -21,16 +23,18 @@
 | ----------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | --------------------------- | ------------- |
 | DB                | DuckDB file write exclusivity on `sapo_warehouse.duckdb`                                     | intrinsic to DuckDB                                                 | process-wide writer         | 📌 inherent    |
 | DB                | dbt `threads: 1`                                                                             | `transformation/profiles.yml:7,14`                                  | in-process                  | ✅ working    |
-| Dagster op pool   | `duckdb_lock` slot=1                                                                         | `orchestration/assets/dbt.py:92`, set via `docker-compose.yml:33`   | instance-wide op step       | ⚠️ leak on cancel |
+| Dagster op pool   | `duckdb_lock` slot=1                                                                         | `orchestration/assets/dbt.py:92`, set via `docker-compose.yml:33`   | instance-wide op step       | ✅ working (auto-unstick on boot since 2026-04-09) |
 | Dagster run coord | `QueuedRunCoordinator` `tag_concurrency_limits concurrency_group=dbt_rw limit=1`             | `app_data/dagster_home/dagster.yaml:13-21`                          | instance-wide run dequeue   | ✅ working    |
 | Dagster schedule  | `_has_active_run()` self-overlap skip                                                        | `orchestration/definitions.py:132-177`                              | per-job queue suppression   | ✅ working (post-fix 2026-04-08) |
-| Dagster sensor    | `stuck_run_sensor` (alert-only, 45 min)                                                      | `orchestration/sensors/stuck_run_alerter.py`                        | operator alert              | ✅ working    |
+| Dagster sensor    | `lark_failure_sensor` (terminal FAILURE → Lark)                                              | `orchestration/sensors/failure_alerting.py`                         | operator alert (crash path) | ✅ working    |
+| Dagster sensor    | `stuck_run_sensor` (STARTED > 45 min → Lark, cursor-dedup, no auto-kill)                     | `orchestration/sensors/stuck_run_alerter.py`                        | operator alert (hang path)  | ✅ working (fixed `DagsterRun.start_time` bug 2026-04-09) |
+| Dagster sensor    | `sheets_modified_sensor` (sha256 polling every 5 min → sheets_sync_job)                      | `orchestration/sensors/sheets_modified_sensor.py`                   | reactive trigger on edit    | ✅ working (verified live tick 2026-04-09 11:43) |
 | OS file           | Cross-platform file lock on cookies (`msvcrt.locking` / `fcntl.flock`)                       | `ingestion/src/utils/shared_cookie_manager.py:17-43`                | cross-process               | ✅ working    |
 | OS file           | Atomic tmp + `os.replace` (cookies, `.known_tables.json`)                                    | `shared_cookie_manager.py:222-237`, `refresh_rolling.py:86-92`      | writer isolation            | ✅ working    |
-| OS file           | Parquet GC PermissionError/OSError retry                                                     | `scripts/provisioning/refresh_rolling.py:46-71`                     | writer vs reader            | ❌ likely dead |
+| OS file           | Parquet GC (main `os.remove`) + PermissionError/OSError retry (cold path)                    | `scripts/provisioning/refresh_rolling.py:46-71`                     | writer vs reader            | ✅ working (retry branches never fired, see §Verification 2026-04-09) |
 | App (dlt)         | Per-pipeline state dir `/var/dlt/pipelines/<name>/` + internal advisory lock                 | dlt library                                                         | same `pipeline_name` only   | 📌 inherent    |
 | Subprocess        | `Popen` streaming + `timeout=1800`                                                           | `orchestration/assets/serving.py:54-77`                             | serving script run          | ✅ working    |
-| Subprocess        | `subprocess.run(..., check=True)` no timeout, inherited stdio                                | `transformation/scripts/run_dbt.py:109`                             | standalone dbt CLI wrapper  | ⚠️ hang-possible |
+| Subprocess        | `subprocess.run(..., check=True, timeout=3600)` inherited stdio                              | `transformation/scripts/run_dbt.py:109`                             | standalone dbt CLI wrapper  | ✅ working (post-fix 2026-04-09) |
 | DB                | dbt manifest `prepare_if_dev()` disabled (`manifest.concurrent-update-lock` workaround)      | `orchestration/assets/dbt.py:16-18`; pre-parse in docker-compose:33 | Dagster code reload race    | ✅ working (documented) |
 
 ## Detailed Inventory
@@ -108,7 +112,7 @@
 - `definitions.py:124-177`: `_has_active_run(context, job_name)` queries the instance for runs in `[QUEUED, NOT_STARTED, STARTING, STARTED]` for the **same job name** and skips the tick if any exist.
 - Applied to all 3 schedules: `realtime_schedule` (`:146`), `incremental_schedule` (`:161`), `nightly_schedule` (`:173`). ✅
 - `incremental_schedule` cron `*/10 0-3,5-23 * * *` excludes the 4 AM hour to avoid piling up ticks while nightly holds the `dbt_rw` slot. Thoughtful.
-- Note: `sheets_sync_job` has no schedule — manual trigger only. Coordinator tag still protects it from colliding with active sync runs.
+- Note: `sheets_sync_job` has no schedule. Trigger paths: (1) manual via Dagster UI / CLI, (2) `sheets_modified_sensor` (content-hash polling every 5 min, auto-fires on real sheet edits — see commit 2026-04-09), (3) nightly reconciliation (includes sheet assets in its selection). Coordinator tag still protects it from colliding with active sync runs.
 
 ### Dagster op-level
 
@@ -155,43 +159,43 @@
 2. **Serving subprocess streaming + timeout** fixes the real 2026-04-08 bug cleanly. Stderr merged into stdout avoids two-pipe deadlock. Output streamed line-by-line so it is impossible to fill the 64 KB pipe buffer.
 3. **Schedule self-overlap check** restored today. Pattern is simple, uses Dagster native run state, and the Active-Status set correctly includes `NOT_STARTED` and `QUEUED`.
 4. **SharedCookieManager atomic write** (`mkstemp` → unique tmp → `os.replace`) handles concurrent writers without lock contention. Read path does not lock — which is correct given the atomic replace guarantee.
-5. **Stuck-run sensor** (`stuck_run_alerter.py`) fills the gap left by `run_failure_sensor`, which only fires on terminal FAILURE. Cursor-based dedup (max 100 ids) prevents re-alert spam.
+5. **Paired run-health sensors**. Two complementary sensors cover every failure mode:
+   - `lark_failure_sensor` (`failure_alerting.py`) — built on Dagster's `@run_failure_sensor`, fires on any terminal FAILURE and pushes a red Lark card. Handles the "job crashed loudly" path.
+   - `stuck_run_sensor` (`stuck_run_alerter.py`) — custom `@sensor` ticking every 10 min, scans `DagsterRunStatus.STARTED`, alerts on any run older than 45 min with an orange Lark card. Handles the "job silently hung, no failure event" path (the 16 h serving-db incident would have been caught here). Cursor-based dedup (max 100 ids) prevents re-alert spam, and no auto-kill means operator owns the recovery decision. The 45-min threshold is deliberately longer than `SERVING_TIMEOUT_SEC` (1800 s) so the subprocess timeout path gets a chance to raise naturally first.
 6. **Bootstrap / runtime split** (`bootstrap_serving_views.py` vs `refresh_rolling.py`) separates DB-touching logic from file-touching logic. Cleaner blast radius even if the "avoid Metabase lock" justification is obsolete.
 7. **Schema drift detection** via `.known_tables.json` marker + hard error on new tables is an elegant, lock-free way to catch "view needs bootstrap" state without opening DuckDB.
 8. **`unstick_concurrency_pools.py`** already exists in the repo — team discovered and fixed the leak the same day.
 
 ## What's Risky or Fragile
 
-1. **Dagster asset-level pool slot leak on cancel** — inherent to Dagster's semantics for op-level concurrency pools. Workaround exists (`unstick_concurrency_pools.py`) but requires **manual operator action** after every cancel batch or container restart. Post-mortem today showed 28+ runs piled up because of this.
-   - **Mitigation (P1)**: run `unstick_concurrency_pools.py` on every container start. Wire it into `docker-compose.yml` command before `dagster dev`.
-2. **`run_dbt.py` has no timeout** (`transformation/scripts/run_dbt.py:109`). If a human runs it manually and dbt hangs, the shell hangs too. Low blast radius (not Dagster-invoked) but trivially fixable.
-   - **Fix (P2)**: add `timeout=3600` to the `subprocess.run` call.
+1. ~~**Dagster asset-level pool slot leak on cancel**~~ → **RESOLVED 2026-04-09** (commit b2659fb). `unstick_concurrency_pools.py` now runs on every container boot via `docker-compose.yml` command: `... && python scripts/maintenance/unstick_concurrency_pools.py || true && dagster dev ...`. First boot verified: `Pool 'duckdb_lock': slot=1 active=0 pending=0 / Total slots freed: 0`. Leak still exists in Dagster upstream, but blast radius bounded to "one container restart = auto-healed".
+2. ~~**`run_dbt.py` has no timeout**~~ → **RESOLVED 2026-04-09** (commit 2aa55d8). `timeout=3600` + `TimeoutExpired` handler added.
 3. **Incremental schedule `4 AM hour exclusion` is a magic skip window**. If nightly is ever delayed past 5 AM, the incremental job resumes and can enqueue while nightly is still running. Self-overlap on nightly's OWN job prevents double-nightly, and coordinator tag serializes dbt_rw across jobs — so it is correct but subtle.
-   - **Mitigation (P2)**: no code change needed. Document it in `nightly_schedule` docstring.
-4. **Read-time lock assumption**: `_read_cookie_file()` relies on the fact that the writer uses atomic rename. If anyone ever adds a non-atomic writer path (e.g. edit-in-place), readers will see partial JSON. Add a code comment enforcing invariant.
-5. **Retry loops mask lock contention**: `pipeline_runner.py:80-100` retries 3× on any exception. If a real lock bug appears, it will be swallowed into retry noise.
+   - **Status 2026-04-09**: documented in `nightly_schedule` docstring (commit 2aa55d8). ✅
+4. ~~**Read-time lock assumption** in `_read_cookie_file()`~~ → **DOCUMENTED 2026-04-09** (commit 2aa55d8). INVARIANT comment added forbidding future edit-in-place writer paths.
+5. **Retry loops mask lock contention**: `pipeline_runner.py:80-100` retries 3× on any exception. If a real lock bug appears, it will be swallowed into retry noise. (Still open — observational.)
 
 ## What's Broken / Leaky
 
-### 🚨 Landmine: template file still has the 16 h bug pattern
+_All items in this section from the 2026-04-08 audit have been resolved on 2026-04-09. Kept as historical record._
+
+### ✅ Landmine: template file had the 16 h bug pattern — FIXED
 
 - **File**: `.skills/data-pipeline/templates/dagster-serving-asset-template.py:66`
-- **Code**: `subprocess.run(..., capture_output=True, ...)` — no timeout.
-- **Fix priority**: **P0** — anyone writing a new serving-type asset will copy this.
-- **Fix**: replace the template with the `Popen` + streaming pattern from `serving.py:54-77`.
+- **Was**: `subprocess.run(..., capture_output=True, ...)` — no timeout, pipe-deadlock prone.
+- **Resolution**: replaced with `Popen` + streaming stdout + `stderr=STDOUT` + `wait(timeout=1800)` pattern from `serving.py:54-77`. Commit 593aa5c (2026-04-09).
 
-### ⚠️ Dead/misleading docstring in bootstrap_serving_views.py
+### ✅ Misleading docstring in bootstrap_serving_views.py — FIXED
 
-- **File**: `scripts/provisioning/bootstrap_serving_views.py:1-20`
-- **Issue**: Says `IMPORTANT: Metabase must NOT be connected to olap.duckdb while this runs, because Metabase's JDBC pool holds the file lock.` Empirically refuted today (Insight 2). The script's own lines 15-17 then contradict this with `After Metabase is configured with duckdb.read_only=true, it holds only a shared lock...` — which is also technically wrong (no lock at all).
-- **Fix priority**: **P2** — misleading operators but not actively breaking.
-- **Fix**: rewrite the docstring to say "as long as Metabase is `read_only=true`, this is safe to run while Metabase is up; no restart needed".
+- **File**: `scripts/provisioning/bootstrap_serving_views.py`
+- **Was**: `IMPORTANT: Metabase must NOT be connected to olap.duckdb while this runs`. Refuted empirically (Insight 2: `read_only=true` takes no file lock).
+- **Resolution**: docstring rewritten to state "safe to run while Metabase is up in read_only=true mode, no restart required". Connect-error message also updated. Commit b2659fb (2026-04-09).
 
-### ⚠️ Asset-level pool leak is not auto-remediated
+### ✅ Asset-level pool leak — AUTO-REMEDIATED
 
-- **Mechanism**: Dagster `report_run_canceled()` does not call `free_concurrency_slots_for_run()`.
-- **Impact**: every cancel batch can brick `duckdb_lock` until operator runs the helper.
-- **Fix priority**: **P1** — wire `unstick_concurrency_pools.py` into the container startup command before `dagster dev`. Idempotent, safe on every restart.
+- **Mechanism**: Dagster `report_run_canceled()` still does not call `free_concurrency_slots_for_run()` (upstream behavior unchanged).
+- **Resolution**: `docker-compose.yml` command now runs `python scripts/maintenance/unstick_concurrency_pools.py || true` before `dagster dev`. Idempotent, safe, first-boot friendly. Commit b2659fb (2026-04-09). Manual operator action no longer required after cancel batches — just restart the container (which was usually the operator's first instinct anyway).
+- **Residual risk**: if the container runs for many weeks and accumulates cancels without a restart, the helper is still available for manual invocation.
 
 ## Inherent Limits (Must Accept)
 
@@ -206,7 +210,7 @@
 
 | File:Line | Code | Probably dead because | Verification approach |
 |---|---|---|---|
-| `scripts/provisioning/refresh_rolling.py:57-67` | PermissionError/OSError retry on parquet unlink | Linux allows unlink-while-open; DuckDB releases fds per query | Instrument the except branches with a print, run nightly for a week |
+| `scripts/provisioning/refresh_rolling.py:57-67` | PermissionError/OSError retry on parquet unlink | Linux allows unlink-while-open; DuckDB releases fds per query | **Verified 2026-04-09**: 10 consecutive runs show `deleted=17 skipped=0` on every table. Main `os.remove()` succeeds first try. Retry branches are cold. **Keep** — cheap cross-platform safety net for future Windows-native dev. |
 | `scripts/provisioning/bootstrap_serving_views.py:89-98` | `try: con = duckdb.connect(SERVING_DB_PATH) except... "Could not acquire DuckDB lock"` | DuckDB `read_only=true` mode never holds a lock → this catch never fires for the Metabase case | Empirical — run bootstrap with Metabase up, observe no exception |
 | `.skills/data-pipeline/templates/dagster-serving-asset-template.py:66` | `capture_output=True` subprocess.run | This is the ANTI-pattern, not a dead defender — see P0 finding above | n/a — replace |
 
@@ -216,24 +220,37 @@
 
 ### P0 — must-fix
 
-1. **Fix the serving asset template** (`.skills/data-pipeline/templates/dagster-serving-asset-template.py`): replace `subprocess.run(capture_output=True)` with the `Popen` + streaming + timeout pattern. Copy from `orchestration/assets/serving.py:54-77` verbatim. **Effort: 15 min.**
+1. ~~Fix the serving asset template~~ → **DONE 2026-04-09 (commit 593aa5c).**
 
 ### P1 — should-fix
 
-2. **Wire `unstick_concurrency_pools.py` into container startup**: modify `docker-compose.yml:33` command to call it before `dagster dev`. Example:
-   ```sh
-   ... && python scripts/maintenance/unstick_concurrency_pools.py || true && dagster dev ...
-   ```
-   The `|| true` ensures a first-run failure doesn't block boot. **Effort: 10 min + 1 restart.**
-3. **Update `bootstrap_serving_views.py` docstring** to reflect Insight 2. Rewrite lines 8-17 to say: "Safe to run with Metabase running in `read_only=true` mode; no stop required." **Effort: 5 min.**
+2. ~~Wire `unstick_concurrency_pools.py` into container startup~~ → **DONE 2026-04-09 (commit b2659fb).**
+3. ~~Update `bootstrap_serving_views.py` docstring~~ → **DONE 2026-04-09 (commit b2659fb).**
 
 ### P2 — nice-to-have
 
-4. **Add `timeout=3600` to `transformation/scripts/run_dbt.py:109`**. Standalone script, low risk, but removes the last hang-prone subprocess call. **Effort: 2 min.**
-5. **Add a unit test** that imports `definitions.py` and asserts every schedule's function references `_has_active_run` (guard against future regressions). **Effort: 30 min.**
-6. **Document the 4 AM incremental-skip window** in `nightly_schedule` docstring and in `AGENTS.md`. **Effort: 5 min.**
-7. **Add invariant comment** in `SharedCookieManager._read_cookie_file` forbidding future edit-in-place writers. **Effort: 2 min.**
-8. **Consider a Dagster sensor** that inspects `duckdb_lock` pool every 5 minutes and auto-frees slots whose owning run is terminal. Replaces manual `unstick_concurrency_pools.py`. **Effort: 2-4 h.**
+4. ~~Add `timeout=3600` to `transformation/scripts/run_dbt.py`~~ → **DONE 2026-04-09 (commit 2aa55d8).**
+5. **Add a unit test** that imports `definitions.py` and asserts every schedule's function references `_has_active_run` (guard against future regressions). **Still open.**
+6. ~~Document the 4 AM incremental-skip window~~ → **DONE 2026-04-09 (commit 2aa55d8, `nightly_schedule` docstring).**
+7. ~~Add invariant comment in `SharedCookieManager._read_cookie_file`~~ → **DONE 2026-04-09 (commit 2aa55d8).**
+8. **Sensor-based auto-unstick** — inspect `duckdb_lock` pool every N minutes and free slots whose owning run is terminal. Would replace boot-time helper with runtime healing. **Still open** — current boot-time workaround is good enough; only worth it if cancels happen frequently between restarts.
+
+## Status Refresh — 2026-04-09
+
+Post-audit hardening sweep (commits 593aa5c, b2659fb, 2aa55d8) resolved 6 of 8 recommendations:
+
+| # | Item | Status | Commit |
+|---|---|---|---|
+| P0-1 | Serving asset template landmine | ✅ Fixed | 593aa5c |
+| P1-2 | Auto-unstick on boot | ✅ Fixed | b2659fb |
+| P1-3 | bootstrap_serving_views docstring | ✅ Fixed | b2659fb |
+| P2-4 | run_dbt.py timeout | ✅ Fixed | 2aa55d8 |
+| P2-5 | Schedule self-overlap unit test | ⏸ Open | — |
+| P2-6 | 4 AM skip-window docs | ✅ Fixed | 2aa55d8 |
+| P2-7 | Cookie read-lock invariant comment | ✅ Fixed | 2aa55d8 |
+| P2-8 | Sensor-based pool auto-free | ⏸ Open | — |
+
+**New findings during refresh**: `lark_failure_sensor` (commit e8b1f4a) was missing from the original Layer Map — added in this refresh. It complements `stuck_run_sensor` by covering the crash path.
 
 ## Verification History
 
@@ -251,10 +268,30 @@ Tests run inside `data_platform` container during this audit (2026-04-08 23:35+0
 | Verify `concurrency_group: dbt_rw` applied to all sync jobs | ✅ `SYNC_TAGS` applied to `sapo_realtime_sync_job`, `sapo_incremental_sync_job`, `sheets_sync_job`, `sapo_nightly_reconciliation_job` |
 | Verify `_has_active_run` check in all schedules | ✅ in `realtime_schedule`, `incremental_schedule`, `nightly_schedule` (no schedule for sheets_sync_job) |
 
+### Follow-up verification 2026-04-09 11:10+07
+
+| Test | Result |
+|---|---|
+| Parquet GC `skipped` counter across last 10 serving runs | ✅ every run: `tables=24 deleted=17 skipped=0` — main `os.remove()` always succeeds first try |
+| `ls /app/data_lake/export/marts/rolling/<table>/` post-GC | ✅ each dir has exactly 1 file (latest timestamp) — no accumulation |
+| `ls /var/dlt/pipelines/` | ✅ only `sapo_history_log_pipeline`, `sapo_webhook_consumer` (post-09:55 restart) |
+| Container boot time via `stat /proc/1` | 2026-04-09 09:55:31 +0700 |
+| Last nightly run with `sapo_orders_batch_asset` | ✅ `73b8ee34-2e0f-469f-8fdd-609b5b6783b2`, 2026-04-09 04:00:15–04:09:30, STEP_SUCCESS |
+| Destination-side dlt state presence | ✅ `sapo_{orders,customers,accounts}_batch__*.jsonl` in `/app/data_lake/sapo_raw/_dlt_pipeline_state/` — incremental cursors persistent across container restart |
+| Anomaly spotted | `/app/data_lake/export/marts/rolling/dim_time.parquet` — stray top-level file from pre-refactor layout (mtime Feb 3). Harmless: GC only scans subdirs. Candidate for cleanup. |
+
 ## Unresolved Questions
 
 1. **`pipeline_runner.py` retry loop** — is the 3-attempt exponential backoff ever triggered by dlt internal lock contention in production? No telemetry distinguishes lock errors from network errors. Suggest adding an exception-type breakdown to logs.
 2. **`bootstrap_serving_views.py` exclusive lock claim** — it says "requires exclusive DB lock" in its docstring L1. If Metabase is `read_only=true`, does `CREATE OR REPLACE VIEW` actually block any active Metabase queries even briefly? Would need a load-test to confirm whether a query issued during a `CREATE OR REPLACE VIEW` retries, errors, or blocks. Not urgent.
 3. **dbt `prepare_if_dev()` manifest lock** — what exactly caused the "manifest.concurrent-update-lock" errors during code reload? Is it the same Dagster code-server reload race, and does newer dagster-dbt fix it? Worth checking on upgrade.
-4. **Why do `sapo_orders_batch / customers / accounts` have no dlt state dirs** in `/var/dlt/pipelines/` right now? Either they have not run since the state volume was created, or they use different pipeline_name conventions. Not a locking issue but worth confirming the state path assumption.
-5. **`sheets_sync_job` with no schedule** — intentional (manual-only) or missing-schedule bug? Only affects whether sheets re-syncs outside the nightly window.
+4. ~~**Why do `sapo_orders_batch / customers / accounts` have no dlt state dirs** in `/var/dlt/pipelines/` right now?~~ **RESOLVED 2026-04-09.** Three-part answer:
+   1. **`/var/dlt/pipelines/` is ephemeral** — not bind-mounted in `docker-compose.yml`. Every container restart wipes it. Container boot time today: 2026-04-09 09:55:31 (`stat /proc/1`).
+   2. **Batch pipelines only run at 04:00 nightly** (`sapo_nightly_reconciliation_job`, cron `0 4 * * *`). Last successful run: 2026-04-09 04:00:15–04:09:30 (verified in dagster compute logs, run `73b8ee34`). That state was wiped by the 09:55 container restart. Next re-creation: 2026-04-10 04:00. Meanwhile only `sapo_history_log_pipeline` (every 10 min) and `sapo_webhook_consumer` (every 3 min) have recreated their state dirs post-restart.
+   3. **True pipeline state is NOT in `/var/dlt/`** — it lives in the destination, at `/app/data_lake/sapo_raw/_dlt_pipeline_state/` (bind-mounted, persistent). dlt's `restore_from_destination=True` default re-reads this on every `pipeline.run()` init. Verified presence of `sapo_orders_batch__*.jsonl`, `sapo_customers_batch__*.jsonl`, `sapo_accounts_batch__*.jsonl` files in this dir. So incremental cursors survive container restarts even though `/var/dlt/` does not.
+   - **Implication**: `/var/dlt/` is a scratch dir only. No action needed. If we ever wanted faster restart warm-up, we could add a volume mount — but it would be pure optimization, not correctness.
+5. ~~**`sheets_sync_job` with no schedule**~~ **RESOLVED 2026-04-09.** Intentional — by design it's reactive, not scheduled. Three trigger paths now exist:
+   - **Manual** (UI Launchpad or `dagster job launch -j sheets_sync_job`)
+   - **`sheets_modified_sensor`** (new — content-hash polls CSV export URLs every 5 min, fires RunRequest on real byte change; cold-start records baseline without firing; fetch errors preserve prior hash to avoid false positives)
+   - **Nightly reconciliation** (includes sheet assets in its selection)
+   Job selection was also expanded (commit 2026-04-09) to cascade downstream: `_sources | _sources.downstream() | sapo_serving_db` = 7 assets total (2 raw + 2 staging + 2 marts + 1 serving_db). Surgical rebuild, not full dbt graph. Pattern packaged into `.skills/data-pipeline/` Lesson 7 + L21/L22/L23.
