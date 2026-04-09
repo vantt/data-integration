@@ -155,6 +155,11 @@ def realtime_schedule(context):
     # Skip 4 AM hour entirely — nightly reconciliation runs then and holds the
     # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
     # ticks from piling up while nightly is running.
+    #
+    # Edge case: if nightly is ever delayed past 5 AM, incremental resumes at
+    # :00 of the next hour and may enqueue while nightly is still active.
+    # This is safe — coordinator tag `dbt_rw=1` serializes the dequeue, and
+    # incremental's own self-overlap check prevents double-enqueue.
     cron_schedule="*/10 0-3,5-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )

@@ -174,7 +174,11 @@ class SharedCookieManager:
 
     def _read_cookie_file(self) -> Optional[Dict]:
         """
-        Read cookies from file with file locking.
+        Read cookies from file — no explicit lock.
+
+        INVARIANT: this relies on _write_cookie_file using atomic rename
+        (mkstemp + os.replace). DO NOT add an edit-in-place writer path —
+        readers will observe partial JSON.
 
         Returns:
             Dictionary containing cookie data or None if file doesn't exist

@@ -106,11 +106,16 @@ def run_dbt():
     try:
         # shell=True on Windows can help with some path issues, but direct execution is safer if we have full path
         # Using shell=False and full path to exe
-        process = subprocess.run(cmd, cwd=transformation_dir, env=env, check=True)
+        # Hard timeout — prevents indefinite hang if dbt gets stuck.
+        # 1 hour is plenty for the largest current build.
+        process = subprocess.run(cmd, cwd=transformation_dir, env=env, check=True, timeout=3600)
         print("DBT Build Completed Successfully.")
     except subprocess.CalledProcessError as e:
         print(f"DBT Build Failed (Exit Code: {e.returncode})")
         sys.exit(e.returncode)
+    except subprocess.TimeoutExpired:
+        print("DBT Build timed out after 3600s — killed.")
+        sys.exit(124)
     except Exception as e:
         print(f"Error running dbt: {e}")
         sys.exit(1)
