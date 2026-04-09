@@ -1,20 +1,23 @@
-"""One-shot bootstrap of serving DuckDB views (requires exclusive DB lock).
+"""One-shot bootstrap of serving DuckDB views.
 
 Run manually when:
   - Initial deployment (olap.duckdb has no views yet)
   - Schema drift detected (refresh_rolling.py logged [!] SCHEMA_DRIFT)
   - Empty folders appeared and their views need dropping
 
-IMPORTANT: Metabase must NOT be connected to olap.duckdb while this runs,
-because Metabase's JDBC pool holds the file lock. Typical flow:
+METABASE COEXISTENCE (verified empirically 2026-04-08, see lessons-learned.md L18):
 
-    docker compose stop metabase
+Provided Metabase is configured with duckdb `read_only=true` in its JDBC URL,
+Metabase does NOT hold any file lock on olap.duckdb — DuckDB's read_only mode
+only mmaps the file. This script can run while Metabase is up:
+
     docker compose exec data_platform python scripts/provisioning/bootstrap_serving_views.py
-    docker compose start metabase
 
-After Metabase is configured with duckdb.read_only=true, it holds only a
-shared lock and this script can be run without stopping Metabase (but may
-briefly block reads during CREATE OR REPLACE).
+No restart required. Writer + reader coexist on the same DuckDB file.
+
+(Historical note: earlier versions of this docstring warned that Metabase must
+be stopped first. That was based on a misdiagnosis of the 2026-04-08 serving
+hang, which turned out to be a subprocess pipe deadlock, not lock contention.)
 
 See plans/260408-1611-fix-serving-db-hang-metabase-lock/plan.md Phase 2.
 """
@@ -86,15 +89,15 @@ def bootstrap() -> None:
         print("No table directories found. Nothing to bootstrap.")
         return
 
-    # Require exclusive lock — if Metabase is connected, this will fail fast
-    # with a clear error rather than hang.
+    # Open RW. Metabase (read_only=true) does not lock the file, so this
+    # should always succeed unless another writer (dbt build) is active.
     try:
         con = duckdb.connect(SERVING_DB_PATH)
     except Exception as e:
         raise RuntimeError(
-            f"Could not acquire DuckDB lock on {SERVING_DB_PATH}: {e}\n"
-            f"Is Metabase still connected? Stop it first or configure "
-            f"duckdb.read_only=true in Metabase's JDBC params."
+            f"Could not open {SERVING_DB_PATH}: {e}\n"
+            f"If Metabase is configured with duckdb.read_only=true, it should "
+            f"not block this. Check for another writer process holding the file."
         ) from e
 
     try:
