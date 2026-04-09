@@ -21,6 +21,7 @@ from dagster import (
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, dbt, serving
 from orchestration.sensors.failure_alerting import lark_failure_sensor
+from orchestration.sensors.sheets_modified_sensor import sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
 
 # Load all assets
@@ -81,12 +82,26 @@ sapo_incremental_sync_job = define_asset_job(
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
-# 2.5 Sheets Job (Manual)
-# Ingests Google Sheets Data (Targets, Marketing Spend).
-# Raw Sync Only - NO DBT (dbt runs in Nightly or Manual triggers of dbt job)
+# 2.5 Sheets Job (Manual or sensor-triggered on sheet edit)
+# Ingests Google Sheets (Targets, Marketing Spend) AND cascades downstream:
+# dbt models that depend on the raw sheet tables + serving_db refresh.
+#
+# Why downstream is included: sheets are rarely edited (manual input by analysts)
+# and users expect the dashboard to reflect the change without waiting for
+# the 04:00 nightly. `AssetSelection.downstream()` limits the cascade to
+# marts that actually depend on these sources (fact_targets, fact_marketing_spend,
+# and anything derived) — NOT the whole dbt graph.
+_sheets_sources = (
+    AssetSelection.assets(sheets_assets.sheets_targets_asset)
+    | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset)
+)
 sheets_sync_job = define_asset_job(
     name="sheets_sync_job",
-    selection=AssetSelection.assets(sheets_assets.sheets_targets_asset) | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset),
+    selection=(
+        _sheets_sources
+        | _sheets_sources.downstream()
+        | AssetSelection.assets(serving.sapo_serving_db)
+    ),
     tags=SYNC_TAGS,
 )
 
@@ -193,6 +208,16 @@ if not dbt_exe:
 
 defs = Definitions(
     assets=all_assets,
+    # Jobs must be listed explicitly so sensors can reference them by name.
+    # Schedules already pull in their target job implicitly, but sensors
+    # targeting a job (e.g. sheets_modified_sensor → sheets_sync_job)
+    # require the job to be present in the repository.
+    jobs=[
+        sapo_realtime_sync_job,
+        sapo_incremental_sync_job,
+        sheets_sync_job,
+        sapo_nightly_reconciliation_job,
+    ],
     schedules=[
         realtime_schedule,
         incremental_schedule,
@@ -201,6 +226,7 @@ defs = Definitions(
     sensors=[
         lark_failure_sensor,
         stuck_run_sensor,
+        sheets_modified_sensor,
     ],
     resources={
         "dbt": DbtCliResource(

@@ -51,18 +51,21 @@ def stuck_run_sensor(context: SensorEvaluationContext):
     alerted_set = set(alerted)
 
     instance = context.instance
-    started_runs = instance.get_runs(
+    # Use get_run_records (not get_runs) — only RunRecord exposes start_time.
+    # DagsterRun (returned by get_runs) has no start_time attribute in dagster 1.x+.
+    started_records = instance.get_run_records(
         filters=RunsFilter(statuses=[DagsterRunStatus.STARTED])
     )
     now = datetime.now(timezone.utc)
     new_alerts: list[str] = []
 
-    for run in started_runs:
+    for rec in started_records:
+        run = rec.dagster_run
         if run.run_id in alerted_set:
             continue
-        if not run.start_time:
+        if not rec.start_time:
             continue
-        start_dt = datetime.fromtimestamp(run.start_time, tz=timezone.utc)
+        start_dt = datetime.fromtimestamp(rec.start_time, tz=timezone.utc)
         age = now - start_dt
         if age < STUCK_THRESHOLD:
             continue
