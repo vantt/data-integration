@@ -158,6 +158,50 @@ Sales targets from Google Sheets.
 
 ---
 
+### Shopee Income (`shopee_raw.order_revenue`) — NEW, planned
+
+Per-order Shopee released-income data (fees, shipping, revenue). Source: Seller Center Excel export.
+
+| Column | Type | Description |
+|---|---|---|
+| `order_code` | VARCHAR | **Natural key** — Shopee Order SN |
+| `payout_released_at` | DATE | Date payout was credited to seller wallet |
+| `order_placed_at` | DATE | Date order was placed |
+| `total_paid_amount` | BIGINT | VND, total paid by buyer |
+| `service_fee` | BIGINT | Platform service fee (negative) |
+| `payment_fee` | BIGINT | Payment processing fee (negative) |
+| `fixed_fee` | BIGINT | Fixed platform fee (negative) |
+| `shipping_fee_actual` | BIGINT | Actual shipping cost (negative) |
+| ... | | 53 columns total — see `docs/shopee-integration/data-source-description.md` § 4.3 |
+
+**Related entities:** `shopee_raw.order_revenue_items` (line-item grain), `shopee_raw.order_service_fees` (extra fees: infrastructure + Xtra voucher).
+
+---
+
+### MISA Sales Ledger (`misa_raw.sales_lines`) — NEW, planned
+
+Per-invoice-line sales detail from MISA AMIS accounting system. Contains COGS (giá vốn).
+
+| Column | Type | Description |
+|---|---|---|
+| `voucher_no` | VARCHAR | MISA voucher ID — **cross-source join key** to Sapo/Shopee |
+| `line_no` | INT | Synthesized line number per voucher (original row order) |
+| `posting_date` | DATE | Accounting posting date |
+| `product_code` | VARCHAR | MISA product code |
+| `quantity` | BIGINT | Quantity sold |
+| `unit_price` | DECIMAL(18,4) | Unit price (VND) |
+| `revenue_gross` | BIGINT | Pre-discount line revenue (VND) |
+| `discount_amount` | BIGINT | Discount (VND) |
+| `cogs_amount` | BIGINT | **Cost of goods sold** — key column |
+| `is_promo_line` | BOOL | `true` = promotional giveaway (revenue=0, cogs>0) |
+| `channel_code` | VARCHAR | `DAILY/ECOM/CS/KHAC` — sales channel |
+| `customer_code` | VARCHAR | Customer tax code |
+| ... | | 25 columns total — see `docs/misa-amis/data-source-description.md` § 4 |
+
+**Business key:** `(voucher_no, line_no)`. Dedup: `ROW_NUMBER() OVER (PARTITION BY voucher_no, line_no ORDER BY ingested_at DESC) = 1`.
+
+---
+
 ## Staging Models
 
 ### `stg_sapo_orders`
@@ -222,6 +266,89 @@ Deduplicated staff accounts.
 | `email`      | VARCHAR | `payload.email`     | Email           |
 | `role`       | VARCHAR | `payload.role`      | Role/position   |
 | `status`     | VARCHAR | `payload.status`    | active/inactive |
+
+---
+
+## Intermediate Models (Enrichment Layer)
+
+> Models prefixed `int_` contain enrichment data from external sources (Shopee, MISA). These are NOT primary facts — all orders already exist in Sapo `fact_orders`. `int_` models add fee breakdowns and cost data. They have rolling location for P0 Metabase access; P1 will join them into `fact_order_economics`.
+
+### `int_shopee_order_fees` — NEW, planned
+
+Shopee per-order fee breakdown. Joins `stg_shopee_order_revenue` LEFT JOIN `stg_shopee_order_service_fees`.
+
+| Column | Type | Description |
+|---|---|---|
+| `shopee_order_sk` | VARCHAR | Surrogate key (MD5 of order_code) |
+| `order_code` | VARCHAR | **Natural key** — joins to Sapo `fact_orders.order_code` |
+| `payout_released_at` | DATE | Date payout was released |
+| `total_paid_amount` | BIGINT | Total paid by buyer (VND) |
+| `gross_revenue` | BIGINT | Derived: total_paid + refund |
+| `total_shipping_net` | BIGINT | Net shipping (6 components) |
+| `total_discounts` | BIGINT | Seller vouchers + coin cashback + subsidies |
+| `total_platform_fees` | BIGINT | fixed + service + payment + affiliate + PiShip |
+| `infrastructure_fee` | BIGINT | From Service Fee Details sheet (COALESCE 0) |
+| `voucher_xtra_fee` | BIGINT | From Service Fee Details sheet (COALESCE 0) |
+| `total_taxes` | BIGINT | VAT + personal income tax |
+| `net_settlement` | BIGINT | Derived: all components summed = Shopee "Tổng phát hành" |
+
+**Grain:** One row per Shopee order. **Plan:** `plans/260409-1710-shopee-pipeline/design-spec.md` § 3.4
+
+---
+
+### `int_shopee_order_items` — NEW, planned
+
+Shopee per-order × product line items.
+
+| Column | Type | Description |
+|---|---|---|
+| `shopee_order_item_sk` | VARCHAR | Surrogate key |
+| `order_code` | VARCHAR | FK to `int_shopee_order_fees` |
+| `product_code` | VARCHAR | Shopee product code |
+| `product_name` | VARCHAR | Product name |
+
+**Grain:** One row per order × product.
+
+---
+
+### `int_misa_sales_lines` — NEW, planned
+
+MISA AMIS per-invoice-line with COGS, margin, and channel enrichment.
+
+| Column | Type | Description |
+|---|---|---|
+| `misa_sales_line_sk` | VARCHAR | Surrogate key (MD5 of voucher_no + line_no) |
+| `voucher_no` | VARCHAR | **Cross-source join key** to Sapo/Shopee |
+| `line_no` | INT | Line number within voucher |
+| `posting_date` | DATE | Accounting posting date |
+| `product_code` | VARCHAR | MISA product code |
+| `quantity` | BIGINT | Quantity sold |
+| `unit_price` | DECIMAL(18,4) | Unit price (VND) |
+| `revenue_gross` | BIGINT | Pre-discount revenue (VND) |
+| `cogs_amount` | BIGINT | Cost of goods sold (VND) |
+| `revenue_net_of_discount` | BIGINT | Derived: revenue - discount |
+| `gross_profit` | BIGINT | Derived: net_revenue - COGS |
+| `gross_margin_pct` | DECIMAL | Derived: gross_profit / net_revenue |
+| `is_promo_line` | BOOL | Promotional giveaway (revenue=0, cogs>0) |
+| `channel_code` | VARCHAR | `DAILY/ECOM/CS/KHAC` |
+| `channel_name` | VARCHAR | From `ref_misa_channel_codes` seed |
+| `voucher_source_hint` | VARCHAR | Heuristic: `SAPO_DEALER/SHOPEE/AEON/OTHER` |
+
+**Grain:** One row per invoice-line. **Plan:** `plans/260409-1742-misa-amis-pipeline/design-spec.md` § 3.5
+
+---
+
+### P1 Vision: `fact_order_economics` — planned
+
+Unified per-order P&L combining all three sources:
+
+```sql
+fact_order_economics =
+  fact_orders (Sapo — base grain)
+  LEFT JOIN int_shopee_order_fees ON order_code   -- platform fees
+  LEFT JOIN int_misa_sales_lines  ON voucher_no   -- COGS (aggregated to order level)
+→ net_revenue, total_fees, total_cogs, gross_profit, gross_margin_pct
+```
 
 ---
 

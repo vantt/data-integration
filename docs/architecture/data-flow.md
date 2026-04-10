@@ -6,6 +6,9 @@
 
 1. [Overview Diagram](#overview-diagram)
 2. [Ingestion Channels (Hop 1-2)](#ingestion-channels-hop-1-2)
+   - Channel 1-3: Sapo (Batch API, Webhooks, History Log)
+   - Channel 4: Shopee File Drop (NEW)
+   - Channel 5: MISA AMIS File Drop (NEW)
 3. [Storage Layer (Hop 3)](#storage-layer-hop-3)
 4. [Transformation (Hop 4-6)](#transformation-hop-4-6)
 5. [Serving (Hop 7)](#serving-hop-7)
@@ -17,10 +20,12 @@
 
 ```mermaid
 flowchart TB
-    subgraph HOP1["HOP 1: SAPO SOURCES"]
+    subgraph HOP1["HOP 1: DATA SOURCES"]
         BA[Batch API<br/>modified_on cursor]
         WH[Webhooks<br/>Real-time events]
         HL[History Log<br/>occur_at cursor]
+        SPE[Shopee Excel<br/>Released Income]
+        MISA[MISA Excel<br/>Sales Ledger / COGS]
     end
 
     subgraph HOP2["HOP 2: COLLECTION"]
@@ -28,10 +33,14 @@ flowchart TB
         CF[Cloudflare Worker<br/>D1 Buffer]
         DLT_H[dlt History<br/>run_history_log.py]
         DLT_W[dlt Webhook<br/>run_webhook_consumer.py]
+        FD_S[pandas Parser<br/>run_shopee_income_file_drop.py]
+        FD_M[pandas Parser<br/>run_misa_sales_file_drop.py]
     end
 
     subgraph HOP3["HOP 3: RAW STORAGE"]
-        PQ[Parquet Files<br/>sapo_raw/]
+        PQ_SAPO[Parquet<br/>sapo_raw/]
+        PQ_SHOP[Parquet<br/>shopee_raw/]
+        PQ_MISA[Parquet<br/>misa_raw/]
     end
 
     subgraph HOP4["HOP 4: QUERY LAYER"]
@@ -39,12 +48,13 @@ flowchart TB
     end
 
     subgraph HOP5["HOP 5: STAGING"]
-        STG[dbt Staging<br/>Deduplication]
+        STG[dbt src_ + stg_<br/>Deduplication + Cleanup]
     end
 
     subgraph HOP6["HOP 6: TRANSFORMATION"]
-        INT[dbt Intermediate<br/>Business Logic]
-        MART[dbt Marts<br/>Star Schema]
+        INT_SAPO[dbt dim_ / fact_<br/>Sapo Star Schema]
+        INT_ENRICH[dbt int_<br/>Shopee Fees + MISA COGS]
+        ECON[P1: fact_order_economics<br/>Unified P&L]
     end
 
     subgraph HOP7["HOP 7: SERVING"]
@@ -56,16 +66,26 @@ flowchart TB
     WH --> CF
     HL --> DLT_H
     CF --> DLT_W
+    SPE --> FD_S
+    MISA --> FD_M
 
-    DLT_B --> PQ
-    DLT_W --> PQ
-    DLT_H --> PQ
+    DLT_B --> PQ_SAPO
+    DLT_W --> PQ_SAPO
+    DLT_H --> PQ_SAPO
+    FD_S --> PQ_SHOP
+    FD_M --> PQ_MISA
 
-    PQ --> DUCK
+    PQ_SAPO --> DUCK
+    PQ_SHOP --> DUCK
+    PQ_MISA --> DUCK
     DUCK --> STG
-    STG --> INT
-    INT --> MART
-    MART --> SERVE
+    STG --> INT_SAPO
+    STG --> INT_ENRICH
+    INT_SAPO --> ECON
+    INT_ENRICH --> ECON
+    INT_SAPO --> SERVE
+    INT_ENRICH --> SERVE
+    ECON -.-> SERVE
     SERVE --> MB
 ```
 
@@ -235,34 +255,124 @@ flowchart TB
 
 ---
 
+### Channel 4: Shopee File Drop (NEW — planned)
+
+**Purpose:** Ingest Shopee released-income Excel exports containing per-order platform fees, shipping subsidies, and voucher costs.
+
+```
+app_data/input_source/shopee/*.xlsx
+         │
+         │  Dagster reactive sensor (file mtime change)
+         ▼
+┌─────────────────────────────────────┐
+│  ingestion/run_shopee_income_       │
+│  file_drop.py                       │
+│  (pandas + openpyxl, NO dlt SDK)    │
+│                                     │
+│  • Parse 2 sheets (Doanh thu,       │
+│    Service Fee Details)             │
+│  • Split Order/Sku grain            │
+│  • Rename VN→snake_case             │
+│  • Inject ingested_at metadata      │
+└────────────┬────────────────────────┘
+             │  Writes 3 parquet tables
+             ▼
+data_lake/shopee_raw/
+├── order_revenue/ingest_method=file_drop/year=*/month=*/*.parquet
+├── order_revenue_items/ingest_method=file_drop/year=*/month=*/*.parquet
+└── order_service_fees/ingest_method=file_drop/year=*/month=*/*.parquet
+```
+
+**Key design:** append-only parquet (unique filename per ingest), dedup at dbt read-time. No API.
+
+**Schedule:** Reactive sensor; manual file drop cadence (weekly est.)
+
+**Entities:** `order_revenue`, `order_revenue_items`, `order_service_fees`
+
+**Plan:** `plans/260409-1710-shopee-pipeline/`
+
+---
+
+### Channel 5: MISA AMIS File Drop (NEW — planned)
+
+**Purpose:** Ingest MISA AMIS **Sổ chi tiết bán hàng** (Sales Detail Ledger) Excel exports containing per-line cost-of-goods-sold (giá vốn).
+
+```
+app_data/input_source/misa-amis/*.xlsx
+         │
+         │  Dagster reactive sensor (file mtime change)
+         ▼
+┌─────────────────────────────────────┐
+│  ingestion/run_misa_sales_          │
+│  file_drop.py                       │
+│  (pandas + openpyxl, NO dlt SDK)    │
+│                                     │
+│  • Parse single sheet               │
+│  • Filter totals footer             │
+│  • Synthesize line_no per voucher   │
+│  • Rename VN→snake_case             │
+│  • Inject ingested_at metadata      │
+└────────────┬────────────────────────┘
+             │  Writes 1 parquet table
+             ▼
+data_lake/misa_raw/
+└── sales_lines/ingest_method=file_drop/year=*/month=*/*.parquet
+```
+
+**Key design:** append-only parquet (unique filename per ingest), dedup at dbt read-time. Voucher_no bridges to Sapo/Shopee orders.
+
+**Schedule:** Reactive sensor; manual file drop cadence (weekly/monthly est.)
+
+**Entities:** `sales_lines`
+
+**Plan:** `plans/260409-1742-misa-amis-pipeline/`
+
+---
+
+### Ingestion Latency Summary (updated)
+
+| Path | Hop 1→2 | Hop 2→3 | Hop 3→7 | Total |
+|------|---------|---------|---------|-------|
+| **Real-time (Webhook)** | ~1s | ~1 min | ~2 min | **~3 min** |
+| **Near Real-time (History)** | 5-10 min | ~1 min | ~2 min | **~13 min** |
+| **Batch (Daily)** | Scheduled | ~5 min | ~10 min | **~15 min** |
+| **File Drop (Shopee/MISA)** | Manual | ~30s | ~2 min | **Manual + ~2.5 min** |
+
+---
+
 ## Storage Layer (Hop 3)
 
 ### Partition Structure
 
 ```
-data_lake/sapo_raw/
-├── order/
-│   ├── ingest_method=batch_sync/
-│   │   ├── year=2026/
-│   │   │   ├── month=01/
-│   │   │   │   ├── 20260128_040015_abc123.parquet
-│   │   │   │   └── 20260127_040012_def456.parquet
-│   │   │   └── month=02/
-│   │   └── year=2025/
-│   ├── ingest_method=webhook/
-│   │   └── year=2026/
-│   │       └── month=01/
-│   │           ├── 20260128_100530_ghi789.parquet
-│   │           └── 20260128_100630_jkl012.parquet
-│   └── ingest_method=history_log/
-│       └── year=2026/
-│           └── month=01/
-│               └── 20260128_101000_mno345.parquet
-├── customer/
-│   └── ... (same structure)
-└── account/
-    └── ... (same structure)
+data_lake/
+├── sapo_raw/                              # Sapo API data (dlt-managed)
+│   ├── order/
+│   │   ├── ingest_method=batch_sync/
+│   │   │   └── year=2026/month=01/*.parquet
+│   │   ├── ingest_method=webhook/
+│   │   │   └── year=2026/month=01/*.parquet
+│   │   └── ingest_method=history_log/
+│   │       └── year=2026/month=01/*.parquet
+│   ├── customer/  ... (same structure)
+│   └── account/   ... (same structure)
+│
+├── shopee_raw/                            # Shopee file-drop (pandas-managed)
+│   ├── order_revenue/
+│   │   └── ingest_method=file_drop/year=2026/month=02/
+│   │       ├── shopee_income_2026-02_20260301T080000Z.parquet
+│   │       └── shopee_income_2026-02_20260315T090000Z.parquet
+│   ├── order_revenue_items/  ... (same partition layout)
+│   └── order_service_fees/   ... (same partition layout)
+│
+└── misa_raw/                              # MISA file-drop (pandas-managed)
+    └── sales_lines/
+        └── ingest_method=file_drop/year=2026/month=01/
+            ├── misa_sales_2026-01_20260201T100000Z.parquet
+            └── misa_sales_2026-01_20260315T080000Z.parquet
 ```
+
+> **Note:** Shopee/MISA use **append-only** writes with unique `{ingested_at_ts}` in filenames. Sapo uses dlt-generated `{file_id}`. Both patterns produce multiple files per partition; dedup happens at dbt read-time.
 
 ### File Naming Convention
 

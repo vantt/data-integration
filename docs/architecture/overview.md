@@ -26,6 +26,7 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 - **Orchestration:** Dagster (job scheduling)
 - **Serving:** DuckDB + Metabase (BI)
 - **Webhooks:** Cloudflare Workers + D1
+- **File Drop:** Shopee Income + MISA Sales Ledger (Excel → pandas → Parquet)
 
 ### Deployment Topology
 
@@ -40,7 +41,9 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 │         ▼                ▼                     ▼                 │
 │  ┌─────────────────────────────────────────────────────────────┐│
 │  │              data_lake/ (Local Filesystem)                   ││
-│  │  ├── sapo_raw/     (Parquet - Raw Data)                     ││
+│  │  ├── sapo_raw/     (Parquet - Sapo API Data)                 ││
+│  │  ├── shopee_raw/   (Parquet - Shopee File Drop)  [NEW]      ││
+│  │  ├── misa_raw/     (Parquet - MISA File Drop)    [NEW]      ││
 │  │  ├── export/marts/ (Parquet - Transformed)                  ││
 │  │  └── serving/      (DuckDB - Views)                         ││
 │  └─────────────────────────────────────────────────────────────┘│
