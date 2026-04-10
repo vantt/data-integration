@@ -1,0 +1,6 @@
+channel_code,channel_name,channel_group
+DAILY,Đại lý,B2B_DEALER
+ECOM,E-commerce,MARKETPLACE
+CS,Chăm sóc khách hàng,DIRECT_B2C
+KHAC,Khác,OTHER
+UNKNOWN,Chưa phân loại,UNKNOWN

@@ -30,3 +30,23 @@ sources:
       # Bảng 5: Marketing Spend (Google Sheets)
       - name: marketing_spend_raw
         description: "Marketing spend data ingested from Google Sheets"
+
+  - name: shopee_raw
+    schema: main
+    meta:
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/shopee_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+    tables:
+      - name: order_revenue
+        description: "Shopee order-level revenue & fees (Doanh thu sheet, Order rows)"
+      - name: order_revenue_items
+        description: "Shopee order × product line items (Doanh thu sheet, Sku rows)"
+      - name: order_service_fees
+        description: "Shopee extra service fees: infrastructure + Xtra voucher (Service Fee Details sheet)"
+
+  - name: misa_raw
+    schema: main
+    meta:
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/misa_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+    tables:
+      - name: sales_lines
+        description: "MISA AMIS Sổ chi tiết bán hàng — 1 row per invoice line, includes COGS (giá vốn)"

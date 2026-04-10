@@ -9,3 +9,4 @@ dagster-dbt
 dbt-duckdb
 pandas
 pyarrow
+openpyxl

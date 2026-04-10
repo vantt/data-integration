@@ -283,14 +283,15 @@ From the 2026-01-06 .. 2026-04-09 drop (472 lines):
 
 | Metric | Value |
 |---|---|
-| Total lines | 472 |
+| Total lines | 471 |
 | Distinct vouchers | 344 |
 | Max lines per voucher | 4 |
 | Promo lines | 92 (19.5%) |
-| Non-promo revenue (sum `revenue_gross`) | **5,176,752,390 VND** |
-| Non-promo COGS (sum `cogs_amount`) | **1,434,780,582 VND** |
-| Promo COGS (sum `cogs_amount`) | **56,729,582 VND** |
-| Implied gross margin (non-promo) | **72.3%** |
+| Non-promo revenue (sum `revenue_gross`) | **2,588,376,195 VND** |
+| Non-promo COGS (sum `cogs_amount`) | **688,941,414 VND** |
+| Promo COGS (sum `cogs_amount`) | **56,813,668 VND** |
+| Total COGS (matches Tổng cộng footer) | **745,755,082 VND** |
+| Implied gross margin (non-promo) | **73.4%** |
 | Implied gross margin including promo-cost | **71.2%** |
 | Channel split (lines) | ECOM 212 / DAILY 186 / CS 60 / KHAC 6 / NULL 8 |
 

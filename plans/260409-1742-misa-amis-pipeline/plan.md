@@ -57,8 +57,8 @@ Ingest MISA AMIS **Sổ chi tiết bán hàng** Excel exports end-to-end so that
 
 ## Success criteria
 
-- `SELECT COUNT(*) FROM int_misa_sales_lines` = 472 for the 2026-01-06..04-09 sample (distinct from totals footer).
-- `SELECT SUM(revenue_gross) FROM int_misa_sales_lines WHERE is_promo_line = FALSE` matches **5,176,752,390 VND** (audit baseline, § 9 of data-source-description.md).
+- `SELECT COUNT(*) FROM int_misa_sales_lines` = 471 for the 2026-01-06..04-09 sample (totals footer excluded).
+- `SELECT SUM(revenue_gross) FROM int_misa_sales_lines WHERE is_promo_line = FALSE` matches **2,588,376,195 VND** (audit baseline, § 9 of data-source-description.md — original figure of 5.177B was wrong due to totals-row contamination).
 - `SELECT SUM(cogs_amount) FROM int_misa_sales_lines` matches the `"Tổng cộng"` footer row of the Excel (pre-filter) — serves as load-completeness checksum.
 - `SELECT COUNT(DISTINCT voucher_no) FROM int_misa_sales_lines` = 344.
 - No duplicate `(voucher_no, line_no)` pairs (unique test passes).

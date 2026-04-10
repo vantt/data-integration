@@ -30,6 +30,11 @@ seeds:
         vendor_raw: varchar
         brand_name: varchar
         brand_code: varchar
+    ref_misa_channel_codes:
+      +column_types:
+        channel_code: varchar
+        channel_name: varchar
+        channel_group: varchar
 # Dispatch configuration
 dispatch:
   - macro_namespace: dbt
@@ -50,10 +55,12 @@ models:
       +materialized: view
       +tags: ["otp"]
 
-    # intermediate:
-    #   +schema: intermediate
-    #   +materialized: table
-    #   +tags: ["otp"]
+    intermediate:
+      +materialized: table
+      shopee:
+        +tags: ["int", "shopee"]
+      misa:
+        +tags: ["int", "misa"]
 
     marts:
       +schema: marts

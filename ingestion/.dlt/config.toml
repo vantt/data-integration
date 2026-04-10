@@ -31,3 +31,11 @@ account_id = "REPLACE_ME" # Used if running single account mode
 
 [sources.facebook_messenger]
 page_access_token = "REPLACE_ME_OR_SET_ENV_VAR" # Required if not in environment
+
+[sources.shopee]
+input_dir = "app_data/input_source/shopee"
+file_pattern = "Income.*.xlsx"
+
+[sources.misa_amis]
+input_dir = "app_data/input_source/misa-amis"
+file_pattern = "So_chi_tiet_ban_hang_*.xlsx"

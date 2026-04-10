@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: int_shopee_order_fees
+    description: "Shopee per-order fee breakdown (enrichment layer, not primary fact)"
+    columns:
+      - name: shopee_order_sk
+        tests: [unique, not_null]
+      - name: order_code
+        tests: [unique, not_null]
+      - name: payout_released_at
+        tests: [not_null]
+      - name: net_settlement
+        tests: [not_null]
+
+  - name: int_shopee_order_items
+    description: "Shopee per-order × product line items"
+    columns:
+      - name: shopee_order_item_sk
+        tests: [unique, not_null]
+      - name: order_code
+        tests:
+          - not_null
+          - relationships:
+              to: ref('int_shopee_order_fees')
+              field: order_code

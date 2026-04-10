@@ -15,12 +15,15 @@ def ensure_directories():
         print("   [WARN] DBT_EXPORT_PATH not set. Skipping directory creation.")
         return
 
-    # 2. Scan for Models (Marts only, as they are external tables)
-    # Pattern: models/marts/**/*.sql
-    models_pattern = os.path.join(project_dir, "models", "marts", "**", "*.sql")
-    model_files = glob.glob(models_pattern, recursive=True)
-    print(f"   [DEBUG] Scanning: {models_pattern}")
-    print(f"   [DEBUG] Found {len(model_files)} models.")
+    # 2. Scan for Models that use get_rolling_location() (marts + intermediate)
+    # Both marts/ and intermediate/ may contain models with rolling external parquet output.
+    model_files = []
+    for subdir in ["marts", "intermediate"]:
+        pattern = os.path.join(project_dir, "models", subdir, "**", "*.sql")
+        found = glob.glob(pattern, recursive=True)
+        model_files.extend(found)
+        print(f"   [DEBUG] Scanning: {pattern} → {len(found)} models")
+    print(f"   [DEBUG] Total: {len(model_files)} models.")
 
     count = 0
     for model_file in model_files:

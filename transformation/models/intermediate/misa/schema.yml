@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: int_misa_sales_lines
+    description: "MISA per-invoice-line with COGS, margin, and channel (enrichment layer, not primary fact)"
+    columns:
+      - name: misa_sales_line_sk
+        tests: [unique, not_null]
+      - name: voucher_no
+        tests: [not_null]
+      - name: line_no
+        tests: [not_null]
+      - name: posting_date
+        tests: [not_null]
+      - name: cogs_amount
+        tests: [not_null]
+      - name: channel_code
+        tests:
+          - accepted_values:
+              values: ['DAILY', 'ECOM', 'CS', 'KHAC', 'UNKNOWN']
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [voucher_no, line_no]
