@@ -1,6 +1,6 @@
 {{ config(
     tags=['int', 'misa'],
-    materialized='table',
+    options={'format': 'parquet'},
     location="{{ get_rolling_location() }}"
 ) }}
 

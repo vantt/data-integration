@@ -19,10 +19,11 @@ from dagster import (
     DagsterRunStatus,
 )
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, sheets_assets, dbt, serving
+from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving
 from orchestration.sensors.failure_alerting import lark_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
+from orchestration.sensors.file_drop_sensors import shopee_file_drop_sensor, misa_file_drop_sensor
 
 # Load all assets
 # Load all assets
@@ -35,7 +36,7 @@ from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
 # except Exception as e:
 #     print(f"[WARN] Auto-check failed: {e}")
 
-all_assets = load_assets_from_modules([sapo_assets, sheets_assets, dbt, serving])
+all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -105,6 +106,31 @@ sheets_sync_job = define_asset_job(
     tags=SYNC_TAGS,
 )
 
+# 2.6 Shopee file-drop sync job
+# Ingests Shopee income Excel → dbt (downstream of shopee sources) → serving_db.
+_shopee_source = AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset)
+shopee_file_drop_sync_job = define_asset_job(
+    name="shopee_file_drop_sync_job",
+    selection=(
+        _shopee_source
+        | _shopee_source.downstream()
+        | AssetSelection.assets(serving.sapo_serving_db)
+    ),
+    tags=SYNC_TAGS,
+)
+
+# 2.7 MISA file-drop sync job
+_misa_source = AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset)
+misa_file_drop_sync_job = define_asset_job(
+    name="misa_file_drop_sync_job",
+    selection=(
+        _misa_source
+        | _misa_source.downstream()
+        | AssetSelection.assets(serving.sapo_serving_db)
+    ),
+    tags=SYNC_TAGS,
+)
+
 # 3. Nightly Reconciliation Job (Batch)
 sapo_nightly_reconciliation_job = define_asset_job(
     name="sapo_nightly_reconciliation_job",
@@ -114,6 +140,8 @@ sapo_nightly_reconciliation_job = define_asset_job(
         AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
         AssetSelection.assets(sheets_assets.sheets_targets_asset) |
         AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
+        AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
+        AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
         all_dbt_assets |
         AssetSelection.assets(serving.sapo_serving_db)
     ),
@@ -216,6 +244,8 @@ defs = Definitions(
         sapo_realtime_sync_job,
         sapo_incremental_sync_job,
         sheets_sync_job,
+        shopee_file_drop_sync_job,
+        misa_file_drop_sync_job,
         sapo_nightly_reconciliation_job,
     ],
     schedules=[
@@ -227,6 +257,8 @@ defs = Definitions(
         lark_failure_sensor,
         stuck_run_sensor,
         sheets_modified_sensor,
+        shopee_file_drop_sensor,
+        misa_file_drop_sensor,
     ],
     resources={
         "dbt": DbtCliResource(

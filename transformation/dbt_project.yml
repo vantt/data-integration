@@ -56,7 +56,9 @@ models:
       +tags: ["otp"]
 
     intermediate:
-      +materialized: table
+      +materialized: external
+      +options:
+        format: "parquet"
       shopee:
         +tags: ["int", "shopee"]
       misa:
