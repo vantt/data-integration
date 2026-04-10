@@ -54,4 +54,28 @@ services:
       caddy: bi.local
       caddy.reverse_proxy: "{{upstreams 3000}}"
 
+  rill:
+    build:
+      context: .
+      dockerfile: Dockerfile.rill
+      args:
+        RILL_VERSION: ${RILL_VERSION:-v0.85.0}
+    container_name: rill
+    restart: unless-stopped
+    ports:
+      - "9009:9009"
+    environment:
+      - RILL_EXPORT_ROOT=/app/data_lake/export/rill/current
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - caddy_net
+    volumes:
+      - ./rill:/app/rill
+      - ./app_data/data_lake:/app/data_lake
+      - ./app_data/rill:/app/rill/.rill
+    command: sh -c "rill start --no-open --pull-env=false --host 0.0.0.0 --port 9009 /app/rill"
+    labels:
+      caddy: rill.local
+      caddy.reverse_proxy: "{{upstreams 9009}}"
+
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)

@@ -1,0 +1,6 @@
+type: explore
+display_name: "Orders Core"
+metrics_view: orders_core_metrics
+dimensions: "*"
+measures: "*"
+

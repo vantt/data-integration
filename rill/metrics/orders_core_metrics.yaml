@@ -1,0 +1,100 @@
+version: 1
+type: metrics_view
+model: orders_enriched
+timeseries: hour_start
+smallest_time_grain: hour
+
+dimensions:
+  - name: channel_name
+    column: channel_name
+  - name: channel_category
+    column: channel_category
+  - name: platform
+    column: platform
+  - name: branch_location_name
+    column: branch_location_name
+  - name: province
+    column: province
+  - name: district
+    column: district
+  - name: staff_name
+    column: staff_name
+  - name: status
+    column: status
+  - name: payment_status
+    column: payment_status
+  - name: fulfillment_status
+    column: fulfillment_status
+  - name: day_of_week
+    column: day_of_week
+  - name: order_hour
+    column: order_hour
+  - name: first_ship_bucket
+    column: first_ship_bucket
+  - name: complete_time_bucket
+    column: complete_time_bucket
+  - name: order_size_band
+    column: order_size_band
+
+measures:
+  - name: orders_count
+    display_name: Orders
+    expression: count(*)
+  - name: gross_revenue
+    display_name: Gross Revenue
+    expression: sum(gross_revenue)
+  - name: net_revenue
+    display_name: Net Revenue
+    expression: sum(net_revenue)
+  - name: discount_amount
+    display_name: Discount Amount
+    expression: sum(discount_amount)
+  - name: tax_amount
+    display_name: Tax Amount
+    expression: sum(tax_amount)
+  - name: total_collected
+    display_name: Total Collected
+    expression: sum(total_collected)
+  - name: avg_order_value
+    display_name: Average Order Value
+    expression: sum(net_revenue) / nullif(count(*), 0)
+  - name: completed_orders
+    display_name: Completed Orders
+    expression: count(*) filter (where is_completed)
+  - name: cancelled_orders
+    display_name: Cancelled Orders
+    expression: count(*) filter (where is_cancelled)
+  - name: open_orders
+    display_name: Open Orders
+    expression: count(*) filter (where is_open)
+  - name: fulfilled_orders
+    display_name: Fulfilled Orders
+    expression: count(*) filter (where is_fulfilled)
+  - name: eligible_orders
+    display_name: Eligible Orders
+    expression: count(*) filter (where status != 'DRAFT')
+  - name: fulfillment_rate
+    display_name: Fulfillment Rate
+    expression: count(*) filter (where is_fulfilled) / nullif(count(*) filter (where status != 'DRAFT'), 0)
+  - name: same_day_ship_orders
+    display_name: Same-day Ship Orders
+    expression: count(*) filter (where ship_same_day_flag)
+  - name: same_day_ship_rate
+    display_name: Same-day Ship Rate
+    expression: count(*) filter (where ship_same_day_flag) / nullif(count(*) filter (where status != 'DRAFT'), 0)
+  - name: pending_gt_24h_orders
+    display_name: Pending Over 24h
+    expression: count(*) filter (where pending_gt_24h_flag)
+  - name: pending_gt_48h_orders
+    display_name: Pending Over 48h
+    expression: count(*) filter (where pending_gt_48h_flag)
+  - name: avg_hours_to_first_ship
+    display_name: Avg Hours To First Ship
+    expression: avg(hours_to_first_ship)
+  - name: avg_hours_to_complete
+    display_name: Avg Hours To Complete
+    expression: avg(hours_to_complete)
+  - name: discount_rate
+    display_name: Discount Rate
+    expression: sum(discount_amount) / nullif(sum(gross_revenue), 0)
+

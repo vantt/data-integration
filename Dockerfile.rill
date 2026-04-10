@@ -1,0 +1,20 @@
+FROM debian:bookworm-slim
+
+ARG RILL_VERSION=v0.85.0
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PATH="/root/.local/bin:${PATH}"
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        bash \
+        ca-certificates \
+        curl \
+        unzip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://rill.sh | sh -s -- --version "${RILL_VERSION}" \
+    && rill version
+
+WORKDIR /app
+

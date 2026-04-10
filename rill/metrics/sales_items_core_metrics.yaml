@@ -1,0 +1,57 @@
+version: 1
+type: metrics_view
+model: sales_items_enriched
+timeseries: sale_date
+smallest_time_grain: day
+
+dimensions:
+  - name: product_name
+    column: product_name
+  - name: variant_name
+    column: variant_name
+  - name: sku
+    column: sku
+  - name: brand_name
+    column: brand_name
+  - name: product_type
+    column: product_type
+  - name: channel_name
+    column: channel_name
+  - name: branch_location_name
+    column: branch_location_name
+  - name: province
+    column: province
+  - name: district
+    column: district
+  - name: staff_name
+    column: staff_name
+
+measures:
+  - name: order_lines
+    display_name: Order Lines
+    expression: count(*)
+  - name: distinct_orders
+    display_name: Distinct Orders
+    expression: count(distinct order_id)
+  - name: quantity_sold
+    display_name: Quantity Sold
+    expression: sum(quantity)
+  - name: item_revenue
+    display_name: Item Revenue
+    expression: sum(revenue)
+  - name: direct_discount_amount
+    display_name: Direct Discount Amount
+    expression: sum(discount_amount)
+  - name: allocated_discount_amount
+    display_name: Allocated Discount Amount
+    expression: sum(distributed_discount_amount)
+  - name: total_discount_amount
+    display_name: Total Discount Amount
+    expression: sum(total_discount_amount)
+  - name: avg_selling_price
+    display_name: Average Selling Price
+    expression: sum(revenue) / nullif(sum(quantity), 0)
+  - name: avg_items_per_order
+    display_name: Avg Items Per Order
+    expression: sum(quantity) / nullif(count(distinct order_id), 0)
+

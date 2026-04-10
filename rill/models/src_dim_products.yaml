@@ -1,0 +1,7 @@
+type: model
+connector: duckdb
+materialize: true
+sql: |
+  SELECT *
+  FROM read_parquet('{{ .env.RILL_EXPORT_ROOT }}/dim_products.parquet')
+
