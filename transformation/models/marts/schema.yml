@@ -337,3 +337,43 @@ models:
         description: "Time of payment creation"
       - name: paid_on
         description: "Time of payment completion"
+
+  - name: fact_order_economics
+    description: "Per-order profitability: Sapo revenue + MISA COGS + Shopee platform fees. Grain: one row per order."
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: order_code
+        tests: [not_null]
+      - name: channel_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_channels')
+                field: channel_key
+      - name: date_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+      - name: gross_revenue
+        description: "Giá bán × SL (trước chiết khấu & thuế)"
+      - name: net_revenue
+        description: "Doanh thu thuần (sau chiết khấu, trước thuế)"
+      - name: cogs_amount
+        description: "Giá vốn hàng bán (từ MISA). NULL nếu chưa có dữ liệu MISA."
+      - name: has_cogs
+        description: "true nếu đơn có dữ liệu COGS từ MISA"
+      - name: gross_profit
+        description: "Lãi gộp = net_revenue - COGS. Nếu không có COGS thì = net_revenue."
+      - name: gross_margin_pct
+        description: "Biên lãi gộp = gross_profit / net_revenue"
+      - name: shopee_platform_fees
+        description: "Tổng phí sàn Shopee (service + payment + fixed). NULL cho non-Shopee."
+      - name: shopee_net_settlement
+        description: "Số tiền Shopee thực chuyển về. NULL cho non-Shopee."
+      - name: channel_net_profit
+        description: "Lãi ròng kênh = net_revenue - COGS - phí sàn - thuế sàn"
+      - name: channel_net_margin_pct
+        description: "Biên lãi ròng kênh = channel_net_profit / net_revenue"
