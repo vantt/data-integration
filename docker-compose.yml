@@ -69,7 +69,7 @@ services:
       - ./rill:/app/rill
       - ./app_data/data_lake:/app/data_lake
       - ./app_data/rill:/app/rill/.rill
-    command: ["start", "--no-open", "--no-ui", "--port", "9009", "--env", "RILL_EXPORT_ROOT=/app/data_lake/export/rill/current"]
+    command: ["start", "--no-open", "--port", "9009", "--env", "RILL_EXPORT_ROOT=/app/data_lake/export/rill/current"]
     labels:
       caddy: rill.local
       caddy.reverse_proxy: "{{upstreams 9009}}"
