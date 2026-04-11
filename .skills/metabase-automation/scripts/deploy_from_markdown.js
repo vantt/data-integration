@@ -285,6 +285,21 @@ async function main() {
       const pos = q.pos || { row: 0, col: 0, size_x: 4, size_y: 4 };
       const cardConfig = { id: card.id, ...pos };
 
+      // Propagate click_behavior from card viz settings to dashcard level.
+      // Metabase stores click_behavior on the dashcard, not the card itself.
+      const flatVizSettings = flattenViz(q.viz);
+      if (flatVizSettings.column_settings) {
+        const clickEntries = {};
+        for (const [key, val] of Object.entries(flatVizSettings.column_settings)) {
+          if (val && val.click_behavior) {
+            clickEntries[key] = { click_behavior: val.click_behavior };
+          }
+        }
+        if (Object.keys(clickEntries).length > 0) {
+          cardConfig.visualization_settings = { column_settings: clickEntries };
+        }
+      }
+
       // Pass tab name — syncCards will resolve to tab ID
       if (q.tab) {
         cardConfig.tab = q.tab;
