@@ -1,5 +1,3 @@
-version: "3.8"
-
 networks:
   caddy_net:
     external: true
@@ -30,7 +28,7 @@ services:
       - ./app_data/data_lake:/app/data_lake
       - ./app_data/dagster_home:/app/.dagster_home
       - ./app_data/logs:/app/logs
-    command: sh -c "python scripts/ensure_dbt_directories.py && dbt deps --project-dir /app/transformation && dagster instance concurrency set duckdb_lock 1 && dbt parse --project-dir /app/transformation --profiles-dir /app/transformation && (python scripts/maintenance/unstick_concurrency_pools.py || true) && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
+    command: sh -c "python scripts/ensure_dbt_directories.py && dbt deps --project-dir /app/transformation && dagster instance concurrency set duckdb_lock 1 && dbt parse --project-dir /app/transformation --profiles-dir /app/transformation && (python scripts/maintenance/unstick_concurrency_pools.py || true) && (python scripts/provisioning/bootstrap_reporting.py || true) && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
     labels:
       caddy: etl.local
       caddy.reverse_proxy: "{{upstreams 3001}}"
@@ -53,5 +51,27 @@ services:
     labels:
       caddy: bi.local
       caddy.reverse_proxy: "{{upstreams 3000}}"
+
+  rill:
+    build:
+      context: .
+      dockerfile: Dockerfile.rill
+    container_name: rill
+    restart: unless-stopped
+    ports:
+      - "9009:9009"
+    environment:
+      - RILL_EXPORT_ROOT=/app/data_lake/export/rill/current
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - caddy_net
+    volumes:
+      - ./rill:/app/rill
+      - ./app_data/data_lake:/app/data_lake
+      - ./app_data/rill:/app/rill/.rill
+    command: ["start", "--no-open", "--no-ui", "--port", "9009", "--env", "RILL_EXPORT_ROOT=/app/data_lake/export/rill/current"]
+    labels:
+      caddy: rill.local
+      caddy.reverse_proxy: "{{upstreams 9009}}"
 
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)

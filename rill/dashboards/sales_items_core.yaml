@@ -1,0 +1,6 @@
+type: explore
+display_name: "Sales Items Core"
+metrics_view: sales_items_core_metrics
+dimensions: "*"
+measures: "*"
+

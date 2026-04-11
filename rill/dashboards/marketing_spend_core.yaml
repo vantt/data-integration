@@ -1,0 +1,6 @@
+type: explore
+display_name: "Marketing Spend Core"
+metrics_view: marketing_spend_core_metrics
+dimensions: "*"
+measures: "*"
+

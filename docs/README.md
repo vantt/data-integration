@@ -104,6 +104,7 @@ Find any topic in one lookup:
 | Document | What it covers |
 |----------|---------------|
 | [dbt vs Metabase](./guides/dbt-vs-metabase.md) | Architecture separation patterns |
+| [Rill + Metabase](./guides/rill-with-metabase.md) | Recommended architecture for adding Rill alongside Metabase |
 | [Targets Sheet](./guides/targets-sheet.md) | Google Sheets targets configuration |
 | [Facebook Ads](./guides/facebook-ads.md) | FB Ads data integration |
 | [Facebook Messenger](./guides/facebook-messenger.md) | FB Messenger integration |

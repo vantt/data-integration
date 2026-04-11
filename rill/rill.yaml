@@ -1,0 +1,9 @@
+display_name: "Sapo Rill"
+description: "Rill analytics companion project for curated Sapo marts"
+olap_connector: duckdb
+
+env:
+  RILL_TIME_ZONE: "Asia/Ho_Chi_Minh"
+
+models:
+  materialize: true

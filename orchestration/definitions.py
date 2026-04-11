@@ -19,13 +19,12 @@ from dagster import (
     DagsterRunStatus,
 )
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving
+from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill
 from orchestration.sensors.failure_alerting import lark_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
 from orchestration.sensors.file_drop_sensors import shopee_file_drop_sensor, misa_file_drop_sensor
 
-# Load all assets
 # Load all assets
 # [Auto-Setup] Ensure dbt directories exist before loading assets
 # try:
@@ -36,7 +35,7 @@ from orchestration.sensors.file_drop_sensors import shopee_file_drop_sensor, mis
 # except Exception as e:
 #     print(f"[WARN] Auto-check failed: {e}")
 
-all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving])
+all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -72,14 +71,14 @@ SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 # 1. Realtime Job (Webhook)
 sapo_realtime_sync_job = define_asset_job(
     name="sapo_realtime_sync_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
+    selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
     tags=SYNC_TAGS,
 )
 
 # 2. Incremental Job (History Log)
 sapo_incremental_sync_job = define_asset_job(
     name="sapo_incremental_sync_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db),
+    selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
@@ -102,6 +101,7 @@ sheets_sync_job = define_asset_job(
         _sheets_sources
         | _sheets_sources.downstream()
         | AssetSelection.assets(serving.sapo_serving_db)
+        | AssetSelection.assets(rill.sapo_rill_publish)
     ),
     tags=SYNC_TAGS,
 )
@@ -143,7 +143,8 @@ sapo_nightly_reconciliation_job = define_asset_job(
         AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
         AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
         all_dbt_assets |
-        AssetSelection.assets(serving.sapo_serving_db)
+        AssetSelection.assets(serving.sapo_serving_db) |
+        AssetSelection.assets(rill.sapo_rill_publish)
     ),
     tags=SYNC_TAGS,
 )

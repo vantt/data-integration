@@ -1,0 +1,5 @@
+FROM rilldata/rill:latest
+
+# Default project dir — mount your rill/ folder here
+WORKDIR /app/rill
+

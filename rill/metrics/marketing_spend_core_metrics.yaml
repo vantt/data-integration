@@ -1,0 +1,40 @@
+version: 1
+type: metrics_view
+model: marketing_spend_enriched
+timeseries: spend_date
+smallest_time_grain: day
+
+dimensions:
+  - name: channel_name
+    column: channel_name
+  - name: channel_category
+    column: channel_category
+  - name: branch_location_name
+    column: branch_location_name
+  - name: campaign_id
+    column: campaign_id
+  - name: spend_code
+    column: spend_code
+  - name: channel_group
+    column: channel_group
+
+measures:
+  - name: spend
+    display_name: Spend
+    expression: sum(spend_amount)
+  - name: clicks
+    display_name: Clicks
+    expression: sum(clicks)
+  - name: impressions
+    display_name: Impressions
+    expression: sum(impressions)
+  - name: ctr
+    display_name: CTR
+    expression: sum(clicks) / nullif(sum(impressions), 0)
+  - name: cpc
+    display_name: CPC
+    expression: sum(spend_amount) / nullif(sum(clicks), 0)
+  - name: cpm
+    display_name: CPM
+    expression: 1000 * sum(spend_amount) / nullif(sum(impressions), 0)
+
