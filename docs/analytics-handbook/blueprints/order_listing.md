@@ -521,6 +521,7 @@ ORDER BY o.discount_amount DESC
 
 ```sql
 SELECT
+    o.order_id as "order_id",
     o.order_code as "Order Code",
     strftime(o.order_timestamp, '%H:%M') as "Time",
     o.status as "Status",
@@ -548,12 +549,29 @@ ORDER BY o.order_timestamp DESC
   "display": "table",
   "table.pivot": false,
   "visualization_settings": {
+    "table.columns": [
+      {"name": "order_id", "enabled": false}
+    ],
     "column_settings": {
       "Gross": { "number_style": "currency", "currency": "VND" },
       "Discount": { "number_style": "currency", "currency": "VND" },
       "Net Revenue": { "number_style": "currency", "currency": "VND" },
       "Tax": { "number_style": "currency", "currency": "VND" },
-      "Collected": { "number_style": "currency", "currency": "VND" }
+      "Collected": { "number_style": "currency", "currency": "VND" },
+      "[\"name\",\"Order Code\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "dashboard",
+          "targetId": 38,
+          "parameterMapping": {
+            "order_id": {
+              "source": { "type": "column", "id": "order_id", "name": "order_id" },
+              "target": { "type": "parameter", "id": "order_id" },
+              "id": "order_id"
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -1078,6 +1096,7 @@ ORDER BY o.discount_amount DESC
 
 ```sql
 SELECT
+    o.order_id as "order_id",
     o.order_code as "Order Code",
     strftime(o.order_timestamp, '%H:%M') as "Time",
     o.status as "Status",
@@ -1105,12 +1124,29 @@ ORDER BY o.order_timestamp DESC
   "display": "table",
   "table.pivot": false,
   "visualization_settings": {
+    "table.columns": [
+      {"name": "order_id", "enabled": false}
+    ],
     "column_settings": {
       "Gross": { "number_style": "currency", "currency": "VND" },
       "Discount": { "number_style": "currency", "currency": "VND" },
       "Net Revenue": { "number_style": "currency", "currency": "VND" },
       "Tax": { "number_style": "currency", "currency": "VND" },
-      "Collected": { "number_style": "currency", "currency": "VND" }
+      "Collected": { "number_style": "currency", "currency": "VND" },
+      "[\"name\",\"Order Code\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "dashboard",
+          "targetId": 38,
+          "parameterMapping": {
+            "order_id": {
+              "source": { "type": "column", "id": "order_id", "name": "order_id" },
+              "target": { "type": "parameter", "id": "order_id" },
+              "id": "order_id"
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -1646,6 +1682,7 @@ ORDER BY o.discount_amount DESC
 
 ```sql
 SELECT
+    o.order_id as "order_id",
     o.order_code as "Order Code",
     strftime(o.order_timestamp, '%H:%M') as "Time",
     o.status as "Status",
@@ -1673,12 +1710,29 @@ ORDER BY o.order_timestamp DESC
   "display": "table",
   "table.pivot": false,
   "visualization_settings": {
+    "table.columns": [
+      {"name": "order_id", "enabled": false}
+    ],
     "column_settings": {
       "Gross": { "number_style": "currency", "currency": "VND" },
       "Discount": { "number_style": "currency", "currency": "VND" },
       "Net Revenue": { "number_style": "currency", "currency": "VND" },
       "Tax": { "number_style": "currency", "currency": "VND" },
-      "Collected": { "number_style": "currency", "currency": "VND" }
+      "Collected": { "number_style": "currency", "currency": "VND" },
+      "[\"name\",\"Order Code\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "dashboard",
+          "targetId": 38,
+          "parameterMapping": {
+            "order_id": {
+              "source": { "type": "column", "id": "order_id", "name": "order_id" },
+              "target": { "type": "parameter", "id": "order_id" },
+              "id": "order_id"
+            }
+          }
+        }
+      }
     }
   }
 }

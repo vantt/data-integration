@@ -4,11 +4,13 @@
 
 - **Audience:** CFO, Treasury
 - **Goal:** Track cash movements, forecast, and monitor liquidity.
-- **Collection:** `Finance Analytics`
+- **Collection:** `Executive`
+
+> **Status: Planned** — `fact_payments` exists but lacks inflow/outflow classification. Cash flow dashboard will be implemented when payment type enrichment is added.
 
 ## Data Lineage
 
-- **Core Model:** `fact_payments` (Planned)
+- **Core Model:** [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql) — exists but needs inflow/outflow type enrichment
 - **Dimensions:** [`dim_date`](../../../transformation/models/marts/core/dim_date.sql)
 
 ## Filters

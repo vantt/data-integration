@@ -32,28 +32,83 @@
   SUM(line_amount)
   ```
 
-### 3. Profit Margin by Category
+### 3. Product-Level COGS (Giá vốn theo sản phẩm)
 
-> **dbt Model:** [fact_sales](../../../transformation/models/marts/sales/fact_sales.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
-- **Business Definition:** Gross profit percentage aggregated by category.
+- **Business Definition:** Giá vốn hàng bán chi tiết theo từng sản phẩm, lấy từ sổ chi tiết bán hàng MISA.
 - **Logic (SQL):**
   ```sql
-  (SUM(revenue) - SUM(cogs)) / SUM(revenue) * 100
-  -- Detailed:
-  (SUM(oli.line_amount - oli.quantity * p.cost_price) * 100.0 /
-   NULLIF(SUM(oli.line_amount), 0))
+  SELECT
+      product_code,
+      product_name,
+      SUM(cogs_amount) AS total_cogs,
+      SUM(quantity) AS total_qty,
+      SUM(cogs_amount) * 1.0 / NULLIF(SUM(quantity), 0) AS avg_cogs_per_unit
+  FROM int_misa_sales_lines
+  WHERE NOT is_promo_line
+  GROUP BY product_code, product_name
   ```
 
-### 4. Return Rate
+### 4. Gross Margin by Product
 
-> **dbt Model:** [fact_sales](../../../transformation/models/marts/sales/fact_sales.sql)
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
-- **Business Definition:** Percentage of units returned.
+- **Business Definition:** Biên lợi nhuận gộp theo sản phẩm — so sánh sản phẩm nào tạo lãi cao, sản phẩm nào biên mỏng.
 - **Logic (SQL):**
   ```sql
-  Returns / Units_Sold
+  SELECT
+      product_code,
+      product_name,
+      SUM(revenue_net_of_discount) AS revenue,
+      SUM(cogs_amount) AS cogs,
+      SUM(gross_profit) AS gross_profit,
+      SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0) AS gross_margin_pct
+  FROM int_misa_sales_lines
+  WHERE NOT is_promo_line
+  GROUP BY product_code, product_name
+  ORDER BY gross_profit DESC
   ```
+- **Threshold:**
+  - High-margin: > 50%
+  - Normal: 30-50%
+  - Low-margin: < 30%
+
+### 5. Gross Margin by Category/Channel
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Biên lợi nhuận gộp theo kênh bán hàng và nhóm sản phẩm.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      channel_name,
+      SUM(revenue_net_of_discount) AS revenue,
+      SUM(gross_profit) AS gross_profit,
+      SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0) AS gross_margin_pct
+  FROM int_misa_sales_lines
+  WHERE NOT is_promo_line
+  GROUP BY channel_name
+  ```
+
+### 6. Return Rate
+
+> **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+
+- **Business Definition:** Percentage of orders returned.
+- **Logic (SQL):**
+  ```sql
+  COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) * 100.0
+  / NULLIF(COUNT(DISTINCT order_id), 0)
+  ```
+- **Note:** Return tracking via order status transitions; may undercount partial returns.
+
+## Related Dashboards
+
+| Dashboard | Audience | Purpose | Link |
+|:---|:---|:---|:---|
+| **Product Performance** | Merchandising | Sales velocity, category analysis, margin (MISA COGS) | [Playbook](../playbooks/product_performance.md) |
+| **Channel Profitability Monthly** | CEO, Finance | Product margin drill-down by channel | [Playbook](../playbooks/channel_profitability_monthly.md) |
 
 ## Context: Inventory Health
 
@@ -62,7 +117,7 @@
 > **Description:** Stock levels and efficiency.
 > **dbt Source:** `fact_inventory`
 
-### 5. Inventory Turnover
+### 7. Inventory Turnover
 
 > **dbt Model:** `fact_inventory`
 
@@ -72,7 +127,7 @@
   COGS / Avg_Inventory
   ```
 
-### 6. Sell-through Rate
+### 8. Sell-through Rate
 
 > **dbt Model:** `fact_inventory`
 
@@ -82,7 +137,7 @@
   Units_Sold / (Start_Stock + Received)
   ```
 
-### 7. Days of Supply
+### 9. Days of Supply
 
 > **dbt Model:** `fact_inventory`
 
@@ -92,7 +147,7 @@
   Current_Stock / Daily_Sales_Rate
   ```
 
-### 8. Out of Stock (OOS) Rate
+### 10. Out of Stock (OOS) Rate
 
 > **dbt Model:** `fact_inventory`
 
@@ -102,7 +157,7 @@
   Count(OOS_SKUs) / Total_SKUs
   ```
 
-### 9. Inventory Value
+### 11. Inventory Value
 
 > **dbt Model:** `fact_inventory`
 
@@ -112,7 +167,7 @@
   SUM(quantity * cost_price)
   ```
 
-### 10. Slow-Moving Stock (Dead Stock)
+### 12. Slow-Moving Stock (Dead Stock)
 
 > **dbt Model:** `fact_inventory`
 

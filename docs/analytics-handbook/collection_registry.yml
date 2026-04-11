@@ -27,7 +27,7 @@
 #     Marketing & Customers → "Kênh/Khách thế nào?"
 #     Operations            → "Hôm nay cần làm gì?"
 #
-# LAST UPDATED: 2026-03-31
+# LAST UPDATED: 2026-04-10
 # =============================================================================
 
 collections:
@@ -44,6 +44,7 @@ collections:
       - CEO Weekly Pulse
       - CEO Monthly Scorecard
       - Sales Executive Dashboard
+      - Channel Profitability Monthly
 
   # ---------------------------------------------------------------------------
   # MARKETING & CUSTOMERS — "Kênh/Khách thế nào?"
@@ -82,6 +83,7 @@ collections:
         dashboards:
           - Sales Ops Weekly Review
           - Sales Ops Monthly Summary
+          - Shopee Channel Economics
 
     dashboards:
       - Social Commerce Operations
@@ -95,10 +97,12 @@ collections:
 # | Audience                    | Collection Path              |
 # |-----------------------------|------------------------------|
 # | CEO / Board / Sales Director| Executive                    |
+# | Finance / CFO (profitability)| Executive                   |
 # | Marketing Manager / CMO     | Marketing & Customers        |
 # | Customer Success            | Marketing & Customers        |
 # | Store Manager (daily ops)   | Operations > Daily Monitoring|
 # | Sales Ops / CS Lead (weekly)| Operations > Periodic Reviews|
+# | Sales Ops (Shopee economics)| Operations > Periodic Reviews|
 # | CS Lead (social commerce)   | Operations                   |
 #
 # DECISION GUIDE — which collection?

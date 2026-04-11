@@ -9,7 +9,8 @@
 
 ## Data Lineage
 
-- **Core Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+- **Core Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql) (velocity & revenue)
+- **Profitability:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) (COGS & margin)
 - **Dimensions:** [`dim_products`](../../../transformation/models/marts/core/dim_products.sql), [`dim_product_types`](../../../transformation/models/marts/core/dim_product_types.sql)
 
 ## Reading Flow
@@ -52,15 +53,26 @@
 | **Category Mix Trend** | Stacked Area       | [Product Revenue](../domains/product.md#2-product-revenue) | Group by Category Over Time. |
 | **Category Growth MoM** | Horizontal Bar (conditional) | [Product Revenue](../domains/product.md#2-product-revenue) | MoM % change by category. |
 
-### Section 3: Planned — Inventory-dependent (requires `fact_inventory`)
+### Section 3: Profitability (MISA COGS)
+
+> **Status: Ready** — MISA sales ledger provides product-level COGS and gross margin.
+> **Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+| Chart Title                    | Visualization Type | Metric Reference (Link to Domain)                                           | Notes/Config                                          |
+| :----------------------------- | :----------------- | :-------------------------------------------------------------------------- | :---------------------------------------------------- |
+| **Gross Margin %**             | Scalar             | [Gross Margin by Product](../domains/product.md#4-gross-margin-by-product)  | Overall margin %. Threshold: >40% healthy.            |
+| **Top Products by Profit**     | Horizontal Bar     | [Gross Margin by Product](../domains/product.md#4-gross-margin-by-product)  | Top 20 products ranked by gross_profit (absolute).    |
+| **Margin by Channel**          | Horizontal Bar     | [Gross Margin by Category/Channel](../domains/product.md#5-gross-margin-by-categorychannel) | Compare DAILY vs ECOM vs CS margin %. |
+| **Low-Margin Products**        | Table              | [Product-Level COGS](../domains/product.md#3-product-level-cogs-giá-vốn-theo-sản-phẩm) | Products with margin < 30%. Alert list. |
+
+### Section 4: Planned — Inventory-dependent (requires `fact_inventory`)
 
 > **Status: Planned** — `fact_inventory` model does not exist yet. Metrics below will be added when inventory data pipeline is built.
 
-| Chart Title            | Visualization Type | Metric Reference (Link to Domain)                          | Notes/Config                 |
-| :--------------------- | :----------------- | :--------------------------------------------------------- | :--------------------------- |
-| **Return Rate by Cat** | Bar Chart          | [Return Rate](../domains/product.md#4-return-rate)         | Requires reliable return data at line-item level. Planned. |
-| **OOS Rate**           | Gauge              | [OOS Rate](../domains/product.md#8-out-of-stock-oos-rate)  | Requires `fact_inventory`. Planned. |
-| **Inventory Turnover** | Single Value       | [Inventory Turnover](../domains/product.md#5-inventory-turnover) | Requires `fact_inventory`. Planned. |
+| Chart Title            | Visualization Type | Metric Reference (Link to Domain)                                          | Notes/Config                            |
+| :--------------------- | :----------------- | :------------------------------------------------------------------------- | :-------------------------------------- |
+| **OOS Rate**           | Gauge              | [OOS Rate](../domains/product.md#10-out-of-stock-oos-rate)                 | Requires `fact_inventory`. Planned.     |
+| **Inventory Turnover** | Single Value       | [Inventory Turnover](../domains/product.md#7-inventory-turnover)           | Requires `fact_inventory`. Planned.     |
 
 ## Implementation Notes
 

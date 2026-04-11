@@ -1147,3 +1147,258 @@ Source: fact_orders · dim_products · Updated daily · Excludes cancelled order
 ```json metabase-pos
 { "row": 34, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+---
+
+### 📑 Tab: Loi nhuan
+
+#### 📝 Text: Profitability Heading
+
+# Bien loi nhuan gop theo san pham — dua tren gia von tu MISA
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Gross Margin %
+
+Ty le bien loi nhuan gop tong the — gauge theo nguong hieu suat.
+
+```sql
+SELECT
+    ROUND(
+        SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+        1
+    ) AS "Bien loi nhuan gop %"
+FROM int_misa_sales_lines
+WHERE NOT is_promo_line
+  [[AND posting_date >= {{date_range}}]]
+```
+
+```json metabase-viz
+{
+  "display": "gauge",
+  "visualization_settings": {
+    "gauge.segments": [
+      { "min": 0,  "max": 25,  "color": "#EF8C8C", "label": "Thap" },
+      { "min": 25, "max": 40,  "color": "#F9D45C", "label": "Trung binh" },
+      { "min": 40, "max": 100, "color": "#84BB4C", "label": "Tot" }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+```
+
+#### Question: Top 20 san pham theo loi nhuan
+
+Top 20 san pham co loi nhuan gop cao nhat — horizontal bar.
+
+```sql
+SELECT
+    product_name AS "San pham",
+    SUM(gross_profit) AS "Loi nhuan gop"
+FROM int_misa_sales_lines
+WHERE NOT is_promo_line
+  [[AND posting_date >= {{date_range}}]]
+GROUP BY product_name
+ORDER BY "Loi nhuan gop" DESC
+LIMIT 20
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["San pham"],
+    "graph.metrics": ["Loi nhuan gop"],
+    "graph.colors": ["#509EE3"],
+    "graph.x_axis.title_text": "Loi nhuan gop (VND)",
+    "column_settings": {
+      "Loi nhuan gop": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 6, "size_x": 12, "size_y": 8 }
+```
+
+---
+
+#### 📝 Text: Channel Margin Heading
+
+# So sanh margin giua cac kenh ban hang
+
+```json metabase-pos
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Margin by Channel
+
+Loi nhuan gop va bien LN theo kenh ban hang — horizontal bar.
+
+```sql
+SELECT
+    channel_name AS "Kenh ban hang",
+    SUM(revenue_net_of_discount) AS "Doanh thu",
+    SUM(cogs) AS "Gia von",
+    SUM(gross_profit) AS "Loi nhuan gop",
+    ROUND(
+        SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+        1
+    ) AS "Margin %"
+FROM int_misa_sales_lines
+WHERE NOT is_promo_line
+  [[AND posting_date >= {{date_range}}]]
+GROUP BY channel_name
+ORDER BY "Margin %" DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Kenh ban hang"],
+    "graph.metrics": ["Margin %"],
+    "graph.x_axis.title_text": "Bien loi nhuan gop (%)",
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Gia von": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Loi nhuan gop": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Margin %": {
+        "number_style": "decimal",
+        "decimals": 1,
+        "suffix": "%"
+      }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Margin %"],
+        "type": "single",
+        "operator": ">",
+        "value": 40,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Margin %"],
+        "type": "single",
+        "operator": "<",
+        "value": 25,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### Question: San pham margin thap
+
+San pham co bien loi nhuan gop duoi 30% — bang chi tiet de review.
+
+```sql
+SELECT
+    product_code AS "Ma san pham",
+    product_name AS "San pham",
+    SUM(revenue_net_of_discount) AS "Doanh thu",
+    SUM(cogs) AS "Gia von",
+    SUM(gross_profit) AS "Loi nhuan gop",
+    ROUND(
+        SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+        1
+    ) AS "Margin %"
+FROM int_misa_sales_lines
+WHERE NOT is_promo_line
+  [[AND posting_date >= {{date_range}}]]
+GROUP BY product_code, product_name
+HAVING ROUND(
+    SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+    1
+) < 30
+ORDER BY "Margin %" ASC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Gia von": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Loi nhuan gop": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Margin %": {
+        "number_style": "decimal",
+        "decimals": 1,
+        "suffix": "%"
+      }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Margin %"],
+        "type": "single",
+        "operator": "<",
+        "value": 15,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Margin %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 40,
+        "color": "#84BB4C",
+        "highlight_row": false
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 9, "size_x": 9, "size_y": 9 }
+```
