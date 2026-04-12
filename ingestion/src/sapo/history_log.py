@@ -9,7 +9,6 @@ import requests
 import time
 import hashlib
 import json
-import re
 from typing import Iterator, Dict, Any, List, Optional
 from datetime import datetime
 from tenacity import (
@@ -19,44 +18,107 @@ from tenacity import (
     retry_if_exception_type
 )
 
-def infer_uri(root_type: str, root_id: int) -> Optional[str]:
+# ---------------------------------------------------------------------------
+# Entity Registry
+# Each entry defines how to fetch and route a Sapo entity from history log.
+#
+#   api_resource : URL path segment for JSON API  /admin/{api_resource}/{id}.json
+#   table        : destination table in data lake (None = use root_type as-is)
+#   resolve      : "standard"  — fetch /admin/{api_resource}/{root_id}.json
+#                  "parent"    — root_id is a child; extract parent ID from log's
+#                                `uri` field (e.g. customer_address → customer)
+#                  "skip"      — do not fetch (low-value / non-fetchable entity)
+#
+# Verified against live Sapo JSON endpoints (cookie-based, same as orders).
+# Web UI routes may differ (e.g. /admin/shipments/ vs /admin/fulfillments/).
+# ---------------------------------------------------------------------------
+ENTITY_REGISTRY: Dict[str, Dict[str, Any]] = {
+    # --- Core business entities (have batch pipelines) ---
+    "order":              {"api_resource": "orders",              "table": "order"},
+    "customer":           {"api_resource": "customers",           "table": "customer"},
+    "product":            {"api_resource": "products",            "table": "product"},
+    "account":            {"api_resource": "accounts",            "table": "account"},
+
+    # --- Logistics & inventory (history_log only) ---
+    # Fulfillment = packing slip (kho đóng gói). Shipment info is nested inside.
+    # Web UI: /admin/fulfillments (kho) and /admin/shipments (vận chuyển) = same entity.
+    "fulfillment":        {"api_resource": "fulfillments",        "table": "fulfillment"},
+    "purchase_order":     {"api_resource": "purchase_orders",     "table": "purchase_order"},
+    "order_return":       {"api_resource": "order_returns",       "table": "order_return"},
+    "stock_adjustment":   {"api_resource": "stock_adjustments",   "table": "stock_adjustment"},
+
+    # --- Reference / config entities ---
+    "customer_group":     {"api_resource": "customer_groups",     "table": "customer_group"},
+    "price_list":         {"api_resource": "price_lists",         "table": "price_list"},
+
+    # --- Resolved via parent entity ---
+    # customer_address: rootId = address_id, but we re-fetch the parent customer.
+    # The log's `uri` field contains /admin/customers/{customer_id}/addresses.json
+    "customer_address":   {"api_resource": None, "table": "customer", "resolve": "parent",
+                           "parent_uri_pattern": "/addresses.json",
+                           "parent_uri_replace": ".json"},
+
+    # --- Content / CMS (never observed in history log — URLs unverified) ---
+    "page":               {"api_resource": "pages",               "table": "page"},
+    "blog":               {"api_resource": "blogs",               "table": "blog"},
+    "article":            {"api_resource": "articles",            "table": "article"},
+    "custom_collection":  {"api_resource": "custom_collections",  "table": "custom_collection"},
+    "smart_collection":   {"api_resource": "smart_collections",   "table": "smart_collection"},
+    "collect":            {"api_resource": "collects",            "table": "collect"},
+    "variant":            {"api_resource": "variants",            "table": "variant"},
+
+    # --- Low-value / non-fetchable — skip ---
+    "fulfillment_print_forms":  {"resolve": "skip"},
+    "account_authentication":   {"resolve": "skip"},
+    "tenant_role":              {"resolve": "skip"},
+    "policy":                   {"resolve": "skip"},
+}
+
+
+def infer_uri(root_type: str, root_id: int, log_item: Optional[Dict] = None) -> Optional[str]:
     """
-    Infers the URI for a Sapo entity based on its type and ID.
+    Build the JSON API fetch URI for an entity from the history log.
+
+    Returns None when the entity should be skipped or cannot be resolved.
+    For "parent" resolve types, extracts the parent URI from the log item's `uri` field.
     """
     if not root_type or not root_id:
         return None
-        
+
     r_type = root_type.lower().strip()
-    
-    mappings = {
-        'order': 'orders',
-        'customer': 'customers',
-        'product': 'products',
-        'variant': 'variants',
-        'collect': 'collects',
-        'custom_collection': 'custom_collections',
-        'smart_collection': 'smart_collections',
-        'page': 'pages',
-        'blog': 'blogs',
-        'article': 'articles',
-        'fulfillment': 'fulfillments',
-        'purchase_order': 'purchase_orders',
-        'stock_adjustment': 'stock_adjustments',
-        'delivery_service_provider': 'delivery_service_providers',
-        'order_return': 'order_returns',
-        'fulfillment_print_forms': 'fulfillment_print_forms',
-        'account_authentication': 'account_authentications',
-        'customer_address': 'customer_addresses',
-        'tenant_role': 'tenant_roles',
-        'user': 'users',
-        'policy': 'policies',
-    }
-    
-    resource = mappings.get(r_type)
-    if resource:
-        return f"/admin/{resource}/{root_id}.json"
-    
-    return f"/admin/{r_type}s/{root_id}.json"
+    entry = ENTITY_REGISTRY.get(r_type)
+
+    if not entry:
+        # Unknown type — attempt default pluralisation
+        return f"/admin/{r_type}s/{root_id}.json"
+
+    resolve = entry.get("resolve", "standard")
+
+    if resolve == "skip":
+        return None
+
+    if resolve == "parent" and log_item:
+        source_uri = log_item.get("uri", "")
+        pattern = entry.get("parent_uri_pattern", "")
+        replacement = entry.get("parent_uri_replace", "")
+        if source_uri and pattern and pattern in source_uri:
+            return source_uri.replace(pattern, replacement)
+        return None
+
+    api_resource = entry.get("api_resource")
+    if api_resource:
+        return f"/admin/{api_resource}/{root_id}.json"
+
+    return None
+
+
+def get_table_name(root_type: str) -> str:
+    """Resolve the destination table name for an entity type."""
+    r_type = root_type.lower().strip() if root_type else ""
+    entry = ENTITY_REGISTRY.get(r_type)
+    if entry and entry.get("table"):
+        return entry["table"]
+    return r_type or "unknown"
 
 @dlt.source
 def sapo_history_log_source(
@@ -249,12 +311,10 @@ def history_log(
                     else:
                         is_new = False
                 
-                if debug and not is_new:
-                     # Verbose: show we skipped
-                     # print(f"   Skipold: {item_occur_at} <= {last_value}")
-                     pass
-
                 if is_new:
+                    # Any new item (even if later skipped) proves we haven't
+                    # paginated past the new-data frontier yet.
+                    consecutive_old_items = 0
                     try:
                         # 1. Parse Date for Partitioning
                         dt = datetime.fromisoformat(item_occur_at.replace("Z", "+00:00"))
@@ -262,60 +322,39 @@ def history_log(
                         # 2. Prepare Envelope
                         root_id = item.get("rootId")
                         root_type = item.get("rootType", "").lower() # Normalize
-                        
-                        # [Modified] Custom Logic for specific types
-                        if "fulfillment_print_form" in root_type or root_type == "account_authentication":
-                             if debug:
-                                 print(f"   Skipping ignored type: {root_type}")
-                             continue
 
-                        inferred_uri = infer_uri(root_type, root_id)
-                        
-                        if root_type == "customer_address":
-                             # Reload customer details instead of address
-                             # User logic: Extract from item url which is like /admin/customers/{id}/addresses.json
-                             # Convert to /admin/customers/{id}.json
-                             source_uri = item.get("uri")
-                             if source_uri and "/addresses.json" in source_uri:
-                                 inferred_uri = source_uri.replace("/addresses.json", ".json")
-                             else:
-                                 # Fallback: try regex if strict matching fails or just log warning
-                                 if debug:
-                                     print(f"   ⚠️ Could not extract customer URI from url: {source_uri}")
-                                 inferred_uri = None
+                        # Resolve fetch URI via entity registry
+                        inferred_uri = infer_uri(root_type, root_id, log_item=item)
 
-                        
-                        if debug:
-                            print(f"   Item {item.get('id')} [{item_occur_at}] -> {root_type}:{root_id}")
-                            if not inferred_uri:
-                                print(f"   ⚠️ Could not infer URI for {root_type}:{root_id}")
-
-                        # Fetch Entity State (Payload)
-                        entity_payload = None
-                        if inferred_uri:
-                            if debug:
-                                print(f"   🔎 Fetching entity: {inferred_uri}")
-                            raw_entity_data = fetch_entity_data(inferred_uri, session)
-                            if raw_entity_data:
-                                stats["fetched_success"] += 1
-                                # Often the data is wrapped { "order": { ... } }
-                                # We want the inner dict if possible?
-                                # `webhook` puts { ... } directly.
-                                # `orders.py` puts { ... } directly.
-                                # `fetch_entity_data` returns { "order": { ... } } usually.
-                                # Let's try to unwrap if 1 key matches singular entity type?
-                                # For safety, let's keep it as is, or normalize later.
-                                # The Unified Schema expects `payload` to be THE entity.
-                                # If I have { "order": {...} }, I should probably unwrap it to match Batch Sync which returns {...}.
-                                keys = list(raw_entity_data.keys())
-                                if len(keys) == 1 and keys[0].lower() == root_type:
-                                    entity_payload = raw_entity_data[keys[0]]
-                                else:
-                                    entity_payload = raw_entity_data
-                            else:
-                                stats["fetched_failure"] += 1
+                        if inferred_uri is None:
+                            # Registry returned None — either "skip" type or unresolvable parent
+                            entry = ENTITY_REGISTRY.get(root_type, {})
+                            if entry.get("resolve") == "skip":
                                 if debug:
-                                    print(f"      ❌ Failed to fetch {inferred_uri}")
+                                    print(f"   Skipping low-value type: {root_type}")
+                            else:
+                                if debug:
+                                    print(f"   ⚠️ Could not resolve URI for {root_type}:{root_id}")
+                            stats["skipped_no_uri_or_payload"] += 1
+                            continue
+
+                        if debug:
+                            print(f"   🔎 {item.get('id')} [{item_occur_at}] {root_type}:{root_id} -> {inferred_uri}")
+                        raw_entity_data = fetch_entity_data(inferred_uri, session)
+                        entity_payload = None
+                        if raw_entity_data:
+                            stats["fetched_success"] += 1
+                            # API returns wrapped: {"order": {...}}, {"customer": {...}}, etc.
+                            # Unwrap if single top-level key whose value is a dict.
+                            keys = list(raw_entity_data.keys())
+                            if len(keys) == 1 and isinstance(raw_entity_data[keys[0]], dict):
+                                entity_payload = raw_entity_data[keys[0]]
+                            else:
+                                entity_payload = raw_entity_data
+                        else:
+                            stats["fetched_failure"] += 1
+                            if debug:
+                                print(f"      ❌ Failed to fetch {inferred_uri}")
                         
                         if not entity_payload:
                              if debug:
@@ -327,9 +366,15 @@ def history_log(
                         payload_str = json.dumps(entity_payload, sort_keys=True)
                         payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
 
+                        # For "parent" resolve (e.g. customer_address → customer),
+                        # use the payload's actual id as entity_id, and the table's entity type.
+                        entry = ENTITY_REGISTRY.get(root_type, {})
+                        effective_entity_id = str(entity_payload.get("id", root_id))
+                        effective_entity_type = entry.get("table", root_type)
+
                         envelope = {
-                            "entity_id": str(root_id),
-                            "entity_type": root_type,
+                            "entity_id": effective_entity_id,
+                            "entity_type": effective_entity_type,
                             "ingest_method": "history_log",
                             "event_type": str(item.get("actionName")),
                             "event_timestamp": item_occur_at,
@@ -353,7 +398,6 @@ def history_log(
                              print(f"      ✅ Prepared envelope for {root_type}:{root_id}")
 
                         new_envelopes.append(envelope)
-                        consecutive_old_items = 0 
                     except ValueError:
                         print(f"⚠️ Date parse error: {item_occur_at}")
                         stats["skipped_parse_error"] += 1
@@ -370,17 +414,8 @@ def history_log(
                         print(f"🛑 Limit of {limit} reached.")
                         break
 
-                    # Dynamic Table Name Routing based on entity_type
-                    raw_type = env["entity_type"]
-                    if raw_type in ["order", "orders"]:
-                        table_name = "order"
-                    elif raw_type in ["customer", "customers"]:
-                        table_name = "customer"
-                    elif raw_type in ["product", "products"]:
-                        table_name = "product"
-                    else:
-                        table_name = raw_type if raw_type else "history_log"
-                    
+                    # Route to destination table via entity registry
+                    table_name = get_table_name(env["entity_type"])
                     yield dlt.mark.with_table_name(env, table_name)
                     stats["yielded"] += 1
             
