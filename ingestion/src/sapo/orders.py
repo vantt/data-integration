@@ -86,7 +86,7 @@ def sapo_orders_source(
 )
 def orders(
     max_pages: int = 1000,
-    page_size: int = 250,
+    page_size: int = 100,
     min_overlap_items: int = 500,
     first_timestamp=dlt.sources.incremental("sync_metadata.event_timestamp")
 ) -> Iterator[List[Dict[Any, Any]]]:
