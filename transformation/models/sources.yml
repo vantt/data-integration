@@ -23,7 +23,11 @@ sources:
       - name: account
         description: "Raw accounts/staff data from Parquet files"
 
-      # Bảng 4: Targets (Google Sheets)
+      # Bảng 4: Products
+      - name: product
+        description: "Raw products data from Parquet files"
+
+      # Bảng 5: Targets (Google Sheets)
       - name: targets_raw
         description: "Target goals ingested from Google Sheets"
 

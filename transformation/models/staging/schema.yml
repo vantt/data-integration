@@ -29,3 +29,29 @@ models:
     columns:
       - name: sapo_customer_id
         tests: [not_null]
+
+  - name: stg_sapo_products
+    columns:
+      - name: product_id
+        tests: [not_null]
+
+  - name: stg_sapo_variants
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: product_id
+        tests: [not_null]
+
+  - name: stg_sapo_variant_prices
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: price_list_id
+        tests: [not_null]
+
+  - name: stg_sapo_inventories
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
