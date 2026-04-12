@@ -14,6 +14,7 @@ try:
     import run_customers_batch
     import run_customers_batch
     import run_accounts_batch
+    import run_products_batch
     # removed gsheet imports
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
@@ -97,6 +98,35 @@ def sapo_accounts_batch_asset(context):
     context.log.info(f"Accounts Batch Sync Finished. Info: {load_info}")
     return Output(
         value="Accounts Batch Sync Completed", 
+        metadata={
+            "fetch_status": MetadataValue.text(records_status),
+            "packages_loaded": MetadataValue.int(len(loaded_packages)),
+            "load_info": MetadataValue.text(str(load_info))
+        }
+    )
+
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
+def sapo_products_batch_asset(context):
+    """
+    Daily batch sync for Sapo Products.
+    Captures 'modified_on' updates.
+    """
+    context.log.info("Starting Sapo Products Batch Sync...")
+    load_dlt_configuration(context.log.info)
+    cwd = os.getcwd()
+    try:
+        os.chdir(DLT_DIR)
+        load_info = run_products_batch.run(argv=[])
+    finally:
+        os.chdir(cwd)
+
+    info_dict = load_info.asdict() if hasattr(load_info, 'asdict') else {}
+    loaded_packages = info_dict.get('loads_ids', [])
+    records_status = "Data loaded" if len(loaded_packages) > 0 else "0 new records"
+
+    context.log.info(f"Products Batch Sync Finished. Info: {load_info}")
+    return Output(
+        value="Products Batch Sync Completed",
         metadata={
             "fetch_status": MetadataValue.text(records_status),
             "packages_loaded": MetadataValue.int(len(loaded_packages)),

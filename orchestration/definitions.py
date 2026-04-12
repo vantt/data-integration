@@ -138,6 +138,7 @@ sapo_nightly_reconciliation_job = define_asset_job(
         AssetSelection.assets(sapo_assets.sapo_orders_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
         AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
+        AssetSelection.assets(sapo_assets.sapo_products_batch_asset) |
         AssetSelection.assets(sheets_assets.sheets_targets_asset) |
         AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
         AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
