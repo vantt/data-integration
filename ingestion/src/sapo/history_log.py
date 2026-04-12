@@ -9,13 +9,15 @@ import requests
 import time
 import hashlib
 import json
+import random
 from typing import Iterator, Dict, Any, List, Optional
 from datetime import datetime
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential,
-    retry_if_exception_type
+    retry_if_exception_type,
+    retry_if_result
 )
 
 # ---------------------------------------------------------------------------
@@ -220,53 +222,93 @@ def history_log(
         "fetched_failure": 0
     }
 
+    def _delay_with_jitter():
+        """Apply rate-limiting delay with random jitter to avoid predictable patterns."""
+        if request_delay > 0:
+            jitter = random.uniform(0, request_delay * 0.3)
+            time.sleep(request_delay + jitter)
+
+    def _handle_auth_response(response, current_session, context: str):
+        """
+        Check for auth issues (redirect to login, 401, 403).
+        Returns refreshed response on recoverable auth failure, or raises.
+        """
+        if "accessdenied" in response.url:
+            raise PermissionError(
+                f"Access Denied for {context}. Redirected to: {response.url}"
+            )
+        if "/login" in response.url or response.status_code in (401, 403):
+            print(f"🔄 Session expired ({context}), refreshing cookies...")
+            client.refresh_session(current_session)
+            return None  # Signal caller to retry
+        return response
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=2, max=10),
-        retry=retry_if_exception_type(requests.RequestException)
+        retry=retry_if_exception_type((requests.RequestException, PermissionError))
     )
     def fetch_page_with_retry(page_num: int, current_session) -> Dict[str, Any]:
-
-        # Apply rate limiting delay
-        if request_delay > 0:
-            time.sleep(request_delay)
-
-        params = {
-            "page": page_num,
-            "limit": page_size
-        }
-
+        _delay_with_jitter()
+        params = {"page": page_num, "limit": page_size}
         response = current_session.get(logs_url, params=params, timeout=30)
 
-        # Check for redirects
-        if response.url.find("/login") != -1:
-            print(f"⚠️ Redirected to login page: {response.url}")
-        elif "accessdenied" in response.url:
-            raise PermissionError(f"❌ Access Denied: The user does not have permission to access {logs_url}. Redirected to: {response.url}")
+        checked = _handle_auth_response(response, current_session, f"page {page_num}")
+        if checked is None:
+            # Session refreshed — retry immediately
+            _delay_with_jitter()
+            response = current_session.get(logs_url, params=params, timeout=30)
 
-            
-        if response.status_code == 401 or response.status_code == 403:
-             print("🔄 Session expired, refreshing cookies...")
-             client.refresh_session(current_session)
-             print(f"↻ Retrying with new session...")
-             response = current_session.get(logs_url, params=params, timeout=30)
-        
+        if response.status_code == 429:
+            retry_after = int(response.headers.get("Retry-After", 30))
+            print(f"⚠️ Rate limited on page {page_num}, waiting {retry_after}s...")
+            time.sleep(retry_after)
+            raise requests.RequestException("429 rate limited")
+
         response.raise_for_status()
         return response.json()
-    
+
+    def _should_retry_entity(result):
+        """Retry on None (transient failure), but not on __not_found or valid data."""
+        return result is None
+
+    @retry(
+        stop=stop_after_attempt(2),
+        wait=wait_exponential(multiplier=1, min=3, max=15),
+        retry=retry_if_result(_should_retry_entity) | retry_if_exception_type(requests.RequestException)
+    )
+    def _fetch_entity_inner(target_url: str, uri: str, current_session) -> Optional[Dict[str, Any]]:
+        """Inner fetch with tenacity retry. Returns None to signal retry."""
+        _delay_with_jitter()
+        resp = current_session.get(target_url, timeout=15)
+        _delay_with_jitter()
+        resp = current_session.get(target_url, timeout=15)
+
+        checked = _handle_auth_response(resp, current_session, uri)
+        if checked is None:
+            return None  # Session refreshed → tenacity retries
+
+        if resp.status_code == 429:
+            retry_after = int(resp.headers.get("Retry-After", 30))
+            print(f"⚠️ Rate limited on {uri}, waiting {retry_after}s...")
+            time.sleep(retry_after)
+            raise requests.RequestException("429 rate limited")
+
+        if resp.status_code == 404:
+            return {"__not_found": True}  # Not retryable
+
+        if resp.status_code == 200:
+            return resp.json()
+
+        return None  # Other errors → tenacity retries
+
     def fetch_entity_data(uri: str, current_session) -> Optional[Dict[str, Any]]:
-        """Fetching full entity state"""
+        """Fetch full entity state. Wraps retry logic, returns None on final failure."""
         if not uri:
             return None
         target_url = f"{domain_base}{uri}"
         try:
-            if request_delay > 0:
-                time.sleep(request_delay)
-            resp = current_session.get(target_url, timeout=10)
-            if resp.status_code == 200:
-                return resp.json()
-            else:
-                return None
+            return _fetch_entity_inner(target_url, uri, current_session)
         except Exception:
             return None
 
@@ -340,7 +382,21 @@ def history_log(
 
                         if debug:
                             print(f"   🔎 {item.get('id')} [{item_occur_at}] {root_type}:{root_id} -> {inferred_uri}")
-                        raw_entity_data = fetch_entity_data(inferred_uri, session)
+                        try:
+                            raw_entity_data = fetch_entity_data(inferred_uri, session)
+                        except Exception as fetch_err:
+                            if debug:
+                                print(f"      ❌ Fetch error {inferred_uri}: {fetch_err}")
+                            stats["fetched_failure"] += 1
+                            continue
+
+                        # Handle non-retryable 404 (deleted entity)
+                        if isinstance(raw_entity_data, dict) and raw_entity_data.get("__not_found"):
+                            if debug:
+                                print(f"      ⚠️ 404 Not Found: {inferred_uri}")
+                            stats["fetched_failure"] += 1
+                            continue
+
                         entity_payload = None
                         if raw_entity_data:
                             stats["fetched_success"] += 1
@@ -354,8 +410,8 @@ def history_log(
                         else:
                             stats["fetched_failure"] += 1
                             if debug:
-                                print(f"      ❌ Failed to fetch {inferred_uri}")
-                        
+                                print(f"      ❌ Failed to fetch {inferred_uri} after retries")
+
                         if not entity_payload:
                              if debug:
                                  print(f"   ⚠️ Skipping {root_type} {root_id}: No entity data found.")
