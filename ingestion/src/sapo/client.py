@@ -65,10 +65,8 @@ def get_sapo_client() -> Any:
         'login_url': login_url,
         'username': username,
         'password': password,
-        'cookie_ttl_hours': 6,
+        'cookie_ttl_hours': 168,  # 7 days; 401/403 detection handles early expiry
         'headless': config.get("headless", True),
-        'cookie_ttl_hours': 6,
-
         'login_selectors': login_selectors,
         'domain': domain
     }, login_strategy=sapo_login_strategy)
