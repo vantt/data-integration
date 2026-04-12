@@ -60,9 +60,10 @@ def run_pipeline(
     print(f"[Pipeline Runner] Dataset: {final_dataset_name}")
     
     # 4. Handle Full Refresh
+    refresh_mode = None
     if args.full_refresh:
-        print("[Pipeline Runner] --full-refresh detected. Dropping pipeline state.")
-        pipeline.drop()
+        print("[Pipeline Runner] --full-refresh detected. Will drop source state on run.")
+        refresh_mode = "drop_sources"
     
     # 5. Configure Source
     # Inject limit if the source factory accepts it and it was provided
@@ -84,7 +85,7 @@ def run_pipeline(
             # Instantiate source
             source = source_factory(**source_args)
             
-            info = pipeline.run(source)
+            info = pipeline.run(source, refresh=refresh_mode)
             print(info)
             return info
         except Exception as e:
