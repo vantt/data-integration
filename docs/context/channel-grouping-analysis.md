@@ -1,14 +1,43 @@
 # Phân tích Gom nhóm Kênh & Bản chất Đơn hàng
 
-> **Ngày:** 2026-04-11
-> **Mục đích:** Nhận diện vấn đề classification hiện tại, đề xuất cách gom nhóm dữ liệu chính xác hơn cho báo cáo
-> **Dữ liệu:** 51,300 đơn completed từ warehouse (tính đến 2026-04-11)
+> **Ngày:** 2026-04-13
+> **Dữ liệu:** 51,300 đơn completed từ warehouse
+
+## Mục đích & TL;DR
+
+Tài liệu này trả lời những câu hỏi nào?
+
+1. **Tại sao discount trung bình bị phồng?** — US channel, khách sỉ ẩn, nội bộ lẫn vào
+2. **Làm sao phân biệt bán sỉ vs promotion?** — Đại Lý (46.8%) có giá sỉ cố định, không phải KM
+3. **CS/Telesale là doanh thu hay nội bộ?** — Doanh thu bán hàng thật, cần chuyển category
+4. **"Other" là gì?** — Thùng rác chứa khách VIP, CTV, khách sỉ ẩn, đơn không rõ
+5. **Làm sao fix?** — Thêm `order_nature` dimension + customer tagging
+
+**Executive Summary:**
+
+- **ĐÃ XÁC NHẬN (2026-04-13):** Telesale & CS = bán thật, chuyển sang Offline/Direct Sales
+- **ĐÃ XÁC NHẬN:** US channel = cross-border fulfillment (0đ doanh thu), không phải bán hàng VN
+- **ĐỀ XUẤT:** Thêm `order_nature` để tách retail_sale, wholesale, cross_border_fulfillment, staff_benefit, gift, test
+- **ĐỀ XUẤT:** Customer tagging để identify khách sỉ ẩn trên Zalo/Facebook (~20-50 khách)
+- **Hành động:** 4 phase: seed changes (1-2 tuần), customer tagging, order_nature derivation, report templates
 
 ---
 
-## 1. Vấn đề hiện tại
+## Decision Log
 
-### 1.1. "US" channel — Cross-border fulfillment bị lẫn vào doanh thu VN
+| Quyết định | Trạng thái | Ngày | Xác nhận bởi | Ghi chú |
+|-----------|----------|------|----------|---------|
+| US channel = cross-border fulfillment, không tính doanh thu VN | ĐÃ XÁC NHẬN | 2026-04-13 | Business | Chuyển `is_sales_channel = false`, doanh thu = 0đ |
+| Telesale & CS = bán hàng thật (Offline/Direct Sales) | ĐÃ XÁC NHẬN | 2026-04-13 | Business | Chuyển sang `is_sales_channel = true` |
+| Thêm `order_nature` dimension | ĐỀ XUẤT | — | — | 7 giá trị: retail_sale, wholesale, cross_border_fulfillment, staff_benefit, gift, test, affiliate |
+| Customer tagging cho khách sỉ ẩn | ĐỀ XUẤT | — | — | Seed ~20-50 khách, rule-based screening bổ trợ |
+| Gosumo, POPS, Leflair, Selly, Chiaki có nên giữ hay archive? | CẦN XÁC NHẬN | — | Business | Các kênh inactive |
+
+---
+
+## Phân tích vấn đề
+
+### Vấn đề 1: "US" channel — Cross-border fulfillment bị lẫn vào doanh thu VN
 
 | Metric                     | Giá trị                 |
 | -------------------------- | ------------------------- |
@@ -40,9 +69,7 @@ Mô hình vận hành:
 - Báo cáo "Export" hay "B2B" vô nghĩa vì phần lớn là cross-border fulfillment
 - Gross revenue bị inflate ~500 tỷ nhưng net gần như bằng 0
 
----
-
-### 1.2. "Đại Lý" — Giá sỉ bị coi như discount promotion
+### Vấn đề 2: "Đại Lý" — Giá sỉ bị coi như discount promotion
 
 | Metric       | Giá trị |
 | ------------ | --------- |
@@ -54,9 +81,7 @@ Mô hình vận hành:
 
 **Hậu quả:** Khi mix với Shopee (D% 29%), Lazada (D% 14%), metric "discount rate" trung bình bị sai bản chất. Không thể so sánh "hiệu quả promotion" giữa kênh sỉ và kênh lẻ.
 
----
-
-### 1.3. Internal channels — Rủi ro lọt vào báo cáo
+### Vấn đề 3: Internal channels — Rủi ro lọt vào báo cáo
 
 | Channel            | Đơn | Gross      | Net        | Avg D% | Bản chất                             | Phân loại                                                     |
 | ------------------ | ----- | ---------- | ---------- | ------ | -------------------------------------- | --------------------------------------------------------------- |
@@ -72,9 +97,7 @@ Mô hình vận hành:
 
 Với các source Internal còn lại: `is_sales_channel = false` — báo cáo cần **luôn luôn** filter theo nó. Nếu quên → sai lệch nặng, đặc biệt Quà Tặng (9.2 tỷ gross bị inflate).
 
----
-
-### 1.4. "Other" channel — Thùng rác không phân loại
+### Vấn đề 4: "Other" channel — Thùng rác không phân loại
 
 | Metric       | Giá trị |
 | ------------ | --------- |
@@ -91,9 +114,7 @@ Với các source Internal còn lại: `is_sales_channel = false` — báo cáo 
 
 **Hậu quả:** Không thể phân tích "Other" vì bản chất đơn quá khác nhau.
 
----
-
-### 1.5. Khách sỉ ẩn trên kênh B2C (Zalo, Facebook, Other)
+### Vấn đề 5: Khách sỉ ẩn trên kênh B2C (Zalo, Facebook, Other)
 
 Nhiều khách mua qua Zalo/Facebook có pattern giống bán sỉ:
 
@@ -112,7 +133,7 @@ Nhiều khách mua qua Zalo/Facebook có pattern giống bán sỉ:
 
 ---
 
-## 2. Tổng hợp phân bổ doanh thu hiện tại
+## Tổng hợp phân bổ doanh thu hiện tại
 
 | Category               | Segment | Market   | Đơn  | Net (tỷ) | Disc% | Ghi chú                                                 |
 | ---------------------- | ------- | -------- | ------ | --------- | ----- | -------------------------------------------------------- |
@@ -126,9 +147,11 @@ Nhiều khách mua qua Zalo/Facebook có pattern giống bán sỉ:
 
 ---
 
-## 3. Đề xuất: Thêm lớp "Bản chất đơn hàng" (Order Nature)
+## Đề xuất giải pháp
 
-### 3.1. Định nghĩa order_nature
+### Thêm lớp "Bản chất đơn hàng" (Order Nature)
+
+#### Định nghĩa order_nature
 
 Bổ sung cho hệ thống channel hiện tại, không thay thế.
 
@@ -142,7 +165,7 @@ Bổ sung cho hệ thống channel hiện tại, không thay thế.
 | **test**                     | Đơn test                                                | Test Sản Phẩm                                          |
 | **affiliate**                | CTV bán hàng                                            | Khách có tag CTV, discount ~100%                       |
 
-### 3.2. Cách identify "khách sỉ ẩn" trên kênh B2C
+#### Cách identify "khách sỉ ẩn" trên kênh B2C
 
 **Approach A: Customer tagging (Khuyến nghị — chính xác, đơn giản)**
 
@@ -167,7 +190,7 @@ Nếu: AOV > 10M AND avg_discount > 40% AND order_count > 5
 → Flag "likely_wholesale" → review thủ công
 ```
 
-### 3.3. Xử lý US channel
+#### Xử lý US channel
 
 | Thuộc tính     | Hiện tại      | Đề xuất                             |
 | ---------------- | --------------- | -------------------------------------- |
@@ -180,7 +203,7 @@ Nếu: AOV > 10M AND avg_discount > 40% AND order_count > 5
 
 → Mặc định loại khỏi mọi báo cáo doanh thu VN.
 
-### 3.4. Xử lý "Other" channel
+#### Xử lý "Other" channel
 
 Tách "Other" thành các nguồn cụ thể hơn nếu có thể identify qua tags/notes trong Sapo:
 
@@ -193,9 +216,9 @@ Tách "Other" thành các nguồn cụ thể hơn nếu có thể identify qua t
 
 ---
 
-## 4. Report Grouping khuyến nghị
+## Report Grouping khuyến nghị
 
-### 4.1. Báo cáo doanh thu bán hàng (mặc định)
+### Báo cáo doanh thu bán hàng (mặc định)
 
 ```
 WHERE is_sales_channel = true
@@ -204,7 +227,7 @@ WHERE is_sales_channel = true
 
 Loại: US, Internal, Gift, Test, CTV 100%.
 
-### 4.2. Hiệu quả kênh Ecommerce (B2C thuần)
+### Hiệu quả kênh Ecommerce (B2C thuần)
 
 ```
 WHERE channel_category = 'Ecommerce'
@@ -213,7 +236,7 @@ WHERE channel_category = 'Ecommerce'
 
 Loại: khách sỉ ẩn trên Zalo/Facebook → so sánh discount giữa các kênh mới chính xác.
 
-### 4.3. Báo cáo kênh sỉ (tách riêng)
+### Báo cáo kênh sỉ (tách riêng)
 
 ```
 WHERE order_nature = 'wholesale'
@@ -221,7 +244,7 @@ WHERE order_nature = 'wholesale'
 
 Gom: Đại Lý + Chợ sỉ + khách sỉ ẩn trên Zalo/FB/Other. Metric discount ở đây là giá sỉ, không phải promotion.
 
-### 4.4. P&L tổng hợp
+### P&L tổng hợp
 
 ```
 WHERE is_sales_channel = true
@@ -230,7 +253,7 @@ WHERE is_sales_channel = true
 
 Gồm cả wholesale, staff benefit. Loại test và gift.
 
-### 4.5. Discount analysis
+### Discount analysis
 
 **PHẢI** tách riêng:
 
@@ -240,38 +263,52 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 
 ---
 
-## 5. Implementation Roadmap
+## Implementation Roadmap
 
-### Phase 1: Quick wins (seed changes, không cần code mới)
+**Phase 1 — Quick wins** (1-2 tuần, seed changes)
+- Sửa `ref_order_sources.csv`: US → `platform_group = 'CrossBorder'`, `is_sales_channel = false`
+- Sửa `ref_order_sources.csv`: Telesale, CS → `platform_group = 'Direct'`, `channel_type = 'Direct Sales'`, `is_sales_channel = true`
+- Cập nhật `dim_channels.sql`: thêm `CrossBorder` → `channel_category = 'Internal'`, `Direct Sales` → `channel_category = 'Offline'`
 
-1. Sửa `ref_order_sources.csv`: US → `platform_group = 'CrossBorder'`, `is_sales_channel = false`
-2. Sửa `ref_order_sources.csv`: Telesale, CS → `platform_group = 'Direct'`, `channel_type = 'Direct Sales'`, `is_sales_channel = true`
-3. Cập nhật `dim_channels.sql`: thêm `CrossBorder` → `channel_category = 'Internal'`, `Direct Sales` → `channel_category = 'Offline'`
+**Phase 2 — Customer tagging** (1 tuần)
+- Tạo `ref_customer_tags.csv` với danh sách khách sỉ/CTV đã biết (~20-50 khách)
+- Thêm `customer_type` vào `dim_customers` (LEFT JOIN ref_customer_tags)
 
-### Phase 2: Customer tagging
+**Phase 3 — Order nature derivation** (1 tuần, code mới)
+- Thêm `order_nature` vào `fact_orders` / `fact_sales`, derive từ channel + customer_type
+- Logic: CrossBorder/Internal/Staff/Gift/Test → trực tiếp; customer_type wholesale → wholesale; còn lại → retail_sale
 
-1. Tạo `ref_customer_tags.csv` với danh sách khách sỉ/CTV đã biết
-2. Thêm `customer_type` vào `dim_customers` (LEFT JOIN ref_customer_tags)
-
-### Phase 3: Order nature derivation
-
-1. Thêm `order_nature` vào `fact_orders` / `fact_sales`, derive từ:
-   - channel → CrossBorder (US) / Internal / Staff / Gift / Test
-   - customer_type → wholesale / ctv
-   - Còn lại → retail_sale
-
-### Phase 4: Report templates
-
-1. Cập nhật Metabase dashboards với filter mặc định theo order_nature
-2. Tạo dashboard riêng cho kênh sỉ
+**Phase 4 — Report templates** (1 tuần)
+- Cập nhật Metabase dashboards với filter mặc định theo order_nature
+- Tạo dashboard riêng cho kênh sỉ
 
 ---
 
-## 6. Câu hỏi cần xác nhận từ Business
+## Những hiểu nhầm thường gặp
 
-1. **US channel**: ~~Có đơn US nào là bán thật cho khách Mỹ không?~~ **ĐÃ XÁC NHẬN:** 100% là cross-border fulfillment — FG Care VN giao hàng tại VN cho khách của FG Care US, doanh thu = 0đ, thanh toán theo hợp đồng B2B riêng.
-2. **Telesale + CS**: ~~Nên tính là doanh thu bán hàng hay internal?~~ **ĐÃ XÁC NHẬN (2026-04-13):** Doanh thu bán hàng thật. Chuyển sang `Offline / Direct Sales`, `is_sales_channel = true`. Dual-dimension (track kênh gốc + team) chưa cần với volume 0.2% — revisit khi CS/Telesale scale lên.
-3. **Khách sỉ Zalo/Facebook**: Danh sách khoảng bao nhiêu người? Có sẵn list từ sales team không?
-4. **Discount 50% trên Zalo/FB**: Là chính sách giá sỉ cố định hay promotion từng đơn?
-5. **"Gosumo", "POPS", "Leflair", "Selly", "Chiaki"**: Các kênh inactive này có cần giữ lại trong báo cáo hay archive?
-6. **"Other" channel**: Có tag hoặc note nào trong Sapo giúp phân biệt khách VIP / CTV / khách sỉ?
+1. **"Discount sỉ ≠ discount promotion"** — Đại Lý có D% 46.8% là giá cố định, không phải KM. Không so sánh với Shopee D% 29%.
+
+2. **"US channel = bán hàng VN ≠ US channel = fulfillment"** — FG Care VN chỉ giao hàng tại VN cho khách FG Care US. Doanh thu = 0đ, thanh toán theo hợp đồng B2B riêng.
+
+3. **"Other = kênh ≠ Other = chưa phân loại"** — Other chứa khách VIP, CTV, khách sỉ ẩn, đơn không rõ. Cần tách riêng, không thể so sánh metric.
+
+4. **"Doanh thu gross ≠ doanh thu thật khi US inflate"** — US có gross 514 tỷ nhưng net ~0đ. Filter `is_sales_channel = true` bắt buộc trong báo cáo doanh thu.
+
+---
+
+## Câu hỏi cần xác nhận từ Business
+
+| Câu hỏi | Trạng thái | Ghi chú |
+|--------|-----------|---------|
+| US channel: Có đơn US nào là bán thật cho khách Mỹ không? | **ĐÃ XÁC NHẬN** | 100% cross-border fulfillment, doanh thu = 0đ |
+| Telesale + CS: Nên tính là doanh thu bán hàng hay internal? | **ĐÃ XÁC NHẬN** | Doanh thu bán hàng thật, chuyển Offline/Direct Sales |
+| Khách sỉ Zalo/Facebook: Danh sách bao nhiêu người? | **CẦN XÁC NHẬN** | Sales team có list không? |
+| Discount 50% trên Zalo/FB: Giá sỉ cố định hay promotion từng đơn? | **CẦN XÁC NHẬN** | Ảnh hưởng cách identify khách sỉ |
+| "Gosumo", "POPS", "Leflair", "Selly", "Chiaki" nên giữ hay archive? | **CẦN XÁC NHẬN** | Các kênh inactive |
+| "Other" channel: Có tag/note nào trong Sapo phân biệt VIP/CTV/sỉ? | **CẦN XÁC NHẬN** | Giúp tách "Other" dễ hơn |
+
+---
+
+## Kết luận
+
+**"Để báo cáo doanh thu chính xác, ta cần tách riêng bán sỉ, bán lẻ, nội bộ thay vì trộn chung — đó là bước đầu nâng cấp từ channel classification sang business classification."**
