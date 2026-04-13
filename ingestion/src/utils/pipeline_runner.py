@@ -48,22 +48,28 @@ def run_pipeline(
     final_dataset_name = dataset_name + "_dev" if args.dev else dataset_name
     setup_dlt_env(final_dataset_name)
     
-    # 3. Initialize Pipeline
+    # 3. Handle Full Refresh — reset dlt pipeline STATE before initialization.
+    # Data lives in data_lake/ (DESTINATION__FILESYSTEM__BUCKET_URL), NOT in .dlt/pipelines/.
+    # Deleting the state dir only removes incremental cursors + schemas + normalize info.
+    # dlt.pipeline() re-creates fresh state → incremental starts from scratch.
+    if args.full_refresh:
+        import shutil
+        state_dir = os.path.join(".dlt", "pipelines", pipeline_name)
+        if os.path.exists(state_dir):
+            shutil.rmtree(state_dir)
+            print(f"[Pipeline Runner] --full-refresh: reset pipeline state ({state_dir})")
+        source_args["full_refresh"] = True
+
+    # 4. Initialize Pipeline (creates fresh state if dir was deleted by full-refresh)
     pipeline = dlt.pipeline(
         pipeline_name=pipeline_name,
         destination="filesystem",
         dataset_name=final_dataset_name,
         **pipeline_kwargs
     )
-    
+
     print(f"[Pipeline Runner] Initialized pipeline: {pipeline_name}")
     print(f"[Pipeline Runner] Dataset: {final_dataset_name}")
-    
-    # 4. Handle Full Refresh — SAFE: only reset incremental cursor, NEVER drop data.
-    # Data is append-only; deduplication is handled by the transformation layer (dbt).
-    if args.full_refresh:
-        print("[Pipeline Runner] --full-refresh: resetting incremental cursor (data preserved).")
-        source_args["full_refresh"] = True
 
     # 5. Run Pipeline
     import time
