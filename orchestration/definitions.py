@@ -131,23 +131,33 @@ misa_file_drop_sync_job = define_asset_job(
     tags=SYNC_TAGS,
 )
 
-# 3. Nightly Reconciliation Job (Batch)
+# 3. Nightly Reconciliation Job (Batch — incremental from last cursor)
+_nightly_batch_selection = (
+    AssetSelection.assets(sapo_assets.sapo_orders_batch_asset) |
+    AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
+    AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
+    AssetSelection.assets(sapo_assets.sapo_products_batch_asset) |
+    AssetSelection.assets(sheets_assets.sheets_targets_asset) |
+    AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
+    AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
+    AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
+    all_dbt_assets |
+    AssetSelection.assets(serving.sapo_serving_db) |
+    AssetSelection.assets(rill.sapo_rill_publish)
+)
+
 sapo_nightly_reconciliation_job = define_asset_job(
     name="sapo_nightly_reconciliation_job",
-    selection=(
-        AssetSelection.assets(sapo_assets.sapo_orders_batch_asset) |
-        AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
-        AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
-        AssetSelection.assets(sapo_assets.sapo_products_batch_asset) |
-        AssetSelection.assets(sheets_assets.sheets_targets_asset) |
-        AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
-        AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
-        AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
-        all_dbt_assets |
-        AssetSelection.assets(serving.sapo_serving_db) |
-        AssetSelection.assets(rill.sapo_rill_publish)
-    ),
+    selection=_nightly_batch_selection,
     tags=SYNC_TAGS,
+)
+
+# 3b. Full Refresh Job — manual trigger only, resets all batch cursors
+# Launch from Dagster UI when data gaps are suspected.
+sapo_full_refresh_job = define_asset_job(
+    name="sapo_full_refresh_job",
+    selection=_nightly_batch_selection,
+    tags={**SYNC_TAGS, "full_refresh": "true"},
 )
 
 # ------------------------------------------------------------------------------
@@ -249,6 +259,7 @@ defs = Definitions(
         shopee_file_drop_sync_job,
         misa_file_drop_sync_job,
         sapo_nightly_reconciliation_job,
+        sapo_full_refresh_job,
     ],
     schedules=[
         realtime_schedule,
