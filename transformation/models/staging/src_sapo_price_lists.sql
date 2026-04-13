@@ -95,13 +95,14 @@ extracted AS (
 )
 
 -- Step 2: Business dedup by price_list_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, price_list_id, modified_on, price_list_code, price_list_name, price_list_status, currency_iso, currency_symbol, is_cost, created_on' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT price_list_id FROM extracted) new_keys
-        ON existing.price_list_id = new_keys.price_list_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE price_list_id IN (SELECT DISTINCT price_list_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (

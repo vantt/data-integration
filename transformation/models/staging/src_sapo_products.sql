@@ -119,13 +119,14 @@ extracted AS (
 )
 
 -- Business dedup by product_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, product_id, tenant_id, modified_on, product_name, product_status, product_type, description, brand_id, brand, category_id, category, category_code, opt1, opt2, opt3, medicine, tags, image_path, image_name, created_on, variants_json, options_json, images_json' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT product_id FROM extracted) new_keys
-        ON existing.product_id = new_keys.product_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE product_id IN (SELECT DISTINCT product_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (

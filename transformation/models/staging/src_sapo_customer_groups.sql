@@ -100,13 +100,14 @@ extracted AS (
 )
 
 -- Step 2: Business dedup by customer_group_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, customer_group_id, modified_on, group_code, group_name, group_status, group_type, condition_type, is_default, customer_count, note, created_on' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT customer_group_id FROM extracted) new_keys
-        ON existing.customer_group_id = new_keys.customer_group_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE customer_group_id IN (SELECT DISTINCT customer_group_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (

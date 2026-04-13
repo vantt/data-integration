@@ -107,13 +107,14 @@ extracted AS (
 )
 
 -- Step 2: Business dedup by order_return_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, order_return_id, modified_on, return_code, order_id, order_code, customer_id, location_id, account_id, return_status, refund_status, total_amount, total_quantity, note, reason, issued_on, received_on, created_on' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT order_return_id FROM extracted) new_keys
-        ON existing.order_return_id = new_keys.order_return_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE order_return_id IN (SELECT DISTINCT order_return_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (

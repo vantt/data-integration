@@ -116,13 +116,14 @@ extracted AS (
 )
 
 -- Step 2: Business dedup by sapo_customer_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, sapo_customer_id, modified_on, customer_code, full_name, phone_number, email, status, birthday, dob, sex, customer_group, city, province, district, ward, address1, country, total_expense, orders_count, loyalty_point, debt, created_on' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT sapo_customer_id FROM extracted) new_keys
-        ON existing.sapo_customer_id = new_keys.sapo_customer_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE sapo_customer_id IN (SELECT DISTINCT sapo_customer_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (

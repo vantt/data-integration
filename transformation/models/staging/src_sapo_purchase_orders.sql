@@ -100,13 +100,14 @@ extracted AS (
 )
 
 -- Step 2: Business dedup by purchase_order_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, purchase_order_id, modified_on, purchase_order_code, po_status, supplier_id, location_id, account_id, note, tags, created_on, line_items_json, supplier_data_json' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT purchase_order_id FROM extracted) new_keys
-        ON existing.purchase_order_id = new_keys.purchase_order_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE purchase_order_id IN (SELECT DISTINCT purchase_order_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (

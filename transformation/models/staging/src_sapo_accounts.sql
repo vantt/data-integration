@@ -95,13 +95,14 @@ extracted AS (
 )
 
 -- Step 2: Business dedup by account_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, account_id, modified_on, full_name, email, user_name, first_name, last_name, mobile, status, tenant_id, created_on' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT account_id FROM extracted) new_keys
-        ON existing.account_id = new_keys.account_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE account_id IN (SELECT DISTINCT account_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (

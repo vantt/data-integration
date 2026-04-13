@@ -118,13 +118,14 @@ extracted AS (
 )
 
 -- Step 2: Business dedup by fulfillment_id — compare new vs existing before overwriting
+-- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
+{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, fulfillment_id, modified_on, fulfillment_code, order_id, fulfillment_status, composite_status, payment_status, delivery_type, location_id, account_id, partner_id, total_amount, total_tax, total_discount, total_quantity, packed_on, shipped_on, received_on, cancelled_on, created_on, tracking_code, cod_amount, freight_amount, freight_payer, line_items_json, shipping_address_json' %}
 SELECT * FROM (
-    SELECT * FROM extracted
+    SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT fulfillment_id FROM extracted) new_keys
-        ON existing.fulfillment_id = new_keys.fulfillment_id
+    SELECT {{ union_cols }} FROM {{ this }}
+    WHERE fulfillment_id IN (SELECT DISTINCT fulfillment_id FROM extracted)
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (
