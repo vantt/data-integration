@@ -27,7 +27,13 @@
 --   - Biz dedup ROW_NUMBER runs on flat extracted data — NO payload, negligible memory.
 -- =================================================================================================
 
-WITH raw_data AS (
+WITH
+{% if is_incremental() %}
+_cursor AS (
+    SELECT COALESCE(MAX(_dlt_load_id), '') AS max_load_id FROM {{ this }}
+),
+{% endif %}
+raw_data AS (
     SELECT
         entity_id,
         entity_type,
@@ -37,7 +43,7 @@ WITH raw_data AS (
         payload
     FROM {{ source('sapo_raw', 'order') }}
     {% if is_incremental() %}
-    WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{ this }})
+    WHERE _dlt_load_id > (SELECT max_load_id FROM _cursor)
     {% endif %}
 ),
 
