@@ -95,11 +95,13 @@ Tầng 1 — Phân loại kênh (Ecommerce / Offline / Internal)
 | **Offline**            | Retail (Cửa hàng)     | POS                 | POS - Trương Dinh, POS - Hau Giang               |
 |                              | B2B (Bán sỉ)          | Wholesale           | Đại Lý, Chợ sỉ                                |
 | **Internal**           | System (Nội bộ)       | System              | Telesale, CS, Test Sản Phẩm, Quà Tặng          |
+|                              | CrossBorder (Giao hàng xuyên biên giới) | US | Fine Japan-USA — giao hàng tại VN cho khách FG Care US |
 
 **Lưu ý:**
 
 - **Ecommerce** bao gồm tất cả kênh bán hàng trực tuyến: sàn TMDT, mạng xã hội, và website. Đây là nghĩa rộng của "thương mại điện tử".
 - Nguồn **Internal** (Telesale, CS, Test, Quà Tặng...) **không tính vào doanh thu bán hàng** trong các báo cáo sales. Chúng phục vụ mục đích nội bộ.
+- Nguồn **CrossBorder** (US): FG Care VN giao hàng tại VN cho người thân của khách Việt Kiều mua từ FG Care US. Doanh thu = 0đ — thanh toán theo hợp đồng B2B riêng giữa FG Care US và FG Care VN. **Không tính vào doanh thu bán hàng VN.**
 - Mỗi nền tảng có thể có nhiều nguồn cụ thể (nhiều shop trên Shopee, nhiều page Facebook...).
 
 ---
@@ -188,7 +190,7 @@ Hai phân loại bổ sung, dùng khi cần tách riêng doanh thu theo đối t
 | Chiều phân loại       | Giá trị             | Áp dụng cho                              |
 | ------------------------ | --------------------- | ------------------------------------------ |
 | **Thị trường**  | Domestic (Nội địa) | Hầu hết các kênh                       |
-|                          | Export (Xuất khẩu)  | US, và các kênh xuất khẩu tương lai |
+|                          | Export (Xuất khẩu)  | Các kênh xuất khẩu tương lai (US đã chuyển sang Internal/CrossBorder) |
 | **Phân khúc KH** | B2C (Bán lẻ)        | Shopee, Lazada, Website, POS...            |
 |                          | B2B (Bán sỉ)        | Đại Lý, Chợ Sỉ                        |
 
@@ -320,6 +322,7 @@ Mỗi dòng đại diện cho một nguồn đơn hàng cụ thể trong Sapo (m
 | `Retail`               | Cửa hàng vật lý                         | Offline                 |
 | `B2B`                  | Bán sỉ, đại lý                         | Offline                 |
 | `System`               | Nội bộ (Telesale, CS, Test...)            | Internal                |
+| `CrossBorder`          | Giao hàng xuyên biên giới cho công ty liên kết (US) | Internal                |
 | `Other`                | Khác                                       | Other                   |
 
 **Quy tắc is_generic_source:**

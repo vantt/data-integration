@@ -8,7 +8,7 @@
 
 ## 1. Vấn đề hiện tại
 
-### 1.1. "US" channel — Inter-company transfer bị lẫn vào doanh thu
+### 1.1. "US" channel — Cross-border fulfillment bị lẫn vào doanh thu VN
 
 | Metric | Giá trị |
 |---|---|
@@ -17,13 +17,25 @@
 | Discount | 473 tỷ (82.7%) |
 | Discount gần đây (2026) | **100%** mọi đơn |
 
-**Bản chất:** Đây là chuyển hàng nội bộ sang công ty Mỹ (inter-company transfer), không phải bán hàng.
+**Bản chất business:**
+
+FG Care US nhập sản phẩm Fine Japan từ Nhật bán cho Việt Kiều tại Mỹ. Phát hiện hàng ship từ Nhật về VN nhanh và rẻ hơn ship qua Mỹ, FG Care US lập FG Care VN với chức năng chính: **giao hàng tại VN cho người thân của khách hàng Mỹ**.
+
+Mô hình vận hành:
+- Khách Việt Kiều mua 12 hộp → dùng 4 hộp tại Mỹ, gửi 8 hộp về VN cho người thân
+- FG Care US giao 4 hộp tại Mỹ, FG Care VN giao 8 hộp tại VN
+- Khách thanh toán toàn bộ 12 hộp cho FG Care US (giá niêm yết Mỹ, KM theo chương trình Mỹ)
+- FG Care US thanh toán cho FG Care VN phần giao tại VN theo **hợp đồng mua bán riêng**
+
+→ Đây **không phải** inter-company transfer đơn thuần. Đây là cross-border fulfillment service — FG Care VN đóng vai trò logistics/fulfillment cho FG Care US, thanh toán theo hợp đồng B2B riêng biệt.
+
+**Ghi nhận doanh thu:** Doanh thu từ nguồn này = **0đ** trong báo cáo FG Care VN. Loại trừ toàn bộ khi đánh giá hiệu quả kinh doanh VN vì cơ chế mua bán khác hoàn toàn so với các kênh/đại lý khác.
 
 **Hiện tại:** classify `Other / Other / Export / B2B` → mix chung với đơn Other thật, kéo lệch mọi metric trung bình.
 
 **Hậu quả:**
 - Tổng discount toàn hệ thống bị phồng
-- Báo cáo "Export" hay "B2B" vô nghĩa vì phần lớn là transfer pricing
+- Báo cáo "Export" hay "B2B" vô nghĩa vì phần lớn là cross-border fulfillment
 - Gross revenue bị inflate ~500 tỷ nhưng net gần như bằng 0
 
 ---
@@ -116,7 +128,7 @@ Bổ sung cho hệ thống channel hiện tại, không thay thế.
 |---|---|---|
 | **retail_sale** | Bán lẻ, giá thị trường | Kênh B2C + customer_type != wholesale |
 | **wholesale** | Bán sỉ, giá chiết khấu cố định | Đại Lý, Chợ sỉ + khách sỉ ẩn trên Zalo/FB/Other |
-| **intercompany_transfer** | Chuyển hàng nội bộ, 0đ | US channel |
+| **cross_border_fulfillment** | Giao hàng tại VN cho khách FG Care US, doanh thu = 0đ | US channel — thanh toán theo hợp đồng B2B riêng |
 | **staff_benefit** | Ưu đãi nhân viên | Ưu đãi Nhân Viên |
 | **gift** | Quà tặng, hàng cho | Quà Tặng |
 | **test** | Đơn test | Test Sản Phẩm |
@@ -151,11 +163,14 @@ Nếu: AOV > 10M AND avg_discount > 40% AND order_count > 5
 
 | Thuộc tính | Hiện tại | Đề xuất |
 |---|---|---|
-| platform_group | Other | **InterCompany** (giá trị mới) |
+| platform_group | Other | **CrossBorder** (giá trị mới) |
 | is_sales_channel | true (implicit) | **false** |
 | channel_category | Other | **Internal** |
+| order_nature | (chưa có) | **cross_border_fulfillment** |
 
-→ Mặc định loại khỏi mọi báo cáo doanh thu.
+**Lý do:** US không phải bán hàng của FG Care VN. Doanh thu thuộc FG Care US, VN chỉ thực hiện fulfillment theo hợp đồng B2B riêng. Ghi nhận doanh thu = 0đ.
+
+→ Mặc định loại khỏi mọi báo cáo doanh thu VN.
 
 ### 3.4. Xử lý "Other" channel
 
@@ -220,8 +235,8 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 
 ### Phase 1: Quick wins (seed changes, không cần code mới)
 
-1. Sửa `ref_order_sources.csv`: US → `platform_group = 'InterCompany'`, `is_sales_channel = false`
-2. Cập nhật `dim_channels.sql`: thêm `InterCompany` → `channel_category = 'Internal'`
+1. Sửa `ref_order_sources.csv`: US → `platform_group = 'CrossBorder'`, `is_sales_channel = false`
+2. Cập nhật `dim_channels.sql`: thêm `CrossBorder` → `channel_category = 'Internal'`
 
 ### Phase 2: Customer tagging
 
@@ -231,7 +246,7 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 ### Phase 3: Order nature derivation
 
 1. Thêm `order_nature` vào `fact_orders` / `fact_sales`, derive từ:
-   - channel → InterCompany / Internal / Staff / Gift / Test
+   - channel → CrossBorder (US) / Internal / Staff / Gift / Test
    - customer_type → wholesale / ctv
    - Còn lại → retail_sale
 
@@ -244,7 +259,7 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 
 ## 6. Câu hỏi cần xác nhận từ Business
 
-1. **US channel**: Có đơn US nào là bán thật cho khách Mỹ không? Hay 100% là inter-company transfer?
+1. **US channel**: ~~Có đơn US nào là bán thật cho khách Mỹ không?~~ **ĐÃ XÁC NHẬN:** 100% là cross-border fulfillment — FG Care VN giao hàng tại VN cho khách của FG Care US, doanh thu = 0đ, thanh toán theo hợp đồng B2B riêng.
 2. **"Other" channel**: Có tag hoặc note nào trong Sapo giúp phân biệt khách VIP / CTV / khách sỉ?
 3. **Khách sỉ Zalo/Facebook**: Danh sách khoảng bao nhiêu người? Có sẵn list từ sales team không?
 4. **Discount 50% trên Zalo/FB**: Là chính sách giá sỉ cố định hay promotion từng đơn?

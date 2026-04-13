@@ -18,7 +18,7 @@ id,name,status,platform_group,is_generic_source,platform,mapping_tag,channel_bra
 4517138,Telesale,false,System,false,Telesale,,,Domestic,B2C
 4461848,Instagram,true,Social,false,Instagram,,,Domestic,B2C
 4164989,Đại Lý,false,B2B,false,Wholesale,,,Domestic,B2B
-4110169,US,false,Other,false,Other,,,Export,B2B
+4110169,US,false,CrossBorder,false,US,,,Export,B2B
 3988160,Sendo,true,Ecom,false,Sendo,,,Domestic,B2C
 3988159,Other,true,Other,false,Other,,,Domestic,B2C
 3988158,Shopee,true,Ecom,false,Shopee,,,Domestic,B2C

@@ -72,6 +72,7 @@ SELECT
         WHEN 'Retail' THEN 'Offline'
         WHEN 'B2B'    THEN 'Offline'
         WHEN 'System' THEN 'Internal'
+        WHEN 'CrossBorder' THEN 'Internal'
         ELSE 'Other'
     END as channel_category,
     platform_group,
@@ -79,7 +80,7 @@ SELECT
     channel_brand,
     market,
     customer_segment,
-    platform_group != 'System' as is_sales_channel,
+    platform_group NOT IN ('System', 'CrossBorder') as is_sales_channel,
 
     -- Lineage Links
     source_id,
