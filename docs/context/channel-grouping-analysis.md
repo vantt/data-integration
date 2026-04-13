@@ -10,11 +10,11 @@
 
 ### 1.1. "US" channel — Cross-border fulfillment bị lẫn vào doanh thu VN
 
-| Metric | Giá trị |
-|---|---|
-| Số đơn | 11,540 |
-| Gross revenue | 514 tỷ |
-| Discount | 473 tỷ (82.7%) |
+| Metric                     | Giá trị                 |
+| -------------------------- | ------------------------- |
+| Số đơn                  | 11,540                    |
+| Gross revenue              | 514 tỷ                   |
+| Discount                   | 473 tỷ (82.7%)           |
 | Discount gần đây (2026) | **100%** mọi đơn |
 
 **Bản chất business:**
@@ -22,6 +22,7 @@
 FG Care US nhập sản phẩm Fine Japan từ Nhật bán cho Việt Kiều tại Mỹ. Phát hiện hàng ship từ Nhật về VN nhanh và rẻ hơn ship qua Mỹ, FG Care US lập FG Care VN với chức năng chính: **giao hàng tại VN cho người thân của khách hàng Mỹ**.
 
 Mô hình vận hành:
+
 - Khách Việt Kiều mua 12 hộp → dùng 4 hộp tại Mỹ, gửi 8 hộp về VN cho người thân
 - FG Care US giao 4 hộp tại Mỹ, FG Care VN giao 8 hộp tại VN
 - Khách thanh toán toàn bộ 12 hộp cho FG Care US (giá niêm yết Mỹ, KM theo chương trình Mỹ)
@@ -34,6 +35,7 @@ Mô hình vận hành:
 **Hiện tại:** classify `Other / Other / Export / B2B` → mix chung với đơn Other thật, kéo lệch mọi metric trung bình.
 
 **Hậu quả:**
+
 - Tổng discount toàn hệ thống bị phồng
 - Báo cáo "Export" hay "B2B" vô nghĩa vì phần lớn là cross-border fulfillment
 - Gross revenue bị inflate ~500 tỷ nhưng net gần như bằng 0
@@ -42,11 +44,11 @@ Mô hình vận hành:
 
 ### 1.2. "Đại Lý" — Giá sỉ bị coi như discount promotion
 
-| Metric | Giá trị |
-|---|---|
-| Số đơn | 11,152 |
-| AOV | 6.17M |
-| Avg discount | 46.8% |
+| Metric       | Giá trị |
+| ------------ | --------- |
+| Số đơn    | 11,152    |
+| AOV          | 6.17M     |
+| Avg discount | 46.8%     |
 
 **Bản chất:** Discount 40-50% là **giá sỉ cố định**, không phải promotion.
 
@@ -56,27 +58,32 @@ Mô hình vận hành:
 
 ### 1.3. Internal channels — Rủi ro lọt vào báo cáo
 
-| Channel | Đơn | Gross | Net | Avg D% | Bản chất |
-|---|---|---|---|---|---|
-| Quà Tặng | 788 | 9.2 tỷ | 6.5 triệu | 78.7% | Cho hàng miễn phí |
-| Ưu đãi NV | 1,292 | 6.6 tỷ | 594 triệu | 77.8% | Giá nhân viên |
-| Test SP | 76 | 274 triệu | 78 triệu | 77.9% | Đơn test |
-| Telesale | 36 | 291 triệu | 115 triệu | 42.4% | Nội bộ |
-| CS | 88 | 252 triệu | 145 triệu | 32.9% | Customer Service |
+| Channel            | Đơn | Gross      | Net        | Avg D% | Bản chất                             | Phân loại                                                     |
+| ------------------ | ----- | ---------- | ---------- | ------ | -------------------------------------- | --------------------------------------------------------------- |
+| Quà Tặng         | 788   | 9.2 tỷ    | 6.5 triệu | 78.7%  | Cho hàng miễn phí                   | Internal —`is_sales_channel = false`                         |
+| Ưu đãi NV       | 1,292 | 6.6 tỷ    | 594 triệu | 77.8%  | Giá nhân viên                       | Internal —`is_sales_channel = false`                         |
+| Test SP            | 76    | 274 triệu | 78 triệu  | 77.9%  | Đơn test                             | Internal —`is_sales_channel = false`                         |
+| **Telesale** | 36    | 291 triệu | 115 triệu | 42.4%  | **Bán thật** qua điện thoại | **Offline / Direct Sales** — `is_sales_channel = true` |
+| **CS**       | 88    | 252 triệu | 145 triệu | 32.9%  | **Bán thật** qua chat/hotline  | **Offline / Direct Sales** — `is_sales_channel = true` |
 
-`is_sales_channel = false` đã tồn tại nhưng báo cáo cần **luôn luôn** filter theo nó. Nếu quên → sai lệch nặng, đặc biệt Quà Tặng (9.2 tỷ gross bị inflate).
+**ĐÃ XÁC NHẬN (2026-04-13):** Telesale và CS là team bán hàng, không phải hoạt động nội bộ. Đơn do staff tạo thủ công khi khách mua trực tiếp → doanh thu thật. Chuyển sang `Offline / Direct Sales`.
+
+**Lưu ý dual-dimension:** CS/Telesale là team (ai chốt đơn), không phải kênh (khách đến từ đâu). Khi CS tạo đơn thủ công trong Sapo, thông tin kênh gốc (Shopee, FB...) bị mất. Mô hình dual-dimension (track cả channel + team) được cân nhắc nhưng **chưa cần** với volume hiện tại (124 đơn, 0.2% tổng). Nếu CS/Telesale scale lên → nâng cấp bằng quy ước source name (`CS-Shopee`, `Telesale-Zalo`).
+
+Với các source Internal còn lại: `is_sales_channel = false` — báo cáo cần **luôn luôn** filter theo nó. Nếu quên → sai lệch nặng, đặc biệt Quà Tặng (9.2 tỷ gross bị inflate).
 
 ---
 
 ### 1.4. "Other" channel — Thùng rác không phân loại
 
-| Metric | Giá trị |
-|---|---|
-| Số đơn | 2,568 |
-| Net revenue | 5.2 tỷ |
-| Avg discount | 26.5% |
+| Metric       | Giá trị |
+| ------------ | --------- |
+| Số đơn    | 2,568     |
+| Net revenue  | 5.2 tỷ   |
+| Avg discount | 26.5%     |
 
 **Mix lẫn nhiều loại:**
+
 - Khách VIP mua qua DM/điện thoại (Huynh Tri Bao, Trần Thị Thanh Trang)
 - CTV/cộng tác viên (Anh Long - CTV OTC: 100% discount, Fine Japan-USA: 100% discount)
 - Đơn không xác định source
@@ -90,14 +97,14 @@ Mô hình vận hành:
 
 Nhiều khách mua qua Zalo/Facebook có pattern giống bán sỉ:
 
-| Khách hàng | Kênh | AOV | Discount | Pattern |
-|---|---|---|---|---|
-| Mr.Bình | Zalo | 24.4M | 50.6% | Sỉ |
-| Chị Hạnh Nguyễn | Zalo | 22M | 50.8% | Sỉ |
-| chị Thủy | Zalo | 21.2M | 50.5% | Sỉ |
-| Chị Yến | Zalo | 19M | 58.2% | Sỉ |
-| Petter Phạm | Facebook | — | 53.3% | Sỉ/VIP |
-| Cô Sáu US | Zalo | 11.3M | 52.1% | Sỉ |
+| Khách hàng       | Kênh    | AOV   | Discount | Pattern |
+| ------------------ | -------- | ----- | -------- | ------- |
+| Mr.Bình           | Zalo     | 24.4M | 50.6%    | Sỉ     |
+| Chị Hạnh Nguyễn | Zalo     | 22M   | 50.8%    | Sỉ     |
+| chị Thủy         | Zalo     | 21.2M | 50.5%    | Sỉ     |
+| Chị Yến          | Zalo     | 19M   | 58.2%    | Sỉ     |
+| Petter Phạm       | Facebook | —    | 53.3%    | Sỉ/VIP |
+| Cô Sáu US        | Zalo     | 11.3M | 52.1%    | Sỉ     |
 
 **Đặc điểm chung:** AOV > 10M, discount cố định ~50%, mua định kỳ.
 
@@ -107,14 +114,15 @@ Nhiều khách mua qua Zalo/Facebook có pattern giống bán sỉ:
 
 ## 2. Tổng hợp phân bổ doanh thu hiện tại
 
-| Category | Segment | Market | Đơn | Net (tỷ) | Disc% | Ghi chú |
-|---|---|---|---|---|---|---|
-| Ecommerce | B2C | Domestic | 22,168 | 38.5 | 28.8% | Kênh bán lẻ chính |
-| Offline | B2B | Domestic | 11,156 | 68.8 | 46.8% | Đại Lý — giá sỉ |
-| Other | B2B | Export | 11,540 | 41.0 | 82.7% | **US — inter-company** |
-| Other | B2C | Domestic | 2,584 | 5.2 | 26.7% | Thùng rác |
-| Offline | B2C | Domestic | 1,560 | 2.6 | 25.5% | POS retail |
-| Internal | B2C | Domestic | 2,280 | 0.9 | 75.8% | Không phải bán hàng |
+| Category               | Segment | Market   | Đơn  | Net (tỷ) | Disc% | Ghi chú                                                 |
+| ---------------------- | ------- | -------- | ------ | --------- | ----- | -------------------------------------------------------- |
+| Ecommerce              | B2C     | Domestic | 22,168 | 38.5      | 28.8% | Kênh bán lẻ chính                                    |
+| Offline                | B2B     | Domestic | 11,156 | 68.8      | 46.8% | Đại Lý — giá sỉ                                    |
+| Other                  | B2B     | Export   | 11,540 | 41.0      | 82.7% | **US — inter-company**                            |
+| Other                  | B2C     | Domestic | 2,584  | 5.2       | 26.7% | Thùng rác                                              |
+| Offline                | B2C     | Domestic | 1,560  | 2.6       | 25.5% | POS retail                                               |
+| Offline / Direct Sales | B2C     | Domestic | 124    | 0.3       | 38.0% | **Telesale + CS — bán thật**                    |
+| Internal               | B2C     | Domestic | 2,156  | 0.6       | 78.5% | Không phải bán hàng (Quà Tặng, Ưu đãi NV, Test) |
 
 ---
 
@@ -124,15 +132,15 @@ Nhiều khách mua qua Zalo/Facebook có pattern giống bán sỉ:
 
 Bổ sung cho hệ thống channel hiện tại, không thay thế.
 
-| order_nature | Mô tả | Cách xác định |
-|---|---|---|
-| **retail_sale** | Bán lẻ, giá thị trường | Kênh B2C + customer_type != wholesale |
-| **wholesale** | Bán sỉ, giá chiết khấu cố định | Đại Lý, Chợ sỉ + khách sỉ ẩn trên Zalo/FB/Other |
-| **cross_border_fulfillment** | Giao hàng tại VN cho khách FG Care US, doanh thu = 0đ | US channel — thanh toán theo hợp đồng B2B riêng |
-| **staff_benefit** | Ưu đãi nhân viên | Ưu đãi Nhân Viên |
-| **gift** | Quà tặng, hàng cho | Quà Tặng |
-| **test** | Đơn test | Test Sản Phẩm |
-| **affiliate** | CTV bán hàng | Khách có tag CTV, discount ~100% |
+| order_nature                       | Mô tả                                                   | Cách xác định                                        |
+| ---------------------------------- | --------------------------------------------------------- | -------------------------------------------------------- |
+| **retail_sale**              | Bán lẻ, giá thị trường                              | Kênh B2C + customer_type != wholesale                   |
+| **wholesale**                | Bán sỉ, giá chiết khấu cố định                    | Đại Lý, Chợ sỉ + khách sỉ ẩn trên Zalo/FB/Other |
+| **cross_border_fulfillment** | Giao hàng tại VN cho khách FG Care US, doanh thu = 0đ | US channel — thanh toán theo hợp đồng B2B riêng    |
+| **staff_benefit**            | Ưu đãi nhân viên                                     | Ưu đãi Nhân Viên                                    |
+| **gift**                     | Quà tặng, hàng cho                                     | Quà Tặng                                               |
+| **test**                     | Đơn test                                                | Test Sản Phẩm                                          |
+| **affiliate**                | CTV bán hàng                                            | Khách có tag CTV, discount ~100%                       |
 
 ### 3.2. Cách identify "khách sỉ ẩn" trên kênh B2C
 
@@ -161,12 +169,12 @@ Nếu: AOV > 10M AND avg_discount > 40% AND order_count > 5
 
 ### 3.3. Xử lý US channel
 
-| Thuộc tính | Hiện tại | Đề xuất |
-|---|---|---|
-| platform_group | Other | **CrossBorder** (giá trị mới) |
-| is_sales_channel | true (implicit) | **false** |
-| channel_category | Other | **Internal** |
-| order_nature | (chưa có) | **cross_border_fulfillment** |
+| Thuộc tính     | Hiện tại      | Đề xuất                             |
+| ---------------- | --------------- | -------------------------------------- |
+| platform_group   | Other           | **CrossBorder** (giá trị mới) |
+| is_sales_channel | true (implicit) | **false**                        |
+| channel_category | Other           | **Internal**                     |
+| order_nature     | (chưa có)     | **cross_border_fulfillment**     |
 
 **Lý do:** US không phải bán hàng của FG Care VN. Doanh thu thuộc FG Care US, VN chỉ thực hiện fulfillment theo hợp đồng B2B riêng. Ghi nhận doanh thu = 0đ.
 
@@ -176,12 +184,12 @@ Nếu: AOV > 10M AND avg_discount > 40% AND order_count > 5
 
 Tách "Other" thành các nguồn cụ thể hơn nếu có thể identify qua tags/notes trong Sapo:
 
-| Nhóm | Cách identify | Xử lý |
-|---|---|---|
-| Khách VIP/DM | customer_type = retail, AOV cao | Giữ nguyên B2C |
-| Khách sỉ ẩn | customer_type = wholesale (từ ref_customer_tags) | Gom vào wholesale |
-| CTV | customer_type = ctv | Tách riêng affiliate |
-| Không rõ | Còn lại | Giữ "Other" nhưng monitor |
+| Nhóm          | Cách identify                                    | Xử lý                     |
+| -------------- | ------------------------------------------------- | --------------------------- |
+| Khách VIP/DM  | customer_type = retail, AOV cao                   | Giữ nguyên B2C            |
+| Khách sỉ ẩn | customer_type = wholesale (từ ref_customer_tags) | Gom vào wholesale          |
+| CTV            | customer_type = ctv                               | Tách riêng affiliate      |
+| Không rõ     | Còn lại                                         | Giữ "Other" nhưng monitor |
 
 ---
 
@@ -225,6 +233,7 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 ### 4.5. Discount analysis
 
 **PHẢI** tách riêng:
+
 - **Retail discount:** promotion/coupon thật → so sánh Shopee vs Lazada vs Web
 - **Wholesale discount:** giá sỉ cố định → không so sánh với retail
 - **Internal discount:** giá NV, quà tặng → loại khỏi analysis
@@ -236,7 +245,8 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 ### Phase 1: Quick wins (seed changes, không cần code mới)
 
 1. Sửa `ref_order_sources.csv`: US → `platform_group = 'CrossBorder'`, `is_sales_channel = false`
-2. Cập nhật `dim_channels.sql`: thêm `CrossBorder` → `channel_category = 'Internal'`
+2. Sửa `ref_order_sources.csv`: Telesale, CS → `platform_group = 'Direct'`, `channel_type = 'Direct Sales'`, `is_sales_channel = true`
+3. Cập nhật `dim_channels.sql`: thêm `CrossBorder` → `channel_category = 'Internal'`, `Direct Sales` → `channel_category = 'Offline'`
 
 ### Phase 2: Customer tagging
 
@@ -260,8 +270,8 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 ## 6. Câu hỏi cần xác nhận từ Business
 
 1. **US channel**: ~~Có đơn US nào là bán thật cho khách Mỹ không?~~ **ĐÃ XÁC NHẬN:** 100% là cross-border fulfillment — FG Care VN giao hàng tại VN cho khách của FG Care US, doanh thu = 0đ, thanh toán theo hợp đồng B2B riêng.
-2. **"Other" channel**: Có tag hoặc note nào trong Sapo giúp phân biệt khách VIP / CTV / khách sỉ?
+2. **Telesale + CS**: ~~Nên tính là doanh thu bán hàng hay internal?~~ **ĐÃ XÁC NHẬN (2026-04-13):** Doanh thu bán hàng thật. Chuyển sang `Offline / Direct Sales`, `is_sales_channel = true`. Dual-dimension (track kênh gốc + team) chưa cần với volume 0.2% — revisit khi CS/Telesale scale lên.
 3. **Khách sỉ Zalo/Facebook**: Danh sách khoảng bao nhiêu người? Có sẵn list từ sales team không?
 4. **Discount 50% trên Zalo/FB**: Là chính sách giá sỉ cố định hay promotion từng đơn?
-5. **Telesale + CS**: Nên tính là doanh thu bán hàng hay internal? Hiện tại là `System / Internal`.
-6. **"Gosumo", "POPS", "Leflair", "Selly", "Chiaki"**: Các kênh inactive này có cần giữ lại trong báo cáo hay archive?
+5. **"Gosumo", "POPS", "Leflair", "Selly", "Chiaki"**: Các kênh inactive này có cần giữ lại trong báo cáo hay archive?
+6. **"Other" channel**: Có tag hoặc note nào trong Sapo giúp phân biệt khách VIP / CTV / khách sỉ?

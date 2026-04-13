@@ -27,16 +27,16 @@ Tài liệu này thiết lập cách phân loại chuẩn cho toàn công ty.
                     | dim       |                | dim          |
                     | channels  |----> fact <----| products     |
                     +-----------+    sales       +--------------+
-                                    line
-                    +-----------+   items        +--------------+
+                                     line
+                    +-----------+    items       +--------------+
                     | dim       |                | Thị trường   |
                     | branches  |----> fact <----| & Phân khúc  |
-                    +-----------+    sales       +--------------+
+                    +-----------+     sales      +--------------+
                          ^                              ^
                          |                              |
                     "Ai xử lý?"                 "Bán cho ai?"
                     Chi nhánh                    Nội địa/Xuất khẩu
-                                                B2C/B2B
+                                                 B2C/B2B
 ```
 
 Khi muốn xem doanh thu theo góc nhìn nào, chỉ cần gom nhóm (GROUP BY) theo cột tương ứng. Không cần tạo báo cáo riêng — cùng một bộ dữ liệu, nhìn từ nhiều phía.
@@ -76,33 +76,34 @@ Tầng 1 — Phân loại kênh (Ecommerce / Offline / Internal)
               └── (Nguồn đơn hàng cụ thể)
 ```
 
-
-
 🌈Bảng phân loại đầy đủ:
 
-| Tầng 1: Phân loại kênh   | Tầng 2: Loại kênh    | Tầng 3: Nền tảng | Nguồn cụ thể (ví dụ)                          |
-| ---------------------------- | ----------------------- | ------------------- | -------------------------------------------------- |
-| **Ecommerce (Online)** | Marketplace (Sàn TMDT) | Shopee              | Shopee - JPC OFFICIAL, Shopee - Fine Japan Vietnam |
-|                              |                         | Lazada              | Lazada - JPC SHOP, Lazada - Fine Japan Vietnam     |
-|                              |                         | TikTok              | TiktokShop                                         |
-|                              |                         | Tiki                | Tiki - FINE WORLD GROUP                            |
-|                              |                         | Sendo               | Sendo                                              |
-|                              |                         | Grab                | GrabMart                                           |
-|                              | Social Commerce (MXH)   | Facebook            | Facebook, FaceBookJPC, FaceBookFJPTViet            |
-|                              |                         | Instagram           | Instagram                                          |
-|                              |                         | Zalo                | Zalo                                               |
-|                              | Website (DTC)           | Website             | Web, WebOrder                                      |
-| **Offline**            | Retail (Cửa hàng)     | POS                 | POS - Trương Dinh, POS - Hau Giang               |
-|                              | B2B (Bán sỉ)          | Wholesale           | Đại Lý, Chợ sỉ                                |
-| **Internal**           | System (Nội bộ)       | System              | Telesale, CS, Test Sản Phẩm, Quà Tặng          |
-|                              | CrossBorder (Giao hàng xuyên biên giới) | US | Fine Japan-USA — giao hàng tại VN cho khách FG Care US |
+| Tầng 1: Phân loại kênh   | Tầng 2: Loại kênh                        | Tầng 3: Nền tảng | Nguồn cụ thể (ví dụ)                                  |
+| ---------------------------- | ------------------------------------------- | ------------------- | ---------------------------------------------------------- |
+| **Ecommerce (Online)** | Marketplace (Sàn TMDT)                     | Shopee              | Shopee - JPC OFFICIAL, Shopee - Fine Japan Vietnam         |
+|                              |                                             | Lazada              | Lazada - JPC SHOP, Lazada - Fine Japan Vietnam             |
+|                              |                                             | TikTok              | TiktokShop                                                 |
+|                              |                                             | Tiki                | Tiki - FINE WORLD GROUP                                    |
+|                              |                                             | Sendo               | Sendo                                                      |
+|                              |                                             | Grab                | GrabMart                                                   |
+|                              | Social Commerce (MXH)                       | Facebook            | Facebook, FaceBookJPC, FaceBookFJPTViet                    |
+|                              |                                             | Instagram           | Instagram                                                  |
+|                              |                                             | Zalo                | Zalo                                                       |
+|                              | Website (DTC)                               | Website             | Web, WebOrder                                              |
+| **Offline**            | Retail (Cửa hàng)                         | POS                 | POS - Trương Dinh, POS - Hau Giang                       |
+|                              | B2B (Bán sỉ)                              | Wholesale           | Đại Lý, Chợ sỉ                                        |
+|                              | Direct Sales (Bán trực tiếp)              | Direct              | Telesale, CS — đơn tạo thủ công bởi staff, khách mua thật |
+| **Internal**           | System (Nội bộ)                           | System              | Test Sản Phẩm, Quà Tặng, Ưu đãi Nhân Viên             |
+|                              | CrossBorder (Giao hàng xuyên biên giới) | US                  | Fine Japan-USA — giao hàng tại VN cho khách FG Care US |
 
 **Lưu ý:**
 
 - **Ecommerce** bao gồm tất cả kênh bán hàng trực tuyến: sàn TMDT, mạng xã hội, và website. Đây là nghĩa rộng của "thương mại điện tử".
-- Nguồn **Internal** (Telesale, CS, Test, Quà Tặng...) **không tính vào doanh thu bán hàng** trong các báo cáo sales. Chúng phục vụ mục đích nội bộ.
+- **Direct Sales** (Telesale, CS): Đơn tạo thủ công bởi staff khi khách mua trực tiếp qua điện thoại/chat. Đây là **doanh thu bán hàng thật**, `is_sales_channel = true`. Telesale/CS là team chốt đơn, không phải hoạt động nội bộ — xếp vào Offline vì đơn không chảy qua API marketplace.
+- Nguồn **Internal** (Test SP, Quà Tặng, Ưu đãi NV) **không tính vào doanh thu bán hàng**. Chúng phục vụ mục đích nội bộ.
 - Nguồn **CrossBorder** (US): FG Care VN giao hàng tại VN cho người thân của khách Việt Kiều mua từ FG Care US. Doanh thu = 0đ — thanh toán theo hợp đồng B2B riêng giữa FG Care US và FG Care VN. **Không tính vào doanh thu bán hàng VN.**
 - Mỗi nền tảng có thể có nhiều nguồn cụ thể (nhiều shop trên Shopee, nhiều page Facebook...).
+- **Dual-dimension (tương lai):** Hiện tại Sapo chỉ có 1 field `source` → khi CS tạo đơn, mất thông tin kênh gốc khách đến. Nếu CS/Telesale scale lên, có thể nâng cấp sang mô hình dual-dimension: track cả `source_channel` (khách đến từ đâu) + `team` (ai chốt). Yêu cầu quy ước source name trong Sapo (vd: `CS-Shopee`, `Telesale-Zalo`) hoặc custom field. Với volume hiện tại (124 đơn, 0.2% tổng) chưa cần.
 
 ---
 
@@ -187,12 +188,12 @@ Chi nhánh là đơn vị vật lý chịu trách nhiệm thực hiện đơn h�
 
 Hai phân loại bổ sung, dùng khi cần tách riêng doanh thu theo đối tượng:
 
-| Chiều phân loại       | Giá trị             | Áp dụng cho                              |
-| ------------------------ | --------------------- | ------------------------------------------ |
-| **Thị trường**  | Domestic (Nội địa) | Hầu hết các kênh                       |
+| Chiều phân loại       | Giá trị             | Áp dụng cho                                                                  |
+| ------------------------ | --------------------- | ------------------------------------------------------------------------------ |
+| **Thị trường**  | Domestic (Nội địa) | Hầu hết các kênh                                                           |
 |                          | Export (Xuất khẩu)  | Các kênh xuất khẩu tương lai (US đã chuyển sang Internal/CrossBorder) |
-| **Phân khúc KH** | B2C (Bán lẻ)        | Shopee, Lazada, Website, POS...            |
-|                          | B2B (Bán sỉ)        | Đại Lý, Chợ Sỉ                        |
+| **Phân khúc KH** | B2C (Bán lẻ)        | Shopee, Lazada, Website, POS...                                                |
+|                          | B2B (Bán sỉ)        | Đại Lý, Chợ Sỉ                                                            |
 
 ---
 
@@ -267,23 +268,23 @@ Hệ thống phân loại kênh bán hàng được xây dựng trên mô hình 
                               │ is_active            │
                               └────────┬────────────┘
                                        │
-┌─────────────────────┐       ┌────────┴────────────┐       ┌─────────────────────┐
-│   dim_products       │       │   fact_sales         │       │ dim_branch_locations │
-│─────────────────────│       │─────────────────────│       │─────────────────────│
-│ product_key (SK)     │──────│ product_key (FK)     │       │ branch_location_key  │
-│ product_id           │       │ channel_key (FK)     │──────│ branch_location_id   │
-│ variant_id           │       │ branch_key (FK)      │       │ branch_location_name │
-│ sku                  │       │ order_date           │       │ branch_location_code │
-│ barcode              │       │ quantity             │       └─────────────────────┘
-│ product_name         │       │ revenue              │
-│ variant_name         │       │ discount             │
-│ product_type         │       │ ...                  │
-│ brand_name           │  ←    └─────────────────────┘
-│ brand_code           │  ←
-│ unit                 │
-│ weight_grams         │
-│ last_sold_price      │
-│ last_seen_at         │
+┌─────────────────────┐       ┌────────┴────────────┐       ┌──────────────────────┐
+│   dim_products      │       │   fact_sales        │       │ dim_branch_locations │
+│─────────────────────│       │─────────────────────│       │──────────────────────│
+│ product_key (SK)    │───────│ product_key (FK)    │       │ branch_location_key  │
+│ product_id          │       │ channel_key (FK)    │───────│ branch_location_id   │
+│ variant_id          │       │ branch_key (FK)     │       │ branch_location_name │
+│ sku                 │       │ order_date          │       │ branch_location_code │
+│ barcode             │       │ quantity            │       └──────────────────────┘
+│ product_name        │       │ revenue             │
+│ variant_name        │       │ discount            │
+│ product_type        │       │ ...                 │
+│ brand_name          │  ←    └─────────────────────┘
+│ brand_code          │  ←
+│ unit                │
+│ weight_grams        │
+│ last_sold_price     │
+│ last_seen_at        │
 └─────────────────────┘
 ```
 
@@ -314,16 +315,16 @@ Mỗi dòng đại diện cho một nguồn đơn hàng cụ thể trong Sapo (m
 
 **Quy tắc platform_group:**
 
-| Giá trị platform_group | Ý nghĩa                                   | Thuộc channel_category |
-| ------------------------ | ------------------------------------------- | ----------------------- |
-| `Ecom`                 | Sàn thương mại điện tử (Marketplace) | Ecommerce               |
-| `Social`               | Mạng xã hội (Social Commerce)            | Ecommerce               |
-| `Web`                  | Website công ty (DTC)                      | Ecommerce               |
-| `Retail`               | Cửa hàng vật lý                         | Offline                 |
-| `B2B`                  | Bán sỉ, đại lý                         | Offline                 |
-| `System`               | Nội bộ (Telesale, CS, Test...)            | Internal                |
+| Giá trị platform_group | Ý nghĩa                                                  | Thuộc channel_category |
+| ------------------------ | ---------------------------------------------------------- | ----------------------- |
+| `Ecom`                 | Sàn thương mại điện tử (Marketplace)                | Ecommerce               |
+| `Social`               | Mạng xã hội (Social Commerce)                           | Ecommerce               |
+| `Web`                  | Website công ty (DTC)                                     | Ecommerce               |
+| `Retail`               | Cửa hàng vật lý                                        | Offline                 |
+| `B2B`                  | Bán sỉ, đại lý                                        | Offline                 |
+| `System`               | Nội bộ (Telesale, CS, Test...)                           | Internal                |
 | `CrossBorder`          | Giao hàng xuyên biên giới cho công ty liên kết (US) | Internal                |
-| `Other`                | Khác                                       | Other                   |
+| `Other`                | Khác                                                      | Other                   |
 
 **Quy tắc is_generic_source:**
 
