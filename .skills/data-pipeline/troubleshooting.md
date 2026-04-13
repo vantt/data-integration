@@ -48,6 +48,9 @@
 | Row count thấp hơn expected | Late-arriving events không được re-process | Verify 7-day lookback: `WHERE event_timestamp > MAX - INTERVAL 7 DAY` |
 | Duplicate rows trong dbt output | Dedup logic bị sai | Verify two-phase dedup: tech (entity_id) → biz (biz_key) |
 | `unique_key` constraint fail | `delete+insert` không xóa hết rows cũ | Kiểm tra `unique_key` match với biz_key dedup partition |
+| `WHERE clause cannot contain aggregates` | DuckDB reject `MAX()` in WHERE subquery on `read_parquet()` source | Tách aggregate vào `_cursor` CTE. Xem L31 |
+| `Referenced column "_dlt_load_id" not found` | Table materialized trước khi column `_dlt_load_id` tồn tại | Dùng `adapter.get_columns_in_relation(this)` check + fallback `''`. Xem L31 |
+| `Set operations: same number of result columns` | UNION ALL giữa extracted (có column mới) và `{{ this }}` (chưa có) | Guard UNION ALL bằng `'_dlt_load_id' in existing_cols`. Xem L31 |
 
 ## dbt — Source / Reference
 

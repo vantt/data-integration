@@ -137,10 +137,32 @@ stg_sapo_orders.sql   (VIEW)           → enrichment joins, ~210MB peak
 
 **Giải pháp:**
 ```sql
+{% set existing_cols = (adapter.get_columns_in_relation(this) | map(attribute='name') | list) if is_incremental() else [] %}
+
+WITH
 {% if is_incremental() %}
-WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{ this }})
+_cursor AS (
+    {% if '_dlt_load_id' in existing_cols %}
+    SELECT COALESCE(MAX(_dlt_load_id), '') AS max_load_id FROM {{ this }}
+    {% else %}
+    SELECT '' AS max_load_id
+    {% endif %}
+),
 {% endif %}
+raw_data AS (
+    SELECT ... FROM {{ source('sapo_raw', 'entity') }}
+    {% if is_incremental() %}
+    WHERE _dlt_load_id > (SELECT max_load_id FROM _cursor)
+    {% endif %}
+),
 ```
+
+**3 bẫy DuckDB khi dùng `_dlt_load_id` incremental filter:**
+1. **Aggregate trong WHERE subquery** — DuckDB reject `MAX()` inside WHERE subquery trên `read_parquet()` source. Fix: tách vào `_cursor` CTE.
+2. **Column chưa tồn tại trong table cũ** — table materialized trước khi thêm `_dlt_load_id` vào SELECT. Fix: `adapter.get_columns_in_relation(this)` check compile-time, fallback `''` (reprocess all).
+3. **UNION ALL column mismatch** — business dedup UNION ALL `extracted` (có `_dlt_load_id`) với `{{ this }}` (không có). Fix: guard UNION ALL bằng `'_dlt_load_id' in existing_cols`.
+
+**Kết hợp `on_schema_change='append_new_columns'`** trong config → first run after migration tự heal: cursor='' + skip UNION ALL → reprocess all → column added → subsequent runs normal.
 
 **Lý do dùng `_dlt_load_id`:** `_dlt_load_id` tăng đơn điệu theo từng dlt load (format `{unix_timestamp}.{sequence}`) — catches all new data regardless of `event_timestamp`. `event_timestamp` filter bỏ sót late-arriving data từ full-refresh hoặc history_log backfill.
 

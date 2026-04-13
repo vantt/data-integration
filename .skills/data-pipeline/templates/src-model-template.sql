@@ -2,6 +2,7 @@
     materialized='incremental',
     unique_key='{BIZ_KEY}',
     incremental_strategy='delete+insert',
+    on_schema_change='append_new_columns',
     tags=['source', '{SOURCE}']
 ) {{"}}"}}
 
@@ -32,7 +33,19 @@
 --   - event_timestamp filter bỏ sót full-refresh history_log (event_timestamp cũ, _dlt_load_id mới)
 -- =============================================================================
 
-WITH raw_data AS (
+{{% set existing_cols = (adapter.get_columns_in_relation(this) | map(attribute='name') | list) if is_incremental() else [] %}}
+
+WITH
+{{% if is_incremental() %}}
+_cursor AS (
+    {{% if '_dlt_load_id' in existing_cols %}}
+    SELECT COALESCE(MAX(_dlt_load_id), '') AS max_load_id FROM {{{{ this }}}}
+    {{% else %}}
+    SELECT '' AS max_load_id
+    {{% endif %}}
+),
+{{% endif %}}
+raw_data AS (
     SELECT
         entity_id,
         entity_type,
@@ -42,8 +55,7 @@ WITH raw_data AS (
         payload
     FROM {{{{ source('{SOURCE}_raw', '{ENTITY}') }}}}
     {{% if is_incremental() %}}
-    -- _dlt_load_id filter: catch tất cả data từ load mới, kể cả late-arriving events
-    WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{{{ this }}}})
+    WHERE _dlt_load_id > (SELECT max_load_id FROM _cursor)
     {{% endif %}}
 ),
 
@@ -99,7 +111,7 @@ extracted AS (
 -- để đảm bảo chỉ genuinely newer data thắng (tránh stale overwrite)
 candidates AS (
     SELECT * FROM extracted
-    {{% if is_incremental() %}}
+    {{% if is_incremental() and '_dlt_load_id' in existing_cols %}}
     UNION ALL
     SELECT existing.* FROM {{{{ this }}}} existing
     INNER JOIN (SELECT DISTINCT {BIZ_KEY} FROM extracted) k

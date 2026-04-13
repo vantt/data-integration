@@ -693,6 +693,53 @@ WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{ this }})
 
 **Tại sao:** Full-refresh history_log tạo record với `event_timestamp` cũ nhưng `_dlt_load_id` mới. Filter theo `event_timestamp` bỏ sót chúng. `_dlt_load_id` là string sortable theo thứ tự thời gian (dlt format: `{timestamp}.{sequence}`).
 
+### L31 — DuckDB incremental schema migration: 3 bẫy khi thêm column mới
+
+**Symptom:** Thêm `_dlt_load_id` vào extracted CTE của src_ model → 3 lỗi cascade:
+1. `Binder Error: WHERE clause cannot contain aggregates!` — DuckDB reject `MAX()` inside WHERE subquery trên `read_parquet()` source
+2. `Binder Error: Referenced column "_dlt_load_id" not found` — table materialized trước khi column tồn tại
+3. `Binder Error: Set operations can only apply to expressions with the same number of result columns` — UNION ALL giữa extracted (có column mới) và `{{ this }}` (chưa có)
+
+**Fix pattern — self-healing migration:**
+
+```sql
+{{ config(
+    on_schema_change='append_new_columns',  -- (1) dbt tự thêm column mới vào table
+) }}
+
+-- (2) Check column tồn tại ở compile-time
+{% set existing_cols = (adapter.get_columns_in_relation(this) | map(attribute='name') | list) if is_incremental() else [] %}
+
+WITH
+{% if is_incremental() %}
+_cursor AS (
+    {% if '_dlt_load_id' in existing_cols %}
+    SELECT COALESCE(MAX(_dlt_load_id), '') AS max_load_id FROM {{ this }}
+    {% else %}
+    SELECT '' AS max_load_id  -- fallback: reprocess all (one-time full refresh)
+    {% endif %}
+),
+{% endif %}
+raw_data AS (
+    ...
+    {% if is_incremental() %}
+    WHERE _dlt_load_id > (SELECT max_load_id FROM _cursor)  -- (3) no aggregate in WHERE
+    {% endif %}
+),
+...
+-- (4) Guard UNION ALL against column mismatch
+{% if is_incremental() and '_dlt_load_id' in existing_cols %}
+UNION ALL
+SELECT existing.* FROM {{ this }} existing ...
+{% endif %}
+```
+
+**Self-heal sequence:**
+- Run 1: column missing → cursor='' (process all) + skip UNION ALL → `on_schema_change` adds column
+- Run 2+: column exists → normal incremental with UNION ALL
+
+**Tại sao không `--full-refresh`:** Requires manual intervention. Self-healing migration = zero-touch, model tự recover sau 1 run.
+
 ### L30 — Compare-before-overwrite cho incremental dedup
 
 ```sql
