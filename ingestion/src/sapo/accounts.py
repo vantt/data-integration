@@ -34,15 +34,17 @@ from tenacity import (
 
 @dlt.source
 def sapo_accounts_source(
-    max_pages: int = 100, 
-    page_size: int = 50
+    max_pages: int = 100,
+    page_size: int = 50,
+    full_refresh: bool = False
 ):
     """
     Sapo Accounts source function.
     """
     return accounts(
-        max_pages=max_pages, 
-        page_size=page_size
+        max_pages=max_pages,
+        page_size=page_size,
+        full_refresh=full_refresh
     )
 
 @dlt.resource(
@@ -65,6 +67,7 @@ def sapo_accounts_source(
 def accounts(
     max_pages: int = 100,
     page_size: int = 50,
+    full_refresh: bool = False,
     first_timestamp=dlt.sources.incremental("sync_metadata.event_timestamp")
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
@@ -91,8 +94,8 @@ def accounts(
     MAX_ERRORS = 3
     empty_retries = 0
 
-    last_value = first_timestamp.last_value
-    print(f"🚀 Starting incremental load for Accounts from: {last_value}")
+    last_value = None if full_refresh else first_timestamp.last_value
+    print(f"🚀 Starting incremental load for Accounts from: {last_value} {'[FULL REFRESH — cursor ignored]' if full_refresh else ''}")
 
     session = client.session
 

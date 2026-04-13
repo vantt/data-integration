@@ -52,13 +52,15 @@ from tenacity import (
 def sapo_products_source(
     max_pages: int = 100,
     page_size: int = 50,
-    min_overlap_items: int = 100
+    min_overlap_items: int = 100,
+    full_refresh: bool = False
 ):
     """Sapo products source function."""
     return products(
         max_pages=max_pages,
         page_size=page_size,
-        min_overlap_items=min_overlap_items
+        min_overlap_items=min_overlap_items,
+        full_refresh=full_refresh
     )
 
 
@@ -83,6 +85,7 @@ def products(
     max_pages: int = 100,
     page_size: int = 50,
     min_overlap_items: int = 100,
+    full_refresh: bool = False,
     first_timestamp=dlt.sources.incremental("sync_metadata.event_timestamp")
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
@@ -111,8 +114,8 @@ def products(
     MAX_ERRORS = 3
     empty_retries = 0
 
-    last_value = first_timestamp.last_value
-    print(f"[>>] Starting Products incremental load from: {last_value}")
+    last_value = None if full_refresh else first_timestamp.last_value
+    print(f"[>>] Starting Products incremental load from: {last_value} {'[FULL REFRESH — cursor ignored]' if full_refresh else ''}")
     print(f"   Config: page_size={page_size}, min_overlap_items={min_overlap_items}")
 
     session = client.session

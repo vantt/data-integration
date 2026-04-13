@@ -24,14 +24,16 @@ def sapo_orders_batch_asset(context):
     """
     Daily batch sync for Sapo Orders.
     Captures 'modified_on' updates.
+    When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     """
-    context.log.info("Starting Sapo Orders Batch Sync...")
+    is_full_refresh = context.run.tags.get("full_refresh") == "true"
+    argv = ["--full-refresh"] if is_full_refresh else []
+    context.log.info(f"Starting Sapo Orders Batch Sync... (full_refresh={is_full_refresh})")
     load_dlt_configuration(context.log.info)
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        # Pass empty list to ignore sys.argv (Dagster args)
-        load_info = run_orders_batch.run(argv=[])
+        load_info = run_orders_batch.run(argv=argv)
     finally:
         os.chdir(cwd)
         
@@ -53,13 +55,16 @@ def sapo_orders_batch_asset(context):
 def sapo_customers_batch_asset(context):
     """
     Daily batch sync for Sapo Customers.
+    When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     """
-    context.log.info("Starting Sapo Customers Batch Sync...")
+    is_full_refresh = context.run.tags.get("full_refresh") == "true"
+    argv = ["--full-refresh"] if is_full_refresh else []
+    context.log.info(f"Starting Sapo Customers Batch Sync... (full_refresh={is_full_refresh})")
     load_dlt_configuration(context.log.info)
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_customers_batch.run(argv=[])
+        load_info = run_customers_batch.run(argv=argv)
     finally:
         os.chdir(cwd)
         
@@ -81,13 +86,16 @@ def sapo_customers_batch_asset(context):
 def sapo_accounts_batch_asset(context):
     """
     Daily batch sync for Sapo Accounts (Staff).
+    When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     """
-    context.log.info("Starting Sapo Accounts Batch Sync...")
+    is_full_refresh = context.run.tags.get("full_refresh") == "true"
+    argv = ["--full-refresh"] if is_full_refresh else []
+    context.log.info(f"Starting Sapo Accounts Batch Sync... (full_refresh={is_full_refresh})")
     load_dlt_configuration(context.log.info)
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_accounts_batch.run(argv=[])
+        load_info = run_accounts_batch.run(argv=argv)
     finally:
         os.chdir(cwd)
         
@@ -110,13 +118,16 @@ def sapo_products_batch_asset(context):
     """
     Daily batch sync for Sapo Products.
     Captures 'modified_on' updates.
+    When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     """
-    context.log.info("Starting Sapo Products Batch Sync...")
+    is_full_refresh = context.run.tags.get("full_refresh") == "true"
+    argv = ["--full-refresh"] if is_full_refresh else []
+    context.log.info(f"Starting Sapo Products Batch Sync... (full_refresh={is_full_refresh})")
     load_dlt_configuration(context.log.info)
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        load_info = run_products_batch.run(argv=[])
+        load_info = run_products_batch.run(argv=argv)
     finally:
         os.chdir(cwd)
 
