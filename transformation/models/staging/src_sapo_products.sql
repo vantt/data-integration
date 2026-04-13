@@ -2,6 +2,7 @@
     materialized='incremental',
     unique_key='product_id',
     incremental_strategy='delete+insert',
+    on_schema_change='append_new_columns',
     tags=['source', 'sapo', 'products']
 ) }}
 
@@ -23,8 +24,13 @@
 
 WITH
 {% if is_incremental() %}
+{% set cols = adapter.get_columns_in_relation(this) | map(attribute='name') | list %}
 _cursor AS (
+    {% if '_dlt_load_id' in cols %}
     SELECT COALESCE(MAX(_dlt_load_id), '') AS max_load_id FROM {{ this }}
+    {% else %}
+    SELECT '' AS max_load_id
+    {% endif %}
 ),
 {% endif %}
 raw_data AS (
