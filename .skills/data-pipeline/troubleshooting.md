@@ -102,6 +102,7 @@
 | **Queue tích lũy > N runs cho 1 job** | `tag_concurrency_limits` chỉ giới hạn dequeue, không giới hạn queue size — schedule cứ tick là queue thêm | Re-add self-overlap skip trong schedule body: `_has_active_run(context, job_name)` → `SkipReason`. Xem `lessons-learned.md` L19 |
 | **"Step blocked by limit for pool duckdb_lock"** sau khi cancel runs | Asset-level concurrency pool slot bị leak từ ghost run đã CANCELED — `report_run_canceled` không tự free slot | `docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py`. Xem `lessons-learned.md` L20 |
 | **2 runs cùng STARTED concurrent dù có concurrency tag** | Một run là pre-deploy ghost không có tag — coordinator không enforce trên runs cũ | Cancel ghost runs + chạy unstick_concurrency_pools.py. Tags chỉ áp dụng cho runs **launched after** deploy |
+| **Nightly reconciliation finish ngay lập tức với 0 records mới** | Batch source `full_refresh` param không được wire xuống resource — cursor luôn up-to-date, early-stop fires ngay | Wire `full_refresh` xuyên suốt entry-point → source → resource. Dùng `sapo_full_refresh_job` để one-time reload. Xem L32 |
 
 ## Rate Limiting
 

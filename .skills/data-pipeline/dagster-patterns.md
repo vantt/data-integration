@@ -358,6 +358,83 @@ for rec in records:
 
 ---
 
+## Lesson 9: Separate Jobs for Nightly Incremental vs Manual Full-Refresh
+
+**Problem:** Nếu gắn tag `full_refresh=true` vào nightly schedule → toàn bộ API bị scan mỗi đêm, lãng phí và không cần thiết. Nếu không tách job, operator phải truyền tag thủ công mỗi lần muốn full-refresh → error-prone.
+
+**Pattern đúng: 2 job definitions riêng biệt**
+
+```python
+# Nightly — incremental (default behavior)
+sapo_nightly_reconciliation_job = define_asset_job(
+    name="sapo_nightly_reconciliation_job",
+    selection=nightly_selection,
+    tags={"concurrency_group": "dbt_rw"},
+    # KHÔNG tag full_refresh — assets chạy incremental
+)
+
+# Manual full-refresh — one-click launch từ Dagster UI
+sapo_full_refresh_job = define_asset_job(
+    name="sapo_full_refresh_job",
+    selection=nightly_selection,  # cùng assets
+    tags={
+        "concurrency_group": "dbt_rw",
+        "full_refresh": "true",   # baked in — không cần truyền lúc launch
+    },
+)
+```
+
+**Asset đọc tag:**
+
+```python
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
+def sapo_orders_batch_asset(context):
+    full_refresh = context.run.tags.get("full_refresh") == "true"
+    argv = ["--full-refresh"] if full_refresh else []
+
+    load_dlt_configuration(context.log.info)
+    cwd = os.getcwd()
+    try:
+        os.chdir(DLT_DIR)
+        load_info = run_orders_batch.run(argv=argv)
+    finally:
+        os.chdir(cwd)
+```
+
+**Cursor continuity:** Cả hai job dùng cùng `pipeline_name` → share dlt state file. Full-refresh cập nhật cursor sau khi load xong → nightly run tiếp theo chỉ scan từ đó trở đi.
+
+```
+[full_refresh run]  scan all → cursor = T_now
+[nightly run]       scan from T_now → chỉ load data mới
+```
+
+**Lưu ý về batch source wiring:** `full_refresh` phải được wire xuyên suốt từ entry-point xuống resource function:
+
+```python
+# Entry point
+def run(argv=None):
+    parser.add_argument("--full-refresh", action="store_true")
+    args = parser.parse_args(argv)
+    sapo_orders_source(full_refresh=args.full_refresh)
+
+# Source function
+@dlt.source
+def sapo_orders_source(full_refresh: bool = False):
+    yield sapo_orders_resource(full_refresh=full_refresh)
+
+# Resource function
+@dlt.resource
+def sapo_orders_resource(..., full_refresh: bool = False):
+    last_value = None if full_refresh else first_timestamp.last_value
+    ...
+```
+
+Nếu thiếu wire này → `--full-refresh` bị silently ignored, cursor vẫn dùng giá trị cũ → nightly finish instantly với 0 records mới.
+
+**Xem thêm:** `lessons-learned.md` L32, L25.
+
+---
+
 ## Summary: Dagster Integration Checklist
 
 Khi add job/asset mới vào Dagster, kiểm tra:
@@ -375,6 +452,8 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **Sensor** targeting specific job → job phải có trong `Definitions(jobs=[...])` — không auto-discover từ schedules
 - [ ] **Sensor** đụng run timing → dùng `get_run_records()`, KHÔNG `get_runs()` (`DagsterRun` không có `start_time`) — xem Lesson 8
 - [ ] **Sau mỗi edit sensor/definitions.py** → `reloadRepositoryLocation` via GraphQL + verify log daemon không có sensor error
+- [ ] **Full-refresh** = `sapo_full_refresh_job` (manual, tag baked in), KHÔNG tag nightly schedule — xem Lesson 9
+- [ ] Batch source functions wire `full_refresh` param từ entry-point → source → resource (nếu thiếu: silently ignored)
 - [ ] Job cascade "source → downstream" → dùng `_sources | _sources.downstream()`, không dùng full `all_dbt_assets`
 
 ---
@@ -390,5 +469,6 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 | `orchestration/sensors/stuck_run_alerter.py` | Hang detector dùng `get_run_records()` — xem Lesson 8 |
 | `orchestration/sensors/failure_alerting.py` | Lark alert cho terminal FAILURE runs |
 | `.skills/data-pipeline/templates/dagster-reactive-sensor-template.py` | Copy-paste starter cho reactive sensor mới |
+| `orchestration/definitions.py` | `sapo_nightly_reconciliation_job` + `sapo_full_refresh_job` definitions — xem Lesson 9 |
 | `docker-compose.yml` | Telemetry env vars (line 20-21) + auto-unstick on boot (line 33) |
 | `run_dagster.ps1` | Windows local telemetry vars (line 10-11) |

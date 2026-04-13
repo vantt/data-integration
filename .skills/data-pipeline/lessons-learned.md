@@ -760,3 +760,64 @@ QUALIFY ROW_NUMBER() OVER (
 ```
 
 **Tại sao:** dbt `delete+insert` thay thế unconditionally. Nếu late-arriving data có `modified_on` cũ hơn row đang có, nó sẽ overwrite dữ liệu mới hơn. Union + re-dedup đảm bảo chỉ data thực sự mới hơn mới thắng.
+
+---
+
+## Full-Refresh vs Nightly Incremental
+
+### L32 — Nightly incremental vs manual full-refresh — separate jobs, shared cursor
+
+**Nguồn gốc:** Sau incident L25 (`drop_sources` xóa data), `--full-refresh` được làm safe (chỉ reset cursor, không drop data). Tiếp theo phát hiện batch source functions (orders, customers, accounts, products) không wire `full_refresh` param xuống resource — flag bị silently ignored. Fix: thêm `full_refresh` param vào tất cả batch source+resource functions (pattern giống `history_log` đã có sẵn).
+
+**Anti-pattern (đã mắc phải):** Gắn tag `full_refresh=true` vào nightly schedule → full-refresh **mỗi đêm** — lãng phí, scan toàn bộ API không cần thiết.
+
+**Pattern đúng: 2 jobs riêng biệt, shared cursor**
+
+```python
+# Job 1: Nightly — incremental từ cursor cuối cùng
+sapo_nightly_reconciliation_job = define_asset_job(
+    name="sapo_nightly_reconciliation_job",
+    selection=...,
+    # KHÔNG có full_refresh tag — chạy incremental bình thường
+    tags={"concurrency_group": "dbt_rw"},
+)
+
+# Job 2: Manual full-refresh — launch thủ công khi cần reload lại toàn bộ
+sapo_full_refresh_job = define_asset_job(
+    name="sapo_full_refresh_job",
+    selection=...,
+    tags={
+        "concurrency_group": "dbt_rw",
+        "full_refresh": "true",  # baked vào job definition — không cần truyền lúc launch
+    },
+)
+```
+
+**Asset check tag:**
+
+```python
+@asset(...)
+def sapo_orders_batch_asset(context):
+    full_refresh = context.run.tags.get("full_refresh") == "true"
+    argv = ["--full-refresh"] if full_refresh else []
+    run_orders_batch.run(argv=argv)
+```
+
+**Cursor continuity:**
+```
+full_refresh run:
+  last_value = None  → scan toàn bộ API
+  dlt load xong     → dlt cập nhật cursor = latest timestamp
+
+nightly run sau đó:
+  last_value = cursor từ full_refresh run → chỉ scan data mới
+```
+
+Cả hai job dùng cùng `pipeline_name` → share cùng dlt state file → cursor liên tục giữa full-refresh và incremental.
+
+**Khi nào dùng `sapo_full_refresh_job`:**
+- Lần đầu bootstrap data
+- Phát hiện data bị thiếu / corrupt
+- Sau khi thêm field mới vào source cần backfill
+
+**Rule:** Nightly job = incremental từ cursor. Full-refresh = manual, one-click, separate job definition.

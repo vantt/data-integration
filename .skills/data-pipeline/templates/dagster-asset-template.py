@@ -9,12 +9,18 @@ Thay thế trước khi dùng:
 Thêm vào: orchestration/assets/{SOURCE}_assets.py
 
 Job Selection Guide:
-  sapo_realtime_sync_job        → webhook consumer (mỗi 3 phút)
-  sapo_incremental_sync_job     → history log, event polling (mỗi 10 phút)
+  sapo_realtime_sync_job          → webhook consumer (mỗi 3 phút)
+  sapo_incremental_sync_job       → history log, event polling (mỗi 10 phút)
   sapo_nightly_reconciliation_job → batch sync: orders, customers, accounts (04:00 AM)
+  sapo_full_refresh_job           → manual one-time full reload (tag "full_refresh=true" baked in)
 
 Thêm asset mới vào job trong orchestration/definitions.py:
   {JOB}.selection.add(AssetSelection.assets({SOURCE}/{ENTITY}_batch_asset))
+
+QUAN TRỌNG — Full-refresh design (xem L32):
+  - sapo_nightly_reconciliation_job KHÔNG có full_refresh tag → chạy incremental bình thường
+  - sapo_full_refresh_job có tag {"full_refresh": "true"} baked in → asset tự đọc tag, truyền argv
+  - Cả hai job share cùng pipeline_name → cursor liên tục giữa 2 job
 """
 
 from dagster import asset, Output
@@ -39,9 +45,17 @@ import run_{ENTITY}_batch
 def {SOURCE}_{ENTITY}_batch_asset(context):
     """
     Batch sync cho {SOURCE} {ENTITY}.
-    Chạy incremental — chỉ load data mới kể từ lần chạy trước.
+    Mặc định: incremental — chỉ load data mới kể từ lần chạy trước.
+    Full-refresh: khi job được launch với tag {"full_refresh": "true"} (sapo_full_refresh_job).
     """
     context.log.info("Starting {SOURCE} {ENTITY} Batch Sync...")
+
+    # Đọc full_refresh từ run tag — set bởi sapo_full_refresh_job definition
+    # Không bao giờ set tag này trên nightly schedule (wasteful, scan toàn bộ API mỗi đêm)
+    full_refresh = context.run.tags.get("full_refresh") == "true"
+    argv = ["--full-refresh"] if full_refresh else []
+    if full_refresh:
+        context.log.info("Full-refresh mode — resetting cursor, scanning all data")
 
     # 1. Load credentials từ .env.local + secrets.toml
     load_dlt_configuration(context.log.info)
@@ -50,13 +64,13 @@ def {SOURCE}_{ENTITY}_batch_asset(context):
     cwd = os.getcwd()
     try:
         os.chdir(DLT_DIR)
-        # argv=[] bắt buộc — tránh Dagster's sys.argv gây lỗi argparse
-        load_info = run_{ENTITY}_batch.run(argv=[])
+        # argv=[] (incremental) hoặc argv=["--full-refresh"] — tránh Dagster's sys.argv
+        load_info = run_{ENTITY}_batch.run(argv=argv)
     finally:
         os.chdir(cwd)
 
     context.log.info(f"{ENTITY} Batch Sync Finished.")
     return Output(
         value="{ENTITY} Batch Sync Completed",
-        metadata={"load_info": str(load_info)},
+        metadata={"load_info": str(load_info), "full_refresh": full_refresh},
     )
