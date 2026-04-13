@@ -3,6 +3,7 @@
     unique_key='customer_group_id',
     incremental_strategy='delete+insert',
     on_schema_change='append_new_columns',
+    enabled=false,
     tags=['source', 'sapo']
 ) }}
 
