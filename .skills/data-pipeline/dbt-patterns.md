@@ -90,12 +90,19 @@ deduped AS (
 extracted AS (
     SELECT entity_id, event_timestamp,
            json_extract_string(payload, '$.id') AS biz_key,
+           json_extract_string(payload, '$.modified_on') AS modified_on,
            -- ... các fields scalar
     FROM deduped WHERE rn = 1
 )
 -- Phase 2: Business dedup — chạy trên flat data, KHÔNG có payload
+-- modified_on first (entity timestamp = source of truth), event_timestamp second
 SELECT * FROM extracted
-QUALIFY ROW_NUMBER() OVER (PARTITION BY biz_key ORDER BY event_timestamp DESC) = 1
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY biz_key
+    ORDER BY
+        try_cast(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ) DESC NULLS LAST,
+        CASE ingest_method WHEN 'webhook' THEN 3 WHEN 'history_log' THEN 2 ELSE 1 END DESC
+) = 1
 ```
 
 **Memory peak thực tế:** ~1.1GB (vs crash lúc trước) — well under 5GB limit.
@@ -124,20 +131,22 @@ stg_sapo_orders.sql   (VIEW)           → enrichment joins, ~210MB peak
 
 ---
 
-## Lesson 3: 7-Day Lookback cho Incremental
+## Lesson 3: Incremental Filter bằng `_dlt_load_id` (thay 7-Day Lookback)
 
-**Vấn đề:** Events từ webhook hoặc history_log có thể đến sau batch sync 1-5 ngày. Standard incremental (`WHERE ts > MAX(ts)`) bỏ sót.
+**Vấn đề:** Events từ webhook hoặc history_log có thể đến sau batch sync 1-5 ngày. Standard incremental (`WHERE ts > MAX(ts)`) bỏ sót. Nghiêm trọng hơn: full-refresh history_log tạo record với `event_timestamp` cũ nhưng `_dlt_load_id` mới — filter theo `event_timestamp` hoàn toàn bỏ sót chúng.
 
 **Giải pháp:**
 ```sql
 {% if is_incremental() %}
-WHERE event_timestamp > (SELECT MAX(event_timestamp) - INTERVAL 7 DAY FROM {{ this }})
+WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{ this }})
 {% endif %}
 ```
 
+**Lý do dùng `_dlt_load_id`:** `_dlt_load_id` tăng đơn điệu theo từng dlt load (format `{unix_timestamp}.{sequence}`) — catches all new data regardless of `event_timestamp`. `event_timestamp` filter bỏ sót late-arriving data từ full-refresh hoặc history_log backfill.
+
 **Trade-off:**
-- 7 ngày đủ rộng cho late events, vẫn đủ hẹp để giữ incremental nhanh
-- `delete+insert` strategy handle duplicates khi lookback overlap
+- `_dlt_load_id` filter chính xác hơn 7-day lookback — không bỏ sót, không scan thừa
+- `delete+insert` strategy handle duplicates khi có data overlap
 - Full refresh vẫn process toàn bộ — nếu OOM thì tăng `memory_limit` tạm thời
 
 ---
@@ -148,7 +157,7 @@ WHERE event_timestamp > (SELECT MAX(event_timestamp) - INTERVAL 7 DAY FROM {{ th
 CASE ingest_method
     WHEN 'webhook'     THEN 3   -- Real-time event, mới nhất
     WHEN 'history_log' THEN 2   -- Gap-fill từ audit log
-    ELSE 1                      -- batch_sync (có thể bị stale nhất)
+    ELSE 1                      -- batch_sync (có thể bị stale nhất); 'text' là legacy alias của batch_sync, cũng về ELSE
 END DESC
 ```
 
@@ -156,6 +165,7 @@ END DESC
 - Webhook bắn real-time → fresh nhất
 - History_log catch những events mà batch bỏ sót
 - Batch sync scheduled → có thể stale đến vài giờ
+- `'text'` là legacy alias của `batch_sync` — không cần case riêng, ELSE clause đã cover
 
 Dùng trong ROW_NUMBER() ORDER BY phase tech dedup.
 

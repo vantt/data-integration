@@ -156,7 +156,7 @@ data_lake/                             # Runtime data
 ## Critical Rules
 
 1. **Mart models MUST have** `location="{{ get_rolling_location() }}"` — nếu thiếu, `generate_serving_db.py` báo "Empty folder" và drop view
-2. **src_ phải incremental** với 7-day lookback — xử lý late-arriving events
+2. **src_ phải incremental** với `_dlt_load_id` filter — xử lý late-arriving events (dùng `_dlt_load_id`, không phải `event_timestamp`; xem Rule 14)
 3. **src_/stg_ split** — tránh OOM; payload chỉ ở src_, stg_ đọc flat data
 4. **Dagster DuckDB writer assets** phải có `op_tags={"dagster/concurrency_key": "duckdb_lock"}`
 5. **`argv=[]`** khi gọi `run_*.run()` từ Dagster — tránh pick up Dagster's sys.argv
@@ -166,3 +166,6 @@ data_lake/                             # Runtime data
 9. **Telemetry vars** (`DLT_TELEMETRY_DISABLED=true`, `DBT_SEND_ANONYMOUS_USAGE_STATS=false`) set ở process level — tránh zombie threads block Dagster job exit
 10. **Jobs với nhiều ingestion sources** phải inject upstream keys qua `DagsterDbtTranslator.get_upstream_asset_keys()` — nếu không dbt start trước ingestion
 11. **Khi fix anti-pattern trong prod code** → `grep` `templates/` cho cùng pattern và fix luôn. Templates là hạt giống bug tương lai — bất kỳ asset mới copy từ template cũ sẽ kế thừa bug. Đã xảy ra thực tế 2026-04-08: serving subprocess fix ở prod, nhưng template vẫn giữ `capture_output=True` cho tới audit 2026-04-09.
+12. **KHÔNG BAO GIỜ dùng `refresh="drop_sources"`** — xóa TẤT CẢ tables trong shared dataset (sapo_raw). Dùng `full_refresh` flag để reset incremental cursor, giữ nguyên data. Xem L25.
+13. **Dedup ORDER BY: `modified_on DESC` trước** (entity timestamp = source of truth), sau đó ingest_method priority. KHÔNG dùng `event_timestamp` làm primary sort cho dedup — event_timestamp là timestamp của log system, không phải entity. Xem L28.
+14. **Incremental filter: dùng `_dlt_load_id`** không phải `event_timestamp` — catches late-arriving data từ full-refresh hoặc history_log backfill mà event_timestamp filter sẽ bỏ sót. Xem L29.

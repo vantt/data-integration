@@ -300,6 +300,8 @@ Tránh duplicating code giữa Dagster integration và standalone runner.
 
 ### L16 — History Log URI Inference Mapping
 
+> **Đã superseded bởi L24.** L16 mô tả URI_MAP đơn giản; L24 mô tả ENTITY_REGISTRY đầy đủ với 3 resolve strategies.
+
 **Pattern:** History log chứa events dạng `{subject_type, subject_id, occur_at}`. Để fetch full entity, map `subject_type → API endpoint template`.
 
 ```python
@@ -588,3 +590,126 @@ for rec in records:
 docker logs data_platform 2>&1 | grep -iE "sensor" | grep -iE "error|traceback" | head
 # Không có output = sensors healthy
 ```
+
+---
+
+## History Log & Web Scraping
+
+### L24 — Entity Registry pattern cho history log URI resolution
+
+**Supersedes L16.** Thay URI_MAP đơn giản bằng `ENTITY_REGISTRY` data-driven với 3 resolve strategies.
+
+```python
+# ingestion/src/sapo/history_log.py
+ENTITY_REGISTRY: Dict[str, Dict[str, Any]] = {
+    "order":            {"api_resource": "orders",          "table": "order"},
+    "customer_address": {"api_resource": None, "table": "customer", "resolve": "parent",
+                         "parent_uri_pattern": "/addresses.json",
+                         "parent_uri_replace": ".json"},
+    "fulfillment_print_forms": {"resolve": "skip"},
+    # ... 18 types total
+}
+```
+
+**3 resolve strategies:**
+- **standard** (default): pluralize subject_type thành API resource path
+- **parent**: extract parent ID từ log URI (e.g., `customer_address` → re-fetch `customer`)
+- **skip**: low-value entity type, bỏ qua không fetch
+
+**Tại sao:** Một số entity cần re-fetch parent (customer_address → customer), một số không có giá trị (fulfillment_print_forms). Registry xử lý tất cả các case một cách declarative thay vì conditional logic rải rác.
+
+### L25 — KHÔNG BAO GIỜ dùng `refresh="drop_sources"` — xóa toàn bộ dataset
+
+```python
+# NGUY HIỂM — xóa TẤT CẢ tables trong dataset (kể cả pipeline khác)
+info = pipeline.run(source, refresh="drop_sources")
+
+# AN TOÀN — chỉ reset cursor, data được giữ lại, dedup ở dbt
+source_args["full_refresh"] = True  # flag truyền vào source
+# Trong source: last_value = None if full_refresh else first_timestamp.last_value
+info = pipeline.run(source)  # không có refresh parameter
+```
+
+**Tại sao:** Tất cả pipeline đều ghi vào cùng dataset (sapo_raw). `drop_sources` xóa trắng toàn bộ. Pattern đúng là append-only ingestion + dbt dedup.
+
+### L26 — Smart rate limiting cho cookie-based web scraping
+
+```python
+def _delay_with_jitter():
+    jitter = random.uniform(0, request_delay * 0.3)
+    time.sleep(request_delay + jitter)
+
+def _handle_auth_response(response, session, context):
+    if "/login" in response.url or response.status_code in (401, 403):
+        client.refresh_session(session)
+        return None  # signal retry
+    if response.status_code == 429:
+        time.sleep(int(response.headers.get("Retry-After", 30)))
+        raise requests.RequestException("429")
+    return response
+```
+
+**Pattern:** jitter ±30% để tránh request pattern đều đặn, phát hiện 429 với Retry-After, tự recovery khi auth redirect/401/403, retry riêng cho entity fetch (tenacity 2 attempts).  
+**Tại sao:** Cookie-based scraping (không phải official API) — cần request pattern giống human, xử lý session expiry gracefully.
+
+### L27 — Cookie TTL nên dài, dựa vào 401/403 để refresh on-demand
+
+```python
+# BAD — TTL 6h gây Playwright login thường xuyên không cần thiết
+'cookie_ttl_hours': 6
+
+# GOOD — 7 ngày, 401/403 trigger refresh khi cần
+'cookie_ttl_hours': 168
+```
+
+**Tại sao:** Sapo session sống hàng tuần/tháng. TTL ngắn = Playwright login nhiều = chậm + dễ bị detect. TTL dài + on-demand refresh = login tối thiểu.
+
+---
+
+## Dedup & Incremental Correctness
+
+### L28 — Dedup phải dùng `modified_on` của entity, KHÔNG phải `event_timestamp` của log
+
+```sql
+-- BAD: event_timestamp = thời điểm LOG ghi lại (hệ thống trung gian)
+ORDER BY event_timestamp DESC, modified_on DESC
+
+-- GOOD: modified_on = thời điểm ENTITY thực sự thay đổi (source of truth)
+ORDER BY try_cast(modified_on AS TIMESTAMPTZ) DESC NULLS LAST,
+         CASE ingest_method WHEN 'webhook' THEN 1 WHEN 'history_log' THEN 2 ELSE 3 END
+```
+
+**Tại sao:** History log re-fetch có thể tạo record với `event_timestamp` mới nhưng `modified_on` cũ. Dùng `event_timestamp` để dedup → dữ liệu stale ghi đè dữ liệu mới.
+
+### L29 — Incremental filter: dùng `_dlt_load_id`, KHÔNG phải `event_timestamp`
+
+```sql
+-- BAD: bỏ sót late-arriving data có event_timestamp cũ
+WHERE event_timestamp > (SELECT MAX(event_timestamp) - INTERVAL 7 DAY FROM {{ this }})
+
+-- GOOD: _dlt_load_id tăng đơn điệu theo từng load, catch tất cả data mới
+WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{ this }})
+```
+
+**Tại sao:** Full-refresh history_log tạo record với `event_timestamp` cũ nhưng `_dlt_load_id` mới. Filter theo `event_timestamp` bỏ sót chúng. `_dlt_load_id` là string sortable theo thứ tự thời gian (dlt format: `{timestamp}.{sequence}`).
+
+### L30 — Compare-before-overwrite cho incremental dedup
+
+```sql
+-- Khi data mới đến cho entity đã tồn tại, so sánh trước khi thay thế
+SELECT * FROM (
+    SELECT * FROM new_extracted
+    {% if is_incremental() %}
+    UNION ALL
+    SELECT existing.* FROM {{ this }} existing
+    INNER JOIN (SELECT DISTINCT pk FROM new_extracted) k ON existing.pk = k.pk
+    {% endif %}
+)
+QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY pk
+    ORDER BY try_cast(modified_on AS TIMESTAMPTZ) DESC NULLS LAST,
+             CASE ingest_method WHEN 'webhook' THEN 1 WHEN 'history_log' THEN 2 ELSE 3 END
+) = 1
+```
+
+**Tại sao:** dbt `delete+insert` thay thế unconditionally. Nếu late-arriving data có `modified_on` cũ hơn row đang có, nó sẽ overwrite dữ liệu mới hơn. Union + re-dedup đảm bảo chỉ data thực sự mới hơn mới thắng.
