@@ -224,8 +224,7 @@ def nightly_schedule(context):
     active = _has_active_run(context, "sapo_nightly_reconciliation_job")
     if active:
         return SkipReason(f"nightly: previous run still active ({active[:8]})")
-    # Tag full_refresh=true so batch assets reset their incremental cursor
-    return RunRequest(run_key=None, tags={"full_refresh": "true"})
+    return RunRequest(run_key=None)
 
 # ------------------------------------------------------------------------------
 # RESOURCES & DEFINITIONS
