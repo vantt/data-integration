@@ -1,23 +1,23 @@
 {{ config(
     materialized='incremental',
-    unique_key='account_id',
+    unique_key='customer_group_id',
     incremental_strategy='delete+insert',
-    tags=['source', 'sapo', 'accounts']
+    tags=['source', 'sapo']
 ) }}
 
 -- =================================================================================================
--- SOURCE EXTRACTION: SAPO ACCOUNTS
+-- SOURCE EXTRACTION: SAPO CUSTOMER GROUPS
 -- =================================================================================================
 -- Purpose:
 --   1. Read raw Parquet from Data Lake (dlt pipeline output).
 --   2. Technical dedup by entity_id (ROW_NUMBER, modified_on + ingest_method priority).
---   3. Extract ALL scalar JSON fields from payload.
---   4. Business dedup by account_id (latest modified_on wins; compare new vs existing rows).
---   5. Discard payload -> frees memory for downstream models.
+--   3. Extract ALL scalar JSON fields as columns.
+--   4. Business dedup by customer_group_id (latest modified_on wins; compare new vs existing rows).
+--   5. Discard payload → frees memory for downstream models.
 --
 -- Incremental strategy:
 --   - Filters on _dlt_load_id (monotonically increasing) to catch late-arriving data.
---   - New extracted rows are UNIONed with existing rows for the same account_ids before
+--   - New extracted rows are UNIONed with existing rows for the same customer_group_ids before
 --     final dedup, so a later load never overwrites a more-recent record.
 -- =================================================================================================
 
@@ -29,7 +29,7 @@ WITH raw_data AS (
         ingest_method,
         _dlt_load_id,
         payload
-    FROM {{ source('sapo_raw', 'account') }}
+    FROM {{ source('sapo_raw', 'customer_group') }}
     {% if is_incremental() %}
     WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{ this }})
     {% endif %}
@@ -60,39 +60,43 @@ extracted AS (
         ingest_method,
         _dlt_load_id,
 
-        -- Account IDs
-        json_extract_string(payload, '$.id') as account_id,
-        json_extract_string(payload, '$.modified_on') as modified_on,
+        -- IDs & codes
+        json_extract_string(payload, '$.id')                AS customer_group_id,
+        json_extract_string(payload, '$.modified_on')       AS modified_on,
+        json_extract_string(payload, '$.code')              AS group_code,
+        json_extract_string(payload, '$.name')              AS group_name,
 
-        -- Account info
-        json_extract_string(payload, '$.full_name') as full_name,
-        json_extract_string(payload, '$.email') as email,
-        json_extract_string(payload, '$.user_name') as user_name,
-        json_extract_string(payload, '$.first_name') as first_name,
-        json_extract_string(payload, '$.last_name') as last_name,
-        json_extract_string(payload, '$.mobile') as mobile,
-        json_extract_string(payload, '$.status') as status,
-        json_extract_string(payload, '$.tenant_id') as tenant_id,
+        -- Status & type
+        json_extract_string(payload, '$.status')            AS group_status,
+        json_extract_string(payload, '$.group_type')        AS group_type,
+        json_extract_string(payload, '$.condition_type')    AS condition_type,
+
+        -- Flags & counts
+        json_extract_string(payload, '$.is_default')        AS is_default,
+        try_cast(json_extract_string(payload, '$.count_customer') AS INTEGER) AS customer_count,
+
+        -- Misc
+        json_extract_string(payload, '$.note')              AS note,
 
         -- Timestamps
-        json_extract_string(payload, '$.created_on') as created_on
+        json_extract_string(payload, '$.created_on')        AS created_on
 
     FROM deduped
     WHERE rn = 1
 )
 
--- Step 2: Business dedup by account_id — compare new vs existing before overwriting
+-- Step 2: Business dedup by customer_group_id — compare new vs existing before overwriting
 SELECT * FROM (
     SELECT * FROM extracted
     {% if is_incremental() %}
     UNION ALL
     SELECT existing.* FROM {{ this }} existing
-    INNER JOIN (SELECT DISTINCT account_id FROM extracted) new_keys
-        ON existing.account_id = new_keys.account_id
+    INNER JOIN (SELECT DISTINCT customer_group_id FROM extracted) new_keys
+        ON existing.customer_group_id = new_keys.customer_group_id
     {% endif %}
 )
 QUALIFY ROW_NUMBER() OVER (
-    PARTITION BY account_id
+    PARTITION BY customer_group_id
     ORDER BY
         try_cast(modified_on AS TIMESTAMPTZ) DESC NULLS LAST,
         CASE ingest_method

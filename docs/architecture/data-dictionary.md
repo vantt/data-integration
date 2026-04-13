@@ -15,37 +15,54 @@
 
 ## Source Entities
 
+> **Complete reference:** See [`docs/architecture/source-entities/`](./source-entities/index.md) for detailed documentation of all raw entities, envelope schema, and payload structures.
+
+This section provides quick reference tables for the most commonly used entities. For comprehensive payload schemas, see the modular source-entities documentation.
+
 ### Orders (`sapo_raw.order`)
 
-The core transactional entity representing customer purchases.
+The core transactional entity representing customer purchases. Includes line items, fulfillments, payments, and returns.
 
 | Column            | Type      | Description             | Example                     |
 | ----------------- | --------- | ----------------------- | --------------------------- |
 | `entity_id`       | VARCHAR   | Unique order identifier | `"12345678"`                |
 | `entity_type`     | VARCHAR   | Always `"order"`        | `"order"`                   |
-| `ingest_method`   | VARCHAR   | Data source             | `"webhook"`, `"batch_sync"` |
+| `ingest_method`   | VARCHAR   | Data source             | `"history_log"`, `"text"`, `"webhook"` |
 | `event_type`      | VARCHAR   | Event action            | `"create"`, `"update"`      |
 | `event_timestamp` | TIMESTAMP | When event occurred     | `2026-01-28T10:30:00Z`      |
-| `payload`         | JSON      | Full order snapshot     | See below                   |
+| `payload`         | JSON      | Full order snapshot     | See below & reference docs  |
 
-**Payload Structure:**
+**Payload Structure (Abbreviated Example):**
 
 ```json
 {
   "id": 12345678,
   "code": "SON000001",
-  "status": "confirmed",
-  "fulfillment_status": "pending",
+  "tenant_id": 5006,
+  "status": "finalized",
+  "fulfillment_status": "unshipped",
   "payment_status": "paid",
+  "packed_status": "packed",
+  "return_status": "none",
+  "process_status": "processing",
+  "channel": "web",
+  "created_on": "2026-01-28T10:00:00Z",
+  "modified_on": "2026-01-28T10:30:00Z",
+  "finalized_on": "2026-01-28T10:10:00Z",
+  "completed_on": null,
+  "cancelled_on": null,
+  "customer_id": 9876543,
+  "location_id": 12345,
+  "account_id": 1001,
+  "assignee_id": 1002,
+  "source_id": 1,
+  "source_name": "web",
   "total": 500000,
   "total_discount": 50000,
   "total_tax": 0,
-  "customer_id": 9876543,
-  "location_id": 12345,
-  "source_id": 1,
-  "source_name": "web",
-  "created_on": "2026-01-28T10:00:00Z",
-  "modified_on": "2026-01-28T10:30:00Z",
+  "delivery_fee": 25000,
+  "note": "Fragile item",
+  "tags": ["urgent"],
   "order_line_items": [
     {
       "id": 111,
@@ -53,37 +70,47 @@ The core transactional entity representing customer purchases.
       "variant_id": 333,
       "quantity": 2,
       "price": 250000,
-      "line_amount": 500000
+      "line_amount": 500000,
+      "discount_amount": 50000
     }
   ],
+  "fulfillments": [{...}],
+  "payments": [{...}],
+  "promotion_redemptions": [{...}],
   "shipping_address": {
     "address1": "123 Main St",
-    "ward": "Ward 1",
-    "district": "District 1",
+    "ward_name": "Ward 1",
+    "district_name": "District 1",
     "city": "Ho Chi Minh"
   }
 }
 ```
 
-**Business Rules:**
+**Complete Payload Field Reference:**
 
-- `status`: draft → confirmed → processing → completed/cancelled
-- `fulfillment_status`: pending → partial → fulfilled
-- `payment_status`: pending → partial → paid → refunded
+See [`docs/architecture/raw-data-sources.md § Order`](./raw-data-sources.md#order-sapo_raworder) for exhaustive payload schema including all status fields, timestamps, and nested line items, fulfillments, and payments.
+
+**Status Values & Transitions:**
+
+- `status`: `draft` → `finalized` → `completed` OR `cancelled`
+- `fulfillment_status`: `unshipped` → `partial` → `fulfilled`
+- `payment_status`: `pending` → `partial` → `paid` → (optionally) `refunded`
+- `packed_status`, `return_status`, `received_status`: Additional tracking dimensions
+- Cancellation: Sets `status=cancelled` and `cancelled_on` timestamp
 
 ---
 
 ### Customers (`sapo_raw.customer`)
 
-Customer master data.
+Customer master data. Addresses are nested within customer entity; address changes trigger customer entity updates in history log.
 
 | Column            | Type      | Description                | Example                |
 | ----------------- | --------- | -------------------------- | ---------------------- |
 | `entity_id`       | VARCHAR   | Unique customer identifier | `"9876543"`            |
 | `entity_type`     | VARCHAR   | Always `"customer"`        | `"customer"`           |
-| `ingest_method`   | VARCHAR   | Data source                | `"webhook"`            |
+| `ingest_method`   | VARCHAR   | Data source                | `"history_log"`, `"text"` |
 | `event_timestamp` | TIMESTAMP | When event occurred        | `2026-01-28T09:00:00Z` |
-| `payload`         | JSON      | Full customer snapshot     | See below              |
+| `payload`         | JSON      | Full customer snapshot     | See below & reference docs |
 
 **Payload Structure:**
 
@@ -115,17 +142,23 @@ Customer master data.
 }
 ```
 
+**Complete Payload Field Reference:**
+
+See [`docs/architecture/raw-data-sources.md § Customer`](./raw-data-sources.md#customer-sapo_rawcustomer) for exhaustive payload schema including address structures and customer group semantics.
+
 ---
 
 ### Accounts (`sapo_raw.account`)
 
-Staff/employee accounts.
+Staff/employee accounts for sales attribution and order assignment.
 
 | Column        | Type    | Description               | Example     |
 | ------------- | ------- | ------------------------- | ----------- |
 | `entity_id`   | VARCHAR | Unique account identifier | `"1001"`    |
 | `entity_type` | VARCHAR | Always `"account"`        | `"account"` |
-| `payload`     | JSON    | Full account snapshot     | See below   |
+| `ingest_method` | VARCHAR | Data source             | `"history_log"`, `"text"` |
+| `event_timestamp` | TIMESTAMP | When account changed  | `2026-01-28T10:00:00Z` |
+| `payload`     | JSON    | Full account snapshot     | See below & reference docs |
 
 **Payload Structure:**
 
@@ -141,6 +174,206 @@ Staff/employee accounts.
   "locations": [12345, 12346]
 }
 ```
+
+**Role Values:** `admin`, `sales`, `warehouse`, `customer_service`, etc.
+
+**Status Values:** `active`, `inactive`, `suspended`
+
+**Complete Payload Field Reference:**
+
+See [`docs/architecture/raw-data-sources.md § Account`](./raw-data-sources.md#account-sapo_rawaccount) for exhaustive payload schema.
+
+---
+
+### Fulfillments (`sapo_raw.fulfillment`) — NEW
+
+Packing slips (kho đóng gói) from History Log pipeline. Each fulfillment represents goods prepared for a single shipment; one order may spawn multiple fulfillments.
+
+| Column            | Type      | Description             | Example                     |
+| ----------------- | --------- | ----------------------- | --------------------------- |
+| `entity_id`       | VARCHAR   | Unique fulfillment ID   | `"87654321"`                |
+| `entity_type`     | VARCHAR   | Always `"fulfillment"`  | `"fulfillment"`             |
+| `ingest_method`   | VARCHAR   | Always `"history_log"`  | `"history_log"`             |
+| `event_timestamp` | TIMESTAMP | When fulfillment changed| `2026-01-28T10:30:00Z`      |
+| `payload`         | JSON      | Full fulfillment snapshot | See below                 |
+
+**Payload Structure:**
+
+```json
+{
+  "id": 87654321,
+  "code": "KH000001",
+  "order_id": 12345678,
+  "stock_location_id": 456,
+  "status": "shipped",
+  "delivery_type": "courier",
+  "total": 475000,
+  "total_discount": 50000,
+  "total_tax": 0,
+  "packed_on": "2026-01-28T10:15:00Z",
+  "shipped_on": "2026-01-28T10:25:00Z",
+  "fulfillment_line_items": [
+    {
+      "id": 111,
+      "product_id": 222,
+      "variant_id": 333,
+      "quantity": 2,
+      "line_amount": 475000
+    }
+  ],
+  "shipment": {
+    "id": 555,
+    "delivery_service_provider": "GHN",
+    "tracking_code": "GHN123456",
+    "freight_amount": 30000,
+    "estimated_delivery_time": "2026-01-30T23:59:59Z"
+  }
+}
+```
+
+**Status Values:** `fulfilled`, `packed`, `shipped`, `cancelled`
+
+**Relationships:** FK `order_id` → `order`, FK `stock_location_id` → warehouse locations
+
+See [`docs/architecture/raw-data-sources.md § Fulfillments`](./raw-data-sources.md#fulfillment-sapo_rawfulfillment) for complete payload schema and nested structures.
+
+---
+
+### Purchase Orders (`sapo_raw.purchase_order`) — NEW
+
+Supplier purchase orders (nhập hàng) from History Log pipeline. Track goods received from suppliers.
+
+| Column            | Type      | Description             | Example                     |
+| ----------------- | --------- | ----------------------- | --------------------------- |
+| `entity_id`       | VARCHAR   | Unique PO identifier    | `"11111111"`                |
+| `entity_type`     | VARCHAR   | Always `"purchase_order"` | `"purchase_order"`          |
+| `ingest_method`   | VARCHAR   | Always `"history_log"`  | `"history_log"`             |
+| `event_timestamp` | TIMESTAMP | When PO changed         | `2026-01-28T10:30:00Z`      |
+| `payload`         | JSON      | Full PO snapshot        | See reference               |
+
+**Status Values:** Typical: `draft`, `confirmed`, `received`, `cancelled`
+
+**Current State:** 0 rows (awaiting purchase order events in Sapo)
+
+**API Endpoint:** `/admin/purchase_orders/{id}.json`
+
+See [`docs/architecture/raw-data-sources.md § Purchase Orders`](./raw-data-sources.md#purchase_order-sapo_rawpurchase_order) for expected schema.
+
+---
+
+### Order Returns (`sapo_raw.order_return`) — NEW
+
+Return/refund transactions (hoàn/trả hàng) from History Log pipeline. Track customer returns and refunds.
+
+| Column            | Type      | Description             | Example                     |
+| ----------------- | --------- | ----------------------- | --------------------------- |
+| `entity_id`       | VARCHAR   | Unique return ID        | `"22222222"`                |
+| `entity_type`     | VARCHAR   | Always `"order_return"` | `"order_return"`            |
+| `ingest_method`   | VARCHAR   | Always `"history_log"`  | `"history_log"`             |
+| `event_timestamp` | TIMESTAMP | When return changed     | `2026-01-28T10:30:00Z`      |
+| `payload`         | JSON      | Full return snapshot    | See reference               |
+
+**Status Values:** Typical: `pending`, `approved`, `received`, `rejected`, `refunded`
+
+**Current State:** 0 rows (awaiting return events in Sapo)
+
+**API Endpoint:** `/admin/order_returns/{id}.json`
+
+See [`docs/architecture/raw-data-sources.md § Order Returns`](./raw-data-sources.md#order_return-sapo_raworder_return) for expected schema.
+
+---
+
+### Stock Adjustments (`sapo_raw.stock_adjustment`) — NEW
+
+Inventory adjustments (kiểm kho, điều chỉnh tồn kho) from History Log pipeline. Track manual stock corrections, physical inventory counts, and write-offs.
+
+| Column            | Type      | Description             | Example                     |
+| ----------------- | --------- | ----------------------- | --------------------------- |
+| `entity_id`       | VARCHAR   | Unique adjustment ID    | `"33333333"`                |
+| `entity_type`     | VARCHAR   | Always `"stock_adjustment"` | `"stock_adjustment"`    |
+| `ingest_method`   | VARCHAR   | Always `"history_log"`  | `"history_log"`             |
+| `event_timestamp` | TIMESTAMP | When adjustment occurred| `2026-01-28T10:30:00Z`      |
+| `payload`         | JSON      | Full adjustment snapshot| See reference               |
+
+**Reason Types:** `inventory_count` (kiểm kho), `write_off` (xóa tồn), `damage`, `theft`, `correction`
+
+**Current State:** 0 rows (awaiting stock adjustments in Sapo)
+
+**API Endpoint:** `/admin/stock_adjustments/{id}.json`
+
+See [`docs/architecture/raw-data-sources.md § Stock Adjustments`](./raw-data-sources.md#stock_adjustment-sapo_rawstock_adjustment) for expected schema.
+
+---
+
+### Customer Groups (`sapo_raw.customer_group`) — NEW
+
+Customer segmentation groups (nhóm khách hàng) from History Log pipeline. Used for tiering, pricing, and targeting.
+
+| Column            | Type      | Description             | Example                     |
+| ----------------- | --------- | ----------------------- | --------------------------- |
+| `entity_id`       | VARCHAR   | Unique group ID         | `"44444444"`                |
+| `entity_type`     | VARCHAR   | Always `"customer_group"` | `"customer_group"`        |
+| `ingest_method`   | VARCHAR   | Always `"history_log"`  | `"history_log"`             |
+| `event_timestamp` | TIMESTAMP | When group changed      | `2026-01-28T10:30:00Z`      |
+| `payload`         | JSON      | Full group snapshot     | See below                   |
+
+**Payload Structure:**
+
+```json
+{
+  "id": 44444444,
+  "code": "VIP",
+  "name": "VIP Customers",
+  "description": "Premium customer tier",
+  "discount_rate": 10
+}
+```
+
+**Current State:** 0 rows (awaiting customer group events in Sapo)
+
+**API Endpoint:** `/admin/customer_groups/{id}.json`
+
+See [`docs/architecture/raw-data-sources.md § Customer Groups`](./raw-data-sources.md#customer_group-sapo_rawcustomer_group) for complete schema.
+
+---
+
+### Price Lists (`sapo_raw.price_list`) — NEW
+
+Pricing tiers and rules (bảng giá) from History Log pipeline. Defines product prices per channel, customer group, or time period.
+
+| Column            | Type      | Description             | Example                     |
+| ----------------- | --------- | ----------------------- | --------------------------- |
+| `entity_id`       | VARCHAR   | Unique price list ID    | `"55555555"`                |
+| `entity_type`     | VARCHAR   | Always `"price_list"`   | `"price_list"`              |
+| `ingest_method`   | VARCHAR   | Always `"history_log"`  | `"history_log"`             |
+| `event_timestamp` | TIMESTAMP | When price list changed | `2026-01-28T10:30:00Z`      |
+| `payload`         | JSON      | Full price list snapshot| See below                   |
+
+**Payload Structure:**
+
+```json
+{
+  "id": 55555555,
+  "code": "WHOLESALE_Q1",
+  "name": "Wholesale Q1 2026",
+  "status": "active",
+  "start_date": "2026-01-01",
+  "end_date": "2026-03-31",
+  "is_default": false,
+  "price_list_items": [
+    {
+      "product_id": 222,
+      "price": 180000
+    }
+  ]
+}
+```
+
+**Current State:** 0 rows (awaiting price list events in Sapo)
+
+**API Endpoint:** `/admin/price_lists/{id}.json`
+
+See [`docs/architecture/raw-data-sources.md § Price Lists`](./raw-data-sources.md#price_list-sapo_rawprice_list) for complete schema.
 
 ---
 

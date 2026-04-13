@@ -10,10 +10,15 @@
 -- =================================================================================================
 -- Purpose:
 --   1. Read raw Parquet from Data Lake (dlt pipeline output).
---   2. Technical dedup by entity_id (ROW_NUMBER, ingest_method priority).
+--   2. Technical dedup by entity_id (ROW_NUMBER, modified_on + ingest_method priority).
 --   3. Extract ALL scalar JSON fields from payload.
---   4. Business dedup by sapo_customer_id (latest event_timestamp wins).
+--   4. Business dedup by sapo_customer_id (latest modified_on wins; compare new vs existing rows).
 --   5. Discard payload -> frees memory for downstream models.
+--
+-- Incremental strategy:
+--   - Filters on _dlt_load_id (monotonically increasing) to catch late-arriving data.
+--   - New extracted rows are UNIONed with existing rows for the same customer_ids before
+--     final dedup, so a later load never overwrites a more-recent record.
 -- =================================================================================================
 
 WITH raw_data AS (
@@ -22,10 +27,11 @@ WITH raw_data AS (
         entity_type,
         event_timestamp,
         ingest_method,
+        _dlt_load_id,
         payload
     FROM {{ source('sapo_raw', 'customer') }}
     {% if is_incremental() %}
-    WHERE event_timestamp > (SELECT MAX(event_timestamp) - INTERVAL 7 DAY FROM {{ this }})
+    WHERE _dlt_load_id > (SELECT COALESCE(MAX(_dlt_load_id), '') FROM {{ this }})
     {% endif %}
 ),
 
@@ -35,7 +41,7 @@ deduped AS (
         ROW_NUMBER() OVER (
             PARTITION BY entity_id
             ORDER BY
-                event_timestamp DESC,
+                try_cast(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ) DESC NULLS LAST,
                 CASE
                     WHEN ingest_method = 'webhook' THEN 3
                     WHEN ingest_method = 'history_log' THEN 2
@@ -52,6 +58,7 @@ extracted AS (
         entity_type,
         event_timestamp,
         ingest_method,
+        _dlt_load_id,
 
         -- Customer IDs
         json_extract_string(payload, '$.id') as sapo_customer_id,
@@ -95,9 +102,23 @@ extracted AS (
     WHERE rn = 1
 )
 
--- Step 2: Business dedup by sapo_customer_id -- operates on flat data only, no payload
-SELECT * FROM extracted
+-- Step 2: Business dedup by sapo_customer_id — compare new vs existing before overwriting
+SELECT * FROM (
+    SELECT * FROM extracted
+    {% if is_incremental() %}
+    UNION ALL
+    SELECT existing.* FROM {{ this }} existing
+    INNER JOIN (SELECT DISTINCT sapo_customer_id FROM extracted) new_keys
+        ON existing.sapo_customer_id = new_keys.sapo_customer_id
+    {% endif %}
+)
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY sapo_customer_id
-    ORDER BY event_timestamp DESC, try_cast(modified_on AS TIMESTAMP) DESC NULLS LAST
+    ORDER BY
+        try_cast(modified_on AS TIMESTAMPTZ) DESC NULLS LAST,
+        CASE ingest_method
+            WHEN 'webhook' THEN 1
+            WHEN 'history_log' THEN 2
+            ELSE 3
+        END
 ) = 1

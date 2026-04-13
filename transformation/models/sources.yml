@@ -27,7 +27,31 @@ sources:
       - name: product
         description: "Raw products data from Parquet files"
 
-      # Bảng 5: Targets (Google Sheets)
+      # Bảng 5: Fulfillments (history_log — packing slips with nested shipment)
+      - name: fulfillment
+        description: "Raw fulfillment/shipment data from history log"
+
+      # Bảng 6: Purchase Orders (history_log — supplier orders)
+      - name: purchase_order
+        description: "Raw purchase order data from history log"
+
+      # Bảng 7: Order Returns (history_log)
+      - name: order_return
+        description: "Raw order return data from history log"
+
+      # Bảng 8: Stock Adjustments (history_log — inventory adjustments)
+      - name: stock_adjustment
+        description: "Raw stock adjustment data from history log"
+
+      # Bảng 9: Customer Groups (history_log — customer segmentation)
+      - name: customer_group
+        description: "Raw customer group data from history log"
+
+      # Bảng 10: Price Lists (history_log)
+      - name: price_list
+        description: "Raw price list data from history log"
+
+      # Targets (Google Sheets)
       - name: targets_raw
         description: "Target goals ingested from Google Sheets"
 
