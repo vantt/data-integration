@@ -48,10 +48,29 @@ branch_locations AS (
         WHERE s.is_generic_source = true
     ),
 
+    -- 3. Generic Sources with Unknown Location (fallback for unrecognized location_ids)
+    generic_unknown AS (
+        SELECT
+            cast(s.id as string) as source_id,
+            null as location_id,
+            s.name || ' (Unknown Location)' as channel_name,
+            s.name as channel_code,
+            s.platform_group,
+            s.platform,
+            s.channel_brand,
+            s.market,
+            s.customer_segment,
+            s.status as is_active
+        FROM source_definitions s
+        WHERE s.is_generic_source = true
+    ),
+
     unioned AS (
         SELECT * FROM specific_channels
         UNION ALL
         SELECT * FROM generic_channels
+        UNION ALL
+        SELECT * FROM generic_unknown
     )
 
 SELECT

@@ -17,3 +17,12 @@ SELECT DISTINCT
 
 FROM locations
 WHERE id IS NOT NULL
+
+UNION ALL
+
+-- Unknown Member
+SELECT
+    {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as branch_location_key,
+    cast(null as integer) as branch_location_id,
+    'Unknown' as branch_location_name,
+    'UNK' as branch_location_code

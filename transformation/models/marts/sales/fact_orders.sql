@@ -17,6 +17,10 @@ source_definitions AS (
     SELECT id, is_generic_source FROM {{ ref('ref_order_sources') }}
 ),
 
+valid_locations AS (
+    SELECT cast(id as varchar) as location_id FROM {{ ref('ref_branch_locations') }}
+),
+
 first_shipment AS (
     SELECT order_id, MIN(shipped_at) as first_shipped_at
     FROM {{ ref('std_fulfillments') }}
@@ -47,12 +51,13 @@ SELECT
     -- or just bridge it later. For now, we leave NULL or specific handling if needed. 
     -- Simplification: Just take the first code if present, or NULL.
     {{ dbt_utils.generate_surrogate_key(["coalesce(json_extract_string(json_extract_string(discount_codes, '$[0]'), '$.code'), 'Unknown')"]) }} as promotion_key,
-    {{ dbt_utils.generate_surrogate_key(["coalesce(cast(location_id as varchar), 'Unknown')"]) }} as branch_location_key,
+    -- Validated location: fallback to Unknown if location_id not in ref_branch_locations
+    {{ dbt_utils.generate_surrogate_key(["coalesce(vl.location_id, 'Unknown')"]) }} as branch_location_key,
 
-    -- Channel Key Logic
+    -- Channel Key Logic (uses validated location for generic sources)
     CASE
         WHEN sd.is_generic_source = true THEN
-            {{ dbt_utils.generate_surrogate_key(['cast(source_id as string)', "coalesce(cast(location_id as string), 'Unknown')"]) }}
+            {{ dbt_utils.generate_surrogate_key(['cast(source_id as string)', "coalesce(vl.location_id, 'Unknown')"]) }}
         ELSE
             {{ dbt_utils.generate_surrogate_key(['cast(source_id as string)', "'Unknown'"]) }}
     END as channel_key,
@@ -89,4 +94,5 @@ FROM orders
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = vc.customer_key
 LEFT JOIN {{ ref('dim_staff') }} ds ON {{ dbt_utils.generate_surrogate_key(['orders.salesperson_id']) }} = ds.staff_key
 LEFT JOIN source_definitions sd ON orders.source_id = sd.id
+LEFT JOIN valid_locations vl ON cast(orders.location_id as varchar) = vl.location_id
 LEFT JOIN first_shipment fs ON orders.order_id = fs.order_id

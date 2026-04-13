@@ -15,6 +15,9 @@ valid_customers AS (
 ),
 source_definitions AS (
     SELECT id, is_generic_source FROM {{ ref('ref_order_sources') }}
+),
+valid_locations AS (
+    SELECT cast(id as varchar) as location_id FROM {{ ref('ref_branch_locations') }}
 )
 
 SELECT
@@ -25,13 +28,14 @@ SELECT
     END as product_key,
     {{ dbt_utils.generate_surrogate_key(["coalesce(i.product_type, 'Unknown')"]) }} as product_type_key,
     COALESCE(vc.customer_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as customer_key,
-    {{ dbt_utils.generate_surrogate_key(["coalesce(cast(o.location_id as string), 'Unknown')"]) }} as branch_location_key,
-    
-    -- Channel Key Logic (Must match dim_channels)
+    -- Validated location: fallback to Unknown if location_id not in ref_branch_locations
+    {{ dbt_utils.generate_surrogate_key(["coalesce(vl.location_id, 'Unknown')"]) }} as branch_location_key,
+
+    -- Channel Key Logic (uses validated location for generic sources)
     CASE
-        WHEN sd.is_generic_source = true THEN 
-            {{ dbt_utils.generate_surrogate_key(['cast(o.source_id as string)', "coalesce(cast(o.location_id as string), 'Unknown')"]) }}
-        ELSE 
+        WHEN sd.is_generic_source = true THEN
+            {{ dbt_utils.generate_surrogate_key(['cast(o.source_id as string)', "coalesce(vl.location_id, 'Unknown')"]) }}
+        ELSE
             {{ dbt_utils.generate_surrogate_key(['cast(o.source_id as string)', "'Unknown'"]) }}
     END as channel_key,
 
@@ -74,3 +78,4 @@ JOIN orders o ON i.order_id = o.order_id
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(['o.customer_id']) }} = vc.customer_key
 LEFT JOIN {{ ref('dim_staff') }} ds ON {{ dbt_utils.generate_surrogate_key(['o.salesperson_id']) }} = ds.staff_key
 LEFT JOIN source_definitions sd ON o.source_id = sd.id
+LEFT JOIN valid_locations vl ON cast(o.location_id as varchar) = vl.location_id

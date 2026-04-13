@@ -34,8 +34,8 @@ SELECT
     json_extract_string(payment_json, '$.payment_method_id') as payment_method_id,
     json_extract_string(payment_json, '$.code') as payment_code,
 
-    -- Financials
-    try_cast(json_extract_string(payment_json, '$.amount') as DECIMAL(18,2)) as amount,
+    -- Financials (default 0 if amount is null/malformed)
+    coalesce(try_cast(json_extract_string(payment_json, '$.amount') as DECIMAL(18,2)), 0.00) as amount,
 
     -- Status
     json_extract_string(payment_json, '$.status') as status,
