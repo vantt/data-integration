@@ -821,3 +821,42 @@ Cả hai job dùng cùng `pipeline_name` → share cùng dlt state file → curs
 - Sau khi thêm field mới vào source cần backfill
 
 **Rule:** Nightly job = incremental từ cursor. Full-refresh = manual, one-click, separate job definition.
+
+### L33 — dlt incremental có 2 lớp filter — phải reset CẢ HAI khi full-refresh
+
+**Symptom:** `--full-refresh` chạy nhưng kết thúc nhanh bất thường (vài phút thay vì cả ngày). Log show "0 new records" dù `last_value = None` đã pass tất cả items qua manual check.
+
+**Root cause:** `dlt.sources.incremental` có **2 lớp filter song song**:
+
+| Lớp | Vị trí | Cơ chế |
+|-----|--------|--------|
+| **Manual** | Resource function code | `if last_value is None or ts > last_value` — do dev kiểm soát |
+| **dlt internal** | `dlt.sources.incremental` transform | Tự động drop items có cursor value `<=` stored `last_value` trong `.dlt/pipelines/{name}/state.json` |
+
+Khi chỉ set `last_value = None` trong code (lớp 1), items pass manual check → yield → nhưng dlt transform (lớp 2) vẫn drop chúng vì state.json giữ cursor cũ.
+
+**Fix: xóa pipeline state directory TRƯỚC khi khởi tạo pipeline:**
+
+```python
+# pipeline_runner.py
+if args.full_refresh:
+    import shutil
+    state_dir = os.path.join(".dlt", "pipelines", pipeline_name)
+    if os.path.exists(state_dir):
+        shutil.rmtree(state_dir)
+        print(f"[Pipeline Runner] --full-refresh: reset pipeline state ({state_dir})")
+    source_args["full_refresh"] = True
+
+# Pipeline init SAU khi xóa state → fresh state, no stored cursor
+pipeline = dlt.pipeline(pipeline_name=..., destination="filesystem", ...)
+```
+
+**An toàn vì:**
+- Data sống ở `data_lake/` (DESTINATION__FILESYSTEM__BUCKET_URL) — path riêng
+- `.dlt/pipelines/{name}/` chỉ chứa state, schema, normalize info — KHÔNG chứa data
+- `shutil.rmtree` xóa state → `dlt.pipeline()` tạo lại fresh → `first_timestamp.last_value = None` → dlt internal filter cũng disabled
+- Data append-only, dedup ở dbt — safe
+
+**KHÔNG dùng `pipeline.drop()`** — method này gọi thêm `destination.drop_storage()` có thể xóa data trên destination.
+
+**Rule:** Khi implement `--full-refresh` cho dlt pipeline, phải reset cả 2 lớp: (1) `last_value = None` trong resource code, (2) xóa `.dlt/pipelines/{name}/` để reset dlt internal state. Chỉ set flag mà không xóa state = full-refresh bị silently ignored.

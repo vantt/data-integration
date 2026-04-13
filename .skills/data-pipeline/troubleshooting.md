@@ -16,6 +16,7 @@
 | Incremental cursor không update | Field path sai | Verify: `"sync_metadata.event_timestamp"` match envelope key |
 | Pipeline kẹt, state có pending packages | Crash giữa write | `python scripts/clean_dlt_state.py` |
 | Full refresh quá chậm | Scan toàn API | Dùng `--limit N` khi test, full run off-peak |
+| **`--full-refresh` kết thúc nhanh bất thường** (vài phút thay vì cả ngày) | dlt internal transform vẫn drop items dù manual `last_value=None` — state file giữ cursor cũ | `pipeline_runner.py` phải `shutil.rmtree(.dlt/pipelines/{name}/)` TRƯỚC khi init pipeline. KHÔNG dùng `pipeline.drop()`. Xem L33 |
 
 ## dlt — Config / Credentials
 
