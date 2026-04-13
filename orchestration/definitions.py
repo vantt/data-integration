@@ -20,6 +20,7 @@ from dagster import (
 )
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill
+from orchestration.ops.system_backup import platform_backup_job
 from orchestration.sensors.failure_alerting import lark_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
@@ -236,6 +237,21 @@ def nightly_schedule(context):
         return SkipReason(f"nightly: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
+
+# 6 AM daily — runs after nightly reconciliation (4 AM) has finished.
+# Not in dbt_rw concurrency group: backup reads files, doesn't write DuckDB.
+@schedule(
+    job=platform_backup_job,
+    cron_schedule="0 6 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def backup_schedule(context):
+    active = _has_active_run(context, "platform_backup_job")
+    if active:
+        return SkipReason(f"backup: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
 # ------------------------------------------------------------------------------
 # RESOURCES & DEFINITIONS
 # ------------------------------------------------------------------------------
@@ -260,11 +276,13 @@ defs = Definitions(
         misa_file_drop_sync_job,
         sapo_nightly_reconciliation_job,
         sapo_full_refresh_job,
+        platform_backup_job,
     ],
     schedules=[
         realtime_schedule,
         incremental_schedule,
         nightly_schedule,
+        backup_schedule,
     ],
     sensors=[
         lark_failure_sensor,

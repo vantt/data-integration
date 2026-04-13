@@ -12,9 +12,9 @@
 # =============================================================================
 
 param(
-    [string]$ProjectRoot = "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\data-integration2",
-    [string]$BackupRoot  = "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\backups",
-    [int]$KeepCount      = 7,
+    [string]$ProjectRoot = $(if ($env:BACKUP_PROJECT_ROOT) { $env:BACKUP_PROJECT_ROOT } else { "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\data-integration2" }),
+    [string]$BackupRoot  = $(if ($env:BACKUP_ROOT) { $env:BACKUP_ROOT } else { "D:\_1.FWG_PARA\1.Projects\dev\dataware_house\backups" }),
+    [int]$KeepCount      = $(if ($env:BACKUP_KEEP_COUNT) { [int]$env:BACKUP_KEEP_COUNT } else { 7 }),
     [switch]$SkipRestart
 )
 

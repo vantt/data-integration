@@ -17,6 +17,8 @@ services:
       - DAGSTER_HOME=/app/.dagster_home
       - DLT_TELEMETRY_DISABLED=true
       - DBT_SEND_ANONYMOUS_USAGE_STATS=false
+      - BACKUP_ROOT=/app/backups
+      - BACKUP_KEEP_COUNT=7
     networks:
       - caddy_net
     volumes:
@@ -28,6 +30,7 @@ services:
       - ./app_data/data_lake:/app/data_lake
       - ./app_data/dagster_home:/app/.dagster_home
       - ./app_data/logs:/app/logs
+      - ./app_data/backups:/app/backups
     command: sh -c "python scripts/ensure_dbt_directories.py && dbt deps --project-dir /app/transformation && dagster instance concurrency set duckdb_lock 1 && dbt parse --project-dir /app/transformation --profiles-dir /app/transformation && (python scripts/maintenance/unstick_concurrency_pools.py || true) && (python scripts/provisioning/bootstrap_reporting.py || true) && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
     labels:
       caddy: etl.local
