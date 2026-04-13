@@ -59,33 +59,19 @@ def run_pipeline(
     print(f"[Pipeline Runner] Initialized pipeline: {pipeline_name}")
     print(f"[Pipeline Runner] Dataset: {final_dataset_name}")
     
-    # 4. Handle Full Refresh
-    refresh_mode = None
+    # 4. Handle Full Refresh — SAFE: only reset incremental cursor, NEVER drop data.
+    # Data is append-only; deduplication is handled by the transformation layer (dbt).
     if args.full_refresh:
-        print("[Pipeline Runner] --full-refresh detected. Will drop source state on run.")
-        refresh_mode = "drop_sources"
-    
-    # 5. Configure Source
-    # Inject limit if the source factory accepts it and it was provided
-    if args.limit is not None:
-        # Check if source_factory accepts 'limit' or 'max_pages'
-        # This is a bit dynamic; ideally sources should standardize on 'limit' or we pass via specific source_args
-        print(f"[Pipeline Runner] Applying limit: {args.limit}")
-        # Note: This simply prints for now. The caller should pass the limit to source_args if needed, 
-        # or we update source_args here if we know the key.
-        # For now, let's update source_args if the key is typically used, or rely on caller to use args.limit
-        pass
+        print("[Pipeline Runner] --full-refresh: resetting incremental cursor (data preserved).")
+        source_args["full_refresh"] = True
 
-    # 6. Run Pipeline
-    # 6. Run Pipeline
+    # 5. Run Pipeline
     import time
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            # Instantiate source
             source = source_factory(**source_args)
-            
-            info = pipeline.run(source, refresh=refresh_mode)
+            info = pipeline.run(source)
             print(info)
             return info
         except Exception as e:

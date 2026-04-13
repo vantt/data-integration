@@ -124,21 +124,23 @@ def get_table_name(root_type: str) -> str:
 
 @dlt.source
 def sapo_history_log_source(
-    max_pages: int = 1000, 
+    max_pages: int = 1000,
     page_size: int = 100,
     min_overlap_items: int = 50,
     limit: int = None,
-    debug: bool = False
+    debug: bool = False,
+    full_refresh: bool = False
 ):
     """
     Sapo history log source function.
     """
     return history_log(
-        max_pages=max_pages, 
-        page_size=page_size, 
+        max_pages=max_pages,
+        page_size=page_size,
         min_overlap_items=min_overlap_items,
         limit=limit,
-        debug=debug
+        debug=debug,
+        full_refresh=full_refresh
     )
 
 @dlt.resource(
@@ -164,6 +166,7 @@ def history_log(
     min_overlap_items: int = 50,
     limit: int = None,
     debug: bool = False,
+    full_refresh: bool = False,
     first_timestamp=dlt.sources.incremental("sync_metadata.event_timestamp")
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
@@ -175,6 +178,9 @@ def history_log(
     3. We maintain an incremental state `occur_at` (max date seen previously).
     4. If we encounter items OLDER than `occur_at`, we count them.
     5. If we see `min_overlap_items` old items, we stop.
+
+    When full_refresh=True, the incremental cursor is ignored — all items
+    are treated as new. Data is APPENDED (never deleted); dedup in dbt.
     """
 
     try:
@@ -184,22 +190,13 @@ def history_log(
 
     client = get_sapo_client()
     base_url = client.base_url
-
-    # Special URL for logs as per request
-    # "https://fwg.mysapogo.com/admin/settings/get_logs"
-    # Usually clients configure base_url to be .../admin. 
-    # We need to append "settings/get_logs"
-    
-    # Check if base_url ends with /admin, if so utilize it
-    # If client.base_url already has /orders or similar, we might need to strip.
-    # Safe bet: assume client.base_url is top level admin api root or reconstruct.
-    # The client.base_url in `client.py` defaults to `https://{domain}/admin`.
     domain_base = base_url.rsplit('/admin', 1)[0]
     logs_url = f"{client.base_url}/settings/get_logs"
-    
+
+    last_value = None if full_refresh else first_timestamp.last_value
+
     print(f"🚀 Starting History Log load from: {logs_url}")
-    last_value = first_timestamp.last_value
-    print(f"   State (Last occur_at): {last_value}")
+    print(f"   State (Last occur_at): {last_value} {'[FULL REFRESH — cursor ignored]' if full_refresh else ''}")
     print(f"   Config: page_size={page_size}, min_overlap_items={min_overlap_items}, limit={limit}, debug={debug}")
 
     session = client.session
