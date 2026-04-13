@@ -22,11 +22,12 @@
 --     final dedup, so a later load never overwrites a more-recent record.
 -- =================================================================================================
 
+{% set existing_cols = (adapter.get_columns_in_relation(this) | map(attribute='name') | list) if is_incremental() else [] %}
+
 WITH
 {% if is_incremental() %}
-{% set cols = adapter.get_columns_in_relation(this) | map(attribute='name') | list %}
 _cursor AS (
-    {% if '_dlt_load_id' in cols %}
+    {% if '_dlt_load_id' in existing_cols %}
     SELECT COALESCE(MAX(_dlt_load_id), '') AS max_load_id FROM {{ this }}
     {% else %}
     SELECT '' AS max_load_id
@@ -103,7 +104,7 @@ extracted AS (
 -- Step 2: Business dedup by stock_adjustment_id — compare new vs existing before overwriting
 SELECT * FROM (
     SELECT * FROM extracted
-    {% if is_incremental() %}
+    {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
     SELECT existing.* FROM {{ this }} existing
     INNER JOIN (SELECT DISTINCT stock_adjustment_id FROM extracted) new_keys
