@@ -4,7 +4,7 @@ log_level = "INFO"
 [destination.filesystem]
 loader_file_format = "parquet"
 layout = "{table_name}/ingest_method={ingest_method}/year={year}/month={month}/{file_id}.{ext}"
-extra_placeholders = { "ingest_method" = "batch_sync", "year" = "text", "month" = "text" }
+extra_placeholders = { "ingest_method" = "batch_sync", "year" = "_default", "month" = "_default" }
 # bucket_url = "file:///d:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/app_data/data_lake"
 
 [sources.sapo]
