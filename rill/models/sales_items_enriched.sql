@@ -13,6 +13,7 @@ SELECT
     COALESCE(p.brand_name, 'Unknown') AS brand_name,
     c.channel_name,
     c.channel_category,
+    c.channel_format,
     c.platform,
     b.branch_location_name,
     b.branch_location_code,

@@ -17,6 +17,12 @@ dimensions:
     column: product_type
   - name: channel_name
     column: channel_name
+  - name: channel_category
+    column: channel_category
+  - name: channel_format
+    column: channel_format
+  - name: platform
+    column: platform
   - name: branch_location_name
     column: branch_location_name
   - name: province
