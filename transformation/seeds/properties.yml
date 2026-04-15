@@ -4,7 +4,7 @@ seeds:
   - name: ref_order_sources
     config:
       column_types:
-        id: integer
+        id: varchar
         name: varchar
         status: boolean
         channel_format: varchar

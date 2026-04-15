@@ -18,6 +18,7 @@ app_data
 
 *.duckdb
 *.log
+*.log.*
 **/venv/
 **/__pycache__/
 **/target/

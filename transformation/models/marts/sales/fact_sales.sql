@@ -80,5 +80,5 @@ JOIN orders o ON i.order_id = o.order_id
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(['o.customer_id']) }} = vc.customer_key
 LEFT JOIN {{ ref('dim_staff') }} dseller ON {{ dbt_utils.generate_surrogate_key(['o.seller_user_id']) }} = dseller.staff_key
 LEFT JOIN {{ ref('dim_staff') }} dcreator ON {{ dbt_utils.generate_surrogate_key(['o.creator_user_id']) }} = dcreator.staff_key
-LEFT JOIN source_definitions sd ON o.source_id = sd.id
+LEFT JOIN source_definitions sd ON cast(o.source_id as varchar) = cast(sd.id as varchar)
 LEFT JOIN valid_locations vl ON cast(o.location_id as varchar) = vl.location_id
