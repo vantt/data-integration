@@ -10,7 +10,7 @@ WITH base AS (
         c.channel_name,
         c.channel_code,
         c.channel_category,
-        c.platform_group,
+        c.channel_format,
         c.platform,
         c.channel_brand,
         c.market,

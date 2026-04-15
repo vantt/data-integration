@@ -15,8 +15,8 @@ dimensions:
     column: campaign_id
   - name: spend_code
     column: spend_code
-  - name: channel_group
-    column: channel_group
+  - name: marketing_spend_bucket
+    column: marketing_spend_bucket
 
 measures:
   - name: spend
