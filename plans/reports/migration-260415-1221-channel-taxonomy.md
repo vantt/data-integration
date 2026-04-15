@@ -100,6 +100,25 @@ Expected [..., platform_group, ...] but found [..., channel_format, ...]
 
 Add to runbook for future column renames: **after `dbt build` + `refresh_rolling`, always rerun `bootstrap_serving_views.py` when a mart column changed name or was dropped.**
 
+**Second binder-error class encountered (types-mismatch, not names):** After rebuilding views, some cards still threw `Binder Error: Contents of view were altered: types don't match`. Two separate caches needed clearing:
+
+1. **Metabase JDBC connection pool** — pooled connections retain view schema from the moment they were opened. A brief `docker restart metabase && sleep 3` is insufficient; the pool only fully recreates on cold Metabase startup (~30-60s). Fix: cold restart, then poll `/api/health` until `{status: "ok"}` before proceeding.
+2. **Metabase field metadata cache** — app-layer cache of column names/types per table. Fix: `POST /api/database/{id}/sync_schema`.
+
+Updated runbook (final):
+
+```
+dbt build
+python scripts/provisioning/refresh_rolling.py
+docker stop metabase
+python scripts/provisioning/bootstrap_serving_views.py
+docker start metabase
+# wait for /api/health == ok
+curl -X POST -H "x-api-key: $KEY" $URL/api/database/{id}/sync_schema
+docker restart rill   # if schema-affecting
+# then redeploy blueprints
+```
+
 ## Artifacts
 
 - Plan: `plans/260415-1221-channel-taxonomy-rename/plan.md`
