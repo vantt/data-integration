@@ -45,7 +45,7 @@ Dashboard hien tai co nhieu van de:
 | Filter | Type | Default | Applies to | Rationale |
 |--------|------|---------|------------|-----------|
 | Date Range | date/range | Last 7 days (prev Mon-Sun) | All cards | Xem tuan cu hon |
-| Channel Category | category/single-select | All | All cards | Loc Ecommerce / Offline / All |
+| Channel Category | category/single-select | All | All cards | Loc Online-Ecommerce / Offline / All |
 | Brand (Channel) | category/single-select | All | All cards | Loc theo channel_brand (JPC, Fine Japan, The Healthy Us) |
 
 ### Views
@@ -69,7 +69,7 @@ Multi-view — 3 views:
 | 4 | B | Offline Revenue | supporting | single-value-with-trend | secondary, positive/negative (WoW) | one-quarter x short, standard | Doanh thu tu kenh offline (POS) | vs previous period (WoW %) |
 | 5 | B | Ecom Share % | supporting | single-value-with-trend | secondary, positive/negative (WoW) | one-quarter x short, standard | Ty trong ecommerce trong tong doanh thu | vs previous period (WoW pp) |
 | 6 | C | "Theo doi xu huong Ecommerce vs Offline — momentum va crossover" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
-| 7 | D | Ecommerce vs Offline Trend | trend | multi-line-chart | series-1 (Ecommerce) + series-2 (Offline) | two-thirds x medium | Xu huong doanh thu hang ngay 2 kenh — spot crossover va momentum | vs previous period (visual overlay) |
+| 7 | D | Ecommerce vs Offline Trend | trend | multi-line-chart | series-1 (Online-Ecommerce) + series-2 (Offline) | two-thirds x medium | Xu huong doanh thu hang ngay 2 kenh — spot crossover va momentum | vs previous period (visual overlay) |
 | 8 | D | Revenue by Brand | breakdown | donut | series-1..series-5 | one-third x medium | Ty trong doanh thu theo brand (JPC, Fine Japan, etc.) — max 5 slices | composition |
 | 9 | E | "Xac dinh platform hieu qua — ranking doanh thu va volume" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 10 | F | Revenue by Platform | breakdown | horizontal-bar | primary | half x medium | Ranking platform theo doanh thu — Shopee, Lazada, TikTok, POS, etc. | rank/position |

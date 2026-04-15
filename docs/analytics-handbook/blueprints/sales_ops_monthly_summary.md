@@ -893,7 +893,7 @@ this_month AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND o.order_timestamp < date_trunc('month', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -903,7 +903,7 @@ last_month AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -948,7 +948,7 @@ this_month AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND o.order_timestamp < date_trunc('month', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -958,7 +958,7 @@ last_month AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -1002,7 +1002,7 @@ this_month AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND o.order_timestamp < date_trunc('month', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -1014,7 +1014,7 @@ last_month AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -1056,12 +1056,12 @@ Donut — Facebook vs Zalo revenue split.
 
 ```sql
 SELECT
-    c.platform_group as "Platform",
+    c.channel_format as "Platform",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.platform_group IN ('Facebook', 'Zalo')
+  AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND o.order_timestamp < date_trunc('month', current_date)
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -1101,7 +1101,7 @@ SELECT
         (SELECT SUM(o2.net_revenue) FROM fact_orders o2
          JOIN dim_channels c2 ON o2.channel_key = c2.channel_key
          WHERE o2.status NOT IN ('CANCELLED', 'Voided')
-           AND c2.platform_group IN ('Facebook', 'Zalo')
+           AND c2.channel_format IN ('Facebook', 'Zalo')
            AND o2.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
            AND o2.order_timestamp < date_trunc('month', current_date)), 0
     ), 1) as "% Contribution"
@@ -1109,7 +1109,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.platform_group IN ('Facebook', 'Zalo')
+  AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND o.order_timestamp < date_trunc('month', current_date)
   AND st.staff_key IS NOT NULL

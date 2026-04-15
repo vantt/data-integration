@@ -616,7 +616,7 @@ ORDER BY sort_order
 
 #### ❓ Question: Revenue by Channel Category
 
-Donut chart — Ecommerce / Offline / Internal split.
+Donut chart — Online-Ecommerce / Offline / Internal split.
 
 **Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
@@ -643,7 +643,7 @@ ORDER BY 2 DESC
     "pie.show_legend": true,
     "pie.percent_visibility": "inside",
     "pie.colors": {
-      "Ecommerce": "#509EE3",
+      "Online-Ecommerce": "#509EE3",
       "Offline": "#88BDE6",
       "Internal": "#A989C5"
     }
@@ -768,7 +768,7 @@ ORDER BY 1, 2
     "graph.y_axis.title_text": "Revenue (VND)",
     "graph.x_axis.title_text": "",
     "series_settings": {
-      "Ecommerce": { "color": "#509EE3" },
+      "Online-Ecommerce": { "color": "#509EE3" },
       "Offline": { "color": "#88BDE6" },
       "Internal": { "color": "#A989C5" }
     }

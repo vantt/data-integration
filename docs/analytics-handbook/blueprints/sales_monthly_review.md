@@ -1118,7 +1118,7 @@ Ty le Online/Offline hien tai — donut chart.
 
 ```sql
 SELECT
-    dc.platform_group as "Nhom",
+    dc.channel_format as "Nhom",
     SUM(fo.net_revenue) as "Net Revenue"
 FROM fact_orders fo
 JOIN dim_channels dc ON fo.channel_key = dc.channel_key

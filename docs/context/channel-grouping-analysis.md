@@ -194,7 +194,7 @@ Nếu: AOV > 10M AND avg_discount > 40% AND order_count > 5
 
 | Thuộc tính     | Hiện tại      | Đề xuất                             |
 | ---------------- | --------------- | -------------------------------------- |
-| platform_group   | Other           | **CrossBorder** (giá trị mới) |
+| channel_format   | Other           | **CrossBorder** (giá trị mới) |
 | is_sales_channel | true (implicit) | **false**                        |
 | channel_category | Other           | **Internal**                     |
 | order_nature     | (chưa có)     | **cross_border_fulfillment**     |
@@ -230,7 +230,7 @@ Loại: US, Internal, Gift, Test, CTV 100%.
 ### Hiệu quả kênh Ecommerce (B2C thuần)
 
 ```
-WHERE channel_category = 'Ecommerce'
+WHERE channel_category = 'Online-Ecommerce'
   AND order_nature = 'retail_sale'
 ```
 
@@ -266,8 +266,8 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 ## Implementation Roadmap
 
 **Phase 1 — Quick wins** (1-2 tuần, seed changes)
-- Sửa `ref_order_sources.csv`: US → `platform_group = 'CrossBorder'`, `is_sales_channel = false`
-- Sửa `ref_order_sources.csv`: Telesale, CS → `platform_group = 'Direct'`, `channel_type = 'Direct Sales'`, `is_sales_channel = true`
+- Sửa `ref_order_sources.csv`: US → `channel_format = 'CrossBorder'`, `is_sales_channel = false`
+- Sửa `ref_order_sources.csv`: Telesale, CS → `channel_format = 'Direct'`, `channel_type = 'Direct Sales'`, `is_sales_channel = true`
 - Cập nhật `dim_channels.sql`: thêm `CrossBorder` → `channel_category = 'Internal'`, `Direct Sales` → `channel_category = 'Offline'`
 
 **Phase 2 — Customer tagging** (1 tuần)

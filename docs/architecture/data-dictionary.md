@@ -687,7 +687,7 @@ Standardized sales and marketing channels (3-Level Hierarchy).
 | `channel_key`    | VARCHAR | Surrogate key                                    |
 | `channel_name`   | VARCHAR | **Level 3**: Instance (Page Name, Store, Shop A) |
 | `platform`       | VARCHAR | **Level 2**: Platform (Facebook, Shopee, Retail) |
-| `platform_group` | VARCHAR | **Level 1**: Group (Social, E-com, Retail)       |
+| `channel_format` | VARCHAR | **Level 1**: Group (Social, Marketplace, Retail) |
 | `source_id`      | VARCHAR | Original Source ID or Suffix ID                  |
 | `is_active`      | BOOLEAN | Channel status                                   |
 
@@ -846,7 +846,7 @@ Contains both Sapo-defined sources and User-defined sub-channels (Suffix IDs).
 | `id`                | **(PK)** Source ID (BigInt) or Suffix ID (String) | `8075219` or `113567_1` |
 | `name`              | Source/Channel Name                               | `Shopee Shop A`         |
 | `platform`          | **[NEW]** Specific Platform                       | `Shopee`, `Facebook`    |
-| `platform_group`    | Aggregation Group                                 | `Social`, `Ecom`        |
+| `channel_format`    | Aggregation Group                                 | `Social`, `Marketplace` |
 | `mapping_tag`       | **[NEW]** Tag used to map Orders to Suffix IDs    | `Shopee_ShopA`          |
 | `is_generic_source` | Flag for generic aggregators (requires splitting) | `false`                 |
 

@@ -54,7 +54,7 @@ Focus: "Điều gì đang drive growth? Khách hàng ra sao?"
 
 | Chart Title | Visualization Type | Metric Reference | Notes |
 | :--- | :--- | :--- | :--- |
-| **Revenue by Channel Category** | Donut Chart | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ecommerce / Offline / Internal. Max 3 slices. |
+| **Revenue by Channel Category** | Donut Chart | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Online-Ecommerce / Offline / Internal. Max 3 slices. |
 | **Channel Performance Table** | Table + Conditional Formatting | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Revenue, Orders, AOV, MoM %. Green/Red conditional on MoM. |
 | **Channel Mix Trend (6M)** | Stacked Area | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Monthly revenue stacked by channel_category. |
 | **New Customers** | Scalar + MoM Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | MoM change. |

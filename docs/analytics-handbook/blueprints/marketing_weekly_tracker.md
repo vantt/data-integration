@@ -123,7 +123,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.channel_category = 'Ecommerce'
+      AND c.channel_category = 'Online-Ecommerce'
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.order_timestamp < date_trunc('week', current_date)
       [[AND c.channel_brand = {{channel_brand}}]]
@@ -133,7 +133,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.channel_category = 'Ecommerce'
+      AND c.channel_category = 'Online-Ecommerce'
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND c.channel_brand = {{channel_brand}}]]
@@ -226,7 +226,7 @@ FROM this_week tw, last_week lw
 ```sql
 WITH this_week AS (
     SELECT
-        ROUND(SUM(CASE WHEN c.channel_category = 'Ecommerce' THEN o.net_revenue ELSE 0 END) * 100.0
+        ROUND(SUM(CASE WHEN c.channel_category = 'Online-Ecommerce' THEN o.net_revenue ELSE 0 END) * 100.0
               / NULLIF(SUM(o.net_revenue), 0), 1) as value
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -237,7 +237,7 @@ WITH this_week AS (
 ),
 last_week AS (
     SELECT
-        ROUND(SUM(CASE WHEN c.channel_category = 'Ecommerce' THEN o.net_revenue ELSE 0 END) * 100.0
+        ROUND(SUM(CASE WHEN c.channel_category = 'Online-Ecommerce' THEN o.net_revenue ELSE 0 END) * 100.0
               / NULLIF(SUM(o.net_revenue), 0), 1) as value
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -294,7 +294,7 @@ Daily revenue, 2 lines: Ecommerce vs Offline over 14 days.
 ```sql
 SELECT
     date(o.order_timestamp) as "Date",
-    SUM(CASE WHEN c.channel_category = 'Ecommerce' THEN o.net_revenue ELSE 0 END) as "Ecommerce",
+    SUM(CASE WHEN c.channel_category = 'Online-Ecommerce' THEN o.net_revenue ELSE 0 END) as "Ecommerce",
     SUM(CASE WHEN c.channel_category = 'Offline' THEN o.net_revenue ELSE 0 END) as "Offline"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -1264,7 +1264,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.order_timestamp < date_trunc('week', current_date)
 ),
@@ -1273,7 +1273,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1314,7 +1314,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.order_timestamp < date_trunc('week', current_date)
 ),
@@ -1323,7 +1323,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1362,7 +1362,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.order_timestamp < date_trunc('week', current_date)
 ),
@@ -1372,7 +1372,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1413,13 +1413,13 @@ Facebook vs Zalo revenue breakdown.
 
 ```sql
 SELECT
-    c.platform_group as "Platform",
+    c.channel_format as "Platform",
     SUM(o.net_revenue) as "Revenue",
     COUNT(DISTINCT o.order_id) as "Orders"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.platform_group IN ('Facebook', 'Zalo')
+  AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.order_timestamp < date_trunc('week', current_date)
 GROUP BY 1

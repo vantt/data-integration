@@ -30,7 +30,7 @@ CEO mo tab nay dau tien — tra loi "tuan nay on khong?" trong 2 phut.
 ### Tab 2 — Kenh ban hang
 CEO chuyen sang tab nay khi muon biet "kenh nao dang drive?"
 
-- **Channel Mix Donut:** Ecommerce / Offline / Internal — part-to-whole
+- **Channel Mix Donut:** Online-Ecommerce / Offline / Internal — part-to-whole
 - **WoW Comparison:** Grouped bar — so sanh truc tiep this week vs last week theo category
 - **Top Channels:** Horizontal bar chart — ranking kenh theo revenue
 - **Performance Table:** Chi tiet tung kenh voi WoW %, conditional formatting highlight bien dong lon

@@ -16,12 +16,12 @@
 - **Logic (SQL):**
   ```sql
   SELECT
-      platform_group,
+      channel_format,
       channel_name,
       SUM(gmv)
   FROM fact_orders
   LEFT JOIN dim_channels USING (channel_key)
-  WHERE platform_group = 'Social'
+  WHERE channel_format = 'Social'
   GROUP BY 1, 2
   ```
 
@@ -35,7 +35,7 @@
   SELECT COUNT(DISTINCT order_id)
   FROM fact_orders
   LEFT JOIN dim_channels USING (channel_key)
-  WHERE platform_group = 'Social'
+  WHERE channel_format = 'Social'
   ```
 
 ## Context: Support Efficiency (Planned)

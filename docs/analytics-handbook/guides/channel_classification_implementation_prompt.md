@@ -29,8 +29,8 @@ Dùng prompt bên dưới để bắt đầu một chat session mới với Clau
 
 ### Bước 4: dim_channels.sql — Thêm cột mới
 - Expose `channel_brand`, `market`, `customer_segment` từ ref_order_sources
-- Derive `channel_category` bằng CASE WHEN trên platform_group (xem logic phần 6.3.1)
-- Derive `is_sales_channel` bằng platform_group != 'System'
+- Derive `channel_category` bằng CASE WHEN trên channel_format (xem logic phần 6.3.1)
+- Derive `is_sales_channel` bằng channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other')
 - Thêm tất cả cột mới vào cả specific_channels, generic_channels, và Unknown Member
 - Cập nhật schema.yml
 

@@ -49,7 +49,7 @@ A marketing manager reads Part A. A data engineer reads Part B. Neither wastes t
 
 5 pairs, each with operational harm:
 1. Ecommerce ≠ Marketplace → "báo cáo Ecommerce thiếu 25% nếu chỉ tính sàn"
-2. channel_category ≠ platform_group → "filter sai tầng, kết quả sai"
+2. channel_category ≠ channel_format → "filter sai tầng, kết quả sai"
 3. channel_brand ≠ brand_name → "nhầm thương hiệu sản phẩm với thương hiệu kênh"
 4. Chi nhánh ≠ Kênh → "nhầm nơi xử lý với nơi bán"
 5. is_sales_channel=false ≠ doanh thu=0 → "US có gross 514 tỷ nhưng thật = 0đ"

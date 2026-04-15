@@ -19,7 +19,7 @@
 ## Filters
 
 - **Date Range:** Default = Last 7 Days (prev Mon-Sun). Comparison = Previous 7 Days.
-- **Channel Category:** Filter by Ecommerce / Offline / All.
+- **Channel Category:** Filter by Online-Ecommerce / Offline / All.
 - **Brand (Channel):** Filter by `channel_brand` (JPC, Fine Japan, The Healthy Us, etc.).
 
 ## Data Lineage
@@ -36,7 +36,7 @@
 | Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
 | :--- | :--- | :--- | :--- |
 | **Weekly Revenue** | Scalar + WoW Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | Hero. WoW % change. |
-| **Ecommerce Revenue** | Scalar + WoW Trend | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Filter: `channel_category = 'Ecommerce'`. WoW change. |
+| **Ecommerce Revenue** | Scalar + WoW Trend | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Filter: `channel_category = 'Online-Ecommerce'`. WoW change. |
 | **Offline Revenue** | Scalar + WoW Trend | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Filter: `channel_category = 'Offline'`. WoW change. |
 | **Ecom Share %** | Scalar + WoW Trend | _Derived_ | Ecommerce / Total revenue %. WoW pp change. |
 | **Ecommerce vs Offline Trend** | Multi-Line Chart | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Daily revenue, 2 lines. 14-day window. |

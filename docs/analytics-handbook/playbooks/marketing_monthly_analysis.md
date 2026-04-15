@@ -45,7 +45,7 @@
 | **Monthly AOV** | Scalar + MoM Trend | [AOV](../domains/sales.md#5-aov-average-order-value) | MoM % change. |
 | **Discount Rate Gauge** | Gauge | [Discount Impact](../domains/sales.md#13-discount-impact) | Zones: Green 0-10%, Yellow 10-15%, Red 15%+. |
 | **Revenue Trend (6M)** | Line Chart | [Net Revenue](../domains/sales.md#2-net-revenue) | Monthly net revenue, 6-month window. |
-| **Channel Revenue Share** | Donut | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ecommerce / Offline split. Max 3 slices. |
+| **Channel Revenue Share** | Donut | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Online-Ecommerce / Offline split. Max 3 slices. |
 | **Revenue by Channel (MoM)** | Multi-Line | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | 6-month trend, one line per channel_category. |
 
 ### Tab 2: Channel & Brand

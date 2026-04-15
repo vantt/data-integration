@@ -399,7 +399,7 @@ ORDER BY 1
 
 #### Question: Revenue by Channel Category
 
-**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel) — Donut chart: Ecommerce / Offline / Internal split.
+**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel) — Donut chart: Online-Ecommerce / Offline / Internal split.
 
 ```sql
 SELECT
@@ -425,7 +425,7 @@ ORDER BY 2 DESC
     "pie.show_total": true,
     "pie.percent_visibility": "inside",
     "pie.colors": {
-      "Ecommerce": "#509EE3",
+      "Online-Ecommerce": "#509EE3",
       "Offline": "#88BDE6",
       "Internal": "#A989C5"
     },

@@ -105,7 +105,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc cho đến số
 
 | Thuật ngữ                         | Nghĩa                                              | Ghi chú                                                                                                        |
 | ----------------------------------- | --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| **Doanh thu social**          | Đơn hàng đến từ kênh Facebook/Zalo/Instagram | = Net Revenue filter theo `platform IN ('Facebook', 'Zalo', 'Instagram')` hoặc `platform_group = 'Social'` |
+| **Doanh thu social**          | Đơn hàng đến từ kênh Facebook/Zalo/Instagram | = Net Revenue filter theo `platform IN ('Facebook', 'Zalo', 'Instagram')` hoặc `channel_format = 'Social'` |
 | **Inbox order**               | Đơn nhân viên CS tạo từ tin nhắn             | Tạo trên Sapo POS, gán kênh Facebook/Zalo                                                                   |
 | **COD**                       | Thanh toán khi nhận hàng                         | Phổ biến trên social, xem payment_status                                                                     |
 | **Chi phí quảng cáo**      | Facebook Ads, Zalo Ads                              | Chưa có trong pipeline (planned:`fact_marketing_spend`)                                                     |
@@ -123,7 +123,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc cho đến số
 
 | Thuật ngữ                         | Nghĩa                   | Ghi chú                                           |
 | ----------------------------------- | ------------------------ | -------------------------------------------------- |
-| **Doanh thu cửa hàng**      | Đơn tại quầy         | = Net Revenue filter `platform_group = 'Retail'` |
+| **Doanh thu cửa hàng**      | Đơn tại quầy         | = Net Revenue filter `channel_format = 'Retail'` |
 | **Tiền mặt**                | Thanh toán cash         | Xem payment method = "Tiền mặt"                  |
 | **Quẹt thẻ**                | POS card payment         | Xem payment method = "Quẹt thẻ"                  |
 | **Chuyển khoản**            | Bank transfer tại quầy | Xem payment method chứa "Chuyển khoản"          |
@@ -135,7 +135,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc cho đến số
 
 | Thuật ngữ             | Nghĩa                        | Ghi chú                                                                  |
 | ----------------------- | ----------------------------- | ------------------------------------------------------------------------- |
-| **Doanh thu B2B** | Đơn bán sỉ cho đại lý  | = Net Revenue filter `platform_group = 'B2B'`                           |
+| **Doanh thu B2B** | Đơn bán sỉ cho đại lý  | = Net Revenue filter `channel_format = 'B2B'`                           |
 | **Công nợ**     | Đại lý mua chịu, trả sau | Xem payment_status = 'UNPAID' hoặc payment method "Giảm trừ công nợ" |
 | **Giá sỉ**      | Giá ưu đãi cho đại lý  | Phản ánh qua discount cao hơn bình thường                           |
 
@@ -143,7 +143,7 @@ Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc cho đến số
 
 | Thuật ngữ                   | Nghĩa                                                                                                                                                                     | Ghi chú                             |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Đơn nội bộ**      | Ưu đãi nhân viên, quà tặng, test, CS, Telesale (tất cả kênh `platform_group = 'System'`)                                                                       | `channel_category = 'Internal'`    |
+| **Đơn nội bộ**      | Ưu đãi nhân viên, quà tặng, test, CS, Telesale (tất cả kênh `channel_format = 'System'`)                                                                       | `channel_category = 'Internal'`    |
 | **Đơn 100% discount** | total_collected = 0, toàn bộ là chiết khấu                                                                                                                            | Quà tặng, sampling, đơn nội bộ |
 | **Đơn US (Export)**   | Đơn xuất khẩu B2B, 100% discount (chuyển hàng nội bộ tập đoàn).**Không phải** `channel_category = 'Internal'` — filter bằng `channel_name = 'US'` | `channel_name = 'US'`              |
 

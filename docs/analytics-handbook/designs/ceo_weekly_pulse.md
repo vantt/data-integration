@@ -79,7 +79,7 @@ Multi-view — 3 views:
 | # | Row | Card | Role | Viz Type | Color | Size | Communication | Comparison |
 |---|-----|------|------|----------|-------|------|---------------|------------|
 | 11 | A | "Phan tich cau truc kenh ban hang — Ecommerce vs Offline" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
-| 12 | B | Revenue by Channel Category | hero | donut | series-1 (Ecommerce), series-2 (Offline), series-3 (Internal) | one-third × medium | Ty le Ecommerce / Offline / Internal — part-to-whole snapshot | composition |
+| 12 | B | Revenue by Channel Category | hero | donut | series-1 (Online-Ecommerce), series-2 (Offline), series-3 (Internal) | one-third × medium | Ty le Online-Ecommerce / Offline / Internal — part-to-whole snapshot | composition |
 | 13 | B | Revenue by Channel Category (WoW) | breakdown | grouped-bar | series-1 (This Week) + series-2 (Last Week) | two-thirds × medium | So sanh truc tiep this week vs last week theo tung category | vs previous period (WoW side-by-side) |
 | 14 | C | "Xac dinh top kenh ban hang — ranking va bien dong WoW" | annotation | text-annotation | structural | full-width × minimal | Section heading | — |
 | 15 | D | Top Channels by Revenue | breakdown | horizontal-bar | primary (bars) + muted (last week reference) | full-width × medium | Ranking kenh theo doanh thu — CEO thay ngay kenh nao lon nhat | rank/position |

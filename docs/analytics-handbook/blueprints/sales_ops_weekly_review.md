@@ -823,7 +823,7 @@ this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.order_timestamp < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -833,7 +833,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -878,7 +878,7 @@ this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.order_timestamp < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -888,7 +888,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -932,7 +932,7 @@ this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.order_timestamp < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -944,7 +944,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.platform_group IN ('Facebook', 'Zalo')
+      AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -1032,7 +1032,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.platform_group IN ('Facebook', 'Zalo')
+  AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.order_timestamp < date_trunc('week', current_date)
   AND st.staff_key IS NOT NULL

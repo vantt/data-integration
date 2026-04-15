@@ -24,7 +24,7 @@ domain_refs: [domains/customer_support.md, domains/sales.md]
 
 | Constraint | Rule | Applies to | Rationale |
 |------------|------|------------|-----------|
-| Social channels only | `platform_group = 'Social'` (via dim_channels) | All cards | Dashboard chi theo doi kenh Social (Facebook, Zalo, Instagram) |
+| Social channels only | `channel_format = 'Social'` (via dim_channels) | All cards | Dashboard chi theo doi kenh Social (Facebook, Zalo, Instagram) |
 
 **Interactive Filters** — Khong co. Operational Cockpit can zero-interaction.
 
@@ -55,7 +55,7 @@ Single view — 10 data cards + 5 annotations = 15 cards total. Vua du cho Cockp
 | 13 | H | Agent Performance Table | detail | data-table-formatted | conditional-above/conditional-below on DoD Revenue Change % | full-width x medium, compact | Chi tiet: Agent, Revenue, Orders, AOV, DoD % | vs previous period (DoD) |
 | 14 | I | "Kiem tra don hang moi nhat — xac nhan pipeline real-time" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 15 | J | Recent Social Orders | detail | data-table | neutral | full-width x medium, compact | 20 don moi nhat: time, order code, channel, agent, amount, status | — |
-| 16 | K | "Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: platform_group = Social" | annotation | text-annotation | structural | full-width x minimal | Data source & freshness | — |
+| 16 | K | "Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: channel_format = Social" | annotation | text-annotation | structural | full-width x minimal | Data source & freshness | — |
 
 ### Action Map
 

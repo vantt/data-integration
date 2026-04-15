@@ -177,7 +177,7 @@ domain_refs: [domains/sales.md, domains/customer.md]
 
 | Constraint | Rule | Applies to | Rationale |
 |------------|------|------------|-----------|
-| Exclude US channel | `channel_category != 'US'` | All cards | Đơn nội bộ, 100% discount |
+| Exclude US channel | `is_sales_channel = true` | All cards | Đơn nội bộ, 100% discount |
 
 **Interactive Filters** — user có thể thay đổi trên dashboard:
 
@@ -654,7 +654,7 @@ Mỗi view-group có:
 | Trường | Mô tả | Ví dụ |
 |--------|-------|-------|
 | **Constraint name** | Mô tả ngắn | "Exclude US channel" |
-| **Rule** | Logic lọc | `channel_category != 'US'` |
+| **Rule** | Logic lọc | `is_sales_channel = true` |
 | **Applies to** | Cards nào bị ảnh hưởng | "All cards" |
 | **Rationale** | Tại sao | "Đơn nội bộ, 100% discount" |
 
@@ -1234,7 +1234,7 @@ SELECT
   , 1) AS achievement_pct
 FROM fact_orders
 WHERE order_date >= DATE_TRUNC('month', CURRENT_DATE)
-  AND channel_category != 'US'
+  AND is_sales_channel = true
 ```
 
 ```json metabase-viz
@@ -1271,14 +1271,14 @@ WITH this_week AS (
   SELECT SUM(net_revenue) AS revenue
   FROM fact_orders
   WHERE order_date >= DATE_TRUNC('week', CURRENT_DATE)
-    AND channel_category != 'US'
+    AND is_sales_channel = true
 ),
 last_week AS (
   SELECT SUM(net_revenue) AS revenue
   FROM fact_orders
   WHERE order_date >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days'
     AND order_date < DATE_TRUNC('week', CURRENT_DATE)
-    AND channel_category != 'US'
+    AND is_sales_channel = true
 )
 SELECT
   t.revenue AS net_revenue,
@@ -1332,7 +1332,7 @@ WITH this_week AS (
   SELECT channel_category, SUM(net_revenue) AS revenue
   FROM fact_orders
   WHERE order_date >= DATE_TRUNC('week', CURRENT_DATE)
-    AND channel_category != 'US'
+    AND is_sales_channel = true
   GROUP BY channel_category
 ),
 last_week AS (
@@ -1340,7 +1340,7 @@ last_week AS (
   FROM fact_orders
   WHERE order_date >= DATE_TRUNC('week', CURRENT_DATE) - INTERVAL '7 days'
     AND order_date < DATE_TRUNC('week', CURRENT_DATE)
-    AND channel_category != 'US'
+    AND is_sales_channel = true
   GROUP BY channel_category
 )
 SELECT
@@ -1394,7 +1394,7 @@ Ví dụ trên (CEO Weekly Pulse) không có interactive filters. Dưới đây 
 
 | Constraint | Rule | Applies to | Rationale |
 |------------|------|------------|-----------|
-| Exclude US channel | `channel_category != 'US'` | All cards | Đơn nội bộ, 100% discount |
+| Exclude US channel | `is_sales_channel = true` | All cards | Đơn nội bộ, 100% discount |
 
 **Interactive Filters** — user tương tác trên dashboard:
 
@@ -1433,7 +1433,7 @@ Ví dụ trên (CEO Weekly Pulse) không có interactive filters. Dưới đây 
 ```sql
 SELECT SUM(net_revenue) AS net_revenue
 FROM fact_orders
-WHERE channel_category != 'US'
+WHERE is_sales_channel = true
   [[AND {{date_range}}]]
   [[AND channel_category = {{channel}}]]
 ```

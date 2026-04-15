@@ -45,7 +45,7 @@ Dashboard hien tai co nhieu van de:
 | Filter | Type | Default | Applies to | Rationale |
 |--------|------|---------|------------|-----------|
 | Date Range | date/range | Last closed month | All cards | Xem thang cu hon |
-| Channel Category | category/single-select | All | All cards | Ecommerce / Offline focus |
+| Channel Category | category/single-select | All | All cards | Online-Ecommerce / Offline focus |
 | Brand (Channel) | category/single-select | All | Channel & Brand tab | Filter by channel_brand |
 
 ### Views

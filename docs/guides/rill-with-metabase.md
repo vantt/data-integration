@@ -265,7 +265,7 @@ Rill-owned logic in this model:
 - derive convenience fields:
   - `has_clicks_flag`
   - `has_impressions_flag`
-  - `channel_group`
+  - `marketing_spend_bucket`
 
 Important constraint from current repo state:
 
@@ -432,7 +432,7 @@ Recommended dimensions:
 - `branch_location_name`
 - `campaign_id`
 - `spend_code`
-- `channel_group`
+- `marketing_spend_bucket`
 
 Recommended measures:
 

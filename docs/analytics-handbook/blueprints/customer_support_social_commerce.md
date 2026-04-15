@@ -2,7 +2,7 @@
 
 **Design Spec**: [Social Commerce Operations](../designs/customer_support_social_commerce.md)
 
-Single-view Operational Cockpit for CS Team Leader — real-time social commerce monitoring with DoD comparisons. Zero interactive filters. Covers Facebook, Zalo, Instagram channels (`platform_group = 'Social'`).
+Single-view Operational Cockpit for CS Team Leader — real-time social commerce monitoring with DoD comparisons. Zero interactive filters. Covers Facebook, Zalo, Instagram channels (`channel_format = 'Social'`).
 
 ## 📂 Collection: Operations > Daily Monitoring
 
@@ -30,7 +30,7 @@ SELECT
     COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hôm qua"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
@@ -72,7 +72,7 @@ SELECT
     COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hôm qua"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
@@ -114,7 +114,7 @@ SELECT
          ) END as "Hôm qua"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
@@ -161,7 +161,7 @@ social AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as social_rev
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE c.platform_group = 'Social'
+    WHERE c.channel_format = 'Social'
       AND date(o.order_timestamp) = current_date
 )
 SELECT
@@ -207,7 +207,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) = current_date
 GROUP BY c.channel_name
 ORDER BY 2 DESC
@@ -251,7 +251,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) >= current_date - INTERVAL '6 days'
 GROUP BY date(o.order_timestamp), c.channel_name
 ORDER BY 1, 2
@@ -301,7 +301,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff s ON o.seller_staff_key = s.staff_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) = current_date
 GROUP BY s.full_name
 ORDER BY 2 DESC
@@ -341,7 +341,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff s ON o.seller_staff_key = s.staff_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) = current_date
 GROUP BY s.full_name
 ORDER BY 2 DESC
@@ -385,7 +385,7 @@ today AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_staff s ON o.seller_staff_key = s.staff_key
-    WHERE c.platform_group = 'Social'
+    WHERE c.channel_format = 'Social'
       AND date(o.order_timestamp) = current_date
     GROUP BY s.full_name
 ),
@@ -397,7 +397,7 @@ yesterday AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_staff s ON o.seller_staff_key = s.staff_key
-    WHERE c.platform_group = 'Social'
+    WHERE c.channel_format = 'Social'
       AND date(o.order_timestamp) = current_date - INTERVAL '1 day'
     GROUP BY s.full_name
 )
@@ -503,7 +503,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
-WHERE c.platform_group = 'Social'
+WHERE c.channel_format = 'Social'
   AND date(o.order_timestamp) = current_date
 ORDER BY o.order_timestamp DESC
 LIMIT 20
@@ -542,7 +542,7 @@ LIMIT 20
 
 #### 📝 Text: Footer
 
-Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: platform_group = Social
+Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: channel_format = Social
 
 ```json metabase-pos
 { "row": 32, "col": 0, "size_x": 18, "size_y": 1 }
