@@ -19,7 +19,7 @@ seeds:
         name: varchar
         status: boolean
         platform: varchar
-        platform_group: varchar
+        channel_format: varchar
         is_generic_source: boolean
         mapping_tag: varchar
         channel_brand: varchar

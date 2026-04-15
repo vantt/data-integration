@@ -1,47 +1,47 @@
-id,name,status,platform_group,is_generic_source,platform,mapping_tag,channel_brand,market,customer_segment
+id,name,status,channel_format,is_generic_source,platform,mapping_tag,channel_brand,market,customer_segment
 8075219,FaceBookFJPTViet,false,Social,false,Facebook,,Fine Japan Vietnam,Domestic,B2C
 8075218,FaceBookJPC,false,Social,false,Facebook,,JPC,Domestic,B2C
 7737135,Gosumo,false,Other,false,Other,,,Domestic,B2C
-7503763,CS,false,System,false,System,,,Domestic,B2C
-7312199,Tiki Cross Border,false,Ecom,false,Tiki,,Fine World Group,Export,B2B
-7165820,POPS,false,Ecom,false,Other,,,Domestic,B2C
-7139806,Leflair,false,Ecom,false,Leflair,,,Domestic,B2C
+7503763,CS,false,Direct,false,Direct,,,Domestic,B2C
+7312199,Tiki Cross Border,false,Marketplace,false,Tiki,,Fine World Group,Export,B2B
+7165820,POPS,false,Marketplace,false,Other,,,Domestic,B2C
+7139806,Leflair,false,Marketplace,false,Leflair,,,Domestic,B2C
 7054173,Chợ sỉ,false,B2B,false,Wholesale,,,Domestic,B2B
 6656236,Test Sản Phẩm,false,System,false,System,,,Domestic,B2C
-6569908,Chiaki,false,Ecom,false,Chiaki,,,Domestic,B2C
-6500681,TiktokShop,true,Ecom,false,TikTok,,JPC,Domestic,B2C
-5686178,Selly,false,Ecom,false,Selly,,,Domestic,B2C
+6569908,Chiaki,false,Marketplace,false,Chiaki,,,Domestic,B2C
+6500681,TiktokShop,true,Marketplace,false,TikTok,,JPC,Domestic,B2C
+5686178,Selly,false,Marketplace,false,Selly,,,Domestic,B2C
 5384969,Ưu đãi Nhân Viên,false,System,false,System,,,Domestic,B2C
 5384956,Quà Tặng,false,System,false,System,,,Domestic,B2C
-4999848,GrabMart,true,Ecom,false,Grab,,JPC,Domestic,B2C
+4999848,GrabMart,true,Marketplace,false,Grab,,JPC,Domestic,B2C
 4609259,WebOrder,true,Web,false,Website,,,Domestic,B2C
-4517138,Telesale,false,System,false,Telesale,,,Domestic,B2C
+4517138,Telesale,false,Direct,false,Direct,,,Domestic,B2C
 4461848,Instagram,true,Social,false,Instagram,,,Domestic,B2C
 4164989,Đại Lý,false,B2B,false,Wholesale,,,Domestic,B2B
-4110169,US,false,CrossBorder,false,US,,,Export,B2B
-3988160,Sendo,true,Ecom,false,Sendo,,,Domestic,B2C
+4110169,US,false,CrossBorder Fulfillment,false,US,,,Export,B2B
+3988160,Sendo,true,Marketplace,false,Sendo,,,Domestic,B2C
 3988159,Other,true,Other,false,Other,,,Domestic,B2C
-3988158,Shopee,true,Ecom,false,Shopee,,,Domestic,B2C
-3988157,Pos,true,Retail,true,Retail,,,Domestic,B2C
-3988156,Tiki,true,Ecom,false,Tiki,,Fine World Group,Domestic,B2C
-3988155,Lazada,true,Ecom,false,Lazada,,,Domestic,B2C
+3988158,Shopee,true,Marketplace,false,Shopee,,,Domestic,B2C
+3988157,Pos,true,Retail,true,POS,,,Domestic,B2C
+3988156,Tiki,true,Marketplace,false,Tiki,,Fine World Group,Domestic,B2C
+3988155,Lazada,true,Marketplace,false,Lazada,,,Domestic,B2C
 3988154,Zalo,true,Social,false,Zalo,,,Domestic,B2C
 3988153,Facebook,true,Social,false,Facebook,,,Domestic,B2C
 3988152,Web,true,Web,false,Website,,,Domestic,B2C
-3988158_1,Shopee - Fine Japan Vietnam,true,Ecom,false,Shopee,"Shopee_Fine Japan Vietnam,",Fine Japan Vietnam,Domestic,B2C
-3988158_2,Shopee - thehealthyus,true,Ecom,false,Shopee,Shopee_thehealthyus,The Healthy Us,Domestic,B2C
-3988158_3,Shopee - JPC SHOP,true,Ecom,false,Shopee,Shopee_JPC SHOP,JPC,Domestic,B2C
-3988158_4,Shopee - JPC OFFICIAL,true,Ecom,false,Shopee,Shopee_JPC OFFICIAL,JPC,Domestic,B2C
-3988158_5,Shopee - FG CARE,true,Ecom,false,Shopee,Shopee_FG CARE,FG Care,Domestic,B2C
-3988158_6,Shopee - FWG Vietnam,true,Ecom,false,Shopee,Shopee_FWG Vietnam,Fine World Group,Domestic,B2C
-3988158_7,Shopee - Fine Care,true,Ecom,false,Shopee,Shopee_Fine Care,Fine Care,Domestic,B2C
-3988158_8,Shopee - FINE WORLD GROUP,true,Ecom,false,Shopee,Shopee_FINE WORLD GROUP,Fine World Group,Domestic,B2C
-3988155_1,Lazada - Fine Japan Vietnam,true,Ecom,false,Lazada,Lazada_Fine Japan Vietnam,Fine Japan Vietnam,Domestic,B2C
-3988155_2,Lazada - JPC SHOP,true,Ecom,false,Lazada,Lazada_JPC SHOP,JPC,Domestic,B2C
-3988155_3,Lazada - The Healthy Us,true,Ecom,false,Lazada,Lazada_The Healthy Us,The Healthy Us,Domestic,B2C
-3988155_4,Lazada - Fine Japan store,true,Ecom,false,Lazada,Lazada_Fine Japan store,Fine Japan Vietnam,Domestic,B2C
-3988155_5,Lazada - FINE WORLD GROUP,true,Ecom,false,Lazada,Lazada_FINE WORLD GROUP,Fine World Group,Domestic,B2C
-3988155_6,Lazada - FG CARE,true,Ecom,false,Lazada,Lazada_FG CARE,FG Care,Domestic,B2C
-3988155_7,Lazada - Fine Care,true,Ecom,false,Lazada,Lazada_Fine Care,Fine Care,Domestic,B2C
-3988156_1,Tiki - FINE WORLD GROUP,true,Ecom,false,Tiki,Tiki_FINE WORLD GROUP,Fine World Group,Domestic,B2C
-3988156_2,Tiki - FG GLOBAL,true,Ecom,false,Tiki,Tiki_FG GLOBAL,Fine World Group,Domestic,B2C
+3988158_1,Shopee - Fine Japan Vietnam,true,Marketplace,false,Shopee,"Shopee_Fine Japan Vietnam,",Fine Japan Vietnam,Domestic,B2C
+3988158_2,Shopee - thehealthyus,true,Marketplace,false,Shopee,Shopee_thehealthyus,The Healthy Us,Domestic,B2C
+3988158_3,Shopee - JPC SHOP,true,Marketplace,false,Shopee,Shopee_JPC SHOP,JPC,Domestic,B2C
+3988158_4,Shopee - JPC OFFICIAL,true,Marketplace,false,Shopee,Shopee_JPC OFFICIAL,JPC,Domestic,B2C
+3988158_5,Shopee - FG CARE,true,Marketplace,false,Shopee,Shopee_FG CARE,FG Care,Domestic,B2C
+3988158_6,Shopee - FWG Vietnam,true,Marketplace,false,Shopee,Shopee_FWG Vietnam,Fine World Group,Domestic,B2C
+3988158_7,Shopee - Fine Care,true,Marketplace,false,Shopee,Shopee_Fine Care,Fine Care,Domestic,B2C
+3988158_8,Shopee - FINE WORLD GROUP,true,Marketplace,false,Shopee,Shopee_FINE WORLD GROUP,Fine World Group,Domestic,B2C
+3988155_1,Lazada - Fine Japan Vietnam,true,Marketplace,false,Lazada,Lazada_Fine Japan Vietnam,Fine Japan Vietnam,Domestic,B2C
+3988155_2,Lazada - JPC SHOP,true,Marketplace,false,Lazada,Lazada_JPC SHOP,JPC,Domestic,B2C
+3988155_3,Lazada - The Healthy Us,true,Marketplace,false,Lazada,Lazada_The Healthy Us,The Healthy Us,Domestic,B2C
+3988155_4,Lazada - Fine Japan store,true,Marketplace,false,Lazada,Lazada_Fine Japan store,Fine Japan Vietnam,Domestic,B2C
+3988155_5,Lazada - FINE WORLD GROUP,true,Marketplace,false,Lazada,Lazada_FINE WORLD GROUP,Fine World Group,Domestic,B2C
+3988155_6,Lazada - FG CARE,true,Marketplace,false,Lazada,Lazada_FG CARE,FG Care,Domestic,B2C
+3988155_7,Lazada - Fine Care,true,Marketplace,false,Lazada,Lazada_Fine Care,Fine Care,Domestic,B2C
+3988156_1,Tiki - FINE WORLD GROUP,true,Marketplace,false,Tiki,Tiki_FINE WORLD GROUP,Fine World Group,Domestic,B2C
+3988156_2,Tiki - FG GLOBAL,true,Marketplace,false,Tiki,Tiki_FG GLOBAL,Fine World Group,Domestic,B2C

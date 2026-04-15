@@ -53,10 +53,17 @@ models:
       - name: channel_code
         data_type: varchar
       - name: channel_category
-        description: "Ecommerce / Offline / Internal / Other"
+        description: "Tier 1. Online-Ecommerce / Offline / Internal."
         data_type: varchar
-      - name: platform_group
+        tests:
+          - accepted_values:
+              values: ['Online-Ecommerce', 'Offline', 'Internal']
+      - name: channel_format
+        description: "Tier 2. Marketplace / Social / Web / Retail / B2B / Direct / System / CrossBorder Fulfillment / Other."
         data_type: varchar
+        tests:
+          - accepted_values:
+              values: ['Marketplace', 'Social', 'Web', 'Retail', 'B2B', 'Direct', 'System', 'CrossBorder Fulfillment', 'Other']
       - name: platform
         data_type: varchar
       - name: channel_brand

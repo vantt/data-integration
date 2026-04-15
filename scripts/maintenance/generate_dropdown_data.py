@@ -59,13 +59,13 @@ def generate_channels():
         # Line 24: 3988158,Shopee,true,Ecom,false,Shopee,
         # Line 25: 3988157,Pos,true,Retail,true,Retail,
         # Wait, check 'is_generic_source' column index.
-        # Header: id,name,status,platform_group,is_generic_source,platform,mapping_tag
+        # Header: id,name,status,channel_format,is_generic_source,platform,mapping_tag
         # Shopee (3988158): is_generic_source is 'true'? 
         # Line 24 in view_file output: `3988158,Shopee,true,Ecom,false,Shopee,`
-        # status=true, platform_group=Ecom, is_generic_source=false ??
+        # status=true, channel_format=Marketplace, is_generic_source=false ??
         # Ah, comma counting.
-        # id=3988158, name=Shopee, status=true, platform_group=Ecom, is_generic_source=false
-        # id=3988157, name=Pos, status=true, platform_group=Retail, is_generic_source=true
+        # id=3988158, name=Shopee, status=true, channel_format=Marketplace, is_generic_source=false
+        # id=3988157, name=Pos, status=true, channel_format=Retail, is_generic_source=true
         
         # Accessing by column name is safer with pandas.
         pass

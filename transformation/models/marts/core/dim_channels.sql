@@ -19,7 +19,7 @@ branch_locations AS (
             null as location_id,
             name as channel_name,
             name as channel_code,
-            platform_group,
+            channel_format,
             platform,
             channel_brand,
             market,
@@ -37,7 +37,7 @@ branch_locations AS (
             cast(l.id as string) as location_id,
             l.name as channel_name,
             l.code as channel_code,
-            s.platform_group,
+            s.channel_format,
             s.platform,
             s.channel_brand,
             s.market,
@@ -55,7 +55,7 @@ branch_locations AS (
             null as location_id,
             s.name || ' (Unknown Location)' as channel_name,
             s.name as channel_code,
-            s.platform_group,
+            s.channel_format,
             s.platform,
             s.channel_brand,
             s.market,
@@ -83,23 +83,31 @@ SELECT
     channel_name,
     channel_code,
 
-    -- Channel classification
-    CASE platform_group
-        WHEN 'Ecom'   THEN 'Ecommerce'
-        WHEN 'Social' THEN 'Ecommerce'
-        WHEN 'Web'    THEN 'Ecommerce'
-        WHEN 'Retail' THEN 'Offline'
-        WHEN 'B2B'    THEN 'Offline'
-        WHEN 'System' THEN 'Internal'
-        WHEN 'CrossBorder' THEN 'Internal'
-        ELSE 'Other'
+    -- Tier 1: channel_category (Online-Ecommerce / Offline / Internal)
+    CASE channel_format
+        WHEN 'Marketplace' THEN 'Online-Ecommerce'
+        WHEN 'Social'      THEN 'Online-Ecommerce'
+        WHEN 'Web'         THEN 'Online-Ecommerce'
+        WHEN 'Retail'      THEN 'Offline'
+        WHEN 'B2B'         THEN 'Offline'
+        WHEN 'Direct'      THEN 'Offline'
+        WHEN 'System'      THEN 'Internal'
+        WHEN 'CrossBorder Fulfillment' THEN 'Internal'
+        ELSE 'Internal'
     END as channel_category,
-    platform_group,
+
+    -- Tier 2: channel_format (Marketplace / Social / Web / Retail / B2B / Direct / System / CrossBorder Fulfillment / Other)
+    channel_format,
+
+    -- Tier 3: platform
     platform,
+
     channel_brand,
     market,
     customer_segment,
-    platform_group NOT IN ('System', 'CrossBorder') as is_sales_channel,
+
+    -- Real sales channel flag: excludes internal/system and non-sales fulfillment.
+    channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other') as is_sales_channel,
 
     -- Lineage Links
     source_id,
@@ -116,8 +124,8 @@ SELECT
     {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as channel_key,
     'Unknown' as channel_name,
     'UNK' as channel_code,
-    'Other' as channel_category,
-    'Other' as platform_group,
+    'Internal' as channel_category,
+    'Other' as channel_format,
     'Other' as platform,
     cast(null as varchar) as channel_brand,
     'Domestic' as market,

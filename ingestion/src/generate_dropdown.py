@@ -73,13 +73,13 @@ def generate_dropdown_options():
     #      They are MARKED AS `true` (Generic) in `is_generic_source` column?
     #      Let's re-read line 31: `3988158_1,Shopee - Fine Japan Vietnam,true,Ecom,false,Shopee,"Shopee_Fine Japan Vietnam,"`
     #      Wait, the 5th column is `is_generic_source`.
-    #      Line 1 (Schema): id,name,status,platform_group,is_generic_source,platform,mapping_tag
+    #      Line 1 (Schema): id,name,status,channel_format,is_generic_source,platform,mapping_tag
     #      Line 31: 3988158_1 ... true (status) ... Ecom ... false (is_generic) ...
     #      Ah! So specific shops ARE `is_generic_source=false`.
     
     #      Line 24: `3988158,Shopee,true,Ecom,false,Shopee` -> This is the "Generic Shopee". It has is_generic=false? 
     #      Wait, let's trace carefully.
-    #      header: id,name,status,platform_group,is_generic_source
+    #      header: id,name,status,channel_format,is_generic_source
     #      val 24: 3988158,Shopee,true,Ecom,false
     #      So "Shopee" itself is NOT generic?
     #      

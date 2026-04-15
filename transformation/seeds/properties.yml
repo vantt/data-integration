@@ -7,7 +7,7 @@ seeds:
         id: integer
         name: varchar
         status: boolean
-        platform_group: varchar
+        channel_format: varchar
         is_generic_source: boolean
         platform: varchar
         mapping_tag: varchar

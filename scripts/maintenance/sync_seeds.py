@@ -40,12 +40,13 @@ def sync_seeds():
             if not new_sources_df.empty:
                 print(f"Found {len(new_sources_df)} new sources. Appending...")
                 # Heuristic Classification
-                def classify_platform_group(name):
+                def classify_channel_format(name):
                     n = str(name).lower()
-                    if any(x in n for x in ['shopee', 'lazada', 'tiki', 'sendo', 'grab', 'tiktok']): return 'Ecom'
+                    if any(x in n for x in ['shopee', 'lazada', 'tiki', 'sendo', 'grab', 'tiktok']): return 'Marketplace'
                     if any(x in n for x in ['facebook', 'fb', 'instagram', 'zalo', 'social']): return 'Social'
                     if any(x in n for x in ['pos', 'store', 'cửa hàng', 'showroom', 'tại quầy']): return 'Retail'
                     if any(x in n for x in ['web', 'online']): return 'Web'
+                    if any(x in n for x in ['telesale', 'cs']): return 'Direct'
                     return 'Other'
 
                 def classify_platform(name):
@@ -61,17 +62,17 @@ def sync_seeds():
                     return 'Other'
 
                 new_sources_df['status'] = 'true'
-                new_sources_df['platform_group'] = new_sources_df['name'].apply(classify_platform_group)
-                new_sources_df['is_generic_source'] = new_sources_df['platform_group'].apply(
+                new_sources_df['channel_format'] = new_sources_df['name'].apply(classify_channel_format)
+                new_sources_df['is_generic_source'] = new_sources_df['channel_format'].apply(
                     lambda x: 'true' if x == 'Retail' else 'false'
                 )
                 # Add New Columns matching CSV Schema
                 new_sources_df['platform'] = new_sources_df['name'].apply(classify_platform)
                 new_sources_df['mapping_tag'] = '' # Default empty for auto-synced sources
 
-                # Ensure Column Order matches CSV: id,name,status,platform_group,is_generic_source,platform,mapping_tag
+                # Ensure Column Order matches CSV: id,name,status,channel_format,is_generic_source,platform,mapping_tag
                 new_sources_df = new_sources_df[[
-                    'id', 'name', 'status', 'platform_group', 'is_generic_source', 'platform', 'mapping_tag'
+                    'id', 'name', 'status', 'channel_format', 'is_generic_source', 'platform', 'mapping_tag'
                 ]]
 
                 # Append
