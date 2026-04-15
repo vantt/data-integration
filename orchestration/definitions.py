@@ -18,6 +18,7 @@ from dagster import (
     RunsFilter,
     DagsterRunStatus,
 )
+from orchestration.asset_checks import ALL_CHECKS
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill
 from orchestration.ops.system_backup import platform_backup_job
@@ -252,6 +253,26 @@ def backup_schedule(context):
     return RunRequest(run_key=None)
 
 
+# Ingestion health checks job — runs all @asset_checks every 2h.
+# Read-only against ingestion_health.duckdb; not in dbt_rw concurrency group.
+ingestion_health_checks_job = define_asset_job(
+    name="ingestion_health_checks_job",
+    selection=AssetSelection.all_asset_checks(),
+)
+
+
+@schedule(
+    job=ingestion_health_checks_job,
+    cron_schedule="0 */2 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def ingestion_health_checks_schedule(context):
+    active = _has_active_run(context, "ingestion_health_checks_job")
+    if active:
+        return SkipReason(f"health_checks: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
 # ------------------------------------------------------------------------------
 # RESOURCES & DEFINITIONS
 # ------------------------------------------------------------------------------
@@ -268,6 +289,7 @@ defs = Definitions(
     # Schedules already pull in their target job implicitly, but sensors
     # targeting a job (e.g. sheets_modified_sensor → sheets_sync_job)
     # require the job to be present in the repository.
+    asset_checks=ALL_CHECKS,
     jobs=[
         sapo_realtime_sync_job,
         sapo_incremental_sync_job,
@@ -277,12 +299,14 @@ defs = Definitions(
         sapo_nightly_reconciliation_job,
         sapo_full_refresh_job,
         platform_backup_job,
+        ingestion_health_checks_job,
     ],
     schedules=[
         realtime_schedule,
         incremental_schedule,
         nightly_schedule,
         backup_schedule,
+        ingestion_health_checks_schedule,
     ],
     sensors=[
         lark_failure_sensor,
