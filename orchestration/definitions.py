@@ -19,8 +19,9 @@ from dagster import (
     DagsterRunStatus,
 )
 from orchestration.asset_checks import ALL_CHECKS
+from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill
+from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation
 from orchestration.ops.system_backup import platform_backup_job
 from orchestration.sensors.failure_alerting import lark_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import sheets_modified_sensor
@@ -37,7 +38,7 @@ from orchestration.sensors.file_drop_sensors import shopee_file_drop_sensor, mis
 # except Exception as e:
 #     print(f"[WARN] Auto-check failed: {e}")
 
-all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill])
+all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -253,6 +254,27 @@ def backup_schedule(context):
     return RunRequest(run_key=None)
 
 
+# Recon job — daily source↔destination reconciliation.
+# NOT in dbt_rw concurrency group: recon is read-only on raw DB and health DB,
+# so it must never compete with nightly ingestion writes.
+recon_daily_job = define_asset_job(
+    name="recon_daily_job",
+    selection=AssetSelection.groups("reconciliation"),
+)
+
+
+@schedule(
+    job=recon_daily_job,
+    cron_schedule="30 4 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def recon_daily_schedule(context):
+    active = _has_active_run(context, "recon_daily_job")
+    if active:
+        return SkipReason(f"recon: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
 # Ingestion health checks job — runs all @asset_checks every 2h.
 # Read-only against ingestion_health.duckdb; not in dbt_rw concurrency group.
 ingestion_health_checks_job = define_asset_job(
@@ -289,7 +311,7 @@ defs = Definitions(
     # Schedules already pull in their target job implicitly, but sensors
     # targeting a job (e.g. sheets_modified_sensor → sheets_sync_job)
     # require the job to be present in the repository.
-    asset_checks=ALL_CHECKS,
+    asset_checks=[*ALL_CHECKS, *RECON_CHECKS],
     jobs=[
         sapo_realtime_sync_job,
         sapo_incremental_sync_job,
@@ -300,6 +322,7 @@ defs = Definitions(
         sapo_full_refresh_job,
         platform_backup_job,
         ingestion_health_checks_job,
+        recon_daily_job,
     ],
     schedules=[
         realtime_schedule,
@@ -307,6 +330,7 @@ defs = Definitions(
         nightly_schedule,
         backup_schedule,
         ingestion_health_checks_schedule,
+        recon_daily_schedule,
     ],
     sensors=[
         lark_failure_sensor,
