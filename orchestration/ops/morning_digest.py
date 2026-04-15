@@ -1,0 +1,342 @@
+"""Morning Lark digest for ingestion health.
+
+Runs at 08:00 Asia/Ho_Chi_Minh daily. Reads ingestion_health.duckdb,
+composes one Lark card summarising 24h volume, 7-day median trend,
+freshness, and recon drift per source. Dry-run via DIGEST_DRY_RUN=1.
+
+Architecture: @op inside a job (not an asset — no downstream data graph).
+Card delivery failure is caught and logged — never fails the Dagster run.
+"""
+from __future__ import annotations
+
+import logging
+import math
+import os
+from dataclasses import dataclass
+from datetime import datetime, timezone, timedelta
+from typing import Literal, Optional
+
+import duckdb
+from dagster import job, op
+
+from orchestration.ops.ingestion_health import get_db_path
+from orchestration.notifications.lark_client import send_lark_card
+
+logger = logging.getLogger("orchestration.morning_digest")
+
+# ---------------------------------------------------------------------------
+# Known asset registry: (short_name, asset_key, recon_asset_key | None)
+# ---------------------------------------------------------------------------
+KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
+    ("sapo_webhook",   "sapo/sapo_webhook_consumer_asset",   None),
+    ("sapo_history",   "sapo/sapo_history_log_asset",        None),
+    ("sapo_orders",    "sapo/sapo_orders_batch_asset",       "recon/sapo_orders_daily"),
+    ("sapo_customers", "sapo/sapo_customers_batch_asset",    "recon/sapo_customers_daily"),
+    ("sapo_products",  "sapo/sapo_products_batch_asset",     None),
+    ("sapo_accounts",  "sapo/sapo_accounts_batch_asset",     None),
+    ("shopee",         "shopee/shopee_income_file_drop_asset","recon/shopee_daily"),
+    ("misa",           "misa_amis/misa_sales_file_drop_asset","recon/misa_daily"),
+    ("sheet_targets",  "sheets/sheets_targets_asset",        None),
+    ("sheet_spend",    "sheets/sheets_marketing_spend_asset", None),
+]
+
+# ---------------------------------------------------------------------------
+# Data model
+# ---------------------------------------------------------------------------
+
+@dataclass
+class DigestRow:
+    short_name: str
+    asset_key: str
+    status: Literal["green", "yellow", "red", "gray"]
+    rows_24h: Optional[int]
+    median_7d: Optional[int]
+    pct_vs_median: Optional[float]
+    fresh_age_min: Optional[int]   # minutes since last success
+    drift_pct: Optional[float]     # from recon, if applicable
+    note: Optional[str]            # e.g. "never run", "recon failed"
+
+
+# ---------------------------------------------------------------------------
+# Classification
+# ---------------------------------------------------------------------------
+
+_SLA_HOURS = 12  # freshness SLA — no data > this → red
+
+
+def classify(row: DigestRow) -> Literal["green", "yellow", "red", "gray"]:
+    """Return color for a DigestRow. Gray = never run / no data.
+
+    Drift is checked first even for never-run rows: if recon captured a large
+    discrepancy, that is actionable regardless of whether we have direct run data.
+    """
+    # Recon drift overrides everything — even "never run" gray state
+    if row.drift_pct is not None:
+        abs_drift = abs(row.drift_pct)
+        if abs_drift > 5.0:
+            return "red"
+        if abs_drift > 1.0:
+            return "yellow"
+
+    # After drift check: return gray for never-run / unreachable with no drift signal
+    if row.note in ("never run", "health DB unreachable"):
+        return "gray"
+
+    # Freshness SLA
+    if row.fresh_age_min is not None and row.fresh_age_min > _SLA_HOURS * 60:
+        return "red"
+
+    # Row-trend vs 7d median
+    if row.median_7d and row.median_7d > 0 and row.rows_24h is not None:
+        ratio = row.rows_24h / row.median_7d
+        if ratio < 0.5:
+            return "yellow"
+
+    # Most-recent run failed
+    if row.note == "last run failed":
+        return "red"
+
+    return "green"
+
+
+# ---------------------------------------------------------------------------
+# SQL helpers
+# ---------------------------------------------------------------------------
+
+_MAIN_QUERY = """
+WITH recent AS (
+    SELECT asset_key,
+           MAX(run_started_at) FILTER (WHERE status = 'success') AS last_ok,
+           MAX(run_started_at)                                    AS last_any,
+           SUM(rows_written)   FILTER (WHERE run_started_at >= now() - INTERVAL 1 DAY) AS r_24h,
+           LAST(status ORDER BY run_started_at) AS last_status
+    FROM ingestion_runs
+    GROUP BY asset_key
+),
+daily AS (
+    SELECT asset_key,
+           date_trunc('day', run_started_at) AS d,
+           SUM(rows_written)                 AS r
+    FROM ingestion_runs
+    WHERE run_started_at >= now() - INTERVAL 7 DAY
+      AND status = 'success'
+    GROUP BY 1, 2
+),
+med AS (
+    SELECT asset_key, median(r) AS med7
+    FROM daily
+    GROUP BY 1
+)
+SELECT r.asset_key, r.last_ok, r.r_24h, m.med7, r.last_status
+FROM recent r
+LEFT JOIN med m USING (asset_key);
+"""
+
+_RECON_QUERY = """
+SELECT asset_key, (metadata_json ->> 'drift_pct')::DOUBLE AS drift_pct
+FROM ingestion_runs
+WHERE asset_key LIKE 'recon/%'
+  AND run_started_at >= now() - INTERVAL 1 DAY
+QUALIFY row_number() OVER (PARTITION BY asset_key ORDER BY run_started_at DESC) = 1;
+"""
+
+
+def _fetch_stats(db_path: str) -> tuple[dict, dict]:
+    """Return (stats_by_asset_key, drift_by_recon_key) dicts."""
+    stats: dict = {}
+    drift: dict = {}
+    try:
+        conn = duckdb.connect(db_path, read_only=True)
+        try:
+            rows = conn.execute(_MAIN_QUERY).fetchall()
+            for asset_key, last_ok, r_24h, med7, last_status in rows:
+                stats[asset_key] = (last_ok, r_24h, med7, last_status)
+
+            recon_rows = conn.execute(_RECON_QUERY).fetchall()
+            for rk, dp in recon_rows:
+                drift[rk] = dp
+        finally:
+            conn.close()
+    except Exception as exc:
+        logger.error(f"morning_digest: failed to query health DB: {exc}")
+        return {}, {}
+    return stats, drift
+
+
+# ---------------------------------------------------------------------------
+# Row builder
+# ---------------------------------------------------------------------------
+
+def build_digest_rows(db_path: str) -> list[DigestRow]:
+    """Query ingestion_health.duckdb and build one DigestRow per known asset."""
+    stats, drift = _fetch_stats(db_path)
+    now_utc = datetime.now(timezone.utc)
+    rows: list[DigestRow] = []
+
+    for short_name, asset_key, recon_key in KNOWN_ASSETS:
+        drift_val = drift.get(recon_key) if recon_key else None
+        if asset_key not in stats:
+            dr = DigestRow(
+                short_name=short_name, asset_key=asset_key,
+                status="gray", rows_24h=None, median_7d=None,
+                pct_vs_median=None, fresh_age_min=None,
+                drift_pct=drift_val, note="never run",
+            )
+            dr.status = classify(dr)
+            rows.append(dr)
+            continue
+
+        last_ok, r_24h, med7, last_status = stats[asset_key]
+
+        fresh_age_min: Optional[int] = None
+        if last_ok is not None:
+            # last_ok may be tz-aware or naive; normalise to UTC
+            if hasattr(last_ok, "tzinfo") and last_ok.tzinfo is None:
+                last_ok = last_ok.replace(tzinfo=timezone.utc)
+            fresh_age_min = int((now_utc - last_ok).total_seconds() / 60)
+
+        rows_24h_int = int(r_24h) if r_24h is not None else 0
+        med7_int = int(med7) if med7 is not None else None
+
+        pct: Optional[float] = None
+        if med7_int and med7_int > 0:
+            pct = round((rows_24h_int / med7_int - 1) * 100, 1)
+
+        note: Optional[str] = None
+        if last_status == "failed":
+            note = "last run failed"
+
+        dr = DigestRow(
+            short_name=short_name, asset_key=asset_key,
+            status="green",
+            rows_24h=rows_24h_int,
+            median_7d=med7_int,
+            pct_vs_median=pct,
+            fresh_age_min=fresh_age_min,
+            drift_pct=drift_val,
+            note=note,
+        )
+        dr.status = classify(dr)
+        rows.append(dr)
+
+    return rows
+
+
+# ---------------------------------------------------------------------------
+# Card formatting
+# ---------------------------------------------------------------------------
+
+_EMOJI = {"green": "✅", "yellow": "⚠️", "red": "❌", "gray": "⬜"}
+_LARK_COLOR = {"green": "green", "yellow": "orange", "red": "red", "gray": "grey"}
+
+
+def _fmt_age(minutes: Optional[int]) -> str:
+    if minutes is None:
+        return "unknown"
+    if minutes < 60:
+        return f"{minutes}m"
+    hours = minutes // 60
+    return f"{hours}h"
+
+
+def _fmt_pct(pct: Optional[float]) -> str:
+    if pct is None:
+        return ""
+    sign = "+" if pct >= 0 else ""
+    return f"{sign}{pct:.0f}%"
+
+
+def compose_card_fields(rows: list[DigestRow]) -> tuple[dict, str]:
+    """Return (fields dict for send_lark_card, worst-severity color string)."""
+    fields: dict[str, str] = {}
+    worst = "green"
+    severity_rank = {"green": 0, "gray": 1, "yellow": 2, "red": 3}
+
+    for dr in rows:
+        em = _EMOJI[dr.status]
+
+        if dr.note == "never run":
+            val = f"{em} never run"
+        elif dr.note == "health DB unreachable":
+            val = f"{em} health DB unreachable"
+        elif dr.drift_pct is not None and abs(dr.drift_pct) > 5.0:
+            sign = "+" if dr.drift_pct >= 0 else ""
+            val = f"{em} RECON DRIFT {sign}{dr.drift_pct:.1f}%"
+        else:
+            rows_str = f"{dr.rows_24h:,}" if dr.rows_24h is not None else "?"
+            med_str = f"{dr.median_7d:,}" if dr.median_7d else "?"
+            pct_str = _fmt_pct(dr.pct_vs_median)
+            age_str = _fmt_age(dr.fresh_age_min)
+            med_part = f"med {med_str}"
+            if pct_str:
+                med_part += f", {pct_str}"
+            val = f"{em} 24h: {rows_str} ({med_part}) · fresh: {age_str}"
+            if dr.drift_pct is not None:
+                sign = "+" if dr.drift_pct >= 0 else ""
+                val += f" · drift: {sign}{dr.drift_pct:.1f}%"
+
+        fields[dr.short_name] = val
+
+        if severity_rank.get(dr.status, 0) > severity_rank.get(worst, 0):
+            worst = dr.status
+
+    return fields, _LARK_COLOR.get(worst, "grey")
+
+
+def _today_ict() -> str:
+    """Return current date string in Asia/Ho_Chi_Minh (+07:00)."""
+    utc_now = datetime.now(timezone.utc)
+    ict_now = utc_now + timedelta(hours=7)
+    return ict_now.strftime("%Y-%m-%d")
+
+
+# ---------------------------------------------------------------------------
+# Op + job
+# ---------------------------------------------------------------------------
+
+@op
+def compose_and_send_digest(_context) -> None:
+    """Read ingestion_health.duckdb and post morning Lark card."""
+    db_path = get_db_path()
+    dry_run = os.getenv("DIGEST_DRY_RUN", "0") == "1"
+
+    # Graceful degradation: DB may not exist yet on first boot
+    if not os.path.exists(db_path):
+        logger.warning(f"morning_digest: health DB not found at {db_path}")
+        rows = [
+            DigestRow(
+                short_name=s, asset_key=ak, status="gray",
+                rows_24h=None, median_7d=None, pct_vs_median=None,
+                fresh_age_min=None, drift_pct=None, note="never run",
+            )
+            for s, ak, _ in KNOWN_ASSETS
+        ]
+        # Reclassify so note="never run" → gray
+        for r in rows:
+            r.status = classify(r)
+    else:
+        rows = build_digest_rows(db_path)
+
+    if not rows:
+        logger.warning("morning_digest: build_digest_rows returned empty list")
+        return
+
+    fields, color = compose_card_fields(rows)
+    title = f"Data Ingestion Morning Report — {_today_ict()}"
+
+    if dry_run:
+        print(f"\n[DIGEST DRY-RUN] {title}  [{color.upper()}]")
+        for k, v in fields.items():
+            print(f"  {k:<16} {v}")
+        return
+
+    try:
+        send_lark_card(title=title, fields=fields, color=color)
+    except Exception as exc:
+        # Must not fail the Dagster run
+        logger.error(f"morning_digest: Lark send raised unexpectedly: {exc}")
+
+
+@job
+def morning_digest_job():
+    compose_and_send_digest()

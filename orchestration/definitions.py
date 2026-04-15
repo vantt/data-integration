@@ -23,6 +23,7 @@ from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation
 from orchestration.ops.system_backup import platform_backup_job
+from orchestration.ops.morning_digest import morning_digest_job
 from orchestration.sensors.failure_alerting import lark_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
@@ -295,6 +296,19 @@ def ingestion_health_checks_schedule(context):
     return RunRequest(run_key=None)
 
 
+# Morning digest — 08:00 ICT daily, read-only against health DB, not in dbt_rw group.
+@schedule(
+    job=morning_digest_job,
+    cron_schedule="0 8 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def ingestion_morning_digest_schedule(context):
+    active = _has_active_run(context, "morning_digest_job")
+    if active:
+        return SkipReason(f"morning_digest: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
 # ------------------------------------------------------------------------------
 # RESOURCES & DEFINITIONS
 # ------------------------------------------------------------------------------
@@ -323,6 +337,7 @@ defs = Definitions(
         platform_backup_job,
         ingestion_health_checks_job,
         recon_daily_job,
+        morning_digest_job,
     ],
     schedules=[
         realtime_schedule,
@@ -331,6 +346,7 @@ defs = Definitions(
         backup_schedule,
         ingestion_health_checks_schedule,
         recon_daily_schedule,
+        ingestion_morning_digest_schedule,
     ],
     sensors=[
         lark_failure_sensor,
