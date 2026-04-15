@@ -74,11 +74,23 @@ All 9 channel_format values present, distributed correctly across 3 channel_cate
 - **Metabase `visualization_settings.series_settings`:** keys = actual data values; had to patch these separately from SQL (3 cards: #898, #247, #262).
 - **Staff attribution refactor unrelated:** 22 files of staff `seller_staff_key`/`creator_staff_key` work were on the working tree at session start. Moved to main as commit `003c65d` before starting taxonomy work to keep PR single-concern.
 
+## Post-commit: Blueprint redeploy (forward-only flow)
+
+After initial live-API patch, followed up with **blueprint-as-SoT redeploy** to make the migration durable across Metabase DB restores:
+
+- Ran `deploy_from_markdown.js` on all 24 blueprints in `docs/analytics-handbook/blueprints/*.md` sequentially.
+- Script is idempotent (matches card by tab+name, reuses ID). All 24 → "Deployment Complete". No duplicates.
+- **Post-redeploy rescan (629 cards):** 0 `platform_group`, 0 `'Ecommerce'/'Ecom'` value literals; 28 cards use `channel_format`; 7 use `Online-Ecommerce`.
+- Per-file deploy logs at `plans/260415-1221-channel-taxonomy-rename/deploy-logs/*.log` (gitignored via `*.log`).
+
+**Caveat noted during redeploy:** `deploy_from_markdown.js --dry-run` flag is documented but **not implemented** — first invocation deployed live. Same-content idempotent overwrite, no harm. Suggest wiring a real dry-run flag as a follow-up.
+
 ## Artifacts
 
 - Plan: `plans/260415-1221-channel-taxonomy-rename/plan.md`
-- Metabase update script: `plans/260415-1221-channel-taxonomy-rename/update-metabase-cards.py`
-- Metabase per-card log: `plans/260415-1221-channel-taxonomy-rename/metabase-update-log.txt`
+- Metabase one-shot update script (kept for future ad-hoc use): `plans/260415-1221-channel-taxonomy-rename/update-metabase-cards.py`
+- Metabase per-card log (first pass): `plans/260415-1221-channel-taxonomy-rename/metabase-update-log.txt`
+- Blueprint redeploy logs: `plans/260415-1221-channel-taxonomy-rename/deploy-logs/`
 
 ## Unresolved questions
 
