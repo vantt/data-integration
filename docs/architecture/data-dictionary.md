@@ -756,7 +756,8 @@ Order-level fact table.
 | `date_key`           | INTEGER       | FK to dim_date        |
 | `customer_key`       | VARCHAR       | FK to dim_customers   |
 | `location_key`       | VARCHAR       | FK to dim_locations   |
-| `staff_key`          | VARCHAR       | FK to dim_staff       |
+| `seller_staff_key`   | VARCHAR       | FK to dim_staff — người chốt (Sapo assignee), primary for sales attribution |
+| `creator_staff_key`  | VARCHAR       | FK to dim_staff — người tạo đơn (Sapo account), operational/fallback |
 | `status`             | VARCHAR       | Degenerate dimension  |
 | `payment_status`     | VARCHAR       | Degenerate dimension  |
 | `fulfillment_status` | VARCHAR       | Degenerate dimension  |

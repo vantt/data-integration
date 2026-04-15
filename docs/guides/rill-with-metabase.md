@@ -709,7 +709,7 @@ FROM src_fact_orders o
 LEFT JOIN src_dim_channels c ON o.channel_key = c.channel_key
 LEFT JOIN src_dim_branch_location b ON o.branch_location_key = b.branch_location_key
 LEFT JOIN src_dim_geography g ON o.shipping_geography_key = g.geography_key
-LEFT JOIN src_dim_staff s ON o.staff_key = s.staff_key
+LEFT JOIN src_dim_staff s ON o.seller_staff_key = s.staff_key
 ```
 
 ```yaml

@@ -95,5 +95,5 @@
 - **Differs from CEO Monthly Scorecard:** CEO sees strategic metrics (revenue, growth, segments). This shows **operational metrics** (completion rate, processing time, staff productivity, payment health).
 - **3-tab design:** Tab 1 is the quick monthly pulse (5-7 min). Tabs 2-3 are deep-dives for specific audiences (channel managers, team leads, finance).
 - **`time_to_complete_hours`:** Calculated in `fact_orders` as `DATEDIFF(hour, order_timestamp, completed_at)`. NULL for non-completed orders — exclude from average.
-- **Staff Data Caveat:** Not all orders have assigned staff (marketplace auto-orders). Filter to `staff_key IS NOT NULL` for meaningful staff comparisons.
+- **Staff Data Caveat:** Not all orders have assigned staff (marketplace auto-orders). Filter to `seller_staff_key IS NOT NULL` for meaningful staff comparisons.
 - Max ~27 visual elements across 3 tabs (~9-10 per tab). Operations Manager reviews in detail (20-30 min).

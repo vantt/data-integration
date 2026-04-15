@@ -27,9 +27,17 @@ SELECT
     customer_id,
     location_id,
 
-    coalesce(assignee_id, account_id) as salesperson_id,
-    coalesce(assignee_full_name, assignee_name, account_full_name, account_name, user_name) as salesperson_name,
-    coalesce(assignee_email, account_email) as salesperson_email,
+    -- Sales attribution: Sapo has TWO distinct user fields per order.
+    -- seller_* (from Sapo `assignee`) = người được giao đơn → primary for team attribution & commission
+    -- creator_* (from Sapo `account`)  = người tạo đơn trên Sapo → operational, fallback only
+    -- See docs/context/channel-classification.md § 3.4 for business rationale.
+    assignee_id as seller_user_id,
+    coalesce(assignee_full_name, assignee_name) as seller_name,
+    assignee_email as seller_email,
+
+    account_id as creator_user_id,
+    coalesce(account_full_name, account_name, user_name) as creator_name,
+    account_email as creator_email,
     
     -- Timestamps - Lifecycle
     try_cast(created_on as TIMESTAMPTZ) as created_at,

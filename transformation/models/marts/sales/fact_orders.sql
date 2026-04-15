@@ -62,7 +62,11 @@ SELECT
             {{ dbt_utils.generate_surrogate_key(['cast(source_id as string)', "'Unknown'"]) }}
     END as channel_key,
 
-    COALESCE(ds.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as staff_key,
+    -- Sales attribution keys (see docs/context/channel-classification.md § 3.4)
+    -- seller_staff_key  = người chốt/được giao đơn → primary for team/commission
+    -- creator_staff_key = người tạo đơn trên Sapo → operational/fallback
+    COALESCE(dseller.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as seller_staff_key,
+    COALESCE(dcreator.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as creator_staff_key,
     {{ dbt_utils.generate_surrogate_key(['status']) }} as status_key,
     coalesce(cast(strftime(created_at, '%Y%m%d') as integer), 19000101) as date_key,
     (extract(hour from created_at) * 100) + extract(minute from created_at) as time_key,
@@ -92,7 +96,8 @@ SELECT
 
 FROM orders
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = vc.customer_key
-LEFT JOIN {{ ref('dim_staff') }} ds ON {{ dbt_utils.generate_surrogate_key(['orders.salesperson_id']) }} = ds.staff_key
+LEFT JOIN {{ ref('dim_staff') }} dseller ON {{ dbt_utils.generate_surrogate_key(['orders.seller_user_id']) }} = dseller.staff_key
+LEFT JOIN {{ ref('dim_staff') }} dcreator ON {{ dbt_utils.generate_surrogate_key(['orders.creator_user_id']) }} = dcreator.staff_key
 LEFT JOIN source_definitions sd ON orders.source_id = sd.id
 LEFT JOIN valid_locations vl ON cast(orders.location_id as varchar) = vl.location_id
 LEFT JOIN first_shipment fs ON orders.order_id = fs.order_id

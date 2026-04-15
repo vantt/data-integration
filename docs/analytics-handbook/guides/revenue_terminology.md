@@ -255,5 +255,6 @@ total_collected  = total_amount + total_tax_amount
 | -------------------------------------------- | ------------------------------------------------------------------- |
 | `financial_status`                         | Đã normalize thành `payment_status` trong std_orders           |
 | `packed_status`, `received_status`       | Đã gộp vào logic `fulfillment_status`                         |
-| `assignee_*`, `account_*`, `user_name` | Đã normalize thành `staff_key` qua dim_staff                   |
+| `assignee_*`                             | Normalize thành `seller_staff_key` (người chốt/giao đơn — primary)        |
+| `account_*`, `user_name`                 | Normalize thành `creator_staff_key` (người tạo đơn — operational/fallback) |
 | `issued_on`, `finalized_on`              | Ít dùng trong báo cáo, giữ `created_at` và `completed_at` |

@@ -18,7 +18,9 @@ SELECT
     b.branch_location_code,
     g.province,
     g.district,
-    st.full_name AS staff_name,
+    -- Sales attribution: seller (assignee) primary; creator (account) for ops views.
+    seller.full_name AS seller_name,
+    creator.full_name AS creator_name,
     os.status_code AS status,
     s.quantity,
     s.revenue,
@@ -31,5 +33,6 @@ LEFT JOIN src_dim_products p ON s.product_key = p.product_key
 LEFT JOIN src_dim_channels c ON s.channel_key = c.channel_key
 LEFT JOIN src_dim_branch_location b ON s.branch_location_key = b.branch_location_key
 LEFT JOIN src_dim_geography g ON s.shipping_geography_key = g.geography_key
-LEFT JOIN src_dim_staff st ON s.staff_key = st.staff_key
+LEFT JOIN src_dim_staff seller ON s.seller_staff_key = seller.staff_key
+LEFT JOIN src_dim_staff creator ON s.creator_staff_key = creator.staff_key
 LEFT JOIN src_dim_order_status os ON s.status_key = os.status_key

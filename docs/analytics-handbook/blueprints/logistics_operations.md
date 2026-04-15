@@ -641,7 +641,7 @@ SELECT
     ROUND(date_diff('hour', o.order_timestamp, current_timestamp), 1) as "Chờ (giờ)",
     o.order_timestamp as "Thời gian tạo"
 FROM fact_orders o
-LEFT JOIN dim_staff s ON o.staff_key = s.staff_key
+LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 WHERE o.status = 'OPEN'
   AND o.fulfillment_status != 'fulfilled'
@@ -700,7 +700,7 @@ SELECT
     s.full_name as "Nhân viên",
     COUNT(DISTINCT o.order_id) as "Đơn xử lý"
 FROM fact_orders o
-JOIN dim_staff s ON o.staff_key = s.staff_key
+JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.status NOT IN ('DRAFT', 'CANCELLED')
   AND date(o.order_timestamp) = current_date
 GROUP BY 1
@@ -732,7 +732,7 @@ SELECT
     s.full_name as "Nhân viên",
     ROUND(AVG(date_diff('hour', o.order_timestamp, o.first_shipped_at)), 1) as "TB giờ xử lý"
 FROM fact_orders o
-JOIN dim_staff s ON o.staff_key = s.staff_key
+JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.status NOT IN ('DRAFT', 'CANCELLED')
   AND o.first_shipped_at IS NOT NULL
   AND date(o.order_timestamp) = current_date
@@ -788,7 +788,7 @@ SELECT
         ELSE NULL
     END as "Giờ đến XK"
 FROM fact_orders o
-LEFT JOIN dim_staff s ON o.staff_key = s.staff_key
+LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 WHERE o.status != 'DRAFT'

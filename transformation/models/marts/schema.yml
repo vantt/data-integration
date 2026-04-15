@@ -160,7 +160,15 @@ models:
               arguments:
                 to: ref('dim_product_types')
                 field: product_type_key
-      - name: staff_key
+      - name: seller_staff_key
+        description: "Người chốt/được giao đơn (Sapo assignee). Primary for team attribution & commission."
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_staff')
+                field: staff_key
+      - name: creator_staff_key
+        description: "Người tạo đơn trên Sapo (Sapo account). Operational; use as fallback only."
         tests:
           - relationships:
               arguments:
@@ -266,8 +274,17 @@ models:
                 field: promotion_key
               config:
                 severity: warn
-      - name: staff_key
+      - name: seller_staff_key
         data_type: varchar
+        description: "Người chốt/được giao đơn (Sapo assignee). Primary for team attribution & commission."
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_staff')
+                field: staff_key
+      - name: creator_staff_key
+        data_type: varchar
+        description: "Người tạo đơn trên Sapo (Sapo account). Operational; use as fallback only."
         tests:
           - relationships:
               arguments:

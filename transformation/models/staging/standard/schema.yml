@@ -27,6 +27,18 @@ models:
         description: "Browser IP and User Agent details (JSON)"
       - name: tags
         description: "Order tags"
+      - name: seller_user_id
+        description: "Sapo `assignee_id` — người được giao đơn. Primary field for sales attribution (team, commission, KPI). NULL for orders without explicit assignee."
+      - name: seller_name
+        description: "Tên nhân viên seller (từ Sapo assignee.full_name / assignee.name)."
+      - name: seller_email
+        description: "Email seller."
+      - name: creator_user_id
+        description: "Sapo `account_id` — người tạo đơn trên Sapo. Operational field; use only as fallback when seller_user_id is NULL or is a system account."
+      - name: creator_name
+        description: "Tên nhân viên creator (từ Sapo account.full_name / account.name / user_name)."
+      - name: creator_email
+        description: "Email creator."
 
   - name: std_order_items
     description: "Line items v2.0"

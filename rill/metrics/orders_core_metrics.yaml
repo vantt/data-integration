@@ -17,8 +17,10 @@ dimensions:
     column: province
   - name: district
     column: district
-  - name: staff_name
-    column: staff_name
+  - name: seller_name
+    column: seller_name
+  - name: creator_name
+    column: creator_name
   - name: status
     column: status
   - name: payment_status

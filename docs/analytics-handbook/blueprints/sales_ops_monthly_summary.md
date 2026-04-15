@@ -1107,7 +1107,7 @@ SELECT
     ), 1) as "% Contribution"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-JOIN dim_staff st ON o.staff_key = st.staff_key
+JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND c.platform_group IN ('Facebook', 'Zalo')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -1145,7 +1145,7 @@ SELECT
     st.full_name as "Staff",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
-JOIN dim_staff st ON o.staff_key = st.staff_key
+JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND o.order_timestamp < date_trunc('month', current_date)
@@ -1187,7 +1187,7 @@ SELECT
     ROUND(COUNT(DISTINCT CASE WHEN o.status = 'COMPLETED' THEN o.order_id END) * 100.0
         / NULLIF(COUNT(DISTINCT o.order_id), 0), 1) as "Completion %"
 FROM fact_orders o
-JOIN dim_staff st ON o.staff_key = st.staff_key
+JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND o.order_timestamp < date_trunc('month', current_date)
   AND st.staff_key IS NOT NULL

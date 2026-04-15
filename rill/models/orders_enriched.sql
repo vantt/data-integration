@@ -22,8 +22,11 @@ WITH base AS (
         g.district,
         g.ward,
         g.country,
-        s.full_name AS staff_name,
-        s.email AS staff_email,
+        -- Sales attribution: seller (assignee) primary; creator (account) for ops views.
+        seller.full_name AS seller_name,
+        seller.email AS seller_email,
+        creator.full_name AS creator_name,
+        creator.email AS creator_email,
         o.status,
         o.payment_status,
         o.fulfillment_status,
@@ -42,7 +45,8 @@ WITH base AS (
     LEFT JOIN src_dim_channels c ON o.channel_key = c.channel_key
     LEFT JOIN src_dim_branch_location b ON o.branch_location_key = b.branch_location_key
     LEFT JOIN src_dim_geography g ON o.shipping_geography_key = g.geography_key
-    LEFT JOIN src_dim_staff s ON o.staff_key = s.staff_key
+    LEFT JOIN src_dim_staff seller ON o.seller_staff_key = seller.staff_key
+    LEFT JOIN src_dim_staff creator ON o.creator_staff_key = creator.staff_key
 ),
 flags AS (
     SELECT

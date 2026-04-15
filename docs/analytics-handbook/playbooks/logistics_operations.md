@@ -21,7 +21,7 @@
 | Fulfillment status breakdown | **Available** | `fact_orders.fulfillment_status` | fulfilled/unfulfilled/partial |
 | Time to complete (hours) | **Available** | `fact_orders.time_to_complete_hours` | `date_diff('hour', created_at, completed_at)` |
 | First shipment timestamp | **Available** | `fact_orders.first_shipped_at` | From `std_fulfillments`, MIN(shipped_at) per order |
-| Staff who processed order | **Available** | `fact_orders` JOIN `dim_staff` | Via staff_key |
+| Staff who processed order | **Available** | `fact_orders` JOIN `dim_staff` | Via seller_staff_key |
 | Carrier-level performance | **Planned** | No `dim_carriers` / `fact_shipments` | Requires new ingestion + models |
 | Delivery timestamps | **Planned** | No delivery tracking data | Cannot compute delivery time |
 | Per-fulfillment line items | **Planned** | No `fact_fulfillments` mart | Only aggregated first_shipped_at available |

@@ -105,7 +105,7 @@
       COUNT(DISTINCT fo.order_id) as total_orders,
       AVG(fo.time_to_complete_hours) as avg_processing_hours
   FROM fact_orders fo
-  JOIN dim_staff ds ON fo.staff_key = ds.staff_key
+  JOIN dim_staff ds ON fo.seller_staff_key = ds.staff_key
   WHERE fo.status NOT IN ('DRAFT', 'CANCELLED')
   GROUP BY 1
   ```

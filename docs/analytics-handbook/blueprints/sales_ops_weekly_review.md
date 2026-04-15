@@ -989,7 +989,7 @@ SELECT
     st.full_name as "Nhan vien",
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
-JOIN dim_staff st ON o.staff_key = st.staff_key
+JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.order_timestamp < date_trunc('week', current_date)
@@ -1030,7 +1030,7 @@ SELECT
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-JOIN dim_staff st ON o.staff_key = st.staff_key
+JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND c.platform_group IN ('Facebook', 'Zalo')
   AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'

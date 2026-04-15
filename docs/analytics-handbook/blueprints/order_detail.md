@@ -58,7 +58,7 @@ FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
 LEFT JOIN dim_branch_location b ON o.branch_location_key = b.branch_location_key
 LEFT JOIN dim_order_status os ON o.status_key = os.status_key
-LEFT JOIN dim_staff s ON o.staff_key = s.staff_key
+LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 LEFT JOIN dim_geography g ON o.shipping_geography_key = g.geography_key
 WHERE o.order_id = {{order_id}}
 ```

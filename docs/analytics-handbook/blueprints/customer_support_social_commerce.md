@@ -300,7 +300,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-JOIN dim_staff s ON o.staff_key = s.staff_key
+JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE c.platform_group = 'Social'
   AND date(o.order_timestamp) = current_date
 GROUP BY s.full_name
@@ -340,7 +340,7 @@ SELECT
     COUNT(DISTINCT o.order_id) as "Số đơn"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-JOIN dim_staff s ON o.staff_key = s.staff_key
+JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE c.platform_group = 'Social'
   AND date(o.order_timestamp) = current_date
 GROUP BY s.full_name
@@ -384,7 +384,7 @@ today AS (
         COUNT(DISTINCT o.order_id) as orders
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    JOIN dim_staff s ON o.staff_key = s.staff_key
+    JOIN dim_staff s ON o.seller_staff_key = s.staff_key
     WHERE c.platform_group = 'Social'
       AND date(o.order_timestamp) = current_date
     GROUP BY s.full_name
@@ -396,7 +396,7 @@ yesterday AS (
         COUNT(DISTINCT o.order_id) as orders
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    JOIN dim_staff s ON o.staff_key = s.staff_key
+    JOIN dim_staff s ON o.seller_staff_key = s.staff_key
     WHERE c.platform_group = 'Social'
       AND date(o.order_timestamp) = current_date - INTERVAL '1 day'
     GROUP BY s.full_name
@@ -502,7 +502,7 @@ SELECT
     o.status as "Trạng thái"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-LEFT JOIN dim_staff s ON o.staff_key = s.staff_key
+LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE c.platform_group = 'Social'
   AND date(o.order_timestamp) = current_date
 ORDER BY o.order_timestamp DESC
