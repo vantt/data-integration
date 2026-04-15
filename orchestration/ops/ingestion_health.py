@@ -30,28 +30,33 @@ import duckdb
 # Module fallback: this file lives at <project_root>/orchestration/ops/ingestion_health.py,
 # so project_root = parents[2]. This works for local dev regardless of CWD.
 def _resolve_db_path() -> str:
+    """Resolve DuckDB file path from environment — no hardcoded paths.
+
+    Priority:
+    1. INGESTION_HEALTH_DB        — full file path override.
+    2. DBT_DATA_LAKE_PATH         — data_lake root; appends /monitoring/ingestion_health.duckdb.
+                                    Already defined in .env.{docker,local,example}.
+
+    Raises RuntimeError if neither is set — fail loud, do NOT fall back to a
+    hardcoded path that could be ephemeral or wrong for the deployment.
+    """
     explicit = os.environ.get("INGESTION_HEALTH_DB")
     if explicit:
         return explicit
 
-    # Candidate 1: DAGSTER_HOME (production Dagster deployment)
-    dagster_home = os.environ.get("DAGSTER_HOME")
-    if dagster_home:
-        candidate = Path(dagster_home).parent / "app_data" / "data_lake" / "monitoring" / "ingestion_health.duckdb"
-        if candidate.parent.parent.exists():  # app_data/data_lake exists
-            return str(candidate)
+    data_lake = os.environ.get("DBT_DATA_LAKE_PATH")
+    if data_lake:
+        return str(Path(data_lake) / "monitoring" / "ingestion_health.duckdb")
 
-    # Candidate 2: Docker fixed path
-    docker_path = Path("/app/app_data/data_lake/monitoring/ingestion_health.duckdb")
-    if docker_path.parent.parent.exists():
-        return str(docker_path)
-
-    # Candidate 3: module-relative (local dev, any CWD)
-    project_root = Path(__file__).resolve().parents[2]
-    return str(project_root / "app_data" / "data_lake" / "monitoring" / "ingestion_health.duckdb")
+    raise RuntimeError(
+        "ingestion_health: cannot resolve DB path — set INGESTION_HEALTH_DB or "
+        "DBT_DATA_LAKE_PATH (e.g. via .env.local for host runs, .env.docker for "
+        "containers). Refusing to write to a hardcoded fallback."
+    )
 
 
-_HEALTH_DB_PATH = _resolve_db_path()
+# Path resolved lazily inside _connect()/get_db_path() so import never fails
+# when env is missing — only actual writes do.
 
 
 _DDL = """
@@ -78,8 +83,9 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
 
 
 def _connect() -> duckdb.DuckDBPyConnection:
-    os.makedirs(os.path.dirname(_HEALTH_DB_PATH), exist_ok=True)
-    conn = duckdb.connect(_HEALTH_DB_PATH)
+    path = _resolve_db_path()
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    conn = duckdb.connect(path)
     conn.execute(_DDL)
     return conn
 
@@ -144,4 +150,4 @@ def record_run(
 
 def get_db_path() -> str:
     """Return the resolved DuckDB path (for diagnostics / tooling)."""
-    return _HEALTH_DB_PATH
+    return _resolve_db_path()
