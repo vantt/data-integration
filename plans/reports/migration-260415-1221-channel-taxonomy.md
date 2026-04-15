@@ -85,6 +85,21 @@ After initial live-API patch, followed up with **blueprint-as-SoT redeploy** to 
 
 **Caveat noted during redeploy:** `deploy_from_markdown.js --dry-run` flag is documented but **not implemented** — first invocation deployed live. Same-content idempotent overwrite, no harm. Suggest wiring a real dry-run flag as a follow-up.
 
+## Post-deploy fix: stale serving views
+
+Encountered after blueprint redeploy when Metabase tried to query dim_channels:
+
+```
+Binder Error: Contents of view were altered: names don't match!
+Expected [..., platform_group, ...] but found [..., channel_format, ...]
+```
+
+**Cause:** DuckDB serving views in `data_lake/serving/olap.duckdb` (consumed by Metabase) cache the column list at CREATE time. When dbt wrote new parquet with `channel_format`, the view still expected `platform_group` → binder mismatch at query time. Applies to any column-renaming migration touching dim/fact parquet.
+
+**Fix:** `python scripts/provisioning/bootstrap_serving_views.py` (idempotent, uses CREATE OR REPLACE). Must stop Metabase first because DuckDB held a PID 0 lock on the file despite Metabase's `read_only=True` — a DuckDB/Metabase JDBC quirk not reflected in the script's docstring claim that read_only coexists. Restart Metabase after.
+
+Add to runbook for future column renames: **after `dbt build` + `refresh_rolling`, always rerun `bootstrap_serving_views.py` when a mart column changed name or was dropped.**
+
 ## Artifacts
 
 - Plan: `plans/260415-1221-channel-taxonomy-rename/plan.md`
