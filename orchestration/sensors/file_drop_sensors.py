@@ -68,12 +68,12 @@ def _parse_cursor(raw: str | None) -> float:
 
 # Shopee sensor — ticks every 5 minutes (file drops are manual/weekly)
 @sensor(
-    job_name="shopee_file_drop_sync_job",
+    job_name="file_drop_shopee_sync_job",
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,
     description=(
         "Watches app_data/input_source/shopee/ for new/modified .xlsx files. "
-        "Fires shopee_file_drop_sync_job on change."
+        "Fires file_drop_shopee_sync_job on change."
     ),
 )
 def shopee_file_drop_sensor(context: SensorEvaluationContext):
@@ -101,12 +101,12 @@ def shopee_file_drop_sensor(context: SensorEvaluationContext):
 
 # MISA sensor — ticks every 5 minutes
 @sensor(
-    job_name="misa_file_drop_sync_job",
+    job_name="file_drop_misa_sync_job",
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,
     description=(
         "Watches app_data/input_source/misa-amis/ for new/modified .xlsx files. "
-        "Fires misa_file_drop_sync_job on change."
+        "Fires file_drop_misa_sync_job on change."
     ),
 )
 def misa_file_drop_sensor(context: SensorEvaluationContext):

@@ -110,8 +110,8 @@ sheets_sync_job = define_asset_job(
 # 2.6 Shopee file-drop sync job
 # Ingests Shopee income Excel → dbt (downstream of shopee sources) → serving_db.
 _shopee_source = AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset)
-shopee_file_drop_sync_job = define_asset_job(
-    name="shopee_file_drop_sync_job",
+file_drop_shopee_sync_job = define_asset_job(
+    name="file_drop_shopee_sync_job",
     selection=(
         _shopee_source
         | _shopee_source.downstream()
@@ -122,8 +122,8 @@ shopee_file_drop_sync_job = define_asset_job(
 
 # 2.7 MISA file-drop sync job
 _misa_source = AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset)
-misa_file_drop_sync_job = define_asset_job(
-    name="misa_file_drop_sync_job",
+file_drop_misa_sync_job = define_asset_job(
+    name="file_drop_misa_sync_job",
     selection=(
         _misa_source
         | _misa_source.downstream()
@@ -272,8 +272,8 @@ defs = Definitions(
         sapo_realtime_sync_job,
         sapo_incremental_sync_job,
         sheets_sync_job,
-        shopee_file_drop_sync_job,
-        misa_file_drop_sync_job,
+        file_drop_shopee_sync_job,
+        file_drop_misa_sync_job,
         sapo_nightly_reconciliation_job,
         sapo_full_refresh_job,
         platform_backup_job,
