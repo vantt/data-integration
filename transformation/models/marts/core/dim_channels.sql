@@ -11,31 +11,59 @@ branch_locations AS (
     SELECT * FROM {{ ref('ref_branch_locations') }}
 ),
 
+    -- Parent rows are those whose name prefixes other rows' names with " - "
+    -- (e.g. "Shopee" is parent of "Shopee - JPC OFFICIAL"). When materialized into
+    -- dim_channels, parent rows get " (Unspecified)" suffix so users can tell
+    -- orders mapped to a specific storefront from orders still tagged with the
+    -- generic Sapo source. Leaf platforms with no children (Facebook, Zalo, Web,
+    -- Telesale...) are not suffixed.
+    --
+    -- Name-based detection: seed properties.yml declares id INTEGER, and DuckDB's
+    -- integer parser strips underscores as digit separators, so composite ids
+    -- like '3988158_1' lose the underscore at load time — id-based LIKE match
+    -- cannot detect parent/child relationships. Names stay intact.
+    parents_with_children AS (
+        SELECT DISTINCT p.id as parent_id
+        FROM source_definitions p
+        WHERE EXISTS (
+            SELECT 1 FROM source_definitions c
+            WHERE c.name LIKE p.name || ' - %'
+              AND c.id <> p.id
+        )
+    ),
+
     -- 1. Specific Sources (Non-Generic)
-    -- e.g. Facebook, Web -> Map 1-1 to Source
+    -- e.g. Facebook, Web -> Map 1-1 to Source. Marketplace parents get "(Unspecified)"
+    -- suffix when their sibling composite children exist in the seed.
     specific_channels AS (
         SELECT
-            cast(id as string) as source_id,
+            cast(s.id as string) as source_id,
             null as location_id,
-            name as channel_name,
-            name as channel_code,
-            channel_format,
-            platform,
-            channel_brand,
-            market,
-            customer_segment,
-            status as is_active
-        FROM source_definitions
-        WHERE is_generic_source = false
+            CASE
+                WHEN pwc.parent_id IS NOT NULL THEN s.name || ' (Unspecified)'
+                ELSE s.name
+            END as channel_name,
+            s.name as channel_code,
+            s.channel_format,
+            s.platform,
+            s.channel_brand,
+            s.market,
+            s.customer_segment,
+            s.status as is_active
+        FROM source_definitions s
+        LEFT JOIN parents_with_children pwc
+            ON s.id = pwc.parent_id
+        WHERE s.is_generic_source = false
     ),
 
     -- 2. Generic Sources expanded by Location (POS -> Stores)
-    -- e.g. POS -> Map 1-N to Locations (Store A, Store B)
+    -- e.g. POS -> Map 1-N to Locations. channel_name prefixed with platform so values
+    -- are unambiguous across platforms (e.g. "POS - 16 Trương Định").
     generic_channels AS (
         SELECT
             cast(s.id as string) as source_id,
             cast(l.id as string) as location_id,
-            l.name as channel_name,
+            s.platform || ' - ' || l.name as channel_name,
             l.code as channel_code,
             s.channel_format,
             s.platform,
@@ -53,7 +81,7 @@ branch_locations AS (
         SELECT
             cast(s.id as string) as source_id,
             null as location_id,
-            s.name || ' (Unknown Location)' as channel_name,
+            s.platform || ' - Unknown Location' as channel_name,
             s.name as channel_code,
             s.channel_format,
             s.platform,

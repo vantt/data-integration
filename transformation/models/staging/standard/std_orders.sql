@@ -20,7 +20,12 @@ SELECT
     -- ID & Codes
     order_id,
     order_code,
-    source_id,
+    -- Enriched source_id: if order.tags matches a mapping_tag in ref_order_sources,
+    -- stg_sapo_orders resolved to the composite child id (e.g. '3988158_1'
+    -- = "Shopee - JPC OFFICIAL"); otherwise falls back to raw generic id (e.g. '3988158' = "Shopee").
+    -- This makes downstream fact_orders.channel_key resolve to the right tier-4 storefront
+    -- when mapping_tag coverage exists, or to the "(Unspecified)" parent row otherwise.
+    final_source_id as source_id,
     'sapo' as source_system,
     
     -- Foreign Keys

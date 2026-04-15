@@ -98,6 +98,6 @@ FROM orders
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = vc.customer_key
 LEFT JOIN {{ ref('dim_staff') }} dseller ON {{ dbt_utils.generate_surrogate_key(['orders.seller_user_id']) }} = dseller.staff_key
 LEFT JOIN {{ ref('dim_staff') }} dcreator ON {{ dbt_utils.generate_surrogate_key(['orders.creator_user_id']) }} = dcreator.staff_key
-LEFT JOIN source_definitions sd ON orders.source_id = sd.id
+LEFT JOIN source_definitions sd ON cast(orders.source_id as varchar) = cast(sd.id as varchar)
 LEFT JOIN valid_locations vl ON cast(orders.location_id as varchar) = vl.location_id
 LEFT JOIN first_shipment fs ON orders.order_id = fs.order_id
