@@ -85,7 +85,10 @@ def _persist_recon(
     window_end: datetime,
     status: str = "success",
 ) -> None:
-    """Write one recon result row into ingestion_health.duckdb."""
+    """Write one recon result row into ingestion_health.duckdb.
+
+    Best-effort: lock contention or DB errors must not crash the recon asset.
+    """
     metadata = {
         "source_count": source_count,
         "dest_count": dest_count,
@@ -93,16 +96,19 @@ def _persist_recon(
         "window_start": window_start.isoformat(),
         "window_end": window_end.isoformat(),
     }
-    record_run(
-        asset_key=asset_key,
-        run_id=run_id,
-        run_started_at=started,
-        run_ended_at=datetime.now(timezone.utc),
-        status=status,
-        rows_fetched=source_count,
-        rows_written=dest_count,
-        metadata=metadata,
-    )
+    try:
+        record_run(
+            asset_key=asset_key,
+            run_id=run_id,
+            run_started_at=started,
+            run_ended_at=datetime.now(timezone.utc),
+            status=status,
+            rows_fetched=source_count,
+            rows_written=dest_count,
+            metadata=metadata,
+        )
+    except Exception:
+        logger.warning("_persist_recon(%s): failed to write health record", asset_key, exc_info=True)
 
 
 # ---------------------------------------------------------------------------

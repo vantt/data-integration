@@ -233,3 +233,63 @@ def test_drift_above_error_threshold():
     from orchestration.asset_checks.reconciliation_checks import _ERROR_THRESHOLD
     drift = 0.10
     assert abs(drift) > _ERROR_THRESHOLD
+
+
+# ---------------------------------------------------------------------------
+# Unit: _persist_recon exception handling
+# ---------------------------------------------------------------------------
+
+def test_persist_recon_swallows_db_error(health_db, monkeypatch):
+    """_persist_recon must not raise when record_run fails (best-effort write)."""
+    from unittest.mock import patch
+    from orchestration.assets.reconciliation import _persist_recon
+
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+
+    with patch(
+        "orchestration.assets.reconciliation.record_run",
+        side_effect=duckdb.IOException("Could not set lock on file"),
+    ):
+        _persist_recon(
+            asset_key="recon/test",
+            run_id=str(uuid.uuid4()),
+            started=now,
+            source_count=100,
+            dest_count=100,
+            drift_pct=0.0,
+            window_start=yesterday,
+            window_end=now,
+        )
+
+
+def test_persist_recon_writes_when_db_available(health_db, monkeypatch):
+    """_persist_recon writes successfully when DB is accessible."""
+    import importlib
+    import orchestration.ops.ingestion_health as ih
+    importlib.reload(ih)
+
+    from orchestration.assets.reconciliation import _persist_recon
+
+    now = datetime.now(timezone.utc)
+    yesterday = now - timedelta(days=1)
+    run_id = str(uuid.uuid4())
+
+    _persist_recon(
+        asset_key="recon/test_write",
+        run_id=run_id,
+        started=now,
+        source_count=200,
+        dest_count=195,
+        drift_pct=-0.025,
+        window_start=yesterday,
+        window_end=now,
+    )
+
+    conn = duckdb.connect(health_db, read_only=True)
+    row = conn.execute(
+        "SELECT asset_key, rows_fetched, rows_written FROM ingestion_runs WHERE run_id = ?",
+        [run_id],
+    ).fetchone()
+    conn.close()
+    assert row == ("recon/test_write", 200, 195)

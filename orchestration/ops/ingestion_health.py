@@ -18,12 +18,16 @@ Design:
 from __future__ import annotations
 
 import json
+import logging
 import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 import duckdb
+
+logger = logging.getLogger(__name__)
 
 # --- Path resolution ---
 # Priority: explicit env var > DAGSTER_HOME-derived > module-relative fallback.
@@ -82,12 +86,27 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
 """
 
 
+_LOCK_RETRIES = 3
+_LOCK_BACKOFF_S = 1.0
+
+
 def _connect() -> duckdb.DuckDBPyConnection:
     path = _resolve_db_path()
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    conn = duckdb.connect(path)
-    conn.execute(_DDL)
-    return conn
+    last_err: Exception | None = None
+    for attempt in range(_LOCK_RETRIES):
+        try:
+            conn = duckdb.connect(path)
+            conn.execute(_DDL)
+            return conn
+        except duckdb.IOException as exc:
+            last_err = exc
+            if attempt < _LOCK_RETRIES - 1:
+                wait = _LOCK_BACKOFF_S * (2 ** attempt)
+                logger.warning("ingestion_health lock contention (attempt %d/%d), retry in %.1fs",
+                               attempt + 1, _LOCK_RETRIES, wait)
+                time.sleep(wait)
+    raise last_err  # type: ignore[misc]
 
 
 def record_run(
