@@ -35,8 +35,11 @@ parser = _import_from_file("income_parser", PROJECT_ROOT / "ingestion" / "src" /
 utils = _import_from_file("file_drop_utils", PROJECT_ROOT / "ingestion" / "src" / "file-drop-utils.py")
 
 
-# Default input directory (relative to project root)
-DEFAULT_INPUT_DIR = str(PROJECT_ROOT / "app_data" / "input_source" / "shopee")
+# Input directory — env var for Docker, fallback to local relative path.
+DEFAULT_INPUT_DIR = os.environ.get(
+    "SHOPEE_INPUT_DIR",
+    str(PROJECT_ROOT / "app_data" / "input_source" / "shopee"),
+)
 
 
 def run(argv=None, file_path=None):

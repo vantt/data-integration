@@ -15,9 +15,14 @@ from orchestration.assets.utils import load_dlt_configuration, DLT_DIR
 from orchestration.ops.ingestion_health import record_run as _record_health
 from orchestration.ops.file_metrics import scan_drop_zone, aggregate_file_manifest
 
-# Default input directory for Shopee drop zone (mirrors run-shopee-income-file-drop.py)
-_PROJECT_ROOT = Path(DLT_DIR).parent
-_SHOPEE_INPUT_DIR = str(_PROJECT_ROOT / "app_data" / "input_source" / "shopee")
+# Input directory for Shopee drop zone — env var with Docker default.
+# Local dev: set SHOPEE_INPUT_DIR in .env.local.
+_SHOPEE_INPUT_DIR = os.environ.get(
+    "SHOPEE_INPUT_DIR",
+    str(Path(DLT_DIR).parent / "app_data" / "input_source" / "shopee"),
+)
+if not os.path.isdir(_SHOPEE_INPUT_DIR):
+    _SHOPEE_INPUT_DIR = "/app/var/input_source/shopee"
 
 
 def _import_from_file(module_name, file_path):
