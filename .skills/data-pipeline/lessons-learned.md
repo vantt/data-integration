@@ -24,12 +24,13 @@ secrets.toml.sample   (template, git-committed)
        ↓
 .dlt/secrets.toml     (gitignored, local dev / server)
        ↓
-ingestion/.env.local  (gitignored, loaded bởi load_dlt_configuration())
+.env.local (project root, gitignored, loaded bởi load_dlt_configuration())
        ↓
-Environment variables (Docker, CI/CD, Dagster launch env)
+Environment variables (Docker via .env.docker, CI/CD, Dagster launch env)
 ```
 
 Khi Dagster chạy: `.env.local` không tự load — phải gọi `load_dlt_configuration()` đầu mỗi asset.
+`.env.local` nằm ở **project root** (không phải `ingestion/`).
 
 ### Mapping env var ↔ config key
 
@@ -167,11 +168,12 @@ finally:
 ```python
 @asset(...)
 def my_asset(context):
-    load_dlt_configuration(context.log.info)  # load .env.local + secrets.toml
+    load_dlt_configuration(context.log.info)  # load .env.local (root) + secrets.toml
     os.chdir(DLT_DIR)
     run_entity.run(argv=[])
 ```
 Hàm này trong `orchestration/assets/utils.py`. Dagster không tự load `.env.local`.
+`.env.local` nằm ở project root — loader resolve từ `PROJECT_ROOT`.
 
 ### L11 — DuckDB concurrency lock
 
@@ -860,3 +862,34 @@ pipeline = dlt.pipeline(pipeline_name=..., destination="filesystem", ...)
 **KHÔNG dùng `pipeline.drop()`** — method này gọi thêm `destination.drop_storage()` có thể xóa data trên destination.
 
 **Rule:** Khi implement `--full-refresh` cho dlt pipeline, phải reset cả 2 lớp: (1) `last_value = None` trong resource code, (2) xóa `.dlt/pipelines/{name}/` để reset dlt internal state. Chỉ set flag mà không xóa state = full-refresh bị silently ignored.
+
+---
+
+### L35 — Config ecosystem: layered defaults, single .env, no duplication
+
+**Nguyên tắc cốt lõi:**
+
+| Layer | Chứa gì | Ví dụ |
+|-------|---------|-------|
+| `config.toml` | Defaults ít thay đổi, không phụ thuộc environment | layout, format, selectors, delays, file patterns |
+| `.env` | Credentials + bất cứ gì khác nhau giữa local/docker | passwords, API keys, paths, URLs |
+| `docker-compose environment:` | Container constants gắn chặt volume mount/infra | BACKUP_ROOT, telemetry flags |
+| `Dockerfile ENV` | Build-time immutable | DAGSTER_HOME, PYTHONPATH |
+
+**Không lặp lại** — nếu `config.toml` đã có `loader_file_format = "parquet"`, `.env` không set lại. Nhưng `.env.example` **liệt kê commented-out** để operator biết có thể override.
+
+**File locations:**
+- `.env.docker` — Docker runtime (project root, gitignored)
+- `.env.local` — Local dev (project root, gitignored)
+- `.env.example` — Template (committed, sections + documented defaults)
+- `config.toml` — dlt defaults (committed, `ingestion/.dlt/`)
+
+**Loader** (`load_dlt_configuration()` trong `utils.py`):
+- Docker: `.env.docker` đã inject qua `env_file:` → loader chỉ verify credentials
+- Local dev: loader parse `.env.local` (project root) + `secrets.toml` → `os.environ`
+
+**Path consistency:** Config files mount vào Docker tại **cùng relative path** với host (project root). `backup.sh` (Docker) và `backup.ps1` (Windows) dùng cùng logic `${PROJECT_ROOT}/${filename}`. Không mount vào subfolder riêng — tránh path khác nhau giữa 2 môi trường.
+
+**docker-compose `environment:`:** Chỉ chứa vars gắn chặt volume mount (ví dụ `BACKUP_ROOT=/app/backups` ph���i match `./app_data/backups:/app/backups`). Nếu var có thể thay đổi độc lập → thuộc `.env`.
+
+**Xem:** `docs/config-guide.md` cho chi tiết đầy đủ.

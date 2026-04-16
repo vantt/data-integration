@@ -91,8 +91,10 @@ log "Backing up config files..."
 CONFIG_DST="${BACKUP_DIR}/config"
 mkdir -p "$CONFIG_DST"
 COPIED=0
+# Config files are mounted read-only at PROJECT_ROOT in Docker (same relative path as host)
+CONFIG_SRC="${PROJECT_ROOT}"
 for f in .env.docker docker-compose.yml Dockerfile.dataplatform Dockerfile.metabase; do
-    src="${PROJECT_ROOT}/${f}"
+    src="${CONFIG_SRC}/${f}"
     if [ -f "$src" ]; then
         cp "$src" "$CONFIG_DST/" && COPIED=$((COPIED + 1))
     fi
@@ -113,13 +115,13 @@ ls -1d [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9] 2
     | tail -n +$((KEEP_COUNT + 1)) \
     | while read -r old; do
         rm -rf "${BACKUP_ROOT}/${old}" && log "Deleted old backup: ${old}" || log "WARNING: could not delete ${old}"
-    done
+    done || true
 
 # Rotate logs
 for pattern in "backup-*.log" "restore-*.log"; do
     ls -1 ${pattern} 2>/dev/null | sort -r | tail -n +$((KEEP_COUNT + 1)) | while read -r old_log; do
         rm -f "${BACKUP_ROOT}/${old_log}" 2>/dev/null || true
-    done
+    done || true
 done
 
 ELAPSED=$(( SECONDS - START_SECONDS ))

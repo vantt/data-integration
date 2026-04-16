@@ -140,7 +140,7 @@ orchestration/                         # Dagster layer
 │   ├── {source}_assets.py             # Ingestion assets
 │   ├── dbt.py                         # dbt_assets
 │   ├── serving.py                     # serving_db asset
-│   └── utils.py                       # load_dlt_configuration, DLT_DIR
+│   └── utils.py                       # load_dlt_configuration, DLT_DIR, PROJECT_ROOT
 └── definitions.py                     # Jobs, schedules
 
 data_lake/                             # Runtime data

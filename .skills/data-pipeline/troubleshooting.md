@@ -23,7 +23,7 @@
 | Triệu chứng | Nguyên nhân | Fix |
 |-------------|-------------|-----|
 | `KeyError: sources.{source}.username` | Credentials không load | Kiểm tra `secrets.toml` có section, hoặc env var `SOURCES__{SOURCE}__USERNAME` |
-| `SOURCES__SAPO__DOMAIN is MISSING` (Dagster log) | `load_dlt_configuration()` chưa gọi | Gọi đầu asset; kiểm tra `ingestion/.env.local` tồn tại |
+| `SOURCES__SAPO__DOMAIN is MISSING` (Dagster log) | `load_dlt_configuration()` chưa gọi | Gọi đầu asset; kiểm tra `.env.local` (project root) hoặc `.env.docker` tồn tại |
 | Parquet lưu sai chỗ | `bucket_url` không set | Set `DESTINATION__FILESYSTEM__BUCKET_URL=file:///path/to/data_lake` |
 
 ## dlt — Parquet / Partition
@@ -92,7 +92,7 @@
 | `database is locked` trong logs | Concurrent DuckDB writes | Thêm `op_tags={"dagster/concurrency_key": "duckdb_lock"}` |
 | Asset fail với `ModuleNotFoundError` | `DLT_DIR` chưa trong `sys.path` | Kiểm tra `orchestration/assets/utils.py` → `DLT_DIR` đúng |
 | Asset không tạo parquet | `os.chdir(DLT_DIR)` thiếu | dlt resolve `.dlt/` từ CWD — phải `chdir` vào `ingestion/` |
-| Credentials không load | `load_dlt_configuration()` chưa gọi | Gọi đầu asset trước `os.chdir()` |
+| Credentials không load | `load_dlt_configuration()` chưa gọi | Gọi đầu asset trước `os.chdir()`; `.env.local` phải ở project root |
 | Serving asset chạy trước dbt xong | Thiếu `deps` | Thêm `deps=[sapo_dbt_assets]` trong `@asset` |
 | Asset `sapo_serving_db` fail silently | Script báo warning nhưng exit 0 | Kiểm tra logs output — script check `"error"` và `"[!]"` markers |
 | **Job exit quá chậm / timeout** | dlt hoặc dbt telemetry threads giữ process sống | Set `DLT_TELEMETRY_DISABLED=true` + `DBT_SEND_ANONYMOUS_USAGE_STATS=false` ở docker-compose hoặc shell wrapper (không đặt trong Python code) |

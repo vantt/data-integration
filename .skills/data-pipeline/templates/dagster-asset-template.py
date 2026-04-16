@@ -57,7 +57,7 @@ def {SOURCE}_{ENTITY}_batch_asset(context):
     if full_refresh:
         context.log.info("Full-refresh mode — resetting cursor, scanning all data")
 
-    # 1. Load credentials từ .env.local + secrets.toml
+    # 1. Load credentials từ .env.local (project root) + secrets.toml
     load_dlt_configuration(context.log.info)
 
     # 2. chdir vào ingestion/ để dlt resolve .dlt/config.toml đúng

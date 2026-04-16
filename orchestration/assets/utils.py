@@ -4,20 +4,27 @@ import sys
 # Add dlt dir to path
 # orchestration/assets/utils.py -> ../../ingestion
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-DLT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, "../../ingestion"))
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../.."))
+DLT_DIR = os.path.join(PROJECT_ROOT, "ingestion")
 
 if DLT_DIR not in sys.path:
     sys.path.append(DLT_DIR)
 
 def load_dlt_configuration(log_func=print):
     """
-    Manually load .env.local and secrets.toml into os.environ.
-    Includes handling for inline comments and robust fallback parsing.
+    Load .env.local (project root) and secrets.toml into os.environ.
+
+    Config layers (high → low precedence):
+      1. docker-compose environment:  — telemetry flags only
+      2. .env.docker (via env_file:)  — credentials + env-specific overrides
+      3. .env.local (project root)    — local dev overrides (loaded here)
+      4. secrets.toml                 — dlt credentials (loaded here, lower precedence)
+      5. config.toml                  — dlt defaults (read natively by dlt)
     """
     log_func(f"[Config Loader] Loading configuration from {DLT_DIR}")
-    
-    # 1. Load .env.local
-    env_local = os.path.join(DLT_DIR, ".env.local")
+
+    # 1. Load .env.local from project root
+    env_local = os.path.join(PROJECT_ROOT, ".env.local")
     if os.path.exists(env_local):
         log_func(f"[Config Loader] Found .env.local at {env_local}")
         with open(env_local, "r", encoding="utf-8") as f:
