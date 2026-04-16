@@ -184,7 +184,7 @@ python transformation/scripts/run_dbt.py --select +tag:otp   # OTP layer only
 
 # Orchestration
 dagster dev                                   # Start Dagster UI
-dagster job execute -j sapo_nightly_reconciliation_job
+dagster job execute -j transform_batch_nightly_job
 
 # Serving
 python scripts/provisioning/generate_serving_db.py

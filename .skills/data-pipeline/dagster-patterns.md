@@ -64,11 +64,11 @@ Kết quả: **không bao giờ** có 2 job trigger cùng một giây.
 Mỗi schedule check active runs của **higher-priority jobs** trước khi proceed:
 
 ```python
-def realtime_schedule(context):
+def ingest_sapo_realtime_schedule(context):
     priority_jobs = [
-        "sheets_sync_job",
-        "sapo_nightly_reconciliation_job",
-        "sapo_incremental_sync_job",
+        "ingest_sheets_sync_job",
+        "transform_batch_nightly_job",
+        "ingest_sapo_incremental_job",
     ]
     for job_name in priority_jobs:
         active = context.instance.get_runs(filters=RunsFilter(
@@ -205,8 +205,8 @@ def _has_active_run(context, job_name: str) -> str | None:
     return runs[0].run_id if runs else None
 
 @schedule(...)
-def realtime_schedule(context):
-    active = _has_active_run(context, "sapo_realtime_sync_job")
+def ingest_sapo_realtime_schedule(context):
+    active = _has_active_run(context, "ingest_sapo_realtime_job")
     if active:
         return SkipReason(f"previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -276,7 +276,7 @@ Total slots freed: 0
 
 ```python
 @sensor(
-    job_name="sheets_sync_job",
+    job_name="ingest_sheets_sync_job",
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,  # auto-on — sensor mới default STOPPED
 )
@@ -296,7 +296,7 @@ def sheets_modified_sensor(context):
     context.update_cursor(json.dumps(current))
     return RunRequest(
         run_key=f"sheets-{'-'.join(f'{n}:{current[n][:12]}' for n in sorted(changed))}",
-        tags={"concurrency_group": "dbt_rw", "source": "sheets_modified_sensor"},
+        tags={"concurrency_group": "dbt_rw", "source": "ingest_sheets_modified_sensor"},
     )
 ```
 
@@ -310,8 +310,8 @@ def sheets_modified_sensor(context):
 
 ```python
 _sources = AssetSelection.assets(sheets_targets_asset) | AssetSelection.assets(sheets_marketing_spend_asset)
-sheets_sync_job = define_asset_job(
-    name="sheets_sync_job",
+ingest_sheets_sync_job = define_asset_job(
+    name="ingest_sheets_sync_job",
     selection=_sources | _sources.downstream() | AssetSelection.assets(serving.sapo_serving_db),
     tags={"concurrency_group": "dbt_rw"},
 )
@@ -329,6 +329,8 @@ docker logs --since 5m data_platform 2>&1 | grep -iE "sensor" | grep -iE "error|
 **Template:** `.skills/data-pipeline/templates/dagster-reactive-sensor-template.py` — copy, replace 3 markers, done.
 
 **Chi tiết:** xem `lessons-learned.md` L21 (content-hash sensor), L22 (`AssetSelection.downstream()`), L23 (`get_run_records()` vs `get_runs()` — sensor `DagsterRun.start_time` trap).
+
+**Sensor rename map:** `sheets_modified_sensor` → `ingest_sheets_modified_sensor`; `stuck_run_sensor` → `health_alert_stuckrun_sensor`; `lark_failure_sensor` → `health_alert_failure_sensor`.
 
 ---
 
@@ -366,16 +368,16 @@ for rec in records:
 
 ```python
 # Nightly — incremental (default behavior)
-sapo_nightly_reconciliation_job = define_asset_job(
-    name="sapo_nightly_reconciliation_job",
+transform_batch_nightly_job = define_asset_job(
+    name="transform_batch_nightly_job",
     selection=nightly_selection,
     tags={"concurrency_group": "dbt_rw"},
     # KHÔNG tag full_refresh — assets chạy incremental
 )
 
 # Manual full-refresh — one-click launch từ Dagster UI
-sapo_full_refresh_job = define_asset_job(
-    name="sapo_full_refresh_job",
+transform_batch_fullrefresh_job = define_asset_job(
+    name="transform_batch_fullrefresh_job",
     selection=nightly_selection,  # cùng assets
     tags={
         "concurrency_group": "dbt_rw",
@@ -452,7 +454,7 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **Sensor** targeting specific job → job phải có trong `Definitions(jobs=[...])` — không auto-discover từ schedules
 - [ ] **Sensor** đụng run timing → dùng `get_run_records()`, KHÔNG `get_runs()` (`DagsterRun` không có `start_time`) — xem Lesson 8
 - [ ] **Sau mỗi edit sensor/definitions.py** → `reloadRepositoryLocation` via GraphQL + verify log daemon không có sensor error
-- [ ] **Full-refresh** = `sapo_full_refresh_job` (manual, tag baked in), KHÔNG tag nightly schedule — xem Lesson 9
+- [ ] **Full-refresh** = `transform_batch_fullrefresh_job` (manual, tag baked in), KHÔNG tag nightly schedule — xem Lesson 9
 - [ ] Batch source functions wire `full_refresh` param từ entry-point → source → resource (nếu thiếu: silently ignored)
 - [ ] Job cascade "source → downstream" → dùng `_sources | _sources.downstream()`, không dùng full `all_dbt_assets`
 
@@ -465,10 +467,10 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 | `orchestration/assets/dbt.py` | `SapoDbtTranslator` với upstream injection + mart dir pre-create |
 | `orchestration/definitions.py` | Schedule offset + priority yielding logic + explicit `jobs=[...]` cho sensors |
 | `orchestration/assets/serving.py` | Serving asset với `deps=[sapo_dbt_assets]` |
-| `orchestration/sensors/sheets_modified_sensor.py` | Reactive content-hash sensor — xem Lesson 7 |
-| `orchestration/sensors/stuck_run_alerter.py` | Hang detector dùng `get_run_records()` — xem Lesson 8 |
-| `orchestration/sensors/failure_alerting.py` | Lark alert cho terminal FAILURE runs |
+| `orchestration/sensors/sheets_modified_sensor.py` | `ingest_sheets_modified_sensor` — Reactive content-hash sensor — xem Lesson 7 |
+| `orchestration/sensors/stuck_run_alerter.py` | `health_alert_stuckrun_sensor` — Hang detector dùng `get_run_records()` — xem Lesson 8 |
+| `orchestration/sensors/failure_alerting.py` | `health_alert_failure_sensor` — Lark alert cho terminal FAILURE runs |
 | `.skills/data-pipeline/templates/dagster-reactive-sensor-template.py` | Copy-paste starter cho reactive sensor mới |
-| `orchestration/definitions.py` | `sapo_nightly_reconciliation_job` + `sapo_full_refresh_job` definitions — xem Lesson 9 |
+| `orchestration/definitions.py` | `transform_batch_nightly_job` + `transform_batch_fullrefresh_job` definitions — xem Lesson 9 |
 | `docker-compose.yml` | Telemetry env vars (line 20-21) + auto-unstick on boot (line 33) |
 | `run_dagster.ps1` | Windows local telemetry vars (line 10-11) |

@@ -1,6 +1,6 @@
 ---
 title: "CEO Weekly Pulse (Redesign)"
-archetype: Executive Pulse
+archetype: Operational Cockpit
 status: final
 last_modified: 2026-04-02
 domain_refs: [domains/sales.md, domains/customer.md]
@@ -15,7 +15,7 @@ domain_refs: [domains/sales.md, domains/customer.md]
 - **Primary question:** "Tuan qua kinh doanh co on-track khong? Dang ahead hay behind target thang?"
 - **Decision enabled:** Can thiep khan cap (giam gia, tang marketing) hay tiep tuc nhu hien tai
 - **Comparison frame:** WoW (this week vs previous week) + MTD vs Target
-- **Archetype:** Executive Pulse
+- **Archetype:** Operational Cockpit (3 views, ~27 cards, detail table — exceeds Executive Pulse limits)
 - **Domain references:** [domains/sales.md](../domains/sales.md)
 
 ### Redesign Rationale
@@ -42,7 +42,7 @@ Dashboard hien tai co nhieu van de:
 
 | Filter | Type | Default | Applies to | Rationale |
 |--------|------|---------|------------|-----------|
-| *(Khong co — Executive Pulse can zero-interaction)* | | | | |
+| *(Khong co — zero-interaction CEO view)* | | | | |
 
 ### Views
 
@@ -128,7 +128,7 @@ Multi-view — 3 views:
 - [x] Action Map day du cho cards co signal quan trong
 - [x] Hero card o row dau tien, noi bat nhat (one-third, prominent)
 - [x] Row widths sum = full-width (18 cols)
-- [x] Density: Executive Pulse — 3 tabs (note: exceeds 2-tab guideline, justified by 3 distinct audiences within CEO view)
+- [x] Density: Operational Cockpit — 3 tabs (within 4-tab cockpit limit), ~27 cards across tabs
 - [x] Moi view co it nhat 1 section divider
 - [x] Color tokens nhat quan — khong hex codes
 - [x] Size hierarchy ro: hero > supporting > detail

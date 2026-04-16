@@ -155,9 +155,9 @@ python scripts/provisioning/generate_serving_db.py
 
 | Job | Schedule | Description |
 |-----|----------|-------------|
-| `sapo_realtime_sync_job` | Every 1 min | Webhook processing |
-| `sapo_incremental_sync_job` | Every 10 min | History log gap filling |
-| `sapo_nightly_reconciliation_job` | 04:00 AM | Full batch reconciliation |
+| `ingest_sapo_realtime_job` | Every 1 min | Webhook processing |
+| `ingest_sapo_incremental_job` | Every 10 min | History log gap filling |
+| `transform_batch_nightly_job` | 04:00 AM | Full batch reconciliation |
 
 ---
 

@@ -270,7 +270,7 @@ dagster-daemon status
 dagster-daemon run &
 
 # Or force manual execution
-dagster schedule kick sapo_realtime_sync_job
+dagster schedule kick ingest_sapo_realtime_schedule
 ```
 
 ---

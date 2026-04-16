@@ -161,9 +161,9 @@ Hệ thống mặc định chạy tự động. Người vận hành giám sát 
   ./run_dagster.ps1
   ```
 - **Các Job Chính**:
-  - `sapo_realtime_sync_job` (1 phút/lần): Ingestion Webhook + Transformation (Staging). Đảm bảo đơn mới lên báo cáo ngay lập tức.
-  - `sapo_incremental_sync_job` (10 phút/lần): Ingestion History Log + Transformation (Staging). Bắt các thay đổi bị miss bởi webhook.
-  - `sapo_nightly_reconciliation_job` (Hàng ngày - 4:00 AM): Ingestion Full Batch (Orders/Customers/Accounts) + Full Transformation (All Layers). Đồng bộ lại toàn bộ dữ liệu chuẩn.
+  - `ingest_sapo_realtime_job` (1 phút/lần): Ingestion Webhook + Transformation (Staging). Đảm bảo đơn mới lên báo cáo ngay lập tức.
+  - `ingest_sapo_incremental_job` (10 phút/lần): Ingestion History Log + Transformation (Staging). Bắt các thay đổi bị miss bởi webhook.
+  - `transform_batch_nightly_job` (Hàng ngày - 4:00 AM): Ingestion Full Batch (Orders/Customers/Accounts) + Full Transformation (All Layers). Đồng bộ lại toàn bộ dữ liệu chuẩn.
 
 ### Kiểm tra trạng thái
 

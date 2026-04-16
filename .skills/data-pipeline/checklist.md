@@ -132,9 +132,9 @@ Tạo nếu consolidate multiple sources:
 - [ ] Đăng ký asset trong `orchestration/definitions.py`:
   - Thêm vào `load_assets_from_modules([..., {source}_assets])`
   - Chọn job phù hợp:
-    - `sapo_nightly_reconciliation_job` → batch sync (chạy 04:00 AM)
-    - `sapo_incremental_sync_job` → history log, event polling (mỗi 10 phút)
-    - `sapo_realtime_sync_job` → webhook consumer (mỗi 3 phút)
+    - `transform_batch_nightly_job` → batch sync (chạy 04:00 AM)
+    - `ingest_sapo_incremental_job` → history log, event polling (mỗi 10 phút)
+    - `ingest_sapo_realtime_job` → webhook consumer (mỗi 3 phút)
 - [ ] Nếu asset write DuckDB: thêm `op_tags={"dagster/concurrency_key": "duckdb_lock"}`
 - [ ] Verify asset DAG: `{source}_ingestion_asset → dbt_assets → serving_db_asset`
 

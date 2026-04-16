@@ -412,8 +412,8 @@ def _has_active_run(context, job_name: str) -> str | None:
     return runs[0].run_id if runs else None
 
 @schedule(...)
-def realtime_schedule(context):
-    active = _has_active_run(context, "sapo_realtime_sync_job")
+def ingest_sapo_realtime_schedule(context):
+    active = _has_active_run(context, "ingest_sapo_realtime_job")
     if active:
         return SkipReason(f"previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -482,11 +482,11 @@ def _fetch_hash(url: str) -> str | None:
         return None
 
 @sensor(
-    job_name="sheets_sync_job",
+    job_name="ingest_sheets_sync_job",
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,  # auto-on sau deploy
 )
-def sheets_modified_sensor(context):
+def ingest_sheets_modified_sensor(context):
     prev = json.loads(context.cursor) if context.cursor else {}
     current, errors = {}, []
     for name, url in SHEET_URLS.items():
@@ -511,7 +511,7 @@ def sheets_modified_sensor(context):
     # run_key chứa hash → Dagster tự dedup nếu tick lại cùng hash
     return RunRequest(
         run_key="sheets-" + "-".join(f"{n}:{current[n][:12]}" for n in sorted(changed)),
-        tags={"concurrency_group": "dbt_rw", "source": "sheets_modified_sensor"},
+        tags={"concurrency_group": "dbt_rw", "source": "ingest_sheets_modified_sensor"},
     )
 ```
 
@@ -538,8 +538,8 @@ _sheets_sources = (
     | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset)
 )
 
-sheets_sync_job = define_asset_job(
-    name="sheets_sync_job",
+ingest_sheets_sync_job = define_asset_job(
+    name="ingest_sheets_sync_job",
     selection=(
         _sheets_sources
         | _sheets_sources.downstream()           # staging + marts phụ thuộc
@@ -556,7 +556,7 @@ Kết quả resolve: **7 assets** (2 raw sheets + 2 staging + 2 facts + 1 servin
 ```python
 from orchestration import definitions
 d = definitions.defs
-job = d.get_repository_def().get_job("sheets_sync_job")
+job = d.get_repository_def().get_job("ingest_sheets_sync_job")
 for k in sorted(str(x) for x in job.asset_layer.executable_asset_keys):
     print(k)
 ```
@@ -586,7 +586,7 @@ for rec in records:
         age = datetime.now(timezone.utc) - datetime.fromtimestamp(rec.start_time, tz=timezone.utc)
 ```
 
-**Lesson meta:** Sensor code phải được verify bằng **live tick** sau deploy — không chỉ dựa vào unit test. `stuck_run_sensor` silent-fail trong cả tháng vì không ai check log sensor daemon. Sau khi fix, thêm vào checklist verify post-deploy:
+**Lesson meta:** Sensor code phải được verify bằng **live tick** sau deploy — không chỉ dựa vào unit test. `health_alert_stuckrun_sensor` silent-fail trong cả tháng vì không ai check log sensor daemon. Sau khi fix, thêm vào checklist verify post-deploy:
 
 ```bash
 docker logs data_platform 2>&1 | grep -iE "sensor" | grep -iE "error|traceback" | head
@@ -777,16 +777,16 @@ QUALIFY ROW_NUMBER() OVER (
 
 ```python
 # Job 1: Nightly — incremental từ cursor cuối cùng
-sapo_nightly_reconciliation_job = define_asset_job(
-    name="sapo_nightly_reconciliation_job",
+transform_batch_nightly_job = define_asset_job(
+    name="transform_batch_nightly_job",
     selection=...,
     # KHÔNG có full_refresh tag — chạy incremental bình thường
     tags={"concurrency_group": "dbt_rw"},
 )
 
 # Job 2: Manual full-refresh — launch thủ công khi cần reload lại toàn bộ
-sapo_full_refresh_job = define_asset_job(
-    name="sapo_full_refresh_job",
+transform_batch_fullrefresh_job = define_asset_job(
+    name="transform_batch_fullrefresh_job",
     selection=...,
     tags={
         "concurrency_group": "dbt_rw",
@@ -817,7 +817,7 @@ nightly run sau đó:
 
 Cả hai job dùng cùng `pipeline_name` → share cùng dlt state file → cursor liên tục giữa full-refresh và incremental.
 
-**Khi nào dùng `sapo_full_refresh_job`:**
+**Khi nào dùng `transform_batch_fullrefresh_job`:**
 - Lần đầu bootstrap data
 - Phát hiện data bị thiếu / corrupt
 - Sau khi thêm field mới vào source cần backfill

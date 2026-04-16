@@ -137,4 +137,4 @@ Copy .env.example → .env.local, fill in credentials (adjust paths to Windows)
 
 ## Backup
 
-Config files (`.env.docker`, `docker-compose.yml`, Dockerfiles) are mounted read-only at `/app/` inside Docker and backed up daily by `platform_backup_job` to `$BACKUP_ROOT/{timestamp}/config/`.
+Config files (`.env.docker`, `docker-compose.yml`, Dockerfiles) are mounted read-only at `/app/` inside Docker and backed up daily by `maintain_backup_platform_job` to `$BACKUP_ROOT/{timestamp}/config/`.

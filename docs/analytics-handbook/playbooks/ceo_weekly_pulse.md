@@ -5,7 +5,7 @@
 - **Audience:** CEO, Co-Founders
 - **Goal:** 5-minute weekly check-in — answer "Are we on track this week?" across Revenue, Channels, and Customer Health.
 - **Cadence:** Every Monday morning, reviewing the previous Mon–Sun.
-- **Archetype:** Executive Pulse
+- **Archetype:** Operational Cockpit
 - **Collection:** `Executive`
 - **Design Spec:** [CEO Weekly Pulse (Redesign)](../designs/ceo_weekly_pulse.md)
 
@@ -45,7 +45,7 @@ CEO chuyen sang tab nay khi muon kiem tra customer health va red flags.
 
 ## Filters
 
-- **No interactive filters** — Executive Pulse can zero-interaction. CEO mo va doc.
+- **No interactive filters** — zero-interaction. CEO mo va doc.
 - **Business constraint:** Loai bo don kenh US (internal, 100% discount).
 
 ## Data Lineage

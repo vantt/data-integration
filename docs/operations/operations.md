@@ -57,15 +57,15 @@ dagster job list --running
 
 | Job | Schedule | Timezone | Description |
 |-----|----------|----------|-------------|
-| `sapo_realtime_sync_job` | */1 * * * * | Asia/Ho_Chi_Minh | Webhook processing |
-| `sapo_incremental_sync_job` | */10 * * * * | Asia/Ho_Chi_Minh | History log gap filling |
-| `sapo_nightly_reconciliation_job` | 0 4 * * * | Asia/Ho_Chi_Minh | Full batch + refresh |
-| `sapo_targets_sync_job` | Manual | - | Google Sheets targets |
+| `ingest_sapo_realtime_job` | */1 * * * * | Asia/Ho_Chi_Minh | Webhook processing |
+| `ingest_sapo_incremental_job` | */10 * * * * | Asia/Ho_Chi_Minh | History log gap filling |
+| `transform_batch_nightly_job` | 0 4 * * * | Asia/Ho_Chi_Minh | Full batch + refresh |
+| `ingest_sheets_sync_job` | Manual | - | Google Sheets targets |
 
 ### Schedule Dependencies
 
 ```
-sapo_nightly_reconciliation_job (04:00 AM)
+transform_batch_nightly_job (04:00 AM)
 ├── sapo_orders_batch_asset
 ├── sapo_customers_batch_asset
 ├── sapo_accounts_batch_asset
@@ -78,7 +78,7 @@ sapo_nightly_reconciliation_job (04:00 AM)
 
 ```bash
 # Run specific job
-dagster job execute -j sapo_nightly_reconciliation_job
+dagster job execute -j transform_batch_nightly_job
 
 # Run specific asset
 dagster asset materialize -a sapo_orders_batch_asset
@@ -95,8 +95,8 @@ python transformation/scripts/run_dbt.py run --select +tag:mart
 # 2. Toggle schedule on/off
 
 # Or via CLI:
-dagster schedule stop sapo_realtime_sync_job
-dagster schedule start sapo_realtime_sync_job
+dagster schedule stop ingest_sapo_realtime_schedule
+dagster schedule start ingest_sapo_realtime_schedule
 ```
 
 ---
@@ -230,7 +230,7 @@ du -sh data_lake/sapo_raw/*/ingest_method=*/* | sort -hr | head -20
 **Diagnosis:**
 ```bash
 # Check consumer status
-dagster job list --running | grep realtime
+dagster job list --running | grep ingest_sapo_realtime
 
 # Check D1 queue size
 curl -H "Authorization: Bearer $CF_TOKEN" \
@@ -240,7 +240,7 @@ curl -H "Authorization: Bearer $CF_TOKEN" \
 **Resolution:**
 ```bash
 # Restart webhook consumer
-dagster job execute -j sapo_realtime_sync_job
+dagster job execute -j ingest_sapo_realtime_job
 
 # If D1 is full, increase poll limit
 python ingestion/run_webhook_consumer.py --batch-size 5000
@@ -389,7 +389,7 @@ python scripts/provisioning/generate_serving_db.py
 
 # Restart components
 docker restart metabase
-dagster job execute -j sapo_nightly_reconciliation_job
+dagster job execute -j transform_batch_nightly_job
 
 # View logs
 tail -f transformation/logs/dbt.log
