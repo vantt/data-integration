@@ -2,6 +2,7 @@ dlt[deltalake,parquet]
 playwright
 requests
 tenacity
+python-dotenv
 duckdb
 dagster
 dagster-webserver

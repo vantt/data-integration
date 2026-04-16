@@ -1,6 +1,8 @@
 import os
 import sys
 
+from dotenv import load_dotenv
+
 # Add dlt dir to path
 # orchestration/assets/utils.py -> ../../ingestion
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -10,126 +12,19 @@ DLT_DIR = os.path.join(PROJECT_ROOT, "ingestion")
 if DLT_DIR not in sys.path:
     sys.path.append(DLT_DIR)
 
+
 def load_dlt_configuration(log_func=print):
-    """
-    Load .env.local (project root) and secrets.toml into os.environ.
+    """Load env vars for dlt pipelines. Idempotent, safe for both envs.
 
-    Config layers (high → low precedence):
-      1. docker-compose environment:  — telemetry flags only
-      2. .env.docker (via env_file:)  — credentials + env-specific overrides
-      3. .env.local (project root)    — local dev overrides (loaded here)
-      4. secrets.toml                 — dlt credentials (loaded here, lower precedence)
-      5. config.toml                  — dlt defaults (read natively by dlt)
-    """
-    log_func(f"[Config Loader] Loading configuration from {DLT_DIR}")
+    Docker:  env vars already injected via docker-compose env_file → no-op.
+    Local:   loads .env.local (project root) into os.environ.
 
-    # 1. Load .env.local from project root
+    secrets.toml and config.toml are read natively by dlt when assets
+    chdir to DLT_DIR before running pipelines — no manual flatten needed.
+    """
     env_local = os.path.join(PROJECT_ROOT, ".env.local")
-    if os.path.exists(env_local):
-        log_func(f"[Config Loader] Found .env.local at {env_local}")
-        with open(env_local, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"): continue
-
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    value = value.strip()
-
-                    # Strip inline comments: KEY=value # comment OR KEY=value#comment
-                    # But preserve # inside quoted values: KEY="val#ue"
-                    if value and value[0] in ('"', "'"):
-                        # Quoted value — find closing quote, ignore # inside
-                        quote_char = value[0]
-                        end_idx = value.find(quote_char, 1)
-                        if end_idx != -1:
-                            value = value[1:end_idx]
-                        else:
-                            value = value[1:]  # unclosed quote, strip opening
-                    else:
-                        # Unquoted — strip at first # (with or without leading space)
-                        comment_idx = value.find("#")
-                        if comment_idx != -1:
-                            value = value[:comment_idx].rstrip()
-
-                    os.environ[key] = value
-                    # log_func(f"  [ENV] Loaded {key}")
-
-    # 2. Load secrets.toml
-    secrets_path = os.path.join(DLT_DIR, ".dlt", "secrets.toml")
-    if os.path.exists(secrets_path):
-        log_func(f"[Config Loader] Found secrets.toml at {secrets_path}")
-        data = None
-        try:
-            import tomllib
-            with open(secrets_path, "rb") as f:
-                data = tomllib.load(f)
-        except ImportError:
-            try:
-                import tomli
-                with open(secrets_path, "rb") as f:
-                    data = tomli.load(f)
-            except ImportError:
-                 log_func("[Config Loader] Warning: Neither tomllib nor tomli found. Using manual fallback.")
-
-        if data:
-            def flatten_config(d, prefix=""):
-                for k, v in d.items():
-                    key_upper = k.upper()
-                    new_prefix = f"{prefix}__{key_upper}" if prefix else key_upper
-                    if isinstance(v, dict):
-                        flatten_config(v, new_prefix)
-                    else:
-                        if new_prefix not in os.environ:
-                            os.environ[new_prefix] = str(v)
-                            # log_func(f"  [TOML] Loaded {new_prefix}")
-
-            flatten_config(data)
-        else:
-            # Improved Fallback Manual Parsing
-            current_section = ""
-            with open(secrets_path, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if not line or line.startswith("#"): 
-                        continue
-                    
-                    # Handle inline comments
-                    if " #" in line:
-                        line = line.split(" #", 1)[0].strip()
-                    
-                    if line.startswith("[") and line.endswith("]"):
-                        # [sources.sapo] -> SOURCES__SAPO
-                        raw_section = line[1:-1]
-                        current_section = raw_section.replace(".", "__").upper()
-                        continue
-                        
-                    if "=" in line:
-                        k, v = line.split("=", 1)
-                        k = k.strip().upper()
-                        v = v.strip()
-                        v = v.strip('"').strip("'")
-                        
-                        if current_section:
-                            env_key = f"{current_section}__{k}"
-                        else:
-                            env_key = k
-                            
-                        if env_key not in os.environ:
-                             os.environ[env_key] = v
-                             # log_func(f"  [FALLBACK] Loaded {env_key}")
-
-    # Debug: Check if critical Sapo config is loaded
-    sapo_domain = os.environ.get("SOURCES__SAPO__DOMAIN")
-    sapo_user = os.environ.get("SOURCES__SAPO__USERNAME")
-    
-    if sapo_domain:
-        log_func(f"[Config Loader] Verified SOURCES__SAPO__DOMAIN: {sapo_domain}")
+    loaded = load_dotenv(env_local, override=False)
+    if loaded:
+        log_func(f"[Config] Loaded .env.local from {env_local}")
     else:
-        log_func("[Config Loader] ❌ SOURCES__SAPO__DOMAIN is MISSING in os.environ!")
-        
-    if sapo_user:
-         log_func(f"[Config Loader] Verified SOURCES__SAPO__USERNAME: Set")
-    else:
-         log_func("[Config Loader] ❌ SOURCES__SAPO__USERNAME is MISSING in os.environ!")
+        log_func("[Config] No .env.local — using docker-injected env vars")
