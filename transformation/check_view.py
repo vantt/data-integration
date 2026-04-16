@@ -4,7 +4,7 @@ import sys
 
 try:
     import os
-    data_lake_path = os.environ.get('DBT_DATA_LAKE_PATH', '/app/data_lake')
+    data_lake_path = os.environ.get('DBT_DATA_LAKE_PATH', '/app/var/data_lake')
     db_path = os.path.join(data_lake_path, 'serving', 'olap.duckdb')
     conn = duckdb.connect(db_path)
     views = ['dim_channels', 'fact_sales']

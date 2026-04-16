@@ -101,6 +101,8 @@ Xem `checklist.md` — thực hiện theo 6 phase.
 
 ## Key Paths
 
+### Local Development
+
 ```
 ingestion/                             # dlt pipeline layer
 ├── run_{entity}_{method}.py           # Entry points
@@ -131,6 +133,7 @@ transformation/                        # dbt layer
 scripts/                               # Project-level scripts
 ├── provisioning/
 │   └── generate_serving_db.py         # Rolling → Rolling Self-Refresh Views + GC
+│   └── bootstrap_serving_views.py     # Alternative: safer serving view gen
 ├── ensure_dbt_directories.py          # Pre-create rolling/ dirs
 ├── clean_dlt_state.py                 # Drop pending dlt packages
 └── debug_duckdb.py                    # Query debugging
@@ -143,7 +146,7 @@ orchestration/                         # Dagster layer
 │   └── utils.py                       # load_dlt_configuration, DLT_DIR, PROJECT_ROOT
 └── definitions.py                     # Jobs, schedules
 
-data_lake/                             # Runtime data
+data_lake/                             # Runtime data (LOCAL)
 ├── {entity}/ingest_method=*/          # Raw Parquet (dlt output)
 ├── sapo_warehouse.duckdb              # dbt working DB
 ├── export/marts/rolling/              # dbt mart exports
@@ -151,9 +154,70 @@ data_lake/                             # Runtime data
 └── serving/olap.duckdb                # Rolling Self-Refresh Views (Metabase reads)
 ```
 
+### Docker Volume Mapping
+
+**Convention:** Code at `/app/`, Data at `/app/var/` (inside container).
+
+```
+Host (app_data/)                      Container (/app/var/)
+├── data_lake/                    →   /app/var/data_lake
+├── dagster_home/                 →   /app/var/dagster_home
+├── logs/                         →   /app/var/logs
+├── backups/                      →   /app/var/backups
+└── input_source/                 →   /app/var/input_source
+
+Host (code)                            Container (/app/)
+├── transformation/               →   /app/transformation
+├── ingestion/                    →   /app/ingestion
+├── orchestration/                →   /app/orchestration
+└── scripts/                      →   /app/scripts
+```
+
+**Path Resolution Pattern:**
+
+Python scripts use env vars with Docker defaults:
+
+```python
+# Example: get data lake path
+data_lake_path = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
+```
+
+Env vars set in container via docker-compose `environment:` section or `.env.docker` file.
+
 ---
 
 ## Critical Rules
+
+### Serving Views & Absolute Paths
+
+**⚠️ CRITICAL AFTER DOCKER MOUNT CHANGES:**
+
+Serving views (`olap.duckdb`) bake absolute paths into their SQL. If you change Docker volume mount paths or directory structure:
+
+1. **Stop Metabase first** (releases DuckDB lock):
+   ```bash
+   docker compose down
+   ```
+
+2. **Regenerate serving views** on the data_platform container:
+   ```bash
+   docker compose up -d data_platform
+   docker compose exec data_platform python scripts/provisioning/bootstrap_serving_views.py
+   ```
+
+3. **Restart Metabase** (will connect to updated views):
+   ```bash
+   docker compose up -d metabase
+   ```
+
+**Why?** Views contain embedded paths like:
+```sql
+CREATE VIEW dim_customers AS SELECT * FROM '/app/var/data_lake/export/marts/rolling/dim_customers/*.parquet'
+```
+
+If `/app/var/data_lake` changes to `/app/data_lake`, view paths break and Metabase queries fail.
+
+### Other Rules
 
 1. **Mart models MUST have** `location="{{ get_rolling_location() }}"` — nếu thiếu, `generate_serving_db.py` báo "Empty folder" và drop view
 2. **src_ phải incremental** với `_dlt_load_id` filter — xử lý late-arriving events (dùng `_dlt_load_id`, không phải `event_timestamp`; xem Rule 14)

@@ -40,12 +40,19 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 │         │                │                     │                 │
 │         ▼                ▼                     ▼                 │
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │              data_lake/ (Local Filesystem)                   ││
-│  │  ├── sapo_raw/     (Parquet - Sapo API Data)                 ││
-│  │  ├── shopee_raw/   (Parquet - Shopee File Drop)  [NEW]      ││
-│  │  ├── misa_raw/     (Parquet - MISA File Drop)    [NEW]      ││
-│  │  ├── export/marts/ (Parquet - Transformed)                  ││
-│  │  └── serving/      (DuckDB - Views)                         ││
+│  │        Docker Volume: /app/var/ (Data) + /app/ (Code)      ││
+│  │  Data (/app/var/):          Code (/app/):                  ││
+│  │  ├── data_lake/             ├── transformation/             ││
+│  │  │   ├── sapo_raw/          ├── ingestion/                 ││
+│  │  │   ├── shopee_raw/        ├── orchestration/             ││
+│  │  │   ├── misa_raw/          └── scripts/                   ││
+│  │  │   ├── export/marts/                                      ││
+│  │  │   └── serving/           Local Host Bind:               ││
+│  │  ├── dagster_home/          ./app_data/data_lake          ││
+│  │  ├── logs/                  ./app_data/dagster_home       ││
+│  │  ├── backups/               ./app_data/logs                ││
+│  │  └── input_source/          ./app_data/backups             ││
+│  │                             ./app_data/input_source        ││
 │  └─────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
                               │

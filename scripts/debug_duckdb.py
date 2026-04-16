@@ -2,7 +2,7 @@ import duckdb
 import os
 
 import os
-data_lake_path = os.environ.get('DBT_DATA_LAKE_PATH', '/app/data_lake')
+data_lake_path = os.environ.get('DBT_DATA_LAKE_PATH', '/app/var/data_lake')
 db_path = os.path.join(data_lake_path, 'sapo_warehouse.duckdb')
 print(f"Connecting to {db_path}...")
 

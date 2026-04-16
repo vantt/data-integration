@@ -323,7 +323,7 @@ def compose_card_fields(rows: list[DigestRow]) -> tuple[dict, str]:
         if dr.zero_streak >= 2:
             val += f" · ⚠ {dr.zero_streak}x zero-rows"
 
-        if run_link:
+        if run_link and dr.status in ("yellow", "red"):
             val += f" · run: {run_link}"
 
         action = _recommend(dr)

@@ -24,22 +24,11 @@ from dagster import (
     sensor,
 )
 
-# --- Paths (resolved inside Docker container) ---
-_PROJECT_ROOT = Path(os.environ.get("DAGSTER_HOME", "/app")).parent
-_SHOPEE_INPUT_DIR = os.environ.get(
-    "SHOPEE_INPUT_DIR",
-    str(_PROJECT_ROOT / "app_data" / "input_source" / "shopee"),
-)
-_MISA_INPUT_DIR = os.environ.get(
-    "MISA_INPUT_DIR",
-    str(_PROJECT_ROOT / "app_data" / "input_source" / "misa-amis"),
-)
-
-# Fallback for Docker where app_data is mounted at /app/.. or similar
-if not os.path.isdir(_SHOPEE_INPUT_DIR):
-    _SHOPEE_INPUT_DIR = "/app/app_data/input_source/shopee"
-if not os.path.isdir(_MISA_INPUT_DIR):
-    _MISA_INPUT_DIR = "/app/app_data/input_source/misa-amis"
+# --- Paths ---
+# Env var if set, otherwise Docker default (/app/var/input_source/).
+# Local dev: set SHOPEE_INPUT_DIR / MISA_INPUT_DIR in .env.local.
+_SHOPEE_INPUT_DIR = os.environ.get("SHOPEE_INPUT_DIR", "/app/var/input_source/shopee")
+_MISA_INPUT_DIR = os.environ.get("MISA_INPUT_DIR", "/app/var/input_source/misa-amis")
 
 
 def _get_max_mtime(input_dir: str) -> float:

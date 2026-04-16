@@ -12,9 +12,10 @@ File-drop recon reads ingestion_health.duckdb only — no xlsx re-parsing at rec
 from __future__ import annotations
 
 import logging
+import os
 import uuid
 from datetime import datetime, timezone, timedelta
-from pathlib import Path
+
 from typing import Optional
 
 import duckdb
@@ -32,8 +33,8 @@ logger = logging.getLogger(__name__)
 _WINDOW_DAYS = 7
 
 # Raw DuckDB path (MISA/Shopee parquet-backed tables live here via dlt)
-_PROJECT_ROOT = Path(__file__).resolve().parents[3]
-_RAW_DB_PATH = str(_PROJECT_ROOT / "app_data" / "data_lake" / "raw" / "raw.duckdb")
+_DATA_LAKE = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
+_RAW_DB_PATH = os.path.join(_DATA_LAKE, "raw", "raw.duckdb")
 
 # asset_key strings used by Phase 1 ingestion assets in health DB
 _SHOPEE_ASSET_KEY = "shopee/shopee_income_file_drop_asset"

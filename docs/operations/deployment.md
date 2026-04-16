@@ -123,12 +123,31 @@ raise_on_failed_jobs = true
 
 #### 3.3 Environment Variables (`.env`)
 
-Create `.env` at repository root:
+Create `.env` at repository root for LOCAL DEVELOPMENT:
 
 ```bash
-# Data paths
+# Data paths (local filesystem, not Docker)
 DATA_LAKE_PATH=D:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake
 DBT_EXPORT_PATH=D:/_1.FWG_PARA/1.Projects/dev/dataware_house/data-integration2/data_lake/export/marts
+
+# Metabase
+METABASE_URL=http://127.0.0.1:3000
+METABASE_API_KEY=your_metabase_api_key
+
+# Timezone
+TZ=Asia/Ho_Chi_Minh
+```
+
+For DOCKER DEPLOYMENT, create `.env.docker`:
+
+```bash
+# Docker paths (use /app/var/ for data, /app/ for code)
+DBT_DATA_LAKE_PATH=/app/var/data_lake
+DBT_EXPORT_PATH=/app/var/data_lake/export/marts
+DESTINATION__FILESYSTEM__BUCKET_URL=file:///app/var/data_lake
+BACKUP_ROOT=/app/var/backups
+DAGSTER_HOME=/app/var/dagster_home
+SHOPEE_INPUT_DIR=/app/var/input_source/shopee
 
 # Metabase
 METABASE_URL=http://127.0.0.1:3000
@@ -223,15 +242,37 @@ curl https://your-worker.workers.dev/health
 
 ### Deploy Metabase (Docker)
 
-```bash
-# From repository root
-docker build -t metabase-duckdb .
+**Volume Structure:**
 
-# Run container
+Docker containers mount data directories at `/app/var/` and code at `/app/`:
+
+```bash
+# docker-compose.yml volume mounts:
+volumes:
+  # Code (stateless, git-tracked)
+  - ./transformation:/app/transformation
+  - ./ingestion:/app/ingestion
+  - ./orchestration:/app/orchestration
+  - ./scripts:/app/scripts
+  # Data (stateful, persistent) — grouped under /app/var/
+  - ./app_data/data_lake:/app/var/data_lake
+  - ./app_data/dagster_home:/app/var/dagster_home
+  - ./app_data/logs:/app/var/logs
+  - ./app_data/backups:/app/var/backups
+  - ./app_data/input_source:/app/var/input_source
+```
+
+**Run Metabase:**
+
+```bash
+# From repository root (using docker-compose)
+docker compose up -d metabase
+
+# OR: standalone container
 docker run -d \
   --name metabase \
   -p 3000:3000 \
-  -v ./data_lake:/data_lake \
+  -v ./app_data/data_lake:/app/var/data_lake \
   metabase-duckdb
 
 # Check logs
@@ -244,8 +285,26 @@ docker logs -f metabase
 2. Complete initial setup wizard
 3. Add Database:
    - Type: DuckDB
-   - Path: `/data_lake/serving/olap.duckdb`
+   - Path: `/app/var/data_lake/serving/olap.duckdb`
 4. Name: "Sapo DuckDB"
+
+**Critical: Serving Views After Mount Changes**
+
+If you change Docker volume mount paths, you MUST regenerate serving views:
+
+```bash
+# Stop Metabase first (releases DuckDB lock)
+docker compose down
+
+# Then regenerate
+docker compose up -d data_platform
+docker compose exec data_platform python scripts/provisioning/bootstrap_serving_views.py
+
+# Restart Metabase
+docker compose up -d metabase
+```
+
+Reason: Serving view SQL contains absolute paths to Parquet files. Path changes require view regeneration.
 
 ---
 
@@ -478,10 +537,25 @@ Ensure you have the following key files:
 - `docker-compose.yml`
 - `Dockerfile.metabase` (Metabase)
 - `Dockerfile.dataplatform`
+- `Dockerfile.rill`
 - `.env.example`
-- `ingestion/`, `transformation/`, `orchestration/`, `webhook_consumer/` folders.
+- `ingestion/`, `transformation/`, `orchestration/`, `scripts/` folders.
 
-_Note: An `app_data` folder will be created automatically to store all runtime data (Data Lake, Logs, DB)._
+**Directory Structure (Created Automatically):**
+
+```
+project-root/
+├── app_data/                    # Created automatically on first docker compose up
+│   ├── data_lake/               # Maps to /app/var/data_lake in container
+│   ├── dagster_home/            # Maps to /app/var/dagster_home in container
+│   ├── logs/                    # Maps to /app/var/logs in container
+│   ├── backups/                 # Maps to /app/var/backups in container
+│   ├── input_source/            # Maps to /app/var/input_source in container
+│   ├── metabase_data/           # Metabase H2 database
+│   └── rill/                    # Rill configuration
+├── docker-compose.yml           # Volume mount configuration
+└── [code directories]           # Map to /app/* in container (code)
+```
 
 #### 2. Configure Environment Variables
 

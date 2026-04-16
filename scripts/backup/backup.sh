@@ -42,12 +42,9 @@ log "Mode: hot backup (no container stop — running inside Docker)"
 START_SECONDS=$SECONDS
 
 # --- Step 1: Backup app_data ---
-# In Docker, data_lake is at /app/data_lake, dagster_home at /app/.dagster_home, etc.
-# We resolve based on common mount paths.
-APP_DATA_CANDIDATES=(
-    "${PROJECT_ROOT}/app_data"
-    "/app/data_lake"
-)
+# Docker layout: data directories grouped under /app/var/.
+# Local layout: grouped under ${PROJECT_ROOT}/app_data/.
+DATA_ROOT="${DATA_ROOT:-/app/var}"
 
 # Try the native-style app_data first (if running outside Docker or custom mount)
 if [ -d "${PROJECT_ROOT}/app_data" ]; then
@@ -63,22 +60,19 @@ if [ -d "${PROJECT_ROOT}/app_data" ]; then
         EXIT_CODE=1
     fi
 else
-    # Docker volume layout: individual mount points
+    # Docker volume layout: all data dirs under DATA_ROOT (/app/var/)
     mkdir -p "${BACKUP_DIR}/app_data"
-    for vol_name in data_lake dagster_home metabase_data logs; do
-        # Map Docker paths → check /app/<name> or /app/.<name>
-        for candidate in "/app/${vol_name}" "/app/.${vol_name}"; do
-            if [ -d "$candidate" ]; then
-                log "Backing up ${vol_name} from ${candidate}..."
-                if cp -a "$candidate" "${BACKUP_DIR}/app_data/${vol_name}" 2>&1; then
-                    BACKUP_DATA_OK=true
-                    log "${vol_name} backed up."
-                else
-                    log "WARNING: failed to copy ${candidate}"
-                fi
-                break
+    for vol_name in data_lake dagster_home logs input_source; do
+        candidate="${DATA_ROOT}/${vol_name}"
+        if [ -d "$candidate" ]; then
+            log "Backing up ${vol_name} from ${candidate}..."
+            if cp -a "$candidate" "${BACKUP_DIR}/app_data/${vol_name}" 2>&1; then
+                BACKUP_DATA_OK=true
+                log "${vol_name} backed up."
+            else
+                log "WARNING: failed to copy ${candidate}"
             fi
-        done
+        fi
     done
     if [ "$BACKUP_DATA_OK" = false ]; then
         log "ERROR: no data directories found to back up"

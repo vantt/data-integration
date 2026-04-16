@@ -29,7 +29,7 @@ import re
 import duckdb
 
 # --- Paths ---
-DATA_LAKE_ROOT = os.environ.get("DBT_DATA_LAKE_PATH", "/app/data_lake")
+DATA_LAKE_ROOT = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
 DBT_EXPORT_PATH = os.environ.get("DBT_EXPORT_PATH", os.path.join(DATA_LAKE_ROOT, "export", "marts"))
 SERVING_DIR = os.path.join(DATA_LAKE_ROOT, "serving")
 ROLLING_DIR = os.path.join(DBT_EXPORT_PATH, "rolling")

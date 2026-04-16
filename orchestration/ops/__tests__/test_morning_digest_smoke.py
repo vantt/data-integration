@@ -287,11 +287,13 @@ def test_classify_green_zero_streak_1():
     assert classify(row) == "green"
 
 
-def test_compose_card_fields_includes_run_link():
+def test_compose_card_no_run_link_for_green():
+    """Green rows should NOT have run links (keep card clean)."""
     from orchestration.ops.morning_digest import compose_card_fields
     row = _make()
     row.last_run_id = "abcdef12-3456-7890-abcd-ef1234567890"
-    _, _ = compose_card_fields([row])
+    fields, _ = compose_card_fields([row])
+    assert "abcdef12" not in fields["test"]
 
 
 def test_compose_card_includes_zero_streak_warning():
@@ -310,10 +312,12 @@ def test_compose_card_includes_recommendation_for_failed():
     assert "re-materialize" in fields["test"]
 
 
-def test_compose_card_includes_run_link_text():
+def test_compose_card_includes_run_link_for_red():
+    """Red rows SHOULD have run links."""
     from orchestration.ops.morning_digest import compose_card_fields
-    row = _make()
+    row = _make(note="last run failed")
     row.last_run_id = "abcdef12-3456-7890-abcd-ef1234567890"
+    row.status = classify(row)
     fields, _ = compose_card_fields([row])
     assert "abcdef12" in fields["test"]
 

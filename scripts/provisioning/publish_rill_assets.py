@@ -16,7 +16,7 @@ import os
 import shutil
 from datetime import datetime, timezone
 
-DATA_LAKE_ROOT = os.environ.get("DBT_DATA_LAKE_PATH", "/app/data_lake")
+DATA_LAKE_ROOT = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
 DBT_EXPORT_PATH = os.environ.get(
     "DBT_EXPORT_PATH",
     os.path.join(DATA_LAKE_ROOT, "export", "marts"),

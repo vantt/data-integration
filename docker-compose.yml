@@ -16,19 +16,23 @@ services:
     environment:
       - DLT_TELEMETRY_DISABLED=true
       - DBT_SEND_ANONYMOUS_USAGE_STATS=false
-      - BACKUP_ROOT=/app/backups  # must match volume mount below
+      - BACKUP_ROOT=/app/var/backups  # must match volume mount below
     networks:
       - caddy_net
     volumes:
+      # Code (stateless, git-tracked)
       - ./transformation:/app/transformation
       - ./transformation/target:/app/transformation/target
       - ./ingestion:/app/ingestion
       - ./orchestration:/app/orchestration
       - ./scripts:/app/scripts
-      - ./app_data/data_lake:/app/data_lake
-      - ./app_data/dagster_home:/app/.dagster_home
-      - ./app_data/logs:/app/logs
-      - ./app_data/backups:/app/backups  # must match BACKUP_ROOT above
+      # Data (stateful, persistent) — grouped under /app/var/
+      - ./app_data/data_lake:/app/var/data_lake
+      - ./app_data/dagster_home:/app/var/dagster_home
+      - ./app_data/logs:/app/var/logs
+      - ./app_data/backups:/app/var/backups
+      - ./app_data/input_source:/app/var/input_source
+      # Config (read-only)
       - ./.env.docker:/app/.env.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./Dockerfile.dataplatform:/app/Dockerfile.dataplatform:ro
@@ -52,7 +56,7 @@ services:
       - caddy_net
     volumes:
       - ./app_data/metabase_data:/home/metabase/data
-      - ./app_data/data_lake:/app/data_lake
+      - ./app_data/data_lake:/app/var/data_lake
     labels:
       caddy: bi.local
       caddy.reverse_proxy: "{{upstreams 3000}}"
@@ -66,15 +70,15 @@ services:
     ports:
       - "9009:9009"
     environment:
-      - RILL_EXPORT_ROOT=/app/data_lake/export/rill/current
+      - RILL_EXPORT_ROOT=/app/var/data_lake/export/rill/current
       - TZ=Asia/Ho_Chi_Minh
     networks:
       - caddy_net
     volumes:
       - ./rill:/app/rill
-      - ./app_data/data_lake:/app/data_lake
+      - ./app_data/data_lake:/app/var/data_lake
       - ./app_data/rill:/app/rill/.rill
-    command: ["start", "--no-open", "--port", "9009", "--env", "RILL_EXPORT_ROOT=/app/data_lake/export/rill/current"]
+    command: ["start", "--no-open", "--port", "9009", "--env", "RILL_EXPORT_ROOT=/app/var/data_lake/export/rill/current"]
     labels:
       caddy: rill.local
       caddy.reverse_proxy: "{{upstreams 9009}}"
