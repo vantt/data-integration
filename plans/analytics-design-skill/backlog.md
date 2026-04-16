@@ -7,40 +7,17 @@
 
 ## Group 1: Fixes (nho, cu the, co the lam ngay)
 
-### Fix 1 — CEO Weekly Pulse: archetype violation
+### Fix 1 — CEO Weekly Pulse: archetype violation — ✅ DONE (2026-04-16)
 
-**Van de:** Dashboard labeled `Executive Pulse` nhung co cau truc Operational Cockpit — 3 views, detail tables, ~26 cards. Vi pham rule Executive Pulse: single view, no tables, max 10 cards.
+**Resolution:** Option A — re-labeled to `Operational Cockpit` in design spec + playbook. Blueprint unchanged (no archetype field).
 
-**Impact:** Agents hoc tu exemplar sai → dashboards "pulse" bam dan thanh cockpit, mat narrative discipline.
-
-**Options:**
-- A) Re-label thanh `Operational Cockpit` → update design spec + blueprint + playbook
-- B) Re-design lai thanh dung Executive Pulse: 1 view, no tables, max 10 cards
-- C) Tach thanh 2 artifact: `ceo_weekly_pulse` (true Pulse) + `ceo_weekly_review` (Cockpit)
-
-**Files lien quan:**
-- `docs/analytics-handbook/designs/ceo_weekly_pulse.md`
-- `docs/analytics-handbook/blueprints/ceo_weekly_pulse.md`
-- `docs/analytics-handbook/playbooks/ceo_weekly_pulse.md`
+**Note:** 5 other dashboards also labeled "Executive Pulse" exceed the archetype limits (CEO Monthly Scorecard, Sales Monthly Review, Finance P&L, Channel Profitability Monthly, Order Profitability). Consider auditing these separately.
 
 ---
 
-### Fix 2 — Blueprint → Design Spec reference con thieu
+### Fix 2 — Blueprint → Design Spec reference con thieu — ✅ DONE (verified 2026-04-16)
 
-**Van de:** 15/17 blueprints khong co link tro ve design spec tuong ung. Khi design spec update, khong biet blueprint da outdated.
-
-**Hien trang (2026-04-03):** Chi co 2/17 blueprints co Design Spec header (`customer_retention_dashboard.md`, `customer_intelligence_monthly.md`).
-
-**Giai phap:** Option A — them convention header vao tung blueprint:
-```
-> **Design Spec:** `designs/<name>.md`
-```
-
-**Files can sua:**
-- `.skills/metabase-automation/templates/blueprint_template.md` — them vi du header
-- 15 blueprint files con lai trong `docs/analytics-handbook/blueprints/`
-
-**Priority:** Low — hygiene, khong anh huong deploy hay design quality.
+**Status:** All 25/25 blueprints now have Design Spec headers. Fixed sometime between 2026-04-03 and 2026-04-16 during various dashboard creation sessions.
 
 ---
 

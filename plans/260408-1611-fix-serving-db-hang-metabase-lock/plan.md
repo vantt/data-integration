@@ -1,7 +1,8 @@
 ---
 type: fix-plan
 date: 2026-04-08
-status: proposal
+status: done
+completed: 2026-04-16
 scope: orchestration/assets/serving.py, scripts/provisioning/generate_serving_db.py, docker-compose
 related:
   - plans/reports/design-260408-1531-dagster-stability-flexibility.md
