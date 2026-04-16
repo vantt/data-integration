@@ -226,17 +226,19 @@ dbt's `target/` directory caches compiled SQL and model state including **absolu
 - Cached state still references old paths → dbt tries to read/write to non-existent old paths
 - Error: `IO Error: Cannot open file "/app/data_lake/export/marts/rolling/...": No such file or directory`
 
-**Fix:** Clean dbt target cache before rebuilding:
+**Fix:** Clean dbt target cache and regenerate manifest before Dagster uses it:
 ```bash
-docker exec data_platform bash -c "rm -rf /app/transformation/target && cd /app/transformation && dbt build"
+docker exec data_platform bash -c "rm -rf /app/transformation/target"
+docker exec data_platform bash -c "cd /app/transformation && dbt deps && dbt parse"
+docker compose restart data_platform
 ```
 
-Or selectively rebuild only failing models:
+**⚠️ Order matters:** `dbt parse` MUST run before Dagster restarts — Dagster imports `manifest.json` at startup. If you `rm -rf target/` and restart without `dbt parse`, Dagster crashes with `DagsterDbtManifestNotFoundError`.
+
+Or selectively rebuild only failing models (no target nuke needed):
 ```bash
 docker exec data_platform bash -c "cd /app/transformation && dbt build --select model_name_1 model_name_2"
 ```
-
-**Note:** The startup command in `docker-compose.yml` runs `dbt parse` which regenerates `target/manifest.json`. But if Dagster triggers a dbt build before this completes, or if old `target/` state persists from a volume mount, stale paths surface. When in doubt, nuke `target/`.
 
 ### Other Rules
 
