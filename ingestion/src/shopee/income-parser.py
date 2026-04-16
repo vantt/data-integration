@@ -292,6 +292,11 @@ def _parse_adjustment_sheet(file_path):
             .astype("Int64")
         )
 
+    # Force adjustment_reason to string (avoids float64↔string type mismatch
+    # across parquets when all values are null in some files but text in others)
+    if "adjustment_reason" in df_adj.columns:
+        df_adj["adjustment_reason"] = df_adj["adjustment_reason"].astype("string")
+
     # Date parsing
     for date_col in ["adjustment_completed_at", "payout_released_at"]:
         if date_col in df_adj.columns:

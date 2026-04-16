@@ -87,7 +87,7 @@ class SapoDbtTranslator(DagsterDbtTranslator):
         # File-drop sources: ingestion asset must finish before dbt reads parquet
         elif name in ["src_misa_sales_lines", "stg_misa_sales_lines"]:
             upstream_keys.add(AssetKey(["misa_amis", "misa_sales_file_drop_asset"]))
-        elif name in ["src_shopee_order_revenue", "src_shopee_order_items", "src_shopee_service_fees", "src_shopee_order_adjustments"]:
+        elif name in ["src_shopee_order_revenue", "src_shopee_order_revenue_items", "src_shopee_order_service_fees", "src_shopee_order_adjustments"]:
             upstream_keys.add(AssetKey(["shopee", "shopee_income_file_drop_asset"]))
 
         return upstream_keys
@@ -110,19 +110,17 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     if not os.path.exists(export_base_dir):
         os.makedirs(export_base_dir)
 
-    # Pre-create subdirectories for all Marts to ensure COPY commands don't fail
-    # Scan transformation/models/marts
-    marts_dir = os.path.join(DBT_PROJECT_DIR, "models", "marts")
-    if os.path.exists(marts_dir):
-        for root, dirs, files in os.walk(marts_dir):
-            for file in files:
-                if file.endswith(".sql"):
-                    # model name = filename without extension
-                    model_name = os.path.splitext(file)[0]
-                    # Create folder in export_base_dir
-                    model_export_dir = os.path.join(export_base_dir, model_name)
-                    os.makedirs(model_export_dir, exist_ok=True)
-                    # context.log.info(f"Ensured export dir: {model_export_dir}")
+    # Pre-create subdirectories for all models using get_rolling_location()
+    # Scan both marts/ and intermediate/ (both contain external parquet models)
+    for subdir in ["marts", "intermediate"]:
+        scan_dir = os.path.join(DBT_PROJECT_DIR, "models", subdir)
+        if os.path.exists(scan_dir):
+            for root, dirs, files in os.walk(scan_dir):
+                for file in files:
+                    if file.endswith(".sql"):
+                        model_name = os.path.splitext(file)[0]
+                        model_export_dir = os.path.join(export_base_dir, model_name)
+                        os.makedirs(model_export_dir, exist_ok=True)
         
     context.log.info(f"Target Export Path (Stable): {export_base_dir}")
     
