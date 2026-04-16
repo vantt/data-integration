@@ -43,7 +43,7 @@ DEFAULT_INPUT_DIR = os.environ.get(
 
 
 def run(argv=None, file_path=None):
-    """Parse Shopee income Excel file(s) and emit 3 parquet tables.
+    """Parse Shopee income Excel file(s) and emit 4 parquet tables.
 
     If file_path is None, process every *.xlsx under the input directory
     (excluding _archive/). Dagster reactive sensor drives this mode.

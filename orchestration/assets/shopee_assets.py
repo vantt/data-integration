@@ -50,7 +50,7 @@ def _get_run_module():
 def shopee_income_file_drop_asset(context):
     """Ingest Shopee released-income Excel files from the drop zone.
 
-    Parses xlsx -> 3 parquet tables (order_revenue, order_revenue_items, order_service_fees).
+    Parses xlsx -> 4 parquet tables (order_revenue, order_revenue_items, order_service_fees, order_adjustments).
     Append-only writes; source files archived to _archive/ on success.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
