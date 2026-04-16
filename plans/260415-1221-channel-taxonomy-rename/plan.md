@@ -70,3 +70,13 @@
 - ✅ Tier 4 column → keep `channel_name` (storefront is conceptual label only)
 - ✅ Telesale/CS → `Offline`/`Direct`, `is_sales_channel=true`
 - ✅ Metabase in same PR
+
+## Post-migration Cleanup (2026-04-16)
+
+- ✅ Rill: `channel_format` already in orders + sales_items metrics; added `channel_format` + `platform` to `marketing_spend_core_metrics.yaml`
+- ✅ Metabase H2 DB: no action needed — blueprints are SoT, already redeployed
+- ✅ Blueprint display labels: standardized "Ecommerce"/"Ecom" → "Online-Ecom" across 4 blueprints (marketing_weekly_tracker, ceo_weekly_pulse, ceo_monthly_scorecard, marketing_monthly_analysis)
+- ✅ `deploy_from_markdown.js --dry-run`: implemented (was documented but no-op)
+- ✅ Serving views runbook: added Binder Error section to `docs/operations/troubleshooting.md` with full column-rename procedure
+
+**Status: COMPLETE — archivable**

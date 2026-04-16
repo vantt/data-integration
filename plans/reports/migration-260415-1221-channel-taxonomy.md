@@ -128,6 +128,10 @@ docker restart rill   # if schema-affecting
 
 ## Unresolved questions
 
-- Rill metric views `orders_core_metrics.yaml` and `sales_items_core_metrics.yaml` **do not expose `channel_format` as a dimension** (they never did). Per YAGNI, not added. If dashboards need to filter/group by Tier 2 in Rill, add later.
-- Metabase cards edits are in H2 DB (`metabase.db.mv.db`) — not version-controlled. If the Metabase DB is rebuilt from snapshot, these updates will be lost. Consider scripting this into `bootstrap_reporting.py` as a one-shot migration or snapshotting current state.
-- `docs/analytics-handbook/blueprints/*` display labels still use "Ecom Share %" / "Ecom" as KPI nicknames (business-facing). Left intentionally; if finance wants consistent labels, do a separate pass.
+All resolved (2026-04-16):
+
+- ~~Rill metric views don't expose `channel_format`~~ → **RESOLVED.** Already present in orders + sales_items. Added to `marketing_spend_core_metrics.yaml`.
+- ~~Metabase H2 DB not version-controlled~~ → **RESOLVED.** Blueprints are SoT; redeploy restores all cards. No additional scripting needed.
+- ~~Blueprint display labels use "Ecom"~~ → **RESOLVED.** Standardized to "Online-Ecom" across 4 blueprints, redeployed, 3 orphaned cards archived.
+- ~~`deploy_from_markdown.js --dry-run` not implemented~~ → **RESOLVED.** Implemented and tested.
+- ~~Serving views runbook undocumented~~ → **RESOLVED.** Added Binder Error section to `docs/operations/troubleshooting.md`.

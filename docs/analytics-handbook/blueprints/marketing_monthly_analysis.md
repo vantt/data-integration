@@ -393,9 +393,9 @@ ORDER BY 2 DESC
 
 ### 📑 Tab: Channel & Brand
 
-#### 📝 Text: Theo dõi structural shift kênh 6 tháng — Ecommerce đang chiếm ưu thế?
+#### 📝 Text: Theo dõi structural shift kênh 6 tháng — Online-Ecom đang chiếm ưu thế?
 
-# Theo dõi structural shift kênh 6 tháng — Ecommerce đang chiếm ưu thế?
+# Theo dõi structural shift kênh 6 tháng — Online-Ecom đang chiếm ưu thế?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }

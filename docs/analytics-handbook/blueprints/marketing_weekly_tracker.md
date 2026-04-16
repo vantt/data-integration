@@ -113,7 +113,7 @@ FROM this_week tw, last_week lw
 { "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
-#### ❓ Question: Ecommerce Revenue
+#### ❓ Question: Online-Ecom Revenue
 
 **Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
@@ -139,7 +139,7 @@ last_week AS (
       [[AND c.channel_brand = {{channel_brand}}]]
 )
 SELECT
-    tw.value as "Ecommerce Revenue",
+    tw.value as "Online-Ecom Revenue",
     lw.value as "Previous Week"
 FROM this_week tw, last_week lw
 ```
@@ -157,7 +157,7 @@ FROM this_week tw, last_week lw
       }
     ],
     "column_settings": {
-      "Ecommerce Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Online-Ecom Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
@@ -221,7 +221,7 @@ FROM this_week tw, last_week lw
 { "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
-#### ❓ Question: Ecom Share %
+#### ❓ Question: Online-Ecom Share %
 
 ```sql
 WITH this_week AS (
@@ -247,7 +247,7 @@ last_week AS (
       [[AND c.channel_brand = {{channel_brand}}]]
 )
 SELECT
-    tw.value as "Ecom Share %",
+    tw.value as "Online-Ecom Share %",
     lw.value as "Previous Week"
 FROM this_week tw, last_week lw
 ```
@@ -265,7 +265,7 @@ FROM this_week tw, last_week lw
       }
     ],
     "column_settings": {
-      "Ecom Share %": { "suffix": "%", "decimals": 1 }
+      "Online-Ecom Share %": { "suffix": "%", "decimals": 1 }
     }
   }
 }
@@ -277,24 +277,24 @@ FROM this_week tw, last_week lw
 
 ---
 
-#### 📝 Text: Theo dõi xu hướng Ecommerce vs Offline — momentum và crossover
+#### 📝 Text: Theo dõi xu hướng Online-Ecom vs Offline — momentum và crossover
 
-# Theo dõi xu hướng Ecommerce vs Offline — momentum và crossover
+# Theo dõi xu hướng Online-Ecom vs Offline — momentum và crossover
 
 ```json metabase-pos
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### ❓ Question: Ecommerce vs Offline Trend
+#### ❓ Question: Online-Ecom vs Offline Trend
 
-Daily revenue, 2 lines: Ecommerce vs Offline over 14 days.
+Daily revenue, 2 lines: Online-Ecom vs Offline over 14 days.
 
 **Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
 ```sql
 SELECT
     date(o.order_timestamp) as "Date",
-    SUM(CASE WHEN c.channel_category = 'Online-Ecommerce' THEN o.net_revenue ELSE 0 END) as "Ecommerce",
+    SUM(CASE WHEN c.channel_category = 'Online-Ecommerce' THEN o.net_revenue ELSE 0 END) as "Online-Ecom",
     SUM(CASE WHEN c.channel_category = 'Offline' THEN o.net_revenue ELSE 0 END) as "Offline"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
@@ -311,12 +311,12 @@ ORDER BY 1
   "display": "line",
   "visualization_settings": {
     "graph.dimensions": ["Date"],
-    "graph.metrics": ["Ecommerce", "Offline"],
+    "graph.metrics": ["Online-Ecom", "Offline"],
     "graph.colors": ["#509EE3", "#F2A86F"],
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "Revenue (VND)",
     "column_settings": {
-      "Ecommerce": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Online-Ecom": { "number_style": "currency", "currency": "VND", "compact": true },
       "Offline": { "number_style": "currency", "currency": "VND", "compact": true }
     }
   }

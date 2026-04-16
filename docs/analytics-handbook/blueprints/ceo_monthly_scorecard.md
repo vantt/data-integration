@@ -598,9 +598,9 @@ ORDER BY sort_order
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Theo dõi structural shift kênh 6 tháng — Ecommerce đang lên?
+#### 📝 Text: Theo dõi structural shift kênh 6 tháng — Online-Ecom đang lên?
 
-## Theo dõi structural shift kênh 6 tháng — Ecommerce đang lên?
+## Theo dõi structural shift kênh 6 tháng — Online-Ecom đang lên?
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }

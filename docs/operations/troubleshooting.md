@@ -349,10 +349,47 @@ FROM read_parquet('data_lake/export/marts/rolling/fact_orders/*.parquet');
 **Solution:**
 ```bash
 # Regenerate serving views
-python scripts/provisioning/generate_serving_db.py --force
+python scripts/provisioning/bootstrap_serving_views.py
 
 # Or sync Metabase database
 # Metabase Admin → Databases → Sapo DuckDB → Sync database schema
+```
+
+---
+
+#### Issue: Binder Error After Column Rename
+
+**Symptoms:**
+- `Binder Error: Contents of view were altered: names don't match!`
+- `Binder Error: Contents of view were altered: types don't match!`
+- Metabase cards show errors after `dbt build` with column renames
+
+**Cause:** DuckDB serving views cache column list at CREATE time. When dbt writes new parquet with renamed/retyped columns, views still expect old schema.
+
+**Solution — full runbook for column-renaming migrations:**
+```bash
+# 1. Build dbt + refresh parquet
+dbt build
+python scripts/provisioning/refresh_rolling.py
+
+# 2. Stop Metabase (DuckDB may hold lock via JDBC)
+docker stop metabase
+
+# 3. Rebuild serving views (idempotent CREATE OR REPLACE)
+python scripts/provisioning/bootstrap_serving_views.py
+
+# 4. Restart Metabase (cold start flushes JDBC pool + field metadata cache)
+docker start metabase
+# Wait for /api/health == ok (~30-60s)
+
+# 5. Force Metabase schema sync
+curl -X POST -H "x-api-key: $METABASE_API_KEY" $METABASE_URL/api/database/{id}/sync_schema
+
+# 6. Restart Rill if schema-affecting
+docker restart rill
+
+# 7. Redeploy blueprints (if display labels changed)
+# node .skills/metabase-automation/scripts/deploy_from_markdown.js <blueprint.md>
 ```
 
 ---

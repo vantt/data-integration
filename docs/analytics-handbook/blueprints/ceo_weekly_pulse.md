@@ -381,9 +381,9 @@ ORDER BY 1
 
 ### Tab: Kenh ban hang
 
-#### 📝 Text: Phân tích cấu trúc kênh bán hàng — Ecommerce vs Offline
+#### 📝 Text: Phân tích cấu trúc kênh bán hàng — Online-Ecom vs Offline
 
-# Phân tích cấu trúc kênh bán hàng — Ecommerce vs Offline
+# Phân tích cấu trúc kênh bán hàng — Online-Ecom vs Offline
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }

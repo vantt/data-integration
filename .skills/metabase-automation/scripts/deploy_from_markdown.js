@@ -61,13 +61,18 @@ function flattenViz(viz) {
 
 async function main() {
   const args = process.argv.slice(2);
-  const filePath = args[0];
+  const dryRun = args.includes("--dry-run");
+  const filePath = args.find((a) => !a.startsWith("--"));
 
-  if (!filePath || filePath.startsWith("--")) {
+  if (!filePath) {
     console.error(
       "Usage: node deploy_from_markdown.js <path-to-docs.md> [--dry-run]",
     );
     process.exit(1);
+  }
+
+  if (dryRun) {
+    console.log("🔍 DRY RUN — no changes will be made to Metabase.");
   }
 
   const absPath = path.resolve(process.cwd(), filePath);
@@ -131,9 +136,14 @@ async function main() {
   for (const col of config.collections) {
     const parentId = col.parent ? colMap[col.parent] || null : null;
     const pathLabel = col.parent ? `${col.parent} > ${col.name}` : col.name;
-    console.log(`📂 Ensuring Collection: ${pathLabel}`);
-    const remote = await client.collection.ensure(col.name, { parent_id: parentId });
-    colMap[col.name] = remote.id;
+    if (dryRun) {
+      console.log(`📂 [DRY] Would ensure Collection: ${pathLabel}`);
+      colMap[col.name] = -1; // placeholder
+    } else {
+      console.log(`📂 Ensuring Collection: ${pathLabel}`);
+      const remote = await client.collection.ensure(col.name, { parent_id: parentId });
+      colMap[col.name] = remote.id;
+    }
   }
 
   // B. Models & Metrics
@@ -148,17 +158,20 @@ async function main() {
       }
 
       // Ensure Model (Dataset)
-      // We use the same defaultDbId as Questions for now.
-      await client.model.ensure(
-        model.name,
-        model.sql,
-        defaultDbId,
-        colMap[col.name],
-        {
-          description: model.metadata ? model.metadata.description : null,
-          visualization_settings: model.metadata || {},
-        },
-      );
+      if (dryRun) {
+        console.log(`🧊 [DRY] Would ensure Model: ${model.name}`);
+      } else {
+        await client.model.ensure(
+          model.name,
+          model.sql,
+          defaultDbId,
+          colMap[col.name],
+          {
+            description: model.metadata ? model.metadata.description : null,
+            visualization_settings: model.metadata || {},
+          },
+        );
+      }
 
       // Metrics (Experimental)
       if (model.metrics && model.metrics.length > 0) {
@@ -186,6 +199,20 @@ async function main() {
       default: f.default || null,
       sectionId: f.sectionId || undefined,
     }));
+
+    if (dryRun) {
+      console.log(`🖥️  [DRY] Would ensure Dashboard: ${dashboard.name} (${dashboard.questions.length} questions, ${(dashboard.textCards || []).length} text cards)`);
+      if (dashParams.length > 0) {
+        console.log(`🔍 [DRY] Would sync ${dashParams.length} filter(s): ${dashParams.map(p => p.name).join(', ')}`);
+      }
+      for (const q of dashboard.questions) {
+        console.log(`   [DRY] Question: ${q.name} (display: ${q.viz?.display || 'table'})${q.tab ? ` [tab: ${q.tab}]` : ''}`);
+      }
+      for (const tc of (dashboard.textCards || [])) {
+        console.log(`   [DRY] Text: "${tc.name}"${tc.tab ? ` [tab: ${tc.tab}]` : ''}`);
+      }
+      continue;
+    }
 
     const dashRemote = await client.dashboard.ensure(dashboard.name, "", colId, dashParams);
 
@@ -374,7 +401,7 @@ async function main() {
     }
   }
 
-  console.log("🚀 Deployment Complete.");
+  console.log(dryRun ? "🔍 Dry run complete — no changes made." : "🚀 Deployment Complete.");
 }
 
 main().catch(console.error);
