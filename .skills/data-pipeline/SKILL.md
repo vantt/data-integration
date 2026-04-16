@@ -217,6 +217,27 @@ CREATE VIEW dim_customers AS SELECT * FROM '/app/var/data_lake/export/marts/roll
 
 If `/app/var/data_lake` changes to `/app/data_lake`, view paths break and Metabase queries fail.
 
+### dbt Target Cache & Rolling Parquet Paths
+
+**⚠️ CRITICAL AFTER DOCKER MOUNT CHANGES:**
+
+dbt's `target/` directory caches compiled SQL and model state including **absolute parquet output paths** from `get_rolling_location()`. When Docker mount paths change (e.g. `/app/data_lake` → `/app/var/data_lake`):
+
+- Cached state still references old paths → dbt tries to read/write to non-existent old paths
+- Error: `IO Error: Cannot open file "/app/data_lake/export/marts/rolling/...": No such file or directory`
+
+**Fix:** Clean dbt target cache before rebuilding:
+```bash
+docker exec data_platform bash -c "rm -rf /app/transformation/target && cd /app/transformation && dbt build"
+```
+
+Or selectively rebuild only failing models:
+```bash
+docker exec data_platform bash -c "cd /app/transformation && dbt build --select model_name_1 model_name_2"
+```
+
+**Note:** The startup command in `docker-compose.yml` runs `dbt parse` which regenerates `target/manifest.json`. But if Dagster triggers a dbt build before this completes, or if old `target/` state persists from a volume mount, stale paths surface. When in doubt, nuke `target/`.
+
 ### Other Rules
 
 1. **Mart models MUST have** `location="{{ get_rolling_location() }}"` — nếu thiếu, `generate_serving_db.py` báo "Empty folder" và drop view

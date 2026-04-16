@@ -306,6 +306,15 @@ docker compose up -d metabase
 
 Reason: Serving view SQL contains absolute paths to Parquet files. Path changes require view regeneration.
 
+**Also clean dbt target cache** — cached state references old absolute paths for rolling parquet output:
+
+```bash
+docker exec data_platform bash -c "rm -rf /app/transformation/target"
+# Then trigger a full dbt build (or let Dagster startup command handle it via dbt parse)
+```
+
+Without this, dbt may fail with `Cannot open file "/app/old_path/rolling/...": No such file or directory`.
+
 ---
 
 ## Initial Data Load
