@@ -123,12 +123,10 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
                         os.makedirs(model_export_dir, exist_ok=True)
         
     context.log.info(f"Target Export Path (Stable): {export_base_dir}")
-    
-    # 2. Inject Environment Variable
-    # dbt needs DBT_EXPORT_PATH to be set.
-    # We update os.environ for this process.
-    os.environ["DBT_EXPORT_PATH"] = export_base_dir
-    
-    # No "cleanup_old_versions" here. Cleanup is now handled by the Serving Layer (GC).
+
+    # DBT_EXPORT_PATH is already set via .env.docker (e.g. /app/var/data_lake/export/marts).
+    # Do NOT overwrite it with export_base_dir (.../rolling) — the dbt macro
+    # get_rolling_location() appends /rolling/ itself. Overwriting caused the macro
+    # to need a fragile replace('/rolling','') hack.
 
     yield from dbt.cli(["build"], context=context).stream()
