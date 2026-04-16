@@ -23,7 +23,7 @@ def run(argv=None):
         "debug": args.debug
     }
 
-    run_pipeline(
+    return run_pipeline(
         pipeline_name="sapo_history_log_pipeline",
         dataset_name="sapo_raw",
         source_factory=sapo_history_log_source,

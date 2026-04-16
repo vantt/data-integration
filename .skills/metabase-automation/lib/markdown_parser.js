@@ -38,6 +38,7 @@ function parseMarkdownConfig(filePath) {
     const lines = content.split('\n');
 
     const config = {
+        database: null, // Parsed from "> **Database:** `Name`" blockquote
         collections: [],
         models: [], // Flat list of models with collection_id linkage logic
         dashboards: [] // Flat list, hierarchically parsed
@@ -136,6 +137,14 @@ function parseMarkdownConfig(filePath) {
 
         if (inCodeBlock) {
             codeBuffer.push(line);
+            continue;
+        }
+
+        // 1b. Parse blueprint metadata from blockquotes (e.g. "> **Database:** `Name`")
+        // Must be after inCodeBlock guard to avoid consuming lines inside code blocks
+        const dbMatch = trimmed.match(/^>\s*\*\*Database:\*\*\s*`([^`]+)`/);
+        if (dbMatch && !config.database) {
+            config.database = dbMatch[1].trim();
             continue;
         }
 

@@ -33,23 +33,15 @@ Monitoring wall for ingestion pipeline: per-source SLA status tiles, recon drift
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_orders_batch_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written, status
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_orders_batch_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_orders_batch_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_orders_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -88,23 +80,15 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_customers_batch_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_customers_batch_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_customers_batch_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_customers_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -143,23 +127,15 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_products_batch_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_products_batch_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_products_batch_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_products_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -198,23 +174,15 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_accounts_batch_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_accounts_batch_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_accounts_batch_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_accounts_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -255,23 +223,15 @@ FROM last_ok lo, last_run lr
 Hero card — highest frequency realtime asset (12h SLA).
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_webhook_consumer_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_webhook_consumer_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_webhook_consumer_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_webhook_consumer_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -310,23 +270,15 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_history_log_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'sapo/sapo_history_log_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_history_log_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sapo/sapo_history_log_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -365,23 +317,15 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sheets/sheets_targets_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'sheets/sheets_targets_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sheets/sheets_targets_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sheets/sheets_targets_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -420,23 +364,15 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'sheets/sheets_marketing_spend_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'sheets/sheets_marketing_spend_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'sheets/sheets_marketing_spend_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'sheets/sheets_marketing_spend_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -477,23 +413,15 @@ FROM last_ok lo, last_run lr
 SLA = 192h (8 days). Warning at 144h (75%).
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'misa_amis/misa_sales_file_drop_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'misa_amis/misa_sales_file_drop_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'misa_amis/misa_sales_file_drop_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'misa_amis/misa_sales_file_drop_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -532,23 +460,15 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Ingestion Freshness](../domains/operations.md#1-ingestion-freshness)
 
 ```sql
-WITH last_ok AS (
-    SELECT MAX(run_ended_at) AS last_success_at
-    FROM ingestion_runs
-    WHERE asset_key = 'shopee/shopee_income_file_drop_asset'
-      AND status IN ('success', 'partial')
-),
-last_run AS (
-    SELECT rows_written
-    FROM ingestion_runs
-    WHERE asset_key = 'shopee/shopee_income_file_drop_asset'
-    ORDER BY run_started_at DESC
-    LIMIT 1
-)
 SELECT
-    ROUND(date_diff('hour', lo.last_success_at, now()), 1) AS "Giờ từ lần chạy OK",
-    COALESCE(lr.rows_written, 0)                           AS "Rows Written"
-FROM last_ok lo, last_run lr
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = 'shopee/shopee_income_file_drop_asset' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = 'shopee/shopee_income_file_drop_asset' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
 ```
 
 ```json metabase-viz
@@ -597,20 +517,24 @@ FROM last_ok lo, last_run lr
 **Domain Reference**: [Recon Drift](../domains/operations.md#4-recon-drift)
 
 ```sql
-WITH latest AS (
-    SELECT
-        CAST(metadata_json->>'source_count' AS BIGINT) AS "Source Count",
-        CAST(metadata_json->>'dest_count'   AS BIGINT) AS "Dest Count",
-        ROUND(CAST(metadata_json->>'drift_pct' AS DOUBLE), 3) AS "Drift %",
-        run_started_at
-    FROM ingestion_runs
-    WHERE asset_key = 'recon/recon_sapo_orders_daily'
+SELECT
+    COALESCE(CAST(r.metadata_json->>'source_count' AS BIGINT), 0) AS "Source Count",
+    COALESCE(CAST(r.metadata_json->>'dest_count'   AS BIGINT), 0) AS "Dest Count",
+    COALESCE(ROUND(CAST(r.metadata_json->>'drift_pct' AS DOUBLE), 3), 999) AS "Drift %"
+FROM (
+    SELECT metadata_json FROM ingestion_runs
+    WHERE asset_key = 'recon/sapo_orders_daily'
       AND status IN ('success', 'partial')
       AND metadata_json IS NOT NULL
-    ORDER BY run_started_at DESC
-    LIMIT 1
+    ORDER BY run_started_at DESC LIMIT 1
+) r
+UNION ALL SELECT 0, 0, 999 WHERE NOT EXISTS (
+    SELECT 1 FROM ingestion_runs
+    WHERE asset_key = 'recon/sapo_orders_daily'
+      AND status IN ('success', 'partial')
+      AND metadata_json IS NOT NULL
 )
-SELECT "Source Count", "Dest Count", "Drift %" FROM latest
+LIMIT 1
 ```
 
 ```json metabase-viz
@@ -649,20 +573,24 @@ SELECT "Source Count", "Dest Count", "Drift %" FROM latest
 **Domain Reference**: [Recon Drift](../domains/operations.md#4-recon-drift)
 
 ```sql
-WITH latest AS (
-    SELECT
-        CAST(metadata_json->>'source_count' AS BIGINT) AS "Source Count",
-        CAST(metadata_json->>'dest_count'   AS BIGINT) AS "Dest Count",
-        ROUND(CAST(metadata_json->>'drift_pct' AS DOUBLE), 3) AS "Drift %",
-        run_started_at
-    FROM ingestion_runs
-    WHERE asset_key = 'recon/recon_sapo_customers_daily'
+SELECT
+    COALESCE(CAST(r.metadata_json->>'source_count' AS BIGINT), 0) AS "Source Count",
+    COALESCE(CAST(r.metadata_json->>'dest_count'   AS BIGINT), 0) AS "Dest Count",
+    COALESCE(ROUND(CAST(r.metadata_json->>'drift_pct' AS DOUBLE), 3), 999) AS "Drift %"
+FROM (
+    SELECT metadata_json FROM ingestion_runs
+    WHERE asset_key = 'recon/sapo_customers_daily'
       AND status IN ('success', 'partial')
       AND metadata_json IS NOT NULL
-    ORDER BY run_started_at DESC
-    LIMIT 1
+    ORDER BY run_started_at DESC LIMIT 1
+) r
+UNION ALL SELECT 0, 0, 999 WHERE NOT EXISTS (
+    SELECT 1 FROM ingestion_runs
+    WHERE asset_key = 'recon/sapo_customers_daily'
+      AND status IN ('success', 'partial')
+      AND metadata_json IS NOT NULL
 )
-SELECT "Source Count", "Dest Count", "Drift %" FROM latest
+LIMIT 1
 ```
 
 ```json metabase-viz
@@ -701,20 +629,24 @@ SELECT "Source Count", "Dest Count", "Drift %" FROM latest
 **Domain Reference**: [Recon Drift](../domains/operations.md#4-recon-drift)
 
 ```sql
-WITH latest AS (
-    SELECT
-        CAST(metadata_json->>'source_count' AS BIGINT) AS "Source Count",
-        CAST(metadata_json->>'dest_count'   AS BIGINT) AS "Dest Count",
-        ROUND(CAST(metadata_json->>'drift_pct' AS DOUBLE), 3) AS "Drift %",
-        run_started_at
-    FROM ingestion_runs
-    WHERE asset_key = 'recon/recon_misa_daily'
+SELECT
+    COALESCE(CAST(r.metadata_json->>'source_count' AS BIGINT), 0) AS "Source Count",
+    COALESCE(CAST(r.metadata_json->>'dest_count'   AS BIGINT), 0) AS "Dest Count",
+    COALESCE(ROUND(CAST(r.metadata_json->>'drift_pct' AS DOUBLE), 3), 999) AS "Drift %"
+FROM (
+    SELECT metadata_json FROM ingestion_runs
+    WHERE asset_key = 'recon/misa_daily'
       AND status IN ('success', 'partial')
       AND metadata_json IS NOT NULL
-    ORDER BY run_started_at DESC
-    LIMIT 1
+    ORDER BY run_started_at DESC LIMIT 1
+) r
+UNION ALL SELECT 0, 0, 999 WHERE NOT EXISTS (
+    SELECT 1 FROM ingestion_runs
+    WHERE asset_key = 'recon/misa_daily'
+      AND status IN ('success', 'partial')
+      AND metadata_json IS NOT NULL
 )
-SELECT "Source Count", "Dest Count", "Drift %" FROM latest
+LIMIT 1
 ```
 
 ```json metabase-viz
@@ -753,20 +685,24 @@ SELECT "Source Count", "Dest Count", "Drift %" FROM latest
 **Domain Reference**: [Recon Drift](../domains/operations.md#4-recon-drift)
 
 ```sql
-WITH latest AS (
-    SELECT
-        CAST(metadata_json->>'source_count' AS BIGINT) AS "Source Count",
-        CAST(metadata_json->>'dest_count'   AS BIGINT) AS "Dest Count",
-        ROUND(CAST(metadata_json->>'drift_pct' AS DOUBLE), 3) AS "Drift %",
-        run_started_at
-    FROM ingestion_runs
-    WHERE asset_key = 'recon/recon_shopee_daily'
+SELECT
+    COALESCE(CAST(r.metadata_json->>'source_count' AS BIGINT), 0) AS "Source Count",
+    COALESCE(CAST(r.metadata_json->>'dest_count'   AS BIGINT), 0) AS "Dest Count",
+    COALESCE(ROUND(CAST(r.metadata_json->>'drift_pct' AS DOUBLE), 3), 999) AS "Drift %"
+FROM (
+    SELECT metadata_json FROM ingestion_runs
+    WHERE asset_key = 'recon/shopee_daily'
       AND status IN ('success', 'partial')
       AND metadata_json IS NOT NULL
-    ORDER BY run_started_at DESC
-    LIMIT 1
+    ORDER BY run_started_at DESC LIMIT 1
+) r
+UNION ALL SELECT 0, 0, 999 WHERE NOT EXISTS (
+    SELECT 1 FROM ingestion_runs
+    WHERE asset_key = 'recon/shopee_daily'
+      AND status IN ('success', 'partial')
+      AND metadata_json IS NOT NULL
 )
-SELECT "Source Count", "Dest Count", "Drift %" FROM latest
+LIMIT 1
 ```
 
 ```json metabase-viz

@@ -119,13 +119,9 @@ async function main() {
 
   // 3. Execution
 
-  // We need a Database ID for SQL questions and Models.
-  // Limitation: The markdown syntax doesn't explicitly state "Which Database".
-  // We assume a default DB or we need to look it up.
-  // Let's assume the first available DB for now or env var?
-  const defaultDbId = await client.findDatabaseId(
-    process.env.METABASE_DB_NAME || "Sapo DuckDB",
-  );
+  // Resolve target database: blueprint > env var > fallback
+  const dbName = config.database || process.env.METABASE_DB_NAME || "Sapo DuckDB";
+  const defaultDbId = await client.findDatabaseId(dbName);
   if (!defaultDbId) {
     console.error("❌ Could not find target Database. Set METABASE_DB_NAME.");
     process.exit(1);

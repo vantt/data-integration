@@ -17,7 +17,7 @@ def run(argv=None):
         "max_pages": args.limit
     }
 
-    run_pipeline(
+    return run_pipeline(
         pipeline_name="sapo_products_batch",
         dataset_name="sapo_raw",
         source_factory=sapo_products_source,

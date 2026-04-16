@@ -20,7 +20,7 @@ def run(argv=None):
         "page_size": args.page_size
     }
 
-    run_pipeline(
+    return run_pipeline(
         pipeline_name="sapo_accounts_batch",
         dataset_name="sapo_raw",
         source_factory=sapo_accounts_source,
