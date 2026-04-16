@@ -1,9 +1,10 @@
 """Entry point: Shopee released-income file-drop ingestion.
 
-Parses Shopee Income Excel files and writes 3 parquet tables:
+Parses Shopee Income Excel files and writes 4 parquet tables:
   - shopee_raw/order_revenue
   - shopee_raw/order_revenue_items
   - shopee_raw/order_service_fees
+  - shopee_raw/order_adjustments
 
 Usage:
   python ingestion/run-shopee-income-file-drop.py
@@ -72,16 +73,17 @@ def run(argv=None, file_path=None):
 
     print(f"Found {len(files)} file(s) to process")
 
-    entities = ["order_revenue", "order_revenue_items", "order_service_fees"]
+    entities = ["order_revenue", "order_revenue_items", "order_service_fees", "order_adjustments"]
 
     for fpath in files:
         print(f"\n{'='*60}")
-        df_order, df_sku, df_sfd = parser.parse_shopee_income(fpath)
+        df_order, df_sku, df_sfd, df_adj = parser.parse_shopee_income(fpath)
 
         entity_dfs = [
             ("order_revenue", df_order, "payout_released_at"),
             ("order_revenue_items", df_sku, "payout_released_at"),
             ("order_service_fees", df_sfd, "payout_released_at"),
+            ("order_adjustments", df_adj, "payout_released_at"),
         ]
 
         # Full-refresh: delete existing parquet in touched partitions

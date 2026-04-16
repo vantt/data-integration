@@ -1,7 +1,7 @@
 """Shopee released-income Excel parser.
 
 Parses 'Income.đã phát hành.vn.*.xlsx' files exported from Shopee Seller Center.
-Outputs 3 DataFrames: order_revenue, order_revenue_items, order_service_fees.
+Outputs 4 DataFrames: order_revenue, order_revenue_items, order_service_fees, order_adjustments.
 
 Canonical rename dict is the SINGLE SOURCE OF TRUTH for VN→snake_case mapping.
 See docs/shopee-integration/data-source-description.md § 4.3 for full column dictionary.
@@ -79,6 +79,24 @@ SERVICE_FEE_RENAME = {
     "Voucher Xtra": "voucher_xtra_fee",
 }
 
+# Sheet: Adjustment (section-based parsing, header row found dynamically)
+ADJUSTMENT_RENAME = {
+    "Mã giao dịch": "row_seq",
+    "Ngày hoàn thành điều chỉnh đơn hàng": "adjustment_completed_at",
+    "Loại điều chỉnh | Mô tả": "adjustment_type",
+    "Lý do điều chỉnh": "adjustment_reason",
+    "Số tiền điều chỉnh": "adjustment_amount",
+    "Mã đơn hàng liên quan": "order_code",
+    "Ngày hoàn thành thanh toán": "payout_released_at",
+}
+
+# Section marker to find the detail rows in Adjustment sheet
+# (skip shop-level summary above this marker)
+ADJUSTMENT_SECTION_MARKER = "Chi tiết danh sách giao dịch điều chỉnh"
+
+# Required columns for Adjustment sheet validation
+REQUIRED_ADJUSTMENT_HEADERS = {"Mã đơn hàng liên quan", "Số tiền điều chỉnh"}
+
 # Columns that need string→int cleanup (may contain "-", "", or string numbers)
 NUMERIC_CLEANUP_COLS = [
     "piship_service_fee", "amount_paid_by_buyer",
@@ -108,8 +126,9 @@ def parse_shopee_income(file_path):
     """Parse one Shopee income Excel file.
 
     Returns:
-        (df_order_revenue, df_order_revenue_items, df_order_service_fees)
+        (df_order_revenue, df_order_revenue_items, df_order_service_fees, df_order_adjustments)
         Each DataFrame has ingestion metadata columns: source_file, ingested_at, year, month.
+        df_order_adjustments may be empty if no adjustment detail rows exist.
     """
     file_path = str(file_path)
     source_file = os.path.basename(file_path)
@@ -193,8 +212,12 @@ def parse_shopee_income(file_path):
 
     print(f"  Service Fee Details: {len(df_sfd)} rows")
 
+    # ── Parse Adjustment sheet (section-based) ───────────────────────────
+    df_adj = _parse_adjustment_sheet(file_path)
+    print(f"  Adjustment: {len(df_adj)} rows")
+
     # ── Inject ingestion metadata ──────────────────────────────────────────
-    for df in [df_order, df_sku, df_sfd]:
+    for df in [df_order, df_sku, df_sfd, df_adj]:
         df["ingest_method"] = "file_drop"
         df["source_file"] = source_file
         df["ingested_at"] = ingested_at
@@ -203,8 +226,82 @@ def parse_shopee_income(file_path):
     _add_partition_keys(df_order, "payout_released_at")
     _add_partition_keys(df_sfd, "payout_released_at", fallback_df=df_order)
     _add_partition_keys(df_sku, "payout_released_at", fallback_df=df_order)
+    _add_partition_keys(df_adj, "payout_released_at")
 
-    return df_order, df_sku, df_sfd
+    return df_order, df_sku, df_sfd, df_adj
+
+
+def _parse_adjustment_sheet(file_path):
+    """Parse the Adjustment sheet using section-based detection.
+
+    Scans column A for the section marker text to find where detail rows begin.
+    Skips the shop-level summary section above the marker.
+    Returns an empty DataFrame if no detail rows or sheet doesn't exist.
+    """
+    try:
+        # Load entire sheet without header to scan for section marker
+        df_raw = pd.read_excel(file_path, sheet_name="Adjustment", header=None, engine="openpyxl")
+    except ValueError:
+        # Sheet doesn't exist in this file
+        return pd.DataFrame()
+
+    # Find the section marker row: "Chi tiết danh sách giao dịch điều chỉnh"
+    marker_row = None
+    for idx, val in df_raw.iloc[:, 0].items():
+        if isinstance(val, str) and ADJUSTMENT_SECTION_MARKER in val:
+            marker_row = idx
+            break
+
+    if marker_row is None:
+        return pd.DataFrame()
+
+    # Header row = marker + 1, data starts at marker + 2
+    header_row = marker_row + 1
+    if header_row >= len(df_raw):
+        return pd.DataFrame()
+
+    # Re-read with correct header position
+    df_adj = pd.read_excel(
+        file_path, sheet_name="Adjustment",
+        header=header_row, engine="openpyxl",
+    )
+    df_adj.columns = df_adj.columns.str.strip()
+
+    # Validate required headers
+    missing = REQUIRED_ADJUSTMENT_HEADERS - set(df_adj.columns)
+    if missing:
+        raise ValueError(f"Adjustment sheet missing required headers: {missing}")
+
+    # Rename VN → snake_case
+    rename_map = {k: v for k, v in ADJUSTMENT_RENAME.items() if k in df_adj.columns}
+    df_adj = df_adj.rename(columns=rename_map)
+
+    # Filter: keep only rows with order_code (drops blank rows + "Tổng cộng" summary)
+    df_adj = df_adj[df_adj["order_code"].notna()].reset_index(drop=True)
+
+    if df_adj.empty:
+        return df_adj
+
+    # Numeric cleanup — adjustment_amount may already be numeric from Excel,
+    # so cast directly instead of to_int_vnd() which corrupts floats (strips '.')
+    if "adjustment_amount" in df_adj.columns:
+        df_adj["adjustment_amount"] = (
+            pd.to_numeric(df_adj["adjustment_amount"], errors="coerce")
+            .fillna(0)
+            .round()
+            .astype("Int64")
+        )
+
+    # Date parsing
+    for date_col in ["adjustment_completed_at", "payout_released_at"]:
+        if date_col in df_adj.columns:
+            df_adj[date_col] = pd.to_datetime(df_adj[date_col], errors="coerce").dt.date
+
+    # Drop row_seq (file row counter)
+    if "row_seq" in df_adj.columns:
+        df_adj = df_adj.drop(columns=["row_seq"])
+
+    return df_adj
 
 
 def _add_partition_keys(df, date_col, fallback_df=None):

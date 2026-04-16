@@ -70,6 +70,8 @@ sources:
         description: "Shopee order × product line items (Doanh thu sheet, Sku rows)"
       - name: order_service_fees
         description: "Shopee extra service fees: infrastructure + Xtra voucher (Service Fee Details sheet)"
+      - name: order_adjustments
+        description: "Shopee order-level adjustments: marketing fees, compensations (Adjustment sheet, detail rows only)"
 
   - name: misa_raw
     schema: main

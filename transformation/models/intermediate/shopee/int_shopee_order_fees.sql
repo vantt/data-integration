@@ -14,6 +14,14 @@ WITH rev AS (
 
 fees AS (
     SELECT * FROM {{ ref('stg_shopee_order_service_fees') }}
+),
+
+adj AS (
+    SELECT
+        order_code,
+        SUM(adjustment_amount) AS total_adjustment_amount
+    FROM {{ ref('int_shopee_order_adjustments') }}
+    GROUP BY order_code
 )
 
 SELECT
@@ -66,9 +74,23 @@ SELECT
         + COALESCE(fees.voucher_xtra_fee, 0)
     ) AS net_settlement,
 
+    -- Adjustments (marketing fees, compensations — from Adjustment sheet)
+    COALESCE(adj.total_adjustment_amount, 0) AS total_adjustment_amount,
+    (
+        rev.total_paid_amount
+        + rev.total_shipping_net
+        + rev.total_discounts
+        + rev.total_platform_fees
+        + rev.total_taxes
+        + COALESCE(fees.infrastructure_fee, 0)
+        + COALESCE(fees.voucher_xtra_fee, 0)
+        + COALESCE(adj.total_adjustment_amount, 0)
+    ) AS net_settlement_adjusted,
+
     -- Lineage
     rev.source_file,
     rev.ingested_at
 
 FROM rev
 LEFT JOIN fees USING (order_code)
+LEFT JOIN adj USING (order_code)
