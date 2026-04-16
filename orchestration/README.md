@@ -23,7 +23,7 @@ dagster dev
 dagster definitions validate
 
 # Execute a job manually
-dagster job execute -j sapo_nightly_reconciliation_job
+dagster job execute -j transform_batch_nightly_job
 ```
 
 → See [System Architecture](../docs/architecture/overview.md) for how orchestration fits into the full pipeline.

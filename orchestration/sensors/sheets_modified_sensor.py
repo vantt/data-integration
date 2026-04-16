@@ -3,7 +3,7 @@
 Polls the public CSV export URL of each tracked sheet every N minutes,
 computes a sha256 of the response body, and compares to a cursor of
 last-known hashes. When any hash changes, fires a RunRequest for
-`sheets_sync_job` (which cascades downstream into dbt + serving_db).
+`ingest_sheets_sync_job` (which cascades downstream into dbt + serving_db).
 
 Design rationale (why content hash, not Drive API `modifiedTime`):
   - These sheets are published as "anyone with link can view" and are
@@ -19,8 +19,8 @@ Cursor format (JSON): `{"targets": "<sha256>", "marketing_spend": "<sha256>"}`.
 On first tick (empty cursor) the sensor records hashes but does NOT fire —
 we only want to trigger on CHANGE, not on cold start.
 
-Alerts: failures propagate naturally — `lark_failure_sensor` will fire if
-`sheets_sync_job` fails, and `stuck_run_sensor` catches hangs. No extra
+Alerts: failures propagate naturally — `health_alert_failure_sensor` will fire if
+`ingest_sheets_sync_job` fails, and `health_alert_stuckrun_sensor` catches hangs. No extra
 logic here.
 """
 from __future__ import annotations
@@ -95,16 +95,16 @@ def _parse_cursor(raw: Optional[str]) -> dict[str, str]:
 # and the polling cost is a rounding error against the Google CSV endpoint.
 # Lower to 60s only if user feedback demands it.
 @sensor(
-    job_name="sheets_sync_job",
+    job_name="ingest_sheets_sync_job",
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,  # auto-start on deploy
     description=(
         "Polls Google Sheets CSV exports via content hash. Fires "
-        "sheets_sync_job only when a sheet's bytes actually change. "
+        "ingest_sheets_sync_job only when a sheet's bytes actually change. "
         "See lessons-learned L21."
     ),
 )
-def sheets_modified_sensor(context: SensorEvaluationContext):
+def ingest_sheets_modified_sensor(context: SensorEvaluationContext):
     """Detect sheet edits by comparing CSV content hashes to a cursor."""
     prev = _parse_cursor(context.cursor)
     current: dict[str, str] = {}
@@ -157,7 +157,7 @@ def sheets_modified_sensor(context: SensorEvaluationContext):
         run_key=run_key,
         tags={
             "concurrency_group": "dbt_rw",
-            "source": "sheets_modified_sensor",
+            "source": "ingest_sheets_modified_sensor",
             "sheets_changed": ",".join(changed),
         },
     )

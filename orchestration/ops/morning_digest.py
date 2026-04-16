@@ -2,7 +2,8 @@
 
 Runs at 08:00 Asia/Ho_Chi_Minh daily. Reads ingestion_health.duckdb,
 composes one Lark card summarising 24h volume, 7-day median trend,
-freshness, and recon drift per source. Dry-run via DIGEST_DRY_RUN=1.
+freshness, recon drift, consecutive zero-row streaks, and recommended
+actions per source. Dry-run via DIGEST_DRY_RUN=1.
 
 Architecture: @op inside a job (not an asset — no downstream data graph).
 Card delivery failure is caught and logged — never fails the Dagster run.
@@ -10,7 +11,6 @@ Card delivery failure is caught and logged — never fails the Dagster run.
 from __future__ import annotations
 
 import logging
-import math
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
@@ -55,6 +55,8 @@ class DigestRow:
     fresh_age_min: Optional[int]   # minutes since last success
     drift_pct: Optional[float]     # from recon, if applicable
     note: Optional[str]            # e.g. "never run", "recon failed"
+    last_run_id: Optional[str] = None
+    zero_streak: int = 0           # consecutive cursor-advanced-but-0-rows runs
 
 
 # ---------------------------------------------------------------------------
@@ -92,6 +94,12 @@ def classify(row: DigestRow) -> Literal["green", "yellow", "red", "gray"]:
         if ratio < 0.5:
             return "yellow"
 
+    # Consecutive zero-row runs (cursor advanced but no data)
+    if row.zero_streak >= 3:
+        return "red"
+    if row.zero_streak >= 2:
+        return "yellow"
+
     # Most-recent run failed
     if row.note == "last run failed":
         return "red"
@@ -109,7 +117,8 @@ WITH recent AS (
            MAX(run_started_at) FILTER (WHERE status = 'success') AS last_ok,
            MAX(run_started_at)                                    AS last_any,
            SUM(rows_written)   FILTER (WHERE run_started_at >= now() - INTERVAL 1 DAY) AS r_24h,
-           LAST(status ORDER BY run_started_at) AS last_status
+           LAST(status ORDER BY run_started_at) AS last_status,
+           LAST(run_id ORDER BY run_started_at) AS last_run_id
     FROM ingestion_runs
     GROUP BY asset_key
 ),
@@ -127,7 +136,7 @@ med AS (
     FROM daily
     GROUP BY 1
 )
-SELECT r.asset_key, r.last_ok, r.r_24h, m.med7, r.last_status
+SELECT r.asset_key, r.last_ok, r.r_24h, m.med7, r.last_status, r.last_run_id
 FROM recent r
 LEFT JOIN med m USING (asset_key);
 """
@@ -141,26 +150,34 @@ QUALIFY row_number() OVER (PARTITION BY asset_key ORDER BY run_started_at DESC) 
 """
 
 
-def _fetch_stats(db_path: str) -> tuple[dict, dict]:
-    """Return (stats_by_asset_key, drift_by_recon_key) dicts."""
+def _fetch_stats(db_path: str) -> tuple[dict, dict, dict]:
+    """Return (stats_by_asset_key, drift_by_recon_key, zero_streaks) dicts."""
     stats: dict = {}
     drift: dict = {}
+    zero_streaks: dict = {}
     try:
         conn = duckdb.connect(db_path, read_only=True)
         try:
+            from orchestration.asset_checks.health_db import consecutive_empty_with_cursor_move
+
             rows = conn.execute(_MAIN_QUERY).fetchall()
-            for asset_key, last_ok, r_24h, med7, last_status in rows:
-                stats[asset_key] = (last_ok, r_24h, med7, last_status)
+            for asset_key, last_ok, r_24h, med7, last_status, last_run_id in rows:
+                stats[asset_key] = (last_ok, r_24h, med7, last_status, last_run_id)
 
             recon_rows = conn.execute(_RECON_QUERY).fetchall()
             for rk, dp in recon_rows:
                 drift[rk] = dp
+
+            for _, asset_key, _ in KNOWN_ASSETS:
+                streak = consecutive_empty_with_cursor_move(conn, asset_key, streak_n=5)
+                if streak > 0:
+                    zero_streaks[asset_key] = streak
         finally:
             conn.close()
     except Exception as exc:
         logger.error(f"morning_digest: failed to query health DB: {exc}")
-        return {}, {}
-    return stats, drift
+        return {}, {}, {}
+    return stats, drift, zero_streaks
 
 
 # ---------------------------------------------------------------------------
@@ -169,28 +186,29 @@ def _fetch_stats(db_path: str) -> tuple[dict, dict]:
 
 def build_digest_rows(db_path: str) -> list[DigestRow]:
     """Query ingestion_health.duckdb and build one DigestRow per known asset."""
-    stats, drift = _fetch_stats(db_path)
+    stats, drift, zero_streaks = _fetch_stats(db_path)
     now_utc = datetime.now(timezone.utc)
     rows: list[DigestRow] = []
 
     for short_name, asset_key, recon_key in KNOWN_ASSETS:
         drift_val = drift.get(recon_key) if recon_key else None
+        streak = zero_streaks.get(asset_key, 0)
         if asset_key not in stats:
             dr = DigestRow(
                 short_name=short_name, asset_key=asset_key,
                 status="gray", rows_24h=None, median_7d=None,
                 pct_vs_median=None, fresh_age_min=None,
                 drift_pct=drift_val, note="never run",
+                zero_streak=streak,
             )
             dr.status = classify(dr)
             rows.append(dr)
             continue
 
-        last_ok, r_24h, med7, last_status = stats[asset_key]
+        last_ok, r_24h, med7, last_status, last_run_id = stats[asset_key]
 
         fresh_age_min: Optional[int] = None
         if last_ok is not None:
-            # last_ok may be tz-aware or naive; normalise to UTC
             if hasattr(last_ok, "tzinfo") and last_ok.tzinfo is None:
                 last_ok = last_ok.replace(tzinfo=timezone.utc)
             fresh_age_min = int((now_utc - last_ok).total_seconds() / 60)
@@ -215,6 +233,8 @@ def build_digest_rows(db_path: str) -> list[DigestRow]:
             fresh_age_min=fresh_age_min,
             drift_pct=drift_val,
             note=note,
+            last_run_id=last_run_id,
+            zero_streak=streak,
         )
         dr.status = classify(dr)
         rows.append(dr)
@@ -228,6 +248,30 @@ def build_digest_rows(db_path: str) -> list[DigestRow]:
 
 _EMOJI = {"green": "✅", "yellow": "⚠️", "red": "❌", "gray": "⬜"}
 _LARK_COLOR = {"green": "green", "yellow": "orange", "red": "red", "gray": "grey"}
+
+_DAGSTER_BASE = os.getenv("DAGSTER_URL", f"http://localhost:{os.getenv('DAGSTER_PORT', '3001')}")
+
+
+def _run_link(run_id: Optional[str]) -> str:
+    if not run_id:
+        return ""
+    short = run_id[:8]
+    return f"[{short}]({_DAGSTER_BASE}/runs/{run_id})"
+
+
+def _recommend(dr: "DigestRow") -> Optional[str]:
+    """Return a short recommended action string, or None."""
+    if dr.note == "last run failed":
+        return "→ check logs, re-materialize"
+    if dr.zero_streak >= 3:
+        return "→ source may be empty; verify API/file"
+    if dr.drift_pct is not None and abs(dr.drift_pct) > 5.0:
+        return "→ run recon diff, check source counts"
+    if dr.fresh_age_min is not None and dr.fresh_age_min > _SLA_HOURS * 60:
+        return "→ check schedule/sensor, re-materialize"
+    if dr.zero_streak >= 2:
+        return "→ monitor next run for zero-rows"
+    return None
 
 
 def _fmt_age(minutes: Optional[int]) -> str:
@@ -254,6 +298,7 @@ def compose_card_fields(rows: list[DigestRow]) -> tuple[dict, str]:
 
     for dr in rows:
         em = _EMOJI[dr.status]
+        run_link = _run_link(dr.last_run_id)
 
         if dr.note == "never run":
             val = f"{em} never run"
@@ -274,6 +319,16 @@ def compose_card_fields(rows: list[DigestRow]) -> tuple[dict, str]:
             if dr.drift_pct is not None:
                 sign = "+" if dr.drift_pct >= 0 else ""
                 val += f" · drift: {sign}{dr.drift_pct:.1f}%"
+
+        if dr.zero_streak >= 2:
+            val += f" · ⚠ {dr.zero_streak}x zero-rows"
+
+        if run_link:
+            val += f" · run: {run_link}"
+
+        action = _recommend(dr)
+        if action:
+            val += f"\n{action}"
 
         fields[dr.short_name] = val
 
@@ -338,5 +393,5 @@ def compose_and_send_digest(_context) -> None:
 
 
 @job
-def morning_digest_job():
+def health_report_digest_job():
     compose_and_send_digest()

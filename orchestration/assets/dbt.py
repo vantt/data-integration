@@ -48,7 +48,7 @@ class SapoDbtTranslator(DagsterDbtTranslator):
         # SYSTEM INSIGHT: HYBRID JOB RACE CONDITION FIX
         # ----------------------------------------------------------------------
         # Problem:
-        # In `sapo_incremental_sync_job`, we run `sapo_history_log_asset` (Incremental) 
+        # In `ingest_sapo_incremental_job`, we run `sapo_history_log_asset` (Incremental) 
         # and `dbt_assets`. However, dbt models like `stg_sapo_orders` declare their 
         # source as `source('sapo_raw', 'order')`, which `get_asset_key` maps to 
         # `sapo_orders_batch_asset`.

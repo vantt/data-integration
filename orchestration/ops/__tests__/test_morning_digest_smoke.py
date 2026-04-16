@@ -128,7 +128,7 @@ def health_db(tmp_path, monkeypatch):
 # ---------------------------------------------------------------------------
 
 def _make(status="green", rows_24h=1000, median_7d=1000, fresh_age_min=30,
-          drift_pct=None, note=None) -> DigestRow:
+          drift_pct=None, note=None, zero_streak=0) -> DigestRow:
     return DigestRow(
         short_name="test", asset_key="test/asset",
         status=status,
@@ -138,6 +138,7 @@ def _make(status="green", rows_24h=1000, median_7d=1000, fresh_age_min=30,
         fresh_age_min=fresh_age_min,
         drift_pct=drift_pct,
         note=note,
+        zero_streak=zero_streak,
     )
 
 
@@ -265,3 +266,59 @@ def test_compose_card_fields_no_db(tmp_path, monkeypatch):
     fields, color = compose_card_fields(rows)
     assert color == "grey"
     assert len(fields) == len(KNOWN_ASSETS)
+
+
+# ---------------------------------------------------------------------------
+# New feature tests: zero-streak, run links, recommendations
+# ---------------------------------------------------------------------------
+
+def test_classify_red_zero_streak_3():
+    row = _make(zero_streak=3)
+    assert classify(row) == "red"
+
+
+def test_classify_yellow_zero_streak_2():
+    row = _make(zero_streak=2)
+    assert classify(row) == "yellow"
+
+
+def test_classify_green_zero_streak_1():
+    row = _make(zero_streak=1)
+    assert classify(row) == "green"
+
+
+def test_compose_card_fields_includes_run_link():
+    from orchestration.ops.morning_digest import compose_card_fields
+    row = _make()
+    row.last_run_id = "abcdef12-3456-7890-abcd-ef1234567890"
+    _, _ = compose_card_fields([row])
+
+
+def test_compose_card_includes_zero_streak_warning():
+    from orchestration.ops.morning_digest import compose_card_fields
+    row = _make(zero_streak=3)
+    row.status = classify(row)
+    fields, _ = compose_card_fields([row])
+    assert "3x zero-rows" in fields["test"]
+
+
+def test_compose_card_includes_recommendation_for_failed():
+    from orchestration.ops.morning_digest import compose_card_fields
+    row = _make(note="last run failed")
+    row.status = classify(row)
+    fields, _ = compose_card_fields([row])
+    assert "re-materialize" in fields["test"]
+
+
+def test_compose_card_includes_run_link_text():
+    from orchestration.ops.morning_digest import compose_card_fields
+    row = _make()
+    row.last_run_id = "abcdef12-3456-7890-abcd-ef1234567890"
+    fields, _ = compose_card_fields([row])
+    assert "abcdef12" in fields["test"]
+
+
+def test_build_digest_rows_populates_run_id(health_db):
+    rows = build_digest_rows(health_db)
+    orders = next(r for r in rows if r.short_name == "sapo_orders")
+    assert orders.last_run_id is not None

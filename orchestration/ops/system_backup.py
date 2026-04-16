@@ -71,5 +71,5 @@ def run_platform_backup(context: OpExecutionContext) -> None:
     description="Daily platform backup (app_data + config files).",
     tags={"kind": "maintenance"},
 )
-def platform_backup_job():
+def maintain_backup_platform_job():
     run_platform_backup()

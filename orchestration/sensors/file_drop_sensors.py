@@ -68,15 +68,15 @@ def _parse_cursor(raw: str | None) -> float:
 
 # Shopee sensor — ticks every 5 minutes (file drops are manual/weekly)
 @sensor(
-    job_name="file_drop_shopee_sync_job",
+    job_name="ingest_filedrop_shopee_job",
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,
     description=(
         "Watches app_data/input_source/shopee/ for new/modified .xlsx files. "
-        "Fires file_drop_shopee_sync_job on change."
+        "Fires ingest_filedrop_shopee_job on change."
     ),
 )
-def shopee_file_drop_sensor(context: SensorEvaluationContext):
+def ingest_filedrop_shopee_sensor(context: SensorEvaluationContext):
     current_mtime = _get_max_mtime(_SHOPEE_INPUT_DIR)
 
     if current_mtime == 0.0:
@@ -95,21 +95,21 @@ def shopee_file_drop_sensor(context: SensorEvaluationContext):
     context.update_cursor(json.dumps({"mtime": current_mtime}))
     return RunRequest(
         run_key=f"shopee-file-drop-{current_mtime:.0f}",
-        tags={"source": "shopee_file_drop_sensor"},
+        tags={"source": "ingest_filedrop_shopee_sensor"},
     )
 
 
 # MISA sensor — ticks every 5 minutes
 @sensor(
-    job_name="file_drop_misa_sync_job",
+    job_name="ingest_filedrop_misa_job",
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,
     description=(
         "Watches app_data/input_source/misa-amis/ for new/modified .xlsx files. "
-        "Fires file_drop_misa_sync_job on change."
+        "Fires ingest_filedrop_misa_job on change."
     ),
 )
-def misa_file_drop_sensor(context: SensorEvaluationContext):
+def ingest_filedrop_misa_sensor(context: SensorEvaluationContext):
     current_mtime = _get_max_mtime(_MISA_INPUT_DIR)
 
     if current_mtime == 0.0:
@@ -127,5 +127,5 @@ def misa_file_drop_sensor(context: SensorEvaluationContext):
     context.update_cursor(json.dumps({"mtime": current_mtime}))
     return RunRequest(
         run_key=f"misa-file-drop-{current_mtime:.0f}",
-        tags={"source": "misa_file_drop_sensor"},
+        tags={"source": "ingest_filedrop_misa_sensor"},
     )

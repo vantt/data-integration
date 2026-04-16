@@ -4,25 +4,25 @@
 
 ## Schedule Overview
 
-| Schedule               | Cron           | Timezone         | Job                             |
-| ---------------------- | -------------- | ---------------- | ------------------------------- |
-| `realtime_schedule`    | `*/1 * * * *`  | Asia/Ho_Chi_Minh | sapo_realtime_sync_job          |
-| `incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | sapo_incremental_sync_job       |
-| `nightly_schedule`     | `0 4 * * *`    | Asia/Ho_Chi_Minh | sapo_nightly_reconciliation_job |
+| Schedule                         | Cron           | Timezone         | Job                          |
+| -------------------------------- | -------------- | ---------------- | ---------------------------- |
+| `ingest_sapo_realtime_schedule`  | `*/1 * * * *`  | Asia/Ho_Chi_Minh | ingest_sapo_realtime_job     |
+| `ingest_sapo_incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | ingest_sapo_incremental_job  |
+| `transform_batch_nightly_schedule` | `0 4 * * *`    | Asia/Ho_Chi_Minh | transform_batch_nightly_job  |
 
 ---
 
 ## Schedule Definitions
 
-### realtime_schedule
+### ingest_sapo_realtime_schedule
 
 **Purpose:** Process webhook events every minute.
 
 ```python
 from dagster import ScheduleDefinition
 
-realtime_schedule = ScheduleDefinition(
-    job=sapo_realtime_sync_job,
+ingest_sapo_realtime_schedule = ScheduleDefinition(
+    job=ingest_sapo_realtime_job,
     cron_schedule="*/1 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING
@@ -35,13 +35,13 @@ realtime_schedule = ScheduleDefinition(
 
 ---
 
-### incremental_schedule
+### ingest_sapo_incremental_schedule
 
 **Purpose:** Gap filling via history log every 10 minutes.
 
 ```python
-incremental_schedule = ScheduleDefinition(
-    job=sapo_incremental_sync_job,
+ingest_sapo_incremental_schedule = ScheduleDefinition(
+    job=ingest_sapo_incremental_job,
     cron_schedule="*/10 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING
@@ -54,13 +54,13 @@ incremental_schedule = ScheduleDefinition(
 
 ---
 
-### nightly_schedule
+### transform_batch_nightly_schedule
 
 **Purpose:** Full reconciliation and mart refresh.
 
 ```python
-nightly_schedule = ScheduleDefinition(
-    job=sapo_nightly_reconciliation_job,
+transform_batch_nightly_schedule = ScheduleDefinition(
+    job=transform_batch_nightly_job,
     cron_schedule="0 4 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING
@@ -138,10 +138,10 @@ ScheduleDefinition(
 
 ```bash
 # Start schedule
-dagster schedule start nightly_schedule
+dagster schedule start transform_batch_nightly_schedule
 
 # Stop schedule
-dagster schedule stop nightly_schedule
+dagster schedule stop transform_batch_nightly_schedule
 
 # List all schedules
 dagster schedule list
@@ -157,17 +157,17 @@ dagster schedule wipe
 dagster schedule list
 
 # Output:
-# Schedule Name           State     Cron Schedule
-# realtime_schedule       RUNNING   */1 * * * *
-# incremental_schedule    RUNNING   */10 * * * *
-# nightly_schedule        RUNNING   0 4 * * *
+# Schedule Name                       State     Cron Schedule
+# ingest_sapo_realtime_schedule       RUNNING   */1 * * * *
+# ingest_sapo_incremental_schedule    RUNNING   */10 * * * *
+# transform_batch_nightly_schedule    RUNNING   0 4 * * *
 ```
 
 ### Force Run
 
 ```bash
 # Trigger schedule immediately
-dagster schedule tick nightly_schedule
+dagster schedule tick transform_batch_nightly_schedule
 ```
 
 ---
@@ -230,7 +230,7 @@ Instead of fixed schedules, trigger based on events:
 ```python
 from dagster import sensor, RunRequest
 
-@sensor(job=sapo_incremental_sync_job, minimum_interval_seconds=60)
+@sensor(job=ingest_sapo_incremental_job, minimum_interval_seconds=60)
 def new_data_sensor(context):
     if check_for_new_webhooks():
         yield RunRequest(run_key=f"webhook_{timestamp}")
@@ -303,7 +303,7 @@ If server was down, missed runs are NOT automatically backfilled. To catch up:
 
 ```bash
 # Manual run
-dagster job execute -j sapo_nightly_reconciliation_job
+dagster job execute -j transform_batch_nightly_job
 
 # Or use sensors for catch-up logic
 ```

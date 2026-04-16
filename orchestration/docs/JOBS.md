@@ -14,22 +14,22 @@ Jobs are collections of assets that execute together. Each job has:
 
 | Job                               | Schedule        | Assets                        | Purpose                  |
 | --------------------------------- | --------------- | ----------------------------- | ------------------------ |
-| `sapo_realtime_sync_job`          | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates        |
-| `sapo_incremental_sync_job`       | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling              |
-| `sapo_nightly_reconciliation_job` | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation      |
-| `sheets_sync_job`                 | Manual          | Targets + Marketing Spend     | Google Sheets (Raw Only) |
+| `ingest_sapo_realtime_job`       | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates        |
+| `ingest_sapo_incremental_job`    | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling              |
+| `transform_batch_nightly_job`    | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation      |
+| `ingest_sheets_sync_job`         | Manual          | Targets + Marketing Spend     | Google Sheets (Raw Only) |
 
 ---
 
 ## Job Definitions
 
-### sapo_realtime_sync_job
+### ingest_sapo_realtime_job
 
 **Purpose:** Process webhook events and update operational tables.
 
 ```python
-sapo_realtime_sync_job = define_asset_job(
-    name="sapo_realtime_sync_job",
+ingest_sapo_realtime_job = define_asset_job(
+    name="ingest_sapo_realtime_job",
     selection=[
         "sapo_webhook_consumer",
         *dbt_assets_tagged("otp")
@@ -67,13 +67,13 @@ graph TD
 
 ---
 
-### sapo_incremental_sync_job
+### ingest_sapo_incremental_job
 
 **Purpose:** Gap filling via history log and incremental dbt updates.
 
 ```python
-sapo_incremental_sync_job = define_asset_job(
-    name="sapo_incremental_sync_job",
+ingest_sapo_incremental_job = define_asset_job(
+    name="ingest_sapo_incremental_job",
     selection=[
         "sapo_history_log",
         *dbt_assets_tagged("otp")
@@ -91,13 +91,13 @@ sapo_incremental_sync_job = define_asset_job(
 
 ---
 
-### sapo_nightly_reconciliation_job
+### transform_batch_nightly_job
 
 **Purpose:** Full daily reconciliation and mart refresh.
 
 ```python
-sapo_nightly_reconciliation_job = define_asset_job(
-    name="sapo_nightly_reconciliation_job",
+transform_batch_nightly_job = define_asset_job(
+    name="transform_batch_nightly_job",
     selection=[
         "sapo_orders_batch",
         "sapo_customers_batch",
@@ -158,13 +158,13 @@ graph TD
 
 ---
 
-### sheets_sync_job
+### ingest_sheets_sync_job
 
 **Purpose:** Manual sync of Targets and Marketing Spend from Google Sheets (Raw Ingestion Only).
 
 ```python
-sheets_sync_job = define_asset_job(
-    name="sheets_sync_job",
+ingest_sheets_sync_job = define_asset_job(
+    name="ingest_sheets_sync_job",
     selection=[
         "sheets_targets_asset",
         "sheets_marketing_spend_asset"
@@ -197,8 +197,8 @@ def custom_backfill_job(): ...
 ### Tags
 
 ```python
-sapo_nightly_reconciliation_job = define_asset_job(
-    name="sapo_nightly_reconciliation_job",
+transform_batch_nightly_job = define_asset_job(
+    name="transform_batch_nightly_job",
     selection=[...],
     tags={
         "team": "data-eng",
@@ -213,8 +213,8 @@ sapo_nightly_reconciliation_job = define_asset_job(
 ```python
 from dagster import multiprocess_executor
 
-sapo_nightly_reconciliation_job = define_asset_job(
-    name="sapo_nightly_reconciliation_job",
+transform_batch_nightly_job = define_asset_job(
+    name="transform_batch_nightly_job",
     selection=[...],
     executor_def=multiprocess_executor.configured({
         "max_concurrent": 4
@@ -238,14 +238,14 @@ sapo_nightly_reconciliation_job = define_asset_job(
 
 ```bash
 # Run with defaults
-dagster job execute -j sapo_nightly_reconciliation_job
+dagster job execute -j transform_batch_nightly_job
 
 # Run with config
-dagster job execute -j sapo_nightly_reconciliation_job \
+dagster job execute -j transform_batch_nightly_job \
   --config-json '{"ops": {"sapo_orders_batch": {"config": {"backfill_days": 30}}}}'
 
 # Run in background
-dagster job launch -j sapo_nightly_reconciliation_job
+dagster job launch -j transform_batch_nightly_job
 ```
 
 ### Via Code
@@ -254,7 +254,7 @@ dagster job launch -j sapo_nightly_reconciliation_job
 from dagster import execute_job
 
 result = execute_job(
-    sapo_nightly_reconciliation_job,
+    transform_batch_nightly_job,
     run_config={...}
 )
 ```
@@ -266,7 +266,7 @@ result = execute_job(
 Jobs can depend on other jobs completing:
 
 ```python
-@sensor(job=sapo_nightly_reconciliation_job)
+@sensor(job=transform_batch_nightly_job)
 def after_ingestion_sensor(context):
     # Check if ingestion completed
     if ingestion_complete():

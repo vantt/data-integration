@@ -22,12 +22,12 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation
-from orchestration.ops.system_backup import platform_backup_job
-from orchestration.ops.morning_digest import morning_digest_job
-from orchestration.sensors.failure_alerting import lark_failure_sensor
-from orchestration.sensors.sheets_modified_sensor import sheets_modified_sensor
-from orchestration.sensors.stuck_run_alerter import stuck_run_sensor
-from orchestration.sensors.file_drop_sensors import shopee_file_drop_sensor, misa_file_drop_sensor
+from orchestration.ops.system_backup import maintain_backup_platform_job
+from orchestration.ops.morning_digest import health_report_digest_job
+from orchestration.sensors.failure_alerting import health_alert_failure_sensor
+from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
+from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
+from orchestration.sensors.file_drop_sensors import ingest_filedrop_shopee_sensor, ingest_filedrop_misa_sensor
 
 # Load all assets
 # [Auto-Setup] Ensure dbt directories exist before loading assets
@@ -73,15 +73,15 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 
 # 1. Realtime Job (Webhook)
-sapo_realtime_sync_job = define_asset_job(
-    name="sapo_realtime_sync_job",
+ingest_sapo_realtime_job = define_asset_job(
+    name="ingest_sapo_realtime_job",
     selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
     tags=SYNC_TAGS,
 )
 
 # 2. Incremental Job (History Log)
-sapo_incremental_sync_job = define_asset_job(
-    name="sapo_incremental_sync_job",
+ingest_sapo_incremental_job = define_asset_job(
+    name="ingest_sapo_incremental_job",
     selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
@@ -99,8 +99,8 @@ _sheets_sources = (
     AssetSelection.assets(sheets_assets.sheets_targets_asset)
     | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset)
 )
-sheets_sync_job = define_asset_job(
-    name="sheets_sync_job",
+ingest_sheets_sync_job = define_asset_job(
+    name="ingest_sheets_sync_job",
     selection=(
         _sheets_sources
         | _sheets_sources.downstream()
@@ -113,8 +113,8 @@ sheets_sync_job = define_asset_job(
 # 2.6 Shopee file-drop sync job
 # Ingests Shopee income Excel → dbt (downstream of shopee sources) → serving_db.
 _shopee_source = AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset)
-file_drop_shopee_sync_job = define_asset_job(
-    name="file_drop_shopee_sync_job",
+ingest_filedrop_shopee_job = define_asset_job(
+    name="ingest_filedrop_shopee_job",
     selection=(
         _shopee_source
         | _shopee_source.downstream()
@@ -125,8 +125,8 @@ file_drop_shopee_sync_job = define_asset_job(
 
 # 2.7 MISA file-drop sync job
 _misa_source = AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset)
-file_drop_misa_sync_job = define_asset_job(
-    name="file_drop_misa_sync_job",
+ingest_filedrop_misa_job = define_asset_job(
+    name="ingest_filedrop_misa_job",
     selection=(
         _misa_source
         | _misa_source.downstream()
@@ -150,16 +150,16 @@ _nightly_batch_selection = (
     AssetSelection.assets(rill.sapo_rill_publish)
 )
 
-sapo_nightly_reconciliation_job = define_asset_job(
-    name="sapo_nightly_reconciliation_job",
+transform_batch_nightly_job = define_asset_job(
+    name="transform_batch_nightly_job",
     selection=_nightly_batch_selection,
     tags=SYNC_TAGS,
 )
 
 # 3b. Full Refresh Job — manual trigger only, resets all batch cursors
 # Launch from Dagster UI when data gaps are suspected.
-sapo_full_refresh_job = define_asset_job(
-    name="sapo_full_refresh_job",
+transform_batch_fullrefresh_job = define_asset_job(
+    name="transform_batch_fullrefresh_job",
     selection=_nightly_batch_selection,
     tags={**SYNC_TAGS, "full_refresh": "true"},
 )
@@ -198,20 +198,20 @@ def _has_active_run(context, job_name: str) -> str | None:
 
 
 @schedule(
-    job=sapo_realtime_sync_job,
+    job=ingest_sapo_realtime_job,
     cron_schedule="*/3 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def realtime_schedule(context):
-    active = _has_active_run(context, "sapo_realtime_sync_job")
+def ingest_sapo_realtime_schedule(context):
+    active = _has_active_run(context, "ingest_sapo_realtime_job")
     if active:
         return SkipReason(f"realtime: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
 @schedule(
-    job=sapo_incremental_sync_job,
-    # Skip 4 AM hour entirely — nightly reconciliation runs then and holds the
+    job=ingest_sapo_incremental_job,
+    # Skip 4 AM hour entirely — nightly batch runs then and holds the
     # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
     # ticks from piling up while nightly is running.
     #
@@ -222,34 +222,34 @@ def realtime_schedule(context):
     cron_schedule="*/10 0-3,5-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def incremental_schedule(context):
-    active = _has_active_run(context, "sapo_incremental_sync_job")
+def ingest_sapo_incremental_schedule(context):
+    active = _has_active_run(context, "ingest_sapo_incremental_job")
     if active:
         return SkipReason(f"incremental: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
 @schedule(
-    job=sapo_nightly_reconciliation_job,
+    job=transform_batch_nightly_job,
     cron_schedule="0 4 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def nightly_schedule(context):
-    active = _has_active_run(context, "sapo_nightly_reconciliation_job")
+def transform_batch_nightly_schedule(context):
+    active = _has_active_run(context, "transform_batch_nightly_job")
     if active:
         return SkipReason(f"nightly: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
-# 6 AM daily — runs after nightly reconciliation (4 AM) has finished.
+# 6 AM daily — runs after nightly batch (4 AM) has finished.
 # Not in dbt_rw concurrency group: backup reads files, doesn't write DuckDB.
 @schedule(
-    job=platform_backup_job,
+    job=maintain_backup_platform_job,
     cron_schedule="0 6 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def backup_schedule(context):
-    active = _has_active_run(context, "platform_backup_job")
+def maintain_backup_platform_schedule(context):
+    active = _has_active_run(context, "maintain_backup_platform_job")
     if active:
         return SkipReason(f"backup: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -258,39 +258,39 @@ def backup_schedule(context):
 # Recon job — daily source↔destination reconciliation.
 # NOT in dbt_rw concurrency group: recon is read-only on raw DB and health DB,
 # so it must never compete with nightly ingestion writes.
-recon_daily_job = define_asset_job(
-    name="recon_daily_job",
+health_recon_daily_job = define_asset_job(
+    name="health_recon_daily_job",
     selection=AssetSelection.groups("reconciliation"),
 )
 
 
 @schedule(
-    job=recon_daily_job,
+    job=health_recon_daily_job,
     cron_schedule="30 4 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def recon_daily_schedule(context):
-    active = _has_active_run(context, "recon_daily_job")
+def health_recon_daily_schedule(context):
+    active = _has_active_run(context, "health_recon_daily_job")
     if active:
         return SkipReason(f"recon: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
-# Ingestion health checks job — runs all @asset_checks every 2h.
+# Health asset checks job — runs all @asset_checks every 2h.
 # Read-only against ingestion_health.duckdb; not in dbt_rw concurrency group.
-ingestion_health_checks_job = define_asset_job(
-    name="ingestion_health_checks_job",
+health_checks_asset_job = define_asset_job(
+    name="health_checks_asset_job",
     selection=AssetSelection.all_asset_checks(),
 )
 
 
 @schedule(
-    job=ingestion_health_checks_job,
+    job=health_checks_asset_job,
     cron_schedule="0 */2 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def ingestion_health_checks_schedule(context):
-    active = _has_active_run(context, "ingestion_health_checks_job")
+def health_checks_asset_schedule(context):
+    active = _has_active_run(context, "health_checks_asset_job")
     if active:
         return SkipReason(f"health_checks: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -298,12 +298,12 @@ def ingestion_health_checks_schedule(context):
 
 # Morning digest — 08:00 ICT daily, read-only against health DB, not in dbt_rw group.
 @schedule(
-    job=morning_digest_job,
+    job=health_report_digest_job,
     cron_schedule="0 8 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def ingestion_morning_digest_schedule(context):
-    active = _has_active_run(context, "morning_digest_job")
+def health_report_digest_schedule(context):
+    active = _has_active_run(context, "health_report_digest_job")
     if active:
         return SkipReason(f"morning_digest: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -323,37 +323,47 @@ defs = Definitions(
     assets=all_assets,
     # Jobs must be listed explicitly so sensors can reference them by name.
     # Schedules already pull in their target job implicitly, but sensors
-    # targeting a job (e.g. sheets_modified_sensor → sheets_sync_job)
+    # targeting a job (e.g. ingest_sheets_modified_sensor → ingest_sheets_sync_job)
     # require the job to be present in the repository.
     asset_checks=[*ALL_CHECKS, *RECON_CHECKS],
     jobs=[
-        sapo_realtime_sync_job,
-        sapo_incremental_sync_job,
-        sheets_sync_job,
-        file_drop_shopee_sync_job,
-        file_drop_misa_sync_job,
-        sapo_nightly_reconciliation_job,
-        sapo_full_refresh_job,
-        platform_backup_job,
-        ingestion_health_checks_job,
-        recon_daily_job,
-        morning_digest_job,
+        # ingest_*
+        ingest_sapo_realtime_job,
+        ingest_sapo_incremental_job,
+        ingest_sheets_sync_job,
+        ingest_filedrop_shopee_job,
+        ingest_filedrop_misa_job,
+        # transform_*
+        transform_batch_nightly_job,
+        transform_batch_fullrefresh_job,
+        # health_*
+        health_recon_daily_job,
+        health_checks_asset_job,
+        health_report_digest_job,
+        # maintain_*
+        maintain_backup_platform_job,
     ],
     schedules=[
-        realtime_schedule,
-        incremental_schedule,
-        nightly_schedule,
-        backup_schedule,
-        ingestion_health_checks_schedule,
-        recon_daily_schedule,
-        ingestion_morning_digest_schedule,
+        # ingest_*
+        ingest_sapo_realtime_schedule,
+        ingest_sapo_incremental_schedule,
+        # transform_*
+        transform_batch_nightly_schedule,
+        # health_*
+        health_recon_daily_schedule,
+        health_checks_asset_schedule,
+        health_report_digest_schedule,
+        # maintain_*
+        maintain_backup_platform_schedule,
     ],
     sensors=[
-        lark_failure_sensor,
-        stuck_run_sensor,
-        sheets_modified_sensor,
-        shopee_file_drop_sensor,
-        misa_file_drop_sensor,
+        # ingest_*
+        ingest_sheets_modified_sensor,
+        ingest_filedrop_shopee_sensor,
+        ingest_filedrop_misa_sensor,
+        # health_*
+        health_alert_failure_sensor,
+        health_alert_stuckrun_sensor,
     ],
     resources={
         "dbt": DbtCliResource(

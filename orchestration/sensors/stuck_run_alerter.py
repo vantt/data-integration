@@ -45,7 +45,7 @@ def _parse_cursor(raw: str | None) -> list[str]:
 
 
 @sensor(minimum_interval_seconds=600)  # tick every 10 minutes
-def stuck_run_sensor(context: SensorEvaluationContext):
+def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
     """Alert on any run that has been STARTED longer than STUCK_THRESHOLD."""
     alerted = _parse_cursor(context.cursor)
     alerted_set = set(alerted)

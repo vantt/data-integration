@@ -11,7 +11,7 @@ from orchestration.notifications.lark_client import send_lark_card
 
 
 @run_failure_sensor(minimum_interval_seconds=60)
-def lark_failure_sensor(context: RunFailureSensorContext):
+def health_alert_failure_sensor(context: RunFailureSensorContext):
     """Send failure alert for any job failure in the deployment."""
     run = context.dagster_run
     error_msg = (context.failure_event.message or "")[:500]

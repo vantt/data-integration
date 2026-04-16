@@ -4,7 +4,7 @@ Four daily assets compare external source truth vs warehouse row counts and
 persist drift metrics to ingestion_health.duckdb under asset_key='recon/...'.
 
 Asset group: reconciliation
-Schedule: recon_daily_schedule at 04:30 Asia/Ho_Chi_Minh (registered in definitions.py)
+Schedule: health_recon_daily_schedule at 04:30 Asia/Ho_Chi_Minh (registered in definitions.py)
 
 Live Sapo API calls are gated behind RECON_LIVE_API=1 env flag.
 File-drop recon reads ingestion_health.duckdb only — no xlsx re-parsing at recon time.
