@@ -55,3 +55,23 @@ models:
         tests: [not_null]
       - name: location_id
         tests: [not_null]
+
+  - name: src_misa_sales_lines
+    columns:
+      - name: voucher_no
+        tests: [not_null]
+      - name: line_no
+        tests: [not_null]
+      - name: posting_date
+        tests: [not_null]
+
+  - name: stg_misa_sales_lines
+    columns:
+      - name: voucher_no
+        tests: [not_null]
+      - name: line_no
+        tests: [not_null]
+      - name: posting_date
+        tests: [not_null]
+      - name: cogs_amount
+        tests: [not_null]

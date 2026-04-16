@@ -83,7 +83,13 @@ class SapoDbtTranslator(DagsterDbtTranslator):
             upstream_keys.add(AssetKey(["sheets", "sheets_targets_asset"]))
         elif name == "stg_marketing_spend":
             upstream_keys.add(AssetKey(["sheets", "sheets_marketing_spend_asset"]))
-        
+
+        # File-drop sources: ingestion asset must finish before dbt reads parquet
+        elif name in ["src_misa_sales_lines", "stg_misa_sales_lines"]:
+            upstream_keys.add(AssetKey(["misa_amis", "misa_sales_file_drop_asset"]))
+        elif name in ["src_shopee_order_revenue", "src_shopee_order_items", "src_shopee_service_fees"]:
+            upstream_keys.add(AssetKey(["shopee", "shopee_income_file_drop_asset"]))
+
         return upstream_keys
 
 @dbt_assets(

@@ -293,7 +293,7 @@ data_lake/shopee_raw/
 
 ---
 
-### Channel 5: MISA AMIS File Drop (NEW — planned)
+### Channel 5: MISA AMIS File Drop
 
 **Purpose:** Ingest MISA AMIS **Sổ chi tiết bán hàng** (Sales Detail Ledger) Excel exports containing per-line cost-of-goods-sold (giá vốn).
 

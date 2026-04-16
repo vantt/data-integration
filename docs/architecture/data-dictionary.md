@@ -411,7 +411,7 @@ Per-order Shopee released-income data (fees, shipping, revenue). Source: Seller 
 
 ---
 
-### MISA Sales Ledger (`misa_raw.sales_lines`) — NEW, planned
+### MISA Sales Ledger (`misa_raw.sales_lines`)
 
 Per-invoice-line sales detail from MISA AMIS accounting system. Contains COGS (giá vốn).
 
@@ -544,7 +544,7 @@ Shopee per-order × product line items.
 
 ---
 
-### `int_misa_sales_lines` — NEW, planned
+### `int_misa_sales_lines`
 
 MISA AMIS per-invoice-line with COGS, margin, and channel enrichment.
 

@@ -24,12 +24,12 @@ Ingest MISA AMIS **Sổ chi tiết bán hàng** Excel exports end-to-end so that
 | # | Phase | Status | File |
 |---|---|---|---|
 | 0 | Design spec (detailed) | ✅ done | `design-spec.md` |
-| 1 | Excel parser + file-drop ingestion | pending | `phase-01-ingestion.md` |
-| 2 | dbt src_/stg_ models (1 entity) | pending | `phase-02-dbt-staging.md` |
-| 3 | dbt intermediate: `int_misa_sales_lines` + channel code seed | pending | `phase-03-dbt-intermediate.md` |
-| 4 | Serving layer verification | pending | `phase-04-serving.md` |
-| 5 | Dagster asset + reactive sensor | pending | `phase-05-dagster.md` |
-| 6 | E2E verification + reconciliation | pending | `phase-06-verify.md` |
+| 1 | Excel parser + file-drop ingestion | ✅ done | `ingestion/run-misa-sales-file-drop.py`, `ingestion/src/misa_amis/sales-ledger-parser.py` |
+| 2 | dbt src_/stg_ models (1 entity) | ✅ done | `src_misa_sales_lines.sql`, `stg_misa_sales_lines.sql`, staging `schema.yml` tests |
+| 3 | dbt intermediate: `int_misa_sales_lines` + channel code seed | ✅ done | `int_misa_sales_lines.sql`, `schema.yml` tests, `ref_misa_channel_codes.csv` |
+| 4 | Serving layer verification | ✅ done | `bootstrap_serving_views.py` auto-discovered; verified in olap.duckdb (2026-04-16) |
+| 5 | Dagster asset + reactive sensor | ✅ done | `misa_amis_assets.py`, `file_drop_sensors.py`, `definitions.py`, upstream keys in `dbt.py` |
+| 6 | E2E verification + reconciliation | ✅ done | All checks pass (2026-04-16): 471 rows, 344 vouchers, revenue/COGS match, dedup OK, serving OK |
 
 *(Phase files not yet authored — created on kickoff of implementation.)*
 

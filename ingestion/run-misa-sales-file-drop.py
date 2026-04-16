@@ -98,8 +98,8 @@ def run(argv=None, file_path=None):
         print(f"  Reconciliation: SUM(cogs_amount) = {actual_cogs:,} VND")
         if cogs_total_claimed is not None:
             delta = abs(actual_cogs - cogs_total_claimed)
-            status = "✓ MATCH" if delta == 0 else f"⚠ DELTA={delta:,} VND"
-            print(f"  vs Tổng cộng footer: {cogs_total_claimed:,} VND → {status}")
+            status = "MATCH" if delta == 0 else f"DELTA={delta:,} VND"
+            print(f"  vs Tong cong footer: {cogs_total_claimed:,} VND -> {status}")
 
         # Archive source file
         max_date = max(d for d in df["posting_date"].dropna() if d is not None) if df["posting_date"].notna().any() else None

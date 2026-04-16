@@ -53,7 +53,7 @@ def write_partitioned_parquet(df, base_path, entity_name, source_prefix, date_co
         cols_to_drop = [c for c in ["year", "month"] if c in group.columns]
         group.drop(columns=cols_to_drop).to_parquet(file_path, index=False)
 
-        print(f"  Written {len(group)} rows → {file_path}")
+        print(f"  Written {len(group)} rows -> {file_path}")
         written_files.append(file_path)
 
     return written_files
@@ -78,7 +78,7 @@ def archive_source_file(source_file, archive_base, max_date, ingested_at_ts=None
     original_name = os.path.basename(source_file)
     dest = os.path.join(archive_dir, f"{ingested_at_ts}__{original_name}")
     shutil.move(str(source_file), dest)
-    print(f"  Archived: {source_file} → {dest}")
+    print(f"  Archived: {source_file} -> {dest}")
 
 
 def full_refresh_partitions(base_path, entity_name, touched_partitions):
@@ -113,7 +113,7 @@ def check_full_refresh_guardrail(df, date_col):
         return True
     date_range_days = (dates.max() - dates.min()).days
     if date_range_days < 7:
-        print(f"  ⚠ WARNING: date range is only {date_range_days} days.")
+        print(f"  WARNING: date range is only {date_range_days} days.")
         print(f"    This looks like a small corrective drop, not a full snapshot.")
         print(f"    --full-refresh-touched-months will DELETE existing data in touched partitions.")
         print(f"    Add --force to confirm, or remove --full-refresh-touched-months.")
