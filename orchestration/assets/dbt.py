@@ -101,12 +101,10 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # Base Export Dir (Same as in run_pipeline.ps1)
     # ProjectRoot/data_lake/export/marts/rolling
 
-    # Base Export Dir (Same as in run_pipeline.ps1)
-    # ProjectRoot/data_lake/export/marts
-    # We can deduce project root relative to this file
-    current_dir = os.path.dirname(os.path.abspath(__file__)) # orchestration/assets
-    project_root = os.path.dirname(os.path.dirname(current_dir)) # orchestration/.. -> root
-    export_base_dir = os.path.join(project_root, "data_lake", "export", "marts", "rolling")
+    # Rolling export dir — derive from DBT_EXPORT_PATH env var (set in .env.docker).
+    # Do NOT hardcode /app/data_lake — Docker mounts data under /app/var/.
+    dbt_export_path = os.environ.get("DBT_EXPORT_PATH", "/app/var/data_lake/export/marts")
+    export_base_dir = os.path.join(dbt_export_path, "rolling")
     
     # Ensure stable rolling directory exists
     if not os.path.exists(export_base_dir):
