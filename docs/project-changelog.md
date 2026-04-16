@@ -2,6 +2,26 @@
 
 > Record of significant changes, features, and fixes
 
+## [2026-04-16] Ingestion Health Monitor — Dashboard Fix
+
+**Summary:** Dashboard 40 showed blank values for most cards due to 3 cascading bugs.
+
+**Root Causes & Fixes:**
+
+| Bug | Impact | Fix |
+|-----|--------|-----|
+| Missing `return` in 5 batch runners | `LoadInfo` always `None` → health logger recorded all runs as "skipped" instead of "success" | Added `return` before `run_pipeline()` in `run_orders_batch.py`, `run_customers_batch.py`, `run_products_batch.py`, `run_history_log.py`, `run_accounts_batch.py` |
+| Wrong `asset_key` in drift cards | Blueprint used `recon/recon_*` prefix but code uses `recon/*` | Fixed 4 drift card queries in `ingestion_health.md` blueprint |
+| SQL cross-join returns empty on no-data | CTE cross-join produces 0 rows when asset never ran | Rewrote to scalar subqueries + COALESCE fallback (9999h freshness, 999 drift) |
+
+**Deploy infra fix:** Blueprint parser now reads `> **Database:** \`Name\`` from markdown header, overriding `METABASE_DB_NAME` env var. Prevents deploying cards to wrong database when `.env.local` has a different default.
+
+**Files:** `ingestion/run_*_batch.py` (5), `docs/analytics-handbook/blueprints/ingestion_health.md`, `.skills/metabase-automation/lib/markdown_parser.js`, `.skills/metabase-automation/scripts/deploy_from_markdown.js`
+
+**Commit:** `b0f6678`
+
+---
+
 ## [2026-04-16] Docker Volume Restructure
 
 **Summary:** Reorganized Docker volume mounts from flat `/app/` to grouped `/app/var/` for data directories.

@@ -893,3 +893,63 @@ pipeline = dlt.pipeline(pipeline_name=..., destination="filesystem", ...)
 **docker-compose `environment:`:** Chỉ chứa vars gắn chặt volume mount (ví dụ `BACKUP_ROOT=/app/backups` ph���i match `./app_data/backups:/app/backups`). Nếu var có thể thay đổi độc lập → thuộc `.env`.
 
 **Xem:** `docs/config-guide.md` cho chi tiết đầy đủ.
+
+---
+
+## Health Monitoring
+
+### L36 — Runner entry point PHẢI `return run_pipeline(...)` — không return = silent "skipped"
+
+**Symptom:** Ingestion Health Monitor dashboard trống — tất cả batch asset hiển thị "skipped" dù pipeline thực tế chạy thành công, data ghi đúng vào data lake.
+
+**Root cause:** 5 file `run_*_batch.py` gọi `run_pipeline(...)` nhưng **thiếu `return`**. Dagster asset nhận `None` thay vì `LoadInfo`:
+
+```python
+# SAI — run_pipeline() trả LoadInfo nhưng run() trả None
+def run(argv=None):
+    run_pipeline(pipeline_name=..., ...)
+
+# ĐÚNG
+def run(argv=None):
+    return run_pipeline(pipeline_name=..., ...)
+```
+
+**Chuỗi hậu quả:**
+```
+run() returns None
+→ load_info.asdict() if hasattr(load_info, "asdict") else {} → {}
+→ extract_loaded_packages({}) → []
+→ status = "success" if loaded_packages else "skipped" → "skipped"
+→ _record_health(status="skipped") → dashboard shows blank
+```
+
+**Detection:** Query `ingestion_runs` table:
+```sql
+SELECT asset_key, status, metadata_json::VARCHAR
+FROM ingestion_runs WHERE asset_key LIKE 'sapo/%'
+```
+Nếu `load_info = {}` trong metadata_json → runner thiếu `return`.
+
+**Rule:** Mọi runner entry point `run()` **PHẢI** `return run_pipeline(...)`. Template `run-entry-point-template.py` đã có sẵn `return` — đối chiếu khi tạo runner mới.
+
+### L37 — Dashboard SQL phải handle "asset chưa từng chạy" — không dùng cross join
+
+**Symptom:** Scalar card hiển thị blank khi asset chưa có bất kỳ run nào (không phải NULL mà là 0 rows).
+
+**Root cause:** CTE pattern `FROM last_ok lo, last_run lr` là implicit CROSS JOIN. Khi `last_run` trả 0 rows (asset chưa run), cross join cũng trả 0 rows → Metabase scalar hiển thị blank.
+
+**Fix:** Dùng scalar subqueries (luôn trả đúng 1 row):
+
+```sql
+SELECT
+    COALESCE(ROUND(date_diff('hour',
+        (SELECT MAX(run_ended_at) FROM ingestion_runs
+         WHERE asset_key = '{key}' AND status IN ('success', 'partial')),
+        now()), 1), 9999) AS "Giờ từ lần chạy OK",
+    COALESCE(
+        (SELECT rows_written FROM ingestion_runs
+         WHERE asset_key = '{key}' ORDER BY run_started_at DESC LIMIT 1),
+        0) AS "Rows Written"
+```
+
+**Rule:** Dashboard monitoring SQL phải handle 3 states: (1) asset có success run, (2) asset chỉ có skipped/failed, (3) asset chưa từng chạy. Sentinel values (9999h, 999%) trigger conditional formatting red → operator biết ngay.
