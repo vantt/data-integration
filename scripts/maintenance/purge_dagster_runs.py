@@ -1,7 +1,57 @@
 import sys
+import os
 import argparse
 from datetime import datetime, timedelta
 from dagster import DagsterInstance, RunsFilter, DagsterRunStatus
+
+def _get_run_db_dir(instance):
+    """Resolve the per-run SQLite directory from the Dagster instance."""
+    storage = instance._event_storage
+    if hasattr(storage, '_base_dir'):
+        return os.path.join(storage._base_dir, 'runs')
+    dagster_home = os.environ.get('DAGSTER_HOME', '')
+    return os.path.join(dagster_home, 'history', 'runs')
+
+
+def _remove_run_db_files(instance, run_id):
+    """Delete the per-run .db / .db-wal / .db-shm files for a given run_id."""
+    run_dir = _get_run_db_dir(instance)
+    removed = 0
+    for ext in ('.db', '.db-wal', '.db-shm'):
+        path = os.path.join(run_dir, run_id + ext)
+        try:
+            if os.path.exists(path):
+                os.remove(path)
+                removed += 1
+        except OSError:
+            pass
+    return removed
+
+
+def _cleanup_orphan_files(instance):
+    """Remove .db files that have no matching run record in Dagster storage."""
+    run_dir = _get_run_db_dir(instance)
+    if not os.path.isdir(run_dir):
+        return 0
+
+    known_ids = set(r.run_id for r in instance.get_runs(limit=999999))
+    removed = 0
+    for f in os.listdir(run_dir):
+        if not f.endswith('.db') or f == 'index.db':
+            continue
+        run_id = f[:-3]
+        if run_id in known_ids:
+            continue
+        for ext in ('.db', '.db-wal', '.db-shm'):
+            path = os.path.join(run_dir, run_id + ext)
+            try:
+                if os.path.exists(path):
+                    os.remove(path)
+                    removed += 1
+            except OSError:
+                pass
+    return removed
+
 
 def main():
     parser = argparse.ArgumentParser(description="Purge Dagster runs based on retention policy.")
@@ -77,22 +127,29 @@ def main():
     else:
         print(f"\n[EXECUTING] Deleting {count} runs (oldest first)...")
         deleted_count = 0
+        files_removed = 0
         for i, rec in enumerate(records):
             run_id = rec.dagster_run.run_id
             try:
-                # Delete run metadata and event logs separately to handle SQLite datetime issues
                 instance._run_storage.delete_run(run_id)
                 try:
                     instance._event_storage.delete_events(run_id)
                 except TypeError:
-                    pass  # SQLite datetime conversion issue in event storage, run record already deleted
+                    pass
                 deleted_count += 1
-                if (i + 1) % 10 == 0:
+
+                files_removed += _remove_run_db_files(instance, run_id)
+
+                if (i + 1) % 100 == 0:
                     print(f"Deleted {i + 1}/{count} (up to {format_ts(rec.create_timestamp)})...")
             except Exception as e:
                 print(f"Failed to delete run {run_id}: {e}")
 
-        print(f"\nCompleted. Deleted {deleted_count} runs.")
+        print(f"\nCompleted. Deleted {deleted_count} runs, removed {files_removed} orphan files.")
+
+        orphan_cleaned = _cleanup_orphan_files(instance)
+        if orphan_cleaned:
+            print(f"Cleaned {orphan_cleaned} additional orphan files (no matching run record).")
 
 if __name__ == "__main__":
     main()
