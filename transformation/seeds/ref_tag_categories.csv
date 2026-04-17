@@ -1,0 +1,62 @@
+pattern,category,match_type,priority,description
+Shopee,channel_platform,exact,10,Shopee marketplace
+Lazada,channel_platform,exact,10,Lazada marketplace
+Tiki,channel_platform,exact,10,Tiki marketplace
+sapoweb,channel_platform,exact,10,Sapo web orders
+sapo_social,channel_platform,exact,10,Sapo social orders
+bizweb,channel_platform,exact,10,Bizweb orders
+Shopee_%,channel_storefront,prefix,10,Shopee storefronts
+Lazada_%,channel_storefront,prefix,10,Lazada storefronts
+Tiki_%,channel_storefront,prefix,10,Tiki storefronts
+%ký gửi%,order_type_consignment,contains,1,Consignment orders (lowercase)
+%Ký gửi%,order_type_consignment,contains,1,Consignment orders (capitalized)
+%KÝ GỬI%,order_type_consignment,contains,1,Consignment orders (uppercase)
+%MẪU%,order_type_sample,contains,1,Sample orders (uppercase Vietnamese)
+%mẫu%,order_type_sample,contains,1,Sample orders (lowercase Vietnamese)
+%sampling%,order_type_sample,contains,1,Sampling orders
+%Sample%,order_type_sample,contains,1,Sample orders (English)
+%TÀI TRỢ%,order_type_sample,contains,1,Sponsored/supported sampling
+SAMPLING%,order_type_sample,prefix,1,Sampling orders (uppercase)
+Sampling%,order_type_sample,prefix,1,Sampling orders (mixed case)
+%tặng%,order_type_gift,contains,1,Gift orders (lowercase)
+%Tặng%,order_type_gift,contains,1,Gift orders (capitalized)
+%Quà%,order_type_gift,contains,1,Gift/promo orders
+Đơn gối đầu,order_type_preorder,exact,1,Pre-order/deposit orders
+Đơn lỗi,order_type_error,exact,1,Error/problem order
+%thanh lý%,order_type_clearance,contains,1,Clearance/liquidation orders
+CK SAU%,discount_deferred,prefix,2,Deferred discount (CK SAU)
+CHIẾT KHẤU%,discount_deferred,prefix,2,Deferred discount (CHIET KHAU)
+%Chiết khấu%,discount_deferred,contains,2,Deferred discount (mixed case)
+CK FGO%,discount_deferred,prefix,2,FGO discount
+TRẢ PHÍ%,expense_reimbursement,prefix,3,Expense reimbursement
+TRẢ THƯỞNG%,expense_reimbursement,prefix,3,Reward/bonus payment
+%hóa đơn%,invoice_status,contains,4,Invoice related (lowercase)
+%HÓA ĐƠN%,invoice_status,contains,4,Invoice related (uppercase)
+%thanh toán%,payment_status,contains,5,Payment status (lowercase)
+%THANH TOÁN%,payment_status,contains,5,Payment status (uppercase)
+%giao hàng%,fulfillment_status,contains,6,Delivery status (lowercase)
+%Giao hàng%,fulfillment_status,contains,6,Delivery status (capitalized)
+%Giao lại%,fulfillment_status,contains,6,Redelivery
+Ad_id_%,marketing_ad,prefix,10,Facebook Ad ID
+Post_ID%,marketing_post,prefix,10,Facebook Post ID
+ID Khách hàng%,marketing_customer,prefix,10,Facebook Customer ID
+ECOMOBI%,marketing_affiliate,prefix,10,Ecomobi affiliate
+KOC%,marketing_affiliate,prefix,10,KOC review
+page_%,social_page,prefix,10,Facebook page ID
+page_id_%,social_page,prefix,10,Facebook page numeric ID
+Freeship,shipping_type,exact,10,Free shipping
+Ngoại thành,shipping_type,exact,10,Suburban delivery
+cordyceps,product_category,exact,10,Product line - Cordyceps
+Fucoidan,product_category,exact,10,Product line - Fucoidan
+Collagen,product_category,exact,10,Product line - Collagen
+Vitamin CD,product_category,exact,10,Product line - Vitamin CD
+%CHƯƠNG TRÌNH%,promo_campaign,contains,10,Campaign/program related
+%minigame%,promo_campaign,contains,10,Minigame promotion
+OnePay%,payment_method,prefix,10,OnePay payment gateway
+VCB,payment_method,exact,10,Vietcombank transfer
+GB %,partner_location,prefix,10,Partner retail location
+NGUỒN LÀ ĐẠI LÝ,customer_type_agent,exact,10,Agent/distributor source
+Test_Monitor,system_test,exact,99,System test order
+Người nhận%,order_note,prefix,20,Recipient note
+%NỢ%,order_note,contains,20,Debt/credit note
+LCĐ,order_note,exact,20,Internal code/note

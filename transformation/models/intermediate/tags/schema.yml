@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: int_order_tags
+    description: "Unnested order tags with semantic categorization. One row per order-tag pair."
+    columns:
+      - name: order_id
+        description: "Order ID from src_sapo_orders"
+      - name: tag_value
+        description: "Individual tag value extracted from JSON array"
+      - name: tag_category
+        description: "Semantic category (channel_platform, order_type_consignment, etc.) or 'uncategorized'"

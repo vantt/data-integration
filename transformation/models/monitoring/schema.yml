@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: monitor_uncategorized_tags
+    description: "Lists tags without category mapping for review. Add patterns to ref_tag_categories.csv."
+    columns:
+      - name: tag_value
+        description: "Tag value needing categorization"
+      - name: order_count
+        description: "Number of orders with this tag"
+      - name: sample_order_id
+        description: "Example order ID for investigation"
+      - name: suggestion
+        description: "Auto-suggested category based on pattern"
+      - name: checked_at
+        description: "Timestamp of query"

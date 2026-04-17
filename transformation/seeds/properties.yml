@@ -21,3 +21,13 @@ seeds:
         vendor_raw: varchar
         brand_name: varchar
         brand_code: varchar
+
+  - name: ref_tag_categories
+    description: "Tag pattern to category mapping for order tag classification"
+    config:
+      column_types:
+        pattern: varchar
+        category: varchar
+        match_type: varchar
+        priority: integer
+        description: varchar
