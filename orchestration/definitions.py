@@ -17,6 +17,7 @@ from dagster import (
     SkipReason,
     RunsFilter,
     DagsterRunStatus,
+    in_process_executor,
 )
 from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
@@ -261,6 +262,7 @@ def maintain_backup_platform_schedule(context):
 health_recon_daily_job = define_asset_job(
     name="health_recon_daily_job",
     selection=AssetSelection.groups("reconciliation"),
+    executor_def=in_process_executor,
 )
 
 
@@ -278,9 +280,13 @@ def health_recon_daily_schedule(context):
 
 # Health asset checks job — runs all @asset_checks every 2h.
 # Read-only against ingestion_health.duckdb; not in dbt_rw concurrency group.
+# Uses in_process_executor: checks are lightweight DuckDB reads — spawning
+# heavyweight subprocesses (each re-importing dlt/dbt/duckdb) caused OOM
+# ChildProcessCrashException in the default multiprocess executor.
 health_checks_asset_job = define_asset_job(
     name="health_checks_asset_job",
     selection=AssetSelection.all_asset_checks(),
+    executor_def=in_process_executor,
 )
 
 
