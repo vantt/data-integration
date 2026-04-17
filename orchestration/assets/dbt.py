@@ -37,6 +37,8 @@ class SapoDbtTranslator(DagsterDbtTranslator):
                  return AssetKey(["sheets", "sheets_targets_asset"])
             elif name == "marketing_spend_raw":
                  return AssetKey(["sheets", "sheets_marketing_spend_asset"])
+            # Note: teams_raw and team_members_raw both come from sheets_team_config_asset
+            # but cannot share the same asset key. Dependency handled in get_upstream_asset_keys.
 
         return super().get_asset_key(dbt_resource_props)
 
@@ -83,6 +85,8 @@ class SapoDbtTranslator(DagsterDbtTranslator):
             upstream_keys.add(AssetKey(["sheets", "sheets_targets_asset"]))
         elif name == "stg_marketing_spend":
             upstream_keys.add(AssetKey(["sheets", "sheets_marketing_spend_asset"]))
+        elif name in ("stg_teams", "stg_team_members"):
+            upstream_keys.add(AssetKey(["sheets", "sheets_team_config_asset"]))
 
         # File-drop sources: ingestion asset must finish before dbt reads parquet
         elif name in ["src_misa_sales_lines", "stg_misa_sales_lines"]:

@@ -34,3 +34,6 @@ assets:
   sheets/sheets_marketing_spend_asset:
     freshness_hours: 48
     trend_min_ratio: null
+  sheets/sheets_team_config_asset:
+    freshness_hours: 168        # 7 days — team config rarely changes
+    trend_min_ratio: null

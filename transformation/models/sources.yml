@@ -59,6 +59,13 @@ sources:
       - name: marketing_spend_raw
         description: "Marketing spend data ingested from Google Sheets"
 
+      # Team Configuration (Google Sheets)
+      - name: teams_raw
+        description: "Team definitions with revenue_type and revenue_filter"
+
+      - name: team_members_raw
+        description: "Staff membership with SCD2 (effective_from/to)"
+
   - name: shopee_raw
     schema: main
     meta:

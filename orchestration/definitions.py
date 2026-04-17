@@ -99,6 +99,7 @@ ingest_sapo_incremental_job = define_asset_job(
 _sheets_sources = (
     AssetSelection.assets(sheets_assets.sheets_targets_asset)
     | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset)
+    | AssetSelection.assets(sheets_assets.sheets_team_config_asset)
 )
 ingest_sheets_sync_job = define_asset_job(
     name="ingest_sheets_sync_job",
@@ -144,6 +145,7 @@ _nightly_batch_selection = (
     AssetSelection.assets(sapo_assets.sapo_products_batch_asset) |
     AssetSelection.assets(sheets_assets.sheets_targets_asset) |
     AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
+    AssetSelection.assets(sheets_assets.sheets_team_config_asset) |
     AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
     AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
     all_dbt_assets |

@@ -44,6 +44,7 @@ def _build_asset_def_map() -> dict[str, Any]:
         "misa_amis/misa_sales_file_drop_asset": misa_amis_assets.misa_sales_file_drop_asset,
         "sheets/sheets_targets_asset": sheets_assets.sheets_targets_asset,
         "sheets/sheets_marketing_spend_asset": sheets_assets.sheets_marketing_spend_asset,
+        "sheets/sheets_team_config_asset": sheets_assets.sheets_team_config_asset,
     }
 
 

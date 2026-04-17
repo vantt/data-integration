@@ -2,6 +2,43 @@
 
 > Record of significant changes, features, and fixes
 
+## [2026-04-17] Team Configuration — Google Sheets Integration
+
+**Summary:** New team management system via Google Sheets for sales team definitions and member assignments with SCD2 history tracking.
+
+**Components:**
+
+| Layer | File | Purpose |
+|-------|------|---------|
+| Ingestion | `ingestion/src/gsheet_team_config.py` | XLSX download, validation, parquet output |
+| Dagster | `orchestration/assets/sheets_assets.py` | `sheets_team_config_asset` |
+| dbt Staging | `transformation/models/staging/stg_teams.sql` | Team definitions with surrogate key |
+| dbt Staging | `transformation/models/staging/stg_team_members.sql` | Member assignments with SCD2 |
+| Source | `transformation/models/sources.yml` | `teams_raw`, `team_members_raw` |
+
+**Google Sheet Structure:**
+
+- **teams tab:** `team_code`, `team_name`, `revenue_type` (member/platform/channel_name), `revenue_filter`, `leader_email`, `description`
+- **team_members tab:** `staff_email`, `team_code`, `effective_from`, `effective_to` (SCD2)
+
+**Revenue Attribution Models:**
+
+| `revenue_type` | `revenue_filter` | Logic |
+|----------------|------------------|-------|
+| `member` | (empty) | Sum revenue of team members' orders |
+| `platform` | `Shopee,Lazada` | Sum revenue from specified platforms |
+| `channel_name` | `SOC,WEB` | Sum revenue from specified channels |
+
+**Jobs Updated:**
+- `ingest_sheets_sync_job` — includes team_config asset
+- `transform_batch_nightly_job` — includes team_config asset
+
+**Env Var:** `SOURCES__SPREADSHEET_URL__TEAM_CONFIG`
+
+**Docs:** `docs/context/team-management.md`
+
+---
+
 ## [2026-04-16] Ingestion Health Monitor — Dashboard Fix
 
 **Summary:** Dashboard 40 showed blank values for most cards due to 3 cascading bugs.
