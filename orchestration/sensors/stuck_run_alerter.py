@@ -17,9 +17,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from dagster import (
-    DagsterEventType,
     DagsterRunStatus,
-    EventRecordsFilter,
     RunsFilter,
     SensorEvaluationContext,
     SkipReason,
@@ -55,26 +53,20 @@ def _parse_cursor(raw: str | None) -> list[str]:
 
 
 def _get_last_event_time(context: SensorEvaluationContext, run_id: str) -> datetime | None:
-    """Get timestamp of the most recent event for a run."""
+    """Get timestamp of the most recent event for a run.
+
+    Uses get_records_for_run() which filters server-side by run_id.
+    This is more efficient and correct than fetching global events
+    and filtering client-side (which could miss events).
+    """
     try:
-        records = context.instance.get_event_records(
-            EventRecordsFilter(
-                event_type=DagsterEventType.ENGINE_EVENT,
-                after_cursor=None,
-            ),
-            limit=1,
-            ascending=False,
+        # get_records_for_run filters by run_id server-side — correct API
+        result = context.instance.get_records_for_run(
+            run_id=run_id,
+            limit=1,  # only need the most recent event
         )
-        # Filter for this run_id since EventRecordsFilter doesn't support run_id directly
-        # Fall back to checking all recent events
-        records = context.instance.get_event_records(
-            EventRecordsFilter(),
-            limit=100,
-            ascending=False,
-        )
-        for rec in records:
-            if rec.dagster_run and rec.dagster_run.run_id == run_id:
-                return datetime.fromtimestamp(rec.timestamp, tz=timezone.utc)
+        if result.records:
+            return datetime.fromtimestamp(result.records[0].timestamp, tz=timezone.utc)
     except Exception as exc:
         logger.warning("Failed to get last event time for run %s: %s", run_id[:8], exc)
     return None
@@ -131,8 +123,8 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
         try:
             # Try graceful termination first
             instance.report_run_canceled(run)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Graceful cancel failed for run %s: %s", run.run_id[:8], exc)
 
         try:
             # Force to failed state if still not terminal
