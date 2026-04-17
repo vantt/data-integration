@@ -61,9 +61,11 @@ def _get_last_event_time(context: SensorEvaluationContext, run_id: str) -> datet
     """
     try:
         # get_records_for_run filters by run_id server-side — correct API
+        # ascending=False → newest first → limit=1 gets most recent event
         result = context.instance.get_records_for_run(
             run_id=run_id,
-            limit=1,  # only need the most recent event
+            limit=1,
+            ascending=False,  # CRITICAL: newest first, not oldest
         )
         if result.records:
             return datetime.fromtimestamp(result.records[0].timestamp, tz=timezone.utc)
