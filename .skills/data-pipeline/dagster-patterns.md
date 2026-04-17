@@ -437,6 +437,109 @@ Nếu thiếu wire này → `--full-refresh` bị silently ignored, cursor vẫn
 
 ---
 
+## Lesson 10: Auto-Termination + Concurrency Pool Janitor — Self-Healing Infrastructure
+
+**Problem:** Runs get stuck (subprocess hang, dbt bug) → block concurrency pool → cascade block all subsequent runs. Manual intervention required.
+
+**Solution: 2 sensor tự động hóa recovery**
+
+### 1. Stuck Run Auto-Terminator
+
+```python
+# orchestration/sensors/stuck_run_alerter.py
+INACTIVITY_THRESHOLD = timedelta(minutes=5)   # no log output → stuck
+MIN_RUNTIME_BEFORE_KILL = timedelta(minutes=10)  # grace period
+
+@sensor(minimum_interval_seconds=300)
+def health_alert_stuckrun_sensor(context):
+    for rec in instance.get_run_records(filters=RunsFilter(statuses=[STARTED])):
+        if runtime < MIN_RUNTIME_BEFORE_KILL:
+            continue
+        last_event_time = _get_last_event_time(context, run.run_id)
+        if (now - last_event_time) > INACTIVITY_THRESHOLD:
+            # Auto-terminate sequence
+            instance.report_run_canceled(run)
+            instance.report_run_failed(run, "Auto-terminated: no activity")
+            instance.event_log_storage.free_concurrency_slots_for_run(run.run_id)
+            send_lark_card(...)  # alert
+```
+
+**Key insight:** Activity-based detection (no log output 5+ min) beats fixed timeout. Legitimate long runs produce continuous output; hung processes go silent.
+
+### 2. Concurrency Pool Janitor
+
+```python
+# orchestration/sensors/concurrency_pool_janitor.py
+@sensor(minimum_interval_seconds=300)
+def health_concurrency_pool_janitor(context):
+    for key in els.get_concurrency_keys():
+        info = els.get_concurrency_info(key)
+        for run_id in info.active_run_ids | info.pending_run_ids:
+            run = instance.get_run_by_id(run_id)
+            if run is None or run.status not in ACTIVE_STATUSES:
+                els.free_concurrency_slots_for_run(run_id)
+```
+
+**Covers:** Container crash, OOM kill, `report_run_canceled()` không release slot, boot-time leak.
+
+### Layered Defense
+
+| Layer | Mechanism | Coverage |
+|-------|-----------|----------|
+| Boot | `unstick_concurrency_pools.py` trong docker-compose command | Pre-existing leaks |
+| Runtime (5 min) | `health_concurrency_pool_janitor` sensor | Mid-runtime leaks |
+| Stuck (5 min) | `health_alert_stuckrun_sensor` → free slots after kill | Hung process leaks |
+
+**Result:** Zero manual intervention for stuck runs. System self-heals within 10 minutes.
+
+**Reference:** `orchestration/sensors/stuck_run_alerter.py`, `orchestration/sensors/concurrency_pool_janitor.py`
+
+---
+
+## Lesson 11: Health Checks Mutual Exclusion với Ingestion
+
+**Problem:** Health checks job (`all_asset_checks()`) block ingestion 55+ min vì include dbt tests → compete `duckdb_lock`.
+
+**Solution: 3 layers**
+
+### 1. Exclude dbt tests từ health checks
+
+```python
+health_checks_asset_job = define_asset_job(
+    name="health_checks_asset_job",
+    selection=(
+        AssetSelection.all_asset_checks()
+        - AssetSelection.checks_for_assets(dbt.sapo_dbt_assets)
+    ),
+    executor_def=in_process_executor,
+)
+```
+
+### 2. Schedule mutual exclusion
+
+```python
+def _has_active_ingestion(context) -> str | None:
+    for job_name in ["ingest_sapo_realtime_job", "transform_batch_nightly_job", ...]:
+        runs = context.instance.get_runs(filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES), limit=1)
+        if runs:
+            return runs[0].run_id
+    return None
+
+@schedule(cron_schedule="5 */2 * * *", ...)  # offset :05
+def health_checks_schedule(context):
+    if active := _has_active_ingestion(context):
+        return SkipReason(f"Ingestion active ({active[:8]})")
+    return RunRequest(run_key=None)
+```
+
+### 3. Cron offset
+
+`:05` thay vì `:00` → không trigger cùng lúc với ingestion schedules.
+
+**Priority:** Ingestion > Health checks. Data freshness quan trọng hơn monitoring freshness.
+
+---
+
 ## Summary: Dagster Integration Checklist
 
 Khi add job/asset mới vào Dagster, kiểm tra:
@@ -457,6 +560,9 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **Full-refresh** = `transform_batch_fullrefresh_job` (manual, tag baked in), KHÔNG tag nightly schedule — xem Lesson 9
 - [ ] Batch source functions wire `full_refresh` param từ entry-point → source → resource (nếu thiếu: silently ignored)
 - [ ] Job cascade "source → downstream" → dùng `_sources | _sources.downstream()`, không dùng full `all_dbt_assets`
+- [ ] **Auto-recovery sensors** trong `Definitions(sensors=[...])`: `health_alert_stuckrun_sensor` + `health_concurrency_pool_janitor` — xem Lesson 10
+- [ ] Health checks job exclude dbt tests: `AssetSelection.all_asset_checks() - AssetSelection.checks_for_assets(dbt_assets)` — xem Lesson 11
+- [ ] Health checks schedule có `_has_active_ingestion()` check + offset `:05` cron — xem Lesson 11
 
 ---
 
@@ -470,6 +576,8 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 | `orchestration/sensors/sheets_modified_sensor.py` | `ingest_sheets_modified_sensor` — Reactive content-hash sensor — xem Lesson 7 |
 | `orchestration/sensors/stuck_run_alerter.py` | `health_alert_stuckrun_sensor` — Hang detector dùng `get_run_records()` — xem Lesson 8 |
 | `orchestration/sensors/failure_alerting.py` | `health_alert_failure_sensor` — Lark alert cho terminal FAILURE runs |
+| `orchestration/sensors/stuck_run_alerter.py` | `health_alert_stuckrun_sensor` — Activity-based auto-terminator — xem Lesson 10 |
+| `orchestration/sensors/concurrency_pool_janitor.py` | `health_concurrency_pool_janitor` — Auto-free leaked slots — xem Lesson 10 |
 | `.skills/data-pipeline/templates/dagster-reactive-sensor-template.py` | Copy-paste starter cho reactive sensor mới |
 | `orchestration/definitions.py` | `transform_batch_nightly_job` + `transform_batch_fullrefresh_job` definitions — xem Lesson 9 |
 | `docker-compose.yml` | Telemetry env vars (line 20-21) + auto-unstick on boot (line 33) |

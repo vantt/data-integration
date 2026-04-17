@@ -953,3 +953,154 @@ SELECT
 ```
 
 **Rule:** Dashboard monitoring SQL phải handle 3 states: (1) asset có success run, (2) asset chỉ có skipped/failed, (3) asset chưa từng chạy. Sentinel values (9999h, 999%) trigger conditional formatting red → operator biết ngay.
+
+---
+
+## Auto-Recovery & Self-Healing
+
+### L38 — Activity-based stuck detection vs fixed timeout
+
+**Symptom:** Job STARTED 1h+ nhưng không fail/complete. Fixed timeout (e.g., 30 min) có thể false-positive trên nightly batch.
+
+**Root cause:** dbt subprocess hang (e.g., dbt-duckdb rollback bug, deadlock, network stall). Process vẫn sống nhưng không produce output.
+
+**Activity-based approach (đã implement):**
+- Run đang chạy **phải** có log activity (stdout/stderr) mỗi vài giây
+- Nếu không có output > `INACTIVITY_THRESHOLD` (5 min) = stuck
+- Threshold nhỏ hơn nhiều so với runtime timeout → catch hang sớm
+
+```python
+# orchestration/sensors/stuck_run_alerter.py
+INACTIVITY_THRESHOLD = timedelta(minutes=5)   # no log activity
+MIN_RUNTIME_BEFORE_KILL = timedelta(minutes=10)  # grace period cho init
+
+def _get_last_event_time(context, run_id) -> datetime | None:
+    records = context.instance.get_event_records(EventRecordsFilter(), limit=100)
+    for rec in records:
+        if rec.dagster_run and rec.dagster_run.run_id == run_id:
+            return datetime.fromtimestamp(rec.timestamp, tz=timezone.utc)
+    return None
+```
+
+**Auto-terminate pattern:**
+```python
+# 1. Try graceful cancel
+instance.report_run_canceled(run)
+
+# 2. Force fail if still not terminal
+if updated_run.status not in TERMINAL_STATUSES:
+    instance.report_run_failed(run, "Auto-terminated: no activity for X minutes")
+
+# 3. Free concurrency slots (critical — không free = pool leak)
+instance.event_log_storage.free_concurrency_slots_for_run(run.run_id)
+
+# 4. Alert
+send_lark_card(...)
+```
+
+**Tại sao activity-based > fixed timeout:**
+- Nightly batch có thể chạy 2h+ legitimately (continuous log output)
+- Hung process im lặng trong vài phút → stuck signal rõ ràng
+- False positive gần như zero nếu pipeline code in log thường xuyên
+
+**Reference:** `orchestration/sensors/stuck_run_alerter.py`
+
+### L39 — Concurrency pool janitor auto-cleanup
+
+**Symptom:** Sau container restart/crash, run mới "Step blocked by limit for pool duckdb_lock" dù không có run nào active.
+
+**Root cause:** Asset-level concurrency pool (`op_tags={"dagster/concurrency_key": ...}`) leak slot khi:
+- Container restart/OOM kill
+- `report_run_canceled()` call
+- Force terminate
+
+Dagster **không auto-release** pool slots — khác với run-level tag concurrency.
+
+**Auto-cleanup sensor (đã implement):**
+
+```python
+# orchestration/sensors/concurrency_pool_janitor.py
+@sensor(minimum_interval_seconds=300)  # every 5 min
+def health_concurrency_pool_janitor(context):
+    els = context.instance.event_log_storage
+    for key in els.get_concurrency_keys():
+        info = els.get_concurrency_info(key)
+        for run_id in info.active_run_ids | info.pending_run_ids:
+            run = context.instance.get_run_by_id(run_id)
+            if run is None or run.status not in ACTIVE_STATUSES:
+                els.free_concurrency_slots_for_run(run_id)
+                logger.info("Freed leaked slot in pool '%s' from run %s", key, run_id[:8])
+```
+
+**Layered defense:**
+1. **Boot-time:** `docker-compose.yml` command runs `unstick_concurrency_pools.py || true` trước `dagster dev`
+2. **Runtime:** Janitor sensor chạy mỗi 5 min, cleanup bất kỳ leak nào phát sinh sau boot
+3. **Stuck-run:** Auto-termination sensor free slot sau khi kill stuck run
+
+**Tại sao runtime cleanup cần thiết:**
+- Boot cleanup chỉ fire 1 lần
+- Leak có thể xảy ra giữa runtime (cancel run, container partial restart)
+- 5-min polling ít overhead, catch leak trước khi gây block chain
+
+**Reference:** `orchestration/sensors/concurrency_pool_janitor.py`
+
+### L40 — Health checks phải mutual-exclude với ingestion/dbt jobs
+
+**Symptom:** Health checks job (dbt tests, asset checks) block ingestion/nightly batch > 55 min. Hoặc ngược lại: ingestion chạy dài, health checks queue tích lũy.
+
+**Root cause:**
+- `AssetSelection.all_asset_checks()` include dbt tests thông qua dagster-dbt integration
+- dbt tests require `duckdb_lock` → compete với ingestion/nightly
+- Health checks schedule `0 */2` collide với ingestion schedules
+
+**Fix 3 layers:**
+
+**1. Exclude dbt tests từ health checks job:**
+```python
+health_checks_asset_job = define_asset_job(
+    name="health_checks_asset_job",
+    selection=(
+        AssetSelection.all_asset_checks()
+        - AssetSelection.checks_for_assets(dbt.sapo_dbt_assets)  # exclude dbt tests
+    ),
+    executor_def=in_process_executor,  # no subprocess overhead for small checks
+)
+```
+
+**2. Mutual exclusion check trong schedule:**
+```python
+def _has_active_ingestion(context) -> str | None:
+    for job_name in [
+        "ingest_sapo_realtime_job", "ingest_sapo_incremental_job",
+        "transform_batch_nightly_job", "ingest_sheets_sync_job",
+    ]:
+        runs = context.instance.get_runs(
+            filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES), limit=1
+        )
+        if runs:
+            return runs[0].run_id
+    return None
+
+@schedule(cron_schedule="5 */2 * * *", ...)  # offset :05 để tránh collision
+def health_checks_schedule(context):
+    if active := _has_active_ingestion(context):
+        return SkipReason(f"Ingestion/transform active ({active[:8]}), skipping health checks")
+    return RunRequest(run_key=None)
+```
+
+**3. Schedule offset:** `5 */2` thay vì `0 */2` → không trigger cùng lúc với ingestion schedules.
+
+**Priority hierarchy:**
+```
+Ingestion/Transform jobs > Health checks
+
+Ingestion đang chạy → Health checks skip (sẽ retry 2h sau)
+Health checks đang chạy → Ingestion vẫn queue (coordinator enforce duckdb_lock)
+```
+
+**Tại sao asymmetric:**
+- Ingestion = business-critical, data freshness
+- Health checks = monitoring, có thể delay vài giờ không sao
+- Better to have stale health metrics than stale business data
+
+**Reference:** `orchestration/definitions.py` — `health_checks_asset_job`, `health_checks_schedule`

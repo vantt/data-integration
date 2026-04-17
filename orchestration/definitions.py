@@ -29,6 +29,7 @@ from orchestration.sensors.failure_alerting import health_alert_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
 from orchestration.sensors.file_drop_sensors import ingest_filedrop_shopee_sensor, ingest_filedrop_misa_sensor
+from orchestration.sensors.concurrency_pool_janitor import health_concurrency_pool_janitor
 
 # Load all assets
 # [Auto-Setup] Ensure dbt directories exist before loading assets
@@ -200,6 +201,31 @@ def _has_active_run(context, job_name: str) -> str | None:
     return runs[0].run_id if runs else None
 
 
+# Jobs that use duckdb_lock (write to DuckDB). Health checks should yield to these.
+# IMPORTANT: Update this list when adding new ingestion/transform jobs!
+_INGESTION_JOBS = [
+    "ingest_sapo_realtime_job",
+    "ingest_sapo_incremental_job",
+    "ingest_sheets_sync_job",
+    "ingest_filedrop_shopee_job",
+    "ingest_filedrop_misa_job",
+    "transform_batch_nightly_job",
+    "transform_batch_fullrefresh_job",
+]
+
+
+def _has_active_ingestion(context) -> str | None:
+    """Return job_name of any active ingestion job, or None if all idle."""
+    for job_name in _INGESTION_JOBS:
+        runs = context.instance.get_runs(
+            filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES),
+            limit=1,
+        )
+        if runs:
+            return job_name
+    return None
+
+
 @schedule(
     job=ingest_sapo_realtime_job,
     cron_schedule="*/3 * * * *",
@@ -280,27 +306,49 @@ def health_recon_daily_schedule(context):
     return RunRequest(run_key=None)
 
 
-# Health asset checks job — runs all @asset_checks every 2h.
+# Health asset checks job — runs INGESTION checks only (freshness, row_trend, cursor, recon).
 # Read-only against ingestion_health.duckdb; not in dbt_rw concurrency group.
+#
+# IMPORTANT: We explicitly EXCLUDE dbt tests from this job. Rationale:
+# - `all_asset_checks()` includes dbt tests (exposed via dagster-dbt)
+# - dbt tests require running `sapo_dbt_assets` step which needs `duckdb_lock`
+# - This caused 55+ minute blocking when health checks and ingestion ran simultaneously
+# - dbt tests already run during each ingestion job — no need to duplicate here
+#
 # Uses in_process_executor: checks are lightweight DuckDB reads — spawning
 # heavyweight subprocesses (each re-importing dlt/dbt/duckdb) caused OOM
 # ChildProcessCrashException in the default multiprocess executor.
 health_checks_asset_job = define_asset_job(
     name="health_checks_asset_job",
-    selection=AssetSelection.all_asset_checks(),
+    selection=(
+        AssetSelection.all_asset_checks()
+        - AssetSelection.checks_for_assets(dbt.sapo_dbt_assets)
+    ),
     executor_def=in_process_executor,
 )
 
 
 @schedule(
     job=health_checks_asset_job,
-    cron_schedule="0 */2 * * *",
+    # Run at :05 instead of :00 to avoid collision with realtime (*/3) and incremental (*/10).
+    # Both those schedules fire at :00, so health_checks would frequently skip due to yield logic.
+    cron_schedule="5 */2 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
 def health_checks_asset_schedule(context):
+    # Self-overlap check
     active = _has_active_run(context, "health_checks_asset_job")
     if active:
         return SkipReason(f"health_checks: previous run still active ({active[:8]})")
+
+    # Yield to ingestion: skip if any ingestion job is running.
+    # Health checks are fast (~12s) but we don't want to add noise during data sync.
+    # At :05 minute mark, realtime (:00, :03, :06) would have completed its ~45s run,
+    # so this skip is less likely to trigger than at :00.
+    active_ingest = _has_active_ingestion(context)
+    if active_ingest:
+        return SkipReason(f"health_checks: yielding to active ingestion ({active_ingest})")
+
     return RunRequest(run_key=None)
 
 
@@ -372,6 +420,7 @@ defs = Definitions(
         # health_*
         health_alert_failure_sensor,
         health_alert_stuckrun_sensor,
+        health_concurrency_pool_janitor,
     ],
     resources={
         "dbt": DbtCliResource(

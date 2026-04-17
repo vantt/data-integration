@@ -104,6 +104,9 @@
 | **"Step blocked by limit for pool duckdb_lock"** sau khi cancel runs | Asset-level concurrency pool slot bị leak từ ghost run đã CANCELED — `report_run_canceled` không tự free slot | `docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py`. Xem `lessons-learned.md` L20 |
 | **2 runs cùng STARTED concurrent dù có concurrency tag** | Một run là pre-deploy ghost không có tag — coordinator không enforce trên runs cũ | Cancel ghost runs + chạy unstick_concurrency_pools.py. Tags chỉ áp dụng cho runs **launched after** deploy |
 | **Health dashboard tất cả batch asset hiển thị "skipped"** | Runner `run()` thiếu `return` trước `run_pipeline()` → `LoadInfo` = None → `loaded_packages = []` → status = "skipped" | Thêm `return` trước `run_pipeline(...)`. Query `metadata_json` — nếu `load_info = {}` là dấu hiệu. Xem L36 |
+| **Run stuck STARTED 1h+ không fail/complete** | dbt subprocess hang (rollback bug, deadlock, network stall) — process sống nhưng không output | Auto-handled: `health_alert_stuckrun_sensor` phát hiện (no activity 5 min) → auto-terminate → free slots → Lark alert. Manual: cancel run + `unstick_concurrency_pools.py`. Xem L38 |
+| **"Step blocked by limit for pool duckdb_lock" sau restart** | Concurrency slot leak từ crashed/killed runs | Auto-handled: boot-time cleanup + `health_concurrency_pool_janitor` sensor (5 min). Manual: `docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py`. Xem L39 |
+| **Health checks block ingestion 55+ min** | `AssetSelection.all_asset_checks()` include dbt tests → compete `duckdb_lock` | Exclude dbt tests từ health job + mutual exclusion check trong schedule + offset cron :05. Xem L40 |
 
 ## Metabase — Dashboard Deploy
 
