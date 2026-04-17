@@ -589,6 +589,69 @@ Hai phân loại bổ sung, dùng khi cần tách riêng doanh thu theo đối t
 
 ---
 
+### 3.6. Giới hạn của Channel — Khi nào cần thêm Customer?
+
+**Channel trả lời:** Giao dịch xảy ra ở đâu?
+
+**Channel KHÔNG trả lời:** Bản chất giao dịch là gì? (sỉ hay lẻ)
+
+#### Phân loại kênh theo khả năng suy luận bản chất
+
+| Kênh | Channel → Order Nature? | Giải thích |
+|------|-------------------------|------------|
+| **Đại Lý, Chợ sỉ** | ✅ Đủ | `channel_format = B2B` → chắc chắn wholesale |
+| **Shopee, Lazada, Tiki** | ✅ Đủ | Marketplace B2C → chắc chắn retail |
+| **POS** | ✅ Đủ | Retail store → chắc chắn retail |
+| **Zalo, Facebook** | ❌ Không đủ | Social = dual-purpose → có thể retail HOẶC wholesale |
+| **Other** | ❌ Không đủ | Catch-all → không biết |
+
+#### Vấn đề: Social/Other là kênh "dual-purpose"
+
+```
+Kênh Zalo
+    ├── Khách lẻ nhắn mua 1 hộp     → retail
+    └── Khách sỉ nhắn mua 50 hộp    → wholesale
+    
+    → Cùng 1 kênh, 2 bản chất khác nhau
+```
+
+Đây không phải lỗi của channel classification — mà là **bản chất của kênh Social**: ai cũng có thể nhắn tin, bất kể họ là khách lẻ hay sỉ.
+
+#### Giải pháp: Order Nature = f(Channel, Customer)
+
+Để xác định bản chất giao dịch, cần kết hợp **Channel** + **Customer Group**:
+
+```sql
+order_nature = CASE
+  -- Channel đủ sức suy luận
+  WHEN channel_format = 'B2B' THEN 'wholesale'
+  WHEN channel_format IN ('Marketplace', 'Retail', 'Web') THEN 'retail_sale'
+  WHEN channel_format IN ('System', 'CrossBorder Fulfillment') THEN 'internal'
+  
+  -- Channel dual-purpose → dựa vào Customer Group
+  WHEN channel_format = 'Social' AND customer_group = 'WHOLESALE' THEN 'wholesale'
+  WHEN channel_format = 'Social' THEN 'retail_sale'
+  
+  -- Direct (Telesale, CS) → dựa vào Customer Group
+  WHEN channel_format = 'Direct' AND customer_group = 'WHOLESALE' THEN 'wholesale'
+  WHEN channel_format = 'Direct' THEN 'retail_sale'
+  
+  ELSE 'retail_sale'
+END
+```
+
+#### Tóm lại
+
+| Dimension | Trả lời câu hỏi | Đủ một mình? |
+|-----------|-----------------|--------------|
+| **Channel** | Giao dịch ở đâu? | Đủ cho ~80% cases (Marketplace, B2B, Retail) |
+| **Customer Group** | Khách thuộc tier nào? | Bổ sung cho ~20% còn lại (Social, Direct, Other) |
+| **Order Nature** | Bản chất giao dịch? | = Channel + Customer |
+
+> **Xem thêm:** [Customer Segmentation](./customer-segmentation.md) — Chi tiết về phân loại khách hàng và customer_group
+
+---
+
 ## 4. Common Misunderstandings — Những nhầm lẫn phổ biến
 
 | Nhầm lẫn | Sai | Đúng |
@@ -598,6 +661,8 @@ Hai phân loại bổ sung, dùng khi cần tách riêng doanh thu theo đối t
 | **channel_brand ≠ brand_name** | "JPC là thương hiệu sản phẩm" | JPC chỉ là thương hiệu kênh. Sản phẩm trên JPC có brand từ Fine Japan, FG Care, v.v. |
 | **Chi nhánh ≠ Kênh** | "POS ở Trương Dinh = kênh bán khác" | Chi nhánh là execution, kênh là where. Một shop Shopee có thể xử lý từ nhiều chi nhánh. |
 | **is_sales_channel = false ≠ doanh thu = 0** | "Internal không bán hàng" | Internal là kênh nội bộ, không bán (doanh thu = 0). Direct Sales/Telesale là kênh bán thật (is_sales_channel = true) |
+| **Social channel ≠ chỉ B2C** | "Zalo/Facebook = bán lẻ" | Social là dual-purpose: có cả khách lẻ và khách sỉ ẩn. Cần kết hợp `customer_group` để xác định. |
+| **Discount Social ≠ promotion** | "Discount 50% trên Zalo = KM" | Có thể là giá sỉ (khách WHOLESALE) hoặc promotion (khách RETAIL). Check `customer_group` trước khi kết luận. |
 
 ---
 
@@ -687,6 +752,73 @@ PHÂN KHÚC (GROUP BY customer_segment):
 | Thương hiệu kênh | `channel_brand` | dim_channels |
 | Thương hiệu SP | `brand_name` | dim_products |
 | Chi nhánh | `branch_location_name` | dim_branch_locations |
+
+---
+
+## 7. Known Limitations — Source Field Overloading
+
+### Vấn đề
+
+Sapo `source` field (và `ref_order_sources.csv`) đang trộn lẫn **5 khái niệm khác nhau** vào cùng 1 field:
+
+| Khái niệm | Trả lời câu hỏi | Sources thuộc nhóm | Có phải Channel? |
+|-----------|-----------------|-------------------|------------------|
+| **Channel** | Mua Ở ĐÂU? | Shopee, Zalo, POS, Web | ✅ Đúng |
+| **Customer Type** | AI mua? | Đại Lý, Chợ sỉ | ❌ Không |
+| **Team/Function** | AI xử lý? | CS, Telesale | ❌ Không |
+| **Order Purpose** | MỤC ĐÍCH gì? | Test SP, Quà Tặng, Ưu đãi NV | ❌ Không |
+| **Business Arrangement** | LOẠI HỢP ĐỒNG? | US (CrossBorder) | ❌ Không |
+
+### Minh họa
+
+```
+Sapo "source" field (legacy catch-all)
+    │
+    ├── Channel (WHERE)           → Shopee, Zalo, POS, Web
+    │
+    ├── Customer Type (WHO)       → Đại Lý, Chợ sỉ
+    │
+    ├── Team/Function (BY WHOM)   → CS, Telesale
+    │
+    ├── Order Purpose (WHY)       → Test SP, Quà Tặng, Ưu đãi NV
+    │
+    └── Business Arrangement      → US (CrossBorder Fulfillment)
+```
+
+### Thiết kế lý tưởng (không áp dụng)
+
+Nếu thiết kế từ đầu, nên tách thành các dimension độc lập:
+
+| Dimension | Field | Ví dụ values |
+|-----------|-------|--------------|
+| Channel | `channel` | Shopee, Zalo, POS, Web, Phone, Email |
+| Customer Type | `customer_group` | RETAIL, WHOLESALE, PARTNER, STAFF |
+| Team | `team` | Marketplace, Social, CS, B2B |
+| Order Purpose | `order_purpose` | Sale, Gift, Test, Staff Benefit |
+| Fulfillment Type | `fulfillment_type` | Standard, CrossBorder |
+
+### Cách tiếp cận hiện tại
+
+**Giữ nguyên source + bổ sung bằng các dimension khác:**
+
+| Vấn đề | Giải pháp bổ sung |
+|--------|-------------------|
+| Đại Lý/Chợ sỉ là Customer Type | → Dùng `customer_group` (xem [Customer Segmentation](./customer-segmentation.md)) |
+| CS/Telesale là Team | → Dùng Team dimension (xem Section 3.4) |
+| Test/Quà Tặng/NV là Order Purpose | → Filter bằng `is_sales_channel = false` |
+| US là Business Arrangement | → Filter bằng `is_sales_channel = false` + `channel_format = CrossBorder Fulfillment` |
+
+### Tại sao không refactor?
+
+1. **Data đã có** — Reports và dashboards đang chạy
+2. **Các dimension bổ sung đã cover** — Customer, Team, is_sales_channel
+3. **Effort cao, benefit thấp** — Breaking change không đáng
+
+### Lưu ý khi sử dụng
+
+- **Đừng gọi tất cả source là "channel"** — Một số là customer type, team, hoặc order purpose
+- **Luôn kết hợp với dimension khác** khi cần phân tích chính xác
+- **Document này gọi là "Channel Classification"** vì đó là use case chính, nhưng nhận thức rằng source field overloaded
 
 ---
 
