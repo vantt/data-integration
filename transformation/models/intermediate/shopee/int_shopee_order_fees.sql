@@ -63,29 +63,14 @@ SELECT
     rev.vat_tax,
     rev.personal_income_tax,
 
-    -- Derived net settlement (matches Shopee "Tổng phát hành")
-    (
-        rev.total_paid_amount
-        + rev.total_shipping_net
-        + rev.total_discounts
-        + rev.total_platform_fees
-        + rev.total_taxes
-        + COALESCE(fees.infrastructure_fee, 0)
-        + COALESCE(fees.voucher_xtra_fee, 0)
-    ) AS net_settlement,
+    -- Net settlement = Shopee per-order payout ("Tổng tiền đã thanh toán").
+    -- Fees/discounts/taxes are ALREADY embedded; do NOT recompute from components.
+    -- Invariant enforced by tests/assert_shopee_net_settlement_matches_total_paid.sql.
+    rev.total_paid_amount AS net_settlement,
 
     -- Adjustments (marketing fees, compensations — from Adjustment sheet)
     COALESCE(adj.total_adjustment_amount, 0) AS total_adjustment_amount,
-    (
-        rev.total_paid_amount
-        + rev.total_shipping_net
-        + rev.total_discounts
-        + rev.total_platform_fees
-        + rev.total_taxes
-        + COALESCE(fees.infrastructure_fee, 0)
-        + COALESCE(fees.voucher_xtra_fee, 0)
-        + COALESCE(adj.total_adjustment_amount, 0)
-    ) AS net_settlement_adjusted,
+    (rev.total_paid_amount + COALESCE(adj.total_adjustment_amount, 0)) AS net_settlement_adjusted,
 
     -- Lineage
     rev.source_file,

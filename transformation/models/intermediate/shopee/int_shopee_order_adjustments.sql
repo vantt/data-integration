@@ -8,8 +8,10 @@
 -- One row per adjustment per order. Standalone table — join to int_shopee_order_fees via order_code.
 
 SELECT
+    -- sk must match src_ dedup key so same row never collides with a distinct
+    -- same-day same-type adjustment of a different amount.
     {{ dbt_utils.generate_surrogate_key([
-        'order_code', 'adjustment_completed_at', 'adjustment_type'
+        'order_code', 'adjustment_completed_at', 'adjustment_type', 'adjustment_amount'
     ]) }} AS shopee_order_adjustment_sk,
     order_code,
     adjustment_completed_at,

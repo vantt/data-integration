@@ -1,5 +1,7 @@
 # Plans & Backlog Audit — 2026-04-16
 
+> **Shopee section superseded 2026-04-16 22:48.** All 11 open questions answered same day, Phases 1–6 deployed, `net_settlement` formula bug found + fixed, invariant dbt test added. Current status: Phase 6 = PASS 10/10. See `plans/reports/verify-260416-2248-shopee-phase6.md` and `plans/260409-1710-shopee-pipeline/plan.md`.
+
 ## Summary
 
 Scanned 8 plan directories, 4 backlog files, 15 reports. Found **3 active plans with pending work**, **2 new pipelines blocked on user input**, **1 config plan ready to start**, and **several deferred items worth re-evaluating for actionable reports**.

@@ -19,15 +19,16 @@ Ingest Shopee **released-income** Excel exports end-to-end so that per-order rev
 
 ## Phases
 
-| # | Phase | Status | File |
+| # | Phase | Status | Evidence |
 |---|---|---|---|
-| 0 | Design spec (detailed) | pending | `design-spec.md` |
-| 1 | Excel parser + file-drop ingestion | pending | `phase-01-ingestion.md` |
-| 2 | dbt src_/stg_ models (2 entities) | pending | `phase-02-dbt-staging.md` |
-| 3 | dbt intermediate: `int_shopee_order_fees` + `int_shopee_order_items` | pending | `phase-03-dbt-intermediate.md` |
-| 4 | Serving layer verification | pending | `phase-04-serving.md` |
-| 5 | Dagster asset + reactive sensor | pending | `phase-05-dagster.md` |
-| 6 | E2E verification + Metabase probe | pending | `phase-06-verify.md` |
+| 0 | Design spec (detailed) | ✅ DONE | `design-spec.md` |
+| 1 | Excel parser + file-drop ingestion | ✅ DONE | `ingestion/src/shopee/income-parser.py` + `ingestion/run-shopee-income-file-drop.py` (archive-after-ingest wired) |
+| 2 | dbt src_/stg_ models (4 entities) | ✅ DONE | `src_/stg_shopee_order_{revenue,revenue_items,service_fees,adjustments}.sql` |
+| 3 | dbt intermediate: fees + items + adjustments | ✅ DONE | `int_shopee_order_{fees,items,adjustments}.sql` + schema.yml tests |
+| 4 | Serving layer verification | ✅ DONE | Rolling parquet emitted at `data_lake/export/marts/rolling/int_shopee_*` (ts 20260416154233); bootstrap_serving_views.py auto-discovers |
+| 5 | Dagster asset + reactive sensor | ✅ DONE | `orchestration/assets/shopee_assets.py`, sensor `ingest_filedrop_shopee_sensor`, `dbt.py` upstream keys incl. `src_shopee_order_adjustments` |
+| 6 | E2E verification + Metabase probe | ✅ DONE — all 10 criteria pass after formula fix (SUM(net_settlement)=123,381,631 = Shopee Summary, diff 0) | `plans/reports/verify-260416-2248-shopee-phase6.md` |
+| 7 | Adjustment sheet (promoted from P1 → P0, 2026-04-16) | ✅ DONE | `phase-adjustment-sheet.md` all 8 steps implemented; `int_shopee_order_fees` gained `total_adjustment_amount` + `net_settlement_adjusted` |
 
 ## Key decisions (locked in design-spec.md)
 

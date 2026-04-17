@@ -43,7 +43,9 @@ payout_released_at=2026-02-09
 
 ### 1. Grain: 1 row per adjustment per order
 
-Một order có thể có N adjustments (nhiều loại điều chỉnh khác nhau). Business key = `(order_code, adjustment_completed_at, adjustment_type)` — không dùng `row_seq`.
+Một order có thể có N adjustments (nhiều loại điều chỉnh khác nhau). Business key = `(order_code, adjustment_completed_at, adjustment_type, adjustment_amount)` — không dùng `row_seq`.
+
+> **Post-implementation revision 2026-04-16:** `adjustment_amount` added to the key after ultrathink audit found that omitting it risked collapsing two legitimate same-day same-type adjustments with different amounts (and downstream `sk` collision). Both `src_` dedup PARTITION BY and `int_` surrogate key now include amount. See `plans/reports/verify-260416-2248-shopee-phase6.md`.
 
 ### 2. Bảng riêng, KHÔNG join vào `int_shopee_order_fees`
 
@@ -121,8 +123,9 @@ ADJUSTMENT_RENAME = {
 **File:** `transformation/models/staging/src_shopee_order_adjustments.sql`
 
 - Materialize: `view`
-- Business key: `(order_code, adjustment_completed_at, adjustment_type)`
-- Dedup: `ROW_NUMBER() OVER (PARTITION BY order_code, adjustment_completed_at, adjustment_type ORDER BY ingested_at DESC) = 1`
+- Business key: `(order_code, adjustment_completed_at, adjustment_type, adjustment_amount)` — see revision note above
+- Dedup: `ROW_NUMBER() OVER (PARTITION BY order_code, adjustment_completed_at, adjustment_type, adjustment_amount ORDER BY ingested_at DESC) = 1`
+- Safety placeholder: a sentinel parquet at `shopee_raw/order_adjustments/ingest_method=file_drop/year=1970/month=1/shopee_income_safety_placeholder.parquet` guarantees the source glob never matches zero files (avoids cascade failure when no adjustment data yet). The sentinel row `order_code = '_safety_placeholder'` is filtered out in `src_` via `WHERE order_code <> '_safety_placeholder'` and never propagates downstream.
 - Tag: `['src', 'shopee']`
 
 ### Step 4: dbt stg_ model
@@ -146,7 +149,7 @@ ADJUSTMENT_RENAME = {
 
 SELECT
     {{ dbt_utils.generate_surrogate_key([
-        'order_code', 'adjustment_completed_at', 'adjustment_type'
+        'order_code', 'adjustment_completed_at', 'adjustment_type', 'adjustment_amount'
     ]) }} AS shopee_order_adjustment_sk,
     order_code,
     adjustment_completed_at,
