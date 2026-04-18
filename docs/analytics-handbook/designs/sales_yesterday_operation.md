@@ -132,7 +132,7 @@ Multi-view — 4 views:
 | 33 | B | Returning Customer Rate % | supporting | single-value | positive/warning (>35% positive, <20% warning) | one-sixth x short, standard | Ty le khach quay lai — red flag neu giam | vs benchmark (threshold) |
 | 34 | B | At Risk Customers | supporting | single-value | warning | one-sixth x short, standard | Khach co nguy co mat | — |
 | 35 | B | New vs Returning Customers | breakdown | vertical-bar | series-1 + series-2 | two-thirds x medium | So sanh truc tiep New vs Returning — orders va revenue | categorical comparison |
-| 36 | C | Revenue by Customer Segment | breakdown | vertical-bar | series-1..series-N | full-width x medium | VIP / Loyal / Regular — phan khuc nao dong gop | categorical comparison |
+| 36 | C | Revenue by Customer Segment | breakdown | vertical-bar | series-1..series-N | full-width x medium | VALUE_VIP / GOLD / SILVER / BRONZE — phan khuc nao dong gop | categorical comparison |
 | 37 | D | "Kiem tra phan bo thanh toan va muc do chiet khau" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 38 | E | Orders by Status | breakdown | donut | series-1..series-4 | half x medium | Phan bo trang thai don (<= 5 slices) | composition |
 | 39 | E | Payment Method Distribution | breakdown | donut | series-1..series-5 | half x medium | Phan bo phuong thuc thanh toan (<= 5 slices) | composition |

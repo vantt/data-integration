@@ -48,7 +48,7 @@ branch_locations AS (
             s.platform,
             s.channel_brand,
             s.market,
-            s.customer_segment,
+            s.source_type,
             s.status as is_active
         FROM source_definitions s
         LEFT JOIN parents_with_children pwc
@@ -69,7 +69,7 @@ branch_locations AS (
             s.platform,
             s.channel_brand,
             s.market,
-            s.customer_segment,
+            s.source_type,
             s.status as is_active
         FROM source_definitions s
         CROSS JOIN branch_locations l
@@ -87,7 +87,7 @@ branch_locations AS (
             s.platform,
             s.channel_brand,
             s.market,
-            s.customer_segment,
+            s.source_type,
             s.status as is_active
         FROM source_definitions s
         WHERE s.is_generic_source = true
@@ -132,7 +132,7 @@ SELECT
 
     channel_brand,
     market,
-    customer_segment,
+    source_type,
 
     -- Real sales channel flag: excludes internal/system and non-sales fulfillment.
     channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other') as is_sales_channel,
@@ -157,7 +157,7 @@ SELECT
     'Other' as platform,
     cast(null as varchar) as channel_brand,
     'Domestic' as market,
-    'B2C' as customer_segment,
+    'channel' as source_type,
     false as is_sales_channel,
     cast(null as string) as source_id,
     cast(null as string) as location_id,

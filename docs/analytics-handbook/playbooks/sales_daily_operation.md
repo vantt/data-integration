@@ -95,7 +95,7 @@ The landing tab — designed for a 10-second status check.
 | Chart Title | Type | Metric Reference |
 |-------------|------|------------------|
 | **New vs Returning Customers** | Bar | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) |
-| **Revenue by Customer Segment** | Bar | VIP / Loyal / Regular breakdown |
+| **Revenue by Customer Segment** | Bar | VALUE_VIP / GOLD / SILVER / BRONZE breakdown |
 | **Orders by Status** | Pie | Order status distribution |
 | **Payment Method Distribution** | Pie | [Payment Methods](../domains/sales.md#11-payment-method-distribution) |
 | **Discount Impact** | Table | [Discount Impact](../domains/sales.md#13-discount-impact) |

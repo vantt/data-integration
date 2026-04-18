@@ -11,6 +11,7 @@ SELECT
     c.platform,
     c.channel_brand,
     c.market,
+    c.source_type,
     COALESCE(b.branch_location_name, 'Unknown') AS branch_location_name,
     m.spend_amount,
     m.clicks,

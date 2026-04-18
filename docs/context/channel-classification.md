@@ -403,8 +403,8 @@ CHI NHÁNH (GROUP BY branch_location_name):
 THỊ TRƯỜNG (GROUP BY market):
   Domestic / Export
 
-PHÂN KHÚC (GROUP BY customer_segment):
-  B2C / B2B
+LOẠI NGUỒN (GROUP BY source_type):
+  channel / customer_type / team / purpose / arrangement
 ```
 
 **Bảng tra cứu tên cột SQL:**
@@ -524,7 +524,7 @@ erDiagram
         string platform
         string channel_brand
         string market
-        string customer_segment
+        string source_type
         boolean is_sales_channel
         string source_id FK
         string location_id FK

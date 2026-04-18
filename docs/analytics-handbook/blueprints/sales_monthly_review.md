@@ -1160,16 +1160,16 @@ ORDER BY "Net Revenue" DESC
 
 #### ❓ Question: Revenue by Customer Segment
 
-VIP/Loyal/Regular dong gop — vertical bar.
+VALUE_VIP/GOLD/SILVER/BRONZE dong gop — vertical bar.
 
 ```sql
-WITH customer_segments AS (
+WITH value_groups AS (
     SELECT
         dc.customer_key,
         CASE
-            WHEN COUNT(DISTINCT fo.order_id) >= 10 THEN 'VIP'
-            WHEN COUNT(DISTINCT fo.order_id) >= 3 THEN 'Loyal'
-            ELSE 'Regular'
+            WHEN COUNT(DISTINCT fo.order_id) >= 10 THEN 'VALUE_VIP'
+            WHEN COUNT(DISTINCT fo.order_id) >= 3 THEN 'VALUE_GOLD'
+            ELSE 'VALUE_BRONZE'
         END as segment
     FROM fact_orders fo
     JOIN dim_customers dc ON fo.customer_key = dc.customer_key
@@ -1181,7 +1181,7 @@ SELECT
     cs.segment as "Phan khuc",
     SUM(fo.net_revenue) as "Net Revenue"
 FROM fact_orders fo
-JOIN customer_segments cs ON fo.customer_key = cs.customer_key
+JOIN value_groups cs ON fo.customer_key = cs.customer_key
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND fo.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.order_timestamp < date_trunc('month', current_date)

@@ -75,7 +75,7 @@ Multi-view — 3 tabs:
 | 20 | F | New Customers | supporting | single-value-with-trend | positive/negative | one-third × short, standard | Khách mới acquire được | vs Previous Month |
 | 21 | F | At Risk Customers | supporting | single-value | warning/negative | one-third × short, standard | Khách sắp mất — cần hành động | Threshold flag |
 | 22 | F | Churned Customers | supporting | single-value | negative/neutral | one-third × short, standard | Khách đã mất | Threshold flag |
-| 23 | G | Customer Segment Distribution | breakdown | donut | series-1..series-3 | one-third × medium | Tỷ lệ VIP / Loyal / Regular | Composition |
+| 23 | G | Customer Segment Distribution | breakdown | donut | series-1..series-4 | one-third × medium | Tỷ lệ VALUE_VIP / GOLD / SILVER / BRONZE | Composition |
 | 24 | G | Revenue by Customer Segment | breakdown | horizontal-bar | series-1..series-3 | two-thirds × medium | Revenue contribution per segment — VIP drives bao nhiêu % | Rank |
 
 ---

@@ -204,20 +204,20 @@ ORDER BY
 
 #### ❓ Question: Customer Segment Distribution
 
-Donut — VIP / Loyal / Regular value composition.
+Donut — VALUE_VIP / GOLD / SILVER / BRONZE value composition.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
 GROUP BY 1
 ORDER BY
-    CASE customer_segment
-        WHEN 'VIP' THEN 1
-        WHEN 'Loyal' THEN 2
-        WHEN 'Regular' THEN 3
+    CASE value_group
+        WHEN 'VALUE_VIP' THEN 1
+        WHEN 'VALUE_GOLD' THEN 2
+        WHEN 'VALUE_BRONZE' THEN 3
     END
 ```
 
@@ -228,9 +228,10 @@ ORDER BY
     "pie.show_legend": true,
     "pie.show_data_labels": true,
     "pie.colors": {
-      "VIP": "#7172AD",
-      "Loyal": "#509EE3",
-      "Regular": "#C2D2E9"
+      "VALUE_VIP": "#7172AD",
+      "VALUE_GOLD": "#509EE3",
+      "VALUE_SILVER": "#88BDE6",
+      "VALUE_BRONZE": "#C2D2E9"
     }
   }
 }
@@ -613,7 +614,7 @@ Cross-tabulation of segment x status with Active % and At-Risk LTV.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(*) as "Total",
     COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) as "Active",
     COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) as "At Risk",
@@ -627,7 +628,7 @@ FROM dim_customers
 WHERE customer_id != 'Unknown'
 GROUP BY 1
 ORDER BY
-    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
+    CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END
 ```
 
 ```json metabase-viz
@@ -679,7 +680,7 @@ SELECT
     customer_status as "Status",
     last_order_date as "Last Order"
 FROM dim_customers
-WHERE customer_segment = 'VIP'
+WHERE value_group = 'VALUE_VIP'
   AND customer_id != 'Unknown'
 ORDER BY recency_days DESC
 LIMIT 50
@@ -728,7 +729,7 @@ SELECT
     full_name as "Customer",
     phone as "Phone",
     email as "Email",
-    customer_segment as "Segment",
+    value_group as "Segment",
     total_orders_count as "Orders",
     lifetime_value as "LTV",
     recency_days as "Days Inactive",
@@ -775,7 +776,7 @@ SELECT
     full_name as "Customer",
     phone as "Phone",
     email as "Email",
-    customer_segment as "Segment",
+    value_group as "Segment",
     total_orders_count as "Orders",
     lifetime_value as "LTV",
     recency_days as "Days Inactive",

@@ -877,13 +877,13 @@ WHERE customer_status = 'Churned'
 
 #### ❓ Question: Customer Segment Distribution
 
-Customer count by RFM segment — VIP / Loyal / Regular.
+Customer count by value_group — VALUE_VIP / GOLD / SILVER / BRONZE.
 
 **Domain Reference**: [RFM Segment](../domains/customer.md#7-rfm-segment)
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id IS NOT NULL
@@ -900,9 +900,10 @@ ORDER BY 2 DESC
     "pie.show_legend": true,
     "pie.percent_visibility": "inside",
     "pie.colors": {
-      "VIP": "#509EE3",
-      "Loyal": "#88BDE6",
-      "Regular": "#A989C5"
+      "VALUE_VIP": "#509EE3",
+      "VALUE_GOLD": "#88BDE6",
+      "VALUE_SILVER": "#A989C5",
+      "VALUE_BRONZE": "#CFD8DC"
     }
   }
 }
@@ -914,13 +915,13 @@ ORDER BY 2 DESC
 
 #### ❓ Question: Revenue by Customer Segment
 
-Revenue contribution by VIP / Loyal / Regular — horizontal bar.
+Revenue contribution by VALUE_VIP / GOLD / SILVER / BRONZE — horizontal bar.
 
 **Domain Reference**: [RFM Segment](../domains/customer.md#7-rfm-segment)
 
 ```sql
 SELECT
-    c.customer_segment as "Segment",
+    c.value_group as "Segment",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key

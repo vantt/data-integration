@@ -15,7 +15,7 @@
 1. **Financial Performance:** Có đạt target doanh thu tháng không? Variance bao nhiêu?
 2. **Growth Trajectory:** MoM growth bao nhiêu? Trend 6 tháng gần nhất đang lên hay xuống?
 3. **Channel Strategy:** Tỷ trọng kênh thay đổi thế nào? Ecommerce vs Offline trend?
-4. **Customer Portfolio:** Khách hàng mới bao nhiêu? Bao nhiêu khách At Risk/Churned? Giá trị VIP segment?
+4. **Customer Portfolio:** Khách hàng mới bao nhiêu? Bao nhiêu khách At Risk/Churned? Giá trị VALUE_VIP segment?
 5. **Operational Efficiency:** Discount ăn bao nhiêu % doanh thu? Return rate có kiểm soát được không?
 6. **Product Mix:** Sản phẩm/brand nào đang drive growth? Sản phẩm nào suy giảm?
 
@@ -60,8 +60,8 @@ Focus: "Điều gì đang drive growth? Khách hàng ra sao?"
 | **New Customers** | Scalar + MoM Trend | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | MoM change. |
 | **At Risk Customers** | Scalar | [Churn Rate](../domains/customer.md#6-churn-rate) | ⚠ prefix. |
 | **Churned Customers** | Scalar | [Churn Rate](../domains/customer.md#6-churn-rate) | — |
-| **Customer Segment Distribution** | Donut Chart | [RFM Segment](../domains/customer.md#7-rfm-segment) | VIP / Loyal / Regular breakdown. |
-| **Revenue by Customer Segment** | Horizontal Bar | [RFM Segment](../domains/customer.md#7-rfm-segment) | Revenue contribution per segment. |
+| **Customer Segment Distribution** | Donut Chart | [Value Group](../domains/customer.md#7-rfm-segment) | VALUE_VIP / GOLD / SILVER / BRONZE breakdown. |
+| **Revenue by Customer Segment** | Horizontal Bar | [Value Group](../domains/customer.md#7-rfm-segment) | Revenue contribution per segment. |
 
 ### Tab 3: Sản phẩm & Vận hành
 

@@ -708,20 +708,20 @@ ORDER BY tm.revenue DESC
 { "row": 22, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
-#### ❓ Question: Revenue by Customer Segment
+#### ❓ Question: Revenue by Channel Type (B2C vs B2B)
 
-B2C vs B2B revenue split.
+B2C vs B2B revenue split derived from channel_format.
 
 ```sql
 SELECT
-    c.customer_segment as "Segment",
+    CASE WHEN c.channel_format = 'B2B' THEN 'B2B' ELSE 'B2C' END as "Segment",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND o.order_timestamp < date_trunc('month', current_date)
-  AND c.customer_segment IS NOT NULL
+  AND c.is_sales_channel = true
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1115,13 +1115,13 @@ FROM stats s, prev p
 { "row": 12, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
-#### ❓ Question: Customer Segment Movement
+#### ❓ Question: Customer Value Group Movement
 
-Segment breakdown with customer count and LTV.
+Value group breakdown with customer count and LTV.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Value Group",
     customer_status as "Status",
     COUNT(*) as "Customers",
     SUM(lifetime_value) as "Total LTV",
@@ -1129,7 +1129,9 @@ SELECT
 FROM dim_customers
 WHERE customer_id IS NOT NULL
 GROUP BY 1, 2
-ORDER BY 1, 3 DESC
+ORDER BY 
+    CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END,
+    3 DESC
 ```
 
 ```json metabase-viz

@@ -68,7 +68,7 @@ Multi-view — 3 views:
 | 5 | B | Churned Customers | supporting | single-value | negative | one-quarter x short, standard | So khach >90 ngay chua mua — da mat | — (current state) |
 | 6 | C | "Kiem tra phan bo trang thai va segment — dau la diem nong?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 7 | D | Customer Status Distribution | breakdown | donut | series-1=positive (Active), series-2=warning (At Risk), series-3=negative (Churned) | one-third x medium | Active / At Risk / Churned — nhin nhanh composition | composition |
-| 8 | D | Customer Segment Distribution | breakdown | donut | series-1=accent (VIP), series-2=primary (Loyal), series-3=muted (Regular) | one-third x medium | VIP / Loyal / Regular — gia tri phan bo | composition |
+| 8 | D | Customer Segment Distribution | breakdown | donut | series-1=accent (VALUE_VIP), series-2=primary (VALUE_GOLD), series-3=secondary (VALUE_SILVER), series-4=muted (VALUE_BRONZE) | one-third x medium | VALUE_VIP / GOLD / SILVER / BRONZE — gia tri phan bo | composition |
 | 9 | D | Active Rate | supporting | gauge | positive/warning/negative (zones: 30-100% green, 15-30% yellow, 0-15% red) | one-third x medium | Ty le khach Active trong tong — target >30% | vs benchmark (zones) |
 | 10 | E | "Theo doi xu huong 6 thang — growth quality va MAU trajectory" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 11 | F | New vs Returning Customers (6M) | trend | stacked-area | series-1=primary (New), series-2=secondary (Returning) | half x medium | Growth quality — bao nhieu la khach moi vs quay lai? | composition over time |

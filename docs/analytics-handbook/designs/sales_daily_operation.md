@@ -107,7 +107,7 @@ Multi-view — 4 views:
 | 33 | B | Returning Rate % | supporting | single-value | positive/warning | one-sixth x short | Ty le khach quay lai | vs benchmark |
 | 34 | B | At Risk Customers | supporting | single-value | warning | one-sixth x short | Khach co nguy co mat | — |
 | 35 | B | New vs Returning | breakdown | vertical-bar | series-1 + series-2 | two-thirds x medium | New vs Returning | categorical |
-| 36 | C | Revenue by Segment | breakdown | vertical-bar | series-1..series-N | full-width x medium | VIP/Loyal/Regular | categorical |
+| 36 | C | Revenue by Segment | breakdown | vertical-bar | series-1..series-N | full-width x medium | VALUE_VIP/GOLD/SILVER/BRONZE | categorical |
 | 37 | D | "Kiem tra phan bo thanh toan va muc do chiet khau" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 38 | E | Orders by Status | breakdown | donut | series-1..series-4 | half x medium | Phan bo trang thai | composition |
 | 39 | E | Payment Method | breakdown | donut | series-1..series-5 | half x medium | Phan bo PTTT | composition |

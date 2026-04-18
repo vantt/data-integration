@@ -54,7 +54,7 @@ Multi-view (3 tabs):
 | 5 | B | One-Time Buyer Rate | supporting | single-value-with-trend | negative/positive (lower=better, MoM) | one-quarter x short, standard | % customers with only 1 order — conversion opportunity | vs previous month |
 | 6 | C | "Assess customer status distribution — identify at-risk concentration" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 7 | D | Customer Status Distribution | breakdown | donut | series-1 (Active), series-2 (At Risk), series-3 (Churned) | one-third x medium | Part-to-whole: what % of customers are in each status | composition |
-| 8 | D | Customer Segment Distribution | breakdown | donut | series-1 (VIP), series-2 (Loyal), series-3 (Regular) | one-third x medium | Part-to-whole: segment sizes | composition |
+| 8 | D | Customer Segment Distribution | breakdown | donut | series-1 (VALUE_VIP), series-2 (VALUE_GOLD), series-3 (VALUE_SILVER), series-4 (VALUE_BRONZE) | one-third x medium | Part-to-whole: segment sizes | composition |
 | 9 | D | Revenue from Top 20% | supporting | single-value | accent | one-third x medium, prominent | Revenue concentration — Pareto indicator | — |
 | 10 | E | "Track growth dynamics — is acquisition outpacing churn?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 11 | F | Monthly Acquisition vs Churn (6M) | trend | combo-chart | positive (Acquired bar), negative (Churned bar), primary (Net Growth line) | full-width x medium | Net customer growth trend — bars for volume, line for net | vs previous months |
@@ -72,10 +72,10 @@ Multi-view (3 tabs):
 | 18 | B | Repeat Purchase Rate | supporting | single-value-with-trend | positive/negative (MoM) | one-quarter x short, standard | % customers with >1 order | vs previous month |
 | 19 | C | "Examine LTV distribution — identify value clusters and Pareto effect" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 20 | D | Customer Value Distribution | breakdown | vertical-bar | primary (bars), accent (top bucket highlight) | half x medium | Histogram — shape of customer value base | — |
-| 21 | D | Segment Revenue Share | breakdown | donut | series-1 (VIP), series-2 (Loyal), series-3 (Regular) | half x medium | Revenue concentration by segment — Pareto visual | composition |
+| 21 | D | Segment Revenue Share | breakdown | donut | series-1 (VALUE_VIP), series-2 (VALUE_GOLD), series-3 (VALUE_SILVER), series-4 (VALUE_BRONZE) | half x medium | Revenue concentration by segment — Pareto visual | composition |
 | 22 | E | "Track segment performance trends — spending trajectory by segment" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
-| 23 | F | AOV by Segment Trend (6M) | trend | multi-line-chart | series-1 (VIP), series-2 (Loyal), series-3 (Regular) | half x medium | AOV trajectory per segment — detect spending changes | vs previous months |
-| 24 | F | Revenue by Segment Trend (6M) | trend | stacked-area | series-1 (VIP), series-2 (Loyal), series-3 (Regular) | half x medium | Revenue composition over time — which segments grow | vs previous months |
+| 23 | F | AOV by Segment Trend (6M) | trend | multi-line-chart | series-1 (VALUE_VIP), series-2 (VALUE_GOLD), series-3 (VALUE_SILVER), series-4 (VALUE_BRONZE) | half x medium | AOV trajectory per segment — detect spending changes | vs previous months |
+| 24 | F | Revenue by Segment Trend (6M) | trend | stacked-area | series-1 (VALUE_VIP), series-2 (VALUE_GOLD), series-3 (VALUE_SILVER), series-4 (VALUE_BRONZE) | half x medium | Revenue composition over time — which segments grow | vs previous months |
 | 25 | G | "Review segment detail — identify underperforming segments for action" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 26 | H | Segment Revenue & Metrics Detail | detail | data-table-formatted | conditional-above (Revenue% high), conditional-below (Recency high) | full-width x medium | Per-segment: Customers, Revenue, Revenue%, Avg Orders, Avg Recency | rank (by revenue) |
 
@@ -85,9 +85,9 @@ Multi-view (3 tabs):
 |---|-----|------|------|----------|-------|------|---------------|------------|
 | 27 | A | "Analyze purchase behavior — channel and product preferences by segment" | annotation | text-annotation | structural | full-width x minimal | Dashboard subtitle | — |
 | 28 | B | "Assess channel effectiveness — which channels serve which segments best?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
-| 29 | C | Channel Revenue by Segment | breakdown | stacked-bar | series-1 (VIP), series-2 (Loyal), series-3 (Regular) | full-width x medium | Which channels drive revenue for each segment | composition |
-| 30 | D | "Compare product affinity — VIP vs first-time buyer preferences" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
-| 31 | E | Top 10 Products — VIP Customers | breakdown | horizontal-bar | accent | half x medium | VIP product preferences — guide retention offers | rank |
+| 29 | C | Channel Revenue by Segment | breakdown | stacked-bar | series-1 (VALUE_VIP), series-2 (VALUE_GOLD), series-3 (VALUE_SILVER), series-4 (VALUE_BRONZE) | full-width x medium | Which channels drive revenue for each segment | composition |
+| 30 | D | "Compare product affinity — VALUE_VIP vs first-time buyer preferences" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 31 | E | Top 10 Products — VALUE_VIP Customers | breakdown | horizontal-bar | accent | half x medium | VALUE_VIP product preferences — guide retention offers | rank |
 | 32 | E | Top 10 Products — First-Time Buyers | breakdown | horizontal-bar | primary | half x medium | Entry products — guide acquisition funnels | rank |
 | 33 | F | "Evaluate new customer quality — are acquisition cohorts improving?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 34 | G | New Customer Quality Trend (6M) | trend | combo-chart | primary (New Customers bar), accent (Avg First Order line), warning (30-day Repeat % line) | full-width x medium | Cohort quality: volume + first AOV + early repeat rate | vs previous cohorts |

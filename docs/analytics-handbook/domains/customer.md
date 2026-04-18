@@ -131,16 +131,19 @@
 
 #### Phase 1: Rule-Based Segmentation (Operational)
 
-> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) - `customer_segment`, `customer_status`
+> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) - `value_group`, `customer_status`
 
 - **Business Definition:** Fixed threshold segmentation for Operational consistency (Sales/CS).
 - **Logic:**
-  - **VIP:** Lifetime Value > 10,000,000 VND
-  - **Loyal:** Lifetime Value 5,000,000 - 10,000,000 VND
-  - **Regular:** Lifetime Value < 5,000,000 VND
+  - **VALUE_VIP:** Lifetime Value >= 50,000,000 VND OR Total Orders >= 20
+  - **VALUE_GOLD:** Lifetime Value >= 20,000,000 VND
+  - **VALUE_SILVER:** Lifetime Value >= 5,000,000 VND
+  - **VALUE_BRONZE:** Lifetime Value < 5,000,000 VND
   - **Active:** Last purchase <= 30 days
   - **At Risk:** Last purchase 31-90 days
   - **Churned:** Last purchase > 90 days
+
+> **See:** [customer-segmentation.md](../../context/customer-segmentation.md) for full 8-dimension customer segmentation model.
 
 #### Phase 2: Statistics-Based Segmentation (Analytical)
 
@@ -174,7 +177,7 @@
 
 - **Phase 1 (Immediate):** Deploy **"Operational Customer Dashboard"**.
   - **Audience:** Customer Success & Sales Operations.
-  - **Key Features:** Customer Profile (Demographics), Retention & Churn (Historical), VIP/Loyal Segmentation (Rule-based).
+  - **Key Features:** Customer Profile (Demographics), Retention & Churn (Historical), Value Group Segmentation (VALUE_VIP/GOLD/SILVER/BRONZE).
   - **Goal:** Enable daily operational decision-making (e.g., who to call today, who is at risk).
 
 - **Phase 2 (Quarterly Review):** Deploy **"Strategic Customer Insights"**.
@@ -198,8 +201,8 @@
 2.  **Dashboard Development (Phase 1):**
     - **Report 1: Customer Overview:** Total Users, Active Users (MAU), New Users Trend.
     - **Report 2: Retention Watch:** Cohort Retention Heatmap, Churn Rate Trend.
-    - **Report 3: Segment Performance:** Revenue by Segment (VIP vs Regular), Order Frequency by Segment.
+    - **Report 3: Segment Performance:** Revenue by Value Group (VALUE_VIP/GOLD/SILVER/BRONZE), Order Frequency by Segment.
 
 3.  **Training & Handover:**
     - **CS Team:** Training on interpreting "At Risk" vs "Churned" statuses for reactivation campaigns.
-    - **Sales Team:** Understanding "VIP" threshold requirements for loyalty program application.
+    - **Sales Team:** Understanding "VALUE_VIP" threshold requirements for loyalty program application.

@@ -104,8 +104,8 @@ Multi-view — 4 views:
 | 26 | C | "Theo doi structural shift kenh 6 thang — Online dang chiem uu the?" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
 | 27 | D | Channel Revenue Trend (6M) | trend | stacked-bar-time | series-1..series-N | two-thirds x medium | Cau thanh doanh thu thay doi theo thang | composition over time |
 | 28 | D | Online vs Offline Share | breakdown | donut | series-1 + series-2 | one-third x medium | Ty le Online/Offline hien tai | composition |
-| 29 | E | "Danh gia phan khuc khach hang — VIP contribution va growth" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
-| 30 | F | Revenue by Customer Segment | breakdown | vertical-bar | series-1..series-N | half x medium | VIP/Loyal/Regular dong gop | categorical |
+| 29 | E | "Danh gia phan khuc khach hang — value_group contribution va growth" | annotation | text-annotation | structural | full-width x minimal | Section heading | — |
+| 30 | F | Revenue by Customer Segment | breakdown | vertical-bar | series-1..series-N | half x medium | VALUE_VIP/GOLD/SILVER/BRONZE dong gop | categorical |
 | 31 | F | New vs Returning Revenue Share | breakdown | stacked-bar | series-1 + series-2 | half x medium | Khach moi vs khach cu dong gop | composition |
 
 ---

@@ -44,9 +44,10 @@
 | Active | recency_days <= 30 | dim_customers | — |
 | At Risk | recency_days 31-90 | dim_customers | Escalate if count trending up |
 | Churned | recency_days > 90 | dim_customers | — |
-| VIP | lifetime_value > 10M VND | dim_customers | Priority for retention |
-| Loyal | lifetime_value 5M-10M VND | dim_customers | — |
-| Regular | lifetime_value < 5M VND | dim_customers | — |
+| VALUE_VIP | lifetime_value >=50M OR total_orders >=20 | dim_customers | Priority for retention |
+| VALUE_GOLD | lifetime_value >=20M | dim_customers | High-value segment |
+| VALUE_SILVER | lifetime_value >=5M | dim_customers | Growth potential |
+| VALUE_BRONZE | lifetime_value <5M | dim_customers | Conversion focus |
 
 ## Implementation Notes
 

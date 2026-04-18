@@ -14,7 +14,7 @@ WITH base AS (
         c.platform,
         c.channel_brand,
         c.market,
-        c.customer_segment,
+        c.source_type,
         COALESCE(c.is_sales_channel, false) AS is_sales_channel,
         b.branch_location_name,
         b.branch_location_code,

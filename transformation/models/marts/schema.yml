@@ -15,6 +15,12 @@ models:
         description: "Total count of distinct orders. Formula: COUNT(order_id)"
       - name: customer_status
         description: "RFM Status. Logic: Active (<=30 days), At Risk (31-90 days), Churned (>90 days)"
+      - name: value_group
+        description: "Customer value tier: VALUE_VIP (>=50M or >=20 orders), VALUE_GOLD (>=20M), VALUE_SILVER (>=5M), VALUE_BRONZE (else)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              values: ['VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER', 'VALUE_BRONZE']
 
   - name: dim_customers_base
     description: "Base customer dimension (SCD Type 1) without circular dependencies."
@@ -72,9 +78,12 @@ models:
       - name: market
         description: "Domestic / Export"
         data_type: varchar
-      - name: customer_segment
-        description: "B2C / B2B"
+      - name: source_type
+        description: "Source classification: channel, customer_type, team, purpose, arrangement"
         data_type: varchar
+        tests:
+          - accepted_values:
+              values: ['channel', 'customer_type', 'team', 'purpose', 'arrangement']
       - name: is_sales_channel
         description: "true = real sales channel (not System/Internal)"
         data_type: boolean

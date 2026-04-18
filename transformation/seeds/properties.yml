@@ -13,7 +13,7 @@ seeds:
         mapping_tag: varchar
         channel_brand: varchar
         market: varchar
-        customer_segment: varchar
+        source_type: varchar
 
   - name: ref_brands
     config:

@@ -76,16 +76,14 @@ SELECT
     address1,
     country,
     
-    -- [METRIC] Customer Segmentation (RFM - Monetary Component)
-    -- Logic: Based on fixed thresholds of Lifetime Value (GMV).
-    -- - VIP: > 10,000,000 VND
-    -- - Loyal: 5,000,000 - 10,000,000 VND
-    -- - Regular: < 5,000,000 VND
-    CASE 
-        WHEN monetary_value > 10000000 THEN 'VIP'
-        WHEN monetary_value > 5000000 THEN 'Loyal'
-        ELSE 'Regular'
-    END as customer_segment,
+    -- value_group: Customer value tier based on lifetime spend
+    -- See docs/context/customer-segmentation.md for definitions
+    CASE
+        WHEN monetary_value >= 50000000 OR frequency >= 20 THEN 'VALUE_VIP'
+        WHEN monetary_value >= 20000000 THEN 'VALUE_GOLD'
+        WHEN monetary_value >= 5000000 THEN 'VALUE_SILVER'
+        ELSE 'VALUE_BRONZE'
+    END as value_group,
 
     -- Demographics
     dob,

@@ -264,21 +264,21 @@ ORDER BY
 
 #### ❓ Question: Customer Segment Distribution
 
-Donut chart showing VIP / Loyal / Regular split.
+Donut chart showing VALUE_VIP / GOLD / SILVER / BRONZE split.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
 GROUP BY 1
 ORDER BY
-    CASE customer_segment
-        WHEN 'VIP' THEN 1
-        WHEN 'Loyal' THEN 2
-        WHEN 'Regular' THEN 3
+    CASE value_group
+        WHEN 'VALUE_VIP' THEN 1
+        WHEN 'VALUE_GOLD' THEN 2
+        WHEN 'VALUE_BRONZE' THEN 3
     END
 ```
 
@@ -289,9 +289,10 @@ ORDER BY
     "pie.dimension": "Segment",
     "pie.metric": "Customers",
     "pie.colors": {
-      "VIP": "#7172AD",
-      "Loyal": "#509EE3",
-      "Regular": "#88BDE6"
+      "VALUE_VIP": "#7172AD",
+      "VALUE_GOLD": "#509EE3",
+      "VALUE_SILVER": "#88BDE6",
+      "VALUE_BRONZE": "#C2D2E9"
     },
     "pie.show_legend": true,
     "pie.percent_visibility": "inside"
@@ -421,7 +422,7 @@ Per-segment vitals with conditional formatting.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(*) as "Customers",
     ROUND(COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Active %",
     ROUND(COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "At Risk %",
@@ -435,7 +436,7 @@ WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
 GROUP BY 1
 ORDER BY
-    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
+    CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END
 ```
 
 ```json metabase-viz
@@ -745,14 +746,14 @@ Revenue contribution donut by customer segment.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     SUM(lifetime_value) as "Revenue"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
 GROUP BY 1
 ORDER BY
-    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
+    CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END
 ```
 
 ```json metabase-viz
@@ -762,9 +763,10 @@ ORDER BY
     "pie.dimension": "Segment",
     "pie.metric": "Revenue",
     "pie.colors": {
-      "VIP": "#7172AD",
-      "Loyal": "#509EE3",
-      "Regular": "#88BDE6"
+      "VALUE_VIP": "#7172AD",
+      "VALUE_GOLD": "#509EE3",
+      "VALUE_SILVER": "#88BDE6",
+      "VALUE_BRONZE": "#C2D2E9"
     },
     "pie.show_legend": true,
     "pie.percent_visibility": "inside"
@@ -793,7 +795,7 @@ Average order value trend by segment over 6 months.
 ```sql
 SELECT
     date_trunc('month', o.order_timestamp)::date as "Month",
-    cust.customer_segment as "Segment",
+    cust.value_group as "Segment",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
@@ -815,9 +817,10 @@ ORDER BY 1, 2
     "graph.metrics": ["AOV"],
     "graph.series_order_dimension": "Segment",
     "series_settings": {
-      "VIP": { "color": "#7172AD" },
-      "Loyal": { "color": "#509EE3" },
-      "Regular": { "color": "#88BDE6" }
+      "VALUE_VIP": { "color": "#7172AD" },
+      "VALUE_GOLD": { "color": "#509EE3" },
+      "VALUE_SILVER": { "color": "#88BDE6" },
+      "VALUE_BRONZE": { "color": "#C2D2E9" }
     },
     "graph.y_axis.title_text": "AOV (VND)",
     "graph.x_axis.title_text": "",
@@ -839,7 +842,7 @@ Revenue composition by segment over time — stacked area.
 ```sql
 SELECT
     date_trunc('month', o.order_timestamp)::date as "Month",
-    cust.customer_segment as "Segment",
+    cust.value_group as "Segment",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
@@ -860,9 +863,10 @@ ORDER BY 1, 2
     "graph.dimensions": ["Month", "Segment"],
     "graph.metrics": ["Revenue"],
     "series_settings": {
-      "VIP": { "color": "#7172AD" },
-      "Loyal": { "color": "#509EE3" },
-      "Regular": { "color": "#88BDE6" }
+      "VALUE_VIP": { "color": "#7172AD" },
+      "VALUE_GOLD": { "color": "#509EE3" },
+      "VALUE_SILVER": { "color": "#88BDE6" },
+      "VALUE_BRONZE": { "color": "#C2D2E9" }
     },
     "graph.y_axis.title_text": "Revenue (VND)",
     "graph.x_axis.title_text": "",
@@ -893,7 +897,7 @@ Comprehensive metrics per segment with conditional formatting.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(*) as "Customers",
     SUM(lifetime_value) as "Total Revenue",
     ROUND(
@@ -973,7 +977,7 @@ Which channels drive revenue for each segment — stacked bar (last 3 months).
 ```sql
 SELECT
     ch.channel_name as "Channel",
-    cust.customer_segment as "Segment",
+    cust.value_group as "Segment",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
@@ -994,9 +998,10 @@ ORDER BY 1, 3 DESC
     "graph.dimensions": ["Channel", "Segment"],
     "graph.metrics": ["Revenue"],
     "series_settings": {
-      "VIP": { "color": "#7172AD" },
-      "Loyal": { "color": "#509EE3" },
-      "Regular": { "color": "#88BDE6" }
+      "VALUE_VIP": { "color": "#7172AD" },
+      "VALUE_GOLD": { "color": "#509EE3" },
+      "VALUE_SILVER": { "color": "#88BDE6" },
+      "VALUE_BRONZE": { "color": "#C2D2E9" }
     },
     "graph.y_axis.title_text": "Revenue (VND)",
     "graph.x_axis.title_text": "",
@@ -1033,7 +1038,7 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_products p ON s.product_key = p.product_key
-WHERE cust.customer_segment = 'VIP'
+WHERE cust.value_group = 'VALUE_VIP'
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.order_timestamp < date_trunc('month', current_date)
@@ -1192,7 +1197,7 @@ Loyalty engagement levels per segment — bar chart.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(CASE WHEN loyalty_point = 0 THEN 1 END) as "0 Points",
     COUNT(CASE WHEN loyalty_point BETWEEN 1 AND 999 THEN 1 END) as "1-999",
     COUNT(CASE WHEN loyalty_point BETWEEN 1000 AND 4999 THEN 1 END) as "1K-5K",
@@ -1202,7 +1207,7 @@ WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
 GROUP BY 1
 ORDER BY
-    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
+    CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END
 ```
 
 ```json metabase-viz
@@ -1229,7 +1234,7 @@ Demographic breakdown for marketing persona targeting.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COALESCE(NULLIF(sex, ''), 'Unknown') as "Gender",
     COUNT(*) as "Customers"
 FROM dim_customers
@@ -1237,7 +1242,7 @@ WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
 GROUP BY 1, 2
 ORDER BY
-    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END,
+    CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END,
     3 DESC
 ```
 

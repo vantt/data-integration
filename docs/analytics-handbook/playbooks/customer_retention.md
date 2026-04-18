@@ -16,7 +16,7 @@
 
 ## Filters
 
-- **Customer Segment:** VIP, Loyal, Regular (multi-select)
+- **Customer Segment:** VALUE_VIP, VALUE_GOLD, VALUE_SILVER, VALUE_BRONZE (multi-select)
 
 ## Dashboard Structure (3 Tabs)
 

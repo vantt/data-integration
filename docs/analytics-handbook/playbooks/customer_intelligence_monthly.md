@@ -16,7 +16,7 @@
 
 ## Filters
 
-- **Segment:** VIP, Loyal, Regular (multi-select) — applies to Tab 2 and Tab 3
+- **Segment:** VALUE_VIP, VALUE_GOLD, VALUE_SILVER, VALUE_BRONZE (multi-select) — applies to Tab 2 and Tab 3
 
 ## Dashboard Structure (3 Tabs)
 
@@ -33,7 +33,7 @@
 | **New Customers (Last Month)** | Scalar | Derived from `created_at` | Monthly acquisition volume, MoM trend |
 | **One-Time Buyer Rate** | Scalar | % with only 1 order | Conversion opportunity signal, MoM trend |
 | **Customer Status Distribution** | Donut | Active / At Risk / Churned | Part-to-whole status view |
-| **Customer Segment Distribution** | Donut | VIP / Loyal / Regular | Part-to-whole segment sizes |
+| **Customer Segment Distribution** | Donut | VALUE_VIP / GOLD / SILVER / BRONZE | Part-to-whole segment sizes |
 | **Revenue from Top 20% Customers** | Scalar | Pareto indicator | Revenue concentration % |
 | **Monthly Acquisition vs Churn (6M)** | Combo | Acquired bar + Churned bar + Net Growth line | Net customer growth momentum |
 | **Customer Health Scorecard** | Table | Per-segment vitals | Active%, At Risk%, Churned%, Repeat%, Avg LTV, Avg Orders, Avg Recency — conditional formatting |
@@ -49,7 +49,7 @@
 | **Avg Orders per Customer** | Scalar | Avg `total_orders_count` | Purchase frequency, MoM trend |
 | **Repeat Purchase Rate** | Scalar | [Retention Rate](../domains/customer.md#5-retention-rate) | % with >1 order, MoM trend |
 | **Customer Value Distribution** | Bar (histogram) | LTV range buckets | Shape of customer value base (0, <500K, 500K-1M, 1M-2M, 2M-5M, 5M-10M, 10M+) |
-| **Segment Revenue Share** | Donut | Revenue by VIP / Loyal / Regular | Revenue concentration by segment |
+| **Segment Revenue Share** | Donut | Revenue by VALUE_VIP / GOLD / SILVER / BRONZE | Revenue concentration by segment |
 | **AOV by Segment Trend (6M)** | Multi-line | AOV per segment monthly | Spending trajectory per segment |
 | **Revenue by Segment Trend (6M)** | Stacked Area | Revenue by segment monthly | Which segments grow over time |
 | **Segment Revenue & Metrics Detail** | Table | Per-segment: Customers, Revenue, Revenue%, Avg LTV, Avg Orders, Avg Recency | Ranked by revenue, conditional formatting on Revenue% and Avg Recency |

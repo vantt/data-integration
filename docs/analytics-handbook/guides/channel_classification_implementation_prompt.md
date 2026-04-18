@@ -9,10 +9,10 @@ Dùng prompt bên dưới để bắt đầu một chat session mới với Clau
 
 ## Phạm vi triển khai
 
-### Bước 1: ref_order_sources.csv — Thêm 3 cột
-- Thêm `channel_brand`, `market`, `customer_segment` vào seed file hiện có
-- Giữ nguyên tất cả cột cũ, không đổi tên, không xóa
-- Điền giá trị cho TẤT CẢ dòng hiện có theo bảng mapping trong phần 6.2.1
+### Bước 1: ref_order_sources.csv — Cập nhật schema
+- Cột `source_type` phân loại nguồn: `channel`, `customer_type`, `team`, `purpose`, `arrangement`
+- Cột `channel_brand`, `market` đã có sẵn
+- Xem `docs/context/channel-classification.md` Section 7 cho chi tiết source_type
 - Cập nhật `transformation/seeds/properties.yml` nếu cần
 
 ### Bước 2: ref_brands.csv — Tạo seed mới
@@ -27,8 +27,8 @@ Dùng prompt bên dưới để bắt đầu một chat session mới với Clau
 - Thêm brand_name và brand_code vào output, kể cả Unknown Member
 - Cập nhật schema.yml
 
-### Bước 4: dim_channels.sql — Thêm cột mới
-- Expose `channel_brand`, `market`, `customer_segment` từ ref_order_sources
+### Bước 4: dim_channels.sql — Cập nhật schema
+- Expose `channel_brand`, `market`, `source_type` từ ref_order_sources
 - Derive `channel_category` bằng CASE WHEN trên channel_format (xem logic phần 6.3.1)
 - Derive `is_sales_channel` bằng channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other')
 - Thêm tất cả cột mới vào cả specific_channels, generic_channels, và Unknown Member
@@ -37,7 +37,7 @@ Dùng prompt bên dưới để bắt đầu một chat session mới với Clau
 ### Bước 5: Kiểm tra
 - Chạy `dbt build --select ref_order_sources ref_brands dim_channels dim_products`
 - Kiểm tra không có lỗi
-- Query dim_channels xác nhận channel_category, channel_brand, market, customer_segment có giá trị đúng
+- Query dim_channels xác nhận channel_category, channel_brand, market, source_type có giá trị đúng
 - Query dim_products xác nhận brand_name, brand_code có giá trị đúng
 
 ## Lưu ý quan trọng

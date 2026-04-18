@@ -33,7 +33,7 @@ domain_refs: [domains/customer.md]
 
 | Filter | Type | Default | Applies to | Rationale |
 |--------|------|---------|------------|-----------|
-| Customer Segment | category/multi-select | All | Tab 1, Tab 3 cards | Drill into VIP/Loyal/Regular retention |
+| Customer Segment | category/multi-select | All | Tab 1, Tab 3 cards | Drill into VALUE_VIP/GOLD/SILVER/BRONZE retention |
 
 ### Views
 

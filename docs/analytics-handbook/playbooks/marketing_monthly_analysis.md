@@ -14,7 +14,7 @@
 
 1. **Channel Strategy:** Kênh nào đang grow, kênh nào stagnant? Tỷ trọng Ecommerce/Offline thay đổi thế nào trong 6 tháng?
 2. **Campaign Effectiveness:** Discount có ăn hết margin không? Promotion nào hiệu quả?
-3. **Customer Health:** Cohort retention ra sao? Bao nhiêu khách churn? VIP segment có ổn định không?
+3. **Customer Health:** Cohort retention ra sao? Bao nhiêu khách churn? VALUE_VIP segment có ổn định không?
 4. **Brand Portfolio:** Brand nào đang drive growth? Brand nào cần push marketing?
 
 ## Filters
@@ -57,7 +57,7 @@
 | **Channel Brand Revenue** | Horizontal Bar | _Derived_ | Group by `channel_brand` (JPC, Fine Japan, etc.). |
 | **Revenue by Market** | Donut Chart | _Derived_ | Domestic vs Export split. From `dim_channels.market`. |
 | **Brand Performance Summary** | Table | _Derived_ | Brand, This Month Revenue/Units, Last Month Revenue/Units, MoM Growth %. From `fact_sales`. |
-| **Revenue by Customer Segment (B2C/B2B)** | Donut Chart | _Derived_ | From `dim_channels.customer_segment`. |
+| **Revenue by Customer Segment (B2C/B2B)** | Donut Chart | _Derived_ | From `source_type`. |
 
 ### Tab 3: Customer Intelligence
 
@@ -71,7 +71,7 @@
 | **At Risk Customers** | Scalar + MoM Trend | [Churn Rate](../domains/customer.md#6-churn-rate) | Count of `customer_status = 'At Risk'`. MoM change. |
 | **Churn Rate Gauge** | Gauge | [Churn Rate](../domains/customer.md#6-churn-rate) | Zones: Green 0-10%, Yellow 10-20%, Red 20%+. |
 | **Active Customer Rate** | Scalar + MoM Trend | _Derived_ | Active / total customers %. |
-| **Customer Segment Movement** | Table | [RFM Segment](../domains/customer.md#7-rfm-segment) | Segment, Customer Count, Revenue, MoM Count Change. |
+| **Customer Value Group Movement** | Table | [Value Group](../domains/customer.md#7-rfm-segment) | Segment, Customer Count, Revenue, MoM Count Change. |
 | **Cohort Retention Heatmap** | Pivot Table (Heatmap) | [Retention Rate](../domains/customer.md#5-retention-rate) | Month-0 to Month-6 retention by acquisition cohort. Color intensity = retention %. |
 
 ### Tab 4: Campaigns & Products

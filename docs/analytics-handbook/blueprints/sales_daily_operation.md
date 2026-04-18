@@ -1104,7 +1104,7 @@ Breakdown by RFM-based customer segments.
 
 ```sql
 SELECT
-    COALESCE(c.customer_segment, 'Unknown') as "Phân khúc",
+    COALESCE(c.value_group, 'Unknown') as "Phân khúc",
     COUNT(DISTINCT o.order_id) as "Đơn hàng",
     SUM(o.net_revenue) as "Doanh thu",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0

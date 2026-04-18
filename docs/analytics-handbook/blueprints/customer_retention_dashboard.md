@@ -75,7 +75,7 @@ WITH current_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
@@ -88,7 +88,7 @@ previous_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 )
 SELECT
     c.value as "Repeat Rate %",
@@ -131,7 +131,7 @@ WITH current_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
@@ -142,7 +142,7 @@ previous_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 )
 SELECT
     c.value as "Churn Rate %",
@@ -182,7 +182,7 @@ WITH current_period AS (
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 1
       AND lifespan_days > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT ROUND(AVG(lifespan_days), 0) as value
@@ -191,7 +191,7 @@ previous_period AS (
       AND total_orders_count > 1
       AND lifespan_days > 0
       AND last_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 )
 SELECT
     c.value as "Avg Lifespan (days)",
@@ -234,7 +234,7 @@ WITH current_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
@@ -245,7 +245,7 @@ previous_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 )
 SELECT
     c.value as "Active Rate %",
@@ -288,7 +288,7 @@ FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
   AND customer_status IN ('Active', 'At Risk', 'Churned')
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 GROUP BY 1
 ORDER BY
     CASE customer_status
@@ -332,7 +332,7 @@ FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
   AND customer_status IN ('Active', 'At Risk', 'Churned')
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 GROUP BY 1
 ORDER BY
     CASE customer_status
@@ -368,17 +368,17 @@ Stacked bar showing lifecycle status distribution within each customer segment.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     customer_status as "Status",
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
   AND customer_status IN ('Active', 'At Risk', 'Churned')
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 GROUP BY 1, 2
 ORDER BY
-    CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END,
+    CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 3 END,
     CASE customer_status WHEN 'Active' THEN 1 WHEN 'At Risk' THEN 2 ELSE 3 END
 ```
 
@@ -419,7 +419,7 @@ WHERE customer_status = 'Churned'
   AND (last_order_date + INTERVAL '90' DAY) >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND (last_order_date + INTERVAL '90' DAY) < date_trunc('month', current_date)
   AND customer_id != 'Unknown'
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 GROUP BY 1
 ORDER BY 1
 ```
@@ -495,7 +495,7 @@ Per-segment retention vitals with conditional formatting.
 
 ```sql
 SELECT
-    customer_segment as "Segment",
+    value_group as "Segment",
     COUNT(*) as "Customers",
     ROUND(COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Active %",
     ROUND(COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "At Risk %",
@@ -506,9 +506,9 @@ SELECT
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND total_orders_count > 0
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 GROUP BY 1
-ORDER BY CASE customer_segment WHEN 'VIP' THEN 1 WHEN 'Loyal' THEN 2 ELSE 3 END
+ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 3 END
 ```
 
 ```json metabase-viz
@@ -1009,7 +1009,7 @@ WITH purchase_gaps AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_id != 'Unknown'
-      [[AND c.customer_segment = {{segment}}]]
+      [[AND c.value_group = {{segment}}]]
 ),
 current_val AS (
     SELECT ROUND(AVG(days_between), 0) as value
@@ -1028,7 +1028,7 @@ prev_gaps AS (
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_id != 'Unknown'
       AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
-      [[AND c.customer_segment = {{segment}}]]
+      [[AND c.value_group = {{segment}}]]
 ),
 prev_val AS (
     SELECT ROUND(AVG(days_between), 0) as value
@@ -1083,7 +1083,7 @@ WITH reactivated_current AS (
       AND o.order_timestamp < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
       AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
-      [[AND c.customer_segment = {{segment}}]]
+      [[AND c.value_group = {{segment}}]]
 ),
 reactivated_prev AS (
     SELECT COUNT(DISTINCT o.customer_key) as value
@@ -1101,7 +1101,7 @@ reactivated_prev AS (
       AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
       AND c.customer_id != 'Unknown'
       AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
-      [[AND c.customer_segment = {{segment}}]]
+      [[AND c.value_group = {{segment}}]]
 )
 SELECT
     c.value as "Reactivated",
@@ -1140,7 +1140,7 @@ FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND customer_status = 'At Risk'
   AND total_orders_count > 0
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 ```
 
 ```json metabase-viz
@@ -1168,7 +1168,7 @@ WITH current_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
@@ -1181,7 +1181,7 @@ previous_period AS (
     FROM dim_customers
     WHERE customer_id != 'Unknown'
       AND total_orders_count > 0
-      [[AND customer_segment = {{segment}}]]
+      [[AND value_group = {{segment}}]]
 )
 SELECT
     c.value as "One-Time %",
@@ -1235,7 +1235,7 @@ SELECT
 FROM dim_customers
 WHERE total_orders_count > 0
   AND customer_id != 'Unknown'
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 GROUP BY 1
 ORDER BY MIN(total_orders_count)
 ```
@@ -1273,7 +1273,7 @@ WITH purchase_gaps AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_id != 'Unknown'
-      [[AND c.customer_segment = {{segment}}]]
+      [[AND c.value_group = {{segment}}]]
 )
 SELECT
     CASE
@@ -1341,7 +1341,7 @@ WITH reactivated AS (
       AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND o.order_timestamp < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
-      [[AND c.customer_segment = {{segment}}]]
+      [[AND c.value_group = {{segment}}]]
     GROUP BY 1, 2
 )
 SELECT
@@ -1385,7 +1385,7 @@ High-value At Risk customers needing outreach — sorted by LTV descending.
 SELECT
     full_name as "Customer",
     phone as "Phone",
-    customer_segment as "Segment",
+    value_group as "Segment",
     last_order_date as "Last Order",
     recency_days as "Days Since",
     lifetime_value as "Lifetime Value",
@@ -1394,7 +1394,7 @@ FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND customer_status = 'At Risk'
   AND total_orders_count > 0
-  [[AND customer_segment = {{segment}}]]
+  [[AND value_group = {{segment}}]]
 ORDER BY lifetime_value DESC
 LIMIT 50
 ```

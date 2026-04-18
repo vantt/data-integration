@@ -148,7 +148,7 @@ Multi-view — 4 views:
 | Revenue Trend (6M) | Downtrend | 3 thang lien tiep MoM growth < 0 | Re-evaluate marketing strategy, budget allocation |
 | Channel Performance (grouped-bar) | Kenh sut giam | MoM Revenue < -15% | Dieu tra kenh — competitive pressure? budget cut? |
 | New Customers (hero Tab 3) | Drop | MoM < -15% | Review acquisition channels, tang marketing spend |
-| Churn Rate % (gauge) | Vuot nguong | > 15% | Kich hoat retention campaign, focus VIP/Loyal |
+| Churn Rate % (gauge) | Vuot nguong | > 15% | Kich hoat retention campaign, focus VALUE_VIP/GOLD |
 | At Risk Customers | Spike | MoM > +30% | Uu tien outreach, kiem tra customer satisfaction |
 | Total Discount Amount | Spike | MoM > +20% | Review promotion portfolio, kiem tra discount abuse |
 | Promotion Leaderboard | Low efficiency | Discount % > 20% va Usage < 50 | Stop promotion khong hieu qua |

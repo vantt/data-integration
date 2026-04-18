@@ -23,6 +23,12 @@ dimensions:
     column: channel_format
   - name: platform
     column: platform
+  - name: channel_brand
+    column: channel_brand
+  - name: market
+    column: market
+  - name: source_type
+    column: source_type
   - name: branch_location_name
     column: branch_location_name
   - name: province
