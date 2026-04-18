@@ -230,349 +230,14 @@ Chi nhánh là đơn vị vật lý chịu trách nhiệm thực hiện đơn h�
 
 ### 3.4. Team — "Ai sở hữu doanh số?"
 
-**Định nghĩa:** Team là đơn vị tổ chức bán hàng chịu trách nhiệm doanh số trên một cụm kênh/nguồn. Khác với chi nhánh (vận hành vật lý), team phản ánh **cơ cấu sales** — ai chịu KPI, ai ăn commission.
+**Định nghĩa:** Team là đơn vị tổ chức bán hàng chịu trách nhiệm doanh số. Khác với chi nhánh (vận hành vật lý), team phản ánh **cơ cấu sales** — ai chịu KPI, ai ăn commission.
 
-**Ràng buộc thiết kế cho FG Care (theo yêu cầu business, không phải chuẩn ngành):**
-- **Exclusivity:** 1 source/user = 1 team, không chia tỷ lệ, không tranh giữa các team.
-- **Team tổng = Σ doanh số thành viên**, bất kể kênh (user bán chéo kênh).
+**Đặc điểm chính:**
+- **Orthogonal với channel:** Team là chiều độc lập, không thay thế `channel_category`
+- **3 cách tính doanh số:** `member` (theo nhân viên), `platform` (theo tier 3), `channel_name` (theo tier 4)
+- **SCD2 membership:** Track lịch sử nhân viên chuyển team
 
-**Nguyên tắc kỹ thuật (chuẩn dimensional modeling):**
-- **Orthogonal với channel:** team là chiều độc lập, không thay thế `channel_category` — đảm bảo star schema không bị denormalize.
-
-> **Lưu ý:** 2 ràng buộc đầu là lựa chọn cụ thể của FG Care, **không phải best practice ngành**. Xem mục *"Các mô hình attribution phổ biến"* bên dưới để hiểu các cách chia khác mà ngành đang dùng — nếu ràng buộc FG Care thay đổi, có thể chuyển sang mô hình khác.
-
-#### Các mô hình attribution phổ biến (industry best practices)
-
-Trong thực tế công nghiệp (retail, ecommerce, B2B sales), có 6 nhóm mô hình attribution chính. Mỗi mô hình phù hợp với bối cảnh khác nhau.
-
-**Nhóm 1 — Single-owner attribution (1 người ăn số)**
-
-| Mô hình | Cách tính | Phù hợp khi |
-|---------|-----------|-------------|
-| **Last-touch / Closer-based** | Người chốt đơn cuối cùng ăn 100% | Retail, ecom chat-to-close, telesale (phổ biến nhất cho FG Care) |
-| **First-touch / Creator-based** | Người tạo lead đầu tiên ăn 100% | B2B dài hạn, khi nuôi lead quan trọng hơn chốt |
-| **Order-creator** (Sapo default) | Người tạo đơn trong hệ thống ăn 100% | Đơn giản nhất, nhưng sai khi creator ≠ seller |
-
-→ Phổ biến trong retail/ecom. **FG Care nên dùng Last-touch/Closer-based** cho user-based attribution.
-
-**Nhóm 2 — Split / Shared attribution (2+ người chia credit)**
-
-| Mô hình | Cách tính | Phù hợp khi |
-|---------|-----------|-------------|
-| **Equal split** | Chia đều, vd SDR 50% + AE 50% | SaaS B2B, có quy trình lead qualification rõ |
-| **Weighted split** | Tỷ lệ cố định, vd SDR 30% + AE 70% | Khi đóng góp không cân nhau |
-| **Role-based split** | Theo vai trò trong deal (Marketing + SDR + AE + CS) | Enterprise B2B, deal cycle dài |
-
-→ Phức tạp hơn, cần policy rõ. Phù hợp khi có **pipeline rõ ràng** (lead → qualified → closed). Ít phổ biến trong retail B2C.
-
-**Nhóm 3 — Multi-touch attribution (marketing analytics)**
-
-| Mô hình | Cách tính | Phù hợp khi |
-|---------|-----------|-------------|
-| **Linear** | Chia đều cho mọi touchpoint | Khi không biết touch nào quan trọng hơn |
-| **Time-decay** | Touch gần close có trọng số cao hơn | Sales cycle ngắn-trung bình |
-| **U-shape (position-based)** | 40% first-touch + 40% last-touch + 20% middle | Khi acquisition và close đều quan trọng |
-| **Data-driven (Markov / Shapley)** | Algorithm học từ data lịch sử | Có đủ data, có data team mạnh |
-
-→ Chủ yếu dùng cho **marketing ROI analysis** (ads, channels), không dùng cho commission cá nhân. FG Care nên áp dụng nếu cần phân tích hiệu quả Marketing khi có đa kênh touchpoint.
-
-**Nhóm 4 — Pooled / Team-based attribution (chia theo team, không cá nhân)**
-
-| Mô hình | Cách tính | Phù hợp khi |
-|---------|-----------|-------------|
-| **Team quota** | Cả team share 1 quota, thưởng chia đều hoặc theo đóng góp | POS retail, team CS ca kíp, team không tracker cá nhân được |
-| **Shift-based** | Doanh số trong ca → chia đều cho nhân viên ca đó | Quầy bán, call center |
-
-→ Phù hợp khi **không tracker được cá nhân** (shared account, POS quầy, CS ca kíp). Là **fallback tốt** cho FG Care khi không có `seller_user_id`.
-
-**Nhóm 5 — Account / Territory-based (theo khách hoặc vùng)**
-
-| Mô hình | Cách tính | Phù hợp khi |
-|---------|-----------|-------------|
-| **Account ownership** | 1 nhân viên sở hữu 1 account, mọi đơn của account đó → của họ | B2B, KAM (Key Account Manager), đại lý |
-| **Territory-based** | Chia theo vùng địa lý / segment khách | Sales field, FMCG truyền thống |
-
-→ Phù hợp cho **Team B2B** của FG Care (Đại Lý) — 1 KAM sở hữu 1 cụm đại lý, mọi đơn của cụm đó → của KAM.
-
-**Nhóm 6 — Channel / Source-based (theo nguồn đơn, không theo người)**
-
-| Mô hình | Cách tính | Phù hợp khi |
-|---------|-----------|-------------|
-| **Pure channel** | Doanh số kênh X → Team quản kênh X | Khi không có user, đơn auto (marketplace sync) |
-| **Hybrid user-then-channel** | User nếu có, fallback channel | Thực tế nhất cho FG Care |
-
-→ Đơn giản nhất, không cần data user. **Khuyến nghị FG Care dùng Hybrid (user-then-channel)** để tận dụng data user khi có, fallback channel khi không.
-
-#### Bảng so sánh nhanh — chọn mô hình nào?
-
-| Bối cảnh FG Care | Mô hình khuyến nghị | Lý do |
-|-----------------|---------------------|-------|
-| Team Marketplace (Shopee, Lazada auto-sync) | **Channel-based (Nhóm 6)** | Không có user thật |
-| Team Social (FB, Zalo) — chat chốt đơn | **Last-touch / Closer-based (Nhóm 1)** | Có user chốt rõ ràng |
-| Team CS/Telesale | **Last-touch + Shift-based fallback (1 + 4)** | Có user nhưng ca kíp share account |
-| Team B2B Đại Lý | **Account ownership (Nhóm 5)** | KAM sở hữu cụm đại lý |
-| Team Retail POS | **Pooled/Team-based (Nhóm 4)** | Staff quầy dùng chung account |
-| Team Web DTC | **Channel-based (Nhóm 6)** | Khách tự đặt, không có seller |
-| Marketing ROI analysis | **Multi-touch (Nhóm 3)** | Cần hiểu đóng góp từng touchpoint |
-
-**Kết luận:** Không có 1 mô hình duy nhất áp cho toàn công ty. **FG Care nên dùng hybrid đa mô hình** theo từng team, với source-based (Nhóm 6) làm default fallback khi thiếu data user.
-
-#### So sánh với ràng buộc FG Care hiện tại
-
-Ràng buộc FG Care (exclusivity + Σ user) **tương thích với**:
-- Nhóm 1 (Single-owner) ✓
-- Nhóm 4 (Team-based) ✓
-- Nhóm 5 (Account/Territory) ✓
-- Nhóm 6 (Channel-based) ✓
-
-Ràng buộc FG Care **xung đột với**:
-- Nhóm 2 (Split) ✗ — vì "không chia tỷ lệ"
-- Nhóm 3 (Multi-touch) ✗ — vì "không chia tỷ lệ"
-
-→ Nếu tương lai FG Care muốn đo đóng góp của Marketing, SDR, Closer riêng → **phải nới lỏng ràng buộc exclusivity** để cho phép split/multi-touch.
-
-#### Các mô hình phân team phổ biến (kinh nghiệm thực tế)
-
-**Mô hình 1 — Channel-based (phổ biến nhất, khuyến nghị cho FG Care giai đoạn đầu)**
-
-Mỗi team sở hữu 1 cụm kênh có đặc thù vận hành giống nhau.
-
-| Team | Nguồn quản lý | Lý do nhóm chung |
-|------|---------------|------------------|
-| Team Marketplace | Shopee, Lazada, Tiki, TikTok Shop, Sendo, Grab | Đấu giá, flash sale, ads sàn, KPI GMV |
-| Team Social | Facebook, Zalo, Instagram | Content, chat chốt đơn, KOL/KOC |
-| Team Web / DTC | Web, WebOrder | SEO, ads Google/Meta, email |
-| Team B2B | Đại Lý, Chợ sỉ | Sales field, hợp đồng, công nợ |
-| Team Retail | POS các chi nhánh, Showroom | Vận hành quầy, staff cửa hàng |
-| Team Direct Sales | Telesale, CS | Inbound/outbound, chăm khách cũ |
-
-→ **Ưu:** rõ trách nhiệm, KPI dễ set, triển khai nhanh (chỉ cần mapping source→team trong seed). **Nhược:** user bán chéo kênh khó phân bổ chính xác.
-
-**Mô hình 2 — Brand-based**
-
-Mỗi team quản toàn bộ multi-channel của 1 thương hiệu kênh.
-
-| Team | Nguồn quản lý |
-|------|---------------|
-| Team JPC | Shopee-JPC, Lazada-JPC, Web-JPC, FB-JPC |
-| Team Fine Japan | Shopee-FineJapan, Lazada-FineJapan, FB-FineJapan |
-| Team The Healthy Us | All kênh THU |
-
-→ **Ưu:** đồng bộ branding, 1 team lo full funnel 1 brand. **Nhược:** cần sales đa kênh giỏi, khó scale khi 1 brand quá lớn.
-
-**Mô hình 3 — Khu vực / Segment khách**
-
-| Team | Phạm vi |
-|------|---------|
-| Team Miền Bắc / Nam / Trung | Theo vùng địa lý |
-| Team B2C / Team B2B / Team VIP | Theo phân khúc khách |
-| Team Domestic / Team Export | Theo thị trường |
-
-→ Phù hợp khi kênh B2B offline mạnh (FMCG truyền thống).
-
-**Mô hình 4 — Hybrid (Matrix)**
-
-2 chiều đồng thời: **Brand × Channel-type**. Mỗi đơn có 2 team owner (brand team + channel team). Cần cơ chế ưu tiên khi tính commission (thường brand team ăn số, channel team ăn performance).
-
-→ Phổ biến ở công ty trưởng thành có P&L riêng theo brand.
-
-#### Tiêu chí thiết kế
-
-| Tiêu chí | Quy tắc |
-|---------|---------|
-| **Exclusivity** | 1 source/user → 1 team duy nhất tại mỗi thời điểm |
-| **Attribution** | User-first (theo `seller_user_id`), fallback source→team cho đơn auto |
-| **SCD2 membership** | Ràng buộc `effective_from`/`effective_to` trong `ref_user_teams` — user chuyển team không được làm sai lệch báo cáo lịch sử |
-| **Scope** | Chỉ gán team cho `is_sales_channel = true`. Internal (Test, Quà Tặng, NV) và CrossBorder Fulfillment (US) = NULL |
-| **Returns** | Gán theo team **tại thời điểm order gốc**, không theo team hiện tại |
-
-#### Hai cách attribution & tradeoff
-
-**Cách A — Source-based (Channel → Team):** map mỗi source vào 1 team qua `ref_order_sources.csv` (thêm cột `default_team`).
-- Ưu: đơn giản, không phụ thuộc data user, chạy được ngay.
-- Nhược: không phân biệt được đóng góp cá nhân, user bán chéo kênh bị sai attribution.
-
-**Cách B — User-based (Σ doanh số nhân viên):** mỗi đơn có `seller_user_id` → map user→team qua `ref_user_teams.csv`.
-- Ưu: chính xác theo bản chất "người bán chịu KPI".
-- Nhược: đòi hỏi data hygiene cao (xem vấn đề bên dưới).
-
-**Khuyến nghị:** **Hybrid A+B** — ưu tiên user, fallback source khi user NULL/system.
-
-#### Thảo luận sâu: Team = Σ doanh số n nhân viên — có vấn đề gì?
-
-Mô hình đơn giản "team gồm n nhân viên, doanh số team = tổng doanh số của từng nhân viên" nghe hợp lý nhưng trong thực tế vận hành phát sinh 8 nhóm vấn đề sau. Mỗi vấn đề đều có thể làm tổng team ≠ tổng thực tế.
-
-**Vấn đề 1 — Phụ thuộc chất lượng dữ liệu `created_by` / `assigned_to`**
-
-- Đơn marketplace auto-sync (Shopee, Lazada, Tiki) thường không có user thật — Sapo gán `system` hoặc admin mặc định → không attribute được cho ai.
-- Đơn cũ trước khi quy trình gán user chặt chẽ → NULL hàng loạt.
-- Staff dùng chung account (phổ biến ở team CS ca kíp) → 1 user ID nhưng thực tế 3-4 người.
-
-→ Nếu `created_by` không sạch, tổng team ≠ tổng thực tế, có gap "Unassigned" khó giải thích. **FG Care cần kiểm tra % đơn có `created_by` là user thật trước khi quyết định dùng user-based.**
-
-**Vấn đề 2 — Membership thay đổi theo thời gian (SCD problem)**
-
-- User chuyển team giữa kỳ → doanh số tháng trước thuộc team cũ hay mới?
-- User nghỉ việc → orders cũ của họ "mồ côi", tổng team giảm nếu dùng current membership.
-- Team tách/gộp/đổi tên → báo cáo YoY bị đứt gãy.
-
-→ **Bắt buộc SCD2** (`effective_from`/`effective_to` trên `ref_user_teams`). Không được dùng snapshot hiện tại để tính lịch sử. Khi tính team cho 1 order: tra user_id + order_date → effective team tại thời điểm đó.
-
-**Vấn đề 3 — Attribution ambiguity: ai "sở hữu" đơn?**
-
-Một đơn có thể đi qua nhiều tay:
-- **Marketing** chạy ads kéo khách vào → **CS** tư vấn chốt → **Warehouse staff** tạo đơn Sapo.
-- Chỉ tính theo `created_by` = warehouse staff ăn hết doanh số, CS và Marketing không có gì.
-- Đơn **re-order** khách cũ: user nào xứng đáng? Người chốt đơn đầu tiên hay người xử lý đơn này?
-
-→ Sales commission và BI metrics thường xung đột. Cần **policy rõ** (business quyết định): attribution theo ai — creator, closer, owner, hay first-touch. Khuyến nghị tách:
-- `seller_user_id` — người chốt, ăn doanh số/commission
-- `created_by_user_id` — người tạo đơn, chỉ là operational
-
-**Vấn đề 4 — Cross-sell / bán hộ không phản ánh đúng**
-
-User A (Team Social) chốt đơn qua Zalo nhưng **nhờ** user B (Team CS) tạo trên Sapo vì A đang livestream → B ăn số, A mất.
-
-→ Với mô hình "user bán chéo kênh" mà FG Care mô tả, attribution theo `created_by` **sai bản chất**. Phải có custom field `seller_user_id` riêng, hoặc convention ghi vào note/tag đơn và parse ra.
-
-**Vấn đề 5 — Gian lận và xung đột KPI**
-
-- Cuối tháng user "chạy số": nhờ đồng nghiệp team khác **gán tên mình** vào đơn để đạt KPI.
-- Manager tự gán user mình vào đơn của cấp dưới nghỉ việc.
-- Đơn refund/hủy: user đã nhận thưởng tháng trước → claw-back có thực thi không?
-
-→ Cần **audit log** (ai sửa `seller_user_id` khi nào) và policy rõ ràng. Không có audit → không biết số có bị "chạy" hay không.
-
-**Vấn đề 6 — Đơn không có "người bán" thật**
-
-- Marketplace auto-sync chiếm phần lớn GMV (Shopee, Lazada tự sync, không có nhân viên chốt).
-- Website DTC self-service (khách tự đặt).
-- POS đôi khi dùng 1 account quầy chung.
-
-→ Nếu team = Σ user **thuần túy**, các đơn này rớt ra ngoài. **Team Marketplace doanh số = 0** dù chiếm 60-70% GMV. Giải pháp: **hybrid attribution** — user nếu có, fallback source→team.
-
-**Vấn đề 7 — Đơn trả hàng / đổi hàng xuyên kỳ**
-
-- Return xảy ra 30-60 ngày sau order, user có thể đã chuyển team hoặc nghỉ việc.
-- Net revenue theo team = gross - returns, nhưng returns gán team nào?
-
-→ Quy tắc: **gán team theo thời điểm order gốc** (matching SCD2), không theo team hiện tại của user. Return tháng 4 của đơn tháng 2 → trừ vào team tháng 2, không phải team hiện tại.
-
-**Vấn đề 8 — Granularity & privacy**
-
-- Team nhỏ (2 người) → dễ đoán ai đóng góp bao nhiêu khi nhìn tổng.
-- Nhân viên thấy dashboard public so sánh → ảnh hưởng tâm lý.
-
-→ Cần **row-level security** ở BI layer: manager thấy team mình, leadership thấy tổng, nhân viên thấy chính mình.
-
-#### Tóm tắt mức độ nghiêm trọng
-
-| # | Vấn đề | Mức độ | Có fix được không? |
-|---|--------|--------|---|
-| 1 | Đơn auto không có user | **Cao** | ✓ Hybrid: fallback source→team |
-| 2 | SCD membership | **Cao** | ✓ Bắt buộc effective_from/to |
-| 3 | Attribution ai sở hữu | **Cao** | ⚠ Cần policy business (creator vs closer) |
-| 4 | Cross-sell / bán hộ | **TB** | ✓ Cần `seller_user_id` riêng |
-| 5 | Gian lận KPI | **TB** | ⚠ Audit log + policy claw-back |
-| 6 | Returns xuyên kỳ | **TB** | ✓ Gán theo order_date, không current |
-| 7 | Shared account | **Thấp-TB** | ✓ Enforce 1 user = 1 account |
-| 8 | Privacy | **Thấp** | ✓ RLS ở BI layer |
-
-**Kết luận:** Mô hình "Σ user" về lý thuyết chính xác nhất nhưng **đòi hỏi data hygiene tốt** (user sạch, SCD2, `seller_user_id` tin cậy, audit log). Nếu FG Care chưa có quy trình này → bắt đầu bằng **source-based (Cách A)** đơn giản và đáng tin hơn; nâng cấp lên user-based (Cách B) khi các điều kiện trên được đảm bảo.
-
-#### Sapo đã có sẵn 2 user fields — không cần custom field
-
-Sapo order payload (`src_sapo_orders.sql:105-113`) trả về **2 trường user riêng biệt**, đúng với 2 vai trò doc đề cập:
-
-| Doc terminology | Sapo field | Ý nghĩa nghiệp vụ | Các field phụ |
-|----------------|-----------|-------------------|---------------|
-| `seller_user_id` (người chốt, ăn số) | **`assignee_id`** | Nhân viên được **giao đơn** | `assignee.name`, `assignee.full_name`, `assignee.email` |
-| `created_by_user_id` (người tạo, operational) | **`account_id`** | Nhân viên **tạo đơn** trên Sapo | `account.name`, `account.full_name`, `account.email` |
-
-**Pipeline hiện tại (`std_orders.sql:30`)** coalesce 2 fields:
-
-```sql
-coalesce(assignee_id, account_id) as salesperson_id
-```
-
-→ Ưu tiên `assignee`, fallback `account`. **Mất distinction** sau std_orders → không phân biệt được closer vs creator ở lớp trên.
-
-**Đề xuất:** giữ **cả 2 fields riêng biệt** ở std_orders và fact_orders, để BI layer chọn mô hình attribution linh hoạt.
-
-#### Coverage thực tế trên dữ liệu FG Care
-
-Query mẫu trên `src_sapo_orders` (2,787 đơn, 2021-05 → 2026-04, không bao gồm đơn marketplace sync qua path riêng):
-
-| Metric | Giá trị |
-|--------|---------|
-| Đơn có `assignee_id` NOT NULL | **100%** |
-| Đơn có `account_id` NOT NULL | **100%** |
-| Đơn có `assignee_id` ≠ `account_id` | **16.58%** (462/2787) |
-
-**Phân bố diff theo source (trích):**
-
-| Source | Orders | `assignee ≠ account` | Ghi chú |
-|--------|-------:|:---:|---------|
-| **Đại Lý** | 1,058 | **40.2%** | Data entry tạo đơn, sales được assign — workflow B2B rõ ràng |
-| Web | 64 | 25.0% | Có nhiều creator khác assignee |
-| Other | 66 | 15.2% | Mixed |
-| Pos | 42 | 2.4% | Quầy tự tạo |
-| US | 1,096 | 0.6% | Auto-sync, cùng system user |
-| Shopee | 319 | **0%** | Auto-sync, 1 admin (`Trà My`) làm cả 2 |
-| Lazada/Tiki/Chiaki/... | ~30 | 0% | Marketplace auto-sync |
-| Zalo/FaceBook*/CS/Telesale | nhỏ | 0% | Cùng user làm cả 2 |
-
-**Đại Lý pattern mẫu (top assignee-creator pairs):**
-
-| Assignee (người chốt) | Creator (người tạo) | Số đơn |
-|----------------------|---------------------|-------:|
-| Vũ Ngọc | Vũ Ngọc | 197 (tự tạo) |
-| Ngoc Anh | Ngoc Anh | 154 (tự tạo) |
-| **Vũ Ngọc** | **Ngoc Vu** | **95 (khác!)** |
-| **Vũ Ngọc** | **Nguyễn Thị Thanh Huyền** | **73 (khác — có data entry staff)** |
-| **Ngoc Anh** | **Ngoc Vu** | **92 (khác!)** |
-
-→ Xác nhận pattern B2B thực tế: **có nhân viên chuyên tạo đơn (data entry), sau đó assign cho sales rep**. Với những đơn này, dùng `account_id` (creator) sai bản chất — phải dùng `assignee_id`.
-
-#### Kết luận cập nhật cho FG Care
-
-1. **FG Care sẵn sàng làm user-based attribution** cho Đại Lý/Web (data hygiene 100% ở 2 fields).
-2. **Marketplace (Shopee, Lazada, Tiki, Chiaki...)** không cần user — assignee = account = system user. Dùng **source-based fallback** cho các kênh này.
-3. **Hybrid attribution đề xuất:**
-   ```
-   seller_user_id = assignee_id (primary)
-   → map qua ref_user_teams → team
-
-   IF assignee_id = system_user_ids (Trà My, etc.)
-     → fallback source_id → default_team
-   ```
-4. **Chưa cần thêm custom field trên Sapo** — dùng native fields.
-5. **Cần xác nhận business:** liệt kê `system_user_ids` (các account chỉ dùng cho auto-sync) để logic fallback phân biệt được user thật vs system.
-
-#### Checklist trước khi quyết định dùng user-based
-
-- [ ] Tỷ lệ đơn có `created_by` là user thật (không phải system/admin default) > 80%
-- [ ] Có cơ chế phân biệt `seller_user_id` vs `created_by_user_id`
-- [ ] Mỗi nhân viên 1 account riêng (không shared)
-- [ ] Có seed `ref_user_teams.csv` với SCD2
-- [ ] Có policy attribution được business duyệt (creator / closer / first-touch)
-- [ ] Có audit log thay đổi `seller_user_id` trên đơn
-- [ ] Có quy tắc xử lý return/refund xuyên kỳ
-- [ ] Đã backfill hoặc loại trừ đơn lịch sử thiếu user
-
-Không đạt đủ các mục trên → **dùng source-based (Cách A)** cho đến khi sẵn sàng.
-
-#### Khuyến nghị cho FG Care (Phase 1)
-
-Dùng **Channel-based (Mô hình 1) + Source-based attribution (Cách A)** — 6 teams như bảng mẫu ở trên. Loại `is_sales_channel = false` (Internal, CrossBorder Fulfillment) khỏi phân bổ team.
-
-**Phase 2 (khi data user sạch):** nâng cấp sang Hybrid attribution (user-first, source fallback) + thêm Brand dimension nếu cần track P&L theo brand.
-
-#### Seed đề xuất (chưa triển khai)
-
-- `ref_teams.csv` — danh sách team + leader + mô tả
-- Thêm cột `default_team` vào `ref_order_sources.csv` — fallback attribution
-- `ref_user_teams.csv` — membership với SCD2 (`user_id`, `team_id`, `effective_from`, `effective_to`) — chỉ cần khi Phase 2
+> **Chi tiết đầy đủ:** Xem [Team Management](./team-management.md) — bao gồm 6 nhóm mô hình attribution theo chuẩn ngành, cách cấu hình trên Google Sheet, và các vấn đề thường gặp.
 
 ---
 
@@ -785,40 +450,57 @@ Sapo "source" field (legacy catch-all)
     └── Business Arrangement      → US (CrossBorder Fulfillment)
 ```
 
-### Thiết kế lý tưởng (không áp dụng)
+### Giải pháp: Thêm `source_type`
 
-Nếu thiết kế từ đầu, nên tách thành các dimension độc lập:
+Thay vì tạo nhiều field mới, thêm **1 field `source_type`** vào seed để phân loại rõ mỗi source thuộc concept nào:
 
-| Dimension | Field | Ví dụ values |
-|-----------|-------|--------------|
-| Channel | `channel` | Shopee, Zalo, POS, Web, Phone, Email |
-| Customer Type | `customer_group` | RETAIL, WHOLESALE, PARTNER, STAFF |
-| Team | `team` | Marketplace, Social, CS, B2B |
-| Order Purpose | `order_purpose` | Sale, Gift, Test, Staff Benefit |
-| Fulfillment Type | `fulfillment_type` | Standard, CrossBorder |
+| source_type | Mô tả | Ví dụ sources |
+|-------------|-------|---------------|
+| `channel` | Kênh bán hàng thực sự | Shopee, Zalo, POS, Web |
+| `customer_type` | Loại khách hàng (không phải channel) | Đại Lý, Chợ sỉ |
+| `team` | Team/function xử lý | CS, Telesale |
+| `purpose` | Mục đích đơn hàng (không phải bán) | Test SP, Quà Tặng, Ưu đãi NV |
+| `arrangement` | Thỏa thuận kinh doanh đặc biệt | US (CrossBorder Fulfillment) |
 
-### Cách tiếp cận hiện tại
+**Ví dụ mapping:**
 
-**Giữ nguyên source + bổ sung bằng các dimension khác:**
+```csv
+id,name,source_type,channel_format,...
+3988158_1,Shopee - Fine Japan Vietnam,channel,Marketplace,...
+4164989,Đại Lý,customer_type,B2B,...
+4517138,Telesale,team,Direct,...
+3988160,Test Sản Phẩm,purpose,System,...
+4110169,US,arrangement,CrossBorder Fulfillment,...
+```
 
-| Vấn đề | Giải pháp bổ sung |
-|--------|-------------------|
-| Đại Lý/Chợ sỉ là Customer Type | → Dùng `customer_group` (xem [Customer Segmentation](./customer-segmentation.md)) |
-| CS/Telesale là Team | → Dùng Team dimension (xem Section 3.4) |
-| Test/Quà Tặng/NV là Order Purpose | → Filter bằng `is_sales_channel = false` |
-| US là Business Arrangement | → Filter bằng `is_sales_channel = false` + `channel_format = CrossBorder Fulfillment` |
+### Cách sử dụng
 
-### Tại sao không refactor?
+| Nhu cầu | Cách filter |
+|---------|-------------|
+| Báo cáo doanh thu theo kênh thực | `WHERE source_type = 'channel'` |
+| Loại đơn nội bộ | `WHERE is_sales_channel = true` |
+| Phân tích theo loại khách | Join với `dim_customers.customer_type` |
+| Doanh thu theo team | Join với `dim_teams` theo `revenue_type` logic |
 
-1. **Data đã có** — Reports và dashboards đang chạy
-2. **Các dimension bổ sung đã cover** — Customer, Team, is_sales_channel
-3. **Effort cao, benefit thấp** — Breaking change không đáng
+### Tại sao không tách thành nhiều dimension?
+
+Phân tích cho thấy hầu hết đề xuất ban đầu đã được cover bởi schema hiện có:
+
+| Đề xuất ban đầu | Đã cover bởi |
+|-----------------|--------------|
+| `channel` | 4-tier taxonomy (channel_category/format/platform/name) |
+| `customer_group` | `dim_customers.customer_type` |
+| `team` | `dim_teams` với `revenue_type` logic |
+| `order_purpose` | `is_sales_channel` + `source_name` |
+| `fulfillment_type` | `channel_format` value |
+
+→ Chỉ cần thêm `source_type` để phân loại, không cần thêm 5 field mới.
 
 ### Lưu ý khi sử dụng
 
-- **Đừng gọi tất cả source là "channel"** — Một số là customer type, team, hoặc order purpose
-- **Luôn kết hợp với dimension khác** khi cần phân tích chính xác
-- **Document này gọi là "Channel Classification"** vì đó là use case chính, nhưng nhận thức rằng source field overloaded
+- **Đừng gọi tất cả source là "channel"** — Kiểm tra `source_type` để biết source thuộc concept nào
+- **`source_type != 'channel'` không có nghĩa là không có doanh thu** — Đại Lý có doanh thu nhưng không phải channel
+- Xem thêm: [Data Model Overview](./data-model-overview.md)
 
 ---
 
@@ -904,13 +586,15 @@ Mỗi dòng đại diện cho một nguồn đơn hàng cụ thể trong Sapo (m
 | `id`                | string  | Co         | ID nguồn trên Sapo (ví dụ `3988158` hoặc composite `3988158_1`)                                   | `3988158_1`                   |
 | `name`              | string  | Co         | Tên hiển thị đầy đủ                                                                                 | `Shopee - Fine Japan Vietnam` |
 | `status`            | boolean | Co         | Nguồn còn hoạt động không                                                                            | `true`                        |
+| `source_type`       | string  | Co         | Loại source. Giá trị: `channel`, `customer_type`, `team`, `purpose`, `arrangement` | `channel`                     |
 | `channel_format`    | string  | Co         | Loại kênh. Giá trị: `Marketplace`, `Social`, `Web`, `Retail`, `B2B`, `Direct`, `System`, `CrossBorder Fulfillment`, `Other` | `Marketplace`                 |
 | `platform`          | string  | Co         | Nền tảng cụ thể                                                                                              | `Shopee`                      |
 | `is_generic_source` | boolean | Co         | `true` nếu nguồn cần expand theo chi nhánh (hiện chỉ POS)                                          | `false`                       |
 | `mapping_tag`       | string  | Khong      | Tag dùng để map đơn hàng từ Sapo vào nguồn cụ thể                                               | `Shopee_Fine Japan Vietnam`   |
 | `channel_brand`     | string  | Khong      | Thương hiệu kênh sở hữu nguồn này                                                                  | `Fine Japan Vietnam`          |
 | `market`            | string  | Co         | Thị trường. Giá trị: `Domestic`, `Export`                                                          | `Domestic`                    |
-| `customer_segment`  | string  | Co         | Phân khúc khách hàng. Giá trị: `B2C`, `B2B`                                                       | `B2C`                         |
+
+> **Deprecated:** `customer_segment` đã được loại bỏ. Phân khúc khách hàng thuộc về `dim_customers.customer_type`, không phải channel. Xem [customer-segmentation.md](./customer-segmentation.md).
 
 **Quy tắc channel_format:**
 
@@ -934,16 +618,17 @@ Mỗi dòng đại diện cho một nguồn đơn hàng cụ thể trong Sapo (m
 **Ví dụ dữ liệu:**
 
 ```csv
-id,name,status,channel_format,is_generic_source,platform,mapping_tag,channel_brand,market,customer_segment
-3988158_1,Shopee - Fine Japan Vietnam,true,Marketplace,false,Shopee,"Shopee_Fine Japan Vietnam",Fine Japan Vietnam,Domestic,B2C
-3988158_4,Shopee - JPC OFFICIAL,true,Marketplace,false,Shopee,Shopee_JPC OFFICIAL,JPC,Domestic,B2C
-3988155_2,Lazada - JPC SHOP,true,Marketplace,false,Lazada,Lazada_JPC SHOP,JPC,Domestic,B2C
-3988153,Facebook,true,Social,false,Facebook,,,Domestic,B2C
-3988152,Web,true,Web,false,Website,,,Domestic,B2C
-3988157,Pos,true,Retail,true,POS,,,Domestic,B2C
-4164989,Đại Lý,false,B2B,false,Wholesale,,,Domestic,B2B
-4110169,US,false,CrossBorder Fulfillment,false,US,,,Export,B2B
-4517138,Telesale,false,Direct,false,Direct,,,Domestic,B2C
+id,name,status,source_type,channel_format,is_generic_source,platform,mapping_tag,channel_brand,market
+3988158_1,Shopee - Fine Japan Vietnam,true,channel,Marketplace,false,Shopee,"Shopee_Fine Japan Vietnam",Fine Japan Vietnam,Domestic
+3988158_4,Shopee - JPC OFFICIAL,true,channel,Marketplace,false,Shopee,Shopee_JPC OFFICIAL,JPC,Domestic
+3988155_2,Lazada - JPC SHOP,true,channel,Marketplace,false,Lazada,Lazada_JPC SHOP,JPC,Domestic
+3988153,Facebook,true,channel,Social,false,Facebook,,,Domestic
+3988152,Web,true,channel,Web,false,Website,,,Domestic
+3988157,Pos,true,channel,Retail,true,POS,,,Domestic
+4164989,Đại Lý,false,customer_type,B2B,false,Wholesale,,,Domestic
+4110169,US,false,arrangement,CrossBorder Fulfillment,false,US,,,Export
+4517138,Telesale,false,team,Direct,false,Direct,,,Domestic
+3988160,Test Sản Phẩm,false,purpose,System,false,System,,,Domestic
 ```
 
 ### 8.2. ref_brands.csv — Chuẩn hóa vendor
@@ -1017,13 +702,15 @@ Bảng `dim_channels` materialize đầy đủ **4 tầng** của hệ thống p
 | `channel_category`  | string  | Khong | **1** | **Phân loại kênh** (Channel Category) | `Online-Ecommerce`, `Offline`, `Internal` |
 | `channel_format`    | string  | Khong | **2** | **Hình thức kênh** (Channel Format) — renamed từ `platform_group` | `Marketplace`, `Social`, `Web`, `Retail`, `B2B`, `Direct`, `System`, `CrossBorder Fulfillment`, `Other` |
 | `platform`          | string  | Khong | **3** | **Nền tảng** (Platform) | `Shopee`, `Lazada`, `TikTok`, `Tiki`, `Sendo`, `Grab`, `Facebook`, `Instagram`, `Zalo`, `Website`, `POS`, `Wholesale`, `Direct`, `System`, `US`, `Other` |
+| `source_type`       | string  | Khong | —   | Loại source (xem Section 7) | `channel`, `customer_type`, `team`, `purpose`, `arrangement` |
 | `channel_brand`     | string  | Co    | —   | Thương hiệu kênh (Channel Brand) — khác thương hiệu sản phẩm | `JPC`, `Fine Japan Vietnam`, `FG Care`, `The Healthy Us`, `Fine World Group`, NULL |
 | `market`            | string  | Khong | —   | Thị trường (Market) | `Domestic`, `Export` |
-| `customer_segment`  | string  | Khong | —   | Phân khúc khách hàng (Customer Segment) | `B2C`, `B2B` |
 | `is_sales_channel`  | boolean | Khong | —   | `true` = kênh bán hàng thật (tính vào doanh thu). `false` = Internal (System) + CrossBorder Fulfillment | true/false |
 | `source_id`         | string  | Co    | —   | FK về `ref_order_sources` (= `order_source.id` của Sapo) | |
 | `location_id`       | string  | Co    | —   | FK về `ref_branch_locations` (chỉ có giá trị khi `is_generic_source=true`, e.g. POS expand theo chi nhánh) | |
 | `is_active`         | boolean | Khong | —   | Nguồn còn hoạt động trên Sapo | true/false |
+
+> **Deprecated:** `customer_segment` đã được loại bỏ khỏi dim_channels. Phân khúc khách hàng thuộc về `dim_customers`, không phải channel.
 
 **Cross-reference tầng ↔ cột:**
 
@@ -1038,9 +725,11 @@ Bảng `dim_channels` materialize đầy đủ **4 tầng** của hệ thống p
 
 | Chiều phân loại | Cột | Dùng để GROUP BY |
 |----------------|-----|------------------|
+| Loại source | `source_type` | Filter channel thực vs customer_type vs team vs purpose |
 | Thương hiệu kênh | `channel_brand` | So sánh JPC vs Fine Japan vs THU (ở cấp channel brand, không phải product brand) |
 | Thị trường | `market` | Domestic vs Export |
-| Phân khúc KH | `customer_segment` | B2C vs B2B |
+
+> **Lưu ý:** Phân khúc khách hàng (B2C/B2B) nay thuộc về `dim_customers.customer_type`, không nằm trên channel.
 
 **Lưu ý quan trọng về `is_sales_channel`:**
 

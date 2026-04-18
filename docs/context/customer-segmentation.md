@@ -1,7 +1,7 @@
 # Hướng dẫn Phân loại Khách hàng (Customer Segmentation)
 
 > **Dành cho:** Sales, Marketing, Data Team
-> **Cập nhật:** 2026-04-17
+> **Cập nhật:** 2026-04-18
 > **Bảo trì:** Data Team
 
 ## Tài liệu này trả lời những câu hỏi nào?
@@ -15,10 +15,10 @@
 
 ## TL;DR
 
-- **6 chiều phân loại độc lập** — Pricing, Value, Lifecycle, Channel, Product, Payment
+- **8 chiều phân loại độc lập** — customer_type, value_group, lifecycle_stage, channel_preference, product_affinity, payment_behavior, geo_region, acquisition_source
 - **Mỗi chiều trả lời 1 câu hỏi riêng** — Có thể kết hợp để phân tích sâu
-- **Manual vs Auto** — Pricing/Source dùng manual; còn lại auto theo điều kiện
-- **Naming convention** — `{DIMENSION}_{TIER}` (vd: `PRICING_WHOLESALE`, `VALUE_VIP`)
+- **Manual vs Auto** — customer_type/acquisition_source dùng manual; còn lại auto theo điều kiện
+- **customer_type vs value_group** — customer_type là bản chất quan hệ (RETAIL, WHOLESALE); value_group là giá trị đóng góp (VALUE_VIP, VALUE_GOLD)
 
 ---
 
@@ -31,65 +31,86 @@
 │                                                                   │
 │  NHÓM 1: COMMERCIAL (Ảnh hưởng giá/chính sách)                  │
 │  ════════════════════════════════════════════                    │
-│  • PRICING_*     Manual   Xác định mức giá áp dụng              │
-│  • PAYMENT_*     Auto     Hành vi thanh toán, quản lý công nợ    │
+│  • customer_type      Manual  Bản chất quan hệ với công ty       │
+│  • payment_behavior   Auto    Hành vi thanh toán, quản lý công nợ│
 │                                                                   │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  NHÓM 2: BEHAVIORAL (Hiểu hành vi khách)                        │
 │  ═══════════════════════════════════════                         │
-│  • VALUE_*       Auto     Giá trị khách hàng (RFM-based)         │
-│  • LIFECYCLE_*   Auto     Trạng thái trong vòng đời             │
-│  • CHANNEL_*     Auto     Kênh mua hàng ưa thích                │
-│  • PRODUCT_*     Auto     Thương hiệu/danh mục ưa thích         │
+│  • value_group        Auto    Giá trị đóng góp (RFM-based)       │
+│  • lifecycle_stage    Auto    Trạng thái trong vòng đời          │
+│  • channel_preference Auto    Kênh mua hàng ưa thích             │
+│  • product_affinity   Auto    Thương hiệu/danh mục ưa thích      │
 │                                                                   │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                   │
 │  NHÓM 3: DEMOGRAPHIC (Thông tin khách)                          │
 │  ═════════════════════════════════════                           │
-│  • GEO_*         Auto     Vị trí địa lý                         │
-│  • SOURCE_*      Manual   Nguồn khách hàng                       │
+│  • geo_region         Auto    Vị trí địa lý                      │
+│  • acquisition_source Manual  Nguồn khách hàng                   │
 │                                                                   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Chi tiết từng chiều phân loại
+## Phân biệt customer_type vs value_group
 
-### 1. PRICING — "Khách được mua giá nào?"
+```
+customer_type = Bản chất quan hệ         value_group = Giá trị đóng góp
+       │                                        │
+       ▼                                        ▼
+  RETAIL, WHOLESALE,                      VALUE_VIP, VALUE_GOLD,
+  PARTNER, STAFF, KOL                     VALUE_SILVER, VALUE_BRONZE
 
-**Mục đích:** Xác định chính sách giá áp dụng cho khách hàng.
+→ Khách lẻ chi 50M+ = customer_type=RETAIL + value_group=VALUE_VIP
+→ Đại lý mới = customer_type=WHOLESALE + value_group=VALUE_BRONZE
+→ KOL = customer_type=KOL (bất kể doanh số)
+```
 
-**Loại:** Manual (Sales team quyết định)
-
-**Tính chất:** Mutually exclusive — 1 khách chỉ thuộc 1 tier
-
-| Tier | Code | Mô tả | Chính sách |
-|------|------|-------|------------|
-| Retail | `PRICING_RETAIL` | Khách lẻ mua qua các kênh B2C | Giá niêm yết |
-| Wholesale | `PRICING_WHOLESALE` | Khách sỉ, đại lý, mua số lượng lớn | Giá sỉ (chiết khấu cố định ~40-50%) |
-| Partner | `PRICING_PARTNER` | CTV, đại lý nhỏ, đối tác | Giá đối tác (theo thỏa thuận) |
-| Staff | `PRICING_STAFF` | Nhân viên công ty | Giá ưu đãi nhân viên |
-
-**Cách xác định:**
-- Default: `PRICING_RETAIL`
-- Sales team cập nhật thủ công khi ký hợp đồng sỉ/đối tác
-- HR cập nhật cho nhân viên
-
-**Lưu ý quan trọng:**
-- Discount của khách `PRICING_WHOLESALE` là **giá sỉ cố định**, không phải promotion
-- Khi phân tích hiệu quả promotion, **phải filter** `PRICING_RETAIL` only
+**Quy tắc:** customer_type KHÔNG thay đổi theo doanh số, chỉ thay đổi khi quan hệ thay đổi (vd: từ RETAIL → WHOLESALE khi ký hợp đồng đại lý).
 
 ---
 
-### 2. VALUE — "Khách có giá trị thế nào?"
+## Chi tiết từng chiều phân loại
+
+### 1. customer_type — "Khách là ai? Quan hệ gì với công ty?"
+
+**Mục đích:** Xác định bản chất quan hệ với công ty — ảnh hưởng pricing, communication, chính sách.
+
+**Loại:** Manual (Sales team quyết định)
+
+**Tính chất:** Mutually exclusive — 1 khách chỉ thuộc 1 type
+
+| Type | Code | Mô tả | Chính sách giá |
+|------|------|-------|----------------|
+| Retail | `RETAIL` | Khách lẻ mua qua các kênh B2C | Giá niêm yết |
+| Wholesale | `WHOLESALE` | Khách sỉ, đại lý, mua số lượng lớn | Giá sỉ (chiết khấu cố định ~40-50%) |
+| Partner | `PARTNER` | CTV, đại lý nhỏ, đối tác | Giá đối tác (theo thỏa thuận) |
+| Staff | `STAFF` | Nhân viên công ty | Giá ưu đãi nhân viên |
+| KOL | `KOL` | Influencer, người có ảnh hưởng | Giá ưu đãi + hỗ trợ content |
+
+**Cách xác định:**
+- Default: `RETAIL`
+- Sales team cập nhật thủ công khi ký hợp đồng sỉ/đối tác
+- HR cập nhật cho nhân viên
+- Marketing cập nhật cho KOL
+
+**Lưu ý quan trọng:**
+- Discount của khách `WHOLESALE` là **giá sỉ cố định**, không phải promotion
+- Khi phân tích hiệu quả promotion, **phải filter** `customer_type = 'RETAIL'` only
+- `KOL` khác với `SOURCE_KOL` (acquisition source): customer_type=KOL là chính KOL, SOURCE_KOL là khách đến từ KOL
+
+---
+
+### 2. value_group — "Khách có giá trị đóng góp thế nào?"
 
 **Mục đích:** Phân loại khách theo tổng giá trị đóng góp (Customer Lifetime Value proxy).
 
 **Loại:** Auto (theo điều kiện mua hàng)
 
-**Tính chất:** Mutually exclusive — 1 khách chỉ thuộc 1 tier
+**Tính chất:** Mutually exclusive — 1 khách chỉ thuộc 1 tier. **Độc lập với customer_type.**
 
 | Tier | Code | Điều kiện | Ưu tiên |
 |------|------|-----------|---------|
@@ -97,6 +118,11 @@
 | Gold | `VALUE_GOLD` | Tổng chi tiêu ≥ 20M | Cao |
 | Silver | `VALUE_SILVER` | Tổng chi tiêu ≥ 5M | Trung bình |
 | Bronze | `VALUE_BRONZE` | Còn lại | Cơ bản |
+
+**Phân biệt với customer_type:**
+- Khách `WHOLESALE` mua nhiều → vẫn có thể là `VALUE_VIP`
+- Khách `RETAIL` chi 50M → là `VALUE_VIP` (không phải VIP customer type)
+- `VALUE_VIP` là tier doanh số, KHÔNG phải loại khách hàng
 
 **Logic đánh giá (thứ tự ưu tiên):**
 ```sql
@@ -115,7 +141,7 @@ END
 
 ---
 
-### 3. LIFECYCLE — "Khách đang ở giai đoạn nào?"
+### 3. lifecycle_stage — "Khách đang ở giai đoạn nào?"
 
 **Mục đích:** Xác định trạng thái hoạt động của khách trong vòng đời.
 
@@ -147,7 +173,7 @@ END
 
 ---
 
-### 4. CHANNEL — "Khách thích mua ở đâu?"
+### 4. channel_preference — "Khách thích mua ở đâu?"
 
 **Mục đích:** Xác định kênh mua hàng chính của khách.
 
@@ -185,7 +211,7 @@ GROUP BY customer_id
 
 ---
 
-### 5. PRODUCT — "Khách thích mua brand/category nào?"
+### 5. product_affinity — "Khách thích mua brand/category nào?"
 
 **Mục đích:** Xác định thương hiệu sản phẩm khách mua nhiều nhất.
 
@@ -229,7 +255,7 @@ GROUP BY customer_id
 
 ---
 
-### 6. PAYMENT — "Khách thanh toán thế nào?"
+### 6. payment_behavior — "Khách thanh toán thế nào?"
 
 **Mục đích:** Phân loại theo hành vi thanh toán, đặc biệt quan trọng cho B2B.
 
@@ -261,7 +287,7 @@ END
 
 ---
 
-### 7. GEO — "Khách ở đâu?"
+### 7. geo_region — "Khách ở đâu?"
 
 **Mục đích:** Phân loại theo vị trí địa lý.
 
@@ -282,7 +308,7 @@ END
 
 ---
 
-### 8. SOURCE — "Khách đến từ đâu?"
+### 8. acquisition_source — "Khách đến từ đâu?"
 
 **Mục đích:** Tracking nguồn acquisition để đo marketing ROI.
 
@@ -305,16 +331,16 @@ END
 
 ## Bảng tổng hợp
 
-| Chiều | Loại | Câu hỏi | Ảnh hưởng |
-|-------|------|---------|-----------|
-| PRICING | Manual | Giá nào? | Pricing, Revenue |
-| VALUE | Auto | Giá trị? | Service level |
-| LIFECYCLE | Auto | Giai đoạn? | Marketing action |
-| CHANNEL | Auto | Kênh nào? | Channel strategy |
-| PRODUCT | Auto | Brand nào? | Cross-sell |
-| PAYMENT | Auto | Thanh toán? | Finance, Risk |
-| GEO | Auto | Ở đâu? | Logistics |
-| SOURCE | Manual | Từ đâu? | Marketing ROI |
+| Chiều | Field | Loại | Câu hỏi | Ảnh hưởng |
+|-------|-------|------|---------|-----------|
+| Customer Type | `customer_type` | Manual | Khách là ai? | Pricing, Policy |
+| Value | `value_group` | Auto | Giá trị đóng góp? | Service level |
+| Lifecycle | `lifecycle_stage` | Auto | Giai đoạn? | Marketing action |
+| Channel | `channel_preference` | Auto | Kênh nào? | Channel strategy |
+| Product | `product_affinity` | Auto | Brand nào? | Cross-sell |
+| Payment | `payment_behavior` | Auto | Thanh toán? | Finance, Risk |
+| Geo | `geo_region` | Auto | Ở đâu? | Logistics |
+| Source | `acquisition_source` | Manual | Từ đâu? | Marketing ROI |
 
 ---
 
@@ -325,16 +351,17 @@ END
 ```
 Hiện tại          →  Chuẩn hóa
 ─────────────────────────────────
-RETAIL (BANLE)    →  PRICING_RETAIL
-WHOLESALE (BANBUON) → PRICING_WHOLESALE
+RETAIL (BANLE)    →  RETAIL
+WHOLESALE (BANBUON) → WHOLESALE
 ```
 
-### Bước 2: Tạo thêm PRICING tiers (Manual)
+### Bước 2: Tạo thêm customer_type (Manual)
 
 | Group Name | Code | Note |
 |------------|------|------|
-| Partner Pricing | PRICING_PARTNER | CTV, đại lý nhỏ |
-| Staff Pricing | PRICING_STAFF | Nhân viên |
+| Partner | PARTNER | CTV, đại lý nhỏ |
+| Staff | STAFF | Nhân viên |
+| KOL | KOL | Influencer, người có ảnh hưởng |
 
 ### Bước 3: Tạo VALUE tiers (Auto)
 
@@ -364,12 +391,13 @@ Sapo hỗ trợ auto-group theo `last_order_date`:
 
 | Câu hỏi | Segments kết hợp | Insight |
 |---------|------------------|---------|
-| Khách VIP nào đang có nguy cơ mất? | `VALUE_VIP` + `LIFECYCLE_AT_RISK` | Danh sách ưu tiên win-back |
-| Khách sỉ hay mua qua kênh nào? | `PRICING_WHOLESALE` + `CHANNEL_*` | Tối ưu kênh B2B |
-| Khách Fine Japan có mua FG Care không? | `PRODUCT_FINE_JAPAN` → cross-buy analysis | Cơ hội cross-sell |
-| Khách B2B nào đang nợ quá hạn? | `PRICING_WHOLESALE` + `PAYMENT_DELINQUENT` | Cảnh báo công nợ |
-| Khách mới từ KOL có giá trị cao không? | `SOURCE_KOL` + `LIFECYCLE_NEW` → VALUE trend | Đánh giá KOL ROI |
-| Vùng nào có nhiều khách churned? | `LIFECYCLE_CHURNED` + `GEO_*` | Regional retention issue |
+| Khách VIP nào đang có nguy cơ mất? | `value_group=VALUE_VIP` + `lifecycle_stage=AT_RISK` | Danh sách ưu tiên win-back |
+| Khách sỉ hay mua qua kênh nào? | `customer_type=WHOLESALE` + `channel_preference=*` | Tối ưu kênh B2B |
+| Khách Fine Japan có mua FG Care không? | `product_affinity=FINE_JAPAN` → cross-buy analysis | Cơ hội cross-sell |
+| Khách B2B nào đang nợ quá hạn? | `customer_type=WHOLESALE` + `payment_behavior=DELINQUENT` | Cảnh báo công nợ |
+| Khách mới từ KOL có giá trị cao không? | `acquisition_source=KOL` + `lifecycle_stage=NEW` → value trend | Đánh giá KOL ROI |
+| Vùng nào có nhiều khách churned? | `lifecycle_stage=CHURNED` + `geo_region=*` | Regional retention issue |
+| KOL có value cao không? | `customer_type=KOL` → `value_group` distribution | Đánh giá KOL performance |
 
 ---
 
@@ -377,26 +405,25 @@ Sapo hỗ trợ auto-group theo `last_order_date`:
 
 | Phase | Chiều | Timeline | Owner |
 |-------|-------|----------|-------|
-| P0 | PRICING_* | Tuần 1 | Sales + Data |
-| P1 | VALUE_*, LIFECYCLE_* | Tuần 2-3 | Data |
-| P2 | CHANNEL_*, PRODUCT_* | Tuần 4-5 | Data |
-| P3 | PAYMENT_*, GEO_*, SOURCE_* | Khi cần | Data + Finance |
+| P0 | customer_type | Tuần 1 | Sales + Data |
+| P1 | value_group, lifecycle_stage | Tuần 2-3 | Data |
+| P2 | channel_preference, product_affinity | Tuần 4-5 | Data |
+| P3 | payment_behavior, geo_region, acquisition_source | Khi cần | Data + Finance |
 
 ---
 
 ## Checklist triển khai
 
-**P0 - PRICING (Manual)**
-- [ ] Rename RETAIL → PRICING_RETAIL trong Sapo
-- [ ] Rename BANBUON → PRICING_WHOLESALE trong Sapo
-- [ ] Tạo PRICING_PARTNER, PRICING_STAFF
-- [ ] Cập nhật 12 khách sỉ ẩn → PRICING_WHOLESALE
-- [ ] Document policy: ai được approve chuyển tier?
+**P0 - customer_type (Manual)**
+- [ ] Chuẩn hóa RETAIL, WHOLESALE trong Sapo
+- [ ] Tạo PARTNER, STAFF, KOL groups
+- [ ] Cập nhật 12 khách sỉ ẩn → WHOLESALE
+- [ ] Document policy: ai được approve chuyển customer_type?
 
-**P1 - VALUE & LIFECYCLE (Auto)**
+**P1 - value_group & lifecycle_stage (Auto)**
 - [ ] Kiểm tra Sapo plan có hỗ trợ auto-group không
-- [ ] Tạo 4 VALUE tiers với điều kiện
-- [ ] Tạo 4 LIFECYCLE stages với điều kiện
+- [ ] Tạo 4 value_group tiers với điều kiện
+- [ ] Tạo 4 lifecycle_stage với điều kiện
 - [ ] Test auto-assignment
 
 **P2+ - Các chiều còn lại**
@@ -409,17 +436,28 @@ Sapo hỗ trợ auto-group theo `last_order_date`:
 
 **Q: Một khách có thể thuộc nhiều group không?**
 
-A: Có. Mỗi chiều độc lập. Ví dụ: Khách A có thể là `PRICING_WHOLESALE` + `VALUE_VIP` + `LIFECYCLE_ACTIVE` + `CHANNEL_SOCIAL`.
+A: Có. Mỗi chiều độc lập. Ví dụ: Khách A có thể là `customer_type=WHOLESALE` + `value_group=VALUE_VIP` + `lifecycle_stage=ACTIVE` + `channel_preference=SOCIAL`.
 
 **Q: Khi nào dùng Manual vs Auto group?**
 
 A: 
-- **Manual:** Khi cần con người quyết định (pricing, source) hoặc không có data tự động
+- **Manual:** Khi cần con người quyết định (customer_type, acquisition_source) hoặc không có data tự động
 - **Auto:** Khi có thể derive từ data (value, lifecycle, channel, product)
 
 **Q: Làm sao để discount analysis không bị sai?**
 
-A: Luôn filter `PRICING_RETAIL` khi phân tích promotion discount. Khách `PRICING_WHOLESALE` có discount 40-50% là giá sỉ, không phải KM.
+A: Luôn filter `customer_type = 'RETAIL'` khi phân tích promotion discount. Khách `WHOLESALE` có discount 40-50% là giá sỉ, không phải KM.
+
+**Q: customer_type và value_group khác nhau thế nào?**
+
+A:
+- **customer_type**: Bản chất quan hệ (RETAIL, WHOLESALE, PARTNER, STAFF, KOL) — manual, ít thay đổi
+- **value_group**: Giá trị đóng góp (VALUE_VIP, VALUE_GOLD...) — auto theo doanh số, thay đổi theo thời gian
+- Khách RETAIL chi 50M+ → `customer_type=RETAIL` + `value_group=VALUE_VIP` (vẫn là khách lẻ, nhưng VIP tier)
+
+**Q: VIP là customer_type hay value_group?**
+
+A: **value_group**. "VIP" là tier doanh số (VALUE_VIP), không phải loại khách hàng. Đừng nhầm với customer_type.
 
 **Q: Auto group có update real-time không?**
 
@@ -429,5 +467,7 @@ A: Tùy Sapo plan. Thường là daily hoặc khi có đơn hàng mới.
 
 ## Liên kết tài liệu
 
+- [Data Model Overview](./data-model-overview.md) — Tổng quan data model (entry point)
 - [Channel Classification](./channel-classification.md) — Phân loại kênh bán hàng
+- [Team Management](./team-management.md) — Quản lý team và attribution
 - [Channel Grouping Analysis](./channel-grouping-analysis.md) — Phân tích gom nhóm kênh
