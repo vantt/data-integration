@@ -17,13 +17,23 @@ def extract_rows_written(info_dict: dict) -> Optional[int]:
     """Best-effort extraction of total rows written from a DLT LoadInfo dict.
 
     DLT doesn't expose a single top-level row count. We walk load_packages ->
-    jobs -> (job_counts | metrics.items_count) and sum. Returns None if the
-    shape doesn't match any known path — caller keeps the raw dict in
-    metadata_json as a fallback for later forensic inspection.
+    jobs -> (job_counts | metrics.items_count) and sum.
+
+    Returns:
+        int >= 0 if we could determine the count (including 0 for empty loads)
+        None only if the dict structure doesn't match any known DLT pattern
     """
+    if not info_dict:
+        return None
+
+    load_packages = info_dict.get("load_packages", []) or []
+    # Empty packages = DLT ran but found nothing new (skipped) -> 0 rows written
+    if not load_packages:
+        return 0
+
     total = 0
     matched = False
-    for pkg in info_dict.get("load_packages", []) or []:
+    for pkg in load_packages:
         jobs = pkg.get("jobs")
         if isinstance(jobs, dict):
             job_list = jobs.get("completed_jobs", []) or []
@@ -38,7 +48,9 @@ def extract_rows_written(info_dict: dict) -> Optional[int]:
                 if isinstance(n, int):
                     total += n
                     matched = True
-    return total if matched else None
+    # If we had packages but couldn't extract counts, return total (0) anyway
+    # since packages were processed. Only return None for truly unknown structures.
+    return total if matched else (0 if load_packages else None)
 
 
 def extract_loaded_packages(info_dict: dict) -> list[str]:

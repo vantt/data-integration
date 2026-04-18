@@ -27,6 +27,22 @@ from typing import Any, Optional
 
 import duckdb
 
+
+class _DateTimeEncoder(json.JSONEncoder):
+    """JSON encoder that handles datetime objects from DLT/pendulum."""
+
+    def default(self, obj):
+        # Handle datetime objects
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        # Handle pendulum DateTime (has isoformat)
+        if hasattr(obj, "isoformat"):
+            return obj.isoformat()
+        # Handle pendulum Duration/Interval
+        if hasattr(obj, "total_seconds"):
+            return obj.total_seconds()
+        return super().default(obj)
+
 logger = logging.getLogger(__name__)
 
 # --- Path resolution ---
@@ -86,8 +102,8 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
 """
 
 
-_LOCK_RETRIES = 3
-_LOCK_BACKOFF_S = 1.0
+_LOCK_RETRIES = 5
+_LOCK_BACKOFF_S = 0.5
 
 
 def _connect() -> duckdb.DuckDBPyConnection:
@@ -162,7 +178,7 @@ def record_run(
                 schema_hash,
                 file_sha256,
                 file_mtime,
-                json.dumps(metadata) if metadata else None,
+                json.dumps(metadata, cls=_DateTimeEncoder) if metadata else None,
             ],
         )
 

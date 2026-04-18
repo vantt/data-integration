@@ -1104,3 +1104,72 @@ Health checks đang chạy → Ingestion vẫn queue (coordinator enforce duckdb
 - Better to have stale health metrics than stale business data
 
 **Reference:** `orchestration/definitions.py` — `health_checks_asset_job`, `health_checks_schedule`
+
+### L41 — Health recording: datetime serialization và rows_written semantics
+
+**Symptom:** Morning digest hiển thị "0 items" cho tất cả sources dù data có đồng bộ. Logs show `ingestion_health record_run failed: Object of type DateTime is not JSON serializable`.
+
+**Root cause 1 — DateTime serialization:**
+DLT `LoadInfo.asdict()` trả về objects pendulum/datetime trong metadata dict. `json.dumps(metadata)` fail vì standard encoder không handle datetime.
+
+```python
+# SAI — fail với pendulum DateTime
+json.dumps(metadata)
+
+# ĐÚNG — custom encoder handle datetime
+class _DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        if hasattr(obj, "isoformat"):  # pendulum DateTime
+            return obj.isoformat()
+        if hasattr(obj, "total_seconds"):  # pendulum Duration
+            return obj.total_seconds()
+        return super().default(obj)
+
+json.dumps(metadata, cls=_DateTimeEncoder)
+```
+
+**Root cause 2 — rows_written = None thay vì 0:**
+
+```python
+# SAI — empty packages trả None (unknown)
+if not load_packages:
+    return None  # downstream code coi là unknown, không tính vào SUM
+
+# ĐÚNG — empty packages = 0 rows written (explicit)
+if not load_packages:
+    return 0  # DLT ran, no data to load → 0 rows written
+```
+
+**Hệ quả downstream:**
+```sql
+-- SUM(NULL) = NULL, SUM(0) = 0
+-- Với rows_written = NULL cho mọi run → digest shows "0 items"
+SUM(rows_written) FILTER (WHERE run_started_at >= now() - INTERVAL 1 DAY) AS r_24h
+```
+
+**Fix locations:**
+1. `orchestration/ops/ingestion_health.py` — thêm `_DateTimeEncoder`, dùng trong `json.dumps()`
+2. `orchestration/ops/dlt_metrics.py` — `extract_rows_written()` return 0 cho empty packages
+
+**Verification query:**
+```sql
+-- Before fix: with_rows = 0, null_rows = N
+-- After fix:  with_rows = N, null_rows = 0
+SELECT 
+    CASE WHEN run_started_at < '2026-04-18 16:27:00+07' THEN 'before' ELSE 'after' END as period,
+    COUNT(*) as runs,
+    COUNT(rows_written) as with_rows,
+    COUNT(*) - COUNT(rows_written) as null_rows
+FROM ingestion_runs 
+WHERE run_started_at >= '2026-04-18 15:00:00+07'
+GROUP BY 1
+```
+
+**Rule:** 
+1. Mọi JSON serialization của DLT metadata **phải** dùng custom encoder handle datetime/pendulum
+2. `rows_written` semantics: `0` = DLT ran, no data; `None` = truly unknown (không có DLT response)
+3. Downstream code dùng `COALESCE(rows_written, 0)` để handle cả hai case
+
+**Reference:** `orchestration/ops/ingestion_health.py`, `orchestration/ops/dlt_metrics.py`
