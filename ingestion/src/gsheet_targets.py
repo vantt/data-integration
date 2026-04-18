@@ -4,6 +4,27 @@ import re
 import pandas as pd
 from datetime import datetime
 
+
+def _load_dotenv_local():
+    """Load environment variables from .env.local if it exists (for local dev)."""
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.abspath(os.path.join(current_dir, "../.."))
+    env_local = os.path.join(project_root, ".env.local")
+
+    if os.path.exists(env_local):
+        with open(env_local, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    key = key.strip()
+                    value = value.strip().strip('"').strip("'")
+                    if key and key not in os.environ:
+                        os.environ[key] = value
+
+
+_load_dotenv_local()
+
 # Configuration
 DATA_LAKE_PATH = os.environ.get("DBT_DATA_LAKE_PATH")
 

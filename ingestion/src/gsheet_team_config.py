@@ -9,7 +9,7 @@ Writes to:
 - sapo_raw/team_members_raw/
 
 Environment:
-- DBT_DATA_LAKE_PATH: Path to data lake (required in Docker, auto-detected locally)
+- DBT_DATA_LAKE_PATH: Path to data lake (required; can be set via .env.local for local dev)
 - SOURCES__SPREADSHEET_URL__TEAM_CONFIG: Google Sheet URL
 """
 import sys
