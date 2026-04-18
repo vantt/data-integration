@@ -42,10 +42,10 @@ _load_dotenv_local()
 DATA_LAKE_PATH = os.environ.get("DBT_DATA_LAKE_PATH")
 
 if not DATA_LAKE_PATH:
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Go up 2 levels from ingestion/src/ to project root, then into app_data/data_lake
-    DATA_LAKE_PATH = os.path.abspath(os.path.join(current_dir, "../../app_data/data_lake"))
-    print(f"Info: DBT_DATA_LAKE_PATH not set. Using local path: {DATA_LAKE_PATH}")
+    raise ValueError(
+        "DBT_DATA_LAKE_PATH environment variable is not set. "
+        "Set via .env.docker (container) or .env.local (host)."
+    )
 
 SHEET_URL = os.environ.get(
     "SOURCES__SPREADSHEET_URL__TEAM_CONFIG",

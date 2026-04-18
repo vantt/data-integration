@@ -10,10 +10,10 @@ import io
 DATA_LAKE_PATH = os.environ.get("DBT_DATA_LAKE_PATH")
 
 if not DATA_LAKE_PATH:
-    # Fallback to calculated path for local development (consistent with other gsheet_* modules)
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    DATA_LAKE_PATH = os.path.abspath(os.path.join(current_dir, "../../app_data/data_lake"))
-    print(f"Warning: DBT_DATA_LAKE_PATH not set. Using calculated path: {DATA_LAKE_PATH}")
+    raise ValueError(
+        "DBT_DATA_LAKE_PATH environment variable is not set. "
+        "Set via .env.docker (container) or .env.local (host)."
+    )
 
 # Replace with actual Marketing Spend Sheet URL
 # Should be set in .dlt/secrets.toml or .env.local as SOURCES__SPREADSHEET_URL__MARKETING_SPEND
