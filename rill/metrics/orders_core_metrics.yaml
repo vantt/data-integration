@@ -5,6 +5,7 @@ timeseries: hour_start
 smallest_time_grain: hour
 
 dimensions:
+  # Channel dimensions
   - name: channel_name
     column: channel_name
   - name: channel_category
@@ -19,55 +20,90 @@ dimensions:
     column: market
   - name: source_type
     column: source_type
+  # Location dimensions
   - name: branch_location_name
     column: branch_location_name
   - name: province
     column: province
   - name: district
     column: district
+  # Staff dimensions
   - name: seller_name
     column: seller_name
   - name: creator_name
     column: creator_name
+  # Status dimensions
   - name: status
     column: status
   - name: payment_status
     column: payment_status
   - name: fulfillment_status
     column: fulfillment_status
+  # Time dimensions
   - name: day_of_week
     column: day_of_week
   - name: order_hour
     column: order_hour
+  # Bucket dimensions
   - name: first_ship_bucket
     column: first_ship_bucket
   - name: complete_time_bucket
     column: complete_time_bucket
   - name: order_size_band
     column: order_size_band
+  # Customer segmentation (3-layer architecture)
+  - name: customer_type
+    column: customer_type
+    description: "Commercial type: RETAIL, WHOLESALE, PARTNER, STAFF, KOL"
+  - name: value_group
+    column: value_group
+    description: "Value tier: VALUE_VIP, VALUE_GOLD, VALUE_SILVER, VALUE_BRONZE"
+  - name: customer_status
+    column: customer_status
+    description: "RFM status: Active, At Risk, Churned, New/Unknown"
+  - name: customer_name
+    column: customer_name
+  # Scope flags for filtering (see report_segmentation.md)
+  - name: scope_sales
+    column: scope_sales
+    description: "Layer 1 Executive [All]: is_sales_channel AND not cancelled"
+  - name: scope_retail
+    column: scope_retail
+    description: "Layer 2 Retail [Retail]: scope_sales AND customer_type=RETAIL"
+  - name: scope_b2b
+    column: scope_b2b
+    description: "Layer 2 B2B [B2B]: scope_sales AND customer_type IN (WHOLESALE, PARTNER)"
 
 measures:
+  # Core revenue metrics (domains/sales.md)
   - name: orders_count
     display_name: Orders
+    description: "domains/sales.md#4-total-orders — Count of unique orders"
     expression: count(*)
   - name: gross_revenue
     display_name: Gross Revenue
+    description: "domains/sales.md#1-gross-revenue-gmv — Total before discounts"
     expression: sum(gross_revenue)
   - name: net_revenue
     display_name: Net Revenue
+    description: "domains/sales.md#2-net-revenue — Doanh thu thuần sau chiết khấu"
     expression: sum(net_revenue)
   - name: discount_amount
     display_name: Discount Amount
+    description: "domains/sales.md#13-discount-impact — Total discounts applied"
     expression: sum(discount_amount)
   - name: tax_amount
     display_name: Tax Amount
     expression: sum(tax_amount)
   - name: total_collected
     display_name: Total Collected
+    description: "domains/sales.md#2b-total-collected — Tổng thu từ khách (gồm thuế)"
     expression: sum(total_collected)
   - name: avg_order_value
     display_name: Average Order Value
+    description: "domains/sales.md#5-aov-average-order-value — Net revenue / orders"
     expression: sum(net_revenue) / nullif(count(*), 0)
+  # Status metrics
   - name: completed_orders
     display_name: Completed Orders
     expression: count(*) filter (where is_completed)
@@ -86,6 +122,7 @@ measures:
   - name: fulfillment_rate
     display_name: Fulfillment Rate
     expression: count(*) filter (where is_fulfilled) / nullif(count(*) filter (where status != 'DRAFT'), 0)
+  # Logistics metrics
   - name: same_day_ship_orders
     display_name: Same-day Ship Orders
     expression: count(*) filter (where ship_same_day_flag)
@@ -104,7 +141,34 @@ measures:
   - name: avg_hours_to_complete
     display_name: Avg Hours To Complete
     expression: avg(hours_to_complete)
+  # Discount analysis (MUST use scope_retail for meaningful analysis)
   - name: discount_rate
     display_name: Discount Rate
+    description: "domains/sales.md#13-discount-impact — BẮT BUỘC scope_retail"
     expression: sum(discount_amount) / nullif(sum(gross_revenue), 0)
+  # Scope-filtered metrics for quick access
+  - name: sales_orders
+    display_name: Sales Orders [All]
+    description: "Layer 1 Executive scope — excludes internal/cancelled"
+    expression: count(*) filter (where scope_sales)
+  - name: sales_revenue
+    display_name: Sales Revenue [All]
+    description: "Layer 1 Executive scope — net revenue from sales channels"
+    expression: sum(net_revenue) filter (where scope_sales)
+  - name: retail_orders
+    display_name: Retail Orders [Retail]
+    description: "Layer 2 Retail scope — customer_type=RETAIL only"
+    expression: count(*) filter (where scope_retail)
+  - name: retail_revenue
+    display_name: Retail Revenue [Retail]
+    description: "Layer 2 Retail scope — net revenue from retail customers"
+    expression: sum(net_revenue) filter (where scope_retail)
+  - name: b2b_orders
+    display_name: B2B Orders [B2B]
+    description: "Layer 2 B2B scope — WHOLESALE + PARTNER"
+    expression: count(*) filter (where scope_b2b)
+  - name: b2b_revenue
+    display_name: B2B Revenue [B2B]
+    description: "Layer 2 B2B scope — net revenue from B2B customers"
+    expression: sum(net_revenue) filter (where scope_b2b)
 

@@ -22,6 +22,11 @@ WITH base AS (
         g.district,
         g.ward,
         g.country,
+        -- Customer segmentation (3-layer scope architecture)
+        COALESCE(cu.customer_type, 'RETAIL') AS customer_type,
+        COALESCE(cu.value_group, 'VALUE_BRONZE') AS value_group,
+        cu.customer_status,
+        cu.full_name AS customer_name,
         -- Sales attribution: seller (assignee) primary; creator (account) for ops views.
         seller.full_name AS seller_name,
         seller.email AS seller_email,
@@ -45,6 +50,7 @@ WITH base AS (
     LEFT JOIN src_dim_channels c ON o.channel_key = c.channel_key
     LEFT JOIN src_dim_branch_location b ON o.branch_location_key = b.branch_location_key
     LEFT JOIN src_dim_geography g ON o.shipping_geography_key = g.geography_key
+    LEFT JOIN src_dim_customers cu ON o.customer_key = cu.customer_key
     LEFT JOIN src_dim_staff seller ON o.seller_staff_key = seller.staff_key
     LEFT JOIN src_dim_staff creator ON o.creator_staff_key = creator.staff_key
 ),
@@ -67,7 +73,14 @@ flags AS (
         CASE
             WHEN status = 'OPEN' THEN date_diff('hour', order_timestamp, current_timestamp) > 48
             ELSE false
-        END AS pending_gt_48h_flag
+        END AS pending_gt_48h_flag,
+        -- Scope flags for 3-layer architecture (see report_segmentation.md)
+        -- Layer 1: Executive [All] - all sales channels
+        is_sales_channel AND status NOT IN ('CANCELLED', 'Voided') AS scope_sales,
+        -- Layer 2: Retail Operations [Retail]
+        is_sales_channel AND status NOT IN ('CANCELLED', 'Voided') AND customer_type = 'RETAIL' AS scope_retail,
+        -- Layer 2: B2B Operations [B2B]
+        is_sales_channel AND status NOT IN ('CANCELLED', 'Voided') AND customer_type IN ('WHOLESALE', 'PARTNER') AS scope_b2b
     FROM base
 )
 SELECT

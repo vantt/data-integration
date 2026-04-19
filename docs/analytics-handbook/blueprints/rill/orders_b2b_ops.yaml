@@ -1,0 +1,46 @@
+# Blueprint: Orders B2B Ops [B2B]
+# Layer: 2 - Operational (B2B)
+# Playbook: playbooks/rill/orders_b2b_ops.md
+# Deploy: cp to rill/dashboards/
+
+type: explore
+display_name: "Orders B2B Ops [B2B]"
+metrics_view: orders_core_metrics
+description: |
+  B2B operations dashboard for Wholesale/Partner sales team.
+  Scope: scope_b2b (WHOLESALE + PARTNER customers only)
+
+dimensions:
+  - customer_type
+  - customer_name
+  - channel_name
+  - platform
+  - payment_status
+  - fulfillment_status
+  - status
+  - branch_location_name
+  - province
+  - scope_b2b
+
+measures:
+  - b2b_revenue
+  - b2b_orders
+  - avg_order_value
+  - total_collected
+  - completed_orders
+  - open_orders
+  - fulfilled_orders
+  - fulfillment_rate
+  - pending_gt_24h_orders
+  - pending_gt_48h_orders
+  - avg_hours_to_complete
+
+default_preset:
+  time_range: "P30D"
+  where: "scope_b2b = true"
+  dimensions:
+    - customer_type
+  measures:
+    - b2b_revenue
+    - b2b_orders
+

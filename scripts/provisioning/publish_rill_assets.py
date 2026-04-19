@@ -38,6 +38,7 @@ DEFAULT_TABLES = [
     "dim_staff",
     "dim_products",
     "dim_order_status",
+    "dim_customers",
 ]
 
 

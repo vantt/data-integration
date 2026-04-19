@@ -5,6 +5,7 @@ timeseries: sale_date
 smallest_time_grain: day
 
 dimensions:
+  # Product dimensions
   - name: product_name
     column: product_name
   - name: variant_name
@@ -15,6 +16,7 @@ dimensions:
     column: brand_name
   - name: product_type
     column: product_type
+  # Channel dimensions
   - name: channel_name
     column: channel_name
   - name: channel_category
@@ -29,18 +31,41 @@ dimensions:
     column: market
   - name: source_type
     column: source_type
+  # Location dimensions
   - name: branch_location_name
     column: branch_location_name
   - name: province
     column: province
   - name: district
     column: district
+  # Staff dimensions
   - name: seller_name
     column: seller_name
   - name: creator_name
     column: creator_name
+  # Customer segmentation (3-layer architecture)
+  - name: customer_type
+    column: customer_type
+    description: "Commercial type: RETAIL, WHOLESALE, PARTNER, STAFF, KOL"
+  - name: value_group
+    column: value_group
+    description: "Value tier: VALUE_VIP, VALUE_GOLD, VALUE_SILVER, VALUE_BRONZE"
+  - name: customer_status
+    column: customer_status
+    description: "RFM status: Active, At Risk, Churned, New/Unknown"
+  # Scope flags for filtering (see report_segmentation.md)
+  - name: scope_sales
+    column: scope_sales
+    description: "Layer 1 Executive [All]: is_sales_channel AND not cancelled"
+  - name: scope_retail
+    column: scope_retail
+    description: "Layer 2 Retail [Retail]: scope_sales AND customer_type=RETAIL"
+  - name: scope_b2b
+    column: scope_b2b
+    description: "Layer 2 B2B [B2B]: scope_sales AND customer_type IN (WHOLESALE, PARTNER)"
 
 measures:
+  # Core product metrics (domains/sales.md#9-top-selling-products)
   - name: order_lines
     display_name: Order Lines
     expression: count(*)
@@ -49,10 +74,13 @@ measures:
     expression: count(distinct order_id)
   - name: quantity_sold
     display_name: Quantity Sold
+    description: "domains/sales.md#9-top-selling-products — Total units sold"
     expression: sum(quantity)
   - name: item_revenue
     display_name: Item Revenue
+    description: "Line-item revenue (for product performance analysis)"
     expression: sum(revenue)
+  # Discount metrics (MUST use scope_retail for meaningful analysis)
   - name: direct_discount_amount
     display_name: Direct Discount Amount
     expression: sum(discount_amount)
@@ -61,11 +89,30 @@ measures:
     expression: sum(distributed_discount_amount)
   - name: total_discount_amount
     display_name: Total Discount Amount
+    description: "domains/sales.md#13-discount-impact — BẮT BUỘC scope_retail"
     expression: sum(total_discount_amount)
+  # Derived metrics
   - name: avg_selling_price
     display_name: Average Selling Price
     expression: sum(revenue) / nullif(sum(quantity), 0)
   - name: avg_items_per_order
     display_name: Avg Items Per Order
     expression: sum(quantity) / nullif(count(distinct order_id), 0)
+  # Scope-filtered metrics for quick access
+  - name: sales_quantity
+    display_name: Sales Quantity [All]
+    description: "Layer 1 Executive scope — excludes internal/cancelled"
+    expression: sum(quantity) filter (where scope_sales)
+  - name: sales_item_revenue
+    display_name: Sales Item Revenue [All]
+    description: "Layer 1 Executive scope — item revenue from sales channels"
+    expression: sum(revenue) filter (where scope_sales)
+  - name: retail_quantity
+    display_name: Retail Quantity [Retail]
+    description: "Layer 2 Retail scope — customer_type=RETAIL only"
+    expression: sum(quantity) filter (where scope_retail)
+  - name: retail_item_revenue
+    display_name: Retail Item Revenue [Retail]
+    description: "Layer 2 Retail scope — item revenue from retail customers"
+    expression: sum(revenue) filter (where scope_retail)
 

@@ -1,0 +1,42 @@
+# Blueprint: Orders Executive [All]
+# Layer: 1 - Executive
+# Playbook: playbooks/rill/orders_executive.md
+# Deploy: cp to rill/dashboards/
+
+type: explore
+display_name: "Orders Executive [All]"
+metrics_view: orders_core_metrics
+description: |
+  Executive-level business overview for CEO, Founders, Directors.
+  Scope: scope_sales (all sales channels, excludes internal/cancelled)
+
+dimensions:
+  - channel_category
+  - channel_name
+  - platform
+  - customer_type
+  - value_group
+  - market
+  - branch_location_name
+  - scope_sales
+
+measures:
+  - sales_revenue
+  - sales_orders
+  - avg_order_value
+  - retail_revenue
+  - retail_orders
+  - b2b_revenue
+  - b2b_orders
+  - fulfillment_rate
+  - same_day_ship_rate
+
+default_preset:
+  time_range: "P7D"
+  where: "scope_sales = true"
+  dimensions:
+    - channel_category
+  measures:
+    - sales_revenue
+    - sales_orders
+

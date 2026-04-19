@@ -1,7 +1,11 @@
 # AI Agent Instructions: Analytics Handbook
 
-This system controls the documentation for the company's Business Intelligence (dbt + Metabase).
+This system controls the documentation for the company's Business Intelligence (dbt + Metabase + Rill).
 Your primary role here is **Analytics Architect**. You must maintain strict separation between **Business Logic** and **Visualization Specs**.
+
+**Platforms:**
+- **Metabase**: Operational dashboards, static reports (`blueprints/*.md`)
+- **Rill**: Self-service exploration, semantic layer (`blueprints/rill/*.yaml`)
 
 ---
 
@@ -274,12 +278,14 @@ FROM this_week tw LEFT JOIN last_week lw ON ...
 
 ## 🛠️ Tools & Skills
 
+### Metabase
+
 To implement Blueprints, use the **Metabase Automation Skill**.
 
 - **Skill Definition**: `.skills/metabase-automation/SKILL.md`
 - **Capability**: Programmatically create Collections, Questions (Cards), and Dashboards from JSON/Markdown specs.
 
-### Available Workflows
+#### Available Workflows
 
 Use these slash commands to accelerate your work:
 
@@ -287,6 +293,53 @@ Use these slash commands to accelerate your work:
 - **/deploy_metabase_blueprint**: Deploys a specific Blueprint file to the Metabase instance.
   - *Usage*: `node .skills/metabase-automation/scripts/deploy_blueprint.js [path/to/blueprint.md]`
 - **/manage_metabase_resources**: General management (sync schemas, list collections).
+
+### Rill
+
+Rill uses YAML-based semantic layer definitions. Blueprints are in `blueprints/rill/*.yaml`.
+
+#### Directory Structure
+
+```
+rill/
+├── models/                     # Data sources & enriched models
+│   ├── src_*.yaml              # Source connectors (parquet)
+│   ├── orders_enriched.sql     # Enriched model with joins
+│   └── sales_items_enriched.sql
+├── metrics/                    # Metrics views (semantic layer)
+│   ├── orders_core_metrics.yaml
+│   └── sales_items_core_metrics.yaml
+└── dashboards/                 # Explore configurations
+    └── orders_core.yaml
+```
+
+#### Deployment
+
+```bash
+# Deploy from blueprint to Rill
+cp docs/analytics-handbook/blueprints/rill/orders_executive.yaml rill/dashboards/
+```
+
+#### 3-Layer Scope Architecture
+
+Rill metrics include scope flags for the 3-layer architecture:
+
+| Scope | Filter | Layer |
+|-------|--------|-------|
+| `scope_sales` | `is_sales_channel AND not cancelled` | Executive [All] |
+| `scope_retail` | `scope_sales AND customer_type='RETAIL'` | Retail [Retail] |
+| `scope_b2b` | `scope_sales AND customer_type IN (WHOLESALE, PARTNER)` | B2B [B2B] |
+
+Pre-filtered measures are available: `sales_revenue`, `retail_revenue`, `b2b_revenue`.
+
+#### Rill Playbooks vs Metabase Playbooks
+
+| Aspect | Metabase | Rill |
+|--------|----------|------|
+| Location | `playbooks/*.md` | `playbooks/rill/*.md` |
+| Focus | Static dashboard layout | Explore configuration |
+| Filters | Tab-based | Dimension-based |
+| Deployment | `deploy_from_markdown.js` | Copy YAML to `rill/dashboards/` |
 
 ## 💡 Tips for Success
 

@@ -1,0 +1,43 @@
+# Blueprint: Sales Items Product [Retail]
+# Layer: 2 - Operational (Product)
+# Deploy: cp to rill/dashboards/
+
+type: explore
+display_name: "Product Performance [Retail]"
+metrics_view: sales_items_core_metrics
+description: |
+  Product performance analysis for Product Team.
+  Scope: scope_retail (retail sales only for clean product metrics)
+
+dimensions:
+  - product_name
+  - variant_name
+  - sku
+  - brand_name
+  - product_type
+  - channel_name
+  - channel_category
+  - platform
+  - customer_type
+  - value_group
+  - scope_retail
+
+measures:
+  - quantity_sold
+  - item_revenue
+  - retail_quantity
+  - retail_item_revenue
+  - distinct_orders
+  - avg_selling_price
+  - avg_items_per_order
+  - total_discount_amount
+
+default_preset:
+  time_range: "P30D"
+  where: "scope_retail = true"
+  dimensions:
+    - product_name
+  measures:
+    - retail_quantity
+    - retail_item_revenue
+

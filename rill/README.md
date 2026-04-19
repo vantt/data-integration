@@ -40,6 +40,21 @@ Dagster publishes these files into `/app/data_lake/export/rill/current/`:
 - `dim_staff.parquet`
 - `dim_products.parquet`
 - `dim_order_status.parquet`
+- `dim_customers.parquet`
+
+## 3-Layer Scope Architecture
+
+Metrics follow the analytics-handbook 3-layer architecture:
+
+| Layer | Scope Flag | Filter | Audience |
+|-------|------------|--------|----------|
+| Executive [All] | `scope_sales` | `is_sales_channel AND not cancelled` | CEO, Directors |
+| Retail [Retail] | `scope_retail` | + `customer_type='RETAIL'` | Sales, Marketing |
+| B2B [B2B] | `scope_b2b` | + `customer_type IN (WHOLESALE, PARTNER)` | B2B Sales |
+
+Pre-filtered measures available: `sales_revenue`, `retail_revenue`, `b2b_revenue`.
+
+See [Report Segmentation Guide](../docs/analytics-handbook/guides/report_segmentation.md) for details.
 
 ## Initial Assets
 

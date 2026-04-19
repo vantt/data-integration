@@ -28,25 +28,52 @@ We follow a **"Domain-First"** approach.
 ```text
 docs/analytics-handbook/
 ├── domains/                    <-- The "Laws" (Business Logic & Metrics)
+│   ├── sales.md
 │   ├── finance.md
-│   ├── supply_chain.md
 │   └── ...
 │
 ├── playbooks/                  <-- The "Products" (Dashboards)
-│   ├── executive_overview.md
+│   ├── ceo_weekly_pulse.md
 │   ├── sales_daily_operation.md
+│   ├── rill/                   <-- Rill-specific playbooks
+│   │   ├── orders_executive.md
+│   │   ├── orders_retail_ops.md
+│   │   └── orders_b2b_ops.md
 │   └── ...
 │
 ├── blueprints/                 <-- The "Specs" (Technical Implementation)
-│   ├── sales_daily.md
+│   ├── ceo_weekly_pulse.md     <-- Metabase blueprints
+│   ├── rill/                   <-- Rill blueprints (YAML)
+│   │   ├── orders_executive.yaml
+│   │   ├── orders_retail_ops.yaml
+│   │   └── orders_b2b_ops.yaml
 │   └── ...
 │
 ├── guides/                     <-- The "Knowledge" (Concepts & Patterns)
+│   ├── report_segmentation.md  <-- 3-layer architecture guide
 │   ├── metabase_concepts.md
 │   └── ...
 │
 ├── AGENTS.md                   <-- Instructions for AI Assistants
 └── README.md                   <-- This file
+```
+
+## Platform Support
+
+| Platform | Playbooks | Blueprints | Deployment |
+|----------|-----------|------------|------------|
+| **Metabase** | `playbooks/*.md` | `blueprints/*.md` | `/deploy_metabase_blueprint` |
+| **Rill** | `playbooks/rill/*.md` | `blueprints/rill/*.yaml` | Copy to `rill/dashboards/` |
+
+## 3-Layer Architecture
+
+All dashboards follow a 3-layer scope architecture (see [Report Segmentation Guide](guides/report_segmentation.md)):
+
+```
+Layer 1: Executive [All]     → scope_sales = true
+Layer 2: Retail [Retail]     → scope_retail = true  
+Layer 2: B2B [B2B]           → scope_b2b = true
+Layer 3: Analytics [Cross]   → Explicit per-analysis
 ```
 
 ## Workflow for Contributors

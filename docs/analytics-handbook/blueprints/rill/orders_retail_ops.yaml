@@ -1,0 +1,53 @@
+# Blueprint: Orders Retail Ops [Retail]
+# Layer: 2 - Operational (Retail)
+# Playbook: playbooks/rill/orders_retail_ops.md
+# Deploy: cp to rill/dashboards/
+
+type: explore
+display_name: "Orders Retail Ops [Retail]"
+metrics_view: orders_core_metrics
+description: |
+  Retail operations dashboard for Sales Ops, Store Managers, Marketing.
+  Scope: scope_retail (retail customers only, valid for discount/promotion analysis)
+
+dimensions:
+  - channel_name
+  - channel_category
+  - platform
+  - seller_name
+  - creator_name
+  - value_group
+  - customer_status
+  - order_size_band
+  - day_of_week
+  - order_hour
+  - status
+  - payment_status
+  - fulfillment_status
+  - scope_retail
+
+measures:
+  - retail_revenue
+  - retail_orders
+  - avg_order_value
+  - discount_rate
+  - discount_amount
+  - completed_orders
+  - cancelled_orders
+  - open_orders
+  - fulfilled_orders
+  - fulfillment_rate
+  - same_day_ship_rate
+  - pending_gt_24h_orders
+  - avg_hours_to_first_ship
+
+default_preset:
+  time_range: "P1D"
+  where: "scope_retail = true"
+  dimensions:
+    - channel_name
+  measures:
+    - retail_revenue
+    - retail_orders
+    - discount_rate
+
