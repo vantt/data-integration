@@ -2,6 +2,32 @@
 
 > Record of significant changes, features, and fixes
 
+## [2026-04-19] fact_order_economics — Validation Complete
+
+**Summary:** Unified per-order P&L model validation finished. Phase 6 (voucher coverage) and Phase 7 (E2E verification) completed.
+
+**Validation Results:**
+
+| Metric | Value |
+|--------|-------|
+| MISA→Sapo voucher match | 92.7% (319/344) |
+| COGS timing lag | avg 3.7 days |
+| Gross margin (orders with COGS) | 55.4% |
+| Row count match | 2,813 = fact_orders |
+
+**Schema Updates:**
+- Added `not_null` test for `net_revenue`
+- Documented 5 missing columns: `status`, `shopee_infra_fee`, `shopee_voucher_xtra_fee`, `shopee_taxes`, `has_shopee_fees`
+
+**Files:**
+- `transformation/models/marts/schema.yml` — tests + docs
+- `plans/260411-fact-order-economics/plan.md` — complete plan
+- `plans/reports/verify-260419-fact-order-economics.md` — E2E report
+
+**Status:** Production-ready
+
+---
+
 ## [2026-04-17] Team Configuration — Google Sheets Integration
 
 **Summary:** New team management system via Google Sheets for sales team definitions and member assignments with SCD2 history tracking.

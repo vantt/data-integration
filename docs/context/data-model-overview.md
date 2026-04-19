@@ -1,7 +1,7 @@
 # Tổng quan Data Model — Phân loại & Attribution
 
 > **Dành cho:** Data Team, Business Analysts
-> **Cập nhật:** 2026-04-18
+> **Cập nhật:** 2026-04-19
 > **Bảo trì:** Data Team
 
 ## Mục đích
@@ -30,8 +30,8 @@ Tài liệu này cung cấp cái nhìn tổng quan về data model cho các chi�
 │  ┌─────────────────┐    ┌─────────┴─────────┐    ┌─────────────────┐       │
 │  │   dim_teams     │    │                   │    │  dim_customers  │       │
 │  │─────────────────│    │    fact_orders    │    │─────────────────│       │
-│  │ team_code       │◄───│                   │───►│ customer_type   │       │
-│  │ revenue_type    │    │    fact_sales     │    │ value_group     │       │
+│  │ team_code       │◄───│    fact_sales     │───►│ customer_type   │       │
+│  │ revenue_type    │    │ fact_order_econ.  │    │ value_group     │       │
 │  │ revenue_filter  │    │                   │    │ lifecycle_stage │       │
 │  └─────────────────┘    └─────────┬─────────┘    │ ...8 dimensions │       │
 │                                   │              └─────────────────┘       │
@@ -47,7 +47,37 @@ Tài liệu này cung cấp cái nhìn tổng quan về data model cho các chi�
 
 ---
 
-## 2. Các Dimension Chính
+## 2. Fact Tables
+
+| Fact Table | Grain | Mô tả | Sources |
+|------------|-------|-------|---------|
+| **fact_orders** | 1 row/order | Đơn hàng Sapo | Sapo API |
+| **fact_sales** | 1 row/order-line | Chi tiết line items | Sapo API |
+| **fact_order_economics** | 1 row/order | P&L per order: revenue, COGS, Shopee fees | fact_orders + MISA + Shopee |
+| **fact_payments** | 1 row/payment | Thanh toán | Sapo API |
+| **fact_marketing_spend** | 1 row/day-channel | Chi phí marketing | Google Sheets |
+| **fact_targets** | 1 row/month-team | Mục tiêu doanh số | Google Sheets |
+
+### fact_order_economics — Chi tiết
+
+Unified per-order P&L model:
+
+```
+fact_order_economics = fact_orders (base)
+    LEFT JOIN int_misa_sales_lines   → COGS (giá vốn)
+    LEFT JOIN int_shopee_order_fees  → Shopee platform fees
+
+Key metrics:
+- gross_profit = net_revenue - COGS
+- gross_margin_pct = gross_profit / net_revenue
+- channel_net_profit = gross_profit - Shopee fees
+- has_cogs (92.7% coverage for matched orders)
+- has_shopee_fees (45.7% coverage for Shopee channel)
+```
+
+---
+
+## 3. Các Dimension Chính
 
 | Dimension | Entity | Mô tả | Tài liệu chi tiết |
 |-----------|--------|-------|-------------------|
@@ -59,7 +89,7 @@ Tài liệu này cung cấp cái nhìn tổng quan về data model cho các chi�
 
 ---
 
-## 3. Nguyên tắc Thiết kế
+## 4. Nguyên tắc Thiết kế
 
 | Nguyên tắc | Mô tả |
 |------------|-------|
@@ -73,7 +103,7 @@ Tài liệu này cung cấp cái nhìn tổng quan về data model cho các chi�
 
 ---
 
-## 4. Source Type — Phân loại nguồn đơn hàng
+## 5. Source Type — Phân loại nguồn đơn hàng
 
 Sapo `source` field chứa nhiều concepts khác nhau. Dùng `source_type` để phân loại:
 
@@ -89,7 +119,7 @@ Chi tiết: [sales-segmentation-guide.md - Section 7](./sales-segmentation-guide
 
 ---
 
-## 5. Team Attribution
+## 6. Team Attribution
 
 Team doanh số được xác định theo `revenue_type`:
 
@@ -103,7 +133,7 @@ Chi tiết: [team-management.md](./team-management.md)
 
 ---
 
-## 6. Customer Segmentation
+## 7. Customer Segmentation
 
 8 chiều phân loại độc lập:
 
@@ -122,9 +152,9 @@ Chi tiết: [customer-segmentation.md](./customer-segmentation.md)
 
 ---
 
-## 7. Quy tắc Quan trọng
+## 8. Quy tắc Quan trọng
 
-### 7.1. customer_type vs value_group
+### 8.1. customer_type vs value_group
 
 ```
 customer_type = Bản chất quan hệ       value_group = Giá trị đóng góp
@@ -137,7 +167,7 @@ customer_type = Bản chất quan hệ       value_group = Giá trị đóng gó
 → Đại lý mới = customer_type=WHOLESALE + value_group=VALUE_BRONZE
 ```
 
-### 7.2. Team không "own" Channel
+### 8.2. Team không "own" Channel
 
 ```
 SAI:  dim_channels.default_team = 'Marketplace'
@@ -146,7 +176,7 @@ SAI:  dim_channels.default_team = 'Marketplace'
 → Team định nghĩa revenue logic, không phải Channel
 ```
 
-### 7.3. Không capture customer_type trên Order
+### 8.3. Không capture customer_type trên Order
 
 ```
 SAI:  fact_orders.customer_type = 'WHOLESALE'
@@ -158,7 +188,7 @@ SAI:  fact_orders.customer_type = 'WHOLESALE'
 
 ---
 
-## 8. Tài liệu liên quan
+## 9. Tài liệu liên quan
 
 | Tài liệu | Nội dung |
 |----------|----------|
@@ -174,4 +204,5 @@ SAI:  fact_orders.customer_type = 'WHOLESALE'
 
 | Date | Change |
 |------|--------|
+| 2026-04-19 | Add Section 2 (Fact Tables) with fact_order_economics details |
 | 2026-04-18 | Initial version — consolidate insights from source normalization discussion |
