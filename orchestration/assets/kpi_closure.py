@@ -1,0 +1,210 @@
+"""KPI Closure (Phase 5) — Revenue invariant check.
+
+Daily 04:45 asset comparing Sapo source revenue vs warehouse fact_orders.
+Writes to ingestion_health.duckdb with asset_key='kpi/revenue_daily'.
+
+Gated behind KPI_CLOSURE_ENABLED=1 env flag (disabled by default).
+Live Sapo API calls also require RECON_LIVE_API=1.
+
+Architecture:
+- Source: Sapo orders API → sum($.total) for orders created yesterday
+- Warehouse: serving DB → SUM(net_revenue) from fact_orders WHERE date_key = yesterday
+- Drift: (warehouse - source) / source
+"""
+from __future__ import annotations
+
+import logging
+import os
+import uuid
+from datetime import datetime, timezone, timedelta
+from typing import Optional
+
+import duckdb
+from dagster import asset, MetadataValue, Output
+
+from orchestration.ops.ingestion_health import record_run, get_db_path
+
+logger = logging.getLogger(__name__)
+
+# Feature flag — disabled by default until calibration complete
+_KPI_ENABLED = os.environ.get("KPI_CLOSURE_ENABLED", "").strip() == "1"
+
+# Serving DB path — must match bootstrap_serving_views.py
+_DATA_LAKE = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
+_SERVING_DB_PATH = os.path.join(_DATA_LAKE, "serving", "olap.duckdb")
+
+# Statuses to exclude from revenue calculation
+_EXCLUDE_STATUSES = ["cancelled", "voided"]
+
+
+def _make_run_id() -> str:
+    return str(uuid.uuid4())
+
+
+def _yesterday_window_utc() -> tuple[datetime, datetime, int]:
+    """Return (yesterday_00:00 UTC, today_00:00 UTC, date_key YYYYMMDD).
+
+    Both API and warehouse use UTC for consistency:
+    - Sapo API: created_on filters use UTC timestamps
+    - fact_orders.date_key: strftime(created_at) uses DuckDB default timezone (UTC)
+    """
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_start = today_start - timedelta(days=1)
+    # date_key = UTC date of the query window (matches fact_orders.date_key logic)
+    date_key = int(yesterday_start.strftime("%Y%m%d"))
+    return yesterday_start, today_start, date_key
+
+
+def _fetch_sapo_revenue(window_start: datetime, window_end: datetime) -> Optional[float]:
+    """Fetch sum of order revenue from Sapo API for [window_start, window_end)."""
+    if not _KPI_ENABLED:
+        logger.debug("kpi_closure: KPI_CLOSURE_ENABLED not set — skipping Sapo call")
+        return None
+
+    try:
+        from sapo.api_count import sum_revenue_orders  # type: ignore[import]
+    except ImportError:
+        from ingestion.src.sapo.api_count import sum_revenue_orders  # type: ignore[import]
+
+    return sum_revenue_orders(window_start, window_end, _EXCLUDE_STATUSES)
+
+
+def _fetch_warehouse_revenue(date_key: int) -> Optional[float]:
+    """Fetch SUM(net_revenue) from fact_orders for the given date_key."""
+    if not os.path.exists(_SERVING_DB_PATH):
+        logger.warning("kpi_closure: serving DB not found at %s", _SERVING_DB_PATH)
+        return None
+
+    conn = None
+    try:
+        conn = duckdb.connect(_SERVING_DB_PATH, read_only=True)
+        # Exclude cancelled/voided orders
+        exclude_list = ", ".join(f"'{s}'" for s in _EXCLUDE_STATUSES)
+        row = conn.execute(
+            f"""
+            SELECT COALESCE(SUM(net_revenue), 0)
+            FROM fact_orders
+            WHERE date_key = ?
+              AND LOWER(status) NOT IN ({exclude_list})
+            """,
+            [date_key],
+        ).fetchone()
+        return float(row[0]) if row else 0.0
+    except Exception as exc:
+        logger.error("kpi_closure: warehouse query failed — %s", exc)
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def _compute_drift(source: Optional[float], dest: Optional[float]) -> Optional[float]:
+    """drift_pct = (dest - source) / source. Returns None if source unknown or zero."""
+    if source is None or source == 0:
+        return None
+    if dest is None:
+        return None
+    return (dest - source) / source
+
+
+def _persist_kpi(
+    asset_key: str,
+    run_id: str,
+    started: datetime,
+    source_revenue: Optional[float],
+    warehouse_revenue: Optional[float],
+    drift_pct: Optional[float],
+    date_key: int,
+    status: str = "success",
+) -> None:
+    """Write KPI closure result to ingestion_health.duckdb."""
+    metadata = {
+        "source_revenue": source_revenue,
+        "warehouse_revenue": warehouse_revenue,
+        "drift_pct": drift_pct,
+        "date_key": date_key,
+        "currency": "VND",
+    }
+    try:
+        record_run(
+            asset_key=asset_key,
+            run_id=run_id,
+            run_started_at=started,
+            run_ended_at=datetime.now(timezone.utc),
+            status=status,
+            rows_fetched=None,
+            rows_written=None,
+            metadata=metadata,
+        )
+    except Exception:
+        logger.warning("_persist_kpi(%s): failed to write health record", asset_key, exc_info=True)
+
+
+@asset(group_name="kpi_closure", key_prefix=["kpi"])
+def kpi_revenue_daily(context):
+    """Daily revenue invariant check: Sapo source vs warehouse fact_orders.
+
+    Compares yesterday's revenue between:
+    - Source: Sapo orders API SUM($.total) for created_on in [yesterday, today) UTC
+    - Warehouse: SUM(net_revenue) from fact_orders WHERE date_key = yesterday (UTC)
+
+    Gated behind KPI_CLOSURE_ENABLED=1 and RECON_LIVE_API=1.
+    """
+    started = datetime.now(timezone.utc)
+    run_id = _make_run_id()
+    asset_key = "kpi/revenue_daily"
+    window_start, window_end, date_key = _yesterday_window_utc()
+
+    source_revenue = _fetch_sapo_revenue(window_start, window_end)
+    warehouse_revenue = _fetch_warehouse_revenue(date_key)
+    drift_pct = _compute_drift(source_revenue, warehouse_revenue)
+
+    # Determine status
+    if not _KPI_ENABLED:
+        status = "disabled"
+    elif source_revenue is None and warehouse_revenue is None:
+        status = "failed"  # both sides unavailable
+    elif source_revenue is None:
+        status = "partial_source"  # Sapo API failed
+    elif warehouse_revenue is None:
+        status = "partial_warehouse"  # serving DB issue
+    else:
+        status = "success"
+
+    context.log.info(
+        "kpi_revenue_daily: date_key=%d source=%.2f warehouse=%.2f drift_pct=%s",
+        date_key,
+        source_revenue or 0,
+        warehouse_revenue or 0,
+        f"{drift_pct:.4%}" if drift_pct is not None else "N/A",
+    )
+
+    _persist_kpi(
+        asset_key=asset_key,
+        run_id=run_id,
+        started=started,
+        source_revenue=source_revenue,
+        warehouse_revenue=warehouse_revenue,
+        drift_pct=drift_pct,
+        date_key=date_key,
+        status=status,
+    )
+
+    return Output(
+        value={
+            "source_revenue": source_revenue,
+            "warehouse_revenue": warehouse_revenue,
+            "drift_pct": drift_pct,
+            "date_key": date_key,
+        },
+        metadata={
+            "date_key": MetadataValue.int(date_key),
+            "source_revenue_vnd": MetadataValue.float(source_revenue or 0),
+            "warehouse_revenue_vnd": MetadataValue.float(warehouse_revenue or 0),
+            "drift_pct": MetadataValue.float(drift_pct * 100 if drift_pct is not None else 0),
+            "kpi_enabled": MetadataValue.bool(_KPI_ENABLED),
+            "window_start": MetadataValue.text(window_start.isoformat()),
+            "window_end": MetadataValue.text(window_end.isoformat()),
+        },
+    )

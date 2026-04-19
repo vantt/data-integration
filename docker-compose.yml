@@ -17,6 +17,8 @@ services:
       - DLT_TELEMETRY_DISABLED=true
       - DBT_SEND_ANONYMOUS_USAGE_STATS=false
       - BACKUP_ROOT=/app/var/backups  # must match volume mount below
+      - RECON_LIVE_API=1              # enable live Sapo API calls for recon + KPI
+      - KPI_CLOSURE_ENABLED=1         # enable Phase 5 revenue invariant check
     networks:
       - caddy_net
     volumes:
@@ -29,7 +31,6 @@ services:
       # Data (stateful, persistent) — grouped under /app/var/
       - ./app_data/data_lake:/app/var/data_lake
       - ./app_data/dagster_home:/app/var/dagster_home
-      - ./app_data/logs:/app/var/logs
       - ./app_data/backups:/app/var/backups
       - ./app_data/input_source:/app/var/input_source
       # Config (read-only)

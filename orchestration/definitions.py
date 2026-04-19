@@ -21,8 +21,9 @@ from dagster import (
 )
 from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
+from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation
+from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
 from orchestration.sensors.failure_alerting import health_alert_failure_sensor
@@ -41,7 +42,7 @@ from orchestration.sensors.concurrency_pool_janitor import health_concurrency_po
 # except Exception as e:
 #     print(f"[WARN] Auto-check failed: {e}")
 
-all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation])
+all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -240,15 +241,15 @@ def ingest_sapo_realtime_schedule(context):
 
 @schedule(
     job=ingest_sapo_incremental_job,
-    # Skip 4 AM hour entirely — nightly batch runs then and holds the
+    # Skip 3 AM hour entirely — nightly batch runs then and holds the
     # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
     # ticks from piling up while nightly is running.
     #
-    # Edge case: if nightly is ever delayed past 5 AM, incremental resumes at
+    # Edge case: if nightly is ever delayed past 4 AM, incremental resumes at
     # :00 of the next hour and may enqueue while nightly is still active.
     # This is safe — coordinator tag `dbt_rw=1` serializes the dequeue, and
     # incremental's own self-overlap check prevents double-enqueue.
-    cron_schedule="*/10 0-3,5-23 * * *",
+    cron_schedule="*/10 0-2,4-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
 def ingest_sapo_incremental_schedule(context):
@@ -260,7 +261,7 @@ def ingest_sapo_incremental_schedule(context):
 
 @schedule(
     job=transform_batch_nightly_job,
-    cron_schedule="0 4 * * *",
+    cron_schedule="0 3 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
 def transform_batch_nightly_schedule(context):
@@ -270,7 +271,7 @@ def transform_batch_nightly_schedule(context):
     return RunRequest(run_key=None)
 
 
-# 6 AM daily — runs after nightly batch (4 AM) has finished.
+# 6 AM daily — runs after nightly batch (3 AM) has finished.
 # Not in dbt_rw concurrency group: backup reads files, doesn't write DuckDB.
 @schedule(
     job=maintain_backup_platform_job,
@@ -293,6 +294,15 @@ health_recon_daily_job = define_asset_job(
     executor_def=in_process_executor,
 )
 
+# KPI closure job — daily revenue invariant check (Phase 5).
+# NOT in dbt_rw concurrency group: reads from Sapo API + serving DB (read-only).
+# Gated behind KPI_CLOSURE_ENABLED=1 env flag.
+health_kpi_closure_job = define_asset_job(
+    name="health_kpi_closure_job",
+    selection=AssetSelection.groups("kpi_closure"),
+    executor_def=in_process_executor,
+)
+
 
 @schedule(
     job=health_recon_daily_job,
@@ -303,6 +313,20 @@ def health_recon_daily_schedule(context):
     active = _has_active_run(context, "health_recon_daily_job")
     if active:
         return SkipReason(f"recon: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
+# KPI closure — 04:45 ICT daily, after recon (04:30) and nightly batch (03:00).
+# Gated behind KPI_CLOSURE_ENABLED=1 — when disabled, asset runs but writes status='disabled'.
+@schedule(
+    job=health_kpi_closure_job,
+    cron_schedule="45 4 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def health_kpi_closure_schedule(context):
+    active = _has_active_run(context, "health_kpi_closure_job")
+    if active:
+        return SkipReason(f"kpi_closure: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
 
 
@@ -381,7 +405,7 @@ defs = Definitions(
     # Schedules already pull in their target job implicitly, but sensors
     # targeting a job (e.g. ingest_sheets_modified_sensor → ingest_sheets_sync_job)
     # require the job to be present in the repository.
-    asset_checks=[*ALL_CHECKS, *RECON_CHECKS],
+    asset_checks=[*ALL_CHECKS, *RECON_CHECKS, *KPI_CHECKS],
     jobs=[
         # ingest_*
         ingest_sapo_realtime_job,
@@ -394,6 +418,7 @@ defs = Definitions(
         transform_batch_fullrefresh_job,
         # health_*
         health_recon_daily_job,
+        health_kpi_closure_job,
         health_checks_asset_job,
         health_report_digest_job,
         # maintain_*
@@ -407,6 +432,7 @@ defs = Definitions(
         transform_batch_nightly_schedule,
         # health_*
         health_recon_daily_schedule,
+        health_kpi_closure_schedule,
         health_checks_asset_schedule,
         health_report_digest_schedule,
         # maintain_*

@@ -59,6 +59,16 @@ class DigestRow:
     zero_streak: int = 0           # consecutive cursor-advanced-but-0-rows runs
 
 
+@dataclass
+class KpiData:
+    """KPI closure revenue data (Phase 5)."""
+    source_revenue: Optional[float]
+    warehouse_revenue: Optional[float]
+    drift_pct: Optional[float]
+    date_key: Optional[int]
+    status: Optional[str]  # success, partial, disabled
+
+
 # ---------------------------------------------------------------------------
 # Classification
 # ---------------------------------------------------------------------------
@@ -149,12 +159,27 @@ WHERE asset_key LIKE 'recon/%'
 QUALIFY row_number() OVER (PARTITION BY asset_key ORDER BY run_started_at DESC) = 1;
 """
 
+_KPI_QUERY = """
+SELECT
+    (metadata_json ->> 'source_revenue')::DOUBLE AS source_revenue,
+    (metadata_json ->> 'warehouse_revenue')::DOUBLE AS warehouse_revenue,
+    (metadata_json ->> 'drift_pct')::DOUBLE AS drift_pct,
+    (metadata_json ->> 'date_key')::INTEGER AS date_key,
+    status
+FROM ingestion_runs
+WHERE asset_key = 'kpi/revenue_daily'
+  AND run_started_at >= now() - INTERVAL 1 DAY
+ORDER BY run_started_at DESC
+LIMIT 1;
+"""
 
-def _fetch_stats(db_path: str) -> tuple[dict, dict, dict]:
-    """Return (stats_by_asset_key, drift_by_recon_key, zero_streaks) dicts."""
+
+def _fetch_stats(db_path: str) -> tuple[dict, dict, dict, Optional[KpiData]]:
+    """Return (stats_by_asset_key, drift_by_recon_key, zero_streaks, kpi_data) dicts."""
     stats: dict = {}
     drift: dict = {}
     zero_streaks: dict = {}
+    kpi_data: Optional[KpiData] = None
     try:
         conn = duckdb.connect(db_path, read_only=True)
         try:
@@ -172,21 +197,32 @@ def _fetch_stats(db_path: str) -> tuple[dict, dict, dict]:
                 streak = consecutive_empty_with_cursor_move(conn, asset_key, streak_n=5)
                 if streak > 0:
                     zero_streaks[asset_key] = streak
+
+            # Fetch KPI closure data (Phase 5)
+            kpi_row = conn.execute(_KPI_QUERY).fetchone()
+            if kpi_row:
+                kpi_data = KpiData(
+                    source_revenue=kpi_row[0],
+                    warehouse_revenue=kpi_row[1],
+                    drift_pct=kpi_row[2],
+                    date_key=kpi_row[3],
+                    status=kpi_row[4],
+                )
         finally:
             conn.close()
     except Exception as exc:
         logger.error(f"morning_digest: failed to query health DB: {exc}")
-        return {}, {}, {}
-    return stats, drift, zero_streaks
+        return {}, {}, {}, None
+    return stats, drift, zero_streaks, kpi_data
 
 
 # ---------------------------------------------------------------------------
 # Row builder
 # ---------------------------------------------------------------------------
 
-def build_digest_rows(db_path: str) -> list[DigestRow]:
-    """Query ingestion_health.duckdb and build one DigestRow per known asset."""
-    stats, drift, zero_streaks = _fetch_stats(db_path)
+def build_digest_rows(db_path: str) -> tuple[list[DigestRow], Optional[KpiData]]:
+    """Query ingestion_health.duckdb and build one DigestRow per known asset + KPI data."""
+    stats, drift, zero_streaks, kpi_data = _fetch_stats(db_path)
     now_utc = datetime.now(timezone.utc)
     rows: list[DigestRow] = []
 
@@ -239,7 +275,7 @@ def build_digest_rows(db_path: str) -> list[DigestRow]:
         dr.status = classify(dr)
         rows.append(dr)
 
-    return rows
+    return rows, kpi_data
 
 
 # ---------------------------------------------------------------------------
@@ -290,11 +326,53 @@ def _fmt_pct(pct: Optional[float]) -> str:
     return f"{sign}{pct:.0f}%"
 
 
-def compose_card_fields(rows: list[DigestRow]) -> tuple[dict, str]:
+def _format_vnd(amount: Optional[float]) -> str:
+    """Format VND amount with thousand separators."""
+    if amount is None:
+        return "?"
+    return f"{amount:,.0f}"
+
+
+def compose_card_fields(rows: list[DigestRow], kpi_data: Optional[KpiData] = None) -> tuple[dict, str]:
     """Return (fields dict for send_lark_card, worst-severity color string)."""
     fields: dict[str, str] = {}
     worst = "green"
     severity_rank = {"green": 0, "gray": 1, "yellow": 2, "red": 3}
+
+    # KPI revenue line at the top (Phase 5)
+    if kpi_data is not None and kpi_data.status not in ("disabled", None):
+        kpi_drift = kpi_data.drift_pct
+        if kpi_drift is not None:
+            abs_drift = abs(kpi_drift)
+            drift_display = kpi_drift * 100
+            if abs_drift > 0.005:  # > 0.5%
+                kpi_emoji = "❌"
+                kpi_status = "red"
+            elif abs_drift > 0.001:  # > 0.1%
+                kpi_emoji = "⚠️"
+                kpi_status = "yellow"
+            else:
+                kpi_emoji = "✅"
+                kpi_status = "green"
+
+            src = _format_vnd(kpi_data.source_revenue)
+            wh = _format_vnd(kpi_data.warehouse_revenue)
+            sign = "+" if drift_display >= 0 else ""
+            fields["💰 Revenue"] = f"{kpi_emoji} sapo={src} ₫ | warehouse={wh} ₫ | drift={sign}{drift_display:.2f}%"
+
+            if severity_rank.get(kpi_status, 0) > severity_rank.get(worst, 0):
+                worst = kpi_status
+        elif kpi_data.status == "partial_source":
+            fields["💰 Revenue"] = "⬜ Sapo API unavailable (RECON_LIVE_API=0?)"
+        elif kpi_data.status == "partial_warehouse":
+            fields["💰 Revenue"] = "⬜ warehouse unavailable (serving DB issue)"
+        elif kpi_data.status == "failed":
+            fields["💰 Revenue"] = "❌ both source & warehouse unavailable"
+        elif kpi_data.status == "success":
+            # Success but drift=None means source=0 (no orders yesterday)
+            src = _format_vnd(kpi_data.source_revenue)
+            wh = _format_vnd(kpi_data.warehouse_revenue)
+            fields["💰 Revenue"] = f"✅ sapo={src} ₫ | warehouse={wh} ₫ | drift=N/A (zero base)"
 
     for dr in rows:
         em = _EMOJI[dr.status]
@@ -355,6 +433,8 @@ def compose_and_send_digest(_context) -> None:
     db_path = get_db_path()
     dry_run = os.getenv("DIGEST_DRY_RUN", "0") == "1"
 
+    kpi_data: Optional[KpiData] = None
+
     # Graceful degradation: DB may not exist yet on first boot
     if not os.path.exists(db_path):
         logger.warning(f"morning_digest: health DB not found at {db_path}")
@@ -370,13 +450,13 @@ def compose_and_send_digest(_context) -> None:
         for r in rows:
             r.status = classify(r)
     else:
-        rows = build_digest_rows(db_path)
+        rows, kpi_data = build_digest_rows(db_path)
 
     if not rows:
         logger.warning("morning_digest: build_digest_rows returned empty list")
         return
 
-    fields, color = compose_card_fields(rows)
+    fields, color = compose_card_fields(rows, kpi_data)
     title = f"Data Ingestion Morning Report — {_today_ict()}"
 
     if dry_run:
