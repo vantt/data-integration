@@ -2,6 +2,49 @@
 
 > **Owner:** Sales Team / Data Team
 > **Update Frequency:** Real-time / Daily
+> **Cập nhật:** 2026-04-19
+> **Xem thêm:** [Report Segmentation Guide](../guides/report_segmentation.md)
+
+---
+
+## Scope Definitions (QUAN TRỌNG)
+
+> **Tham chiếu:** [Report Segmentation Guide](../guides/report_segmentation.md) — Chi tiết về 3-layer architecture
+
+Tất cả metrics trong domain này PHẢI được apply đúng scope tùy theo dashboard layer:
+
+### Base Scopes
+
+| Scope | Filter SQL | Dùng cho |
+|-------|------------|----------|
+| **scope_sales** | `is_sales_channel = true AND status NOT IN ('CANCELLED', 'Voided')` | Layer 1 Executive [All] |
+| **scope_retail** | scope_sales `AND customer_type = 'RETAIL'` | Layer 2 Retail [Retail] |
+| **scope_b2b** | scope_sales `AND customer_type IN ('WHOLESALE', 'PARTNER')` | Layer 2 B2B [B2B] |
+
+### Scope Requirements by Metric
+
+| Metric | Scope Requirement | Lý do |
+|--------|-------------------|-------|
+| **Discount Rate, Discount Amount** | BẮT BUỘC scope_retail | B2B discount = giá sỉ cố định, không phải promotion |
+| **Promotion ROI, Promo Analysis** | BẮT BUỘC scope_retail | B2B không có promotion |
+| **AOV (Average Order Value)** | scope_retail HOẶC scope_b2b | Không mix 2 mức giá khác nhau |
+| **Revenue, Orders (overview)** | scope_sales | Cần full picture |
+| **Customer Metrics** | scope_retail | Retail customer focus |
+
+### Cảnh báo: Data Pollution
+
+```
+❌ KHÔNG:
+SELECT SUM(discount_amount) FROM fact_orders
+→ Trộn lẫn promotion discount (retail) với giá sỉ (B2B) = sai lệch
+
+✅ ĐÚNG:
+SELECT SUM(discount_amount) FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE c.customer_type = 'RETAIL'
+```
+
+---
 
 ## Context: Order Performance
 
@@ -82,20 +125,49 @@
 
 ## Available Dashboards
 
-| Dashboard Name                | Audience              | Purpose                                                        | Link                            |
-| :---------------------------- | :-------------------- | :------------------------------------------------------------- | :------------------------------ |
-| **Sales Executive Dashboard** | Executives / Managers | High-level monthly overview of revenue, channels, and targets. | [Dashboard 37](/dashboard/37) |
-| **Daily Sales Dashboard**     | Ops / Sales Reps      | Real-time monitoring of today's performance — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Dashboard 2](/dashboard/2) |
-| **Yesterday's Sales Dashboard** | Ops / Store Managers | Finalized yesterday review — 4 tabs: Overview, Channels, Products, Customers & Payments. | [Dashboard 5](/dashboard/5) |
-| **Today's Orders List**         | Ops / Sales Reps    | Order-level list for real-time reconciliation with Sapo.        | TBD                             |
-| **Yesterday's Orders List**     | Ops / Store Managers | Finalized order-level list for reconciliation with Sapo.        | TBD                             |
-| **CEO Weekly Pulse**            | CEO / Founders       | 5-min weekly check-in: revenue pace, channel shifts, customer health. | TBD                       |
-| **CEO Monthly Scorecard**       | CEO / Board          | Comprehensive monthly review: targets, channels, segments, efficiency. | TBD                      |
-| **Marketing Weekly Tracker**    | Marketing Manager    | Weekly channel performance, acquisition, promotions, social commerce.  | TBD                      |
-| **Marketing Monthly Analysis**  | Marketing / CMO      | Monthly deep dive: channel strategy, cohort retention, campaign ROI.   | TBD                      |
-| **Sales Ops Weekly Review**     | Sales Ops / CS Lead  | Weekly order processing, team performance, channel workload.           | TBD                      |
-| **Sales Ops Monthly Summary**   | Sales Ops / Ops Mgr  | Monthly operational efficiency, staff KPIs, payment reconciliation.    | TBD                      |
-| **Promotion & Discount Analysis** | Marketing / Sales Ops / Finance | Deep-dive into promotion ROI, discount spending, promo vs non-promo, channel impact. | TBD |
+> **Naming convention:** Dashboard có suffix `[All]`, `[Retail]`, `[B2B]`, hoặc `[Cross]` để chỉ scope. Xem [Report Segmentation Guide](../guides/report_segmentation.md).
+
+### Layer 1 — Executive [All]
+
+| Dashboard Name | Scope | Audience | Purpose |
+|:---|:---|:---|:---|
+| **CEO Weekly Pulse [All]** | scope_sales | CEO / Founders | 5-min weekly check-in: revenue pace, channel shifts, customer health |
+| **CEO Monthly Scorecard [All]** | scope_sales | CEO / Board | Comprehensive monthly review: targets, channels, segments, efficiency |
+| **Order Profitability [All]** | scope_sales | CEO / CFO / Sales Director | P&L per order, gross margin, channel net profit |
+
+### Layer 2 — Retail Operations [Retail]
+
+| Dashboard Name | Scope | Audience | Purpose |
+|:---|:---|:---|:---|
+| **Daily Sales [Retail]** | scope_retail | Ops / Sales Reps | Real-time monitoring — 4 tabs: Overview, Channels, Products, Customers |
+| **Yesterday's Sales [Retail]** | scope_retail | Ops / Store Managers | Finalized yesterday review |
+| **Today's Orders [Retail]** | scope_retail | Ops / Sales Reps | Order-level list for reconciliation |
+| **Yesterday's Orders [Retail]** | scope_retail | Ops / Store Managers | Finalized order-level list |
+| **Promotion Analysis [Retail]** | scope_retail | Marketing / Sales Ops | Promotion ROI, discount analysis — **BẮT BUỘC scope_retail** |
+| **Sales Ops Weekly [Retail]** | scope_retail | Sales Ops / CS Lead | Weekly order processing, team performance |
+| **Sales Ops Monthly [Retail]** | scope_retail | Sales Ops / Ops Mgr | Monthly operational efficiency, staff KPIs |
+
+### Layer 2 — B2B Operations [B2B]
+
+| Dashboard Name | Scope | Audience | Purpose |
+|:---|:---|:---|:---|
+| **B2B Daily Sales [B2B]** | scope_b2b | B2B Sales | Daily wholesale/partner orders |
+| **B2B Orders Tracking [B2B]** | scope_b2b | B2B Sales | Order list, credit tracking |
+| **Partner Performance [B2B]** | scope_b2b | B2B Manager | CTV/Partner metrics |
+| **B2B Margin Analysis [B2B]** | scope_b2b | Finance / B2B Sales | Wholesale margin analysis |
+
+### Layer 2 — Marketing & Customers [Retail]
+
+| Dashboard Name | Scope | Audience | Purpose |
+|:---|:---|:---|:---|
+| **Marketing Weekly Tracker [Retail]** | scope_retail | Marketing Manager | Weekly channel performance, acquisition, promotions |
+| **Marketing Monthly Analysis [Retail]** | scope_retail | Marketing / CMO | Monthly deep dive: channel strategy, cohort retention |
+
+### Layer 3 — Analytics [Cross]
+
+| Dashboard Name | Scope | Audience | Purpose |
+|:---|:---|:---|:---|
+| **Channel Profitability [Cross]** | scope_sales + breakdown | Analysts / Leadership | Margin comparison by customer_type |
 
 ## Composite Metrics
 
@@ -274,31 +346,48 @@
 
 > **Playbook:** [Promotion Analysis](../playbooks/sales_promotion_analysis.md)
 
+> **⚠️ SCOPE REQUIREMENT: BẮT BUỘC `scope_retail` (`customer_type = 'RETAIL'`)**
+>
+> Discount của B2B (WHOLESALE, PARTNER) là **giá sỉ cố định** (40-50%), KHÔNG phải promotion.
+> Nếu không filter, kết quả discount analysis sẽ sai lệch nghiêm trọng.
+>
+> Xem: [Report Segmentation Guide](../guides/report_segmentation.md#42-quy-tắc-vàng)
+
 ### 13. Discount Impact
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **Required Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
-- **Business Definition:** Value of discounts given and percentage of orders discounted.
+- **Business Definition:** Value of discounts given and percentage of orders discounted. **Chỉ áp dụng cho retail orders.**
 - **Logic (SQL):**
   ```sql
-  SUM(CASE WHEN discount_amount > 0 THEN 1 ELSE 0 END) as discounted_orders,
-  SUM(discount_amount) as total_discounts,
-  AVG(discount_amount * 100.0 / NULLIF(gross_revenue, 0)) as avg_discount_pct
+  -- BẮT BUỘC filter customer_type = 'RETAIL'
+  SELECT
+      SUM(CASE WHEN discount_amount > 0 THEN 1 ELSE 0 END) as discounted_orders,
+      SUM(discount_amount) as total_discounts,
+      AVG(discount_amount * 100.0 / NULLIF(gross_revenue, 0)) as avg_discount_pct
+  FROM fact_orders o
+  JOIN dim_customers c ON o.customer_key = c.customer_key
+  WHERE c.customer_type = 'RETAIL'
   ```
 
 ### 14. Promotion Performance
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+> **Required Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
-- **Business Definition:** Revenue and usage by specific promotion campaign.
+- **Business Definition:** Revenue and usage by specific promotion campaign. **Chỉ áp dụng cho retail orders.**
 - **Logic (SQL):**
   ```sql
+  -- BẮT BUỘC filter customer_type = 'RETAIL'
   SELECT
       pr.promotion_name,
       COUNT(DISTINCT o.order_id) as usage_count,
       SUM(o.net_revenue) as revenue_with_promo
   FROM fact_orders o
   JOIN promotion_redemptions pr USING (order_id)
+  JOIN dim_customers c ON o.customer_key = c.customer_key
+  WHERE c.customer_type = 'RETAIL'
   GROUP BY 1
   ```
 

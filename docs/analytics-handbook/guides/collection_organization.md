@@ -1,9 +1,10 @@
 # Hướng dẫn Tổ chức Collection trong Metabase
 
 > **Dành cho:** Tất cả người dùng Metabase, AI Agents tạo dashboard
-> **Cập nhật:** 2026-03-31
+> **Cập nhật:** 2026-04-19
 > **Bảo trì:** Data Team
 > **Tham chiếu kỹ thuật:** [`collection_registry.yml`](../collection_registry.yml)
+> **Xem thêm:** [Report Segmentation Guide](./report_segmentation.md) — Phân lớp báo cáo theo scope
 
 ## 1. Vấn đề
 
@@ -53,32 +54,42 @@ Tần suất (daily/weekly/monthly) là thuộc tính của dashboard, không ph
 
 ## 3. Cấu trúc hiện tại
 
+> **Thay đổi 2026-04-19:** Thêm B2B Operations và Analytics collection. Xem [Report Segmentation Guide](./report_segmentation.md) để hiểu 3-layer architecture.
+
 ```text
-                         ┌─────────────────────────────────┐
-                         │         Metabase Root            │
-                         └───────┬──────────┬───────────────┘
-                                 │          │               │
-                    ┌────────────┤     ┌────┴─────┐   ┌─────┴──────────┐
-                    │            │     │          │   │                │
-              ┌─────┴─────┐  ┌──┴──┐  │Marketing │   │   Operations   │
-              │ Executive │  │     │  │    &     │   │                │
-              │           │  │     │  │Customers │   ├──Daily         │
-              │ 3 boards  │  │     │  │          │   │  Monitoring    │
-              └───────────┘  │     │  │ 3 boards │   │  (4 boards)   │
-                             │     │  └──────────┘   │                │
-                             │     │                 ├──Periodic      │
-                             │     │                 │  Reviews       │
-                             │     │                 │  (2 boards)    │
-                             │     │                 └────────────────┘
+                              ┌─────────────────────────────────┐
+                              │         Metabase Root            │
+                              └──┬─────────┬─────────┬──────────┬┘
+                                 │         │         │          │
+              ┌──────────────────┤    ┌────┴────┐   ┌┴────────┐ │
+              │                  │    │         │   │         │ │
+        ┌─────┴─────┐      ┌─────┴────┴──┐  ┌───┴───┴──┐  ┌───┴─┴────┐
+        │ Executive │      │  Operations │  │Marketing │  │Analytics │
+        │   [L1]    │      │    [L2]     │  │& Customer│  │   [L3]   │
+        │           │      │             │  │ [L2-Ret] │  │          │
+        │ 5 boards  │      │             │  │ 4 boards │  │ 4 boards │
+        └───────────┘      │             │  └──────────┘  └──────────┘
+                           │             │
+              ┌────────────┼─────────────┼────────────┐
+              │            │             │            │
+        ┌─────┴─────┐ ┌────┴────┐ ┌─────┴────┐ ┌─────┴─────┐
+        │  Retail   │ │   B2B   │ │  Daily   │ │ Periodic  │
+        │Operations │ │Operations│ │Monitoring│ │ Reviews   │
+        │ [Retail]  │ │  [B2B]  │ │ [Retail] │ │ [Retail]  │
+        │ 1 board   │ │ 4 boards│ │ 4 boards │ │ 2 boards  │
+        └───────────┘ └─────────┘ └──────────┘ └───────────┘
 ```
 
-| Collection | Câu hỏi chính | Ai mở? | Dashboards |
-|:---|:---|:---|:---|
-| **Executive** | "Công ty đang thế nào?" | CEO, Founders, Sales Director | CEO Weekly Pulse, CEO Monthly Scorecard, Sales Executive Dashboard |
-| **Marketing & Customers** | "Kênh/Khách thế nào?" | Marketing Manager, Brand Manager, Customer Success | Marketing Weekly Tracker, Marketing Monthly Analysis, Customer Operational Dashboard |
-| **Operations** | "Hôm nay cần làm gì?" | Store Managers, Sales Ops, CS Lead | _Xem sub-collections bên dưới_ |
-| ↳ Daily Monitoring | "Ngay bây giờ ra sao?" | Store Managers, Sales Team | Daily Sales, Yesterday's Sales, Today's Orders, Yesterday's Orders |
-| ↳ Periodic Reviews | "Tuần/Tháng này thế nào?" | Sales Ops Lead, CS Lead | Sales Ops Weekly Review, Sales Ops Monthly Summary |
+| Collection | Layer | Câu hỏi chính | Ai mở? | Scope | Dashboards |
+|:---|:---|:---|:---|:---|:---|
+| **Executive** | L1 | "Công ty đang thế nào?" | CEO, Founders, Directors | scope_sales [All] | CEO Weekly Pulse, CEO Monthly Scorecard, Order Profitability, Finance P&L, Logistics |
+| **Operations** | L2 | "Hôm nay cần làm gì?" | Ops team | (xem sub-collections) | — |
+| ↳ Retail Operations | L2 | "Bán lẻ ra sao?" | Sales Ops (Retail) | scope_retail [Retail] | Promotion Analysis |
+| ↳ B2B Operations | L2 | "Khách sỉ thế nào?" | B2B Sales | scope_b2b [B2B] | B2B Daily Sales, B2B Orders Tracking, Partner Performance, B2B Margin |
+| ↳ Daily Monitoring | L2 | "Ngay bây giờ ra sao?" | Store Managers | scope_retail [Retail] | Daily Sales, Yesterday's Sales, Today's Orders, Yesterday's Orders |
+| ↳ Periodic Reviews | L2 | "Tuần/Tháng này?" | Sales Ops Lead | scope_retail [Retail] | Sales Ops Weekly, Sales Ops Monthly |
+| **Marketing & Customers** | L2-Retail | "Kênh/Khách retail?" | Marketing Manager, CS | scope_retail [Retail] | Marketing Weekly, Marketing Monthly, Customer Ops, Customer Retention |
+| **Analytics** | L3 | "So sánh segment?" | Analysts, Leadership | scope_sales + breakdown [Cross] | Customer Intelligence, Channel Profitability, Product Profitability, Acquisition Analysis |
 
 ---
 
@@ -121,22 +132,34 @@ Hỏi: "Ai sẽ mở dashboard này hàng ngày/tuần?"
 ```text
 Dashboard mới cần tạo
        │
-       ├── Dành cho CEO / Founders / Ban giám đốc?
-       │       → Executive
+       ├── Dành cho CEO / Founders / Directors (tổng quan all business)?
+       │       → Executive [All] — Layer 1
        │
-       ├── Dành cho Marketing / Phân tích khách hàng?
-       │       → Marketing & Customers
+       ├── Dành cho Marketing / Phân tích khách lẻ?
+       │       → Marketing & Customers [Retail] — Layer 2
        │
-       ├── Dành cho vận hành hàng ngày? (xem nhiều lần/ngày)
-       │       → Operations > Daily Monitoring
+       ├── Dành cho theo dõi khách sỉ / đối tác (B2B)?
+       │       → Operations > B2B Operations [B2B] — Layer 2
        │
-       ├── Dành cho review tuần/tháng? (xem 1 lần/tuần hoặc /tháng)
-       │       → Operations > Periodic Reviews
+       ├── Dành cho vận hành retail hàng ngày? (xem nhiều lần/ngày)
+       │       → Operations > Daily Monitoring [Retail] — Layer 2
+       │
+       ├── Dành cho review tuần/tháng (retail ops)?
+       │       → Operations > Periodic Reviews [Retail] — Layer 2
+       │
+       ├── Dành cho phân tích promotion/discount?
+       │       → Operations > Retail Operations [Retail] — BẮT BUỘC scope_retail
+       │
+       ├── Dành cho so sánh cross-segment / research?
+       │       → Analytics [Cross] — Layer 3
        │
        └── Không khớp?
+               → Xem Report Segmentation Guide để chọn scope
                → CẬP NHẬT collection_registry.yml trước
                → KHÔNG tự tạo collection mới
 ```
+
+**Quan trọng:** Luôn xác định scope (scope_sales, scope_retail, scope_b2b) TRƯỚC khi chọn collection. Xem [Report Segmentation Guide](./report_segmentation.md).
 
 ### Bước 3: Kiểm tra giới hạn
 
@@ -147,16 +170,21 @@ Dashboard mới cần tạo
 
 ## 6. Khi nào cần thay đổi cấu trúc?
 
-Cấu trúc 3-collection phù hợp với team nhỏ (~5-10 người dùng Metabase). Cần tách khi:
+Cấu trúc hiện tại (4 top-level + sub-collections) phù hợp với team nhỏ-vừa (~10-20 người dùng Metabase). Cần điều chỉnh khi:
 
 | Tín hiệu | Hành động |
 |:---|:---|
 | **Team Customer Success tách biệt khỏi Marketing** (> 15 người, có KPI riêng) | Tách `Marketing & Customers` → `Marketing` + `Customer Analytics` |
 | **Sales Director ≠ CEO**, cần permission riêng | Tách `Executive` → `Executive` + `Sales Analytics` |
 | **Operations > Daily Monitoring > 6 dashboards** | Tạo sub-collection theo chức năng (ví dụ: `Fulfillment Monitoring`) |
+| **B2B team có KPI riêng biệt với Retail** | Đã tách: `Operations > B2B Operations` |
 | **Xuất hiện domain mới** (Finance, Logistics) có audience riêng | Tạo top-level collection mới |
+| **Cần phân tích cross-segment thường xuyên** | Đã có: `Analytics` collection cho Layer 3 |
 
-Nguyên tắc: **gộp khi cùng người dùng, tách khi khác người dùng.**
+**Nguyên tắc:**
+- **Gộp** khi cùng người dùng
+- **Tách** khi khác người dùng
+- **Phân lớp** khi cùng người dùng nhưng khác scope (Retail vs B2B)
 
 ---
 
@@ -167,3 +195,6 @@ Nguyên tắc: **gộp khi cùng người dùng, tách khi khác người dùng.
 | [`collection_registry.yml`](../collection_registry.yml) | Machine-readable registry — deploy script đọc file này |
 | [`AGENTS.md`](../AGENTS.md) → Section "Collection Governance" | Quy trình cho AI agents — lookup table + syntax `>` |
 | [`dashboard_design_patterns.md`](./dashboard_design_patterns.md) | Quy chuẩn layout dashboard (Executive Pulse, Operational Cockpit, etc.) |
+| [`report_segmentation.md`](./report_segmentation.md) | **Quan trọng:** Phân lớp báo cáo (L1/L2/L3), scope definitions, naming conventions |
+| [`../../context/customer-segmentation.md`](../../context/customer-segmentation.md) | 8 chiều phân loại khách hàng, đặc biệt `customer_type` |
+| [`../../context/sales-segmentation-guide.md`](../../context/sales-segmentation-guide.md) | Gom nhóm kênh/sản phẩm/team |

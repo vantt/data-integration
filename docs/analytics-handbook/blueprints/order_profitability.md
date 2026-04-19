@@ -1,14 +1,20 @@
-# Order Profitability Blueprint
+# Order Profitability Blueprint [All]
 
+**Scope**: scope_sales (`is_sales_channel = true`)
+**Layer**: L1 - Executive
 **Design Spec**: [Order Profitability](../designs/order_profitability.md)
+
+> **UPDATED (2026-04-19):** Thêm scope indicator [All].
+> Dashboard này analyze profitability across all customer types (RETAIL + B2B) on sales channels.
+> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
 P&L per order — gross margin, channel net profit, cost structure, order detail table. Dung fact_order_economics (Sapo revenue + MISA COGS + Shopee fees).
 
 ## 📂 Collection: Executive
 
-### Dashboard: Order Profitability
+### Dashboard: Order Profitability [All]
 
-**Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director.
+**Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director. **Scope: All sales channels.**
 
 ---
 
@@ -56,6 +62,7 @@ SELECT
 FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
+  AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   [[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ```
@@ -87,6 +94,7 @@ SELECT
 FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
+  AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   [[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ```
@@ -121,6 +129,7 @@ SELECT
 FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
+  AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   [[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ```
@@ -156,6 +165,7 @@ SELECT
     ROUND(SUM(CASE WHEN has_cogs THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) AS "Coverage %"
 FROM fact_order_economics
 WHERE status = 'COMPLETED'
+  AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   [[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ```
@@ -204,6 +214,7 @@ FROM fact_order_economics e
 JOIN dim_channels c USING (channel_key)
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
+  AND c.is_sales_channel
   [[AND e.date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND c.channel_name = {{channel}}]]
 GROUP BY c.channel_name
@@ -263,6 +274,7 @@ FROM fact_order_economics e
 JOIN dim_channels c USING (channel_key)
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
+  AND c.is_sales_channel
   [[AND e.date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND c.channel_name = {{channel}}]]
 GROUP BY c.channel_name
@@ -321,6 +333,7 @@ SELECT
 FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
+  AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   [[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 GROUP BY 1
@@ -363,6 +376,7 @@ FROM fact_order_economics e
 JOIN dim_date d ON e.date_key = d.date_key
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
+  AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   [[AND e.date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 GROUP BY d.date_actual
@@ -423,6 +437,7 @@ JOIN dim_channels c USING (channel_key)
 JOIN dim_date d ON e.date_key = d.date_key
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
+  AND c.is_sales_channel
   [[AND e.date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
   [[AND c.channel_name = {{channel}}]]
 ORDER BY e.gross_profit DESC

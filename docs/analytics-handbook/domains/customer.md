@@ -2,6 +2,47 @@
 
 > **Owner:** Marketing / Customer Success
 > **Update Frequency:** Daily / Monthly
+> **Cập nhật:** 2026-04-19
+> **Xem thêm:** [Customer Segmentation](../../context/customer-segmentation.md), [Report Segmentation Guide](../guides/report_segmentation.md)
+
+---
+
+## Scope & Segmentation (QUAN TRỌNG)
+
+### customer_type — Chiều phân loại quan trọng nhất
+
+`customer_type` quyết định bản chất quan hệ với công ty, ảnh hưởng đến cách phân tích:
+
+| customer_type | Bản chất | Ảnh hưởng đến phân tích |
+|---------------|----------|-------------------------|
+| **RETAIL** | Khách lẻ B2C | Default scope cho Marketing, Customer Ops |
+| **WHOLESALE** | Khách sỉ | B2B analysis, giá sỉ ≠ promotion |
+| **PARTNER** | CTV, đối tác | B2B analysis, chính sách riêng |
+| **STAFF** | Nhân viên | Loại khỏi L2 analysis |
+| **KOL** | Influencer | Loại khỏi L2 analysis |
+
+### Default Scope cho Customer Metrics
+
+Hầu hết customer metrics (Retention, MAU, Cohort, CAC, CLV) áp dụng cho **retail customers**:
+
+```sql
+-- scope_retail (mặc định cho customer domain)
+WHERE c.customer_type = 'RETAIL'
+```
+
+**Lý do:**
+- Marketing target retail customers
+- Retention concept khác nhau giữa B2C vs B2B
+- CLV calculation assumptions khác nhau
+- B2B customer journey khác flow
+
+### Khi nào KHÔNG filter customer_type?
+
+- Layer 1 Executive dashboards (scope_sales [All])
+- Cross-segment analysis (Layer 3 [Cross])
+- Total customer count cho reporting
+
+---
 
 ## Context: Acquisition & Value
 
@@ -76,35 +117,46 @@
 ## Context: Retention & Engagement
 
 > **Description:** Metrics tracking user activity and churn.
+> **Default Scope:** scope_retail (`customer_type = 'RETAIL'`) — Retention concepts áp dụng chủ yếu cho retail customers.
 
 ### 4. Monthly Active Users (MAU)
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
+> **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
 - **Business Definition:** Unique users with activity in the last 30 days.
 - **Logic (SQL):**
   ```sql
-  COUNT(DISTINCT customer_id) WHERE last_active_date >= CURRENT_DATE - 30
+  -- Retail MAU (recommended)
+  SELECT COUNT(DISTINCT customer_key)
+  FROM fact_orders o
+  JOIN dim_customers c ON o.customer_key = c.customer_key
+  WHERE o.order_timestamp >= CURRENT_DATE - INTERVAL '30 days'
+    AND c.customer_type = 'RETAIL'
+    AND o.status NOT IN ('CANCELLED', 'Voided')
   ```
 
 ### 5. Retention Rate
 
 > **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
+> **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
-- **Business Definition:** Percentage of users who return in a subsequent period.
+- **Business Definition:** Percentage of users who return in a subsequent period. **B2B retention có logic khác (contract-based), nên tách riêng.**
 - **Logic (SQL):**
   ```sql
-  -- Cohort Analysis Logic
+  -- Cohort Analysis Logic - Retail Only
   (Customers_End / Customers_Start) * 100
   ```
 - **Detailed Logic (SQL):**
   ```sql
   WITH cohort_activity AS (
       SELECT
-          DATE_TRUNC('month', first_order_date) as cohort_month,
-          DATE_TRUNC('month', o.order_date) as activity_month,
-          COUNT(DISTINCT c.customer_id) as customers
-      FROM dim_customers c JOIN fact_orders o USING (customer_id)
+          DATE_TRUNC('month', c.first_order_date) as cohort_month,
+          DATE_TRUNC('month', o.order_timestamp) as activity_month,
+          COUNT(DISTINCT c.customer_key) as customers
+      FROM dim_customers c
+      JOIN fact_orders o ON c.customer_key = o.customer_key
+      WHERE c.customer_type = 'RETAIL'  -- scope_retail
       GROUP BY 1, 2
   )
   ...
@@ -113,11 +165,15 @@
 ### 6. Churn Rate
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
+> **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
 - **Business Definition:** Percentage of customers lost over a period.
 - **Logic (SQL):**
   ```sql
-  Lost_Customers / Total_Customers * 100
+  -- Retail Churn Rate
+  SELECT COUNT(*) FILTER (WHERE customer_status = 'Churned') * 100.0 / COUNT(*)
+  FROM dim_customers
+  WHERE customer_type = 'RETAIL'
   ```
 
 ## Context: Segmentation

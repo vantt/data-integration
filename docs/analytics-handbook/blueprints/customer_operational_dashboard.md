@@ -1,15 +1,24 @@
-# Customer Operational Dashboard Blueprint (Redesign)
+# Customer Operational Dashboard Blueprint [Retail]
 
 **Design Spec**: [Customer Operational Dashboard (Redesign)](../designs/customer_operational_dashboard.md)
 **Playbook**: [Customer Operational Dashboard](../playbooks/customer_operational_dashboard.md)
+**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
+**Layer**: L2 - Marketing & Customers
 
-Redesigned dashboard with 3 tabs, integrated MoM comparisons, donuts for composition, gauge for active rate, conditional formatting on watchlists, combo chart for acquisition. Daily operational cockpit for Customer Success / Sales Ops.
+> **SCOPE (2026-04-19):** Dashboard này focus vào **retail customers** (`customer_type = 'RETAIL'`).
+> Customer ops metrics (MAU, Retention, Churn, At Risk) áp dụng cho B2C customers.
+> B2B customer management có logic khác (contract-based, credit terms).
+> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
+
+Redesigned dashboard with 3 tabs, integrated MoM comparisons, donuts for composition, gauge for active rate, conditional formatting on watchlists, combo chart for acquisition. Daily operational cockpit for Customer Success / Sales Ops. **Focus: Retail customers only.**
 
 ## 📂 Collection: Marketing & Customers
 
-### 🖥️ Dashboard: Customer Operational Dashboard
+> **Database:** Sapo DuckDB
 
-**Description**: Daily operational cockpit — customer health KPIs with rolling comparisons, segment & status composition, acquisition trends with MoM growth, channel & geographic analysis, and actionable watchlists for VIP care, churn prevention, and recovery campaigns. 3 tabs: Tong quan, Kenh & Dia ly, Watchlist & Hanh dong.
+### 🖥️ Dashboard: Customer Operational [Retail]
+
+**Description**: Daily operational cockpit for **retail customers** — customer health KPIs with rolling comparisons, segment & status composition, acquisition trends with MoM growth, channel & geographic analysis, and actionable watchlists for VIP care, churn prevention, and recovery campaigns. 3 tabs: Tong quan, Kenh & Dia ly, Watchlist & Hanh dong.
 
 ---
 
@@ -41,25 +50,31 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, donuts for composi
 
 #### ❓ Question: MAU (Monthly Active Customers)
 
-**Domain Reference**: [MAU](../domains/customer.md#4-monthly-active-users-mau) — Hero metric with rolling 30-day comparison.
+**Domain Reference**: [MAU](../domains/customer.md#4-monthly-active-users-mau) — Hero metric with rolling 30-day comparison. **Scope: Retail only.**
 
 ```sql
 WITH
 current_mau AS (
-    SELECT COUNT(DISTINCT customer_key) as val
-    FROM fact_orders
-    WHERE order_timestamp >= current_date - INTERVAL '30 days'
-      AND status NOT IN ('CANCELLED', 'Voided')
+    SELECT COUNT(DISTINCT o.customer_key) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_mau AS (
-    SELECT COUNT(DISTINCT customer_key) as val
-    FROM fact_orders
-    WHERE order_timestamp >= current_date - INTERVAL '60 days'
-      AND order_timestamp < current_date - INTERVAL '30 days'
-      AND status NOT IN ('CANCELLED', 'Voided')
+    SELECT COUNT(DISTINCT o.customer_key) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.order_timestamp >= current_date - INTERVAL '60 days'
+      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
-SELECT c.val as "MAU", p.val as "30 ngay truoc"
-FROM current_mau c, prev_mau p
+SELECT cm.val as "MAU", pm.val as "30 ngay truoc"
+FROM current_mau cm, prev_mau pm
 ```
 
 ```json metabase-viz
@@ -322,12 +337,15 @@ Line chart — MAU trend over 6 months showing momentum.
 
 ```sql
 SELECT
-    date_trunc('month', order_timestamp)::date as "Month",
-    COUNT(DISTINCT customer_key) as "Active Customers"
-FROM fact_orders
-WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND order_timestamp < date_trunc('month', current_date)
-  AND status NOT IN ('CANCELLED', 'Voided')
+    date_trunc('month', o.order_timestamp)::date as "Month",
+    COUNT(DISTINCT o.customer_key) as "Active Customers"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 1
 ```

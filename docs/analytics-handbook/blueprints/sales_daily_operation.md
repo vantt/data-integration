@@ -1,15 +1,23 @@
-# Daily Sales Performance Blueprint (Redesign v2)
+# Daily Sales Performance Blueprint [Retail]
 
 **Design Spec**: [Daily Sales Dashboard (Redesign)](../designs/sales_daily_operation.md)
 **Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)
+**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
+**Layer**: L2 - Retail Operations
 
-Redesigned dashboard with integrated DoD comparisons, gauge health score, section headings, and improved viz choices. Real-time monitoring — data for today, compared with yesterday.
+> **⚠️ SCOPE CHANGE (2026-04-19):** Dashboard này chỉ hiển thị **retail sales orders** (`customer_type = 'RETAIL'` + `is_sales_channel = true`).
+> Excludes: B2B orders, US CrossBorder, System, Internal orders.
+> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
+
+Redesigned dashboard with integrated DoD comparisons, gauge health score, section headings, and improved viz choices. Real-time monitoring — data for today, compared with yesterday. **Chỉ bao gồm retail customers.**
 
 ## 📂 Collection: Operations > Daily Monitoring
 
-### Dashboard: Daily Sales Dashboard
+### Dashboard: Daily Sales [Retail]
 
-**Description**: Real-time monitoring of today's sales — Health Score gauge, KPIs with integrated DoD trends, hourly patterns, channel/product/customer breakdowns across 4 tabs.
+**Description**: Real-time monitoring of today's **retail** sales — Health Score gauge, KPIs with integrated DoD trends, hourly patterns, channel/product/customer breakdowns across 4 tabs.
+
+> **Database:** Sapo DuckDB
 
 ---
 
@@ -49,27 +57,33 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 
 #### Question: Health Score
 
-Điểm sức khỏe kinh doanh (0-100) dựa trên 4 chỉ số: Revenue Momentum, Order Momentum, Customer Loyalty, AOV Stability. So sánh 7 ngày gần nhất (kể cả hôm nay) vs 7 ngày trước đó.
+Điểm sức khỏe kinh doanh (0-100) dựa trên 4 chỉ số: Revenue Momentum, Order Momentum, Customer Loyalty, AOV Stability. So sánh 7 ngày gần nhất (kể cả hôm nay) vs 7 ngày trước đó. **Scope: Retail only.**
 
 ```sql
 WITH
 recent AS (
     SELECT
-        COALESCE(SUM(net_revenue), 0) as revenue,
-        COUNT(DISTINCT order_id) as orders,
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
-    FROM fact_orders
-    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+        COALESCE(SUM(o.net_revenue), 0) as revenue,
+        COUNT(DISTINCT o.order_id) as orders,
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 previous AS (
     SELECT
-        COALESCE(SUM(net_revenue), 0) as revenue,
-        COUNT(DISTINCT order_id) as orders,
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
-    FROM fact_orders
-    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+        COALESCE(SUM(o.net_revenue), 0) as revenue,
+        COUNT(DISTINCT o.order_id) as orders,
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 customer_loyalty AS (
     SELECT
@@ -78,8 +92,10 @@ customer_loyalty AS (
             / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
         ) as returning_rate
     FROM fact_orders o
-    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 scores AS (
     SELECT
@@ -118,21 +134,27 @@ Chi tiết từng thành phần của Health Score với conditional formatting.
 WITH
 recent AS (
     SELECT
-        COALESCE(SUM(net_revenue), 0) as revenue,
-        COUNT(DISTINCT order_id) as orders,
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
-    FROM fact_orders
-    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+        COALESCE(SUM(o.net_revenue), 0) as revenue,
+        COUNT(DISTINCT o.order_id) as orders,
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 previous AS (
     SELECT
-        COALESCE(SUM(net_revenue), 0) as revenue,
-        COUNT(DISTINCT order_id) as orders,
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as aov
-    FROM fact_orders
-    WHERE date(order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+        COALESCE(SUM(o.net_revenue), 0) as revenue,
+        COUNT(DISTINCT o.order_id) as orders,
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 customer_loyalty AS (
     SELECT
@@ -141,8 +163,10 @@ customer_loyalty AS (
             / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
         ) as returning_rate
     FROM fact_orders o
-    LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+    JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 raw_scores AS (
     SELECT
@@ -217,15 +241,18 @@ SELECT * FROM (
 
 #### Question: Net Revenue
 
-**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison vs yesterday.
+**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison vs yesterday. **Scope: Retail only.**
 
 ```sql
 SELECT
-    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date THEN net_revenue END), 0) as "Net Revenue",
-    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN net_revenue END), 0) as "Hôm qua"
-FROM fact_orders
-WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END), 0) as "Net Revenue",
+    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hôm qua"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(o.order_timestamp) <= current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -258,15 +285,18 @@ WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
 
 #### Question: Gross Revenue
 
-**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI with DoD.
+**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI with DoD. **Scope: Retail only.**
 
 ```sql
 SELECT
-    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date THEN gross_revenue END), 0) as "Gross Revenue",
-    COALESCE(SUM(CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN gross_revenue END), 0) as "Hôm qua"
-FROM fact_orders
-WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.gross_revenue END), 0) as "Gross Revenue",
+    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.gross_revenue END), 0) as "Hôm qua"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(o.order_timestamp) <= current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -299,15 +329,18 @@ WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
 
 #### Question: Total Orders
 
-Supporting KPI with DoD comparison.
+Supporting KPI with DoD comparison. **Scope: Retail only.**
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date THEN order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN order_id END) as "Hôm qua"
-FROM fact_orders
-WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) as "Total Orders",
+    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hôm qua"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(o.order_timestamp) <= current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -332,23 +365,26 @@ WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
 
 #### Question: AOV
 
-Supporting KPI with DoD comparison.
+Supporting KPI with DoD comparison. **Scope: Retail only.**
 
 ```sql
 SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date THEN order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(order_timestamp) = current_date THEN net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date THEN order_id END), 0
+            SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END), 0
          ) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN order_id END), 0
+            SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
          ) END as "Hôm qua"
-FROM fact_orders
-WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(o.order_timestamp) <= current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -383,12 +419,16 @@ WHERE date(order_timestamp) >= current_date - INTERVAL '1 day'
 
 #### Question: New Customers
 
+**Scope: Retail only.**
+
 ```sql
 SELECT COUNT(DISTINCT o.customer_key) as "New Customers"
 FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
   AND date(c.first_order_date) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -401,12 +441,16 @@ WHERE date(o.order_timestamp) = current_date
 
 #### Question: Returning Customers
 
+**Scope: Retail only.**
+
 ```sql
 SELECT COUNT(DISTINCT o.customer_key) as "Returning Customers"
 FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
   AND date(c.first_order_date) < current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -420,10 +464,13 @@ WHERE date(o.order_timestamp) = current_date
 #### Question: Returns
 
 ```sql
-SELECT COUNT(DISTINCT order_id) as "Returns"
-FROM fact_orders
-WHERE date(order_timestamp) = current_date
-  AND fulfillment_status = 'RETURNED'
+SELECT COUNT(DISTINCT o.order_id) as "Returns"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+  AND o.fulfillment_status = 'RETURNED'
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -439,9 +486,12 @@ WHERE date(order_timestamp) = current_date
 **Domain Reference**: [Total Collected](../domains/sales.md#2b-total-collected)
 
 ```sql
-SELECT COALESCE(SUM(total_collected), 0) as "Total Collected"
-FROM fact_orders
-WHERE date(order_timestamp) = current_date
+SELECT COALESCE(SUM(o.total_collected), 0) as "Total Collected"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -469,11 +519,14 @@ WHERE date(order_timestamp) = current_date
 ```sql
 SELECT
     ROUND(
-        COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) * 100.0
-        / NULLIF(COUNT(DISTINCT order_id), 0), 1
+        COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) * 100.0
+        / NULLIF(COUNT(DISTINCT o.order_id), 0), 1
     ) as "Discount Rate %"
-FROM fact_orders
-WHERE date(order_timestamp) = current_date
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -491,7 +544,11 @@ SELECT ROUND(
     SUM(s.quantity)::FLOAT / NULLIF(COUNT(DISTINCT s.order_id), 0), 1
 ) as "Items/Order"
 FROM fact_sales s
+JOIN fact_orders o ON s.order_id = o.order_id
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -513,26 +570,32 @@ Compare today's hourly performance with yesterday — real-time.
 ```sql
 WITH current_sales AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        SUM(net_revenue) as sales_today
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        SUM(o.net_revenue) as sales_today
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) = current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 ),
 previous_sales AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        SUM(net_revenue) as sales_yesterday
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        SUM(o.net_revenue) as sales_yesterday
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 )
 SELECT
-    COALESCE(c.hour_of_day, p.hour_of_day) as "Hour",
-    COALESCE(c.sales_today, 0) as "Hôm nay",
-    COALESCE(p.sales_yesterday, 0) as "Hôm qua"
-FROM current_sales c
-FULL OUTER JOIN previous_sales p ON c.hour_of_day = p.hour_of_day
+    COALESCE(cs.hour_of_day, ps.hour_of_day) as "Hour",
+    COALESCE(cs.sales_today, 0) as "Hôm nay",
+    COALESCE(ps.sales_yesterday, 0) as "Hôm qua"
+FROM current_sales cs
+FULL OUTER JOIN previous_sales ps ON cs.hour_of_day = ps.hour_of_day
 ORDER BY 1
 ```
 
@@ -563,18 +626,24 @@ WITH hours AS (
 ),
 today_hourly AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        SUM(net_revenue) as revenue
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        SUM(o.net_revenue) as revenue
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) = current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 ),
 yesterday_hourly AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        SUM(net_revenue) as revenue
-    FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        SUM(o.net_revenue) as revenue
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 )
 SELECT
@@ -634,15 +703,18 @@ ORDER BY 1
 
 #### Question: Revenue by Channel
 
-**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel) — Horizontal bar for ranking.
+**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel) — Horizontal bar for ranking. **Scope: Retail only.**
 
 ```sql
 SELECT
-    c.channel_name as "Kênh",
+    ch.channel_name as "Kênh",
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
+JOIN dim_channels ch ON o.channel_key = ch.channel_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -676,12 +748,15 @@ Online vs Offline vs Internal breakdown.
 
 ```sql
 SELECT
-    c.channel_category as "Loại kênh",
+    ch.channel_category as "Loại kênh",
     SUM(o.net_revenue) as "Doanh thu",
     COUNT(DISTINCT o.order_id) as "Đơn hàng"
 FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
+JOIN dim_channels ch ON o.channel_key = ch.channel_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -708,22 +783,28 @@ DoD comparison by channel with conditional formatting on change %.
 ```sql
 WITH today AS (
     SELECT
-        c.channel_name,
+        ch.channel_name,
         COUNT(DISTINCT o.order_id) as orders,
         COALESCE(SUM(o.net_revenue), 0) as revenue
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.order_timestamp) = current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 ),
 yesterday AS (
     SELECT
-        c.channel_name,
+        ch.channel_name,
         COUNT(DISTINCT o.order_id) as orders,
         COALESCE(SUM(o.net_revenue), 0) as revenue
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 )
 SELECT
@@ -786,6 +867,8 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 
 #### Question: Sales by Branch
 
+**Scope: Retail only.**
+
 ```sql
 SELECT
     bl.branch_location_name as "Chi nhánh",
@@ -795,7 +878,10 @@ SELECT
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -849,7 +935,7 @@ ORDER BY 3 DESC
 
 #### Question: Top 10 Products by Revenue
 
-**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products) — Horizontal bar for visual ranking.
+**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products) — Horizontal bar for visual ranking. **Scope: Retail only.**
 
 ```sql
 SELECT
@@ -857,7 +943,10 @@ SELECT
     SUM(s.revenue) as "Doanh thu"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
+JOIN dim_customers c ON s.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -888,7 +977,7 @@ LIMIT 10
 
 #### Question: Top 10 Products by Quantity
 
-Horizontal bar for quantity ranking.
+Horizontal bar for quantity ranking. **Scope: Retail only.**
 
 ```sql
 SELECT
@@ -896,7 +985,10 @@ SELECT
     SUM(s.quantity) as "Số lượng"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
+JOIN dim_customers c ON s.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -919,7 +1011,7 @@ LIMIT 10
 
 #### Question: Revenue by Product Type
 
-Horizontal bar replacing pie chart.
+Horizontal bar replacing pie chart. **Scope: Retail only.**
 
 ```sql
 SELECT
@@ -927,7 +1019,10 @@ SELECT
     SUM(s.revenue) as "Doanh thu"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
+JOIN dim_customers c ON s.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -957,7 +1052,7 @@ ORDER BY 2 DESC
 
 #### Question: Product Performance Table
 
-Full detail with Qty, Revenue, Avg Price.
+Full detail with Qty, Revenue, Avg Price. **Scope: Retail only.**
 
 ```sql
 SELECT
@@ -968,7 +1063,10 @@ SELECT
     ROUND(SUM(s.revenue) / NULLIF(SUM(s.quantity), 0), 0) as "Giá TB"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
+JOIN dim_customers c ON s.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1, 2
 ORDER BY 4 DESC
 LIMIT 20
@@ -1143,10 +1241,13 @@ ORDER BY 3 DESC
 
 ```sql
 SELECT
-    status as "Trạng thái",
-    COUNT(DISTINCT order_id) as "Đơn hàng"
-FROM fact_orders
-WHERE date(order_timestamp) = current_date
+    o.status as "Trạng thái",
+    COUNT(DISTINCT o.order_id) as "Đơn hàng"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1176,7 +1277,11 @@ SELECT
     COALESCE(SUM(p.amount), 0) as "Số tiền"
 FROM fact_payments p
 JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
+JOIN fact_orders o ON p.order_id = o.order_id
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(p.payment_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1197,19 +1302,22 @@ ORDER BY 3 DESC
 
 #### Question: Discount Impact
 
-**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact)
+**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact) — **⚠️ BẮT BUỘC scope_retail để tránh trộn lẫn với giá sỉ.**
 
 ```sql
 SELECT
-    COUNT(DISTINCT order_id) as "Tổng đơn",
-    COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) as "Đơn có CK",
-    ROUND(COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) * 100.0
-        / NULLIF(COUNT(DISTINCT order_id), 0), 1) as "Tỷ lệ CK %",
-    SUM(COALESCE(discount_amount, 0)) as "Tổng CK",
-    ROUND(AVG(CASE WHEN discount_amount > 0
-        THEN discount_amount * 100.0 / NULLIF(gross_revenue, 0) END), 1) as "TB CK %"
-FROM fact_orders
-WHERE date(order_timestamp) = current_date
+    COUNT(DISTINCT o.order_id) as "Tổng đơn",
+    COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) as "Đơn có CK",
+    ROUND(COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) * 100.0
+        / NULLIF(COUNT(DISTINCT o.order_id), 0), 1) as "Tỷ lệ CK %",
+    SUM(COALESCE(o.discount_amount, 0)) as "Tổng CK",
+    ROUND(AVG(CASE WHEN o.discount_amount > 0
+        THEN o.discount_amount * 100.0 / NULLIF(o.gross_revenue, 0) END), 1) as "TB CK %"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -1235,8 +1343,13 @@ WHERE date(order_timestamp) = current_date
 
 #### 📝 Text: Source & Freshness
 
-Source: fact_orders · Updated real-time · Excludes cancelled/voided orders
+Source: fact_orders · Updated real-time · **Scope: Retail only (customer_type = 'RETAIL')** · Excludes cancelled/voided orders
 
 ```json metabase-pos
 { "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+---
+
+> **Scope Note:** Tất cả queries trong blueprint này filter `customer_type = 'RETAIL'`. B2B orders (WHOLESALE, PARTNER) được track trong **B2B Daily Sales [B2B]** blueprint.
+> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)

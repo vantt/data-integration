@@ -1,25 +1,38 @@
-# 📘 Blueprint: Sales Promotion & Discount Analysis
+# 📘 Blueprint: Sales Promotion & Discount Analysis [Retail]
 
 **Design Spec**: [Sales Promotion & Discount Analysis](../designs/sales_promotion_analysis.md)
+**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`) — **BẮT BUỘC**
+**Layer**: L2 - Retail Operations
 
-> **Target Collection:** `Marketing & Customers`
+> **Target Collection:** `Operations > Retail Operations`
 > **Role:** Marketing Manager, Sales Ops, Finance
 > **Archetype:** Exploratory Tool (3 tabs)
 
-Ad-hoc analysis — evaluate campaign ROI, discount spending, promo effectiveness. 3 tabs: Tong quan chiet khau (Discount Overview), Hieu suat khuyen mai (Promotion Performance), Phan tich kenh & chi tiet (Channel Impact & Detail). MoM = last 30 days vs previous 30 days.
+> **⚠️ CRITICAL SCOPE (2026-04-19):** Dashboard này **BẮT BUỘC** filter `customer_type = 'RETAIL'`.
+>
+> **Lý do:** Discount của B2B (WHOLESALE, PARTNER) là **giá sỉ cố định** (40-50%), KHÔNG phải promotion.
+> Nếu không filter, kết quả phân tích sẽ sai lệch nghiêm trọng:
+> - Discount Rate cao bất thường (trộn lẫn giá sỉ)
+> - Promotion ROI không đáng tin
+>
+> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
-## 📂 Collection: Marketing & Customers
+Ad-hoc analysis — evaluate campaign ROI, discount spending, promo effectiveness. **Chỉ bao gồm retail orders.** 3 tabs: Tong quan chiet khau (Discount Overview), Hieu suat khuyen mai (Promotion Performance), Phan tich kenh & chi tiet (Channel Impact & Detail). MoM = last 30 days vs previous 30 days.
 
-Channel performance, customer acquisition, retention, segmentation, and campaign analysis.
+## 📂 Collection: Operations > Retail Operations
+
+Promotion analysis, discount tracking for retail customers only.
+
+> **Database:** Sapo DuckDB
 
 <!-- Filters removed: date/all-options and string/= types don't work with native SQL template tags in DuckDB.
      Date scoping is hardcoded in each SQL (last 30 days). -->
 
 ---
 
-### 🖥️ Dashboard: Promotion & Discount Analysis
+### 🖥️ Dashboard: Promotion Analysis [Retail]
 
-**Description**: Phan tich khuyen mai & chiet khau — 3 tabs: Tong quan chiet khau, Hieu suat khuyen mai, Phan tich kenh & chi tiet. MoM comparison (30 days vs previous 30 days). Loai bo don CANCELLED.
+**Description**: Phan tich khuyen mai & chiet khau cho **retail customers** — 3 tabs: Tong quan chiet khau, Hieu suat khuyen mai, Phan tich kenh & chi tiet. MoM comparison (30 days vs previous 30 days). Loai bo don CANCELLED va non-retail orders.
 
 ---
 
@@ -35,23 +48,29 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 #### ❓ Question: Total Discount Amount
 
-Tong tien chiet khau ky nay voi MoM comparison.
+Tong tien chiet khau ky nay voi MoM comparison. **Scope: Retail only — loai tru gia si B2B.**
 
 ```sql
 WITH
 this_period AS (
-    SELECT COALESCE(SUM(discount_amount), 0) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+    SELECT COALESCE(SUM(o.discount_amount), 0) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_period AS (
-    SELECT COALESCE(SUM(discount_amount), 0) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '60 days'
-      AND order_timestamp < current_date - INTERVAL '30 days'
+    SELECT COALESCE(SUM(o.discount_amount), 0) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '60 days'
+      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     tp.val as "Tong CK",
@@ -95,21 +114,27 @@ Ty le chiet khau / GMV voi MoM comparison.
 WITH
 this_period AS (
     SELECT
-        CASE WHEN SUM(gross_revenue) = 0 THEN 0
-             ELSE ROUND(SUM(discount_amount) * 100.0 / SUM(gross_revenue), 1) END as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+        CASE WHEN SUM(o.gross_revenue) = 0 THEN 0
+             ELSE ROUND(SUM(o.discount_amount) * 100.0 / SUM(o.gross_revenue), 1) END as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_period AS (
     SELECT
-        CASE WHEN SUM(gross_revenue) = 0 THEN 0
-             ELSE ROUND(SUM(discount_amount) * 100.0 / SUM(gross_revenue), 1) END as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '60 days'
-      AND order_timestamp < current_date - INTERVAL '30 days'
+        CASE WHEN SUM(o.gross_revenue) = 0 THEN 0
+             ELSE ROUND(SUM(o.discount_amount) * 100.0 / SUM(o.gross_revenue), 1) END as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '60 days'
+      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     tp.val as "Ty le CK %",
@@ -150,23 +175,29 @@ Phan tram don hang co chiet khau voi MoM comparison.
 WITH
 this_period AS (
     SELECT
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE ROUND(COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) * 100.0
-                        / COUNT(DISTINCT order_id), 1) END as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE ROUND(COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) * 100.0
+                        / COUNT(DISTINCT o.order_id), 1) END as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_period AS (
     SELECT
-        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
-             ELSE ROUND(COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) * 100.0
-                        / COUNT(DISTINCT order_id), 1) END as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '60 days'
-      AND order_timestamp < current_date - INTERVAL '30 days'
+        CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+             ELSE ROUND(COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) * 100.0
+                        / COUNT(DISTINCT o.order_id), 1) END as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '60 days'
+      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     tp.val as "Tan suat CK %",
@@ -206,18 +237,24 @@ So don hang co chiet khau voi MoM comparison.
 ```sql
 WITH
 this_period AS (
-    SELECT COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+    SELECT COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_period AS (
-    SELECT COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '60 days'
-      AND order_timestamp < current_date - INTERVAL '30 days'
+    SELECT COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '60 days'
+      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     tp.val as "Don co CK",
@@ -260,13 +297,16 @@ So sanh Revenue, Orders, AOV giua Promo va Non-Promo — grouped bar.
 ```sql
 WITH base AS (
     SELECT
-        CASE WHEN discount_amount > 0 THEN 'Promo' ELSE 'Non-Promo' END as segment,
-        net_revenue,
-        order_id
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+        CASE WHEN o.discount_amount > 0 THEN 'Promo' ELSE 'Non-Promo' END as segment,
+        o.net_revenue,
+        o.order_id
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     'Revenue' as "Metric",
@@ -332,13 +372,16 @@ AOV(Promo) vs AOV(Non-Promo) delta — single value.
 ```sql
 WITH base AS (
     SELECT
-        CASE WHEN discount_amount > 0 THEN 'Promo' ELSE 'Non-Promo' END as segment,
-        net_revenue,
-        order_id
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+        CASE WHEN o.discount_amount > 0 THEN 'Promo' ELSE 'Non-Promo' END as segment,
+        o.net_revenue,
+        o.order_id
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 aov AS (
     SELECT
@@ -399,18 +442,21 @@ Phan bo don hang theo % chiet khau (0-10%, 10-20%, 20-30%, 30%+).
 ```sql
 SELECT
     CASE
-        WHEN gross_revenue = 0 THEN 'N/A'
-        WHEN discount_amount / gross_revenue < 0.1 THEN '0-10%'
-        WHEN discount_amount / gross_revenue < 0.2 THEN '10-20%'
-        WHEN discount_amount / gross_revenue < 0.3 THEN '20-30%'
+        WHEN o.gross_revenue = 0 THEN 'N/A'
+        WHEN o.discount_amount / o.gross_revenue < 0.1 THEN '0-10%'
+        WHEN o.discount_amount / o.gross_revenue < 0.2 THEN '10-20%'
+        WHEN o.discount_amount / o.gross_revenue < 0.3 THEN '20-30%'
         ELSE '30%+'
     END as "Muc chiet khau",
-    COUNT(DISTINCT order_id) as "So don"
-FROM fact_orders
-WHERE status != 'CANCELLED'
-  AND order_timestamp >= current_date - INTERVAL '30 days'
-  AND order_timestamp < current_date
-  AND discount_amount > 0
+    COUNT(DISTINCT o.order_id) as "So don"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.status != 'CANCELLED'
+  AND o.order_timestamp >= current_date - INTERVAL '30 days'
+  AND o.order_timestamp < current_date
+  AND o.discount_amount > 0
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY
     CASE
@@ -448,14 +494,17 @@ Ranking kenh theo ty le chiet khau trung binh — horizontal bar.
 
 ```sql
 SELECT
-    c.channel_name as "Kenh",
+    ch.channel_name as "Kenh",
     ROUND(SUM(o.discount_amount) * 100.0 / NULLIF(SUM(o.gross_revenue), 0), 1) as "Ty le CK %"
 FROM fact_orders o
-LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
+LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
   AND o.discount_amount > 0
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -495,13 +544,16 @@ Xu huong tien chiet khau (bar) va ty le CK (line) theo thang — combo chart.
 
 ```sql
 SELECT
-    date_trunc('month', order_timestamp)::date as "Thang",
-    SUM(discount_amount) as "Tien CK",
-    ROUND(SUM(discount_amount) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Ty le CK %"
-FROM fact_orders
-WHERE status != 'CANCELLED'
-  AND order_timestamp >= current_date - INTERVAL '6 months'
-  AND order_timestamp < current_date
+    date_trunc('month', o.order_timestamp)::date as "Thang",
+    SUM(o.discount_amount) as "Tien CK",
+    ROUND(SUM(o.discount_amount) * 100.0 / NULLIF(SUM(o.gross_revenue), 0), 1) as "Ty le CK %"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.status != 'CANCELLED'
+  AND o.order_timestamp >= current_date - INTERVAL '6 months'
+  AND o.order_timestamp < current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 1
 ```
@@ -556,20 +608,26 @@ Tong doanh thu tu don co promo voi MoM comparison.
 ```sql
 WITH
 this_period AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND discount_amount > 0
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+    SELECT COALESCE(SUM(o.net_revenue), 0) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.discount_amount > 0
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_period AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND discount_amount > 0
-      AND order_timestamp >= current_date - INTERVAL '60 days'
-      AND order_timestamp < current_date - INTERVAL '30 days'
+    SELECT COALESCE(SUM(o.net_revenue), 0) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.discount_amount > 0
+      AND o.order_timestamp >= current_date - INTERVAL '60 days'
+      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     tp.val as "DT Promo",
@@ -612,20 +670,26 @@ Tong so don dung promo voi MoM comparison.
 ```sql
 WITH
 this_period AS (
-    SELECT COUNT(DISTINCT order_id) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND discount_amount > 0
-      AND order_timestamp >= current_date - INTERVAL '30 days'
-      AND order_timestamp < current_date
+    SELECT COUNT(DISTINCT o.order_id) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.discount_amount > 0
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_period AS (
-    SELECT COUNT(DISTINCT order_id) as val
-    FROM fact_orders
-    WHERE status != 'CANCELLED'
-      AND discount_amount > 0
-      AND order_timestamp >= current_date - INTERVAL '60 days'
-      AND order_timestamp < current_date - INTERVAL '30 days'
+    SELECT COUNT(DISTINCT o.order_id) as val
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status != 'CANCELLED'
+      AND o.discount_amount > 0
+      AND o.order_timestamp >= current_date - INTERVAL '60 days'
+      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     tp.val as "Luot dung",
@@ -660,12 +724,15 @@ So chuong trinh khuyen mai dang active — single value (khong co MoM).
 ```sql
 SELECT COUNT(DISTINCT p.promotion_code) as "So CT active"
 FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
   AND p.promotion_code IS NOT NULL
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -690,24 +757,30 @@ this_period AS (
         CASE WHEN COUNT(DISTINCT p.promotion_code) = 0 THEN 0
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT p.promotion_code) END as val
     FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
       AND o.order_timestamp >= current_date - INTERVAL '30 days'
       AND o.order_timestamp < current_date
       AND p.promotion_code IS NOT NULL
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
 prev_period AS (
     SELECT
         CASE WHEN COUNT(DISTINCT p.promotion_code) = 0 THEN 0
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT p.promotion_code) END as val
     FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
       AND o.order_timestamp >= current_date - INTERVAL '60 days'
       AND o.order_timestamp < current_date - INTERVAL '30 days'
       AND p.promotion_code IS NOT NULL
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
 SELECT
     tp.val as "DT TB/CT",
@@ -760,11 +833,14 @@ SELECT
     COALESCE(p.promotion_code, 'Khong ro') as "Ma KM",
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -803,11 +879,14 @@ SELECT
     COALESCE(p.promotion_code, 'Khong ro') as "Ma KM",
     COUNT(DISTINCT o.order_id) as "Luot dung"
 FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -852,11 +931,14 @@ SELECT
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1, 2
 ORDER BY "Doanh thu" DESC
 ```
@@ -930,12 +1012,15 @@ Phan bo luot dung promo theo thang, chia theo top 5 codes — stacked bar.
 WITH top5 AS (
     SELECT p.promotion_code
     FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
       AND o.order_timestamp >= current_date - INTERVAL '6 months'
       AND o.order_timestamp < current_date
       AND p.promotion_code IS NOT NULL
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
     ORDER BY COUNT(DISTINCT o.order_id) DESC
     LIMIT 5
@@ -945,12 +1030,15 @@ SELECT
     COALESCE(p.promotion_code, 'Khac') as "Ma KM",
     COUNT(DISTINCT o.order_id) as "So don"
 FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
   AND o.order_timestamp >= current_date - INTERVAL '6 months'
   AND o.order_timestamp < current_date
   AND p.promotion_code IN (SELECT promotion_code FROM top5)
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -990,14 +1078,17 @@ Ty le doanh thu promo vs non-promo theo kenh — stacked bar.
 
 ```sql
 SELECT
-    c.channel_name as "Kenh",
+    ch.channel_name as "Kenh",
     SUM(CASE WHEN o.discount_amount > 0 THEN o.net_revenue ELSE 0 END) as "DT Promo",
     SUM(CASE WHEN o.discount_amount = 0 THEN o.net_revenue ELSE 0 END) as "DT Non-Promo"
 FROM fact_orders o
-LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
+LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY SUM(o.net_revenue) DESC
 ```
@@ -1043,13 +1134,16 @@ Ranking kenh theo ty le chiet khau — horizontal bar.
 
 ```sql
 SELECT
-    c.channel_name as "Kenh",
+    ch.channel_name as "Kenh",
     ROUND(SUM(o.discount_amount) * 100.0 / NULLIF(SUM(o.gross_revenue), 0), 1) as "Ty le CK %"
 FROM fact_orders o
-LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
+LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1091,27 +1185,33 @@ Bang chi tiet hieu suat khuyen mai theo kenh — conditional formatting tren MoM
 WITH
 this_period AS (
     SELECT
-        c.channel_name as channel,
+        ch.channel_name as channel,
         COUNT(DISTINCT CASE WHEN o.discount_amount > 0 THEN o.order_id END) as promo_orders,
         SUM(CASE WHEN o.discount_amount > 0 THEN o.net_revenue ELSE 0 END) as promo_revenue,
         SUM(o.discount_amount) as discount_amount,
         ROUND(SUM(o.discount_amount) * 100.0 / NULLIF(SUM(o.gross_revenue), 0), 1) as discount_rate
     FROM fact_orders o
-    LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
     WHERE o.status != 'CANCELLED'
       AND o.order_timestamp >= current_date - INTERVAL '30 days'
       AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 ),
 prev_period AS (
     SELECT
-        c.channel_name as channel,
+        ch.channel_name as channel,
         SUM(CASE WHEN o.discount_amount > 0 THEN o.net_revenue ELSE 0 END) as promo_revenue
     FROM fact_orders o
-    LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
     WHERE o.status != 'CANCELLED'
       AND o.order_timestamp >= current_date - INTERVAL '60 days'
       AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 )
 SELECT
@@ -1193,20 +1293,23 @@ Danh sach don hang co chiet khau > 30% — conditional formatting tren Discount 
 SELECT
     o.order_code as "Ma don",
     o.order_timestamp::date as "Ngay",
-    c.channel_name as "Kenh",
+    ch.channel_name as "Kenh",
     COALESCE(p.promotion_code, o.discount_codes, '') as "Ma KM",
     o.gross_revenue as "Doanh thu goc",
     o.discount_amount as "Tien CK",
     ROUND(o.discount_amount * 100.0 / NULLIF(o.gross_revenue, 0), 1) as "Ty le CK %",
     o.net_revenue as "Doanh thu thuan"
 FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
-LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
+LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
   AND o.order_timestamp >= current_date - INTERVAL '30 days'
   AND o.order_timestamp < current_date
   AND o.gross_revenue > 0
   AND o.discount_amount * 1.0 / o.gross_revenue > 0.3
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ORDER BY o.discount_amount DESC
 LIMIT 100
 ```
