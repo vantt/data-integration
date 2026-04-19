@@ -62,7 +62,7 @@ SELECT
             {{ dbt_utils.generate_surrogate_key(['cast(source_id as string)', "'Unknown'"]) }}
     END as channel_key,
 
-    -- Sales attribution keys (see docs/context/channel-classification.md § 3.4)
+    -- Sales attribution keys (see docs/context/sales-segmentation-guide.md § 3.4)
     -- seller_staff_key  = người chốt/được giao đơn → primary for team/commission
     -- creator_staff_key = người tạo đơn trên Sapo → operational/fallback
     COALESCE(dseller.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as seller_staff_key,

@@ -5,14 +5,14 @@ Dùng prompt bên dưới để bắt đầu một chat session mới với Clau
 ---
 
 ```
-Đọc tài liệu `docs/context/channel-classification.md` — đặc biệt phần 6 (Tài liệu kỹ thuật). Đây là kết quả thiết kế đã được duyệt. Hãy triển khai theo đúng thiết kế, không thay đổi kiến trúc.
+Đọc tài liệu `docs/context/sales-segmentation-guide.md` — đặc biệt phần 6 (Tài liệu kỹ thuật). Đây là kết quả thiết kế đã được duyệt. Hãy triển khai theo đúng thiết kế, không thay đổi kiến trúc.
 
 ## Phạm vi triển khai
 
 ### Bước 1: ref_order_sources.csv — Cập nhật schema
 - Cột `source_type` phân loại nguồn: `channel`, `customer_type`, `team`, `purpose`, `arrangement`
 - Cột `channel_brand`, `market` đã có sẵn
-- Xem `docs/context/channel-classification.md` Section 7 cho chi tiết source_type
+- Xem `docs/context/sales-segmentation-guide.md` Section 7 cho chi tiết source_type
 - Cập nhật `transformation/seeds/properties.yml` nếu cần
 
 ### Bước 2: ref_brands.csv — Tạo seed mới

@@ -51,11 +51,11 @@ Tài liệu này cung cấp cái nhìn tổng quan về data model cho các chi�
 
 | Dimension | Entity | Mô tả | Tài liệu chi tiết |
 |-----------|--------|-------|-------------------|
-| **Channel** | dim_channels | Bán ở đâu? 4-tier taxonomy | [channel-classification.md](./channel-classification.md) |
+| **Channel** | dim_channels | Bán ở đâu? 4-tier taxonomy | [sales-segmentation-guide.md](./sales-segmentation-guide.md) |
 | **Team** | dim_teams | Ai sở hữu doanh số? | [team-management.md](./team-management.md) |
 | **Customer** | dim_customers | Khách hàng là ai? 8 chiều phân loại | [customer-segmentation.md](./customer-segmentation.md) |
-| **Product** | dim_products | Sản phẩm gì? Thương hiệu nào? | [channel-classification.md](./channel-classification.md#32-thương-hiệu-sản-phẩm-vs-thương-hiệu-kênh) |
-| **Branch** | dim_branch_locations | Ai xử lý đơn? | [channel-classification.md](./channel-classification.md#33-chi-nhánh--ai-xử-lý) |
+| **Product** | dim_products | Sản phẩm gì? Thương hiệu nào? | [sales-segmentation-guide.md](./sales-segmentation-guide.md#32-thương-hiệu-sản-phẩm-vs-thương-hiệu-kênh) |
+| **Branch** | dim_branch_locations | Ai xử lý đơn? | [sales-segmentation-guide.md](./sales-segmentation-guide.md#33-chi-nhánh--ai-xử-lý) |
 
 ---
 
@@ -85,7 +85,7 @@ Sapo `source` field chứa nhiều concepts khác nhau. Dùng `source_type` đ�
 | `purpose` | Mục đích đơn hàng | Test SP, Quà Tặng, Ưu đãi NV |
 | `arrangement` | Thỏa thuận đặc biệt | US (CrossBorder Fulfillment) |
 
-Chi tiết: [channel-classification.md - Section 7](./channel-classification.md#7-known-limitations--source-field-overloading)
+Chi tiết: [sales-segmentation-guide.md - Section 7](./sales-segmentation-guide.md#7-known-limitations--source-field-overloading)
 
 ---
 
@@ -162,7 +162,7 @@ SAI:  fact_orders.customer_type = 'WHOLESALE'
 
 | Tài liệu | Nội dung |
 |----------|----------|
-| [channel-classification.md](./channel-classification.md) | 4-tier channel taxonomy, source_type |
+| [sales-segmentation-guide.md](./sales-segmentation-guide.md) | 4-tier channel taxonomy, source_type |
 | [team-management.md](./team-management.md) | Team revenue_type, attribution logic |
 | [customer-segmentation.md](./customer-segmentation.md) | 8 dimensions, customer_type values |
 | [sapo-platform.md](./sapo-platform.md) | Sapo API, data sources |

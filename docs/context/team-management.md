@@ -1,7 +1,7 @@
-# Hướng dẫn Quản lý Team & Tính Doanh thu Team
+# Hướng dẫn Quản lý Team & Tính Doanh số Team/Nhân viên
 
-> **Dành cho:** Tất cả nhân sự quản lý team, xem báo cáo doanh thu team
-> **Cập nhật:** 2026-04-17
+> **Dành cho:** Tất cả nhân sự quản lý team, xem báo cáo doanh thu team/nhân viên
+> **Cập nhật:** 2026-04-19
 > **Bảo trì:** Data Team
 
 ## Tài liệu này trả lời những câu hỏi nào?
@@ -11,6 +11,7 @@
 3. FG Care chọn cách nào và tại sao?
 4. Cách cấu hình team trên Google Sheet như thế nào?
 5. Nhân viên chuyển team thì doanh thu tính cho team nào?
+6. Làm sao để xem doanh số của từng nhân viên?
 
 ---
 
@@ -21,6 +22,7 @@
 - **FG Care hỗ trợ cả 2 cách** — mỗi team tự chọn cách tính phù hợp với đặc thù vận hành.
 - **Cấu hình qua Google Sheet** — 2 tab: `teams` (định nghĩa team) và `team_members` (nhân viên thuộc team).
 - **Lịch sử được track** — nhân viên chuyển team không làm sai lệch báo cáo quá khứ (SCD2).
+- **Drill-down cá nhân** — Khi team dùng `revenue_type = member`, có thể xem doanh số từng nhân viên trong team.
 
 ---
 
@@ -240,6 +242,52 @@ Nếu revenue_type = 'channel_name':
   → Doanh thu thuộc team sở hữu channel đó
 ```
 
+### 5.4. Doanh số nhân viên (Individual Attribution)
+
+Khi team sử dụng `revenue_type = member`, hệ thống tự động hỗ trợ **drill-down từ team → nhân viên**:
+
+```
+Team Revenue (member-based) = Σ Individual Revenue
+                            = Σ doanh số của từng nhân viên trong team
+```
+
+#### Các cấp độ báo cáo
+
+| Cấp độ | GROUP BY | Mục đích |
+|--------|----------|----------|
+| **Team** | `team_code` | Tổng quan hiệu suất team |
+| **Nhân viên trong team** | `team_code`, `seller_email` | So sánh nhân viên cùng team, tính commission |
+| **Nhân viên toàn công ty** | `seller_email` | Bảng xếp hạng toàn công ty |
+
+#### Ví dụ báo cáo
+
+```sql
+-- Doanh số theo team (tổng hợp)
+SELECT team_name, SUM(gmv) as team_revenue
+FROM fact_sales
+GROUP BY team_name;
+
+-- Doanh số từng nhân viên trong team
+SELECT team_name, seller_email, SUM(gmv) as individual_revenue
+FROM fact_sales
+WHERE team_code = 'SOC'
+GROUP BY team_name, seller_email
+ORDER BY individual_revenue DESC;
+
+-- Top sellers toàn công ty
+SELECT seller_email, SUM(gmv) as total_revenue
+FROM fact_sales
+GROUP BY seller_email
+ORDER BY total_revenue DESC
+LIMIT 10;
+```
+
+#### Lưu ý quan trọng
+
+- **Chỉ áp dụng cho `revenue_type = member`**: Team dùng `platform` hoặc `channel_name` không có dữ liệu cá nhân (đơn auto-sync không có user thật).
+- **Seller = assignee**: Doanh số tính theo `assignee_id` (người được giao đơn / chốt đơn), không phải `account_id` (người tạo đơn).
+- **SCD2 membership**: Khi nhân viên chuyển team, doanh số lịch sử vẫn thuộc team cũ.
+
 ---
 
 ## 6. Cấu hình trên Google Sheet
@@ -378,7 +426,7 @@ Sheet `targets` hiện tại có cột `team_code` — có thể đặt target c
 | `platform` | `platform` | Tầng 3 |
 | `channel_name` | `channel_name` | Tầng 4 |
 
-Xem thêm: `docs/context/channel-classification.md`
+Xem thêm: [Sales Segmentation Guide](./sales-segmentation-guide.md)
 
 ### 8.3. Liên kết với Sapo
 

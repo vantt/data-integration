@@ -4,7 +4,7 @@ Concrete anchor for what "good" looks like — not just rules, but judgment.
 
 ## Gold Example
 
-**File:** `docs/context/channel-classification.md` (in the data-integration project).
+**File:** `docs/context/sales-segmentation-guide.md` (in the data-integration project).
 
 Compare your draft against this document section-by-section.
 

@@ -95,7 +95,7 @@ Find any topic in one lookup:
 | Document | What it covers |
 |----------|---------------|
 | [Sapo Platform](./context/sapo-platform.md) | Sapo e-commerce context, API limitations |
-| [Channel Classification](./context/channel-classification.md) | Sales channel mapping rules |
+| [Sales Segmentation Guide](./context/sales-segmentation-guide.md) | Revenue segmentation: channel, product, team, employee |
 | [Marketing Spend Setup](./context/marketing-spend-setup.md) | Marketing data configuration |
 | [Analytics Domains](./analytics-handbook/domains/) | Business metrics by domain (Sales, Customer, Product, etc.) |
 

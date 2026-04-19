@@ -468,6 +468,6 @@ A: Tùy Sapo plan. Thường là daily hoặc khi có đơn hàng mới.
 ## Liên kết tài liệu
 
 - [Data Model Overview](./data-model-overview.md) — Tổng quan data model (entry point)
-- [Channel Classification](./channel-classification.md) — Phân loại kênh bán hàng
+- [Sales Segmentation Guide](./sales-segmentation-guide.md) — Gom nhóm doanh thu (kênh, sản phẩm, team, nhân viên)
 - [Team Management](./team-management.md) — Quản lý team và attribution
 - [Channel Grouping Analysis](./channel-grouping-analysis.md) — Phân tích gom nhóm kênh

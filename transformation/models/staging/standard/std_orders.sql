@@ -35,7 +35,7 @@ SELECT
     -- Sales attribution: Sapo has TWO distinct user fields per order.
     -- seller_* (from Sapo `assignee`) = người được giao đơn → primary for team attribution & commission
     -- creator_* (from Sapo `account`)  = người tạo đơn trên Sapo → operational, fallback only
-    -- See docs/context/channel-classification.md § 3.4 for business rationale.
+    -- See docs/context/sales-segmentation-guide.md § 3.4 for business rationale.
     assignee_id as seller_user_id,
     coalesce(assignee_full_name, assignee_name) as seller_name,
     assignee_email as seller_email,

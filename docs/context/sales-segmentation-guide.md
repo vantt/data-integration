@@ -1,7 +1,7 @@
-# Hướng dẫn Phân loại Kênh bán hàng & Gom nhóm Báo cáo
+# Hướng dẫn Gom nhóm Doanh thu (Sales Segmentation Guide)
 
 > **Dành cho:** Tất cả nhân sự xem/tạo báo cáo doanh thu
-> **Cập nhật:** 2026-04-15
+> **Cập nhật:** 2026-04-19
 > **Bảo trì:** Data Team
 
 ## Tài liệu này trả lời những câu hỏi nào?
@@ -11,6 +11,7 @@
 3. Cần gom nhóm theo cột nào để trả lời câu hỏi của tôi?
 4. Thương hiệu sản phẩm khác gì thương hiệu kênh?
 5. Dữ liệu phân loại (seed files) lưu ở đâu?
+6. Doanh số của team / nhân viên cụ thể bao nhiêu?
 
 ---
 
@@ -228,7 +229,7 @@ Chi nhánh là đơn vị vật lý chịu trách nhiệm thực hiện đơn h�
 
 ---
 
-### 3.4. Team — "Ai sở hữu doanh số?"
+### 3.4. Team & Nhân viên — "Ai sở hữu doanh số?"
 
 **Định nghĩa:** Team là đơn vị tổ chức bán hàng chịu trách nhiệm doanh số. Khác với chi nhánh (vận hành vật lý), team phản ánh **cơ cấu sales** — ai chịu KPI, ai ăn commission.
 
@@ -236,8 +237,17 @@ Chi nhánh là đơn vị vật lý chịu trách nhiệm thực hiện đơn h�
 - **Orthogonal với channel:** Team là chiều độc lập, không thay thế `channel_category`
 - **3 cách tính doanh số:** `member` (theo nhân viên), `platform` (theo tier 3), `channel_name` (theo tier 4)
 - **SCD2 membership:** Track lịch sử nhân viên chuyển team
+- **Drill-down:** Team → Nhân viên (khi `revenue_type = member`)
 
-> **Chi tiết đầy đủ:** Xem [Team Management](./team-management.md) — bao gồm 6 nhóm mô hình attribution theo chuẩn ngành, cách cấu hình trên Google Sheet, và các vấn đề thường gặp.
+#### Báo cáo theo Team vs theo Nhân viên
+
+| Cấp độ | GROUP BY | Ví dụ |
+|--------|----------|-------|
+| **Team** | `team_code` hoặc `team_name` | Team Social: 200M, Team B2B: 150M |
+| **Nhân viên trong team** | `team_code` + `seller_email` | Team Social → Vũ Ngọc: 80M, Ngọc Anh: 70M... |
+| **Nhân viên (toàn công ty)** | `seller_email` | Vũ Ngọc: 80M, Thanh Huyền: 60M... |
+
+> **Chi tiết đầy đủ:** Xem [Team Management](./team-management.md) — bao gồm 6 nhóm mô hình attribution theo chuẩn ngành, cách cấu hình trên Google Sheet, tính doanh số cá nhân, và các vấn đề thường gặp.
 
 ---
 

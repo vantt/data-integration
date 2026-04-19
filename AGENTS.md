@@ -27,7 +27,7 @@ Comprehensive documentation is available following a **progressive disclosure** 
 | **Architecture** | `architecture/overview.md`, `architecture/data-flow.md`, `architecture/data-dictionary.md` |
 | **Operations** | `operations/deployment.md`, `operations/operations.md`, `operations/troubleshooting.md`, `operations/migration.md` |
 | **Development** | `development/contributing.md`, `development/glossary.md` |
-| **Context** | `context/sapo-platform.md`, `context/channel-classification.md`, `context/marketing-spend-setup.md` |
+| **Context** | `context/sapo-platform.md`, `context/sales-segmentation-guide.md`, `context/marketing-spend-setup.md` |
 
 ### Component Documentation
 

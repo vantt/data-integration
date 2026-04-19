@@ -39,7 +39,7 @@ SELECT
             {{ dbt_utils.generate_surrogate_key(['cast(o.source_id as string)', "'Unknown'"]) }}
     END as channel_key,
 
-    -- Sales attribution keys (see docs/context/channel-classification.md § 3.4)
+    -- Sales attribution keys (see docs/context/sales-segmentation-guide.md § 3.4)
     COALESCE(dseller.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as seller_staff_key,
     COALESCE(dcreator.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as creator_staff_key,
     {{ dbt_utils.generate_surrogate_key(['o.status']) }} as status_key,
