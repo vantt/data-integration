@@ -481,10 +481,13 @@ models:
               arguments:
                 to: ref('dim_date')
                 field: date_key
+      - name: status
+        description: "Trạng thái đơn hàng (từ fact_orders)"
       - name: gross_revenue
         description: "Giá bán × SL (trước chiết khấu & thuế)"
       - name: net_revenue
         description: "Doanh thu thuần (sau chiết khấu, trước thuế)"
+        tests: [not_null]
       - name: cogs_amount
         description: "Giá vốn hàng bán (từ MISA). NULL nếu chưa có dữ liệu MISA."
       - name: has_cogs
@@ -494,10 +497,18 @@ models:
       - name: gross_margin_pct
         description: "Biên lãi gộp = gross_profit / net_revenue"
       - name: shopee_platform_fees
-        description: "Tổng phí sàn Shopee (service + payment + fixed). NULL cho non-Shopee."
+        description: "Phí sàn cơ bản (service + payment + fixed + affiliate). NULL cho non-Shopee."
+      - name: shopee_infra_fee
+        description: "Phí hạ tầng Shopee (từ Service Fee Details sheet). NULL cho non-Shopee."
+      - name: shopee_voucher_xtra_fee
+        description: "Phí Voucher Xtra (từ Service Fee Details sheet). NULL cho non-Shopee."
+      - name: shopee_taxes
+        description: "VAT + thuế TNCN Shopee. NULL cho non-Shopee."
       - name: shopee_net_settlement
         description: "Số tiền Shopee thực chuyển về. NULL cho non-Shopee."
+      - name: has_shopee_fees
+        description: "true nếu đơn có dữ liệu phí từ Shopee"
       - name: channel_net_profit
-        description: "Lãi ròng kênh = net_revenue - COGS - phí sàn - thuế sàn"
+        description: "Lãi ròng kênh = net_revenue - COGS - all Shopee fees"
       - name: channel_net_margin_pct
         description: "Biên lãi ròng kênh = channel_net_profit / net_revenue"
