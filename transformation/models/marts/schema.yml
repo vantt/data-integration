@@ -3,24 +3,74 @@ version: 2
 models:
   # Dimensions
   - name: dim_customers
-    description: "Customer dimension with CLV and RFM metrics."
+    description: "Customer dimension with 8 segmentation dimensions. See docs/context/customer-segmentation.md"
     columns:
       - name: customer_key
         tests: [unique, not_null]
+      - name: customer_type
+        description: "Commercial relationship type (Manual from Sapo TYPE_* groups)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['RETAIL', 'WHOLESALE', 'PARTNER', 'STAFF', 'KOL']
+      - name: value_group
+        description: "Customer value tier (Auto): VALUE_VIP (>=50M or >=20 orders), VALUE_GOLD (>=20M), VALUE_SILVER (>=5M), VALUE_BRONZE (else)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER', 'VALUE_BRONZE']
+      - name: lifecycle_stage
+        description: "Customer lifecycle state (Auto): NEW (<=30 days & <=2 orders), ACTIVE (<=90 days), AT_RISK (<=180 days), CHURNED (>180 days)"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['LIFECYCLE_NEW', 'LIFECYCLE_ACTIVE', 'LIFECYCLE_AT_RISK', 'LIFECYCLE_CHURNED']
+      - name: channel_preference
+        description: "Preferred purchase channel (Auto): CHANNEL_SOCIAL/MARKETPLACE/DIRECT/OFFLINE/OTHER based on mode of channel_format"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['CHANNEL_SOCIAL', 'CHANNEL_MARKETPLACE', 'CHANNEL_DIRECT', 'CHANNEL_OFFLINE', 'CHANNEL_OTHER']
+      - name: product_affinity
+        description: "Primary brand preference (Auto): Brand with >60% revenue share, else PRODUCT_MULTI"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['PRODUCT_FINE_JAPAN', 'PRODUCT_FG_CARE', 'PRODUCT_FINE_CARE', 'PRODUCT_MULTI']
+      - name: payment_behavior
+        description: "Payment pattern (Auto): PAYMENT_COD if >70% COD orders, else PAYMENT_PREPAID"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['PAYMENT_PREPAID', 'PAYMENT_COD', 'PAYMENT_CREDIT', 'PAYMENT_DELINQUENT']
+      - name: geo_region
+        description: "Geographic region (Auto): GEO_HCMC/HANOI/MEKONG/CENTRAL/OTHER based on province"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['GEO_HCMC', 'GEO_HANOI', 'GEO_MEKONG', 'GEO_CENTRAL', 'GEO_OTHER']
+      - name: acquisition_source
+        description: "Customer acquisition channel (Manual): SOURCE_ORGANIC/ADS/REFERRAL/KOL/EVENT. NULL until Sapo implementation."
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['SOURCE_ORGANIC', 'SOURCE_ADS', 'SOURCE_REFERRAL', 'SOURCE_KOL', 'SOURCE_EVENT']
+              config:
+                where: "acquisition_source IS NOT NULL"
       - name: lifetime_value
         description: "Total collected from customer (after discounts, incl. tax). Formula: SUM(fact_orders.total_collected)"
       - name: recency_days
         description: "Days since last order. Formula: CURRENT_DATE - MAX(order_date)"
-      - name: frequency
-        description: "Total count of distinct orders. Formula: COUNT(order_id)"
       - name: customer_status
-        description: "RFM Status. Logic: Active (<=30 days), At Risk (31-90 days), Churned (>90 days)"
-      - name: value_group
-        description: "Customer value tier: VALUE_VIP (>=50M or >=20 orders), VALUE_GOLD (>=20M), VALUE_SILVER (>=5M), VALUE_BRONZE (else)"
-        data_type: varchar
-        tests:
-          - accepted_values:
-              values: ['VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER', 'VALUE_BRONZE']
+        description: "DEPRECATED: Use lifecycle_stage. Legacy RFM Status: Active/At Risk/Churned"
 
   - name: dim_customers_base
     description: "Base customer dimension (SCD Type 1) without circular dependencies."
@@ -93,6 +143,32 @@ models:
     columns:
       - name: staff_key
         tests: [unique, not_null]
+
+  - name: dim_teams
+    description: "Sales team dimension. See docs/context/team-management.md"
+    columns:
+      - name: team_key
+        tests: [unique, not_null]
+      - name: team_code
+        description: "Team code (PK from Google Sheet)"
+        data_type: varchar
+        tests: [unique, not_null]
+      - name: team_name
+        description: "Team display name"
+        data_type: varchar
+      - name: revenue_type
+        description: "How team revenue is calculated: member, platform, channel_name"
+        data_type: varchar
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['member', 'platform', 'channel_name']
+      - name: revenue_filter
+        description: "Comma-separated filter values (for platform/channel_name types)"
+        data_type: varchar
+      - name: active_member_count
+        description: "Count of currently active team members"
+        data_type: integer
 
   - name: dim_time
     description: "Time dimension (Minute grain) with business hour flags."
@@ -190,6 +266,13 @@ models:
               arguments:
                 to: ref('dim_staff')
                 field: staff_key
+      - name: team_key
+        description: "Team attribution via seller email → team_members (SCD2)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_teams')
+                field: team_key
       - name: status_key
         tests:
           - relationships:
@@ -306,6 +389,14 @@ models:
               arguments:
                 to: ref('dim_staff')
                 field: staff_key
+      - name: team_key
+        data_type: varchar
+        description: "Team attribution via seller email → team_members (SCD2)"
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_teams')
+                field: team_key
       - name: status_key
         data_type: varchar
         tests:

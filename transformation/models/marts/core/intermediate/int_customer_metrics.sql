@@ -8,12 +8,31 @@ WITH orders AS (
     SELECT * FROM {{ ref('fact_orders') }}
 ),
 
+sales AS (
+    SELECT * FROM {{ ref('fact_sales') }}
+),
+
+channels AS (
+    SELECT * FROM {{ ref('dim_channels') }}
+),
+
+products AS (
+    SELECT * FROM {{ ref('dim_products') }}
+),
+
+payments AS (
+    SELECT * FROM {{ ref('fact_payments') }}
+),
+
+payment_methods AS (
+    SELECT * FROM {{ ref('dim_payment_methods') }}
+),
+
 -- Determine which customers need processing
--- If incremental, only fetch customers who had orders in the incoming batch (plus their full history)
 changed_customers AS (
     {% if is_incremental() %}
-    SELECT DISTINCT customer_key 
-    FROM orders 
+    SELECT DISTINCT customer_key
+    FROM orders
     WHERE updated_at >= (SELECT MAX(last_order_date) FROM {{ this }})
     {% else %}
     SELECT DISTINCT customer_key FROM orders
@@ -21,7 +40,7 @@ changed_customers AS (
 ),
 
 customer_orders AS (
-    SELECT 
+    SELECT
         o.customer_key,
         o.order_id,
         o.order_timestamp,
@@ -32,47 +51,151 @@ customer_orders AS (
     {% endif %}
 ),
 
+-- RFM aggregations (existing)
 aggregated AS (
     SELECT
         customer_key,
-        
-        -- [METRIC] Acquisition Date
-        -- Definition: The timestamp of the very first order placed by the customer.
         MIN(order_timestamp) as first_order_date,
-        
-        -- [METRIC] Last Active Date
-        -- Definition: The timestamp of the most recent order. Used for Recency calculation.
         MAX(order_timestamp) as last_order_date,
-        
-        -- [METRIC] Frequency
-        -- Formula: COUNT(DISTINCT order_id)
-        -- Note: We count distinct order_ids to handle potential duplicate rows in raw data (though deduped in staging).
         COUNT(DISTINCT order_id) as frequency,
-        
-        -- [METRIC] Monetary Value (Lifetime Value component)
-        -- Formula: SUM(total_collected)
-        -- Definition: Total amount collected from customer (after discounts, including tax).
         SUM(total_collected) as monetary_value
     FROM customer_orders
     GROUP BY customer_key
+),
+
+-- Channel preference: mode of channel_format per customer (count ORDERS, not line items)
+channel_stats AS (
+    SELECT
+        s.customer_key,
+        c.channel_format,
+        COUNT(DISTINCT s.order_id) as order_count
+    FROM sales s
+    JOIN channels c ON s.channel_key = c.channel_key
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON s.customer_key = cc.customer_key
+    {% endif %}
+    WHERE c.is_sales_channel = true
+    GROUP BY s.customer_key, c.channel_format
+),
+
+channel_ranked AS (
+    SELECT
+        customer_key,
+        channel_format,
+        ROW_NUMBER() OVER (PARTITION BY customer_key ORDER BY order_count DESC, channel_format ASC) as rn
+    FROM channel_stats
+),
+
+channel_preference_cte AS (
+    SELECT
+        customer_key,
+        CASE channel_format
+            WHEN 'Social' THEN 'CHANNEL_SOCIAL'
+            WHEN 'Marketplace' THEN 'CHANNEL_MARKETPLACE'
+            WHEN 'Web' THEN 'CHANNEL_DIRECT'
+            WHEN 'Direct' THEN 'CHANNEL_DIRECT'
+            WHEN 'B2B' THEN 'CHANNEL_DIRECT'
+            WHEN 'Retail' THEN 'CHANNEL_OFFLINE'
+            ELSE 'CHANNEL_OTHER'
+        END as channel_preference
+    FROM channel_ranked
+    WHERE rn = 1
+),
+
+-- Product affinity: brand with >60% revenue share
+brand_revenue AS (
+    SELECT
+        s.customer_key,
+        p.brand_name,
+        SUM(s.revenue) as brand_revenue
+    FROM sales s
+    JOIN products p ON s.product_key = p.product_key
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON s.customer_key = cc.customer_key
+    {% endif %}
+    WHERE p.brand_name IS NOT NULL AND p.brand_name != 'Unknown'
+    GROUP BY s.customer_key, p.brand_name
+),
+
+customer_total_revenue AS (
+    SELECT
+        customer_key,
+        SUM(brand_revenue) as total_revenue
+    FROM brand_revenue
+    GROUP BY customer_key
+),
+
+brand_share AS (
+    SELECT
+        br.customer_key,
+        br.brand_name,
+        br.brand_revenue / NULLIF(ctr.total_revenue, 0) as share
+    FROM brand_revenue br
+    JOIN customer_total_revenue ctr ON br.customer_key = ctr.customer_key
+),
+
+product_affinity_cte AS (
+    SELECT
+        customer_key,
+        CASE
+            WHEN MAX(share) FILTER (WHERE brand_name = 'Fine Japan Vietnam') > 0.6 THEN 'PRODUCT_FINE_JAPAN'
+            WHEN MAX(share) FILTER (WHERE brand_name = 'FG Care') > 0.6 THEN 'PRODUCT_FG_CARE'
+            WHEN MAX(share) FILTER (WHERE brand_name = 'Fine Care') > 0.6 THEN 'PRODUCT_FINE_CARE'
+            ELSE 'PRODUCT_MULTI'
+        END as product_affinity
+    FROM brand_share
+    GROUP BY customer_key
+),
+
+-- Payment behavior: COD vs prepaid (simplified - no debt tracking available)
+order_payments AS (
+    SELECT
+        o.customer_key,
+        o.order_id,
+        pm.payment_method_type
+    FROM orders o
+    JOIN payments p ON o.order_id = p.order_id
+    JOIN payment_methods pm ON p.payment_method_key = pm.payment_method_key
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
+    {% endif %}
+),
+
+payment_stats AS (
+    SELECT
+        customer_key,
+        COUNT(DISTINCT order_id) as total_orders,
+        COUNT(DISTINCT order_id) FILTER (WHERE payment_method_type = 'cod') as cod_orders
+    FROM order_payments
+    GROUP BY customer_key
+),
+
+payment_behavior_cte AS (
+    SELECT
+        customer_key,
+        CASE
+            WHEN cod_orders::float / NULLIF(total_orders, 0) > 0.7 THEN 'PAYMENT_COD'
+            ELSE 'PAYMENT_PREPAID'
+        END as payment_behavior
+    FROM payment_stats
 )
 
 SELECT
-    customer_key,
-    first_order_date,
-    last_order_date,
-    
-    -- [METRIC] Recency
-    -- Formula: Current Date - Last Order Date (in days)
-    date_diff('day', CAST(last_order_date AS DATE), current_date) as recency_days,
-    
-    frequency,
-    monetary_value,
-    
-    -- [METRIC] Lifespan
-    -- Formula: Last Order Date - First Order Date (in days)
-    -- Meaning: How long the customer has been with us. 0 means they only made one purchase (or multiple on same day).
-    date_diff('day', CAST(first_order_date AS DATE), CAST(last_order_date AS DATE)) as lifespan_days,
-    
+    a.customer_key,
+    a.first_order_date,
+    a.last_order_date,
+    date_diff('day', CAST(a.last_order_date AS DATE), current_date) as recency_days,
+    a.frequency,
+    a.monetary_value,
+    date_diff('day', CAST(a.first_order_date AS DATE), CAST(a.last_order_date AS DATE)) as lifespan_days,
+
+    -- P2 dimensions
+    COALESCE(cp.channel_preference, 'CHANNEL_OTHER') as channel_preference,
+    COALESCE(pa.product_affinity, 'PRODUCT_MULTI') as product_affinity,
+    COALESCE(pb.payment_behavior, 'PAYMENT_PREPAID') as payment_behavior,
+
     current_timestamp as metric_calculated_at
-FROM aggregated
+FROM aggregated a
+LEFT JOIN channel_preference_cte cp ON a.customer_key = cp.customer_key
+LEFT JOIN product_affinity_cte pa ON a.customer_key = pa.customer_key
+LEFT JOIN payment_behavior_cte pb ON a.customer_key = pb.customer_key

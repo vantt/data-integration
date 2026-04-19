@@ -44,6 +44,11 @@ joined_data AS (
         m.lifespan_days,
         m.metric_calculated_at,
 
+        -- P2 dimensions from intermediate model
+        m.channel_preference,
+        m.product_affinity,
+        m.payment_behavior,
+
         -- [METRIC] Customer Status (RFM - Recency Component)
         -- Logic:
         -- - Active: Bought within the last 30 days.
@@ -76,8 +81,17 @@ SELECT
     address1,
     country,
     
-    -- value_group: Customer value tier based on lifetime spend
+    -- customer_type: Commercial relationship type (Manual in Sapo, TYPE_* prefix)
     -- See docs/context/customer-segmentation.md for definitions
+    CASE
+        WHEN customer_group LIKE '%TYPE_WHOLESALE%' THEN 'WHOLESALE'
+        WHEN customer_group LIKE '%TYPE_PARTNER%' THEN 'PARTNER'
+        WHEN customer_group LIKE '%TYPE_STAFF%' THEN 'STAFF'
+        WHEN customer_group LIKE '%TYPE_KOL%' THEN 'KOL'
+        ELSE 'RETAIL'  -- Default: TYPE_RETAIL or untagged
+    END as customer_type,
+
+    -- value_group: Customer value tier based on lifetime spend (Auto)
     CASE
         WHEN monetary_value >= 50000000 OR frequency >= 20 THEN 'VALUE_VIP'
         WHEN monetary_value >= 20000000 THEN 'VALUE_GOLD'
@@ -85,10 +99,40 @@ SELECT
         ELSE 'VALUE_BRONZE'
     END as value_group,
 
+    -- lifecycle_stage: Customer lifecycle state (Auto)
+    CASE
+        WHEN lifespan_days <= 30 AND frequency <= 2 THEN 'LIFECYCLE_NEW'
+        WHEN recency_days <= 90 THEN 'LIFECYCLE_ACTIVE'
+        WHEN recency_days <= 180 THEN 'LIFECYCLE_AT_RISK'
+        ELSE 'LIFECYCLE_CHURNED'
+    END as lifecycle_stage,
+
+    -- channel_preference: Preferred purchase channel (Auto from order history)
+    channel_preference,
+
+    -- product_affinity: Primary brand preference (Auto from sales history)
+    product_affinity,
+
+    -- payment_behavior: Payment pattern (Auto from payment history)
+    payment_behavior,
+
+    -- geo_region: Geographic region (Auto from province)
+    CASE
+        WHEN province IN ('Hồ Chí Minh', 'TP Hồ Chí Minh', 'TP. Hồ Chí Minh', 'HCM', 'Ho Chi Minh') THEN 'GEO_HCMC'
+        WHEN province IN ('Hà Nội', 'Ha Noi', 'Hanoi') THEN 'GEO_HANOI'
+        WHEN province IN ('An Giang', 'Bạc Liêu', 'Bến Tre', 'Cà Mau', 'Cần Thơ', 'Đồng Tháp', 'Hậu Giang', 'Kiên Giang', 'Long An', 'Sóc Trăng', 'Tiền Giang', 'Trà Vinh', 'Vĩnh Long') THEN 'GEO_MEKONG'
+        WHEN province IN ('Đà Nẵng', 'Thừa Thiên Huế', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định', 'Phú Yên', 'Khánh Hòa', 'Ninh Thuận', 'Bình Thuận', 'Quảng Bình', 'Quảng Trị', 'Hà Tĩnh', 'Nghệ An', 'Thanh Hóa') THEN 'GEO_CENTRAL'
+        WHEN province IS NULL OR province = '' THEN 'GEO_OTHER'
+        ELSE 'GEO_OTHER'
+    END as geo_region,
+
+    -- acquisition_source: Customer acquisition channel (Manual - pending Sapo implementation)
+    CAST(NULL AS VARCHAR) as acquisition_source,
+
     -- Demographics
     dob,
     sex,
-    customer_group,
+    customer_group,  -- Keep raw Sapo value for reference
     loyalty_point,
 
     -- CLV & RFM
