@@ -7,7 +7,7 @@
 
 ## Overview
 - **Priority:** P1 — unblocks Phases 2, 3, 4
-- **Status:** pending
+- **Status:** ✅ DONE (commit `5801b31`)
 - **Effort:** ~6h
 - **Summary:** Retrofit every ingestion asset to call `_record_health` with standardized metadata. Extract shared DLT-metrics helper. File-drop assets additionally emit `file_sha256`, `file_mtime`, `rows_fetched` from Excel.
 

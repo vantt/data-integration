@@ -8,7 +8,7 @@
 
 ## Overview
 - **Priority:** P1 — this is the user's "glance once" surface
-- **Status:** pending
+- **Status:** ✅ DONE (commit `5d171fe`)
 - **Effort:** ~3h
 - **Summary:** Dagster schedule at 08:00 Asia/Ho_Chi_Minh runs a job that queries `ingestion_health.duckdb`, composes one Lark interactive card summarizing every source's 24h status, posts via existing `send_lark_card`. No new Lark plumbing — reuse existing webhook.
 

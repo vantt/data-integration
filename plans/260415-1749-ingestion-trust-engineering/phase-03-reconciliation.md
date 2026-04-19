@@ -8,7 +8,7 @@
 
 ## Overview
 - **Priority:** P1 (for file drops) / P2 (for Sapo — gated by research)
-- **Status:** pending
+- **Status:** ✅ DONE (commit `957a599`)
 - **Effort:** ~6h
 - **Summary:** Daily 04:30 asset group `reconciliation` emits one row per source comparing external truth vs warehouse count. Writes drift into `ingestion_health.metadata_json` + a dedicated asset check so drift > threshold → WARN/ERROR.
 

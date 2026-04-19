@@ -1,5 +1,6 @@
 # Plan: Shopee Income Pipeline Integration
 
+**Status:** ✅ COMPLETE (2026-04-19)
 **Created:** 2026-04-09 17:10 (Asia/Saigon)
 **Branch:** main
 **Source:** `app_data/input_source/shopee/Income.*.xlsx` (manual file drop)
@@ -29,6 +30,7 @@ Ingest Shopee **released-income** Excel exports end-to-end so that per-order rev
 | 5 | Dagster asset + reactive sensor | ✅ DONE | `orchestration/assets/shopee_assets.py`, sensor `ingest_filedrop_shopee_sensor`, `dbt.py` upstream keys incl. `src_shopee_order_adjustments` |
 | 6 | E2E verification + Metabase probe | ✅ DONE — all 10 criteria pass after formula fix (SUM(net_settlement)=123,381,631 = Shopee Summary, diff 0) | `plans/reports/verify-260416-2248-shopee-phase6.md` |
 | 7 | Adjustment sheet (promoted from P1 → P0, 2026-04-16) | ✅ DONE | `phase-adjustment-sheet.md` all 8 steps implemented; `int_shopee_order_fees` gained `total_adjustment_amount` + `net_settlement_adjusted` |
+| 8 | P1 `fact_order_economics` | ✅ DONE | See `plans/260411-fact-order-economics/plan.md` — implemented 2026-04-11, shared with MISA |
 
 ## Key decisions (locked in design-spec.md)
 
@@ -55,30 +57,9 @@ Ingest Shopee **released-income** Excel exports end-to-end so that per-order rev
 - Dropping a new `.xlsx` file triggers the sensor → ingestion → dbt → serving within one DAG run.
 - No serving "Empty folder" errors; Metabase can query `int_shopee_order_fees` without lock contention.
 
-## P1 vision: `fact_order_economics` (unified P&L)
+## P1 — Moved to dedicated plan
 
-> **Locked 2026-04-10.** Both Shopee and MISA pipelines deliver `int_` (intermediate enrichment) models at P0. The unified fact is P1 scope.
-
-```
-fact_order_economics (P1, rolling, serving → Metabase):
-  = fact_orders                          ← Sapo order event (base grain: 1 row/order)
-    LEFT JOIN int_shopee_order_fees      ← Shopee platform fees, shipping, vouchers
-              ON order_code
-    LEFT JOIN int_misa_sales_lines       ← MISA COGS per line (aggregate to order level)
-              ON voucher_no
-  → Computes: net_revenue, total_platform_fees, total_cogs,
-              gross_profit, gross_margin_pct, net_settlement
-```
-
-**Why separate fact, not enrich `fact_orders`:**
-- `fact_orders` is in production with existing Metabase dashboards — adding 40+ columns = break risk
-- Not all orders have Shopee data (only ECOM channel) or MISA data → many NULLs
-- Different update cadence: Sapo real-time, Shopee/MISA weekly/ad-hoc
-
-**Pre-requisites for P1:**
-- Both Shopee and MISA P0 pipelines deployed and verified (Phases 1–6)
-- `voucher_no` cross-source join validated: MISA `SON07xxx` ↔ Sapo `order_code`, MISA `2YYMMDD{14alnum}` ↔ Shopee `order_code`
-- Decide: aggregate MISA line-level COGS to order level (SUM) or keep line granularity (change fact grain)
+> P1 `fact_order_economics` has been implemented and is now tracked in: `plans/260411-fact-order-economics/plan.md`
 
 ## Open questions
 

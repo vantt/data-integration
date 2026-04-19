@@ -26,6 +26,15 @@ first_shipment AS (
     FROM {{ ref('std_fulfillments') }}
     WHERE shipped_at IS NOT NULL
     GROUP BY order_id
+),
+
+-- Team membership with SCD2 (for member-based attribution)
+team_members AS (
+    SELECT * FROM {{ ref('stg_team_members') }}
+),
+
+teams AS (
+    SELECT * FROM {{ ref('stg_teams') }}
 )
 
 SELECT
@@ -67,6 +76,10 @@ SELECT
     -- creator_staff_key = người tạo đơn trên Sapo → operational/fallback
     COALESCE(dseller.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as seller_staff_key,
     COALESCE(dcreator.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as creator_staff_key,
+
+    -- Team attribution (see docs/context/team-management.md)
+    -- Uses seller email → team_members (SCD2) → teams
+    COALESCE(t.team_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as team_key,
     {{ dbt_utils.generate_surrogate_key(['status']) }} as status_key,
     coalesce(cast(strftime(created_at, '%Y%m%d') as integer), 19000101) as date_key,
     (extract(hour from created_at) * 100) + extract(minute from created_at) as time_key,
@@ -101,3 +114,8 @@ LEFT JOIN {{ ref('dim_staff') }} dcreator ON {{ dbt_utils.generate_surrogate_key
 LEFT JOIN source_definitions sd ON cast(orders.source_id as varchar) = cast(sd.id as varchar)
 LEFT JOIN valid_locations vl ON cast(orders.location_id as varchar) = vl.location_id
 LEFT JOIN first_shipment fs ON orders.order_id = fs.order_id
+-- Team attribution: seller email → team_members (SCD2) → teams
+LEFT JOIN team_members tm ON lower(dseller.email) = tm.staff_email
+    AND cast(orders.created_at as date) >= tm.effective_from
+    AND (tm.effective_to IS NULL OR cast(orders.created_at as date) <= tm.effective_to)
+LEFT JOIN teams t ON tm.team_code = t.team_code

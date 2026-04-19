@@ -7,7 +7,7 @@
 
 ## Overview
 - **Priority:** P1
-- **Status:** pending
+- **Status:** ✅ DONE (commit `97cee41`)
 - **Effort:** ~5h
 - **Summary:** For each ingestion asset, register 2–3 `@asset_check` functions reading from `ingestion_health.duckdb`. Thresholds driven by a single YAML. First failing signal becomes the user's "glance once" surface in Dagster UI.
 

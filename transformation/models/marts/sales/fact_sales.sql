@@ -18,6 +18,15 @@ source_definitions AS (
 ),
 valid_locations AS (
     SELECT cast(id as varchar) as location_id FROM {{ ref('ref_branch_locations') }}
+),
+
+-- Team membership with SCD2 (for member-based attribution)
+team_members AS (
+    SELECT * FROM {{ ref('stg_team_members') }}
+),
+
+teams AS (
+    SELECT * FROM {{ ref('stg_teams') }}
 )
 
 SELECT
@@ -42,6 +51,9 @@ SELECT
     -- Sales attribution keys (see docs/context/sales-segmentation-guide.md § 3.4)
     COALESCE(dseller.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as seller_staff_key,
     COALESCE(dcreator.staff_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as creator_staff_key,
+
+    -- Team attribution (see docs/context/team-management.md)
+    COALESCE(t.team_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as team_key,
     {{ dbt_utils.generate_surrogate_key(['o.status']) }} as status_key,
     coalesce(cast(strftime(o.created_at, '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD
     (extract(hour from o.created_at) * 100) + extract(minute from o.created_at) as time_key,
@@ -82,3 +94,8 @@ LEFT JOIN {{ ref('dim_staff') }} dseller ON {{ dbt_utils.generate_surrogate_key(
 LEFT JOIN {{ ref('dim_staff') }} dcreator ON {{ dbt_utils.generate_surrogate_key(['o.creator_user_id']) }} = dcreator.staff_key
 LEFT JOIN source_definitions sd ON cast(o.source_id as varchar) = cast(sd.id as varchar)
 LEFT JOIN valid_locations vl ON cast(o.location_id as varchar) = vl.location_id
+-- Team attribution: seller email → team_members (SCD2) → teams
+LEFT JOIN team_members tm ON lower(dseller.email) = tm.staff_email
+    AND cast(o.created_at as date) >= tm.effective_from
+    AND (tm.effective_to IS NULL OR cast(o.created_at as date) <= tm.effective_to)
+LEFT JOIN teams t ON tm.team_code = t.team_code

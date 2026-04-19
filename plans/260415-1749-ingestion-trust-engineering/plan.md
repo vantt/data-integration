@@ -1,7 +1,7 @@
 ---
 title: "Ingestion Trust Engineering"
 description: "Give the user visible, queryable confidence that every ingestion actually moved data — not just ran green."
-status: in-progress
+status: complete
 priority: P1
 effort: ~22h
 branch: main
@@ -24,7 +24,7 @@ Dagster event-log is ephemeral → historical trust metrics MUST live in a dedic
 | 2 | Asset-checks (Dagster-native) | `@asset_check` per ingestion asset, reads health DB | DONE — commit `97cee41` |
 | 3 | Source↔Destination reconciliation | Daily `recon_<src>_daily` assets + drift metric | DONE — commit `957a599` |
 | 4 | Morning Lark digest | 08:00 summary card — 24h volume, trend, drift, freshness | DONE — commit `5d171fe` |
-| 5 | KPI-closure (revenue invariant) | DEFERRED — stub only | deferred |
+| 5 | KPI-closure (revenue invariant) | Daily revenue comparison: Sapo vs warehouse | DONE — 2026-04-19 |
 
 ## Dependency graph
 

@@ -1,50 +1,83 @@
-# Phase 5 — KPI Closure (DEFERRED)
+# Phase 5 — KPI Closure
 
 ## Context Links
 - Parent: [../plan.md](./plan.md)
 - Depends on: Phases 1–4 fully operational.
 
 ## Overview
-- **Priority:** P3 — most powerful trust signal BUT only valuable once Phases 1–4 are stable and Sapo's API surface is validated.
-- **Status:** deferred (explicit user decision 2026-04-15)
-- **Effort:** ~4h (estimate; revisit when unblocked)
-- **Summary:** End-to-end invariant check — "revenue yesterday per Sapo web" ≈ "revenue yesterday per Metabase/serving DB". Single number, single card line, highest-signal trust check possible.
+- **Priority:** P3
+- **Status:** ✅ IMPLEMENTED (2026-04-19)
+- **Effort:** ~4h
+- **Summary:** End-to-end invariant check — "revenue yesterday per Sapo web" ≈ "revenue yesterday per serving DB". Single number, single card line in morning digest.
 
-## Why Deferred
-- Phases 1–4 deliver 80% of trust value without depending on a Sapo revenue-count endpoint.
-- Adding KPI closure before validating the cheaper Sapo count endpoint (Phase 3 research) is premature optimization.
-- User's stance: loose SLAs now, tighten later. Revenue-closure is "tighten later" territory.
+## Implementation Notes
+Implemented with feature flag `KPI_CLOSURE_ENABLED=1` (disabled by default) for controlled rollout.
+Also requires `RECON_LIVE_API=1` for live Sapo API calls.
 
-## Tentative Design (to re-evaluate when activated)
+## Architecture
 
-1. Daily 04:45 asset `kpi_closure_revenue_daily`:
-   - `sapo_revenue_yesterday` from Sapo report endpoint (or sum of `total_price` via orders.json for `created_on` BETWEEN yesterday).
-   - `warehouse_revenue_yesterday` from serving DB fact table (`fct_orders` or equivalent — verify).
-   - Drift = (warehouse - sapo) / sapo.
-2. Write to `ingestion_health` with `asset_key = 'kpi/revenue_daily'`.
-3. Asset check: abs(drift) > 0.5% → ERROR, > 0.1% → WARN.
-4. Add one line to the morning Lark card above the sources table:
-   `💰 Yesterday revenue: sapo=1,234,567 ₫ | warehouse=1,234,500 ₫ | drift=-0.005%`
+```
+┌────────────────────────────────────────────────────────────┐
+│ @schedule health_kpi_closure_schedule (04:45 ICT daily)    │
+│   target = health_kpi_closure_job                          │
+└──────────────────────────┬─────────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│ @asset kpi_revenue_daily (group: kpi_closure)              │
+│   1. Sapo API: paginate orders.json, SUM($.total)          │
+│   2. Serving DB: SUM(net_revenue) from fact_orders         │
+│   3. Compute drift = (warehouse - source) / source         │
+│   4. Write to ingestion_health (asset_key='kpi/revenue_daily')
+└──────────────────────────┬─────────────────────────────────┘
+                           ▼
+┌────────────────────────────────────────────────────────────┐
+│ @asset_check kpi_revenue_drift_check                       │
+│   - drift > 0.5% → ERROR                                   │
+│   - drift > 0.1% → WARN                                    │
+└────────────────────────────────────────────────────────────┘
+```
 
-## Pre-requisites to Un-defer
+## Related Code Files
 
-- Phase 3 research confirms Sapo has a reliable way to fetch total-revenue-in-window OR orders with `total_price` that sum consistently.
-- `fct_orders` (or the chosen warehouse fact) has stable, documented semantics for "yesterday revenue".
-- User explicitly requests activation.
+### Created
+- `orchestration/assets/kpi_closure.py` — daily revenue comparison asset
+- `orchestration/asset_checks/kpi_closure_checks.py` — drift threshold checks
+- `ingestion/src/sapo/api_count.py::sum_revenue_orders()` — Sapo revenue fetcher
 
-## Related Code Files (planned)
-- Create: `orchestration/assets/kpi_closure.py`, check in `orchestration/asset_checks/kpi_closure_checks.py`.
-- Modify: `orchestration/definitions.py`, `orchestration/ops/morning_digest.py` (add revenue line).
+### Modified
+- `orchestration/definitions.py` — registered job, schedule, checks
+- `orchestration/ops/morning_digest.py` — added 💰 Revenue line to Lark card
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `KPI_CLOSURE_ENABLED` | No | `0` | Set to `1` to enable KPI closure |
+| `RECON_LIVE_API` | No | `0` | Set to `1` to enable live Sapo API calls |
 
 ## Todo List
-- [ ] (deferred) activate upon user signal
+- [x] Create `orchestration/assets/kpi_closure.py`
+- [x] Create `orchestration/asset_checks/kpi_closure_checks.py`
+- [x] Add `sum_revenue_orders()` to `ingestion/src/sapo/api_count.py`
+- [x] Update `orchestration/ops/morning_digest.py` with revenue line
+- [x] Register job + schedule in `orchestration/definitions.py`
+- [ ] Enable in production: `KPI_CLOSURE_ENABLED=1 RECON_LIVE_API=1`
+- [ ] Calibration: verify drift < 0.5% over 7+ days before removing flag
 
-## Success Criteria (when activated)
-- One line in morning card showing source-vs-warehouse revenue with drift %.
-- Drift > 0.5% ERROR within 24h of divergence appearing.
+## Success Criteria
+- One line in morning card: `💰 Revenue: ✅ sapo=X ₫ | warehouse=Y ₫ | drift=Z%`
+- Drift > 0.5% triggers ERROR asset check within 24h
+- Drift > 0.1% triggers WARN asset check
 
 ## Risk Assessment
-- Revenue semantics (tax, shipping, refunds, cancelled orders) are notoriously divergent between source & warehouse — expect a long calibration tail. Do NOT start this phase without dedicated session.
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Revenue semantics mismatch (tax, refunds, cancelled) | High | Med | Exclude cancelled/voided; same net_revenue definition |
+| Rate limiting on Sapo API (many pages) | Med | Low | safety limit 200 pages; 429 returns None gracefully |
+| Timezone mismatch (UTC vs ICT) | Med | Med | date_key computed in ICT; API window in UTC |
+| Feature flag forgotten | Low | None | Defaults to disabled; explicit enable required |
 
 ## Next Steps
-- None until pre-requisites met.
+- Enable `KPI_CLOSURE_ENABLED=1` in production
+- Monitor drift values for 7+ days to calibrate thresholds
+- If consistently < 0.1%, consider tightening thresholds

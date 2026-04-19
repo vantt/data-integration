@@ -1,5 +1,6 @@
 # Plan: MISA AMIS Sales Ledger Pipeline Integration
 
+**Status:** ✅ COMPLETE (2026-04-19)
 **Created:** 2026-04-09 17:42 (Asia/Saigon)
 **Branch:** main
 **Source:** `app_data/input_source/misa-amis/So_chi_tiet_ban_hang_*.xlsx` (manual file drop)
@@ -30,8 +31,7 @@ Ingest MISA AMIS **Sổ chi tiết bán hàng** Excel exports end-to-end so that
 | 4 | Serving layer verification | ✅ done | `bootstrap_serving_views.py` auto-discovered; verified in olap.duckdb (2026-04-16) |
 | 5 | Dagster asset + reactive sensor | ✅ done | `misa_amis_assets.py`, `file_drop_sensors.py`, `definitions.py`, upstream keys in `dbt.py` |
 | 6 | E2E verification + reconciliation | ✅ done | All checks pass (2026-04-16): 471 rows, 344 vouchers, revenue/COGS match, dedup OK, serving OK |
-
-*(Phase files not yet authored — created on kickoff of implementation.)*
+| 7 | P1 `fact_order_economics` | ✅ done | See `plans/260411-fact-order-economics/plan.md` — implemented 2026-04-11, shared with Shopee |
 
 ## Key decisions (locked in design-spec.md)
 
@@ -65,22 +65,9 @@ Ingest MISA AMIS **Sổ chi tiết bán hàng** Excel exports end-to-end so that
 - Dropping a new `.xlsx` triggers sensor → ingestion → dbt → serving within one DAG run.
 - No serving "Empty folder" errors; Metabase can query `int_misa_sales_lines` with no lock contention.
 
-## P1 vision: `fact_order_economics` (unified P&L)
+## P1 — Moved to dedicated plan
 
-> **Locked 2026-04-10.** Both Shopee and MISA pipelines deliver `int_` (intermediate enrichment) models at P0. The unified fact is P1 scope. See `plans/260409-1710-shopee-pipeline/plan.md` § "P1 vision" for the full join spec.
-
-```
-fact_order_economics (P1):
-  = fact_orders (Sapo)
-    LEFT JOIN int_shopee_order_fees ON order_code
-    LEFT JOIN int_misa_sales_lines  ON voucher_no  (aggregated to order level)
-  → unified P&L per order
-```
-
-**MISA-specific P1 pre-requisite:** validate `voucher_no` cross-source join coverage:
-- What % of MISA `voucher_no` match a Sapo `order_code` or Shopee `order_code`?
-- Unmatched vouchers = dealer sales not in Sapo? or data-entry format mismatch?
-- Run this query after P0 deploy: `SELECT voucher_source_hint, COUNT(*), COUNT(DISTINCT voucher_no) FROM int_misa_sales_lines GROUP BY 1`
+> P1 `fact_order_economics` has been implemented and is now tracked in: `plans/260411-fact-order-economics/plan.md`
 
 ## Open questions
 
