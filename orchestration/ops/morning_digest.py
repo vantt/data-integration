@@ -41,6 +41,27 @@ KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
 ]
 
 # ---------------------------------------------------------------------------
+# Display config: (vietnamese_label, asset_type, unit_label)
+# asset_type drives how "no new data" is interpreted in the message:
+#   - cursor    : runs every few minutes; "0 dòng mới" is the normal state
+#   - batch     : runs once per day on a schedule
+#   - file_drop : depends on a source file landing (sheet/CSV)
+# unit_label is the noun used for rows (đơn / khách / sản phẩm / dòng …)
+# ---------------------------------------------------------------------------
+ASSET_DISPLAY: dict[str, tuple[str, str, str]] = {
+    "sapo_webhook":   ("Sapo webhook (đơn realtime)",   "cursor",    "đơn"),
+    "sapo_history":   ("Sapo lịch sử (audit log)",       "cursor",    "dòng"),
+    "sapo_orders":    ("Sapo đơn hàng (batch)",          "batch",     "đơn"),
+    "sapo_customers": ("Sapo khách hàng",                "batch",     "khách"),
+    "sapo_products":  ("Sapo sản phẩm",                  "batch",     "sản phẩm"),
+    "sapo_accounts":  ("Sapo tài khoản",                 "batch",     "tài khoản"),
+    "shopee":         ("Shopee — file thu nhập",         "file_drop", "dòng"),
+    "misa":           ("MISA — file bán hàng",           "file_drop", "dòng"),
+    "sheet_targets":  ("Google Sheet — Mục tiêu",        "file_drop", "dòng"),
+    "sheet_spend":    ("Google Sheet — Chi marketing",   "file_drop", "dòng"),
+}
+
+# ---------------------------------------------------------------------------
 # Data model
 # ---------------------------------------------------------------------------
 
@@ -57,6 +78,8 @@ class DigestRow:
     note: Optional[str]            # e.g. "never run", "recon failed"
     last_run_id: Optional[str] = None
     zero_streak: int = 0           # consecutive cursor-advanced-but-0-rows runs
+    runs_24h: int = 0              # how many times asset ran in last 24h
+    last_status: Optional[str] = None  # success | skipped | failed
 
 
 @dataclass
@@ -123,10 +146,13 @@ def classify(row: DigestRow) -> Literal["green", "yellow", "red", "gray"]:
 
 _MAIN_QUERY = """
 WITH recent AS (
+    -- last_ok includes BOTH 'success' (wrote rows) and 'skipped' (ran ok, no new data).
+    -- A skipped run is a healthy outcome for cursor/batch assets when source had nothing new.
     SELECT asset_key,
-           MAX(run_started_at) FILTER (WHERE status = 'success') AS last_ok,
-           MAX(run_started_at)                                    AS last_any,
+           MAX(run_started_at) FILTER (WHERE status IN ('success', 'skipped')) AS last_ok,
+           MAX(run_started_at)                                                 AS last_any,
            SUM(rows_written)   FILTER (WHERE run_started_at >= now() - INTERVAL 1 DAY) AS r_24h,
+           COUNT(*)            FILTER (WHERE run_started_at >= now() - INTERVAL 1 DAY) AS runs_24h,
            LAST(status ORDER BY run_started_at) AS last_status,
            LAST(run_id ORDER BY run_started_at) AS last_run_id
     FROM ingestion_runs
@@ -138,7 +164,7 @@ daily AS (
            SUM(rows_written)                 AS r
     FROM ingestion_runs
     WHERE run_started_at >= now() - INTERVAL 7 DAY
-      AND status = 'success'
+      AND status IN ('success', 'skipped')
     GROUP BY 1, 2
 ),
 med AS (
@@ -146,7 +172,7 @@ med AS (
     FROM daily
     GROUP BY 1
 )
-SELECT r.asset_key, r.last_ok, r.r_24h, m.med7, r.last_status, r.last_run_id
+SELECT r.asset_key, r.last_ok, r.r_24h, m.med7, r.last_status, r.last_run_id, r.runs_24h
 FROM recent r
 LEFT JOIN med m USING (asset_key);
 """
@@ -186,8 +212,8 @@ def _fetch_stats(db_path: str) -> tuple[dict, dict, dict, Optional[KpiData]]:
             from orchestration.asset_checks.health_db import consecutive_empty_with_cursor_move
 
             rows = conn.execute(_MAIN_QUERY).fetchall()
-            for asset_key, last_ok, r_24h, med7, last_status, last_run_id in rows:
-                stats[asset_key] = (last_ok, r_24h, med7, last_status, last_run_id)
+            for asset_key, last_ok, r_24h, med7, last_status, last_run_id, runs_24h in rows:
+                stats[asset_key] = (last_ok, r_24h, med7, last_status, last_run_id, runs_24h)
 
             recon_rows = conn.execute(_RECON_QUERY).fetchall()
             for rk, dp in recon_rows:
@@ -241,7 +267,7 @@ def build_digest_rows(db_path: str) -> tuple[list[DigestRow], Optional[KpiData]]
             rows.append(dr)
             continue
 
-        last_ok, r_24h, med7, last_status, last_run_id = stats[asset_key]
+        last_ok, r_24h, med7, last_status, last_run_id, runs_24h = stats[asset_key]
 
         fresh_age_min: Optional[int] = None
         if last_ok is not None:
@@ -271,6 +297,8 @@ def build_digest_rows(db_path: str) -> tuple[list[DigestRow], Optional[KpiData]]
             note=note,
             last_run_id=last_run_id,
             zero_streak=streak,
+            runs_24h=int(runs_24h or 0),
+            last_status=last_status,
         )
         dr.status = classify(dr)
         rows.append(dr)
@@ -296,34 +324,37 @@ def _run_link(run_id: Optional[str]) -> str:
 
 
 def _recommend(dr: "DigestRow") -> Optional[str]:
-    """Return a short recommended action string, or None."""
+    """Return a short Vietnamese recommended action string, or None."""
     if dr.note == "last run failed":
-        return "→ check logs, re-materialize"
+        return "→ Xem log Dagster, chạy lại asset"
     if dr.zero_streak >= 3:
-        return "→ source may be empty; verify API/file"
+        return "→ Source có thể đang rỗng; kiểm tra API/file nguồn"
     if dr.drift_pct is not None and abs(dr.drift_pct) > 5.0:
-        return "→ run recon diff, check source counts"
+        return "→ Chạy recon diff, đối chiếu số liệu source"
     if dr.fresh_age_min is not None and dr.fresh_age_min > _SLA_HOURS * 60:
-        return "→ check schedule/sensor, re-materialize"
+        return "→ Kiểm tra schedule/sensor, chạy lại asset"
     if dr.zero_streak >= 2:
-        return "→ monitor next run for zero-rows"
+        return "→ Theo dõi lần chạy kế tiếp, nếu vẫn 0 dòng cần kiểm tra source"
     return None
 
 
-def _fmt_age(minutes: Optional[int]) -> str:
+def _fmt_age_vi(minutes: Optional[int]) -> str:
+    """Vietnamese-friendly age string."""
     if minutes is None:
-        return "unknown"
+        return "chưa rõ"
     if minutes < 60:
-        return f"{minutes}m"
+        return f"{minutes} phút"
     hours = minutes // 60
-    return f"{hours}h"
+    if hours < 24:
+        return f"{hours} giờ"
+    days = hours // 24
+    return f"{days} ngày"
 
 
-def _fmt_pct(pct: Optional[float]) -> str:
-    if pct is None:
-        return ""
-    sign = "+" if pct >= 0 else ""
-    return f"{sign}{pct:.0f}%"
+def _fmt_int(n: Optional[int]) -> str:
+    if n is None:
+        return "?"
+    return f"{n:,}".replace(",", ".")  # Vietnamese thousand separator
 
 
 def _format_vnd(amount: Optional[float]) -> str:
@@ -334,12 +365,34 @@ def _format_vnd(amount: Optional[float]) -> str:
 
 
 def compose_card_fields(rows: list[DigestRow], kpi_data: Optional[KpiData] = None) -> tuple[dict, str]:
-    """Return (fields dict for send_lark_card, worst-severity color string)."""
+    """Return (fields dict for send_lark_card, worst-severity color string).
+
+    Field order in the returned dict matters — the Lark card renders fields
+    top-to-bottom in insertion order. Layout:
+      1. 📊 Tổng quan       — summary header (always first when rows exist)
+      2. 💰 Doanh thu hôm qua — KPI line (only when kpi_data present)
+      3. <asset rows>        — one line per known asset
+    """
     fields: dict[str, str] = {}
     worst = "green"
     severity_rank = {"green": 0, "gray": 1, "yellow": 2, "red": 3}
 
-    # KPI revenue line at the top (Phase 5)
+    # ---- Pass 1: format asset rows + tally severity counts -------------------
+    asset_lines: list[tuple[str, str]] = []  # (display_label, formatted_value)
+    counts = {"green": 0, "yellow": 0, "red": 0, "gray": 0}
+
+    for dr in rows:
+        counts[dr.status] = counts.get(dr.status, 0) + 1
+        if severity_rank.get(dr.status, 0) > severity_rank.get(worst, 0):
+            worst = dr.status
+
+        label, asset_type, unit = ASSET_DISPLAY.get(
+            dr.short_name, (dr.short_name, "batch", "dòng")
+        )
+        asset_lines.append((label, _format_row_vi(dr, asset_type, unit)))
+
+    # ---- Pass 2: KPI signal (computes color, doesn't insert yet) -------------
+    kpi_field_value: Optional[str] = None
     if kpi_data is not None and kpi_data.status not in ("disabled", None):
         kpi_drift = kpi_data.drift_pct
         if kpi_drift is not None:
@@ -358,62 +411,126 @@ def compose_card_fields(rows: list[DigestRow], kpi_data: Optional[KpiData] = Non
             src = _format_vnd(kpi_data.source_revenue)
             wh = _format_vnd(kpi_data.warehouse_revenue)
             sign = "+" if drift_display >= 0 else ""
-            fields["💰 Revenue"] = f"{kpi_emoji} sapo={src} ₫ | warehouse={wh} ₫ | drift={sign}{drift_display:.2f}%"
+            kpi_field_value = (
+                f"{kpi_emoji} Sapo: {src} ₫ · Warehouse: {wh} ₫ · "
+                f"lệch: {sign}{drift_display:.2f}%"
+            )
 
             if severity_rank.get(kpi_status, 0) > severity_rank.get(worst, 0):
                 worst = kpi_status
         elif kpi_data.status == "partial_source":
-            fields["💰 Revenue"] = "⬜ Sapo API unavailable (RECON_LIVE_API=0?)"
+            kpi_field_value = "⬜ Không gọi được Sapo API (RECON_LIVE_API=0?)"
         elif kpi_data.status == "partial_warehouse":
-            fields["💰 Revenue"] = "⬜ warehouse unavailable (serving DB issue)"
+            kpi_field_value = "⬜ Không đọc được warehouse (serving DB issue)"
         elif kpi_data.status == "failed":
-            fields["💰 Revenue"] = "❌ both source & warehouse unavailable"
+            kpi_field_value = "❌ Cả Sapo lẫn warehouse đều không truy cập được"
         elif kpi_data.status == "success":
-            # Success but drift=None means source=0 (no orders yesterday)
             src = _format_vnd(kpi_data.source_revenue)
             wh = _format_vnd(kpi_data.warehouse_revenue)
-            fields["💰 Revenue"] = f"✅ sapo={src} ₫ | warehouse={wh} ₫ | drift=N/A (zero base)"
+            kpi_field_value = (
+                f"✅ Sapo: {src} ₫ · Warehouse: {wh} ₫ · lệch: N/A (doanh thu = 0)"
+            )
 
-    for dr in rows:
-        em = _EMOJI[dr.status]
-        run_link = _run_link(dr.last_run_id)
+    # ---- Insert in display order: Summary → KPI → Assets --------------------
+    if asset_lines:
+        total = sum(counts.values())
+        summary_parts = [f"{counts['green']}/{total} khoẻ"]
+        if counts["yellow"]:
+            summary_parts.append(f"{counts['yellow']} cảnh báo")
+        if counts["red"]:
+            summary_parts.append(f"{counts['red']} lỗi")
+        if counts["gray"]:
+            summary_parts.append(f"{counts['gray']} chưa chạy")
+        fields["📊 Tổng quan"] = " · ".join(summary_parts)
 
-        if dr.note == "never run":
-            val = f"{em} never run"
-        elif dr.note == "health DB unreachable":
-            val = f"{em} health DB unreachable"
-        elif dr.drift_pct is not None and abs(dr.drift_pct) > 5.0:
-            sign = "+" if dr.drift_pct >= 0 else ""
-            val = f"{em} RECON DRIFT {sign}{dr.drift_pct:.1f}%"
-        else:
-            rows_str = f"{dr.rows_24h:,}" if dr.rows_24h is not None else "?"
-            med_str = f"{dr.median_7d:,}" if dr.median_7d else "?"
-            pct_str = _fmt_pct(dr.pct_vs_median)
-            age_str = _fmt_age(dr.fresh_age_min)
-            med_part = f"med {med_str}"
-            if pct_str:
-                med_part += f", {pct_str}"
-            val = f"{em} 24h: {rows_str} ({med_part}) · fresh: {age_str}"
-            if dr.drift_pct is not None:
-                sign = "+" if dr.drift_pct >= 0 else ""
-                val += f" · drift: {sign}{dr.drift_pct:.1f}%"
+    if kpi_field_value is not None:
+        fields["💰 Doanh thu hôm qua"] = kpi_field_value
 
-        if dr.zero_streak >= 2:
-            val += f" · ⚠ {dr.zero_streak}x zero-rows"
+    for label, val in asset_lines:
+        fields[label] = val
 
-        if run_link and dr.status in ("yellow", "red"):
-            val += f" · run: {run_link}"
-
-        action = _recommend(dr)
-        if action:
-            val += f"\n{action}"
-
-        fields[dr.short_name] = val
-
-        if severity_rank.get(dr.status, 0) > severity_rank.get(worst, 0):
-            worst = dr.status
+    # Empty input → "no data" state, not "all healthy".
+    if not rows and kpi_field_value is None:
+        worst = "gray"
 
     return fields, _LARK_COLOR.get(worst, "grey")
+
+
+def _format_row_vi(dr: DigestRow, asset_type: str, unit: str) -> str:
+    """Render a single asset row in Vietnamese, contextual to asset_type.
+
+    asset_type:
+      - cursor    : runs every few minutes; "0 dòng mới" is normal — emphasise runs_24h
+      - batch     : runs once a day; emphasise rows ingested vs schedule
+      - file_drop : depends on a file; "0 dòng" usually means file unchanged
+    """
+    em = _EMOJI[dr.status]
+    age = _fmt_age_vi(dr.fresh_age_min)
+
+    # Special states (override standard format) ---------------------------
+    if dr.note == "never run":
+        return f"{em} Chưa từng chạy — kiểm tra job/schedule"
+    if dr.note == "health DB unreachable":
+        return f"{em} Không đọc được DB sức khoẻ"
+    if dr.note == "last run failed":
+        link = _run_link(dr.last_run_id)
+        suffix = f" · run {link}" if link else ""
+        line = f"{em} Lần chạy gần nhất LỖI · {age} trước{suffix}"
+        action = _recommend(dr)
+        return f"{line}\n{action}" if action else line
+
+    # Drift overrides — most actionable signal -----------------------------
+    if dr.drift_pct is not None and abs(dr.drift_pct) > 5.0:
+        sign = "+" if dr.drift_pct >= 0 else ""
+        line = f"{em} Lệch source {sign}{dr.drift_pct:.1f}% (recon) · cập nhật {age} trước"
+        action = _recommend(dr)
+        return f"{line}\n{action}" if action else line
+
+    # Stale beyond SLA -----------------------------------------------------
+    if dr.fresh_age_min is not None and dr.fresh_age_min > _SLA_HOURS * 60:
+        line = f"{em} Quá hạn — {age} chưa cập nhật (SLA {_SLA_HOURS}h)"
+        action = _recommend(dr)
+        return f"{line}\n{action}" if action else line
+
+    # Standard healthy/warning rendering by asset_type --------------------
+    rows_str = _fmt_int(dr.rows_24h)
+    rows_int = dr.rows_24h or 0
+
+    if asset_type == "cursor":
+        # Cursor jobs run every few minutes — "0" is normal. Show frequency.
+        runs = dr.runs_24h
+        if rows_int > 0:
+            line = f"{em} {rows_str} {unit} mới · chạy {runs} lần/24h · cập nhật {age} trước"
+        else:
+            line = f"{em} Không có {unit} mới (đã chạy {runs} lần/24h) · cập nhật {age} trước"
+    elif asset_type == "batch":
+        # Batch jobs run once a day. Show what was ingested.
+        if rows_int > 0:
+            line = f"{em} Batch hôm nay: {rows_str} {unit} mới · cập nhật {age} trước"
+        else:
+            line = f"{em} Batch hôm nay: không có {unit} mới · cập nhật {age} trước"
+    else:  # file_drop
+        if rows_int > 0:
+            line = f"{em} File mới có {rows_str} {unit} · cập nhật {age} trước"
+        else:
+            line = f"{em} File nguồn chưa thay đổi · cập nhật {age} trước"
+
+    # Drift annotation (small, < 5% — doesn't override main message)
+    if dr.drift_pct is not None and abs(dr.drift_pct) <= 5.0:
+        sign = "+" if dr.drift_pct >= 0 else ""
+        line += f" · lệch source: {sign}{dr.drift_pct:.1f}%"
+
+    # Zero-streak warning
+    if dr.zero_streak >= 2:
+        line += f" · ⚠ {dr.zero_streak} lần liên tiếp 0 dòng"
+
+    # Run link for non-green
+    if dr.status in ("yellow", "red") and dr.last_run_id:
+        line += f" · run {_run_link(dr.last_run_id)}"
+
+    # Recommendation
+    action = _recommend(dr)
+    return f"{line}\n{action}" if action else line
 
 
 def _today_ict() -> str:
