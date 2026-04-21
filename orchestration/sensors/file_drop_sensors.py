@@ -6,8 +6,7 @@ fire a RunRequest for the corresponding sync job that cascades:
 
 Design:
   - Cursor = max mtime of files in the drop zone (excluding _archive/).
-  - Cold start: record baseline mtime, do NOT fire.
-  - Subsequent ticks: fire only when max mtime increases (new/modified file).
+  - Fire whenever current_mtime > prev_mtime (includes first tick with files present).
   - Sensor always runs append-only mode; --full-refresh-touched-months is CLI-only.
 """
 from __future__ import annotations
@@ -73,11 +72,6 @@ def ingest_filedrop_shopee_sensor(context: SensorEvaluationContext):
 
     prev_mtime = _parse_cursor(context.cursor)
 
-    # Cold start: record baseline, don't fire
-    if prev_mtime == 0.0:
-        context.update_cursor(json.dumps({"mtime": current_mtime}))
-        return SkipReason(f"Cold start — recorded baseline mtime={current_mtime:.0f}")
-
     if current_mtime <= prev_mtime:
         return SkipReason("No new/modified Shopee files")
 
@@ -105,10 +99,6 @@ def ingest_filedrop_misa_sensor(context: SensorEvaluationContext):
         return SkipReason("No .xlsx files in MISA drop zone")
 
     prev_mtime = _parse_cursor(context.cursor)
-
-    if prev_mtime == 0.0:
-        context.update_cursor(json.dumps({"mtime": current_mtime}))
-        return SkipReason(f"Cold start — recorded baseline mtime={current_mtime:.0f}")
 
     if current_mtime <= prev_mtime:
         return SkipReason("No new/modified MISA files")
