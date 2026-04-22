@@ -1,9 +1,10 @@
 """Morning Lark digest for ingestion health.
 
-Runs at 08:00 Asia/Ho_Chi_Minh daily. Reads ingestion_health.duckdb,
-composes one Lark card summarising 24h volume, 7-day median trend,
-freshness, recon drift, consecutive zero-row streaks, and recommended
-actions per source. Dry-run via DIGEST_DRY_RUN=1.
+Runs at 06:00 Asia/Ho_Chi_Minh daily. Reads ingestion_health.duckdb,
+composes one Lark card summarising yesterday's ingestion volume (ICT
+0h-24h), 7-day median trend, freshness, recon drift, consecutive
+zero-row streaks, and recommended actions per source.
+Dry-run via DIGEST_DRY_RUN=1.
 
 Architecture: @op inside a job (not an asset — no downstream data graph).
 Card delivery failure is caught and logged — never fails the Dagster run.
@@ -78,7 +79,7 @@ class DigestRow:
     note: Optional[str]            # e.g. "never run", "recon failed"
     last_run_id: Optional[str] = None
     zero_streak: int = 0           # consecutive cursor-advanced-but-0-rows runs
-    runs_24h: int = 0              # how many times asset ran in last 24h
+    runs_24h: int = 0              # how many times asset ran yesterday (ICT 0h-24h)
     last_status: Optional[str] = None  # success | skipped | failed
 
 
@@ -145,25 +146,36 @@ def classify(row: DigestRow) -> Literal["green", "yellow", "red", "gray"]:
 # ---------------------------------------------------------------------------
 
 _MAIN_QUERY = """
+-- Reporting window = yesterday's ICT calendar day (0h-24h Asia/Ho_Chi_Minh),
+-- not a rolling 24h window. Digest runs at 06:00 ICT so the card describes
+-- the full previous day. Freshness (last_ok/last_any) stays absolute.
 WITH recent AS (
     -- last_ok includes BOTH 'success' (wrote rows) and 'skipped' (ran ok, no new data).
     -- A skipped run is a healthy outcome for cursor/batch assets when source had nothing new.
     SELECT asset_key,
            MAX(run_started_at) FILTER (WHERE status IN ('success', 'skipped')) AS last_ok,
            MAX(run_started_at)                                                 AS last_any,
-           SUM(rows_written)   FILTER (WHERE run_started_at >= now() - INTERVAL 1 DAY) AS r_24h,
-           COUNT(*)            FILTER (WHERE run_started_at >= now() - INTERVAL 1 DAY) AS runs_24h,
+           SUM(rows_written)   FILTER (
+               WHERE (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
+                   = ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE - 1)
+           )                                                                    AS r_yday,
+           COUNT(*)            FILTER (
+               WHERE (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
+                   = ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE - 1)
+           )                                                                    AS runs_yday,
            LAST(status ORDER BY run_started_at) AS last_status,
            LAST(run_id ORDER BY run_started_at) AS last_run_id
     FROM ingestion_runs
     GROUP BY asset_key
 ),
 daily AS (
+    -- Calendar-day buckets in ICT so median lines up with the yesterday window.
     SELECT asset_key,
-           date_trunc('day', run_started_at) AS d,
-           SUM(rows_written)                 AS r
+           (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE AS d,
+           SUM(rows_written)                                       AS r
     FROM ingestion_runs
-    WHERE run_started_at >= now() - INTERVAL 7 DAY
+    WHERE (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
+        >= ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE - 7)
       AND status IN ('success', 'skipped')
     GROUP BY 1, 2
 ),
@@ -172,7 +184,7 @@ med AS (
     FROM daily
     GROUP BY 1
 )
-SELECT r.asset_key, r.last_ok, r.r_24h, m.med7, r.last_status, r.last_run_id, r.runs_24h
+SELECT r.asset_key, r.last_ok, r.r_yday, m.med7, r.last_status, r.last_run_id, r.runs_yday
 FROM recent r
 LEFT JOIN med m USING (asset_key);
 """
@@ -497,18 +509,18 @@ def _format_row_vi(dr: DigestRow, asset_type: str, unit: str) -> str:
     rows_int = dr.rows_24h or 0
 
     if asset_type == "cursor":
-        # Cursor jobs run every few minutes — "0" is normal. Show frequency.
+        # Cursor jobs run every few minutes — "0" is normal. Show frequency over yesterday.
         runs = dr.runs_24h
         if rows_int > 0:
-            line = f"{em} {rows_str} {unit} mới · chạy {runs} lần/24h · cập nhật {age} trước"
+            line = f"{em} {rows_str} {unit} mới · chạy {runs} lần hôm qua · cập nhật {age} trước"
         else:
-            line = f"{em} Không có {unit} mới (đã chạy {runs} lần/24h) · cập nhật {age} trước"
+            line = f"{em} Không có {unit} mới (đã chạy {runs} lần hôm qua) · cập nhật {age} trước"
     elif asset_type == "batch":
-        # Batch jobs run once a day. Show what was ingested.
+        # Batch jobs run once a day. Show what was ingested yesterday (ICT 0h–24h).
         if rows_int > 0:
-            line = f"{em} Batch hôm nay: {rows_str} {unit} mới · cập nhật {age} trước"
+            line = f"{em} Batch hôm qua: {rows_str} {unit} mới · cập nhật {age} trước"
         else:
-            line = f"{em} Batch hôm nay: không có {unit} mới · cập nhật {age} trước"
+            line = f"{em} Batch hôm qua: không có {unit} mới · cập nhật {age} trước"
     else:  # file_drop
         if rows_int > 0:
             line = f"{em} File mới có {rows_str} {unit} · cập nhật {age} trước"

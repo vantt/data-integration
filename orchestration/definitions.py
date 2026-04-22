@@ -376,10 +376,12 @@ def health_checks_asset_schedule(context):
     return RunRequest(run_key=None)
 
 
-# Morning digest — 08:00 ICT daily, read-only against health DB, not in dbt_rw group.
+# Morning digest — 06:00 ICT daily, read-only against health DB, not in dbt_rw group.
+# Window is yesterday's ICT calendar day (0h-24h), so the digest describes the
+# full previous day by the time stakeholders read it at 6 AM.
 @schedule(
     job=health_report_digest_job,
-    cron_schedule="0 8 * * *",
+    cron_schedule="0 6 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
 def health_report_digest_schedule(context):
