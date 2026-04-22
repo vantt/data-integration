@@ -52,18 +52,42 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
 """
 
 
+# Asia/Ho_Chi_Minh is a fixed UTC+7 offset (no DST), so a plain timezone works.
+_ICT = timezone(timedelta(hours=7))
+
+
+def _yesterday_noon_utc() -> datetime:
+    """Return a UTC datetime that falls inside yesterday's ICT calendar day.
+
+    The digest's SQL filters on ``(run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE``.
+    Noon ICT the day before today-ICT is safely inside that window regardless of
+    when the test executes.
+    """
+    today_ict = datetime.now(_ICT).replace(hour=12, minute=0, second=0, microsecond=0)
+    return (today_ict - timedelta(days=1)).astimezone(timezone.utc)
+
+
 @pytest.fixture()
 def health_db(tmp_path, monkeypatch):
-    """Temp ingestion_health.duckdb seeded with synthetic data."""
+    """Temp ingestion_health.duckdb seeded with synthetic data.
+
+    Rows are anchored to yesterday-noon ICT so they land in the digest's
+    "yesterday 0h-24h ICT" window. The 7d median baseline is built by stepping
+    back one ICT day at a time from that anchor.
+    """
     db_path = str(tmp_path / "ingestion_health.duckdb")
     monkeypatch.setenv("INGESTION_HEALTH_DB", db_path)
 
-    now = datetime.now(timezone.utc)
+    anchor = _yesterday_noon_utc()
+    now_utc = datetime.now(timezone.utc)
+    recent = now_utc - timedelta(hours=1)  # heartbeat so freshness SLA passes
+    recent_recon = now_utc - timedelta(hours=1)
 
     conn = duckdb.connect(db_path)
     conn.execute(_DDL)
 
-    # Asset 1: sapo_orders — healthy, 12_000 rows in last 24h, 7d median ~11_000
+    # Asset 1: sapo_orders — healthy. Yesterday has 11_000 rows; earlier days
+    # increment slightly so the 7d median sits around 11_300 → green.
     for days_ago in range(7):
         conn.execute(
             """INSERT INTO ingestion_runs
@@ -72,19 +96,19 @@ def health_db(tmp_path, monkeypatch):
             [
                 "sapo/sapo_orders_batch_asset",
                 str(uuid.uuid4()),
-                now - timedelta(days=days_ago, hours=1),
+                anchor - timedelta(days=days_ago),
                 11_000 + days_ago * 100,
             ],
         )
-    # Extra recent run for today
+    # Recent heartbeat — keeps last_ok fresh so SLA (12h) doesn't flag red.
     conn.execute(
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
-           VALUES (?, ?, ?, 'success', ?)""",
-        ["sapo/sapo_orders_batch_asset", str(uuid.uuid4()), now - timedelta(hours=2), 12_000],
+           VALUES (?, ?, ?, 'skipped', 0)""",
+        ["sapo/sapo_orders_batch_asset", str(uuid.uuid4()), recent],
     )
 
-    # Asset 2: sapo_customers — 0 rows in last 24h (WARN)
+    # Asset 2: sapo_customers — yesterday=0, median~200 → ratio 0 → yellow.
     for days_ago in range(1, 7):
         conn.execute(
             """INSERT INTO ingestion_runs
@@ -93,19 +117,27 @@ def health_db(tmp_path, monkeypatch):
             [
                 "sapo/sapo_customers_batch_asset",
                 str(uuid.uuid4()),
-                now - timedelta(days=days_ago, hours=1),
+                anchor - timedelta(days=days_ago),
                 200,
             ],
         )
-    # Today: 0 rows
+    # Yesterday: 0 rows.
     conn.execute(
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
            VALUES (?, ?, ?, 'success', ?)""",
-        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), now - timedelta(hours=3), 0],
+        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), anchor, 0],
+    )
+    # Recent heartbeat so SLA doesn't override the "yellow from ratio" check.
+    conn.execute(
+        """INSERT INTO ingestion_runs
+           (asset_key, run_id, run_started_at, status, rows_written)
+           VALUES (?, ?, ?, 'skipped', 0)""",
+        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), recent],
     )
 
-    # Asset 3: misa — recon drift > 5% (ERROR)
+    # Asset 3: misa — recon drift > 5% (ERROR). Recon still uses rolling 24h
+    # so seed a recent timestamp (the morning run before digest fires).
     conn.execute(
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written, metadata_json)
@@ -113,7 +145,7 @@ def health_db(tmp_path, monkeypatch):
         [
             "recon/misa_daily",
             str(uuid.uuid4()),
-            now - timedelta(hours=1),
+            recent_recon,
             0,
             '{"drift_pct": -13.0, "src_count": 8200, "dst_count": 7140}',
         ],
@@ -386,7 +418,7 @@ def test_format_cursor_zero_rows_emphasises_run_count():
     fields, _ = compose_card_fields([row])
     val = fields[_label_for("sapo_webhook")]
     assert "Không có" in val and "đơn" in val
-    assert "347 lần/24h" in val
+    assert "347 lần hôm qua" in val
     assert "✅" in val  # green
 
 
@@ -398,18 +430,18 @@ def test_format_cursor_with_rows_shows_count():
     val = fields[_label_for("sapo_history")]
     assert "1.234" in val  # Vietnamese thousand separator
     assert "dòng mới" in val
-    assert "88 lần/24h" in val
+    assert "88 lần hôm qua" in val
 
 
 def test_format_batch_zero_rows_says_no_new():
-    """Batch with 0 rows should say 'không có ... mới' (not 'Batch hôm nay: 0')."""
+    """Batch with 0 rows should say 'không có ... mới' (not 'Batch hôm qua: 0')."""
     from orchestration.ops.morning_digest import compose_card_fields
     row = _make_with_runs("sapo_orders", "sapo/sapo_orders_batch_asset",
                           rows_24h=0, runs_24h=1, last_status="skipped")
     fields, _ = compose_card_fields([row])
     val = fields[_label_for("sapo_orders")]
     assert "không có đơn mới" in val
-    assert "Batch hôm nay" in val
+    assert "Batch hôm qua" in val
 
 
 def test_format_file_drop_zero_says_unchanged():
@@ -440,7 +472,7 @@ def test_format_small_drift_annotation_under_5_pct():
     row.status = classify(row)  # drift -1.0 stays green (boundary > 1.0 is yellow)
     fields, _ = compose_card_fields([row])
     val = fields[_label_for("sapo_orders")]
-    assert "Batch hôm nay" in val
+    assert "Batch hôm qua" in val
     assert "lệch source: -1.0%" in val
 
 
