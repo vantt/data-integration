@@ -9,6 +9,7 @@ Skill hỗ trợ thêm data source mới vào pipeline end-to-end:
 - "tạo dbt model mới", "thêm src_/stg_/dim_/fact_ model"
 - Hỏi về envelope schema, dedup strategy, incremental dbt, OOM, rolling snapshots, rolling self-refresh views
 - Debug: dlt auth, dbt memory, Dagster asset fail, serving DB lock, empty folder
+- **Ingestion health / monitoring:** "morning digest", "health report", "ingestion_runs", "rows_written=0 bug", "daily health card", "Lark/Slack health alert", "per-source SLA", "recon drift report" → see `ingestion-health-digest.md`
 
 ---
 
@@ -83,6 +84,7 @@ Xem `checklist.md` — thực hiện theo 6 phase.
 | `serving-layer.md` | **Cơ chế serving DB**: Rolling Self-Refresh Views, GC, zero-downtime swap |
 | `supporting-scripts.md` | **Supporting scripts**: generate_serving_db, run_dbt, clean_dlt_state... |
 | `troubleshooting.md` | Symptom → Cause → Fix (dlt + dbt + serving + Dagster) |
+| `ingestion-health-digest.md` | **Health digest pattern**: per-source observability card (schema → recorder → 3-layer row-count fallback → yesterday-ICT window → classification → delivery), plus backfill + composite-PK recovery playbook |
 
 ### Templates
 | File | Mục đích |
@@ -96,6 +98,10 @@ Xem `checklist.md` — thực hiện theo 6 phase.
 | `templates/fact-model-template.sql` | dbt fact_ với surrogate keys + rolling |
 | `templates/sources-yml-template.yml` | dbt sources config (external Parquet glob) |
 | `templates/schema-yml-template.yml` | dbt tests (unique, not_null, relationships) |
+| `templates/ingestion-health-recorder-template.py` | Health DB recorder (`record_run` API + DDL, composite PK `(asset_key, run_id)`) |
+| `templates/dlt-row-count-extractor-template.py` | 3-layer fallback: metric walk → file_id glob → `_dlt_load_id` scan |
+| `templates/ingestion-health-digest-template.py` | Morning digest op: SQL window + classification + asset-type-aware messaging |
+| `templates/backfill-health-rows-written-template.py` | One-shot backfill for fixed extractor (composite-PK-safe UPDATE) |
 
 ---
 

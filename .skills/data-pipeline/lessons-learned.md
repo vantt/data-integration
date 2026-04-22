@@ -1173,3 +1173,96 @@ GROUP BY 1
 3. Downstream code dùng `COALESCE(rows_written, 0)` để handle cả hai case
 
 **Reference:** `orchestration/ops/ingestion_health.py`, `orchestration/ops/dlt_metrics.py`
+
+---
+
+## Ingestion Health Digest (post-mortems 2026-04-22)
+
+Reusable pattern doc: [`ingestion-health-digest.md`](ingestion-health-digest.md).
+
+### L42 — dlt LoadInfo does NOT expose row counts for filesystem destinations
+
+**Context:** `extract_rows_written(info_dict)` walked `load_packages[].jobs[].metrics.items_count` and persisted the result to `ingestion_runs.rows_written`. For ~6 weeks the health digest reported `"Batch hôm qua: không có đơn mới"` for Sapo orders while the actual parquet files had thousands of rows. Stakeholders escalated because the digest had lost credibility.
+
+**Root cause:** current dlt + filesystem destination (plain parquet AND Delta Lake) does not populate `items_count` or `row_count` in either `load_packages[].jobs[].metrics` or top-level `job_metrics[]`. Each job record only carries `file_path`, `file_size`, `table_name`, `file_id`. The metric walk always returned `matched=False` → function returned `0`.
+
+**Symptoms that should have triggered earlier investigation:**
+- Every batch asset shows `rows_written=0` regardless of source state.
+- Recon drift (-1%, -5%) shows source-vs-warehouse mismatch growing over time.
+- `file_size` in the dlt metadata grows daily but `rows_written` stays 0.
+
+**Fix:** 3-layer fallback in `extract_rows_written`:
+
+1. **Metric walk** — future-proof for dlt versions that DO populate `items_count`.
+2. **`file_id` glob** — fast path for plain-parquet destinations where filename = `{file_id}.parquet`. DuckDB `COUNT(*)` on parquet reads the footer only (~ms per file).
+3. **`_dlt_load_id` scan** — Delta Lake rewrites file names (`part-00000-{uuid}-c000.snappy.parquet`) so `file_id` doesn't match on disk. Every dlt row still carries `_dlt_load_id`, so we glob all parquets under `{dataset}/{table}/` and `WHERE _dlt_load_id IN (loads_ids)`.
+
+**Rule:**
+1. Never trust `items_count` from dlt metadata — always have a fallback.
+2. If your serving layer is parquet or Delta, `_dlt_load_id` filter is the canonical way to derive accurate row counts.
+3. Monitor the ratio of `rows_written=0` runs per asset. Persistent zeros = extractor bug, NOT source silence.
+
+**Reference:** `orchestration/ops/dlt_metrics.py`, `ingestion-health-digest.md` → "Row count extraction"
+
+---
+
+### L43 — Digest window must be business-TZ calendar day, not rolling 24h
+
+**Context:** The digest fired at 08:00 ICT with SQL `WHERE run_started_at >= now() - INTERVAL 1 DAY`. Stakeholder complained: "bạn báo không có đơn hôm nay, nhưng tôi thấy đơn hôm qua rõ ràng được cập nhật." The label said "Batch hôm nay" (today) — but the rolling window covered 08:00 yesterday → 08:00 today, straddling two business days.
+
+**Root cause:** rolling-24h semantics != "yesterday" semantics. At 08:00 the window misses the day's last 16 hours of yesterday's data and includes the first 8 of today. The label "Batch hôm nay" was plain wrong — people read "hôm qua" / "yesterday" as a complete calendar day in their business TZ.
+
+**Fix:** anchor on business-TZ calendar day. Schedule fires at 06:00 local time AFTER overnight recon/KPI finish, so the digest describes the full previous day:
+
+```sql
+WHERE (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
+    = ((now()          AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE - 1)
+```
+
+DuckDB ICU extension is auto-loaded and supports named IANA timezones. `AT TIME ZONE` applied to TIMESTAMPTZ returns wall-clock TIMESTAMP in that TZ; cast to DATE for calendar day. `DATE - 1` returns yesterday as DATE.
+
+Labels also updated: "Batch hôm nay" → "Batch hôm qua", "X lần/24h" → "X lần hôm qua".
+
+**Rule:**
+1. Freshness (`last_ok` age) stays absolute — no window.
+2. Volume/count metrics window by **calendar day in business TZ**, not rolling.
+3. Schedule after all overnight jobs complete: recon → KPI closure → digest.
+4. Labels must match the window semantics. "Today" when you report yesterday's data is worse than "no digest at all".
+
+**Reference:** `orchestration/ops/morning_digest.py` → `_MAIN_QUERY`, `orchestration/definitions.py` → `health_report_digest_schedule`
+
+---
+
+### L44 — `ingestion_runs` composite PK: always filter BOTH asset_key AND run_id
+
+**Context:** Wrote a backfill script to replay historical `load_info` through the fixed `extract_rows_written`. Used `UPDATE ingestion_runs SET rows_written = ? WHERE run_id = ?`. Script ran against 2899 rows, reported "175 updated". Minutes later discovered that shopee/misa/accounts/products/sheets all showed identical row counts to sapo_orders_batch for the same date. Data was corrupted across 182 rows. Had to restore from the daily backup at `app_data/backups/20260422-060050/…/ingestion_health.duckdb`.
+
+**Root cause:** `ingestion_runs` PK is composite `(asset_key, run_id)`. Dagster fans out one `run_id` across every asset in the same scheduled job — the 03:00 daily batch writes 7 rows (orders + customers + products + accounts + shopee + misa + sheets), all sharing the same `run_id`, distinguished ONLY by `asset_key`. The UPDATE matched all 7 and overwrote siblings with the orders count.
+
+**Fix:** every DML against the table MUST filter on BOTH columns:
+
+```sql
+-- ✅ Correct
+UPDATE ingestion_runs SET rows_written = ?
+WHERE asset_key = ? AND run_id = ?;
+
+-- ❌ Silent data corruption
+UPDATE ingestion_runs SET rows_written = ? WHERE run_id = ?;
+```
+
+Same rule applies to DELETE, MERGE, and any subquery that uses `run_id` alone to identify "this row".
+
+**Recovery playbook** (if this happens again):
+1. Stop all write paths to the health DB (pause Dagster if needed).
+2. `ATTACH '{backup}' AS bak (READ_ONLY)` from the daily backup.
+3. `UPDATE live SET rows_written = bak.rows_written FROM bak WHERE live.asset_key = bak.asset_key AND live.run_id = bak.run_id` restores the intersection.
+4. Verify `COALESCE(live, -1) != COALESCE(bak, -1)` is 0 after restore.
+5. Fix the bug.
+6. Re-run the corrected backfill.
+
+**Rule:**
+1. Include the health DB in daily backup rotation. **The 2026-04-22 recovery would have been impossible without it.**
+2. Code review checklist: any UPDATE/DELETE on `ingestion_runs` — is the WHERE composite?
+3. When writing ad-hoc SQL against any table whose PK you don't know, query `information_schema.table_constraints` first.
+
+**Reference:** `scripts/maintenance/backfill_ingestion_health_rows_written.py`, memory entry `feedback_ingestion_runs_composite_pk.md`
