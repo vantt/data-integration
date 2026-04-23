@@ -80,6 +80,42 @@ def _cleanup_orphans(instance) -> tuple[int, int]:
     return db_removed, storage_removed
 
 
+def _cleanup_dbt_target_dirs(keep_days: int, log) -> tuple[int, float]:
+    """Remove old sapo_dbt_assets-* directories from transformation/target/."""
+    target_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+        'transformation', 'target'
+    )
+    if not os.path.isdir(target_dir):
+        return 0, 0
+
+    cutoff_ts = datetime.now().timestamp() - (keep_days * 86400)
+    removed_count = 0
+    freed_bytes = 0
+
+    for name in os.listdir(target_dir):
+        if not name.startswith('sapo_dbt_assets-'):
+            continue
+        dir_path = os.path.join(target_dir, name)
+        if not os.path.isdir(dir_path):
+            continue
+        try:
+            mtime = os.path.getmtime(dir_path)
+            if mtime < cutoff_ts:
+                dir_size = sum(
+                    os.path.getsize(os.path.join(dp, f))
+                    for dp, _, files in os.walk(dir_path)
+                    for f in files
+                )
+                shutil.rmtree(dir_path, ignore_errors=True)
+                removed_count += 1
+                freed_bytes += dir_size
+        except OSError:
+            pass
+
+    return removed_count, freed_bytes / (1024 * 1024)
+
+
 def _vacuum_index_db(instance, log) -> tuple[float, float]:
     """VACUUM the per-run event log index to reclaim space after mass deletion."""
     run_dir = _get_run_db_dir(instance)
@@ -129,12 +165,17 @@ def maintain_purge_runs_op(context) -> dict:
         context.log.info("No runs to purge")
         orphan_db, orphan_storage = _cleanup_orphans(context.instance)
         size_before, size_after = _vacuum_index_db(context.instance, context.log)
+        dbt_dirs_removed, dbt_mb_freed = _cleanup_dbt_target_dirs(keep_days, context.log)
+        if dbt_dirs_removed:
+            context.log.info(f"Cleaned {dbt_dirs_removed} dbt target dirs, freed {dbt_mb_freed:.1f} MB")
         return {
             "deleted_runs": 0,
             "db_files_removed": orphan_db,
             "storage_dirs_removed": orphan_storage,
             "index_mb_before": size_before,
             "index_mb_after": size_after,
+            "dbt_dirs_removed": dbt_dirs_removed,
+            "dbt_mb_freed": dbt_mb_freed,
         }
 
     context.log.info(f"Found {count} runs to delete")
@@ -171,12 +212,18 @@ def maintain_purge_runs_op(context) -> dict:
     size_before, size_after = _vacuum_index_db(context.instance, context.log)
     context.log.info(f"VACUUM index.db: {size_before:.1f} MB → {size_after:.1f} MB")
 
+    dbt_dirs_removed, dbt_mb_freed = _cleanup_dbt_target_dirs(keep_days, context.log)
+    if dbt_dirs_removed:
+        context.log.info(f"Cleaned {dbt_dirs_removed} dbt target dirs, freed {dbt_mb_freed:.1f} MB")
+
     return {
         "deleted_runs": deleted_count,
         "db_files_removed": db_files_removed,
         "storage_dirs_removed": storage_dirs_removed,
         "index_mb_before": size_before,
         "index_mb_after": size_after,
+        "dbt_dirs_removed": dbt_dirs_removed,
+        "dbt_mb_freed": dbt_mb_freed,
     }
 
 
