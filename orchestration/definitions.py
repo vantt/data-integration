@@ -26,6 +26,7 @@ from dagster_dbt import DbtCliResource
 from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
+from orchestration.ops.purge_runs import maintain_purge_runs_job
 from orchestration.sensors.failure_alerting import health_alert_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
@@ -391,6 +392,22 @@ def health_report_digest_schedule(context):
     return RunRequest(run_key=None)
 
 
+# 05:30 daily — purge old Dagster runs to reclaim disk space.
+# Runs 30 min before backup (06:00) so backup captures a clean state.
+# Keeps PURGE_KEEP_DAYS (default: 1) days of history.
+# Not in dbt_rw concurrency group: operates on Dagster's internal storage only.
+@schedule(
+    job=maintain_purge_runs_job,
+    cron_schedule="30 5 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def maintain_purge_runs_schedule(context):
+    active = _has_active_run(context, "maintain_purge_runs_job")
+    if active:
+        return SkipReason(f"purge_runs: previous run still active ({active[:8]})")
+    return RunRequest(run_key=None)
+
+
 # ------------------------------------------------------------------------------
 # RESOURCES & DEFINITIONS
 # ------------------------------------------------------------------------------
@@ -425,6 +442,7 @@ defs = Definitions(
         health_report_digest_job,
         # maintain_*
         maintain_backup_platform_job,
+        maintain_purge_runs_job,
     ],
     schedules=[
         # ingest_*
@@ -439,6 +457,7 @@ defs = Definitions(
         health_report_digest_schedule,
         # maintain_*
         maintain_backup_platform_schedule,
+        maintain_purge_runs_schedule,
     ],
     sensors=[
         # ingest_*
