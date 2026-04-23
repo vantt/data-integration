@@ -49,7 +49,9 @@
       "Bash(export METABASE_API_KEY=\"mb_buAQN9X7jRNYeum74PRgIJIirdmXM9hy2IDLDJtAmmA=\")",
       "Bash(export METABASE_DB_NAME=\"Sapo\")",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(mv .claude/skills/domain-knowledge-doc .claude/skills/doc-domain-knowledge)",
+      "Bash(mv .claude/skills/workflow-documentation .claude/skills/doc-workflow)"
     ]
   }
 }

@@ -18,7 +18,8 @@ Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past30days"
+  "default": "past30days",
+  "field_id": 287
 }
 ```
 
@@ -27,7 +28,8 @@ Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich
 ```json metabase-filter
 {
   "slug": "order_type",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 288
 }
 ```
 
@@ -37,7 +39,7 @@ Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich
 
 #### 📝 Text: Overview Heading
 
-Monitor chi phi ban hang Shopee — ty le tien thuc nhan sau phi san
+## Monitor chi phi ban hang Shopee — ty le tien thuc nhan sau phi san
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -50,13 +52,13 @@ Hero metric — % doanh thu thuc nhan sau khi tru het phi Shopee. Gauge voi 3 vu
 ```sql
 SELECT
     ROUND(
-        SUM(net_settlement) * 100.0 / NULLIF(SUM(gross_revenue), 0),
-        1
+        SUM(net_settlement) * 1.0 / NULLIF(SUM(gross_revenue), 0),
+        4
     ) AS "Settlement Margin %"
 FROM int_shopee_order_fees
 WHERE payout_released_at IS NOT NULL
-  [[AND payout_released_at >= {{date_range}}]]
-  [[AND order_type = {{order_type}}]]
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 ```
 
 ```json metabase-viz
@@ -64,15 +66,14 @@ WHERE payout_released_at IS NOT NULL
   "display": "gauge",
   "visualization_settings": {
     "gauge.segments": [
-      { "min": 0,  "max": 60, "color": "#EF8C8C", "label": "Nguy hiem (<60%)" },
-      { "min": 60, "max": 75, "color": "#F9D45C", "label": "Can theo doi (60-75%)" },
-      { "min": 75, "max": 100, "color": "#84BB4C", "label": "On track (>75%)" }
+      { "min": 0,    "max": 0.6,  "color": "#EF8C8C", "label": "Nguy hiem (<60%)" },
+      { "min": 0.6,  "max": 0.75, "color": "#F9D45C", "label": "Can theo doi (60-75%)" },
+      { "min": 0.75, "max": 1.5,  "color": "#84BB4C", "label": "On track (>75%)" }
     ],
     "column_settings": {
       "Settlement Margin %": {
         "number_style": "percent",
-        "decimals": 1,
-        "scale": 0.01
+        "decimals": 1
       }
     }
   }
@@ -85,59 +86,20 @@ WHERE payout_released_at IS NOT NULL
 
 #### Question: Gross Revenue
 
-Supporting KPI — tong doanh thu Shopee ky nay vs ky truoc.
+Supporting KPI — tong doanh thu Shopee trong ky loc.
 
 ```sql
-WITH
-this_period AS (
-    SELECT COALESCE(SUM(gross_revenue), 0) AS val
-    FROM int_shopee_order_fees
-    WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
-      [[AND order_type = {{order_type}}]]
-),
-prev_period AS (
-    SELECT COALESCE(SUM(gross_revenue), 0) AS val
-    FROM int_shopee_order_fees
-    WHERE payout_released_at IS NOT NULL
-      AND payout_released_at >= (
-            CAST(STRFTIME(
-                (SELECT MIN(payout_released_at) FROM int_shopee_order_fees
-                 WHERE payout_released_at IS NOT NULL
-                   [[AND payout_released_at >= {{date_range}}]]
-                ),
-                '%Y-%m-%d'
-            ) AS DATE) - INTERVAL '30 days'
-          )
-      AND payout_released_at < (
-            CAST(STRFTIME(
-                (SELECT MIN(payout_released_at) FROM int_shopee_order_fees
-                 WHERE payout_released_at IS NOT NULL
-                   [[AND payout_released_at >= {{date_range}}]]
-                ),
-                '%Y-%m-%d'
-            ) AS DATE)
-          )
-      [[AND order_type = {{order_type}}]]
-)
-SELECT
-    t.val AS "Gross Revenue",
-    p.val AS "Ky truoc"
-FROM this_period t, prev_period p
+SELECT COALESCE(SUM(gross_revenue), 0) AS "Gross Revenue"
+FROM int_shopee_order_fees
+WHERE payout_released_at IS NOT NULL
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Gross Revenue": {
         "number_style": "currency",
@@ -156,59 +118,20 @@ FROM this_period t, prev_period p
 
 #### Question: Net Settlement
 
-Supporting KPI — tien thuc nhan tu Shopee ky nay vs ky truoc.
+Supporting KPI — tien thuc nhan tu Shopee trong ky loc.
 
 ```sql
-WITH
-this_period AS (
-    SELECT COALESCE(SUM(net_settlement), 0) AS val
-    FROM int_shopee_order_fees
-    WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
-      [[AND order_type = {{order_type}}]]
-),
-prev_period AS (
-    SELECT COALESCE(SUM(net_settlement), 0) AS val
-    FROM int_shopee_order_fees
-    WHERE payout_released_at IS NOT NULL
-      AND payout_released_at >= (
-            CAST(STRFTIME(
-                (SELECT MIN(payout_released_at) FROM int_shopee_order_fees
-                 WHERE payout_released_at IS NOT NULL
-                   [[AND payout_released_at >= {{date_range}}]]
-                ),
-                '%Y-%m-%d'
-            ) AS DATE) - INTERVAL '30 days'
-          )
-      AND payout_released_at < (
-            CAST(STRFTIME(
-                (SELECT MIN(payout_released_at) FROM int_shopee_order_fees
-                 WHERE payout_released_at IS NOT NULL
-                   [[AND payout_released_at >= {{date_range}}]]
-                ),
-                '%Y-%m-%d'
-            ) AS DATE)
-          )
-      [[AND order_type = {{order_type}}]]
-)
-SELECT
-    t.val AS "Net Settlement",
-    p.val AS "Ky truoc"
-FROM this_period t, prev_period p
+SELECT COALESCE(SUM(net_settlement), 0) AS "Net Settlement"
+FROM int_shopee_order_fees
+WHERE payout_released_at IS NOT NULL
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Net Settlement": {
         "number_style": "currency",
@@ -227,84 +150,34 @@ FROM this_period t, prev_period p
 
 #### Question: Platform Fee Rate %
 
-Supporting KPI — tong phi san / gross revenue ky nay vs ky truoc.
+Supporting KPI — tong phi san / gross revenue trong ky loc.
 
 ```sql
-WITH
-this_period AS (
-    SELECT
-        ROUND(
-            (
-                COALESCE(SUM(ABS(service_fee)), 0)
-                + COALESCE(SUM(ABS(payment_fee)), 0)
-                + COALESCE(SUM(ABS(fixed_fee)), 0)
-                + COALESCE(SUM(ABS(infrastructure_fee)), 0)
-                + COALESCE(SUM(ABS(voucher_xtra_fee)), 0)
-            ) * 100.0 / NULLIF(SUM(gross_revenue), 0),
-            1
-        ) AS val
-    FROM int_shopee_order_fees
-    WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
-      [[AND order_type = {{order_type}}]]
-),
-prev_period AS (
-    SELECT
-        ROUND(
-            (
-                COALESCE(SUM(ABS(service_fee)), 0)
-                + COALESCE(SUM(ABS(payment_fee)), 0)
-                + COALESCE(SUM(ABS(fixed_fee)), 0)
-                + COALESCE(SUM(ABS(infrastructure_fee)), 0)
-                + COALESCE(SUM(ABS(voucher_xtra_fee)), 0)
-            ) * 100.0 / NULLIF(SUM(gross_revenue), 0),
-            1
-        ) AS val
-    FROM int_shopee_order_fees
-    WHERE payout_released_at IS NOT NULL
-      AND payout_released_at >= (
-            CAST(STRFTIME(
-                (SELECT MIN(payout_released_at) FROM int_shopee_order_fees
-                 WHERE payout_released_at IS NOT NULL
-                   [[AND payout_released_at >= {{date_range}}]]
-                ),
-                '%Y-%m-%d'
-            ) AS DATE) - INTERVAL '30 days'
-          )
-      AND payout_released_at < (
-            CAST(STRFTIME(
-                (SELECT MIN(payout_released_at) FROM int_shopee_order_fees
-                 WHERE payout_released_at IS NOT NULL
-                   [[AND payout_released_at >= {{date_range}}]]
-                ),
-                '%Y-%m-%d'
-            ) AS DATE)
-          )
-      [[AND order_type = {{order_type}}]]
-)
 SELECT
-    t.val AS "Platform Fee Rate %",
-    p.val AS "Ky truoc"
-FROM this_period t, prev_period p
+    ROUND(
+        (
+            COALESCE(SUM(ABS(service_fee)), 0)
+            + COALESCE(SUM(ABS(payment_fee)), 0)
+            + COALESCE(SUM(ABS(fixed_fee)), 0)
+            + COALESCE(SUM(ABS(infrastructure_fee)), 0)
+            + COALESCE(SUM(ABS(voucher_xtra_fee)), 0)
+        ) * 1.0 / NULLIF(SUM(gross_revenue), 0),
+        4
+    ) AS "Platform Fee Rate %"
+FROM int_shopee_order_fees
+WHERE payout_released_at IS NOT NULL
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 ```
 
 ```json metabase-viz
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Platform Fee Rate %": {
         "number_style": "percent",
-        "decimals": 1,
-        "scale": 0.01
+        "decimals": 1
       }
     }
   }
@@ -315,9 +188,36 @@ FROM this_period t, prev_period p
 { "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
+#### Question: Chu ky bao cao
+
+Hien thi pham vi ngay payout thuc te trong ky dang xem — tu ngay den ngay.
+
+```sql
+SELECT
+    STRFTIME(MIN(payout_released_at), '%d/%m/%Y') AS "Tu ngay",
+    STRFTIME(MAX(payout_released_at), '%d/%m/%Y') AS "Den ngay"
+FROM int_shopee_order_fees
+WHERE payout_released_at IS NOT NULL
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.cell_height": "compact"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 4, "col": 6, "size_x": 12, "size_y": 2 }
+```
+
 #### 📝 Text: Fee Breakdown Heading
 
-Phan tich co cau phi — loai phi nao chiem nhieu nhat?
+## Phan tich co cau phi — loai phi nao chiem nhieu nhat?
 
 ```json metabase-pos
 { "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
@@ -332,19 +232,19 @@ SELECT
     "Loai phi",
     "Gia tri phi (VND)"
 FROM (
-    SELECT 'Service Fee'       AS "Loai phi", COALESCE(SUM(ABS(service_fee)), 0)        AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]
+    SELECT 'Service Fee'       AS "Loai phi", COALESCE(SUM(ABS(service_fee)), 0)        AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]
     UNION ALL
-    SELECT 'Payment Fee'       AS "Loai phi", COALESCE(SUM(ABS(payment_fee)), 0)         AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]
+    SELECT 'Payment Fee'       AS "Loai phi", COALESCE(SUM(ABS(payment_fee)), 0)         AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]
     UNION ALL
-    SELECT 'Fixed Fee'         AS "Loai phi", COALESCE(SUM(ABS(fixed_fee)), 0)           AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]
+    SELECT 'Fixed Fee'         AS "Loai phi", COALESCE(SUM(ABS(fixed_fee)), 0)           AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]
     UNION ALL
-    SELECT 'Infrastructure Fee' AS "Loai phi", COALESCE(SUM(ABS(infrastructure_fee)), 0) AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]
+    SELECT 'Infrastructure Fee' AS "Loai phi", COALESCE(SUM(ABS(infrastructure_fee)), 0) AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]
     UNION ALL
-    SELECT 'Voucher Xtra Fee'  AS "Loai phi", COALESCE(SUM(ABS(voucher_xtra_fee)), 0)   AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]
+    SELECT 'Voucher Xtra Fee'  AS "Loai phi", COALESCE(SUM(ABS(voucher_xtra_fee)), 0)   AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]
     UNION ALL
-    SELECT 'VAT Tax'           AS "Loai phi", COALESCE(SUM(ABS(vat_tax)), 0)             AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]
+    SELECT 'VAT Tax'           AS "Loai phi", COALESCE(SUM(ABS(vat_tax)), 0)             AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]
     UNION ALL
-    SELECT 'Personal Income Tax' AS "Loai phi", COALESCE(SUM(ABS(personal_income_tax)), 0) AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]
+    SELECT 'Personal Income Tax' AS "Loai phi", COALESCE(SUM(ABS(personal_income_tax)), 0) AS "Gia tri phi (VND)" FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]
 ) fee_summary
 ORDER BY "Gia tri phi (VND)" DESC
 ```
@@ -384,14 +284,14 @@ SELECT
     "Gia tri (VND)"
 FROM (
     VALUES
-        (1, 'Gross Revenue',       (SELECT COALESCE(SUM(gross_revenue), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]])),
-        (2, 'Service Fee',         (SELECT -COALESCE(SUM(ABS(service_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]])),
-        (3, 'Payment Fee',         (SELECT -COALESCE(SUM(ABS(payment_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]])),
-        (4, 'Fixed Fee',           (SELECT -COALESCE(SUM(ABS(fixed_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]])),
-        (5, 'Infrastructure Fee',  (SELECT -COALESCE(SUM(ABS(infrastructure_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]])),
-        (6, 'Voucher Xtra Fee',    (SELECT -COALESCE(SUM(ABS(voucher_xtra_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]])),
-        (7, 'Taxes',               (SELECT -(COALESCE(SUM(ABS(vat_tax)), 0) + COALESCE(SUM(ABS(personal_income_tax)), 0)) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]])),
-        (8, 'Net Settlement',      (SELECT COALESCE(SUM(net_settlement), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND payout_released_at >= {{date_range}}]] [[AND order_type = {{order_type}}]]))
+        (1, 'Gross Revenue',       (SELECT COALESCE(SUM(gross_revenue), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]])),
+        (2, 'Service Fee',         (SELECT -COALESCE(SUM(ABS(service_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]])),
+        (3, 'Payment Fee',         (SELECT -COALESCE(SUM(ABS(payment_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]])),
+        (4, 'Fixed Fee',           (SELECT -COALESCE(SUM(ABS(fixed_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]])),
+        (5, 'Infrastructure Fee',  (SELECT -COALESCE(SUM(ABS(infrastructure_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]])),
+        (6, 'Voucher Xtra Fee',    (SELECT -COALESCE(SUM(ABS(voucher_xtra_fee)), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]])),
+        (7, 'Taxes',               (SELECT -(COALESCE(SUM(ABS(vat_tax)), 0) + COALESCE(SUM(ABS(personal_income_tax)), 0)) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]])),
+        (8, 'Net Settlement',      (SELECT COALESCE(SUM(net_settlement), 0) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL [[AND {{date_range}}]] [[AND {{order_type}}]]))
 ) AS waterfall_data("Thu tu", "Buoc", "Gia tri (VND)")
 ORDER BY "Thu tu"
 ```
@@ -429,7 +329,7 @@ ORDER BY "Thu tu"
 
 #### 📝 Text: Trend Heading
 
-Xu huong settlement — margin dang cai thien hay xau di?
+## Xu huong settlement — margin dang cai thien hay xau di?
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -443,13 +343,13 @@ Settlement margin % theo tung thang — line chart voi reference line 75%.
 SELECT
     date_trunc('month', payout_released_at) AS "Thang",
     ROUND(
-        SUM(net_settlement) * 100.0 / NULLIF(SUM(gross_revenue), 0),
-        1
+        SUM(net_settlement) * 1.0 / NULLIF(SUM(gross_revenue), 0),
+        4
     ) AS "Settlement Margin %"
 FROM int_shopee_order_fees
 WHERE payout_released_at IS NOT NULL
-  [[AND payout_released_at >= {{date_range}}]]
-  [[AND order_type = {{order_type}}]]
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 GROUP BY date_trunc('month', payout_released_at)
 ORDER BY "Thang"
 ```
@@ -462,7 +362,7 @@ ORDER BY "Thang"
     "graph.metrics": ["Settlement Margin %"],
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "Settlement Margin (%)",
-    "graph.goal_value": 75,
+    "graph.goal_value": 0.75,
     "graph.show_goal": true,
     "graph.goal_label": "Muc tieu 75%",
     "series_settings": {
@@ -471,8 +371,7 @@ ORDER BY "Thang"
     "column_settings": {
       "Settlement Margin %": {
         "number_style": "percent",
-        "decimals": 1,
-        "scale": 0.01
+        "decimals": 1
       }
     }
   }
@@ -497,8 +396,8 @@ SELECT
     COALESCE(SUM(ABS(voucher_xtra_fee)), 0)     AS "Voucher Xtra Fee"
 FROM int_shopee_order_fees
 WHERE payout_released_at IS NOT NULL
-  [[AND payout_released_at >= {{date_range}}]]
-  [[AND order_type = {{order_type}}]]
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 GROUP BY date_trunc('month', payout_released_at)
 ORDER BY "Thang"
 ```
@@ -536,7 +435,7 @@ ORDER BY "Thang"
 
 #### 📝 Text: Low Settlement Orders Heading
 
-Chi tiet don hang — don nao co settlement thap nhat?
+## Chi tiet don hang — don nao co settlement thap nhat?
 
 ```json metabase-pos
 { "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
@@ -564,13 +463,13 @@ SELECT
         + COALESCE(ABS(personal_income_tax), 0)                    AS "Tong phi (VND)",
     net_settlement                                                  AS "Net Settlement (VND)",
     ROUND(
-        net_settlement * 100.0 / NULLIF(gross_revenue, 0),
-        1
+        net_settlement * 1.0 / NULLIF(gross_revenue, 0),
+        4
     )                                                               AS "Settlement %"
 FROM int_shopee_order_fees
 WHERE payout_released_at IS NOT NULL
-  [[AND payout_released_at >= {{date_range}}]]
-  [[AND order_type = {{order_type}}]]
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 ORDER BY "Settlement %" ASC NULLS LAST
 LIMIT 20
 ```
@@ -585,7 +484,7 @@ LIMIT 20
         "columns": ["Settlement %"],
         "type": "single",
         "operator": "<",
-        "value": 50,
+        "value": 0.5,
         "color": "#EF8C8C",
         "highlight_row": true
       }
@@ -611,8 +510,7 @@ LIMIT 20
       },
       "Settlement %": {
         "number_style": "percent",
-        "decimals": 1,
-        "scale": 0.01
+        "decimals": 1
       }
     }
   }
@@ -625,7 +523,7 @@ LIMIT 20
 
 #### 📝 Text: Product Settlement Heading
 
-Hieu qua theo san pham — san pham nao bi mat margin nhieu nhat tren Shopee?
+## Hieu qua theo san pham — san pham nao bi mat margin nhieu nhat tren Shopee?
 
 ```json metabase-pos
 { "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
@@ -642,8 +540,8 @@ SELECT
     COALESCE(SUM(fees.gross_revenue), 0)                                        AS "Gross Revenue (VND)",
     COALESCE(SUM(fees.net_settlement), 0)                                       AS "Net Settlement (VND)",
     ROUND(
-        SUM(fees.net_settlement) * 100.0 / NULLIF(SUM(fees.gross_revenue), 0),
-        1
+        SUM(fees.net_settlement) * 1.0 / NULLIF(SUM(fees.gross_revenue), 0),
+        4
     )                                                                           AS "Settlement Margin %",
     COALESCE(SUM(ABS(fees.service_fee)), 0)
         + COALESCE(SUM(ABS(fees.payment_fee)), 0)
@@ -653,8 +551,8 @@ SELECT
 FROM int_shopee_order_items items
 INNER JOIN int_shopee_order_fees fees ON items.order_code = fees.order_code
 WHERE fees.payout_released_at IS NOT NULL
-  [[AND fees.payout_released_at >= {{date_range}}]]
-  [[AND fees.order_type = {{order_type}}]]
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
 GROUP BY items.product_name
 ORDER BY "Settlement Margin %" ASC NULLS LAST
 ```
@@ -669,7 +567,7 @@ ORDER BY "Settlement Margin %" ASC NULLS LAST
         "columns": ["Settlement Margin %"],
         "type": "single",
         "operator": "<",
-        "value": 60,
+        "value": 0.6,
         "color": "#EF8C8C",
         "highlight_row": false
       },
@@ -677,7 +575,7 @@ ORDER BY "Settlement Margin %" ASC NULLS LAST
         "columns": ["Settlement Margin %"],
         "type": "single",
         "operator": ">",
-        "value": 80,
+        "value": 0.8,
         "color": "#84BB4C",
         "highlight_row": false
       }
@@ -703,8 +601,7 @@ ORDER BY "Settlement Margin %" ASC NULLS LAST
       },
       "Settlement Margin %": {
         "number_style": "percent",
-        "decimals": 1,
-        "scale": 0.01
+        "decimals": 1
       }
     }
   }

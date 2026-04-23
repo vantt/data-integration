@@ -1,5 +1,5 @@
 ---
-name: workflow-documentation
+name: doc-workflow
 description: "Write, rewrite, normalize, or review workflow documentation for any project. Use when Codex needs to explain how a workflow, process, pipeline, or orchestration path works end-to-end, including stages, triggers, owners, tools or skills, events or signals, checkpoints, runtime behavior, data flow, error handling, and diagrams. Trigger on requests like: 'document this workflow', 'make this process guide clearer', 'write a v2 workflow guide', 'explain this pipeline from brief to publish', or 'standardize workflow docs across projects'."
 ---
 

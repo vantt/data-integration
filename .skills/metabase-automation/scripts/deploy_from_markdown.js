@@ -19,23 +19,39 @@ const fs = require("fs");
  * Auto-detect {{variable}} placeholders in SQL and build Metabase template-tags.
  * Maps common variable names to appropriate types (date, number, text).
  */
-function buildTemplateTags(sql) {
+function buildTemplateTags(sql, dashParams = []) {
   const tags = {};
   const regex = /\{\{(\w+)\}\}/g;
   let match;
   while ((match = regex.exec(sql)) !== null) {
     const name = match[1];
     if (tags[name]) continue;
-    // Infer type from name
-    let type = 'text';
-    if (/date|day|month|year|start|end|from|to/i.test(name)) type = 'date';
-    else if (/id|count|num|amount|limit|offset/i.test(name)) type = 'number';
-    tags[name] = {
-      id: name,
-      name: name,
-      'display-name': name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
-      type: type
-    };
+    const matchingParam = dashParams.find(p =>
+      p.slug === name || p.slug.replace(/-/g, '_') === name
+    );
+    // Use Field Filter (dimension type) when field_id is provided — required for
+    // date/all-options and string/= dashboard filters to pass values to native queries.
+    if (matchingParam && matchingParam.field_id) {
+      tags[name] = {
+        id: name,
+        name: name,
+        'display-name': name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+        type: 'dimension',
+        dimension: ['field', matchingParam.field_id, null],
+        'widget-type': matchingParam.type || 'date/all-options'
+      };
+    } else {
+      // Fallback: variable type inferred from name
+      let type = 'text';
+      if (/date|day|month|year|start|end|from|to/i.test(name)) type = 'date';
+      else if (/id|count|num|amount|limit|offset/i.test(name)) type = 'number';
+      tags[name] = {
+        id: name,
+        name: name,
+        'display-name': name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+        type: type
+      };
+    }
   }
   return tags;
 }
@@ -194,6 +210,7 @@ async function main() {
       type: f.type || 'date/all-options',
       default: f.default || null,
       sectionId: f.sectionId || undefined,
+      field_id: f.field_id || null,
     }));
 
     if (dryRun) {
@@ -280,7 +297,7 @@ async function main() {
           collection_id: colId,
           dataset_query: {
             type: "native",
-            native: { query: q.sql, "template-tags": buildTemplateTags(q.sql) },
+            native: { query: q.sql, "template-tags": buildTemplateTags(q.sql, dashParams) },
             database: defaultDbId
           },
           display: q.viz ? q.viz.display : "table",
@@ -294,7 +311,7 @@ async function main() {
           collection_id: colId,
           dataset_query: {
             type: "native",
-            native: { query: q.sql, "template-tags": buildTemplateTags(q.sql) },
+            native: { query: q.sql, "template-tags": buildTemplateTags(q.sql, dashParams) },
             database: defaultDbId
           },
           display: q.viz ? q.viz.display : "table",
@@ -330,7 +347,7 @@ async function main() {
 
       // Auto-wire parameter_mappings: match dashboard filters to SQL template tags
       if (dashParams.length > 0 && q.sql) {
-        const templateTags = buildTemplateTags(q.sql);
+        const templateTags = buildTemplateTags(q.sql, dashParams);
         const mappings = [];
         for (const param of dashParams) {
           // Match by slug: dashboard filter slug should match SQL {{variable_name}}
@@ -338,10 +355,13 @@ async function main() {
             t === param.slug || t === param.slug.replace(/-/g, '_')
           );
           if (tagName) {
+            const isDimension = templateTags[tagName].type === 'dimension';
             mappings.push({
               parameter_id: param.id || param.slug,
               card_id: card.id,
-              target: ["variable", ["template-tag", tagName]]
+              target: isDimension
+                ? ["dimension", ["template-tag", tagName]]
+                : ["variable", ["template-tag", tagName]]
             });
           }
         }

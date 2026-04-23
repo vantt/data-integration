@@ -62,7 +62,7 @@ FROM fact_orders
 
 #### 📝 Text: Section 1 — Tổng quan
 
-▸ Tổng quan đơn hàng — số cần đối soát với Sapo
+### ▸ Tổng quan đơn hàng — số cần đối soát với Sapo
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
@@ -353,7 +353,7 @@ FROM current_period c, previous_period p
 
 #### 📝 Text: Section 2 — Phân bổ
 
-▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
+### ▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -451,7 +451,7 @@ ORDER BY 3 DESC
 
 #### 📝 Text: Section 3 — Cảnh báo
 
-▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
+### ▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -511,7 +511,7 @@ ORDER BY o.discount_amount DESC
 
 #### 📝 Text: Section 4 — Chi tiết
 
-▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
+### ▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
@@ -637,7 +637,7 @@ FROM fact_orders
 
 #### 📝 Text: Section 1 — Tổng quan
 
-▸ Tổng quan đơn hàng — số cần đối soát với Sapo
+### ▸ Tổng quan đơn hàng — số cần đối soát với Sapo
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
@@ -928,7 +928,7 @@ FROM current_period c, previous_period p
 
 #### 📝 Text: Section 2 — Phân bổ
 
-▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
+### ▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1026,7 +1026,7 @@ ORDER BY 3 DESC
 
 #### 📝 Text: Section 3 — Cảnh báo
 
-▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
+### ▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1086,7 +1086,7 @@ ORDER BY o.discount_amount DESC
 
 #### 📝 Text: Section 4 — Chi tiết
 
-▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
+### ▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1223,7 +1223,7 @@ FROM fact_orders
 
 #### 📝 Text: Section 1 — Tổng quan
 
-▸ Tổng quan đơn hàng — số cần đối soát với Sapo
+### ▸ Tổng quan đơn hàng — số cần đối soát với Sapo
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1514,7 +1514,7 @@ FROM current_period c, previous_period p
 
 #### 📝 Text: Section 2 — Phân bổ
 
-▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
+### ▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
 
 ```json metabase-pos
 { "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1612,7 +1612,7 @@ ORDER BY 3 DESC
 
 #### 📝 Text: Section 3 — Cảnh báo
 
-▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
+### ▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1672,7 +1672,7 @@ ORDER BY o.discount_amount DESC
 
 #### 📝 Text: Section 4 — Chi tiết
 
-▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
+### ▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
