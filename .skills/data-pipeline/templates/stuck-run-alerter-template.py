@@ -1,21 +1,24 @@
-"""Stuck run sensor — detects and auto-terminates runs with no recent activity.
+"""Stuck run alerter sensor — auto-terminate runs with no recent activity.
 
-Detects runs in STARTED state that have no log activity for INACTIVITY_THRESHOLD.
-Unlike a fixed timeout, this approach:
-- Won't kill legitimate long-running jobs (they have continuous output)
-- Will kill hung processes (they produce no output)
+TEMPLATE: Copy and customize for your project.
 
-Auto-terminates stuck runs and frees concurrency slots to unblock the queue.
-Alerts via Lark after termination.
+Features:
+- Activity-based detection (no log output > threshold = stuck)
+- Graceful cancel → force fail → free concurrency slots → kill subprocess
+- Lark/Slack alert on termination
+- Cursor-based dedup (won't re-terminate same run)
 
-See: plans/260408-1611-fix-serving-db-hang-metabase-lock/plan.md Phase 3.
+Requirements:
+- psutil (for subprocess termination)
+- Lark client (or replace with your notification system)
+
+See: .skills/data-pipeline/dagster-patterns.md Lesson 10
+See: .skills/data-pipeline/lessons-learned.md L45-L48
 """
 from __future__ import annotations
 
 import json
 import logging
-import os
-import signal
 from datetime import datetime, timedelta, timezone
 
 from dagster import (
@@ -26,11 +29,12 @@ from dagster import (
     sensor,
 )
 
-from orchestration.notifications.lark_client import send_lark_card
+# TODO: Replace with your notification client
+# from orchestration.notifications.lark_client import send_lark_card
 
 logger = logging.getLogger(__name__)
 
-# Import psutil for cross-platform process killing (works in Docker)
+# psutil for cross-platform process killing
 try:
     import psutil
     HAS_PSUTIL = True
@@ -38,66 +42,16 @@ except ImportError:
     HAS_PSUTIL = False
     logger.warning("psutil not available — subprocess termination will be best-effort")
 
-# No log activity for this long = stuck. 5 minutes is generous since normal
-# dbt runs output every few seconds.
+# No log activity for this long = stuck
+# 5 min is generous since normal dbt runs output every few seconds
 INACTIVITY_THRESHOLD = timedelta(minutes=5)
 
-# Minimum runtime before we consider terminating. Prevents killing runs
-# that are still initializing (resource setup, partial_parse, etc.).
+# Minimum runtime before considering termination
+# Prevents killing runs still initializing (resource setup, partial_parse, etc.)
 MIN_RUNTIME_BEFORE_KILL = timedelta(minutes=10)
 
-# Max run_ids kept in cursor to prevent unbounded growth.
+# Max run_ids kept in cursor to prevent unbounded growth
 CURSOR_LIMIT = 100
-
-
-def _terminate_subprocess_tree(run_id: str) -> bool:
-    """Kill any subprocess tree associated with a Dagster run.
-
-    Searches for processes with the run_id in their environment (DAGSTER_RUN_JOB_NAME
-    or similar) or command line, then sends SIGTERM followed by SIGKILL.
-
-    Returns True if any process was terminated.
-    """
-    if not HAS_PSUTIL:
-        return False
-
-    terminated = False
-    try:
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'environ']):
-            try:
-                # Check if this process belongs to the run
-                cmdline = " ".join(proc.info.get('cmdline') or [])
-                env = proc.info.get('environ') or {}
-
-                # Look for run_id in command line or environment
-                if run_id[:12] in cmdline or run_id[:12] in str(env):
-                    logger.info("Terminating subprocess %s (%s) for run %s",
-                                proc.pid, proc.info.get('name'), run_id[:8])
-
-                    # Kill entire process tree (dbt may spawn child processes)
-                    try:
-                        parent = psutil.Process(proc.pid)
-                        children = parent.children(recursive=True)
-                        for child in children:
-                            child.terminate()
-                        parent.terminate()
-
-                        # Wait briefly then force kill survivors
-                        gone, alive = psutil.wait_procs(children + [parent], timeout=3)
-                        for p in alive:
-                            p.kill()
-
-                        terminated = True
-                    except psutil.NoSuchProcess:
-                        pass
-
-            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-                continue
-
-    except Exception as e:
-        logger.warning("Error during subprocess termination for %s: %s", run_id[:8], e)
-
-    return terminated
 
 
 def _parse_cursor(raw: str | None) -> list[str]:
@@ -113,25 +67,55 @@ def _parse_cursor(raw: str | None) -> list[str]:
 
 
 def _get_last_event_time(context: SensorEvaluationContext, run_id: str) -> datetime | None:
-    """Get timestamp of the most recent event for a run.
-
-    Uses get_records_for_run() which filters server-side by run_id.
-    This is more efficient and correct than fetching global events
-    and filtering client-side (which could miss events).
-    """
+    """Get timestamp of the most recent event for a run."""
     try:
-        # get_records_for_run filters by run_id server-side — correct API
-        # ascending=False → newest first → limit=1 gets most recent event
         result = context.instance.get_records_for_run(
             run_id=run_id,
             limit=1,
-            ascending=False,  # CRITICAL: newest first, not oldest
+            ascending=False,  # newest first
         )
         if result.records:
             return datetime.fromtimestamp(result.records[0].timestamp, tz=timezone.utc)
     except Exception as exc:
         logger.warning("Failed to get last event time for run %s: %s", run_id[:8], exc)
     return None
+
+
+def _terminate_subprocess_tree(run_id: str) -> bool:
+    """Kill subprocess tree associated with a Dagster run.
+
+    Searches for processes with the run_id in their command line,
+    then sends SIGTERM followed by SIGKILL.
+    """
+    if not HAS_PSUTIL:
+        return False
+
+    terminated = False
+    try:
+        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+            try:
+                cmdline = " ".join(proc.info.get('cmdline') or [])
+                if run_id[:12] in cmdline:
+                    logger.info("Terminating subprocess %s (%s) for run %s",
+                                proc.pid, proc.info.get('name'), run_id[:8])
+                    try:
+                        parent = psutil.Process(proc.pid)
+                        children = parent.children(recursive=True)
+                        for child in children:
+                            child.terminate()
+                        parent.terminate()
+                        # Wait briefly then force kill survivors
+                        gone, alive = psutil.wait_procs(children + [parent], timeout=3)
+                        for p in alive:
+                            p.kill()
+                        terminated = True
+                    except psutil.NoSuchProcess:
+                        pass
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                continue
+    except Exception as e:
+        logger.warning("Error during subprocess termination for %s: %s", run_id[:8], e)
+    return terminated
 
 
 @sensor(minimum_interval_seconds=300)  # check every 5 minutes
@@ -165,8 +149,6 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
 
         # Check last activity time
         last_event_time = _get_last_event_time(context, run.run_id)
-
-        # If we can't get last event time, fall back to start time
         if last_event_time is None:
             last_event_time = start_dt
 
@@ -182,14 +164,14 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
             run.run_id[:8], run.job_name, inactivity, runtime
         )
 
+        # 1. Try graceful cancellation (Dagster state only)
         try:
-            # Try graceful termination first
             instance.report_run_canceled(run)
         except Exception as exc:
             logger.debug("Graceful cancel failed for run %s: %s", run.run_id[:8], exc)
 
+        # 2. Force to failed state if still not terminal
         try:
-            # Force to failed state if still not terminal
             updated_run = instance.get_run_by_id(run.run_id)
             if updated_run and updated_run.status not in [
                 DagsterRunStatus.SUCCESS,
@@ -203,30 +185,31 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
         except Exception as exc:
             logger.warning("Failed to mark run as failed: %s", exc)
 
-        # Free concurrency slots
+        # 3. Free concurrency slots (critical - prevents pool leak)
         try:
             instance.event_log_storage.free_concurrency_slots_for_run(run.run_id)
             logger.info("Freed concurrency slots for run %s", run.run_id[:8])
         except Exception as exc:
             logger.warning("Failed to free concurrency slots: %s", exc)
 
-        # Kill actual subprocess — Dagster state update doesn't send OS signals
+        # 4. Kill actual subprocess (report_run_canceled doesn't send OS signals)
         subprocess_killed = _terminate_subprocess_tree(run.run_id)
         if subprocess_killed:
             logger.info("Terminated subprocess tree for run %s", run.run_id[:8])
 
-        # Alert
-        send_lark_card(
-            title="🔪 Dagster Run AUTO-KILLED (stuck)",
-            color="red",
-            fields={
-                "Job": run.job_name,
-                "Run ID": run.run_id[:8],
-                "Runtime": f"{runtime.total_seconds()//60:.0f} min",
-                "Inactive": f"{inactivity.total_seconds()//60:.0f} min",
-                "Action": "Auto-terminated, slots freed",
-            },
-        )
+        # 5. Alert (TODO: replace with your notification system)
+        # send_lark_card(
+        #     title="🔪 Dagster Run AUTO-KILLED (stuck)",
+        #     color="red",
+        #     fields={
+        #         "Job": run.job_name,
+        #         "Run ID": run.run_id[:8],
+        #         "Runtime": f"{runtime.total_seconds()//60:.0f} min",
+        #         "Inactive": f"{inactivity.total_seconds()//60:.0f} min",
+        #         "Action": "Auto-terminated, slots freed",
+        #     },
+        # )
+
         new_terminations.append(run.run_id)
 
     if new_terminations:

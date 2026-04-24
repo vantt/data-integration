@@ -85,6 +85,7 @@ Xem `checklist.md` — thực hiện theo 6 phase.
 | `supporting-scripts.md` | **Supporting scripts**: generate_serving_db, run_dbt, clean_dlt_state... |
 | `troubleshooting.md` | Symptom → Cause → Fix (dlt + dbt + serving + Dagster) |
 | `ingestion-health-digest.md` | **Health digest pattern**: per-source observability card (schema → recorder → 3-layer row-count fallback → yesterday-ICT window → classification → delivery), plus backfill + composite-PK recovery playbook |
+| `dagster-patterns.md` Lesson 10-13 | **Stuck run prevention**: dbt subprocess timeout, subprocess killing via psutil, backup concurrency lock, zombie NOT_STARTED cleanup |
 
 ### Templates
 | File | Mục đích |
@@ -102,6 +103,7 @@ Xem `checklist.md` — thực hiện theo 6 phase.
 | `templates/dlt-row-count-extractor-template.py` | 3-layer fallback: metric walk → file_id glob → `_dlt_load_id` scan |
 | `templates/ingestion-health-digest-template.py` | Morning digest op: SQL window + classification + asset-type-aware messaging |
 | `templates/backfill-health-rows-written-template.py` | One-shot backfill for fixed extractor (composite-PK-safe UPDATE) |
+| `templates/stuck-run-alerter-template.py` | Auto-terminate stuck runs: activity detection → cancel → kill subprocess → free slots |
 
 ---
 

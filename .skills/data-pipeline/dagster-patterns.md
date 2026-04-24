@@ -441,9 +441,36 @@ Nếu thiếu wire này → `--full-refresh` bị silently ignored, cursor vẫn
 
 **Problem:** Runs get stuck (subprocess hang, dbt bug) → block concurrency pool → cascade block all subsequent runs. Manual intervention required.
 
-**Solution: 2 sensor tự động hóa recovery**
+**Solution: 3-layer defense**
 
-### 1. Stuck Run Auto-Terminator
+### Layer 1: dbt Subprocess Timeout Watchdog (prevent hang at source)
+
+```python
+# orchestration/assets/dbt.py
+import threading
+
+DBT_TIMEOUT_SEC = int(os.environ.get("DBT_TIMEOUT_SEC", "900"))  # 15 min
+
+@dbt_assets(...)
+def sapo_dbt_assets(context, dbt: DbtCliResource):
+    invocation = dbt.cli(["build"], context=context)
+
+    def _kill_on_timeout():
+        context.log.error(f"dbt exceeded {DBT_TIMEOUT_SEC}s — killing")
+        invocation.process.kill()
+
+    watchdog = threading.Timer(DBT_TIMEOUT_SEC, _kill_on_timeout)
+    watchdog.daemon = True
+    watchdog.start()
+    try:
+        yield from invocation.stream()
+    finally:
+        watchdog.cancel()
+```
+
+**Why:** `dbt.cli().stream()` has no timeout. DuckDB WAL checkpoint can hang indefinitely under I/O pressure. Watchdog ensures hard upper bound.
+
+### Layer 2: Stuck Run Auto-Terminator (catch hangs that escape watchdog)
 
 ```python
 # orchestration/sensors/stuck_run_alerter.py
@@ -461,7 +488,24 @@ def health_alert_stuckrun_sensor(context):
             instance.report_run_canceled(run)
             instance.report_run_failed(run, "Auto-terminated: no activity")
             instance.event_log_storage.free_concurrency_slots_for_run(run.run_id)
-            send_lark_card(...)  # alert
+            _terminate_subprocess_tree(run.run_id)  # CRITICAL: kill actual process
+            send_lark_card(...)
+```
+
+**Critical addition (2026-04-24):** Must call `_terminate_subprocess_tree()` using `psutil` to send actual OS signals. `report_run_canceled()` only updates Dagster state — subprocess survives.
+
+```python
+def _terminate_subprocess_tree(run_id: str) -> bool:
+    """Kill subprocess tree via psutil."""
+    for proc in psutil.process_iter(['cmdline']):
+        if run_id[:12] in " ".join(proc.info.get('cmdline') or []):
+            parent = psutil.Process(proc.pid)
+            for child in parent.children(recursive=True):
+                child.terminate()
+            parent.terminate()
+            psutil.wait_procs([parent] + parent.children(), timeout=3)
+            return True
+    return False
 ```
 
 **Key insight:** Activity-based detection (no log output 5+ min) beats fixed timeout. Legitimate long runs produce continuous output; hung processes go silent.
@@ -540,6 +584,59 @@ def health_checks_schedule(context):
 
 ---
 
+## Lesson 12: Backup Job Must Acquire duckdb_lock
+
+**Problem:** Backup job runs `cp -a` on DuckDB files while dbt is writing → I/O pressure causes DuckDB WAL checkpoint to stall (uninterruptible I/O sleep) → dbt hangs indefinitely.
+
+**Fix:** Add concurrency tag to backup op:
+
+```python
+@op(
+    tags={
+        "kind": "maintenance",
+        "dagster/concurrency_key": "duckdb_lock",  # Wait for dbt
+    },
+)
+def run_platform_backup(context):
+    ...
+```
+
+**Effect:** Backup queues behind dbt/ingestion. No I/O collision during WAL checkpoint.
+
+**Trade-off:** Backup may delay up to 15 min if dbt running. Acceptable for maintenance job.
+
+---
+
+## Lesson 13: Zombie NOT_STARTED Runs After Container Restart
+
+**Problem:** Container restart leaves `NOT_STARTED` runs in Dagster SQLite. Every schedule tick finds this zombie via `_has_active_run()` → skips indefinitely.
+
+**Why it happens:** Run enqueued → container restarts before run starts → after restart, run still `NOT_STARTED` but executor context lost → will never execute.
+
+**Manual fix:**
+```bash
+docker exec data_platform python3 -c "
+from dagster import DagsterInstance
+instance = DagsterInstance.get()
+run = instance.get_run_by_id('zombie-run-id')
+instance.report_run_canceled(run)
+"
+```
+
+**Auto-fix at boot:** Add to `unstick_concurrency_pools.py`:
+
+```python
+# Cancel NOT_STARTED runs older than 30 min
+cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+for rec in instance.get_run_records(filters=RunsFilter(statuses=[DagsterRunStatus.NOT_STARTED])):
+    if datetime.fromtimestamp(rec.create_timestamp, tz=timezone.utc) < cutoff:
+        instance.report_run_canceled(rec.dagster_run)
+```
+
+**Reference:** `lessons-learned.md` L48
+
+---
+
 ## Summary: Dagster Integration Checklist
 
 Khi add job/asset mới vào Dagster, kiểm tra:
@@ -563,6 +660,11 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **Auto-recovery sensors** trong `Definitions(sensors=[...])`: `health_alert_stuckrun_sensor` + `health_concurrency_pool_janitor` — xem Lesson 10
 - [ ] Health checks job exclude dbt tests: `AssetSelection.all_asset_checks() - AssetSelection.checks_for_assets(dbt_assets)` — xem Lesson 11
 - [ ] Health checks schedule có `_has_active_ingestion()` check + offset `:05` cron — xem Lesson 11
+- [ ] **dbt subprocess timeout watchdog** trong `@dbt_assets` — 15 min hard limit via `threading.Timer` — xem Lesson 10 Layer 1
+- [ ] **stuck_run_alerter must kill subprocess** via `psutil` — `report_run_canceled()` only updates state — xem Lesson 10 Layer 2
+- [ ] **psutil** in `requirements.txt` for subprocess termination
+- [ ] **Backup job** has `"dagster/concurrency_key": "duckdb_lock"` to prevent I/O collision — xem Lesson 12
+- [ ] **Boot-time cleanup** cancels zombie NOT_STARTED runs older than 30 min — xem Lesson 13
 
 ---
 

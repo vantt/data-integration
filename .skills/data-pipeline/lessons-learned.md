@@ -1176,6 +1176,162 @@ GROUP BY 1
 
 ---
 
+## Stuck Run Prevention (post-mortem 2026-04-24)
+
+### L45 — dbt subprocess timeout watchdog — prevent infinite hang
+
+**Symptom:** `ingest_sapo_realtime_job` stuck 14+ min with 14 min inactive. Multiple runs stuck in single day. Jobs auto-terminated by stuck alerter but pattern keeps recurring.
+
+**Root cause:** `dbt.cli(["build"]).stream()` at `orchestration/assets/dbt.py:136` had **no timeout**. When dbt subprocess enters DuckDB WAL checkpoint hang (I/O pressure from concurrent backup or Metabase reads), the `stream()` generator blocks indefinitely — stdout stalls, Dagster blocks waiting for next line.
+
+**Evidence chain:**
+- 3 stuck runs on 2026-04-23 (05:01, 09:25, 10:25 ICT) — all during morning hours when Metabase usage starts
+- Stdout stopped at different model counts (24→69→73/73) — suggesting I/O resource pressure increasing
+- Run #3 stuck at model 73/73 = dbt finished SQL execution but DuckDB connection close (WAL checkpoint) hung
+
+**Fix: Watchdog timer with hard timeout**
+
+```python
+# orchestration/assets/dbt.py
+import threading
+
+DBT_TIMEOUT_SEC = int(os.environ.get("DBT_TIMEOUT_SEC", "900"))  # 15 min
+
+@dbt_assets(...)
+def sapo_dbt_assets(context, dbt: DbtCliResource):
+    invocation = dbt.cli(["build"], context=context)
+
+    def _kill_on_timeout():
+        context.log.error(f"dbt subprocess exceeded {DBT_TIMEOUT_SEC}s — killing")
+        try:
+            invocation.process.kill()
+        except Exception as e:
+            context.log.warning(f"Failed to kill dbt subprocess: {e}")
+
+    watchdog = threading.Timer(DBT_TIMEOUT_SEC, _kill_on_timeout)
+    watchdog.daemon = True
+    watchdog.start()
+    try:
+        yield from invocation.stream()
+    finally:
+        watchdog.cancel()
+```
+
+**Why 15 min:** Normal runs complete in <2 min. 15 min is generous safety margin that catches true hangs without false-positives on slow but legitimate runs.
+
+**Configurable:** `DBT_TIMEOUT_SEC` env var allows tuning per environment.
+
+### L46 — stuck_run_alerter must kill actual subprocess, not just Dagster state
+
+**Problem:** `stuck_run_alerter.py` used `instance.report_run_canceled()` which only updates Dagster's SQLite state — it does NOT send SIGTERM/SIGKILL to the running subprocess. The dbt process survives "cancellation", continues holding DuckDB file handles, and can cause next run to also hang.
+
+**Evidence:** After stuck alerter "killed" run, the next run that acquired `duckdb_lock` also hung at similar point — suggesting DuckDB was in inconsistent state from prior zombie process.
+
+**Fix: Use psutil to kill process tree**
+
+```python
+# orchestration/sensors/stuck_run_alerter.py
+import psutil
+
+def _terminate_subprocess_tree(run_id: str) -> bool:
+    """Kill subprocess tree associated with Dagster run."""
+    for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'environ']):
+        cmdline = " ".join(proc.info.get('cmdline') or [])
+        if run_id[:12] in cmdline:
+            parent = psutil.Process(proc.pid)
+            children = parent.children(recursive=True)
+            for child in children:
+                child.terminate()
+            parent.terminate()
+            # Force kill survivors after 3s
+            gone, alive = psutil.wait_procs(children + [parent], timeout=3)
+            for p in alive:
+                p.kill()
+            return True
+    return False
+
+# In sensor, after state update:
+subprocess_killed = _terminate_subprocess_tree(run.run_id)
+```
+
+**Dependency:** Requires `psutil` in container. Add to `ingestion/requirements.txt`, rebuild image.
+
+**Graceful degradation:** If psutil unavailable, falls back to state-only update (still better than nothing).
+
+### L47 — Backup job must acquire duckdb_lock to prevent I/O collision
+
+**Problem:** `maintain_backup_platform_job` runs `cp -a` on DuckDB files while dbt is actively writing. The I/O pressure from sequential kernel read during backup causes DuckDB WAL checkpoint to stall (uninterruptible I/O sleep).
+
+**Timeline correlation:** First stuck run on 2026-04-23 started at 05:01 ICT, backup job started at 06:01 ICT — backup ran while dbt was in progress.
+
+**Fix: Add concurrency tag to backup op**
+
+```python
+# orchestration/ops/system_backup.py
+@op(
+    description="Run platform hot backup",
+    tags={
+        "kind": "maintenance",
+        "dagster/concurrency_key": "duckdb_lock",  # Wait for dbt to finish
+    },
+)
+def run_platform_backup(context):
+    ...
+```
+
+**Effect:** Backup waits in queue until any dbt/ingestion job holding `duckdb_lock` completes. No I/O collision during WAL checkpoint.
+
+**Trade-off:** Backup may be delayed up to 15 min (dbt timeout) if it fires during dbt run. Acceptable since backup is maintenance, not business-critical.
+
+### L48 — Zombie NOT_STARTED runs block schedules indefinitely
+
+**Symptom:** All scheduled jobs show "skipping: previous run still active" but no run is actually running. Health report shows 9/10 assets overdue.
+
+**Root cause:** Container restart at 22:29 UTC left a `NOT_STARTED` run (`773eefde`) in Dagster's SQLite. This run was enqueued just before restart but never executed. After restart, Dagster loaded DB state and found the run still `NOT_STARTED`. Every schedule tick checks `_has_active_run()` which includes `NOT_STARTED` status → always finds this zombie → skips.
+
+**Why NOT_STARTED is "active":**
+```python
+_ACTIVE_STATUSES = [
+    DagsterRunStatus.QUEUED,
+    DagsterRunStatus.NOT_STARTED,  # ← zombie lives here
+    DagsterRunStatus.STARTING,
+    DagsterRunStatus.STARTED,
+]
+```
+
+`NOT_STARTED` is legitimately active during normal operation (run created, waiting for executor). But after container restart, a pre-restart `NOT_STARTED` run will never execute — it's zombie.
+
+**Fix: Cancel zombie runs manually**
+```bash
+docker exec data_platform python3 -c "
+from dagster import DagsterInstance
+instance = DagsterInstance.get()
+run = instance.get_run_by_id('773eefde-...')
+instance.report_run_canceled(run)
+"
+```
+
+**Prevention: Boot-time cleanup**
+
+Add to `unstick_concurrency_pools.py` or separate boot script:
+
+```python
+# Cancel NOT_STARTED runs older than 30 min (zombie detection)
+from datetime import datetime, timedelta, timezone
+cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+
+for rec in instance.get_run_records(filters=RunsFilter(statuses=[DagsterRunStatus.NOT_STARTED])):
+    if rec.create_timestamp and datetime.fromtimestamp(rec.create_timestamp, tz=timezone.utc) < cutoff:
+        instance.report_run_canceled(rec.dagster_run)
+        logger.info(f"Canceled zombie NOT_STARTED run {rec.dagster_run.run_id[:8]}")
+```
+
+**Also update stuck_run_alerter:** Current sensor only checks `STARTED` runs. Should also check `NOT_STARTED` runs older than threshold.
+
+**Reference:** `plans/reports/fix-260424-0810-realtime-job-stuck-prevention.md`
+
+---
+
 ## Ingestion Health Digest (post-mortems 2026-04-22)
 
 Reusable pattern doc: [`ingestion-health-digest.md`](ingestion-health-digest.md).

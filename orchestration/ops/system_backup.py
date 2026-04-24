@@ -44,7 +44,12 @@ def _run_and_log(context: OpExecutionContext, cmd: list[str], env: dict | None =
 
 @op(
     description="Run platform hot backup (bash). Copies app_data + config files.",
-    tags={"kind": "maintenance"},
+    tags={
+        "kind": "maintenance",
+        # Acquire duckdb_lock to prevent backup from running while dbt is writing.
+        # Backup copies DuckDB files — concurrent dbt write can cause WAL checkpoint stall.
+        "dagster/concurrency_key": "duckdb_lock",
+    },
 )
 def run_platform_backup(context: OpExecutionContext) -> None:
     backup_root = os.environ.get("BACKUP_ROOT")

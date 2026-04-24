@@ -1,7 +1,12 @@
 from dagster import AssetExecutionContext, AssetKey
 from dagster_dbt import DbtCliResource, dbt_assets, DbtProject, DagsterDbtTranslator
 import os
+import threading
 from typing import Any, Mapping
+
+# Hard timeout for dbt subprocess. Prevents infinite hang when DuckDB checkpoint stalls.
+# Normal runs complete in <2 min; 15 min is generous safety margin.
+DBT_TIMEOUT_SEC = int(os.environ.get("DBT_TIMEOUT_SEC", "900"))
 
 # Define the dbt project path
 DBT_PROJECT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "transformation")
@@ -133,4 +138,20 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # get_rolling_location() appends /rolling/ itself. Overwriting caused the macro
     # to need a fragile replace('/rolling','') hack.
 
-    yield from dbt.cli(["build"], context=context).stream()
+    # Run dbt with watchdog timeout to prevent infinite hang on DuckDB checkpoint stall
+    invocation = dbt.cli(["build"], context=context)
+
+    def _kill_on_timeout():
+        context.log.error(f"dbt subprocess exceeded {DBT_TIMEOUT_SEC}s timeout — killing")
+        try:
+            invocation.process.kill()
+        except Exception as e:
+            context.log.warning(f"Failed to kill dbt subprocess: {e}")
+
+    watchdog = threading.Timer(DBT_TIMEOUT_SEC, _kill_on_timeout)
+    watchdog.daemon = True
+    watchdog.start()
+    try:
+        yield from invocation.stream()
+    finally:
+        watchdog.cancel()

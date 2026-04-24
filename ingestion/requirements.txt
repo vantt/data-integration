@@ -11,3 +11,4 @@ dbt-duckdb
 pandas
 pyarrow
 openpyxl
+psutil
