@@ -497,18 +497,99 @@ Sau 8 cái này, các context khác có thể được template hóa nhanh.
 | `docs/dlt-ingestion-skill-design.md` | `docs/archive/deprecated-skills/` | Đã có `.skills/data-pipeline/` |
 | `docs/archive/*` | giữ nguyên `docs/archive/` | OK |
 
-### 5.3 Files KHÔNG ĐỘNG
+### 5.3 Sub-component docs — chiến lược "kết nối, không chạm"
+
+Sub-component docs (`ingestion/docs/`, `transformation/docs/`, `orchestration/docs/`, `webhook_receiver/docs/`) hiện tại tốt và có owner riêng. **KHÔNG động vào nội dung file con bên trong**. Nhưng để chúng "kết nối" được với meta-system mới (charter, validator, cross-ref graph), cần **3 chỉnh nhẹ** ở mức entry-point.
+
+#### 5.3a Files KHÔNG ĐỘNG hoàn toàn (giữ y nguyên)
 
 | Path | Lý do |
 | --- | --- |
-| `docs/analytics-handbook/**` | Skills tham chiếu trực tiếp; cấu trúc đã tốt |
-| `ingestion/docs/**` | Component-local, gắn với code |
-| `transformation/docs/**` | idem |
-| `transformation/AGENTS.md` | dbt-specific rules |
-| `orchestration/docs/**` | idem |
-| `webhook_receiver/docs/**` | idem (nhưng cần thêm "ACTIVE/DEPRECATED" status — xem §6.3) |
-| `webhook_consumer/**/README.md` | idem |
+| `docs/analytics-handbook/**` (trừ AGENTS.md hiện có) | Skills tham chiếu trực tiếp; cấu trúc đã tốt |
+| `ingestion/docs/*.md` (trừ README.md) | Component-local, gắn với code, owner riêng |
+| `transformation/docs/*.md` (trừ README.md) | idem |
+| `orchestration/docs/*.md` (trừ README.md) | idem |
+| `webhook_receiver/docs/*.md` (trừ README.md) | idem |
+| `webhook_consumer/**/README.md` | idem (chỉ thêm STATUS BANNER, không sửa content) |
 | `.skills/**` | Skills directory |
+| File con dbt models, Python scripts, v.v. | Không đụng |
+
+#### 5.3b Files có chỉnh nhẹ (3 thay đổi, không chạm content)
+
+| # | Thay đổi | File ảnh hưởng | Mục đích |
+| --- | --- | --- | --- |
+| 1 | **Add `AGENTS.md`** ở sub-component chưa có | NEW: `ingestion/AGENTS.md`, `orchestration/AGENTS.md`, `webhook_receiver/AGENTS.md` (~50 dòng/file) | Hoàn thiện 3-layer discovery (root → sub-component → docs/_meta/charter); hiện chỉ `transformation/AGENTS.md` có |
+| 2 | **Add YAML frontmatter** cho README.md của mỗi sub-component | EDIT: `ingestion/docs/README.md`, `transformation/docs/README.md`, `orchestration/docs/README.md`, `webhook_receiver/docs/README.md` (~10 dòng frontmatter mỗi file) | Để validator script + cross-ref graph chạy được. Frontmatter dùng `audience: [engineer, ai-agent]` (cho phép agent filter). |
+| 3 | **Add section "📍 Trỏ tới narrative & contexts"** ở cuối README.md mỗi sub-component | EDIT: 4 README files trên (~10 dòng/file) | Bidirectional link với `docs/07-implementation/{component}.md` và contexts/ liên quan — agent đi 2 chiều được |
+
+**Đặc biệt với `transformation/AGENTS.md` (đã có ~103 dòng)**: chỉ thêm 1 dòng ở đầu — `> Cho doc rules chung (frontmatter, naming, length): xem [docs/_meta/doc-system-charter.md](../docs/_meta/doc-system-charter.md).` Phần dbt-specific giữ nguyên.
+
+**Workload thêm**: ~half-day, gộp vào Phase 4 (Implementation pointers).
+
+#### 5.3c Template AGENTS.md cho sub-component (mới, ~50 dòng)
+
+```markdown
+# Agent Rules — {Component} Layer
+
+> **Doc charter chung**: [docs/_meta/doc-system-charter.md](../docs/_meta/doc-system-charter.md).
+> **Trước khi edit `{component}/docs/**`**: đọc charter + tham khảo `docs/_meta/decision-trees.md` cho SOP.
+
+## Quick reference
+
+- **Component purpose**: {1 câu — vd: "Extract data from Sapo APIs into Parquet files"}
+- **Tech stack**: {vd: Python, dlt, playwright}
+- **Entry points**: {vd: ingestion/run_*.py}
+- **Documentation entry**: [docs/README.md](docs/README.md) (engineer-focused)
+- **Narrative entry** (cho ai mới): [../docs/07-implementation/{component}.md](../docs/07-implementation/{component}.md)
+- **Per-context use**: see `../docs/contexts/` for narratives that depend on this component
+
+## Component-specific rules
+
+{2-5 quy tắc cụ thể của component, vd:}
+- ALWAYS use venv python: `{component}/venv/Scripts/python.exe`
+- NEVER hardcode paths — use `os.path.join()` cho cross-platform
+- ...
+
+## Edits to docs in this folder
+
+- `{component}/docs/README.md` có frontmatter — không xóa.
+- File con (CONFIGURATION.md, PIPELINES.md, ...) không bắt buộc frontmatter (giữ style hiện tại).
+- Nếu thêm file mới → áp template `docs/_meta/templates/...` tương ứng.
+- Validator: `python scripts/testing/validate_docs_structure.py --scope {component}/docs/`
+```
+
+#### 5.3d Frontmatter cho README sub-component (template)
+
+```yaml
+---
+title: "{Component} Layer Documentation"
+audience: [engineer, ai-agent]
+status: active
+language: en
+last_modified: 2026-04-26
+summary: "Implementation reference cho {component} component — {tech stack ngắn gọn}."
+maintainer_doc: ../../docs/_meta/doc-system-charter.md
+related:
+  - ../../docs/07-implementation/{component}.md
+  - ../../docs/contexts/  # contexts dùng component này
+---
+```
+
+#### 5.3e Section "Trỏ tới narrative & contexts" (template ở cuối README)
+
+```markdown
+---
+
+## 📍 Trỏ ra ngoài
+
+- **Narrative chung** (cho người mới): [docs/07-implementation/{component}.md](../../docs/07-implementation/{component}.md)
+- **Contexts dùng component này**:
+  - [contexts/{X}/](../../docs/contexts/{X}/) — {1-line giải thích}
+  - [contexts/{Y}/](../../docs/contexts/{Y}/) — {1-line giải thích}
+- **Strategy decisions liên quan**:
+  - [ADR-XXX](../../docs/06-strategy/decisions/XXX-...md)
+- **Charter** (rule chung khi sửa docs): [docs/_meta/doc-system-charter.md](../../docs/_meta/doc-system-charter.md)
+```
 
 ### 5.4 Files MỚI cần viết
 
@@ -558,6 +639,8 @@ Tổng MD mới: ~50 files, đa số nhỏ (100-200 dòng).
 
 ### 6.2 `docs/analytics-handbook/AGENTS.md` (giữ nguyên — đã focus đúng)
 
+Chỉ thêm 1 dòng đầu: `> Cho doc rules chung: xem [docs/_meta/doc-system-charter.md](../_meta/doc-system-charter.md). Handbook-specific rules dưới đây.`
+
 ### 6.3 `webhook_receiver/README.md` — thêm STATUS BANNER
 
 ```markdown
@@ -566,6 +649,21 @@ Tổng MD mới: ~50 files, đa số nhỏ (100-200 dòng).
 ```
 
 Tương tự cho `webhook_consumer/README.md`.
+
+### 6.4 Sub-component AGENTS.md hierarchy (NEW — kết nối, không chạm content)
+
+Hoàn thiện convention 3-layer discovery: root `AGENTS.md` → sub-component `AGENTS.md` → `docs/_meta/charter`. Hiện chỉ `transformation/AGENTS.md` có; thêm 3 file mới:
+
+| File | Trạng thái | Hành động |
+| --- | --- | --- |
+| `transformation/AGENTS.md` (~103 dòng) | EXISTING | Thêm 1 dòng đầu trỏ về `docs/_meta/charter` (xem §5.3b) |
+| `ingestion/AGENTS.md` (~50 dòng) | NEW | Theo template §5.3c |
+| `orchestration/AGENTS.md` (~50 dòng) | NEW | idem |
+| `webhook_receiver/AGENTS.md` (~50 dòng) | NEW | idem |
+
+Lý do: khi agent làm việc trong `ingestion/`, root `AGENTS.md` nói "đây là multi-project repo, sub-folder có rule riêng" → agent navigate sang `ingestion/` thấy `AGENTS.md` → biết Python venv path + nhắc nhở về charter doc rules. Convention nhất quán cho cả 4 components.
+
+**Template** ở §5.3c. **Workload**: 3 file mới × ~50 dòng = ~150 dòng tổng, gộp Phase 4.
 
 ---
 
@@ -597,8 +695,14 @@ Tương tự cho `webhook_consumer/README.md`.
 - Gộp `architecture/overview.md` + `architecture/data-flow.md` → `06-strategy/pipeline-architecture.md`
 - Viết các strategy file mới (deduplication, rolling-snapshots, orchestration-patterns, analytics-as-code)
 
-### Phase 4 — Implementation pointers + ops & dev (1-2 ngày)
+### Phase 4 — Implementation pointers + sub-component connect + ops & dev (2 ngày)
 - Viết `07-implementation/` 7 pointer files
+- **Sub-component "kết nối, không chạm" (xem §5.3b, §6.4):**
+  - Tạo NEW `ingestion/AGENTS.md`, `orchestration/AGENTS.md`, `webhook_receiver/AGENTS.md` (~50 dòng/file, theo template §5.3c)
+  - Thêm 1-line charter pointer ở đầu `transformation/AGENTS.md` và `analytics-handbook/AGENTS.md`
+  - Thêm YAML frontmatter cho 4 sub-component README.md (template §5.3d)
+  - Thêm section "📍 Trỏ ra ngoài" cuối 4 sub-component README.md (template §5.3e)
+  - Thêm STATUS BANNER cho `webhook_receiver/README.md` + `webhook_consumer/README.md` (§6.3)
 - Move `operations/` → `08-operations/`
 - Move `development/` → `09-development/`
 - Move `config-guide.md`, `project-changelog.md`
@@ -713,11 +817,13 @@ Không file MD nào nên vượt 800 dòng (giới hạn mềm bạn đã đặt
 ## 11. Cái KHÔNG đề xuất (để tránh hiểu lầm)
 
 - **Không** đổi `analytics-handbook/` (domains/playbooks/designs/blueprints) format hay vị trí.
-- **Không** đổi sub-component `*/docs/` cấu trúc nội bộ.
+- **Không** đổi cấu trúc nội bộ sub-component `*/docs/` (file SOURCES.md, MODELS.md, JOBS.md... giữ nguyên content + naming + structure). Chỉ chỉnh nhẹ ở **README.md + AGENTS.md mức entry-point** để kết nối với meta-system — chi tiết §5.3b.
+- **Không** thêm frontmatter cho TẤT CẢ file sub-component (chỉ README.md). File con bên trong giữ style hiện tại.
 - **Không** đổi `.skills/` hay `.claude/commands/` (chỉ update path nếu cần).
 - **Không** xóa file ngay — tất cả "deprecated" chuyển vào `archive/`.
 - **Không** thay đổi naming convention dbt models, file naming Python, v.v. (chỉ docs).
 - **Không** thay đổi process deploy (Metabase deploy script tham chiếu blueprints).
+- **Không** đổi owner sub-component docs — engineer của component vẫn maintain chính. Charter chỉ là "guard rail" mức entry-point, không invalidate domain expertise.
 
 ---
 
