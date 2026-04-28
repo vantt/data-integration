@@ -200,9 +200,11 @@ def kpi_revenue_daily(context):
         },
         metadata={
             "date_key": MetadataValue.int(date_key),
-            "source_revenue_vnd": MetadataValue.float(source_revenue or 0),
-            "warehouse_revenue_vnd": MetadataValue.float(warehouse_revenue or 0),
-            "drift_pct": MetadataValue.float(drift_pct * 100 if drift_pct is not None else 0),
+            # MetadataValue.float() rejects int. `or 0` short-circuits to a Python int
+            # when the left side is None/0.0 (falsy) — must use 0.0 explicitly.
+            "source_revenue_vnd": MetadataValue.float(source_revenue or 0.0),
+            "warehouse_revenue_vnd": MetadataValue.float(warehouse_revenue or 0.0),
+            "drift_pct": MetadataValue.float(drift_pct * 100 if drift_pct is not None else 0.0),
             "kpi_enabled": MetadataValue.bool(_KPI_ENABLED),
             "window_start": MetadataValue.text(window_start.isoformat()),
             "window_end": MetadataValue.text(window_end.isoformat()),
