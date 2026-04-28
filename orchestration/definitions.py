@@ -418,7 +418,7 @@ def health_report_digest_schedule(context):
 # Not in dbt_rw concurrency group: operates on Dagster's internal storage only.
 @schedule(
     job=maintain_purge_runs_job,
-    cron_schedule="30 2 * * *",
+    cron_schedule="0 1 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
 def maintain_purge_runs_schedule(context):
