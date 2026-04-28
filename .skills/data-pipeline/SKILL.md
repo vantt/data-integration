@@ -86,6 +86,7 @@ Xem `checklist.md` — thực hiện theo 6 phase.
 | `troubleshooting.md` | Symptom → Cause → Fix (dlt + dbt + serving + Dagster) |
 | `ingestion-health-digest.md` | **Health digest pattern**: per-source observability card (schema → recorder → 3-layer row-count fallback → yesterday-ICT window → classification → delivery), plus backfill + composite-PK recovery playbook |
 | `dagster-patterns.md` Lesson 10-13 | **Stuck run prevention**: dbt subprocess timeout, subprocess killing via psutil, backup concurrency lock, zombie NOT_STARTED cleanup |
+| `dagster-patterns.md` Lesson 14 + `lessons-learned.md` L49-L52 | **Maintenance cron topology**: schedule must be explicitly started, backup `trap … EXIT` rotation, `prune_dagster_history`, stuck-run sensor Pass 2 (queue-stuck), purge cleans dbt target dirs (post-mortem 2026-04-28 disk-full) |
 
 ### Templates
 | File | Mục đích |

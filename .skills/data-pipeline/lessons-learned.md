@@ -1422,3 +1422,191 @@ Same rule applies to DELETE, MERGE, and any subquery that uses `run_id` alone to
 3. When writing ad-hoc SQL against any table whose PK you don't know, query `information_schema.table_constraints` first.
 
 **Reference:** `scripts/maintenance/backfill_ingestion_health_rows_written.py`, memory entry `feedback_ingestion_runs_composite_pk.md`
+
+---
+
+## Disaster Recovery & Maintenance Cron (post-mortem 2026-04-28)
+
+Disk D: hit 100% full → SQLite `disk I/O error` on Dagster's daemon heartbeat → API stopped responding. Recovery surfaced four latent defects in the maintenance pipeline.
+
+### L49 — Schedules in `defs.schedules=[...]` are NOT auto-enabled
+
+**Symptom:** `maintain_purge_runs_job` had **0 runs ever** despite the schedule being defined in code for weeks. `dagster_home/history/` accumulated to 18 GB.
+
+**Root cause:** Listing a schedule in `Definitions(schedules=[...])` makes it visible to the daemon but leaves it in `DECLARED_IN_CODE` state until someone explicitly starts it. Storage table `jobs` (in `schedules.db`) only has rows for schedules that have transitioned to `RUNNING`. The `DagsterDaemonScheduler` only ticks schedules whose row exists with `status='RUNNING'`.
+
+**Detection query:**
+```python
+import sqlite3, json
+c = sqlite3.connect('/app/var/dagster_home/schedules/schedules.db').cursor()
+c.execute("SELECT job_body, status FROM jobs WHERE job_type='SCHEDULE'")
+seen = set()
+for body, status in c.fetchall():
+    nm = json.loads(body)['origin']['job_name']
+    seen.add(nm)
+# Compare `seen` against the list in `defs.schedules` — any missing name is DECLARED_IN_CODE.
+```
+
+**Fix:** explicitly start each maintenance schedule:
+```bash
+docker exec data_platform sh -c 'cd /app && DAGSTER_HOME=/app/var/dagster_home \
+    dagster schedule start -f orchestration/definitions.py maintain_purge_runs_schedule'
+```
+
+**Rule:**
+1. After adding a new `@schedule` to `defs.schedules`, **manually start it** (UI or CLI). Never assume "listed in code = running".
+2. Add a healthcheck or boot-time assertion that compares `defs.schedules` names against the storage table. Any schedule missing from storage = silently disabled.
+3. Storage row also caches the cron from FIRST start. Editing the cron in code → daemon evaluates the NEW cron on each tick (in-memory definition wins), but the storage snapshot stays stale. To keep them aligned, `dagster schedule stop` + `dagster schedule start` after any cron edit.
+
+**Reference:** today's recovery — `maintain_purge_runs_schedule` defined since the original commit but never started; `definitions.py` → `maintain_purge_runs_schedule`
+
+---
+
+### L50 — Backup rotation MUST run via `trap … EXIT`, not after `cp`
+
+**Symptom:** Backup directory grew from 7 → 10 daily backups (104 GB total) over 4 days while disk was filling. Older backups (oldest 18 GB each) never got deleted.
+
+**Root cause:** `backup.sh` had retention logic at the bottom of the script (Step 4 — keep 7 newest, delete rest). With `set -euo pipefail`, any failure of `cp -a app_data` mid-copy (most often `ENOSPC` once disk fills) causes the script to exit immediately. The rotation step at the bottom is never reached → old backups accumulate → next day disk is even fuller → `cp` fails earlier → vicious cycle.
+
+**Fix:** move rotation into an `EXIT` trap so it fires regardless of how the script exits:
+
+```bash
+rotate_old_backups() {
+    local rc=$?
+    set +e  # cleanup must never bubble up an error
+    # Drop incomplete current backup
+    if [ "${BACKUP_DATA_OK:-false}" = false ] && [ -d "${BACKUP_DIR:-}" ]; then
+        rm -rf "$BACKUP_DIR"
+    fi
+    # Rotate old backups
+    cd "$BACKUP_ROOT" 2>/dev/null || return $rc
+    ls -1d [0-9]*-[0-9]* 2>/dev/null | sort -r | tail -n +$((KEEP_COUNT + 1)) \
+        | while read -r old; do rm -rf "${BACKUP_ROOT}/${old}"; done
+    return $rc
+}
+trap rotate_old_backups EXIT
+```
+
+**Companion fix — pre-flight disk check** (fail fast, let trap rotate to free space):
+
+```bash
+NEED_KB=$(du -sk "$DATA_ROOT" | awk '{print $1}')
+FREE_KB=$(df -Pk "$BACKUP_ROOT" | awk 'NR==2 {print $4}')
+if [ "$FREE_KB" -lt "$((NEED_KB + 1024*1024))" ]; then  # +1 GB margin
+    log "ABORT: insufficient disk; trap will rotate older backups"
+    exit 1
+fi
+```
+
+**Rule:**
+1. Cleanup logic in any "create-then-rotate" script MUST live in a trap, not as final-step inline code.
+2. Pre-flight resource checks belong before the resource-consuming step, not after.
+3. A backup script that can leave the system worse than it found it is a foot-gun — design for graceful degradation under disk pressure.
+
+**Reference:** `scripts/backup/backup.sh` → `rotate_old_backups()` + EXIT trap + pre-flight disk check.
+
+---
+
+### L51 — Exclude regenerable data from backup (`dagster_home/history/`)
+
+**Symptom:** Each daily backup grew from 4 GB to 18 GB over 10 days. DuckDB itself was only 320 MB; the bulk was Dagster run history.
+
+**Root cause:** `cp -a dagster_home` blindly included `history/` (per-run SQLite DBs + WAL + index.db) which had ballooned to 18 GB because the purge schedule was never running (L49). Restoring run history from a backup is undesirable anyway — old run records would confuse the queue coordinator and alerting sensors.
+
+**Fix:** prune `history/` from the backup destination after copy:
+
+```bash
+prune_dagster_history() {
+    local dh_dir="$1"
+    if [ -d "${dh_dir}/history" ]; then
+        rm -rf "${dh_dir}/history"
+        log "Pruned ${dh_dir}/history (run records excluded from backup)"
+    fi
+}
+# Call after each `cp -a` of dagster_home
+```
+
+**What we DO keep** in dagster_home backup:
+- `dagster.yaml` — instance config
+- `schedules/schedules.db` — schedule state (RUNNING/STOPPED, cursors)
+- `storage/` — asset materialization records (small, ~500 MB)
+- `logs/`, `.telemetry/`, `.nux/` — minor
+
+**What we EXCLUDE:**
+- `history/runs.db` + `history/runs/*.db` + `history/index.db` — run records (regenerable on next tick)
+
+**Rule:**
+1. Never back up data that's both (a) regenerable on demand and (b) the dominant size contributor.
+2. Audit backup contents quarterly: `du -sh backup_dir/*` should look proportional to the operational data, not to historical noise.
+3. After excluding regenerable data, verify a restore drill works with the slimmer backup.
+
+**Reference:** `scripts/backup/backup.sh` → `prune_dagster_history`.
+
+---
+
+### L52 — `health_alert_stuckrun_sensor` must cover ALL non-terminal states (Pass 2)
+
+**Symptom:** 4 zombie runs sat in `NOT_STARTED` status for 3-4 days during the disk-full incident. The stuck-run sensor never alerted on them.
+
+**Root cause:** Sensor was filtering `RunsFilter(statuses=[DagsterRunStatus.STARTED])` — only catches runs that have already begun executing but lost activity. It missed runs that never even left the queue because the run coordinator daemon was frozen (SQLite I/O error).
+
+There are **two failure modes** for stuck runs:
+| Failure mode | Status | Pass 1 catches? | Pass 2 catches? |
+|---|---|---|---|
+| dbt subprocess hang | `STARTED` + no log activity 5+ min | ✅ | n/a |
+| Daemon never dequeued | `NOT_STARTED` / `QUEUED` / `STARTING` for 2h+ | ❌ | ✅ |
+
+**Fix:** add Pass 2 — iterate `NOT_STARTED` / `QUEUED` / `STARTING` runs and cancel any older than `QUEUE_STUCK_THRESHOLD = 2h`:
+
+```python
+# Pass 2: queue-stuck runs (never dequeued)
+queue_records = instance.get_run_records(
+    filters=RunsFilter(statuses=[
+        DagsterRunStatus.NOT_STARTED,
+        DagsterRunStatus.QUEUED,
+        DagsterRunStatus.STARTING,
+    ])
+)
+for rec in queue_records:
+    age = now - datetime.fromtimestamp(rec.create_timestamp, tz=timezone.utc)
+    if age < QUEUE_STUCK_THRESHOLD:
+        continue
+    instance.report_run_canceled(rec.dagster_run)
+    instance.event_log_storage.free_concurrency_slots_for_run(rec.dagster_run.run_id)
+    send_lark_card(title="🪦 Dagster Run AUTO-CANCELED (queue-stuck)", ...)
+```
+
+**Threshold choice — why 2 hours, not 30 min:**
+- Nightly batch (`transform_batch_nightly_job`) holds `dbt_rw=1` for ~30-60 min. Realtime ticks queued behind it sit in `NOT_STARTED` legitimately.
+- 2h gives wide safety margin while preventing days-long zombie accumulation.
+- Different from Pass 1's `INACTIVITY_THRESHOLD=5min` because Pass 2 detects "daemon never picked it up", not "process stalled".
+
+**Tighten interval:** `@sensor(minimum_interval_seconds=60)` (was 300) — list-runs is a cheap status-filtered query; faster cadence bounds Pass 1 detection latency to ~6 min instead of ~10 min.
+
+**Rule:**
+1. Auto-recovery sensors must cover EVERY non-terminal state, not just the obvious one.
+2. Different stuck modes need different thresholds — don't conflate "process stalled" and "daemon never dequeued".
+3. Boot-time cleanup (L48) handles restart-induced zombies; sensor (L52) handles steady-state zombies. Need both.
+
+**Reference:** `orchestration/sensors/stuck_run_alerter.py` → Pass 1 (`STARTED` + inactivity) + Pass 2 (`NOT_STARTED`/`QUEUED`/`STARTING` + age).
+
+---
+
+### Maintenance Cron Design Principles (synthesis)
+
+Lessons L49-L52 + the existing L47 (backup acquires `duckdb_lock`) crystallize a design pattern for daily maintenance schedules:
+
+1. **Order by mutual exclusion**: `purge → backup` (purge clears history before backup snapshots).
+2. **Window in the quiet zone**: avoid hours when realtime/nightly are running. For this project: 02:00-02:59 ICT (after midnight, before 03:00 nightly).
+3. **Yield to peers**: `maintain_backup_platform_schedule` must `_has_active_run("maintain_purge_runs_job")` and skip if true. Don't compete on shared filesystem.
+4. **Bound resource cost upfront** with concurrency tags (`duckdb_lock`) and pre-flight checks (free disk).
+5. **Always-run cleanup via `trap … EXIT`** in shell scripts — never trust step-by-step linear execution to reach the rotation step.
+6. **Exclude regenerable data** from anything that gets persisted (backups, snapshots).
+7. **Auto-recovery sensors cover ALL non-terminal states**, not just `STARTED`.
+
+| Schedule | Cron (ICT) | Rationale |
+|---|---|---|
+| `maintain_purge_runs_schedule` | `30 2 * * *` | Quietest window; finishes well before 03:00 nightly |
+| `transform_batch_nightly_schedule` | `0 3 * * *` | Default nightly batch |
+| `maintain_backup_platform_schedule` | `0 6 * * *` | After all overnight jobs complete; yields to active purge |
+| `health_report_digest_schedule` | `0 6 * * *` | Same slot as backup but read-only on different DB |

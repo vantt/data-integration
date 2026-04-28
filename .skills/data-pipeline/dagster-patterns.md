@@ -637,6 +637,126 @@ for rec in instance.get_run_records(filters=RunsFilter(statuses=[DagsterRunStatu
 
 ---
 
+## Lesson 14: Maintenance Schedule Topology — Cleanup, Backup, Auto-Recovery
+
+**Problem:** Daily maintenance jobs (purge, backup, vacuum) compete with each other and with active ingestion. Without explicit topology, you get:
+- Backup mid-running while purge is deleting files → ENOENT noise + partial backup
+- Purge competing with realtime tick (every 3 min) on event_logs SQLite → "database is locked"
+- Schedules defined in code but never running (`DECLARED_IN_CODE` status)
+- Auto-recovery sensor only watching `STARTED` runs — misses queue-stuck zombies
+
+### Topology rules
+
+```
+02:30  purge_runs_job          (clears Dagster history + dbt target dirs)
+03:00  transform_batch_nightly (holds dbt_rw=1)
+04:30  health_recon_daily      (read-only on serving DB)
+04:45  health_kpi_closure      (read-only)
+06:00  backup_platform_job     (yields if purge still running)
+06:00  health_report_digest    (read-only, parallel-safe with backup)
+```
+
+**Why this order:**
+- **Purge first**: clears `history/` so backup snapshots a small dataset (`history/` excluded anyway, but smaller `index.db` reduces backup time)
+- **02:30 quietest window**: realtime ticks every 3 min always; nightly at 03:00; recon at 04:30 — 02:00-02:59 has the lowest competing write pressure on Dagster's SQLite
+- **Backup yields to purge**: if purge backlog runs >30 min (recovery scenario), backup skips this window rather than producing partial output
+- **Digest parallel with backup**: both read-only on different DBs; OK to share the 06:00 slot
+
+### Required wiring
+
+**1. Schedule must yield to peer maintenance:**
+
+```python
+@schedule(
+    job=maintain_backup_platform_job,
+    cron_schedule="0 6 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def maintain_backup_platform_schedule(context):
+    if _has_active_run(context, "maintain_backup_platform_job"):
+        return SkipReason("backup: previous run still active")
+    if _has_active_run(context, "maintain_purge_runs_job"):
+        return SkipReason("backup: yielding to active purge")
+    return RunRequest(run_key=None)
+```
+
+**2. Stuck-run sensor covers ALL non-terminal states (not just `STARTED`):**
+
+```python
+@sensor(minimum_interval_seconds=60)  # cheap status-filter query
+def health_alert_stuckrun_sensor(context):
+    # Pass 1: STARTED + no log activity for 5+ min (caught by INACTIVITY_THRESHOLD)
+    # ... existing logic ...
+
+    # Pass 2: NOT_STARTED/QUEUED/STARTING for 2h+ (daemon never dequeued)
+    queue_records = instance.get_run_records(
+        filters=RunsFilter(statuses=[
+            DagsterRunStatus.NOT_STARTED,
+            DagsterRunStatus.QUEUED,
+            DagsterRunStatus.STARTING,
+        ])
+    )
+    for rec in queue_records:
+        age = now - datetime.fromtimestamp(rec.create_timestamp, tz=timezone.utc)
+        if age >= QUEUE_STUCK_THRESHOLD:  # 2h
+            instance.report_run_canceled(rec.dagster_run)
+```
+
+**3. Backup script `trap … EXIT` for cleanup, pre-flight disk check:**
+
+```bash
+# scripts/backup/backup.sh
+trap rotate_old_backups EXIT  # always rotate, even if cp fails
+
+# Pre-flight: abort fast if free < source + 1 GB margin
+NEED_KB=$(du -sk "$DATA_ROOT" | awk '{print $1}')
+FREE_KB=$(df -Pk "$BACKUP_ROOT" | awk 'NR==2 {print $4}')
+[ "$FREE_KB" -lt "$((NEED_KB + 1024*1024))" ] && exit 1
+
+# After copying dagster_home, exclude regenerable run history
+prune_dagster_history "${BACKUP_DIR}/app_data/dagster_home"
+```
+
+**4. `purge_runs_job` must clean BOTH Dagster history AND dbt target dirs:**
+
+```python
+# orchestration/ops/purge_runs.py
+def maintain_purge_runs_op(context):
+    # ... delete runs older than PURGE_KEEP_DAYS ...
+    # ... cleanup orphan .db files in history/runs/ ...
+    # ... VACUUM index.db to reclaim space after mass deletes ...
+    _cleanup_dbt_target_dirs(keep_days=1)  # transformation/target/sapo_dbt_assets-*
+```
+
+`sapo_dbt_assets-*` accumulates ~480 dirs/day × 10 MB = ~4.8 GB/day untouched. Purge cleanup is the only thing keeping it bounded.
+
+### Operational gotcha
+
+**Schedule listed in `defs.schedules=[...]` but never starts:** Dagster does NOT auto-enable on first detection. New schedules sit in `DECLARED_IN_CODE` status and only tick after explicit start. Verify with:
+
+```bash
+docker exec data_platform sh -c '
+python -c "
+import sqlite3, json
+c = sqlite3.connect(\"/app/var/dagster_home/schedules/schedules.db\").cursor()
+c.execute(\"SELECT job_body, status FROM jobs WHERE job_type=\x27SCHEDULE\x27\")
+for body, status in c.fetchall():
+    print(status, json.loads(body)[\"origin\"][\"job_name\"])
+"'
+```
+
+If a schedule from your `definitions.py` is missing → never enabled. Start it:
+
+```bash
+dagster schedule start -f orchestration/definitions.py <schedule_name>
+```
+
+**Cron edited in code but storage shows old value:** schedule storage caches cron from FIRST start. Daemon evaluates the NEW cron from in-memory definitions (storage cron is just a snapshot). To align them, `dagster schedule stop && dagster schedule start` after any cron edit.
+
+**Reference:** `lessons-learned.md` L49 (DECLARED_IN_CODE pitfall), L50 (`trap … EXIT`), L51 (exclude `dagster_home/history`), L52 (Pass 2 stuck sensor).
+
+---
+
 ## Summary: Dagster Integration Checklist
 
 Khi add job/asset mới vào Dagster, kiểm tra:
@@ -665,6 +785,12 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **psutil** in `requirements.txt` for subprocess termination
 - [ ] **Backup job** has `"dagster/concurrency_key": "duckdb_lock"` to prevent I/O collision — xem Lesson 12
 - [ ] **Boot-time cleanup** cancels zombie NOT_STARTED runs older than 30 min — xem Lesson 13
+- [ ] **Maintenance schedule explicitly started** (not just listed in `defs.schedules`) — verify `schedules.db` `jobs` table has row with `status='RUNNING'` — xem Lesson 14 / L49
+- [ ] **Backup schedule yields to active purge** — `_has_active_run("maintain_purge_runs_job")` check before `RunRequest` — xem Lesson 14
+- [ ] **Maintenance cron in quiet window** — purge 02:30 ICT (before nightly), backup 06:00 ICT (after recon/KPI)
+- [ ] **stuck_run_alerter has Pass 2** for `NOT_STARTED`/`QUEUED`/`STARTING` >2h — Pass 1 alone misses queue-stuck zombies — xem Lesson 14 / L52
+- [ ] **`backup.sh` rotation in `trap … EXIT`** + pre-flight `df` check + `prune_dagster_history` — xem L50, L51
+- [ ] **`purge_runs_job` cleans dbt target dirs** (`_cleanup_dbt_target_dirs`) — without this, `transformation/target/` accumulates ~5 GB/day — xem Lesson 14
 
 ---
 

@@ -107,6 +107,12 @@
 | **Run stuck STARTED 1h+ không fail/complete** | dbt subprocess hang (rollback bug, deadlock, network stall) — process sống nhưng không output | Auto-handled: `health_alert_stuckrun_sensor` phát hiện (no activity 5 min) → auto-terminate → free slots → Lark alert. Manual: cancel run + `unstick_concurrency_pools.py`. Xem L38 |
 | **"Step blocked by limit for pool duckdb_lock" sau restart** | Concurrency slot leak từ crashed/killed runs | Auto-handled: boot-time cleanup + `health_concurrency_pool_janitor` sensor (5 min). Manual: `docker compose exec data_platform python scripts/maintenance/unstick_concurrency_pools.py`. Xem L39 |
 | **Health checks block ingestion 55+ min** | `AssetSelection.all_asset_checks()` include dbt tests → compete `duckdb_lock` | Exclude dbt tests từ health job + mutual exclusion check trong schedule + offset cron :05. Xem L40 |
+| **Dagster API treo, daemon log spam `disk I/O error`** | Disk full → SQLite `runs.db`/`index.db`/`schedules.db` không write được heartbeat | `df -h /app/var` check disk; xóa `transformation/target/sapo_dbt_assets-*` cũ + backup cũ + đợi/trigger purge. Container vẫn UP nhưng API liệt vì SQLite hỏng |
+| **Schedule defined nhưng job có 0 runs ever** | Schedule ở trạng thái `DECLARED_IN_CODE` — phải explicit start để đẩy lên `RUNNING` | `dagster schedule start -f orchestration/definitions.py <schedule_name>`. Verify storage: `SELECT job_body, status FROM jobs` trong `schedules.db`. Xem L49 |
+| **Backup tích lũy quá `KEEP_COUNT`, đĩa đầy** | Rotation chạy SAU `cp -a` — `cp` fail giữa chừng (ENOSPC) → `set -e` exit → rotation không bao giờ tới | Move rotation vào `trap rotate_old_backups EXIT` + pre-flight `df` check. Xem L50 |
+| **Backup folder phình 18 GB/ngày trong khi DuckDB chỉ 320 MB** | `cp -a dagster_home` ôm cả `history/` (run records) | `prune_dagster_history` xóa `dagster_home/history/` khỏi backup destination sau copy. Xem L51 |
+| **Stuck run sensor không catch zombie NOT_STARTED 3+ ngày** | Sensor chỉ filter `STARTED` runs, bỏ qua `NOT_STARTED`/`QUEUED`/`STARTING` | Add Pass 2: iterate non-terminal statuses + age >2h → `report_run_canceled`. Xem L52 |
+| **`transformation/target/sapo_dbt_assets-*` phình hàng GB/ngày** | Mỗi dbt run tạo 1 dir ~10 MB; không có cleanup → 480 dirs/ngày × 10 MB | `_cleanup_dbt_target_dirs(keep_days)` trong `purge_runs.py` op — chạy 02:30 ICT daily |
 
 ## Metabase — Dashboard Deploy
 
