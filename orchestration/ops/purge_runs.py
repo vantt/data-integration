@@ -9,7 +9,7 @@ from dagster import op, job, Out, Output, DagsterRunStatus
 
 
 # Retry delays (seconds) for SQLite "database is locked" errors.
-# Total max wait: 0.5+1+2+4+8 = 15.5s — long enough for any daemon tick to release.
+# 5 attempts; sleep after attempts 0-3 only (total wait 7.5s before final try).
 _LOCK_RETRY_DELAYS = [0.5, 1.0, 2.0, 4.0, 8.0]
 
 
@@ -143,7 +143,9 @@ def _vacuum_index_db(instance, log) -> tuple[float, float]:
         # the WAL on disk. TRUNCATE mode checkpoints and shrinks it to 0.
         result = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
         if result and result[0] == 1:
-            log.warning("wal_checkpoint(TRUNCATE): blocked by active readers, WAL not fully truncated")
+            # busy=1 is normal when the daemon has open WAL readers; SQLite's
+            # auto-checkpoint will truncate on the next quiet moment.
+            log.info("wal_checkpoint(TRUNCATE): active readers present, WAL will auto-truncate later")
         conn.close()
     except sqlite3.OperationalError as e:
         log.warning(f"VACUUM skipped (database busy): {e}")

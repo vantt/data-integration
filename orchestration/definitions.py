@@ -6,8 +6,7 @@ import shutil
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ingestion", "src"))
 
-from datetime import datetime
-import pytz
+from datetime import datetime, timezone, timedelta
 
 from dagster import (
     Definitions,
@@ -271,12 +270,11 @@ def transform_batch_nightly_schedule(context):
     return RunRequest(run_key=None)
 
 
-_ICT = pytz.timezone("Asia/Ho_Chi_Minh")
+_ICT = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh, no pytz dependency
 
-# Fires immediately after purge succeeds — no fixed clock dependency.
-# run_key=date deduplicates: at most one backup per calendar day even if
-# purge is manually re-run. Backup sees a clean dagster_home because purge
-# already finished; no more cp -a ENOENT noise from mid-delete copies.
+# Fast path: fires immediately after purge succeeds (normally ~02:35).
+# run_key=date deduplicates with the fallback schedule below — only one
+# backup runs per calendar day, whichever triggers first.
 @run_status_sensor(
     run_status=DagsterRunStatus.SUCCESS,
     monitored_jobs=[maintain_purge_runs_job],
@@ -284,6 +282,21 @@ _ICT = pytz.timezone("Asia/Ho_Chi_Minh")
     minimum_interval_seconds=60,
 )
 def trigger_backup_after_purge(context: RunStatusSensorContext):
+    date_key = datetime.now(tz=_ICT).strftime("%Y-%m-%d")
+    return RunRequest(run_key=date_key)
+
+
+# Fallback: if purge failed (sensor never fired), backup still runs at 06:00.
+# Same run_key format as the sensor — Dagster deduplicates automatically,
+# so this is a no-op on days where the sensor already triggered backup.
+@schedule(
+    job=maintain_backup_platform_job,
+    cron_schedule="0 6 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def maintain_backup_fallback_schedule(context):
+    if _has_active_run(context, "maintain_backup_platform_job"):
+        return SkipReason("backup: already running")
     date_key = datetime.now(tz=_ICT).strftime("%Y-%m-%d")
     return RunRequest(run_key=date_key)
 
@@ -464,6 +477,7 @@ defs = Definitions(
         health_report_digest_schedule,
         # maintain_*
         maintain_purge_runs_schedule,
+        maintain_backup_fallback_schedule,
     ],
     sensors=[
         # ingest_*
