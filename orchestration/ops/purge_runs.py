@@ -2,16 +2,26 @@
 import os
 import shutil
 import sqlite3
+import time
 from datetime import datetime, timedelta
 
 from dagster import op, job, Out, Output, DagsterRunStatus
 
 
+# Retry delays (seconds) for SQLite "database is locked" errors.
+# Total max wait: 0.5+1+2+4+8 = 15.5s — long enough for any daemon tick to release.
+_LOCK_RETRY_DELAYS = [0.5, 1.0, 2.0, 4.0, 8.0]
+
+
 def _get_run_db_dir(instance):
-    """Resolve the per-run SQLite directory from the Dagster instance."""
+    """Resolve the per-run SQLite directory from the Dagster instance.
+
+    _base_dir IS the runs/ directory (e.g. dagster_home/history/runs/).
+    Do NOT append 'runs' again.
+    """
     storage = instance._event_storage
     if hasattr(storage, '_base_dir'):
-        return os.path.join(storage._base_dir, 'runs')
+        return storage._base_dir
     dagster_home = os.environ.get('DAGSTER_HOME', '')
     return os.path.join(dagster_home, 'history', 'runs')
 
@@ -47,9 +57,11 @@ def _remove_run_storage(instance, run_id: str) -> int:
     return 0
 
 
-def _cleanup_orphans(instance) -> tuple[int, int]:
-    """Remove .db files and storage dirs with no matching run record."""
-    known_ids = set(r.run_id for r in instance.get_runs(limit=999999))
+def _cleanup_orphans(instance, known_run_ids: set) -> tuple[int, int]:
+    """Remove .db files and storage dirs with no matching run record.
+
+    Uses the caller-supplied known_run_ids set to avoid re-querying the DB.
+    """
     db_removed = 0
     storage_removed = 0
 
@@ -59,7 +71,7 @@ def _cleanup_orphans(instance) -> tuple[int, int]:
             if not f.endswith('.db') or f == 'index.db':
                 continue
             run_id = f[:-3]
-            if run_id in known_ids:
+            if run_id in known_run_ids:
                 continue
             for ext in ('.db', '.db-wal', '.db-shm'):
                 path = os.path.join(run_dir, run_id + ext)
@@ -73,7 +85,7 @@ def _cleanup_orphans(instance) -> tuple[int, int]:
     storage_dir = _get_storage_dir(instance)
     if os.path.isdir(storage_dir):
         for d in os.listdir(storage_dir):
-            if d not in known_ids and os.path.isdir(os.path.join(storage_dir, d)):
+            if d not in known_run_ids and os.path.isdir(os.path.join(storage_dir, d)):
                 shutil.rmtree(os.path.join(storage_dir, d), ignore_errors=True)
                 storage_removed += 1
 
@@ -124,8 +136,14 @@ def _vacuum_index_db(instance, log) -> tuple[float, float]:
         return 0, 0
     size_before = os.path.getsize(index_path) / (1024 * 1024)
     try:
-        conn = sqlite3.connect(index_path, timeout=10.0)
+        conn = sqlite3.connect(index_path, timeout=30.0)
+        conn.execute('PRAGMA busy_timeout = 30000')
         conn.execute('VACUUM')
+        # Truncate WAL file to 0 bytes — VACUUM rebuilds the main file but leaves
+        # the WAL on disk. TRUNCATE mode checkpoints and shrinks it to 0.
+        result = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
+        if result and result[0] == 1:
+            log.warning("wal_checkpoint(TRUNCATE): blocked by active readers, WAL not fully truncated")
         conn.close()
     except sqlite3.OperationalError as e:
         log.warning(f"VACUUM skipped (database busy): {e}")
@@ -145,6 +163,75 @@ _TERMINATED_STATUSES = [
 ]
 
 
+def _delete_run_with_retry(instance, run_id: str, log) -> bool:
+    """Delete run + events via public API, retrying on SQLite lock errors."""
+    for attempt, wait in enumerate(_LOCK_RETRY_DELAYS):
+        try:
+            instance.delete_run(run_id)
+            return True
+        except Exception as e:
+            if 'database is locked' not in str(e).lower():
+                log.warning(f"Failed to delete run {run_id}: {e}")
+                return False
+            if attempt < len(_LOCK_RETRY_DELAYS) - 1:
+                time.sleep(wait)
+    log.warning(f"Giving up on run {run_id} after {len(_LOCK_RETRY_DELAYS)} retries (database locked)")
+    return False
+
+
+def _delete_events_with_retry(event_storage, run_id: str, log) -> bool:
+    """Delete only event_log entries for a run_id, retrying on SQLite lock errors."""
+    for attempt, wait in enumerate(_LOCK_RETRY_DELAYS):
+        try:
+            event_storage.delete_events(run_id)
+            return True
+        except Exception as e:
+            if 'database is locked' not in str(e).lower():
+                log.warning(f"Failed to delete events for {run_id}: {e}")
+                return False
+            if attempt < len(_LOCK_RETRY_DELAYS) - 1:
+                time.sleep(wait)
+    log.warning(f"Giving up on events for {run_id} after {len(_LOCK_RETRY_DELAYS)} retries (database locked)")
+    return False
+
+
+def _cleanup_orphan_event_entries(instance, known_run_ids: set, log) -> int:
+    """Delete event_log rows in index.db whose run_id no longer exists in runs.db.
+
+    This handles the partial-delete case: when delete_run() succeeded but
+    delete_events() failed previously, leaving orphaned rows in index.db.
+    """
+    run_dir = _get_run_db_dir(instance)
+    index_path = os.path.join(run_dir, 'index.db')
+    if not os.path.exists(index_path):
+        return 0
+
+    # Find run_ids present in event_logs but not in runs.db
+    try:
+        conn = sqlite3.connect(index_path, timeout=30.0)
+        conn.execute('PRAGMA busy_timeout = 30000')
+        event_run_ids = set(
+            row[0] for row in conn.execute('SELECT DISTINCT run_id FROM event_logs').fetchall()
+        )
+        conn.close()
+    except sqlite3.OperationalError as e:
+        log.warning(f"Could not query index.db for orphan detection: {e}")
+        return 0
+
+    orphan_ids = event_run_ids - known_run_ids
+    if not orphan_ids:
+        return 0
+
+    log.info(f"Found {len(orphan_ids)} orphaned event-log run_ids, cleaning up")
+    cleaned = 0
+    for run_id in orphan_ids:
+        if _delete_events_with_retry(instance._event_storage, run_id, log):
+            cleaned += 1
+
+    log.info(f"Cleaned event_logs for {cleaned}/{len(orphan_ids)} orphaned run_ids")
+    return cleaned
+
+
 @op(out=Out(dict))
 def maintain_purge_runs_op(context) -> dict:
     """Purge Dagster runs older than keep_days and reclaim storage."""
@@ -154,6 +241,17 @@ def maintain_purge_runs_op(context) -> dict:
         context.log.warning("PURGE_KEEP_DAYS < 1 is not allowed, using 1")
     cutoff_date = datetime.now() - timedelta(days=keep_days)
 
+    # Log WAL size as an early warning — a large WAL (> 100 MB) means a previous
+    # run was stuck or killed mid-operation and left the WAL uncheckpointed.
+    run_dir = _get_run_db_dir(context.instance)
+    wal_path = os.path.join(run_dir, 'index.db-wal')
+    if os.path.exists(wal_path):
+        wal_mb = os.path.getsize(wal_path) / (1024 * 1024)
+        if wal_mb > 100:
+            context.log.warning(f"index.db-wal is {wal_mb:.0f} MB — previous run may have been interrupted")
+        else:
+            context.log.info(f"index.db-wal: {wal_mb:.1f} MB (normal)")
+
     context.log.info(f"Purging runs older than {keep_days} days (cutoff: {cutoff_date})")
 
     from dagster import RunsFilter
@@ -161,9 +259,17 @@ def maintain_purge_runs_op(context) -> dict:
     records = context.instance.get_run_records(filters=filters, ascending=True)
     count = len(records)
 
+    # Snapshot current known run IDs once — used by orphan cleanup below.
+    # limit=10000 is a safe upper bound: at ~650 runs/day with 1-day keep window,
+    # steady-state is ~1300 runs. 10K prevents OOM on an unexpected backlog.
+    known_run_ids = set(
+        r.run_id for r in context.instance.get_runs(limit=10000)
+    )
+
     if count == 0:
         context.log.info("No runs to purge")
-        orphan_db, orphan_storage = _cleanup_orphans(context.instance)
+        orphan_db, orphan_storage = _cleanup_orphans(context.instance, known_run_ids)
+        orphan_events = _cleanup_orphan_event_entries(context.instance, known_run_ids, context.log)
         size_before, size_after = _vacuum_index_db(context.instance, context.log)
         dbt_dirs_removed, dbt_mb_freed = _cleanup_dbt_target_dirs(keep_days, context.log)
         if dbt_dirs_removed:
@@ -172,6 +278,7 @@ def maintain_purge_runs_op(context) -> dict:
             "deleted_runs": 0,
             "db_files_removed": orphan_db,
             "storage_dirs_removed": orphan_storage,
+            "orphan_event_entries_cleaned": orphan_events,
             "index_mb_before": size_before,
             "index_mb_after": size_after,
             "dbt_dirs_removed": dbt_dirs_removed,
@@ -186,31 +293,31 @@ def maintain_purge_runs_op(context) -> dict:
 
     for i, rec in enumerate(records):
         run_id = rec.dagster_run.run_id
-        try:
-            context.instance._run_storage.delete_run(run_id)
-            try:
-                context.instance._event_storage.delete_events(run_id)
-            except TypeError:
-                pass
+        if _delete_run_with_retry(context.instance, run_id, context.log):
             deleted_count += 1
             db_files_removed += _remove_run_db_files(context.instance, run_id)
             storage_dirs_removed += _remove_run_storage(context.instance, run_id)
 
-            if (i + 1) % 100 == 0:
-                context.log.info(f"Progress: {i + 1}/{count}")
-        except Exception as e:
-            context.log.warning(f"Failed to delete run {run_id}: {e}")
+        if (i + 1) % 100 == 0:
+            context.log.info(f"Progress: {i + 1}/{count}")
 
     context.log.info(f"Deleted {deleted_count} runs, {db_files_removed} db files, {storage_dirs_removed} storage dirs")
 
-    orphan_db, orphan_storage = _cleanup_orphans(context.instance)
+    # Re-fetch known IDs after deletions for accurate orphan detection
+    known_run_ids = set(
+        r.run_id for r in context.instance.get_runs(limit=10000)
+    )
+
+    orphan_db, orphan_storage = _cleanup_orphans(context.instance, known_run_ids)
     if orphan_db or orphan_storage:
         db_files_removed += orphan_db
         storage_dirs_removed += orphan_storage
         context.log.info(f"Cleaned {orphan_db} orphan db files, {orphan_storage} orphan storage dirs")
 
+    orphan_events = _cleanup_orphan_event_entries(context.instance, known_run_ids, context.log)
+
     size_before, size_after = _vacuum_index_db(context.instance, context.log)
-    context.log.info(f"VACUUM index.db: {size_before:.1f} MB → {size_after:.1f} MB")
+    context.log.info(f"VACUUM index.db: {size_before:.1f} MB -> {size_after:.1f} MB")
 
     dbt_dirs_removed, dbt_mb_freed = _cleanup_dbt_target_dirs(keep_days, context.log)
     if dbt_dirs_removed:
@@ -220,6 +327,7 @@ def maintain_purge_runs_op(context) -> dict:
         "deleted_runs": deleted_count,
         "db_files_removed": db_files_removed,
         "storage_dirs_removed": storage_dirs_removed,
+        "orphan_event_entries_cleaned": orphan_events,
         "index_mb_before": size_before,
         "index_mb_after": size_after,
         "dbt_dirs_removed": dbt_dirs_removed,

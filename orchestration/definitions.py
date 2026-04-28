@@ -6,6 +6,9 @@ import shutil
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ingestion", "src"))
 
+from datetime import datetime
+import pytz
+
 from dagster import (
     Definitions,
     load_assets_from_modules,
@@ -18,6 +21,8 @@ from dagster import (
     RunsFilter,
     DagsterRunStatus,
     in_process_executor,
+    run_status_sensor,
+    RunStatusSensorContext,
 )
 from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
@@ -266,27 +271,21 @@ def transform_batch_nightly_schedule(context):
     return RunRequest(run_key=None)
 
 
-# 6 AM daily — runs after nightly batch (3 AM) has finished.
-# Not in dbt_rw concurrency group: backup reads files, doesn't write DuckDB.
-#
-# Yields to active purge: backup copies dagster_home; if purge is still
-# deleting from history/ mid-copy, cp -a sees vanishing files (ENOENT noise)
-# and the partial history/ gets pruned anyway. Skipping until next day's
-# slot avoids producing a noisy/incomplete backup. Purge normally takes
-# 1-3 min in steady state; only matters when recovering from a backlog.
-@schedule(
-    job=maintain_backup_platform_job,
-    cron_schedule="0 6 * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
+_ICT = pytz.timezone("Asia/Ho_Chi_Minh")
+
+# Fires immediately after purge succeeds — no fixed clock dependency.
+# run_key=date deduplicates: at most one backup per calendar day even if
+# purge is manually re-run. Backup sees a clean dagster_home because purge
+# already finished; no more cp -a ENOENT noise from mid-delete copies.
+@run_status_sensor(
+    run_status=DagsterRunStatus.SUCCESS,
+    monitored_jobs=[maintain_purge_runs_job],
+    request_job=maintain_backup_platform_job,
+    minimum_interval_seconds=60,
 )
-def maintain_backup_platform_schedule(context):
-    active = _has_active_run(context, "maintain_backup_platform_job")
-    if active:
-        return SkipReason(f"backup: previous run still active ({active[:8]})")
-    purge_active = _has_active_run(context, "maintain_purge_runs_job")
-    if purge_active:
-        return SkipReason(f"backup: yielding to active purge ({purge_active[:8]})")
-    return RunRequest(run_key=None)
+def trigger_backup_after_purge(context: RunStatusSensorContext):
+    date_key = datetime.now(tz=_ICT).strftime("%Y-%m-%d")
+    return RunRequest(run_key=date_key)
 
 
 # Recon job — daily source↔destination reconciliation.
@@ -464,7 +463,6 @@ defs = Definitions(
         health_checks_asset_schedule,
         health_report_digest_schedule,
         # maintain_*
-        maintain_backup_platform_schedule,
         maintain_purge_runs_schedule,
     ],
     sensors=[
@@ -476,6 +474,8 @@ defs = Definitions(
         health_alert_failure_sensor,
         health_alert_stuckrun_sensor,
         health_concurrency_pool_janitor,
+        # maintain_*
+        trigger_backup_after_purge,
     ],
     resources={
         "dbt": DbtCliResource(
