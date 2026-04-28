@@ -26,6 +26,52 @@ BACKUP_DATA_OK=false
 # --- Helpers ---
 log() { local msg="$(date +%H:%M:%S) $*"; echo "$msg"; echo "$msg" >> "$LOG_FILE" 2>/dev/null || true; }
 
+# Drop dagster_home/history/ from a copied dagster_home — Dagster run records
+# are regenerable and large (often the bulk of dagster_home). Restoring runs
+# from an old backup is undesirable; we only need dagster.yaml, schedules/,
+# storage/ (assets), logs/ etc. to recover orchestration state.
+prune_dagster_history() {
+    local dh_dir="$1"
+    if [ -d "${dh_dir}/history" ]; then
+        rm -rf "${dh_dir}/history"
+        log "Pruned ${dh_dir}/history (run records excluded from backup)"
+    fi
+}
+
+# Always-run cleanup, registered as EXIT trap. Runs even when the script
+# aborts mid-copy (set -e + cp failure on disk-full, etc.) — without this,
+# rotation only fired on success, so failing backups piled up and made the
+# next run fail too. Idempotent: safe to run when there's nothing to clean.
+rotate_old_backups() {
+    local rc=$?
+    set +e  # never let cleanup itself bubble up an error
+
+    # Drop incomplete backup if data step never finished
+    if [ "${BACKUP_DATA_OK:-false}" = false ] && [ -n "${BACKUP_DIR:-}" ] && [ -d "$BACKUP_DIR" ]; then
+        rm -rf "$BACKUP_DIR" 2>/dev/null && log "Removed failed backup dir: $(basename "$BACKUP_DIR")"
+    fi
+
+    # Rotate timestamped backup dirs (newest $KEEP_COUNT kept)
+    if [ -d "${BACKUP_ROOT:-}" ]; then
+        local keep="${KEEP_COUNT:-7}"
+        cd "$BACKUP_ROOT" 2>/dev/null || return $rc
+        ls -1d [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9] 2>/dev/null \
+            | sort -r \
+            | tail -n +$((keep + 1)) \
+            | while read -r old; do
+                rm -rf "${BACKUP_ROOT}/${old}" && log "Rotated old backup: ${old}"
+            done
+        # Rotate log files alongside backup dirs
+        for pattern in "backup-*.log" "restore-*.log"; do
+            ls -1 ${pattern} 2>/dev/null | sort -r | tail -n +$((keep + 1)) | while read -r old_log; do
+                rm -f "${BACKUP_ROOT}/${old_log}" 2>/dev/null
+            done
+        done
+    fi
+
+    return $rc
+}
+
 # --- Pre-flight ---
 if [ "$KEEP_COUNT" -lt 1 ]; then
     echo "ERROR: BACKUP_KEEP_COUNT must be >= 1 (got $KEEP_COUNT)" >&2
@@ -33,6 +79,30 @@ if [ "$KEEP_COUNT" -lt 1 ]; then
 fi
 
 mkdir -p "$BACKUP_DIR"
+
+# Register cleanup AFTER vars are set (so trap can read BACKUP_DIR/BACKUP_ROOT/KEEP_COUNT).
+trap rotate_old_backups EXIT
+
+# Disk space pre-flight: estimate need vs free, fail fast if insufficient.
+# Need = current DATA_ROOT size + 1 GB safety margin (logs, growth during copy).
+# Trap still runs on early exit → old backups get rotated → space freed for next attempt.
+DATA_ROOT_PRECHECK="${DATA_ROOT:-/app/var}"
+PRECHECK_TARGET="${PROJECT_ROOT}/app_data"
+[ -d "$PRECHECK_TARGET" ] || PRECHECK_TARGET="$DATA_ROOT_PRECHECK"
+if [ -d "$PRECHECK_TARGET" ]; then
+    NEED_KB=$(du -sk "$PRECHECK_TARGET" 2>/dev/null | awk '{print $1}')
+    FREE_KB=$(df -Pk "$BACKUP_ROOT" | awk 'NR==2 {print $4}')
+    SAFETY_KB=$((1024 * 1024))  # 1 GB
+    if [ -n "$NEED_KB" ] && [ -n "$FREE_KB" ] && [ "$FREE_KB" -lt "$((NEED_KB + SAFETY_KB))" ]; then
+        log "=== Backup ABORTED: insufficient disk space ==="
+        log "Source size:  $((NEED_KB / 1024)) MB"
+        log "Free space:   $((FREE_KB / 1024)) MB"
+        log "Required:     $((NEED_KB / 1024 + 1024)) MB (source + 1 GB margin)"
+        log "Trap will still rotate old backups to free space for next attempt."
+        EXIT_CODE=1
+        exit 1
+    fi
+fi
 
 log "=== Backup started: $TIMESTAMP ==="
 log "Source: $PROJECT_ROOT"
@@ -53,6 +123,7 @@ if [ -d "${PROJECT_ROOT}/app_data" ]; then
     log "Backing up app_data from ${APP_DATA_SRC}..."
     if cp -a "$APP_DATA_SRC" "$APP_DATA_DST" 2>&1; then
         BACKUP_DATA_OK=true
+        prune_dagster_history "${APP_DATA_DST}/dagster_home"
         SIZE=$(du -sh "$APP_DATA_DST" 2>/dev/null | cut -f1 || echo "unknown")
         log "app_data backed up: ${SIZE}"
     else
@@ -68,6 +139,9 @@ else
             log "Backing up ${vol_name} from ${candidate}..."
             if cp -a "$candidate" "${BACKUP_DIR}/app_data/${vol_name}" 2>&1; then
                 BACKUP_DATA_OK=true
+                if [ "$vol_name" = "dagster_home" ]; then
+                    prune_dagster_history "${BACKUP_DIR}/app_data/dagster_home"
+                fi
                 log "${vol_name} backed up."
             else
                 log "WARNING: failed to copy ${candidate}"
@@ -95,29 +169,9 @@ for f in .env.docker docker-compose.yml Dockerfile.dataplatform Dockerfile.metab
 done
 log "Config files backed up (${COPIED} found)."
 
-# --- Step 3: Remove failed backup directory ---
-if [ "$BACKUP_DATA_OK" = false ]; then
-    rm -rf "$BACKUP_DIR" 2>/dev/null && log "Removed failed backup dir." || log "WARNING: could not remove failed backup dir."
-fi
-
-# --- Step 4: Rotate old backups ---
-log "Rotating backups (keeping last ${KEEP_COUNT})..."
-# List timestamp-named dirs, newest first, skip $KEEP_COUNT, delete rest
-cd "$BACKUP_ROOT"
-ls -1d [0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9][0-9][0-9] 2>/dev/null \
-    | sort -r \
-    | tail -n +$((KEEP_COUNT + 1)) \
-    | while read -r old; do
-        rm -rf "${BACKUP_ROOT}/${old}" && log "Deleted old backup: ${old}" || log "WARNING: could not delete ${old}"
-    done || true
-
-# Rotate logs
-for pattern in "backup-*.log" "restore-*.log"; do
-    ls -1 ${pattern} 2>/dev/null | sort -r | tail -n +$((KEEP_COUNT + 1)) | while read -r old_log; do
-        rm -f "${BACKUP_ROOT}/${old_log}" 2>/dev/null || true
-    done || true
-done
-
+# --- Step 3: Finalize ---
+# Cleanup (rotation + failed-dir removal) is handled by the EXIT trap so it
+# runs even when the script aborts mid-copy.
 ELAPSED=$(( SECONDS - START_SECONDS ))
 if [ "$EXIT_CODE" -eq 0 ]; then
     log "=== Backup completed successfully in ${ELAPSED}s ==="

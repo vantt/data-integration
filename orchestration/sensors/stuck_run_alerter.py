@@ -46,6 +46,14 @@ INACTIVITY_THRESHOLD = timedelta(minutes=5)
 # that are still initializing (resource setup, partial_parse, etc.).
 MIN_RUNTIME_BEFORE_KILL = timedelta(minutes=10)
 
+# Runs stuck in NOT_STARTED/QUEUED/STARTING for this long indicate the queue
+# coordinator daemon never picked them up (daemon crashed, disk full, frozen
+# by SQLite lock storm, etc.). Threshold > nightly batch duration (~30 min)
+# so realtime ticks queued behind nightly aren't false-positives. 2 hours
+# leaves a wide safety margin while preventing zombie runs from accumulating
+# for days (which is what happened during the 2026-04-28 disk-full incident).
+QUEUE_STUCK_THRESHOLD = timedelta(hours=2)
+
 # Max run_ids kept in cursor to prevent unbounded growth.
 CURSOR_LIMIT = 100
 
@@ -134,7 +142,11 @@ def _get_last_event_time(context: SensorEvaluationContext, run_id: str) -> datet
     return None
 
 
-@sensor(minimum_interval_seconds=300)  # check every 5 minutes
+@sensor(minimum_interval_seconds=60)  # check every 60s
+# Cheap: each tick lists runs filtered by status (small set, indexed query).
+# Tighter than the 5-min INACTIVITY_THRESHOLD so detection latency for Pass 1
+# is bounded (a stuck run is caught within ~6 min total instead of ~10 min).
+# Pass 2 (queue-stuck >2h) sees negligible benefit but pays no extra cost.
 def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
     """Detect and auto-terminate runs with no recent activity."""
     terminated_ids = _parse_cursor(context.cursor)
@@ -225,6 +237,69 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
                 "Runtime": f"{runtime.total_seconds()//60:.0f} min",
                 "Inactive": f"{inactivity.total_seconds()//60:.0f} min",
                 "Action": "Auto-terminated, slots freed",
+            },
+        )
+        new_terminations.append(run.run_id)
+
+    # --- Pass 2: queue-stuck runs (never dequeued) ---
+    # Catches runs frozen in NOT_STARTED/QUEUED/STARTING because the run
+    # coordinator daemon was unable to dequeue (most often from SQLite I/O
+    # errors during disk-full, daemon OOM, or grpc code server crash).
+    # Pass 1 misses these entirely because they never reach STARTED.
+    queue_records = instance.get_run_records(
+        filters=RunsFilter(statuses=[
+            DagsterRunStatus.NOT_STARTED,
+            DagsterRunStatus.QUEUED,
+            DagsterRunStatus.STARTING,
+        ])
+    )
+    for rec in queue_records:
+        run = rec.dagster_run
+        if run.run_id in terminated_set:
+            continue
+        if not rec.create_timestamp:
+            continue
+
+        create_dt = rec.create_timestamp
+        if isinstance(create_dt, (int, float)):
+            create_dt = datetime.fromtimestamp(create_dt, tz=timezone.utc)
+        elif create_dt.tzinfo is None:
+            create_dt = create_dt.replace(tzinfo=timezone.utc)
+
+        age = now - create_dt
+        if age < QUEUE_STUCK_THRESHOLD:
+            continue
+
+        logger.warning(
+            "Auto-canceling queue-stuck run %s (%s) — status %s, age %s",
+            run.run_id[:8], run.job_name, run.status.value, age
+        )
+
+        try:
+            instance.report_run_canceled(run)
+        except Exception as exc:
+            logger.warning("Cancel failed for queue-stuck %s: %s", run.run_id[:8], exc)
+            try:
+                instance.report_run_failed(
+                    run, f"Auto-canceled: stuck in {run.status.value} for {age}"
+                )
+            except Exception as exc2:
+                logger.warning("Failed-state fallback also failed: %s", exc2)
+
+        try:
+            instance.event_log_storage.free_concurrency_slots_for_run(run.run_id)
+        except Exception as exc:
+            logger.debug("Free slots failed (often expected for never-started runs): %s", exc)
+
+        send_lark_card(
+            title="🪦 Dagster Run AUTO-CANCELED (queue-stuck)",
+            color="orange",
+            fields={
+                "Job": run.job_name,
+                "Run ID": run.run_id[:8],
+                "Status was": run.status.value,
+                "Age": f"{age.total_seconds()//60:.0f} min",
+                "Action": "Auto-canceled (daemon never dequeued)",
             },
         )
         new_terminations.append(run.run_id)

@@ -33,16 +33,10 @@ from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
 from orchestration.sensors.file_drop_sensors import ingest_filedrop_shopee_sensor, ingest_filedrop_misa_sensor
 from orchestration.sensors.concurrency_pool_janitor import health_concurrency_pool_janitor
 
-# Load all assets
-# [Auto-Setup] Ensure dbt directories exist before loading assets
-# try:
-#     from scripts.ensure_dbt_directories import ensure_directories
-#     ensure_directories()
-# except ImportError:
-#     print("[WARN] Could not import ensure_directories script. Skipping auto-check.")
-# except Exception as e:
-#     print(f"[WARN] Auto-check failed: {e}")
-
+# Load all assets — directory setup runs once at container startup
+# (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
+# Don't call it from here: definitions.py is re-imported on every gRPC code
+# server spawn (e.g. each `dagster job launch`), which would add noise.
 all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure])
 
 # ------------------------------------------------------------------------------
@@ -274,6 +268,12 @@ def transform_batch_nightly_schedule(context):
 
 # 6 AM daily — runs after nightly batch (3 AM) has finished.
 # Not in dbt_rw concurrency group: backup reads files, doesn't write DuckDB.
+#
+# Yields to active purge: backup copies dagster_home; if purge is still
+# deleting from history/ mid-copy, cp -a sees vanishing files (ENOENT noise)
+# and the partial history/ gets pruned anyway. Skipping until next day's
+# slot avoids producing a noisy/incomplete backup. Purge normally takes
+# 1-3 min in steady state; only matters when recovering from a backlog.
 @schedule(
     job=maintain_backup_platform_job,
     cron_schedule="0 6 * * *",
@@ -283,6 +283,9 @@ def maintain_backup_platform_schedule(context):
     active = _has_active_run(context, "maintain_backup_platform_job")
     if active:
         return SkipReason(f"backup: previous run still active ({active[:8]})")
+    purge_active = _has_active_run(context, "maintain_purge_runs_job")
+    if purge_active:
+        return SkipReason(f"backup: yielding to active purge ({purge_active[:8]})")
     return RunRequest(run_key=None)
 
 
@@ -392,13 +395,18 @@ def health_report_digest_schedule(context):
     return RunRequest(run_key=None)
 
 
-# 05:30 daily — purge old Dagster runs to reclaim disk space.
-# Runs 30 min before backup (06:00) so backup captures a clean state.
+# 02:30 daily — purge old Dagster runs to reclaim disk space.
+# Window choice: ingestion is quietest in the small hours (realtime tick
+# every 3 min still fires, but no nightly/recon/health overlap), which
+# minimises SQLite "database is locked" contention against event_logs
+# during mass deletes. Completes well before nightly batch (03:00) and
+# backup (06:00). Earlier 05:30 slot collided with the post-nightly
+# realtime drain and caused warnings during purge.
 # Keeps PURGE_KEEP_DAYS (default: 1) days of history.
 # Not in dbt_rw concurrency group: operates on Dagster's internal storage only.
 @schedule(
     job=maintain_purge_runs_job,
-    cron_schedule="30 5 * * *",
+    cron_schedule="30 2 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
 def maintain_purge_runs_schedule(context):
