@@ -234,6 +234,36 @@ def _cleanup_orphan_event_entries(instance, known_run_ids: set, log) -> int:
     return cleaned
 
 
+def _cleanup_orphan_asset_check_executions(instance, log) -> int:
+    """Delete asset_check_executions rows whose run_id no longer exists in runs.db.
+
+    Dagster's delete_run() does not touch this table, so it accumulates
+    indefinitely. We join directly against runs.db to find orphans.
+    """
+    run_dir = _get_run_db_dir(instance)
+    index_path = os.path.join(run_dir, 'index.db')
+    runs_path = os.path.join(os.path.dirname(run_dir), 'runs.db')
+    if not os.path.exists(index_path) or not os.path.exists(runs_path):
+        return 0
+    try:
+        conn = sqlite3.connect(index_path, timeout=30.0)
+        conn.execute('PRAGMA busy_timeout = 30000')
+        conn.execute(f"ATTACH DATABASE '{runs_path}' AS runsdb")
+        conn.execute("""
+            DELETE FROM asset_check_executions
+            WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)
+        """)
+        conn.commit()
+        deleted = conn.execute("SELECT changes()").fetchone()[0]
+        conn.close()
+    except Exception as e:
+        log.warning(f"asset_check_executions cleanup failed: {e}")
+        return 0
+    if deleted:
+        log.info(f"Cleaned {deleted:,} orphaned asset_check_executions rows")
+    return deleted
+
+
 @op(out=Out(dict))
 def maintain_purge_runs_op(context) -> dict:
     """Purge Dagster runs older than keep_days and reclaim storage."""
@@ -272,6 +302,7 @@ def maintain_purge_runs_op(context) -> dict:
         context.log.info("No runs to purge")
         orphan_db, orphan_storage = _cleanup_orphans(context.instance, known_run_ids)
         orphan_events = _cleanup_orphan_event_entries(context.instance, known_run_ids, context.log)
+        orphan_checks = _cleanup_orphan_asset_check_executions(context.instance, context.log)
         size_before, size_after = _vacuum_index_db(context.instance, context.log)
         dbt_dirs_removed, dbt_mb_freed = _cleanup_dbt_target_dirs(keep_days, context.log)
         if dbt_dirs_removed:
@@ -281,6 +312,7 @@ def maintain_purge_runs_op(context) -> dict:
             "db_files_removed": orphan_db,
             "storage_dirs_removed": orphan_storage,
             "orphan_event_entries_cleaned": orphan_events,
+            "orphan_check_executions_cleaned": orphan_checks,
             "index_mb_before": size_before,
             "index_mb_after": size_after,
             "dbt_dirs_removed": dbt_dirs_removed,
@@ -317,6 +349,7 @@ def maintain_purge_runs_op(context) -> dict:
         context.log.info(f"Cleaned {orphan_db} orphan db files, {orphan_storage} orphan storage dirs")
 
     orphan_events = _cleanup_orphan_event_entries(context.instance, known_run_ids, context.log)
+    orphan_checks = _cleanup_orphan_asset_check_executions(context.instance, context.log)
 
     size_before, size_after = _vacuum_index_db(context.instance, context.log)
     context.log.info(f"VACUUM index.db: {size_before:.1f} MB -> {size_after:.1f} MB")
@@ -330,6 +363,7 @@ def maintain_purge_runs_op(context) -> dict:
         "db_files_removed": db_files_removed,
         "storage_dirs_removed": storage_dirs_removed,
         "orphan_event_entries_cleaned": orphan_events,
+        "orphan_check_executions_cleaned": orphan_checks,
         "index_mb_before": size_before,
         "index_mb_after": size_after,
         "dbt_dirs_removed": dbt_dirs_removed,
