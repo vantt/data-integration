@@ -75,7 +75,7 @@ username = dlt.secrets["sources.sapo.username"]  # secrets cho sensitive data
 
 Sapo API sort DESC theo `modified_on`. Thay vì tính tổng pages, đếm `consecutive_old_items`:
 ```python
-if consecutive_old_items >= min_overlap_items:  # default 500
+if consecutive_old_items >= min_overlap_items:  # default 50 (see L57 — do NOT raise to 500)
     break  # đủ safety buffer, dừng
 ```
 **Tại sao:** total_count không đáng tin (API có thể trả sai); early-stop ổn định hơn và tránh scan toàn lịch sử.
@@ -1597,16 +1597,193 @@ for rec in queue_records:
 Lessons L49-L52 + the existing L47 (backup acquires `duckdb_lock`) crystallize a design pattern for daily maintenance schedules:
 
 1. **Order by mutual exclusion**: `purge → backup` (purge clears history before backup snapshots).
-2. **Window in the quiet zone**: avoid hours when realtime/nightly are running. For this project: 02:00-02:59 ICT (after midnight, before 03:00 nightly).
-3. **Yield to peers**: `maintain_backup_platform_schedule` must `_has_active_run("maintain_purge_runs_job")` and skip if true. Don't compete on shared filesystem.
+2. **Window in the quiet zone**: avoid hours when realtime/nightly are running. For this project: 01:00-01:59 ICT (after midnight, before 03:00 nightly).
+3. **Enforce ordering via sensor, not cron offset**: use `run_status_sensor` to chain `backup` after `purge` completes. Cron offset only works if both jobs are fast and predictable.
 4. **Bound resource cost upfront** with concurrency tags (`duckdb_lock`) and pre-flight checks (free disk).
 5. **Always-run cleanup via `trap … EXIT`** in shell scripts — never trust step-by-step linear execution to reach the rotation step.
 6. **Exclude regenerable data** from anything that gets persisted (backups, snapshots).
 7. **Auto-recovery sensors cover ALL non-terminal states**, not just `STARTED`.
+8. **Pre-flight disk check must measure only source dirs, not parent dir**: if backup destination lives under the same parent as source, `du -sk parent` includes the existing backups in "required size" (circular over-estimate → false ENOSPC abort every run).
 
-| Schedule | Cron (ICT) | Rationale |
+| Schedule/Sensor | Trigger | Rationale |
 |---|---|---|
-| `maintain_purge_runs_schedule` | `30 2 * * *` | Quietest window; finishes well before 03:00 nightly |
-| `transform_batch_nightly_schedule` | `0 3 * * *` | Default nightly batch |
-| `maintain_backup_platform_schedule` | `0 6 * * *` | After all overnight jobs complete; yields to active purge |
-| `health_report_digest_schedule` | `0 6 * * *` | Same slot as backup but read-only on different DB |
+| `maintain_purge_runs_schedule` | `0 1 * * *` ICT | Quietest window; finishes before 03:00 nightly |
+| `trigger_backup_after_purge` (sensor) | purge SUCCESS | Hard ordering — backup runs after purge, not cron-guessed |
+| `maintain_backup_fallback_schedule` | `0 6 * * *` ICT | Fallback if purge fails; `run_key=date` deduplicates with sensor |
+| `transform_batch_nightly_schedule` | `0 3 * * *` ICT | Default nightly batch |
+| `health_report_digest_schedule` | `0 6 * * *` ICT | After all overnight jobs complete; read-only different DB |
+
+---
+
+## Cleanup & Schedule Management (post-mortem 2026-04-28/29)
+
+### L53 — Phantom Dagster instigator states after code renames
+
+**Symptom:** Old sensor/schedule names show `RUNNING` in UI even after being renamed in code. They never tick but hold state rows in `schedules.db`, confusing debugging. New names appear as `DECLARED_IN_CODE` even after daemon restart.
+
+**Root cause:** Dagster stores instigator state in `schedules.db` by original name. Renaming in Python does NOT auto-migrate the DB row. Old row stays `RUNNING`, new row stays unregistered.
+
+**Detect phantoms:**
+```python
+import sqlite3, json
+conn = sqlite3.connect('/app/var/dagster_home/schedules/schedules.db')
+for body, status in conn.execute("SELECT job_body, status FROM jobs WHERE job_type IN ('SCHEDULE','SENSOR')"):
+    nm = json.loads(body)['origin']['job_name']
+    print(f"{status:20s} | {nm}")
+```
+Any name no longer in `definitions.py` = phantom.
+
+**Fix:**
+```python
+from dagster import DagsterInstance, InstigatorStatus
+instance = DagsterInstance.get()
+for s in instance.all_instigator_state():
+    if s.name in PHANTOM_NAMES:
+        instance.update_instigator_state(s.with_status(InstigatorStatus.STOPPED))
+```
+After stopping, Dagster cleans up phantom rows on next daemon tick.
+
+**Rule:**
+1. When renaming a schedule/sensor: stop it in UI BEFORE renaming code → deploy → start under new name.
+2. After renaming: verify `dagster schedule list` shows only current names.
+3. A phantom `RUNNING` sensor costs nothing (no ticks) but is misleading. Clean up proactively.
+
+---
+
+### L54 — `run_status_sensor` pattern for hard job ordering (backup-after-purge)
+
+**Problem:** Backup must run AFTER purge completes — not at a fixed cron offset. Cron offset (`06:00`) is brittle: if purge runs long or is skipped, backup may run on stale DB or skip entirely.
+
+**Solution:** `run_status_sensor` fires on purge SUCCESS → triggers backup immediately. Fallback schedule at 06:00 handles the case where purge failed.
+
+```python
+from dagster import run_status_sensor, RunStatusSensorContext, RunRequest, DagsterRunStatus, schedule, SkipReason
+from datetime import datetime, timezone, timedelta
+
+_ICT = timezone(timedelta(hours=7))
+
+@run_status_sensor(
+    run_status=DagsterRunStatus.SUCCESS,
+    monitored_jobs=[maintain_purge_runs_job],
+    request_job=maintain_backup_platform_job,
+    minimum_interval_seconds=60,
+)
+def trigger_backup_after_purge(context: RunStatusSensorContext):
+    date_key = datetime.now(tz=_ICT).strftime("%Y-%m-%d")
+    return RunRequest(run_key=date_key)  # run_key deduplicates with fallback
+
+@schedule(job=maintain_backup_platform_job, cron_schedule="0 6 * * *", execution_timezone="Asia/Ho_Chi_Minh")
+def maintain_backup_fallback_schedule(context):
+    if _has_active_run(context, "maintain_backup_platform_job"):
+        return SkipReason("backup: already running")
+    date_key = datetime.now(tz=_ICT).strftime("%Y-%m-%d")
+    return RunRequest(run_key=date_key)  # same key as sensor → Dagster deduplicates
+```
+
+**Key points:**
+- `run_key=date` in BOTH sensor and fallback → if sensor already triggered backup, fallback's `RunRequest` is silently deduplicated by Dagster.
+- Sensor fires within ~1 min of purge SUCCESS → typical backup starts ~02:35 ICT.
+- Fallback fires at 06:00 → catches missed backups without double-running.
+- Use stdlib `datetime.timezone(timedelta(hours=7))` not `pytz` — pytz import failure breaks all of Dagster startup.
+
+**New sensor registration:** after code deploy, new sensors may NOT auto-register in schedules.db. If UI shows "DECLARED_IN_CODE" instead of running, use GraphQL `startSensor` mutation or Dagster CLI.
+
+---
+
+### L55 — `asset_check_executions` table not cleaned by `delete_run()`
+
+**Symptom:** After purging 18,000+ runs, `index.db` still 3.3 GB after VACUUM. Found `asset_check_executions` had 800,377 rows (800,160 orphaned).
+
+**Root cause:** Dagster's `instance.delete_run()` cleans `runs.db` and `event_logs` but does NOT touch `asset_check_executions` in `index.db`. Rows accumulate indefinitely — one row per asset check per run.
+
+**Fix — cross-SQLite delete using ATTACH:**
+```python
+def _cleanup_orphan_asset_check_executions(instance, log) -> int:
+    run_dir = _get_run_db_dir(instance)
+    index_path = os.path.join(run_dir, 'index.db')
+    runs_path = os.path.join(os.path.dirname(run_dir), 'runs.db')
+    conn = sqlite3.connect(index_path, timeout=30.0)
+    conn.execute('PRAGMA busy_timeout = 30000')
+    conn.execute(f"ATTACH DATABASE '{runs_path}' AS runsdb")
+    conn.execute("""
+        DELETE FROM asset_check_executions
+        WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)
+    """)
+    conn.commit()
+    deleted = conn.execute("SELECT changes()").fetchone()[0]
+    conn.close()
+    return deleted
+```
+
+After fix: index.db shrank to 43.7 MB (from 3.3 GB after VACUUM, 6 GB before).
+
+**Rule:** Include `_cleanup_orphan_asset_check_executions` in every purge run — both the `count==0` path (maintenance-only) and the `count>0` path (active purge). See `orchestration/ops/purge_runs.py`.
+
+---
+
+### L56 — SQLite WAL safety in purge/cleanup scripts
+
+**Key practices for SQLite operations during Dagster maintenance:**
+
+1. **Always set both Python timeout AND SQLite busy_timeout:**
+```python
+conn = sqlite3.connect(index_path, timeout=30.0)      # Python-level wait
+conn.execute('PRAGMA busy_timeout = 30000')            # SQLite-level wait (ms)
+# Both needed: Python timeout handles connection; busy_timeout handles statement-level locks
+```
+
+2. **VACUUM + WAL checkpoint after mass delete:**
+```python
+conn.execute('VACUUM')
+result = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
+if result and result[0] == 1:
+    # busy=1 is NORMAL — daemon holds WAL readers; SQLite auto-truncates later
+    log.info("wal_checkpoint(TRUNCATE): active readers present, WAL will auto-truncate later")
+```
+Log this as `info`, not `warning` — the daemon always holds WAL readers in production.
+
+3. **WAL size at run start = early warning:**
+```python
+wal_path = os.path.join(run_dir, 'index.db-wal')
+if os.path.exists(wal_path):
+    wal_mb = os.path.getsize(wal_path) / (1024 * 1024)
+    if wal_mb > 100:
+        log.warning(f"index.db-wal is {wal_mb:.0f} MB — previous run may have been interrupted")
+```
+A >100 MB WAL at the START of a purge run = previous purge was killed mid-operation. SQLite will auto-apply the WAL on next DB open (recovery is safe).
+
+4. **Offline VACUUM when online is impossible:** If Docker container holds an exclusive lock during cleanup, `docker compose stop data_platform` releases it. Then VACUUM directly on Windows host — the bind-mounted SQLite files are accessible from outside the container.
+
+---
+
+### L57 — history_log double-fetch + `min_overlap_items` reset behavior
+
+**Double-fetch bug:**
+```python
+# BUG — first session.get response immediately discarded, 2x network calls
+def _fetch_entity_inner(target_url, uri, current_session):
+    _delay_with_jitter()
+    resp = current_session.get(target_url, timeout=15)   # ← wasted
+    _delay_with_jitter()
+    resp = current_session.get(target_url, timeout=15)   # ← overwrites first
+
+# FIX
+def _fetch_entity_inner(target_url, uri, current_session):
+    _delay_with_jitter()
+    resp = current_session.get(target_url, timeout=15)
+```
+The bug doubled network calls and delay time, effectively halving throughput.
+
+**`min_overlap_items` reset behavior (run never exits):**
+
+The early-stop counter `consecutive_old_items` resets to 0 every time a NEW log item is seen. On an active store:
+- `min_overlap_items=500` requires 500 consecutive-old items in a row
+- Any single new event resets the counter → need 500 more
+- On a busy log stream = the loop effectively never exits until `max_pages` (1000 pages = 100,000 items)
+
+The source default is `min_overlap_items=50`. Setting it to 500 in `run_history_log.py` caused >10-minute hangs.
+
+**Rule:**
+1. Use source default (50) for `min_overlap_items` unless there is explicit evidence that new items appear sparsely across 5+ pages.
+2. Add a Dagster `op_tags={"dagster/max_runtime": N}` to history_log asset as a hard ceiling.
+3. When a source has a "double request" pattern like above, the bug is invisible from metrics — only manifest as 2× slower runs.

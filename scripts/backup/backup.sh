@@ -84,16 +84,32 @@ mkdir -p "$BACKUP_DIR"
 trap rotate_old_backups EXIT
 
 # Disk space pre-flight: estimate need vs free, fail fast if insufficient.
-# Need = current DATA_ROOT size + 1 GB safety margin (logs, growth during copy).
+# Need = size of directories being backed up + 1 GB safety margin.
+# IMPORTANT: measure only the source dirs (data_lake, dagster_home, input_source),
+# NOT the parent DATA_ROOT — that would include BACKUP_ROOT itself (circular).
 # Trap still runs on early exit → old backups get rotated → space freed for next attempt.
-DATA_ROOT_PRECHECK="${DATA_ROOT:-/app/var}"
-PRECHECK_TARGET="${PROJECT_ROOT}/app_data"
-[ -d "$PRECHECK_TARGET" ] || PRECHECK_TARGET="$DATA_ROOT_PRECHECK"
-if [ -d "$PRECHECK_TARGET" ]; then
-    NEED_KB=$(du -sk "$PRECHECK_TARGET" 2>/dev/null | awk '{print $1}')
+_precheck_need_kb() {
+    local total=0
+    if [ -d "${PROJECT_ROOT}/app_data" ]; then
+        total=$(du -sk "${PROJECT_ROOT}/app_data" 2>/dev/null | awk '{print $1}')
+    else
+        local dr="${DATA_ROOT:-/app/var}"
+        for vol in data_lake dagster_home input_source; do
+            local d="${dr}/${vol}"
+            if [ -d "$d" ]; then
+                local sz
+                sz=$(du -sk "$d" 2>/dev/null | awk '{print $1}')
+                total=$((total + sz))
+            fi
+        done
+    fi
+    echo "$total"
+}
+NEED_KB=$(_precheck_need_kb)
+if [ -n "$NEED_KB" ] && [ "$NEED_KB" -gt 0 ]; then
     FREE_KB=$(df -Pk "$BACKUP_ROOT" | awk 'NR==2 {print $4}')
     SAFETY_KB=$((1024 * 1024))  # 1 GB
-    if [ -n "$NEED_KB" ] && [ -n "$FREE_KB" ] && [ "$FREE_KB" -lt "$((NEED_KB + SAFETY_KB))" ]; then
+    if [ -n "$FREE_KB" ] && [ "$FREE_KB" -lt "$((NEED_KB + SAFETY_KB))" ]; then
         log "=== Backup ABORTED: insufficient disk space ==="
         log "Source size:  $((NEED_KB / 1024)) MB"
         log "Free space:   $((FREE_KB / 1024)) MB"
