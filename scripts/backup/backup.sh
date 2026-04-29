@@ -99,7 +99,7 @@ _precheck_need_kb() {
             if [ -d "$d" ]; then
                 local sz
                 sz=$(du -sk "$d" 2>/dev/null | awk '{print $1}')
-                total=$((total + sz))
+                total=$((total + ${sz:-0}))
             fi
         done
     fi
