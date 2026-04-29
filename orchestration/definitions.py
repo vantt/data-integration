@@ -286,9 +286,10 @@ def trigger_backup_after_purge(context: RunStatusSensorContext):
     return RunRequest(run_key=date_key)
 
 
-# Fallback: if purge failed (sensor never fired), backup still runs at 06:00.
-# Same run_key format as the sensor — Dagster deduplicates automatically,
-# so this is a no-op on days where the sensor already triggered backup.
+# Fallback: fires at 06:00 if sensor didn't trigger backup (purge failed).
+# Also retries if sensor triggered but backup FAILED — run_key=None so Dagster
+# does NOT deduplicate against a previously failed run with same date key.
+# Dedup is handled manually: skip if a SUCCESS already exists today.
 @schedule(
     job=maintain_backup_platform_job,
     cron_schedule="0 6 * * *",
@@ -297,8 +298,18 @@ def trigger_backup_after_purge(context: RunStatusSensorContext):
 def maintain_backup_fallback_schedule(context):
     if _has_active_run(context, "maintain_backup_platform_job"):
         return SkipReason("backup: already running")
-    date_key = datetime.now(tz=_ICT).strftime("%Y-%m-%d")
-    return RunRequest(run_key=date_key)
+    today = datetime.now(tz=_ICT).date()
+    records = context.instance.get_run_records(
+        filters=RunsFilter(
+            job_name="maintain_backup_platform_job",
+            statuses=[DagsterRunStatus.SUCCESS],
+        ),
+        limit=5,
+    )
+    for rec in records:
+        if datetime.fromtimestamp(rec.create_timestamp, tz=_ICT).date() == today:
+            return SkipReason("backup: already succeeded today")
+    return RunRequest(run_key=None)
 
 
 # Recon job — daily source↔destination reconciliation.
