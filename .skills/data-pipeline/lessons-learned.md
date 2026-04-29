@@ -1603,7 +1603,7 @@ Lessons L49-L52 + the existing L47 (backup acquires `duckdb_lock`) crystallize a
 5. **Always-run cleanup via `trap … EXIT`** in shell scripts — never trust step-by-step linear execution to reach the rotation step.
 6. **Exclude regenerable data** from anything that gets persisted (backups, snapshots).
 7. **Auto-recovery sensors cover ALL non-terminal states**, not just `STARTED`.
-8. **Pre-flight disk check must measure only source dirs, not parent dir**: if backup destination lives under the same parent as source, `du -sk parent` includes the existing backups in "required size" (circular over-estimate → false ENOSPC abort every run).
+8. **Pre-flight disk check must measure only source dirs, not parent dir**: if backup destination lives under the same parent as source, `du -sk parent` includes the existing backups in "required size" (circular over-estimate → false ENOSPC abort every run). See L58.
 
 | Schedule/Sensor | Trigger | Rationale |
 |---|---|---|
@@ -1787,3 +1787,48 @@ The source default is `min_overlap_items=50`. Setting it to 500 in `run_history_
 1. Use source default (50) for `min_overlap_items` unless there is explicit evidence that new items appear sparsely across 5+ pages.
 2. Add a Dagster `op_tags={"dagster/max_runtime": N}` to history_log asset as a hard ceiling.
 3. When a source has a "double request" pattern like above, the bug is invisible from metrics — only manifest as 2× slower runs.
+
+---
+
+### L58 — Backup pre-flight disk check must exclude backup destination from source size
+
+**Symptom:** Backup job fails every night with "Backup ABORTED: insufficient disk space — Source: 107 GB, Free: 35 GB". But actual per-run backup is only ~19 GB and disk is not actually full.
+
+**Root cause:** `backup.sh` pre-flight falls back to `du -sk $DATA_ROOT` when the native `app_data/` path doesn't exist. `DATA_ROOT=/app/var` is the **parent** of all volume mounts including `/app/var/backups`. So the measurement includes every existing backup in "source size":
+
+```
+/app/var/
+├── data_lake/        ~19 GB  ← real source
+├── dagster_home/     ~0.5 GB ← real source
+├── input_source/     ~0.5 GB ← real source
+└── backups/          ~95 GB  ← backup DESTINATION, wrongly measured as source
+```
+
+`du -sk /app/var` = 115 GB → pre-flight says "need 116 GB" → aborts → rotation trap removes oldest backup → next night same thing (7 backups → 6, disk shrinks ~19 GB, but 6 × 19 GB still >> 44 GB free).
+
+**Why it wasn't caught earlier:** The first backup ever ran before enough backups accumulated to trip the threshold. Once 5+ backups existed (~95 GB), every subsequent run aborted at pre-flight, leaving previous backups intact. The rotation DID fire (removed the oldest) but freed only ~19 GB — not enough to overcome the phantom 95 GB circular estimate.
+
+**Fix:** Measure only the directories actually being copied:
+```bash
+_precheck_need_kb() {
+    local total=0
+    if [ -d "${PROJECT_ROOT}/app_data" ]; then
+        total=$(du -sk "${PROJECT_ROOT}/app_data" 2>/dev/null | awk '{print $1}')
+    else
+        local dr="${DATA_ROOT:-/app/var}"
+        for vol in data_lake dagster_home input_source; do
+            local d="${dr}/${vol}"
+            [ -d "$d" ] || continue
+            local sz; sz=$(du -sk "$d" 2>/dev/null | awk '{print $1}')
+            total=$((total + sz))
+        done
+    fi
+    echo "$total"
+}
+NEED_KB=$(_precheck_need_kb)
+```
+
+**Rule:**
+1. Any pre-flight size check: list explicitly what is being measured. Never measure a parent dir that contains the destination.
+2. When a backup script has both source and destination under the same mount, the pre-flight MUST enumerate source subdirs individually.
+3. If backups silently stop succeeding but old ones remain (rotation running but no new success), suspect circular size estimate — compare `du -sk <source_dirs>` vs `du -sk <parent>`.
