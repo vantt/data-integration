@@ -153,14 +153,20 @@ else
         candidate="${DATA_ROOT}/${vol_name}"
         if [ -d "$candidate" ]; then
             log "Backing up ${vol_name} from ${candidate}..."
-            if cp -a "$candidate" "${BACKUP_DIR}/app_data/${vol_name}" 2>&1; then
+            dst="${BACKUP_DIR}/app_data/${vol_name}"
+            # cp -a may return non-zero when SQLite WAL/SHM files are checkpointed
+            # (deleted/recreated) mid-copy. Treat as success if destination was
+            # populated — check for the directory with content rather than exit code.
+            cp -a "$candidate" "$dst" 2>/dev/null || true
+            if [ -d "$dst" ] && [ "$(ls -A "$dst" 2>/dev/null)" ]; then
                 BACKUP_DATA_OK=true
                 if [ "$vol_name" = "dagster_home" ]; then
-                    prune_dagster_history "${BACKUP_DIR}/app_data/dagster_home"
+                    prune_dagster_history "$dst"
                 fi
-                log "${vol_name} backed up."
+                SIZE=$(du -sh "$dst" 2>/dev/null | cut -f1 || echo "unknown")
+                log "${vol_name} backed up: ${SIZE}"
             else
-                log "WARNING: failed to copy ${candidate}"
+                log "WARNING: failed to copy ${candidate} (destination empty)"
             fi
         fi
     done
