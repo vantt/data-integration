@@ -18,7 +18,7 @@ def run(argv=None):
     # Configure source arguments
     source_args = {
         "page_size": args.page_size,
-        "min_overlap_items": 500,
+        "min_overlap_items": 50,
         "limit": args.limit,
         "debug": args.debug
     }

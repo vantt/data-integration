@@ -278,8 +278,6 @@ def history_log(
         """Inner fetch with tenacity retry. Returns None to signal retry."""
         _delay_with_jitter()
         resp = current_session.get(target_url, timeout=15)
-        _delay_with_jitter()
-        resp = current_session.get(target_url, timeout=15)
 
         checked = _handle_auth_response(resp, current_session, uri)
         if checked is None:
