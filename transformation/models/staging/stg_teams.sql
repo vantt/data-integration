@@ -40,3 +40,5 @@ SELECT
     description,
     ingest_method
 FROM cleaned
+-- Safety net: if multiple partitions are ever read, keep the latest snapshot per team
+QUALIFY ROW_NUMBER() OVER (PARTITION BY team_code ORDER BY year DESC, month DESC) = 1

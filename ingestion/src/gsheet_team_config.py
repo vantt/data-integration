@@ -223,45 +223,35 @@ def _print_validation_report(tab_name, issues, total_rows, valid_count):
     print(f"    {valid_count} valid row(s) will be ingested.")
 
 
-def _save_to_parquet(df, table_name, partition_col="year"):
-    """Save DataFrame to parquet with year/month partitioning."""
-    if partition_col not in df.columns:
-        # Default partition: current year/month
-        df["year"] = datetime.now().year
-        df["month"] = datetime.now().month
+def _save_to_parquet(df, table_name):
+    """Save DataFrame to a fixed snapshot path, overwriting on every run.
+
+    Config tables (teams, team_members) are always-current snapshots — no time-series
+    partitioning. Fixed path prevents month-rollover from accumulating duplicate partitions.
+    Uses snapshot/ subdir so the sources.yml glob pattern ingest_method=*/**/*.parquet still matches.
+    """
+    import shutil
 
     df["ingest_method"] = "google_sheet"
 
-    # Handle empty dataframes - still write file with schema for dbt source
-    if len(df) == 0:
-        year = datetime.now().year
-        month = datetime.now().month
-        output_dir = os.path.join(
-            DATA_LAKE_PATH, "sapo_raw", table_name,
-            "ingest_method=google_sheet",
-            f"year={year}",
-            f"month={month}"
-        )
-        os.makedirs(output_dir, exist_ok=True)
-        file_path = os.path.join(output_dir, f"{table_name.replace('_raw', '')}.parquet")
-        print(f"  Writing 0 rows (schema only) to {file_path}")
-        df.to_parquet(file_path, index=False)
-        return
+    base_dir = os.path.join(
+        DATA_LAKE_PATH, "sapo_raw", table_name, "ingest_method=google_sheet"
+    )
 
-    grouped = df.groupby(["year", "month"])
+    # Remove legacy year=*/month=* partition subdirs (accumulated from old design)
+    if os.path.exists(base_dir):
+        for entry in os.listdir(base_dir):
+            entry_path = os.path.join(base_dir, entry)
+            if os.path.isdir(entry_path) and entry.startswith("year="):
+                print(f"  Removing legacy partition dir: {entry_path}")
+                shutil.rmtree(entry_path)
 
-    for (year, month), group in grouped:
-        output_dir = os.path.join(
-            DATA_LAKE_PATH, "sapo_raw", table_name,
-            "ingest_method=google_sheet",
-            f"year={year}",
-            f"month={month}"
-        )
-        os.makedirs(output_dir, exist_ok=True)
+    snapshot_dir = os.path.join(base_dir, "snapshot")
+    os.makedirs(snapshot_dir, exist_ok=True)
 
-        file_path = os.path.join(output_dir, f"{table_name.replace('_raw', '')}.parquet")
-        print(f"  Writing {len(group)} rows to {file_path}")
-        group.to_parquet(file_path, index=False)
+    file_path = os.path.join(snapshot_dir, f"{table_name.replace('_raw', '')}.parquet")
+    print(f"  Writing {len(df)} rows to {file_path}")
+    df.to_parquet(file_path, index=False)
 
 
 def fetch_and_save_team_config():

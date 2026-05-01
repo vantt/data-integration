@@ -1832,3 +1832,63 @@ NEED_KB=$(_precheck_need_kb)
 1. Any pre-flight size check: list explicitly what is being measured. Never measure a parent dir that contains the destination.
 2. When a backup script has both source and destination under the same mount, the pre-flight MUST enumerate source subdirs individually.
 3. If backups silently stop succeeding but old ones remain (rotation running but no new success), suspect circular size estimate — compare `du -sk <source_dirs>` vs `du -sk <parent>`.
+
+---
+
+## Config Snapshot Ingestion (Google Sheets, static reference data)
+
+### L59 — Config snapshot tables: dùng fixed path, KHÔNG phân vùng theo year/month
+
+**Incident (2026-05-01):** `gsheet_team_config.py` dùng `year/month` partitioning cho bảng `teams_raw` và `team_members_raw`. Lúc 03:01 ICT ngày 1/5, nightly batch tạo partition `month=5` mới — trong khi `month=4` vẫn còn. DuckDB glob `ingest_method=*/**/*.parquet` đọc cả hai → team CS xuất hiện 2 lần trong `stg_teams` → `fact_orders` SCD2 join nhân đôi mỗi order có seller thuộc team đó → **1419 duplicate order_id → dbt fail → 102 job failures + hàng trăm alert**.
+
+**Root cause:** `year/month` partitioning phù hợp cho time-series (orders, events) — KHÔNG phù hợp cho config snapshot (teams, members) vì config là "trạng thái hiện tại", không phải "lịch sử theo thời gian".
+
+**Fix pattern — Fixed snapshot path:**
+
+```python
+# BAD: mỗi tháng tạo partition mới, cộng dồn duplicate
+output_dir = .../ingest_method=google_sheet/year=2026/month=5/
+file_path  = .../teams.parquet  # tháng sau: month=6, tháng sau nữa: month=7
+
+# GOOD: luôn overwrite cùng file, không cộng dồn
+output_dir = .../ingest_method=google_sheet/snapshot/
+file_path  = .../teams.parquet  # overwrite mỗi lần chạy
+```
+
+Dùng `snapshot/` làm subdir cố định vì glob pattern của `sources.yml` là `ingest_method=*/**/*.parquet` — cần ít nhất 1 level subdirectory sau `ingest_method=*`.
+
+**Cleanup legacy partitions tự động khi chạy:**
+
+```python
+def _save_to_parquet(df, table_name):
+    import shutil
+    base_dir = .../ingest_method=google_sheet
+    # Xóa legacy year=* dirs từ design cũ
+    if os.path.exists(base_dir):
+        for entry in os.listdir(base_dir):
+            entry_path = os.path.join(base_dir, entry)
+            if os.path.isdir(entry_path) and entry.startswith("year="):
+                shutil.rmtree(entry_path)
+    # Ghi vào fixed path
+    snapshot_dir = os.path.join(base_dir, "snapshot")
+    os.makedirs(snapshot_dir, exist_ok=True)
+    df.to_parquet(os.path.join(snapshot_dir, f"{table_name.replace('_raw','')}.parquet"), index=False)
+```
+
+**Safety net ở staging SQL (QUALIFY dedup):**
+
+```sql
+-- stg_teams.sql — dedup by team_code, giữ snapshot mới nhất
+FROM cleaned
+QUALIFY ROW_NUMBER() OVER (PARTITION BY team_code ORDER BY year DESC, month DESC) = 1
+
+-- stg_team_members.sql — dedup by SCD2 key, giữ snapshot mới nhất
+FROM cleaned
+QUALIFY ROW_NUMBER() OVER (PARTITION BY staff_email, team_code, effective_from ORDER BY year DESC, month DESC) = 1
+```
+
+**Rules:**
+1. **Config/reference tables** (teams, team_members, targets, marketing_spend): dùng fixed path overwrite — KHÔNG year/month partition.
+2. **Time-series tables** (orders, events, history_log): dùng year/month partition — đây là nguồn gốc của pattern này.
+3. **Staging SQL cho config tables**: luôn thêm `QUALIFY ROW_NUMBER() ... = 1` làm safety net phòng re-introduced partitioning.
+4. **Cảnh báo cascade**: Config table duplicate → dim/fact downstream đọc SCD2 nhân đôi → hàng nghìn duplicate rows → toàn bộ dbt graph fail.

@@ -43,3 +43,5 @@ SELECT
 
     ingest_method
 FROM cleaned
+-- Safety net: if multiple partitions are ever read, keep the latest snapshot per SCD2 row
+QUALIFY ROW_NUMBER() OVER (PARTITION BY staff_email, team_code, effective_from ORDER BY year DESC, month DESC) = 1
