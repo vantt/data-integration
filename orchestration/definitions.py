@@ -36,6 +36,7 @@ from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_
 from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
 from orchestration.sensors.file_drop_sensors import ingest_filedrop_shopee_sensor, ingest_filedrop_misa_sensor
 from orchestration.sensors.concurrency_pool_janitor import health_concurrency_pool_janitor
+from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_sensor
 
 # Load all assets — directory setup runs once at container startup
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
@@ -499,6 +500,7 @@ defs = Definitions(
         health_alert_failure_sensor,
         health_alert_stuckrun_sensor,
         health_concurrency_pool_janitor,
+        health_db_watchdog_sensor,
         # maintain_*
         trigger_backup_after_purge,
     ],

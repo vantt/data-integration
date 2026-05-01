@@ -556,6 +556,22 @@ def _today_ict() -> str:
 # Op + job
 # ---------------------------------------------------------------------------
 
+def _check_db_staleness(db_path: str) -> Optional[float]:
+    """Return age in hours of the last health DB write, or None if unreadable."""
+    try:
+        conn = duckdb.connect(db_path, read_only=True)
+        row = conn.execute("SELECT MAX(run_started_at) FROM ingestion_runs").fetchone()
+        conn.close()
+        if not row or row[0] is None:
+            return None
+        last_write = row[0]
+        if hasattr(last_write, "tzinfo") and last_write.tzinfo is None:
+            last_write = last_write.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - last_write).total_seconds() / 3600
+    except Exception:
+        return None
+
+
 @op
 def compose_and_send_digest(_context) -> None:
     """Read ingestion_health.duckdb and post morning Lark card."""
@@ -563,6 +579,7 @@ def compose_and_send_digest(_context) -> None:
     dry_run = os.getenv("DIGEST_DRY_RUN", "0") == "1"
 
     kpi_data: Optional[KpiData] = None
+    stale_age_h: Optional[float] = None
 
     # Graceful degradation: DB may not exist yet on first boot
     if not os.path.exists(db_path):
@@ -579,6 +596,9 @@ def compose_and_send_digest(_context) -> None:
         for r in rows:
             r.status = classify(r)
     else:
+        # Check for stale monitoring data before building rows.
+        # sapo_webhook writes every 3 min; a gap > 6h means the recorder is broken.
+        stale_age_h = _check_db_staleness(db_path)
         rows, kpi_data = build_digest_rows(db_path)
 
     if not rows:
@@ -586,6 +606,23 @@ def compose_and_send_digest(_context) -> None:
         return
 
     fields, color = compose_card_fields(rows, kpi_data)
+
+    # Prepend stale-data banner when health monitoring itself is broken.
+    # Threshold 6h: lenient enough to not fire for brief restarts, strict
+    # enough to catch the "8 days frozen" scenario on the next morning report.
+    if stale_age_h is not None and stale_age_h > 6:
+        days = int(stale_age_h // 24)
+        hours = int(stale_age_h % 24)
+        age_str = f"{days} ngày {hours} giờ" if days else f"{int(stale_age_h)} giờ"
+        # Insert as the first field so it's always visible at the top of the card
+        stale_banner = (
+            f"⚠️ Health monitoring bị gián đoạn {age_str} — "
+            "dữ liệu bên dưới có thể không phản ánh thực tế. "
+            "Xem logs: `grep 'record_run failed' docker logs data_platform`"
+        )
+        fields = {"🚨 Cảnh báo hệ thống monitoring": stale_banner, **fields}
+        color = "red"  # Override card color to red regardless of asset status
+
     title = f"Data Ingestion Morning Report — {_today_ict()}"
 
     if dry_run:

@@ -186,3 +186,18 @@ def record_run(
 def get_db_path() -> str:
     """Return the resolved DuckDB path (for diagnostics / tooling)."""
     return _resolve_db_path()
+
+
+def check_writable() -> tuple[bool, str]:
+    """Try to open the health DB in write mode (no retries, no DDL).
+
+    Returns (ok, error_message). Used by the watchdog sensor to distinguish
+    a ghost lock from a recorder code bug.
+    """
+    try:
+        path = _resolve_db_path()
+        conn = duckdb.connect(path)
+        conn.close()
+        return True, ""
+    except Exception as exc:
+        return False, str(exc)[:300]
