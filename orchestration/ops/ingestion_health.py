@@ -102,8 +102,15 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
 """
 
 
-_LOCK_RETRIES = 5
-_LOCK_BACKOFF_S = 0.5
+_LOCK_RETRIES = 8
+_LOCK_BACKOFF_S = 1.0
+
+# Hint shown when a Windows shell/Defender process holds the lock.
+_LOCK_HINT = (
+    "Fix: Add Windows Defender exclusion for the monitoring directory, or run "
+    "'taskkill /F /IM dllhost.exe' on the Windows host to release COM surrogate lock. "
+    "See health_db_watchdog_sensor for automated detection."
+)
 
 
 def _connect() -> duckdb.DuckDBPyConnection:
@@ -117,10 +124,20 @@ def _connect() -> duckdb.DuckDBPyConnection:
             return conn
         except duckdb.IOException as exc:
             last_err = exc
+            err_str = str(exc)
+            is_stale = "PID 0" in err_str or "being used by another process" in err_str
             if attempt < _LOCK_RETRIES - 1:
                 wait = _LOCK_BACKOFF_S * (2 ** attempt)
-                logger.warning("ingestion_health lock contention (attempt %d/%d), retry in %.1fs",
-                               attempt + 1, _LOCK_RETRIES, wait)
+                if is_stale and attempt == 0:
+                    logger.warning(
+                        "ingestion_health: stale lock on %s (attempt %d/%d) — %s",
+                        path, attempt + 1, _LOCK_RETRIES, _LOCK_HINT,
+                    )
+                else:
+                    logger.warning(
+                        "ingestion_health lock contention (attempt %d/%d), retry in %.1fs",
+                        attempt + 1, _LOCK_RETRIES, wait,
+                    )
                 time.sleep(wait)
     raise last_err  # type: ignore[misc]
 
