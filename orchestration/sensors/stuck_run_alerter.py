@@ -48,11 +48,14 @@ MIN_RUNTIME_BEFORE_KILL = timedelta(minutes=10)
 
 # Runs stuck in NOT_STARTED/QUEUED/STARTING for this long indicate the queue
 # coordinator daemon never picked them up (daemon crashed, disk full, frozen
-# by SQLite lock storm, etc.). Threshold > nightly batch duration (~30 min)
-# so realtime ticks queued behind nightly aren't false-positives. 2 hours
-# leaves a wide safety margin while preventing zombie runs from accumulating
-# for days (which is what happened during the 2026-04-28 disk-full incident).
-QUEUE_STUCK_THRESHOLD = timedelta(hours=2)
+# by SQLite lock storm, etc.).
+#
+# Sizing: the dbt_rw=1 tag limit serializes all sync jobs. Legitimate wait =
+# duration of the currently-running job (realtime: ~7 min normal, ~10 min max;
+# nightly: ~60 min). The incremental schedule skips hour 3 (where nightly runs)
+# so incremental runs never legitimately queue behind nightly. 90 min covers
+# the worst case (nightly overruns) with a wide safety margin.
+QUEUE_STUCK_THRESHOLD = timedelta(minutes=90)
 
 # Max run_ids kept in cursor to prevent unbounded growth.
 CURSOR_LIMIT = 100

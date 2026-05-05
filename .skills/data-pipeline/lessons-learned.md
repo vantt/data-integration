@@ -1892,3 +1892,99 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY staff_email, team_code, effective_from O
 2. **Time-series tables** (orders, events, history_log): dùng year/month partition — đây là nguồn gốc của pattern này.
 3. **Staging SQL cho config tables**: luôn thêm `QUALIFY ROW_NUMBER() ... = 1` làm safety net phòng re-introduced partitioning.
 4. **Cảnh báo cascade**: Config table duplicate → dim/fact downstream đọc SCD2 nhân đôi → hàng nghìn duplicate rows → toàn bộ dbt graph fail.
+
+---
+
+## Stuck Run — Zombie Subprocess Cascade (post-mortem 2026-05-05)
+
+### L60 — `finally: watchdog.cancel()` orphans dbt subprocess khi run bị kill ngoài
+
+**Symptom:** `ingest_sapo_realtime_job` stuck **liên tục** (Runtime: 10 min, Inactive: 9 min, auto-terminated). Pattern lặp lại mỗi 3-13 phút mà không dừng dù đã có watchdog timer và stuck_run_alerter.
+
+**Root cause:** Chuỗi nguyên nhân đa tầng:
+
+1. dbt subprocess hang ở DuckDB WAL checkpoint
+2. `stuck_run_alerter` kill Dagster run lúc T=10 min (MIN_RUNTIME đạt ngưỡng, inactivity 9 min)
+3. Dagster cancel run → Python garbage-collect generator `sapo_dbt_assets` → `GeneratorExit` → **`finally: watchdog.cancel()` fires, disarming watchdog**
+4. dbt subprocess hiện **orphan** — không có watchdog, không có SIGKILL
+5. `_terminate_subprocess_tree(run_id)` tìm process bằng `run_id[:12]` trong cmdline/env của dbt → **không tìm thấy** (dbt không inject run_id vào environment của nó)
+6. Zombie dbt process tiếp tục chạy, giữ DuckDB WAL lock
+7. Run mới bắt đầu 3 min sau → dbt ngay lập tức hang ở WAL lock do zombie → repeat từ bước 1
+
+**Evidence:** "Runtime: 10 min, Inactive: 9 min" = 1 min webhook chạy OK, rồi dbt hang ngay khi start. Perfect match với "zombie từ run trước giữ WAL lock".
+
+**Fix: Kill subprocess trong `finally` block bất kể exit path nào**
+
+```python
+# orchestration/assets/dbt.py
+watchdog = threading.Timer(DBT_TIMEOUT_SEC, _kill_on_timeout)
+watchdog.daemon = True
+watchdog.start()
+try:
+    yield from invocation.stream()
+finally:
+    watchdog.cancel()
+    # Kill subprocess on ANY exit path (normal, timeout, OR external cancellation).
+    # Without this: external cancellation cancels the watchdog but leaves dbt alive.
+    try:
+        if invocation.process.poll() is None:
+            invocation.process.kill()
+    except Exception:
+        pass
+```
+
+**Rules:**
+1. **`finally` block phải đảm bảo cleanup** — không chỉ cancel watchdog. Bất kỳ exit path nào (exception, GeneratorExit, cancellation) đều phải kill subprocess.
+2. **Watchdog + finally kill = defense in depth**: watchdog fires nếu run hoàn tất bình thường nhưng dbt quá chậm; finally kill fires khi run bị cancel externally.
+3. **`_terminate_subprocess_tree` tìm theo run_id là không đủ** — subprocesses spawn bởi Dagster assets thường không có run_id trong cmdline hay env của chúng.
+4. **Zombie cascade dấu hiệu**: job cứ stuck đều đặn với cùng timing (Inactive ≈ 1 min ít hơn MIN_RUNTIME) là dấu hiệu zombie từ run trước đang giữ lock.
+
+**Reference:** `orchestration/assets/dbt.py` → `finally` block; `orchestration/sensors/stuck_run_alerter.py` → `_terminate_subprocess_tree`.
+
+---
+
+### L61 — QUEUE_STUCK_THRESHOLD phải sizing dựa vào topology schedule thực tế
+
+**Symptom:** `ingest_sapo_incremental_job` stuck NOT_STARTED 120 min (đúng bằng QUEUE_STUCK_THRESHOLD=2h). Runs liên tục bị miss, dữ liệu stale.
+
+**Root cause:** Hai vấn đề kết hợp:
+1. Zombie dbt processes (L60) tích lũy → CPU + file descriptor pressure → `QueuedRunCoordinator` daemon bị slow/freeze → không poll queue để dequeue incremental run
+2. QUEUE_STUCK_THRESHOLD = 2h quá rộng — phải chờ đủ 2h mới phát hiện và cancel
+
+**Tại sao 2h là sai với topology hiện tại:**
+
+```
+Incremental schedule: */10 0-2,4-23 * * *   ← skip toàn bộ hour 3
+Nightly schedule:     0 3 * * *              ← chạy lúc 3 AM
+```
+
+Hour 3 bị skip hoàn toàn → incremental KHÔNG BAO GIỜ xếp hàng trong khi nightly đang chạy → 2h threshold không phục vụ case "chờ nightly xong" vì case đó không xảy ra.
+
+Legitimate wait time thực tế = thời gian chạy của 1 job `dbt_rw` khác = 7-10 min (realtime) hoặc tối đa 60 min (nightly nếu overruns). 90 min bao phủ tất cả edge cases.
+
+**Fix:**
+
+```python
+# orchestration/sensors/stuck_run_alerter.py
+
+# Trước: QUEUE_STUCK_THRESHOLD = timedelta(hours=2)
+# Sau:
+QUEUE_STUCK_THRESHOLD = timedelta(minutes=90)
+# Rationale: incremental schedule skips hour 3 entirely — it can never legitimately
+# queue behind the nightly job. Max legitimate wait = 1 dbt_rw job duration (~60 min
+# worst case nightly overrun). 90 min covers this with margin.
+```
+
+**Quy trình sizing QUEUE_STUCK_THRESHOLD cho bất kỳ pipeline nào:**
+
+1. Liệt kê tất cả jobs dùng cùng concurrency tag (e.g., `dbt_rw=1`)
+2. Xác định job nào chạy lâu nhất (nightly: ~60 min)
+3. Xem schedule của victim job (job bị kẹt) có skip giờ mà job dài chạy không → nếu skip, job dài không thể là nguyên nhân
+4. Threshold = `max_legitimate_wait + safety_margin` (không phải "thật to cho an toàn")
+
+**Rules:**
+1. **Threshold phải phản ánh topology thực tế** — không set 2h chỉ vì "an toàn". Threshold càng lớn, zombie càng tồn tại lâu, cascade càng nhiều.
+2. **Kiểm tra schedule skip hour** — xem từng schedule để hiểu actual dependency. "Incremental skip hour 3" là thông tin quan trọng nhưng không hiển thị rõ ràng trong UI.
+3. **L60 fix phòng ngừa zombie** → L61 fix giảm detection latency. Cả hai cần nhau: L60 ngăn zombie tích lũy, L61 đảm bảo nếu zombie vẫn xảy ra thì bị phát hiện nhanh hơn.
+
+**Reference:** `orchestration/sensors/stuck_run_alerter.py` → `QUEUE_STUCK_THRESHOLD`; `orchestration/definitions.py` → `ingest_sapo_incremental_schedule` cron.

@@ -155,3 +155,12 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
         yield from invocation.stream()
     finally:
         watchdog.cancel()
+        # Kill the subprocess on any exit path (normal, timeout, or external run
+        # cancellation). Without this, external cancellation disarms the watchdog
+        # via the finally block while leaving the dbt process alive — it then
+        # holds the DuckDB lock and causes every subsequent run to hang.
+        try:
+            if invocation.process.poll() is None:
+                invocation.process.kill()
+        except Exception:
+            pass

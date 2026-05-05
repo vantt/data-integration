@@ -457,7 +457,10 @@ def sapo_dbt_assets(context, dbt: DbtCliResource):
 
     def _kill_on_timeout():
         context.log.error(f"dbt exceeded {DBT_TIMEOUT_SEC}s — killing")
-        invocation.process.kill()
+        try:
+            invocation.process.kill()
+        except Exception:
+            pass
 
     watchdog = threading.Timer(DBT_TIMEOUT_SEC, _kill_on_timeout)
     watchdog.daemon = True
@@ -466,9 +469,19 @@ def sapo_dbt_assets(context, dbt: DbtCliResource):
         yield from invocation.stream()
     finally:
         watchdog.cancel()
+        # CRITICAL: Kill subprocess on ANY exit path (normal, timeout, or external
+        # cancellation). Without this: alerter cancels the Dagster run → Python
+        # generator cleanup fires `finally: watchdog.cancel()` → watchdog disarmed
+        # → dbt subprocess orphaned, holds DuckDB WAL lock → every subsequent run
+        # hangs immediately → cascade of stuck runs. See L60.
+        try:
+            if invocation.process.poll() is None:
+                invocation.process.kill()
+        except Exception:
+            pass
 ```
 
-**Why:** `dbt.cli().stream()` has no timeout. DuckDB WAL checkpoint can hang indefinitely under I/O pressure. Watchdog ensures hard upper bound.
+**Why:** `dbt.cli().stream()` has no timeout. DuckDB WAL checkpoint can hang indefinitely under I/O pressure. Watchdog ensures hard upper bound. The `finally` kill ensures no orphan subprocess when run is cancelled externally (see L60 — the zombie cascade pitfall).
 
 ### Layer 2: Stuck Run Auto-Terminator (catch hangs that escape watchdog)
 
@@ -781,7 +794,9 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] Health checks job exclude dbt tests: `AssetSelection.all_asset_checks() - AssetSelection.checks_for_assets(dbt_assets)` — xem Lesson 11
 - [ ] Health checks schedule có `_has_active_ingestion()` check + offset `:05` cron — xem Lesson 11
 - [ ] **dbt subprocess timeout watchdog** trong `@dbt_assets` — 15 min hard limit via `threading.Timer` — xem Lesson 10 Layer 1
+- [ ] **`finally` block kill subprocess** sau `watchdog.cancel()` — không chỉ cancel watchdog; external cancellation disarms watchdog nhưng không kill dbt → zombie cascade (L60)
 - [ ] **stuck_run_alerter must kill subprocess** via `psutil` — `report_run_canceled()` only updates state — xem Lesson 10 Layer 2
+- [ ] **QUEUE_STUCK_THRESHOLD** sized dựa vào schedule topology thực tế, không phải "an toàn 2h mặc định" — xem L61
 - [ ] **psutil** in `requirements.txt` for subprocess termination
 - [ ] **Backup job** has `"dagster/concurrency_key": "duckdb_lock"` to prevent I/O collision — xem Lesson 12
 - [ ] **Boot-time cleanup** cancels zombie NOT_STARTED runs older than 30 min — xem Lesson 13

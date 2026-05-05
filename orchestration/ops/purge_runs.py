@@ -105,6 +105,7 @@ def _cleanup_dbt_target_dirs(keep_days: int, log) -> tuple[int, float]:
     removed_count = 0
     freed_bytes = 0
 
+    log.info(f"Scanning dbt target dirs in {target_dir}...")
     for name in os.listdir(target_dir):
         if not name.startswith('sapo_dbt_assets-'):
             continue
@@ -135,6 +136,7 @@ def _vacuum_index_db(instance, log) -> tuple[float, float]:
     if not os.path.exists(index_path):
         return 0, 0
     size_before = os.path.getsize(index_path) / (1024 * 1024)
+    log.info(f"Starting VACUUM on index.db ({size_before:.1f} MB)...")
     try:
         conn = sqlite3.connect(index_path, timeout=30.0)
         conn.execute('PRAGMA busy_timeout = 30000')
@@ -226,9 +228,11 @@ def _cleanup_orphan_event_entries(instance, known_run_ids: set, log) -> int:
 
     log.info(f"Found {len(orphan_ids)} orphaned event-log run_ids, cleaning up")
     cleaned = 0
-    for run_id in orphan_ids:
+    for i, run_id in enumerate(orphan_ids):
         if _delete_events_with_retry(instance._event_storage, run_id, log):
             cleaned += 1
+        if (i + 1) % 50 == 0:
+            log.info(f"Orphan event cleanup progress: {i + 1}/{len(orphan_ids)}")
 
     log.info(f"Cleaned event_logs for {cleaned}/{len(orphan_ids)} orphaned run_ids")
     return cleaned
@@ -249,6 +253,7 @@ def _cleanup_orphan_asset_check_executions(instance, log) -> int:
         conn = sqlite3.connect(index_path, timeout=30.0)
         conn.execute('PRAGMA busy_timeout = 30000')
         conn.execute(f"ATTACH DATABASE '{runs_path}' AS runsdb")
+        log.info("Cleaning orphaned asset_check_executions rows...")
         conn.execute("""
             DELETE FROM asset_check_executions
             WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)
@@ -332,7 +337,7 @@ def maintain_purge_runs_op(context) -> dict:
             db_files_removed += _remove_run_db_files(context.instance, run_id)
             storage_dirs_removed += _remove_run_storage(context.instance, run_id)
 
-        if (i + 1) % 100 == 0:
+        if (i + 1) % 50 == 0:
             context.log.info(f"Progress: {i + 1}/{count}")
 
     context.log.info(f"Deleted {deleted_count} runs, {db_files_removed} db files, {storage_dirs_removed} storage dirs")
