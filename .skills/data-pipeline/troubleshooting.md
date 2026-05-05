@@ -116,6 +116,15 @@
 | **Stuck run sensor không catch zombie NOT_STARTED 3+ ngày** | Sensor chỉ filter `STARTED` runs, bỏ qua `NOT_STARTED`/`QUEUED`/`STARTING` | Add Pass 2: iterate non-terminal statuses + age >2h → `report_run_canceled`. Xem L52 |
 | **`transformation/target/sapo_dbt_assets-*` phình hàng GB/ngày** | Mỗi dbt run tạo 1 dir ~10 MB; không có cleanup → 480 dirs/ngày × 10 MB | `_cleanup_dbt_target_dirs(keep_days)` trong `purge_runs.py` op — chạy 02:30 ICT daily |
 
+## Health Monitoring DB
+
+| Triệu chứng | Nguyên nhân | Fix |
+|-------------|-------------|-----|
+| `record_run failed: IO Error: Could not set lock ... PID 0` liên tục | Windows `dllhost.exe` (Defender/COM) lock DuckDB file trên bind mount — không release sau container restart | Chạy Windows Python test để xác nhận PID → `taskkill /PID <pid> /F` → CHECKPOINT từ Windows Python → restart Docker Desktop nếu cần. Xem L62 |
+| Health monitoring gián đoạn nhiều giờ/ngày | Lock không được clear — mọi `record_run()` fail | Làm theo fix L62, sau đó verify `SELECT MAX(run_ended_at) FROM ingestion_runs` có timestamp mới |
+| Lock clear nhưng Docker vẫn lỗi `Input/output error` | WSL2 bind mount stale sau Windows-side access | Restart Docker Desktop (không chỉ restart container) |
+| Lock tái diễn sau vài ngày | Defender chưa được exclude | PowerShell Admin: `Add-MpPreference -ExclusionPath "<monitoring_dir>"` |
+
 ## Metabase — Dashboard Deploy
 
 | Triệu chứng | Nguyên nhân | Fix |

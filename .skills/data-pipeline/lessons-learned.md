@@ -1988,3 +1988,82 @@ QUEUE_STUCK_THRESHOLD = timedelta(minutes=90)
 3. **L60 fix phòng ngừa zombie** → L61 fix giảm detection latency. Cả hai cần nhau: L60 ngăn zombie tích lũy, L61 đảm bảo nếu zombie vẫn xảy ra thì bị phát hiện nhanh hơn.
 
 **Reference:** `orchestration/sensors/stuck_run_alerter.py` → `QUEUE_STUCK_THRESHOLD`; `orchestration/definitions.py` → `ingest_sapo_incremental_schedule` cron.
+
+---
+
+## Health DB Lock — Windows dllhost.exe (post-mortem 2026-05-05)
+
+### L62 — Windows dllhost.exe (COM Surrogate / Defender) locks DuckDB files trên bind-mounted Windows paths
+
+**Symptom:** `ingestion_health.duckdb` bị lock liên tục — `record_run failed: IO Error: Could not set lock on file ... Conflicting lock is held in PID 0`. Health monitoring gián đoạn 3 ngày 21 giờ. Lock **vẫn còn** sau khi restart Docker container.
+
+**Root cause:** DuckDB file nằm trên Windows host (bind mount). Windows Defender real-time scanning (hoặc Windows Explorer shell extension / COM surrogate) mở file khi phát hiện file thay đổi (sau mỗi write từ asset). Process holder là `dllhost.exe` — host process của Windows COM components, thường được Defender dùng để scan file trong background.
+
+Khi Docker container bị restart, OS-level advisory locks từ Linux processes được release — nhưng `dllhost.exe` là Windows-level process, chạy bên ngoài WSL2 container. Lock của nó KHÔNG được release khi restart container. Từ phía Linux container, lock holder PID = 0 (không identify được vì là Windows process).
+
+**Thời gian xảy ra:** Thường sau khi có nhiều write operations liên tiếp vào file (Defender queue scan cao), hoặc sau khi user mở folder chứa file trong Windows Explorer (thumbnail shell extension).
+
+**Detection:**
+```python
+# Thử mở từ Windows-native Python (KHÔNG phải Docker):
+python -c "
+import duckdb
+path = r'D:\...\monitoring\ingestion_health.duckdb'
+try:
+    conn = duckdb.connect(path)
+    conn.close()
+    print('OK')
+except Exception as e:
+    print(f'FAIL: {e}')
+"
+# Nếu output có "File is already open in ... dllhost.exe (PID XXXX)"
+# → đó là thủ phạm
+```
+
+**Fix:**
+```powershell
+# 1. Tìm PID từ error message của Windows Python test
+# 2. Kill process (PowerShell):
+taskkill /PID <dllhost_pid> /F
+
+# 3. Mở từ Windows Python để checkpoint (clean state):
+python -c "
+import duckdb
+conn = duckdb.connect(r'D:\...\monitoring\ingestion_health.duckdb')
+conn.execute('CHECKPOINT')
+conn.close()
+print('Checkpointed OK')
+"
+
+# 4. Restart Docker Desktop (nếu WSL2 mount cần refresh):
+# Right-click Docker tray icon → Restart
+docker compose up -d data_platform
+```
+
+**Prevention:**
+```powershell
+# Admin PowerShell — thêm Defender exclusion cho monitoring dir:
+Add-MpPreference -ExclusionPath "D:\...\app_data\data_lake\monitoring"
+```
+Cần admin privileges. Nếu không có admin: chấp nhận rủi ro xảy ra định kỳ, dựa vào watchdog sensor để alert sớm.
+
+**Code defense — `_connect()` tăng retry window và log rõ ràng:**
+```python
+_LOCK_RETRIES = 8        # từ 5 → 8
+_LOCK_BACKOFF_S = 1.0    # từ 0.5 → 1.0 (total ~4 min retry window)
+
+# Khi gặp "PID 0" hoặc "being used by another process":
+if "PID 0" in err_str or "being used by another process" in err_str:
+    logger.warning("ingestion_health: stale lock — Fix: taskkill /F /IM dllhost.exe ...")
+```
+
+**Rules:**
+1. **DuckDB files trên Windows bind mount có thể bị Defender lock bất cứ lúc nào** — đặc biệt sau khi file được modified.
+2. **Restart Docker container KHÔNG release Windows-level lock** — phải kill process giữ lock trên Windows host.
+3. **`PID 0` error từ DuckDB** = lock holder là process không identify được từ Linux side (thường là Windows-side process qua bind mount). Thử mở từ Windows Python để confirm.
+4. **Không restore backup** khi gặp vấn đề này — backup cũng dùng cùng path, lock là OS-level không phải trong file.
+5. **Defender exclusion** là fix tốt nhất; nếu không có admin — tăng retry window trong `_connect()` để absorb scan ngắn hạn.
+
+**Monitoring alert:** `health_db_watchdog_sensor` đã detect và alert đúng. Nếu alert "🚨 Health DB bị KHÓA" → chạy Windows Python test để confirm `dllhost.exe`, rồi `taskkill`.
+
+**Reference:** `orchestration/ops/ingestion_health.py` → `_connect()`; `orchestration/sensors/health_db_watchdog_sensor.py`.
