@@ -2067,3 +2067,252 @@ if "PID 0" in err_str or "being used by another process" in err_str:
 **Monitoring alert:** `health_db_watchdog_sensor` đã detect và alert đúng. Nếu alert "🚨 Health DB bị KHÓA" → chạy Windows Python test để confirm `dllhost.exe`, rồi `taskkill`.
 
 **Reference:** `orchestration/ops/ingestion_health.py` → `_connect()`; `orchestration/sensors/health_db_watchdog_sensor.py`.
+
+---
+
+### L63 — Purge job bị stuck-run alerter kill do VACUUM chạy im lặng quá 5 phút
+
+**Symptom:** `maintain_purge_runs_job` bị auto-terminate mỗi lần chạy — Runtime: ~17 min, Inactive: 5 min. Alerter log: `"Auto-terminating stuck run ... no activity for 5:00"`.
+
+**Root cause:** `_vacuum_index_db()` emit 1 dòng log `"Starting VACUUM on index.db (X MB)..."` rồi im hoàn toàn trong suốt quá trình VACUUM. SQLite VACUUM là blocking operation rewrite toàn bộ database file — trên `index.db` lớn (vài trăm MB sau bulk delete) có thể mất 5–15+ phút không có output nào. `stuck_run_alerter` dùng `INACTIVITY_THRESHOLD = 5 min` — nếu run không emit log event trong 5 min liên tiếp thì bị kill.
+
+Các phase khác cũng có thể silent:
+- `SELECT DISTINCT run_id FROM event_logs` (full scan trên bảng lớn, có thể 30–90s)
+- `DELETE FROM asset_check_executions WHERE run_id NOT IN (...)` (cross-db DELETE lớn)
+
+**Fix:** Chạy VACUUM trong background thread, main thread loop `_done.wait(timeout=30)` và emit heartbeat log mỗi 30 giây:
+
+```python
+import threading
+
+_errors: list[Exception] = []
+_done = threading.Event()
+
+def _do_vacuum():
+    try:
+        conn = sqlite3.connect(index_path, timeout=30.0)
+        conn.execute('VACUUM')
+        conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+        conn.close()
+    except Exception as e:
+        _errors.append(e)
+    finally:
+        _done.set()
+
+t = threading.Thread(target=_do_vacuum, daemon=True)
+t.start()
+
+elapsed = 0
+while not _done.wait(timeout=30):
+    elapsed += 30
+    log.info(f"VACUUM in progress... ({elapsed}s elapsed, {size_before:.1f} MB)")
+```
+
+Ngoài ra thêm log trước các silent phases:
+- Trước `SELECT DISTINCT run_id FROM event_logs`: `log.info("Scanning event_logs for orphaned run_ids...")`
+- Trước cross-db DELETE: `log.info("Cleaning orphaned asset_check_executions rows (cross-db DELETE)...")`
+
+**Rule:** Bất kỳ operation nào có thể chạy >2 min mà không emit log đều có nguy cơ bị stuck-run alerter kill. Dùng background thread + heartbeat loop để giữ activity signal khi không thể break operation thành chunks nhỏ hơn.
+
+**Không nên:** Whitelist maintenance jobs khỏi alerter — alerter vẫn cần catch genuine stuck scenarios. Fix đúng là làm job emit progress, không phải tắt monitoring.
+
+**Reference:** `orchestration/ops/purge_runs.py` → `_vacuum_index_db()`; `orchestration/sensors/stuck_run_alerter.py` → `INACTIVITY_THRESHOLD`.
+
+---
+
+### L64 — Ingestion NOT_STARTED 90 min: schedule tạo run khi dbt_rw slot bị chiếm bởi nightly batch
+
+**Symptom:** `ingest_sapo_realtime_job` và `ingest_sapo_incremental_job` lặp lại NOT_STARTED ~90 min rồi bị auto-canceled ("daemon never dequeued"). Xảy ra sau khi L63 fix làm purge chạy thành công lần đầu → backup trigger lần đầu.
+
+**Root cause:** Nightly batch (`transform_batch_nightly_job`, 60-90+ min) chiếm `dbt_rw=1` concurrency slot. Khi nightly đang chạy:
+
+1. Realtime tick ở ~03:03 ICT: không có active realtime run → tạo `NOT_STARTED` run mới
+2. Coordinator: `dbt_rw=1` bị nightly chiếm → không dequeue realtime → run ở `NOT_STARTED`
+3. Realtime ticks tiếp theo (03:06, 03:09, ...): `_has_active_run` thấy `NOT_STARTED` là "active" → `SkipReason`
+4. Incremental tại 04:00 (sau giờ skip 03:xx): tương tự, tạo `NOT_STARTED` bị block
+5. 90 min sau: `QUEUE_STUCK_THRESHOLD` → auto-cancel cả hai
+
+**Kết nối với backup (L63):** Trước L63 fix, purge bị kill → backup không bao giờ chạy → không có gì mới. Sau fix, backup chạy lần đầu. Backup bản thân không phải nguyên nhân trực tiếp (chỉ chạy max 10 phút, không hold `dbt_rw`), nhưng hệ thống lần đầu chạy đủ các maintenance jobs đồng thời → edge case bị trigger.
+
+**Mechanism trap:** `_ACTIVE_STATUSES` includes `NOT_STARTED` → một run `NOT_STARTED` bị kẹt chặn tất cả ticks tiếp theo qua self-overlap check. Hệ quả: 1 run stuck → 30 ticks bị skip → run bị cancel → cycle lại.
+
+**Fix:**
+
+```python
+# Định nghĩa trong definitions.py:
+_LONG_DPT_RW_JOBS = ["transform_batch_nightly_job", "transform_batch_fullrefresh_job"]
+_RUNNING_STATUSES = [DagsterRunStatus.QUEUED, DagsterRunStatus.STARTING, DagsterRunStatus.STARTED]
+
+def _long_dbt_rw_holder(context) -> str | None:
+    for job_name in _LONG_DPT_RW_JOBS:
+        runs = context.instance.get_runs(
+            filters=RunsFilter(job_name=job_name, statuses=_RUNNING_STATUSES), limit=1
+        )
+        if runs:
+            return job_name
+    return None
+
+# Trong mỗi schedule ngắn (realtime, incremental):
+holder = _long_dbt_rw_holder(context)
+if holder:
+    return SkipReason(f"realtime: yielding to {holder} (dbt_rw occupied)")
+```
+
+Lý do dùng `_RUNNING_STATUSES` (QUEUED/STARTING/STARTED) thay vì `_ACTIVE_STATUSES` (includes NOT_STARTED): nếu nightly chính nó đang NOT_STARTED, nó chưa hold slot → không nên block realtime/incremental.
+
+**Bonus fix:** `trigger_backup_after_purge` sensor thêm check `_has_active_ingestion` trước khi fire — tránh backup DuckDB files khi chúng đang được ghi (torn WAL state risk) và giảm I/O contention.
+
+**Rules:**
+1. **Schedules không nên tạo RunRequest khi biết run sẽ bị blocked** — creates NOT_STARTED zombie, chặn ticks, bị cancel sau 90 min. Skip tick và retry là tốt hơn.
+2. **_has_active_run(self) chỉ check self** — không biết về concurrent jobs khác đang giữ concurrency slot. Phải tự check cross-job khi cần.
+3. **QUEUE_STUCK_THRESHOLD = 90 min là catch-all, không phải expected behavior** — nếu nó trigger thường xuyên = có pattern tạo NOT_STARTED runs không cần thiết.
+4. **Backup snapshot không nên chạy khi DuckDB đang được ghi** — cp của live WAL = torn state risk.
+
+**Reference:** `orchestration/definitions.py` → `_long_dbt_rw_holder()`, `ingest_sapo_realtime_schedule`, `ingest_sapo_incremental_schedule`, `trigger_backup_after_purge`; `orchestration/sensors/stuck_run_alerter.py` → `QUEUE_STUCK_THRESHOLD`.
+
+---
+
+## Dagster Job Executor & Type Safety
+
+### L65 — Lightweight read-only jobs must use `in_process_executor` to prevent OOM
+
+**Symptom:** `health_checks_asset_job` and `health_recon_daily_job` crash with `ChildProcessCrashException`. Jobs appear to start then immediately fail with no useful error beyond the crash.
+
+**Root cause:** Dagster's default multiprocess executor spawns a separate subprocess per step. Each subprocess re-imports the full Python environment (dlt, dbt, duckdb, all orchestration modules). For lightweight read-only DuckDB queries this spawns a ~200-400 MB process just to execute a few SQL statements — OOM kills the child before it can run.
+
+**Fix:**
+
+```python
+from dagster import in_process_executor
+
+health_checks_asset_job = define_asset_job(
+    name="health_checks_asset_job",
+    selection=...,
+    executor_def=in_process_executor,  # runs steps in same process as daemon
+)
+```
+
+**Rules:**
+1. Any job whose assets are lightweight read-only operations (DuckDB queries, file reads, API calls returning small payloads) should use `in_process_executor`.
+2. Only use the default multiprocess executor when steps need isolation (e.g., dbt subprocess, heavy transforms that may OOM and must be killed without killing daemon).
+3. `ChildProcessCrashException` on small jobs = suspect OOM from per-step subprocess overhead.
+
+**Reference:** `orchestration/definitions.py` → `health_checks_asset_job`, `health_recon_daily_job`.
+
+---
+
+### L66 — `MetadataValue.float()` rejects Python int — `or 0` fallback is a trap
+
+**Symptom:** `health_kpi_closure_job` fails intermittently (2 FAIL / 3 SUCCESS pattern) with `Param value is not a float`. Error only occurs when revenue values are exactly zero or None.
+
+**Root cause:** `MetadataValue.float()` strictly requires a Python `float`. The pattern `value or 0` returns Python `int(0)` when `value` is `None` or `0.0` (both falsy) — `0` is `int`, not `float`. When the value is non-zero, it stays a `float` from the SQL query → no error. When exactly zero → `or 0` → `int` → type error.
+
+```python
+# BAD — `or 0` returns int when value is None/0.0
+MetadataValue.float(source_revenue or 0)       # int(0) when source_revenue = 0.0
+
+# GOOD — explicit float literal
+MetadataValue.float(source_revenue or 0.0)     # float(0.0) always
+```
+
+**Pattern applies to:** any code using `x or 0` as a numeric default where the consuming API is type-strict. Common in metadata emission, JSON serialization, and typed function signatures.
+
+**Rules:**
+1. Default numeric literals must match the expected type: `0.0` for float, `0` for int.
+2. `or 0` is a correctness trap when `0` is a valid value — use `if x is None else x` if zero has meaning.
+3. Intermittent type errors (succeed when non-zero, fail when zero) = suspect `or 0` with type-strict consumer.
+
+**Reference:** `orchestration/assets/kpi_closure.py`; commit `4be752b`.
+
+---
+
+## File-Drop Sensor Behavior
+
+### L67 — File-drop sensor cold-start skip silently ignores files already in drop zone
+
+**Symptom:** Shopee/MISA income files placed in drop zone before sensor deploys (or after sensor cursor reset) are never processed. Sensor ticks every 5 min but always returns `SkipReason("Cold start — recorded baseline mtime=...")` then `SkipReason("No new/modified files")` on subsequent ticks.
+
+**Root cause:** Original file-drop sensor logic detected `prev_mtime == 0.0` (no cursor) and treated it as "cold start" — it saved the current `mtime` as baseline and returned without firing. This means any files present at the moment of first tick are silently baselined, never triggering a run. If someone drops a file before deploying or during cursor reset, it's lost.
+
+**Fix:** Remove cold-start special case — fire whenever `current_mtime > prev_mtime`:
+
+```python
+# BAD — files present at deploy are silently ignored
+if prev_mtime == 0.0:
+    context.update_cursor(json.dumps({"mtime": current_mtime}))
+    return SkipReason(f"Cold start — recorded baseline mtime={current_mtime:.0f}")
+
+# GOOD — prev_mtime=0.0 means never seen any file; any file > 0 triggers
+if current_mtime <= prev_mtime:
+    return SkipReason("No new/modified files")
+# falls through to fire RunRequest
+```
+
+`prev_mtime = 0.0` (epoch) is always < any real file mtime → first tick with files fires correctly.
+
+**Rules:**
+1. File-drop sensors should fire on first tick if files are present — "cold start skip" is a footgun when files pre-exist.
+2. After cursor reset or sensor redeploy, check drop zone immediately for unprocessed files.
+3. Sensor `run_key` based on mtime ensures idempotency — firing on cold start is safe.
+
+**Reference:** `orchestration/sensors/file_drop_sensors.py`; commit `0d1e671`.
+
+---
+
+## Backup Script Edge Cases
+
+### L68 — `cp -a` returns non-zero when SQLite WAL/SHM files disappear mid-copy
+
+**Symptom:** Backup job logs `WARNING: failed to copy dagster_home` and skips `prune_dagster_history`. All essential data (`schedules/`, `storage/`, `dagster.yaml`) is actually copied correctly. Downstream: backup never gets history pruned → backup size stays large.
+
+**Root cause:** Dagster daemon's WAL checkpoint can delete `.db-wal` and `.db-shm` files between `cp -a` starting and completing. `cp -a` exits non-zero when a source file disappears mid-copy. With `set -euo pipefail` and `if cp -a ...; then` guard, this non-zero is treated as failure and the entire volume backup is marked failed.
+
+**Fix:** Ignore `cp` exit code, check destination is non-empty instead:
+
+```bash
+cp -a "$src" "$dst" 2>/dev/null || true   # WAL disappearance is expected
+if [ -d "$dst" ] && [ "$(ls -A "$dst" 2>/dev/null)" ]; then
+    BACKUP_DATA_OK=true
+    prune_dagster_history "$dst"
+    log "dagster_home backed up: $(du -sh "$dst" | cut -f1)"
+else
+    log "WARNING: failed to copy dagster_home (destination empty)"
+fi
+```
+
+**Rules:**
+1. `cp -a` on live SQLite databases is inherently racy — WAL files can disappear. Never treat non-zero exit as "backup failed" without checking the destination.
+2. Verify backup success by checking destination exists and is non-empty, not by `cp` exit code.
+3. This applies to any `cp -a` of a live Dagster home directory.
+
+**Reference:** `scripts/backup/backup.sh`; commit `7d61491`.
+
+---
+
+### L69 — `run_key=date` deduplicates against previously FAILED runs — prevents retry
+
+**Symptom:** Backup failed on day D (e.g., purge took too long, fallback triggered but backup encountered an error). On day D+1 (same calendar date, early morning), fallback schedule skips with no `SkipReason` — backup never retries. Monitoring shows no backup for 2 days.
+
+**Root cause:** Dagster deduplicates `RunRequest` by `run_key`. If a run with the same `run_key` already exists — regardless of its status (SUCCESS, FAILURE, CANCELED) — Dagster silently discards the new `RunRequest`. Using `run_key=date` means a failed backup on day D blocks any retry attempt on day D since the key already exists.
+
+```python
+# BAD — FAILED run with same date key blocks all retries on that day
+return RunRequest(run_key=date_key)
+
+# GOOD — run_key=None + manual success check allows retries after failure
+records = context.instance.get_run_records(
+    filters=RunsFilter(job_name=job_name, statuses=[DagsterRunStatus.SUCCESS]),
+    limit=5,
+)
+for rec in records:
+    if datetime.fromtimestamp(rec.create_timestamp, tz=_ICT).date() == today:
+        return SkipReason("backup: already succeeded today")
+return RunRequest(run_key=None)  # no dedup against prior failures
+```
+
+**Rules:**
+1. `run_key` deduplication is global across ALL terminal statuses — a failed run with the same key permanently blocks retries until the key changes.
+2. Use `run_key=None` + manual query for "skip if already succeeded today" semantics when retries on failure are needed.
+3. `run_key` remains appropriate where exactly-once semantics are required (sensor-triggered backup — don't run twice on same purge success event).
+
+**Reference:** `orchestration/definitions.py` → `maintain_backup_fallback_schedule`; commit `2ee4b80`.

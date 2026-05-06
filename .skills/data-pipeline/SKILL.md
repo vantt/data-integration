@@ -13,6 +13,26 @@ Skill hỗ trợ thêm data source mới vào pipeline end-to-end:
 
 ---
 
+## Environment Setup (one-time per machine)
+
+Hook `data-pipeline-lesson-reminder` auto-reminds after `fix:` commits to record lessons.
+
+**Check:** does it exist?
+```bash
+ls "$HOME/.claude/hooks/data-pipeline-lesson-reminder.cjs" 2>/dev/null && echo "OK" || echo "MISSING"
+```
+
+**If MISSING — run setup (idempotent):**
+```bash
+node .skills/data-pipeline/scripts/setup-lesson-reminder-hook.cjs
+```
+
+Then reload: open `/hooks` in Claude Code or restart.
+
+Source lives at `.skills/data-pipeline/hooks/data-pipeline-lesson-reminder.cjs` — always reflects the latest version.
+
+---
+
 ## Architecture Overview
 
 ```

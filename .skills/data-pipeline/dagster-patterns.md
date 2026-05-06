@@ -806,6 +806,14 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **stuck_run_alerter has Pass 2** for `NOT_STARTED`/`QUEUED`/`STARTING` >2h — Pass 1 alone misses queue-stuck zombies — xem Lesson 14 / L52
 - [ ] **`backup.sh` rotation in `trap … EXIT`** + pre-flight `df` check + `prune_dagster_history` — xem L50, L51
 - [ ] **`purge_runs_job` cleans dbt target dirs** (`_cleanup_dbt_target_dirs`) — without this, `transformation/target/` accumulates ~5 GB/day — xem Lesson 14
+- [ ] **Long-running silent ops trong purge job dùng heartbeat thread** — VACUUM / large SELECT DISTINCT / cross-db DELETE không emit log → stuck-run alerter kill sau 5 min; dùng `threading.Thread` + `_done.wait(timeout=30)` loop để emit progress — xem L63
+- [ ] **Schedules ngắn yield to long-running dbt_rw jobs** — realtime/incremental phải check `_long_dbt_rw_holder()` trước khi tạo RunRequest; không thì tạo NOT_STARTED zombie chặn ticks 90 min — xem L64
+- [ ] **trigger_backup check `_has_active_ingestion`** — không backup DuckDB khi đang có ingestion job chạy (torn WAL + I/O contention) — xem L64
+- [ ] **Lightweight read-only jobs dùng `in_process_executor`** — `ChildProcessCrashException` trên lightweight jobs = OOM từ per-step subprocess overhead; dùng `in_process_executor` cho health checks, recon, KPI — xem L65
+- [ ] **`MetadataValue.float()` phải nhận `float`, không phải `int`** — `or 0` returns `int(0)` khi value là None/0.0; dùng `or 0.0` — xem L66
+- [ ] **File-drop sensor KHÔNG có cold-start skip** — files present tại thời điểm deploy bị silently ignored nếu có cold-start guard; remove nó và dùng `current_mtime > prev_mtime` — xem L67
+- [ ] **`cp -a` trên live SQLite dirs: check destination, không check exit code** — WAL/SHM có thể disappear mid-copy → non-zero exit; verify thành công bằng `[ -d "$dst" ] && [ "$(ls -A "$dst")" ]` — xem L68
+- [ ] **Backup fallback schedule dùng `run_key=None` + manual success check** — `run_key=date` deduplicates against FAILED runs → no retry possible; dùng `run_key=None` + query SUCCESS runs for today — xem L69
 
 ---
 
