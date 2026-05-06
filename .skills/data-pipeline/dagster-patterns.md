@@ -814,6 +814,7 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **File-drop sensor KHÔNG có cold-start skip** — files present tại thời điểm deploy bị silently ignored nếu có cold-start guard; remove nó và dùng `current_mtime > prev_mtime` — xem L67
 - [ ] **`cp -a` trên live SQLite dirs: check destination, không check exit code** — WAL/SHM có thể disappear mid-copy → non-zero exit; verify thành công bằng `[ -d "$dst" ] && [ "$(ls -A "$dst")" ]` — xem L68
 - [ ] **Backup fallback schedule dùng `run_key=None` + manual success check** — `run_key=date` deduplicates against FAILED runs → no retry possible; dùng `run_key=None` + query SUCCESS runs for today — xem L69
+- [ ] **Windows Defender exclusion phải cover TOÀN BỘ `data_lake/`, không chỉ `monitoring/`** — `sapo_warehouse.duckdb` cũng trên bind-mounted path; dllhost.exe lock nó → dbt subprocess D-state → stuck 24 min; exclusion chỉ `monitoring/` là không đủ — xem L72
 
 ---
 

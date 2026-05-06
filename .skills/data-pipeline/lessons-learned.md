@@ -2355,3 +2355,43 @@ return RunRequest(run_key=None)  # no dedup against prior failures
 3. `health_db_watchdog_sensor` is the primary early-warning for DuckDB lock incidents — verify it ticks within 10 minutes of container start.
 
 **Reference:** `orchestration/sensors/health_db_watchdog_sensor.py`; `app_data/dagster_home/schedules/schedules.db`; incident May 6 2026.
+
+---
+
+### L72 — Defender exclusion must cover ENTIRE `data_lake`, not just `monitoring/` subdirectory
+
+**Symptom:** `ingest_sapo_realtime_job` keeps getting stuck (Runtime: 25 min, Inactive: 24 min, auto-killed by stuck_run_alerter). Occurs intermittently — some runs succeed, others hang. `sapo_warehouse.duckdb` accessible between runs but dbt step goes silent immediately.
+
+**Root cause:** The L70 fix added Defender exclusion only for `app_data\data_lake\monitoring` (the monitoring DB path). `dllhost.exe` could still scan `sapo_warehouse.duckdb` (the dbt working DB at `app_data\data_lake\sapo_warehouse.duckdb`). When dllhost.exe holds a lock on `sapo_warehouse.duckdb`, the next dbt subprocess enters D-state (uninterruptible I/O sleep waiting for the file lock). In D-state, even `SIGKILL` is deferred — the watchdog fires but the subprocess doesn't die. No dbt output → 24 min of inactivity → stuck_run_alerter kills the Dagster run via DB state update, but zombie subprocess may persist and block the next run.
+
+**Pattern:** Only some runs get stuck (not every run) because dllhost.exe's scan timing is intermittent — it only locks the file for a brief window immediately after each dbt write. If the next run's dbt starts during that window, it hangs.
+
+**Fix:**
+1. Kill `dllhost.exe`: `taskkill /F /IM dllhost.exe`
+2. Widen exclusion to cover the entire data_lake (Admin PowerShell):
+   ```powershell
+   Remove-MpPreference -ExclusionPath "D:\Vantt\app\data-integration\app_data\data_lake\monitoring"
+   Add-MpPreference -ExclusionPath "D:\Vantt\app\data-integration\app_data\data_lake"
+   ```
+3. Optionally disable Windows Search indexing for the directory:
+   ```cmd
+   attrib +i "D:\Vantt\app\data-integration\app_data\data_lake" /s /d
+   ```
+4. Kill `dllhost.exe` once more after exclusion is in place — the next spawn will not scan excluded paths.
+5. Verify both DBs accessible:
+   ```bash
+   docker exec data_platform python3 -c "
+   import duckdb
+   for p in ['/app/var/data_lake/monitoring/ingestion_health.duckdb', '/app/var/data_lake/sapo_warehouse.duckdb']:
+       try: c = duckdb.connect(p); c.close(); print(f'OK: {p.split(\"/\")[-1]}')
+       except Exception as e: print(f'LOCKED: {p.split(\"/\")[-1]}')
+   "
+   ```
+
+**Rules:**
+1. Defender exclusion must cover ALL DuckDB files used by the pipeline — not just the monitoring DB. Any DuckDB file on a bind-mounted path is vulnerable.
+2. Two `taskkill` calls may be needed: first to release the immediate lock, second after exclusion propagates (dllhost.exe respawns immediately after kill; the second spawn respects the exclusion).
+3. D-state dbt subprocess cannot be killed by `SIGKILL` — the watchdog in `dbt.py` is ineffective when the process waits on a Windows-held file lock. Only releasing the file lock on the host unblocks it.
+4. `sapo_warehouse.duckdb` lock causes 24 min stuck runs (ingestion stalls + silent dbt). `ingestion_health.duckdb` lock causes ~2 min delay per run but does NOT prevent run completion (exception caught in `finally` block).
+
+**Reference:** `transformation/profiles.yml` (sapo_warehouse path); `app_data/data_lake/sapo_warehouse.duckdb`; incident May 6 2026 (second occurrence).
