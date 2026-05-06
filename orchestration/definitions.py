@@ -202,6 +202,35 @@ def _has_active_run(context, job_name: str) -> str | None:
     return runs[0].run_id if runs else None
 
 
+# Long-running dbt_rw jobs (60-90+ min). Submitting realtime/incremental while
+# these are STARTED causes NOT_STARTED accumulation: the submitted run can't be
+# dequeued (dbt_rw=1 occupied), blocks subsequent ticks via _has_active_run,
+# and eventually hits the 90-min QUEUE_STUCK_THRESHOLD and gets auto-canceled.
+# Better to skip the tick and retry next tick (3-10 min later).
+_LONG_DPT_RW_JOBS = ["transform_batch_nightly_job", "transform_batch_fullrefresh_job"]
+
+# Statuses that mean a job is ACTUALLY running (holds the dbt_rw slot).
+# Exclude NOT_STARTED — a NOT_STARTED batch job hasn't acquired the slot yet
+# and may fail to start; we shouldn't pre-emptively block on it.
+_RUNNING_STATUSES = [
+    DagsterRunStatus.QUEUED,
+    DagsterRunStatus.STARTING,
+    DagsterRunStatus.STARTED,
+]
+
+
+def _long_dbt_rw_holder(context) -> str | None:
+    """Return job_name if a long-running dbt_rw job is currently active (holds slot)."""
+    for job_name in _LONG_DPT_RW_JOBS:
+        runs = context.instance.get_runs(
+            filters=RunsFilter(job_name=job_name, statuses=_RUNNING_STATUSES),
+            limit=1,
+        )
+        if runs:
+            return job_name
+    return None
+
+
 # Jobs that use duckdb_lock (write to DuckDB). Health checks should yield to these.
 # IMPORTANT: Update this list when adding new ingestion/transform jobs!
 _INGESTION_JOBS = [
@@ -236,6 +265,12 @@ def ingest_sapo_realtime_schedule(context):
     active = _has_active_run(context, "ingest_sapo_realtime_job")
     if active:
         return SkipReason(f"realtime: previous run still active ({active[:8]})")
+    # Yield to long-running batch jobs: a new run can't start (dbt_rw=1 occupied)
+    # and would sit NOT_STARTED for 60-90+ min before being auto-canceled.
+    # Skip this tick; the next tick in 3 min will retry.
+    holder = _long_dbt_rw_holder(context)
+    if holder:
+        return SkipReason(f"realtime: yielding to {holder} (dbt_rw occupied)")
     return RunRequest(run_key=None)
 
 
@@ -245,10 +280,9 @@ def ingest_sapo_realtime_schedule(context):
     # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
     # ticks from piling up while nightly is running.
     #
-    # Edge case: if nightly is ever delayed past 4 AM, incremental resumes at
-    # :00 of the next hour and may enqueue while nightly is still active.
-    # This is safe — coordinator tag `dbt_rw=1` serializes the dequeue, and
-    # incremental's own self-overlap check prevents double-enqueue.
+    # If nightly overruns past 4 AM, _long_dbt_rw_holder() skips the tick
+    # instead of creating a NOT_STARTED run that would sit for 60-90+ min
+    # and trigger QUEUE_STUCK_THRESHOLD auto-cancel.
     cron_schedule="*/10 0-2,4-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
@@ -256,6 +290,9 @@ def ingest_sapo_incremental_schedule(context):
     active = _has_active_run(context, "ingest_sapo_incremental_job")
     if active:
         return SkipReason(f"incremental: previous run still active ({active[:8]})")
+    holder = _long_dbt_rw_holder(context)
+    if holder:
+        return SkipReason(f"incremental: yielding to {holder} (dbt_rw occupied)")
     return RunRequest(run_key=None)
 
 
@@ -284,6 +321,12 @@ _ICT = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh, no pytz dependency
 )
 def trigger_backup_after_purge(context: RunStatusSensorContext):
     date_key = datetime.now(tz=_ICT).strftime("%Y-%m-%d")
+    # Wait for active ingestion to finish before snapshotting DuckDB files —
+    # cp of a live DuckDB WAL risks torn state; also avoids I/O contention.
+    # Sensor retries every 60 s, so the delay is at most one ingestion cycle.
+    active = _has_active_ingestion(context)
+    if active:
+        return SkipReason(f"backup: waiting for {active} to finish")
     return RunRequest(run_key=date_key)
 
 

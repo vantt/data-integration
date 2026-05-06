@@ -2,6 +2,7 @@
 import os
 import shutil
 import sqlite3
+import threading
 import time
 from datetime import datetime, timedelta
 
@@ -130,31 +131,58 @@ def _cleanup_dbt_target_dirs(keep_days: int, log) -> tuple[int, float]:
 
 
 def _vacuum_index_db(instance, log) -> tuple[float, float]:
-    """VACUUM the per-run event log index to reclaim space after mass deletion."""
+    """VACUUM the per-run event log index to reclaim space after mass deletion.
+
+    VACUUM runs in a background thread so we can emit heartbeat log events every
+    30 s — without these the stuck-run alerter would kill us after 5 min of silence.
+    """
     run_dir = _get_run_db_dir(instance)
     index_path = os.path.join(run_dir, 'index.db')
     if not os.path.exists(index_path):
         return 0, 0
     size_before = os.path.getsize(index_path) / (1024 * 1024)
     log.info(f"Starting VACUUM on index.db ({size_before:.1f} MB)...")
-    try:
-        conn = sqlite3.connect(index_path, timeout=30.0)
-        conn.execute('PRAGMA busy_timeout = 30000')
-        conn.execute('VACUUM')
-        # Truncate WAL file to 0 bytes — VACUUM rebuilds the main file but leaves
-        # the WAL on disk. TRUNCATE mode checkpoints and shrinks it to 0.
-        result = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
-        if result and result[0] == 1:
-            # busy=1 is normal when the daemon has open WAL readers; SQLite's
-            # auto-checkpoint will truncate on the next quiet moment.
-            log.info("wal_checkpoint(TRUNCATE): active readers present, WAL will auto-truncate later")
-        conn.close()
-    except sqlite3.OperationalError as e:
-        log.warning(f"VACUUM skipped (database busy): {e}")
+
+    _errors: list[Exception] = []
+    _done = threading.Event()
+
+    def _do_vacuum():
+        try:
+            conn = sqlite3.connect(index_path, timeout=30.0)
+            conn.execute('PRAGMA busy_timeout = 30000')
+            conn.execute('VACUUM')
+            # Truncate WAL file to 0 bytes — VACUUM rebuilds the main file but leaves
+            # the WAL on disk. TRUNCATE mode checkpoints and shrinks it to 0.
+            result = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
+            if result and result[0] == 1:
+                # busy=1 is normal when the daemon has open WAL readers; SQLite's
+                # auto-checkpoint will truncate on the next quiet moment.
+                log.info("wal_checkpoint(TRUNCATE): active readers present, WAL will auto-truncate later")
+            conn.close()
+        except sqlite3.OperationalError as e:
+            _errors.append(e)
+        except Exception as e:
+            _errors.append(e)
+        finally:
+            _done.set()
+
+    t = threading.Thread(target=_do_vacuum, daemon=True)
+    t.start()
+
+    # Heartbeat: emit a log line every 30 s so the stuck-run alerter sees activity.
+    elapsed = 0
+    while not _done.wait(timeout=30):
+        elapsed += 30
+        log.info(f"VACUUM in progress... ({elapsed}s elapsed, {size_before:.1f} MB)")
+
+    if _errors:
+        e = _errors[0]
+        if 'database is locked' in str(e).lower() or isinstance(e, sqlite3.OperationalError):
+            log.warning(f"VACUUM skipped (database busy): {e}")
+        else:
+            log.warning(f"VACUUM failed: {e}")
         return size_before, size_before
-    except Exception as e:
-        log.warning(f"VACUUM failed: {e}")
-        return size_before, size_before
+
     size_after = os.path.getsize(index_path) / (1024 * 1024)
     return size_before, size_after
 
@@ -210,7 +238,9 @@ def _cleanup_orphan_event_entries(instance, known_run_ids: set, log) -> int:
     if not os.path.exists(index_path):
         return 0
 
-    # Find run_ids present in event_logs but not in runs.db
+    # Find run_ids present in event_logs but not in runs.db.
+    # DISTINCT scan on a large table can take 30–90 s — log before to show activity.
+    log.info("Scanning event_logs for orphaned run_ids (may take a moment)...")
     try:
         conn = sqlite3.connect(index_path, timeout=30.0)
         conn.execute('PRAGMA busy_timeout = 30000')
@@ -253,7 +283,7 @@ def _cleanup_orphan_asset_check_executions(instance, log) -> int:
         conn = sqlite3.connect(index_path, timeout=30.0)
         conn.execute('PRAGMA busy_timeout = 30000')
         conn.execute(f"ATTACH DATABASE '{runs_path}' AS runsdb")
-        log.info("Cleaning orphaned asset_check_executions rows...")
+        log.info("Cleaning orphaned asset_check_executions rows (cross-db DELETE)...")
         conn.execute("""
             DELETE FROM asset_check_executions
             WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)
