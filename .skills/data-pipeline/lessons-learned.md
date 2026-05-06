@@ -2316,3 +2316,42 @@ return RunRequest(run_key=None)  # no dedup against prior failures
 3. `run_key` remains appropriate where exactly-once semantics are required (sensor-triggered backup — don't run twice on same purge success event).
 
 **Reference:** `orchestration/definitions.py` → `maintain_backup_fallback_schedule`; commit `2ee4b80`.
+
+### L70 — Windows `dllhost.exe` locks bind-mounted DuckDB file, silently breaks monitoring for days
+
+**Symptom:** Health dashboard shows 0/N assets healthy, all "X ngày chưa cập nhật". Logs show `record_run failed: IO Error: Conflicting lock held in PID 0` on every write. Actual pipeline data (parquet files) is current — only monitoring DB is affected.
+
+**Root cause:** Windows COM surrogate (`dllhost.exe`) acquires a filesystem handle on files it scans (Windows Defender / thumbnail indexer). DuckDB inside the Docker container cannot acquire write lock while host process holds it. Lock persists until dllhost releases or is killed. PID reported as 0 because the lock owner is on the host, not visible inside container.
+
+**Fix:**
+1. Kill `dllhost.exe` on Windows host: `taskkill /F /IM dllhost.exe`
+2. Add Windows Defender exclusion for the monitoring directory (admin terminal):
+   ```powershell
+   Add-MpPreference -ExclusionPath "D:\Vantt\app\data-integration\app_data\data_lake\monitoring"
+   ```
+3. If bind mount breaks after kill (IO Error on `ls`), restart Docker Desktop fully (kill WSL + Docker processes, then relaunch)
+
+**Rules:**
+1. Defender exclusion path must match the **Windows host path** of the bind mount (`app_data\data_lake\monitoring`), not the container path or a non-existent path.
+2. Killing `dllhost.exe` while Docker VM is running can corrupt the bind mount — expect Docker container restart to fail with `mkdir /run/desktop/mnt/host/d: file exists`. Full Docker Desktop restart (including WSL shutdown) is required.
+3. Always verify the fix inside the container: `python3 -c "import duckdb; con=duckdb.connect('/app/var/data_lake/monitoring/ingestion_health.duckdb'); con.close(); print('OK')"`.
+
+**Reference:** `app_data/data_lake/monitoring/ingestion_health.duckdb`; incident May 6 2026; commit `4e93d23`.
+
+### L71 — Dagster sensor registered via `ManagedGrpcPythonEnv` origin never ticks when daemon serves `GrpcServer` origin
+
+**Symptom:** Sensor shows `RUNNING` in Dagster UI but has zero ticks ever (`last_tick_start_timestamp = null`). Daemon logs show the sensor is never checked. The sensor was added after the main codebase was already running.
+
+**Root cause:** Dagster stores the sensor's repository location origin in `schedules/schedules.db`. If a sensor is registered while Dagster runs in `dagster dev` / module-import mode (`ManagedGrpcPythonEnvRepositoryLocationOrigin`), but the production daemon serves via file-based gRPC (`GrpcServerRepositoryLocationOrigin`), the daemon cannot find the sensor in its current code server context — it dispatches only sensors whose `job_origin_id` matches the active gRPC server.
+
+**Fix:**
+1. Identify stale entry: `SELECT id, job_body FROM jobs WHERE job_body LIKE '%<sensor_name>%'` — confirm `__class__` is `ManagedGrpcPythonEnvRepositoryLocationOrigin`
+2. Delete stale entries from both `jobs` and `instigators` tables by `id`
+3. Go to Dagster UI → Automation → Sensors → enable the sensor (it will re-register with correct `GrpcServer` origin)
+
+**Rules:**
+1. Never register sensors interactively via `dagster dev` in a production environment that runs via `GrpcServer` — the origin mismatch silently orphans the sensor.
+2. After any container rebuild or Dagster config change, cross-check sensors in `schedules.db` for origin type: all active sensors should use `GrpcServerRepositoryLocationOrigin`.
+3. `health_db_watchdog_sensor` is the primary early-warning for DuckDB lock incidents — verify it ticks within 10 minutes of container start.
+
+**Reference:** `orchestration/sensors/health_db_watchdog_sensor.py`; `app_data/dagster_home/schedules/schedules.db`; incident May 6 2026.
