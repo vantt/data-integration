@@ -30,6 +30,8 @@ services:
       - ./scripts:/app/scripts
       # Data (stateful, persistent) — grouped under /app/var/
       - ./app_data/data_lake:/app/var/data_lake
+      # Named volume overlay: isolates monitoring DB from Windows filesystem scanning (prevents dllhost lock)
+      - monitoring_db:/app/var/data_lake/monitoring
       - ./app_data/dagster_home:/app/var/dagster_home
       - ./app_data/backups:/app/var/backups
       - ./app_data/input_source:/app/var/input_source
@@ -58,6 +60,7 @@ services:
     volumes:
       - ./app_data/metabase_data:/home/metabase/data
       - ./app_data/data_lake:/app/var/data_lake
+      - monitoring_db:/app/var/data_lake/monitoring
     labels:
       caddy: bi.local
       caddy.reverse_proxy: "{{upstreams 3000}}"
@@ -83,5 +86,9 @@ services:
     labels:
       caddy: rill.local
       caddy.reverse_proxy: "{{upstreams 9009}}"
+
+volumes:
+  monitoring_db:
+    # Stored in Docker VM — isolated from Windows filesystem scanning (no dllhost/Defender lock)
 
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)
