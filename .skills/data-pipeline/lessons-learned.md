@@ -2395,3 +2395,40 @@ return RunRequest(run_key=None)  # no dedup against prior failures
 4. `sapo_warehouse.duckdb` lock causes 24 min stuck runs (ingestion stalls + silent dbt). `ingestion_health.duckdb` lock causes ~2 min delay per run but does NOT prevent run completion (exception caught in `finally` block).
 
 **Reference:** `transformation/profiles.yml` (sapo_warehouse path); `app_data/data_lake/sapo_warehouse.duckdb`; incident May 6 2026 (second occurrence).
+
+---
+
+### L73 — Bind-mounted DuckDB file on Windows NTFS is permanently vulnerable to host-side locks
+
+**Symptom:** `ingestion_health.duckdb` repeatedly locked by PID 0 (Windows dllhost/Defender) even after Defender exclusion was added for the full `data_lake` path. Lock recurs across restarts.
+
+**Root cause:** Any Docker bind mount from Windows NTFS exposes files to the entire Windows filesystem stack — Defender, Search indexer, Explorer shell extensions, COM/dllhost. Defender exclusions are effective but fragile (can be reset by Windows Update or policy). Named volumes live inside the Docker Desktop Linux VM and are never accessible to Windows host processes.
+
+**Fix:** Move the DuckDB file off the bind mount entirely — mount it via a Docker named volume that overlays the bind mount path:
+```yaml
+# docker-compose.yml
+volumes:
+  monitoring_db:  # stored in Docker VM, not NTFS
+
+services:
+  data_platform:
+    volumes:
+      - ./app_data/data_lake:/app/var/data_lake
+      - monitoring_db:/app/var/data_lake/monitoring  # overlays bind mount for this subdir
+```
+Migrate existing data once:
+```bash
+docker run --rm \
+  -v "D:/path/to/data_lake/monitoring:/source:ro" \
+  -v "monitoring_db:/dest" \
+  alpine sh -c "cp -a /source/. /dest/"
+```
+Backup coverage unchanged: backup script runs inside container and sees named volume as part of `data_lake` directory tree.
+
+**Rules:**
+1. Any DuckDB file that must never be locked by Windows → store in a named Docker volume, not a bind mount.
+2. Named volume overlay on a bind-mount subpath works correctly in Docker: the more-specific mount takes precedence.
+3. **NEVER recommend "restart Docker Desktop from tray" to fix a DuckDB lock** — this freezes WSL2 (`wsl.exe -l -v` times out), which requires a full Windows restart to recover.
+4. The correct recovery path without named volumes: `scripts/fix-duckdb-lock.ps1` (kill dllhost + CHECKPOINT inside container, no Docker Desktop restart).
+
+**Reference:** `docker-compose.yml` (monitoring_db volume); `scripts/fix-duckdb-lock.ps1`; incident May 6 2026 (third occurrence, resolved structurally).
