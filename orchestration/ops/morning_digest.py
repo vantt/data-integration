@@ -445,7 +445,7 @@ def compose_card_fields(rows: list[DigestRow], kpi_data: Optional[KpiData] = Non
             if severity_rank.get(kpi_status, 0) > severity_rank.get(worst, 0):
                 worst = kpi_status
         elif kpi_data.status == "partial_source":
-            kpi_field_value = "⬜ Không gọi được Sapo API (RECON_LIVE_API=0?)"
+            kpi_field_value = "⬜ Không đọc được raw DB (raw.duckdb unavailable?)"
         elif kpi_data.status == "partial_warehouse":
             kpi_field_value = "⬜ Không đọc được warehouse (serving DB issue)"
         elif kpi_data.status == "failed":

@@ -4,12 +4,14 @@ Daily 04:45 asset comparing Sapo source revenue vs warehouse fact_orders.
 Writes to ingestion_health.duckdb with asset_key='kpi/revenue_daily'.
 
 Gated behind KPI_CLOSURE_ENABLED=1 env flag (disabled by default).
-Live Sapo API calls also require RECON_LIVE_API=1.
 
 Architecture:
-- Source: Sapo orders API → sum($.total) for orders created yesterday
-- Warehouse: serving DB → SUM(net_revenue) from fact_orders WHERE date_key = yesterday
+- Source: raw__sapo.order → SUM($.total) for orders with created_on in [yesterday, today) UTC
+- Warehouse: serving DB → SUM(net_revenue) from fact_orders WHERE date_key = yesterday (UTC)
 - Drift: (warehouse - source) / source
+
+Note: source reads raw DuckDB (not live Sapo API) so both sides derive from the same ingested
+data. This catches transformation errors rather than ingestion gaps; RECON_LIVE_API not needed.
 """
 from __future__ import annotations
 
@@ -29,8 +31,9 @@ logger = logging.getLogger(__name__)
 # Feature flag — disabled by default until calibration complete
 _KPI_ENABLED = os.environ.get("KPI_CLOSURE_ENABLED", "").strip() == "1"
 
-# Serving DB path — must match bootstrap_serving_views.py
+# DB paths — must match reconciliation.py / bootstrap_serving_views.py
 _DATA_LAKE = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
+_RAW_DB_PATH = os.path.join(_DATA_LAKE, "raw", "raw.duckdb")
 _SERVING_DB_PATH = os.path.join(_DATA_LAKE, "serving", "olap.duckdb")
 
 # Statuses to exclude from revenue calculation
@@ -44,8 +47,8 @@ def _make_run_id() -> str:
 def _yesterday_window_utc() -> tuple[datetime, datetime, int]:
     """Return (yesterday_00:00 UTC, today_00:00 UTC, date_key YYYYMMDD).
 
-    Both API and warehouse use UTC for consistency:
-    - Sapo API: created_on filters use UTC timestamps
+    Both source and warehouse use UTC for consistency:
+    - raw__sapo.order: $.created_on cast as TIMESTAMPTZ (UTC-aware comparison)
     - fact_orders.date_key: strftime(created_at) uses DuckDB default timezone (UTC)
     """
     now = datetime.now(timezone.utc)
@@ -57,17 +60,43 @@ def _yesterday_window_utc() -> tuple[datetime, datetime, int]:
 
 
 def _fetch_sapo_revenue(window_start: datetime, window_end: datetime) -> Optional[float]:
-    """Fetch sum of order revenue from Sapo API for [window_start, window_end)."""
+    """Fetch sum of order revenue from raw__sapo.order for orders created in [window_start, window_end).
+
+    Reads raw DuckDB (not live Sapo API) so the comparison isolates transformation errors.
+    The Sapo orders API does not reliably support created_on filtering — it ignores the
+    params and returns all historical orders, producing a wildly inflated sum.
+    """
     if not _KPI_ENABLED:
-        logger.debug("kpi_closure: KPI_CLOSURE_ENABLED not set — skipping Sapo call")
+        logger.debug("kpi_closure: KPI_CLOSURE_ENABLED not set — skipping source revenue")
         return None
 
-    try:
-        from sapo.api_count import sum_revenue_orders  # type: ignore[import]
-    except ImportError:
-        from ingestion.src.sapo.api_count import sum_revenue_orders  # type: ignore[import]
+    if not os.path.exists(_RAW_DB_PATH):
+        logger.warning("kpi_closure: raw DB not found at %s", _RAW_DB_PATH)
+        return None
 
-    return sum_revenue_orders(window_start, window_end, _EXCLUDE_STATUSES)
+    conn = None
+    try:
+        conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
+        exclude_list = ", ".join(f"'{s}'" for s in _EXCLUDE_STATUSES)
+        row = conn.execute(
+            f"""
+            SELECT COALESCE(SUM(CAST(json_extract_string(payload, '$.total') AS DOUBLE)), 0)
+            FROM raw__sapo.order
+            WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
+                  >= ? AND
+                  TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
+                  < ?
+              AND LOWER(json_extract_string(payload, '$.status')) NOT IN ({exclude_list})
+            """,
+            [window_start, window_end],
+        ).fetchone()
+        return float(row[0]) if row else 0.0
+    except Exception as exc:
+        logger.error("kpi_closure: raw revenue query failed — %s", exc)
+        return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def _fetch_warehouse_revenue(date_key: int) -> Optional[float]:
@@ -143,13 +172,13 @@ def _persist_kpi(
 
 @asset(group_name="kpi_closure", key_prefix=["kpi"])
 def kpi_revenue_daily(context):
-    """Daily revenue invariant check: Sapo source vs warehouse fact_orders.
+    """Daily revenue invariant check: raw DB source vs warehouse fact_orders.
 
     Compares yesterday's revenue between:
-    - Source: Sapo orders API SUM($.total) for created_on in [yesterday, today) UTC
+    - Source: raw__sapo.order SUM($.total) for created_on in [yesterday, today) UTC
     - Warehouse: SUM(net_revenue) from fact_orders WHERE date_key = yesterday (UTC)
 
-    Gated behind KPI_CLOSURE_ENABLED=1 and RECON_LIVE_API=1.
+    Gated behind KPI_CLOSURE_ENABLED=1. RECON_LIVE_API not required.
     """
     started = datetime.now(timezone.utc)
     run_id = _make_run_id()
@@ -166,9 +195,9 @@ def kpi_revenue_daily(context):
     elif source_revenue is None and warehouse_revenue is None:
         status = "failed"  # both sides unavailable
     elif source_revenue is None:
-        status = "partial_source"  # Sapo API failed
+        status = "partial_source"  # raw DB unavailable or query failed
     elif warehouse_revenue is None:
-        status = "partial_warehouse"  # serving DB issue
+        status = "partial_warehouse"  # serving DB unavailable
     else:
         status = "success"
 
