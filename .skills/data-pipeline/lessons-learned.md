@@ -2432,3 +2432,78 @@ Backup coverage unchanged: backup script runs inside container and sees named vo
 4. The correct recovery path without named volumes: `scripts/fix-duckdb-lock.ps1` (kill dllhost + CHECKPOINT inside container, no Docker Desktop restart).
 
 **Reference:** `docker-compose.yml` (monitoring_db volume); `scripts/fix-duckdb-lock.ps1`; incident May 6 2026 (third occurrence, resolved structurally).
+
+---
+
+### L74 — Dagster jobs get stuck when `maintain_purge_runs_job` holds SQLite exclusive lock during VACUUM
+
+**Symptom:** `ingest_sapo_realtime_job` and other short jobs complete all their work but are auto-killed as "stuck" (Inactive 9/10 min). Compute logs show `sqlite3.OperationalError: database is locked` in the step that writes Dagster completion events. Separately, `maintain_purge_runs_job` itself is killed after 15 min runtime / 5 min inactive.
+
+**Root cause:** Two compounding issues in `maintain_purge_runs_job`:
+1. **VACUUM on compact index.db**: SQLite VACUUM holds an exclusive lock for its entire duration. `index.db` was 860 MB but 0% fragmented (no free pages) — VACUUM ran for minutes, gained nothing, and blocked every other Dagster process writing to `index.db` during that window.
+2. **`SELECT DISTINCT run_id FROM event_logs` with no heartbeat**: 205K-row full scan ran in the main thread for 2–5 min with no `context.log.info()` calls → Dagster inactivity watchdog fired after 5 min of silence and killed the purge job.
+
+**Fix (`orchestration/ops/purge_runs.py`):**
+```python
+# 1. Skip VACUUM when freelist < 5% of pages (already compact)
+free_pct = freelist_count / max(page_count, 1) * 100
+if free_pct < 5.0:
+    log.info(f"VACUUM skipped: {free_pct:.1f}% free pages — already compact")
+    return size_before, size_before
+
+# 2. Run DISTINCT scan in background thread with 30s heartbeats (same pattern as VACUUM)
+_SCAN_TIMEOUT = 300  # skip if too slow
+while not _done.wait(timeout=30):
+    elapsed += 30
+    log.info(f"event_logs DISTINCT scan in progress... ({elapsed}s elapsed)")
+    if elapsed >= _SCAN_TIMEOUT:
+        return 0
+```
+
+**Rules:**
+1. SQLite `VACUUM` takes an **exclusive lock** for its entire run — never run it on a file shared with active Dagster processes unless the database is actually fragmented (freelist > 5–10%).
+2. Check fragmentation before VACUUM: `PRAGMA freelist_count` / `PRAGMA page_count`. If free% < 5, VACUUM costs minutes of lock time and shrinks nothing.
+3. Any blocking operation (SQL scan, subprocess, API call) that may take >3 min inside a Dagster op **must** emit `context.log.info()` at least every 4 min, or the inactivity watchdog will kill the run. Use a background thread + heartbeat loop for unbounded operations.
+4. The inactivity watchdog threshold is **5 min** of log silence (see `sensors/stuck_run_alerter.py`). Budget heartbeats at ≤30s intervals for safety.
+5. When diagnosing "stuck" runs, check the `.err` compute log — `sqlite3.OperationalError: database is locked` with a SQLAlchemy stack trace means another process holds an exclusive SQLite lock, not that the job's own code is hung.
+
+**Reference:** `orchestration/ops/purge_runs.py` (`_vacuum_index_db`, `_cleanup_orphan_event_entries`); incident May 7 2026.
+
+---
+
+### L75 — Dagster ops that call external helpers without `context.log` are invisible to the inactivity watchdog
+
+**Symptom:** Jobs that contain slow helper functions (DuckDB window queries, API calls, metadata scans) get killed by the stuck-run watchdog even though they are actively working. No heartbeat appears in the Dagster event log during the slow phase.
+
+**Root cause:** Python `logging.getLogger(__name__)` writes to stderr/stdout but does **not** create Dagster log events. The stuck-run alerter tracks the last Dagster log event timestamp, not the process's stdout. Helper functions that use only `logger.info()` (module-level) are completely invisible to the watchdog.
+
+**Examples found (fixed May 7 2026):**
+- `morning_digest._fetch_stats()`: 4 blocking DuckDB queries (window functions + median), used `logger` not `context.log` — no Dagster events for up to 5 min.
+- `reconciliation.recon_sapo_orders_daily()`: called `count_orders()` (external Sapo API) with log only **after** the call returned.
+
+**Fix pattern:**
+```python
+# Bad: helper uses module logger, invisible to watchdog
+def _fetch_stats(db_path):
+    rows = conn.execute(BIG_QUERY).fetchall()  # silent for 3+ min
+
+# Good: pass log callable through, emit before blocking call
+def _fetch_stats(db_path, log=None):
+    def _hb(msg):
+        (log or logger.info)(msg)
+    _hb("running main stats query...")
+    rows = conn.execute(BIG_QUERY).fetchall()
+    _hb(f"done ({len(rows)} rows)")
+
+# In the @op:
+def my_op(context):
+    _fetch_stats(db_path, log=context.log.info)
+```
+
+**Rules:**
+1. Every `@op` / `@asset` that calls helpers taking >30s must pass `context.log.info` (or equivalent) into those helpers.
+2. Add a `context.log.info(...)` **before** every external call (API, subprocess, DuckDB query) that has no internal logging.
+3. `logger = logging.getLogger(__name__)` output is NOT visible to the Dagster inactivity watchdog — only `context.log.*` calls create Dagster events.
+4. For unbounded operations in helpers (cannot know duration in advance), use the background-thread + heartbeat-loop pattern from `_vacuum_index_db` in `purge_runs.py`.
+
+**Reference:** `orchestration/ops/morning_digest.py` (`_fetch_stats`, `build_digest_rows`, `compose_and_send_digest`); `orchestration/assets/reconciliation.py` (all 4 recon assets); incident May 7 2026.
