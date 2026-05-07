@@ -212,8 +212,18 @@ LIMIT 1;
 """
 
 
-def _fetch_stats(db_path: str) -> tuple[dict, dict, dict, Optional[KpiData]]:
-    """Return (stats_by_asset_key, drift_by_recon_key, zero_streaks, kpi_data) dicts."""
+def _fetch_stats(db_path: str, log=None) -> tuple[dict, dict, dict, Optional[KpiData]]:
+    """Return (stats_by_asset_key, drift_by_recon_key, zero_streaks, kpi_data) dicts.
+
+    log: callable (e.g. context.log.info) — emits Dagster heartbeat events during
+    blocking queries so the stuck-run alerter doesn't kill us after 5 min of silence.
+    """
+    def _heartbeat(msg: str):
+        if log:
+            log(msg)
+        else:
+            logger.info(msg)
+
     stats: dict = {}
     drift: dict = {}
     zero_streaks: dict = {}
@@ -223,20 +233,24 @@ def _fetch_stats(db_path: str) -> tuple[dict, dict, dict, Optional[KpiData]]:
         try:
             from orchestration.asset_checks.health_db import consecutive_empty_with_cursor_move
 
+            _heartbeat("morning_digest: running main stats query (window + median)...")
             rows = conn.execute(_MAIN_QUERY).fetchall()
             for asset_key, last_ok, r_24h, med7, last_status, last_run_id, runs_24h in rows:
                 stats[asset_key] = (last_ok, r_24h, med7, last_status, last_run_id, runs_24h)
+            _heartbeat(f"morning_digest: main query done ({len(rows)} assets)")
 
+            _heartbeat("morning_digest: running recon drift query...")
             recon_rows = conn.execute(_RECON_QUERY).fetchall()
             for rk, dp in recon_rows:
                 drift[rk] = dp
 
+            _heartbeat(f"morning_digest: scanning zero-streak for {len(KNOWN_ASSETS)} assets...")
             for _, asset_key, _ in KNOWN_ASSETS:
                 streak = consecutive_empty_with_cursor_move(conn, asset_key, streak_n=5)
                 if streak > 0:
                     zero_streaks[asset_key] = streak
 
-            # Fetch KPI closure data (Phase 5)
+            _heartbeat("morning_digest: running KPI closure query...")
             kpi_row = conn.execute(_KPI_QUERY).fetchone()
             if kpi_row:
                 kpi_data = KpiData(
@@ -258,9 +272,9 @@ def _fetch_stats(db_path: str) -> tuple[dict, dict, dict, Optional[KpiData]]:
 # Row builder
 # ---------------------------------------------------------------------------
 
-def build_digest_rows(db_path: str) -> tuple[list[DigestRow], Optional[KpiData]]:
+def build_digest_rows(db_path: str, log=None) -> tuple[list[DigestRow], Optional[KpiData]]:
     """Query ingestion_health.duckdb and build one DigestRow per known asset + KPI data."""
-    stats, drift, zero_streaks, kpi_data = _fetch_stats(db_path)
+    stats, drift, zero_streaks, kpi_data = _fetch_stats(db_path, log=log)
     now_utc = datetime.now(timezone.utc)
     rows: list[DigestRow] = []
 
@@ -573,7 +587,7 @@ def _check_db_staleness(db_path: str) -> Optional[float]:
 
 
 @op
-def compose_and_send_digest(_context) -> None:
+def compose_and_send_digest(context) -> None:
     """Read ingestion_health.duckdb and post morning Lark card."""
     db_path = get_db_path()
     dry_run = os.getenv("DIGEST_DRY_RUN", "0") == "1"
@@ -599,7 +613,7 @@ def compose_and_send_digest(_context) -> None:
         # Check for stale monitoring data before building rows.
         # sapo_webhook writes every 3 min; a gap > 6h means the recorder is broken.
         stale_age_h = _check_db_staleness(db_path)
-        rows, kpi_data = build_digest_rows(db_path)
+        rows, kpi_data = build_digest_rows(db_path, log=context.log.info)
 
     if not rows:
         logger.warning("morning_digest: build_digest_rows returned empty list")

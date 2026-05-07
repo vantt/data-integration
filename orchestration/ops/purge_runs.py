@@ -135,12 +135,32 @@ def _vacuum_index_db(instance, log) -> tuple[float, float]:
 
     VACUUM runs in a background thread so we can emit heartbeat log events every
     30 s — without these the stuck-run alerter would kill us after 5 min of silence.
+
+    Skips VACUUM when the database is already compact (< 5% free pages) — running
+    VACUUM on a compact file takes minutes with an exclusive lock and shrinks nothing.
     """
     run_dir = _get_run_db_dir(instance)
     index_path = os.path.join(run_dir, 'index.db')
     if not os.path.exists(index_path):
         return 0, 0
     size_before = os.path.getsize(index_path) / (1024 * 1024)
+
+    # Skip VACUUM when already compact — exclusive lock for minutes with no benefit.
+    try:
+        _probe = sqlite3.connect(index_path, timeout=5.0)
+        page_count = _probe.execute('PRAGMA page_count').fetchone()[0]
+        freelist_count = _probe.execute('PRAGMA freelist_count').fetchone()[0]
+        _probe.close()
+        free_pct = freelist_count / max(page_count, 1) * 100
+        if free_pct < 5.0:
+            log.info(
+                f"VACUUM skipped: index.db is {free_pct:.1f}% free pages "
+                f"({freelist_count:,}/{page_count:,}) — already compact"
+            )
+            return size_before, size_before
+    except Exception:
+        pass  # If probe fails, proceed with VACUUM attempt
+
     log.info(f"Starting VACUUM on index.db ({size_before:.1f} MB)...")
 
     _errors: list[Exception] = []
@@ -232,27 +252,54 @@ def _cleanup_orphan_event_entries(instance, known_run_ids: set, log) -> int:
 
     This handles the partial-delete case: when delete_run() succeeded but
     delete_events() failed previously, leaving orphaned rows in index.db.
+
+    The DISTINCT scan runs in a background thread with 30 s heartbeats so the
+    stuck-run alerter sees activity while the scan completes on a large index.db.
     """
     run_dir = _get_run_db_dir(instance)
     index_path = os.path.join(run_dir, 'index.db')
     if not os.path.exists(index_path):
         return 0
 
-    # Find run_ids present in event_logs but not in runs.db.
-    # DISTINCT scan on a large table can take 30–90 s — log before to show activity.
-    log.info("Scanning event_logs for orphaned run_ids (may take a moment)...")
-    try:
-        conn = sqlite3.connect(index_path, timeout=30.0)
-        conn.execute('PRAGMA busy_timeout = 30000')
-        event_run_ids = set(
-            row[0] for row in conn.execute('SELECT DISTINCT run_id FROM event_logs').fetchall()
-        )
-        conn.close()
-    except sqlite3.OperationalError as e:
-        log.warning(f"Could not query index.db for orphan detection: {e}")
+    _result: list[set] = []
+    _errors: list[Exception] = []
+    _done = threading.Event()
+
+    def _do_scan():
+        try:
+            conn = sqlite3.connect(index_path, timeout=30.0)
+            conn.execute('PRAGMA busy_timeout = 30000')
+            event_run_ids = set(
+                row[0] for row in conn.execute('SELECT DISTINCT run_id FROM event_logs').fetchall()
+            )
+            conn.close()
+            _result.append(event_run_ids)
+        except Exception as e:
+            _errors.append(e)
+        finally:
+            _done.set()
+
+    log.info("Scanning event_logs for orphaned run_ids (background scan with heartbeat)...")
+    t = threading.Thread(target=_do_scan, daemon=True)
+    t.start()
+
+    # Heartbeat every 30 s so the stuck-run alerter doesn't kill us during a slow scan.
+    _SCAN_TIMEOUT = 300  # 5 min max — skip if index.db is too slow/locked
+    elapsed = 0
+    while not _done.wait(timeout=30):
+        elapsed += 30
+        log.info(f"event_logs DISTINCT scan in progress... ({elapsed}s elapsed)")
+        if elapsed >= _SCAN_TIMEOUT:
+            log.warning(f"Orphan event scan timed out after {elapsed}s — skipping this cycle")
+            return 0
+
+    if _errors:
+        log.warning(f"Could not query index.db for orphan detection: {_errors[0]}")
+        return 0
+    if not _result:
         return 0
 
-    orphan_ids = event_run_ids - known_run_ids
+    orphan_ids = _result[0] - known_run_ids
     if not orphan_ids:
         return 0
 

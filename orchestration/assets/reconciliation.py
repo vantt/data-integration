@@ -188,7 +188,9 @@ def recon_shopee_daily(context):
     asset_key = "recon/shopee_daily"
     window_start, window_end = _window_utc()
 
+    context.log.info("recon_shopee_daily: querying health DB source count...")
     source_count = _file_drop_source_count(_SHOPEE_ASSET_KEY, window_start)
+    context.log.info("recon_shopee_daily: querying raw DuckDB dest count...")
     dest_count = _raw_table_dest_count("raw__shopee.order_revenue", window_start) or 0
     drift_pct = _compute_drift(source_count, dest_count)
 
@@ -233,7 +235,9 @@ def recon_misa_daily(context):
     asset_key = "recon/misa_daily"
     window_start, window_end = _window_utc()
 
+    context.log.info("recon_misa_daily: querying health DB source count...")
     source_count = _file_drop_source_count(_MISA_ASSET_KEY, window_start)
+    context.log.info("recon_misa_daily: querying raw DuckDB dest count...")
     dest_count = _raw_table_dest_count("raw__misa_amis.sales_lines", window_start) or 0
     drift_pct = _compute_drift(source_count, dest_count)
 
@@ -335,7 +339,9 @@ def recon_sapo_orders_daily(context):
     except ImportError:
         from ingestion.src.sapo.api_count import count_orders  # type: ignore[import]
 
+    context.log.info("recon_sapo_orders_daily: calling Sapo API count_orders...")
     source_count = count_orders(window_start, window_end)
+    context.log.info("recon_sapo_orders_daily: querying raw DuckDB dest count...")
     dest_count = _sapo_dest_count_orders(window_start, window_end) or 0
     drift_pct = _compute_drift(source_count, dest_count)
 
@@ -395,7 +401,9 @@ def recon_sapo_customers_daily(context):
     except ImportError:
         from ingestion.src.sapo.api_count import count_customers  # type: ignore[import]
 
+    context.log.info("recon_sapo_customers_daily: calling Sapo API count_customers...")
     source_count = count_customers(window_start, window_end)
+    context.log.info("recon_sapo_customers_daily: querying raw DuckDB dest count...")
     dest_count = _sapo_dest_count_customers(window_start, window_end) or 0
     drift_pct = _compute_drift(source_count, dest_count)
 
