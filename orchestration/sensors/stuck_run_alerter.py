@@ -50,13 +50,12 @@ MIN_RUNTIME_BEFORE_KILL = timedelta(minutes=10)
 # coordinator daemon never picked them up (daemon crashed, disk full, frozen
 # by SQLite lock storm, etc.).
 #
-# Sizing: the dbt_rw=1 tag limit serializes all sync jobs. Legitimate wait =
-# duration of the currently-running job (realtime: ~7 min normal, ~10 min max;
-# nightly: ~60 min). Realtime/incremental schedules now skip ticks when nightly
-# is STARTED (see _long_dbt_rw_holder in definitions.py), so NOT_STARTED runs
-# behind nightly should no longer accumulate. 90 min kept as a catch-all for
-# any unexpected queue freeze (disk-full, daemon OOM, SQLite storm).
-QUEUE_STUCK_THRESHOLD = timedelta(minutes=90)
+# Sizing: realtime/incremental max runtime ~10 min; _long_dbt_rw_holder in
+# definitions.py skips new ticks while nightly is STARTED, so NOT_STARTED
+# accumulation during the nightly ~60 min window no longer happens. 20 min
+# covers the max legitimate wait (one job ahead in the dbt_rw=1 queue) with
+# a 10 min buffer for initialization overhead.
+QUEUE_STUCK_THRESHOLD = timedelta(minutes=20)
 
 # Max run_ids kept in cursor to prevent unbounded growth.
 CURSOR_LIMIT = 100

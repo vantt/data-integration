@@ -107,12 +107,17 @@ def _cleanup_dbt_target_dirs(keep_days: int, log) -> tuple[int, float]:
     freed_bytes = 0
 
     log.info(f"Scanning dbt target dirs in {target_dir}...")
+    last_heartbeat = time.time()
     for name in os.listdir(target_dir):
         if not name.startswith('sapo_dbt_assets-'):
             continue
         dir_path = os.path.join(target_dir, name)
         if not os.path.isdir(dir_path):
             continue
+        # Heartbeat every 60s so the stuck-run alerter doesn't kill us mid-scan.
+        if time.time() - last_heartbeat > 60:
+            log.info(f"dbt target cleanup in progress: removed {removed_count} dirs so far...")
+            last_heartbeat = time.time()
         try:
             mtime = os.path.getmtime(dir_path)
             if mtime < cutoff_ts:
@@ -318,29 +323,98 @@ def _cleanup_orphan_event_entries(instance, known_run_ids: set, log) -> int:
 def _cleanup_orphan_asset_check_executions(instance, log) -> int:
     """Delete asset_check_executions rows whose run_id no longer exists in runs.db.
 
-    Dagster's delete_run() does not touch this table, so it accumulates
-    indefinitely. We join directly against runs.db to find orphans.
+    Dagster's delete_run() does not touch this table, so it accumulates indefinitely.
+
+    Two-phase approach to avoid long exclusive locks on index.db:
+    - Phase 1: find orphan run_ids via cross-db ATTACH SELECT (shared read lock, fast)
+    - Phase 2: batched DELETE (50 run_ids/batch) with 0.1s sleep between batches so
+      other writers (SchedulerDaemon, event storage) can acquire the lock between batches.
+    Both phases run in a background thread with 30s heartbeats so the stuck-run alerter
+    doesn't kill us.
     """
     run_dir = _get_run_db_dir(instance)
     index_path = os.path.join(run_dir, 'index.db')
     runs_path = os.path.join(os.path.dirname(run_dir), 'runs.db')
     if not os.path.exists(index_path) or not os.path.exists(runs_path):
         return 0
-    try:
-        conn = sqlite3.connect(index_path, timeout=30.0)
-        conn.execute('PRAGMA busy_timeout = 30000')
-        conn.execute(f"ATTACH DATABASE '{runs_path}' AS runsdb")
-        log.info("Cleaning orphaned asset_check_executions rows (cross-db DELETE)...")
-        conn.execute("""
-            DELETE FROM asset_check_executions
-            WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)
-        """)
-        conn.commit()
-        deleted = conn.execute("SELECT changes()").fetchone()[0]
-        conn.close()
-    except Exception as e:
-        log.warning(f"asset_check_executions cleanup failed: {e}")
+
+    _result: list[int] = []
+    _errors: list[Exception] = []
+    _done = threading.Event()
+    _progress: list[str] = []
+
+    def _do_cleanup():
+        try:
+            # Phase 1: shared read — find orphan run_ids (no long exclusive lock)
+            conn = sqlite3.connect(index_path, timeout=30.0)
+            conn.execute('PRAGMA busy_timeout = 30000')
+            conn.execute(f"ATTACH DATABASE '{runs_path}' AS runsdb")
+            orphan_ids = [
+                row[0] for row in conn.execute(
+                    "SELECT DISTINCT run_id FROM asset_check_executions "
+                    "WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)"
+                ).fetchall()
+            ]
+            conn.execute("DETACH DATABASE runsdb")
+            conn.close()
+
+            if not orphan_ids:
+                _result.append(0)
+                return
+
+            # Phase 2: delete in batches — each batch holds exclusive lock < 1s
+            deleted = 0
+            batch_size = 50
+            for i in range(0, len(orphan_ids), batch_size):
+                batch = orphan_ids[i:i + batch_size]
+                placeholders = ','.join('?' * len(batch))
+                try:
+                    c = sqlite3.connect(index_path, timeout=30.0)
+                    c.execute('PRAGMA busy_timeout = 30000')
+                    c.execute(
+                        f"DELETE FROM asset_check_executions WHERE run_id IN ({placeholders})",
+                        batch
+                    )
+                    c.commit()
+                    deleted += c.execute("SELECT changes()").fetchone()[0]
+                    c.close()
+                    _progress.append(f"{i + len(batch)}/{len(orphan_ids)}")
+                except sqlite3.OperationalError as e:
+                    try:
+                        c.close()
+                    except Exception:
+                        pass
+                    if 'database is locked' in str(e).lower():
+                        time.sleep(1.0)  # back off on contention, retry next batch
+                        continue
+                    raise
+                time.sleep(0.1)  # yield lock window between batches
+
+            _result.append(deleted)
+        except Exception as e:
+            _errors.append(e)
+        finally:
+            _done.set()
+
+    log.info("Cleaning orphaned asset_check_executions rows (batched background DELETE)...")
+    t = threading.Thread(target=_do_cleanup, daemon=True)
+    t.start()
+
+    _TIMEOUT = 300  # 5 min max
+    elapsed = 0
+    while not _done.wait(timeout=30):
+        elapsed += 30
+        progress_str = _progress[-1] if _progress else "scanning"
+        log.info(f"asset_check_executions cleanup in progress... ({elapsed}s, {progress_str})")
+        if elapsed >= _TIMEOUT:
+            log.warning(f"asset_check_executions cleanup timed out after {elapsed}s — skipping this cycle")
+            return 0
+
+    if _errors:
+        log.warning(f"asset_check_executions cleanup failed: {_errors[0]}")
         return 0
+
+    deleted = _result[0] if _result else 0
     if deleted:
         log.info(f"Cleaned {deleted:,} orphaned asset_check_executions rows")
     return deleted
