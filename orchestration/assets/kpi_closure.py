@@ -33,7 +33,7 @@ _KPI_ENABLED = os.environ.get("KPI_CLOSURE_ENABLED", "").strip() == "1"
 
 # DB paths — must match reconciliation.py / bootstrap_serving_views.py
 _DATA_LAKE = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
-_RAW_DB_PATH = os.path.join(_DATA_LAKE, "raw", "raw.duckdb")
+_SAPO_ORDER_PATH = os.path.join(_DATA_LAKE, "sapo_raw", "order")
 _SERVING_DB_PATH = os.path.join(_DATA_LAKE, "serving", "olap.duckdb")
 
 # Statuses to exclude from revenue calculation
@@ -60,32 +60,38 @@ def _yesterday_window_utc() -> tuple[datetime, datetime, int]:
 
 
 def _fetch_sapo_revenue(window_start: datetime, window_end: datetime) -> Optional[float]:
-    """Fetch sum of order revenue from raw__sapo.order for orders created in [window_start, window_end).
+    """Fetch sum of order revenue from sapo_raw/order parquet files for orders created in [window_start, window_end).
 
-    Reads raw DuckDB (not live Sapo API) so the comparison isolates transformation errors.
-    The Sapo orders API does not reliably support created_on filtering — it ignores the
-    params and returns all historical orders, producing a wildly inflated sum.
+    Reads raw parquet (not live Sapo API) so the comparison isolates transformation errors.
+    The Sapo orders API ignores created_on filtering and returns all historical orders.
+    Deduplicates entity_id by taking the latest event_timestamp per order.
     """
     if not _KPI_ENABLED:
         logger.debug("kpi_closure: KPI_CLOSURE_ENABLED not set — skipping source revenue")
         return None
 
-    if not os.path.exists(_RAW_DB_PATH):
-        logger.warning("kpi_closure: raw DB not found at %s", _RAW_DB_PATH)
+    if not os.path.exists(_SAPO_ORDER_PATH):
+        logger.warning("kpi_closure: sapo raw order dir not found at %s", _SAPO_ORDER_PATH)
         return None
 
     conn = None
     try:
-        conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
+        conn = duckdb.connect()
+        # Partition glob avoids _delta_log checkpoint parquets
+        parquet_glob = _SAPO_ORDER_PATH.replace("\\", "/") + "/ingest_method=*/**/*.parquet"
         exclude_list = ", ".join(f"'{s}'" for s in _EXCLUDE_STATUSES)
         row = conn.execute(
             f"""
+            WITH latest AS (
+                SELECT entity_id, payload,
+                    ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY event_timestamp DESC) AS rn
+                FROM read_parquet('{parquet_glob}', union_by_name=true, hive_partitioning=true)
+                WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) >= ?
+                  AND TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) < ?
+            )
             SELECT COALESCE(SUM(CAST(json_extract_string(payload, '$.total') AS DOUBLE)), 0)
-            FROM raw__sapo.order
-            WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
-                  >= ? AND
-                  TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
-                  < ?
+            FROM latest
+            WHERE rn = 1
               AND LOWER(json_extract_string(payload, '$.status')) NOT IN ({exclude_list})
             """,
             [window_start, window_end],
