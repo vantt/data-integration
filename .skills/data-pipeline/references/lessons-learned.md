@@ -2555,3 +2555,59 @@ def my_op(context):
 4. For unbounded operations in helpers (cannot know duration in advance), use the background-thread + heartbeat-loop pattern from `_vacuum_index_db` in `purge_runs.py`.
 
 **Reference:** `orchestration/ops/morning_digest.py` (`_fetch_stats`, `build_digest_rows`, `compose_and_send_digest`); `orchestration/assets/reconciliation.py` (all 4 recon assets); incident May 7 2026.
+
+---
+
+### L77 — Single-shot cross-DB DELETE on index.db holds exclusive lock for ~81s, causing zombie NOT_STARTED runs
+
+**Symptom:** `ingest_sapo_realtime_job` and `ingest_sapo_incremental_job` appear as NOT_STARTED for 90 min then get auto-canceled. `maintain_purge_runs_job` runs normally but `SchedulerDaemon` logs `sqlite3.OperationalError: database is locked` at `store_event()` during the purge window. `QueuedRunCoordinator` goes silent for ~95 min after the lock clears.
+
+**Root cause:** `_cleanup_orphan_asset_check_executions` ran a single `DELETE FROM asset_check_executions WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)` with `runs.db` ATTACHed to `index.db`. With 68,604 rows to delete, SQLite held an **exclusive write lock on `index.db` for ~81 seconds**. During this window, `SchedulerDaemon`'s `create_run()` wrote the run record to `runs.db` but failed on the `store_event()` write to `index.db` → half-baked NOT_STARTED run (record exists, no events). `QueuedRunCoordinator` then entered a long backoff (~95 min) after hitting the same locked DB.
+
+This was a sibling bug to L74 (VACUUM lock) — same class, different function. L74/L75 were fixed May 7 but `_cleanup_orphan_asset_check_executions` was overlooked.
+
+**Fix:** Two-phase approach:
+1. **Phase 1 (shared read):** ATTACH SELECT to find orphan run_ids — brief read lock only.
+2. **Phase 2 (batched write):** DELETE in batches of 50 run_ids with 0.1s sleep between batches — each batch holds exclusive lock <1s, other writers get windows between batches. Runs in background thread with 30s heartbeats.
+
+```python
+# Phase 1: shared read — find orphan run_ids
+conn.execute(f"ATTACH DATABASE '{runs_path}' AS runsdb")
+orphan_ids = [row[0] for row in conn.execute(
+    "SELECT DISTINCT run_id FROM asset_check_executions "
+    "WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)"
+).fetchall()]
+conn.execute("DETACH DATABASE runsdb")
+
+# Phase 2: batched delete — each batch holds exclusive lock < 1s
+for i in range(0, len(orphan_ids), 50):
+    batch = orphan_ids[i:i+50]
+    conn.execute(f"DELETE FROM asset_check_executions WHERE run_id IN ({','.join('?'*len(batch))})", batch)
+    conn.commit()
+    time.sleep(0.1)  # yield lock window between batches
+```
+
+**Rules:**
+1. Any SQLite DELETE that touches >1K rows on a shared database (`index.db`, `runs.db`) **must be batched** — never one-shot. Each batch should hold the exclusive lock <1s.
+2. When fixing a class of bugs (e.g., "long exclusive SQLite locks"), audit ALL callers that open `index.db` for writes, not just the one that triggered the alert. `_cleanup_orphan_asset_check_executions` had the same pattern as the VACUUM that was fixed in L74 but was missed.
+3. A zombie NOT_STARTED run (run_id in `runs.db`, no events in `index.db`) is the signature of a failed `create_run()` mid-write. The run will block the schedule's self-overlap check until it times out (QUEUE_STUCK_THRESHOLD).
+4. `QueuedRunCoordinator` entering a long backoff (>10 min silence) after a lock storm indicates it hit repeated errors during the lock window. The coordinator recovers on its own once the lock clears — no manual intervention needed, but it will take 10–95 min depending on backoff state.
+
+**Reference:** `orchestration/ops/purge_runs.py` (`_cleanup_orphan_asset_check_executions`); incident May 8 2026.
+
+---
+
+### L78 — QUEUE_STUCK_THRESHOLD at 90 min was masking the real fix deadline
+
+**Symptom:** Queue-zombie runs (NOT_STARTED, daemon never dequeued) sat for 90 min before auto-cancel. This made the root-cause window (the ~81s lock storm) seem less severe than it was — the system looked "recovered" after 90 min even though the real problem repeated every day.
+
+**Root cause:** `QUEUE_STUCK_THRESHOLD = timedelta(minutes=90)` was sized for the worst-case legitimate wait (nightly job ~60 min) before `_long_dbt_rw_holder` was added. After `_long_dbt_rw_holder` began skipping ticks while nightly was running, the maximum legitimate NOT_STARTED wait dropped to ~10 min (one realtime/incremental job ahead in the `dbt_rw=1` queue). The 90 min threshold was never updated.
+
+**Fix:** Reduce to 20 min — covers max legitimate wait (~10 min) with a 10 min buffer. Zombie runs from future lock storms now get cleaned up in 20 min instead of 90.
+
+**Rules:**
+1. After adding a mechanism that reduces legitimate queue wait time (like `_long_dbt_rw_holder`), always re-evaluate `QUEUE_STUCK_THRESHOLD` — it should be `max_legitimate_wait + buffer`, not an old worst-case.
+2. A 90 min cleanup window for a 81s root cause means the symptom (stuck jobs, missed ticks) persists for 90 min after the actual problem is gone. Tighter thresholds give faster self-healing.
+3. When `_long_dbt_rw_holder` is the mechanism preventing NOT_STARTED accumulation during nightly runs, the threshold can safely be `nightly_skips_ticks → max_wait = max(realtime_runtime, incremental_runtime) + buffer`.
+
+**Reference:** `orchestration/sensors/stuck_run_alerter.py` (`QUEUE_STUCK_THRESHOLD`); `orchestration/definitions.py` (`_long_dbt_rw_holder`); incident May 8 2026.
