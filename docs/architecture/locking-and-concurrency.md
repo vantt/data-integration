@@ -12,7 +12,7 @@
 - **Metabase + serving `olap.duckdb` coexistence is a non-problem.** Empirically verified: DuckDB `read_only=true` does not acquire any file lock; RW connect while Metabase up = **13.3 ms, no error**. Historical "Metabase JDBC exclusive lock" narrative is refuted.
 - **Subprocess hang risk (16h incident) is fixed** in `orchestration/assets/serving.py` via Popen + streaming read + 1800s timeout + merged stderr. `transformation/scripts/run_dbt.py` now also has `timeout=3600` (2026-04-09).
 - **Pool slot leak auto-remediated:** `unstick_concurrency_pools.py` now runs on every container boot before `dagster dev` (docker-compose.yml, commit b2659fb). Manual operator action no longer required after cancel batches.
-- **Landmine fixed:** `.skills/data-pipeline/templates/dagster-serving-asset-template.py` replaced with Popen+streaming+timeout pattern (commit 593aa5c).
+- **Landmine fixed:** `.skills/data-pipeline/templates/serve/dagster-serving-asset-template.py` replaced with Popen+streaming+timeout pattern (commit 593aa5c).
 - **`bootstrap_serving_views.py` docstring rewritten** to reflect the verified "Metabase read_only=true holds no file lock → safe to run while Metabase is up" reality (commit b2659fb).
 - **Schedules self-overlap check** in place on all 3 scheduled jobs (`realtime`, `incremental`, `nightly`). Coordinator tag `dbt_rw` applied to all 4 jobs including manual-only `ingest_sheets_sync_job`.
 - **Two sensors** monitor run health: `health_alert_failure_sensor` (terminal failures) + `health_alert_stuckrun_sensor` (45-min STARTED threshold, cursor-dedup). Together they cover both crash-path and hang-path failure modes.
@@ -143,7 +143,7 @@
 
 - ✅ `orchestration/assets/serving.py:54-77`: `Popen` + streaming stdout read + `stderr=STDOUT` + `proc.wait(timeout=1800)`. Correct pattern per L17. SERVING_TIMEOUT_SEC env-overridable.
 - ⚠️ `transformation/scripts/run_dbt.py:109`: `subprocess.run(cmd, cwd=..., env=..., check=True)`. Default `capture_output=False` means child inherits parent stdio → **no pipe deadlock possible** (the 16 h bug required `capture_output=True`). But also **no timeout** → indefinite hang possible if dbt itself hangs. Mitigation: this script is standalone-only (not imported by Dagster — Dagster goes through `DbtCliResource.cli(["build"]).stream()` directly). Low production risk.
-- 🚨 **LANDMINE**: `.skills/data-pipeline/templates/dagster-serving-asset-template.py:66` still contains:
+- 🚨 **LANDMINE**: `.skills/data-pipeline/templates/serve/dagster-serving-asset-template.py:66` still contains:
   ```python
   result = subprocess.run(
       ...
@@ -181,7 +181,7 @@ _All items in this section from the 2026-04-08 audit have been resolved on 2026-
 
 ### ✅ Landmine: template file had the 16 h bug pattern — FIXED
 
-- **File**: `.skills/data-pipeline/templates/dagster-serving-asset-template.py:66`
+- **File**: `.skills/data-pipeline/templates/serve/dagster-serving-asset-template.py:66`
 - **Was**: `subprocess.run(..., capture_output=True, ...)` — no timeout, pipe-deadlock prone.
 - **Resolution**: replaced with `Popen` + streaming stdout + `stderr=STDOUT` + `wait(timeout=1800)` pattern from `serving.py:54-77`. Commit 593aa5c (2026-04-09).
 
@@ -212,7 +212,7 @@ _All items in this section from the 2026-04-08 audit have been resolved on 2026-
 |---|---|---|---|
 | `scripts/provisioning/refresh_rolling.py:57-67` | PermissionError/OSError retry on parquet unlink | Linux allows unlink-while-open; DuckDB releases fds per query | **Verified 2026-04-09**: 10 consecutive runs show `deleted=17 skipped=0` on every table. Main `os.remove()` succeeds first try. Retry branches are cold. **Keep** — cheap cross-platform safety net for future Windows-native dev. |
 | `scripts/provisioning/bootstrap_serving_views.py:89-98` | `try: con = duckdb.connect(SERVING_DB_PATH) except... "Could not acquire DuckDB lock"` | DuckDB `read_only=true` mode never holds a lock → this catch never fires for the Metabase case | Empirical — run bootstrap with Metabase up, observe no exception |
-| `.skills/data-pipeline/templates/dagster-serving-asset-template.py:66` | `capture_output=True` subprocess.run | This is the ANTI-pattern, not a dead defender — see P0 finding above | n/a — replace |
+| `.skills/data-pipeline/templates/serve/dagster-serving-asset-template.py:66` | `capture_output=True` subprocess.run | This is the ANTI-pattern, not a dead defender — see P0 finding above | n/a — replace |
 
 **Note**: Keep the `PermissionError` catch — it's cheap and does defend Windows dev. But document that the `except OSError: time.sleep(0.5); retry` branch on Linux is belt-and-suspenders.
 

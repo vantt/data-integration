@@ -32,7 +32,10 @@ try {
 
   // Find last lesson number from lessons-learned.md
   const cwd = hookData.cwd || process.cwd();
-  const lessonsPath = path.join(cwd, '.skills', 'data-pipeline', 'lessons-learned.md');
+  // Try new path first (post-2026-05-07 reorganization), fallback to old path for backward compat
+  const lessonsPathNew = path.join(cwd, '.skills', 'data-pipeline', 'references', 'lessons-learned.md');
+  const lessonsPathOld = path.join(cwd, '.skills', 'data-pipeline', 'lessons-learned.md');
+  const lessonsPath = fs.existsSync(lessonsPathNew) ? lessonsPathNew : lessonsPathOld;
   let lastLesson = 'unknown';
   try {
     const content = fs.readFileSync(lessonsPath, 'utf8');
@@ -49,9 +52,10 @@ try {
     `Commit: "${msg}"`,
     `Last recorded lesson: ${lastLesson}`,
     ``,
-    `→ If the root cause is non-trivial, append a new lesson to \`.skills/data-pipeline/lessons-learned.md\``,
-    `→ Use the Self-Learning Protocol format (Symptom / Root cause / Fix / Rules / Reference)`,
-    `→ Run: \`grep "^### L" .skills/data-pipeline/lessons-learned.md | tail -5\` to see recent lessons`,
+    `→ If root cause is non-trivial, append a new lesson to \`.skills/data-pipeline/references/lessons-learned.md\``,
+    `→ Identify functional group (INGEST/MODEL/SERVE/TRUST/OPS) — update lesson-index.md too`,
+    `→ Use Self-Learning Protocol format (Symptom / Root cause / Fix / Rules / Reference)`,
+    `→ Run: \`grep "^### L" .skills/data-pipeline/references/lessons-learned.md | tail -5\` to see recent`,
   ].join('\n');
 
   console.log(JSON.stringify({

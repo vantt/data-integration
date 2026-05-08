@@ -1,15 +1,62 @@
-# Data Pipeline Skill (dlt + dbt + Serving)
+# Data Pipeline Skill (5 Functional Groups)
 
-Skill hỗ trợ thêm data source mới vào pipeline end-to-end:  
-**ingestion (dlt) → transformation (dbt) → serving layer (DuckDB) → orchestration (Dagster)**.
+Skill hỗ trợ thêm/fix/deploy data pipeline end-to-end.  
+Tổ chức theo **5 nhóm chức năng**: INGEST · MODEL · SERVE · TRUST · OPS.
+
+---
 
 ## Kích hoạt
 
+**INGEST:**
 - "thêm source mới", "add new ingestion", "integrate [source_name]"
+- "envelope schema", "dedup strategy", "auth dlt"
+- "webhook consumer", "history log", "file-drop"
+
+**MODEL:**
 - "tạo dbt model mới", "thêm src_/stg_/dim_/fact_ model"
-- Hỏi về envelope schema, dedup strategy, incremental dbt, OOM, rolling snapshots, rolling self-refresh views
-- Debug: dlt auth, dbt memory, Dagster asset fail, serving DB lock, empty folder
-- **Ingestion health / monitoring:** "morning digest", "health report", "ingestion_runs", "rows_written=0 bug", "daily health card", "Lark/Slack health alert", "per-source SLA", "recon drift report" → see `ingestion-health-digest.md`
+- "incremental dbt", "OOM dbt", "rolling snapshots"
+
+**SERVE:**
+- "Metabase nhìn dữ liệu cũ", "rolling self-refresh views", "serving DB lock"
+- "empty folder", "GC parquet"
+
+**TRUST:**
+- "morning digest", "health report", "ingestion_runs", "rows_written=0 bug"
+- "daily health card", "Lark/Slack health alert", "per-source SLA", "recon drift report"
+- "asset check", "KPI closure"
+
+**OPS:**
+- "schedule", "sensor", "stuck run", "concurrency", "purge", "backup"
+- "Dagster asset fail", "schedule offset", "zombie thread"
+
+**Cross-cutting:**
+- "DuckDB lock", "Docker mount", "env var", "Windows file lock"
+
+**Meta:**
+- "setup hook", "ghi lesson Lxx", "Self-Learning Protocol"
+
+---
+
+## Quick Start
+
+### Tôi đang làm gì?
+
+| Task | Đọc trước |
+|------|-----------|
+| Setup máy mới / hook không nhắc / ghi lesson Lxx mới | `playbooks/00-skill-meta.md` |
+| Thêm source mới | `playbooks/01-ingest.md` + `checklist.md` |
+| Fix dbt model | `playbooks/02-model.md` |
+| Fix Metabase data sai/cũ | `playbooks/03-serve.md` |
+| Health monitoring / digest / recon | `playbooks/04-trust.md` |
+| Schedule / sensor / stuck run | `playbooks/05-ops.md` |
+| Lock / Docker path / env var issue | `playbooks/cross-cutting.md` |
+| Tra cứu lesson Lxx | `lesson-index.md` |
+
+---
+
+## Architecture
+
+Xem `ARCHITECTURE.md` — bản đồ 5 nhóm, critical path diagram, và decision tree đầy đủ.
 
 ---
 
@@ -31,100 +78,74 @@ Then reload: open `/hooks` in Claude Code or restart.
 
 Source lives at `.skills/data-pipeline/hooks/data-pipeline-lesson-reminder.cjs` — always reflects the latest version.
 
----
-
-## Architecture Overview
-
-```
-API Source ─┐
-            ▼
-     [dlt pipeline]  →  data_lake/{entity}/ingest_method=*/year=*/month=*/*.parquet
-                              │
-                              ▼
-                  [dbt src_]  (incremental, tech+biz dedup, JSON extract)
-                              │
-                              ▼
-                  [dbt stg_]  (view, enrichment, unnest)
-                              │
-                              ▼
-                  [dbt std_]  (golden layer, multi-source consolidation)
-                              │
-                              ▼
-               [dbt int_] ←→ [dbt dim_/fact_]  (external parquet to rolling/)
-                              │
-                              ▼
-         DBT_EXPORT_PATH/rolling/{model}/{model}_{timestamp}.parquet
-                              │
-                              ▼
-              [generate_serving_db.py]  (Rolling Self-Refresh Views + GC)
-                              │
-                              ▼
-               data_lake/serving/olap.duckdb  (Metabase query here)
-```
-
-**5-hop transform flow:** `src_ → stg_ → std_ → int_ → dim_/fact_`  
-**Dagster DAG:** `{source}_ingestion_asset → dbt_assets → serving_db_asset`
-
----
-
-## Bước 1: Chọn Pattern Ingestion
-
-```
-Source đã có trong dlt hub?
-(dlthub.com/docs/dlt-ecosystem/verified-sources)
-        │
-   YES  │  NO
-        │
- Pattern B ─── Pattern A (FOCUS)
- (note ngắn)   (custom envelope)
-```
-
-### Pattern B — Native dlt source (note ngắn)
-```python
-from dlt.sources.facebook_ads import facebook_ads_source
-pipeline = dlt.pipeline(pipeline_name="...", destination="duckdb", dataset_name="...")
-pipeline.run(facebook_ads_source(account_id=..., chunk_size=1000))
-```
-Reference: `ingestion/run_facebook_ads_batch.py`
-
-### Pattern A — Custom API (full guide)
-Xem `checklist.md` — thực hiện theo 6 phase.
+**Deep-dive:** `playbooks/00-skill-meta.md` — hook setup, Self-Learning Protocol, Lxx workflow.
 
 ---
 
 ## Quick Reference
 
-### Docs
+### Playbooks (group-specific deployment guides)
+
+| File | Role |
+|------|------|
+| `playbooks/00-skill-meta.md` | META: hook setup, Self-Learning Protocol, Lxx workflow |
+| `playbooks/01-ingest.md` | INGEST: thu thập (Sapo 3-channel, file-drop, sheets) |
+| `playbooks/02-model.md` | MODEL: dbt 5-hop (src→stg→std→int→mart) |
+| `playbooks/03-serve.md` | SERVE: rolling views, dual DuckDB, GC |
+| `playbooks/04-trust.md` | TRUST: 4-tier pyramid, digest, recon, KPI closure |
+| `playbooks/05-ops.md` | OPS: sensors, schedules, concurrency, maintenance |
+| `playbooks/cross-cutting.md` | Shared concerns (DuckDB lock, paths, env vars) |
+
+### Deep references (source-of-truth, đọc khi cần chi tiết)
+
+| File | Group | Lines | Lessons |
+|------|-------|-------|---------|
+| `references/lessons-learned.md` | INGEST + others | 2557 | 76 lessons (L1-L76, gap L34) |
+| `references/dagster-patterns.md` | OPS | 836 | 14 lessons |
+| `references/dbt-patterns.md` | MODEL | 479 | 14 lessons |
+| `references/serving-layer.md` | SERVE | 269 | — |
+| `references/ingestion-health-digest.md` | TRUST | 333 | — |
+| `references/supporting-scripts.md` | cross-cutting | 197 | — |
+| `references/troubleshooting.md` | cross-cutting | 211 | — |
+
+### Index
+
+- `lesson-index.md` — Master cross-ref L1-L76 + 14 dagster + 14 dbt → group(s)
+- `templates/INDEX.md` — Templates organized by group
+
+### Docs (nội dung cụ thể)
+
 | File | Nội dung |
 |------|----------|
 | `checklist.md` | Checklist 6-phase: config → code → dbt → serving → dagster → verify |
-| `lessons-learned.md` | Lessons ingestion: dlt config, incremental, auth |
-| `dbt-patterns.md` | **Lessons dbt**: OOM fix, materialization, dedup, rolling location, partition pruning, time dim |
-| `dagster-patterns.md` | **Lessons Dagster**: hybrid job race, schedule offset, zombie threads, upstream injection |
-| `serving-layer.md` | **Cơ chế serving DB**: Rolling Self-Refresh Views, GC, zero-downtime swap |
-| `supporting-scripts.md` | **Supporting scripts**: generate_serving_db, run_dbt, clean_dlt_state... |
-| `troubleshooting.md` | Symptom → Cause → Fix (dlt + dbt + serving + Dagster) |
-| `ingestion-health-digest.md` | **Health digest pattern**: per-source observability card (schema → recorder → 3-layer row-count fallback → yesterday-ICT window → classification → delivery), plus backfill + composite-PK recovery playbook |
-| `dagster-patterns.md` Lesson 10-13 | **Stuck run prevention**: dbt subprocess timeout, subprocess killing via psutil, backup concurrency lock, zombie NOT_STARTED cleanup |
-| `dagster-patterns.md` Lesson 14 + `lessons-learned.md` L49-L52 | **Maintenance cron topology**: schedule must be explicitly started, backup `trap … EXIT` rotation, `prune_dagster_history`, stuck-run sensor Pass 2 (queue-stuck), purge cleans dbt target dirs (post-mortem 2026-04-28 disk-full) |
+| `references/lessons-learned.md` | Lessons ingestion: dlt config, incremental, auth |
+| `references/dbt-patterns.md` | **Lessons dbt**: OOM fix, materialization, dedup, rolling location, partition pruning, time dim |
+| `references/dagster-patterns.md` | **Lessons Dagster**: hybrid job race, schedule offset, zombie threads, upstream injection |
+| `references/serving-layer.md` | **Cơ chế serving DB**: Rolling Self-Refresh Views, GC, zero-downtime swap |
+| `references/supporting-scripts.md` | **Supporting scripts**: generate_serving_db, run_dbt, clean_dlt_state... |
+| `references/troubleshooting.md` | Symptom → Cause → Fix (dlt + dbt + serving + Dagster) |
+| `references/ingestion-health-digest.md` | **Health digest pattern**: per-source observability card (schema → recorder → 3-layer row-count fallback → yesterday-ICT window → classification → delivery), plus backfill + composite-PK recovery playbook |
+| `references/dagster-patterns.md` Lesson 10-13 | **Stuck run prevention**: dbt subprocess timeout, subprocess killing via psutil, backup concurrency lock, zombie NOT_STARTED cleanup |
+| `references/dagster-patterns.md` Lesson 14 + `references/lessons-learned.md` L49-L52 | **Maintenance cron topology**: schedule must be explicitly started, backup `trap … EXIT` rotation, `prune_dagster_history`, stuck-run sensor Pass 2 (queue-stuck), purge cleans dbt target dirs (post-mortem 2026-04-28 disk-full) |
 
-### Templates
+### Templates (organized by group)
+
 | File | Mục đích |
 |------|----------|
-| `templates/source-template.py` | dlt source + resource + envelope builder |
-| `templates/run-entry-point-template.py` | dlt entry point wrapper |
-| `templates/dagster-asset-template.py` | Dagster ingestion asset |
-| `templates/dagster-serving-asset-template.py` | Dagster serving asset (deps=[dbt_assets]) |
-| `templates/src-model-template.sql` | dbt src_: incremental, dedup, JSON extract |
-| `templates/dim-model-template.sql` | dbt dim_ với `location=get_rolling_location()` |
-| `templates/fact-model-template.sql` | dbt fact_ với surrogate keys + rolling |
-| `templates/sources-yml-template.yml` | dbt sources config (external Parquet glob) |
-| `templates/schema-yml-template.yml` | dbt tests (unique, not_null, relationships) |
-| `templates/ingestion-health-recorder-template.py` | Health DB recorder (`record_run` API + DDL, composite PK `(asset_key, run_id)`) |
-| `templates/dlt-row-count-extractor-template.py` | 3-layer fallback: metric walk → file_id glob → `_dlt_load_id` scan |
-| `templates/ingestion-health-digest-template.py` | Morning digest op: SQL window + classification + asset-type-aware messaging |
-| `templates/backfill-health-rows-written-template.py` | One-shot backfill for fixed extractor (composite-PK-safe UPDATE) |
-| `templates/stuck-run-alerter-template.py` | Auto-terminate stuck runs: activity detection → cancel → kill subprocess → free slots |
+| `templates/ingest/source-template.py` | dlt source + resource + envelope builder |
+| `templates/ingest/run-entry-point-template.py` | dlt entry point wrapper |
+| `templates/ingest/dagster-asset-template.py` | Dagster ingestion asset |
+| `templates/serve/dagster-serving-asset-template.py` | Dagster serving asset (deps=[dbt_assets]) |
+| `templates/model/src-model-template.sql` | dbt src_: incremental, dedup, JSON extract |
+| `templates/model/dim-model-template.sql` | dbt dim_ với `location=get_rolling_location()` |
+| `templates/model/fact-model-template.sql` | dbt fact_ với surrogate keys + rolling |
+| `templates/model/sources-yml-template.yml` | dbt sources config (external Parquet glob) |
+| `templates/model/schema-yml-template.yml` | dbt tests (unique, not_null, relationships) |
+| `templates/trust/ingestion-health-recorder-template.py` | Health DB recorder (`record_run` API + DDL, composite PK `(asset_key, run_id)`) |
+| `templates/trust/dlt-row-count-extractor-template.py` | 3-layer fallback: metric walk → file_id glob → `_dlt_load_id` scan |
+| `templates/trust/ingestion-health-digest-template.py` | Morning digest op: SQL window + classification + asset-type-aware messaging |
+| `templates/trust/backfill-health-rows-written-template.py` | One-shot backfill for fixed extractor (composite-PK-safe UPDATE) |
+| `templates/ops/stuck-run-alerter-template.py` | Auto-terminate stuck runs: activity detection → cancel → kill subprocess → free slots |
 
 ---
 
@@ -217,74 +238,22 @@ Env vars set in container via docker-compose `environment:` section or `.env.doc
 
 ## Critical Rules
 
-### Serving Views & Absolute Paths
+> **Runbooks** (Serving Views + dbt Target Cache after Docker mount changes) → `playbooks/cross-cutting.md`
 
-**⚠️ CRITICAL AFTER DOCKER MOUNT CHANGES:**
-
-Serving views (`olap.duckdb`) bake absolute paths into their SQL. If you change Docker volume mount paths or directory structure:
-
-1. **Stop Metabase first** (releases DuckDB lock):
-   ```bash
-   docker compose down
-   ```
-
-2. **Regenerate serving views** on the data_platform container:
-   ```bash
-   docker compose up -d data_platform
-   docker compose exec data_platform python scripts/provisioning/bootstrap_serving_views.py
-   ```
-
-3. **Restart Metabase** (will connect to updated views):
-   ```bash
-   docker compose up -d metabase
-   ```
-
-**Why?** Views contain embedded paths like:
-```sql
-CREATE VIEW dim_customers AS SELECT * FROM '/app/var/data_lake/export/marts/rolling/dim_customers/*.parquet'
-```
-
-If `/app/var/data_lake` changes to `/app/data_lake`, view paths break and Metabase queries fail.
-
-### dbt Target Cache & Rolling Parquet Paths
-
-**⚠️ CRITICAL AFTER DOCKER MOUNT CHANGES:**
-
-dbt's `target/` directory caches compiled SQL and model state including **absolute parquet output paths** from `get_rolling_location()`. When Docker mount paths change (e.g. `/app/data_lake` → `/app/var/data_lake`):
-
-- Cached state still references old paths → dbt tries to read/write to non-existent old paths
-- Error: `IO Error: Cannot open file "/app/data_lake/export/marts/rolling/...": No such file or directory`
-
-**Fix:** Clean dbt target cache and regenerate manifest before Dagster uses it:
-```bash
-docker exec data_platform bash -c "rm -rf /app/transformation/target"
-docker exec data_platform bash -c "cd /app/transformation && dbt deps && dbt parse"
-docker compose restart data_platform
-```
-
-**⚠️ Order matters:** `dbt parse` MUST run before Dagster restarts — Dagster imports `manifest.json` at startup. If you `rm -rf target/` and restart without `dbt parse`, Dagster crashes with `DagsterDbtManifestNotFoundError`.
-
-Or selectively rebuild only failing models (no target nuke needed):
-```bash
-docker exec data_platform bash -c "cd /app/transformation && dbt build --select model_name_1 model_name_2"
-```
-
-### Other Rules
-
-1. **Mart models MUST have** `location="{{ get_rolling_location() }}"` — nếu thiếu, `generate_serving_db.py` báo "Empty folder" và drop view
-2. **src_ phải incremental** với `_dlt_load_id` filter — xử lý late-arriving events (dùng `_dlt_load_id`, không phải `event_timestamp`; xem Rule 14)
-3. **src_/stg_ split** — tránh OOM; payload chỉ ở src_, stg_ đọc flat data
-4. **Dagster DuckDB writer assets** phải có `op_tags={"dagster/concurrency_key": "duckdb_lock"}`
-5. **`argv=[]`** khi gọi `run_*.run()` từ Dagster — tránh pick up Dagster's sys.argv
-6. **`os.chdir(DLT_DIR)` + `load_dlt_configuration()`** đầu mỗi Dagster ingestion asset
-7. **Serving asset `deps=[dbt_assets]`** — serving phải chạy sau dbt mart export xong
-8. **Pre-create rolling dirs** trong `@dbt_assets` function (idempotent) — dbt COPY fail nếu dir không tồn tại
-9. **Telemetry vars** (`DLT_TELEMETRY_DISABLED=true`, `DBT_SEND_ANONYMOUS_USAGE_STATS=false`) set ở process level — tránh zombie threads block Dagster job exit
-10. **Jobs với nhiều ingestion sources** phải inject upstream keys qua `DagsterDbtTranslator.get_upstream_asset_keys()` — nếu không dbt start trước ingestion
-11. **Khi fix anti-pattern trong prod code** → `grep` `templates/` cho cùng pattern và fix luôn. Templates là hạt giống bug tương lai — bất kỳ asset mới copy từ template cũ sẽ kế thừa bug. Đã xảy ra thực tế 2026-04-08: serving subprocess fix ở prod, nhưng template vẫn giữ `capture_output=True` cho tới audit 2026-04-09.
-12. **KHÔNG BAO GIỜ dùng `refresh="drop_sources"`** — xóa TẤT CẢ tables trong shared dataset (sapo_raw). Dùng `full_refresh` flag để reset incremental cursor, giữ nguyên data. Xem L25.
-13. **Dedup ORDER BY: `modified_on DESC` trước** (entity timestamp = source of truth), sau đó ingest_method priority. KHÔNG dùng `event_timestamp` làm primary sort cho dedup — event_timestamp là timestamp của log system, không phải entity. Xem L28.
-14. **Incremental filter: dùng `_dlt_load_id`** không phải `event_timestamp` — catches late-arriving data từ full-refresh hoặc history_log backfill mà event_timestamp filter sẽ bỏ sót. Xem L29.
-15. **Incremental schema migration phải self-heal** — khi thêm column mới vào src_ model: (a) `on_schema_change='append_new_columns'`, (b) `adapter.get_columns_in_relation(this)` check column tồn tại, (c) guard UNION ALL, (d) cursor CTE thay vì aggregate trong WHERE subquery. DuckDB + `read_parquet()` reject MAX() in WHERE subquery. Xem L31.
-16. **Nightly reconciliation = incremental, KHÔNG phải full refresh.** Dùng `transform_batch_fullrefresh_job` (manual, tag baked in) cho one-time reload. Không bao giờ auto-tag `full_refresh=true` trên scheduled jobs. Batch source functions phải wire `full_refresh` param từ entry-point → source → resource — nếu không flag bị silently ignored. Xem L32.
-17. **`--full-refresh` phải reset dlt pipeline state dir** (`.dlt/pipelines/{name}/`), không chỉ set flag. `dlt.sources.incremental` có 2 lớp filter: manual check (code) + internal transform (state file). Chỉ set `last_value=None` mà không xóa state = dlt silently drop items. KHÔNG dùng `pipeline.drop()` (gọi `destination.drop_storage()`). Xem L33.
+1. `[MODEL]` **Mart models MUST have** `location="{{ get_rolling_location() }}"` — nếu thiếu, `generate_serving_db.py` báo "Empty folder" và drop view
+2. `[MODEL]` **src_ phải incremental** với `_dlt_load_id` filter — xử lý late-arriving events (dùng `_dlt_load_id`, không phải `event_timestamp`; xem Rule 14)
+3. `[MODEL]` **src_/stg_ split** — tránh OOM; payload chỉ ở src_, stg_ đọc flat data
+4. `[OPS+MODEL]` **Dagster DuckDB writer assets** phải có `op_tags={"dagster/concurrency_key": "duckdb_lock"}`
+5. `[INGEST]` **`argv=[]`** khi gọi `run_*.run()` từ Dagster — tránh pick up Dagster's sys.argv
+6. `[INGEST]` **`os.chdir(DLT_DIR)` + `load_dlt_configuration()`** đầu mỗi Dagster ingestion asset
+7. `[SERVE]` **Serving asset `deps=[dbt_assets]`** — serving phải chạy sau dbt mart export xong
+8. `[MODEL]` **Pre-create rolling dirs** trong `@dbt_assets` function (idempotent) — dbt COPY fail nếu dir không tồn tại
+9. `[OPS]` **Telemetry vars** (`DLT_TELEMETRY_DISABLED=true`, `DBT_SEND_ANONYMOUS_USAGE_STATS=false`) set ở process level — tránh zombie threads block Dagster job exit
+10. `[OPS]` **Jobs với nhiều ingestion sources** phải inject upstream keys qua `DagsterDbtTranslator.get_upstream_asset_keys()` — nếu không dbt start trước ingestion
+11. `[META]` **Khi fix anti-pattern trong prod code** → `grep` `templates/` cho cùng pattern và fix luôn. Templates là hạt giống bug tương lai — bất kỳ asset mới copy từ template cũ sẽ kế thừa bug. Đã xảy ra thực tế 2026-04-08: serving subprocess fix ở prod, nhưng template vẫn giữ `capture_output=True` cho tới audit 2026-04-09.
+12. `[INGEST]` **KHÔNG BAO GIỜ dùng `refresh="drop_sources"`** — xóa TẤT CẢ tables trong shared dataset (sapo_raw). Dùng `full_refresh` flag để reset incremental cursor, giữ nguyên data. Xem L25.
+13. `[MODEL]` **Dedup ORDER BY: `modified_on DESC` trước** (entity timestamp = source of truth), sau đó ingest_method priority. KHÔNG dùng `event_timestamp` làm primary sort cho dedup — event_timestamp là timestamp của log system, không phải entity. Xem L28.
+14. `[MODEL]` **Incremental filter: dùng `_dlt_load_id`** không phải `event_timestamp` — catches late-arriving data từ full-refresh hoặc history_log backfill mà event_timestamp filter sẽ bỏ sót. Xem L29.
+15. `[MODEL]` **Incremental schema migration phải self-heal** — khi thêm column mới vào src_ model: (a) `on_schema_change='append_new_columns'`, (b) `adapter.get_columns_in_relation(this)` check column tồn tại, (c) guard UNION ALL, (d) cursor CTE thay vì aggregate trong WHERE subquery. DuckDB + `read_parquet()` reject MAX() in WHERE subquery. Xem L31.
+16. `[OPS+MODEL]` **Nightly reconciliation = incremental, KHÔNG phải full refresh.** Dùng `transform_batch_fullrefresh_job` (manual, tag baked in) cho one-time reload. Không bao giờ auto-tag `full_refresh=true` trên scheduled jobs. Batch source functions phải wire `full_refresh` param từ entry-point → source → resource — nếu không flag bị silently ignored. Xem L32.
+17. `[INGEST]` **`--full-refresh` phải reset dlt pipeline state dir** (`.dlt/pipelines/{name}/`), không chỉ set flag. `dlt.sources.incremental` có 2 lớp filter: manual check (code) + internal transform (state file). Chỉ set `last_value=None` mà không xóa state = dlt silently drop items. KHÔNG dùng `pipeline.drop()` (gọi `destination.drop_storage()`). Xem L33.

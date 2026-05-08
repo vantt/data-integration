@@ -12,8 +12,9 @@ Requirements:
 - psutil (for subprocess termination)
 - Lark client (or replace with your notification system)
 
-See: .skills/data-pipeline/dagster-patterns.md Lesson 10
-See: .skills/data-pipeline/lessons-learned.md L45-L48
+See: .skills/data-pipeline/references/dagster-patterns.md Lesson 10
+See: .skills/data-pipeline/references/lessons-learned.md L45-L48
+See: .skills/data-pipeline/playbooks/05-ops.md (group playbook)
 """
 from __future__ import annotations
 

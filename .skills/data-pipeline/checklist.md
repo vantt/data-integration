@@ -1,11 +1,13 @@
 # Checklist: Thêm Data Source Mới (Pattern A, End-to-End)
 
+> Mỗi phase mapped vào 1 functional group. Đọc playbook tương ứng (`playbooks/0X-{group}.md`) song song với checklist này.
+
 Thay thế trước khi dùng:  
 `{source}`, `{entity}`, `{cursor_field}`, `{biz_key}`, `{response_key}`, `{entity_upper}`
 
 ---
 
-## Phase 1 — dlt Config
+## Phase 1 — dlt Config  [INGEST]
 
 - [ ] Thêm section `[sources.{source}]` vào `ingestion/.dlt/config.toml`:
   ```toml
@@ -30,7 +32,7 @@ Thay thế trước khi dùng:
 
 ---
 
-## Phase 2 — dlt Source Code
+## Phase 2 — dlt Source Code  [INGEST]
 
 - [ ] Tạo `ingestion/src/{source}/__init__.py` (rỗng)
 - [ ] Tạo `ingestion/src/{source}/{entity}.py` từ `templates/source-template.py`
@@ -45,7 +47,7 @@ Thay thế trước khi dùng:
 
 ---
 
-## Phase 3 — dbt Transformation
+## Phase 3 — dbt Transformation  [MODEL]
 
 ### 3.1 Source Registration
 
@@ -112,7 +114,7 @@ Tạo nếu consolidate multiple sources:
 
 ---
 
-## Phase 4 — Serving Layer
+## Phase 4 — Serving Layer  [SERVE]
 
 - [ ] Chạy `dbt run --select +dim_{entity}` → verify parquet ở `rolling/dim_{entity}/`
 - [ ] Chạy `python scripts/provisioning/generate_serving_db.py`
@@ -125,7 +127,7 @@ Tạo nếu consolidate multiple sources:
 
 ---
 
-## Phase 5 — Dagster Orchestration
+## Phase 5 — Dagster Orchestration  [OPS + INGEST asset wiring]
 
 - [ ] Tạo/update `orchestration/assets/{source}_assets.py` từ `templates/dagster-asset-template.py`
 - [ ] Import `run_{entity}_batch` ở đầu file
@@ -140,7 +142,7 @@ Tạo nếu consolidate multiple sources:
 
 ---
 
-## Phase 6 — Verify End-to-End
+## Phase 6 — Verify End-to-End  [TRUST]
 
 - [ ] Chạy ingestion asset:
   ```bash
