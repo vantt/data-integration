@@ -2317,6 +2317,8 @@ return RunRequest(run_key=None)  # no dedup against prior failures
 
 **Reference:** `orchestration/definitions.py` → `maintain_backup_fallback_schedule`; commit `2ee4b80`.
 
+## Windows DuckDB Bind-Mount & Sensor Issues (post-mortems 2026-05-06/07)
+
 ### L70 — Windows `dllhost.exe` locks bind-mounted DuckDB file, silently breaks monitoring for days
 
 **Symptom:** Health dashboard shows 0/N assets healthy, all "X ngày chưa cập nhật". Logs show `record_run failed: IO Error: Conflicting lock held in PID 0` on every write. Actual pipeline data (parquet files) is current — only monitoring DB is affected.
@@ -2433,6 +2435,9 @@ Backup coverage unchanged: backup script runs inside container and sees named vo
 
 **Reference:** `docker-compose.yml` (monitoring_db volume); `scripts/fix-duckdb-lock.ps1`; incident May 6 2026 (third occurrence, resolved structurally).
 
+
+## SQLite Lock Storm — Dagster Metadata DB (post-mortems 2026-05-07/08)
+
 ---
 
 ### L74 — Dagster jobs get stuck when `maintain_purge_runs_job` holds SQLite exclusive lock during VACUUM
@@ -2468,54 +2473,6 @@ while not _done.wait(timeout=30):
 5. When diagnosing "stuck" runs, check the `.err` compute log — `sqlite3.OperationalError: database is locked` with a SQLAlchemy stack trace means another process holds an exclusive SQLite lock, not that the job's own code is hung.
 
 **Reference:** `orchestration/ops/purge_runs.py` (`_vacuum_index_db`, `_cleanup_orphan_event_entries`); incident May 7 2026.
-
----
-
-### L76 — Sapo orders API silently ignores `created_on_min/max` filter, returns all historical orders
-
-**Symptom:** KPI closure revenue check reports Sapo source revenue ~19× higher than warehouse (e.g. 739M vs 39M, −94.69% drift). Warehouse figure matches real daily volume (verified via webhook order count × avg order value).
-
-**Root cause:** The Sapo `/admin/orders.json` endpoint **ignores `created_on_min` / `created_on_max` query params** — only `modified_on_min/max` is reliably supported (confirmed in `plans/archive/260415-1749-ingestion-trust-engineering/research/sapo-page-metadata-verification.md`). When `sum_revenue_orders()` sends `created_on_min/max`, the API returns **all historical orders** (no date filter applied), paginating up to 200 pages × 250 = 50 000 orders. The function sums the entire history, not just the target day.
-
-The 19× ratio equals `total_historical_orders / daily_orders` — consistent with a small business with ~500 total orders and ~27 new orders/day.
-
-**Fix:** Replace live API call with a raw DuckDB query against `raw__sapo.order`, filtering on `$.created_on` cast as TIMESTAMPTZ. Same approach used by `_sapo_dest_count_customers` in `reconciliation.py`.
-
-```python
-# WRONG — API ignores created_on filter
-params = {
-    "created_on_min": window_start.strftime("%Y-%m-%dT%H:%M:%S"),
-    "created_on_max": window_end.strftime("%Y-%m-%dT%H:%M:%S"),
-    "limit": 250, "page": 1,
-}
-# returns ALL orders → sums entire history
-
-# CORRECT — query raw DB directly
-conn.execute("""
-    SELECT COALESCE(SUM(CAST(json_extract_string(payload, '$.total') AS DOUBLE)), 0)
-    FROM raw__sapo.order
-    WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) >= ?
-      AND TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) < ?
-      AND LOWER(json_extract_string(payload, '$.status')) NOT IN ('cancelled', 'voided')
-""", [window_start, window_end])
-```
-
-**Corollary — confirmed supported filters for Sapo API:**
-| Entity | Working filter | NOT working |
-|---|---|---|
-| Orders | `modified_on_min/max` | `created_on_min/max` (silently ignored) |
-| Customers | `created_on_min/max` | `modified_on_min/max` (no reliable support) |
-
-**Side effect — naive timestamp timezone bug (separate −1% recon drift issue):**
-`count_orders` / `count_customers` both format UTC datetimes with `strftime("%Y-%m-%dT%H:%M:%S")` (no `+00:00` marker). Sapo likely interprets these as ICT (UTC+7), shifting the window by 7 hours. This causes the API to count ~1 extra order per 100 at the boundary → consistent −1.0% drift in both `recon_sapo_orders_daily` and `recon_sapo_customers_daily`. Small, accepted for now; fix by appending `+07:00` to the formatted string if Sapo definitely reads ICT.
-
-**Rules:**
-1. Verify every Sapo API filter param against the research doc before trusting it — Sapo APIs have inconsistent filter support across entities.
-2. For revenue/count verification, prefer reading the raw DuckDB (`raw__sapo.order`) over the live Sapo API — raw DB avoids rate limits, is always available, and gives the exact same data that flows to the warehouse.
-3. A KPI drift of >50% always means a windowing/filter bug, not real data divergence — investigate the query first, not the data.
-4. When a live API call is replaced by a raw DB query in a KPI check, it no longer tests ingestion completeness — document this scope change clearly.
-
-**Reference:** `orchestration/assets/kpi_closure.py` — fixed 2026-05-07
 
 ---
 
@@ -2611,3 +2568,55 @@ for i in range(0, len(orphan_ids), 50):
 3. When `_long_dbt_rw_holder` is the mechanism preventing NOT_STARTED accumulation during nightly runs, the threshold can safely be `nightly_skips_ticks → max_wait = max(realtime_runtime, incremental_runtime) + buffer`.
 
 **Reference:** `orchestration/sensors/stuck_run_alerter.py` (`QUEUE_STUCK_THRESHOLD`); `orchestration/definitions.py` (`_long_dbt_rw_holder`); incident May 8 2026.
+
+
+## Sapo API Quirks
+
+---
+
+### L76 — Sapo orders API silently ignores `created_on_min/max` filter, returns all historical orders
+
+**Symptom:** KPI closure revenue check reports Sapo source revenue ~19× higher than warehouse (e.g. 739M vs 39M, −94.69% drift). Warehouse figure matches real daily volume (verified via webhook order count × avg order value).
+
+**Root cause:** The Sapo `/admin/orders.json` endpoint **ignores `created_on_min` / `created_on_max` query params** — only `modified_on_min/max` is reliably supported (confirmed in `plans/archive/260415-1749-ingestion-trust-engineering/research/sapo-page-metadata-verification.md`). When `sum_revenue_orders()` sends `created_on_min/max`, the API returns **all historical orders** (no date filter applied), paginating up to 200 pages × 250 = 50 000 orders. The function sums the entire history, not just the target day.
+
+The 19× ratio equals `total_historical_orders / daily_orders` — consistent with a small business with ~500 total orders and ~27 new orders/day.
+
+**Fix:** Replace live API call with a raw DuckDB query against `raw__sapo.order`, filtering on `$.created_on` cast as TIMESTAMPTZ. Same approach used by `_sapo_dest_count_customers` in `reconciliation.py`.
+
+```python
+# WRONG — API ignores created_on filter
+params = {
+    "created_on_min": window_start.strftime("%Y-%m-%dT%H:%M:%S"),
+    "created_on_max": window_end.strftime("%Y-%m-%dT%H:%M:%S"),
+    "limit": 250, "page": 1,
+}
+# returns ALL orders → sums entire history
+
+# CORRECT — query raw DB directly
+conn.execute("""
+    SELECT COALESCE(SUM(CAST(json_extract_string(payload, '$.total') AS DOUBLE)), 0)
+    FROM raw__sapo.order
+    WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) >= ?
+      AND TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) < ?
+      AND LOWER(json_extract_string(payload, '$.status')) NOT IN ('cancelled', 'voided')
+""", [window_start, window_end])
+```
+
+**Corollary — confirmed supported filters for Sapo API:**
+| Entity | Working filter | NOT working |
+|---|---|---|
+| Orders | `modified_on_min/max` | `created_on_min/max` (silently ignored) |
+| Customers | `created_on_min/max` | `modified_on_min/max` (no reliable support) |
+
+**Side effect — naive timestamp timezone bug (separate −1% recon drift issue):**
+`count_orders` / `count_customers` both format UTC datetimes with `strftime("%Y-%m-%dT%H:%M:%S")` (no `+00:00` marker). Sapo likely interprets these as ICT (UTC+7), shifting the window by 7 hours. This causes the API to count ~1 extra order per 100 at the boundary → consistent −1.0% drift in both `recon_sapo_orders_daily` and `recon_sapo_customers_daily`. Small, accepted for now; fix by appending `+07:00` to the formatted string if Sapo definitely reads ICT.
+
+**Rules:**
+1. Verify every Sapo API filter param against the research doc before trusting it — Sapo APIs have inconsistent filter support across entities.
+2. For revenue/count verification, prefer reading the raw DuckDB (`raw__sapo.order`) over the live Sapo API — raw DB avoids rate limits, is always available, and gives the exact same data that flows to the warehouse.
+3. A KPI drift of >50% always means a windowing/filter bug, not real data divergence — investigate the query first, not the data.
+4. When a live API call is replaced by a raw DB query in a KPI check, it no longer tests ingestion completeness — document this scope change clearly.
+
+**Reference:** `orchestration/assets/kpi_closure.py` — fixed 2026-05-07
+
