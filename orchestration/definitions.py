@@ -152,6 +152,7 @@ _nightly_batch_selection = (
     AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
     all_dbt_assets |
     AssetSelection.assets(serving.sapo_serving_db) |
+    AssetSelection.assets(serving.sapo_standalone_export) |
     AssetSelection.assets(rill.sapo_rill_publish)
 )
 

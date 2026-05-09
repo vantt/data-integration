@@ -32,6 +32,7 @@
 | OS file           | Cross-platform file lock on cookies (`msvcrt.locking` / `fcntl.flock`)                       | `ingestion/src/utils/shared_cookie_manager.py:17-43`                | cross-process               | ✅ working    |
 | OS file           | Atomic tmp + `os.replace` (cookies, `.known_tables.json`)                                    | `shared_cookie_manager.py:222-237`, `refresh_rolling.py:86-92`      | writer isolation            | ✅ working    |
 | OS file           | Parquet GC (main `os.remove`) + PermissionError/OSError retry (cold path)                    | `scripts/provisioning/refresh_rolling.py:46-71`                     | writer vs reader            | ✅ working (retry branches never fired, see §Verification 2026-04-09) |
+| OS file           | Standalone export: single-writer on `.tmp` + `os.replace` (atomic); GC keeps last 3          | `scripts/provisioning/build_standalone_export.py`                   | writer isolation            | ✅ working    |
 | App (dlt)         | Per-pipeline state dir `/var/dlt/pipelines/<name>/` + internal advisory lock                 | dlt library                                                         | same `pipeline_name` only   | 📌 inherent    |
 | Subprocess        | `Popen` streaming + `timeout=1800`                                                           | `orchestration/assets/serving.py:54-77`                             | serving script run          | ✅ working    |
 | Subprocess        | `subprocess.run(..., check=True, timeout=3600)` inherited stdio                              | `transformation/scripts/run_dbt.py:109`                             | standalone dbt CLI wrapper  | ✅ working (post-fix 2026-04-09) |
@@ -57,6 +58,15 @@
 - Readers: Metabase JDBC driver (`read_only=true`). Writers: `bootstrap_serving_views.py` (manual, one-shot).
 - Empirical (2026-04-08): `duckdb.connect('/app/data_lake/serving/olap.duckdb')` (default RW) succeeded in **13.3 ms** while Metabase container up and serving queries. **No lock contention.**
 - `refresh_rolling.py` deliberately does NOT touch the DB file — it only manages parquet files in `data_lake/export/marts/rolling/` and writes `.known_tables.json`. This separation (Pattern C) is the right call, but the original justification ("avoid Metabase lock contention") is wrong. The right justification is "design simplicity — runtime path touches only files, bootstrap path touches DB."
+
+#### `sapo_export_*.duckdb` (standalone export)
+
+- Path: `/app/var/data_lake/serving/standalone/sapo_export_<ts>.duckdb`
+- Writers: `build_standalone_export.py` — writes to a `.tmp` file then `os.replace` (atomic).
+- Readers: external clients via fileserver (HTTP download / DuckDB CLI — no in-process lock).
+- Inputs: `olap.duckdb` opened `READ_ONLY` (no lock per L18) + parquet mmap (no lock).
+- **No lock contention possible by design** — all inputs read-only, output is always a fresh file.
+- `GC_KEEP=3`: old timestamped files deleted after rename completes. Stale `.tmp` swept on startup.
 
 #### dbt manifest race
 

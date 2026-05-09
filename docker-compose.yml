@@ -87,6 +87,25 @@ services:
       caddy: rill.local
       caddy.reverse_proxy: "{{upstreams 9009}}"
 
+  fileserver:
+    image: caddy:alpine
+    container_name: data_fileserver
+    restart: unless-stopped
+    ports:
+      - "3004:8080"
+    networks:
+      - caddy_net
+    env_file:
+      - .env.docker
+    volumes:
+      # Standalone export DuckDB files (read-only)
+      - ./app_data/data_lake/serving/standalone:/data:ro
+      # Caddyfile with basic_auth (Option B — inline auth)
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+    labels:
+      caddy: files.etl.local
+      caddy.reverse_proxy: "{{upstreams 8080}}"
+
 volumes:
   monitoring_db:
     # Stored in Docker VM — isolated from Windows filesystem scanning (no dllhost/Defender lock)

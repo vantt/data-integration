@@ -5,11 +5,12 @@ import sys
 import subprocess
 from .dbt import sapo_dbt_assets
 
-# Resolve Project Root and Script Path
+# Resolve Project Root and Script Paths
 # orchestration/assets/serving.py -> ../../
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../"))
 SCRIPT_PATH = os.path.join(PROJECT_ROOT, "scripts", "provisioning", "refresh_rolling.py")
+STANDALONE_SCRIPT = os.path.join(PROJECT_ROOT, "scripts", "provisioning", "build_standalone_export.py")
 
 # Resolve Python Executable (Try to use dlt venv if available)
 # Use platform-appropriate venv path: Scripts/python.exe (Windows) vs bin/python (Linux)
@@ -33,31 +34,44 @@ _WARN_MARKER_RE = re.compile(r"\[!\]\s+(Failed|WARNING|ERROR)", re.IGNORECASE)
 _SCHEMA_DRIFT_RE = re.compile(r"\[!\]\s+SCHEMA_DRIFT")
 
 
-@asset(
-    deps=[sapo_dbt_assets],
-    group_name="serving_layer",
-    description="Generates the Serving Layer (DuckDB OLAP) from DBT Marts."
-)
-def sapo_serving_db(context: AssetExecutionContext):
-    context.log.info(f"🚀 Starting Serving Layer Generation...")
-    context.log.info(f"   Script: {SCRIPT_PATH}")
+def _run_provisioning_script(
+    context: AssetExecutionContext,
+    script_path: str,
+    env_label: str,
+) -> list[str]:
+    """Run a provisioning script as a subprocess, streaming stdout line-by-line.
+
+    Uses Popen + stdout-stream + stderr=STDOUT + wait(timeout) pattern.
+    DO NOT use capture_output=True — that pattern caused a 16h hang (L17)
+    when log volume exceeded the OS pipe buffer (run 2c6d50cf).
+
+    Args:
+        context:     Dagster execution context (for structured logging).
+        script_path: Absolute path to the Python script to run.
+        env_label:   Short label for log messages (e.g. "refresh_rolling").
+
+    Returns:
+        List of all stdout lines (stripped), for caller to inspect.
+
+    Raises:
+        FileNotFoundError: if script_path does not exist.
+        Exception: on timeout or non-zero exit code.
+    """
+    context.log.info(f"Starting {env_label}")
+    context.log.info(f"   Script: {script_path}")
     context.log.info(f"   Python: {PYTHON_EXE}")
     context.log.info(f"   Timeout: {SERVING_TIMEOUT_SEC}s")
 
-    if not os.path.exists(SCRIPT_PATH):
-        raise FileNotFoundError(f"Serving script not found at {SCRIPT_PATH}")
+    if not os.path.exists(script_path):
+        raise FileNotFoundError(f"Script not found: {script_path}")
 
-    # Stream subprocess output line-by-line to avoid OS pipe buffer deadlock.
-    # Merging stderr into stdout eliminates the classic two-pipe deadlock.
-    # Previously: subprocess.run(capture_output=True, check=True) — no timeout, buffered —
-    # caused the 16h hang on run 2c6d50cf when log volume exceeded pipe buffer.
     proc = subprocess.Popen(
-        [PYTHON_EXE, SCRIPT_PATH],
+        [PYTHON_EXE, script_path],
         cwd=PROJECT_ROOT,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
-        bufsize=1,  # line-buffered
+        bufsize=1,  # line-buffered — required for real-time streaming
     )
 
     output_lines: list[str] = []
@@ -72,15 +86,26 @@ def sapo_serving_db(context: AssetExecutionContext):
         proc.kill()
         proc.wait()
         raise Exception(
-            f"Serving script exceeded {SERVING_TIMEOUT_SEC}s timeout — killed. "
-            f"Check for DuckDB lock contention or pipeline blockage."
+            f"{env_label} exceeded {SERVING_TIMEOUT_SEC}s timeout — killed. "
+            "Check for DuckDB lock contention or pipeline blockage."
         )
 
     if proc.returncode != 0:
         raise Exception(
-            f"Serving script failed with exit code {proc.returncode}. "
+            f"{env_label} failed with exit code {proc.returncode}. "
             f"Last output: {output_lines[-20:] if output_lines else '(empty)'}"
         )
+
+    return output_lines
+
+
+@asset(
+    deps=[sapo_dbt_assets],
+    group_name="serving_layer",
+    description="Generates the Serving Layer (DuckDB OLAP) from DBT Marts."
+)
+def sapo_serving_db(context: AssetExecutionContext):
+    output_lines = _run_provisioning_script(context, SCRIPT_PATH, "refresh_rolling")
 
     # Detect severity-tagged warnings in streamed output.
     # Script exited 0, so these are non-fatal — log but don't raise.
@@ -103,6 +128,35 @@ def sapo_serving_db(context: AssetExecutionContext):
     result_stdout = "\n".join(output_lines)
     return Output(
         value="Serving DB Updated",
+        metadata={
+            "script_output": MetadataValue.md(result_stdout),
+            **({"warnings": MetadataValue.md("\n".join(warnings))} if warnings else {})
+        }
+    )
+
+
+@asset(
+    deps=[sapo_serving_db],
+    group_name="serving_layer",
+    description=(
+        "Materializes all views in olap.duckdb into a self-contained standalone "
+        "DuckDB file (sapo_export_<ts>.duckdb) for offline and AI analysis use."
+    ),
+)
+def sapo_standalone_export(context: AssetExecutionContext):
+    output_lines = _run_provisioning_script(
+        context, STANDALONE_SCRIPT, "build_standalone_export"
+    )
+
+    # Detect severity-tagged warnings (non-fatal — script exited 0).
+    warnings = [line for line in output_lines if _WARN_MARKER_RE.search(line)]
+    if warnings:
+        for w in warnings:
+            context.log.warning(f"⚠️ {w}")
+
+    result_stdout = "\n".join(output_lines)
+    return Output(
+        value="Standalone Export Built",
         metadata={
             "script_output": MetadataValue.md(result_stdout),
             **({"warnings": MetadataValue.md("\n".join(warnings))} if warnings else {})

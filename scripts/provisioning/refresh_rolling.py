@@ -5,6 +5,10 @@ the DuckDB file, so it cannot collide with Metabase's JDBC lock. All view
 lifecycle management is delegated to bootstrap_serving_views.py (run manually
 when schema drifts).
 
+Retention policy: ROLLING_KEEP_VERSIONS (default 3) controls how many parquet
+snapshots per table are kept. Default of 3 provides rollback safety + audit
+trail (views always read max(filename) = latest). Set 1 for minimal storage.
+
 Output conventions:
   - Summary counters per table (1 line each)
   - [!] SCHEMA_DRIFT: <table>  — raised as hard error by the Dagster asset
@@ -30,6 +34,10 @@ ROLLING_DIR = os.path.join(DBT_EXPORT_PATH, "rolling")
 # Lives alongside olap.duckdb but is a plain JSON file — no DB lock needed.
 KNOWN_TABLES_MARKER = os.path.join(SERVING_DIR, ".known_tables.json")
 
+# Number of rolling parquet versions to keep per table (>=1).
+# Default 3: rollback safety net + audit trail. Set 1 for minimal storage.
+ROLLING_KEEP_VERSIONS = max(1, int(os.environ.get("ROLLING_KEEP_VERSIONS", "3")))
+
 # Allowlist: valid SQL identifier (dbt output is safe, guard against malicious dirs)
 _TABLE_NAME_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
 
@@ -43,14 +51,15 @@ def get_latest_file(folder_path: str) -> str | None:
     return os.path.basename(files[-1])
 
 
-def garbage_collect(folder_path: str, latest_file: str) -> tuple[int, int]:
-    """Delete all parquet files except latest_file. Returns (deleted, skipped)."""
-    files = glob.glob(os.path.join(folder_path, "*.parquet"))
+def garbage_collect(folder_path: str, keep_n: int) -> tuple[int, int]:
+    """Keep last keep_n parquet files (lexical max = newest), delete the rest."""
+    files = sorted(glob.glob(os.path.join(folder_path, "*.parquet")))
+    if len(files) <= keep_n:
+        return 0, 0
+    to_delete = files[:-keep_n]
     deleted = 0
     skipped = 0
-    for f in files:
-        if os.path.basename(f) == latest_file:
-            continue
+    for f in to_delete:
         try:
             os.remove(f)
             deleted += 1
@@ -125,11 +134,11 @@ def refresh_rolling() -> None:
             print(f"  {table_name}: empty folder")
             continue
 
-        deleted, skipped = garbage_collect(table_dir, latest)
+        deleted, skipped = garbage_collect(table_dir, ROLLING_KEEP_VERSIONS)
         total_deleted += deleted
         total_skipped += skipped
         # Condensed per-table summary — no per-file spam to keep stdout small
-        print(f"  {table_name}: latest={latest} gc(deleted={deleted}, skipped={skipped})")
+        print(f"  {table_name}: latest={latest} keep={ROLLING_KEEP_VERSIONS} gc(deleted={deleted}, skipped={skipped})")
 
     # Schema drift detection — compare current vs last-known set
     known = load_known_tables()
@@ -147,7 +156,7 @@ def refresh_rolling() -> None:
 
     print(
         f"Refresh done: tables={len(current_tables)} "
-        f"deleted={total_deleted} skipped={total_skipped}"
+        f"keep={ROLLING_KEEP_VERSIONS} deleted={total_deleted} skipped={total_skipped}"
     )
 
 

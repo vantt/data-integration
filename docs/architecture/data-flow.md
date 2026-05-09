@@ -60,6 +60,8 @@ flowchart TB
     subgraph HOP7["HOP 7: SERVING"]
         SERVE[DuckDB Serving<br/>olap.duckdb]
         MB[Metabase<br/>Dashboards]
+        EXP[Standalone Export<br/>sapo_export_latest.duckdb]
+        FS[Fileserver<br/>:3004 / files.etl.local]
     end
 
     BA --> DLT_B
@@ -87,6 +89,8 @@ flowchart TB
     INT_ENRICH --> SERVE
     ECON -.-> SERVE
     SERVE --> MB
+    SERVE --> EXP
+    EXP --> FS
 ```
 
 ### Latency by Hop
@@ -413,7 +417,8 @@ Every record follows this structure:
 | Data Type | Retention | Action |
 |-----------|-----------|--------|
 | Raw Parquet | 2 years | Archive to cold storage |
-| Export Parquet | 30 days | Delete old snapshots |
+| Export Parquet | Last 3 versions per table (`ROLLING_KEEP_VERSIONS=3`) | Auto-GC by `refresh_rolling.py` |
+| Standalone export `.duckdb` | Last 3 timestamped snapshots | Auto-GC by `build_standalone_export.py` |
 | DuckDB state | Indefinite | Part of warehouse |
 
 ---
@@ -561,6 +566,31 @@ WHERE _snapshot_ts = (
 │  • Host: ./data_lake → Container: /data_lake       │
 └─────────────────────────────────────────────────────┘
 ```
+
+### Standalone Export Branch
+
+Dagster asset `sapo_standalone_export` (downstream of `sapo_serving_db`) materializes all views
+in `olap.duckdb` into a self-contained DuckDB file — no parquet path dependency.
+
+```
+olap.duckdb (READ_ONLY ATTACH)
+    │
+    │  scripts/provisioning/build_standalone_export.py
+    ▼
+serving/standalone/
+├── sapo_export_<YYYYMMDDHHMMSS>.duckdb   (timestamped snapshot, GC keeps last 3)
+└── sapo_export_latest.duckdb            (atomic alias → newest snapshot)
+    │
+    │  data_fileserver service (caddy:alpine)
+    ▼
+http://<host>:3004/        (direct host port)
+https://files.etl.local/   (via Caddy reverse-proxy, TLS)
+```
+
+**Use cases:** offline analysis, AI tools, distribution to stakeholders without pipeline access.
+**Lock safety:** `olap.duckdb` opened `READ_ONLY` → safe to run alongside Metabase.
+**Retention:** `GC_KEEP=3` timestamped files. Stale `.tmp` files swept on each run.
+**Schedule:** nightly via `transform_batch_nightly_job` (after `sapo_serving_db`).
 
 ---
 

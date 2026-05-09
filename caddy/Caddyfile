@@ -1,0 +1,8 @@
+:8080 {
+    basic_auth {
+        {$FILESERVER_USER} {$FILESERVER_PASSWORD_HASH}
+    }
+    file_server browse {
+        root /data
+    }
+}

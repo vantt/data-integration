@@ -406,6 +406,53 @@ docker logs -f metabase
 
 ---
 
+## Standalone Export (fileserver)
+
+The nightly job materializes all serving views into a self-contained DuckDB file. Two access points (same content, choose what fits):
+
+| URL | Use case |
+|---|---|
+| `http://<host>:3004/sapo_export_latest.duckdb` | Direct host port — LAN/VPN, scripts, AI tools |
+| `https://files.etl.local/sapo_export_latest.duckdb` | Via Caddy reverse-proxy — TLS, friendly hostname |
+
+**Auth:** HTTP basic auth on both URLs. Credentials stored in 1Password → "Data Platform / fileserver".
+
+**Download & query:**
+
+```bash
+# Direct (host port 3004)
+curl -u $FILESERVER_USER:$FILESERVER_PASSWORD \
+  http://<host>:3004/sapo_export_latest.duckdb \
+  -o sapo.duckdb
+
+# Via Caddy (TLS)
+curl -u $FILESERVER_USER:$FILESERVER_PASSWORD \
+  https://files.etl.local/sapo_export_latest.duckdb \
+  -o sapo.duckdb
+
+# Query locally (no pipeline dependency)
+duckdb sapo.duckdb -c "SELECT count(*) FROM fact_orders;"
+```
+
+**CRITICAL — `$$` escape in `.env.docker`:**
+Docker Compose interpolates `$VAR` inside env_file values. bcrypt hashes contain `$` — they
+WILL be corrupted unless you escape every `$` as `$$` when pasting `FILESERVER_PASSWORD_HASH`
+into `.env.docker`.
+
+Example: raw hash `$2a$14$abc...` must be stored as `$$2a$$14$$abc...`
+The container receives the original single-`$` form. See `.env.docker.example` for the annotated example.
+
+**File location (container):** `/app/var/data_lake/serving/standalone/`
+**Retention:** last 3 timestamped snapshots + `sapo_export_latest.duckdb` alias.
+**Re-run manually:**
+
+```bash
+docker compose exec data_platform \
+  python scripts/provisioning/build_standalone_export.py
+```
+
+---
+
 ## Related Documents
 
 - [Troubleshooting](./troubleshooting.md) - Common issues and fixes

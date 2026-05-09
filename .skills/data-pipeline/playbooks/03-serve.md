@@ -59,8 +59,12 @@ Deep-dive: `../references/serving-layer.md` — "2. Rolling Self-Refresh View Pa
 
 ### Garbage Collection (serving-layer.md §3)
 
-`generate_serving_db.py` scan rolling/ và delete files cũ hơn N versions.
+`refresh_rolling.py` scan rolling/ và delete files cũ hơn `ROLLING_KEEP_VERSIONS` versions.
+Default: **3** (env-overridable, min-guard 1). Rationale: rollback safety net + audit trail.
 GC chạy atomically sau view creation — cũ files vẫn valid trong flight queries.
+
+> **Note (2026-05-08):** Default changed from 1 → 3. This does NOT solve mid-COPY crash
+> (would need `.tmp+rename` for parquet, deferred). Storage cost negligible (~few GB).
 
 ### DuckDB Lock Behavior — Read-Only Mode (L18)
 
@@ -75,6 +79,63 @@ Dual file architecture eliminates the lock conflict.
 
 Rolling pattern inherently zero-downtime: cũ parquet vẫn readable trong flight queries khi
 mới parquet được thêm vào folder. Metabase reads cũ version của view cho đến khi view regen.
+
+### Pattern 4 — Standalone Export
+
+**Problem:** External consumers (AI tools, analysts) can't query `olap.duckdb` views because
+they depend on parquet paths baked into the view SQL — not portable outside the container.
+
+**Solution:** Materialize all views into a self-contained `.duckdb` with real tables (no external deps).
+
+**Mechanism:**
+```python
+# build_standalone_export.py (simplified)
+src = duckdb.connect(OLAP_DB, read_only=True)         # READ_ONLY — safe alongside Metabase
+out = duckdb.connect(tmp_path)                         # fresh file, no lock on existing
+for view_name in src.execute("SELECT name FROM ...").fetchall():
+    out.execute(f"CREATE TABLE {view_name} AS SELECT * FROM src.main.{view_name}")
+os.replace(tmp_path, final_path)                       # atomic swap
+shutil.copy2(final_path, latest_path)                  # stable alias
+```
+
+**Lock analysis:** No contention possible.
+- `olap.duckdb` opened `READ_ONLY` → no exclusive lock (L18)
+- Output writes to `.tmp` first → atomic `os.replace` → readers never see partial state
+- External readers access via HTTP download (no in-process DuckDB lock)
+
+**GC:** keeps last 3 timestamped files (`GC_KEEP=3`). Stale `.tmp` swept on startup.
+
+**File layout:**
+```
+serving/standalone/
+├── sapo_export_20260508230000.duckdb   ← oldest kept
+├── sapo_export_20260509040000.duckdb
+├── sapo_export_20260510040000.duckdb   ← latest
+└── sapo_export_latest.duckdb          ← atomic alias (copy of latest)
+```
+
+**Expose via fileserver:**
+- Service `data_fileserver` (caddy:alpine) in `docker-compose.yml`
+- Two access points (same content):
+  - `http://<host>:3004/` — direct host port (LAN/VPN, scripts, AI tools)
+  - `https://files.etl.local/` — via Caddy reverse-proxy (TLS, friendly hostname)
+- Basic auth credentials: `FILESERVER_USER` / `FILESERVER_PASSWORD_HASH` in `.env.docker`
+
+**CRITICAL — `$$` escape for bcrypt in `.env.docker`:**
+Docker Compose interpolates `$VAR` in env_file. bcrypt hashes contain `$` → paste as `$$`:
+```
+# Raw hash:   $2a$14$abc...
+# In .env.docker:  FILESERVER_PASSWORD_HASH=$$2a$$14$$abc...
+# Container receives: $2a$14$abc...  (correct)
+```
+See `.env.docker.example` for annotated example.
+
+**Use cases:** offline analysis, AI tools, data distribution without pipeline access.
+
+**Dagster asset:** `sapo_standalone_export` in `orchestration/assets/serving.py`
+— downstream of `sapo_serving_db`, wired into `transform_batch_nightly_job`.
+
+**Script:** `scripts/provisioning/build_standalone_export.py`
 
 ---
 
@@ -184,6 +245,7 @@ Xem `../references/troubleshooting.md` "Metabase — Dashboard Deploy" section:
 |---------------------|-------------|
 | MODEL → SERVE | Rolling Parquet từ `dim_/fact_` là input. SERVE chỉ READ Parquet, không modify. |
 | SERVE → (Metabase) | `olap.duckdb` views là interface duy nhất. Metabase queries views. |
+| SERVE → (External) | `sapo_export_latest.duckdb` via `:3004` direct or `https://files.etl.local/` — self-contained, no parquet dep. |
 | SERVE + OPS | Dagster serving asset orchestrated by OPS schedules. `deps=[dbt_assets]` enforced. |
 | SERVE + MODEL | `get_rolling_location()` macro shared — Lesson 5 dbt-patterns canonical pattern. |
 
