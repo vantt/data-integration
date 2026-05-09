@@ -181,9 +181,10 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
         # Check last activity time
         last_event_time = _get_last_event_time(context, run.run_id)
 
-        # If we can't get last event time, fall back to start time
+        # If we can't read the event log (e.g. SQLite locked by purge_runs VACUUM),
+        # skip this run for this tick — don't false-positive kill a healthy job.
         if last_event_time is None:
-            last_event_time = start_dt
+            continue
 
         inactivity = now - last_event_time
 

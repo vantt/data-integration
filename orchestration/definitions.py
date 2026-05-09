@@ -272,6 +272,11 @@ def ingest_sapo_realtime_schedule(context):
     holder = _long_dbt_rw_holder(context)
     if holder:
         return SkipReason(f"realtime: yielding to {holder} (dbt_rw occupied)")
+    # Yield to purge_runs: VACUUM on index.db holds an exclusive SQLite lock, causing
+    # log event writes to fail for concurrent jobs → stuck sensor kills them as "inactive".
+    # Skip instead; next tick in 3 min retries after purge completes (~15-20 min window).
+    if _has_active_run(context, "maintain_purge_runs_job"):
+        return SkipReason("realtime: yielding to purge_runs (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
@@ -294,6 +299,8 @@ def ingest_sapo_incremental_schedule(context):
     holder = _long_dbt_rw_holder(context)
     if holder:
         return SkipReason(f"incremental: yielding to {holder} (dbt_rw occupied)")
+    if _has_active_run(context, "maintain_purge_runs_job"):
+        return SkipReason("incremental: yielding to purge_runs (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
