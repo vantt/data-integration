@@ -2620,3 +2620,178 @@ conn.execute("""
 
 **Reference:** `orchestration/assets/kpi_closure.py` — fixed 2026-05-07
 
+---
+
+### L79 — `raw/raw.duckdb` không tồn tại; raw Sapo data nằm ở `sapo_raw/order/` dưới dạng Delta Lake parquet
+
+**Symptom:** `_fetch_sapo_revenue` log `WARNING: raw DB not found at /app/var/data_lake/raw/raw.duckdb` mỗi ngày → KPI check trả về `None` → `partial_source` status bật liên tục, morning digest mất revenue signal.
+
+**Root cause:** Commit L76 fix thay thế live Sapo API bằng raw DuckDB query nhưng giả định path `raw/raw.duckdb` (theo schema `raw__sapo.order`). Trong môi trường thực tế, ingestion pipeline **không tạo `raw.duckdb`** — Sapo orders được lưu dưới dạng Delta Lake parquet tại `sapo_raw/order/ingest_method=*/date_key=*/**/*.parquet`. `raw.duckdb` chưa bao giờ tồn tại trong project này.
+
+**Fix:** Dùng `duckdb.connect()` (in-memory) + `read_parquet()` với glob pattern, deduplicate `entity_id` bằng `ROW_NUMBER() OVER (PARTITION BY entity_id ORDER BY event_timestamp DESC)` để tránh double-count orders xuất hiện ở nhiều `ingest_method`.
+
+```python
+# WRONG — raw.duckdb không tồn tại trong env này
+_RAW_DB_PATH = os.path.join(_DATA_LAKE, "raw", "raw.duckdb")
+conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
+conn.execute("SELECT ... FROM raw__sapo.order WHERE ...")
+
+# CORRECT — đọc parquet trực tiếp, dedup theo entity_id
+_SAPO_ORDER_PATH = os.path.join(_DATA_LAKE, "sapo_raw", "order")
+parquet_glob = _SAPO_ORDER_PATH.replace("\\", "/") + "/ingest_method=*/**/*.parquet"
+conn = duckdb.connect()  # in-memory
+conn.execute(f"""
+    WITH deduped AS (
+        SELECT payload, ROW_NUMBER() OVER (
+            PARTITION BY json_extract_string(payload, '$.id')
+            ORDER BY event_timestamp DESC
+        ) AS rn
+        FROM read_parquet('{parquet_glob}', hive_partitioning=false)
+    )
+    SELECT COALESCE(SUM(CAST(json_extract_string(payload, '$.total') AS DOUBLE)), 0)
+    FROM deduped
+    WHERE rn = 1
+      AND TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) >= ?
+      AND TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) < ?
+      AND LOWER(json_extract_string(payload, '$.status')) NOT IN (...)
+""", [window_start, window_end])
+```
+
+**Rules:**
+1. Trước khi hardcode bất kỳ DB path nào, verify bằng `os.path.exists()` **và** log warning rõ ràng khi không tồn tại — đừng silently skip với `return None`.
+2. Raw Sapo data trong project này nằm ở `sapo_raw/<entity>/` dạng Delta Lake parquet, **không** có `raw.duckdb`. Xem `docs/architecture/data-flow.md` cho storage layout chính xác.
+3. Khi dữ liệu raw được lưu ở nhiều `ingest_method` partition (webhook + incremental + historical), **luôn dedup theo `entity_id`** trước khi aggregate — một order có thể xuất hiện ở 2-3 partition khác nhau.
+4. Dùng `duckdb.connect()` in-memory + `read_parquet()` khi không cần persistent connection — tránh tạo file `.duckdb` thừa.
+
+**Reference:** `orchestration/assets/kpi_closure.py` (`_fetch_sapo_revenue`) — fixed 2026-05-08
+
+---
+
+## SQLite Lock Storm — False-Positive Stuck Kills (post-mortem 2026-05-09)
+
+---
+
+### L80 — Khi `last_event_time = None` do SQLite lock, stuck alerter không được fallback về `start_dt`
+
+**Symptom:** Ingestion jobs bị kill lúc ~1:20 AM mỗi đêm trong khi thực sự đang chạy bình thường. `stuck_run_alerter` log `killing run <id> — inactive since <start_dt>` dù job không thực sự inactive. Pattern lặp lại sau khi đã fix L74 (VACUUM lock) và L77 (batched DELETE lock).
+
+**Root cause:** `purge_runs` VACUUM giữ exclusive lock trên `index.db` ~15-20 phút. Trong window này, `stuck_run_alerter._get_last_event_time(run_id)` gọi `DagsterEventLogStorage.get_logs_for_run()` → SQLite read fail → trả về `None`. Code cũ xử lý `None` bằng cách **fallback về `start_dt`**:
+
+```python
+# CODE CŨ — NGUY HIỂM
+last_event_time = _get_last_event_time(run_id) or run.start_time
+if now - last_event_time > INACTIVITY_THRESHOLD:
+    kill(run_id)  # ← kills healthy job đang chạy bình thường
+```
+
+Khi `start_dt` của job > `INACTIVITY_THRESHOLD` trước hiện tại (job đã chạy lâu), alerter kết luận job "inactive" và kill. Jobs bắt đầu ~23:00, bị kill lúc ~1:20 AM (90 phút sau) — đúng bằng `QUEUE_STUCK_THRESHOLD` cũ.
+
+Đây là hệ quả thứ 3 của cùng một root cause "SQLite exclusive lock → caller nhận `None`/exception" — L74 (VACUUM), L77 (batched DELETE) fix phía gây lock; L80 fix phía đọc lock.
+
+**Fix:**
+```python
+# CORRECT — skip check khi log unreadable, không fallback
+last_event_time = _get_last_event_time(run_id)
+if last_event_time is None:
+    context.log.warning("run %s: event log unreadable (DB locked?), skipping inactivity check", run_id)
+    continue  # ← không kill, không fallback
+
+if now - last_event_time > INACTIVITY_THRESHOLD:
+    kill(run_id)
+```
+
+Ngoài ra: `realtime_schedule` và `incremental_schedule` được cấu hình `yield_to` cho `maintain_purge_runs_job`, ngăn schedule tạo run mới trong ~15-20 phút purge window — tránh NOT_STARTED accumulation.
+
+**Rules:**
+1. Khi một monitoring/alerter system nhận `None` từ storage read, đó là signal "cannot determine state" — **không được suy diễn state từ fallback**. Skip the check là đúng; giả định worst-case (= inactive) là sai.
+2. `None` từ `get_logs_for_run()` = DB locked **hoặc** run chưa có event — cả hai đều không phải "inactive". Phân biệt 2 case nếu cần: check `run.status` trước.
+3. Khi fix một class bug (SQLite exclusive lock), audit tất cả callers nhận `None`/exception từ storage, không chỉ callers gây lock. L74+L77 fix phía write; L80 fix phía read.
+4. False-positive kill pattern: nếu job bị kill đúng sau `INACTIVITY_THRESHOLD` kể từ `start_dt` (không phải kể từ last event), nguyên nhân gần như chắc chắn là fallback-to-start_dt bug.
+
+**Reference:** `orchestration/sensors/stuck_run_alerter.py`; `orchestration/definitions.py` (`yield_to` config) — fixed 2026-05-09
+
+---
+
+## Docker Compose & Infrastructure
+
+---
+
+### L81 — Docker Compose interpolates `$` trong `env_file` values — bcrypt hash phải escape `$` thành `$$`
+
+**Symptom:** Caddy fileserver trả về HTTP 401 cho tất cả requests kể cả khi dùng đúng password. Không có error log từ Caddy. `{$FILESERVER_PASSWORD_HASH}` trong Caddyfile nhận được string rỗng hoặc truncated hash.
+
+**Root cause:** Bcrypt hashes có dạng `$2a$14$<salt><hash>` — chứa nhiều ký tự `$`. Docker Compose **interpolate `env_file` values** theo cùng cơ chế với `environment:` block: `$VAR` hoặc `${VAR}` bị thay thế bằng giá trị env var tương ứng (hoặc chuỗi rỗng nếu không tồn tại). Kết quả: hash bị cắt nát trước khi truyền vào container.
+
+Ví dụ: `$2a$14$abc` → Docker Compose đọc `$2a` (expand thành ``) và `$14` (expand thành ``) → container nhận `abc` thay vì full hash.
+
+**Fix:** Escape mọi `$` thành `$$` khi paste bcrypt hash vào `.env` file:
+
+```bash
+# Raw hash từ: docker run --rm caddy:alpine caddy hash-password --plaintext 'mypassword'
+# Output: $2a$14$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMN
+
+# WRONG — Docker Compose sẽ interpolate $2a, $14, ...
+FILESERVER_PASSWORD_HASH=$2a$14$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMN
+
+# CORRECT — escape mọi $ thành $$
+FILESERVER_PASSWORD_HASH=$$2a$$14$$abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMN
+```
+
+Trong Caddyfile dùng `{$FILESERVER_PASSWORD_HASH}` (Caddy env var syntax) — Caddy đọc env var **sau khi** Docker Compose đã inject giá trị vào container, nên Caddyfile không cần escape.
+
+**Rules:**
+1. Bất kỳ secret nào chứa `$` (bcrypt, argon2, scrypt hash; regex patterns; connection strings) khi đặt trong `env_file` của Docker Compose **phải escape `$` → `$$`**.
+2. Rule này áp dụng cho cả `env_file:` và inline `environment:` trong `docker-compose.yml`. Chỉ không áp dụng khi dùng `$$` trong Compose file (escape cho Compose interpolation).
+3. Quick test: `docker compose config` in ra config đã interpolate — dùng để verify hash không bị truncate trước khi restart container.
+4. Caddyfile syntax `{$VAR_NAME}` là Caddy-native env var expansion, hoạt động độc lập với Docker Compose interpolation. Không cần escape trong Caddyfile.
+
+**Reference:** `caddy/Caddyfile`; `.env.docker.example` (FILESERVER_PASSWORD_HASH comment) — added 2026-05-09
+
+---
+
+### L82 — Orphaned POSIX record lock (PID 0) trên named volume sau container restart
+
+**Symptom:** `ingestion_health.duckdb` bị lock với "Conflicting lock is held in PID 0, stale 22.1 giờ". Khác với L62 (dllhost): `flock()` thành công, `/proc/locks` trống, không có process nào giữ file — nhưng `fcntl(F_GETLK)` trả về `l_pid=0, l_type=F_WRLCK`. Named volume (ext4, `/dev/sdf`) đã được mount đúng — dllhost không phải nguyên nhân.
+
+**Root cause:** POSIX record lock (fcntl `F_SETLK`) được ghi vào kernel gắn với block device (`/dev/sdf`). Khi một Dagster worker process mở DB và bị kill không sạch (OOM, SIGKILL từ Docker), lock bị "orphan" — process chết nhưng lock vẫn tồn tại trong kernel state của block device. Container restart không clear lock này vì named volume block device được tái sử dụng. Trong PID namespace mới, kernel không tìm được owner → báo `PID 0`.
+
+**Tại sao L73 (named volume) không đủ:** Named volume giải quyết lock do Windows-side (dllhost, Defender). Nhưng POSIX record lock orphan trên named volume là vấn đề khác — xảy ra khi process bên trong container bị kill mà không cleanup.
+
+**Fix:** Copy file sang inode mới. POSIX record lock gắn với inode cụ thể, không theo path. Copy tạo inode mới không có lock; swap nguyên tử bằng `mv`.
+
+```bash
+docker exec data_platform sh -c "
+  cd /app/var/data_lake/monitoring
+  cp ingestion_health.duckdb ingestion_health.duckdb.new
+  mv ingestion_health.duckdb ingestion_health.duckdb.locked
+  mv ingestion_health.duckdb.new ingestion_health.duckdb
+"
+# Verify
+docker exec data_platform python3 -c "
+import duckdb; conn = duckdb.connect('/app/var/data_lake/monitoring/ingestion_health.duckdb')
+conn.execute('CHECKPOINT'); conn.close(); print('OK')
+"
+# Cleanup
+docker exec data_platform rm /app/var/data_lake/monitoring/ingestion_health.duckdb.locked
+```
+
+**Distinguish from L62 (dllhost):**
+| | L62 dllhost | L82 POSIX orphan |
+|---|---|---|
+| flock() | blocked | succeeds |
+| /proc/locks | entry exists | empty |
+| fcntl F_GETLK | PID of dllhost | PID 0, F_WRLCK |
+| Volume type | bind mount (Windows path) | named volume (ext4) |
+| Fix | taskkill dllhost | cp → mv (new inode) |
+
+**Prevention:** Ensure Dagster workers/ops use `try/finally` to close DuckDB connections. `ingestion_health._connect()` already has context manager — ensure callers use `with` pattern. Catastrophic kills (OOM) still cause orphan; script `scripts/fix-duckdb-orphan-lock.sh` recommended.
+
+**Rules:**
+1. "PID 0, stale N hours" + flock OK + /proc/locks empty = POSIX orphan lock. Fix: copy to new inode.
+2. Named volumes prevent Windows host locks, but NOT Linux kernel orphan locks.
+3. POSIX record locks outlive processes if the block device persists (named volumes, mounted filesystems).
+4. Always test lock type with `fcntl(F_GETLK)` before assuming dllhost — the fix depends on the lock type.
+
+**Reference:** `app_data/data_lake/monitoring/` (named volume); incident 2026-05-10; L62 for comparison.
+
+
