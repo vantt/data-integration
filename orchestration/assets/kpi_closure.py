@@ -6,12 +6,14 @@ Writes to ingestion_health.duckdb with asset_key='kpi/revenue_daily'.
 Gated behind KPI_CLOSURE_ENABLED=1 env flag (disabled by default).
 
 Architecture:
-- Source: raw__sapo.order → SUM($.total) for orders with created_on in [yesterday, today) UTC
-- Warehouse: serving DB → SUM(net_revenue) from fact_orders WHERE date_key = yesterday (UTC)
+- Source: raw__sapo.order → SUM($.total) for created_on in [yesterday_ict_midnight, today_ict_midnight) UTC
+- Warehouse: serving DB → SUM(net_revenue) from fact_orders WHERE date_key = yesterday ICT
 - Drift: (warehouse - source) / source
 
-Note: source reads raw DuckDB (not live Sapo API) so both sides derive from the same ingested
+Note: source reads raw parquet (not live Sapo API) so both sides derive from the same ingested
 data. This catches transformation errors rather than ingestion gaps; RECON_LIVE_API not needed.
+Both sides use ICT day boundaries: Sapo timestamps have 'Z' (UTC-aware), fact_orders.date_key
+uses DuckDB TimeZone=Asia/Ho_Chi_Minh (profiles.yml).
 """
 from __future__ import annotations
 
@@ -44,19 +46,24 @@ def _make_run_id() -> str:
     return str(uuid.uuid4())
 
 
-def _yesterday_window_utc() -> tuple[datetime, datetime, int]:
-    """Return (yesterday_00:00 UTC, today_00:00 UTC, date_key YYYYMMDD).
+_ICT = timezone(timedelta(hours=7))
 
-    Both source and warehouse use UTC for consistency:
-    - raw__sapo.order: $.created_on cast as TIMESTAMPTZ (UTC-aware comparison)
-    - fact_orders.date_key: strftime(created_at) uses DuckDB default timezone (UTC)
+
+def _yesterday_window_ict() -> tuple[datetime, datetime, int]:
+    """Return (window_start UTC, window_end UTC, date_key YYYYMMDD) aligned to ICT business day.
+
+    Uses ICT (Asia/Ho_Chi_Minh, UTC+7) as the day boundary because:
+    - Sapo created_on has 'Z' (UTC-aware) → convert ICT boundaries to UTC for TIMESTAMPTZ filtering
+    - fact_orders.date_key = strftime with DuckDB TimeZone=Asia/Ho_Chi_Minh (set in profiles.yml)
+    Both sides must use the same ICT day boundary to compare the same Vietnam business day.
     """
-    now = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    yesterday_start = today_start - timedelta(days=1)
-    # date_key = UTC date of the query window (matches fact_orders.date_key logic)
-    date_key = int(yesterday_start.strftime("%Y%m%d"))
-    return yesterday_start, today_start, date_key
+    now_ict = datetime.now(_ICT)
+    today_ict_midnight = now_ict.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_ict_midnight = today_ict_midnight - timedelta(days=1)
+    date_key = int(yesterday_ict_midnight.strftime("%Y%m%d"))
+    window_start = yesterday_ict_midnight.astimezone(timezone.utc)
+    window_end = today_ict_midnight.astimezone(timezone.utc)
+    return window_start, window_end, date_key
 
 
 def _fetch_sapo_revenue(window_start: datetime, window_end: datetime) -> Optional[float]:
@@ -180,16 +187,16 @@ def _persist_kpi(
 def kpi_revenue_daily(context):
     """Daily revenue invariant check: raw DB source vs warehouse fact_orders.
 
-    Compares yesterday's revenue between:
-    - Source: raw__sapo.order SUM($.total) for created_on in [yesterday, today) UTC
-    - Warehouse: SUM(net_revenue) from fact_orders WHERE date_key = yesterday (UTC)
+    Compares yesterday's ICT business day revenue between:
+    - Source: raw__sapo.order SUM($.total) for created_on in [yesterday_ict_midnight, today_ict_midnight) UTC
+    - Warehouse: SUM(net_revenue) from fact_orders WHERE date_key = yesterday ICT
 
     Gated behind KPI_CLOSURE_ENABLED=1. RECON_LIVE_API not required.
     """
     started = datetime.now(timezone.utc)
     run_id = _make_run_id()
     asset_key = "kpi/revenue_daily"
-    window_start, window_end, date_key = _yesterday_window_utc()
+    window_start, window_end, date_key = _yesterday_window_ict()
 
     source_revenue = _fetch_sapo_revenue(window_start, window_end)
     warehouse_revenue = _fetch_warehouse_revenue(date_key)

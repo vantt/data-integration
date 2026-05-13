@@ -57,15 +57,21 @@ def _window_utc(days: int = _WINDOW_DAYS) -> tuple[datetime, datetime]:
     return start, end
 
 
-def _yesterday_window_utc() -> tuple[datetime, datetime]:
-    """Return (yesterday_00:00 UTC, today_00:00 UTC).
+_ICT = timezone(timedelta(hours=7))
 
-    Sapo modified_on is UTC-native (per project memory / TIMESTAMPTZ convention).
+
+def _yesterday_window_ict() -> tuple[datetime, datetime]:
+    """Return (yesterday_ict_midnight, today_ict_midnight) as ICT-aware datetimes.
+
+    Uses ICT (Asia/Ho_Chi_Minh, UTC+7) so that:
+    - Sapo API receives ICT local strings (Sapo interprets bare datetimes as ICT)
+    - Raw DB TIMESTAMPTZ comparison works correctly (DuckDB resolves +07:00 vs 'Z' internally)
+    - Both source and dest count the same Vietnam business day
     """
-    now = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    yesterday_start = today_start - timedelta(days=1)
-    return yesterday_start, today_start
+    now_ict = datetime.now(_ICT)
+    today_ict_midnight = now_ict.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_ict_midnight = today_ict_midnight - timedelta(days=1)
+    return yesterday_ict_midnight, today_ict_midnight
 
 
 def _compute_drift(source_count: Optional[int], dest_count: int) -> Optional[float]:
@@ -322,8 +328,8 @@ def _sapo_dest_count_customers(window_start: datetime, window_end: datetime) -> 
 def recon_sapo_orders_daily(context):
     """Reconcile Sapo orders: API metadata.total vs raw DB count (yesterday window).
 
-    source_count = Sapo API metadata.total for modified_on in [yesterday, today) UTC
-    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.order for same window
+    source_count = Sapo API metadata.total for modified_on in [yesterday, today) ICT
+    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.order for same ICT window
 
     Live API call gated behind RECON_LIVE_API=1. When disabled, source_count=None
     and drift_pct=None — recon row is still written for Phase 4 visibility.
@@ -331,7 +337,7 @@ def recon_sapo_orders_daily(context):
     started = datetime.now(timezone.utc)
     run_id = _make_run_id()
     asset_key = "recon/sapo_orders_daily"
-    window_start, window_end = _yesterday_window_utc()
+    window_start, window_end = _yesterday_window_ict()
 
     # Lazy import to avoid import-time Sapo side-effects
     try:
@@ -385,8 +391,8 @@ def recon_sapo_orders_daily(context):
 def recon_sapo_customers_daily(context):
     """Reconcile Sapo customers: API metadata.total vs raw DB count (yesterday window).
 
-    source_count = Sapo API metadata.total for created_on in [yesterday, today) UTC
-    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.customer for same window
+    source_count = Sapo API metadata.total for created_on in [yesterday, today) ICT
+    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.customer for same ICT window
 
     NOTE: Sapo customers API filters on created_on only (no reliable modified_on).
     Live API call gated behind RECON_LIVE_API=1.
@@ -394,7 +400,7 @@ def recon_sapo_customers_daily(context):
     started = datetime.now(timezone.utc)
     run_id = _make_run_id()
     asset_key = "recon/sapo_customers_daily"
-    window_start, window_end = _yesterday_window_utc()
+    window_start, window_end = _yesterday_window_ict()
 
     try:
         from sapo.api_count import count_customers  # type: ignore[import]
