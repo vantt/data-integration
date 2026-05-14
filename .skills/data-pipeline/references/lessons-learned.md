@@ -2794,4 +2794,92 @@ docker exec data_platform rm /app/var/data_lake/monitoring/ingestion_health.duck
 
 **Reference:** `app_data/data_lake/monitoring/` (named volume); incident 2026-05-10; L62 for comparison.
 
+---
+
+### L83 — KPI và recon window phải dùng ICT midnight, không phải UTC midnight
+
+**Symptom:** Morning report báo lệch doanh thu ~15%: Sapo source 6.7M ₫ vs Warehouse 5.7M ₫. Xảy ra mỗi ngày, không phải random.
+
+**Root cause:** `_yesterday_window_utc()` tính "hôm qua" từ đồng hồ UTC. Asset KPI chạy lúc 04:45 ICT = 21:45 UTC — lúc này UTC **vẫn còn ngày hôm trước**:
+
+```
+04:45 ICT ngày 13/05  →  21:45 UTC ngày 12/05
+_yesterday_window_utc() trả về:
+  window_start = 2026-05-11 00:00 UTC  (!) ← UTC "hôm qua" = 11/05
+  date_key     = 20260511 (UTC)
+```
+
+Nhưng `fact_orders.date_key` được tính bằng `strftime(created_at, '%Y%m%d')` với DuckDB `TimeZone=Asia/Ho_Chi_Minh` (khai báo trong `transformation/profiles.yml`) — đây là **ngày ICT**, không phải ngày UTC.
+
+Kết quả: source đếm đơn trong window UTC ngày 11/05 (= ICT 07:00 ngày 11 → 07:00 ngày 12), nhưng warehouse `date_key = 20260511` chứa đơn ICT ngày 11/05 (= ICT 00:00 → 23:59 ngày 11). Hai window lệch nhau 7 tiếng — đơn tạo lúc 00:00–07:00 ICT không cùng chiều.
+
+**Fix:** Dùng ICT midnight làm ranh giới ngày trong mọi "yesterday window":
+
+```python
+_ICT = timezone(timedelta(hours=7))
+
+def _yesterday_window_ict() -> tuple[datetime, datetime]:
+    now_ict = datetime.now(_ICT)
+    today_ict = now_ict.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_ict = today_ict - timedelta(days=1)
+    return yesterday_ict, today_ict  # ICT-aware datetimes (+07:00)
+```
+
+ICT-aware datetime hoạt động đúng với cả hai use case:
+- **Sapo API:** `dt.strftime("%Y-%m-%dT%H:%M:%S")` strip timezone → gửi ICT local string "2026-05-12T00:00:00" (Sapo interpret đúng)
+- **Raw DB TIMESTAMPTZ:** DuckDB so sánh `2026-05-12T00:00:00+07:00` vs `"2026-05-11T17:00:00Z"` — khớp vì cùng point in time
+
+**Files đã fix:** `orchestration/assets/kpi_closure.py`, `orchestration/assets/reconciliation.py`
+
+**Rules:**
+1. Bất kỳ "yesterday window" nào so sánh với `fact_orders.date_key` PHẢI dùng ICT midnight boundary.
+2. `fact_orders.date_key` = ICT date (vì `profiles.yml` set `TimeZone: 'Asia/Ho_Chi_Minh'`). Đây là intentional — phục vụ business day Việt Nam.
+3. Sapo timestamps có suffix `Z` (UTC) — pipeline lưu đúng dạng UTC. ICT chỉ cần khi cắt boundary ngày.
+4. Symptom đặc trưng: drift ổn định ~15% (không random) = timezone mismatch, không phải ingestion gap.
+
+**Reference:** `orchestration/assets/kpi_closure.py`; `transformation/profiles.yml:16`; incident 2026-05-12
+
+---
+
+### L84 — UTC storage + ICT display là architecture chuẩn cho pipeline Việt Nam
+
+**Pattern:**
+
+```
+External API (Sapo)  →  "2026-05-01T01:28:14Z"  (UTC, có 'Z')
+         ↓
+Pipeline storage     →  TIMESTAMPTZ              (UTC-aware, lưu nguyên)
+         ↓
+dbt transformation   →  strftime với TimeZone=Asia/Ho_Chi_Minh
+         ↓
+fact_orders.date_key →  20260501                 (ngày ICT, dùng cho báo cáo VN)
+```
+
+**Verification mẫu:**
+
+```python
+# "2026-05-01T01:28:14Z" = 01:28 UTC = 08:28 ICT
+raw_string   = "2026-05-01T01:28:14Z"
+stored_utc   = 2026-05-01 01:28:14+00:00   # lưu trong parquet
+display_ict  = 2026-05-01 08:28:14+07:00   # khi query với session timezone ICT
+date_key     = 20260501                     # ngày ICT = ngày biz VN
+```
+
+**Tại sao UTC storage?**
+- UTC không bao giờ có daylight saving time (DST) hay offset thay đổi
+- Unambiguous trên mọi hệ thống — không cần biết "timezone của server là gì"
+- Dễ tích hợp với hệ thống khác (S3, BigQuery, Kafka đều dùng UTC)
+- Khi business mở rộng timezone khác: data cũ vẫn đúng, chỉ cần đổi display layer
+
+**Tại sao ICT display ở serving layer?**
+- Business users tại Việt Nam nhìn báo cáo theo giờ Việt Nam
+- `date_key = 20260501` nghĩa là "ngày 1/5 theo lịch Việt Nam", không phải lịch UTC
+
+**Quy tắc cho code mới:**
+1. Luôn dùng `TIMESTAMPTZ` (không phải `TIMESTAMP`) cho timestamps — naive TIMESTAMP mất timezone context
+2. Luôn lưu UTC; chỉ convert sang ICT ở serving/display layer
+3. Khi so sánh window với warehouse: dùng ICT boundary (xem L83)
+4. `strftime` trên `TIMESTAMPTZ` phụ thuộc DuckDB session `TimeZone` — luôn verify setting trước khi dùng
+
+**Reference:** `transformation/profiles.yml`; `orchestration/assets/kpi_closure.py`; memory `feedback_timestamp_timezone`
 

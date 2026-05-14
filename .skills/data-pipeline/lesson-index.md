@@ -1,7 +1,7 @@
 # Lesson Index — All Lessons by Functional Group
 
 Master cross-reference: every lesson with group assignment and canonical file.
-Total: 75 lessons from lessons-learned.md (L1-L76, gap L34) + 14 dagster-patterns + 14 dbt-patterns = **103 entries**.
+Total: 77 lessons from lessons-learned.md (L1-L84, gaps L34, L77-L80) + 14 dagster-patterns + 14 dbt-patterns = **105 entries**.
 
 Update protocol: after adding any new Lxx → append row to correct group table here.
 Canonical format for lessons-learned.md anchors: `references/lessons-learned.md` (post-Phase 4 path).
@@ -106,6 +106,8 @@ Lessons covering data trust: health recording, digest, composite PK, KPI closure
 | L44 | `ingestion_runs` composite PK: always filter BOTH asset_key AND run_id | `references/lessons-learned.md#L44` |
 | L55 | `asset_check_executions` table not cleaned by `delete_run()` | `references/lessons-learned.md#L55` |
 | L66 | `MetadataValue.float()` rejects Python int — `or 0` fallback is a trap | `references/lessons-learned.md#L66` |
+| L83 | KPI và recon window phải dùng ICT midnight, không phải UTC midnight | `references/lessons-learned.md#L83` |
+| L84 | UTC storage + ICT display là architecture chuẩn cho pipeline Việt Nam | `references/lessons-learned.md#L84` |
 
 **Full TRUST knowledge base:** `references/ingestion-health-digest.md` (canonical TRUST reference)
 
@@ -221,6 +223,8 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 | L70 | Windows dllhost.exe locks bind-mounted DuckDB, silently breaks monitoring | `playbooks/cross-cutting.md#duckdb-locking` | OPS |
 | L73 | Bind-mounted DuckDB on Windows NTFS permanently vulnerable | `playbooks/cross-cutting.md#duckdb-locking` | OPS |
 | L74 | Dagster jobs stuck when VACUUM holds SQLite exclusive lock | `playbooks/cross-cutting.md#sqlite-wal-safety` | OPS |
+| L83 | KPI/recon window phải dùng ICT midnight, không phải UTC midnight | `playbooks/cross-cutting.md#timezone-window-alignment` | TRUST, OPS |
+| L84 | UTC storage + ICT display — architecture chuẩn cho pipeline VN | `playbooks/cross-cutting.md#timezone-window-alignment` | TRUST, MODEL |
 
 ---
 
@@ -231,10 +235,10 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 | INGEST | 20 | 0 | 0 | 20 |
 | MODEL | 7 | 0 | 14 | 21 |
 | SERVE | 1 + serving-layer.md | 0 | 1 (shared) | 2 + full doc |
-| TRUST | 9 | 0 | 0 | 9 |
+| TRUST | 11 | 0 | 0 | 11 |
 | OPS | 38 | 14 | 0 | 52 |
-| Cross-cutting | 13 (overlap from above) | 0 | 0 | 13 |
-| **Total unique** | **75** | **14** | **14** | **103** |
+| Cross-cutting | 15 (overlap from above) | 0 | 0 | 15 |
+| **Total unique** | **77** | **14** | **14** | **105** |
 
-*Gap: L34 — intentionally skipped (append-only numbering, audit trail preserved)*
+*Gaps: L34 (skipped), L77-L80 (reserved) — append-only numbering, audit trail preserved*
 *Lessons appearing in multiple groups are listed in primary group; cross-cutting table notes secondary references.*

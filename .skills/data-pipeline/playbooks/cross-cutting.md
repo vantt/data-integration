@@ -325,6 +325,61 @@ INGEST (primary user), OPS (asset wiring pattern)
 
 ---
 
+## Timezone / Window Alignment
+
+**Anchor:** `#timezone-window-alignment`
+
+### Architecture: UTC storage + ICT display
+
+```
+Sapo API  →  "2026-05-01T01:28:14Z"  →  TIMESTAMPTZ (UTC lưu)
+                                               ↓
+                            dbt + TimeZone=Asia/Ho_Chi_Minh (profiles.yml)
+                                               ↓
+                                    fact_orders.date_key = 20260501  (ICT ngày)
+```
+
+Timestamps lưu UTC, hiển thị ICT ở serving layer. Đây là best practice chuẩn — UTC không bao giờ bị DST hay offset drift.
+
+### Rule: Window phải dùng ICT midnight khi so sánh với warehouse
+
+`fact_orders.date_key` = ngày ICT (vì `profiles.yml` khai báo `TimeZone: 'Asia/Ho_Chi_Minh'`). Asset tính "yesterday window" từ UTC clock gây **lệch 7 tiếng** khi asset chạy trước 07:00 ICT (vẫn là "UTC hôm qua").
+
+```python
+_ICT = timezone(timedelta(hours=7))
+
+def _yesterday_window_ict() -> tuple[datetime, datetime]:
+    now_ict = datetime.now(_ICT)
+    today_ict = now_ict.replace(hour=0, minute=0, second=0, microsecond=0)
+    yesterday_ict = today_ict - timedelta(days=1)
+    return yesterday_ict, today_ict  # ICT-aware (+07:00)
+```
+
+ICT-aware datetime tự động đúng với:
+- **Sapo API params:** `strftime("%Y-%m-%dT%H:%M:%S")` → ICT local string
+- **Raw DB TIMESTAMPTZ query:** DuckDB resolve `+07:00` vs `Z` — cùng point in time
+
+### Dấu hiệu nhận biết timezone mismatch
+
+| Triệu chứng | Nguyên nhân khả năng |
+|---|---|
+| Drift doanh thu ~15%, ổn định mỗi ngày | Window UTC vs date_key ICT |
+| Drift ngẫu nhiên, không nhất quán | Ingestion gap thực sự |
+| Lệch đúng 1 ngày vào buổi sáng sớm | UTC "yesterday" ≠ ICT "yesterday" khi chạy < 07:00 ICT |
+
+### Rules
+
+1. "Yesterday window" so sánh với `fact_orders.date_key` PHẢI dùng ICT midnight (L83)
+2. Luôn dùng `TIMESTAMPTZ` — naive `TIMESTAMP` mất timezone context
+3. `strftime` trên `TIMESTAMPTZ` phụ thuộc DuckDB session `TimeZone` — kiểm tra `profiles.yml` trước khi dùng
+4. Sapo timestamps có suffix `Z` (UTC) — pipeline lưu UTC là đúng; chỉ cần ICT khi cắt business day boundary
+
+### Referenced from
+
+TRUST (KPI closure, reconciliation), MODEL (date_key derivation), L83, L84
+
+---
+
 ## Composite PK Update Trap (ingestion_runs)
 
 **Anchor:** `#composite-pk-update-trap`
