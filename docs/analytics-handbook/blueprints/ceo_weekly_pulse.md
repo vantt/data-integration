@@ -21,6 +21,15 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 
 ### Tab: Doanh thu & Target
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Tuần qua (T2–CN, ICT) | **So sánh:** Tuần trước đó (WoW) | **Cập nhật:** Hàng tuần
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
 
 # CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua

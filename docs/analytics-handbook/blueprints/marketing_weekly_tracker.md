@@ -309,6 +309,15 @@ FROM this_week tw, last_week lw
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Tuần qua (T2–CN, ICT) | **So sánh:** Tuần trước đó (WoW) | **Cập nhật:** Hàng tuần
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### ❓ Question: Online-Ecom vs Offline Trend
 
 Daily revenue, 2 lines: Online-Ecom vs Offline over 14 days.

@@ -21,6 +21,15 @@ Dashboard đối soát đơn hàng — xác minh tính đúng đắn và đầy 
 
 ### Tab: Today
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Hôm nay / khoảng thời gian được lọc | **So sánh:** N/A (custom filter) | **Cập nhật:** On-demand
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Reconciliation Checklist
 
 ## 🔍 Đối chiếu BI ↔ Sapo — 5 bước

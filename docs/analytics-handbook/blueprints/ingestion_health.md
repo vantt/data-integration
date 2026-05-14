@@ -20,6 +20,15 @@ Monitoring wall for ingestion pipeline: per-source SLA status tiles, recon drift
 
 ### 📑 Tab: Tổng quan
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Hôm nay (ICT) + 30 ngày gần nhất (trend) | **So sánh:** N/A (monitoring wall) | **Cập nhật:** Real-time
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Trạng thái pipeline — tất cả nguồn dữ liệu hôm nay
 
 # Trạng thái pipeline — tất cả nguồn dữ liệu hôm nay

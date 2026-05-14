@@ -36,6 +36,15 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 
 ### Tab: Tong quan tuan
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Tuần qua (T2–CN, ICT) | **So sánh:** Tuần trước đó (WoW) | **Cập nhật:** Hàng tuần
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Review ket qua tuan — doanh thu, don hang, chat luong xu ly
 
 # Review ket qua tuan — doanh thu, don hang, chat luong xu ly

@@ -223,6 +223,15 @@ SELECT * FROM (
 { "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Hôm qua (D-1, ICT) | **So sánh:** Hôm qua -7 ngày (WoW) | **Cập nhật:** Hàng ngày
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Net Revenue
 
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison.

@@ -370,6 +370,15 @@ ORDER BY 1
 
 ### 📑 Tab: Kenh & Dia ly
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** 30 ngày gần nhất (rolling, ICT) | **So sánh:** 30 ngày trước đó | **Cập nhật:** Hàng ngày
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Phan tich acquisition trend 6 thang — momentum tang hay giam?
 
 # Phan tich acquisition trend 6 thang — momentum tang hay giam?

@@ -12,6 +12,15 @@ Chi tiet don hang — header, economics (margin/COGS/fees), line items, payments
 
 ---
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Theo đơn hàng được chọn (không cố định) | **So sánh:** N/A | **Cập nhật:** On-demand
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Filter: Order ID
 
 ```json metabase-filter

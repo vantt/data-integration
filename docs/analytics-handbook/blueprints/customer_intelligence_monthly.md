@@ -220,6 +220,15 @@ FROM current_period c, previous_period p
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### ❓ Question: Customer Status Distribution
 
 Donut chart showing Active / At Risk / Churned split.

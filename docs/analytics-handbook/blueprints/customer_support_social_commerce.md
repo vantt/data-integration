@@ -12,6 +12,15 @@ Single-view Operational Cockpit for CS Team Leader — real-time social commerce
 
 ---
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Hôm nay (rolling đến hiện tại, ICT) | **So sánh:** Hôm qua (D-1) | **Cập nhật:** Real-time
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Monitor doanh thu Social real-time — đội social đang bán được bao nhiêu?
 
 # Monitor doanh thu Social real-time — đội social đang bán được bao nhiêu?

@@ -196,6 +196,15 @@ WHERE date(o.order_timestamp) = current_date
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Hôm nay (rolling đến hiện tại, ICT) | **So sánh:** Hôm qua (D-1) | **Cập nhật:** Real-time
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Revenue by Customer Type
 
 Wholesale vs Partner breakdown.

@@ -292,6 +292,15 @@ FROM this_period t, prev_period p
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Doanh thu san pham theo ngay
 
 Trend doanh thu hang ngay — overlay this month vs last month.

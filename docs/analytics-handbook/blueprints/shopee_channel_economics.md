@@ -37,6 +37,15 @@ Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich
 
 ### 📑 Tab: Settlement Overview
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Kỳ quyết toán Shopee (billing cycle) | **So sánh:** Kỳ trước đó | **Cập nhật:** Theo settlement
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Overview Heading
 
 ## Monitor chi phi ban hang Shopee — ty le tien thuc nhan sau phi san

@@ -283,6 +283,15 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 { "row": 7, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** Hôm nay (rolling đến hiện tại, ICT) | **So sánh:** Hôm qua (D-1) | **Cập nhật:** Real-time
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### Question: Gross Revenue
 
 **Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI with DoD. **Scope: Retail only.**

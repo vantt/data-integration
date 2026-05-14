@@ -593,6 +593,15 @@ ORDER BY 1
 
 ### 📑 Tab: Hieu suat khuyen mai
 
+#### 📝 Text: Chu kỳ báo cáo
+
+📅 **Chu kỳ báo cáo:** 30 ngày gần nhất (rolling, ICT) | **So sánh:** 30 ngày trước đó | **Cập nhật:** Hàng ngày
+<!-- text-id:chu-ky-bao-cao -->
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Xác định promotion hiệu quả — ranking doanh thu và usage
 
 ## Xác định promotion hiệu quả — ranking doanh thu và usage
