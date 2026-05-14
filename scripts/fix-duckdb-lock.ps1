@@ -61,4 +61,4 @@ print(f'OK — {count} runs in DB, write access confirmed')
 Write-Host "=== Done ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "To prevent recurrence, add Defender exclusion (run as Admin):" -ForegroundColor Cyan
-Write-Host "  Add-MpPreference -ExclusionPath 'D:\Vantt\app\data-integration\app_data\data_lake'" -ForegroundColor White
+Write-Host "  Add-MpPreference -ExclusionPath D:\Vantt\app\data-integration\app_data\data_lake" -ForegroundColor White

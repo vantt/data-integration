@@ -16,43 +16,69 @@ def recover() -> None:
         print("-> [health-db-recover] INGESTION_HEALTH_DB / DBT_DATA_LAKE_PATH not set — skip.")
         return
 
-    wal_path = db_path + ".wal"
-    if not os.path.exists(wal_path):
-        print("-> [health-db-recover] No WAL file found — nothing to recover.")
-        return
-
-    print(f"-> [health-db-recover] WAL detected at {wal_path}. Attempting recovery...")
     import duckdb
 
+    wal_path = db_path + ".wal"
+    has_wal = os.path.exists(wal_path)
+
+    if has_wal:
+        print(f"-> [health-db-recover] WAL detected at {wal_path}. Attempting recovery...")
+    else:
+        print(f"-> [health-db-recover] No WAL file — attempting open to check for stale lock...")
+
     # First attempt: DuckDB can self-recover a stale WAL if we just open it.
+    # Also handles no-WAL stale lock (lock stored inside DB file, not WAL).
     try:
         conn = duckdb.connect(db_path)
         conn.execute("CHECKPOINT")
         conn.close()
-        print("-> [health-db-recover] Recovery successful (DuckDB self-healed WAL).")
+        print("-> [health-db-recover] Recovery successful (DuckDB opened cleanly).")
         return
     except duckdb.IOException as exc:
-        if "PID 0" not in str(exc) and "being used by another process" not in str(exc):
-            # Unexpected error — don't silently swallow it.
+        exc_str = str(exc)
+        if "PID 0" not in exc_str and "being used by another process" not in exc_str:
             print(f"-> [health-db-recover] Unexpected error: {exc}. Skipping recovery.")
             return
         print(f"-> [health-db-recover] PID 0 stale lock confirmed: {exc}")
 
-    # Second attempt: remove WAL (data in WAL is from the killed session — already lost).
-    print(f"-> [health-db-recover] Removing stale WAL: {wal_path}")
+    # Second attempt: remove WAL if present (data in WAL is from the killed session — already lost).
+    if has_wal:
+        print(f"-> [health-db-recover] Removing stale WAL: {wal_path}")
+        try:
+            os.remove(wal_path)
+        except OSError as e:
+            print(f"-> [health-db-recover] Could not remove WAL: {e}. Skipping.")
+            return
+
+        try:
+            conn = duckdb.connect(db_path)
+            conn.execute("CHECKPOINT")
+            conn.close()
+            print("-> [health-db-recover] Recovery successful after WAL removal.")
+            return
+        except Exception as e:
+            print(f"-> [health-db-recover] Recovery failed after WAL removal: {e}. Continuing anyway.")
+            return
+
+    # No WAL but still locked: copy DB file to break filesystem-level stale lock.
+    # This happens on named Docker volumes after SIGKILL when the lock is embedded in the file.
+    print("-> [health-db-recover] No WAL but stale lock persists — copying DB to reset filesystem lock...")
+    backup_path = db_path + ".recovering"
     try:
-        os.remove(wal_path)
+        import shutil
+        shutil.copy2(db_path, backup_path)
+        os.replace(backup_path, db_path)
     except OSError as e:
-        print(f"-> [health-db-recover] Could not remove WAL: {e}. Skipping.")
+        print(f"-> [health-db-recover] Could not copy DB file: {e}. Continuing anyway.")
         return
 
     try:
         conn = duckdb.connect(db_path)
         conn.execute("CHECKPOINT")
         conn.close()
-        print("-> [health-db-recover] Recovery successful after WAL removal.")
+        print("-> [health-db-recover] Recovery successful after file copy (stale lock cleared).")
     except Exception as e:
-        print(f"-> [health-db-recover] Recovery failed after WAL removal: {e}. Continuing anyway.")
+        print(f"-> [health-db-recover] Recovery failed after file copy: {e}. Continuing anyway.")
 
 
 def _resolve_path() -> str | None:
