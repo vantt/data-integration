@@ -17,7 +17,7 @@
 
 Channel performance, customer acquisition, retention, segmentation, and campaign analysis for **retail customers**.
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 ---
 
@@ -309,10 +309,22 @@ FROM this_week tw, last_week lw
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Tuần qua (T2–CN, ICT) | **So sánh:** Tuần trước đó (WoW) | **Cập nhật:** Hàng tuần
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Tuần qua: ' ||
+  strftime(date_trunc('week', current_date)::DATE - 7, '%d/%m/%Y') || ' – ' ||
+  strftime(date_trunc('week', current_date)::DATE - 1, '%d/%m/%Y') ||
+  '  ·  WoW: ' ||
+  strftime(date_trunc('week', current_date)::DATE - 14, '%d/%m/%Y') || ' – ' ||
+  strftime(date_trunc('week', current_date)::DATE - 8, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -359,7 +371,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":7, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Revenue by Brand
@@ -399,7 +411,7 @@ LIMIT 5
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":7, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -409,7 +421,7 @@ LIMIT 5
 # Xác định platform hiệu quả — ranking doanh thu và volume
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Revenue by Platform
@@ -450,7 +462,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":14, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### ❓ Question: Orders by Platform
@@ -486,7 +498,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":14, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -496,7 +508,7 @@ ORDER BY 2 DESC
 # So sánh chi tiết kênh WoW — highlight biến động > 20%
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":20, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Channel Performance Table
@@ -603,7 +615,7 @@ ORDER BY tw.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 8 }
+{"row":21, "col":0, "size_x":18, "size_y":8}
 ```
 
 ---

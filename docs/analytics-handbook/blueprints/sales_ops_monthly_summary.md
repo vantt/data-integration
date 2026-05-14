@@ -36,10 +36,22 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
 
 ### Tab: Tong quan thang
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -50,7 +62,7 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
 # Review ket qua thang — doanh thu, don hang, chat luong van hanh
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
@@ -58,7 +70,7 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
 # Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":5, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo doi xu huong 6 thang — cancellation va return rate vs target
@@ -66,7 +78,7 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
 # Theo doi xu huong 6 thang — cancellation va return rate vs target
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Orders
@@ -112,7 +124,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":2, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Net Revenue
@@ -163,7 +175,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -218,7 +230,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Completion Rate
@@ -251,7 +263,7 @@ WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -289,7 +301,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
+{"row":6, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### Question: Avg Time to Complete
@@ -342,7 +354,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 6, "size_y": 6 }
+{"row":6, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### Question: Cancelled & Returns Summary
@@ -407,7 +419,7 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":6, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -446,7 +458,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":13, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Return Rate Trend (6M)
@@ -485,7 +497,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":13, "col":9, "size_x":9, "size_y":6}
 ```
 
 #### Question: Top 10 Returned Products
@@ -531,7 +543,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":19, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---

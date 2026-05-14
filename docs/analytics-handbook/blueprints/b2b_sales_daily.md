@@ -11,7 +11,7 @@ Daily monitoring for wholesale and partner orders — revenue, order volume, key
 
 ## 📂 Collection: Operations > B2B Operations
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 ### Dashboard: B2B Daily Sales [B2B]
 
@@ -196,10 +196,18 @@ WHERE date(o.order_timestamp) = current_date
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Hôm nay (rolling đến hiện tại, ICT) | **So sánh:** Hôm qua (D-1) | **Cập nhật:** Real-time
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -244,7 +252,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 5 }
+{"row":6, "col":0, "size_x":9, "size_y":5}
 ```
 
 #### Question: Revenue by Channel (B2B)
@@ -286,7 +294,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 5 }
+{"row":6, "col":9, "size_x":9, "size_y":5}
 ```
 
 ---
@@ -296,7 +304,7 @@ ORDER BY 2 DESC
 # Top khach hang B2B hom nay
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":11, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Top B2B Customers Today
@@ -338,7 +346,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":12, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---

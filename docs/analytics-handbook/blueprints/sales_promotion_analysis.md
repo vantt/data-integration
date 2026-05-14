@@ -23,7 +23,7 @@ Ad-hoc analysis — evaluate campaign ROI, discount spending, promo effectivenes
 
 Promotion analysis, discount tracking for retail customers only.
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 <!-- Filters removed: date/all-options and string/= types don't work with native SQL template tags in DuckDB.
      Date scoping is hardcoded in each SQL (last 30 days). -->
@@ -38,12 +38,31 @@ Promotion analysis, discount tracking for retail customers only.
 
 ### 📑 Tab: Tong quan chiet khau
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 30 ngày gần nhất: ' ||
+  strftime(current_date - 29, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  So sánh: ' ||
+  strftime(current_date - 59, '%d/%m/%Y') || ' – ' || strftime(current_date - 30, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Kiểm soát chi phí chiết khấu — có vượt ngưỡng và đang tăng hay giảm?
 
 ## Kiểm soát chi phí chiết khấu — có vượt ngưỡng và đang tăng hay giảm?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Total Discount Amount
@@ -103,7 +122,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{"row":2, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: Discount Rate %
@@ -164,7 +183,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{"row":2, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Discount Frequency %
@@ -227,7 +246,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{"row":2, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Discounted Orders
@@ -279,7 +298,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{"row":2, "col":14, "size_x":4, "size_y":4}
 ```
 
 #### 📝 Text: So sánh Promo vs Non-Promo — khuyến mãi có uplift AOV?
@@ -287,7 +306,7 @@ FROM this_period tp, prev_period pp
 ## So sánh Promo vs Non-Promo — khuyến mãi có uplift AOV?
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Promo vs Non-Promo Summary
@@ -362,7 +381,7 @@ FROM base
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":7, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: AOV Uplift
@@ -424,7 +443,7 @@ FROM aov
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":7, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### 📝 Text: Phân tích độ sâu chiết khấu — phát hiện đơn bất thường > 30%
@@ -432,7 +451,7 @@ FROM aov
 ## Phân tích độ sâu chiết khấu — phát hiện đơn bất thường > 30%
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Discount Depth Histogram
@@ -485,7 +504,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":14, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Avg Discount % by Channel
@@ -527,7 +546,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":14, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### 📝 Text: Theo dõi xu hướng chiết khấu — trend amount và rate
@@ -535,7 +554,7 @@ ORDER BY 2 DESC
 ## Theo dõi xu hướng chiết khấu — trend amount và rate
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":20, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Discount Amount & Rate Trend
@@ -586,22 +605,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":21, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Hieu suat khuyen mai
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** 30 ngày gần nhất (rolling, ICT) | **So sánh:** 30 ngày trước đó | **Cập nhật:** Hàng ngày
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Xác định promotion hiệu quả — ranking doanh thu và usage
 
 ## Xác định promotion hiệu quả — ranking doanh thu và usage

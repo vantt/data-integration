@@ -37,10 +37,16 @@ Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich
 
 ### 📑 Tab: Settlement Overview
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Kỳ quyết toán Shopee (billing cycle) | **So sánh:** Kỳ trước đó | **Cập nhật:** Theo settlement
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT '📅 Kỳ quyết toán Shopee — xem tab Settlement để biết ngày chính xác'
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -51,7 +57,7 @@ Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich
 ## Monitor chi phi ban hang Shopee — ty le tien thuc nhan sau phi san
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Settlement Margin %
@@ -90,7 +96,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+{"row":2, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### Question: Gross Revenue
@@ -122,7 +128,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Net Settlement
@@ -154,7 +160,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Platform Fee Rate %
@@ -194,7 +200,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### Question: Chu ky bao cao
@@ -221,7 +227,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 6, "size_x": 12, "size_y": 2 }
+{"row":5, "col":6, "size_x":12, "size_y":2}
 ```
 
 #### 📝 Text: Fee Breakdown Heading
@@ -229,7 +235,7 @@ WHERE payout_released_at IS NOT NULL
 ## Phan tich co cau phi — loai phi nao chiem nhieu nhat?
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Fee Breakdown
@@ -280,7 +286,7 @@ ORDER BY "Gia tri phi (VND)" DESC
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":8, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Revenue to Settlement Waterfall
@@ -329,7 +335,7 @@ ORDER BY "Thu tu"
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":8, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---

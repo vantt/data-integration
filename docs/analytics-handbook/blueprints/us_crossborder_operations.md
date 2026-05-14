@@ -11,7 +11,7 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 
 ## 📂 Collection: Operations > CrossBorder Operations
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 ### Dashboard: US CrossBorder Daily [US]
 
@@ -21,12 +21,29 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 
 ### 📑 Tab: Tong quan
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Don US CrossBorder hom nay — export va arrangement
 
 # Don US CrossBorder hom nay — export va arrangement
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Net Revenue (US)
@@ -62,7 +79,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":2, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Total Orders (US)
@@ -88,7 +105,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV (US)
@@ -128,7 +145,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Unique Customers (US)
@@ -150,7 +167,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Trang thai don va fulfillment
@@ -158,7 +175,7 @@ WHERE date(o.order_timestamp) = current_date
 # Trang thai don va fulfillment
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":5, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Orders by Status (US)
@@ -189,7 +206,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 5 }
+{"row":6, "col":0, "size_x":9, "size_y":5}
 ```
 
 #### Question: Fulfillment Status (US)
@@ -220,7 +237,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 5 }
+{"row":6, "col":9, "size_x":9, "size_y":5}
 ```
 
 #### 📝 Text: Xu huong 7 ngay
@@ -228,7 +245,7 @@ ORDER BY 2 DESC
 # Xu huong 7 ngay
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":11, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: US Revenue Trend (7 Days)
@@ -274,22 +291,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":12, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Chi tiet don hang
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** Hôm nay (rolling đến hiện tại, ICT) | **So sánh:** Hôm qua (D-1) | **Cập nhật:** Real-time
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Danh sach don US hom nay
 
 # Danh sach don US hom nay

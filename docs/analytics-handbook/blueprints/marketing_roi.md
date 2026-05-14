@@ -12,10 +12,22 @@ ROAS per channel — tong spend vs revenue, xu huong, chi tiet per kenh. Dung fa
 
 ---
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -38,7 +50,7 @@ ROAS per channel — tong spend vs revenue, xu huong, chi tiet per kenh. Dung fa
 Marketing ROI — chi tieu vs doanh thu theo kenh
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Spend
@@ -68,7 +80,7 @@ FROM fact_marketing_spend
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":2, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Total Revenue
@@ -101,7 +113,7 @@ WHERE o.status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+{"row":2, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### Question: Blended ROAS
@@ -141,7 +153,7 @@ FROM spend s, revenue r
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+{"row":2, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### 📝 Text: Trend Heading
@@ -149,7 +161,7 @@ FROM spend s, revenue r
 Chi tieu va doanh thu theo thoi gian
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":5, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Spend vs Revenue Trend
@@ -208,7 +220,7 @@ ORDER BY "Thang"
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":6, "col":0, "size_x":18, "size_y":6}
 ```
 
 #### 📝 Text: Channel Heading
@@ -216,7 +228,7 @@ ORDER BY "Thang"
 Hieu qua theo kenh quang cao
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: ROAS by Channel
@@ -285,7 +297,7 @@ ORDER BY "ROAS" DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":13, "col":0, "size_x":18, "size_y":6}
 ```
 
 #### Question: Channel Marketing Table
@@ -366,5 +378,5 @@ ORDER BY "ROAS" DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 8 }
+{"row":19, "col":0, "size_x":18, "size_y":8}
 ```

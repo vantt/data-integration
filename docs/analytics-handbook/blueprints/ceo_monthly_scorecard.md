@@ -29,12 +29,33 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 
 ### 📑 Tab: Hieu suat thang
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Báo cáo hiệu suất kinh doanh tháng
 
 # Báo cáo hiệu suất kinh doanh tháng
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
@@ -42,7 +63,7 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 ## Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":8, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
@@ -50,7 +71,7 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 ## Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":15, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Net Revenue
@@ -108,7 +129,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{"row":2, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: Monthly GMV
@@ -164,7 +185,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{"row":2, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -212,7 +233,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{"row":2, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly AOV
@@ -272,7 +293,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{"row":2, "col":14, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Unique Customers
@@ -318,7 +339,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":6, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Target Achievement
@@ -359,7 +380,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 6, "size_y": 3 }
+{"row":6, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Target Variance
@@ -407,7 +428,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 6, "size_y": 3 }
+{"row":6, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Revenue vs Target (Weekly)
@@ -461,7 +482,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":9, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: 6-Month Revenue Trend
@@ -501,7 +522,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":9, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue Waterfall
@@ -587,22 +608,12 @@ ORDER BY sort_order
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":16, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Kenh & Khach hang
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Đánh giá hiệu suất kênh bán hàng — kênh nào cần đẩy mạnh?
 
 ## Đánh giá hiệu suất kênh bán hàng — kênh nào cần đẩy mạnh?

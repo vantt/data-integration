@@ -20,10 +20,19 @@ Monitoring wall for ingestion pipeline: per-source SLA status tiles, recon drift
 
 ### 📑 Tab: Tổng quan
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Hôm nay (ICT) + 30 ngày gần nhất (trend) | **So sánh:** N/A (monitoring wall) | **Cập nhật:** Real-time
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Trend 30 ngày: ' ||
+  strftime(current_date - 29, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -34,7 +43,7 @@ Monitoring wall for ingestion pipeline: per-source SLA status tiles, recon drift
 # Trạng thái pipeline — tất cả nguồn dữ liệu hôm nay
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Sapo Orders — Trạng thái
@@ -81,7 +90,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":2, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Sapo Customers — Trạng thái
@@ -128,7 +137,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+{"row":2, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### Question: Sapo Products — Trạng thái
@@ -175,7 +184,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+{"row":2, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### Question: Sapo Accounts — Trạng thái
@@ -222,7 +231,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":5, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Sapo Webhook — Trạng thái
@@ -271,7 +280,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 6, "size_x": 6, "size_y": 3 }
+{"row":5, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### Question: Sapo History Log — Trạng thái
@@ -318,7 +327,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 12, "size_x": 6, "size_y": 3 }
+{"row":5, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### Question: Google Sheets Targets — Trạng thái
@@ -365,7 +374,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":8, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Google Sheets Marketing Spend — Trạng thái
@@ -412,7 +421,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 6, "size_x": 6, "size_y": 3 }
+{"row":8, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### Question: MISA File Drop — Trạng thái
@@ -461,7 +470,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 12, "size_x": 6, "size_y": 3 }
+{"row":8, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### Question: Shopee File Drop — Trạng thái
@@ -508,7 +517,7 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":11, "col":0, "size_x":6, "size_y":3}
 ```
 
 ---
@@ -518,7 +527,7 @@ SELECT
 # Reconciliation drift — chênh lệch nguồn vs đích
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":14, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Drift — Sapo Orders
@@ -574,7 +583,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 5, "size_y": 3 }
+{"row":15, "col":0, "size_x":5, "size_y":3}
 ```
 
 #### Question: Drift — Sapo Customers
@@ -630,7 +639,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 5, "size_x": 4, "size_y": 3 }
+{"row":15, "col":5, "size_x":4, "size_y":3}
 ```
 
 #### Question: Drift — MISA
@@ -686,7 +695,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 9, "size_x": 4, "size_y": 3 }
+{"row":15, "col":9, "size_x":4, "size_y":3}
 ```
 
 #### Question: Drift — Shopee
@@ -742,7 +751,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 13, "size_x": 5, "size_y": 3 }
+{"row":15, "col":13, "size_x":5, "size_y":3}
 ```
 
 ---
@@ -752,7 +761,7 @@ LIMIT 1
 # Lịch sử chạy theo ngày — phát hiện ngày Dagster scheduler dừng
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":18, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Run Count per Day (30d)
@@ -786,7 +795,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":19, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---

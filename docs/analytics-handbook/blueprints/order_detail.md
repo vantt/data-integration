@@ -12,10 +12,16 @@ Chi tiet don hang — header, economics (margin/COGS/fees), line items, payments
 
 ---
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Theo đơn hàng được chọn (không cố định) | **So sánh:** N/A | **Cập nhật:** On-demand
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT '📅 Chu kỳ: Theo filter được chọn (không cố định)'
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -35,7 +41,7 @@ Chi tiet don hang — header, economics (margin/COGS/fees), line items, payments
 #### 📝 Text: Order Summary
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Order Header
@@ -88,13 +94,13 @@ WHERE o.order_id = {{order_id}}
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 4 }
+{"row":2, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### 📝 Text: Financials
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Order Economics
@@ -146,13 +152,13 @@ WHERE o.order_id = {{order_id}}
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 4 }
+{"row":7, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### 📝 Text: Line Items
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":11, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Line Items
@@ -197,13 +203,13 @@ ORDER BY s.item_id
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":12, "col":0, "size_x":18, "size_y":6}
 ```
 
 #### 📝 Text: Payments
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":18, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Payments
@@ -238,5 +244,5 @@ ORDER BY fp.payment_timestamp
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 4 }
+{"row":19, "col":0, "size_x":18, "size_y":4}
 ```

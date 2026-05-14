@@ -320,10 +320,20 @@ ORDER BY
 { "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** 30 ngày gần nhất (rolling, ICT) | **So sánh:** 30 ngày trước đó | **Cập nhật:** Hàng ngày
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 30 ngày gần nhất: ' ||
+  strftime(current_date - 29, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  So sánh: ' ||
+  strftime(current_date - 59, '%d/%m/%Y') || ' – ' || strftime(current_date - 30, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -368,7 +378,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 6, "size_y": 6 }
+{"row":6, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Segment x Status Matrix
@@ -405,7 +415,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":6, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -449,7 +459,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":13, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### ❓ Question: Repeat Purchase Rate Trend (6M)
@@ -493,7 +503,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":13, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -556,7 +566,7 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":20, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---

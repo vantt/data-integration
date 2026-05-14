@@ -12,10 +12,20 @@ Ranking san pham theo lai gop va margin — top/bottom products, chi tiet theo k
 
 ---
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** 30 ngày gần nhất (rolling, ICT) | **So sánh:** 30 ngày trước đó | **Cập nhật:** Hàng ngày
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 30 ngày gần nhất: ' ||
+  strftime(current_date - 29, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  So sánh: ' ||
+  strftime(current_date - 59, '%d/%m/%Y') || ' – ' || strftime(current_date - 30, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -47,7 +57,7 @@ Ranking san pham theo lai gop va margin — top/bottom products, chi tiet theo k
 San pham nao tao lai, san pham nao keo xuong?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Products
@@ -71,7 +81,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 4, "size_y": 3 }
+{"row":2, "col":0, "size_x":4, "size_y":3}
 ```
 
 #### Question: Avg Margin %
@@ -105,7 +115,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 4, "size_x": 5, "size_y": 3 }
+{"row":2, "col":4, "size_x":5, "size_y":3}
 ```
 
 #### Question: Highest Margin Product
@@ -148,7 +158,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 5, "size_y": 3 }
+{"row":2, "col":9, "size_x":5, "size_y":3}
 ```
 
 #### Question: Lowest Margin Product
@@ -191,7 +201,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Ranking Heading
@@ -199,7 +209,7 @@ LIMIT 1
 Top 20 san pham theo lai gop
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":5, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Top Products by Profit
@@ -242,7 +252,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 9 }
+{"row":6, "col":0, "size_x":9, "size_y":9}
 ```
 
 #### Question: Bottom Margin Products
@@ -291,7 +301,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 9 }
+{"row":6, "col":9, "size_x":9, "size_y":9}
 ```
 
 #### 📝 Text: Detail Heading
@@ -299,7 +309,7 @@ LIMIT 20
 Chi tiet san pham — margin, doanh thu, gia von theo kenh
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":15, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Product Detail Table
@@ -360,5 +370,5 @@ ORDER BY "Lai gop" DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 10 }
+{"row":16, "col":0, "size_x":18, "size_y":10}
 ```

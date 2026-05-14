@@ -24,12 +24,33 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Monthly Pulse
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
 
 # Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Net Revenue
@@ -83,7 +104,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{"row":2, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -127,7 +148,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{"row":2, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly New Customers
@@ -169,7 +190,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{"row":2, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly AOV
@@ -223,7 +244,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{"row":2, "col":14, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Discount Rate Gauge
@@ -254,7 +275,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 6, "size_y": 5 }
+{"row":6, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### ❓ Question: Revenue Trend (6M)
@@ -301,7 +322,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 12, "size_y": 5 }
+{"row":6, "col":6, "size_x":12, "size_y":5}
 ```
 
 #### 📝 Text: Xác định kênh nào đang drive revenue — composition và MoM change
@@ -309,7 +330,7 @@ ORDER BY 1
 # Xác định kênh nào đang drive revenue — composition và MoM change
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":11, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Channel Revenue Share
@@ -344,7 +365,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 6, "size_y": 6 }
+{"row":12, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue by Channel (MoM)
@@ -386,22 +407,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 6, "size_x": 12, "size_y": 6 }
+{"row":12, "col":6, "size_x":12, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Channel & Brand
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Theo dõi structural shift kênh 6 tháng — Online-Ecom đang chiếm ưu thế?
 
 # Theo dõi structural shift kênh 6 tháng — Online-Ecom đang chiếm ưu thế?

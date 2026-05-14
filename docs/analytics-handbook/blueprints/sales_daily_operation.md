@@ -17,7 +17,7 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 
 **Description**: Real-time monitoring of today's **retail** sales — Health Score gauge, KPIs with integrated DoD trends, hourly patterns, channel/product/customer breakdowns across 4 tabs.
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 ---
 
@@ -283,10 +283,18 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 { "row": 7, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Hôm nay (rolling đến hiện tại, ICT) | **So sánh:** Hôm qua (D-1) | **Cập nhật:** Real-time
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -333,7 +341,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":8, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total Orders
@@ -369,7 +377,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":8, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -421,7 +429,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":8, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -445,7 +453,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 3, "size_y": 3 }
+{"row":12, "col":0, "size_x":3, "size_y":3}
 ```
 
 #### Question: Returning Customers
@@ -467,7 +475,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 3, "size_x": 3, "size_y": 3 }
+{"row":12, "col":3, "size_x":3, "size_y":3}
 ```
 
 #### Question: Returns
@@ -487,7 +495,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 6, "size_x": 3, "size_y": 3 }
+{"row":12, "col":6, "size_x":3, "size_y":3}
 ```
 
 #### Question: Total Collected
@@ -520,7 +528,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 9, "size_x": 3, "size_y": 3 }
+{"row":12, "col":9, "size_x":3, "size_y":3}
 ```
 
 #### Question: Discount Rate
@@ -543,7 +551,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 12, "size_x": 3, "size_y": 3 }
+{"row":12, "col":12, "size_x":3, "size_y":3}
 ```
 
 #### Question: Items per Order
@@ -565,7 +573,7 @@ WHERE date(s.sol_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 15, "size_x": 3, "size_y": 3 }
+{"row":12, "col":15, "size_x":3, "size_y":3}
 ```
 
 ---
@@ -622,7 +630,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":16, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: Cumulative Revenue
@@ -679,7 +687,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":16, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---

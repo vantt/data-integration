@@ -14,10 +14,18 @@ Operational cockpit for monitoring order fulfillment pipeline — fulfillment ra
 
 ### 📑 Tab: Tổng quan
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Hôm nay (rolling đến hiện tại, ICT) | **So sánh:** Hôm qua (D-1) | **Cập nhật:** Real-time
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -28,7 +36,7 @@ Operational cockpit for monitoring order fulfillment pipeline — fulfillment ra
 # Monitor pipeline đơn hàng — trạng thái xử lý và fulfillment rate
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Fulfillment Rate
@@ -59,7 +67,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+{"row":2, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### Question: Tổng đơn hôm nay
@@ -93,7 +101,7 @@ WHERE status != 'DRAFT'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Đơn đã xuất kho
@@ -127,7 +135,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Thời gian hoàn thành TB
@@ -162,7 +170,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -172,7 +180,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 # Kiểm tra phân bổ trạng thái — drop-off ở bước nào?
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Phễu trạng thái đơn
@@ -204,7 +212,7 @@ END
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":8, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Fulfillment Status Breakdown
@@ -233,7 +241,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":8, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -243,7 +251,7 @@ ORDER BY 2 DESC
 # Phân tích lượng đơn theo giờ — peak hours và pattern DoD
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":14, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Đơn hàng theo giờ (DoD)
@@ -292,7 +300,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":15, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: Đơn hàng lũy kế (DoD)
@@ -345,7 +353,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":15, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---

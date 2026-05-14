@@ -292,10 +292,22 @@ FROM this_period t, prev_period p
 { "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -373,7 +385,7 @@ ORDER BY "Ngay"
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":7, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: So luong ban theo ngay
@@ -434,7 +446,7 @@ ORDER BY "Ngay"
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":7, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -444,7 +456,7 @@ ORDER BY "Ngay"
 # Xac dinh dong gop theo loai san pham — ranking va composition
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Doanh thu theo loai san pham
@@ -488,7 +500,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":14, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Ty trong doanh thu theo loai san pham
@@ -522,7 +534,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":14, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---

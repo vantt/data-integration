@@ -35,12 +35,33 @@ Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop
 
 ### 📑 Tab: P&L Overview
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: PL Overview Heading
 
 Doanh thu va loi nhuan gop — ket qua kinh doanh ky nay
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Net Revenue MTD
@@ -93,7 +114,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{"row":2, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: COGS MTD
@@ -146,7 +167,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Gross Profit MTD
@@ -199,7 +220,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Gross Margin Percent
@@ -238,7 +259,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 5 }
+{"row":2, "col":14, "size_x":4, "size_y":5}
 ```
 
 #### 📝 Text: PL Trend Heading
@@ -246,7 +267,7 @@ WHERE NOT is_promo_line
 Xu huong doanh thu va gia von — margin co duy tri?
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Revenue vs COGS Trend
@@ -325,7 +346,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":8, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Revenue Waterfall
@@ -391,22 +412,12 @@ FROM (
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":8, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Channel Profitability
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Channel Heading
 
 Loi nhuan theo kenh ban hang — kenh nao hieu qua nhat?

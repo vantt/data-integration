@@ -220,10 +220,22 @@ FROM current_period c, previous_period p
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -268,7 +280,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
+{"row":6, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Customer Segment Distribution
@@ -310,7 +322,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 6, "size_y": 6 }
+{"row":6, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue from Top 20% Customers
@@ -346,7 +358,7 @@ FROM ranked
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":6, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -356,7 +368,7 @@ FROM ranked
 # Track growth dynamics — is acquisition outpacing churn?
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Acquisition vs Churn (6M)
@@ -412,7 +424,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":13, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
@@ -422,7 +434,7 @@ ORDER BY 1
 # Review segment health scorecard — flag segments with high churn or low activity
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":19, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Customer Health Scorecard
@@ -490,7 +502,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 5 }
+{"row":20, "col":0, "size_x":18, "size_y":5}
 ```
 
 ---

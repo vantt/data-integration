@@ -22,12 +22,33 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 
 ### 📑 Tab: Tong quan
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Review kết quả kinh doanh tháng — doanh thu vs target, gap analysis
 
 # Review kết quả kinh doanh tháng — doanh thu vs target, gap analysis
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Net Revenue vs Target
@@ -65,7 +86,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 6 }
+{"row":2, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Net Revenue
@@ -119,7 +140,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Total Orders
@@ -165,7 +186,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: AOV
@@ -223,7 +244,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Kiểm tra chỉ số phụ — gross revenue, thu tiền, khách hàng, hoàn trả
@@ -231,7 +252,7 @@ FROM this_month tm, prev_month pm
 ## Kiểm tra chỉ số phụ — gross revenue, thu tiền, khách hàng, hoàn trả
 
 ```json metabase-pos
-{ "row": 4, "col": 6, "size_x": 12, "size_y": 1 }
+{"row":5, "col":6, "size_x":12, "size_y":1}
 ```
 
 #### ❓ Question: Gross Revenue
@@ -285,7 +306,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 3, "size_y": 3 }
+{"row":6, "col":6, "size_x":3, "size_y":3}
 ```
 
 #### ❓ Question: Total Collected
@@ -339,7 +360,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 3, "size_y": 3 }
+{"row":6, "col":9, "size_x":3, "size_y":3}
 ```
 
 #### ❓ Question: Variance to Target
@@ -384,7 +405,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 3, "size_y": 3 }
+{"row":6, "col":12, "size_x":3, "size_y":3}
 ```
 
 #### ❓ Question: New Customers
@@ -436,7 +457,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 15, "size_x": 3, "size_y": 3 }
+{"row":6, "col":15, "size_x":3, "size_y":3}
 ```
 
 #### ❓ Question: Returning Customers
@@ -486,7 +507,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 6, "size_x": 3, "size_y": 3 }
+{"row":9, "col":6, "size_x":3, "size_y":3}
 ```
 
 #### ❓ Question: Return Count
@@ -532,7 +553,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 9, "size_x": 3, "size_y": 3 }
+{"row":9, "col":9, "size_x":3, "size_y":3}
 ```
 
 #### 📝 Text: Theo dõi trajectory doanh thu 12 tháng — momentum và target pace
@@ -540,7 +561,7 @@ FROM this_month tm, prev_month pm
 ## Theo dõi trajectory doanh thu 12 tháng — momentum và target pace
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: 12-Month Revenue Trend
@@ -593,7 +614,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":13, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Achievement Rate by Month
@@ -648,22 +669,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":13, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Hieu suat tai chinh
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
 
 # Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ

@@ -36,10 +36,22 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 
 ### Tab: Tong quan tuan
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Tuần qua (T2–CN, ICT) | **So sánh:** Tuần trước đó (WoW) | **Cập nhật:** Hàng tuần
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Tuần qua: ' ||
+  strftime(date_trunc('week', current_date)::DATE - 7, '%d/%m/%Y') || ' – ' ||
+  strftime(date_trunc('week', current_date)::DATE - 1, '%d/%m/%Y') ||
+  '  ·  WoW: ' ||
+  strftime(date_trunc('week', current_date)::DATE - 14, '%d/%m/%Y') || ' – ' ||
+  strftime(date_trunc('week', current_date)::DATE - 8, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -50,7 +62,7 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 # Review ket qua tuan — doanh thu, don hang, chat luong xu ly
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiem tra trang thai don hang — completion rate va cancelled/returns
@@ -58,7 +70,7 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 # Kiem tra trang thai don hang — completion rate va cancelled/returns
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":5, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Phan tich xu huong 14 ngay — volume, AOV, va gio cao diem
@@ -66,7 +78,7 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 # Phan tich xu huong 14 ngay — volume, AOV, va gio cao diem
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Orders
@@ -112,7 +124,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":2, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Net Revenue
@@ -163,7 +175,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -218,7 +230,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Completed %
@@ -251,7 +263,7 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -290,7 +302,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
+{"row":6, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### Question: Fulfilment Status Breakdown
@@ -322,7 +334,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 6, "size_y": 6 }
+{"row":6, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### Question: Cancelled & Returns
@@ -400,7 +412,7 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":6, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -443,7 +455,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 12, "size_y": 6 }
+{"row":13, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: Peak Hour Heatmap
@@ -498,7 +510,7 @@ ORDER BY 2, 3
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 6, "size_y": 6 }
+{"row":13, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---

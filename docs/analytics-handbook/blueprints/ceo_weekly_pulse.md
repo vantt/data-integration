@@ -21,10 +21,22 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 
 ### Tab: Doanh thu & Target
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** Tuần qua (T2–CN, ICT) | **So sánh:** Tuần trước đó (WoW) | **Cập nhật:** Hàng tuần
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 Tuần qua: ' ||
+  strftime(date_trunc('week', current_date)::DATE - 7, '%d/%m/%Y') || ' – ' ||
+  strftime(date_trunc('week', current_date)::DATE - 1, '%d/%m/%Y') ||
+  '  ·  WoW: ' ||
+  strftime(date_trunc('week', current_date)::DATE - 14, '%d/%m/%Y') || ' – ' ||
+  strftime(date_trunc('week', current_date)::DATE - 8, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -35,7 +47,7 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 # CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiểm tra tiến độ target tháng — on-track hay cần điều chỉnh?
@@ -43,7 +55,7 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 # Kiểm tra tiến độ target tháng — on-track hay cần điều chỉnh?
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":5, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
@@ -51,7 +63,7 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 # Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":9, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Net Revenue
@@ -102,7 +114,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{"row":2, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Gross Revenue
@@ -153,7 +165,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total Orders
@@ -201,7 +213,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -256,7 +268,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -299,7 +311,7 @@ FROM mtd_actual a
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 12, "size_y": 3 }
+{"row":6, "col":0, "size_x":12, "size_y":3}
 ```
 
 #### Question: Pace Index
@@ -348,7 +360,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 6, "size_y": 3 }
+{"row":6, "col":12, "size_x":6, "size_y":3}
 ```
 
 ---
@@ -387,7 +399,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":10, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---

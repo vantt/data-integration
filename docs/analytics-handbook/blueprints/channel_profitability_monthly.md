@@ -35,12 +35,33 @@ Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COG
 
 ### 📑 Tab: Channel Overview
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Tab Overview Heading
 
 Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Gross Margin %
@@ -73,7 +94,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+{"row":2, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### Question: Total Revenue
@@ -128,7 +149,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total COGS
@@ -183,7 +204,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total Gross Profit
@@ -238,7 +259,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Channel Comparison Heading
@@ -246,7 +267,7 @@ FROM this_period t, prev_period p
 So sanh hieu qua giua cac kenh ban hang
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Margin by Channel
@@ -307,7 +328,7 @@ ORDER BY "Gross Margin %" DESC
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":8, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Revenue vs COGS by Channel
@@ -356,22 +377,12 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":8, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Trends & Product Detail
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Trends Heading
 
 Xu huong margin theo kenh — kenh nao dang cai thien?

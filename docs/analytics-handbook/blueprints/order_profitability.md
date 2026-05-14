@@ -41,12 +41,33 @@ P&L per order — gross margin, channel net profit, cost structure, order detail
 
 ### 📑 Tab: P&L Overview
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 #### 📝 Text: Tab Heading
 
 Loi nhuan don hang — tong quan P&L theo kenh
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Avg Gross Margin %
@@ -81,7 +102,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+{"row":2, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### Question: Total Gross Profit
@@ -116,7 +137,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{"row":2, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total Channel Net Profit
@@ -151,7 +172,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{"row":2, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Orders with COGS
@@ -188,7 +209,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{"row":2, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Channel Comparison Heading
@@ -196,7 +217,7 @@ WHERE status = 'COMPLETED'
 Loi nhuan theo kenh — kenh nao tao gia tri?
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Channel Net Margin %
@@ -253,7 +274,7 @@ ORDER BY "Channel Net Margin %" DESC
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":8, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Cost Structure by Channel
@@ -301,22 +322,12 @@ ORDER BY SUM(e.net_revenue) DESC
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":8, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
 
 ### 📑 Tab: Order Detail
-
-#### 📝 Text: Chu kỳ báo cáo
-
-📅 **Chu kỳ báo cáo:** Tháng trước (1/M–cuối tháng, ICT) | **So sánh:** Tháng trước đó (MoM) | **Cập nhật:** Hàng tháng
-<!-- text-id:chu-ky-bao-cao -->
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Detail Heading
 
 Chi tiet P&L tung don — don nao lai nhieu, don nao lo?

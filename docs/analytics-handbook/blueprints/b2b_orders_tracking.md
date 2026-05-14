@@ -11,7 +11,7 @@ Track B2B order lifecycle — payment collection, fulfillment status, outstandin
 
 ## 📂 Collection: Operations > B2B Operations
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 ### Dashboard: B2B Orders Tracking [B2B]
 
@@ -141,10 +141,20 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 { "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Chu kỳ báo cáo
+#### ❓ Question: Chu kỳ báo cáo
 
-📅 **Chu kỳ báo cáo:** 30 ngày gần nhất (rolling, ICT) | **So sánh:** 30 ngày trước đó | **Cập nhật:** Hàng ngày
-<!-- text-id:chu-ky-bao-cao -->
+```sql
+SELECT
+  '📅 30 ngày gần nhất: ' ||
+  strftime(current_date - 29, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  So sánh: ' ||
+  strftime(current_date - 59, '%d/%m/%Y') || ' – ' || strftime(current_date - 30, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": {} }
+```
 
 ```json metabase-pos
 { "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
@@ -200,7 +210,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 5 }
+{"row":6, "col":0, "size_x":9, "size_y":5}
 ```
 
 #### Question: Outstanding by Customer Type
@@ -241,7 +251,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 5 }
+{"row":6, "col":9, "size_x":9, "size_y":5}
 ```
 
 ---
@@ -251,7 +261,7 @@ ORDER BY 3 DESC
 # Top khach hang cong no
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":11, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Top Customers by Outstanding
@@ -294,7 +304,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
+{"row":12, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
