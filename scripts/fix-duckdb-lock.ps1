@@ -25,26 +25,34 @@ if ($dllhosts) {
     Write-Host "  No dllhost.exe found" -ForegroundColor Gray
 }
 
-# Step 2: Run CHECKPOINT inside the container (avoids host-side lock contention)
-Write-Host "[2/3] Running CHECKPOINT inside container $Container..." -ForegroundColor Yellow
+# Step 2: File-copy + CHECKPOINT (only strategy that works for PID 0 embedded lock)
+Write-Host "[2/3] Running file-copy recovery..." -ForegroundColor Yellow
 $containerRunning = docker inspect -f "{{.State.Running}}" $Container 2>$null
 if ($containerRunning -eq "true") {
     docker exec $Container python -c "
-import duckdb
-con = duckdb.connect('$ContainerDbPath')
+import shutil, os, duckdb
+db = '$ContainerDbPath'
+bak = db + '.recovering'
+shutil.copy2(db, bak)
+os.replace(bak, db)
+con = duckdb.connect(db)
 con.execute('CHECKPOINT')
 con.close()
-print('CHECKPOINT OK')
+print('CHECKPOINT OK (container file-copy)')
 "
 } else {
-    # Container not running — checkpoint from host
-    Write-Host "  Container not running, checkpointing from host..." -ForegroundColor Gray
+    # Container not running — file-copy from host
+    Write-Host "  Container not running, recovering from host..." -ForegroundColor Gray
     python -c "
-import duckdb
-con = duckdb.connect(r'$DbPath')
+import shutil, os, duckdb
+db = r'$DbPath'
+bak = db + '.recovering'
+shutil.copy2(db, bak)
+os.replace(bak, db)
+con = duckdb.connect(db)
 con.execute('CHECKPOINT')
 con.close()
-print('CHECKPOINT OK (host)')
+print('CHECKPOINT OK (host file-copy)')
 "
 }
 
@@ -55,7 +63,7 @@ import duckdb, datetime
 con = duckdb.connect('$ContainerDbPath')
 count = con.execute('SELECT COUNT(*) FROM ingestion_runs').fetchone()[0]
 con.close()
-print(f'OK — {count} runs in DB, write access confirmed')
+print(f'OK - {count} runs in DB, write access confirmed')
 " 2>&1
 
 Write-Host "=== Done ===" -ForegroundColor Green
