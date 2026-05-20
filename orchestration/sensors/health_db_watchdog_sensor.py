@@ -14,6 +14,9 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
+import os
+import shutil
+
 import duckdb
 from dagster import SensorEvaluationContext, SkipReason, sensor
 
@@ -38,10 +41,10 @@ def _fmt_age(hours: float) -> str:
 
 def _check_staleness(db_path: str) -> tuple[bool, Optional[float]]:
     """Return (is_stale, age_hours). Reads DB in read-only mode — safe during ingestion."""
+    conn = None
     try:
         conn = duckdb.connect(db_path, read_only=True)
         row = conn.execute("SELECT MAX(run_started_at) FROM ingestion_runs").fetchone()
-        conn.close()
         if not row or row[0] is None:
             return True, None
         last_write = row[0]
@@ -52,6 +55,28 @@ def _check_staleness(db_path: str) -> tuple[bool, Optional[float]]:
     except Exception as exc:
         logger.warning("watchdog: could not read health DB: %s", exc)
         return True, None  # treat unreadable as stale
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
+def _auto_recover_db(db_path: str) -> None:
+    """Break embedded stale lock via file-copy strategy, then CHECKPOINT.
+
+    PID 0 lock is embedded in the DB file itself (left by SIGKILL/container crash).
+    Copying the file to a new inode resets the embedded lock metadata.
+    """
+    bak = db_path + ".recovering"
+    shutil.copy2(db_path, bak)
+    os.replace(bak, db_path)
+    conn = duckdb.connect(db_path)
+    try:
+        conn.execute("CHECKPOINT")
+    finally:
+        conn.close()
 
 
 @sensor(minimum_interval_seconds=600)
@@ -83,22 +108,44 @@ def health_db_watchdog_sensor(context: SensorEvaluationContext):
     write_ok, write_err = check_writable()
 
     if not write_ok:
-        # Ghost lock (or OS lock) — most critical, needs manual intervention
-        send_lark_card(
-            title="🚨 Health DB bị KHÓA — cần can thiệp thủ công",
-            color="red",
-            fields={
-                "Vấn đề": f"ingestion_health.duckdb không mở được write mode (stale {age_str})",
-                "Lỗi": f"```{write_err[:250]}```",
-                "Ảnh hưởng": "record_run() thất bại hoàn toàn — health monitoring đã dừng",
-                "Cách fix": (
-                    "1. Xem process giữ lock: check Task Manager → dllhost.exe\n"
-                    "2. Stop data_platform container\n"
-                    "3. Kill process giữ lock → mở DB từ host để CHECKPOINT\n"
-                    "4. Restart container + xác nhận write hoạt động"
-                ),
-            },
-        )
+        # Try auto-recovery via file-copy strategy before alerting
+        recovered = False
+        try:
+            _auto_recover_db(db_path)
+            write_ok_after, _ = check_writable()
+            if write_ok_after:
+                recovered = True
+                logger.info("watchdog: auto-recovered DB lock successfully")
+        except Exception as recover_exc:
+            logger.warning("watchdog: auto-recovery failed: %s", recover_exc)
+
+        if recovered:
+            send_lark_card(
+                title="✅ Health DB lock — tự động phục hồi thành công",
+                color="green",
+                fields={
+                    "Vấn đề": f"ingestion_health.duckdb bị lock (stale {age_str})",
+                    "Hành động": "Watchdog tự động file-copy + CHECKPOINT — DB đã mở lại",
+                    "Lỗi gốc": f"```{write_err[:200]}```",
+                },
+            )
+        else:
+            # Auto-recovery failed — needs manual intervention
+            send_lark_card(
+                title="🚨 Health DB bị KHÓA — auto-recovery thất bại",
+                color="red",
+                fields={
+                    "Vấn đề": f"ingestion_health.duckdb không mở được write mode (stale {age_str})",
+                    "Lỗi": f"```{write_err[:200]}```",
+                    "Ảnh hưởng": "record_run() thất bại hoàn toàn — health monitoring đã dừng",
+                    "Cách fix": (
+                        "docker exec data_platform python -c \""
+                        "import shutil,os,duckdb; db='/app/var/data_lake/monitoring/ingestion_health.duckdb'; "
+                        "bak=db+'.r'; shutil.copy2(db,bak); os.replace(bak,db); "
+                        "c=duckdb.connect(db); c.execute('CHECKPOINT'); c.close(); print('OK')\""
+                    ),
+                },
+            )
     else:
         # Writable but stale — record_run() is likely failing in code (not a lock issue)
         send_lark_card(

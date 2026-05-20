@@ -211,10 +211,16 @@ def check_writable() -> tuple[bool, str]:
     Returns (ok, error_message). Used by the watchdog sensor to distinguish
     a ghost lock from a recorder code bug.
     """
+    conn = None
     try:
         path = _resolve_db_path()
         conn = duckdb.connect(path)
-        conn.close()
         return True, ""
     except Exception as exc:
         return False, str(exc)[:300]
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
