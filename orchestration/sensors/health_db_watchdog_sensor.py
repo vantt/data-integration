@@ -1,26 +1,24 @@
-"""Health DB watchdog sensor — detects ghost locks and silent recorder failures.
+"""Health DB watchdog sensor — detects silent recorder failures.
 
 Fires every 10 minutes. Sends a Lark alert when:
-  1. ingestion_health.duckdb cannot be opened in write mode (ghost lock / OS lock).
+  1. ingestion_health.db cannot be opened in write mode (filesystem error).
   2. No row has been written for > STALE_THRESHOLD_H hours (record_run silently failing).
 
 Alert is suppressed for ALERT_COOLDOWN_H hours after each send to avoid spam.
-Alert distinguishes "ghost lock" (stale + write locked) from "recorder bug" (stale + writable).
+Alert distinguishes "db error" (stale + write failed) from "recorder bug" (stale + writable).
 """
 from __future__ import annotations
 
 import json
 import logging
+import sqlite3
 from datetime import datetime, timezone
 from typing import Optional
 
-import os
-import shutil
-
-import duckdb
 from dagster import SensorEvaluationContext, SkipReason, sensor
 
 from orchestration.ops.ingestion_health import get_db_path, check_writable
+import orchestration.ops.ingestion_health  # noqa: F401 — registers sqlite3 adapters/converters
 from orchestration.notifications.lark_client import send_lark_card
 
 logger = logging.getLogger("orchestration.health_db_watchdog")
@@ -40,15 +38,19 @@ def _fmt_age(hours: float) -> str:
 
 
 def _check_staleness(db_path: str) -> tuple[bool, Optional[float]]:
-    """Return (is_stale, age_hours). Reads DB in read-only mode — safe during ingestion."""
+    """Return (is_stale, age_hours). Reads DB — safe during ingestion (SQLite WAL)."""
     conn = None
     try:
-        conn = duckdb.connect(db_path, read_only=True)
+        conn = sqlite3.connect(db_path, detect_types=sqlite3.PARSE_DECLTYPES)
         row = conn.execute("SELECT MAX(run_started_at) FROM ingestion_runs").fetchone()
         if not row or row[0] is None:
             return True, None
         last_write = row[0]
-        if hasattr(last_write, "tzinfo") and last_write.tzinfo is None:
+        # MAX() returns raw string (not auto-converted by PARSE_DECLTYPES)
+        if isinstance(last_write, str):
+            dt = datetime.fromisoformat(last_write)
+            last_write = dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        elif hasattr(last_write, "tzinfo") and last_write.tzinfo is None:
             last_write = last_write.replace(tzinfo=timezone.utc)
         age_h = (datetime.now(timezone.utc) - last_write).total_seconds() / 3600
         return age_h > STALE_THRESHOLD_H, age_h
@@ -63,25 +65,9 @@ def _check_staleness(db_path: str) -> tuple[bool, Optional[float]]:
                 pass
 
 
-def _auto_recover_db(db_path: str) -> None:
-    """Break embedded stale lock via file-copy strategy, then CHECKPOINT.
-
-    PID 0 lock is embedded in the DB file itself (left by SIGKILL/container crash).
-    Copying the file to a new inode resets the embedded lock metadata.
-    """
-    bak = db_path + ".recovering"
-    shutil.copy2(db_path, bak)
-    os.replace(bak, db_path)
-    conn = duckdb.connect(db_path)
-    try:
-        conn.execute("CHECKPOINT")
-    finally:
-        conn.close()
-
-
 @sensor(minimum_interval_seconds=600)
 def health_db_watchdog_sensor(context: SensorEvaluationContext):
-    """Watches ingestion_health.duckdb for ghost locks and silent recorder failures."""
+    """Watches ingestion_health.db for filesystem errors and silent recorder failures."""
     db_path = get_db_path()
     now_ts = datetime.now(timezone.utc).timestamp()
 
@@ -97,64 +83,36 @@ def health_db_watchdog_sensor(context: SensorEvaluationContext):
     if (now_ts - last_alert_ts) < ALERT_COOLDOWN_H * 3600:
         return SkipReason(f"Alert cooldown active ({ALERT_COOLDOWN_H}h window)")
 
-    # --- Check 1: staleness (read-only, safe) ---
+    # --- Check 1: staleness (read, safe under WAL) ---
     is_stale, age_h = _check_staleness(db_path)
     if not is_stale:
         return SkipReason("Health DB is current")
 
     age_str = _fmt_age(age_h) if age_h is not None else "không rõ"
 
-    # --- Check 2: write mode (only when stale — distinguishes ghost lock vs code bug) ---
+    # --- Check 2: write mode (only when stale — distinguishes db error vs code bug) ---
     write_ok, write_err = check_writable()
 
     if not write_ok:
-        # Try auto-recovery via file-copy strategy before alerting
-        recovered = False
-        try:
-            _auto_recover_db(db_path)
-            write_ok_after, _ = check_writable()
-            if write_ok_after:
-                recovered = True
-                logger.info("watchdog: auto-recovered DB lock successfully")
-        except Exception as recover_exc:
-            logger.warning("watchdog: auto-recovery failed: %s", recover_exc)
-
-        if recovered:
-            send_lark_card(
-                title="✅ Health DB lock — tự động phục hồi thành công",
-                color="green",
-                fields={
-                    "Vấn đề": f"ingestion_health.duckdb bị lock (stale {age_str})",
-                    "Hành động": "Watchdog tự động file-copy + CHECKPOINT — DB đã mở lại",
-                    "Lỗi gốc": f"```{write_err[:200]}```",
-                },
-            )
-        else:
-            # Auto-recovery failed — needs manual intervention
-            send_lark_card(
-                title="🚨 Health DB bị KHÓA — auto-recovery thất bại",
-                color="red",
-                fields={
-                    "Vấn đề": f"ingestion_health.duckdb không mở được write mode (stale {age_str})",
-                    "Lỗi": f"```{write_err[:200]}```",
-                    "Ảnh hưởng": "record_run() thất bại hoàn toàn — health monitoring đã dừng",
-                    "Cách fix": (
-                        "docker exec data_platform python -c \""
-                        "import shutil,os,duckdb; db='/app/var/data_lake/monitoring/ingestion_health.duckdb'; "
-                        "bak=db+'.r'; shutil.copy2(db,bak); os.replace(bak,db); "
-                        "c=duckdb.connect(db); c.execute('CHECKPOINT'); c.close(); print('OK')\""
-                    ),
-                },
-            )
+        send_lark_card(
+            title="🚨 Health DB lỗi filesystem — cần kiểm tra",
+            color="red",
+            fields={
+                "Vấn đề": f"ingestion_health.db không mở được write mode (stale {age_str})",
+                "Lỗi": f"```{write_err[:250]}```",
+                "Ảnh hưởng": "record_run() thất bại hoàn toàn — health monitoring đã dừng",
+                "Kiểm tra": "docker exec data_platform ls -la /app/var/data_lake/monitoring/",
+            },
+        )
     else:
-        # Writable but stale — record_run() is likely failing in code (not a lock issue)
+        # Writable but stale — record_run() is likely failing in code
         send_lark_card(
             title="⚠️ Health DB ngừng ghi — recorder có thể lỗi",
             color="orange",
             fields={
                 "Vấn đề": f"Không có ghi nào trong {age_str} dù DB vẫn mở được",
                 "Ảnh hưởng": "record_run() đang thất bại silently — health data không cập nhật",
-                "Kiểm tra": "docker logs data_platform | grep 'record_run failed'",
+                "Kiểm tra": "docker logs data_platform | grep 'record_run'",
             },
         )
 

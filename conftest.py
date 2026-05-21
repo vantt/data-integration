@@ -22,5 +22,5 @@ def pytest_configure(config):
 
     if "INGESTION_HEALTH_DB" not in os.environ:
         os.environ["INGESTION_HEALTH_DB"] = os.path.join(
-            test_data_lake, "monitoring", "test_ingestion_health.duckdb"
+            test_data_lake, "monitoring", "test_ingestion_health.db"
         )

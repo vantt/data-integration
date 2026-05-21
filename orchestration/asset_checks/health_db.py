@@ -1,30 +1,31 @@
-"""Read-only DuckDB helpers for ingestion_health.duckdb.
+"""Read-only SQLite helpers for ingestion_health.db.
 
 All functions accept an open connection and return plain Python values.
 Callers are responsible for opening/closing via open_readonly().
 """
 from __future__ import annotations
 
+import sqlite3
 from contextlib import contextmanager
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Generator, Optional
 
-import duckdb
-
 from orchestration.ops.ingestion_health import get_db_path
+import orchestration.ops.ingestion_health  # noqa: F401 — registers sqlite3 adapters/converters
 
 
 @contextmanager
-def open_readonly() -> Generator[duckdb.DuckDBPyConnection, None, None]:
-    """Context manager: open ingestion_health.duckdb in read-only mode."""
-    conn = duckdb.connect(get_db_path(), read_only=True)
+def open_readonly() -> Generator[sqlite3.Connection, None, None]:
+    """Context manager: open ingestion_health.db for reading (query_only)."""
+    conn = sqlite3.connect(get_db_path(), detect_types=sqlite3.PARSE_DECLTYPES)
+    conn.execute("PRAGMA query_only=ON")
     try:
         yield conn
     finally:
         conn.close()
 
 
-def last_success(conn: duckdb.DuckDBPyConnection, asset_key: str) -> Optional[datetime]:
+def last_success(conn: sqlite3.Connection, asset_key: str) -> Optional[datetime]:
     """Return run_started_at of the most recent successful run, or None."""
     row = conn.execute(
         """
@@ -40,7 +41,7 @@ def last_success(conn: duckdb.DuckDBPyConnection, asset_key: str) -> Optional[da
 
 
 def rows_by_day(
-    conn: duckdb.DuckDBPyConnection,
+    conn: sqlite3.Connection,
     asset_key: str,
     n_days: int = 8,
 ) -> list[tuple[date, int]]:
@@ -48,7 +49,7 @@ def rows_by_day(
     rows = conn.execute(
         """
         SELECT
-            CAST(date_trunc('day', run_started_at) AS DATE) AS d,
+            date(run_started_at) AS d,
             SUM(COALESCE(rows_written, 0)) AS r
         FROM ingestion_runs
         WHERE asset_key = ? AND status = 'success'
@@ -58,17 +59,17 @@ def rows_by_day(
         """,
         [asset_key, n_days],
     ).fetchall()
-    return [(row[0], int(row[1])) for row in rows]
+    return [(date.fromisoformat(row[0]), int(row[1])) for row in rows]
 
 
 def consecutive_empty_with_cursor_move(
-    conn: duckdb.DuckDBPyConnection,
+    conn: sqlite3.Connection,
     asset_key: str,
     streak_n: int = 3,
 ) -> int:
     """Return the count of the most recent streak of runs where cursor advanced but rows_written=0.
 
-    Returns 0 if cursor columns are null (not yet instrumented) or no streak detected.
+    Returns 0 if cursor columns are null or no streak detected.
     Streak is broken as soon as a run has rows_written > 0 or cursor didn't move.
     """
     rows = conn.execute(
@@ -91,13 +92,13 @@ def consecutive_empty_with_cursor_move(
         if cursor_before != cursor_after and rows_written == 0:
             streak += 1
         else:
-            break  # streak broken
+            break
 
     return streak
 
 
 def count_zero_row_runs_last_24h(
-    conn: duckdb.DuckDBPyConnection,
+    conn: sqlite3.Connection,
     asset_key: str,
 ) -> tuple[int, int]:
     """Return (total_runs_last_24h, zero_row_runs_last_24h)."""
@@ -108,7 +109,7 @@ def count_zero_row_runs_last_24h(
             COUNT(*) FILTER (WHERE COALESCE(rows_written, 0) = 0) AS zero_rows
         FROM ingestion_runs
         WHERE asset_key = ?
-          AND run_started_at >= NOW() - INTERVAL '24 hours'
+          AND run_started_at >= datetime('now', '-24 hours')
           AND status = 'success'
         """,
         [asset_key],
