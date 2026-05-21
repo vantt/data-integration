@@ -27,6 +27,8 @@ logger = logging.getLogger("orchestration.health_db_watchdog")
 # A gap > 2 hours means record_run() is consistently failing.
 STALE_THRESHOLD_H = 2
 ALERT_COOLDOWN_H = 4  # alert at most once per 4 hours when stuck
+RETENTION_DAYS = 90   # rows older than this are deleted during daily cleanup
+CLEANUP_INTERVAL_H = 24
 
 
 def _fmt_age(hours: float) -> str:
@@ -65,6 +67,28 @@ def _check_staleness(db_path: str) -> tuple[bool, Optional[float]]:
                 pass
 
 
+def _cleanup_old_rows(db_path: str) -> int:
+    """Delete rows older than RETENTION_DAYS. Returns deleted count."""
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cur = conn.execute(
+            "DELETE FROM ingestion_runs WHERE run_started_at < datetime('now', ?)",
+            [f"-{RETENTION_DAYS} days"],
+        )
+        conn.commit()
+        return cur.rowcount
+    except Exception as exc:
+        logger.warning("watchdog: cleanup failed: %s", exc)
+        return 0
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+
 @sensor(minimum_interval_seconds=600)
 def health_db_watchdog_sensor(context: SensorEvaluationContext):
     """Watches ingestion_health.db for filesystem errors and silent recorder failures."""
@@ -79,13 +103,23 @@ def health_db_watchdog_sensor(context: SensorEvaluationContext):
         except (json.JSONDecodeError, TypeError):
             pass
 
+    # --- Daily cleanup of old rows ---
+    last_cleanup_ts: float = cursor_state.get("last_cleanup_ts", 0.0)
+    if (now_ts - last_cleanup_ts) >= CLEANUP_INTERVAL_H * 3600:
+        deleted = _cleanup_old_rows(db_path)
+        if deleted:
+            logger.info("watchdog: cleaned up %d rows older than %d days", deleted, RETENTION_DAYS)
+        cursor_state["last_cleanup_ts"] = now_ts
+
     last_alert_ts: float = cursor_state.get("last_alert_ts", 0.0)
     if (now_ts - last_alert_ts) < ALERT_COOLDOWN_H * 3600:
+        context.update_cursor(json.dumps(cursor_state))
         return SkipReason(f"Alert cooldown active ({ALERT_COOLDOWN_H}h window)")
 
     # --- Check 1: staleness (read, safe under WAL) ---
     is_stale, age_h = _check_staleness(db_path)
     if not is_stale:
+        context.update_cursor(json.dumps(cursor_state))
         return SkipReason("Health DB is current")
 
     age_str = _fmt_age(age_h) if age_h is not None else "không rõ"
