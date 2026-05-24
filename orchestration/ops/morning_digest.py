@@ -50,7 +50,7 @@ KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
 # unit_label is the noun used for rows (đơn / khách / sản phẩm / dòng …)
 # ---------------------------------------------------------------------------
 ASSET_DISPLAY: dict[str, tuple[str, str, str]] = {
-    "sapo_webhook":   ("Sapo webhook (đơn realtime)",   "cursor",    "đơn"),
+    "sapo_webhook":   ("Sapo webhook (realtime events)", "cursor",    "events"),
     "sapo_history":   ("Sapo lịch sử (audit log)",       "cursor",    "dòng"),
     "sapo_orders":    ("Sapo đơn hàng (batch)",          "batch",     "đơn"),
     "sapo_customers": ("Sapo khách hàng",                "batch",     "khách"),
