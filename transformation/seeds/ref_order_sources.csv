@@ -28,7 +28,7 @@ id,name,status,channel_format,is_generic_source,platform,mapping_tag,channel_bra
 3988154,Zalo,true,Social,false,Zalo,,,Domestic,channel
 3988153,Facebook,true,Social,false,Facebook,,,Domestic,channel
 3988152,Web,true,Web,false,Website,,,Domestic,channel
-3988158_1,Shopee - Fine Japan Vietnam,true,Marketplace,false,Shopee,"Shopee_Fine Japan Vietnam,",Fine Japan Vietnam,Domestic,channel
+3988158_1,Shopee - Fine Japan Vietnam,true,Marketplace,false,Shopee,Shopee_Fine Japan Vietnam,Fine Japan Vietnam,Domestic,channel
 3988158_2,Shopee - thehealthyus,true,Marketplace,false,Shopee,Shopee_thehealthyus,The Healthy Us,Domestic,channel
 3988158_3,Shopee - JPC SHOP,true,Marketplace,false,Shopee,Shopee_JPC SHOP,JPC,Domestic,channel
 3988158_4,Shopee - JPC OFFICIAL,true,Marketplace,false,Shopee,Shopee_JPC OFFICIAL,JPC,Domestic,channel
