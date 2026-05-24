@@ -2883,3 +2883,39 @@ date_key     = 20260501                     # ngày ICT = ngày biz VN
 
 **Reference:** `transformation/profiles.yml`; `orchestration/assets/kpi_closure.py`; memory `feedback_timestamp_timezone`
 
+---
+
+## Seed Data Quality & Mapping (MODEL)
+
+### L85 — Trailing comma trong CSV seed phá vỡ LIKE mapping, silently misclassifies toàn bộ channel
+
+**Symptom:** Dashboard hiển thị `Shopee (Unspecified)` cho đơn hàng Shopee - Fine Japan Vietnam. 256 đơn (~100% FJV orders) bị misclassify trong nhiều tháng. Không có lỗi build, không có test failure.
+
+**Root cause:** Seed `ref_order_sources.csv` có dòng:
+```
+3988158_1,...,"Shopee_Fine Japan Vietnam,",...
+```
+CSV parser giữ nguyên trailing comma → `mapping_tag = 'Shopee_Fine Japan Vietnam,'` (có dấu phẩy cuối). `stg_sapo_orders.sql` dùng:
+```sql
+o.tags LIKE '%' || mt.mapping_tag || '%'
+-- becomes: o.tags LIKE '%Shopee_Fine Japan Vietnam,%'
+```
+Tags JSON thực tế: `["Shopee","Shopee_Fine Japan Vietnam"]` — sau `Vietnam` luôn là `"` rồi `]`, **không bao giờ có bare comma**. LIKE không bao giờ match → fallback về generic `source_id=3988158` → `dim_channels` gán suffix `(Unspecified)`.
+
+**Fix:** Bỏ trailing comma trong CSV seed:
+```
+# Before
+"Shopee_Fine Japan Vietnam,"
+# After
+Shopee_Fine Japan Vietnam
+```
+Sau đó `dbt seed --select ref_order_sources` + `dbt run --full-refresh --select src_sapo_orders+` (full-refresh vì `src_sapo_orders` là incremental — đơn cũ đã lưu với wrong `final_source_id`, incremental run không reprocess chúng).
+
+**Rules:**
+1. Mapping_tag trong CSV seed dùng LIKE match — **không được có ký tự đặc biệt ở đầu/cuối** (space, comma, quote). Luôn `trim()` khi kiểm tra thủ công.
+2. CSV field chứa dấu phẩy → dùng double-quote wrapping → **dễ nhầm lẫn**: `"value,"` trong CSV là value có trailing comma, không phải separator artifact.
+3. Silent misclassification không raise error — cần data test: `assert count(channel_name = 'Shopee (Unspecified)') < threshold` hoặc `assert count(channel_name LIKE 'Shopee - %') / count(source_id = '3988158') > 0.95`.
+4. Sau `dbt seed` thay đổi reference data: luôn full-refresh incremental models downstream nếu reference data ảnh hưởng đến staging join.
+
+**Reference:** `transformation/seeds/ref_order_sources.csv:31`; `transformation/models/staging/stg_sapo_orders.sql:26-34`
+
