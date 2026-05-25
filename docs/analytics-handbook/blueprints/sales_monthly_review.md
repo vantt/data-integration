@@ -51,9 +51,9 @@ SELECT
 {"row":1, "col":0, "size_x":18, "size_y":1}
 ```
 
-#### ❓ Question: Net Revenue vs Target
+#### ❓ Question: GMV vs Target
 
-Hero metric — doanh thu thuan vs muc tieu thang, hien thi progress bar.
+Hero metric — GMV thang truoc vs muc tieu GMV, hien thi progress bar.
 
 ```sql
 WITH
