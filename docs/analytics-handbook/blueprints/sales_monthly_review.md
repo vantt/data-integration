@@ -61,6 +61,7 @@ mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND order_timestamp < date_trunc('month', current_date)
 ),
@@ -378,6 +379,7 @@ mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND order_timestamp < date_trunc('month', current_date)
 ),
