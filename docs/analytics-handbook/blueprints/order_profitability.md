@@ -84,8 +84,8 @@ FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  [[AND date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+  [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ```
 
 ```json metabase-viz
@@ -116,8 +116,8 @@ FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  [[AND date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+  [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ```
 
 ```json metabase-viz
@@ -151,8 +151,8 @@ FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  [[AND date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+  [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ```
 
 ```json metabase-viz
@@ -187,8 +187,8 @@ SELECT
 FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  [[AND date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+  [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ```
 
 ```json metabase-viz
@@ -236,8 +236,8 @@ JOIN dim_channels c USING (channel_key)
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
   AND c.is_sales_channel
-  [[AND e.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND c.channel_name = {{channel}}]]
+  [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND c.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY c.channel_name
 ORDER BY "Channel Net Margin %" DESC
 ```
@@ -296,8 +296,8 @@ JOIN dim_channels c USING (channel_key)
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
   AND c.is_sales_channel
-  [[AND e.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND c.channel_name = {{channel}}]]
+  [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND c.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY c.channel_name
 ORDER BY SUM(e.net_revenue) DESC
 ```
@@ -354,8 +354,8 @@ FROM fact_order_economics
 WHERE status = 'COMPLETED'
   AND has_cogs
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  [[AND date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+  [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY 1
 ORDER BY
     CASE "Vung margin"
@@ -397,8 +397,8 @@ JOIN dim_date d ON e.date_key = d.date_key
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
   AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  [[AND e.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+  [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY d.date_actual
 ORDER BY d.date_actual
 ```
@@ -458,8 +458,8 @@ JOIN dim_date d ON e.date_key = d.date_key
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
   AND c.is_sales_channel
-  [[AND e.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
-  [[AND c.channel_name = {{channel}}]]
+  [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND c.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ORDER BY e.gross_profit DESC
 ```
 

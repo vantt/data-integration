@@ -2977,32 +2977,52 @@ Kết quả: numerator (actual) và denominator (target) có scope khác nhau �
 
 **Reference:** `docs/analytics-handbook/blueprints/sales_monthly_review.md` — Question: Net Revenue vs Target, Question: Variance; Dashboard 31 card 1051
 
-### L89 — `strftime({{date_range}}, fmt)` fails in DuckDB — must CAST to DATE first
+### L89 — Metabase v0.58.11 rejects `date/all-options` for `type:date` variable tags — must use `type:dimension` field filters
 
-**Symptom:** Dashboards using `date_key` integer (YYYYMMDD) with `date/all-options` filter show no data (0 rows). Cards with `[[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]` return empty.
+**Symptom:** Dashboards with `date/all-options` filter show no data. Direct card query returns HTTP 500: `"date/all-options không hợp lệ cho type:date. Phải là: :category, :date, :date/single"`. Dashboard loads but all cards empty.
 
-**Root cause:** DuckDB's `strftime(timestamp, format)` requires a DATE/TIMESTAMP as first argument — it does NOT accept a plain string. When Metabase resolves the `date/all-options` default (`past3months`) and passes it as a date string like `'2026-02-25'`, DuckDB throws a type error. The entire optional `[[...]]` block renders but fails → query errors → 0 rows.
+**Root cause:** Metabase v0.58.11 (pMBQL) validates parameter types **before** executing SQL. A dashboard-level `date/all-options` parameter can only bind to a `type:dimension` template tag. Template tags defined as `type:date` (old variable style) are rejected at validation — the query never runs.
 
-Confirmed: `strftime('2026-02-25', '%Y%m%d')` → HTTP 400 DuckDB error. `strftime(CAST('2026-02-25' AS DATE), '%Y%m%d')` → `'20260225'` ✓
+The CAST/strftime pattern was an attempted fix but irrelevant: the failure happens before SQL execution.
 
-**Fix:** Add explicit `CAST(... AS DATE)`:
+**Fix:** Three-part upgrade for every affected card:
+
+1. **Template tag** — change from `type:date`/`type:text` variable to `type:dimension` field filter:
+```json
+{
+  "type": "dimension",
+  "widget-type": "date/all-options",
+  "dimension": ["field", {"base-type": "type/DateTime", "effective-type": "type/DateTime", "lib/uuid": "<uuid>"}, 77]
+}
+```
+Field IDs: `77` = `dim_date.date_actual` (DateTime), `179` = `dim_channels.channel_name` (Text/Name)
+
+2. **SQL** — replace CAST/strftime pattern with subquery that hands off the `{{tag}}` to the dimension field:
 ```sql
--- BROKEN
-[[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
-
--- FIXED
+-- BROKEN (variable tag — never executes under date/all-options)
 [[AND date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+
+-- FIXED (dimension field filter)
+[[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+[[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+[[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
+[[AND c.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ```
 
-**Scope of fix (2026-05-25):** Applied to 24 deployed cards across:
-- Dashboard 35 (Order Profitability) — 9 cards
-- Dashboard 45 (Order Profitability [All]) — 9 cards
-- Dashboard 37 (Marketing ROI) — 6 cards
-- Blueprints: `order_profitability.md`, `marketing_roi.md`
+3. **Dashcard parameter mappings** — change target from `variable` to `dimension`:
+```json
+["variable", ["template-tag", "date_range"]]  // BROKEN
+["dimension", ["template-tag", "date_range"]]  // FIXED
+```
+
+**Scope of fix (2026-05-25):** Applied to 21 deployed cards across:
+- Dashboard 35 (Order Profitability) — 9 cards (1130–1138)
+- Dashboard 45 (Order Profitability [All]) — 9 cards (1288–1296) [also fixed channel filter]
+- Dashboard 37 (Marketing ROI) — 6 cards (1146–1151)
+- Blueprints updated: `order_profitability.md`, `marketing_roi.md`
 
 **Rules:**
-1. Whenever filtering on integer `date_key` (YYYYMMDD format), always `CAST({{date_range}} AS DATE)` before passing to `strftime`.
-2. Using a DATE column directly (`posting_date >= {{date_range}}`) is fine — DuckDB auto-casts string to DATE for comparison.
-3. All new blueprints using `date_key` integer filter MUST use the CAST pattern.
-
-**Reference:** Dashboard 35 cards 1130–1138, Dashboard 45 cards 1288–1296, Dashboard 37 cards 1146–1151
+1. Never use `type:date` or `type:text` variable tags with `date/all-options` or `string/=` dashboard filters — use `type:dimension`.
+2. Dimension field filter SQL must use the subquery delegation pattern: `date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})`.
+3. Dashcard `parameter_mappings` target must be `["dimension", ...]` not `["variable", ...]`.
+4. All new blueprints MUST use `type:dimension` tags. See `feedback_metabase_field_filter_required.md` in memory.

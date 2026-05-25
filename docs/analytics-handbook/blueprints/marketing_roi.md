@@ -60,7 +60,7 @@ Tong chi phi marketing.
 ```sql
 SELECT SUM(spend_amount) AS "Tong chi phi"
 FROM fact_marketing_spend
-[[WHERE date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+[[WHERE date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
 ```
 
 ```json metabase-viz
@@ -93,7 +93,7 @@ FROM fact_orders o
 JOIN dim_channels c USING (channel_key)
 WHERE o.status = 'COMPLETED'
   AND c.is_sales_channel
-  [[AND o.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+  [[AND o.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
 ```
 
 ```json metabase-viz
@@ -124,7 +124,7 @@ Hero — ROAS tong hop = revenue / spend.
 WITH spend AS (
     SELECT SUM(spend_amount) AS total_spend
     FROM fact_marketing_spend
-    [[WHERE date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+    [[WHERE date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
 ),
 revenue AS (
     SELECT SUM(o.net_revenue) AS total_revenue
@@ -132,7 +132,7 @@ revenue AS (
     JOIN dim_channels c USING (channel_key)
     WHERE o.status = 'COMPLETED'
       AND c.is_sales_channel
-      [[AND o.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+      [[AND o.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
 )
 SELECT
     ROUND(r.total_revenue::DOUBLE / NULLIF(s.total_spend, 0), 1) AS "ROAS"
@@ -175,7 +175,7 @@ WITH monthly_spend AS (
         SUM(m.spend_amount) AS "Chi phi"
     FROM fact_marketing_spend m
     JOIN dim_date d ON m.date_key = d.date_key
-    [[WHERE m.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+    [[WHERE m.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY d.date_actual
 ),
 monthly_revenue AS (
@@ -187,7 +187,7 @@ monthly_revenue AS (
     JOIN dim_date d ON o.date_key = d.date_key
     WHERE o.status = 'COMPLETED'
       AND c.is_sales_channel
-      [[AND o.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+      [[AND o.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY d.date_actual
 )
 SELECT
@@ -242,7 +242,7 @@ WITH channel_spend AS (
         SUM(m.spend_amount) AS spend
     FROM fact_marketing_spend m
     JOIN dim_channels c USING (channel_key)
-    [[WHERE m.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+    [[WHERE m.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY c.channel_name
 ),
 channel_revenue AS (
@@ -253,7 +253,7 @@ channel_revenue AS (
     JOIN dim_channels c USING (channel_key)
     WHERE o.status = 'COMPLETED'
       AND c.is_sales_channel
-      [[AND o.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+      [[AND o.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY c.channel_name
 )
 SELECT
@@ -313,7 +313,7 @@ WITH channel_spend AS (
         SUM(m.impressions) AS impressions
     FROM fact_marketing_spend m
     JOIN dim_channels c USING (channel_key)
-    [[WHERE m.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+    [[WHERE m.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY c.channel_name
 ),
 channel_revenue AS (
@@ -325,7 +325,7 @@ channel_revenue AS (
     JOIN dim_channels c USING (channel_key)
     WHERE o.status = 'COMPLETED'
       AND c.is_sales_channel
-      [[AND o.date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+      [[AND o.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY c.channel_name
 )
 SELECT
