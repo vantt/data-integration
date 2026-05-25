@@ -1,20 +1,21 @@
 # Order Profitability Blueprint [All]
 
+**Dashboard ID**: 45
 **Scope**: scope_sales (`is_sales_channel = true`)
 **Layer**: L1 - Executive
 **Design Spec**: [Order Profitability](../designs/order_profitability.md)
+**Related**: [Channel Explorer](order_profitability_channel_explorer.md) — no hardcoded scope, all channels
 
-> **UPDATED (2026-04-19):** Thêm scope indicator [All].
 > Dashboard này analyze profitability across all customer types (RETAIL + B2B) on sales channels.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
-P&L per order — gross margin, channel net profit, cost structure, order detail table. Dung fact_order_economics (Sapo revenue + MISA COGS + Shopee fees).
+P&L per order — gross margin, channel net profit, cost structure, order detail. Dung `fact_order_economics` (Sapo revenue + MISA COGS + Shopee fees).
 
 ## 📂 Collection: Executive
 
 ### Dashboard: Order Profitability [All]
 
-**Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director. **Scope: All sales channels.**
+**Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director. **Scope: All sales channels, all customer types.**
 
 ---
 
@@ -39,8 +40,6 @@ P&L per order — gross margin, channel net profit, cost structure, order detail
 
 ---
 
-### 📑 Tab: P&L Overview
-
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
@@ -59,12 +58,15 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":0, "col":0, "size_x":18, "size_y":1}
 ```
 
-#### 📝 Text: Tab Heading
+---
 
-Loi nhuan don hang — tong quan P&L theo kenh
+#### 📝 Text: Section Heading — P&L Overview
+
+## Tổng quan P&L
+Lợi nhuận đơn hàng — gross margin, lãi ròng kênh, phủ COGS
 
 ```json metabase-pos
 {"row":1, "col":0, "size_x":18, "size_y":1}
@@ -102,7 +104,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":5}
+{"row":2, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### Question: Total Gross Profit
@@ -125,19 +127,14 @@ WHERE status = 'COMPLETED'
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Lai gop": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Lai gop": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row":2, "col":6, "size_x":6, "size_y":2}
 ```
 
 #### Question: Total Channel Net Profit
@@ -160,24 +157,19 @@ WHERE status = 'COMPLETED'
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Lai rong kenh": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Lai rong kenh": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row":2, "col":12, "size_x":6, "size_y":2}
 ```
 
 #### Question: Orders with COGS
 
-Supporting KPI — so don co MISA data (coverage).
+Coverage KPI — so don co MISA data (wide bottom KPI).
 
 ```sql
 SELECT
@@ -197,27 +189,25 @@ WHERE status = 'COMPLETED'
   "visualization_settings": {
     "scalar.field": "Co COGS",
     "scalar.comparisons": [
-      {
-        "id": "total",
-        "type": "anotherColumn",
-        "column": "Tong don",
-        "label": "tong don"
-      }
+      { "id": "total", "type": "anotherColumn", "column": "Tong don", "label": "tong don" }
     ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row":4, "col":6, "size_x":12, "size_y":2}
 ```
 
-#### 📝 Text: Channel Comparison Heading
+---
 
-Loi nhuan theo kenh — kenh nao tao gia tri?
+#### 📝 Text: Section Heading — Channel
+
+## Lợi nhuận theo kênh
+Kênh nào tạo giá trị thực sự?
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":18, "size_y":1}
+{"row":6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Channel Net Margin %
@@ -252,29 +242,15 @@ ORDER BY "Channel Net Margin %" DESC
     "graph.x_axis.title_text": "Channel Net Margin (%)",
     "graph.y_axis.title_text": "",
     "table.column_formatting": [
-      {
-        "columns": ["Channel Net Margin %"],
-        "type": "single",
-        "operator": ">=",
-        "value": 50,
-        "color": "#84BB4C",
-        "highlight_row": false
-      },
-      {
-        "columns": ["Channel Net Margin %"],
-        "type": "single",
-        "operator": "<",
-        "value": 25,
-        "color": "#EF8C8C",
-        "highlight_row": false
-      }
+      { "columns": ["Channel Net Margin %"], "type": "single", "operator": ">=", "value": 50, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["Channel Net Margin %"], "type": "single", "operator": "<",  "value": 25, "color": "#EF8C8C", "highlight_row": false }
     ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row":8, "col":0, "size_x":9, "size_y":6}
+{"row":7, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Cost Structure by Channel
@@ -322,18 +298,18 @@ ORDER BY SUM(e.net_revenue) DESC
 ```
 
 ```json metabase-pos
-{"row":8, "col":9, "size_x":9, "size_y":6}
+{"row":7, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
 
-### 📑 Tab: Order Detail
-#### 📝 Text: Detail Heading
+#### 📝 Text: Section Heading — Detail
 
-Chi tiet P&L tung don — don nao lai nhieu, don nao lo?
+## Chi tiết P&L từng đơn
+Đơn nào lãi nhiều, đơn nào lỗ?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Margin Distribution
@@ -381,7 +357,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{"row":14, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Profit by Date
@@ -393,10 +369,11 @@ SELECT
     d.date_actual AS "Ngay",
     SUM(e.gross_profit) AS "Lai gop"
 FROM fact_order_economics e
+JOIN dim_channels c USING (channel_key)
 JOIN dim_date d ON e.date_key = d.date_key
 WHERE e.status = 'COMPLETED'
   AND e.has_cogs
-  AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND c.is_sales_channel
   [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
   [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY d.date_actual
@@ -413,27 +390,25 @@ ORDER BY d.date_actual
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "Lai gop (VND)",
     "column_settings": {
-      "Lai gop": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Lai gop": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{"row":14, "col":9, "size_x":9, "size_y":6}
 ```
 
-#### 📝 Text: Order List Heading
+---
 
-Danh sach don hang — sap xep theo lai/lo
+#### 📝 Text: Section Heading — Order List
+
+## Danh sách đơn hàng
+Sắp xếp theo lãi/lỗ — phát hiện đơn bất thường
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{"row":20, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Order P&L Table
@@ -487,16 +462,16 @@ ORDER BY e.gross_profit DESC
       }
     ],
     "column_settings": {
-      "Doanh thu": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Gia von": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Lai gop": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Phi san": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Lai rong kenh": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Doanh thu":    { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Gia von":      { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Lai gop":      { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Phi san":      { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Lai rong kenh":{ "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 10 }
+{"row":21, "col":0, "size_x":18, "size_y":10}
 ```
