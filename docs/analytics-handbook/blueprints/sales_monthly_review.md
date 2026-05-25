@@ -58,20 +58,21 @@ Hero metric — doanh thu thuan vs muc tieu thang, hien thi progress bar.
 ```sql
 WITH
 mtd_actual AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as actual_revenue
+    SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND order_timestamp < date_trunc('month', current_date)
 ),
 monthly_target AS (
-    SELECT COALESCE(SUM(target_val), 0) as target_revenue
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
     FROM fact_targets
-    WHERE cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
-    a.actual_revenue as "Net Revenue"
+    a.actual_gmv as "GMV"
 FROM mtd_actual a
 CROSS JOIN monthly_target t
 ```
@@ -80,7 +81,11 @@ CROSS JOIN monthly_target t
 {
   "display": "progress",
   "visualization_settings": {
-    "progress.color": "#84BB4C"
+    "progress.goal": 600000000,
+    "progress.color": "#84BB4C",
+    "column_settings": {
+      "[\"name\",\"GMV\"]": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
   }
 }
 ```
@@ -370,20 +375,21 @@ Gap tuyet doi giua doanh thu thuc va target.
 ```sql
 WITH
 mtd_actual AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as actual_revenue
+    SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND order_timestamp < date_trunc('month', current_date)
 ),
 monthly_target AS (
-    SELECT COALESCE(SUM(target_val), 0) as target_revenue
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
     FROM fact_targets
-    WHERE cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
-    a.actual_revenue - t.target_revenue as "Variance"
+    a.actual_gmv - t.target_gmv as "Variance"
 FROM mtd_actual a
 CROSS JOIN monthly_target t
 ```

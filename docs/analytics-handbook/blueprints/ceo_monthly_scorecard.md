@@ -351,7 +351,7 @@ Revenue achievement % vs monthly target — progress bar.
 ```sql
 WITH
 mtd_actual AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as actual_revenue
+    SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -359,13 +359,14 @@ mtd_actual AS (
       AND order_timestamp < date_trunc('month', current_date)
 ),
 monthly_target AS (
-    SELECT COALESCE(SUM(target_val), 0) as target_revenue
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
     FROM fact_targets
-    WHERE cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
-    a.actual_revenue as "Actual Revenue"
+    a.actual_gmv as "GMV"
 FROM mtd_actual a
 CROSS JOIN monthly_target t
 ```
@@ -374,7 +375,11 @@ CROSS JOIN monthly_target t
 {
   "display": "progress",
   "visualization_settings": {
-    "progress.color": "#84BB4C"
+    "progress.goal": 600000000,
+    "progress.color": "#84BB4C",
+    "column_settings": {
+      "[\"name\",\"GMV\"]": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
   }
 }
 ```
@@ -392,7 +397,7 @@ Absolute gap between actual and target revenue.
 ```sql
 WITH
 mtd_actual AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as actual_revenue
+    SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -400,13 +405,14 @@ mtd_actual AS (
       AND order_timestamp < date_trunc('month', current_date)
 ),
 monthly_target AS (
-    SELECT COALESCE(SUM(target_val), 0) as target_revenue
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
     FROM fact_targets
-    WHERE cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
-    a.actual_revenue - t.target_revenue as "Variance"
+    a.actual_gmv - t.target_gmv as "Variance"
 FROM mtd_actual a
 CROSS JOIN monthly_target t
 ```
@@ -441,7 +447,7 @@ Weekly revenue bars with cumulative target line for the closed month.
 WITH weekly_actuals AS (
     SELECT
         date_trunc('week', order_timestamp)::date as week_start,
-        SUM(net_revenue) as actual_revenue
+        SUM(gross_revenue) as actual_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -450,16 +456,17 @@ WITH weekly_actuals AS (
     GROUP BY 1
 ),
 monthly_target AS (
-    SELECT COALESCE(SUM(target_val), 0) as target_revenue
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
     FROM fact_targets
-    WHERE cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
     w.week_start as "Week",
-    w.actual_revenue as "Actual Revenue",
-    SUM(w.actual_revenue) OVER (ORDER BY w.week_start) as "Cumulative Actual",
-    t.target_revenue as "Monthly Target"
+    w.actual_gmv as "Actual Revenue",
+    SUM(w.actual_gmv) OVER (ORDER BY w.week_start) as "Cumulative Actual",
+    t.target_gmv as "Monthly Target"
 FROM weekly_actuals w
 CROSS JOIN monthly_target t
 ORDER BY 1
