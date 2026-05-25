@@ -1,15 +1,15 @@
-# Order Profitability — Channel Explorer Blueprint
+# Order Profitability [All] Blueprint
 
 **Dashboard ID**: 35
 **Scope**: All channels (no hardcoded scope — user-driven channel filter)
 **Layer**: L1 - Executive
-**Related**: [Order Profitability [All]](order_profitability.md) — scoped to `is_sales_channel`, has tabs
+**Related**: [Order Profitability](order_profitability.md) — scoped to `is_sales_channel = true`, executive standard view
 
-P&L per order — gross margin, channel net profit, cost structure, order detail. Flexible channel filter for ad-hoc exploration. Dung `fact_order_economics`.
+P&L per order — gross margin, channel net profit, cost structure, order detail. Bao gom tat ca kenh ke ca non-sales. Dung `fact_order_economics`.
 
 ## 📂 Collection: Executive
 
-### Dashboard: Order Profitability
+### Dashboard: Order Profitability [All]
 
 **Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director. **Scope: tat ca kenh (user-driven filter).**
 

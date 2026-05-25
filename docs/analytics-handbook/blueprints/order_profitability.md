@@ -1,21 +1,21 @@
-# Order Profitability Blueprint [All]
+# Order Profitability Blueprint
 
 **Dashboard ID**: 45
 **Scope**: scope_sales (`is_sales_channel = true`)
 **Layer**: L1 - Executive
 **Design Spec**: [Order Profitability](../designs/order_profitability.md)
-**Related**: [Channel Explorer](order_profitability_channel_explorer.md) — no hardcoded scope, all channels
+**Related**: [Order Profitability [All]](order_profitability_all.md) — no hardcoded scope, all channels
 
-> Dashboard này analyze profitability across all customer types (RETAIL + B2B) on sales channels.
+> Standard executive P&L view — sales channels only, all customer types (RETAIL + B2B).
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
 P&L per order — gross margin, channel net profit, cost structure, order detail. Dung `fact_order_economics` (Sapo revenue + MISA COGS + Shopee fees).
 
 ## 📂 Collection: Executive
 
-### Dashboard: Order Profitability [All]
+### Dashboard: Order Profitability
 
-**Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director. **Scope: All sales channels, all customer types.**
+**Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director. **Scope: Sales channels only, all customer types.**
 
 ---
 
