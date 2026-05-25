@@ -2958,3 +2958,21 @@ Thêm vào đó: Metabase `progress` display **không hỗ trợ goal từ query
 3. Sau khi patch API trực tiếp: kiểm tra tất cả card cùng tên trên các dashboard khác (`grep` blueprint hoặc query `/api/dashboard/:id`).
 
 **Reference:** Dashboard 11 card 885, Dashboard 43 card 1251; `docs/analytics-handbook/blueprints/ceo_weekly_pulse.md`
+
+### L88 — Scope mismatch: all-channel GMV vs sales-channel target gây progress inflated
+
+**Symptom:** `sales_monthly_review` dashboard hiển thị progress ~1.9B so với goal 600M (~316%) — unrealistic, không phản ánh thực tế business.
+
+**Root cause:** Target trong `fact_targets` (600M/tháng) được set theo scope sales channels (`is_sales_channel = true`). Nhưng progress card query `fact_orders` không có `channel_key IN (... WHERE is_sales_channel)` filter — tính GMV toàn bộ channels bao gồm cả internal/non-sales channels.
+
+Kết quả: numerator (actual) và denominator (target) có scope khác nhau → tỉ lệ vô nghĩa.
+
+**Fix:** Thêm `AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)` vào CTE actual của các card so sánh với target. Các card khác trong cùng dashboard (branch breakdown, channel listing) giữ nguyên all-channel scope vì mục đích phân tích khác.
+
+**Rules:**
+1. Bất kỳ card nào so sánh actual vs `fact_targets`: scope của actual PHẢI khớp scope của target.
+2. `fact_targets` hiện tại được set theo scope `is_sales_channel = true` — mọi target comparison card phải dùng cùng filter này trên `fact_orders`.
+3. Không phải tất cả cards trong cùng dashboard cần cùng channel scope — chỉ các cards "actual vs target" mới cần đồng nhất. Cards phân tích (revenue by channel, branch breakdown) có thể giữ all-channel scope.
+4. Khi tạo dashboard mới có tab "target vs actual": luôn verify channel scope khớp nhau trước khi publish.
+
+**Reference:** `docs/analytics-handbook/blueprints/sales_monthly_review.md` — Question: Net Revenue vs Target, Question: Variance; Dashboard 31 card 1051
