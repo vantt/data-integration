@@ -275,11 +275,13 @@ FROM this_week tw, last_week lw
 
 #### Question: MTD Revenue vs Target
 
-**Domain Reference**: [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) — Progress bar showing % of monthly target achieved.
+**Domain Reference**: [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) — Progress bar showing GMV actual vs monthly GMV target in VND.
+
+> **⚠️ Deployment note:** `progress.goal` is a static number in Metabase — it cannot be read dynamically from a query column. Currently set to 600,000,000 which matches all months in `fact_targets`. **Redeploy only if the target value changes** in Google Sheets (not on a monthly cadence — the SQL already picks up the correct month automatically).
 
 ```sql
 WITH mtd_actual AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as mtd_revenue
+    SELECT COALESCE(SUM(gross_revenue), 0) as mtd_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -287,24 +289,25 @@ WITH mtd_actual AS (
       AND order_timestamp < current_date
 ),
 monthly_target AS (
-    SELECT COALESCE(SUM(target_val), 0) as target_revenue
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
     FROM fact_targets
-    WHERE cycle_start_date <= current_date
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date <= current_date
       AND cycle_end_date >= current_date
 )
-SELECT
-    a.mtd_revenue as "MTD Revenue"
+SELECT a.mtd_gmv AS "MTD GMV"
 FROM mtd_actual a
+CROSS JOIN monthly_target t
 ```
 
 ```json metabase-viz
 {
   "display": "progress",
   "visualization_settings": {
-    "progress.goal": 4000000000,
+    "progress.goal": 600000000,
     "progress.color": "#84BB4C",
     "column_settings": {
-      "MTD Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "[\"name\",\"MTD GMV\"]": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
@@ -330,7 +333,8 @@ WITH mtd_actual AS (
 monthly_target AS (
     SELECT COALESCE(SUM(target_val), 0) as target_revenue
     FROM fact_targets
-    WHERE cycle_start_date <= current_date
+    WHERE metric_code = 'net_revenue'
+      AND cycle_start_date <= current_date
       AND cycle_end_date >= current_date
 )
 SELECT
