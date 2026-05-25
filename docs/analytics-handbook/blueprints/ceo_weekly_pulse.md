@@ -323,7 +323,7 @@ Revenue pace indicator: MTD Actual vs expected pace. >1.0 = Ahead, <1.0 = Behind
 
 ```sql
 WITH mtd_actual AS (
-    SELECT COALESCE(SUM(net_revenue), 0) as mtd_revenue
+    SELECT COALESCE(SUM(gross_revenue), 0) as mtd_gmv
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -331,17 +331,17 @@ WITH mtd_actual AS (
       AND order_timestamp < current_date
 ),
 monthly_target AS (
-    SELECT COALESCE(SUM(target_val), 0) as target_revenue
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
     FROM fact_targets
-    WHERE metric_code = 'net_revenue'
+    WHERE metric_code = 'gmv'
       AND cycle_start_date <= current_date
       AND cycle_end_date >= current_date
 )
 SELECT
-    CASE WHEN t.target_revenue = 0 THEN NULL
+    CASE WHEN t.target_gmv = 0 THEN NULL
          ELSE ROUND(
-           a.mtd_revenue / (
-             t.target_revenue
+           a.mtd_gmv / (
+             t.target_gmv
              * EXTRACT(DAY FROM current_date)
              / EXTRACT(DAY FROM (date_trunc('month', current_date) + INTERVAL '1 month' - INTERVAL '1 day'))
            ), 2)
