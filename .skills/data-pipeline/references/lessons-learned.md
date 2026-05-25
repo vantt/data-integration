@@ -2919,3 +2919,42 @@ Sau đó `dbt seed --select ref_order_sources` + `dbt run --full-refresh --selec
 
 **Reference:** `transformation/seeds/ref_order_sources.csv:31`; `transformation/models/staging/stg_sapo_orders.sql:26-34`
 
+
+### L86 — Metabase progress.goal là số tĩnh — không thể dùng query column làm goal động
+
+**Symptom:** Widget "MTD Revenue vs Target" hiển thị goal = 4,000,000,000 (hardcoded) mặc dù pipeline đã ingest target từ Google Sheets vào `fact_targets`. Progress bar misleading vì goal không khớp thực tế.
+
+**Root cause:** Hai bugs chồng nhau:
+1. `monthly_target` CTE trong SQL được tính đúng từ `fact_targets` nhưng **không được JOIN hoặc SELECT** — bị discard hoàn toàn. `progress.goal: 4000000000` là placeholder tĩnh không liên quan đến data.
+2. CTE thiếu `AND metric_code = 'net_revenue'` (hoặc `'gmv'`) — nếu được dùng sẽ SUM tất cả metric targets (gmv + orders + profit), sai semantic.
+
+Thêm vào đó: Metabase `progress` display **không hỗ trợ goal từ query column** — `progress.goal` luôn là số tĩnh trong `visualization_settings`, kể cả khi SQL trả về 2 cột (cột 2 không tự động thành goal).
+
+**Fix:**
+- Thêm `metric_code = 'gmv'` filter vào CTE
+- Đổi actual metric từ `net_revenue` sang `gross_revenue` để khớp semantic với target GMV
+- Set `progress.goal` = giá trị thực từ `fact_targets` (query thủ công rồi hardcode)
+- Khi deploy blueprint: query `SELECT SUM(target_val) FROM fact_targets WHERE metric_code='gmv' AND cycle_start_date <= current_date AND cycle_end_date >= current_date` để lấy giá trị mới nhất
+
+**Rules:**
+1. Khi viết SQL cho Metabase progress card: luôn kiểm tra CTE có thực sự được SELECT không — unused CTE không raise lỗi.
+2. `fact_targets` có nhiều `metric_code` — luôn filter đúng metric khi aggregate target.
+3. `progress.goal` trong Metabase là tĩnh. Pipeline ingest target đúng không nghĩa là goal tự động cập nhật — đây là giới hạn Metabase, không phải lỗi pipeline.
+4. Khi target đồng đều nhiều tháng (repeat_until), hardcode `progress.goal` là chấp nhận được — chỉ cần redeploy khi giá trị target thực sự thay đổi.
+
+**Reference:** `docs/analytics-handbook/blueprints/ceo_weekly_pulse.md` — Question: MTD Revenue vs Target; `ingestion/src/gsheet_targets.py`; Dashboard 11 card 884, Dashboard 43 card 1250
+
+### L87 — Direct API card patch không tự sync blueprint — blueprint drift silently
+
+**Symptom:** Card 885 (Pace Index, Dashboard 11) hiển thị sai sau khi card 884 và 1250/1251 đã được fix. Blueprint trông đúng nhưng live card vẫn dùng SQL cũ.
+
+**Root cause:** Khi fix card trực tiếp qua Metabase API (`PUT /api/card/:id`), blueprint markdown không tự cập nhật. Ngược lại, khi deploy blueprint (`deploy_from_markdown.js`), chỉ các card được khai báo trong blueprint mới được update — card trên dashboard khác (Dashboard 11 vs Dashboard 43) không bị ảnh hưởng.
+
+**Fix:** Sau mỗi lần patch API trực tiếp, luôn sync blueprint ngay trong cùng commit.
+
+**Rules:**
+1. Blueprint là source of truth — mọi thay đổi SQL/viz phải reflect vào blueprint, dù fix qua API hay deploy script.
+2. Khi có 2 dashboard song song (Dashboard 11 "CEO Weekly Pulse" + Dashboard 43 "CEO Weekly Pulse [All]"), fix 1 card không tự fix card tương ứng trên dashboard kia — phải patch cả hai.
+3. Sau khi patch API trực tiếp: kiểm tra tất cả card cùng tên trên các dashboard khác (`grep` blueprint hoặc query `/api/dashboard/:id`).
+
+**Reference:** Dashboard 11 card 885, Dashboard 43 card 1251; `docs/analytics-handbook/blueprints/ceo_weekly_pulse.md`
