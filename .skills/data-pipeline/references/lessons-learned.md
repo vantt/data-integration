@@ -2976,3 +2976,33 @@ Kết quả: numerator (actual) và denominator (target) có scope khác nhau �
 4. Khi tạo dashboard mới có tab "target vs actual": luôn verify channel scope khớp nhau trước khi publish.
 
 **Reference:** `docs/analytics-handbook/blueprints/sales_monthly_review.md` — Question: Net Revenue vs Target, Question: Variance; Dashboard 31 card 1051
+
+### L89 — `strftime({{date_range}}, fmt)` fails in DuckDB — must CAST to DATE first
+
+**Symptom:** Dashboards using `date_key` integer (YYYYMMDD) with `date/all-options` filter show no data (0 rows). Cards with `[[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]` return empty.
+
+**Root cause:** DuckDB's `strftime(timestamp, format)` requires a DATE/TIMESTAMP as first argument — it does NOT accept a plain string. When Metabase resolves the `date/all-options` default (`past3months`) and passes it as a date string like `'2026-02-25'`, DuckDB throws a type error. The entire optional `[[...]]` block renders but fails → query errors → 0 rows.
+
+Confirmed: `strftime('2026-02-25', '%Y%m%d')` → HTTP 400 DuckDB error. `strftime(CAST('2026-02-25' AS DATE), '%Y%m%d')` → `'20260225'` ✓
+
+**Fix:** Add explicit `CAST(... AS DATE)`:
+```sql
+-- BROKEN
+[[AND date_key >= CAST(strftime({{date_range}}, '%Y%m%d') AS INTEGER)]]
+
+-- FIXED
+[[AND date_key >= CAST(strftime(CAST({{date_range}} AS DATE), '%Y%m%d') AS INTEGER)]]
+```
+
+**Scope of fix (2026-05-25):** Applied to 24 deployed cards across:
+- Dashboard 35 (Order Profitability) — 9 cards
+- Dashboard 45 (Order Profitability [All]) — 9 cards
+- Dashboard 37 (Marketing ROI) — 6 cards
+- Blueprints: `order_profitability.md`, `marketing_roi.md`
+
+**Rules:**
+1. Whenever filtering on integer `date_key` (YYYYMMDD format), always `CAST({{date_range}} AS DATE)` before passing to `strftime`.
+2. Using a DATE column directly (`posting_date >= {{date_range}}`) is fine — DuckDB auto-casts string to DATE for comparison.
+3. All new blueprints using `date_key` integer filter MUST use the CAST pattern.
+
+**Reference:** Dashboard 35 cards 1130–1138, Dashboard 45 cards 1288–1296, Dashboard 37 cards 1146–1151
