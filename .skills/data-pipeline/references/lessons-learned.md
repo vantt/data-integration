@@ -3026,3 +3026,24 @@ Field IDs: `77` = `dim_date.date_actual` (DateTime), `179` = `dim_channels.chann
 2. Dimension field filter SQL must use the subquery delegation pattern: `date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})`.
 3. Dashcard `parameter_mappings` target must be `["dimension", ...]` not `["variable", ...]`.
 4. All new blueprints MUST use `type:dimension` tags. See `feedback_metabase_field_filter_required.md` in memory.
+
+### L90 — Legacy `!= US` channel filter silently includes internal channels — replace with `is_sales_channel`
+
+**Symptom:** Dashboard scope appears correct ("excludes US") but still includes internal orders: test products, quà tặng, employee benefits, unknown channels. Metrics inflated by non-commercial transactions.
+
+**Root cause:** When `is_sales_channel` was introduced in `dim_channels`, existing dashboards using `channel_key != US` were NOT updated. At the time, US was the only non-sales channel. Later, new internal channels (Gosumo, Quà Tặng, Test Sản Phẩm, Unknown, Ưu đãi Nhân Viên) were added with `is_sales_channel = False` — but the old filter only excludes US, so these new channels leaked through.
+
+**Fix:** Replace exclusion-based filter with inclusion-based:
+```sql
+-- LEGACY (leaks internal channels added after initial setup)
+AND channel_key != (SELECT channel_key FROM dim_channels WHERE channel_name = 'US')
+
+-- CORRECT
+AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+```
+
+**Scope of fix (2026-05-25):** 17 cards in Dashboard 11 "CEO Weekly Pulse" updated.
+
+**Rules:**
+1. Never filter channels by name exclusion (`!= 'US'`, `!= 'Test'`). Always use `is_sales_channel` or explicit inclusion.
+2. When adding new non-sales channels to `dim_channels`, audit dashboards for legacy exclusion filters.
