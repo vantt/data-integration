@@ -18,6 +18,8 @@ from datetime import datetime, timezone, timedelta
 
 from typing import Optional
 
+import sqlite3
+
 import duckdb
 from dagster import asset, MetadataValue, Output
 
@@ -129,7 +131,7 @@ def _file_drop_source_count(ingestion_asset_key: str, window_start: datetime) ->
     Returns None if no successful runs exist in the window.
     """
     try:
-        conn = duckdb.connect(get_db_path(), read_only=True)
+        conn = sqlite3.connect(get_db_path())
         row = conn.execute(
             """
             SELECT SUM(COALESCE(rows_written, 0))
@@ -138,7 +140,7 @@ def _file_drop_source_count(ingestion_asset_key: str, window_start: datetime) ->
               AND status = 'success'
               AND run_started_at >= ?
             """,
-            [ingestion_asset_key, window_start],
+            [ingestion_asset_key, window_start.isoformat()],
         ).fetchone()
         conn.close()
         if row and row[0] is not None:

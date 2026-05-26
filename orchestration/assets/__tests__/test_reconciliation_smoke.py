@@ -1,6 +1,6 @@
 """Smoke tests for Phase 3 reconciliation logic.
 
-Seeds a temporary ingestion_health.duckdb with synthetic data and verifies:
+Seeds a temporary ingestion_health.db (SQLite) with synthetic data and verifies:
 - drift calculation is correct
 - _file_drop_source_count returns correct sum from health DB
 - recon assets can be imported without live API calls
@@ -15,6 +15,8 @@ import tempfile
 import uuid
 from datetime import datetime, timezone, timedelta
 
+import sqlite3
+
 import duckdb
 import pytest
 
@@ -25,29 +27,29 @@ import pytest
 
 @pytest.fixture()
 def health_db(tmp_path, monkeypatch):
-    """Temp ingestion_health.duckdb seeded with synthetic recon + ingestion data."""
-    db_path = str(tmp_path / "ingestion_health.duckdb")
+    """Temp ingestion_health.db (SQLite) seeded with synthetic recon + ingestion data."""
+    db_path = str(tmp_path / "ingestion_health.db")
     monkeypatch.setenv("INGESTION_HEALTH_DB", db_path)
 
-    conn = duckdb.connect(db_path)
+    conn = sqlite3.connect(db_path)
     conn.execute("""
         CREATE TABLE ingestion_runs (
-            asset_key       VARCHAR NOT NULL,
-            run_id          VARCHAR NOT NULL,
-            run_started_at  TIMESTAMPTZ NOT NULL,
-            run_ended_at    TIMESTAMPTZ,
-            duration_s      DOUBLE,
-            status          VARCHAR NOT NULL,
-            rows_fetched    BIGINT,
-            rows_written    BIGINT,
-            rows_new        BIGINT,
-            rows_updated    BIGINT,
-            cursor_before   VARCHAR,
-            cursor_after    VARCHAR,
-            schema_hash     VARCHAR,
-            file_sha256     VARCHAR,
-            file_mtime      TIMESTAMPTZ,
-            metadata_json   JSON,
+            asset_key       TEXT NOT NULL,
+            run_id          TEXT NOT NULL,
+            run_started_at  TEXT NOT NULL,
+            run_ended_at    TEXT,
+            duration_s      REAL,
+            status          TEXT NOT NULL,
+            rows_fetched    INTEGER,
+            rows_written    INTEGER,
+            rows_new        INTEGER,
+            rows_updated    INTEGER,
+            cursor_before   TEXT,
+            cursor_after    TEXT,
+            schema_hash     TEXT,
+            file_sha256     TEXT,
+            file_mtime      TEXT,
+            metadata_json   TEXT,
             PRIMARY KEY (asset_key, run_id)
         )
     """)
@@ -59,19 +61,22 @@ def health_db(tmp_path, monkeypatch):
     # Shopee ingestion runs: total rows_written = 500
     conn.execute(
         "INSERT INTO ingestion_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ["shopee/shopee_income_file_drop_asset", str(uuid.uuid4()), five_days_ago, five_days_ago, 10.0,
+        ["shopee/shopee_income_file_drop_asset", str(uuid.uuid4()),
+         five_days_ago.isoformat(), five_days_ago.isoformat(), 10.0,
          "success", 300, 300, 300, 0, None, None, None, None, None, None],
     )
     conn.execute(
         "INSERT INTO ingestion_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ["shopee/shopee_income_file_drop_asset", str(uuid.uuid4()), three_days_ago, three_days_ago, 10.0,
+        ["shopee/shopee_income_file_drop_asset", str(uuid.uuid4()),
+         three_days_ago.isoformat(), three_days_ago.isoformat(), 10.0,
          "success", 200, 200, 200, 0, None, None, None, None, None, None],
     )
 
     # MISA ingestion run: rows_written = 150
     conn.execute(
         "INSERT INTO ingestion_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ["misa_amis/misa_sales_file_drop_asset", str(uuid.uuid4()), three_days_ago, three_days_ago, 8.0,
+        ["misa_amis/misa_sales_file_drop_asset", str(uuid.uuid4()),
+         three_days_ago.isoformat(), three_days_ago.isoformat(), 8.0,
          "success", 150, 150, 150, 0, None, None, None, None, None, None],
     )
 
@@ -82,10 +87,12 @@ def health_db(tmp_path, monkeypatch):
                        "window_end": now.isoformat()})
     conn.execute(
         "INSERT INTO ingestion_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        ["recon/shopee_daily", str(uuid.uuid4()), now, now, 1.0,
+        ["recon/shopee_daily", str(uuid.uuid4()),
+         now.isoformat(), now.isoformat(), 1.0,
          "success", 500, 510, None, None, None, None, None, None, None, meta],
     )
 
+    conn.commit()
     conn.close()
     return db_path
 
@@ -286,7 +293,7 @@ def test_persist_recon_writes_when_db_available(health_db, monkeypatch):
         window_end=now,
     )
 
-    conn = duckdb.connect(health_db, read_only=True)
+    conn = sqlite3.connect(health_db)
     row = conn.execute(
         "SELECT asset_key, rows_fetched, rows_written FROM ingestion_runs WHERE run_id = ?",
         [run_id],

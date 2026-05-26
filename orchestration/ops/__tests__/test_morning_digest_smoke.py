@@ -417,7 +417,7 @@ def test_format_cursor_zero_rows_emphasises_run_count():
                           rows_24h=0, runs_24h=347, last_status="skipped")
     fields, _ = compose_card_fields([row])
     val = fields[_label_for("sapo_webhook")]
-    assert "Không có" in val and "đơn" in val
+    assert "Không có" in val and "events" in val
     assert "347 lần hôm qua" in val
     assert "✅" in val  # green
 
