@@ -1,6 +1,6 @@
 """Asset checks for KPI closure (Phase 5) — revenue drift thresholds.
 
-Reads last kpi/revenue_daily run from ingestion_health.duckdb and checks:
+Reads last kpi/revenue_daily run from ingestion_health.db and checks:
 - drift_pct > 0.5% → ERROR
 - drift_pct > 0.1% → WARN
 """
@@ -8,14 +8,13 @@ from __future__ import annotations
 
 import logging
 
-import duckdb
 from dagster import (
     asset_check,
     AssetCheckResult,
     AssetCheckSeverity,
 )
 
-from orchestration.ops.ingestion_health import get_db_path
+from orchestration.asset_checks.health_db import open_readonly
 
 logger = logging.getLogger(__name__)
 
@@ -29,31 +28,26 @@ def _get_last_kpi_drift() -> tuple[float | None, int | None, str | None]:
 
     Returns (None, None, None) if no data or DB unavailable.
     """
-    conn = None
     try:
-        db_path = get_db_path()
-        conn = duckdb.connect(db_path, read_only=True)
-        row = conn.execute(
-            """
-            SELECT
-                (metadata_json ->> 'drift_pct')::DOUBLE,
-                (metadata_json ->> 'date_key')::INTEGER,
-                status
-            FROM ingestion_runs
-            WHERE asset_key = 'kpi/revenue_daily'
-            ORDER BY run_started_at DESC
-            LIMIT 1
-            """
-        ).fetchone()
+        with open_readonly() as conn:
+            row = conn.execute(
+                """
+                SELECT
+                    CAST(json_extract(metadata_json, '$.drift_pct') AS REAL),
+                    CAST(json_extract(metadata_json, '$.date_key') AS INTEGER),
+                    status
+                FROM ingestion_runs
+                WHERE asset_key = 'kpi/revenue_daily'
+                ORDER BY run_started_at DESC
+                LIMIT 1
+                """
+            ).fetchone()
         if row:
             return row[0], row[1], row[2]
         return None, None, None
     except Exception as exc:
         logger.warning("kpi_closure_checks: failed to query health DB — %s", exc)
         return None, None, None
-    finally:
-        if conn:
-            conn.close()
 
 
 # Import the asset for check binding

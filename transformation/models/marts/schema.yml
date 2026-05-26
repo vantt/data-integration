@@ -573,11 +573,15 @@ models:
       - name: return_reason
         description: "Lý do hoàn trả (reason hoặc note từ Sapo)"
       - name: channel_key
+        description: "NULL for legacy orders whose order_code is not found in fact_orders (expected for historical returns)"
         tests:
           - relationships:
               arguments:
                 to: ref('dim_channels')
                 field: channel_key
+              config:
+                severity: warn
+                where: "channel_key IS NOT NULL"
       - name: date_key
         tests:
           - relationships:

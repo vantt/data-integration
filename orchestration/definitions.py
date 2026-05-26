@@ -14,6 +14,7 @@ from dagster import (
     ScheduleDefinition,
     define_asset_job,
     AssetSelection,
+    AssetKey,
     schedule,
     RunRequest,
     SkipReason,
@@ -118,12 +119,17 @@ ingest_sheets_sync_job = define_asset_job(
 # Ingests Shopee income Excel → dbt (shopee chain only) → serving_db.
 # shopee_income_file_drop_asset is a @multi_asset with 4 outputs (one per table),
 # so .downstream() resolves only shopee-dependent dbt models — not the full graph.
+# fact_order_returns is added explicitly: it is not downstream of shopee_source, but
+# fact_order_economics (which IS downstream) depends on it — without this, the first
+# file-drop run on a fresh deploy fails because the parquet does not yet exist.
 _shopee_source = AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset)
+_fact_order_returns = AssetSelection.key(AssetKey(["fact_order_returns"]))
 ingest_filedrop_shopee_job = define_asset_job(
     name="ingest_filedrop_shopee_job",
     selection=(
         _shopee_source
         | _shopee_source.downstream()
+        | _fact_order_returns
         | AssetSelection.assets(serving.sapo_serving_db)
     ),
     tags=SYNC_TAGS,
@@ -136,6 +142,7 @@ ingest_filedrop_misa_job = define_asset_job(
     selection=(
         _misa_source
         | _misa_source.downstream()
+        | _fact_order_returns
         | AssetSelection.assets(serving.sapo_serving_db)
     ),
     tags=SYNC_TAGS,

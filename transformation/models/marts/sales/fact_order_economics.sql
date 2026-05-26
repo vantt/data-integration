@@ -134,7 +134,7 @@ SELECT
     -- Returns (reference only — P&L impact recognized in fact_order_returns at return date)
     r.return_amount,
     COALESCE(r.return_count, 0) AS return_count,
-    r.return_amount IS NOT NULL AS has_returns
+    COALESCE(r.return_count, 0) > 0 AS has_returns
 
 FROM orders o
 LEFT JOIN misa_order m    ON o.order_code = m.order_code

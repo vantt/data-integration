@@ -1,7 +1,7 @@
 """Asset checks for reconciliation drift thresholds (Phase 3).
 
 One check per recon asset. Reads the most recent recon row from
-ingestion_health.duckdb and enforces:
+ingestion_health.db and enforces:
   |drift_pct| > 5%  → ERROR
   |drift_pct| > 1%  → WARN
   source_count=None → WARN (live API unavailable, can't measure drift)
