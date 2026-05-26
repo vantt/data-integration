@@ -115,17 +115,15 @@ ingest_sheets_sync_job = define_asset_job(
 )
 
 # 2.6 Shopee file-drop sync job
-# Ingests Shopee income Excel → all dbt models → serving_db.
-# Note: shopee_raw has 4 source tables; dagster-dbt requires unique keys per
-# resource so they can't all map to shopee_income_file_drop_asset (would raise
-# DagsterInvalidDefinitionError). Proper fix is @multi_asset; until then we
-# use explicit all_dbt_assets selection instead of .downstream().
+# Ingests Shopee income Excel → dbt (shopee chain only) → serving_db.
+# shopee_income_file_drop_asset is a @multi_asset with 4 outputs (one per table),
+# so .downstream() resolves only shopee-dependent dbt models — not the full graph.
 _shopee_source = AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset)
 ingest_filedrop_shopee_job = define_asset_job(
     name="ingest_filedrop_shopee_job",
     selection=(
         _shopee_source
-        | all_dbt_assets
+        | _shopee_source.downstream()
         | AssetSelection.assets(serving.sapo_serving_db)
     ),
     tags=SYNC_TAGS,

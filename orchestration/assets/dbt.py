@@ -47,11 +47,10 @@ class SapoDbtTranslator(DagsterDbtTranslator):
                 # Single source table — maps cleanly to the file-drop ingestion asset
                 return AssetKey(["misa_amis", "misa_sales_file_drop_asset"])
 
-            # shopee_raw has 4 source tables. dagster-dbt requires unique keys per dbt
-            # resource (even for sources) — mapping all 4 to one key raises
-            # DagsterInvalidDefinitionError. Proper fix is @multi_asset (4 outputs, 1 per
-            # table). Until then, shopee sources keep default keys and the job uses
-            # explicit all_dbt_assets selection instead of .downstream().
+            elif source_name == "shopee_raw":
+                # 4 source tables, each maps to its corresponding @multi_asset output.
+                # Unique key per resource satisfies dagster-dbt's uniqueness requirement.
+                return AssetKey(["shopee", name])
 
         return super().get_asset_key(dbt_resource_props)
 

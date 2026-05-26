@@ -3,6 +3,10 @@
 Writes to ingestion_health via orchestration.ops.ingestion_health on every run.
 File-drop variant: emits file_sha256, file_mtime, rows_fetched from xlsx source
 files BEFORE the run module archives them.
+
+Implemented as @multi_asset (4 outputs, one per parquet table) so each
+shopee_raw dbt source can map to a unique AssetKey in SapoDbtTranslator,
+enabling proper graph edges and .downstream() selection in the sync job.
 """
 
 import importlib.util
@@ -10,7 +14,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from dagster import asset, Output, MetadataValue
+from dagster import multi_asset, AssetOut, AssetKey, Output, MetadataValue
 from orchestration.assets.utils import load_dlt_configuration, DLT_DIR
 from orchestration.ops.ingestion_health import record_run as _record_health
 from orchestration.ops.file_metrics import scan_drop_zone, aggregate_file_manifest
@@ -46,7 +50,27 @@ def _get_run_module():
     return _run_module
 
 
-@asset(group_name="shopee_ingestion", key_prefix=["shopee"])
+@multi_asset(
+    outs={
+        "order_revenue": AssetOut(
+            key=AssetKey(["shopee", "order_revenue"]),
+            description="Shopee order-level revenue & fees (Doanh thu sheet, Order rows)",
+        ),
+        "order_revenue_items": AssetOut(
+            key=AssetKey(["shopee", "order_revenue_items"]),
+            description="Shopee order × product line items (Doanh thu sheet, Sku rows)",
+        ),
+        "order_service_fees": AssetOut(
+            key=AssetKey(["shopee", "order_service_fees"]),
+            description="Shopee extra service fees: infrastructure + Xtra voucher",
+        ),
+        "order_adjustments": AssetOut(
+            key=AssetKey(["shopee", "order_adjustments"]),
+            description="Shopee order-level adjustments: marketing fees, compensations",
+        ),
+    },
+    group_name="shopee_ingestion",
+)
 def shopee_income_file_drop_asset(context):
     """Ingest Shopee released-income Excel files from the drop zone.
 
@@ -54,6 +78,7 @@ def shopee_income_file_drop_asset(context):
     Append-only writes; source files archived to _archive/ on success.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
+    # Kept as a stable identifier for the health DB (backward compatible).
     asset_key_str = "shopee/shopee_income_file_drop_asset"
     started = datetime.now(timezone.utc)
     context.log.info("Starting Shopee income file-drop ingestion...")
@@ -84,19 +109,22 @@ def shopee_income_file_drop_asset(context):
 
         status = "success" if file_entries else "skipped"
         context.log.info("Shopee income file-drop ingestion complete.")
-        return Output(
-            "OK",
-            metadata={
-                "status": MetadataValue.text("Success"),
-                "files_processed": MetadataValue.int(len(file_entries)),
-                "rows_fetched": (
-                    MetadataValue.int(manifest["rows_fetched"])
-                    if manifest.get("rows_fetched") is not None
-                    else MetadataValue.text("unknown")
-                ),
-                "file_sha256": MetadataValue.text(manifest.get("file_sha256") or "unknown"),
-            },
-        )
+
+        output_metadata = {
+            "status": MetadataValue.text("Success"),
+            "files_processed": MetadataValue.int(len(file_entries)),
+            "rows_fetched": (
+                MetadataValue.int(manifest["rows_fetched"])
+                if manifest.get("rows_fetched") is not None
+                else MetadataValue.text("unknown")
+            ),
+            "file_sha256": MetadataValue.text(manifest.get("file_sha256") or "unknown"),
+        }
+        yield Output("OK", output_name="order_revenue", metadata=output_metadata)
+        yield Output("OK", output_name="order_revenue_items", metadata=output_metadata)
+        yield Output("OK", output_name="order_service_fees", metadata=output_metadata)
+        yield Output("OK", output_name="order_adjustments", metadata=output_metadata)
+
     except Exception as exc:
         context.log.error(f"Shopee ingestion error: {exc}")
         raise

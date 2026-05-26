@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from dagster import AssetChecksDefinition
+from dagster import AssetChecksDefinition, AssetKey
 
 from orchestration.asset_checks.cursor_checks import make_cursor_stall_check
 from orchestration.asset_checks.freshness_checks import make_freshness_check
@@ -40,7 +40,10 @@ def _build_asset_def_map() -> dict[str, Any]:
         "sapo/sapo_customers_batch_asset": sapo_assets.sapo_customers_batch_asset,
         "sapo/sapo_accounts_batch_asset": sapo_assets.sapo_accounts_batch_asset,
         "sapo/sapo_products_batch_asset": sapo_assets.sapo_products_batch_asset,
-        "shopee/shopee_income_file_drop_asset": shopee_assets.shopee_income_file_drop_asset,
+        # shopee_income_file_drop_asset is @multi_asset; @asset_check(asset=) requires a
+        # single key. Use order_revenue as the representative anchor — the check logic
+        # still queries health DB via the "shopee/shopee_income_file_drop_asset" string key.
+        "shopee/shopee_income_file_drop_asset": AssetKey(["shopee", "order_revenue"]),
         "misa_amis/misa_sales_file_drop_asset": misa_amis_assets.misa_sales_file_drop_asset,
         "sheets/sheets_targets_asset": sheets_assets.sheets_targets_asset,
         "sheets/sheets_marketing_spend_asset": sheets_assets.sheets_marketing_spend_asset,
