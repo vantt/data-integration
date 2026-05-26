@@ -25,6 +25,11 @@ models:
       - name: fulfillment_id
         tests: [not_null]
 
+  - name: stg_sapo_order_returns
+    columns:
+      - name: return_id
+        tests: [unique, not_null]
+
   - name: stg_sapo_customers
     columns:
       - name: sapo_customer_id

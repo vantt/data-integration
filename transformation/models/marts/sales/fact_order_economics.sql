@@ -4,10 +4,11 @@
     location="{{ get_rolling_location() }}"
 ) }}
 
--- Per-order profitability: Sapo revenue + MISA COGS + Shopee platform fees.
+-- Per-order profitability: Sapo revenue + MISA COGS + Shopee platform fees + fulfillment + returns.
 -- Grain: one row per order (from fact_orders).
 -- MISA lines aggregated to order level via voucher_no = order_code.
 -- Shopee fees joined via order_code.
+-- Returns are reference columns only — not restated into channel_net_profit (recognized at return date).
 
 WITH orders AS (
     SELECT
@@ -46,6 +47,23 @@ shopee_fees AS (
         total_taxes      AS shopee_taxes,
         net_settlement
     FROM {{ ref('int_shopee_order_fees') }}
+),
+
+-- Primary shipment per order (earliest created_at) for carrier/COD info
+fulfillments AS (
+    SELECT order_id, cod_amount, carrier_id
+    FROM {{ ref('std_fulfillments') }}
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY order_id ORDER BY created_at) = 1
+),
+
+-- Returns aggregated to order level (reference only — not subtracted from profit)
+order_returns AS (
+    SELECT
+        order_code,
+        SUM(refund_amount) AS return_amount,
+        COUNT(*)           AS return_count
+    FROM {{ ref('fact_order_returns') }}
+    GROUP BY order_code
 )
 
 SELECT
@@ -84,6 +102,7 @@ SELECT
     sf.shopee_taxes,
     sf.net_settlement       AS shopee_net_settlement,
     sf.order_code IS NOT NULL AS has_shopee_fees,
+    sf.order_code IS NOT NULL AS has_platform_fees,
 
     -- Channel Net Profit = Net Revenue - COGS - |Shopee fees| - |Shopee taxes|
     -- For non-Shopee orders: same as gross_profit
@@ -106,8 +125,19 @@ SELECT
             + COALESCE(sf.voucher_xtra_fee, 0)
             + COALESCE(sf.shopee_taxes, 0)
         )::DOUBLE / o.net_revenue
-    END AS channel_net_margin_pct
+    END AS channel_net_margin_pct,
+
+    -- Fulfillment (primary shipment)
+    ff.cod_amount,
+    ff.carrier_id,
+
+    -- Returns (reference only — P&L impact recognized in fact_order_returns at return date)
+    r.return_amount,
+    COALESCE(r.return_count, 0) AS return_count,
+    r.return_amount IS NOT NULL AS has_returns
 
 FROM orders o
-LEFT JOIN misa_order m ON o.order_code = m.order_code
-LEFT JOIN shopee_fees sf ON o.order_code = sf.order_code
+LEFT JOIN misa_order m    ON o.order_code = m.order_code
+LEFT JOIN shopee_fees sf  ON o.order_code = sf.order_code
+LEFT JOIN fulfillments ff ON o.order_id   = ff.order_id
+LEFT JOIN order_returns r ON o.order_code = r.order_code

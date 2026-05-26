@@ -512,3 +512,51 @@ models:
         description: "Lãi ròng kênh = net_revenue - COGS - all Shopee fees"
       - name: channel_net_margin_pct
         description: "Biên lãi ròng kênh = channel_net_profit / net_revenue"
+      - name: has_platform_fees
+        description: "true nếu đơn có phí sàn (Shopee hoặc marketplace khác trong tương lai)"
+      - name: cod_amount
+        description: "Giá trị COD thu hộ từ người mua (từ đơn giao hàng đầu tiên)"
+      - name: carrier_id
+        description: "Đơn vị vận chuyển (GHTK, J&T, GHN, VTP, ...) từ đơn giao hàng đầu tiên"
+      - name: return_amount
+        description: "Tổng giá trị hoàn trả của đơn (từ fact_order_returns). NULL nếu không có hoàn trả. Không ảnh hưởng channel_net_profit — P&L hoàn trả được ghi nhận tại ngày hoàn trả."
+      - name: return_count
+        description: "Số lần hoàn trả của đơn"
+      - name: has_returns
+        description: "true nếu đơn có ít nhất 1 lần hoàn trả"
+
+  - name: fact_order_returns
+    description: "Per-return fact: one row per Sapo return event. Returns recognized at return date — original order P&L is not restated."
+    columns:
+      - name: return_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: order_code
+        tests: [not_null]
+      - name: return_timestamp
+        description: "Thời điểm hoàn trả (issued_at hoặc created_at)"
+      - name: return_date
+        description: "Ngày hoàn trả tính theo múi giờ ICT"
+      - name: refund_amount
+        description: "Giá trị hoàn tiền (từ Sapo total_amount của return)"
+      - name: return_quantity
+        description: "Số lượng sản phẩm hoàn trả"
+      - name: return_status
+        description: "Trạng thái hoàn trả từ Sapo"
+      - name: refund_status
+        description: "Trạng thái hoàn tiền từ Sapo"
+      - name: return_reason
+        description: "Lý do hoàn trả (reason hoặc note từ Sapo)"
+      - name: channel_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_channels')
+                field: channel_key
+      - name: date_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
