@@ -417,8 +417,16 @@ Sapo hỗ trợ auto-group theo `last_order_date`:
 **P0 - customer_type (Manual)**
 - [ ] Chuẩn hóa RETAIL, WHOLESALE trong Sapo
 - [ ] Tạo PARTNER, STAFF, KOL groups
-- [ ] Cập nhật 12 khách sỉ ẩn → WHOLESALE
+- [ ] Cập nhật **36 khách sỉ ẩn** → WHOLESALE/PARTNER (chờ Sales xác nhận)
 - [ ] Document policy: ai được approve chuyển customer_type?
+
+> **Scan 2026-05-26:** Data team đã scan 14,640 đơn và tìm được 36 khách đang label RETAIL nhưng có pattern sỉ (D% 40–73%, AOV ≥2M, ≥3 đơn). Chia 3 nhóm:
+> - **Nhóm 1 (10 khách):** D% ≥55% — chắc sỉ, suggest `WHOLESALE`
+> - **Nhóm 2 (21 khách):** D% 40–55% — cần Sales xác nhận, suggest `WHOLESALE`
+> - **Nhóm 3 (5 khách):** Tên business (shop/nhà thuốc) — suggest `PARTNER`
+>
+> File xác nhận: `plans/reports/wholesale-customers-review-260526.csv`
+> Chi tiết danh sách: `docs/context/channel-grouping-analysis.md` — Vấn đề 5
 
 **P1 - value_group & lifecycle_stage (Auto)**
 - [ ] Kiểm tra Sapo plan có hỗ trợ auto-group không

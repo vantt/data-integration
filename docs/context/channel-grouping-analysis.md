@@ -30,7 +30,7 @@ Tài liệu này trả lời những câu hỏi nào?
 | US channel = cross-border fulfillment, không tính doanh thu VN | ĐÃ XÁC NHẬN | 2026-04-13 | Business | Chuyển `is_sales_channel = false`, doanh thu = 0đ |
 | Telesale & CS = bán hàng thật (Offline/Direct Sales) | ĐÃ XÁC NHẬN | 2026-04-13 | Business | Chuyển sang `is_sales_channel = true` |
 | Thêm `order_nature` dimension | ĐỀ XUẤT | — | — | 7 giá trị: retail_sale, wholesale, cross_border_fulfillment, staff_benefit, gift, test, affiliate |
-| Customer tagging cho khách sỉ ẩn | ĐỀ XUẤT | — | — | Seed ~20-50 khách, rule-based screening bổ trợ |
+| Customer tagging cho khách sỉ ẩn | ĐÃ SCAN | 2026-05-26 | Data | 36 khách tìm được, chờ Sales xác nhận (file: wholesale-customers-review-260526.csv) |
 | Gosumo, POPS, Leflair, Selly, Chiaki có nên giữ hay archive? | CẦN XÁC NHẬN | — | Business | Các kênh inactive |
 
 ---
@@ -114,22 +114,68 @@ Với các source Internal còn lại: `is_sales_channel = false` — báo cáo 
 
 **Hậu quả:** Không thể phân tích "Other" vì bản chất đơn quá khác nhau.
 
-### Vấn đề 5: Khách sỉ ẩn trên kênh B2C (Zalo, Facebook, Other)
+### Vấn đề 5: Khách sỉ ẩn trên kênh B2C (Zalo, Facebook, Other, Web, POS)
 
-Nhiều khách mua qua Zalo/Facebook có pattern giống bán sỉ:
+> **Scan thực tế 2026-05-26** trên 14,640 đơn completed/finalized. Tiêu chí: ≥3 đơn, avg_net ≥2M, avg_disc ≥40%, kênh không phải Marketplace/B2B. Tất cả đang label `RETAIL` trong Sapo.
 
-| Khách hàng       | Kênh    | AOV   | Discount | Pattern |
-| ------------------ | -------- | ----- | -------- | ------- |
-| Mr.Bình           | Zalo     | 24.4M | 50.6%    | Sỉ     |
-| Chị Hạnh Nguyễn | Zalo     | 22M   | 50.8%    | Sỉ     |
-| chị Thủy         | Zalo     | 21.2M | 50.5%    | Sỉ     |
-| Chị Yến          | Zalo     | 19M   | 58.2%    | Sỉ     |
-| Petter Phạm       | Facebook | —    | 53.3%    | Sỉ/VIP |
-| Cô Sáu US        | Zalo     | 11.3M | 52.1%    | Sỉ     |
+**Nhóm 1 — Chắc sỉ (D% ≥ 55%):** cần tag ngay
 
-**Đặc điểm chung:** AOV > 10M, discount cố định ~50%, mua định kỳ.
+| Tên | customer_id | Kênh | Đơn | Avg net | D% | Tổng net | Suggest |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Nguyễn Hiếu | 79472464 | Web/Social/Other | 17 | 5.0M | 72.9% | 85.6M | WHOLESALE |
+| Quang | 149453741 | POS | 21 | 3.9M | 68.4% | 81.7M | WHOLESALE |
+| Huynh Tri Bao | 78229451 | Other | 4 | 41.3M | 64.4% | 165.1M | WHOLESALE |
+| Huỳnh Thị Tuyết Trinh | 68945207 | Web/CS | 27 | 3.6M | 62.1% | 96.0M | WHOLESALE |
+| Petter Phạm (Tuấn) | 86375978 | Facebook | 6 | 16.9M | 59.9% | 101.1M | WHOLESALE |
+| Lê Sơn | 70316860 | Other/Web | 27 | 2.7M | 59.1% | 72.1M | WHOLESALE |
+| Lê Sơn *(trùng account)* | 70335461 | Web | 15 | 4.1M | 58.0% | 61.8M | WHOLESALE |
+| chị Quyên | 95370464 | Zalo/Other | 15 | 4.0M | 57.9% | 59.6M | WHOLESALE |
+| Boilam Vo Xuan | 65532663 | Zalo | 5 | 10.0M | 56.2% | 49.9M | WHOLESALE |
+| Chị Lan | 239274863 | Facebook | 6 | 19.4M | 55.0% | 116.6M | WHOLESALE |
 
-**Hậu quả:** Kênh Zalo (D% 38.7%) và Facebook (D% 40.6%) bị kéo lệch bởi khách sỉ, không phản ánh đúng hiệu quả kênh B2C.
+**Nhóm 2 — Cần Sales xác nhận (D% 40–55%):**
+
+| Tên | customer_id | Kênh | Đơn | Avg net | D% | Tổng net | Suggest |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Chị Phúc | 172107018 | Other | 6 | 5.6M | 52.5% | 33.8M | WHOLESALE |
+| Chị Hương | 319507511 | POS | 5 | 22.0M | 50.0% | 110.0M | WHOLESALE |
+| Nguyễn Hữu Tin-Vy | 90666716 | Other | 6 | 14.7M | 50.0% | 88.0M | WHOLESALE |
+| chị Uyên - Q.10 | 97171938 | Other | 9 | 8.9M | 50.0% | 80.1M | WHOLESALE |
+| Hoa | 88153319 | Web | 6 | 13.0M | 50.0% | 78.0M | WHOLESALE |
+| Lê Như Quỳnh | 92267253 | Other | 6 | 12.0M | 50.0% | 72.0M | WHOLESALE |
+| Mr. Tùng Lương | 177458829 | POS | 6 | 10.8M | 50.0% | 64.8M | WHOLESALE |
+| Oanh (Em chị Thúy) | 88477834 | Other | 6 | 8.9M | 50.0% | 53.4M | WHOLESALE |
+| Chị Oanh Trần | 148469182 | Web | 6 | 7.4M | 50.0% | 44.5M | WHOLESALE |
+| Chị Chi | 79187492 | Zalo | 6 | 6.0M | 50.0% | 36.0M | WHOLESALE |
+| Chị Hân | 74157070 | Zalo | 6 | 5.4M | 50.0% | 32.4M | WHOLESALE |
+| Đỗ Công Hoàng | 82948658 | Other | 5 | 4.0M | 50.0% | 20.0M | WHOLESALE |
+| Mỹ Linh | 84750850 | Zalo | 6 | 3.1M | 50.0% | 18.9M | WHOLESALE |
+| Nguyễn Phước | 65145138 | Facebook | 6 | 2.2M | 50.0% | 13.2M | WHOLESALE |
+| Hải Yến | 76922905 | Facebook | 3 | 4.2M | 50.0% | 12.6M | WHOLESALE |
+| Chị Hạnh | 245989142 | CS | 6 | 4.7M | 46.7% | 28.5M | WHOLESALE |
+| Anh Bảo | 162655294 | POS | 6 | 6.6M | 41.3% | 39.6M | WHOLESALE |
+| Thanh Phi | 80771948 | Zalo/Other | 12 | 6.0M | 41.1% | 71.8M | WHOLESALE |
+| Mai Huong Nguyen Thi | 509658015 | Facebook | 6 | 2.2M | 40.0% | 13.0M | WHOLESALE |
+| Thảo | 78799140 | Zalo | 6 | 2.2M | 40.0% | 13.0M | WHOLESALE |
+| Anh Khoa | 77450203 | Facebook | 6 | 2.2M | 40.0% | 13.0M | WHOLESALE |
+
+**Nhóm 3 — Business account (tên shop/nhà thuốc):** tag PARTNER
+
+| Tên | customer_id | Kênh | Đơn | D% | Tổng net | Suggest |
+| --- | --- | --- | --- | --- | --- | --- |
+| Gosumo - Hạ Vàng | 271015099 | Other | 6 | 49.7% | 13.0M | PARTNER |
+| Michiko Shop | 317992826 | Web | 12 | 47.0% | 77.5M | PARTNER |
+| PHANO | 64548474 | POS | 6 | 44.8% | 36.4M | PARTNER |
+| JAPANA | 64552850 | Web/POS | 12 | 43.3% | 101.1M | PARTNER |
+| Nhà thuốc Helios | 219286557 | Web | 6 | 43.3% | 28.2M | PARTNER |
+
+**Đặc điểm chung:** discount cố định 40–73%, mua lặp lại, AOV cao.
+
+**Ghi chú kỹ thuật:**
+- Lê Sơn có 2 customer_id — cùng 1 người, trùng account Sapo
+- File xác nhận Sales: `plans/reports/wholesale-customers-review-260526.csv`
+
+**Hậu quả:** Kênh Zalo, Facebook, Other, Web bị kéo lệch D% bởi nhóm này → discount analysis B2C sai nếu không filter `customer_type = 'RETAIL'`.
 
 ---
 
@@ -302,8 +348,8 @@ Gồm cả wholesale, staff benefit. Loại test và gift.
 |--------|-----------|---------|
 | US channel: Có đơn US nào là bán thật cho khách Mỹ không? | **ĐÃ XÁC NHẬN** | 100% cross-border fulfillment, doanh thu = 0đ |
 | Telesale + CS: Nên tính là doanh thu bán hàng hay internal? | **ĐÃ XÁC NHẬN** | Doanh thu bán hàng thật, chuyển Offline/Direct Sales |
-| Khách sỉ Zalo/Facebook: Danh sách bao nhiêu người? | **CẦN XÁC NHẬN** | Sales team có list không? |
-| Discount 50% trên Zalo/FB: Giá sỉ cố định hay promotion từng đơn? | **CẦN XÁC NHẬN** | Ảnh hưởng cách identify khách sỉ |
+| Khách sỉ Zalo/Facebook/Other/Web/POS: Danh sách bao nhiêu người? | **ĐÃ SCAN** | 36 khách, xem Vấn đề 5. Chờ Sales xác nhận từng người |
+| Discount 40-73% trên B2C channels: Giá sỉ cố định hay promotion từng đơn? | **CẦN XÁC NHẬN** | Sales điền cột xac_nhan_sales trong CSV |
 | "Gosumo", "POPS", "Leflair", "Selly", "Chiaki" nên giữ hay archive? | **CẦN XÁC NHẬN** | Các kênh inactive |
 | "Other" channel: Có tag/note nào trong Sapo phân biệt VIP/CTV/sỉ? | **CẦN XÁC NHẬN** | Giúp tách "Other" dễ hơn |
 
