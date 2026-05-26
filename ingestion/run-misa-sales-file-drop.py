@@ -73,9 +73,15 @@ def run(argv=None, file_path=None):
 
     print(f"Found {len(files)} file(s) to process")
 
+    failed = []
     for fpath in files:
         print(f"\n{'='*60}")
-        df, cogs_total_claimed = parser.parse_misa_sales_ledger(fpath)
+        try:
+            df, cogs_total_claimed = parser.parse_misa_sales_ledger(fpath)
+        except Exception as e:
+            print(f"  ERROR parsing {os.path.basename(fpath)}: {e}")
+            failed.append(fpath)
+            continue
 
         if df.empty:
             print(f"  Empty result, skipping: {fpath}")
@@ -112,6 +118,10 @@ def run(argv=None, file_path=None):
             print(f"  WARNING: no valid posting_date; file NOT archived: {fpath}")
 
     print(f"\nMISA ingestion complete. Processed {len(files)} file(s).")
+
+    if failed:
+        names = ", ".join(os.path.basename(f) for f in failed)
+        raise RuntimeError(f"{len(failed)} file(s) failed to parse: {names}")
 
 
 if __name__ == "__main__":

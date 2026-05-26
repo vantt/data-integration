@@ -125,7 +125,9 @@ def parse_misa_sales_ledger(file_path):
     # Money columns → Int64
     for money_col in ["revenue_gross", "discount_amount", "total_payment", "cogs_amount", "quantity"]:
         if money_col in df.columns:
-            df[money_col] = pd.to_numeric(df[money_col], errors="coerce").astype("Int64")
+            df[money_col] = pd.to_numeric(df[money_col], errors="coerce").apply(
+                lambda x: int(x) if pd.notna(x) else pd.NA
+            ).astype("Int64")
 
     # unit_price → float64
     if "unit_price" in df.columns:

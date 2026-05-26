@@ -28,78 +28,29 @@ class SapoDbtTranslator(DagsterDbtTranslator):
         source_name = dbt_resource_props.get("source_name")
         name = dbt_resource_props.get("name")
 
-        if resource_type == "source" and source_name == "sapo_raw":
-            if name == "order":
-                print(f"[DEBUG] Mapping source sapo_raw.order -> sapo/sapo_orders_batch_asset")
-                return AssetKey(["sapo", "sapo_orders_batch_asset"])
-            elif name == "customer":
-                print(f"[DEBUG] Mapping source sapo_raw.customer -> sapo/sapo_customers_batch_asset")
-                return AssetKey(["sapo", "sapo_customers_batch_asset"])
-            elif name == "account":
-                print(f"[DEBUG] Mapping source sapo_raw.account -> sapo/sapo_accounts_batch_asset")
-                return AssetKey(["sapo", "sapo_accounts_batch_asset"])
-            elif name == "targets_raw":
-                 return AssetKey(["sheets", "sheets_targets_asset"])
-            elif name == "marketing_spend_raw":
-                 return AssetKey(["sheets", "sheets_marketing_spend_asset"])
-            # Note: teams_raw and team_members_raw both come from sheets_team_config_asset
-            # but cannot share the same asset key. Dependency handled in get_upstream_asset_keys.
+        if resource_type == "source":
+            if source_name == "sapo_raw":
+                if name == "order":
+                    return AssetKey(["sapo", "sapo_orders_batch_asset"])
+                elif name == "customer":
+                    return AssetKey(["sapo", "sapo_customers_batch_asset"])
+                elif name == "account":
+                    return AssetKey(["sapo", "sapo_accounts_batch_asset"])
+                elif name == "targets_raw":
+                    return AssetKey(["sheets", "sheets_targets_asset"])
+                elif name == "marketing_spend_raw":
+                    return AssetKey(["sheets", "sheets_marketing_spend_asset"])
+                # Note: teams_raw and team_members_raw both come from sheets_team_config_asset
+                # but cannot share the same asset key — dependency omitted by design.
+
+            elif source_name == "misa_raw":
+                # Single source table — maps cleanly to the file-drop ingestion asset
+                return AssetKey(["misa_amis", "misa_sales_file_drop_asset"])
+
+            # shopee_raw has 4 source tables → cannot share one asset key (Dagster requires
+            # unique keys per dbt resource). Shopee sources keep their default keys.
 
         return super().get_asset_key(dbt_resource_props)
-
-    def get_upstream_asset_keys(self, dbt_resource_props: Mapping[str, Any]) -> set[AssetKey]:
-        upstream_keys = super().get_upstream_asset_keys(dbt_resource_props)
-        name = dbt_resource_props.get("name")
-
-        # ----------------------------------------------------------------------
-        # SYSTEM INSIGHT: HYBRID JOB RACE CONDITION FIX
-        # ----------------------------------------------------------------------
-        # Problem:
-        # In `ingest_sapo_incremental_job`, we run `sapo_history_log_asset` (Incremental) 
-        # and `dbt_assets`. However, dbt models like `stg_sapo_orders` declare their 
-        # source as `source('sapo_raw', 'order')`, which `get_asset_key` maps to 
-        # `sapo_orders_batch_asset`.
-        #
-        # Since `sapo_orders_batch_asset` is NOT part of the incremental job, Dagster 
-        # normally sees no active dependency for `stg_sapo_orders` within this job, 
-        # causing dbt to start immediately in parallel with Ingestion.
-        #
-        # Solution:
-        # We explicitly inject `sapo_history_log_asset` and `sapo_webhook_consumer_asset`
-        # as upstream dependencies for the Staging Layer. This forces Dagster to wait 
-        # for ALL ingestion tasks in the current job to finish before starting dbt.
-        # ----------------------------------------------------------------------
-        
-        # Explicitly link dbt staging models to History Log and Webhook assets
-        if name in [
-            "stg_sapo_orders", "stg_sapo_customers", "stg_sapo_accounts",
-            "stg_sapo_fulfillments", "stg_sapo_order_items", "stg_sapo_payments",
-            "src_sapo_orders", "src_sapo_customers", "src_sapo_accounts"
-        ]:
-            # Explicitly link dbt staging models to History Log and Webhook assets
-            # AND Batch items (to ensure Nightly Job runs strictly serial: Ingestion -> dbt)
-            upstream_keys.add(AssetKey(["sapo", "sapo_history_log_asset"]))
-            upstream_keys.add(AssetKey(["sapo", "sapo_webhook_consumer_asset"]))
-            
-            # Enforce "Ingestion Phase" completion
-            upstream_keys.add(AssetKey(["sapo", "sapo_orders_batch_asset"]))
-            upstream_keys.add(AssetKey(["sapo", "sapo_customers_batch_asset"]))
-            upstream_keys.add(AssetKey(["sapo", "sapo_accounts_batch_asset"]))
-            
-        elif name == "stg_targets":
-            upstream_keys.add(AssetKey(["sheets", "sheets_targets_asset"]))
-        elif name == "stg_marketing_spend":
-            upstream_keys.add(AssetKey(["sheets", "sheets_marketing_spend_asset"]))
-        elif name in ("stg_teams", "stg_team_members"):
-            upstream_keys.add(AssetKey(["sheets", "sheets_team_config_asset"]))
-
-        # File-drop sources: ingestion asset must finish before dbt reads parquet
-        elif name in ["src_misa_sales_lines", "stg_misa_sales_lines"]:
-            upstream_keys.add(AssetKey(["misa_amis", "misa_sales_file_drop_asset"]))
-        elif name in ["src_shopee_order_revenue", "src_shopee_order_revenue_items", "src_shopee_order_service_fees", "src_shopee_order_adjustments"]:
-            upstream_keys.add(AssetKey(["shopee", "shopee_income_file_drop_asset"]))
-
-        return upstream_keys
 
 @dbt_assets(
     manifest=dbt_project.manifest_path,
