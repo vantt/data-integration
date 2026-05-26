@@ -525,6 +525,30 @@ models:
       - name: has_returns
         description: "true nếu đơn có ít nhất 1 lần hoàn trả"
 
+  - name: fact_order_costs
+    description: "Long-format cost ledger. Grain: 1 row per (order_id, cost_type). Source of truth for granular costs feeding fact_order_economics."
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: order_code
+        tests: [not_null]
+      - name: cost_type
+        tests: [not_null]
+      - name: cost_category
+        tests: [not_null]
+      - name: amount
+        description: "Always positive (ABS). Sign convention derived from cost_category."
+      - name: source_system
+        description: "Origin system: misa | shopee | sapo"
+      - name: source_record
+        description: "Traceability key: voucher_no for MISA, order_code for Shopee, discount reason for Sapo"
+      - name: fee_source
+        description: "actual | estimated"
+      - name: date_key
+        description: "YYYYMMDD in ICT — inherited from fact_orders"
+      - name: channel_key
+        description: "Inherited from fact_orders"
+
   - name: fact_order_returns
     description: "Per-return fact: one row per Sapo return event. Returns recognized at return date — original order P&L is not restated."
     columns:

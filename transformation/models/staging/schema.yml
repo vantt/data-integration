@@ -80,3 +80,15 @@ models:
         tests: [not_null]
       - name: cogs_amount
         tests: [not_null]
+
+  - name: stg_sapo_order_discount_items
+    description: "Unnested discount_items array from raw Sapo orders. Grain: 1 row per discount item per order. B2B wholesale-price-gap rows excluded."
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: order_code
+        tests: [not_null]
+      - name: amount
+        description: "Discount amount (always positive, B2B rate=100/empty-reason rows filtered out)"
+      - name: reason
+        description: "Raw reason string from Sapo payload — used for cost_type classification in fact_order_costs"
