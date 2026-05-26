@@ -1,18 +1,16 @@
 """Smoke tests for asset check factories.
 
-Creates a temp DuckDB, seeds rows, and verifies check factories execute
+Creates a temp SQLite DB, seeds rows, and verifies check factories execute
 without errors and return the correct pass/warn/fail signals.
 
 Run with: pytest orchestration/asset_checks/__tests__/test_check_factories_smoke.py -v
 """
 from __future__ import annotations
 
-import os
-import tempfile
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
-import duckdb
 import pytest
 
 # ---------------------------------------------------------------------------
@@ -21,22 +19,22 @@ import pytest
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS ingestion_runs (
-    asset_key       VARCHAR NOT NULL,
-    run_id          VARCHAR NOT NULL,
+    asset_key       TEXT NOT NULL,
+    run_id          TEXT NOT NULL,
     run_started_at  TIMESTAMPTZ NOT NULL,
     run_ended_at    TIMESTAMPTZ,
-    duration_s      DOUBLE,
-    status          VARCHAR NOT NULL,
-    rows_fetched    BIGINT,
-    rows_written    BIGINT,
-    rows_new        BIGINT,
-    rows_updated    BIGINT,
-    cursor_before   VARCHAR,
-    cursor_after    VARCHAR,
-    schema_hash     VARCHAR,
-    file_sha256     VARCHAR,
+    duration_s      REAL,
+    status          TEXT NOT NULL,
+    rows_fetched    INTEGER,
+    rows_written    INTEGER,
+    rows_new        INTEGER,
+    rows_updated    INTEGER,
+    cursor_before   TEXT,
+    cursor_after    TEXT,
+    schema_hash     TEXT,
+    file_sha256     TEXT,
     file_mtime      TIMESTAMPTZ,
-    metadata_json   JSON,
+    metadata_json   TEXT,
     PRIMARY KEY (asset_key, run_id)
 );
 """
@@ -44,9 +42,9 @@ CREATE TABLE IF NOT EXISTS ingestion_runs (
 
 @pytest.fixture()
 def temp_db(tmp_path):
-    """Return path to a seeded temp DuckDB."""
-    db_path = str(tmp_path / "ingestion_health.duckdb")
-    conn = duckdb.connect(db_path)
+    """Return path to a seeded temp SQLite DB."""
+    db_path = str(tmp_path / "ingestion_health.db")
+    conn = sqlite3.connect(db_path)
     conn.execute(_DDL)
 
     now = datetime.now(timezone.utc)
@@ -81,9 +79,10 @@ def temp_db(tmp_path):
             "INSERT OR REPLACE INTO ingestion_runs "
             "(asset_key, run_id, run_started_at, status, rows_fetched, rows_written, cursor_before, cursor_after) "
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [ak, rid, ts, status, fetched, written, cursor_b, cursor_a],
+            [ak, rid, ts.isoformat(), status, fetched, written, cursor_b, cursor_a],
         )
 
+    conn.commit()
     conn.close()
     return db_path
 
