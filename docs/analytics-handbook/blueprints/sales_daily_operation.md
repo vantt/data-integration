@@ -28,7 +28,7 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 # Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Review kết quả real-time — doanh thu, đơn hàng, AOV so với hôm qua
@@ -36,7 +36,7 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 # Review kết quả real-time — doanh thu, đơn hàng, AOV so với hôm qua
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
@@ -44,7 +44,7 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 # Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phân tích doanh thu theo giờ — peak hours và so sánh real-time
@@ -52,7 +52,7 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 # Phân tích doanh thu theo giờ — peak hours và so sánh real-time
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Health Score
@@ -123,7 +123,7 @@ FROM scores
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 5 }
 ```
 
 #### Question: Health Breakdown
@@ -234,7 +234,7 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 12, "size_y": 5 }
+{ "row": 3, "col": 6, "size_x": 12, "size_y": 5 }
 ```
 
 ---
@@ -280,7 +280,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 9, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -293,11 +293,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### Question: Gross Revenue
@@ -341,7 +341,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row":8, "col":6, "size_x":4, "size_y":3}
+{"row": 10, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total Orders
@@ -377,7 +377,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row":8, "col":10, "size_x":4, "size_y":3}
+{"row": 10, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -429,7 +429,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row":8, "col":14, "size_x":4, "size_y":3}
+{"row": 10, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -453,7 +453,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":3, "size_y":3}
+{"row": 14, "col":0, "size_x":3, "size_y":3}
 ```
 
 #### Question: Returning Customers
@@ -475,7 +475,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{"row":12, "col":3, "size_x":3, "size_y":3}
+{"row": 14, "col":3, "size_x":3, "size_y":3}
 ```
 
 #### Question: Returns
@@ -495,7 +495,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{"row":12, "col":6, "size_x":3, "size_y":3}
+{"row": 14, "col":6, "size_x":3, "size_y":3}
 ```
 
 #### Question: Total Collected
@@ -528,7 +528,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{"row":12, "col":9, "size_x":3, "size_y":3}
+{"row": 14, "col":9, "size_x":3, "size_y":3}
 ```
 
 #### Question: Discount Rate
@@ -551,7 +551,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{"row":12, "col":12, "size_x":3, "size_y":3}
+{"row": 14, "col":12, "size_x":3, "size_y":3}
 ```
 
 #### Question: Items per Order
@@ -573,7 +573,7 @@ WHERE date(s.sol_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{"row":12, "col":15, "size_x":3, "size_y":3}
+{"row": 14, "col":15, "size_x":3, "size_y":3}
 ```
 
 ---
@@ -630,7 +630,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":16, "col":0, "size_x":12, "size_y":6}
+{"row": 18, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: Cumulative Revenue
@@ -687,7 +687,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":16, "col":12, "size_x":6, "size_y":6}
+{"row": 18, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -959,8 +959,9 @@ SELECT
     p.product_name as "Sản phẩm",
     SUM(s.revenue) as "Doanh thu"
 FROM fact_sales s
+JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN dim_customers c ON s.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1001,8 +1002,9 @@ SELECT
     p.product_name as "Sản phẩm",
     SUM(s.quantity) as "Số lượng"
 FROM fact_sales s
+JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN dim_customers c ON s.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1035,8 +1037,9 @@ SELECT
     COALESCE(p.product_type, 'Unknown') as "Loại SP",
     SUM(s.revenue) as "Doanh thu"
 FROM fact_sales s
+JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN dim_customers c ON s.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1079,8 +1082,9 @@ SELECT
     SUM(s.revenue) as "Doanh thu",
     ROUND(SUM(s.revenue) / NULLIF(SUM(s.quantity), 0), 0) as "Giá TB"
 FROM fact_sales s
+JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN dim_customers c ON s.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.sol_timestamp) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
