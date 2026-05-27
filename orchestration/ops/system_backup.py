@@ -78,7 +78,7 @@ def run_platform_backup(context: OpExecutionContext) -> None:
     try:
         ts = datetime.now(_ICT).strftime("%Y-%m-%d %H:%M ICT")
         send_lark_card(
-            title="✅ Backup platform xong",
+            title="ChợPulse BI — ✅ Backup xong",
             color="green",
             fields={
                 "Destination": backup_root,

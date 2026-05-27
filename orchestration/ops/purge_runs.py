@@ -427,7 +427,7 @@ def _notify_purge_success(result: dict, run_id: str) -> None:
     try:
         freed_mb = result["index_mb_before"] - result["index_mb_after"]
         send_lark_card(
-            title="✅ Cleanup runs xong",
+            title="ChợPulse BI — ✅ Cleanup runs xong",
             color="green",
             fields={
                 "Runs deleted": f"{result['deleted_runs']:,}",

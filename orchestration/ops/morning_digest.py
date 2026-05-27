@@ -662,7 +662,7 @@ def compose_and_send_digest(context) -> None:
         fields = {"🚨 Cảnh báo hệ thống monitoring": stale_banner, **fields}
         color = "red"  # Override card color to red regardless of asset status
 
-    title = f"Data Ingestion Morning Report — {_today_ict()}"
+    title = f"ChợPulse BI — Morning Report {_today_ict()}"
 
     if dry_run:
         print(f"\n[DIGEST DRY-RUN] {title}  [{color.upper()}]")

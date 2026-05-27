@@ -22,7 +22,7 @@ def health_alert_failure_sensor(context: RunFailureSensorContext):
     run_link = f"[{run.run_id[:8]}]({_DAGSTER_BASE}/runs/{run.run_id})"
 
     send_lark_card(
-        title="🚨 DataLake Job FAILED",
+        title="ChợPulse BI — 🚨 Job FAILED",
         color="red",
         fields={
             "Job": run.job_name,

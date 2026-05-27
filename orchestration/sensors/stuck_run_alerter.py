@@ -233,7 +233,7 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
 
         # Alert
         send_lark_card(
-            title="🔪 Dagster Run AUTO-KILLED (stuck)",
+            title="ChợPulse BI — 🔪 Run AUTO-KILLED (stuck)",
             color="red",
             fields={
                 "Job": run.job_name,
@@ -296,7 +296,7 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
             logger.debug("Free slots failed (often expected for never-started runs): %s", exc)
 
         send_lark_card(
-            title="🪦 Dagster Run AUTO-CANCELED (queue-stuck)",
+            title="ChợPulse BI — 🪦 Run AUTO-CANCELED (queue-stuck)",
             color="orange",
             fields={
                 "Job": run.job_name,

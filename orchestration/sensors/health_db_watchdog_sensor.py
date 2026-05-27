@@ -129,7 +129,7 @@ def health_db_watchdog_sensor(context: SensorEvaluationContext):
 
     if not write_ok:
         send_lark_card(
-            title="🚨 Health DB lỗi filesystem — cần kiểm tra",
+            title="ChợPulse BI — 🚨 Health DB lỗi filesystem",
             color="red",
             fields={
                 "Vấn đề": f"ingestion_health.db không mở được write mode (stale {age_str})",
@@ -141,7 +141,7 @@ def health_db_watchdog_sensor(context: SensorEvaluationContext):
     else:
         # Writable but stale — record_run() is likely failing in code
         send_lark_card(
-            title="⚠️ Health DB ngừng ghi — recorder có thể lỗi",
+            title="ChợPulse BI — ⚠️ Health DB ngừng ghi",
             color="orange",
             fields={
                 "Vấn đề": f"Không có ghi nào trong {age_str} dù DB vẫn mở được",
