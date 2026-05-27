@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 
 from dagster import op, job, Out, Output, DagsterRunStatus
 
+from orchestration.notifications.lark_client import send_lark_card
+
 
 # Retry delays (seconds) for SQLite "database is locked" errors.
 # 5 attempts; sleep after attempts 0-3 only (total wait 7.5s before final try).
@@ -420,6 +422,25 @@ def _cleanup_orphan_asset_check_executions(instance, log) -> int:
     return deleted
 
 
+def _notify_purge_success(result: dict, run_id: str) -> None:
+    """Best-effort Lark notification after a successful purge run."""
+    try:
+        freed_mb = result["index_mb_before"] - result["index_mb_after"]
+        send_lark_card(
+            title="✅ Cleanup runs xong",
+            color="green",
+            fields={
+                "Runs deleted": f"{result['deleted_runs']:,}",
+                "DB files removed": str(result["db_files_removed"]),
+                "Index freed": f"{freed_mb:.1f} MB ({result['index_mb_before']:.1f}→{result['index_mb_after']:.1f} MB)",
+                "dbt target dirs": str(result["dbt_dirs_removed"]),
+                "Run": run_id[:8],
+            },
+        )
+    except Exception:
+        pass  # notification failure must never fail the job
+
+
 @op(out=Out(dict))
 def maintain_purge_runs_op(context) -> dict:
     """Purge Dagster runs older than keep_days and reclaim storage."""
@@ -463,7 +484,7 @@ def maintain_purge_runs_op(context) -> dict:
         dbt_dirs_removed, dbt_mb_freed = _cleanup_dbt_target_dirs(keep_days, context.log)
         if dbt_dirs_removed:
             context.log.info(f"Cleaned {dbt_dirs_removed} dbt target dirs, freed {dbt_mb_freed:.1f} MB")
-        return {
+        result = {
             "deleted_runs": 0,
             "db_files_removed": orphan_db,
             "storage_dirs_removed": orphan_storage,
@@ -474,6 +495,8 @@ def maintain_purge_runs_op(context) -> dict:
             "dbt_dirs_removed": dbt_dirs_removed,
             "dbt_mb_freed": dbt_mb_freed,
         }
+        _notify_purge_success(result, context.run_id)
+        return result
 
     context.log.info(f"Found {count} runs to delete")
 
@@ -514,7 +537,7 @@ def maintain_purge_runs_op(context) -> dict:
     if dbt_dirs_removed:
         context.log.info(f"Cleaned {dbt_dirs_removed} dbt target dirs, freed {dbt_mb_freed:.1f} MB")
 
-    return {
+    result = {
         "deleted_runs": deleted_count,
         "db_files_removed": db_files_removed,
         "storage_dirs_removed": storage_dirs_removed,
@@ -525,6 +548,8 @@ def maintain_purge_runs_op(context) -> dict:
         "dbt_dirs_removed": dbt_dirs_removed,
         "dbt_mb_freed": dbt_mb_freed,
     }
+    _notify_purge_success(result, context.run_id)
+    return result
 
 
 @job

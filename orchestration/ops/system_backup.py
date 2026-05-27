@@ -10,9 +10,14 @@ Config env vars:
 
 import os
 import subprocess
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 from dagster import op, job, OpExecutionContext, Failure
+
+from orchestration.notifications.lark_client import send_lark_card
+
+_ICT = timezone(timedelta(hours=7))
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKUP_SH = PROJECT_ROOT / "scripts" / "backup" / "backup.sh"
@@ -70,6 +75,20 @@ def run_platform_backup(context: OpExecutionContext) -> None:
     })
 
     context.log.info("Platform backup completed successfully.")
+    try:
+        ts = datetime.now(_ICT).strftime("%Y-%m-%d %H:%M ICT")
+        send_lark_card(
+            title="✅ Backup platform xong",
+            color="green",
+            fields={
+                "Destination": backup_root,
+                "Keep count": keep_count,
+                "Completed at": ts,
+                "Run": context.run_id[:8],
+            },
+        )
+    except Exception:
+        pass  # notification failure must never fail the job
 
 
 @job(
