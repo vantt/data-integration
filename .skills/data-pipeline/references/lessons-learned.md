@@ -3047,3 +3047,31 @@ AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 **Rules:**
 1. Never filter channels by name exclusion (`!= 'US'`, `!= 'Test'`). Always use `is_sales_channel` or explicit inclusion.
 2. When adding new non-sales channels to `dim_channels`, audit dashboards for legacy exclusion filters.
+
+---
+
+### L91 — `AssetSelection.key()` does not exist in Dagster 1.13.2 — causes immediate job load failure
+
+**Group:** OPS
+
+**Symptom:** `ingest_sapo_realtime_job` failed after a `definitions.py` change. Run lasted 0 seconds, `stepStats` empty, Dagster event log: `"Could not load job definition."` / `"This run has been marked as failed from outside the execution context."` The code change looked syntactically valid; no import error was raised at import time.
+
+**Root cause:** `AssetSelection.key()` (singular) does not exist in Dagster 1.13.2. The method only raised `AttributeError` at runtime when the worker process tried to instantiate the job, not at module import time. The code location _appeared_ loaded (Dagster UI showed `LOADED`) because the error occurs during job execution setup, not during `definitions.py` import.
+
+**Fix:**
+```python
+# WRONG — AttributeError at runtime, not caught at import
+AssetSelection.key(AssetKey(["fact_order_returns"]))
+
+# DEPRECATED but works (Dagster 1.13.2)
+AssetSelection.keys(AssetKey(["fact_order_returns"]))
+
+# CORRECT (non-deprecated, works for dbt model assets)
+AssetSelection.assets("fact_order_returns")
+```
+
+**Rules:**
+1. After any `definitions.py` change, always validate in-container: `python3 -c "from orchestration.definitions import defs; print(len(defs.jobs))"` before committing.
+2. "Could not load job definition" + `stepStats=[]` + `startTime==endTime` = job instantiation error, not a step failure. Check `EngineEvent` messages in run log.
+3. `AssetSelection.assets(str)` accepts plain model name strings for dbt models — no `AssetKey` needed.
+4. Code location showing `LOADED` does not guarantee individual job definitions are valid — job validation is lazy (at execution time).
