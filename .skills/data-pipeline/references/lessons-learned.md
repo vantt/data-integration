@@ -3075,3 +3075,42 @@ AssetSelection.assets("fact_order_returns")
 2. "Could not load job definition" + `stepStats=[]` + `startTime==endTime` = job instantiation error, not a step failure. Check `EngineEvent` messages in run log.
 3. `AssetSelection.assets(str)` accepts plain model name strings for dbt models — no `AssetKey` needed.
 4. Code location showing `LOADED` does not guarantee individual job definitions are valid — job validation is lazy (at execution time).
+
+---
+
+### L92 — dbt mart models get 2-component Dagster asset keys `['marts', name]` — bare string selection silently fails
+
+**Group:** OPS
+
+**Symptom:** After adding `AssetSelection.assets("fact_order_returns")` to a job selection, Dagster reported `"Failed to resolve asset job ingest_filedrop_shopee_job"`. No error at module import or at `python3 -c "from orchestration.definitions import defs"` — the failure only appeared in `workspaceOrError.locationOrLoadError` after a code location reload.
+
+**Root cause:** `SapoDbtTranslator.get_asset_key()` falls through to `super()` for model nodes. The default dagster-dbt translator uses the model's `fqn` (fully qualified name) to derive the key. For models in `models/marts/**`, this produces a 2-component key `['marts', 'model_name']`. Models in `models/intermediate/**` get single-component keys. A bare string `"fact_order_returns"` resolves to `AssetKey(['fact_order_returns'])` which doesn't exist in the asset graph → resolution failure.
+
+**Fix:**
+```python
+# WRONG — wrong key, job fails to resolve silently at runtime
+AssetSelection.assets("fact_order_returns")
+
+# CORRECT — use the actual 2-component key for marts/ models
+AssetSelection.assets(AssetKey(["marts", "fact_order_returns"]))
+```
+
+To discover the actual key for any dbt model:
+```python
+docker exec data_platform python3 -c "
+import json
+from orchestration.assets.dbt import SapoDbtTranslator
+with open('/app/transformation/target/manifest.json') as f:
+    manifest = json.load(f)
+translator = SapoDbtTranslator()
+for node in manifest['nodes'].values():
+    if node.get('resource_type') == 'model' and 'my_model' in node['name']:
+        print(node['name'], '->', translator.get_asset_key(node))
+"
+```
+
+**Rules:**
+1. Never assume bare string = valid asset key for dbt models. Always look up the key via translator + manifest first.
+2. Key prefix depends on model folder: `marts/` → `['marts', name]`, `intermediate/` → `[name]`, `staging/` → `['staging', name]`.
+3. After adding any `AssetSelection.assets(...)` referencing a dbt model by key, verify with `workspaceOrError.locationOrLoadError` — a `RepositoryLocation` (not `PythonError`) confirms success.
+4. `python3 -c "from orchestration.definitions import defs"` does NOT catch job resolution errors — always reload the Dagster code location and inspect `locationOrLoadError`.
