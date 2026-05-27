@@ -1,8 +1,7 @@
 """Dagster assets for MISA AMIS sales ledger file-drop ingestion.
 
 Writes to ingestion_health via orchestration.ops.ingestion_health on every run.
-File-drop variant: emits file_sha256, file_mtime, rows_fetched from xlsx source
-files BEFORE the run module archives them.
+Sensor fires one run per file; file_path is passed via MisaFiledropConfig.
 """
 
 import importlib.util
@@ -10,10 +9,10 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from dagster import asset, Output, MetadataValue
+from dagster import asset, Output, MetadataValue, Config
 from orchestration.assets.utils import load_dlt_configuration, DLT_DIR
 from orchestration.ops.ingestion_health import record_run as _record_health
-from orchestration.ops.file_metrics import scan_drop_zone, aggregate_file_manifest
+from orchestration.ops.file_metrics import hash_and_count_xlsx, scan_drop_zone, aggregate_file_manifest
 
 # Input directory for MISA AMIS drop zone — env var with Docker default.
 # Local dev: set MISA_INPUT_DIR in .env.local.
@@ -46,24 +45,34 @@ def _get_run_module():
     return _run_module
 
 
-@asset(group_name="misa_amis_ingestion", key_prefix=["misa_amis"])
-def misa_sales_file_drop_asset(context):
-    """Ingest MISA AMIS sales ledger Excel files from the drop zone.
+class MisaFiledropConfig(Config):
+    file_path: str = ""
 
-    Parses xlsx -> 1 parquet table (sales_lines with COGS).
-    Append-only writes; source files archived to _archive/ on success.
-    Writes to ingestion_health via orchestration.ops.ingestion_health.
+
+@asset(group_name="misa_amis_ingestion", key_prefix=["misa_amis"])
+def misa_sales_file_drop_asset(context, config: MisaFiledropConfig):
+    """Ingest one MISA AMIS sales ledger Excel file from the drop zone.
+
+    Sensor fires one run per file via config.file_path. When triggered
+    manually without config (file_path=""), processes all files in drop zone.
     """
     asset_key_str = "misa_amis/misa_sales_file_drop_asset"
     started = datetime.now(timezone.utc)
     context.log.info("Starting MISA sales ledger file-drop ingestion...")
     load_dlt_configuration(context.log.info)
 
-    # --- Scan drop zone BEFORE run module archives files ---
+    # Scan file metrics BEFORE run module archives the file
     file_entries: list = []
     manifest: dict = {}
     try:
-        file_entries = scan_drop_zone(_MISA_INPUT_DIR)
+        if config.file_path:
+            if os.path.exists(config.file_path):
+                metrics = hash_and_count_xlsx(config.file_path)
+                file_entries = [{"path": config.file_path, **metrics}]
+            else:
+                context.log.warning(f"File not found: {config.file_path}")
+        else:
+            file_entries = scan_drop_zone(_MISA_INPUT_DIR)
         manifest = aggregate_file_manifest(file_entries)
         context.log.info(
             f"MISA drop zone: {len(file_entries)} file(s), "
@@ -73,12 +82,13 @@ def misa_sales_file_drop_asset(context):
         context.log.warning(f"MISA file metrics scan failed (non-fatal): {exc}")
         manifest = {"file_sha256": None, "file_mtime": None, "rows_fetched": None, "manifest": []}
 
+    run_argv = ["--file", config.file_path] if config.file_path else []
     cwd = os.getcwd()
     status = "failed"
     try:
         try:
             os.chdir(DLT_DIR)
-            _get_run_module().run(argv=[])
+            _get_run_module().run(argv=run_argv)
         finally:
             os.chdir(cwd)
 

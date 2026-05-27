@@ -33,9 +33,16 @@ utils = _import_from_file("file_drop_utils", PROJECT_ROOT / "ingestion" / "src" 
 
 
 # Input directory — env var for Docker, fallback to local relative path.
-DEFAULT_INPUT_DIR = os.environ.get(
+# If fallback path doesn't exist (e.g. Docker where volume is mounted at /app/var/),
+# use the Docker-standard mount path to match the asset and sensor resolution.
+_DEFAULT_INPUT_DIR = os.environ.get(
     "MISA_INPUT_DIR",
     str(PROJECT_ROOT / "app_data" / "input_source" / "misa-amis"),
+)
+DEFAULT_INPUT_DIR = (
+    _DEFAULT_INPUT_DIR
+    if os.path.isdir(_DEFAULT_INPUT_DIR)
+    else "/app/var/input_source/misa-amis"
 )
 
 

@@ -105,18 +105,29 @@ def parse_misa_sales_ledger(file_path):
         if date_col in df.columns:
             df[date_col] = pd.to_datetime(df[date_col], errors="coerce").dt.date
 
-    # invoice_no: float → zero-padded 8-char string
+    # invoice_no: numeric float → zero-padded 8-char string; non-numeric kept as-is
     if "invoice_no" in df.columns:
-        df["invoice_no"] = df["invoice_no"].apply(
-            lambda x: f"{int(x):08d}" if pd.notna(x) else None
-        )
+        def _fmt_invoice_no(x):
+            if pd.isna(x):
+                return None
+            try:
+                return f"{int(x):08d}"
+            except (ValueError, TypeError):
+                return str(x).strip()
+        df["invoice_no"] = df["invoice_no"].apply(_fmt_invoice_no)
 
-    # Accounting codes: float → str (preserves "131", "51111", etc.)
+    # Accounting codes: numeric float → str; non-numeric kept as-is
+    def _fmt_acct_code(x):
+        if pd.isna(x):
+            return None
+        try:
+            return str(int(x))
+        except (ValueError, TypeError):
+            return str(x).strip()
+
     for acct_col in ["debit_account", "credit_account", "discount_account", "cogs_account"]:
         if acct_col in df.columns:
-            df[acct_col] = df[acct_col].apply(
-                lambda x: str(int(x)) if pd.notna(x) else None
-            )
+            df[acct_col] = df[acct_col].apply(_fmt_acct_code)
 
     # is_promo_line: "✓" → True, NaN → False
     if "is_promo_line" in df.columns:

@@ -1,8 +1,7 @@
 """Dagster assets for Shopee income file-drop ingestion.
 
 Writes to ingestion_health via orchestration.ops.ingestion_health on every run.
-File-drop variant: emits file_sha256, file_mtime, rows_fetched from xlsx source
-files BEFORE the run module archives them.
+Sensor fires one run per file; file_path is passed via ShopeeFiledropConfig.
 
 Implemented as @multi_asset (4 outputs, one per parquet table) so each
 shopee_raw dbt source can map to a unique AssetKey in SapoDbtTranslator,
@@ -14,10 +13,10 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
-from dagster import multi_asset, AssetOut, AssetKey, Output, MetadataValue
+from dagster import multi_asset, AssetOut, AssetKey, Output, MetadataValue, Config
 from orchestration.assets.utils import load_dlt_configuration, DLT_DIR
 from orchestration.ops.ingestion_health import record_run as _record_health
-from orchestration.ops.file_metrics import scan_drop_zone, aggregate_file_manifest
+from orchestration.ops.file_metrics import hash_and_count_xlsx, scan_drop_zone, aggregate_file_manifest
 
 # Input directory for Shopee drop zone — env var with Docker default.
 # Local dev: set SHOPEE_INPUT_DIR in .env.local.
@@ -50,6 +49,10 @@ def _get_run_module():
     return _run_module
 
 
+class ShopeeFiledropConfig(Config):
+    file_path: str = ""
+
+
 @multi_asset(
     outs={
         "order_revenue": AssetOut(
@@ -71,24 +74,29 @@ def _get_run_module():
     },
     group_name="shopee_ingestion",
 )
-def shopee_income_file_drop_asset(context):
-    """Ingest Shopee released-income Excel files from the drop zone.
+def shopee_income_file_drop_asset(context, config: ShopeeFiledropConfig):
+    """Ingest one Shopee released-income Excel file from the drop zone.
 
-    Parses xlsx -> 4 parquet tables (order_revenue, order_revenue_items, order_service_fees, order_adjustments).
-    Append-only writes; source files archived to _archive/ on success.
-    Writes to ingestion_health via orchestration.ops.ingestion_health.
+    Sensor fires one run per file via config.file_path. When triggered
+    manually without config (file_path=""), processes all files in drop zone.
     """
-    # Kept as a stable identifier for the health DB (backward compatible).
     asset_key_str = "shopee/shopee_income_file_drop_asset"
     started = datetime.now(timezone.utc)
     context.log.info("Starting Shopee income file-drop ingestion...")
     load_dlt_configuration(context.log.info)
 
-    # --- Scan drop zone BEFORE run module archives files ---
+    # Scan file metrics BEFORE run module archives the file
     file_entries: list = []
     manifest: dict = {}
     try:
-        file_entries = scan_drop_zone(_SHOPEE_INPUT_DIR)
+        if config.file_path:
+            if os.path.exists(config.file_path):
+                metrics = hash_and_count_xlsx(config.file_path)
+                file_entries = [{"path": config.file_path, **metrics}]
+            else:
+                context.log.warning(f"File not found: {config.file_path}")
+        else:
+            file_entries = scan_drop_zone(_SHOPEE_INPUT_DIR)
         manifest = aggregate_file_manifest(file_entries)
         context.log.info(
             f"Shopee drop zone: {len(file_entries)} file(s), "
@@ -98,12 +106,13 @@ def shopee_income_file_drop_asset(context):
         context.log.warning(f"Shopee file metrics scan failed (non-fatal): {exc}")
         manifest = {"file_sha256": None, "file_mtime": None, "rows_fetched": None, "manifest": []}
 
+    run_argv = ["--file", config.file_path] if config.file_path else []
     cwd = os.getcwd()
     status = "failed"
     try:
         try:
             os.chdir(DLT_DIR)
-            _get_run_module().run(argv=[])
+            _get_run_module().run(argv=run_argv)
         finally:
             os.chdir(cwd)
 
