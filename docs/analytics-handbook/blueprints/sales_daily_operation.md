@@ -690,6 +690,14 @@ ORDER BY 1
 {"row": 18, "col":12, "size_x":6, "size_y":6}
 ```
 
+#### 📝 Text: Source & Freshness
+
+Source: `fact_orders` (order-level) + `fact_sales` (line-item, Items/Order) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · KPIs & Hourly: hôm nay vs hôm qua · Health Score: D-6 → hôm nay so với D-13 → D-7 · Bao gồm tất cả trạng thái đơn
+
+```json metabase-pos
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ---
 
 ### 📑 Tab: Kênh bán hàng
@@ -930,6 +938,14 @@ ORDER BY 3 DESC
 { "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
+#### 📝 Text: Source & Freshness
+
+Source: `fact_orders` · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Ranking kênh: hôm nay · DoD table (Channel Performance): hôm nay vs hôm qua · Bao gồm tất cả trạng thái đơn
+
+```json metabase-pos
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ---
 
 ### 📑 Tab: Sản phẩm
@@ -1119,6 +1135,14 @@ LIMIT 20
 { "row": 8, "col": 9, "size_x": 9, "size_y": 8 }
 ```
 
+#### 📝 Text: Source & Freshness
+
+Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Khung thời gian: hôm nay (by sol_timestamp, không phải order_timestamp)
+
+```json metabase-pos
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ---
 
 ### 📑 Tab: Khách hàng & Thanh toán
@@ -1148,8 +1172,10 @@ SELECT
         / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
     ) as "Returning Rate %"
 FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
 
 ```json metabase-viz
@@ -1189,8 +1215,10 @@ SELECT
     COUNT(DISTINCT o.order_id) as "Đơn hàng",
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ```
 
@@ -1229,8 +1257,10 @@ SELECT
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
+  AND c.customer_type = 'RETAIL'
+  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1364,7 +1394,7 @@ WHERE date(o.order_timestamp) = current_date
 
 #### 📝 Text: Source & Freshness
 
-Source: fact_orders · Updated real-time · **Scope: Retail only (customer_type = 'RETAIL')** · Excludes cancelled/voided orders
+Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_customers` (At Risk = RFM snapshot, không theo ngày) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Hôm nay (by order_timestamp) · Bao gồm tất cả trạng thái đơn
 
 ```json metabase-pos
 { "row": 20, "col": 0, "size_x": 18, "size_y": 1 }

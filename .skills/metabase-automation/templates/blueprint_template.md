@@ -40,6 +40,62 @@ Tabs organize dashboard cards into separate views. Place `### 📑 Tab:` headers
 - Tab positions reset per tab — each tab has its own `row`/`col` grid starting at (0,0)
 - Tabs and cards are deployed in a single API call to Metabase
 
+### Tab Structure Standards
+
+**Quy tắc: Mỗi tab BẮT BUỘC có 2 widgets — Chu kỳ báo cáo và Source & Freshness**
+
+---
+
+#### Widget 1 — Chu kỳ báo cáo (đầu tab, row 0–1)
+
+Mục đích: Khai báo khung thời gian — người đọc biết chính xác mình đang xem dữ liệu của ngày/tuần/tháng nào.
+
+**Type:** ❓ Question (SQL scalar) — không phải text card
+
+**SQL mẫu (daily):**
+```sql
+SELECT
+  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+**Visualization:**
+```json
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+**Vị trí:** row: 0, col: 0, size_x: 18, size_y: 2 — bắt buộc size_y: 2 mới hiển thị đủ
+
+**Nội dung SQL thay đổi theo loại dashboard:**
+- Daily: hôm nay + hôm qua
+- Weekly: tuần hiện tại (D-6 → hôm nay)
+- Monthly: tháng hiện tại
+
+**Ràng buộc:** Không đặt widget nào khác tại row 0 — Metabase ưu tiên text card khi conflict, Chu kỳ báo cáo sẽ bị đẩy xuống (đây là bug đã gặp và fix trong thực tế).
+
+---
+
+#### Widget 2 — Source & Freshness (cuối tab, row cuối)
+
+Mục đích: Khai báo data frame — nguồn, scope filter thực sự, time window, caveats.
+
+**Type:** Text card (plain text)
+
+**Vị trí:** row cuối cùng, col: 0, size_x: 18, size_y: 1
+
+**Format:**
+```
+Source: [bảng] · [cadence] · **Scope: [filters]** · [time window] · [caveats nếu có]
+```
+
+**Ràng buộc khi viết:**
+- Chỉ ghi những gì query thực sự làm — không assume (bài học: "Excludes cancelled/voided" sai vì fact_orders không filter status)
+- Nếu widgets trong tab dùng time window khác nhau → ghi rõ từng loại
+- Nếu có widget dùng dim snapshot (không theo ngày) → note riêng
+
+---
+
 ### Filter Support
 
 Dashboard-level filters (parameters) are defined using `#### Filter:` headers with a `metabase-filter` JSON block. Place them before any Tab or Question headers.
