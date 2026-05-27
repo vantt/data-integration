@@ -1,7 +1,7 @@
 """Ingestion-health recorder.
 
 Persists one row per ingestion asset run into a dedicated SQLite instance
-(`app_data/data_lake/monitoring/ingestion_health.db`) independent of
+(`/app/var/data_lake/monitoring/ingestion_health.db` inside Docker) independent of
 Dagster's event log (which is short-lived) and of the serving DB.
 
 Public API:

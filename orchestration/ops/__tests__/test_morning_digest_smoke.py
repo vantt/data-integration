@@ -1,6 +1,6 @@
 """Smoke tests for Phase 4 morning digest.
 
-Seeds a temporary ingestion_health.duckdb with synthetic data and verifies:
+Seeds a temporary ingestion_health.db with synthetic data and verifies:
 - classify() correctly assigns green/yellow/red/gray per boundary conditions
 - build_digest_rows() returns one row per known asset
 - compose_card_fields() produces non-empty output with correct worst-color
@@ -11,10 +11,11 @@ No live DB, no network I/O.
 from __future__ import annotations
 
 import os
+import sqlite3
 import uuid
 from datetime import datetime, timezone, timedelta
 
-import duckdb
+import orchestration.ops.ingestion_health  # noqa: F401 — registers sqlite3 adapters/converters
 import pytest
 
 from orchestration.ops.morning_digest import (
@@ -31,22 +32,22 @@ from orchestration.ops.morning_digest import (
 
 _DDL = """
 CREATE TABLE IF NOT EXISTS ingestion_runs (
-    asset_key       VARCHAR NOT NULL,
-    run_id          VARCHAR NOT NULL,
+    asset_key       TEXT NOT NULL,
+    run_id          TEXT NOT NULL,
     run_started_at  TIMESTAMPTZ NOT NULL,
     run_ended_at    TIMESTAMPTZ,
-    duration_s      DOUBLE,
-    status          VARCHAR NOT NULL,
-    rows_fetched    BIGINT,
-    rows_written    BIGINT,
-    rows_new        BIGINT,
-    rows_updated    BIGINT,
-    cursor_before   VARCHAR,
-    cursor_after    VARCHAR,
-    schema_hash     VARCHAR,
-    file_sha256     VARCHAR,
+    duration_s      REAL,
+    status          TEXT NOT NULL,
+    rows_fetched    INTEGER,
+    rows_written    INTEGER,
+    rows_new        INTEGER,
+    rows_updated    INTEGER,
+    cursor_before   TEXT,
+    cursor_after    TEXT,
+    schema_hash     TEXT,
+    file_sha256     TEXT,
     file_mtime      TIMESTAMPTZ,
-    metadata_json   JSON,
+    metadata_json   TEXT,
     PRIMARY KEY (asset_key, run_id)
 );
 """
@@ -69,13 +70,13 @@ def _yesterday_noon_utc() -> datetime:
 
 @pytest.fixture()
 def health_db(tmp_path, monkeypatch):
-    """Temp ingestion_health.duckdb seeded with synthetic data.
+    """Temp ingestion_health.db seeded with synthetic data.
 
     Rows are anchored to yesterday-noon ICT so they land in the digest's
     "yesterday 0h-24h ICT" window. The 7d median baseline is built by stepping
     back one ICT day at a time from that anchor.
     """
-    db_path = str(tmp_path / "ingestion_health.duckdb")
+    db_path = str(tmp_path / "ingestion_health.db")
     monkeypatch.setenv("INGESTION_HEALTH_DB", db_path)
 
     anchor = _yesterday_noon_utc()
@@ -83,7 +84,7 @@ def health_db(tmp_path, monkeypatch):
     recent = now_utc - timedelta(hours=1)  # heartbeat so freshness SLA passes
     recent_recon = now_utc - timedelta(hours=1)
 
-    conn = duckdb.connect(db_path)
+    conn = sqlite3.connect(db_path)
     conn.execute(_DDL)
 
     # Asset 1: sapo_orders — healthy. Yesterday has 11_000 rows; earlier days
@@ -96,7 +97,7 @@ def health_db(tmp_path, monkeypatch):
             [
                 "sapo/sapo_orders_batch_asset",
                 str(uuid.uuid4()),
-                anchor - timedelta(days=days_ago),
+                (anchor - timedelta(days=days_ago)).strftime("%Y-%m-%d %H:%M:%S.%f"),
                 11_000 + days_ago * 100,
             ],
         )
@@ -105,7 +106,7 @@ def health_db(tmp_path, monkeypatch):
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
            VALUES (?, ?, ?, 'skipped', 0)""",
-        ["sapo/sapo_orders_batch_asset", str(uuid.uuid4()), recent],
+        ["sapo/sapo_orders_batch_asset", str(uuid.uuid4()), recent.strftime("%Y-%m-%d %H:%M:%S.%f")],
     )
 
     # Asset 2: sapo_customers — yesterday=0, median~200 → ratio 0 → yellow.
@@ -117,7 +118,7 @@ def health_db(tmp_path, monkeypatch):
             [
                 "sapo/sapo_customers_batch_asset",
                 str(uuid.uuid4()),
-                anchor - timedelta(days=days_ago),
+                (anchor - timedelta(days=days_ago)).strftime("%Y-%m-%d %H:%M:%S.%f"),
                 200,
             ],
         )
@@ -126,14 +127,14 @@ def health_db(tmp_path, monkeypatch):
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
            VALUES (?, ?, ?, 'success', ?)""",
-        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), anchor, 0],
+        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), anchor.strftime("%Y-%m-%d %H:%M:%S.%f"), 0],
     )
     # Recent heartbeat so SLA doesn't override the "yellow from ratio" check.
     conn.execute(
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
            VALUES (?, ?, ?, 'skipped', 0)""",
-        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), recent],
+        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), recent.strftime("%Y-%m-%d %H:%M:%S.%f")],
     )
 
     # Asset 3: misa — recon drift > 5% (ERROR). Recon still uses rolling 24h
@@ -145,12 +146,13 @@ def health_db(tmp_path, monkeypatch):
         [
             "recon/misa_daily",
             str(uuid.uuid4()),
-            recent_recon,
+            recent_recon.strftime("%Y-%m-%d %H:%M:%S.%f"),
             0,
             '{"drift_pct": -13.0, "src_count": 8200, "dst_count": 7140}',
         ],
     )
 
+    conn.commit()
     conn.close()
     return db_path
 
@@ -287,7 +289,7 @@ def test_compose_card_fields_worst_color_red_when_drift(health_db):
 
 def test_compose_card_fields_no_db(tmp_path, monkeypatch):
     """Missing DB → all gray → color is grey."""
-    monkeypatch.setenv("INGESTION_HEALTH_DB", str(tmp_path / "missing.duckdb"))
+    monkeypatch.setenv("INGESTION_HEALTH_DB", str(tmp_path / "missing.db"))
     # build_digest_rows handles missing DB by returning gray rows
     from orchestration.ops.morning_digest import KNOWN_ASSETS, DigestRow, classify, compose_card_fields
     rows = [

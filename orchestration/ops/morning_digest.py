@@ -1,6 +1,6 @@
 """Morning Lark digest for ingestion health.
 
-Runs at 06:00 Asia/Ho_Chi_Minh daily. Reads ingestion_health.duckdb,
+Runs at 06:00 Asia/Ho_Chi_Minh daily. Reads ingestion_health.db,
 composes one Lark card summarising yesterday's ingestion volume (ICT
 0h-24h), 7-day median trend, freshness, recon drift, consecutive
 zero-row streaks, and recommended actions per source.
@@ -17,9 +17,9 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from typing import Literal, Optional
 
-import duckdb
 from dagster import job, op
 
+from orchestration.asset_checks.health_db import consecutive_empty_with_cursor_move, open_readonly
 from orchestration.ops.ingestion_health import get_db_path
 from orchestration.notifications.lark_client import send_lark_card
 
@@ -146,73 +146,103 @@ def classify(row: DigestRow) -> Literal["green", "yellow", "red", "gray"]:
 # ---------------------------------------------------------------------------
 
 _MAIN_QUERY = """
--- Reporting window = yesterday's ICT calendar day (0h-24h Asia/Ho_Chi_Minh),
--- not a rolling 24h window. Digest runs at 06:00 ICT so the card describes
--- the full previous day. Freshness (last_ok/last_any) stays absolute.
-WITH recent AS (
-    -- last_ok includes BOTH 'success' (wrote rows) and 'skipped' (ran ok, no new data).
-    -- A skipped run is a healthy outcome for cursor/batch assets when source had nothing new.
-    SELECT asset_key,
-           MAX(run_started_at) FILTER (WHERE status IN ('success', 'skipped')) AS last_ok,
-           MAX(run_started_at)                                                 AS last_any,
-           SUM(rows_written)   FILTER (
-               WHERE (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
-                   = ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE - 1)
-           )                                                                    AS r_yday,
-           COUNT(*)            FILTER (
-               WHERE (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
-                   = ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE - 1)
-           )                                                                    AS runs_yday,
-           LAST(status ORDER BY run_started_at) AS last_status,
-           LAST(run_id ORDER BY run_started_at) AS last_run_id
+-- Reporting window = yesterday's ICT calendar day (0h-24h Asia/Ho_Chi_Minh).
+-- run_started_at is stored as UTC string; '+7 hours' converts to ICT for date bucketing.
+WITH last_row AS (
+    -- Most recent run per asset for last_status / last_run_id.
+    SELECT asset_key, status AS last_status, run_id AS last_run_id
+    FROM (
+        SELECT asset_key, status, run_id,
+               ROW_NUMBER() OVER (PARTITION BY asset_key ORDER BY run_started_at DESC) AS rn
+        FROM ingestion_runs
+    ) WHERE rn = 1
+),
+recent AS (
+    SELECT
+        asset_key,
+        MAX(run_started_at) FILTER (WHERE status IN ('success', 'skipped')) AS last_ok,
+        MAX(run_started_at)                                                  AS last_any,
+        SUM(rows_written)   FILTER (
+            WHERE date(run_started_at, '+7 hours') = date('now', '+7 hours', '-1 day')
+        )                                                                    AS r_yday,
+        COUNT(*)            FILTER (
+            WHERE date(run_started_at, '+7 hours') = date('now', '+7 hours', '-1 day')
+        )                                                                    AS runs_yday
     FROM ingestion_runs
     GROUP BY asset_key
 ),
 daily AS (
-    -- Calendar-day buckets in ICT so median lines up with the yesterday window.
     SELECT asset_key,
-           (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE AS d,
-           SUM(rows_written)                                       AS r
+           date(run_started_at, '+7 hours') AS d,
+           SUM(rows_written)               AS r
     FROM ingestion_runs
-    WHERE (run_started_at AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE
-        >= ((now() AT TIME ZONE 'Asia/Ho_Chi_Minh')::DATE - 7)
+    WHERE date(run_started_at, '+7 hours') >= date('now', '+7 hours', '-7 days')
       AND status IN ('success', 'skipped')
     GROUP BY 1, 2
 ),
 med AS (
-    SELECT asset_key, median(r) AS med7
-    FROM daily
-    GROUP BY 1
+    -- Median via middle-value trick: works for up to 7 rows per asset.
+    SELECT asset_key, AVG(CAST(r AS REAL)) AS med7
+    FROM (
+        SELECT asset_key, r,
+               ROW_NUMBER() OVER (PARTITION BY asset_key ORDER BY r) AS rn,
+               COUNT(*)     OVER (PARTITION BY asset_key)            AS cnt
+        FROM daily
+    )
+    WHERE rn IN ((cnt + 1) / 2, (cnt + 2) / 2)
+    GROUP BY asset_key
 )
-SELECT r.asset_key, r.last_ok, r.r_yday, m.med7, r.last_status, r.last_run_id, r.runs_yday
+SELECT r.asset_key, r.last_ok, r.r_yday, m.med7, lr.last_status, lr.last_run_id, r.runs_yday
 FROM recent r
-LEFT JOIN med m USING (asset_key);
+LEFT JOIN med m       USING (asset_key)
+LEFT JOIN last_row lr USING (asset_key);
 """
 
 _RECON_QUERY = """
-SELECT asset_key, (metadata_json ->> 'drift_pct')::DOUBLE AS drift_pct
-FROM ingestion_runs
-WHERE asset_key LIKE 'recon/%'
-  AND run_started_at >= now() - INTERVAL 1 DAY
-QUALIFY row_number() OVER (PARTITION BY asset_key ORDER BY run_started_at DESC) = 1;
+SELECT asset_key,
+       CAST(json_extract(metadata_json, '$.drift_pct') AS REAL) AS drift_pct
+FROM (
+    SELECT asset_key, metadata_json,
+           ROW_NUMBER() OVER (PARTITION BY asset_key ORDER BY run_started_at DESC) AS rn
+    FROM ingestion_runs
+    WHERE asset_key LIKE 'recon/%'
+      AND run_started_at >= datetime('now', '-1 day')
+)
+WHERE rn = 1;
 """
 
 _KPI_QUERY = """
 SELECT
-    (metadata_json ->> 'source_revenue')::DOUBLE AS source_revenue,
-    (metadata_json ->> 'warehouse_revenue')::DOUBLE AS warehouse_revenue,
-    (metadata_json ->> 'drift_pct')::DOUBLE AS drift_pct,
-    (metadata_json ->> 'date_key')::INTEGER AS date_key,
+    CAST(json_extract(metadata_json, '$.source_revenue')    AS REAL)    AS source_revenue,
+    CAST(json_extract(metadata_json, '$.warehouse_revenue') AS REAL)    AS warehouse_revenue,
+    CAST(json_extract(metadata_json, '$.drift_pct')         AS REAL)    AS drift_pct,
+    CAST(json_extract(metadata_json, '$.date_key')          AS INTEGER) AS date_key,
     status
 FROM ingestion_runs
 WHERE asset_key = 'kpi/revenue_daily'
-  AND run_started_at >= now() - INTERVAL 1 DAY
+  AND run_started_at >= datetime('now', '-1 day')
 ORDER BY run_started_at DESC
 LIMIT 1;
 """
 
 
-def _fetch_stats(db_path: str, log=None) -> tuple[dict, dict, dict, Optional[KpiData]]:
+def _parse_dt(val) -> Optional[datetime]:
+    """Coerce a SQLite timestamp value (string or datetime) to timezone-aware UTC datetime.
+
+    MAX(run_started_at) returns a string (not converted by PARSE_DECLTYPES) — this handles it.
+    """
+    if val is None:
+        return None
+    if isinstance(val, datetime):
+        return val if val.tzinfo else val.replace(tzinfo=timezone.utc)
+    try:
+        dt = datetime.fromisoformat(str(val))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except (ValueError, TypeError):
+        return None
+
+
+def _fetch_stats(log=None) -> tuple[dict, dict, dict, Optional[KpiData]]:
     """Return (stats_by_asset_key, drift_by_recon_key, zero_streaks, kpi_data) dicts.
 
     log: callable (e.g. context.log.info) — emits Dagster heartbeat events during
@@ -229,14 +259,12 @@ def _fetch_stats(db_path: str, log=None) -> tuple[dict, dict, dict, Optional[Kpi
     zero_streaks: dict = {}
     kpi_data: Optional[KpiData] = None
     try:
-        conn = duckdb.connect(db_path, read_only=True)
-        try:
-            from orchestration.asset_checks.health_db import consecutive_empty_with_cursor_move
-
+        with open_readonly() as conn:
             _heartbeat("morning_digest: running main stats query (window + median)...")
             rows = conn.execute(_MAIN_QUERY).fetchall()
             for asset_key, last_ok, r_24h, med7, last_status, last_run_id, runs_24h in rows:
-                stats[asset_key] = (last_ok, r_24h, med7, last_status, last_run_id, runs_24h)
+                # last_ok is MAX() expression — not auto-converted by PARSE_DECLTYPES
+                stats[asset_key] = (_parse_dt(last_ok), r_24h, med7, last_status, last_run_id, runs_24h)
             _heartbeat(f"morning_digest: main query done ({len(rows)} assets)")
 
             _heartbeat("morning_digest: running recon drift query...")
@@ -260,8 +288,6 @@ def _fetch_stats(db_path: str, log=None) -> tuple[dict, dict, dict, Optional[Kpi
                     date_key=kpi_row[3],
                     status=kpi_row[4],
                 )
-        finally:
-            conn.close()
     except Exception as exc:
         logger.error(f"morning_digest: failed to query health DB: {exc}")
         return {}, {}, {}, None
@@ -273,8 +299,8 @@ def _fetch_stats(db_path: str, log=None) -> tuple[dict, dict, dict, Optional[Kpi
 # ---------------------------------------------------------------------------
 
 def build_digest_rows(db_path: str, log=None) -> tuple[list[DigestRow], Optional[KpiData]]:
-    """Query ingestion_health.duckdb and build one DigestRow per known asset + KPI data."""
-    stats, drift, zero_streaks, kpi_data = _fetch_stats(db_path, log=log)
+    """Query ingestion_health.db and build one DigestRow per known asset + KPI data."""
+    stats, drift, zero_streaks, kpi_data = _fetch_stats(log=log)
     now_utc = datetime.now(timezone.utc)
     rows: list[DigestRow] = []
 
@@ -570,17 +596,16 @@ def _today_ict() -> str:
 # Op + job
 # ---------------------------------------------------------------------------
 
-def _check_db_staleness(db_path: str) -> Optional[float]:
+def _check_db_staleness() -> Optional[float]:
     """Return age in hours of the last health DB write, or None if unreadable."""
     try:
-        conn = duckdb.connect(db_path, read_only=True)
-        row = conn.execute("SELECT MAX(run_started_at) FROM ingestion_runs").fetchone()
-        conn.close()
+        with open_readonly() as conn:
+            row = conn.execute("SELECT MAX(run_started_at) FROM ingestion_runs").fetchone()
         if not row or row[0] is None:
             return None
-        last_write = row[0]
-        if hasattr(last_write, "tzinfo") and last_write.tzinfo is None:
-            last_write = last_write.replace(tzinfo=timezone.utc)
+        last_write = _parse_dt(row[0])
+        if last_write is None:
+            return None
         return (datetime.now(timezone.utc) - last_write).total_seconds() / 3600
     except Exception:
         return None
@@ -588,7 +613,7 @@ def _check_db_staleness(db_path: str) -> Optional[float]:
 
 @op
 def compose_and_send_digest(context) -> None:
-    """Read ingestion_health.duckdb and post morning Lark card."""
+    """Read ingestion_health.db and post morning Lark card."""
     db_path = get_db_path()
     dry_run = os.getenv("DIGEST_DRY_RUN", "0") == "1"
 
@@ -612,7 +637,7 @@ def compose_and_send_digest(context) -> None:
     else:
         # Check for stale monitoring data before building rows.
         # sapo_webhook writes every 3 min; a gap > 6h means the recorder is broken.
-        stale_age_h = _check_db_staleness(db_path)
+        stale_age_h = _check_db_staleness()
         rows, kpi_data = build_digest_rows(db_path, log=context.log.info)
 
     if not rows:

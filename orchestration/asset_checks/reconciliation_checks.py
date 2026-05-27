@@ -18,7 +18,6 @@ import json
 import logging
 from typing import Optional
 
-import duckdb
 from dagster import (
     AssetCheckResult,
     AssetCheckSeverity,
@@ -55,7 +54,7 @@ def _make_drift_check(
 
     Args:
         asset_def: The Dagster asset object the check is attached to.
-        health_asset_key: The asset_key string stored in ingestion_health.duckdb
+        health_asset_key: The asset_key string stored in ingestion_health.db
                           (e.g. 'recon/shopee_daily').
     """
 
