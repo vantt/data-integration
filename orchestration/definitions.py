@@ -368,7 +368,7 @@ def maintain_backup_fallback_schedule(context):
         limit=5,
     )
     for rec in records:
-        if datetime.fromtimestamp(rec.create_timestamp, tz=_ICT).date() == today:
+        if rec.create_timestamp.astimezone(_ICT).date() == today:
             return SkipReason("backup: already succeeded today")
     return RunRequest(run_key=None)
 
