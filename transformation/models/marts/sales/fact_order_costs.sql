@@ -168,7 +168,7 @@ SELECT
     order_code,
     cost_type,
     cost_category,
-    amount,
+    CAST(amount AS DECIMAL(18, 2))  AS amount,
     source_system,
     source_record,
     fee_source,

@@ -512,8 +512,6 @@ models:
         description: "Lãi ròng kênh = net_revenue - COGS - all Shopee fees"
       - name: channel_net_margin_pct
         description: "Biên lãi ròng kênh = channel_net_profit / net_revenue"
-      - name: has_platform_fees
-        description: "true nếu đơn có phí sàn (Shopee hoặc marketplace khác trong tương lai)"
       - name: cod_amount
         description: "Giá trị COD thu hộ từ người mua (từ đơn giao hàng đầu tiên)"
       - name: carrier_id

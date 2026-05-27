@@ -102,7 +102,6 @@ SELECT
     sf.shopee_taxes,
     sf.net_settlement       AS shopee_net_settlement,
     sf.order_code IS NOT NULL AS has_shopee_fees,
-    sf.order_code IS NOT NULL AS has_platform_fees,
 
     -- Channel Net Profit = Net Revenue - COGS - |Shopee fees| - |Shopee taxes|
     -- For non-Shopee orders: same as gross_profit
