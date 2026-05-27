@@ -72,7 +72,7 @@ Key metrics:
 - gross_margin_pct = gross_profit / net_revenue
 - channel_net_profit = gross_profit - Shopee fees
 - has_cogs (92.7% coverage for matched orders)
-- has_shopee_fees (45.7% coverage for Shopee channel)
+- has_platform_fees (45.7% coverage for Shopee channel; expands with Lazada/TikTok)
 ```
 
 ---
