@@ -14,7 +14,6 @@ from dagster import (
     ScheduleDefinition,
     define_asset_job,
     AssetSelection,
-    AssetKey,
     schedule,
     RunRequest,
     SkipReason,
@@ -123,7 +122,7 @@ ingest_sheets_sync_job = define_asset_job(
 # fact_order_economics (which IS downstream) depends on it — without this, the first
 # file-drop run on a fresh deploy fails because the parquet does not yet exist.
 _shopee_source = AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset)
-_fact_order_returns = AssetSelection.key(AssetKey(["fact_order_returns"]))
+_fact_order_returns = AssetSelection.assets("fact_order_returns")
 ingest_filedrop_shopee_job = define_asset_job(
     name="ingest_filedrop_shopee_job",
     selection=(
