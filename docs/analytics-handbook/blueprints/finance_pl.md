@@ -49,11 +49,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: PL Overview Heading
@@ -61,7 +61,7 @@ SELECT
 Doanh thu va loi nhuan gop — ket qua kinh doanh ky nay
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Net Revenue MTD
@@ -114,7 +114,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: COGS MTD
@@ -167,7 +167,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Gross Profit MTD
@@ -220,7 +220,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Gross Margin Percent
@@ -259,7 +259,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":5}
+{"row": 3, "col":14, "size_x":4, "size_y":5}
 ```
 
 #### 📝 Text: PL Trend Heading
@@ -267,7 +267,7 @@ WHERE NOT is_promo_line
 Xu huong doanh thu va gia von — margin co duy tri?
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":18, "size_y":1}
+{"row": 8, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Revenue vs COGS Trend
@@ -346,7 +346,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":8, "col":0, "size_x":12, "size_y":6}
+{"row": 9, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Revenue Waterfall
@@ -412,12 +412,37 @@ FROM (
 ```
 
 ```json metabase-pos
-{"row":8, "col":12, "size_x":6, "size_y":6}
+{"row": 9, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + int_misa_sales_lines · **Cadence:** monthly · **Scope:** is_sales_channel=true · **Caveats:** MISA COGS coverage ~65%
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Channel Profitability
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Channel Heading
 
 Loi nhuan theo kenh ban hang — kenh nao hieu qua nhat?
@@ -594,7 +619,32 @@ ORDER BY 1, 2
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + int_misa_sales_lines · **Cadence:** monthly · **Scope:** is_sales_channel=true · **Caveats:** MISA COGS coverage ~65%
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Shopee Economics
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Shopee Heading
 
@@ -989,3 +1039,13 @@ FROM (
 ```json metabase-pos
 { "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + int_misa_sales_lines · **Cadence:** monthly · **Scope:** is_sales_channel=true · **Caveats:** MISA COGS coverage ~65%
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

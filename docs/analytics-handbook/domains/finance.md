@@ -292,6 +292,698 @@
   GROUP BY 1
   ```
 
+<!-- ============================================================ -->
+<!-- COST_LEDGER_SECTION_START — owned by Phase 05 Cost Ledger agent -->
+
+## Context: Cost Ledger — Per-Order Costs
+
+> **Description:** Long-format cost ledger — 1 row per (order_id, cost_type). Covers COGS (from MISA), Shopee platform fees, taxes, shipping, and seller discounts (from Sapo). Amounts are always positive (ABS); sign/direction is derived from cost_category. Enables breakdown of "where does money go?" by channel and cost type.
+> **dbt Source:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+> **Grain:** Per (order_id, cost_type)
+> **cost_category values:** `COGS`, `PLATFORM_FEE`, `TAX`, `SHIPPING`, `DISCOUNT`
+> **cost_type values (subset):** `cogs`, `platform_service`, `platform_payment`, `platform_fixed`, `platform_affiliate`, `platform_piship`, `platform_infra`, `platform_voucher_xtra`, `tax_vat`, `tax_pit`, `shipping_platform`, `discount_seller_voucher`, `discount_bundle`, `discount_seller`, `discount_manual`
+> **Channel Join:** `dim_channels` via `channel_key`
+> **Coverage:** COGS only for orders matched in MISA; Shopee fees only for Shopee orders; discounts for all Sapo orders with discount_items.
+
+### 1. Total Costs (Tổng chi phí)
+
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+
+- **Business Definition:** Tổng tất cả các loại chi phí phát sinh cho một đơn hàng hoặc một kỳ — bao gồm giá vốn, phí sàn, thuế, vận chuyển và chiết khấu. Đây là "tổng tiền đi ra" của doanh nghiệp.
+- **Logic (SQL):**
+  ```sql
+  SELECT COALESCE(SUM(amount), 0) AS total_costs
+  FROM fact_order_costs
+  ```
+- **Source Mapping:**
+  - **Table:** `fact_order_costs`
+  - **Field:** `amount` (Sum)
+
+### 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí)
+
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+
+- **Business Definition:** Phần trăm giá vốn hàng bán trong tổng chi phí. Cho biết chi phí sản xuất/mua hàng chiếm bao nhiêu % tổng "tiền ra".
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      ROUND(
+          SUM(CASE WHEN cost_category = 'COGS' THEN amount ELSE 0 END) * 100.0
+          / NULLIF(SUM(amount), 0),
+          1
+      ) AS cogs_ratio_pct
+  FROM fact_order_costs
+  ```
+
+### 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí)
+
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+
+- **Business Definition:** Phần trăm phí nền tảng (Shopee: service, payment, fixed, affiliate, piship, infra, voucher xtra) trong tổng chi phí. Tăng cao cho thấy chi phí bán trên sàn đang bào mòn lợi nhuận.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      ROUND(
+          SUM(CASE WHEN cost_category = 'PLATFORM_FEE' THEN amount ELSE 0 END) * 100.0
+          / NULLIF(SUM(amount), 0),
+          1
+      ) AS platform_fee_ratio_pct
+  FROM fact_order_costs
+  ```
+- **Threshold:**
+  - Healthy: < 8% of total costs
+  - Watch: 8–12%
+  - Alert: > 12%
+
+### 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí)
+
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+
+- **Business Definition:** Phần trăm chi phí chiết khấu (voucher seller, bundle deal, manual discount) trong tổng chi phí. Phản ánh mức độ phụ thuộc vào khuyến mãi để tăng doanh số.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      ROUND(
+          SUM(CASE WHEN cost_category = 'DISCOUNT' THEN amount ELSE 0 END) * 100.0
+          / NULLIF(SUM(amount), 0),
+          1
+      ) AS discount_ratio_pct
+  FROM fact_order_costs
+  ```
+
+### 5. Cost Composition by Month (Cơ cấu chi phí theo tháng)
+
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+
+- **Business Definition:** Breakdown chi phí theo từng cost_category (COGS, PLATFORM_FEE, TAX, SHIPPING, DISCOUNT) qua từng tháng. Dùng để vẽ stacked bar chart — thấy ngay chi phí nào đang tăng bất thường.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      date_trunc('month', CAST(date_key AS DATE)) AS month,
+      cost_category,
+      COALESCE(SUM(amount), 0)                    AS total_amount
+  FROM fact_order_costs
+  GROUP BY 1, 2
+  ORDER BY 1, 2
+  ```
+
+### 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất)
+
+> **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
+
+- **Business Definition:** Ranking kênh bán hàng theo tổng chi phí, kèm % breakdown từng loại chi phí. Giúp CFO xác định kênh nào "ăn" ngân sách nhiều nhất và theo loại chi phí nào.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      c.channel_name,
+      COALESCE(SUM(fc.amount), 0)                                                   AS total_costs,
+      ROUND(SUM(CASE WHEN fc.cost_category = 'COGS'         THEN fc.amount ELSE 0 END) * 100.0 / NULLIF(SUM(fc.amount), 0), 1) AS cogs_pct,
+      ROUND(SUM(CASE WHEN fc.cost_category = 'PLATFORM_FEE' THEN fc.amount ELSE 0 END) * 100.0 / NULLIF(SUM(fc.amount), 0), 1) AS platform_fee_pct,
+      ROUND(SUM(CASE WHEN fc.cost_category = 'DISCOUNT'     THEN fc.amount ELSE 0 END) * 100.0 / NULLIF(SUM(fc.amount), 0), 1) AS discount_pct,
+      ROUND(SUM(CASE WHEN fc.cost_category = 'TAX'          THEN fc.amount ELSE 0 END) * 100.0 / NULLIF(SUM(fc.amount), 0), 1) AS tax_pct,
+      ROUND(SUM(CASE WHEN fc.cost_category = 'SHIPPING'     THEN fc.amount ELSE 0 END) * 100.0 / NULLIF(SUM(fc.amount), 0), 1) AS shipping_pct
+  FROM fact_order_costs fc
+  LEFT JOIN dim_channels c ON fc.channel_key = c.channel_key
+  GROUP BY c.channel_name
+  ORDER BY total_costs DESC
+  LIMIT 20
+  ```
+
+<!-- COST_LEDGER_SECTION_END -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- RETURN_IMPACT_SECTION_START — owned by Phase 05 Return Impact agent -->
+
+## Context: Returns & Refund Liability
+
+> **Description:** Per-return event tracking refund exposure, return rate, and reason analysis. Returns are recognized at return date — original order P&L is not restated. Dashboard: Return Impact Analysis [All].
+> **dbt Source:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+> **Grain:** Per Return Event (one row per Sapo return)
+> **Key Fields:** `return_id`, `order_code`, `return_date`, `return_timestamp`, `refund_amount`, `return_quantity`, `return_status`, `refund_status`, `return_reason`, `channel_key`, `date_key`
+> **Join:** `fact_order_returns.order_code` → `fact_orders.order_code` for order-date cohort; `channel_key` → `dim_channels` for channel name
+
+### R1. Return Rate MTD (Ty le hoan hang)
+
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+
+- **Business Definition:** Phan tram don hang bi hoan trong ky. So sanh so return event voi tong don hang hop le cung ky.
+- **Logic (SQL):**
+  ```sql
+  WITH returns_mtd AS (
+      SELECT COUNT(DISTINCT order_code) AS returned_orders
+      FROM fact_order_returns
+      WHERE return_date >= date_trunc('month', current_date)
+        AND return_date < current_date
+  ),
+  orders_mtd AS (
+      SELECT COUNT(DISTINCT order_code) AS total_orders
+      FROM fact_orders
+      WHERE status NOT IN ('CANCELLED', 'Voided')
+        AND order_timestamp >= date_trunc('month', current_date)
+        AND order_timestamp < current_date
+  )
+  SELECT ROUND(r.returned_orders * 100.0 / NULLIF(o.total_orders, 0), 2) AS return_rate_pct
+  FROM returns_mtd r, orders_mtd o
+  ```
+- **Threshold:** Healthy < 2% | Watch 2-5% | Alert > 5%
+
+### R2. Refund Liability (Gia tri hoan tien)
+
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+
+- **Business Definition:** Tong gia tri hoan tien phat sinh trong ky — do muc do anh huong tai chinh truc tiep tu hang hoan.
+- **Logic (SQL):**
+  ```sql
+  SELECT COALESCE(SUM(refund_amount), 0) AS refund_liability
+  FROM fact_order_returns
+  WHERE return_date >= date_trunc('month', current_date)
+    AND return_date < current_date
+  ```
+- **Unit:** VND
+
+### R3. Average Days-to-Return (So ngay trung binh den hoan)
+
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) JOIN [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
+
+- **Business Definition:** So ngay trung binh giua ngay dat hang va ngay hoan hang. Phat hien van de chat luong (hoan som) hoac gian lan (hoan muon).
+- **Logic (SQL):**
+  ```sql
+  SELECT ROUND(AVG(
+      date_diff('day', DATE(o.order_timestamp), r.return_date)
+  ), 1) AS avg_days_to_return
+  FROM fact_order_returns r
+  JOIN fact_orders o ON r.order_code = o.order_code
+  WHERE r.return_date >= date_trunc('month', current_date)
+    AND o.status NOT IN ('CANCELLED', 'Voided')
+  ```
+- **Unit:** Days
+
+### R4. Return Reason Top (Ly do hoan pho bien)
+
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+
+- **Business Definition:** Ly do hoan hang xuat hien nhieu nhat — giup xac dinh nguyen nhan goc re de cai thien chat luong/van hanh.
+- **Logic (SQL):**
+  ```sql
+  SELECT COALESCE(return_reason, 'Khong ro') AS return_reason, COUNT(*) AS cnt
+  FROM fact_order_returns
+  WHERE return_date >= date_trunc('month', current_date)
+  GROUP BY 1 ORDER BY 2 DESC LIMIT 1
+  ```
+
+### R5. Return Rate by Channel (Ty le hoan theo kenh)
+
+> **dbt Models:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql), [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql)
+
+- **Business Definition:** Ty le hoan phan ra theo kenh ban hang. Kenh nao > 5% can dieu tra ngay.
+- **Logic (SQL):**
+  ```sql
+  WITH ret AS (
+      SELECT channel_key, COUNT(DISTINCT order_code) AS returned_orders
+      FROM fact_order_returns GROUP BY 1
+  ),
+  ord AS (
+      SELECT channel_key, COUNT(DISTINCT order_code) AS total_orders
+      FROM fact_orders WHERE status NOT IN ('CANCELLED', 'Voided') GROUP BY 1
+  )
+  SELECT c.channel_name,
+         ROUND(ret.returned_orders * 100.0 / NULLIF(ord.total_orders, 0), 2) AS return_rate_pct
+  FROM ret JOIN ord USING (channel_key)
+  JOIN dim_channels c USING (channel_key)
+  WHERE c.is_sales_channel
+  ORDER BY return_rate_pct DESC
+  ```
+- **Alert Threshold:** > 5% triggers investigation.
+
+### R6. Return Revenue Impact (Doanh thu bi hoan)
+
+> **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
+
+- **Business Definition:** Tong refund_amount theo ly do hoan — giup luong hoa muc do anh huong doanh thu theo tung nguyen nhan.
+- **Logic (SQL):**
+  ```sql
+  SELECT COALESCE(return_reason, 'Khong ro') AS return_reason,
+         COUNT(*) AS return_count,
+         COALESCE(SUM(refund_amount), 0) AS revenue_impact
+  FROM fact_order_returns
+  GROUP BY 1 ORDER BY 3 DESC LIMIT 10
+  ```
+
+<!-- RETURN_IMPACT_SECTION_END -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- CHANNEL_PL_SECTION_START — owned by Phase 05 Channel P&L agent -->
+
+## Context: Channel P&L Waterfall & Loss-Leader Detection
+
+> **Description:** Per-channel P&L combining Sapo revenue, MISA COGS, and Shopee platform fees at order level. Enables waterfall decomposition (Gross Revenue → Discounts → Net Revenue → COGS → Platform Fees → Net Profit) and loss-leader detection. Dashboard: Channel P&L Deep Dive [Cross].
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **Grain:** Per Order (aggregated to channel × period for reporting)
+> **Filters:** `is_sales_channel = true AND status NOT IN ('CANCELLED','Voided') AND has_cogs = true`
+> **Join Keys:** `channel_key` → `dim_channels`; Shopee fees are pre-joined in mart via `order_code`
+
+### CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Tỷ lệ lợi nhuận ròng sau khi trừ COGS và toàn bộ phí platform (Shopee). Đây là chỉ số cuối cùng để phân biệt kênh lãi và kênh lỗ sau chi phí thực tế.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      c.channel_name,
+      ROUND(
+          SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0),
+          1
+      ) AS channel_net_margin_pct
+  FROM fact_order_economics e
+  JOIN dim_channels c USING (channel_key)
+  WHERE e.has_cogs
+    AND e.status NOT IN ('CANCELLED', 'Voided')
+    AND c.is_sales_channel
+  GROUP BY c.channel_name
+  ```
+- **Threshold:**
+  - Healthy: > 20%
+  - Watch: 0–20%
+  - Alert (Loss Leader): < 0%
+
+### CPL2. Loss Leader Flag (Cờ kênh lỗ)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Kênh có `channel_net_profit < 0` sau khi trừ COGS và phí platform — cần điều tra ngay về chiến lược giá và chi phí sàn.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      c.channel_name,
+      ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS channel_net_margin_pct,
+      CASE WHEN SUM(e.channel_net_profit) < 0 THEN 'LỖ' ELSE 'LÃI' END AS profit_flag
+  FROM fact_order_economics e
+  JOIN dim_channels c USING (channel_key)
+  WHERE e.has_cogs AND e.status NOT IN ('CANCELLED', 'Voided') AND c.is_sales_channel
+  GROUP BY c.channel_name
+  HAVING SUM(e.channel_net_profit) < 0
+  ```
+
+### CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** So sánh Net Revenue và Net Margin % của kênh giữa kỳ hiện tại và kỳ trước (WoW, MoM, YoY). Phát hiện kênh nào đang suy giảm nhanh.
+- **Logic (SQL):**
+  ```sql
+  WITH cur AS (
+      SELECT channel_key,
+          SUM(net_revenue)   AS rev_cur,
+          ROUND(SUM(channel_net_profit) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) AS margin_cur
+      FROM fact_order_economics
+      WHERE has_cogs AND status NOT IN ('CANCELLED', 'Voided')
+        AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= date_trunc('month', current_date)
+      GROUP BY channel_key
+  ),
+  prior AS (
+      SELECT channel_key,
+          SUM(net_revenue)   AS rev_prior,
+          ROUND(SUM(channel_net_profit) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) AS margin_prior
+      FROM fact_order_economics
+      WHERE has_cogs AND status NOT IN ('CANCELLED', 'Voided')
+        AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= date_trunc('month', current_date) - INTERVAL '1 month'
+        AND CAST(CAST(date_key AS VARCHAR) AS DATE) <  date_trunc('month', current_date)
+      GROUP BY channel_key
+  )
+  SELECT
+      c.channel_name,
+      cur.rev_cur, prior.rev_prior,
+      ROUND((cur.rev_cur - COALESCE(prior.rev_prior, 0)) * 100.0 / NULLIF(prior.rev_prior, 0), 1) AS rev_delta_pct,
+      cur.margin_cur, prior.margin_prior,
+      ROUND(cur.margin_cur - COALESCE(prior.margin_prior, 0), 1) AS margin_delta_pp
+  FROM cur
+  LEFT JOIN prior USING (channel_key)
+  JOIN dim_channels c USING (channel_key)
+  WHERE c.is_sales_channel
+  ORDER BY margin_delta_pp ASC
+  ```
+
+### CPL4. Waterfall Components (Thành phần thác nước P&L)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Phân tách dòng tiền từ Gross Revenue → Discounts → Net Revenue → COGS → Platform Fees → Net Profit. Mỗi bước là một khoản trừ giúp thấy rõ tiền bị mất ở đâu.
+- **Components:**
+  - `Doanh thu gop` = `SUM(gross_revenue)`
+  - `Chiet khau` = `-SUM(ABS(discount_amount))` (negative deduction)
+  - `Doanh thu thuan` = `SUM(net_revenue)` (running subtotal bar)
+  - `Gia von COGS` = `-SUM(COALESCE(cogs_amount, 0))`
+  - `Phi platform` = Shopee fees (already negative in mart — sum as-is)
+  - `Loi nhuan rong` = `SUM(channel_net_profit)` (final total bar)
+- **Logic (SQL):**
+  ```sql
+  SELECT "Khoan muc", COALESCE("Gia tri", 0) AS "Gia tri"
+  FROM (
+      VALUES
+          ('Doanh thu gop',   (SELECT SUM(gross_revenue)        FROM fact_order_economics WHERE has_cogs AND status NOT IN ('CANCELLED','Voided'))),
+          ('Chiet khau',      (SELECT -SUM(ABS(discount_amount)) FROM fact_order_economics WHERE has_cogs AND status NOT IN ('CANCELLED','Voided'))),
+          ('Doanh thu thuan', (SELECT SUM(net_revenue)           FROM fact_order_economics WHERE has_cogs AND status NOT IN ('CANCELLED','Voided'))),
+          ('Gia von COGS',    (SELECT -SUM(COALESCE(cogs_amount,0)) FROM fact_order_economics WHERE has_cogs AND status NOT IN ('CANCELLED','Voided'))),
+          ('Phi platform',    (SELECT SUM(COALESCE(shopee_platform_fees,0) + COALESCE(shopee_infra_fee,0) + COALESCE(shopee_voucher_xtra_fee,0) + COALESCE(shopee_taxes,0)) FROM fact_order_economics WHERE has_cogs AND status NOT IN ('CANCELLED','Voided'))),
+          ('Loi nhuan rong',  (SELECT SUM(channel_net_profit)   FROM fact_order_economics WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')))
+  ) AS t("Khoan muc", "Gia tri")
+  ```
+
+### CPL5. Channel Scorecard (Bảng điểm kênh)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Một dòng/kênh với đầy đủ: Net Revenue, Gross Margin %, Net Margin %, Order Volume, Platform Fees. Cho phép Finance Director so sánh tất cả kênh trong một màn hình.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      c.channel_name                                                                        AS "Kenh",
+      COUNT(*)                                                                              AS "So don",
+      COALESCE(SUM(e.net_revenue), 0)                                                       AS "Net Revenue",
+      ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1)                AS "Gross Margin %",
+      ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1)          AS "Net Margin %",
+      COALESCE(SUM(ABS(COALESCE(e.shopee_platform_fees,0)) + ABS(COALESCE(e.shopee_infra_fee,0)) + ABS(COALESCE(e.shopee_voucher_xtra_fee,0))), 0) AS "Platform Fees"
+  FROM fact_order_economics e
+  JOIN dim_channels c USING (channel_key)
+  WHERE e.has_cogs AND e.status NOT IN ('CANCELLED', 'Voided') AND c.is_sales_channel
+  GROUP BY c.channel_name
+  ORDER BY "Net Margin %" ASC
+  ```
+
+### CPL6. Net Margin % Heatmap — Channel × Month
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Ma trận kênh × tháng, màu sắc = Net Margin %. Phát hiện kênh nào đang suy giảm margin theo thời gian, hoặc tháng nào bất thường.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      c.channel_name                                                                AS "Kenh",
+      date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))               AS "Thang",
+      ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS "Net Margin %"
+  FROM fact_order_economics e
+  JOIN dim_channels c USING (channel_key)
+  WHERE e.has_cogs AND e.status NOT IN ('CANCELLED', 'Voided') AND c.is_sales_channel
+  GROUP BY c.channel_name, date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))
+  ORDER BY "Thang", "Kenh"
+  ```
+
+<!-- CHANNEL_PL_SECTION_END -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- SKU_MARGIN_SECTION_START — owned by Phase 05 SKU Margin agent -->
+
+## Context: SKU Cost & Margin Variance
+
+> **Description:** Per-SKU gross margin and COGS tracking from MISA sales ledger. Enables merchandising analysis of which SKUs drive profit vs. which have abnormal COGS drift. Promo lines excluded (`NOT is_promo_line`) to reflect true product economics.
+> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+> **Grain:** Per SKU (aggregated from invoice lines)
+> **Audience:** Merchandising Manager, Finance
+
+### M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU)
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Phần trăm doanh thu thuần còn lại sau giá vốn, tính theo từng SKU. Đo lường hiệu quả định giá và chiến lược sản phẩm ở cấp độ SKU.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      product_code,
+      product_name,
+      ROUND(
+          SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+          1
+      ) AS sku_gross_margin_pct
+  FROM int_misa_sales_lines
+  WHERE NOT is_promo_line
+    AND revenue_net_of_discount > 0
+  GROUP BY product_code, product_name
+  ```
+- **Threshold:**
+  - Healthy: > 40%
+  - Watch: 20–40%
+  - Alert (Outlier): < 10% → flag as low-margin
+
+### M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị)
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Giá vốn trung bình trên mỗi đơn vị bán ra của một SKU. Phản ánh chi phí nhập hàng thực tế và hữu ích để phát hiện thay đổi giá nhập đột biến.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      product_code,
+      product_name,
+      ROUND(
+          SUM(cogs_amount) / NULLIF(SUM(quantity), 0),
+          0
+      ) AS cogs_per_unit
+  FROM int_misa_sales_lines
+  WHERE NOT is_promo_line
+    AND quantity > 0
+  GROUP BY product_code, product_name
+  ```
+- **Unit:** VND per unit
+
+### M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng)
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** So sánh giá vốn mỗi đơn vị của tháng hiện tại với trung bình 3 tháng gần nhất. Phát hiện bất thường chi phí nhập hàng (thay đổi nhà cung cấp, lỗi hạch toán, cost spike).
+- **Logic (SQL):**
+  ```sql
+  WITH current_cogs AS (
+      SELECT
+          product_code,
+          product_name,
+          SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_current
+      FROM int_misa_sales_lines
+      WHERE NOT is_promo_line
+        AND quantity > 0
+        AND posting_date >= date_trunc('month', current_date)
+      GROUP BY product_code, product_name
+  ),
+  avg_3m AS (
+      SELECT
+          product_code,
+          SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_3m_avg
+      FROM int_misa_sales_lines
+      WHERE NOT is_promo_line
+        AND quantity > 0
+        AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
+        AND posting_date <  date_trunc('month', current_date)
+      GROUP BY product_code
+  )
+  SELECT
+      c.product_code,
+      c.product_name,
+      c.cogs_per_unit_current,
+      a.cogs_per_unit_3m_avg,
+      ROUND(
+          (c.cogs_per_unit_current - a.cogs_per_unit_3m_avg)
+          * 100.0 / NULLIF(a.cogs_per_unit_3m_avg, 0),
+          1
+      ) AS cogs_variance_pct
+  FROM current_cogs c
+  LEFT JOIN avg_3m a USING (product_code)
+  ```
+- **Threshold:** |variance| > 10% → flag for investigation
+
+### M4. SKU Revenue Share (Tỷ trọng doanh thu SKU)
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Phần trăm doanh thu của một SKU trong tổng doanh thu kỳ. Kết hợp với Margin % để phân loại SKU: high-revenue+high-margin (star), high-revenue+low-margin (cash drain), low-revenue+high-margin (niche gem).
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      product_code,
+      product_name,
+      SUM(revenue_net_of_discount) AS sku_revenue,
+      ROUND(
+          SUM(revenue_net_of_discount) * 100.0
+          / NULLIF(SUM(SUM(revenue_net_of_discount)) OVER (), 0),
+          2
+      ) AS revenue_share_pct
+  FROM int_misa_sales_lines
+  WHERE NOT is_promo_line
+    AND revenue_net_of_discount > 0
+  GROUP BY product_code, product_name
+  ```
+
+### M5. Margin Outlier Flag (Cờ margin bất thường)
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** SKU được đánh dấu là "outlier" khi gross margin < 10%. Đây là ngưỡng cảnh báo cần hành động: rà soát giá bán, COGS, hoặc loại SKU khỏi danh mục.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      product_code,
+      product_name,
+      ROUND(
+          SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+          1
+      ) AS gross_margin_pct,
+      CASE
+          WHEN SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0) < 10
+          THEN true ELSE false
+      END AS is_margin_outlier
+  FROM int_misa_sales_lines
+  WHERE NOT is_promo_line
+    AND revenue_net_of_discount > 0
+  GROUP BY product_code, product_name
+  ```
+- **Alert:** `is_margin_outlier = true` → highlight red in dashboard
+
+<!-- SKU_MARGIN_SECTION_END -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- RECON_SECTION_START — owned by Phase 05 Recon agent -->
+
+## Context: Daily Reconciliation (Sapo ↔ MISA ↔ Shopee)
+
+> **Status: Proxy mode** — `recon_sapo_orders_daily` and `recon_misa_daily` tables are **not yet built**.
+> Metrics below derive from `fact_order_economics` flags as proxy:
+> - **Sapo↔MISA match proxy:** `has_cogs = TRUE` (order has MISA invoice line joined via `voucher_no = order_code`)
+> - **Sapo↔Shopee match proxy:** `has_platform_fees = TRUE` (order has Shopee payout record)
+> - **Triple match (fully reconciled):** `has_cogs AND has_platform_fees` (Shopee orders only)
+> **dbt Source:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+> **Grain:** Per Order
+> **Known Limitation:** `has_cogs` coverage ≈ 65% of completed orders in MISA date range — unmatched orders include cancelled/draft + orders before MISA ingestion window.
+> **Caveat:** This is a derived proxy, not a true reconciliation ledger. Build `recon_sapo_orders_daily` + `recon_misa_daily` dbt models for a proper recon pipeline.
+
+### RC1. MISA Coverage % (Tỷ lệ khớp MISA)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Phần trăm đơn hàng hoàn tất có MISA invoice khớp. Đây là proxy cho "Sapo↔MISA reconciled". Thấp hơn benchmark (≈65%) → cần kiểm tra MISA ingestion.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      ROUND(
+          SUM(CASE WHEN has_cogs THEN 1 ELSE 0 END) * 100.0
+          / NULLIF(COUNT(*), 0),
+          1
+      ) AS misa_coverage_pct
+  FROM fact_order_economics
+  WHERE status = 'COMPLETED'
+  ```
+- **Threshold:**
+  - Healthy: > 70%
+  - Watch: 50-70%
+  - Alert: < 50%
+
+### RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Phần trăm đơn hàng hoàn tất KHÔNG có MISA invoice. Đây là "unmatched orders" từ góc độ kế toán.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      ROUND(
+          SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END) * 100.0
+          / NULLIF(COUNT(*), 0),
+          1
+      ) AS unmatched_rate_pct
+  FROM fact_order_economics
+  WHERE status = 'COMPLETED'
+  ```
+- **Threshold:**
+  - Healthy: < 30%
+  - Watch: 30-50%
+  - Alert: > 50%
+
+### RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Phần trăm đơn hàng Shopee có dữ liệu payout/phí từ Shopee Seller Center. Thấp → thiếu settlement data → không tính được channel_net_profit chính xác.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      ROUND(
+          SUM(CASE WHEN e.has_platform_fees THEN 1 ELSE 0 END) * 100.0
+          / NULLIF(COUNT(*), 0),
+          1
+      ) AS shopee_fee_coverage_pct
+  FROM fact_order_economics e
+  JOIN dim_channels c ON e.channel_key = c.channel_key
+  WHERE c.channel_name ILIKE '%shopee%'
+    AND e.status = 'COMPLETED'
+  ```
+
+### RC4. Recon Status Distribution (Phân loại trạng thái đối soát)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Phân nhóm đơn hàng theo trạng thái recon: FULLY_RECONCILED / MISSING_MISA / MISSING_SHOPEE_FEES / UNRECONCILED. Proxy từ `has_cogs` và `has_platform_fees`.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      CASE
+          WHEN has_cogs AND has_platform_fees THEN 'FULLY_RECONCILED'
+          WHEN has_cogs AND NOT has_platform_fees THEN 'MISSING_SHOPEE_FEES'
+          WHEN NOT has_cogs AND has_platform_fees THEN 'MISSING_MISA'
+          ELSE 'UNRECONCILED'
+      END AS recon_status,
+      COUNT(*) AS order_count,
+      COALESCE(SUM(net_revenue), 0) AS revenue_at_risk
+  FROM fact_order_economics
+  WHERE status = 'COMPLETED'
+  GROUP BY 1
+  ORDER BY 2 DESC
+  ```
+
+### RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Tỷ lệ đơn không có MISA invoice theo ngày — 30 ngày gần nhất. Spike đột ngột → lỗi ingestion MISA hoặc Sapo data lag.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      CAST(CAST(date_key AS VARCHAR) AS DATE) AS order_date,
+      COUNT(*) AS total_orders,
+      SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END) AS unmatched_orders,
+      ROUND(
+          SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END) * 100.0
+          / NULLIF(COUNT(*), 0),
+          1
+      ) AS unmatched_pct
+  FROM fact_order_economics
+  WHERE status = 'COMPLETED'
+    AND date_key >= CAST(current_date - INTERVAL '30 days' AS INTEGER)
+  GROUP BY 1
+  ORDER BY 1
+  ```
+
+### RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí)
+
+> **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
+
+- **Business Definition:** Đơn Shopee có doanh thu nhưng thiếu `shopee_platform_fees` → channel_net_profit bị overstate. Số này là "fee gap" cho kế toán reconcile.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      COUNT(*) AS shopee_orders_missing_fees,
+      COALESCE(SUM(e.net_revenue), 0) AS revenue_without_fee_data
+  FROM fact_order_economics e
+  JOIN dim_channels c ON e.channel_key = c.channel_key
+  WHERE c.channel_name ILIKE '%shopee%'
+    AND e.status = 'COMPLETED'
+    AND NOT e.has_platform_fees
+  ```
+
+<!-- RECON_SECTION_END -->
+<!-- ============================================================ -->
+
 ## Related Dashboards
 
 | Dashboard | Audience | Purpose | Link |
@@ -300,4 +992,9 @@
 | **Channel Profitability Monthly** | CEO, Finance, Sales Director | Cross-channel margin comparison | [Playbook](../playbooks/channel_profitability_monthly.md) |
 | **Shopee Channel Economics** | Sales Ops, CS Lead | Shopee fee structure & settlement analysis | [Playbook](../playbooks/shopee_channel_economics.md) |
 | **Product Performance** | Merchandising | Product margin using MISA COGS | [Playbook](../playbooks/product_performance.md) |
-| **Order Profitability** | CEO, Finance, Sales Ops | Per-order P&L: revenue - COGS - platform fees | *Planned* |
+| **Order Profitability** | CEO, Finance, Sales Ops | Per-order P&L: revenue - COGS - platform fees | [Playbook](../playbooks/order_profitability.md) |
+| **Cost Ledger Analyzer** | CFO, Accounting | Cost breakdown by type (COGS / fees / vouchers) | *Phase 05 — see [phase-05](../../../plans/260527-1327-metabase-collection-restructure/phase-05-new-finance-dashboards.md)* |
+| **Return Impact Analysis** | CEO, CFO, Sales Ops | Refund liability + return rate trends | *Phase 05* |
+| **Channel P&L Deep Dive** | Finance Director | Loss-leader detection via channel margin waterfall | *Phase 05* |
+| **Product Cost-to-Margin Heatmap** | Merchandising, Finance | SKU margin with COGS variance | *Phase 05* |
+| **Accounting Reconciliation Cockpit** | Accounting, CFO | Daily Sapo↔MISA↔Shopee recon | [Playbook](../playbooks/finance_accounting_recon.md) |
