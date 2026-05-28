@@ -1,5 +1,9 @@
 # [Domain Name] Domain
 
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
+
 > **Owner:** [Team Name, e.g., Sales Team]
 > **Update Frequency:** [e.g., Daily, Weekly]
 

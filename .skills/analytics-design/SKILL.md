@@ -41,6 +41,14 @@ Skill này **KHÔNG BIẾT** gì về Metabase, Superset, Looker, hay bất kỳ
 | `templates/guide_template.md` | Tạo mới guide file |
 | `templates/design_spec_template.md` | Tạo mới Design Spec (contract giữa 2 skills) |
 
+Khi tạo domain file mới, template phải giữ nguyên block định nghĩa sau ngay dưới H1 title:
+
+```markdown
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
+```
+
 ## Artifact Ownership
 
 | Artifact | Location | Created by | When |
@@ -69,7 +77,7 @@ Mỗi artifact downstream **tham chiếu** artifact upstream:
 
 1. Kiểm tra domain đã tồn tại? → Quét `docs/analytics-handbook/domains/`
 2. Nếu đã có → Đọc file, kiểm tra metrics cần thiết. Thiếu → cập nhật thêm.
-3. Nếu chưa có → Tạo mới theo `templates/domain_template.md`
+3. Nếu chưa có → Tạo mới theo `templates/domain_template.md`, giữ nguyên block định nghĩa Domain Document ngay dưới H1 title.
 4. Đọc `DOMAIN_MODELING.md` cho conventions và quy tắc.
 
 **Output**: `docs/analytics-handbook/domains/<domain>.md`

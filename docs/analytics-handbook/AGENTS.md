@@ -58,10 +58,22 @@ If a user asks for "A dashboard showing Net Revenue", you must:
 **Purpose:** Group metrics by Business Domain Context, often tying back to a specific dbt Source Model.
 **Filename Convention:** `[domain_name].md` (e.g., `sales.md`, `finance.md`).
 
+**Required document definition:** Every new domain file MUST include the following block immediately after the H1 title:
+
+```markdown
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
+```
+
 ### Template
 
 ````markdown
 # [Domain Name] Domain
+
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
 
 > **Owner:** [Team Name, e.g., Finance Team]
 > **Update Frequency:** [e.g., Monthly]
