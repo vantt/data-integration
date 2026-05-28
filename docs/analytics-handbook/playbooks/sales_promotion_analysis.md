@@ -25,6 +25,44 @@
 | **Discount Rate %**      | `Total Discount / GMV`.                     | [Discount Impact](../domains/sales.md#13-discount-impact) |
 | **Discount Frequency**   | `% of Orders` that have a discount applied. | [Discount Impact](../domains/sales.md#13-discount-impact) |
 
+## Discount ROI
+
+### Overview
+
+The Discount ROI tab answers whether promotion spending generates incremental revenue above the cost of the discount.
+
+**Methodology:**
+- **Baseline:** Average net revenue per non-discounted order in the same 30-day window and channel.
+- **Incremental revenue:** `actual_promo_revenue - (baseline_AOV × promo_order_count)`
+- **ROI %:** `(incremental_revenue - discount_cost) / discount_cost × 100`
+- **Limitation:** No holdout group. Treat as directional signal, not causal proof.
+
+### Metrics
+
+| Metric | Definition |
+| :----- | :--------- |
+| **Discount Amount** | Total VND given away as discount for this campaign |
+| **Incremental Revenue** | Actual promo revenue minus estimated baseline (non-promo AOV × order count) |
+| **ROI %** | `(incremental_revenue - discount_amount) / discount_amount × 100` |
+| **ROI Trend** | Monthly aggregate ROI % over last 6 months |
+
+### Action Triggers
+
+| Signal | Threshold | Action |
+| :----- | :-------- | :----- |
+| **ROI %** | < -50% | Eliminate campaign — losing >50 VND per 100 VND spent on discounts |
+| **ROI %** | > 200% | Scale campaign — every 100 VND discount drives 200 VND net incremental return |
+| **ROI Trend** | 3 consecutive months negative | Audit entire promo strategy — systemic discount dependency without uplift |
+| **Discount Amount high, ROI low** | High spend + ROI < 0 | Pause campaign, redirect budget to positive-ROI codes |
+
+### Reading Flow
+
+1. **Discount ROI by Promotion Code (table):** Sort by ROI % ASC to find worst performers (red rows). Sort DESC to find candidates for scale-up (green rows).
+2. **Discount ROI Trend (line):** Check if overall portfolio ROI is improving or deteriorating month-over-month. A negative trend with rising discount spend = structural problem.
+3. **Cross-reference with Tab 2 (Promotion Performance):** High-usage promos with negative ROI are the highest-priority to cut — they scale the loss.
+
+---
+
 ## Analysis Workflows
 
 ### Scenario A: Campaign ROI Analysis

@@ -20,11 +20,11 @@ SELECT '📅 Chu kỳ: Theo filter được chọn (không cố định)'
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### Filter: Order ID
@@ -41,7 +41,7 @@ SELECT '📅 Chu kỳ: Theo filter được chọn (không cố định)'
 #### 📝 Text: Order Summary
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Order Header
@@ -94,13 +94,13 @@ WHERE o.order_id = {{order_id}}
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":18, "size_y":4}
+{"row": 3, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### 📝 Text: Financials
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":18, "size_y":1}
+{"row": 7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Order Economics
@@ -152,13 +152,13 @@ WHERE o.order_id = {{order_id}}
 ```
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":18, "size_y":4}
+{"row": 8, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### 📝 Text: Line Items
 
 ```json metabase-pos
-{"row":11, "col":0, "size_x":18, "size_y":1}
+{"row": 12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Line Items
@@ -203,13 +203,13 @@ ORDER BY s.item_id
 ```
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":6}
+{"row": 13, "col":0, "size_x":18, "size_y":6}
 ```
 
 #### 📝 Text: Payments
 
 ```json metabase-pos
-{"row":18, "col":0, "size_x":18, "size_y":1}
+{"row": 19, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Payments
@@ -244,5 +244,15 @@ ORDER BY fp.payment_timestamp
 ```
 
 ```json metabase-pos
-{"row":19, "col":0, "size_x":18, "size_y":4}
+{"row": 20, "col":0, "size_x":18, "size_y":4}
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_items · **Cadence:** single-order · **Scope:** selected order_code · **Caveats:** Single order detail
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

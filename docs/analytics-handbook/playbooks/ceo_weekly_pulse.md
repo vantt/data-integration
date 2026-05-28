@@ -12,9 +12,10 @@
 ## Key Questions
 
 1. **Revenue:** Net Revenue va Gross Revenue tuan nay so voi tuan truoc? Dang on-track de dat target thang khong?
-2. **Growth Drivers:** Kenh nao tang, kenh nao giam so voi tuan truoc? Cau truc Ecommerce/Offline thay doi the nao?
-3. **Customer Health:** Bao nhieu khach moi? Ty le doanh thu tu khach cu co healthy (> 60%)?
-4. **Operational Flags:** Co gi bat thuong can chu y (hoan tra tang dot bien, discount qua nhieu, don huy tang)?
+2. **Profitability:** Net Profit va Gross Margin % tuan nay la bao nhieu? Co kenh nao dang lo khong?
+3. **Growth Drivers:** Kenh nao tang, kenh nao giam so voi tuan truoc? Cau truc Ecommerce/Offline thay doi the nao?
+4. **Customer Health:** Bao nhieu khach moi? Ty le doanh thu tu khach cu co healthy (> 60%)?
+5. **Operational Flags:** Co gi bat thuong can chu y (hoan tra tang dot bien, discount qua nhieu, don huy tang)?
 
 ## Dashboard Structure (3 Tabs)
 
@@ -26,6 +27,7 @@ CEO mo tab nay dau tien — tra loi "tuan nay on khong?" trong 2 phut.
 - **MTD Progress:** Progress bar visual — da dat bao nhieu % target thang
 - **Pace Index:** Ahead/Behind indicator — so sanh toc do hien tai voi expected pace
 - **14-Day Trend:** Area chart doanh thu 14 ngay — this week vs previous week
+- **Profitability Row:** 3 scalars WoW — Net Profit, Gross Margin %, Loss-Making Channel Count (alert)
 
 ### Tab 2 — Kenh ban hang
 CEO chuyen sang tab nay khi muon biet "kenh nao dang drive?"
@@ -48,9 +50,21 @@ CEO chuyen sang tab nay khi muon kiem tra customer health va red flags.
 - **No interactive filters** — zero-interaction. CEO mo va doc.
 - **Business constraint:** Loai bo don kenh US (internal, 100% discount).
 
+## Visualizations
+
+| Section | Domain | Type | Metric |
+|:---|:---|:---|:---|
+| Revenue KPIs | [Net Revenue](../domains/sales.md#2-net-revenue) | Scalar + WoW | Net Revenue, Gross Revenue, Orders, AOV |
+| MTD Progress | [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) | Progress bar + Gauge | GMV vs Target, Pace Index |
+| Revenue Trend | [Net Revenue](../domains/sales.md#2-net-revenue) | Area chart (14d) | Daily Net Revenue |
+| **Profitability** | [Order Gross Profit](../domains/finance.md#9-order-gross-profit), [Channel Net Profit](../domains/finance.md#10-channel-net-profit-lãi-ròng-kênh) | Scalar + WoW / Alert | Net Profit WoW, Gross Margin % WoW, Loss-Making Channel Count |
+| Channel Mix | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Pie, Bar, Table | Revenue split by channel |
+| Customer Health | [New vs Returning](../domains/sales.md#10-new-vs-returning-customers) | Scalar + Gauge + Stacked Bar | Acquisition, retention rate |
+| Operational Flags | — | Scalar + Gauge | Cancelled orders, Returns, Discount Rate |
+
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
+- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql), [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 - **Dimensions:** `dim_channels`, `dim_customers`
 
 ## How to Read This Dashboard

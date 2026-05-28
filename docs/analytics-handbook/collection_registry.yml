@@ -13,103 +13,196 @@
 #   3. To add a new collection, update this file FIRST, then create the blueprint.
 #   4. Collection names must be unique within the same parent.
 #   5. Top-level collections are organized by AUDIENCE (who uses it), not by cadence.
+#   6. Every dashboard name MUST have scope suffix: [All]/[Retail]/[B2B]/[Cross]/[US]/[Internal]
 #
 # SYNTAX IN BLUEPRINTS:
 #   Use ">" to express the path from root to target collection:
-#     ## Collection: Operations > Daily Monitoring
-#   The deploy script will ensure "Operations" exists, then ensure "Daily Monitoring"
-#   as a child of "Operations".
+#     ## 📂 Collection: Operations > Daily Monitoring
 #
 # DESIGN GUIDE:
 #   See guides/collection_organization.md for full rationale (Vietnamese).
-#   Summary: 3 collections organized by AUDIENCE, not topic or cadence.
+#   See decisions/009-collection-by-audience.md for ADR + amendments.
+#   Summary: 6 top-level collections organized by AUDIENCE.
+#     📍 Start Here         → "Where do I go?"  (onboarding)
 #     Executive             → "Công ty đang thế nào?"
+#     Finance               → "Tiền của tôi đi đâu?"  (NEW 2026-05-27)
 #     Marketing & Customers → "Kênh/Khách thế nào?"
 #     Operations            → "Hôm nay cần làm gì?"
+#     Analytics             → "So sánh segment / deep-dive?"  (NEW 2026-05-27)
 #
-# LAST UPDATED: 2026-04-10
+# LAST UPDATED: 2026-05-27
+# MIGRATION STATUS: Target state per plans/260527-1327-metabase-collection-restructure/.
+#                   Live Metabase will be migrated in phases — see plan for current state.
 # =============================================================================
 
 collections:
 
   # ---------------------------------------------------------------------------
+  # 📍 START HERE — Onboarding (NEW 2026-05-27)
+  # ---------------------------------------------------------------------------
+  - name: "📍 Start Here"
+    description: "Onboarding cho user mới. Where do I go?"
+    audience: [All]
+    color: "#0EA5E9"  # Blue — info
+    dashboards:
+      - Welcome to ChợPulse BI
+
+  # ---------------------------------------------------------------------------
   # EXECUTIVE — "Công ty đang thế nào?"
-  # CEO, Co-Founders, Board, Sales Director
+  # CEO, Co-Founders, Board (strategic only)
   # ---------------------------------------------------------------------------
   - name: Executive
-    description: "Strategic dashboards for leadership — company performance, targets, and high-level KPIs."
-    audience: [CEO, Co-Founders, Board, Sales Director]
+    description: "Strategic dashboards for leadership — company performance + targets."
+    audience: [CEO, Co-Founders, Board]
     color: "#7C3AED"  # Purple — authority
     dashboards:
-      - CEO Weekly Pulse
-      - CEO Monthly Scorecard
-      - Sales Executive Dashboard
-      - Channel Profitability Monthly
+      - "CEO Weekly Pulse [All]"
+      - "CEO Monthly Scorecard [All]"
+      - "Sales Monthly Business Review [All]"
+
+  # ---------------------------------------------------------------------------
+  # FINANCE — "Tiền của tôi đi đâu?" (NEW 2026-05-27)
+  # Trigger: P&L mart explosion (fact_order_economics, fact_order_costs, fact_order_returns)
+  # CFO, FP&A, Accounting Manager, Finance Director
+  # ---------------------------------------------------------------------------
+  - name: Finance
+    description: "P&L, profitability, cost ledger, reconciliation."
+    audience: [CFO, FP&A, Accounting Manager, Finance Director]
+    color: "#DC2626"  # Red — money/financial
+    dashboards:
+      - "Finance P&L [All]"
+      - "Order Profitability [All]"
+      - "Product Profitability [All]"
+      # Phase 05 — all deployed 2026-05-27 (plans/260527-1327-metabase-collection-restructure):
+      - "Cost Ledger Analyzer [All]"              # dashboard ID 74
+      - "Return Impact Analysis [All]"            # dashboard ID 75
+      - "Product Cost-to-Margin Heatmap [Cross]"  # dashboard ID 76
+      - "Channel P&L Deep Dive [Cross]"           # dashboard ID 77
+      - "Accounting Reconciliation Cockpit [Internal]"  # dashboard ID 78
 
   # ---------------------------------------------------------------------------
   # MARKETING & CUSTOMERS — "Kênh/Khách thế nào?"
   # Marketing Manager, Brand Manager, CMO, Customer Success
   # ---------------------------------------------------------------------------
   - name: Marketing & Customers
-    description: "Channel performance, customer acquisition, retention, segmentation, and campaign analysis."
+    description: "Channel performance, customer acquisition, retention, promotion."
     audience: [Marketing Manager, Brand Manager, CMO, Customer Success]
     color: "#F9A825"  # Yellow — energy
     dashboards:
-      - Marketing Weekly Tracker
-      - Marketing Monthly Analysis
-      - Customer Operational Dashboard
-      - "Customer Retention & Lifecycle"
-      - Customer Intelligence Monthly
+      - "Marketing Weekly Tracker [Retail]"
+      - "Marketing Monthly Analysis [Retail]"
+      - "Marketing ROI [Retail]"
+      - "Customer Operational [Retail]"
+      - "Customer Retention & Lifecycle [Retail]"
+      - "Promotion Analysis [Retail]"
 
   # ---------------------------------------------------------------------------
   # OPERATIONS — "Hôm nay cần làm gì?"
-  # Store Managers, Sales Operators, Customer Support Lead
+  # Store Managers, Sales Operators, B2B AM, Logistics Manager, Data Engineering
   # ---------------------------------------------------------------------------
   - name: Operations
-    description: "Daily/weekly/monthly operational dashboards for frontline teams."
-    audience: [Store Managers, Sales Operators, CS Lead]
+    description: "Daily/weekly operational dashboards by line of business."
+    audience: [Store Managers, Sales Operators, B2B Account Manager, Logistics Manager, Data Engineering]
     color: "#84BB4C"  # Green — go/action
     children:
 
-      - name: Daily Monitoring
-        description: "Real-time and yesterday's dashboards. Checked multiple times per day."
+      - name: US CrossBorder
+        description: "US CrossBorder Fulfillment — export arrangements, order tracking. Tách biệt khỏi retail sales."
+        audience: [US Operations, Sales Ops Lead]
         dashboards:
-          - Daily Sales Dashboard
-          - "Yesterday's Sales Dashboard"
-          - "Orders"  # Tabbed: Today / Yesterday / By Date
+          - "US CrossBorder Daily [US]"
+
+      - name: Daily Monitoring
+        description: "Real-time và yesterday's retail dashboards. Multiple times/day."
+        audience: [Store Managers]
+        dashboards:
+          - "Daily Sales [Retail]"
+          - "Yesterday's Sales [Retail]"
+          - "Order Listing [Retail]"
+          - "Order Detail [Retail]"
+          - "Social Commerce Operations [Retail]"
 
       - name: Periodic Reviews
-        description: "Weekly and monthly operational summaries for team leads."
+        description: "Weekly và monthly retail ops summaries."
+        audience: [Sales Ops Lead]
         dashboards:
-          - Sales Ops Weekly Review
-          - Sales Ops Monthly Summary
-          - Shopee Channel Economics
+          - "Sales Ops Weekly Review [Retail]"
+          - "Sales Ops Monthly Summary [Retail]"
 
+      - name: B2B Operations
+        description: "B2B/wholesale sales tracking."
+        audience: [B2B Account Manager]
+        dashboards:
+          - "B2B Daily Sales [B2B]"
+          - "B2B Orders Tracking [B2B]"
+
+      - name: Logistics  # NEW 2026-05-27 (moved out of Daily Monitoring — audience mismatch)
+        description: "Shipping & delivery operations."
+        audience: [Logistics Manager]
+        dashboards:
+          - "Logistics Operations Center [All]"
+
+      - name: Data Platform  # NEW 2026-05-27 (moved out of Daily Monitoring — audience mismatch)
+        description: "Pipeline health, ingestion monitoring."
+        audience: [Data Engineering]
+        dashboards:
+          - Ingestion Health Monitor
+
+  # ---------------------------------------------------------------------------
+  # ANALYTICS — "So sánh segment / deep-dive?" (NEW 2026-05-27 — Layer 3)
+  # Analyst, Leadership doing deep cross-segment analysis
+  # ---------------------------------------------------------------------------
+  - name: Analytics
+    description: "Cross-segment deep-dives, research-grade analysis (Layer 3)."
+    audience: [Analyst, Leadership]
+    color: "#6366F1"  # Indigo — research/depth
     dashboards:
-      - Social Commerce Operations
+      - "Customer Intelligence Monthly [Cross]"
+      - "Channel Profitability Monthly [Cross]"
+      - "Product Performance [Cross]"
+      - "Shopee Channel Economics [Cross]"
 
 
 # =============================================================================
 # LOOKUP TABLE — Quick reference for agents
 # =============================================================================
-# Use this to find the right collection path for a new dashboard:
-#
-# | Audience                    | Collection Path              |
-# |-----------------------------|------------------------------|
-# | CEO / Board / Sales Director| Executive                    |
-# | Finance / CFO (profitability)| Executive                   |
-# | Marketing Manager / CMO     | Marketing & Customers        |
-# | Customer Success            | Marketing & Customers        |
-# | Store Manager (daily ops)   | Operations > Daily Monitoring|
-# | Sales Ops / CS Lead (weekly)| Operations > Periodic Reviews|
-# | Sales Ops (Shopee economics)| Operations > Periodic Reviews|
-# | CS Lead (social commerce)   | Operations                   |
+# | Audience                          | Collection Path                |
+# |-----------------------------------|--------------------------------|
+# | All (onboarding)                  | 📍 Start Here                  |
+# | CEO / Board / Founders            | Executive                      |
+# | CFO / Accounting / FP&A           | Finance                        |
+# | Marketing Manager / CMO           | Marketing & Customers          |
+# | Customer Success                  | Marketing & Customers          |
+# | Store Manager                     | Operations > Daily Monitoring  |
+# | Sales Ops Lead                    | Operations > Periodic Reviews  |
+# | B2B Account Manager               | Operations > B2B Operations    |
+# | Logistics Manager                 | Operations > Logistics         |
+# | Data Engineering                  | Operations > Data Platform     |
+# | Analyst (cross-segment research)  | Analytics                      |
+# | US Operations / CrossBorder Ops   | Operations > US CrossBorder    |
 #
 # DECISION GUIDE — which collection?
-#   "Is this for strategic oversight?"        → Executive
-#   "Is this for channel/customer analysis?"  → Marketing & Customers
-#   "Is this for daily/weekly action items?"  → Operations (pick sub-collection)
+#   "Strategic overview for leadership?"        → Executive
+#   "Financial / cost / profitability?"         → Finance
+#   "Channel/customer/marketing?"               → Marketing & Customers
+#   "Daily action items? (retail)"              → Operations > Daily Monitoring
+#   "Weekly/monthly retail ops review?"         → Operations > Periodic Reviews
+#   "B2B / wholesale tracking?"                 → Operations > B2B Operations
+#   "US CrossBorder / export arrangements?"     → Operations > US CrossBorder
+#   "Logistics / shipping?"                     → Operations > Logistics
+#   "Data pipeline health?"                     → Operations > Data Platform
+#   "Cross-segment comparison / research?"      → Analytics
+#   "Onboarding / user guide?"                  → 📍 Start Here
 #
-# If the audience doesn't match any existing collection, STOP and update this
-# registry first. Do not create ad-hoc collections.
+# If audience doesn't match → STOP, escalate to Data Team. Do NOT create ad-hoc collections.
+#
+# ARCHIVE POLICY (NEW 2026-05-27):
+# When renaming a dashboard, declare aliases in blueprint frontmatter:
+#   ---
+#   title: New Name [All]
+#   aliases:
+#     - Old Name
+#   ---
+# Deploy script will auto-archive the old name on next deploy.
+# See guides/archive_policy.md (TBD per phase-07).
 # =============================================================================

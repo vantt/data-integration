@@ -106,6 +106,31 @@ sapo_discounts_classified AS (
         END                          AS cost_type,
         'DISCOUNT'                   AS cost_category,
         ABS(d.amount)                AS amount,
+        d.discount_rate              AS discount_rate,
+        CASE
+            WHEN d.reason ILIKE 'voucher seller:%'
+                THEN 'voucher_promotional'
+            WHEN d.reason = 'Bundle Deal'
+                THEN 'bundle'
+            WHEN d.reason ILIKE '%sampling%' OR d.reason ILIKE '%mẫu%' OR d.reason ILIKE '%tặng%'
+                THEN 'sampling_gift'
+            WHEN d.reason ILIKE '%đại lý%' OR d.reason ILIKE '%hợp đồng%' OR d.reason ILIKE '%nhà thuốc%'
+                THEN 'wholesale_explicit'
+            WHEN LOWER(d.reason) ILIKE '%mỹ%'
+                OR TRIM(LOWER(d.reason)) = 'us'
+                OR LOWER(d.reason) ILIKE '% us%'
+                THEN 'overseas'
+            WHEN d.reason ILIKE '%ctkm%' OR d.reason ILIKE '%father%' OR d.reason ILIKE '%mascot%'
+                THEN 'campaign'
+            WHEN d.reason ILIKE '%nhân viên%' OR d.reason ILIKE '%ctv%' OR d.reason ILIKE '%hoa hồng%'
+                THEN 'employee_internal'
+            WHEN d.discount_rate < 20
+                THEN 'negotiated_micro'
+            WHEN d.discount_rate < 40
+                THEN 'negotiated_standard'
+            ELSE
+                'negotiated_deep'
+        END AS discount_nature,
         COALESCE(d.reason, '')       AS source_record,
         om.date_key,
         om.channel_key
@@ -120,7 +145,9 @@ sapo_discounts AS (
         order_code,
         cost_type,
         cost_category,
-        SUM(amount)          AS amount,
+        SUM(amount)                        AS amount,
+        MAX(discount_rate)                 AS discount_rate,
+        MAX_BY(discount_nature, amount)    AS discount_nature,
         'sapo'               AS source_system,
         MIN(source_record)   AS source_record,
         'actual'             AS fee_source,
@@ -139,6 +166,8 @@ SELECT
     cost_type,
     cost_category,
     CAST(amount AS DECIMAL(18, 2))  AS amount,
+    NULL                            AS discount_rate,
+    NULL                            AS discount_nature,
     source_system,
     source_record,
     fee_source,
@@ -154,6 +183,8 @@ SELECT
     cost_type,
     cost_category,
     CAST(amount AS DECIMAL(18, 2))  AS amount,
+    NULL                            AS discount_rate,
+    NULL                            AS discount_nature,
     'shopee'                        AS source_system,
     order_code                      AS source_record,
     'actual'                        AS fee_source,
@@ -169,6 +200,8 @@ SELECT
     cost_type,
     cost_category,
     CAST(amount AS DECIMAL(18, 2))  AS amount,
+    discount_rate,
+    discount_nature,
     source_system,
     source_record,
     fee_source,

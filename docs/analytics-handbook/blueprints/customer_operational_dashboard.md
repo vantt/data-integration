@@ -36,11 +36,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Danh gia suc khoe customer base — MAU, acquisition, at-risk, churn
@@ -48,7 +48,7 @@ SELECT
 # Danh gia suc khoe customer base — MAU, acquisition, at-risk, churn
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiem tra phan bo trang thai va segment — dau la diem nong?
@@ -56,7 +56,7 @@ SELECT
 # Kiem tra phan bo trang thai va segment — dau la diem nong?
 
 ```json metabase-pos
-{"row":5, "col":0, "size_x":18, "size_y":1}
+{"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo doi xu huong 6 thang — growth quality va MAU trajectory
@@ -64,7 +64,7 @@ SELECT
 # Theo doi xu huong 6 thang — growth quality va MAU trajectory
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":1}
+{"row": 13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: MAU (Monthly Active Customers)
@@ -113,7 +113,7 @@ FROM current_mau cm, prev_mau pm
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":3}
+{"row": 3, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: New Customers (MTD)
@@ -156,7 +156,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: At Risk Customers
@@ -175,7 +175,7 @@ WHERE customer_status = 'At Risk'
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Churned Customers
@@ -194,7 +194,7 @@ WHERE customer_status = 'Churned'
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Customer Status Distribution
@@ -233,7 +233,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":6, "size_y":6}
+{"row": 7, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Customer Segment Distribution
@@ -272,7 +272,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row":6, "col":6, "size_x":6, "size_y":6}
+{"row": 7, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Active Rate
@@ -304,7 +304,7 @@ WHERE customer_id != 'Unknown'
 ```
 
 ```json metabase-pos
-{"row":6, "col":12, "size_x":6, "size_y":6}
+{"row": 7, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: New vs Returning Customers (6M)
@@ -347,7 +347,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":9, "size_y":6}
+{"row": 14, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### ❓ Question: Monthly Active Customers Trend (6M)
@@ -382,12 +382,37 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":13, "col":9, "size_x":9, "size_y":6}
+{"row": 14, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** MAU window
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Kenh & Dia ly
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Phan tich acquisition trend 6 thang — momentum tang hay giam?
 
 # Phan tich acquisition trend 6 thang — momentum tang hay giam?
@@ -610,7 +635,32 @@ LIMIT 15
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** MAU window
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Watchlist & Hanh dong
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Review ma tran suc khoe segment — xac dinh diem nong can hanh dong
 
@@ -859,3 +909,13 @@ Source: dim_customers · fact_orders · Updated daily · Excludes Unknown custom
 ```json metabase-pos
 { "row": 33, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** MAU window
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

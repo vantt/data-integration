@@ -4,11 +4,11 @@
 
 Dashboard theo doi hieu suat san pham — doanh thu, so luong, xu huong, phan tich loai SP, top/bottom products. MoM comparison (last 30 days vs previous 30 days).
 
-## 📂 Collection: Operations > Periodic Reviews
+## 📂 Collection: Analytics
 
-### Dashboard: Product Performance
+### Dashboard: Product Performance [Cross]
 
-**Description**: Phan tich hieu suat san pham — doanh thu, so luong ban, xu huong MoM, phan bo theo loai SP, top/bottom products across 3 tabs.
+**Description**: Audience: Analyst / Product Manager. Scope: Cross-segment product analysis. Phan tich hieu suat san pham — doanh thu, so luong ban, xu huong MoM, phan bo theo loai SP, top/bottom products across 3 tabs.
 
 ---
 
@@ -109,7 +109,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: So luong ban
@@ -161,7 +161,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 2, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: So san pham ban duoc
@@ -213,7 +213,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 2, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Doanh thu trung binh/san pham
@@ -279,7 +279,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 2, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
@@ -289,7 +289,7 @@ FROM this_period t, prev_period p
 # Phan tich xu huong doanh thu san pham — momentum MoM
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -306,11 +306,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### Question: Doanh thu san pham theo ngay
@@ -385,7 +385,7 @@ ORDER BY "Ngay"
 ```
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":12, "size_y":6}
+{"row": 8, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: So luong ban theo ngay
@@ -446,7 +446,7 @@ ORDER BY "Ngay"
 ```
 
 ```json metabase-pos
-{"row":7, "col":12, "size_x":6, "size_y":6}
+{"row": 8, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -456,7 +456,7 @@ ORDER BY "Ngay"
 # Xac dinh dong gop theo loai san pham — ranking va composition
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":18, "size_y":1}
+{"row": 14, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Doanh thu theo loai san pham
@@ -500,7 +500,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{"row":14, "col":0, "size_x":9, "size_y":6}
+{"row": 15, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Ty trong doanh thu theo loai san pham
@@ -534,12 +534,37 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{"row":14, "col":9, "size_x":9, "size_y":6}
+{"row": 15, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_misa_sales_lines + fact_sales · **Cadence:** rolling-30d · **Scope:** NOT is_promo_line
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Phan tich loai san pham
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Category Growth Heading
 
@@ -784,7 +809,32 @@ ORDER BY COALESCE(t.doanh_thu, 0) DESC
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_misa_sales_lines + fact_sales · **Cadence:** rolling-30d · **Scope:** NOT is_promo_line
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: San pham ban chay & ban cham
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Top Products Heading
 
@@ -1171,7 +1221,32 @@ Source: fact_orders · dim_products · Updated daily · Excludes cancelled order
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_misa_sales_lines + fact_sales · **Cadence:** rolling-30d · **Scope:** NOT is_promo_line
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Loi nhuan
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Profitability Heading
 
@@ -1423,3 +1498,81 @@ ORDER BY "Margin %" ASC
 ```json metabase-pos
 { "row": 10, "col": 9, "size_x": 9, "size_y": 9 }
 ```
+
+---
+
+#### 📝 Text: Product Profitability Heading
+
+# Phan tich sinh loi theo kenh — Revenue vs Margin % de tim diem toi uu
+
+```json metabase-pos
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Product Category Profitability Heatmap
+
+Scatter: moi kenh ban hang la 1 diem — X = Doanh thu, Y = Bien LN %, size = so don hang. Goc phai tren = high-margin + high-revenue (toi uu). Goc trai duoi = low-margin + low-revenue (can review hoac cat).
+
+```sql
+SELECT
+    channel_name                                                          AS "Kenh ban hang",
+    SUM(revenue_net_of_discount)                                          AS "Doanh thu",
+    ROUND(
+        SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+        1
+    )                                                                     AS "Bien LN %",
+    COUNT(*)                                                              AS "So dong",
+    CASE
+        WHEN ROUND(SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0), 1) >= 40
+            THEN 'High (>=40%)'
+        WHEN ROUND(SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0), 1) >= 25
+            THEN 'Medium (25-40%)'
+        ELSE 'Low (<25%)'
+    END                                                                   AS "Margin Tier"
+FROM int_misa_sales_lines
+WHERE NOT is_promo_line
+  [[AND posting_date >= {{date_range}}]]
+GROUP BY channel_name
+HAVING SUM(revenue_net_of_discount) > 0
+ORDER BY "Doanh thu" DESC
+```
+
+```json metabase-viz
+{
+  "display": "scatter",
+  "visualization_settings": {
+    "graph.dimensions": ["Kenh ban hang"],
+    "graph.metrics": ["Doanh thu", "Bien LN %"],
+    "scatter.bubble": "So dong",
+    "graph.x_axis.title_text": "Doanh thu (VND)",
+    "graph.y_axis.title_text": "Bien loi nhuan (%)",
+    "column_settings": {
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Bien LN %": {
+        "number_style": "decimal",
+        "decimals": 1,
+        "suffix": "%"
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_misa_sales_lines + fact_sales · **Cadence:** rolling-30d · **Scope:** NOT is_promo_line
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

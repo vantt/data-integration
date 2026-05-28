@@ -22,11 +22,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Monitor doanh thu Social real-time — đội social đang bán được bao nhiêu?
@@ -34,7 +34,7 @@ SELECT
 # Monitor doanh thu Social real-time — đội social đang bán được bao nhiêu?
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Social Revenue Today
@@ -76,7 +76,7 @@ WHERE c.channel_format = 'Social'
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":3}
+{"row": 3, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Social Orders Today
@@ -110,7 +110,7 @@ WHERE c.channel_format = 'Social'
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Social AOV
@@ -160,7 +160,7 @@ WHERE c.channel_format = 'Social'
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Social Share of Total
@@ -203,7 +203,7 @@ FROM total t, social s
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Xác định kênh drive doanh thu — Facebook vs Zalo vs Instagram đóng góp
@@ -211,7 +211,7 @@ FROM total t, social s
 # Xác định kênh drive doanh thu — Facebook vs Zalo vs Instagram đóng góp
 
 ```json metabase-pos
-{"row":5, "col":0, "size_x":18, "size_y":1}
+{"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Revenue by Channel
@@ -254,7 +254,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":6, "size_y":6}
+{"row": 7, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### Question: Revenue by Channel (7-day trend)
@@ -296,7 +296,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{"row":6, "col":6, "size_x":12, "size_y":6}
+{"row": 7, "col":6, "size_x":12, "size_y":6}
 ```
 
 #### 📝 Text: Đánh giá hiệu suất nhân viên — ranking và xử lý kịp thời
@@ -304,7 +304,7 @@ ORDER BY 1, 2
 # Đánh giá hiệu suất nhân viên — ranking và xử lý kịp thời
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":1}
+{"row": 13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Top Agents by Revenue
@@ -344,7 +344,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":9, "size_y":6}
+{"row": 14, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Top Agents by Orders
@@ -377,7 +377,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":13, "col":9, "size_x":9, "size_y":6}
+{"row": 14, "col":9, "size_x":9, "size_y":6}
 ```
 
 #### 📝 Text: Review chi tiết nhân viên — xác định ai cần hỗ trợ thêm
@@ -385,7 +385,7 @@ ORDER BY 2 DESC
 # Review chi tiết nhân viên — xác định ai cần hỗ trợ thêm
 
 ```json metabase-pos
-{"row":19, "col":0, "size_x":18, "size_y":1}
+{"row": 20, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Agent Performance Table
@@ -494,7 +494,7 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{"row":20, "col":0, "size_x":18, "size_y":6}
+{"row": 21, "col":0, "size_x":18, "size_y":6}
 ```
 
 #### 📝 Text: Kiểm tra đơn hàng mới nhất — xác nhận pipeline real-time
@@ -502,7 +502,7 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 # Kiểm tra đơn hàng mới nhất — xác nhận pipeline real-time
 
 ```json metabase-pos
-{"row":26, "col":0, "size_x":18, "size_y":1}
+{"row": 27, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Recent Social Orders
@@ -552,7 +552,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{"row":27, "col":0, "size_x":18, "size_y":6}
+{"row": 28, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
@@ -562,5 +562,15 @@ LIMIT 20
 Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: channel_format = Social
 
 ```json metabase-pos
-{"row":33, "col":0, "size_x":18, "size_y":1}
+{"row": 34, "col":0, "size_x":18, "size_y":1}
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders · **Cadence:** daily · **Scope:** channel_format='Social'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

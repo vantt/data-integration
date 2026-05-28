@@ -19,7 +19,7 @@
 
 Ad-hoc analysis — evaluate campaign ROI, discount spending, promo effectiveness. **Chỉ bao gồm retail orders.** 3 tabs: Tong quan chiet khau (Discount Overview), Hieu suat khuyen mai (Promotion Performance), Phan tich kenh & chi tiet (Channel Impact & Detail). MoM = last 30 days vs previous 30 days.
 
-## 📂 Collection: Operations > Retail Operations
+## 📂 Collection: Marketing & Customers
 
 Promotion analysis, discount tracking for retail customers only.
 
@@ -50,11 +50,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Kiểm soát chi phí chiết khấu — có vượt ngưỡng và đang tăng hay giảm?
@@ -62,7 +62,7 @@ SELECT
 ## Kiểm soát chi phí chiết khấu — có vượt ngưỡng và đang tăng hay giảm?
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Total Discount Amount
@@ -122,7 +122,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: Discount Rate %
@@ -183,7 +183,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":4}
+{"row": 3, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Discount Frequency %
@@ -246,7 +246,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":4}
+{"row": 3, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Discounted Orders
@@ -298,7 +298,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":4}
+{"row": 3, "col":14, "size_x":4, "size_y":4}
 ```
 
 #### 📝 Text: So sánh Promo vs Non-Promo — khuyến mãi có uplift AOV?
@@ -306,7 +306,7 @@ FROM this_period tp, prev_period pp
 ## So sánh Promo vs Non-Promo — khuyến mãi có uplift AOV?
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":18, "size_y":1}
+{"row": 7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Promo vs Non-Promo Summary
@@ -381,7 +381,7 @@ FROM base
 ```
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":12, "size_y":6}
+{"row": 8, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: AOV Uplift
@@ -443,7 +443,7 @@ FROM aov
 ```
 
 ```json metabase-pos
-{"row":7, "col":12, "size_x":6, "size_y":6}
+{"row": 8, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### 📝 Text: Phân tích độ sâu chiết khấu — phát hiện đơn bất thường > 30%
@@ -451,7 +451,7 @@ FROM aov
 ## Phân tích độ sâu chiết khấu — phát hiện đơn bất thường > 30%
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":18, "size_y":1}
+{"row": 14, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Discount Depth Histogram
@@ -504,7 +504,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row":14, "col":0, "size_x":12, "size_y":6}
+{"row": 15, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Avg Discount % by Channel
@@ -546,7 +546,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":14, "col":12, "size_x":6, "size_y":6}
+{"row": 15, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### 📝 Text: Theo dõi xu hướng chiết khấu — trend amount và rate
@@ -554,7 +554,7 @@ ORDER BY 2 DESC
 ## Theo dõi xu hướng chiết khấu — trend amount và rate
 
 ```json metabase-pos
-{"row":20, "col":0, "size_x":18, "size_y":1}
+{"row": 21, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Discount Amount & Rate Trend
@@ -605,12 +605,37 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":21, "col":0, "size_x":18, "size_y":6}
+{"row": 22, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_promotions · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** Baseline = non-promo same-channel-period
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Hieu suat khuyen mai
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Xác định promotion hiệu quả — ranking doanh thu và usage
 
 ## Xác định promotion hiệu quả — ranking doanh thu và usage
@@ -1080,7 +1105,32 @@ ORDER BY 1, 2
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_promotions · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** Baseline = non-promo same-channel-period
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Phan tich kenh & chi tiet
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Phân tích tác động promo theo kênh — kênh nào phụ thuộc nhiều?
 
@@ -1383,4 +1433,295 @@ Source: fact_orders · dim_promotions · dim_channels · Updated daily · Exclud
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+---
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_promotions · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** Baseline = non-promo same-channel-period
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+### 📑 Tab: Discount ROI
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+<!-- Discount ROI analysis — incremental revenue vs discount cost per promotion code.
+     Baseline proxy: avg net_revenue per order from non-discounted orders in same period + same channel.
+     Caveat: ROI estimation only. No holdout group. Baseline = non-promo avg order value × promo order count.
+     Limitation: cannot isolate pure uplift without A/B test; treat as directional signal. -->
+
+#### 📝 Text: Discount ROI — đo lường hiệu quả thực của chiết khấu, không chỉ chi phí
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_promotions · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** Baseline = non-promo same-channel-period
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+## Discount ROI — đo lường hiệu quả thực của chiết khấu, không chỉ chi phí
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Discount ROI by Promotion Code
+
+Bang ROI chiet khau theo ma khuyen mai — so sanh tien chiet khau vs doanh thu tang them (incremental). Baseline: trung binh don hang khong khuyen mai cung ky, cung kenh. **Scope: Retail only.**
+
+```sql
+-- Caveat: incremental revenue proxy = (avg non-promo AOV × promo order count) subtracted from actual promo revenue.
+-- Limitation: no holdout group; treat as directional signal only.
+WITH
+period_scope AS (
+    SELECT
+        o.order_id,
+        o.channel_key,
+        o.discount_amount,
+        o.net_revenue,
+        COALESCE(p.promotion_code, 'Khong ro') AS campaign_code
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+      AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+),
+-- Baseline: avg net_revenue per non-discounted order per channel (same 30-day window)
+channel_baseline AS (
+    SELECT
+        o.channel_key,
+        CASE WHEN COUNT(DISTINCT CASE WHEN o.discount_amount = 0 THEN o.order_id END) = 0
+             THEN 0
+             ELSE SUM(CASE WHEN o.discount_amount = 0 THEN o.net_revenue ELSE 0 END)
+                  / COUNT(DISTINCT CASE WHEN o.discount_amount = 0 THEN o.order_id END)
+        END AS baseline_aov
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= current_date - INTERVAL '30 days'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+      AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+    GROUP BY o.channel_key
+),
+-- Promo aggregates per campaign_code
+promo_agg AS (
+    SELECT
+        ps.campaign_code,
+        COUNT(DISTINCT ps.order_id)                              AS promo_orders,
+        SUM(ps.discount_amount)                                   AS discount_amount,
+        SUM(ps.net_revenue)                                       AS actual_revenue,
+        SUM(COALESCE(cb.baseline_aov, 0))                        AS baseline_revenue_sum
+    FROM period_scope ps
+    LEFT JOIN channel_baseline cb ON ps.channel_key = cb.channel_key
+    WHERE ps.discount_amount > 0
+    GROUP BY ps.campaign_code
+)
+SELECT
+    campaign_code                                                 AS "Ma KM",
+    promo_orders                                                  AS "So don",
+    discount_amount                                               AS "Tien CK",
+    actual_revenue                                                AS "Doanh thu thuc",
+    baseline_revenue_sum                                          AS "Doanh thu baseline",
+    (actual_revenue - baseline_revenue_sum)                       AS "Doanh thu tang them",
+    CASE
+        WHEN discount_amount = 0 THEN NULL
+        ELSE ROUND(
+            ((actual_revenue - baseline_revenue_sum) - discount_amount)
+            * 100.0 / NULLIF(discount_amount, 0),
+        1)
+    END                                                           AS "ROI %"
+FROM promo_agg
+ORDER BY "ROI %" DESC NULLS LAST
+LIMIT 50
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["ROI %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 200,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["ROI %"],
+        "type": "single",
+        "operator": "<",
+        "value": -50,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      }
+    ],
+    "column_settings": {
+      "Tien CK": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Doanh thu thuc": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Doanh thu baseline": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Doanh thu tang them": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "ROI %": {
+        "suffix": "%"
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 18, "size_y": 9 }
+```
+
+#### 📝 Text: Xu hướng ROI chiết khấu theo tháng — phát hiện chiến dịch hiệu quả tăng/giảm
+
+## Xu hướng ROI chiết khấu theo tháng — phát hiện chiến dịch hiệu quả tăng/giảm
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Discount ROI Trend (Monthly)
+
+Xu huong ROI chiet khau toan bo (aggregate) theo thang — line chart. 6 thang gan nhat. **Scope: Retail only.**
+
+```sql
+-- Monthly aggregate ROI: (incremental_revenue - discount_cost) / discount_cost
+-- Baseline: non-promo avg AOV × promo order count per month, per channel
+WITH
+monthly_baseline AS (
+    SELECT
+        date_trunc('month', o.order_timestamp)::date AS thang,
+        o.channel_key,
+        CASE WHEN COUNT(DISTINCT CASE WHEN o.discount_amount = 0 THEN o.order_id END) = 0
+             THEN 0
+             ELSE SUM(CASE WHEN o.discount_amount = 0 THEN o.net_revenue ELSE 0 END)
+                  / COUNT(DISTINCT CASE WHEN o.discount_amount = 0 THEN o.order_id END)
+        END AS baseline_aov
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.order_timestamp >= current_date - INTERVAL '6 months'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+      AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+    GROUP BY 1, 2
+),
+monthly_promo AS (
+    SELECT
+        date_trunc('month', o.order_timestamp)::date AS thang,
+        o.channel_key,
+        SUM(o.discount_amount)                                    AS total_discount,
+        SUM(o.net_revenue)                                        AS total_actual_revenue,
+        COUNT(DISTINCT o.order_id)                                AS promo_orders
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.discount_amount > 0
+      AND o.order_timestamp >= current_date - INTERVAL '6 months'
+      AND o.order_timestamp < current_date
+      AND c.customer_type = 'RETAIL'
+      AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+    GROUP BY 1, 2
+),
+monthly_combined AS (
+    SELECT
+        mp.thang,
+        SUM(mp.total_discount)                                    AS total_discount,
+        SUM(mp.total_actual_revenue)                              AS total_actual,
+        SUM(mb.baseline_aov * mp.promo_orders)                    AS total_baseline
+    FROM monthly_promo mp
+    LEFT JOIN monthly_baseline mb ON mp.thang = mb.thang AND mp.channel_key = mb.channel_key
+    GROUP BY mp.thang
+)
+SELECT
+    thang                                                         AS "Thang",
+    CASE WHEN total_discount = 0 THEN NULL
+         ELSE ROUND(
+             ((total_actual - total_baseline) - total_discount)
+             * 100.0 / NULLIF(total_discount, 0),
+         1)
+    END                                                           AS "ROI %"
+FROM monthly_combined
+ORDER BY thang
+```
+
+```json metabase-viz
+{
+  "display": "line",
+  "visualization_settings": {
+    "graph.dimensions": ["Thang"],
+    "graph.metrics": ["ROI %"],
+    "series_settings": {
+      "ROI %": { "color": "#509EE3", "line.style": "solid" }
+    },
+    "graph.y_axis.title_text": "ROI %",
+    "graph.x_axis.title_text": "",
+    "graph.show_goal": true,
+    "graph.goal_value": 0,
+    "graph.goal_label": "Breakeven",
+    "column_settings": {
+      "ROI %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### 📝 Text: Footer
+
+Source: fact_orders · dim_promotions · dim_channels · Updated daily · Excludes CANCELLED/Voided · Retail only · ROI estimation: no holdout group
+
+```json metabase-pos
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```

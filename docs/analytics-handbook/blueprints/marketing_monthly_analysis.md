@@ -13,9 +13,9 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ---
 
-### 🖥️ Dashboard: Marketing Monthly Analysis
+### 🖥️ Dashboard: Marketing Monthly Analysis [Retail]
 
-**Description**: Monthly deep dive — channel strategy, customer acquisition, cohort retention, campaign ROI, brand performance. 4 tabs: Monthly Pulse, Channel & Brand, Customer Intelligence, Campaigns & Products.
+**Description**: Audience: Marketing Manager / CMO. Scope: Retail customers only (customer_type='RETAIL'). Monthly deep dive — channel strategy, customer acquisition, cohort retention, campaign ROI, brand performance, ROI & margin. 5 tabs: Monthly Pulse, Channel & Brand, Customer Intelligence, Campaigns & Products, ROI & Margin.
 
 <!-- Filters removed: date/all-options and string/= types don't work with native SQL template tags in DuckDB.
      Date scoping is hardcoded in each SQL (last closed month). Channel filtering would require field filters. -->
@@ -38,11 +38,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
@@ -50,7 +50,7 @@ SELECT
 # Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Net Revenue
@@ -104,7 +104,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -148,7 +148,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":4}
+{"row": 3, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly New Customers
@@ -190,7 +190,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":4}
+{"row": 3, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly AOV
@@ -244,7 +244,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":4}
+{"row": 3, "col":14, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Discount Rate Gauge
@@ -275,7 +275,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":6, "size_y":5}
+{"row": 7, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### ❓ Question: Revenue Trend (6M)
@@ -322,7 +322,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":6, "col":6, "size_x":12, "size_y":5}
+{"row": 7, "col":6, "size_x":12, "size_y":5}
 ```
 
 #### 📝 Text: Xác định kênh nào đang drive revenue — composition và MoM change
@@ -330,7 +330,7 @@ ORDER BY 1
 # Xác định kênh nào đang drive revenue — composition và MoM change
 
 ```json metabase-pos
-{"row":11, "col":0, "size_x":18, "size_y":1}
+{"row": 12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Channel Revenue Share
@@ -365,7 +365,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":6, "size_y":6}
+{"row": 13, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue by Channel (MoM)
@@ -407,12 +407,37 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":12, "col":6, "size_x":12, "size_y":6}
+{"row": 13, "col":6, "size_x":12, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_marketing_spend + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL' · **Caveats:** ROAS attribution last-click
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Channel & Brand
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Theo dõi structural shift kênh 6 tháng — Online-Ecom đang chiếm ưu thế?
 
 # Theo dõi structural shift kênh 6 tháng — Online-Ecom đang chiếm ưu thế?
@@ -766,7 +791,32 @@ ORDER BY 2 DESC
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_marketing_spend + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL' · **Caveats:** ROAS attribution last-click
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Customer Intelligence
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Đánh giá acquisition — khách mới có tăng và từ kênh nào?
 
@@ -1234,7 +1284,32 @@ ORDER BY 1, 2
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_marketing_spend + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL' · **Caveats:** ROAS attribution last-click
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Campaigns & Products
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Phân tích ROI campaign — promotion nào mang lại giá trị?
 
@@ -1701,3 +1776,276 @@ Source: fact_orders, dim_channels, dim_customers, dim_promotions, fact_sales · 
 ```json metabase-pos
 { "row": 33, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+---
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_marketing_spend + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL' · **Caveats:** ROAS attribution last-click
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+### 📑 Tab: ROI & Margin
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+#### 📝 Text: Marketing P&L — ROAS, margin contribution và channel profit (Retail only, last-click attribution)
+
+# Marketing P&L — ROAS, margin contribution và channel profit (Retail only, last-click attribution)
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: ROAS + Margin by Channel
+
+ROAS and margin breakdown by channel for Retail scope. Attribution: last-click via channel_key match. CAC analysis pending (acquisition_source NULL).
+
+```sql
+WITH spend AS (
+    SELECT
+        channel_key,
+        SUM(spend_amount) AS spend
+    FROM fact_marketing_spend
+    WHERE date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INT)
+      AND date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INT)
+    GROUP BY channel_key
+),
+prev_spend AS (
+    SELECT
+        channel_key,
+        SUM(spend_amount) AS spend
+    FROM fact_marketing_spend
+    WHERE date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INT)
+      AND date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INT)
+    GROUP BY channel_key
+),
+perf AS (
+    SELECT
+        o.channel_key,
+        SUM(o.net_revenue)        AS rev,
+        SUM(o.gross_profit)       AS gross_profit,
+        SUM(o.channel_net_profit) AS net_profit
+    FROM fact_order_economics o
+    JOIN dim_customers c USING (customer_key)
+    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.order_timestamp <  date_trunc('month', current_date)
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+    GROUP BY o.channel_key
+),
+prev_perf AS (
+    SELECT
+        o.channel_key,
+        SUM(o.net_revenue) AS rev
+    FROM fact_order_economics o
+    JOIN dim_customers c USING (customer_key)
+    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.order_timestamp <  date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+    GROUP BY o.channel_key
+)
+SELECT
+    ch.channel_name                                              AS "Channel",
+    COALESCE(s.spend, 0)                                        AS "Spend",
+    COALESCE(p.rev, 0)                                          AS "Attributed Revenue",
+    ROUND(COALESCE(p.rev, 0) / NULLIF(s.spend, 0), 2)          AS "ROAS",
+    ROUND(COALESCE(p.gross_profit, 0) * 100.0
+          / NULLIF(p.rev, 0), 1)                               AS "Margin %",
+    ROUND(COALESCE(p.rev, 0) / NULLIF(s.spend, 0)
+          * COALESCE(p.gross_profit, 0) / NULLIF(p.rev, 0), 2) AS "Profitable ROAS",
+    CASE
+        WHEN COALESCE(ps.spend, 0) = 0 THEN NULL
+        ELSE ROUND((COALESCE(s.spend, 0) - ps.spend) * 100.0 / ps.spend, 1)
+    END                                                          AS "Spend MoM %"
+FROM dim_channels ch
+LEFT JOIN spend      s  ON ch.channel_key = s.channel_key
+LEFT JOIN prev_spend ps ON ch.channel_key = ps.channel_key
+LEFT JOIN perf       p  ON ch.channel_key = p.channel_key
+LEFT JOIN prev_perf  pp ON ch.channel_key = pp.channel_key
+WHERE s.spend IS NOT NULL OR p.rev IS NOT NULL
+ORDER BY COALESCE(p.rev, 0) / NULLIF(s.spend, 0) DESC NULLS LAST
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["Margin %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 30,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Margin %"],
+        "type": "single",
+        "operator": "<",
+        "value": 10,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["ROAS"],
+        "type": "single",
+        "operator": ">=",
+        "value": 3,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["ROAS"],
+        "type": "single",
+        "operator": "<",
+        "value": 1,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "Spend": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Attributed Revenue": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Margin %": { "suffix": "%" },
+      "Spend MoM %": { "suffix": "%" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### 📝 Text: Xác định channel profit contribution — kênh nào đang profit, kênh nào đang drain budget?
+
+# Xác định channel profit contribution — kênh nào đang profit, kênh nào đang drain budget?
+
+```json metabase-pos
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Channel Profit Contribution vs Spend
+
+Combo chart: bar = spend, line = net_profit by channel. Retail scope, last closed month vs prior month. Attribution: last-click via channel_key.
+
+```sql
+WITH spend_cur AS (
+    SELECT
+        channel_key,
+        SUM(spend_amount) AS spend
+    FROM fact_marketing_spend
+    WHERE date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INT)
+      AND date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INT)
+    GROUP BY channel_key
+),
+spend_prev AS (
+    SELECT
+        channel_key,
+        SUM(spend_amount) AS spend
+    FROM fact_marketing_spend
+    WHERE date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INT)
+      AND date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INT)
+    GROUP BY channel_key
+),
+profit_cur AS (
+    SELECT
+        o.channel_key,
+        SUM(o.channel_net_profit) AS net_profit
+    FROM fact_order_economics o
+    JOIN dim_customers c USING (customer_key)
+    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.order_timestamp <  date_trunc('month', current_date)
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+    GROUP BY o.channel_key
+),
+profit_prev AS (
+    SELECT
+        o.channel_key,
+        SUM(o.channel_net_profit) AS net_profit
+    FROM fact_order_economics o
+    JOIN dim_customers c USING (customer_key)
+    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.order_timestamp <  date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+    GROUP BY o.channel_key
+)
+SELECT
+    ch.channel_name                     AS "Channel",
+    COALESCE(sc.spend, 0)               AS "Spend (This Month)",
+    COALESCE(sp.spend, 0)               AS "Spend (Prior Month)",
+    COALESCE(pc.net_profit, 0)          AS "Net Profit (This Month)",
+    COALESCE(pp.net_profit, 0)          AS "Net Profit (Prior Month)"
+FROM dim_channels ch
+LEFT JOIN spend_cur  sc ON ch.channel_key = sc.channel_key
+LEFT JOIN spend_prev sp ON ch.channel_key = sp.channel_key
+LEFT JOIN profit_cur pc ON ch.channel_key = pc.channel_key
+LEFT JOIN profit_prev pp ON ch.channel_key = pp.channel_key
+WHERE sc.spend IS NOT NULL OR pc.net_profit IS NOT NULL
+ORDER BY COALESCE(pc.net_profit, 0) DESC
+```
+
+```json metabase-viz
+{
+  "display": "combo",
+  "visualization_settings": {
+    "graph.dimensions": ["Channel"],
+    "graph.metrics": ["Spend (This Month)", "Net Profit (This Month)"],
+    "series_settings": {
+      "Spend (This Month)": { "display": "bar", "color": "#509EE3" },
+      "Net Profit (This Month)": { "display": "line", "color": "#84BB4C", "line.marker_enabled": true }
+    },
+    "graph.y_axis.auto_split": true,
+    "column_settings": {
+      "Spend (This Month)": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Spend (Prior Month)": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Net Profit (This Month)": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Net Profit (Prior Month)": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 7 }
+```
+
+#### 📝 Text: Footer (ROI & Margin)
+
+Source: fact_marketing_spend, fact_order_economics, dim_channels, dim_customers · Scope: RETAIL only · Attribution: last-click via channel_key · ROAS = revenue/spend · Profitable ROAS = ROAS × margin% · CAC analysis pending (acquisition_source NULL) · Updated daily
+
+```json metabase-pos
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_marketing_spend + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL' · **Caveats:** ROAS attribution last-click
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

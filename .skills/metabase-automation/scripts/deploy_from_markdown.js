@@ -325,9 +325,16 @@ async function main() {
       const pos = q.pos || { row: 0, col: 0, size_x: 4, size_y: 4 };
       const cardConfig = { id: card.id, ...pos };
 
-      // Propagate click_behavior from card viz settings to dashcard level.
-      // Metabase stores click_behavior on the dashcard, not the card itself.
+      // Propagate dashcard-level settings from blueprint viz block.
+      // Keys prefixed with "dashcard." belong on the dashcard, not the card.
+      // click_behavior lives on the dashcard inside column_settings.
       const flatVizSettings = flattenViz(q.viz);
+      const dashcardViz = {};
+      for (const [key, val] of Object.entries(flatVizSettings)) {
+        if (key.startsWith('dashcard.')) {
+          dashcardViz[key] = val;
+        }
+      }
       if (flatVizSettings.column_settings) {
         const clickEntries = {};
         for (const [key, val] of Object.entries(flatVizSettings.column_settings)) {
@@ -336,8 +343,11 @@ async function main() {
           }
         }
         if (Object.keys(clickEntries).length > 0) {
-          cardConfig.visualization_settings = { column_settings: clickEntries };
+          dashcardViz.column_settings = clickEntries;
         }
+      }
+      if (Object.keys(dashcardViz).length > 0) {
+        cardConfig.visualization_settings = dashcardViz;
       }
 
       // Pass tab name — syncCards will resolve to tab ID

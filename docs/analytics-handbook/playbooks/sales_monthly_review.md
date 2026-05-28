@@ -89,6 +89,35 @@ Use this format to document decisions during the meeting:
 | Any Channel Revenue | MoM < -20% | Warning | Channel Owner | Channel-specific diagnosis: stock, marketing, competition |
 | Branch Achievement | < 80% for 2+ months | Red | Regional Manager | Performance improvement plan, resource reallocation |
 
+## 4. Monthly P&L
+
+> **Context:** Are we growing profitably? Revenue without margin visibility leads to strategic blind spots.
+
+| Metric | Reference | Analysis Question |
+|:---|:---|:---|
+| **Net Profit (MoM)** | `fact_order_economics.channel_net_profit` | Did profit grow in line with revenue? If revenue up but profit down, cost inflation or fee creep. |
+| **Gross Margin % (MoM)** | `gross_profit / net_revenue` | Is margin trend stable? Decline over 2+ months triggers COGS/pricing investigation. |
+| **Channel Profit Ranking** | Channel-level `channel_net_profit` | Which channels drive profit? Which are loss-making after COGS and platform fees? |
+
+### Visualization Strategy
+
+- **Scalar + MoM comparison:** Net Profit and Gross Margin % side-by-side — CFO reads both at a glance.
+- **12-Month Line Chart:** Gross Margin % trajectory — reveals structural margin compression vs. one-off dip.
+- **Channel Table (sorted by Net Profit DESC):** Red highlight on negative-profit channels. Top 10 only for focus.
+
+### Action Triggers
+
+| Metric | Condition | Severity | Owner | Action |
+|:---|:---|:---|:---|:---|
+| Gross Margin % | MoM drop > 3pp | Warning | CFO | Investigate COGS spike or platform fee increase |
+| Gross Margin % | Negative for any channel | Red | Sales Director | Channel profitability review, consider delisting |
+| Net Profit | MoM < -20% | Red | CFO | Emergency margin review before next month launch |
+| Channel Net Profit | Any channel negative | Warning | Channel Owner | Channel P&L deep-dive (dashboard: Channel P&L Deep Dive) |
+
+### Filter Applied
+
+Cards in this tab filter: `is_sales_channel = true`, `status NOT IN ('CANCELLED', 'Voided')`, `has_cogs = true` (MISA COGS matched). Orders without COGS match are excluded to avoid understating profitability.
+
 ## Data Preparation Checklist
 
 Before the MBR meeting, ensure:
@@ -96,3 +125,4 @@ Before the MBR meeting, ensure:
 1.  [ ] **Target Upload**: Verify next month's targets are loaded in `fact_targets`.
 2.  [ ] **Cost Data**: Ensure COGS are updated for Margin calculation.
 3.  [ ] **Data Completeness**: Check that all offline orders for the closed month are synced.
+4.  [ ] **MISA Sync**: Confirm `int_misa_sales_lines` is refreshed — P&L tab requires `has_cogs = true` rows.

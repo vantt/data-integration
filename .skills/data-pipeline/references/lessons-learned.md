@@ -2885,6 +2885,38 @@ date_key     = 20260501                     # ngày ICT = ngày biz VN
 
 ---
 
+## Metabase Blueprint Authoring (SERVE)
+
+### L93 — Metabase text card at row 0 wins position conflict over question widget at same row
+
+**Symptom:** A section-heading text card appears as the first widget on a tab, ahead of a date-display question card that was also placed at `row: 0`.
+
+**Root cause:** When two dashcards share the same `row`/`col`, Metabase gives priority to text cards over question cards during layout resolution. The intended order (date display first, section heading second) was lost because both had `"row": 0`.
+
+**Fix:** Move the section heading text card to `row: 2` (the first free row after the 2-row-tall date card), then cascade all downstream widget rows +1.
+
+**Rules:**
+1. No two dashcards may share the same `row` + `col` origin in a blueprint — check for conflicts before deploying.
+2. A text card and a question card at the same row will not coexist cleanly; text card wins.
+3. When inserting a new row above existing content, increment every widget below it by the height of the inserted item.
+
+---
+
+### L94 — `fact_sales` queries referencing `o.channel_key` without joining `fact_orders` cause query errors on all product widgets
+
+**Symptom:** All widgets on the Sản phẩm tab error out with an "unknown column" or "table not found" error for alias `o`.
+
+**Root cause:** Blueprint queries were copied from `fact_orders`-based templates and kept the `o.channel_key` filter, but the Sản phẩm queries only join `fact_sales s`, `dim_products p`, `dim_customers c` — no `fact_orders o` alias exists.
+
+**Fix:** Add `JOIN fact_orders o ON s.order_id = o.order_id` to each affected query. Also change `dim_customers c ON s.customer_key` → `c ON o.customer_key` since `fact_sales` does not carry `customer_key` directly.
+
+**Rules:**
+1. When filtering by `channel_key` in a `fact_sales`-primary query, always join `fact_orders` first — `fact_sales` has `order_id` but not `channel_key`.
+2. After copying a query template, verify every alias referenced in WHERE/JOIN clauses exists in the FROM clause.
+3. `c.customer_type` filter must join through `fact_orders.customer_key`, not `fact_sales.customer_key` (which may not exist).
+
+---
+
 ## Seed Data Quality & Mapping (MODEL)
 
 ### L85 — Trailing comma trong CSV seed phá vỡ LIKE mapping, silently misclassifies toàn bộ channel

@@ -122,7 +122,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Online-Ecom Revenue
@@ -180,7 +180,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 2, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Offline Revenue
@@ -238,7 +238,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 2, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Online-Ecom Share %
@@ -296,7 +296,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 2, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
@@ -306,7 +306,7 @@ FROM this_week tw, last_week lw
 # Theo dõi xu hướng Online-Ecom vs Offline — momentum và crossover
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -323,11 +323,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### ❓ Question: Online-Ecom vs Offline Trend
@@ -371,7 +371,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":12, "size_y":6}
+{"row": 8, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Revenue by Brand
@@ -411,7 +411,7 @@ LIMIT 5
 ```
 
 ```json metabase-pos
-{"row":7, "col":12, "size_x":6, "size_y":6}
+{"row": 8, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -421,7 +421,7 @@ LIMIT 5
 # Xác định platform hiệu quả — ranking doanh thu và volume
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":18, "size_y":1}
+{"row": 14, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Revenue by Platform
@@ -462,7 +462,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":14, "col":0, "size_x":9, "size_y":6}
+{"row": 15, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### ❓ Question: Orders by Platform
@@ -498,7 +498,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":14, "col":9, "size_x":9, "size_y":6}
+{"row": 15, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -508,7 +508,7 @@ ORDER BY 2 DESC
 # So sánh chi tiết kênh WoW — highlight biến động > 20%
 
 ```json metabase-pos
-{"row":20, "col":0, "size_x":18, "size_y":1}
+{"row": 21, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Channel Performance Table
@@ -615,12 +615,135 @@ ORDER BY tw.revenue DESC
 ```
 
 ```json metabase-pos
-{"row":21, "col":0, "size_x":18, "size_y":8}
+{"row": 22, "col":0, "size_x":18, "size_y":8}
 ```
 
 ---
 
+### Section: Weekly Channel Margin
+
+#### 📝 Text: Biên lợi nhuận kênh tuần — phát hiện kênh margin trượt sớm
+
+# Biên lợi nhuận kênh tuần — phát hiện kênh margin trượt sớm
+
+```json metabase-pos
+{"row": 30, "col":0, "size_x":18, "size_y":1}
+```
+
+#### ❓ Question: Weekly Channel Margin & Delta
+
+Combo chart: bar = net_revenue, line = margin %, table footer with WoW margin delta by channel.
+
+**Domain Reference**: [Gross Margin by Channel](../domains/sales.md#gross-margin)
+
+```sql
+WITH this_week AS (
+    SELECT
+        dc.channel_name,
+        COALESCE(SUM(oe.net_revenue), 0)                                          AS rev,
+        ROUND(
+            SUM(oe.gross_profit) / NULLIF(SUM(oe.net_revenue), 0) * 100, 1
+        )                                                                          AS margin_pct
+    FROM fact_order_economics oe
+    JOIN dim_customers        c  ON oe.customer_key = c.customer_key
+    JOIN dim_channels         dc ON oe.channel_key  = dc.channel_key
+    WHERE oe.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+      AND oe.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND oe.order_timestamp <  date_trunc('week', current_date)
+    GROUP BY dc.channel_name
+),
+last_week AS (
+    SELECT
+        dc.channel_name,
+        ROUND(
+            SUM(oe.gross_profit) / NULLIF(SUM(oe.net_revenue), 0) * 100, 1
+        )                                                                          AS margin_pct
+    FROM fact_order_economics oe
+    JOIN dim_customers        c  ON oe.customer_key = c.customer_key
+    JOIN dim_channels         dc ON oe.channel_key  = dc.channel_key
+    WHERE oe.status NOT IN ('CANCELLED', 'Voided')
+      AND c.customer_type = 'RETAIL'
+      AND oe.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND oe.order_timestamp <  date_trunc('week', current_date) - INTERVAL '7 days'
+    GROUP BY dc.channel_name
+)
+SELECT
+    tw.channel_name                                             AS "Channel",
+    tw.rev                                                      AS "Net Revenue",
+    tw.margin_pct                                               AS "Margin %",
+    COALESCE(lw.margin_pct, 0)                                 AS "Prev Margin %",
+    tw.margin_pct - COALESCE(lw.margin_pct, 0)                AS "Margin Delta pp"
+FROM this_week tw
+LEFT JOIN last_week lw ON tw.channel_name = lw.channel_name
+ORDER BY tw.rev DESC
+```
+
+```json metabase-viz
+{
+  "display": "combo",
+  "visualization_settings": {
+    "graph.dimensions": ["Channel"],
+    "graph.metrics": ["Net Revenue", "Margin %"],
+    "series_settings": {
+      "Net Revenue": { "display": "bar",  "color": "#509EE3", "axis": "left"  },
+      "Margin %":    { "display": "line", "color": "#F2A86F", "axis": "right" }
+    },
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "Net Revenue (VND)",
+    "graph.y_axis_right.title_text": "Margin %",
+    "table.column_formatting": [
+      {
+        "columns": ["Margin Delta pp"],
+        "type": "single",
+        "operator": "<=",
+        "value": -5,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      }
+    ],
+    "column_settings": {
+      "Net Revenue":     { "number_style": "currency", "currency": "VND", "compact": true },
+      "Margin %":        { "suffix": "%", "decimals": 1 },
+      "Prev Margin %":   { "suffix": "%", "decimals": 1 },
+      "Margin Delta pp": { "suffix": " pp", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 31, "col":0, "size_x":18, "size_y":8}
+```
+
+---
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Khach hang & Acquisition
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Đánh giá acquisition tuần — bao nhiêu khách mới và từ đâu?
 
@@ -1042,7 +1165,32 @@ GROUP BY 1
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Promotion & Social
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Kiểm soát chi phí khuyến mãi — discount có hợp lý?
 
@@ -1601,3 +1749,13 @@ Source: fact_orders, dim_channels, dim_customers, dim_promotions · Updated dail
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

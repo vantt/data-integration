@@ -54,11 +54,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{"row":0, "col":0, "size_x":18, "size_y":1}
+{"row":0, "col":0, "size_x":18, "size_y": 2}
 ```
 
 ---
@@ -69,7 +69,7 @@ SELECT
 Lợi nhuận đơn hàng — gross margin, lãi ròng kênh, phủ COGS
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Avg Gross Margin %
@@ -104,7 +104,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### Question: Total Gross Profit
@@ -134,7 +134,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":6, "size_y":2}
+{"row": 3, "col":6, "size_x":6, "size_y":2}
 ```
 
 #### Question: Total Channel Net Profit
@@ -164,7 +164,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row":2, "col":12, "size_x":6, "size_y":2}
+{"row": 3, "col":12, "size_x":6, "size_y":2}
 ```
 
 #### Question: Orders with COGS
@@ -196,7 +196,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row":4, "col":6, "size_x":12, "size_y":2}
+{"row": 5, "col":6, "size_x":12, "size_y":2}
 ```
 
 ---
@@ -207,7 +207,7 @@ WHERE status = 'COMPLETED'
 Kênh nào tạo giá trị thực sự?
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":18, "size_y":1}
+{"row": 7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Channel Net Margin %
@@ -250,7 +250,7 @@ ORDER BY "Channel Net Margin %" DESC
 ```
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":9, "size_y":6}
+{"row": 8, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Cost Structure by Channel
@@ -298,7 +298,7 @@ ORDER BY SUM(e.net_revenue) DESC
 ```
 
 ```json metabase-pos
-{"row":7, "col":9, "size_x":9, "size_y":6}
+{"row": 8, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -309,7 +309,7 @@ ORDER BY SUM(e.net_revenue) DESC
 Đơn nào lãi nhiều, đơn nào lỗ?
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":18, "size_y":1}
+{"row": 14, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Margin Distribution
@@ -357,7 +357,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row":14, "col":0, "size_x":9, "size_y":6}
+{"row": 15, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Profit by Date
@@ -397,7 +397,7 @@ ORDER BY d.date_actual
 ```
 
 ```json metabase-pos
-{"row":14, "col":9, "size_x":9, "size_y":6}
+{"row": 15, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -408,7 +408,7 @@ ORDER BY d.date_actual
 Sắp xếp theo lãi/lỗ — phát hiện đơn bất thường
 
 ```json metabase-pos
-{"row":20, "col":0, "size_x":18, "size_y":1}
+{"row": 21, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Order P&L Table
@@ -473,5 +473,5 @@ ORDER BY e.gross_profit DESC
 ```
 
 ```json metabase-pos
-{"row":21, "col":0, "size_x":18, "size_y":10}
+{"row": 22, "col":0, "size_x":18, "size_y":10}
 ```

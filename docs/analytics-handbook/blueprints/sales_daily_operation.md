@@ -702,6 +702,21 @@ Source: `fact_orders` (order-level) + `fact_sales` (line-item, Items/Order) · R
 
 ### 📑 Tab: Kênh bán hàng
 
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
 
 # Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
@@ -950,6 +965,21 @@ Source: `fact_orders` · Real-time · **Scope: customer_type = 'RETAIL' · is_sa
 
 ### 📑 Tab: Sản phẩm
 
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
 
 # Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
@@ -1146,6 +1176,21 @@ Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) �
 ---
 
 ### 📑 Tab: Khách hàng & Thanh toán
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Đánh giá chân dung khách hàng — new vs returning, segment
 

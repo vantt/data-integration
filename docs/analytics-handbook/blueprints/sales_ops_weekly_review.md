@@ -5,11 +5,13 @@
 
 Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completion rate, combo-chart for daily trends, heatmap for peak hours, and conditional formatting throughout. Weekly operational review for Sales Ops / CS Lead.
 
-## Collection: Operations > Periodic Reviews
+## 📂 Collection: Operations > Periodic Reviews
 
-### Dashboard: Sales Ops Weekly Review
+### Dashboard: Sales Ops Weekly Review [Retail]
 
-**Description**: Weekly operational review — order processing health, channel workload, team performance, payment status. 3 tabs: Tong quan, Kenh & Chi nhanh, Doi ngu & Thanh toan.
+**Description**: Audience: Sales Ops Lead. Scope: Retail (customer_type='RETAIL'). Weekly operational review — order processing health, channel workload, team performance, payment status, weekly margin. 4 tabs: Tong quan, Kenh & Chi nhanh, Doi ngu & Thanh toan, Margin.
+
+> **Database:** Sapo
 
 ---
 
@@ -50,11 +52,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Review ket qua tuan — doanh thu, don hang, chat luong xu ly
@@ -62,7 +64,7 @@ SELECT
 # Review ket qua tuan — doanh thu, don hang, chat luong xu ly
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiem tra trang thai don hang — completion rate va cancelled/returns
@@ -70,7 +72,7 @@ SELECT
 # Kiem tra trang thai don hang — completion rate va cancelled/returns
 
 ```json metabase-pos
-{"row":5, "col":0, "size_x":18, "size_y":1}
+{"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Phan tich xu huong 14 ngay — volume, AOV, va gio cao diem
@@ -78,7 +80,7 @@ SELECT
 # Phan tich xu huong 14 ngay — volume, AOV, va gio cao diem
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":1}
+{"row": 13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Orders
@@ -124,7 +126,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":3}
+{"row": 3, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Net Revenue
@@ -175,7 +177,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -230,7 +232,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Completed %
@@ -263,7 +265,7 @@ WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -302,7 +304,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":6, "size_y":6}
+{"row": 7, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### Question: Fulfilment Status Breakdown
@@ -334,7 +336,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":6, "col":6, "size_x":6, "size_y":6}
+{"row": 7, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### Question: Cancelled & Returns
@@ -412,7 +414,7 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{"row":6, "col":12, "size_x":6, "size_y":6}
+{"row": 7, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -455,7 +457,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":12, "size_y":6}
+{"row": 14, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: Peak Hour Heatmap
@@ -510,12 +512,37 @@ ORDER BY 2, 3
 ```
 
 ```json metabase-pos
-{"row":13, "col":12, "size_x":6, "size_y":6}
+{"row": 14, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: Kenh & Chi nhanh
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Xac dinh kenh chiem workload — ranking orders va revenue
 
@@ -530,7 +557,7 @@ ORDER BY 2, 3
 # So sanh hieu suat kenh WoW — highlight bien dong > 30%
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Danh gia hieu suat chi nhanh — volume va WoW change
@@ -538,7 +565,7 @@ ORDER BY 2, 3
 # Danh gia hieu suat chi nhanh — volume va WoW change
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders by Channel
@@ -572,7 +599,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 2, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Channel
@@ -608,7 +635,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 2, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -692,7 +719,7 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 7 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 7 }
 ```
 
 ---
@@ -726,7 +753,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 17, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Branch Performance Table
@@ -802,12 +829,37 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 17, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: Doi ngu & Thanh toan
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Theo doi hieu suat Social Commerce — revenue, orders, AOV
 
@@ -822,7 +874,7 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 # Danh gia hieu suat nhan vien — ranking doanh thu va top social
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiem tra thanh toan va doi soat — phan bo PTTT va pending alert
@@ -830,7 +882,7 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 # Kiem tra thanh toan va doi soat — phan bo PTTT va pending alert
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Social Revenue
@@ -885,7 +937,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social Orders
@@ -937,7 +989,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social AOV
@@ -996,7 +1048,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---
@@ -1035,7 +1087,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Top Staff - Social Channels
@@ -1076,7 +1128,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1111,7 +1163,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Payment Status Summary
@@ -1169,7 +1221,7 @@ ORDER BY s.orders DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 13, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
@@ -1179,5 +1231,191 @@ ORDER BY s.orders DESC
 Source: fact_orders · Updated weekly (Mon-Sun) · Excludes incomplete current week
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+---
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+### Tab: Margin
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+#### 📝 Text: Bien dong bien lo theo kenh — phat hien kenh co bien lo giam manh hoac am
+
+# Bien dong bien lo theo kenh — phat hien kenh co bien lo giam manh hoac am
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Weekly Margin by Channel
+
+Weekly gross margin % per channel with WoW delta. Sort by margin DESC to surface worst-performing channels first.
+
+```sql
+WITH
+this_week AS (
+    SELECT
+        c.channel_name                                                         AS channel,
+        COUNT(DISTINCT e.order_id)                                             AS orders_tw,
+        COALESCE(SUM(e.net_revenue), 0)                                        AS revenue_tw,
+        COALESCE(SUM(e.gross_profit), 0)                                       AS gp_tw
+    FROM fact_order_economics e
+    JOIN dim_channels c ON e.channel_key = c.channel_key
+    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    WHERE cu.customer_type = 'RETAIL'
+      AND e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND e.order_timestamp <  date_trunc('week', current_date)
+    GROUP BY 1
+),
+last_week AS (
+    SELECT
+        c.channel_name                                                         AS channel,
+        COALESCE(SUM(e.gross_profit), 0)                                       AS gp_lw,
+        COALESCE(SUM(e.net_revenue), 0)                                        AS revenue_lw
+    FROM fact_order_economics e
+    JOIN dim_channels c ON e.channel_key = c.channel_key
+    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    WHERE cu.customer_type = 'RETAIL'
+      AND e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND e.order_timestamp <  date_trunc('week', current_date) - INTERVAL '7 days'
+    GROUP BY 1
+)
+SELECT
+    COALESCE(tw.channel, lw.channel)                                           AS "Kenh",
+    COALESCE(tw.orders_tw, 0)                                                  AS "Don hang",
+    COALESCE(tw.revenue_tw, 0)                                                 AS "Doanh thu",
+    ROUND(
+        COALESCE(tw.gp_tw, 0) * 100.0
+        / NULLIF(tw.revenue_tw, 0)
+    , 1)                                                                       AS "Bien lo %",
+    ROUND(
+        COALESCE(tw.gp_tw, 0) * 100.0 / NULLIF(tw.revenue_tw, 0)
+        - COALESCE(lw.gp_lw, 0) * 100.0 / NULLIF(lw.revenue_lw, 0)
+    , 1)                                                                       AS "WoW Δ pp"
+FROM this_week tw
+FULL OUTER JOIN last_week lw ON tw.channel = lw.channel
+ORDER BY "Bien lo %" DESC NULLS LAST
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "table.column_formatting": [
+      {
+        "columns": ["Bien lo %"],
+        "type": "single",
+        "operator": "<",
+        "value": 0,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      },
+      {
+        "columns": ["WoW Δ pp"],
+        "type": "single",
+        "operator": "<=",
+        "value": -5,
+        "color": "#F9D45C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "Doanh thu": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Bien lo %": { "suffix": "%", "decimals": 1 },
+      "WoW Δ pp": { "suffix": " pp", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+---
+
+#### 📝 Text: Canh bao don hang am — so don co channel_net_profit < 0 tuan nay vs tuan truoc
+
+# Canh bao don hang am — so don co channel_net_profit < 0 tuan nay vs tuan truoc
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Loss-Order Alert
+
+Count of orders where channel_net_profit is negative — this week vs last week. Scalar with WoW comparison. Alert threshold: > 5 loss orders warrants immediate investigation.
+
+```sql
+WITH
+this_week AS (
+    SELECT COUNT(DISTINCT e.order_id) AS val
+    FROM fact_order_economics e
+    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    WHERE cu.customer_type = 'RETAIL'
+      AND e.channel_net_profit < 0
+      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND e.order_timestamp <  date_trunc('week', current_date)
+),
+last_week AS (
+    SELECT COUNT(DISTINCT e.order_id) AS val
+    FROM fact_order_economics e
+    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    WHERE cu.customer_type = 'RETAIL'
+      AND e.channel_net_profit < 0
+      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND e.order_timestamp <  date_trunc('week', current_date) - INTERVAL '7 days'
+)
+SELECT
+    tw.val AS "Don hang am",
+    lw.val AS "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {}
+}
+```
+
+```json metabase-pos
+{ "row": 11, "col": 0, "size_x": 9, "size_y": 4 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

@@ -35,6 +35,49 @@ team_members AS (
 
 teams AS (
     SELECT * FROM {{ ref('stg_teams') }}
+),
+
+-- Classify discount items to order-level summary
+-- See: docs/architecture/discount-classification.md
+discount_classified AS (
+    SELECT
+        d.order_code,
+        d.discount_rate,
+        d.amount,
+        CASE
+            WHEN d.reason ILIKE 'voucher seller:%'
+                THEN 'voucher_promotional'
+            WHEN d.reason = 'Bundle Deal'
+                THEN 'bundle'
+            WHEN d.reason ILIKE '%sampling%' OR d.reason ILIKE '%mẫu%' OR d.reason ILIKE '%tặng%'
+                THEN 'sampling_gift'
+            WHEN d.reason ILIKE '%đại lý%' OR d.reason ILIKE '%hợp đồng%' OR d.reason ILIKE '%nhà thuốc%'
+                THEN 'wholesale_explicit'
+            WHEN LOWER(d.reason) ILIKE '%mỹ%'
+                OR TRIM(LOWER(d.reason)) = 'us'
+                OR LOWER(d.reason) ILIKE '% us%'
+                THEN 'overseas'
+            WHEN d.reason ILIKE '%ctkm%' OR d.reason ILIKE '%father%' OR d.reason ILIKE '%mascot%'
+                THEN 'campaign'
+            WHEN d.reason ILIKE '%nhân viên%' OR d.reason ILIKE '%ctv%' OR d.reason ILIKE '%hoa hồng%'
+                THEN 'employee_internal'
+            WHEN d.discount_rate < 20
+                THEN 'negotiated_micro'
+            WHEN d.discount_rate < 40
+                THEN 'negotiated_standard'
+            ELSE
+                'negotiated_deep'
+        END AS discount_nature
+    FROM {{ ref('stg_sapo_order_discount_items') }} d
+),
+
+discount_order_summary AS (
+    SELECT
+        order_code,
+        MAX(discount_rate)              AS max_discount_rate,
+        MAX_BY(discount_nature, amount) AS primary_discount_nature
+    FROM discount_classified
+    GROUP BY order_code
 )
 
 SELECT
@@ -103,7 +146,9 @@ SELECT
     
     orders.client_details,
     orders.discount_codes,
-    
+    dos.max_discount_rate,
+    dos.primary_discount_nature,
+
     created_at as order_timestamp,
     updated_at
 
@@ -119,3 +164,4 @@ LEFT JOIN team_members tm ON lower(dseller.email) = tm.staff_email
     AND cast(orders.created_at as date) >= tm.effective_from
     AND (tm.effective_to IS NULL OR cast(orders.created_at as date) <= tm.effective_to)
 LEFT JOIN teams t ON tm.team_code = t.team_code
+LEFT JOIN discount_order_summary dos ON orders.order_code = dos.order_code

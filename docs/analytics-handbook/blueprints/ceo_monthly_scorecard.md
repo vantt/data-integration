@@ -43,11 +43,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Báo cáo hiệu suất kinh doanh tháng
@@ -55,7 +55,7 @@ SELECT
 # Báo cáo hiệu suất kinh doanh tháng
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
@@ -63,7 +63,7 @@ SELECT
 ## Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
 
 ```json metabase-pos
-{"row":8, "col":0, "size_x":18, "size_y":1}
+{"row": 9, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
@@ -71,7 +71,7 @@ SELECT
 ## Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
 
 ```json metabase-pos
-{"row":15, "col":0, "size_x":18, "size_y":1}
+{"row": 16, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Net Revenue
@@ -129,7 +129,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### ❓ Question: Monthly GMV
@@ -185,7 +185,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":4}
+{"row": 3, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -233,7 +233,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":4}
+{"row": 3, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Monthly AOV
@@ -293,7 +293,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":4}
+{"row": 3, "col":14, "size_x":4, "size_y":4}
 ```
 
 #### ❓ Question: Unique Customers
@@ -339,7 +339,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":6, "size_y":3}
+{"row": 7, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Target Achievement
@@ -385,7 +385,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row":6, "col":6, "size_x":6, "size_y":3}
+{"row": 7, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Target Variance
@@ -434,7 +434,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row":6, "col":12, "size_x":6, "size_y":3}
+{"row": 7, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Revenue vs Target (Weekly)
@@ -489,7 +489,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":9, "col":0, "size_x":12, "size_y":6}
+{"row": 10, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: 6-Month Revenue Trend
@@ -529,7 +529,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":9, "col":12, "size_x":6, "size_y":6}
+{"row": 10, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue Waterfall
@@ -615,12 +615,245 @@ ORDER BY sort_order
 ```
 
 ```json metabase-pos
-{"row":16, "col":0, "size_x":18, "size_y":6}
+{"row": 17, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
+### Section: Monthly Profitability
+
+#### 📝 Text: Lợi nhuận tháng — gross margin, kênh, cấu trúc chi phí
+
+## Lợi nhuận tháng — gross margin, kênh, cấu trúc chi phí
+
+```json metabase-pos
+{ "row": 25, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Monthly Gross Margin %
+
+Gross Margin % tháng trước với target 40% — scalar with MoM comparison.
+
+**Domain Reference**: [Gross Margin](../domains/finance.md#5-gross-margin)
+
+```sql
+WITH
+this_month AS (
+    SELECT
+        ROUND(
+            SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100,
+            1
+        ) AS val
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND date_key < CAST(date_trunc('month', current_date) AS DATE)
+),
+prev_month AS (
+    SELECT
+        ROUND(
+            SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100,
+            1
+        ) AS val
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
+      AND date_key < CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+)
+SELECT
+    COALESCE(tm.val, 0) AS "Gross Margin %",
+    40                   AS "Target %",
+    COALESCE(pm.val, 0) AS "Thang truoc"
+FROM this_month tm, prev_month pm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "target",
+        "type": "anotherColumn",
+        "column": "Target %",
+        "label": "target 40%"
+      },
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Thang truoc",
+        "label": "vs tháng trước"
+      }
+    ],
+    "column_settings": {
+      "Gross Margin %": { "suffix": "%", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 26, "col": 0, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Channel Profitability Breakdown
+
+Net profit tháng vs tháng trước theo kênh bán hàng — grouped bar.
+
+**Domain Reference**: [Channel Net Profit](../domains/finance.md#6-channel-net-profit)
+
+```sql
+WITH
+this_month AS (
+    SELECT
+        c.channel_name,
+        SUM(e.channel_net_profit) AS this_month_profit
+    FROM fact_order_economics e
+    JOIN dim_channels c ON e.channel_key = c.channel_key
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel
+      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND e.date_key < CAST(date_trunc('month', current_date) AS DATE)
+    GROUP BY c.channel_name
+),
+prev_month AS (
+    SELECT
+        c.channel_name,
+        SUM(e.channel_net_profit) AS last_month_profit
+    FROM fact_order_economics e
+    JOIN dim_channels c ON e.channel_key = c.channel_key
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel
+      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
+      AND e.date_key < CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+    GROUP BY c.channel_name
+)
+SELECT
+    COALESCE(tm.channel_name, pm.channel_name) AS "Kênh",
+    COALESCE(tm.this_month_profit, 0)           AS "Tháng này",
+    COALESCE(pm.last_month_profit, 0)           AS "Tháng trước"
+FROM this_month tm
+FULL OUTER JOIN prev_month pm ON tm.channel_name = pm.channel_name
+ORDER BY COALESCE(tm.this_month_profit, 0) DESC
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Kênh"],
+    "graph.metrics": ["Tháng này", "Tháng trước"],
+    "stackable.stack_type": null,
+    "graph.colors": ["#509EE3", "#88BDE6"],
+    "graph.y_axis.title_text": "Net Profit (VND)",
+    "graph.x_axis.title_text": "",
+    "graph.show_values": false,
+    "column_settings": {
+      "Tháng này": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Tháng trước": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 26, "col": 6, "size_x": 12, "size_y": 6 }
+```
+
+#### ❓ Question: Cost Structure Breakdown
+
+Cấu trúc chi phí tháng: %COGS, %Platform Fees, %Tax, %Shipping của Net Revenue — từ fact_order_costs (long-format).
+
+**Domain Reference**: [Cost Structure](../domains/finance.md#10-cost-structure)
+
+```sql
+WITH
+nr AS (
+    SELECT COALESCE(SUM(net_revenue), 0) AS total_net_revenue
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND date_key < CAST(date_trunc('month', current_date) AS DATE)
+),
+costs AS (
+    SELECT
+        cost_category,
+        SUM(amount) AS total_cost
+    FROM fact_order_costs
+    WHERE channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND date_key < CAST(date_trunc('month', current_date) AS DATE)
+      AND cost_category IN ('COGS', 'PLATFORM_FEE', 'TAX', 'SHIPPING')
+    GROUP BY cost_category
+)
+SELECT
+    c.cost_category                                                           AS "Chi phí",
+    ROUND(c.total_cost / NULLIF(nr.total_net_revenue, 0) * 100, 1)           AS "% Net Revenue",
+    c.total_cost                                                              AS "Số tiền (VND)"
+FROM costs c
+CROSS JOIN nr
+ORDER BY
+    CASE c.cost_category
+        WHEN 'COGS'         THEN 1
+        WHEN 'PLATFORM_FEE' THEN 2
+        WHEN 'TAX'          THEN 3
+        WHEN 'SHIPPING'     THEN 4
+        ELSE 5
+    END
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Chi phí"],
+    "graph.metrics": ["% Net Revenue"],
+    "graph.colors": ["#509EE3"],
+    "graph.x_axis.title_text": "% of Net Revenue",
+    "graph.show_values": true,
+    "column_settings": {
+      "% Net Revenue": { "suffix": "%", "decimals": 1 },
+      "Số tiền (VND)": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 30, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+---
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics + fact_order_costs · **Cadence:** monthly · **Scope:** is_sales_channel=true
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Kenh & Khach hang
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Đánh giá hiệu suất kênh bán hàng — kênh nào cần đẩy mạnh?
 
 ## Đánh giá hiệu suất kênh bán hàng — kênh nào cần đẩy mạnh?
@@ -988,9 +1221,44 @@ ORDER BY 2 DESC
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics + fact_order_costs · **Cadence:** monthly · **Scope:** is_sales_channel=true
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: San pham & Van hanh
 
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Xác định sản phẩm và thương hiệu drive growth
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics + fact_order_costs · **Cadence:** monthly · **Scope:** is_sales_channel=true
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 ## Xác định sản phẩm và thương hiệu drive growth
 

@@ -29,11 +29,11 @@ SELECT '📅 Chu kỳ: Theo filter được chọn (không cố định)'
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Reconciliation Checklist
@@ -47,7 +47,7 @@ SELECT '📅 Chu kỳ: Theo filter được chọn (không cố định)'
 5. **Lệch > 1 đơn?** Mở Order Detail List, search order code trên Sapo → báo Data Team nếu là ingestion gap.
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":15, "size_y":2}
+{"row": 2, "col":0, "size_x":15, "size_y":2}
 ```
 
 #### Question: Data Freshness
@@ -70,7 +70,7 @@ FROM fact_orders
 ```
 
 ```json metabase-pos
-{"row":1, "col":15, "size_x":3, "size_y":2}
+{"row": 2, "col":15, "size_x":3, "size_y":2}
 ```
 
 ---
@@ -80,7 +80,7 @@ FROM fact_orders
 ### ▸ Tổng quan đơn hàng — số cần đối soát với Sapo
 
 ```json metabase-pos
-{"row":3, "col":0, "size_x":18, "size_y":1}
+{"row": 4, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Orders
@@ -117,7 +117,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row":4, "col":0, "size_x":6, "size_y":4}
+{"row": 5, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### Question: Net Revenue
@@ -159,7 +159,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row":4, "col":6, "size_x":4, "size_y":4}
+{"row": 5, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### Question: Total Collected
@@ -201,7 +201,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row":4, "col":10, "size_x":4, "size_y":4}
+{"row": 5, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### Question: Gross Revenue
@@ -243,7 +243,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row":4, "col":14, "size_x":4, "size_y":4}
+{"row": 5, "col":14, "size_x":4, "size_y":4}
 ```
 
 #### Question: Total Discount
@@ -285,7 +285,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row":8, "col":0, "size_x":6, "size_y":4}
+{"row": 9, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### Question: Cancelled Orders
@@ -324,7 +324,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row":8, "col":6, "size_x":6, "size_y":4}
+{"row": 9, "col":6, "size_x":6, "size_y":4}
 ```
 
 #### Question: Returns
@@ -361,7 +361,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row":8, "col":12, "size_x":6, "size_y":4}
+{"row": 9, "col":12, "size_x":6, "size_y":4}
 ```
 
 ---
@@ -371,7 +371,7 @@ FROM current_period c, previous_period p
 ### ▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":1}
+{"row": 13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Orders by Status
@@ -398,7 +398,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":6, "size_y":6}
+{"row": 14, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### Question: Orders by Payment Status
@@ -425,7 +425,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":13, "col":6, "size_x":6, "size_y":6}
+{"row": 14, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### Question: Orders by Channel
@@ -459,7 +459,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{"row":13, "col":12, "size_x":6, "size_y":6}
+{"row": 14, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -469,7 +469,7 @@ ORDER BY 3 DESC
 ### ▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
 
 ```json metabase-pos
-{"row":19, "col":0, "size_x":18, "size_y":1}
+{"row": 20, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Flagged Orders
@@ -519,7 +519,7 @@ ORDER BY o.discount_amount DESC
 ```
 
 ```json metabase-pos
-{"row":20, "col":0, "size_x":18, "size_y":5}
+{"row": 21, "col":0, "size_x":18, "size_y":5}
 ```
 
 ---
@@ -529,7 +529,7 @@ ORDER BY o.discount_amount DESC
 ### ▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
 
 ```json metabase-pos
-{"row":25, "col":0, "size_x":18, "size_y":1}
+{"row": 26, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Order Detail List
@@ -593,7 +593,7 @@ ORDER BY o.order_timestamp DESC
 ```
 
 ```json metabase-pos
-{"row":26, "col":0, "size_x":18, "size_y":10}
+{"row": 27, "col":0, "size_x":18, "size_y":10}
 ```
 
 ---
@@ -603,13 +603,38 @@ ORDER BY o.order_timestamp DESC
 Source: `fact_orders` · dbt updates every 10 min via Dagster incremental job · Filter: `status NOT IN ('CANCELLED', 'Voided')` for revenue KPIs · Playbook: [orders_list_reconciliation](../playbooks/orders_list_reconciliation.md) · For help: #data-team
 
 ```json metabase-pos
-{"row":36, "col":0, "size_x":18, "size_y":1}
+{"row": 37, "col":0, "size_x":18, "size_y":1}
 ```
 
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_* · **Cadence:** rolling-30d · **Scope:** Period filter
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: Yesterday
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Reconciliation Checklist
 
@@ -655,7 +680,7 @@ FROM fact_orders
 ### ▸ Tổng quan đơn hàng — số cần đối soát với Sapo
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Total Orders
@@ -692,7 +717,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: Net Revenue
@@ -734,7 +759,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Total Collected
@@ -776,7 +801,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Gross Revenue
@@ -818,7 +843,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Total Discount
@@ -860,7 +885,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 8, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: Cancelled Orders
@@ -899,7 +924,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 8, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: Returns
@@ -936,7 +961,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 8, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 ---
@@ -946,7 +971,7 @@ FROM current_period c, previous_period p
 ### ▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders by Status
@@ -973,7 +998,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Orders by Payment Status
@@ -1000,7 +1025,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 6, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 6, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Orders by Channel
@@ -1034,7 +1059,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -1044,7 +1069,7 @@ ORDER BY 3 DESC
 ### ▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Flagged Orders
@@ -1094,7 +1119,7 @@ ORDER BY o.discount_amount DESC
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 ---
@@ -1104,7 +1129,7 @@ ORDER BY o.discount_amount DESC
 ### ▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 25, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Order Detail List
@@ -1168,7 +1193,7 @@ ORDER BY o.order_timestamp DESC
 ```
 
 ```json metabase-pos
-{ "row": 25, "col": 0, "size_x": 18, "size_y": 10 }
+{ "row": 26, "col": 0, "size_x": 18, "size_y": 10 }
 ```
 
 ---
@@ -1178,13 +1203,38 @@ ORDER BY o.order_timestamp DESC
 Source: `fact_orders` · dbt updates every 10 min via Dagster incremental job · Filter: `status NOT IN ('CANCELLED', 'Voided')` for revenue KPIs · Playbook: [orders_list_reconciliation](../playbooks/orders_list_reconciliation.md) · For help: #data-team
 
 ```json metabase-pos
-{ "row": 35, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 36, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_* · **Cadence:** rolling-30d · **Scope:** Period filter
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: By Date
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### Filter: Date
 
@@ -1199,6 +1249,16 @@ Source: `fact_orders` · dbt updates every 10 min via Dagster incremental job ·
 
 #### 📝 Text: Reconciliation Checklist
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_* · **Cadence:** rolling-30d · **Scope:** Period filter
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ## 🔍 Đối chiếu BI ↔ Sapo — 5 bước
 
 1. **So Total Orders** với Sapo Admin > Đơn hàng cùng ngày (bao gồm cả CANCELLED).
@@ -1241,7 +1301,7 @@ FROM fact_orders
 ### ▸ Tổng quan đơn hàng — số cần đối soát với Sapo
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Total Orders
@@ -1278,7 +1338,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: Net Revenue
@@ -1320,7 +1380,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Total Collected
@@ -1362,7 +1422,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Gross Revenue
@@ -1404,7 +1464,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Total Discount
@@ -1446,7 +1506,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 8, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: Cancelled Orders
@@ -1485,7 +1545,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 8, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: Returns
@@ -1522,7 +1582,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 8, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 ---
@@ -1532,7 +1592,7 @@ FROM current_period c, previous_period p
 ### ▸ Phân bổ theo chiều — phát hiện lệch trạng thái, thanh toán, kênh
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders by Status
@@ -1559,7 +1619,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Orders by Payment Status
@@ -1586,7 +1646,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 6, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 6, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Orders by Channel
@@ -1620,7 +1680,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 13, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -1630,7 +1690,7 @@ ORDER BY 3 DESC
 ### ▸ Đơn bất thường — cần mở Sapo xác minh từng dòng
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Flagged Orders
@@ -1680,7 +1740,7 @@ ORDER BY o.discount_amount DESC
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 ---
@@ -1690,7 +1750,7 @@ ORDER BY o.discount_amount DESC
 ### ▸ Chi tiết đơn hàng — search order code trên Sapo nếu lệch
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 25, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Order Detail List
@@ -1754,7 +1814,7 @@ ORDER BY o.order_timestamp DESC
 ```
 
 ```json metabase-pos
-{ "row": 25, "col": 0, "size_x": 18, "size_y": 10 }
+{ "row": 26, "col": 0, "size_x": 18, "size_y": 10 }
 ```
 
 ---
@@ -1764,6 +1824,15 @@ ORDER BY o.order_timestamp DESC
 Source: `fact_orders` · dbt updates every 10 min via Dagster incremental job · Filter: `status NOT IN ('CANCELLED', 'Voided')` for revenue KPIs · Playbook: [orders_list_reconciliation](../playbooks/orders_list_reconciliation.md) · For help: #data-team
 
 ```json metabase-pos
-{ "row": 35, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 36, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_* · **Cadence:** rolling-30d · **Scope:** Period filter
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 

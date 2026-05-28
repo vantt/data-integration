@@ -2,6 +2,35 @@
 
 > Record of significant changes, features, and fixes
 
+## [2026-05-27] Discount Nature Classification
+
+**Summary:** Chuẩn hóa dữ liệu discount để report retail metrics không bị contaminate bởi hidden wholesale orders. Thêm `discount_nature` và `discount_rate` vào pipeline thay vì reclassify customer.
+
+**Vấn đề:** `discount_manual` = 74.5% volume (~100 tỷ), 93% empty reason. `discount_rate` có trong staging nhưng bị drop trước mart — không có signal phân biệt "giảm 5%" vs "giảm 70%". Khách sĩ ẩn (được sales confirm là Retail) đang làm lệch avg discount, ARPU của kênh retail.
+
+**Giải pháp:** Classify mỗi discount item theo `discount_nature` (reason text + rate) thay vì reclassify customer.
+
+**Taxonomy (10 loại):** `voucher_promotional`, `bundle`, `sampling_gift`, `wholesale_explicit`, `overseas`, `campaign`, `employee_internal`, `negotiated_micro`, `negotiated_standard`, `negotiated_deep`
+
+**Distribution thực tế:**
+| discount_nature | Orders | disc_M |
+|---|---|---|
+| negotiated_deep (≥40% rate, no reason) | 2,016 | 31.1 tỷ |
+| negotiated_standard | 1,852 | 10.4 tỷ |
+| voucher_promotional | 1,648 | 1.5 tỷ |
+
+**Files:**
+- `transformation/models/marts/sales/fact_order_costs.sql` — thêm `discount_rate`, `discount_nature`
+- `transformation/models/marts/sales/fact_orders.sql` — thêm `max_discount_rate`, `primary_discount_nature`
+- `transformation/models/marts/schema.yml` — docs + `accepted_values` tests
+- `docs/architecture/discount-classification.md` — taxonomy, logic, report examples
+
+**Tests:** 22/22 PASS (bao gồm 2 `accepted_values` tests mới)
+
+**Status:** Production — deployed via `dbt build` trong Docker, Dagster reloaded
+
+---
+
 ## [2026-04-19] fact_order_economics — Validation Complete
 
 **Summary:** Unified per-order P&L model validation finished. Phase 6 (voucher coverage) and Phase 7 (E2E verification) completed.

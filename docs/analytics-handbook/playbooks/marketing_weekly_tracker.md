@@ -45,6 +45,16 @@
 | **Orders by Platform** | Horizontal Bar | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Ranked by orders DESC. Side-by-side with revenue. |
 | **Channel Performance Table** | Formatted Table | [Sales by Channel](../domains/sales.md#8-sales-by-channel) | Columns: Channel, Orders, Revenue, AOV, WoW Revenue %, WoW Orders %. Highlight > 20% change. |
 
+### Weekly Channel Margin
+
+**Focus:** "Kênh nào đang bị trượt margin — cần dừng offer ngay?"
+
+| Chart Title | Visualization Type | Metric Reference | Notes/Config |
+| :--- | :--- | :--- | :--- |
+| **Weekly Channel Margin & Delta** | Combo (Bar + Line) + Table footer | [Gross Margin by Channel](../domains/sales.md#gross-margin) | Bar = Net Revenue (left axis), Line = Margin % (right axis). Table footer shows Margin Delta pp WoW. Highlight rows where Margin Delta <= -5pp. Source: `fact_order_economics`. |
+
+**Action:** If Margin Delta pp <= -5 WoW on any channel → pause low-margin offers on that channel. Escalate to Finance if negative 2 weeks running.
+
 ### Tab 2: Khach hang & Acquisition (Customers)
 
 **Focus:** "Tuan nay co bao nhieu khach moi va tu dau?"
@@ -85,6 +95,7 @@
 - **Discount Rate > 15%:** Review which promotions are active. Consider tightening discount rules.
 - **Social Commerce Flat:** Coordinate with CS team on chat response time and closing techniques.
 - **New Customer Share < 20%:** Acquisition channels may be underperforming — review marketing spend allocation.
+- **Weekly Channel Margin slip > 5pp WoW:** Pause low-margin offers on that channel immediately. Escalate to Finance if margin delta stays negative 2 weeks running.
 
 ## Implementation Notes
 

@@ -23,15 +23,16 @@
 
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
+- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_order_economics`](../../../transformation/models/marts/finance/fact_order_economics.sql), [`fact_marketing_spend`](../../../transformation/models/marts/marketing/fact_marketing_spend.sql)
 - **Dimensions:** `dim_channels`, `dim_products`, `dim_customers`, `dim_promotions`, `dim_geography`
 
-## Dashboard Structure (4 Tabs)
+## Dashboard Structure (5 Tabs)
 
 1. **Monthly Pulse** — Executive-level monthly snapshot (5-7 min). Hero revenue + KPIs + discount gauge + 6M trends + channel mix.
 2. **Channel & Brand** — Channel deep dive: mix trends, platform matrix, brand portfolio, market/segment splits.
 3. **Customer Intelligence** — Acquisition trends, channel attribution, segment health, cohort retention heatmap, at-risk/churn alerts.
 4. **Campaigns & Products** — Discount analysis, promotion leaderboard, top products, geographic insights, ordering patterns.
+5. **ROI & Margin** — Marketing P&L: ROAS + margin by channel, channel profit contribution vs spend. Retail scope, last-click attribution.
 
 ## Visualizations
 
@@ -87,6 +88,15 @@
 | **Top 15 Products by Revenue** | Table | [Top Selling Products](../domains/sales.md#9-top-selling-products) | Product, Brand, This Month Units/Revenue, Last Month Units/Revenue, MoM %. From `fact_sales`. |
 | **Revenue by Province (Top 10)** | Horizontal Bar | [Sales by Region](../domains/sales.md#15-sales-by-regionlocation) | From `dim_geography.province` via shipping address. |
 | **Order Heatmap — Day × Hour** | Heatmap | [Hourly Heatmap](../domains/sales.md#7-hourly-heatmap-day-of-week-analysis) | Peak ordering windows for marketing scheduling. |
+
+### Tab 5: Marketing P&L
+
+| Chart Title | Visualization Type | Metric Reference (Link to Domain) | Notes/Config |
+| :--- | :--- | :--- | :--- |
+| **ROAS + Margin by Channel** | Table | [Finance #5 Net Profit](../domains/finance.md#5-net-profit), [Finance #6 Gross Margin](../domains/finance.md#6-gross-margin), [Finance #10 Channel P&L](../domains/finance.md#10-channel-pl) | Columns: Channel, Spend, Attributed Revenue, ROAS, Margin %, Profitable ROAS (=ROAS×margin%), Spend MoM %. Conditional formatting: Margin % green ≥30%, red <10%; ROAS green ≥3, red <1. Retail scope. |
+| **Channel Profit Contribution vs Spend** | Combo Chart | [Finance #5 Net Profit](../domains/finance.md#5-net-profit), [Finance #10 Channel P&L](../domains/finance.md#10-channel-pl) | Bar = Spend (this month), Line = Net Profit (this month). Retail scope. Last closed month vs prior month. |
+
+> **Attribution caveat:** All metrics use last-click attribution via `channel_key` match between `fact_marketing_spend` and `fact_order_economics`. ROAS = attributed_revenue / spend. Profitable ROAS = ROAS × margin%. CAC analysis pending (acquisition_source NULL in Sapo).
 
 ## Visualization Configs
 

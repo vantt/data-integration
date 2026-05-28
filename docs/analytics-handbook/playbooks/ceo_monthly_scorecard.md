@@ -76,6 +76,22 @@ Focus: "Product mix + operational health"
 | **Return Count** | Scalar + MoM Trend | [Return Rate](../domains/sales.md#3-return-rate--count) | MoM comparison. |
 | **Revenue Breakdown Table** | Table | [Revenue Breakdown](../domains/finance.md#3-revenue-breakdown-waterfall-components) | GMV → Discounts → Returns → Net. Detailed table companion. |
 
+### Monthly Profitability
+
+Focus: "Tháng vừa rồi lợi nhuận thế nào? Chi phí đang ăn mòn margin ở đâu?"
+
+Added to Tab 1 (Hiệu suất tháng) below Revenue Waterfall section.
+
+| Chart Title | Visualization Type | Metric Reference | Notes |
+| :--- | :--- | :--- | :--- |
+| **Monthly Gross Margin %** | Scalar + target + MoM | [Gross Margin](../domains/finance.md#5-gross-margin) | Target=40%. Data from `fact_order_economics`. COALESCE/NULLIF protect divide-by-zero. |
+| **Channel Profitability Breakdown** | Grouped Bar (channel × profit MoM) | [Channel Net Profit](../domains/finance.md#6-channel-net-profit) | This month vs last month net_profit per channel. FULL OUTER JOIN handles new/exited channels. |
+| **Cost Structure Breakdown** | Horizontal Bar (% of Net Revenue) | [Cost Structure](../domains/finance.md#10-cost-structure) | From `fact_order_costs` long-format. Categories: COGS, PLATFORM_FEE, TAX, SHIPPING. May return sparse data if `fact_order_costs` partially populated. |
+
+**Data sources**: `fact_order_economics` (metrics #5, #6) + `fact_order_costs` (metric #10).
+
+**Filter applied**: `is_sales_channel = true`, `status NOT IN ('CANCELLED', 'Voided')`, window = last closed month.
+
 ## Implementation Notes
 
 - **3-tab structure**: Each tab is self-contained with its own narrative flow. CEO can review Tab 1 only (3 min) or go deeper into Tabs 2-3.
