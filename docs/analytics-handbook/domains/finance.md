@@ -1533,10 +1533,149 @@
 - **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
 - **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
 
+## Context: Services Revenue
+
+> **Description:** Doanh thu dịch vụ (non-product) tracked separately for CFO P&L review. Covers US HR staffing services (DVCCNS/DVCCNS1), legacy office utilities (DVRENTAL/DVDIEN/etc. — discontinued 2022), and CPBH adjustment entries. Services have zero COGS in MISA — contribution margin = 100%.
+> **dbt Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) WHERE `is_service_line = true`
+> **Grain:** Per Invoice Line
+> **Flag:** `is_service_line = (product_code LIKE 'DV%' OR product_code LIKE 'CPBH%')` — added in P0
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Services Revenue | Doanh thu dịch vụ đang tăng hay giảm? DVCCNS contract còn active không? CPBH adjustments có bất thường không? | S1. Services Revenue, S2. Services as % of Total Revenue, S3. Service Type Breakdown, S4. CPBH Adjustments | `int_misa_sales_lines` + `is_service_line` flag (P0) | `is_service_line` flag must be deployed before queries return data |
+
+### Analytical Questions
+
+#### Q1. Services Revenue Tracking
+
+- **Question:** Doanh thu dịch vụ hàng tháng có ổn định không? DVCCNS US HR contract còn đang được xuất hóa đơn?
+- **Definition:** Theo dõi revenue từ DV* codes (dịch vụ) tách biệt khỏi hàng hóa — phát hiện sụt giảm contract hay phát sinh mã mới.
+- **Nature:** Revenue tracking, lagging/value.
+- **Why It Matters:** 2.4B VND/năm (10%+ tổng revenue MISA) hiện invisible vì lẫn với hàng hóa. CFO cần thấy riêng để đánh giá cơ cấu doanh thu.
+- **Tradeoffs / Caveats:** Services có COGS = 0 — không dùng gross margin % để so sánh với hàng hóa. Posting date có thể delay 1-3 ngày so với transaction date thực.
+- **Insight / Action Enabled:** Nếu DVCCNS drop MoM > 20% → kiểm tra contract status. Nếu CPBH spike âm > 100M → reconcile với chứng từ gốc.
+- **Related Metrics:** S1. Services Revenue, S2. Services as % of Total Revenue
+
+#### Q2. Service Code Audit
+
+- **Question:** Có mã dịch vụ discontinued nào tái xuất hiện không? Có mã mới nào chưa được phân loại?
+- **Definition:** Audit tất cả DV* + CPBH codes trong sổ MISA — phân loại ACTIVE / Low Activity / DISCONTINUED dựa trên last invoice date.
+- **Nature:** Compliance, data quality.
+- **Why It Matters:** Kế toán nhầm mã (vd dùng DVRENTAL cho hợp đồng mới) sẽ khiến P&L bị phân loại sai.
+- **Tradeoffs / Caveats:** "DISCONTINUED" chỉ là trạng thái quan sát từ data — không có flag chính thức trong MISA.
+- **Insight / Action Enabled:** Nếu mã discontinued tái xuất hiện → xác nhận với kế toán trước khi báo cáo.
+- **Related Metrics:** S3. Service Type Breakdown
+
+### Metrics
+
+#### S1. Services Revenue
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Tổng doanh thu từ các dòng dịch vụ (DV* + CPBH) trong kỳ. Bao gồm cả CPBH điều chỉnh âm — tổng có thể thấp hơn DV* alone nếu CPBH spike. Không bao gồm COGS vì services không có giá vốn.
+- **Logic (SQL):**
+  ```sql
+  SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS services_revenue
+  FROM int_misa_sales_lines
+  WHERE is_service_line = true
+  ```
+- **Formula:** SUM(revenue_net_of_discount) WHERE is_service_line = true
+- **Unit:** VND
+- **Common Misunderstandings:** Đừng dùng gross_profit = services_revenue để so sánh gross margin % với hàng hóa — hàng hóa có COGS ~54%, services = 100% contribution (zero COGS). Các số này không comparable.
+- **Pitfalls / Edge Cases:** CPBH entries có giá trị âm — tổng services_revenue thấp hơn tổng DV* codes alone. Check cả hai.
+
+#### S2. Services as % of Total Revenue
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Tỷ lệ doanh thu dịch vụ trong tổng doanh thu MISA (DV* + hàng hóa). Đo mức độ đóng góp của mảng dịch vụ vào top-line. Baseline: ~9-10% (2.4B / ~26B total).
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      ROUND(
+          SUM(CASE WHEN is_service_line THEN revenue_net_of_discount ELSE 0 END) * 100.0
+          / NULLIF(SUM(revenue_net_of_discount), 0),
+          1
+      ) AS services_pct_of_total
+  FROM int_misa_sales_lines
+  ```
+- **Formula:** SUM(services revenue) / SUM(total revenue) × 100
+- **Unit:** %
+- **Common Misunderstandings:** % tăng không nhất thiết là services tăng — có thể do hàng hóa giảm. Luôn xem cả numerator lẫn denominator.
+- **Pitfalls / Edge Cases:** Dùng tháng đóng (tháng trước) để tính % — MTD có thể distort nếu services xuất HĐ cuối tháng.
+
+#### S3. Service Type Breakdown
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Phân bổ doanh thu theo từng service code trong kỳ. Phân loại ACTIVE (HĐ cuối < 3 tháng), Low Activity (3-12 tháng), DISCONTINUED (> 12 tháng).
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      product_code,
+      product_name,
+      MAX(posting_date) AS last_invoice_date,
+      COALESCE(SUM(revenue_net_of_discount), 0) AS revenue_12m,
+      CASE
+          WHEN MAX(posting_date) >= current_date - INTERVAL '3 months'  THEN 'ACTIVE'
+          WHEN MAX(posting_date) >= current_date - INTERVAL '12 months' THEN 'Low Activity'
+          ELSE 'DISCONTINUED'
+      END AS status
+  FROM int_misa_sales_lines
+  WHERE is_service_line = true
+  GROUP BY 1, 2
+  ORDER BY revenue_12m DESC
+  ```
+- **Formula:** GROUP BY product_code, flag status by last_invoice_date recency
+- **Unit:** VND per code
+- **Common Misunderstandings:** DVCCNS và DVCCNS1 là 2 codes khác nhau nhưng cùng bản chất (US HR staffing). Không cộng dồn trừ khi muốn xem tổng US HR.
+- **Pitfalls / Edge Cases:** Mã mới chưa có trong danh sách sẽ tự động xuất hiện khi `is_service_line` flag pick up theo regex DV* / CPBH*. Review hàng quý.
+
+#### S4. CPBH Adjustments
+
+> **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
+
+- **Business Definition:** Các dòng điều chỉnh Chi phí bán hàng khác (CPBH) — thường là giá trị âm, là reversals hoặc credit notes. Không phải "doanh thu thực" mà là kế toán adjustments. Alert nếu tháng bất kỳ > -100M VND.
+- **Logic (SQL):**
+  ```sql
+  SELECT
+      date_trunc('month', posting_date) AS month,
+      COUNT(*) AS line_count,
+      COALESCE(SUM(revenue_net_of_discount), 0) AS cpbh_adjustment
+  FROM int_misa_sales_lines
+  WHERE product_code LIKE 'CPBH%'
+  GROUP BY 1
+  ORDER BY 1 DESC
+  ```
+- **Formula:** SUM(revenue_net_of_discount) WHERE product_code LIKE 'CPBH%'
+- **Unit:** VND (typically negative)
+- **Threshold:** Alert if cpbh_adjustment < -100,000,000 VND in any month
+- **Common Misunderstandings:** CPBH không phải COGS và không phải operating expense — là accounting adjustment. Không dùng trong margin calculation.
+- **Pitfalls / Edge Cases:** Một số tháng có CPBH = 0 (bình thường). Spike âm lớn thường do credit note lớn từ 1 khách hàng.
+
+### Known Service Codes (as of 2026-05)
+
+| Code | Name | Status | Revenue (12M) | Notes |
+|------|------|--------|---------------|-------|
+| `DVCCNS1` | Phí dịch vụ cung cấp nhân sự cho US (FGO) | **ACTIVE** | 1.30B VND | Primary US HR code từ 2024+ |
+| `DVCCNS` | Phí dịch vụ cung cấp nhân sự cho US | **ACTIVE** | 1.12B VND | Original US HR code |
+| `DVVC` | Dịch vụ vận chuyển | Low Activity | 0.6M VND | Last seen 2025-10 |
+| `CPBH` | Chi phí bán hàng khác (adjustments) | Low Activity | -58.5M VND | Negative adjustments |
+| `DVRENTAL` | Thuê văn phòng | DISCONTINUED | 0 (12M) | Last 2022-12 |
+| `DVDIEN` | Tiền điện văn phòng | DISCONTINUED | 0 (12M) | Last 2022-12 |
+| `DVGX` | Giặt xấy văn phòng | DISCONTINUED | 0 (12M) | Last 2022-12 |
+| `DVQL` | Phí quản lý văn phòng | DISCONTINUED | 0 (12M) | Last 2022-12 |
+| `DVNUOC` | Tiền nước văn phòng | DISCONTINUED | 0 (12M) | Last 2022-12 |
+| `DVVS` | Vệ sinh văn phòng | DISCONTINUED | 0 (12M) | Last 2022-12 |
+| `DVDT1` | Thiết bị phóng cao áp (one-off) | DISCONTINUED | 0 (12M) | Last 2022-06, 1.29B one-off |
+
 ## Related Dashboards
 
 | Dashboard | Audience | Purpose | Link |
 |:---|:---|:---|:---|
+| **Finance Services Revenue** | CFO, Finance Manager | Monthly services revenue tracking (DV* + CPBH) | [Playbook](../playbooks/finance_services_revenue.md) |
 | **Finance P&L Dashboard** | CFO, Finance | Monthly P&L: revenue vs COGS vs margin | [Playbook](../playbooks/finance_pl.md) |
 | **Channel Profitability Monthly** | CEO, Finance, Sales Director | Cross-channel margin comparison | [Playbook](../playbooks/channel_profitability_monthly.md) |
 | **Shopee Channel Economics** | Sales Ops, CS Lead | Shopee fee structure & settlement analysis | [Playbook](../playbooks/shopee_channel_economics.md) |
