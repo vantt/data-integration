@@ -106,16 +106,8 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -123,7 +115,8 @@ FROM this_month tm, prev_month pm
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -162,16 +155,8 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "GMV": {
         "number_style": "currency",
@@ -179,7 +164,8 @@ FROM this_month tm, prev_month pm
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -218,16 +204,9 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -270,16 +249,8 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "AOV": {
         "number_style": "currency",
@@ -287,7 +258,8 @@ FROM this_month tm, prev_month pm
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -324,16 +296,9 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -344,7 +309,13 @@ FROM this_month tm, prev_month pm
 
 #### ❓ Question: Target Achievement
 
-Revenue achievement % vs monthly target — progress bar.
+Revenue achievement vs monthly target — actual/target/rate table.
+
+<!-- FIX (2026-05-28): Metabase v0.58.11 progress widget only supports static `progress.goal`.
+     Dynamic goal from fact_targets is not possible without scalar.comparisons (also broken).
+     Workaround: display:table with actual_gmv, target_gmv, achievement_pct columns.
+     Conditional formatting on achievement_pct gives green/red signal.
+     Previous SQL discarded target_gmv in SELECT — the CROSS JOIN was a no-op. -->
 
 **Domain Reference**: [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate)
 
@@ -366,20 +337,41 @@ monthly_target AS (
       AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
-    a.actual_gmv as "GMV"
+    a.actual_gmv                                                                          AS "Thực hiện (GMV)",
+    t.target_gmv                                                                          AS "Target tháng",
+    ROUND(a.actual_gmv * 100.0 / NULLIF(t.target_gmv, 0), 1)                             AS "Đạt %"
 FROM mtd_actual a
 CROSS JOIN monthly_target t
 ```
 
 ```json metabase-viz
 {
-  "display": "progress",
+  "display": "table",
   "visualization_settings": {
-    "progress.goal": 600000000,
-    "progress.color": "#84BB4C",
+    "table.pivot": false,
     "column_settings": {
-      "[\"name\",\"GMV\"]": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Thực hiện (GMV)": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Target tháng":    { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Đạt %":           { "suffix": "%", "decimals": 1 }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Đạt %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 100,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Đạt %"],
+        "type": "single",
+        "operator": "<",
+        "value": 100,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ]
   }
 }
 ```
@@ -671,25 +663,15 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "target",
-        "type": "anotherColumn",
-        "column": "Target %",
-        "label": "target 40%"
-      },
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
-      "Gross Margin %": { "suffix": "%", "decimals": 1 }
-    }
+      "Gross Margin %": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1072,16 +1054,9 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -1428,19 +1403,15 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
-      "Discount Rate %": { "suffix": "%", "decimals": 1 }
-    }
+      "Discount Rate %": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1515,16 +1486,9 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```

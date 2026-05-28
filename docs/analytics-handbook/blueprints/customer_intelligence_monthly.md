@@ -32,22 +32,27 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 Total customers with at least one order, with MoM comparison.
 
 ```sql
-WITH current_period AS (
-    SELECT COUNT(*) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+-- Snapshot-driven MoM: count all customers present in each month-end snapshot.
+-- current = last day of previous calendar month (most recent closed month)
+-- prev    = last day of the month before that
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
+    SELECT COUNT(*) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
 ),
 previous_period AS (
-    SELECT COUNT(*) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+    SELECT COUNT(*) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
 )
 SELECT
-    c.value as "Total Customers",
-    p.value as "Prev Month"
+    c.value AS "Total Customers",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -76,21 +81,27 @@ FROM current_period c, previous_period p
 Customers with at least one order in the last 30 days, with MoM comparison.
 
 ```sql
-WITH current_period AS (
-    SELECT COUNT(*) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND customer_status = 'Active'
+-- Snapshot-driven MoM: status = 'ACTIVE' (last order <= 30d before month-end).
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
+    SELECT COUNT(*) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
+      AND s.status = 'ACTIVE'
 ),
 previous_period AS (
-    SELECT COUNT(*) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND recency_days BETWEEN 31 AND 60
+    SELECT COUNT(*) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
+      AND s.status = 'ACTIVE'
 )
 SELECT
-    c.value as "Active (30d)",
-    p.value as "Prev Month"
+    c.value AS "Active (30d)",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -162,28 +173,29 @@ FROM current_period c, previous_period p
 Percentage of customers who only placed 1 order, with MoM comparison.
 
 ```sql
-WITH current_period AS (
+-- Snapshot-driven MoM: orders_to_date = 1 as-of each month-end snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
     SELECT ROUND(
-        COUNT(CASE WHEN total_orders_count = 1 THEN 1 END) * 100.0
-        / NULLIF(COUNT(*), 0), 1
-    ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+        COUNT(CASE WHEN orders_to_date = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+    ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
 ),
 previous_period AS (
     SELECT ROUND(
-        COUNT(CASE WHEN total_orders_count = 1 THEN 1 END) * 100.0
-        / NULLIF(COUNT(*), 0), 1
-    ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+        COUNT(CASE WHEN orders_to_date = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+    ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
 )
 SELECT
-    c.value as "One-Time %",
-    p.value as "Prev Month"
+    c.value AS "One-Time %",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -547,20 +559,25 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 Cumulative lifetime value with MoM comparison.
 
 ```sql
-WITH current_period AS (
-    SELECT SUM(lifetime_value) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
+-- Snapshot-driven MoM: SUM(lifetime_value_to_date) for base in each snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
+    SELECT SUM(lifetime_value_to_date) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
 ),
 previous_period AS (
-    SELECT SUM(lifetime_value) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+    SELECT SUM(lifetime_value_to_date) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
 )
 SELECT
-    c.value as "Total LTV",
-    p.value as "Prev Month"
+    c.value AS "Total LTV",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -592,22 +609,25 @@ FROM current_period c, previous_period p
 Average lifetime value with MoM comparison.
 
 ```sql
-WITH current_period AS (
-    SELECT ROUND(AVG(lifetime_value), 0) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+-- Snapshot-driven MoM: AVG(lifetime_value_to_date) for base in each snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
+    SELECT ROUND(AVG(lifetime_value_to_date), 0) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
 ),
 previous_period AS (
-    SELECT ROUND(AVG(lifetime_value), 0) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+    SELECT ROUND(AVG(lifetime_value_to_date), 0) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
 )
 SELECT
-    c.value as "Avg LTV",
-    p.value as "Prev Month"
+    c.value AS "Avg LTV",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -639,22 +659,25 @@ FROM current_period c, previous_period p
 Average order count with MoM comparison.
 
 ```sql
-WITH current_period AS (
-    SELECT ROUND(AVG(total_orders_count), 1) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+-- Snapshot-driven MoM: AVG(orders_to_date) for base in each snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
+    SELECT ROUND(AVG(orders_to_date), 1) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
 ),
 previous_period AS (
-    SELECT ROUND(AVG(total_orders_count), 1) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+    SELECT ROUND(AVG(orders_to_date), 1) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
 )
 SELECT
-    c.value as "Avg Orders",
-    p.value as "Prev Month"
+    c.value AS "Avg Orders",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -683,28 +706,29 @@ FROM current_period c, previous_period p
 Percentage of customers with more than 1 order, with MoM comparison.
 
 ```sql
-WITH current_period AS (
+-- Snapshot-driven MoM: orders_to_date > 1 as-of each month-end snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
     SELECT ROUND(
-        COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0
-        / NULLIF(COUNT(*), 0), 1
-    ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+        COUNT(CASE WHEN orders_to_date > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+    ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
 ),
 previous_period AS (
     SELECT ROUND(
-        COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0
-        / NULLIF(COUNT(*), 0), 1
-    ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+        COUNT(CASE WHEN orders_to_date > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+    ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
 )
 SELECT
-    c.value as "Repeat %",
-    p.value as "Prev Month"
+    c.value AS "Repeat %",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 

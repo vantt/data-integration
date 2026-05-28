@@ -96,19 +96,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "Net Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -147,19 +145,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "Gross Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Gross Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -198,16 +194,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -250,19 +239,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -751,16 +738,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -838,16 +818,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -933,16 +906,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -979,16 +945,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -1084,19 +1043,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "Net Profit": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Net Profit": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1145,19 +1102,15 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "Gross Margin %": { "suffix": "%", "decimals": 1 }
-    }
+      "Gross Margin %": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    },
+    "table.pivot": false
   }
 }
 ```

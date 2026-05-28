@@ -7,6 +7,24 @@
 > **Owner:** CFO / Finance Team
 > **Update Frequency:** Daily / Monthly
 
+## Context: Channel Budget Targets — dim_channel_targets
+
+> **Description:** Channel-level budget/plan targets. Manually maintained CSV seed until a formal budget process exists. One row per (channel_name, period_month, metric_type, target_source).
+> **dbt Seed:** [`dim_channel_targets`](../../../transformation/seeds/dim_channel_targets.csv)
+> **dbt Model:** [`dim_channel_targets`](../../../transformation/models/marts/core/dim_channel_targets.sql)
+> **Grain:** (channel_key, period_month, metric_type, target_source)
+> **Refresh:** `dbt seed --select dim_channel_targets && dbt build --select dim_channel_targets`
+
+| metric_type | Unit | Description |
+|-------------|------|-------------|
+| `NET_REVENUE` | VND | Monthly net revenue target per channel |
+| `NET_MARGIN_PCT` | % | Net margin % target per channel (used in CPL5 scorecard + CPL trend overlay) |
+| `ORDER_COUNT` | count | Order volume target per channel |
+
+**Blueprints using this dim:** `finance_channel_pl` (CPL5 Scorecard → Target % + Variance pp; Variance Analysis → Budget overlay on trend line)
+
+---
+
 ## Context: Profit & Loss (P&L) — Sapo Revenue
 
 > **Description:** Revenue-side P&L metrics from Sapo order data. COGS/expense metrics require MISA context below.

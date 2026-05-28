@@ -1,12 +1,13 @@
 # Playbook: Finance Cash Flow
 
+> **Status:** DEFERRED — pending data foundation (xem audit report 260528-0834)
+> **Blocker:** `fact_payments` exists but lacks inflow/outflow classification. Dashboard blocked until payment type enrichment (AP/AR tagging) is implemented.
+
 ## Overview
 
 - **Audience:** CFO, Treasury
 - **Goal:** Track cash movements, forecast, and monitor liquidity.
-- **Collection:** `Executive`
-
-> **Status: Planned** — `fact_payments` exists but lacks inflow/outflow classification. Cash flow dashboard will be implemented when payment type enrichment is added.
+- **Collection:** `Finance`
 
 ## Data Lineage
 

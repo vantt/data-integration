@@ -1,10 +1,13 @@
 # Playbook: Shipping & Returns
 
+> **Status:** DEFERRED — pending data foundation (xem audit report 260528-0834)
+> **Blocker:** `fact_shipments` + `dim_carriers` not yet built. Dashboard blocked until carrier data pipeline is implemented.
+
 ## Overview
 
 - **Audience:** Warehouse Manager, CS
 - **Goal:** Monitor carrier performance and return reasons.
-- **Collection:** `Logistics`
+- **Collection:** `Operations > Logistics`
 
 ## Data Lineage
 

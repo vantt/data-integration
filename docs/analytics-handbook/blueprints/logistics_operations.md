@@ -86,16 +86,9 @@ WHERE status != 'DRAFT'
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -120,16 +113,9 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -155,16 +141,9 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -416,16 +395,9 @@ WHERE first_shipped_at IS NOT NULL
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -464,16 +436,9 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -528,16 +493,9 @@ WHERE status NOT IN ('DRAFT')
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```

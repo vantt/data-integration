@@ -140,40 +140,76 @@ WHERE return_date >= date_trunc('month', current_date)
 {"row": 3, "col":4, "size_x":5, "size_y":3}
 ```
 
-#### ❓ Question: Avg Days-to-Return MTD
+#### ❓ Question: Days-to-Return Histogram (KPI)
 
-So ngay trung binh tu dat hang den hoan — phat hien van de chat luong (hoan som) hoac gian lan (hoan muon).
+Phan phoi lag ngay hoang tra — routing quyet dinh: 0-3d → QC, 4-14d → CS, >30d → fraud review.
+Stack by top-3 return reasons. Thay the scalar trung binh vi trung binh khong co y nghia khi phan phoi lech.
 
 ```sql
-SELECT
-    ROUND(AVG(
-        date_diff('day', DATE(o.order_timestamp), r.return_date)
-    ), 1) AS "Avg Days-to-Return"
-FROM fact_order_returns r
-JOIN fact_orders o ON r.order_code = o.order_code
-WHERE r.return_date >= date_trunc('month', current_date)
-  AND r.return_date < current_date
-  AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND date_diff('day', DATE(o.order_timestamp), r.return_date) >= 0
+WITH lag_data AS (
+    SELECT
+        COALESCE(r.return_reason, 'Khong ro') AS return_reason,
+        date_diff('day', DATE(o.order_timestamp), r.return_date) AS lag_days
+    FROM fact_order_returns r
+    JOIN fact_orders o ON r.order_code = o.order_code
+    WHERE r.return_date >= date_trunc('month', current_date)
+      AND r.return_date < current_date
+      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND date_diff('day', DATE(o.order_timestamp), r.return_date) >= 0
+),
+top_reasons AS (
+    SELECT return_reason
+    FROM lag_data
+    GROUP BY 1
+    ORDER BY COUNT(*) DESC
+    LIMIT 3
+),
+bucketed AS (
+    SELECT
+        CASE
+            WHEN lag_days <= 3  THEN '0-3 ngay (QC)'
+            WHEN lag_days <= 7  THEN '4-7 ngay'
+            WHEN lag_days <= 14 THEN '8-14 ngay (CS)'
+            WHEN lag_days <= 30 THEN '15-30 ngay'
+            ELSE '>30 ngay (Fraud?)'
+        END                                           AS "Bucket ngay hoan",
+        CASE
+            WHEN l.return_reason IN (SELECT return_reason FROM top_reasons)
+            THEN l.return_reason
+            ELSE 'Khac'
+        END                                           AS "Ly do hoan",
+        COUNT(*)                                      AS "So don"
+    FROM lag_data l
+    GROUP BY 1, 2
+)
+SELECT "Bucket ngay hoan", "Ly do hoan", "So don"
+FROM bucketed
+ORDER BY
+    CASE "Bucket ngay hoan"
+        WHEN '0-3 ngay (QC)'     THEN 1
+        WHEN '4-7 ngay'          THEN 2
+        WHEN '8-14 ngay (CS)'    THEN 3
+        WHEN '15-30 ngay'        THEN 4
+        ELSE 5
+    END
 ```
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "bar",
   "visualization_settings": {
-    "column_settings": {
-      "Avg Days-to-Return": {
-        "number_style": "number",
-        "decimals": 1,
-        "suffix": " ngay"
-      }
-    }
+    "graph.dimensions": ["Bucket ngay hoan", "Ly do hoan"],
+    "graph.metrics": ["So don"],
+    "stackable.stack_type": "stacked",
+    "graph.colors": ["#509EE3", "#88BF4D", "#F2A86F", "#EF8C8C"],
+    "graph.x_axis.title_text": "Lag bucket (ngay)",
+    "graph.y_axis.title_text": "So don hoan"
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":9, "size_x":4, "size_y":3}
+{"row": 3, "col":9, "size_x":9, "size_y":5}
 ```
 
 #### ❓ Question: Top Return Reason MTD
@@ -672,6 +708,355 @@ ORDER BY c.order_month, c.return_month
 
 **Source:** fact_order_returns + fact_orders · **Cadence:** rolling-90d · **Scope:** is_sales_channel=true · **Caveats:** Return events, refund recognition
 <!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+---
+
+### 📑 Tab: Return-prone SKUs
+
+> **CAVEAT (IMPORTANT):** Sapo's return API is order-level only — no per-line-item breakdown.
+> All SKUs in a returned order appear here. `int_return_sku_lines` allocates refund proportionally
+> by line revenue share. Use for triage / ranking direction — not precise per-SKU accounting.
+> Source: `int_return_sku_lines` JOIN `dim_products`.
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+#### 📝 Text: SKU Return Heading
+
+Top SKU co gia tri hoan tien cao nhat (MTD) — uu tien dam phan nha cung cap va review chat luong
+
+```json metabase-pos
+{"row": 2, "col":0, "size_x":18, "size_y":1}
+```
+
+#### ❓ Question: Top 20 SKUs by Refund Amount (MTD)
+
+Table — top 20 SKU co tong gia tri hoan cao nhat thang nay. Sort by refund DESC.
+Du lieu tu int_return_sku_lines (phan bo ty le theo revenue). Flag do khi refund > 5M VND.
+
+```sql
+SELECT
+    dp.sku                                                         AS "SKU",
+    dp.product_name                                                AS "Ten san pham",
+    COUNT(DISTINCT rs.return_id)                                   AS "So lan hoan",
+    ROUND(SUM(rs.refund_amount_allocated), 0)                      AS "Refund (VND)"
+FROM int_return_sku_lines rs
+JOIN dim_products dp ON rs.product_key = dp.product_key
+WHERE rs.return_date >= date_trunc('month', current_date)
+  AND rs.return_date < current_date
+  AND dp.sku != 'Unknown'
+GROUP BY 1, 2
+ORDER BY "Refund (VND)" DESC
+LIMIT 20
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["Refund (VND)"],
+        "type": "single",
+        "operator": ">",
+        "value": 5000000,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      }
+    ],
+    "column_settings": {
+      "Refund (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 3, "col":0, "size_x":9, "size_y":9}
+```
+
+#### ❓ Question: Top 20 SKUs by Return Rate (MTD)
+
+Table — ty le hoan per SKU = so don hoan / tong don ban cung ky. Flag do khi rate > 3× trung binh danh muc.
+Tu so: int_return_sku_lines. Mau so: fact_sales. Min 3 don ban de loc nhieu.
+
+```sql
+WITH returns_per_sku AS (
+    SELECT
+        rs.product_key,
+        COUNT(DISTINCT rs.return_id) AS return_count
+    FROM int_return_sku_lines rs
+    WHERE rs.return_date >= date_trunc('month', current_date)
+      AND rs.return_date < current_date
+    GROUP BY 1
+),
+sold_per_sku AS (
+    SELECT
+        fs.product_key,
+        COUNT(DISTINCT fs.order_id) AS sold_orders
+    FROM fact_sales fs
+    JOIN fact_orders fo ON fs.order_id = fo.order_id
+    WHERE fo.order_timestamp >= date_trunc('month', current_date)
+      AND fo.order_timestamp < current_date
+      AND fo.status NOT IN ('CANCELLED', 'Voided')
+    GROUP BY 1
+),
+portfolio_avg AS (
+    SELECT
+        ROUND(
+            COUNT(DISTINCT r.return_id) * 100.0 / NULLIF(COUNT(DISTINCT fo2.order_id), 0),
+            2
+        ) AS avg_rate
+    FROM fact_order_returns r
+    CROSS JOIN (
+        SELECT order_id FROM fact_orders
+        WHERE order_timestamp >= date_trunc('month', current_date)
+          AND order_timestamp < current_date
+          AND status NOT IN ('CANCELLED', 'Voided')
+    ) fo2
+    WHERE r.return_date >= date_trunc('month', current_date)
+      AND r.return_date < current_date
+)
+SELECT
+    dp.sku                                                                     AS "SKU",
+    dp.product_name                                                            AS "Ten san pham",
+    COALESCE(r.return_count, 0)                                                AS "So lan hoan",
+    COALESCE(s.sold_orders, 0)                                                 AS "Don ban",
+    ROUND(COALESCE(r.return_count, 0) * 100.0 / NULLIF(s.sold_orders, 0), 2)  AS "Return Rate %",
+    pa.avg_rate                                                                AS "TB portfolio %",
+    CASE
+        WHEN COALESCE(r.return_count, 0) * 100.0 / NULLIF(s.sold_orders, 0)
+             > pa.avg_rate * 3
+        THEN TRUE ELSE FALSE
+    END                                                                        AS "Bat thuong (>3x avg)"
+FROM sold_per_sku s
+LEFT JOIN returns_per_sku r USING (product_key)
+JOIN dim_products dp ON s.product_key = dp.product_key
+CROSS JOIN portfolio_avg pa
+WHERE dp.sku != 'Unknown'
+  AND s.sold_orders >= 3
+ORDER BY "Return Rate %" DESC NULLS LAST
+LIMIT 20
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["Return Rate %"],
+        "type": "single",
+        "operator": ">",
+        "value": 5,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      }
+    ],
+    "column_settings": {
+      "Return Rate %": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 2
+      },
+      "TB portfolio %": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 2
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 3, "col":9, "size_x":9, "size_y":9}
+```
+
+#### 📝 Text: Reason Matrix Heading
+
+Ma tran: ly do hoan × SKU — SKU nao tap trung nhieu ly do nhat?
+
+```json metabase-pos
+{"row": 12, "col":0, "size_x":18, "size_y":1}
+```
+
+#### ❓ Question: Return Reason × Top SKUs Matrix
+
+Table — top 15 SKU (by refund) × ly do hoan (count + refund). Phat hien SKU co cu the 1 ly do chiem uu the.
+
+```sql
+WITH top_skus AS (
+    SELECT rs.product_key
+    FROM int_return_sku_lines rs
+    WHERE rs.return_date >= date_trunc('month', current_date)
+      AND rs.return_date < current_date
+    GROUP BY 1
+    ORDER BY SUM(rs.refund_amount_allocated) DESC
+    LIMIT 15
+)
+SELECT
+    dp.sku                                             AS "SKU",
+    dp.product_name                                    AS "Ten san pham",
+    COALESCE(rs.return_reason, 'Khong ro')             AS "Ly do hoan",
+    COUNT(DISTINCT rs.return_id)                       AS "So lan hoan",
+    ROUND(SUM(rs.refund_amount_allocated), 0)          AS "Refund (VND)"
+FROM int_return_sku_lines rs
+JOIN dim_products dp ON rs.product_key = dp.product_key
+WHERE rs.product_key IN (SELECT product_key FROM top_skus)
+  AND rs.return_date >= date_trunc('month', current_date)
+  AND rs.return_date < current_date
+GROUP BY 1, 2, 3
+ORDER BY "Refund (VND)" DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "column_settings": {
+      "Refund (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 13, "col":0, "size_x":18, "size_y":8}
+```
+
+#### 📝 Text: Action Table Heading
+
+Bang hanh dong: SKU → xu huong hoan → khuyen nghi can thiep
+
+```json metabase-pos
+{"row": 21, "col":0, "size_x":18, "size_y":1}
+```
+
+#### ❓ Question: SKU Action Table (Prescriptive)
+
+Top 30 SKU (min 3 don ban) voi return rate + ly do chinh → khuyen nghi hanh dong + owner.
+
+```sql
+WITH sku_rates AS (
+    SELECT
+        rs.product_key,
+        COUNT(DISTINCT rs.return_id)                                               AS return_count,
+        ROUND(SUM(rs.refund_amount_allocated), 0)                                  AS total_refund,
+        MODE() WITHIN GROUP (ORDER BY COALESCE(rs.return_reason, 'Khong ro'))      AS top_reason
+    FROM int_return_sku_lines rs
+    WHERE rs.return_date >= date_trunc('month', current_date)
+      AND rs.return_date < current_date
+    GROUP BY 1
+),
+sold_cnt AS (
+    SELECT
+        fs.product_key,
+        COUNT(DISTINCT fs.order_id) AS sold_orders
+    FROM fact_sales fs
+    JOIN fact_orders fo ON fs.order_id = fo.order_id
+    WHERE fo.order_timestamp >= date_trunc('month', current_date)
+      AND fo.order_timestamp < current_date
+      AND fo.status NOT IN ('CANCELLED', 'Voided')
+    GROUP BY 1
+)
+SELECT
+    dp.sku                                                                         AS "SKU",
+    dp.product_name                                                                AS "Ten san pham",
+    ROUND(sr.return_count * 100.0 / NULLIF(sc.sold_orders, 0), 1)                 AS "Return Rate %",
+    sr.top_reason                                                                  AS "Ly do chinh",
+    sr.total_refund                                                                AS "Refund (VND)",
+    CASE
+        WHEN sr.return_count * 100.0 / NULLIF(sc.sold_orders, 0) > 10
+             AND LOWER(sr.top_reason) LIKE '%loi%'
+            THEN 'QC: Review nha cung cap'
+        WHEN sr.return_count * 100.0 / NULLIF(sc.sold_orders, 0) > 5
+             AND LOWER(sr.top_reason) LIKE '%size%'
+            THEN 'Merch: Cap nhat bang size'
+        WHEN sr.return_count * 100.0 / NULLIF(sc.sold_orders, 0) > 5
+             AND LOWER(sr.top_reason) LIKE '%sai%'
+            THEN 'Ops: Kiem tra quy trinh pick & pack'
+        WHEN sr.return_count * 100.0 / NULLIF(sc.sold_orders, 0) > 5
+            THEN 'Sales Ops: Dieu tra nguyen nhan'
+        ELSE 'Monitor'
+    END                                                                            AS "Khuyen nghi",
+    CASE
+        WHEN sr.return_count * 100.0 / NULLIF(sc.sold_orders, 0) > 10 THEN 'QC / Sourcing'
+        WHEN sr.return_count * 100.0 / NULLIF(sc.sold_orders, 0) > 5  THEN 'Sales Ops'
+        ELSE '—'
+    END                                                                            AS "Owner"
+FROM sku_rates sr
+JOIN sold_cnt sc ON sr.product_key = sc.product_key
+JOIN dim_products dp ON sr.product_key = dp.product_key
+WHERE dp.sku != 'Unknown'
+  AND sc.sold_orders >= 3
+ORDER BY "Return Rate %" DESC NULLS LAST
+LIMIT 30
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.column_formatting": [
+      {
+        "columns": ["Return Rate %"],
+        "type": "single",
+        "operator": ">",
+        "value": 5,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "Return Rate %": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      },
+      "Refund (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 22, "col":0, "size_x":18, "size_y":8}
+```
+
+#### 📝 Text: Source & Freshness (SKU Tab)
+
+**Source:** int_return_sku_lines + dim_products + fact_sales · **Cadence:** MTD · **Caveat:** SKU-return link là xấp xỉ (Sapo API order-level only) — dùng để triage/ranking, không phải kế toán chính xác per-SKU
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }

@@ -91,16 +91,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Doanh thu thuan": {
         "number_style": "currency",
@@ -108,7 +100,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -144,16 +137,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Gia von": {
         "number_style": "currency",
@@ -161,7 +146,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -197,16 +183,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Loi nhuan gop": {
         "number_style": "currency",
@@ -214,7 +192,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -681,16 +660,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Tien thuc nhan": {
         "number_style": "currency",
@@ -698,7 +669,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -783,23 +755,16 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Ty le phi san %": {
         "number_style": "percent",
         "scale": 0.01,
         "decimals": 1
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -835,16 +800,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs ky truoc"
-      }
-    ],
     "column_settings": {
       "Doanh thu gop Shopee": {
         "number_style": "currency",
@@ -852,7 +809,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```

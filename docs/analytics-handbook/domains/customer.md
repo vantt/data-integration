@@ -83,7 +83,6 @@ WHERE c.customer_type = 'RETAIL'
   ```sql
   Marketing_Spend / New_Customers
   ```
-
 - **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
 - **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
 - **Unit:** VND
@@ -94,7 +93,6 @@ WHERE c.customer_type = 'RETAIL'
 
 > **Phase 1 Status:** Ready (Historical LTV)
 > **Phase 2 Status:** Planned (Projected CLV)
-
 ##### Phase 1: Historical LTV (Operational)
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) - `lifetime_value`
@@ -104,7 +102,6 @@ WHERE c.customer_type = 'RETAIL'
   ```sql
   SUM(order_total) WHERE status = 'completed'
   ```
-
 ##### Phase 2: Projected CLV (Analytical)
 
 > **dbt Model:** Not yet implemented (Planned for Advanced Analytics)
@@ -134,7 +131,6 @@ WHERE c.customer_type = 'RETAIL'
   FROM customer_metrics
   ```
   _See `clv_calc` CTE in Customer Playbook archives for full logic._
-
 - **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
 - **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
 - **Unit:** VND
@@ -150,7 +146,6 @@ WHERE c.customer_type = 'RETAIL'
   ```sql
   SUM(Revenue) / COUNT(Active_Users)
   ```
-
 - **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
 - **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
 - **Unit:** VND
@@ -200,7 +195,6 @@ WHERE c.customer_type = 'RETAIL'
     AND c.customer_type = 'RETAIL'
     AND o.status NOT IN ('CANCELLED', 'Voided')
   ```
-
 - **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
 - **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
 - **Unit:** count
@@ -232,7 +226,6 @@ WHERE c.customer_type = 'RETAIL'
   )
   ...
   ```
-
 - **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
 - **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
 - **Unit:** %
@@ -289,7 +282,6 @@ WHERE c.customer_type = 'RETAIL'
 
 > **Phase 1 Status:** Ready (Rule-Based)
 > **Phase 2 Status:** Planned (Statistics-Based NTILE)
-
 ##### Phase 1: Rule-Based Segmentation (Operational)
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) - `value_group`, `customer_status`
@@ -305,7 +297,6 @@ WHERE c.customer_type = 'RETAIL'
   - **Churned:** Last purchase > 90 days
 
 > **See:** [customer-segmentation.md](../../context/customer-segmentation.md) for full 8-dimension customer segmentation model.
-
 ##### Phase 2: Statistics-Based Segmentation (Analytical)
 
 > **dbt Model:** Not yet implemented (Planned for Marketing Analysis)
@@ -331,7 +322,6 @@ WHERE c.customer_type = 'RETAIL'
       END as segment
   FROM rfm_calc
   ```
-
 - **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
 - **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
 - **Unit:** business-defined
@@ -351,14 +341,12 @@ WHERE c.customer_type = 'RETAIL'
   - **Audience:** CMO & Head of Sales.
   - **Key Features:** CLV Projections, Market Segmentation (NTILE), CAC & ROI Analysis.
   - **Prerequisite:** Completion of `fact_marketing_spend` and predictive modeling dbt implementation.
-
 #### 2. Preparation Checklist
 
 - [x] **Dbt Models:** `dim_customers` and `fact_orders` are built and verified.
 - [x] **Data Freshness:** Pipeline runs daily (ensuring `recency_days` is accurate).
 - [ ] **Permissions:** Ensure Marketing & CS teams have "Collection View" access to "Customer Analytics" collection.
 - [ ] **Marketing Data:** Accelerate the implementation of `fact_marketing_spend` (Required for CAC).
-
 #### 3. Execution Steps
 
 1.  **BI Tool Configuration:**

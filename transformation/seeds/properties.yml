@@ -31,3 +31,17 @@ seeds:
         match_type: varchar
         priority: integer
         description: varchar
+
+  - name: seed_channel_targets
+    description: >
+      Raw CSV seed: channel-level budget targets maintained manually. One row per
+      (channel_name, period_month, metric_type, target_source). Consumed by
+      dim_channel_targets.sql which resolves channel_key via join to dim_channels.
+    config:
+      column_types:
+        channel_name: varchar
+        period_month: date
+        metric_type: varchar
+        target_value: double
+        target_source: varchar
+        notes: varchar

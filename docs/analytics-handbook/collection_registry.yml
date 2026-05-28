@@ -164,6 +164,26 @@ collections:
 
 
 # =============================================================================
+# DEFERRED DASHBOARDS — not yet deployed, blocked on data foundation
+# Audit ref: plans/reports/audit-260528-0834-analytics-handbook-portfolio.md §2 Tier D
+# =============================================================================
+deferred_dashboards:
+  - name: "Finance Cashflow"
+    playbook: "docs/analytics-handbook/playbooks/finance_cashflow.md"
+    blocker: "fact_payments inflow/outflow classification not built"
+    target_collection: Finance
+
+  - name: "Product Inventory"
+    playbook: "docs/analytics-handbook/playbooks/product_inventory.md"
+    blocker: "fact_inventory table not built"
+    target_collection: Analytics
+
+  - name: "Logistics Shipping"
+    playbook: "docs/analytics-handbook/playbooks/logistics_shipping.md"
+    blocker: "fact_shipments + dim_carriers not built"
+    target_collection: "Operations > Logistics"
+
+# =============================================================================
 # LOOKUP TABLE — Quick reference for agents
 # =============================================================================
 # | Audience                          | Collection Path                |

@@ -48,16 +48,8 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hom qua",
-        "label": "vs hom qua"
-      }
-    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -65,7 +57,8 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -93,16 +86,9 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hom qua",
-        "label": "vs hom qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -138,16 +124,8 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hom qua",
-        "label": "vs hom qua"
-      }
-    ],
     "column_settings": {
       "AOV": {
         "number_style": "currency",
@@ -155,7 +133,8 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
