@@ -67,32 +67,35 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 Hero metric — percentage of customers who have made more than one purchase, with MoM comparison.
 
 ```sql
-WITH current_period AS (
+-- Snapshot-driven MoM: compares state at end of this month vs end of last month.
+-- current_month_end = last day of previous calendar month (most recent closed month)
+-- prev_month_end    = last day of the month before that
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN orders_to_date > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
+      [[AND s.value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN total_orders_count > 1
-                       AND last_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
-                  THEN 1 END) * 100.0
-            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN orders_to_date > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
+      [[AND s.value_group = {{segment}}]]
 )
 SELECT
-    c.value as "Repeat Rate %",
-    p.value as "Prev Month"
+    c.value AS "Repeat Rate %",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -122,31 +125,33 @@ FROM current_period c, previous_period p
 Percentage of customers churned (90+ days inactive), with MoM comparison. Lower is better.
 
 ```sql
-WITH current_period AS (
+-- Snapshot-driven MoM: status = 'CHURNED' as-of each month-end snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0
-            / NULLIF(COUNT(*), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
+      [[AND s.value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN recency_days + 30 > 90 THEN 1 END) * 100.0
-            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
+      [[AND s.value_group = {{segment}}]]
 )
 SELECT
-    c.value as "Churn Rate %",
-    p.value as "Prev Month"
+    c.value AS "Churn Rate %",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -176,26 +181,31 @@ FROM current_period c, previous_period p
 Average days between first and last order for repeat customers, with MoM comparison.
 
 ```sql
-WITH current_period AS (
-    SELECT ROUND(AVG(lifespan_days), 0) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 1
-      AND lifespan_days > 0
-      [[AND value_group = {{segment}}]]
+-- Snapshot-driven MoM: avg days_since_last_order for customers active (not churned)
+-- as-of each month-end. Proxy for lifespan using snapshot recency.
+-- For repeat customers only (orders_to_date > 1).
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
+    SELECT ROUND(AVG(lifetime_value_to_date / NULLIF(orders_to_date, 0)), 0) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
+      AND s.orders_to_date > 1
+      [[AND s.value_group = {{segment}}]]
 ),
 previous_period AS (
-    SELECT ROUND(AVG(lifespan_days), 0) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 1
-      AND lifespan_days > 0
-      AND last_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
-      [[AND value_group = {{segment}}]]
+    SELECT ROUND(AVG(lifetime_value_to_date / NULLIF(orders_to_date, 0)), 0) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
+      AND s.orders_to_date > 1
+      [[AND s.value_group = {{segment}}]]
 )
 SELECT
-    c.value as "Avg Lifespan (days)",
-    p.value as "Prev Month"
+    c.value AS "Avg Lifespan (days)",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -225,31 +235,33 @@ FROM current_period c, previous_period p
 Percentage of paying customers active in last 30 days, with MoM comparison.
 
 ```sql
-WITH current_period AS (
+-- Snapshot-driven MoM: status = 'ACTIVE' as-of each month-end snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0
-            / NULLIF(COUNT(*), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
+      [[AND s.value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN recency_days BETWEEN 31 AND 60 THEN 1 END) * 100.0
-            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
+      [[AND s.value_group = {{segment}}]]
 )
 SELECT
-    c.value as "Active Rate %",
-    p.value as "Prev Month"
+    c.value AS "Active Rate %",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 
@@ -425,19 +437,17 @@ ORDER BY
 Monthly churn rate with goal line — target below 40%.
 
 ```sql
+-- Snapshot-driven trend: % CHURNED as-of each month-end for the past 6 months.
+-- Stable trend line — no more pivoting on last_order_date + 90 DAY.
 SELECT
-    date_trunc('month', last_order_date + INTERVAL '90' DAY)::date as month,
-    COUNT(customer_id) as churned_customers,
+    snapshot_month AS month,
+    COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) AS churned_customers,
     ROUND(
-        COUNT(customer_id) * 100.0 / NULLIF(
-            (SELECT COUNT(*) FROM dim_customers WHERE total_orders_count > 0 AND customer_id != 'Unknown'), 0
-        ), 1
-    ) as "Churn Rate %"
-FROM dim_customers
-WHERE customer_status = 'Churned'
-  AND (last_order_date + INTERVAL '90' DAY) >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND (last_order_date + INTERVAL '90' DAY) < date_trunc('month', current_date)
-  AND customer_id != 'Unknown'
+        COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+    ) AS "Churn Rate %"
+FROM mart_customer_status_snapshot_monthly
+WHERE snapshot_month >= (date_trunc('month', current_date) - INTERVAL '6 months' - INTERVAL '1 day')::date
+  AND snapshot_month <  date_trunc('month', current_date)::date
   [[AND value_group = {{segment}}]]
 GROUP BY 1
 ORDER BY 1
@@ -1228,33 +1238,33 @@ WHERE customer_id != 'Unknown'
 Percentage of customers with exactly 1 order — conversion opportunity. Lower is better.
 
 ```sql
-WITH current_period AS (
+-- Snapshot-driven MoM: orders_to_date = 1 as-of each month-end snapshot.
+WITH month_ends AS (
+    SELECT
+        (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
+        (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
+),
+current_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN total_orders_count = 1 THEN 1 END) * 100.0
-            / NULLIF(COUNT(*), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN orders_to_date = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.current_month_end
+      [[AND s.value_group = {{segment}}]]
 ),
 previous_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN total_orders_count = 1
-                       AND first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
-                  THEN 1 END) * 100.0
-            / NULLIF(COUNT(CASE WHEN first_order_date < date_trunc('month', current_date) - INTERVAL '1 month' THEN 1 END), 0), 1
-        ) as value
-    FROM dim_customers
-    WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
-      [[AND value_group = {{segment}}]]
+            COUNT(CASE WHEN orders_to_date = 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+        ) AS value
+    FROM mart_customer_status_snapshot_monthly s, month_ends m
+    WHERE s.snapshot_month = m.prev_month_end
+      [[AND s.value_group = {{segment}}]]
 )
 SELECT
-    c.value as "One-Time %",
-    p.value as "Prev Month"
+    c.value AS "One-Time %",
+    p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
 

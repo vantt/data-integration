@@ -164,8 +164,8 @@ WHERE c.customer_type = 'RETAIL'
 
 ### 6. Churn Rate
 
-> **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
-> **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
+> **dbt Model:** [mart_customer_status_snapshot_monthly](../../../transformation/models/marts/customer/mart_customer_status_snapshot_monthly.sql) (MoM snapshots) + [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) (current state)
+> **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`) — pre-filtered in mart
 
 - **Business Definition:** Percentage of customers lost over a period.
 - **Logic (SQL):**
@@ -227,6 +227,26 @@ WHERE c.customer_type = 'RETAIL'
   FROM rfm_calc
   ```
 
+## mart_customer_status_snapshot_monthly
+
+> **File:** `transformation/models/marts/customer/mart_customer_status_snapshot_monthly.sql`
+> **Materialization:** table (refreshed daily)
+> **Scope:** RETAIL customers only, rolling 24 months
+
+One row per `(customer_key, snapshot_month)` where `snapshot_month` is the last day of each calendar month. Status is derived from `last_order_date` relative to `snapshot_month`:
+
+| Status | Condition |
+|--------|-----------|
+| ACTIVE | `last_order_date >= snapshot_month - 30 days` |
+| AT_RISK | `last_order_date >= snapshot_month - 90 days AND < snapshot_month - 30 days` |
+| CHURNED | `last_order_date < snapshot_month - 90 days` |
+
+**`is_new`** = TRUE when `first_order_date` falls within the snapshot month.
+
+**Use this mart** for all MoM hero scalars in `customer_retention_dashboard` and `customer_intelligence_monthly` blueprints. Do NOT use `dim_customers` + `first_order_date < lastmonth` filters for MoM comparisons — that pattern returns a snapshot of the older sub-population today, not the true state last month.
+
+---
+
 ## Implementation Planning
 
 ### 1. Deployment Strategy
@@ -243,7 +263,7 @@ WHERE c.customer_type = 'RETAIL'
 
 ### 2. Preparation Checklist
 
-- [x] **Dbt Models:** `dim_customers` and `fact_orders` are built and verified.
+- [x] **Dbt Models:** `dim_customers`, `fact_orders`, and `mart_customer_status_snapshot_monthly` are built and verified.
 - [x] **Data Freshness:** Pipeline runs daily (ensuring `recency_days` is accurate).
 - [ ] **Permissions:** Ensure Marketing & CS teams have "Collection View" access to "Customer Analytics" collection.
 - [ ] **Marketing Data:** Accelerate the implementation of `fact_marketing_spend` (Required for CAC).
