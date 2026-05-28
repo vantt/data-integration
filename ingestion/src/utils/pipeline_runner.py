@@ -49,16 +49,26 @@ def run_pipeline(
     setup_dlt_env(final_dataset_name)
     
     # 3. Handle Full Refresh — reset dlt pipeline STATE before initialization.
-    # Data lives in data_lake/ (DESTINATION__FILESYSTEM__BUCKET_URL), NOT in .dlt/pipelines/.
-    # Deleting the state dir only removes incremental cursors + schemas + normalize info.
-    # dlt.pipeline() re-creates fresh state → incremental starts from scratch.
+    # Strategy: use refresh="drop_sources" in pipeline.run() to drop both destination-side state
+    # (incremental cursors stored in _dlt_pipeline_state) AND local state dir. This is necessary
+    # because dlt restores state FROM the destination on startup, so clearing only local state
+    # is insufficient — the cursor would be restored from _dlt_pipeline_state in the data lake.
+    # Also clear local state dir to avoid stale schema cache that might lock file format.
+    # NOTE: dlt stores local state in get_dlt_pipelines_dir() (default: /var/dlt/pipelines),
+    # NOT in .dlt/pipelines/ (which is the config directory, not the runtime state dir).
+    refresh_mode = None
     if args.full_refresh:
         import shutil
-        state_dir = os.path.join(".dlt", "pipelines", pipeline_name)
+        from dlt.common.pipeline import get_dlt_pipelines_dir
+        state_dir = os.path.join(get_dlt_pipelines_dir(), pipeline_name)
         if os.path.exists(state_dir):
             shutil.rmtree(state_dir)
-            print(f"[Pipeline Runner] --full-refresh: reset pipeline state ({state_dir})")
+            print(f"[Pipeline Runner] --full-refresh: cleared local state dir ({state_dir})")
+        else:
+            print(f"[Pipeline Runner] --full-refresh: no local state dir at {state_dir}, proceeding fresh.")
+        refresh_mode = "drop_sources"
         source_args["full_refresh"] = True
+        print(f"[Pipeline Runner] --full-refresh: will use refresh='drop_sources' to reset destination state")
 
     # 4. Initialize Pipeline (creates fresh state if dir was deleted by full-refresh)
     pipeline = dlt.pipeline(
@@ -74,10 +84,13 @@ def run_pipeline(
     # 5. Run Pipeline
     import time
     max_retries = 3
+    run_kwargs = {"loader_file_format": loader_file_format}
+    if refresh_mode:
+        run_kwargs["refresh"] = refresh_mode
     for attempt in range(max_retries):
         try:
             source = source_factory(**source_args)
-            info = pipeline.run(source)
+            info = pipeline.run(source, **run_kwargs)
             print(info)
             return info
         except Exception as e:
