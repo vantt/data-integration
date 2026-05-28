@@ -56,12 +56,20 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
+#### 📝 Text: Boi canh mua vu + Caveat Blueprint
+
+**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu); 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** ⚠ Caveat: Blueprint này là candidate for deprecation (audit 2026-05) — overlap với finance_channel_pl. YoY added as quick value trong khi pending consolidation. MISA COGS coverage ~65%.
+
+```json metabase-pos
+{"row": 2, "col":0, "size_x":18, "size_y":2}
+```
+
 #### 📝 Text: Tab Overview Heading
 
 Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
 
 ```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":1}
+{"row": 4, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Gross Margin %
@@ -99,9 +107,11 @@ WHERE NOT is_promo_line
 
 #### Question: Total Revenue
 
-Supporting KPI — tong doanh thu ky nay vs ky truoc.
+Supporting KPI — tong doanh thu ky nay vs ky truoc + cung ky nam truoc.
 
 ```sql
+-- YoY added 2026-05-28; note: blueprint deprecation candidate per audit — YoY added as quick value while pending
+-- YoY window is filter-independent (last closed month -12 months) since {{date_range}} can't be shifted 12 months
 WITH
 this_period AS (
     SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS val
@@ -117,11 +127,22 @@ prev_period AS (
       AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
       AND posting_date <  date_trunc('month', current_date)
       [[AND channel_name = {{channel}}]]
+),
+prev_year AS (
+    SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS val
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      AND posting_date >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND posting_date <  date_trunc('month', current_date) - INTERVAL '12 months'
+      [[AND channel_name = {{channel}}]]
 )
 SELECT
-    t.val AS "Doanh thu",
-    p.val AS "Thang truoc"
-FROM this_period t, prev_period p
+    t.val                                                                    AS "Doanh thu",
+    p.val                                                                    AS "Ky truoc",
+    py.val                                                                   AS "Cung ky nam truoc",
+    ROUND((t.val - p.val)  * 100.0 / NULLIF(p.val,  0), 1)                  AS "MoM %",
+    ROUND((t.val - py.val) * 100.0 / NULLIF(py.val, 0), 1)                  AS "YoY %"
+FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-viz
@@ -129,20 +150,25 @@ FROM this_period t, prev_period p
   "display": "table",
   "visualization_settings": {
     "column_settings": {
-      "Doanh thu": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Doanh thu":         { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Ky truoc":          { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Cung ky nam truoc": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "MoM %":             { "suffix": "%", "decimals": 1 },
+      "YoY %":             { "suffix": "%", "decimals": 1 }
     },
-    "table.pivot": false
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":12, "size_y":4}
 ```
 
 #### Question: Total COGS

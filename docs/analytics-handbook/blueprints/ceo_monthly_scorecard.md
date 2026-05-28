@@ -50,12 +50,31 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
+#### 📝 Text: Bối cảnh mùa vụ — Seasonal Context
+
+**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event:
+
+| Tháng | Sự kiện | Tác động |
+|-------|---------|---------|
+| **Jan cuối / Feb đầu** | **Tết Nguyên Đán** | Revenue spike pre-Tết → gần-zero tuần Tết → Feb chậm. MoM Feb luôn âm dù YoY có thể ổn |
+| **9/9** | Shopee 9.9 Mega Sale | Revenue spike 3-10x 1-2 ngày |
+| **10/10** | Shopee 10.10 Sale | Revenue spike |
+| **11/11** | 11.11 Double Day | Lớn nhất năm — spike mạnh nhất |
+| **12/12** | 12.12 Year-End Sale | Revenue spike, sau đó chậm pre-Tết |
+| **Nov cuối** | Black Friday | Spike nhỏ hơn 11.11 |
+
+> **Nguyên tắc đọc:** Nếu tháng hiện tại có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** Ví dụ: Feb -20% MoM có thể bình thường nếu Feb năm trước cũng có Tết.
+
+```json metabase-pos
+{"row": 2, "col":0, "size_x":18, "size_y":5}
+```
+
 #### 📝 Text: Báo cáo hiệu suất kinh doanh tháng
 
 # Báo cáo hiệu suất kinh doanh tháng
 
 ```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":1}
+{"row": 7, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
@@ -63,7 +82,7 @@ SELECT
 ## Theo dõi pace doanh thu theo tuần — đang ahead hay behind target?
 
 ```json metabase-pos
-{"row": 9, "col":0, "size_x":18, "size_y":1}
+{"row": 12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
@@ -71,16 +90,17 @@ SELECT
 ## Phân tích cấu trúc doanh thu — chiết khấu và trả hàng ăn mòn bao nhiêu?
 
 ```json metabase-pos
-{"row": 16, "col":0, "size_x":18, "size_y":1}
+{"row": 18, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Net Revenue
 
-Hero metric — doanh thu thuần tháng qua với MoM comparison.
+Hero metric — doanh thu thuần tháng qua với MoM + YoY comparison.
 
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue)
 
 ```sql
+-- YoY added 2026-05-28: VN seasonality — Tết/megasale months must compare YoY not MoM
 WITH
 this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
@@ -97,11 +117,22 @@ prev_month AS (
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+),
+prev_year AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
-    tm.val as "Net Revenue",
-    pm.val as "Thang truoc"
-FROM this_month tm, prev_month pm
+    tm.val                                                                              AS "Net Revenue",
+    pm.val                                                                              AS "Tháng trước",
+    py.val                                                                              AS "Cùng kỳ năm trước",
+    ROUND((tm.val - pm.val) * 100.0 / NULLIF(pm.val, 0), 1)                            AS "MoM %",
+    ROUND((tm.val - py.val) * 100.0 / NULLIF(py.val, 0), 1)                            AS "YoY %"
+FROM this_month tm, prev_month pm, prev_year py
 ```
 
 ```json metabase-viz
@@ -109,20 +140,25 @@ FROM this_month tm, prev_month pm
   "display": "table",
   "visualization_settings": {
     "column_settings": {
-      "Net Revenue": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Net Revenue":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Tháng trước":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Cùng kỳ năm trước":     { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "MoM %":                 { "suffix": "%", "decimals": 1 },
+      "YoY %":                 { "suffix": "%", "decimals": 1 }
     },
-    "table.pivot": false
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":9, "size_y":4}
 ```
 
 #### ❓ Question: Monthly GMV
@@ -171,7 +207,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":4, "size_y":4}
+{"row": 7, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -179,6 +215,7 @@ FROM this_month tm, prev_month pm
 **Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders)
 
 ```sql
+-- YoY added 2026-05-28
 WITH
 this_month AS (
     SELECT COUNT(DISTINCT order_id) as val
@@ -195,24 +232,45 @@ prev_month AS (
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+),
+prev_year AS (
+    SELECT COUNT(DISTINCT order_id) as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
-    tm.val as "Total Orders",
-    pm.val as "Thang truoc"
-FROM this_month tm, prev_month pm
+    tm.val                                                               AS "Total Orders",
+    pm.val                                                               AS "Tháng trước",
+    py.val                                                               AS "Cùng kỳ năm trước",
+    ROUND((tm.val - pm.val) * 100.0 / NULLIF(pm.val, 0), 1)             AS "MoM %",
+    ROUND((tm.val - py.val) * 100.0 / NULLIF(py.val, 0), 1)             AS "YoY %"
+FROM this_month tm, prev_month pm, prev_year py
 ```
 
 ```json metabase-viz
 {
   "display": "table",
   "visualization_settings": {
-    "table.pivot": false
+    "column_settings": {
+      "MoM %": { "suffix": "%", "decimals": 1 },
+      "YoY %": { "suffix": "%", "decimals": 1 }
+    },
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":10, "size_x":4, "size_y":4}
+{"row": 3, "col":9, "size_x":9, "size_y":4}
 ```
 
 #### ❓ Question: Monthly AOV
@@ -265,7 +323,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 3, "col":14, "size_x":4, "size_y":4}
+{"row": 7, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Unique Customers
@@ -304,7 +362,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":6, "size_y":3}
+{"row": 7, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Target Achievement
@@ -377,7 +435,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row": 7, "col":6, "size_x":6, "size_y":3}
+{"row": 10, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Target Variance
@@ -426,7 +484,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row": 7, "col":12, "size_x":6, "size_y":3}
+{"row": 10, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Revenue vs Target (Weekly)
@@ -481,7 +539,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 10, "col":0, "size_x":12, "size_y":6}
+{"row": 13, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: 6-Month Revenue Trend
@@ -521,7 +579,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 10, "col":12, "size_x":6, "size_y":6}
+{"row": 13, "col":12, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue Waterfall
@@ -607,7 +665,7 @@ ORDER BY sort_order
 ```
 
 ```json metabase-pos
-{"row": 17, "col":0, "size_x":18, "size_y":6}
+{"row": 19, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
@@ -624,41 +682,45 @@ ORDER BY sort_order
 
 #### ❓ Question: Monthly Gross Margin %
 
-Gross Margin % tháng trước với target 40% — scalar with MoM comparison.
+Gross Margin % tháng trước với target 40% — table with MoM + YoY comparison.
 
 **Domain Reference**: [Gross Margin](../domains/finance.md#5-gross-margin)
 
 ```sql
+-- YoY added 2026-05-28
 WITH
 this_month AS (
-    SELECT
-        ROUND(
-            SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100,
-            1
-        ) AS val
+    SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND date_key < CAST(date_trunc('month', current_date) AS DATE)
+      AND date_key <  CAST(date_trunc('month', current_date) AS DATE)
 ),
 prev_month AS (
-    SELECT
-        ROUND(
-            SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100,
-            1
-        ) AS val
+    SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
-      AND date_key < CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+),
+prev_year AS (
+    SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '13 months' AS DATE)
+      AND date_key <  CAST(date_trunc('month', current_date) - INTERVAL '12 months' AS DATE)
 )
 SELECT
-    COALESCE(tm.val, 0) AS "Gross Margin %",
-    40                   AS "Target %",
-    COALESCE(pm.val, 0) AS "Thang truoc"
-FROM this_month tm, prev_month pm
+    COALESCE(tm.val, 0)                                           AS "Gross Margin %",
+    40                                                            AS "Target %",
+    COALESCE(pm.val, 0)                                           AS "Tháng trước",
+    COALESCE(py.val, 0)                                           AS "Cùng kỳ năm trước",
+    ROUND(COALESCE(tm.val,0) - COALESCE(pm.val,0), 1)             AS "MoM pp",
+    ROUND(COALESCE(tm.val,0) - COALESCE(py.val,0), 1)             AS "YoY pp"
+FROM this_month tm, prev_month pm, prev_year py
 ```
 
 ```json metabase-viz
@@ -666,18 +728,25 @@ FROM this_month tm, prev_month pm
   "display": "table",
   "visualization_settings": {
     "column_settings": {
-      "Gross Margin %": {
-        "suffix": "%",
-        "decimals": 1
-      }
+      "Gross Margin %":        { "suffix": "%", "decimals": 1 },
+      "Tháng trước":           { "suffix": "%", "decimals": 1 },
+      "Cùng kỳ năm trước":     { "suffix": "%", "decimals": 1 },
+      "MoM pp":                { "suffix": " pp", "decimals": 1 },
+      "YoY pp":                { "suffix": " pp", "decimals": 1 }
     },
-    "table.pivot": false
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM pp"], "type": "single", "operator": ">=", "value":  1, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM pp"], "type": "single", "operator": "<",  "value": -1, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY pp"], "type": "single", "operator": ">=", "value":  2, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY pp"], "type": "single", "operator": "<",  "value": -2, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 26, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 26, "col": 0, "size_x": 18, "size_y": 4 }
 ```
 
 #### ❓ Question: Channel Profitability Breakdown
@@ -741,7 +810,7 @@ ORDER BY COALESCE(tm.this_month_profit, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 26, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 30, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### ❓ Question: Cost Structure Breakdown
@@ -805,7 +874,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 30, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 36, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---

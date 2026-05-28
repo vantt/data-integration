@@ -45,19 +45,28 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
+#### 📝 Text: Boi canh mua vu — Seasonal Context
+
+**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu); 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale — spike 3-10x; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** Lưu ý: Attribution marketing là last-click — YoY New Customers có thể bị ảnh hưởng bởi data quality thay đổi theo năm.
+
+```json metabase-pos
+{"row": 2, "col":0, "size_x":18, "size_y":2}
+```
+
 #### 📝 Text: Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
 
 # Marketing Monthly Review — đánh giá toàn diện hiệu suất kênh, khách hàng, campaign
 
 ```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":1}
+{"row": 4, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Net Revenue
 
-Monthly net revenue with MoM comparison.
+Monthly net revenue with MoM + YoY comparison.
 
 ```sql
+-- YoY added 2026-05-28
 WITH this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as value
     FROM fact_orders
@@ -71,12 +80,23 @@ last_month AS (
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+),
+prior_year AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as value
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND order_timestamp <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
-    tm.value as "Net Revenue",
+    tm.value                                                                        AS "Net Revenue",
+    lm.value                                                                        AS "Tháng trước",
+    py.value                                                                        AS "Cùng kỳ năm trước",
     CASE WHEN lm.value = 0 THEN NULL
-         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
-FROM this_month tm, last_month lm
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END               AS "MoM %",
+    CASE WHEN py.value = 0 THEN NULL
+         ELSE ROUND((tm.value - py.value) * 100.0 / py.value, 1) END               AS "YoY %"
+FROM this_month tm, last_month lm, prior_year py
 ```
 
 ```json metabase-viz
@@ -84,20 +104,25 @@ FROM this_month tm, last_month lm
   "display": "table",
   "visualization_settings": {
     "column_settings": {
-      "Net Revenue": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Net Revenue":       { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Tháng trước":       { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Cùng kỳ năm trước": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "MoM %":             { "suffix": "%", "decimals": 1 },
+      "YoY %":             { "suffix": "%", "decimals": 1 }
     },
-    "table.pivot": false
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### ❓ Question: Monthly Total Orders
@@ -140,6 +165,7 @@ FROM this_month tm, last_month lm
 #### ❓ Question: Monthly New Customers
 
 ```sql
+-- YoY added 2026-05-28
 WITH this_month AS (
     SELECT COUNT(DISTINCT customer_key) as value
     FROM dim_customers
@@ -151,25 +177,45 @@ last_month AS (
     FROM dim_customers
     WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND date(first_order_date) < date_trunc('month', current_date) - INTERVAL '1 month'
+),
+prior_year AS (
+    SELECT COUNT(DISTINCT customer_key) as value
+    FROM dim_customers
+    WHERE date(first_order_date) >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND date(first_order_date) <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
-    tm.value as "New Customers",
+    tm.value                                                                        AS "New Customers",
+    lm.value                                                                        AS "Tháng trước",
+    py.value                                                                        AS "Cùng kỳ năm trước",
     CASE WHEN lm.value = 0 THEN NULL
-         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END as "MoM %"
-FROM this_month tm, last_month lm
+         ELSE ROUND((tm.value - lm.value) * 100.0 / lm.value, 1) END               AS "MoM %",
+    CASE WHEN py.value = 0 THEN NULL
+         ELSE ROUND((tm.value - py.value) * 100.0 / py.value, 1) END               AS "YoY %"
+FROM this_month tm, last_month lm, prior_year py
 ```
 
 ```json metabase-viz
 {
   "display": "table",
   "visualization_settings": {
-    "table.pivot": false
+    "column_settings": {
+      "MoM %": { "suffix": "%", "decimals": 1 },
+      "YoY %": { "suffix": "%", "decimals": 1 }
+    },
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":10, "size_x":4, "size_y":4}
+{"row": 7, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### ❓ Question: Monthly AOV

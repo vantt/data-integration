@@ -56,19 +56,28 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
+#### 📝 Text: Boi canh mua vu — Seasonal Context
+
+**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu) — spike pre-Tết, gần-zero tuần Tết, Feb chậm; 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale — spike 3-10x; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** Caveat: MISA COGS coverage ~65% — YoY Gross Profit chỉ tin cậy nếu coverage năm trước tương đương.
+
+```json metabase-pos
+{"row": 2, "col":0, "size_x":18, "size_y":2}
+```
+
 #### 📝 Text: PL Overview Heading
 
 Doanh thu va loi nhuan gop — ket qua kinh doanh ky nay
 
 ```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":1}
+{"row": 4, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Net Revenue MTD
 
-Hero metric — doanh thu thuan ky nay vs ky truoc. Exclude cancelled/voided orders.
+Hero metric — doanh thu thuan ky nay vs ky truoc + cung ky nam truoc. Exclude cancelled/voided orders.
 
 ```sql
+-- YoY added 2026-05-28: filter-independent YoY uses fixed closed-month windows
 WITH
 this_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
@@ -82,11 +91,22 @@ prev_period AS (
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND order_timestamp >= (current_date - INTERVAL '60 days')
       AND order_timestamp < (current_date - INTERVAL '30 days')
+),
+-- YoY: same closed month, prior year (last full month -12 months)
+prev_year AS (
+    SELECT COALESCE(SUM(net_revenue), 0) AS val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND order_timestamp <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
-    t.val AS "Doanh thu thuan",
-    p.val AS "Ky truoc"
-FROM this_period t, prev_period p
+    t.val                                                                    AS "Doanh thu thuan",
+    p.val                                                                    AS "Ky truoc",
+    py.val                                                                   AS "Cung ky nam truoc",
+    ROUND((t.val - p.val)  * 100.0 / NULLIF(p.val,  0), 1)                  AS "MoM %",
+    ROUND((t.val - py.val) * 100.0 / NULLIF(py.val, 0), 1)                  AS "YoY %"
+FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-viz
@@ -94,20 +114,25 @@ FROM this_period t, prev_period p
   "display": "table",
   "visualization_settings": {
     "column_settings": {
-      "Doanh thu thuan": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Doanh thu thuan":    { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Ky truoc":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Cung ky nam truoc":  { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "MoM %":              { "suffix": "%", "decimals": 1 },
+      "YoY %":              { "suffix": "%", "decimals": 1 }
     },
-    "table.pivot": false
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":6, "size_y":4}
+{"row": 3, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### ❓ Question: COGS MTD
@@ -158,9 +183,10 @@ FROM this_period t, prev_period p
 
 #### ❓ Question: Gross Profit MTD
 
-Supporting KPI — loi nhuan gop ky nay vs ky truoc. Exclude promo lines.
+Supporting KPI — loi nhuan gop ky nay vs ky truoc + cung ky nam truoc. Exclude promo lines.
 
 ```sql
+-- YoY added 2026-05-28
 WITH
 this_period AS (
     SELECT COALESCE(SUM(gross_profit), 0) AS val
@@ -174,11 +200,21 @@ prev_period AS (
     WHERE NOT is_promo_line
       AND posting_date >= (current_date - INTERVAL '60 days')
       AND posting_date < (current_date - INTERVAL '30 days')
+),
+prev_year AS (
+    SELECT COALESCE(SUM(gross_profit), 0) AS val
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      AND posting_date >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND posting_date <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
-    t.val AS "Loi nhuan gop",
-    p.val AS "Ky truoc"
-FROM this_period t, prev_period p
+    t.val                                                                    AS "Loi nhuan gop",
+    p.val                                                                    AS "Ky truoc",
+    py.val                                                                   AS "Cung ky nam truoc",
+    ROUND((t.val - p.val)  * 100.0 / NULLIF(p.val,  0), 1)                  AS "MoM %",
+    ROUND((t.val - py.val) * 100.0 / NULLIF(py.val, 0), 1)                  AS "YoY %"
+FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-viz
@@ -186,20 +222,25 @@ FROM this_period t, prev_period p
   "display": "table",
   "visualization_settings": {
     "column_settings": {
-      "Loi nhuan gop": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Loi nhuan gop":      { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Ky truoc":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "Cung ky nam truoc":  { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "MoM %":              { "suffix": "%", "decimals": 1 },
+      "YoY %":              { "suffix": "%", "decimals": 1 }
     },
-    "table.pivot": false
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":10, "size_x":4, "size_y":3}
+{"row": 7, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### ❓ Question: Gross Margin Percent

@@ -57,12 +57,20 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
+#### 📝 Text: Boi canh mua vu — Seasonal Context
+
+**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu) — spike orders pre-Tết, gần-zero tuần Tết, Feb chậm; 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale — order volume spike 3-10x; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** Đặc biệt Cancel Rate và Return Rate cũng biến động mạnh theo seasonality.
+
+```json metabase-pos
+{"row": 2, "col":0, "size_x":18, "size_y":2}
+```
+
 #### 📝 Text: Review ket qua thang — doanh thu, don hang, chat luong van hanh
 
 # Review ket qua thang — doanh thu, don hang, chat luong van hanh
 
 ```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":1}
+{"row": 4, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
@@ -83,9 +91,10 @@ SELECT
 
 #### Question: Total Orders
 
-**Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders) — Hero metric with MoM comparison.
+**Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders) — Hero metric with MoM + YoY comparison.
 
 ```sql
+-- YoY added 2026-05-28; migrated from scalar.comparisons (broken on v0.58.11) to display:table
 WITH
 this_month AS (
     SELECT COUNT(DISTINCT order_id) as val
@@ -100,31 +109,44 @@ last_month AS (
     WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+prior_year AS (
+    SELECT COUNT(DISTINCT order_id) as val
+    FROM fact_orders
+    WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND order_timestamp <  date_trunc('month', current_date) - INTERVAL '12 months'
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    tm.val as "Total Orders",
-    lm.val as "Thang truoc"
-FROM this_month tm, last_month lm
+    tm.val                                                               AS "Total Orders",
+    lm.val                                                               AS "Tháng trước",
+    py.val                                                               AS "Cùng kỳ năm trước",
+    ROUND((tm.val - lm.val) * 100.0 / NULLIF(lm.val, 0), 1)             AS "MoM %",
+    ROUND((tm.val - py.val) * 100.0 / NULLIF(py.val, 0), 1)             AS "YoY %"
+FROM this_month tm, last_month lm, prior_year py
 ```
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
+    "column_settings": {
+      "MoM %": { "suffix": "%", "decimals": 1 },
+      "YoY %": { "suffix": "%", "decimals": 1 }
+    },
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
     ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":6, "size_y":3}
+{"row": 3, "col":0, "size_x":18, "size_y":3}
 ```
 
 #### Question: Net Revenue
@@ -306,9 +328,10 @@ ORDER BY 2 DESC
 
 #### Question: Avg Time to Complete
 
-Average hours from order creation to completion — with MoM comparison.
+Average hours from order creation to completion — with MoM + YoY comparison.
 
 ```sql
+-- YoY added 2026-05-28; migrated from scalar.comparisons (broken on v0.58.11) to display:table
 WITH
 this_month AS (
     SELECT ROUND(AVG(time_to_complete_hours), 1) as val
@@ -327,34 +350,49 @@ last_month AS (
       AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+prior_year AS (
+    SELECT ROUND(AVG(time_to_complete_hours), 1) as val
+    FROM fact_orders
+    WHERE status = 'COMPLETED'
+      AND time_to_complete_hours IS NOT NULL
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND order_timestamp <  date_trunc('month', current_date) - INTERVAL '12 months'
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    tm.val as "Avg Hours",
-    lm.val as "Thang truoc"
-FROM this_month tm, last_month lm
+    tm.val                                                               AS "Avg Hours",
+    lm.val                                                               AS "Tháng trước (hrs)",
+    py.val                                                               AS "Cùng kỳ năm trước (hrs)",
+    ROUND((tm.val - lm.val) * 100.0 / NULLIF(lm.val, 0), 1)             AS "MoM %",
+    ROUND((tm.val - py.val) * 100.0 / NULLIF(py.val, 0), 1)             AS "YoY %"
+FROM this_month tm, last_month lm, prior_year py
 ```
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
-      "Avg Hours": { "suffix": " hrs", "decimals": 1 }
-    }
+      "Avg Hours":              { "suffix": " hrs", "decimals": 1 },
+      "Tháng trước (hrs)":      { "suffix": " hrs", "decimals": 1 },
+      "Cùng kỳ năm trước (hrs)":{ "suffix": " hrs", "decimals": 1 },
+      "MoM %":                  { "suffix": "%", "decimals": 1 },
+      "YoY %":                  { "suffix": "%", "decimals": 1 }
+    },
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">",  "value":  5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">",  "value": 10, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#84BB4C", "highlight_row": false }
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 7, "col":6, "size_x":6, "size_y":6}
+{"row": 6, "col":0, "size_x":18, "size_y":4}
 ```
 
 #### Question: Cancelled & Returns Summary

@@ -19,12 +19,20 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Overview & Health
 
+#### 📝 Text: Boi canh mua vu + YoY Caveat
+
+**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu); 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** ⚠ **YoY Caveat:** Các heroes dùng `mart_customer_status_snapshot_monthly` (Total Customers, Active Customers, Total LTV, Repeat %) **chưa có YoY** vì mart hiện không tồn tại trong DB. YoY sẽ được thêm sau khi mart được build với >= 24 months data. Heroes từ `dim_customers` (New Customers) đã có YoY.
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 3 }
+```
+
 #### 📝 Text: Monitor customer base health — growth, activity, and retention pulse check
 
 # Monitor customer base health — growth, activity, and retention pulse check
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Total Customers
@@ -127,9 +135,11 @@ FROM current_period c, previous_period p
 
 #### ❓ Question: New Customers (Last Month)
 
-Customers acquired in the previous calendar month, with comparison to month before.
+Customers acquired in the previous calendar month, with MoM + YoY comparison.
 
 ```sql
+-- YoY added 2026-05-28; uses dim_customers (no snapshot mart dependency)
+-- migrated from scalar.comparisons (broken on v0.58.11) to display:table
 WITH current_period AS (
     SELECT COUNT(*) as value
     FROM dim_customers
@@ -141,31 +151,45 @@ previous_period AS (
     FROM dim_customers
     WHERE created_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND created_at < date_trunc('month', current_date) - INTERVAL '1 month'
+),
+prior_year AS (
+    SELECT COUNT(*) as value
+    FROM dim_customers
+    WHERE created_at >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND created_at <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
-    c.value as "New (Last Month)",
-    p.value as "Prev Month"
-FROM current_period c, previous_period p
+    c.value                                                                      AS "New Customers",
+    p.value                                                                      AS "Prev Month",
+    py.value                                                                     AS "Prev Year (same month)",
+    CASE WHEN p.value = 0 THEN NULL
+         ELSE ROUND((c.value - p.value) * 100.0 / p.value, 1) END               AS "MoM %",
+    CASE WHEN py.value = 0 THEN NULL
+         ELSE ROUND((c.value - py.value) * 100.0 / py.value, 1) END             AS "YoY %"
+FROM current_period c, previous_period p, prior_year py
 ```
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
+    "column_settings": {
+      "MoM %": { "suffix": "%", "decimals": 1 },
+      "YoY %": { "suffix": "%", "decimals": 1 }
+    },
+    "table.pivot": false,
+    "table.column_formatting": [
+      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
+      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
     ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 3 }
 ```
 
 #### ❓ Question: One-Time Buyer Rate
