@@ -439,6 +439,16 @@ models:
         description: "JSON details about client (IP, User Agent)"
       - name: discount_codes
         description: "JSON list of discount codes"
+      - name: max_discount_rate
+        description: "Highest discount_rate (0-100) across all discount items on this order. NULL for orders with no discount_items. See: docs/architecture/discount-classification.md"
+      - name: primary_discount_nature
+        description: "discount_nature of the highest-amount discount item on this order. NULL for orders with no discounts. See: docs/architecture/discount-classification.md"
+        tests:
+          - accepted_values:
+              arguments:
+                values: [voucher_promotional, bundle, sampling_gift, wholesale_explicit, overseas, campaign, employee_internal, negotiated_micro, negotiated_standard, negotiated_deep]
+              config:
+                where: "primary_discount_nature IS NOT NULL"
 
   - name: fact_payments
     description: "Transactional payment fact (one row per payment attempt/transaction)."
@@ -546,6 +556,16 @@ models:
         description: "YYYYMMDD in ICT — inherited from fact_orders"
       - name: channel_key
         description: "Inherited from fact_orders"
+      - name: discount_rate
+        description: "Raw rate (0-100) from Sapo discount_items. NULL for COGS and platform fee rows. Note: always 0 for voucher_promotional (Sapo design). See: docs/architecture/discount-classification.md"
+      - name: discount_nature
+        description: "Semantic classification of this discount. NULL for COGS and platform fee rows. See: docs/architecture/discount-classification.md"
+        tests:
+          - accepted_values:
+              arguments:
+                values: [voucher_promotional, bundle, sampling_gift, wholesale_explicit, overseas, campaign, employee_internal, negotiated_micro, negotiated_standard, negotiated_deep]
+              config:
+                where: "discount_nature IS NOT NULL"
 
   - name: fact_order_returns
     description: "Per-return fact: one row per Sapo return event. Returns recognized at return date — original order P&L is not restated."
