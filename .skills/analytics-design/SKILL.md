@@ -49,6 +49,14 @@ Khi tạo domain file mới, template phải giữ nguyên block định nghĩa 
 > Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
 ```
 
+Khi tạo playbook file mới, template phải giữ nguyên block định nghĩa sau ngay dưới H1 title:
+
+```markdown
+> **Tài liệu này mô tả mục đích và cách sử dụng dashboard/report từ góc nhìn người dùng nghiệp vụ.**
+> Nó giải thích dashboard dành cho ai, dùng để trả lời câu hỏi nào, cần đọc theo luồng nào, dùng những metric nào từ domain documents, và khi thấy tín hiệu bất thường thì ai cần làm gì.
+> Playbook không định nghĩa công thức tính metric; mọi logic nghiệp vụ phải được tham chiếu từ `domains/`.
+```
+
 ## Artifact Ownership
 
 | Artifact | Location | Created by | When |
@@ -88,7 +96,7 @@ Mỗi artifact downstream **tham chiếu** artifact upstream:
 
 1. Kiểm tra playbook đã tồn tại? → Quét `docs/analytics-handbook/playbooks/`
 2. Nếu đã có → Đọc, cập nhật nếu audience/purpose thay đổi
-3. Nếu chưa có → Tạo mới theo `templates/playbook_template.md`
+3. Nếu chưa có → Tạo mới theo `templates/playbook_template.md`, giữ nguyên block định nghĩa Playbook ngay dưới H1 title.
 4. **Action Triggers table là BẮT BUỘC.** Mỗi metric chính phải có ít nhất 1 threshold + owner + action.
 5. **Reading Flow là BẮT BUỘC.** Mô tả đường đi từ hero card → investigation → escalation.
 
