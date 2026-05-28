@@ -58,6 +58,12 @@ If a user asks for "A dashboard showing Net Revenue", you must:
 **Purpose:** Group metrics by Business Domain Context, often tying back to a specific dbt Source Model.
 **Filename Convention:** `[domain_name].md` (e.g., `sales.md`, `finance.md`).
 
+**Required context structure:** Every context MUST be written in this order:
+
+1. `Context Overview` table: category, foundational analytical questions, related metrics, data ready, needs added.
+2. `Analytical Questions`: for each question, define it, explain its nature, why it matters, tradeoffs/caveats, and insight/action enabled.
+3. `Metrics`: after the questions are clear, define the metrics. `Business Definition` must be deep enough to explain business meaning, calculation logic, common misunderstandings, and common mistakes.
+
 **Required document definition:** Every new domain file MUST include the following block immediately after the H1 title:
 
 ```markdown
@@ -84,19 +90,41 @@ If a user asks for "A dashboard showing Net Revenue", you must:
 > **dbt Source:** `[dbt_model_name]` (e.g., `marts.sales.fact_orders`)
 > **Grain:** [e.g., Per Order / Per User]
 
-### 1. [Metric Name]
+### Context Overview
 
-- **Business Definition:** [Plain layman explanation]
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+| :------- | :-------------------------------- | :-------------- | :--------- | :---------- |
+| [Category] | [Question 1; Question 2] | [Metric A], [Metric B] | [Available model/field/table] | [Missing model/field/business input] |
+
+### Analytical Questions
+
+#### Q1. [Question Name]
+
+- **Question:** [Foundational analytical question]
+- **Definition:** [What this question observes in the business]
+- **Nature:** [Nature of the issue: leading/lagging, volume/value/quality, operational/strategic]
+- **Why It Matters:** [Why this question matters for decision-making]
+- **Tradeoffs / Caveats:** [Benefits, limitations, and how it can be misread]
+- **Insight / Action Enabled:** [Insight/action triggered by the answer]
+- **Related Metrics:** [Metric A], [Metric B]
+
+### Metrics
+
+#### 1. [Metric Name]
+
+- **Business Definition:** [Deep business definition: meaning, scope, exclusions, and why this measurement represents business reality]
+- **Business Logic:** [Calculation logic in business language: grain, filters, numerator/denominator, dedup/time basis if relevant]
+- **Formula:** [Short business/math formula, e.g., Net Revenue = Gross Revenue - Discounts]
 - **Logic (SQL):**
   ```sql
   -- Standard dbt logic
   [SQL expression, e.g., SUM(amount - discount)]
   ```
-- **Metabase Mapping:**
-  - **Table:** `[Metabase Table Name]`
-  - **Field/Custom Expression:** `[Field Name]` or `[Expression]`
+- **Unit:** [VND / % / count / ...]
+- **Common Misunderstandings:** [Common misconceptions or reporting mistakes]
+- **Pitfalls / Edge Cases:** [Duplicate grain, canceled orders, missing timestamps, null handling, etc.]
 
-### 2. [Metric Name]
+#### 2. [Metric Name]
 
 ...
 ````

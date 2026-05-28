@@ -49,6 +49,8 @@ Khi tạo domain file mới, template phải giữ nguyên block định nghĩa 
 > Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
 ```
 
+Mỗi context trong domain file dùng cấu trúc chuẩn: `Context Overview` table → `Analytical Questions` → `Metrics`. Trước phần metric, làm rõ category, câu hỏi phân tích nền tảng, metric liên quan, data đã sẵn sàng, data/cấu phần còn cần thêm, và insight/action mà từng câu hỏi kích hoạt. Trong phần metric, `Business Definition` phải giải thích sâu nghiệp vụ, logic tính toán, phạm vi/loại trừ, hiểu lầm thường gặp, và các lỗi report/query dễ mắc. Giữ cả `Formula` và `Logic (SQL)`: `Formula` mô tả công thức business/math ngắn gọn; `Logic (SQL)` chứa SQL có thể tái sử dụng.
+
 Khi tạo playbook file mới, template phải giữ nguyên block định nghĩa sau ngay dưới H1 title:
 
 ```markdown
@@ -94,7 +96,8 @@ Mỗi artifact downstream **tham chiếu** artifact upstream:
 1. Kiểm tra domain đã tồn tại? → Quét `docs/analytics-handbook/domains/`
 2. Nếu đã có → Đọc file, kiểm tra metrics cần thiết. Thiếu → cập nhật thêm.
 3. Nếu chưa có → Tạo mới theo `templates/domain_template.md`, giữ nguyên block định nghĩa Domain Document ngay dưới H1 title.
-4. Đọc `DOMAIN_MODELING.md` cho conventions và quy tắc.
+4. Khi thêm/cập nhật context, luôn viết theo thứ tự `Context Overview` → `Analytical Questions` → `Metrics`.
+5. Đọc `DOMAIN_MODELING.md` cho conventions và quy tắc.
 
 **Output**: `docs/analytics-handbook/domains/<domain>.md`
 
