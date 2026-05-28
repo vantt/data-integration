@@ -232,6 +232,34 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 - Tables: `size_x: 9–18`, `size_y: 6`.
 - Rows increment by the height of the tallest card in that visual row.
 
+### Chu kỳ báo cáo — Bắt buộc ở đầu mỗi tab
+
+**Quy tắc:** Mọi dashboard tab phải có 1 card hiển thị khoảng thời gian cụ thể ở `row: 0`. Người dùng phải thấy ngay "đang xem dữ liệu của tuần nào / tháng nào" mà không cần đọc tiêu đề.
+
+**Cấu hình bắt buộc:**
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+**Tại sao `size_y: 2`?** `size_y: 1` không đủ chiều cao — Metabase chỉ render card title, không render giá trị SQL. `card.title: ""` ẩn tên card. `dashcard.background: false` xóa viền và nền trắng → kết quả là chữ thuần, không có chrome.
+
+**SQL theo cadence (DuckDB):**
+
+| Cadence | SQL |
+|:---|:---|
+| Daily | `SELECT '📅 Hôm nay: ' \|\| strftime(current_date, '%d/%m/%Y') \|\| '  ·  Hôm qua: ' \|\| strftime(current_date - 1, '%d/%m/%Y') AS " "` |
+| Weekly | `SELECT '📅 Tuần này: ' \|\| strftime(date_trunc('week', current_date), '%d/%m/%Y') \|\| ' → ' \|\| strftime(current_date, '%d/%m/%Y') \|\| '  ·  Tuần trước: ' \|\| strftime(date_trunc('week', current_date) - INTERVAL '7 days', '%d/%m/%Y') \|\| ' → ' \|\| strftime(date_trunc('week', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "` |
+| Monthly | `SELECT '📅 Tháng này: ' \|\| strftime(date_trunc('month', current_date), '%d/%m/%Y') \|\| ' → ' \|\| strftime(current_date, '%d/%m/%Y') \|\| '  ·  Tháng trước: ' \|\| strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') \|\| ' → ' \|\| strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "` |
+
+**Column alias phải là `" "` (single space)** — nếu đặt tên thật (vd `"Chu kỳ báo cáo"`), Metabase render tên cột thay vì giá trị.
+
+**Tên question trong blueprint:** `Chu kỳ báo cáo` (daily), `Chu kỳ báo cáo (Weekly)`, `Chu kỳ báo cáo (Monthly)`.
+
+**Sau mỗi lần redeploy:** `dashcard.background: false` được tự động apply bởi deploy script (v2026-05-27+) — không cần patch tay.
+
 ---
 
 ---
@@ -389,30 +417,47 @@ Creating collections ad-hoc leads to a messy Metabase sidebar (orphan "Weekly Re
 
 > **Why this structure?** See [`guides/collection_organization.md`](./guides/collection_organization.md) for the full rationale — organized by audience, not topic or cadence.
 
-### Collection Architecture (3 Collections)
+### Collection Architecture (6 Collections — restructured 2026-05-27)
 
-With a small team (~5 users) where people wear multiple hats, we use **3 top-level collections**, each answering one core question:
+We use **6 top-level collections**, each answering one core audience question:
 
 ```
+📍 Start Here                         ← "Where do I go?" (onboarding)
+│   └── Welcome to ChợPulse BI
+│
 📁 Executive                          ← "Công ty đang thế nào?"
-│   ├── CEO Weekly Pulse
-│   ├── CEO Monthly Scorecard
-│   └── Sales Executive Dashboard
+│   ├── CEO Weekly Pulse [All]
+│   ├── CEO Monthly Scorecard [All]
+│   └── Sales Monthly Business Review [All]
+│
+📁 Finance                            ← "Tiền của tôi đi đâu?" (NEW 2026-05-27)
+│   ├── Finance P&L [All]
+│   ├── Order Profitability [All]
+│   └── Product Profitability [All]
+│   # Roadmap: Cost Ledger, Return Impact, Channel P&L, SKU Margin, Recon
 │
 📁 Marketing & Customers              ← "Kênh/Khách thế nào?"
-│   ├── Marketing Weekly Tracker
-│   ├── Marketing Monthly Analysis
-│   ├── Customer Operational Dashboard
-│   └── Customer Retention & Churn
+│   ├── Marketing Weekly Tracker [Retail]
+│   ├── Marketing Monthly Analysis [Retail]
+│   ├── Marketing ROI [Retail]
+│   ├── Customer Operational [Retail]
+│   ├── Customer Retention & Lifecycle [Retail]
+│   └── Promotion Analysis [Retail]
 │
 📁 Operations                         ← "Hôm nay cần làm gì?"
-│   ├── Daily Monitoring/
-│   │   ├── Daily Sales, Yesterday's Sales
-│   │   └── Today's Orders, Yesterday's Orders
-│   ├── Periodic Reviews/
-│   │   ├── Sales Ops Weekly Review
-│   │   └── Sales Ops Monthly Summary
-│   └── Social Commerce Operations
+│   ├── US CrossBorder/               [US] (NEW 2026-05-27)
+│   │   └── US CrossBorder Daily [US]
+│   ├── Daily Monitoring/             [Retail]
+│   ├── Periodic Reviews/             [Retail]
+│   ├── B2B Operations/               [B2B]
+│   ├── Logistics/                    (NEW)
+│   └── Data Platform/                (NEW)
+│
+📁 Analytics                          ← "So sánh segment / deep-dive?" (NEW 2026-05-27 - Layer 3)
+│   ├── Customer Intelligence Monthly [Cross]
+│   ├── Channel Profitability Monthly [Cross]
+│   ├── Product Performance [Cross]
+│   └── Shopee Channel Economics [Cross]
 ```
 
 ### Collection Placement Workflow
@@ -422,11 +467,17 @@ With a small team (~5 users) where people wear multiple hats, we use **3 top-lev
 
    | Question | Collection Path |
    |:---|:---|
-   | "Is this for **strategic oversight**?" (CEO, Board, Sales Director) | `Executive` |
+   | "Is this for **onboarding**?" (new users) | `📍 Start Here` |
+   | "Is this for **strategic oversight**?" (CEO, Board) | `Executive` |
+   | "Is this for **financial / cost / profitability**?" (CFO, FP&A, Accounting) | `Finance` |
    | "Is this for **channel/customer analysis**?" (Marketing, CS) | `Marketing & Customers` |
-   | "Is this for **daily action items**?" (Store Manager, Ops) | `Operations > Daily Monitoring` |
-   | "Is this for **weekly/monthly ops review**?" (Sales Ops, CS Lead) | `Operations > Periodic Reviews` |
-   | "Is this for **social commerce**?" (CS Lead) | `Operations` |
+   | "Is this for **daily retail action items**?" (Store Manager) | `Operations > Daily Monitoring` |
+   | "Is this for **weekly/monthly retail ops review**?" (Sales Ops Lead) | `Operations > Periodic Reviews` |
+   | "Is this for **B2B/wholesale tracking**?" (B2B AM) | `Operations > B2B Operations` |
+   | "Is this for **US CrossBorder / export arrangements**?" (US Ops) | `Operations > US CrossBorder` |
+   | "Is this for **shipping / delivery ops**?" (Logistics Manager) | `Operations > Logistics` |
+   | "Is this for **pipeline / data health**?" (Data Engineering) | `Operations > Data Platform` |
+   | "Is this for **cross-segment research**?" (Analyst) | `Analytics` |
 
 3. **Use the path in the blueprint** with `>` syntax:
    ```markdown
@@ -446,6 +497,23 @@ With a small team (~5 users) where people wear multiple hats, we use **3 top-lev
 - Team > 15 people with dedicated Customer Success → split `Marketing & Customers` into `Marketing` + `Customer Analytics`
 - Sales Director ≠ CEO, needs separate permissions → split `Executive` into `Executive` + `Sales Analytics`
 - Any collection exceeds ~8 dashboards → add sub-collections or new top-level
+- **New domain emerges with own audience (e.g., Finance, Logistics)** → create new top-level. *Example 2026-05-27: Finance split out when P&L marts (`fact_order_economics`, `fact_order_costs`, `fact_order_returns`) created.*
+
+### Archive Policy (NEW 2026-05-27)
+When renaming a dashboard via blueprint, declare aliases in frontmatter:
+```yaml
+---
+title: New Name [All]
+aliases:
+  - Old Name
+---
+```
+The deploy script will auto-archive the old name on next deploy. This prevents the "7 duplicate pairs" situation discovered in audit 2026-05-27.
+
+### Validation
+- Pre-commit hook: `node .skills/metabase-automation/scripts/validate-collections.js --mode=pre-commit`
+- Daily Dagster job: posts to Lark if drift detected between `collection_registry.yml` and live Metabase
+- See [plans/260527-1327-metabase-collection-restructure/phase-07](../../plans/260527-1327-metabase-collection-restructure/phase-07-validation-rollout.md)
 
 ---
 
