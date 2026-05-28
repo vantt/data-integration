@@ -9,6 +9,8 @@ description: Analyst brain — NGHĨ, ĐỊNH NGHĨA, và THIẾT KẾ analytics
 > Đây là "analyst brain" — sở hữu và tạo ra toàn bộ analytics artifacts trừ blueprints.
 > Blueprints thuộc về `.skills/metabase-automation/` (engineer brain).
 
+> **🚧 Forthcoming (Phase 0+ underway, 2026-05-28)**: Design Spec format đang được nâng cấp lên v2 — thêm Widget Details section (SQL hoặc metric_ref + config YAML), `spec_version` field, `WIDGET_CONFIG_SCHEMA.md`, và JSON Schema cho IDE validation. Endgame: semantic-layer (metric_ref by name, không hardcode SQL). Plan & decisions: `plans/260528-1325-tool-agnostic-design-spec/`. **Current Phase 0-6 workflow chưa thay đổi** — v1 specs vẫn được parser support.
+
 ## Overview
 
 Skill này cung cấp knowledge framework cho các quyết định analytics & design:

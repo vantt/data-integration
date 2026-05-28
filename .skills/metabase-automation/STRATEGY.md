@@ -2,6 +2,8 @@
 
 This document provides the **Metabase-specific** strategy for implementing analytics. For **design thinking** (archetypes, viz selection, composition, visual language), see `.skills/analytics-design/SKILL.md`.
 
+> **🚧 Forthcoming (Phase 0+ underway, 2026-05-28)**: Direct-deploy path coming — Design Spec (v2) → parser → Metabase API trực tiếp, **không qua blueprint file trung gian**. New entry script: `deploy_from_design_spec.js`. Blueprint folder (`docs/analytics-handbook/blueprints/`) sẽ sunset sau Phase 3 migration. Hiện tại blueprint workflow (`deploy_from_markdown.js`) vẫn active cho 30 dashboards production — không bị break. Plan & decisions: `plans/260528-1325-tool-agnostic-design-spec/`.
+
 ## 1. 2-Skill Collaboration
 
 Trước khi tạo blueprint, agent phải hoàn thành Phase 0-6 (Analytics Design) để có Design Spec.
