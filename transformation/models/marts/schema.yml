@@ -686,3 +686,174 @@ models:
                 values: [true, false]
               config:
                 where: "margin_outlier IS NOT NULL"
+
+  - name: fact_inventory_snapshot
+    description: >
+      Daily inventory snapshot. Grain: 1 row per (variant_id, location_id, snapshot_date).
+      Incremental external parquet — appends each day, never deletes (retention: forever).
+      snapshot_date = date of the nightly Sapo product batch run (3am ICT).
+      3 physical locations only: 452566 (Trương Định), 494912 (Hậu Giang), 624127 (MM Market An Phú).
+      mac-derived stock values are estimates only — not accounting-grade.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [variant_id, location_id, snapshot_date]
+    columns:
+      - name: inventory_snapshot_key
+        tests: [unique, not_null]
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: on_hand
+        description: "Units physically on hand; can be negative for consignment locations"
+      - name: available
+        description: "on_hand minus committed"
+      - name: committed
+        description: "Units reserved for open orders"
+      - name: mac
+        description: "Moving Average Cost per unit (VND). NULL for uncosted variants"
+      - name: stock_value_at_mac
+        description: "on_hand × mac when both are present and on_hand > 0, else 0"
+      - name: committed_value_at_mac
+        description: "committed × mac when both present and committed > 0, else 0"
+
+  - name: mart_inventory_health
+    description: >
+      Derived inventory health signals. Grain: 1 row per (variant_id, location_id, snapshot_date).
+      Full rebuild — joins fact_inventory_snapshot (all dates) × latest velocity from
+      mart_sku_economics_monthly. Boolean health flags: is_oos, is_low_stock, is_overstock,
+      is_slow_mover, is_dead_stock. Velocity sourced from last completed month per SKU.
+    columns:
+      - name: inventory_snapshot_key
+        tests: [not_null]
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: is_oos
+        description: "true when on_hand <= 0"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: is_low_stock
+        description: "true when 0 < on_hand <= min_value (only when min_value is configured)"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: is_overstock
+        description: "true when on_hand > max_value (only when max_value is configured)"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: is_slow_mover
+        description: "true when days_of_supply > 90 OR no sale in last 30 days"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: is_dead_stock
+        description: "true when no sale in last 90 days (proxy via mart_sku_economics_monthly)"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: days_of_supply
+        description: "on_hand / daily_velocity. NULL when no sales history. 0 when on_hand <= 0"
+      - name: daily_velocity
+        description: "Units/day from last completed month in mart_sku_economics_monthly. NULL for new/unsold SKUs"
+      - name: stock_value_at_mac
+        description: "Inherited from fact_inventory_snapshot"
+      - name: committed_value_at_mac
+        description: "Inherited from fact_inventory_snapshot"
+      - name: slow_mover_value_at_risk
+        description: "stock_value_at_mac when is_slow_mover, else 0"
+      - name: dead_stock_value_at_risk
+        description: "stock_value_at_mac when is_dead_stock, else 0"
+
+  - name: dim_price_lists
+    description: >
+      Reference dimension for the 17 Sapo price lists.
+      Grain: 1 row per price_list_id. Stable — changes only when Sapo admin adds/removes price lists.
+      is_cost=true → GIANHAP only (import/cost price; reliable COGS proxy for ~10% SKUs not in MISA).
+      is_default=true → BANLE (standard retail price list).
+      Source: variant_prices embedded in product batch_sync parquet (more complete than src_sapo_price_lists).
+    columns:
+      - name: price_list_id
+        tests: [unique, not_null]
+      - name: code
+        tests: [not_null]
+      - name: name
+        tests: [not_null]
+      - name: currency_iso
+        tests: [not_null]
+      - name: is_cost
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: is_default
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+
+  - name: fact_variant_prices_snapshot
+    description: >
+      Daily snapshot of variant prices per price list.
+      Grain: 1 row per (variant_id × price_list_id × snapshot_date).
+      Only non-zero prices stored (value=0 means channel not configured for this SKU).
+      Incremental external parquet — appends today's snapshot, never overwrites historical prices.
+      snapshot_date = dbt run date (CURRENT_DATE), not Sapo product modified_on.
+      gianhap_cost denormalized per row for inline margin calcs without self-join.
+      17 price lists × ~682 variants × 365 days ≈ 4.2M rows/year.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [variant_id, price_list_id, snapshot_date]
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: price_list_id
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: price_value
+        description: "Channel price in VND. Always > 0 (zero-price rows excluded)."
+        tests: [not_null]
+      - name: price_incl_tax
+        description: "Price including VAT. Equals price_value when tax_included=false on variant."
+      - name: is_cost
+        description: "true only for GIANHAP price list — Sapo-native import/cost price."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: gianhap_cost
+        description: "GIANHAP import price for this variant. NULL when GIANHAP not set (value=0) for the SKU."
+      - name: implied_gross_margin_pct
+        description: "((price_value - gianhap_cost) / price_value) × 100. NULL for cost rows or when gianhap_cost=0."
+      - name: is_below_cost
+        description: "true when price_value < gianhap_cost for a non-cost price list. Pricing compliance flag."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]

@@ -137,10 +137,11 @@ collections:
           - "B2B Orders Tracking [B2B]"
 
       - name: Logistics  # NEW 2026-05-27 (moved out of Daily Monitoring — audience mismatch)
-        description: "Shipping & delivery operations."
-        audience: [Logistics Manager]
+        description: "Shipping & delivery operations + inventory health."
+        audience: [Logistics Manager, Inventory Manager, Ops Manager]
         dashboards:
           - "Logistics Operations Center [All]"
+          - "Product Inventory Health [All]"  # unblocked 2026-05-28 (fact_inventory_snapshot + mart_inventory_health)
 
       - name: Data Platform  # NEW 2026-05-27 (moved out of Daily Monitoring — audience mismatch)
         description: "Pipeline health, ingestion monitoring."
@@ -172,11 +173,6 @@ deferred_dashboards:
     playbook: "docs/analytics-handbook/playbooks/finance_cashflow.md"
     blocker: "fact_payments inflow/outflow classification not built"
     target_collection: Finance
-
-  - name: "Product Inventory"
-    playbook: "docs/analytics-handbook/playbooks/product_inventory.md"
-    blocker: "fact_inventory table not built"
-    target_collection: Analytics
 
   - name: "Logistics Shipping"
     playbook: "docs/analytics-handbook/playbooks/logistics_shipping.md"

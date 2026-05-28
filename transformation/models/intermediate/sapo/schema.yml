@@ -1,6 +1,33 @@
 version: 2
 
 models:
+  - name: int_sapo_inventories
+    description: >
+      Enriched inventory rows — one row per (variant_id, location_id) from the latest
+      nightly Sapo product batch. Adds min_value, max_value, wait_to_pack fields
+      (absent in stg_sapo_inventories) and denormalizes location_name/location_code
+      from dim_branch_location. snapshot_date = CAST(source_timestamp AS DATE).
+      CAVEAT: inventory.modified_on is always NULL in Sapo API — snapshot-only, no intra-day history.
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: snapshot_date
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: on_hand
+        description: "Units physically in warehouse (can be negative for consignment locations)"
+      - name: available
+        description: "on_hand minus committed — units available to sell"
+      - name: committed
+        description: "Units reserved against open orders"
+      - name: mac
+        description: "Moving Average Cost per unit (VND). May be NULL for zero-cost or uncosted variants"
+      - name: location_name
+        description: "Denormalized from dim_branch_location; 'Unknown' when location_id not in registry"
+
   - name: int_return_sku_lines
     description: >
       Returns × SKU approximation (Case B). Grain: (return_id, product_key).

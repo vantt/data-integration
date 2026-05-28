@@ -205,18 +205,23 @@ Single source of truth for SKU-level economics. Replaces ad-hoc joins of
 
 ## Context: Inventory Health
 
-> **Status: Planned** — `fact_inventory` model does not exist yet. All metrics below are planned and will be implemented when inventory data pipeline is built.
+> **Description:** Stock levels and efficiency — daily snapshot from Sapo nightly batch.
+> **dbt Sources:**
+> - [`fact_inventory_snapshot`](../../../transformation/models/marts/sales/fact_inventory_snapshot.sql) — grain: (variant_id, location_id, snapshot_date), incremental parquet, retention: forever
+> - [`mart_inventory_health`](../../../transformation/models/marts/sales/mart_inventory_health.sql) — derived health flags + days_of_supply + capital-at-risk signals
+> - Velocity sourced from [`mart_sku_economics_monthly`](../../../transformation/models/marts/sales/mart_sku_economics_monthly.sql)
 
-> **Description:** Stock levels and efficiency.
-> **dbt Source:** `fact_inventory`
+> **Grain:** (variant_id, location_id, snapshot_date) — one row per SKU per location per day
 
-> **Grain:** See metric-level grain notes
+> **Locations in scope:** 452566 (Trương Định — main), 494912 (Hậu Giang — secondary), 624127 (MM Market An Phú — consignment)
+
+> **Snapshot freshness:** Reflects nightly 3am ICT Sapo batch. No intra-day changes.
 
 ### Context Overview
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Inventory Health | Is inventory turning fast enough while avoiding stockouts and dead stock? | 7. Inventory Turnover, 8. Sell-through Rate, 9. Days of Supply, 10. Out of Stock (OOS) Rate, 11. Inventory Value, 12. Slow-Moving Stock (Dead Stock) | `fact_inventory` | None documented |
+| Inventory Health | Is inventory turning fast enough while avoiding stockouts and dead stock? | 7. OOS Rate, 8. Inventory Value, 9. Days of Supply, 10. Slow-Moving Stock (Dead Stock) | `fact_inventory_snapshot`, `mart_inventory_health` | Inventory Turnover (needs GRN data); Sell-through Rate (needs receiving records) |
 
 ### Analytical Questions
 
@@ -232,109 +237,101 @@ Single source of truth for SKU-level economics. Replaces ad-hoc joins of
 
 ### Metrics
 
-#### 7. Inventory Turnover
+#### 7. Out of Stock (OOS) Rate
 
-> **dbt Model:** `fact_inventory`
+> **dbt Model:** [`mart_inventory_health`](../../../transformation/models/marts/sales/mart_inventory_health.sql)
 
-- **Business Definition:** How many times inventory is sold and replaced over a period.
+- **Business Definition:** Percentage of active SKUs (per location) with on_hand ≤ 0 at snapshot date.
 - **Logic (SQL):**
   ```sql
-  COGS / Avg_Inventory
+  SELECT
+      location_name,
+      snapshot_date,
+      ROUND(
+          COUNT(DISTINCT CASE WHEN is_oos THEN sku END) * 100.0
+          / NULLIF(COUNT(DISTINCT sku), 0), 1
+      ) AS oos_rate_pct
+  FROM mart_inventory_health
+  WHERE snapshot_date = current_date - INTERVAL '1 day'
+  GROUP BY location_name, snapshot_date
   ```
-
-- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
-- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Thresholds:** Green < 5%, Amber 5-10%, Red > 10%
 - **Unit:** %
-- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
-- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+- **Caveats:** MM Market (consignment) expected to show high OOS — filter by location for meaningful KPI.
 
-#### 8. Sell-through Rate
+#### 8. Inventory Value
 
-> **dbt Model:** `fact_inventory`
+> **dbt Model:** [`fact_inventory_snapshot`](../../../transformation/models/marts/sales/fact_inventory_snapshot.sql)
 
-- **Business Definition:** Percentage of inventory sold relative to what was available in a period.
+- **Business Definition:** Total capital tied up in on-hand stock, valued at Moving Average Cost (MAC) from Sapo.
 - **Logic (SQL):**
   ```sql
-  Units_Sold / (Start_Stock + Received)
+  SELECT
+      location_name,
+      snapshot_date,
+      SUM(stock_value_at_mac) AS inventory_value_vnd
+  FROM fact_inventory_snapshot
+  WHERE snapshot_date = current_date - INTERVAL '1 day'
+    AND on_hand > 0
+  GROUP BY location_name, snapshot_date
   ```
-
-- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
-- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
-- **Unit:** %
-- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
-- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+- **Unit:** VND
+- **Caveats:** `mac` from Sapo may lag recent GRN pricing by 1-2 days. Not accounting-grade — use MISA for official stock valuation.
 
 #### 9. Days of Supply
 
-> **dbt Model:** `fact_inventory`
+> **dbt Model:** [`mart_inventory_health`](../../../transformation/models/marts/sales/mart_inventory_health.sql)
 
-- **Business Definition:** Number of days current stock will last based on daily sales rate.
+- **Business Definition:** Number of days current on-hand stock will last at the SKU's recent daily sales velocity.
 - **Logic (SQL):**
   ```sql
-  Current_Stock / Daily_Sales_Rate
+  -- mart_inventory_health pre-computes this:
+  -- days_of_supply = on_hand / daily_velocity (from mart_sku_economics_monthly)
+  SELECT sku, location_name, days_of_supply
+  FROM mart_inventory_health
+  WHERE snapshot_date = current_date - INTERVAL '1 day'
+    AND days_of_supply IS NOT NULL
+  ORDER BY days_of_supply ASC
   ```
+- **Unit:** days
+- **Caveats:** Velocity is SKU-level (all locations combined), not per-location. NULL when SKU has no sales history in rolling 24 months.
 
-- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
-- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
-- **Unit:** hours/days
-- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
-- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+#### 10. Slow-Moving Stock (Dead Stock)
 
-#### 10. Out of Stock (OOS) Rate
+> **dbt Model:** [`mart_inventory_health`](../../../transformation/models/marts/sales/mart_inventory_health.sql)
 
-> **dbt Model:** `fact_inventory`
-
-- **Business Definition:** Percentage of SKUs currently out of stock.
+- **Business Definition:**
+  - **Slow mover:** no sale in last 30 days OR days_of_supply > 90
+  - **Dead stock:** no sale in last 90 days
 - **Logic (SQL):**
   ```sql
-  Count(OOS_SKUs) / Total_SKUs
+  SELECT
+      sku, product_name, location_name,
+      on_hand,
+      days_of_supply,
+      slow_mover_value_at_risk,
+      dead_stock_value_at_risk,
+      is_slow_mover,
+      is_dead_stock
+  FROM mart_inventory_health
+  WHERE snapshot_date = current_date - INTERVAL '1 day'
+    AND (is_slow_mover OR is_dead_stock)
+    AND on_hand > 0
+  ORDER BY dead_stock_value_at_risk DESC NULLS LAST
   ```
+- **Unit:** VND (for value columns), days (for days_of_supply)
+- **Caveats:** Proxy based on `mart_sku_economics_monthly` recency (rolling 24-month window). SKUs launched < 30 days ago may incorrectly flag as slow-movers — filter by `created_at` if needed.
 
-- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
-- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
-- **Unit:** %
-- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
-- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+#### 11. Inventory Turnover (Planned)
 
-#### 11. Inventory Value
+> **dbt Model:** Not yet built — requires GRN (Goods Received Note) data from purchase orders.
 
-> **dbt Model:** `fact_inventory`
+- **Business Definition:** COGS / Average Inventory Value over a period.
+- **Blocker:** `src_sapo_purchase_orders` exists but GRN line items not yet modeled into a mart.
 
-- **Business Definition:** Total capital tied up in stock.
-- **Logic (SQL):**
-  ```sql
-  SUM(quantity * cost_price)
-  ```
+#### 12. Sell-through Rate (Planned)
 
-- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
-- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
-- **Unit:** VND
-- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
-- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+> **dbt Model:** Not yet built — requires receiving records (start_stock + received_qty).
 
-#### 12. Slow-Moving Stock (Dead Stock)
-
-> **dbt Model:** `fact_inventory`
-
-- **Business Definition:** Products with no sales in the last 90+ days.
-- **Logic (SQL):**
-  ```sql
-  WHERE days_since_last_sale > 90
-  ```
-- **Detailed Logic (SQL):**
-  ```sql
-  SELECT p.product_name, pv.quantity, MAX(o.created_on) as last_sold
-  FROM products p
-  JOIN product_variants pv USING (product_id)
-  LEFT JOIN order_line_items oli USING (variant_id)
-  LEFT JOIN orders o USING (order_id)
-  GROUP BY 1, 2
-  HAVING DATEDIFF(day, MAX(o.created_on), CURRENT_DATE) > 90
-      OR MAX(o.created_on) IS NULL
-  ```
-
-- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
-- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
-- **Unit:** business-defined
-- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
-- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+- **Business Definition:** Units_Sold / (Start_Stock + Received) for a period.
+- **Blocker:** No intra-period stock movement tracking (only point-in-time snapshots available).
