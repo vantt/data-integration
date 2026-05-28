@@ -137,6 +137,10 @@ async function main() {
   lines.push("");
   lines.push(`## Design Spec: ${dash.name}`);
   lines.push("");
+  lines.push("> **Tài liệu này là bản thiết kế tool-agnostic cho dashboard/report.**");
+  lines.push("> Nó chuyển playbook thành cấu trúc trình bày cụ thể: views, card roles, loại biểu đồ chuẩn, bộ lọc, thứ tự đọc, so sánh cần có, màu sắc/kích thước theo semantic tokens và các yêu cầu trải nghiệm phân tích.");
+  lines.push("> Design spec là hợp đồng giữa Analytics Design và bước triển khai BI; nó không phụ thuộc vào bất kỳ công cụ BI hay nền tảng triển khai cụ thể nào, nhưng được dùng làm input để tạo blueprint triển khai cho công cụ BI được chọn.");
+  lines.push("");
 
   // Brief
   lines.push("### Brief");

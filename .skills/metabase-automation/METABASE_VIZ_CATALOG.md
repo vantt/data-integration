@@ -171,7 +171,7 @@ When capturing a live dashboard back to standard vocabulary, many standard terms
 | text dashcard | — | `text-annotation` |
 | dashboard tab | — | `view-group` |
 
-**Guardrail**: Reverse-generated design specs MUST have `status: draft-from-capture` in frontmatter.
+**Guardrail**: Reverse-generated design specs MUST have `status: draft-from-capture` in frontmatter and MUST include the standard Design Spec definition block immediately after the `## Design Spec: ...` title.
 
 ---
 

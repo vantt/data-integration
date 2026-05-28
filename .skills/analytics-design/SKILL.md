@@ -57,6 +57,14 @@ Khi tạo playbook file mới, template phải giữ nguyên block định nghĩ
 > Playbook không định nghĩa công thức tính metric; mọi logic nghiệp vụ phải được tham chiếu từ `domains/`.
 ```
 
+Khi tạo design spec file mới, template phải giữ nguyên block định nghĩa sau ngay dưới `## Design Spec: ...` title:
+
+```markdown
+> **Tài liệu này là bản thiết kế tool-agnostic cho dashboard/report.**
+> Nó chuyển playbook thành cấu trúc trình bày cụ thể: views, card roles, loại biểu đồ chuẩn, bộ lọc, thứ tự đọc, so sánh cần có, màu sắc/kích thước theo semantic tokens và các yêu cầu trải nghiệm phân tích.
+> Design spec là hợp đồng giữa Analytics Design và bước triển khai BI; nó không phụ thuộc vào bất kỳ công cụ BI hay nền tảng triển khai cụ thể nào, nhưng được dùng làm input để tạo blueprint triển khai cho công cụ BI được chọn.
+```
+
 ## Artifact Ownership
 
 | Artifact | Location | Created by | When |
@@ -146,7 +154,7 @@ Dùng decision tree trong `VISUALIZATION_VOCABULARY.md`. Anti-pattern check bắ
 - 6d: **Action Map** — điền bảng Action Map cho mỗi card có signal quan trọng (xem `templates/design_spec_template.md`)
 - 6e: **Dashboard Finish Checklist** — chạy full checklist trong `VISUAL_LANGUAGE.md` Section 10 trước khi finalize
 
-**Output**: Design Spec → lưu tại `docs/analytics-handbook/designs/<name>.md`
+**Output**: Design Spec → lưu tại `docs/analytics-handbook/designs/<name>.md`, giữ nguyên block định nghĩa Design Spec ngay dưới `## Design Spec: ...` title.
 
 ## Fast-Track Rules
 

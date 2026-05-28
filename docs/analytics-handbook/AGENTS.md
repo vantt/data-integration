@@ -455,9 +455,17 @@ With a small team (~5 users) where people wear multiple hats, we use **3 top-lev
 **Filename Convention:** Same as playbook/blueprint (e.g., `ceo_weekly_pulse.md`).
 **Created by:** Analytics Design Skill (`.skills/analytics-design/`)
 
+**Required document definition:** Every new design spec file MUST include the following block immediately after the `## Design Spec: ...` title:
+
+```markdown
+> **Tài liệu này là bản thiết kế tool-agnostic cho dashboard/report.**
+> Nó chuyển playbook thành cấu trúc trình bày cụ thể: views, card roles, loại biểu đồ chuẩn, bộ lọc, thứ tự đọc, so sánh cần có, màu sắc/kích thước theo semantic tokens và các yêu cầu trải nghiệm phân tích.
+> Design spec là hợp đồng giữa Analytics Design và bước triển khai BI; nó không phụ thuộc vào bất kỳ công cụ BI hay nền tảng triển khai cụ thể nào, nhưng được dùng làm input để tạo blueprint triển khai cho công cụ BI được chọn.
+```
+
 ### Template
 
-```yaml
+```markdown
 ---
 title: [Dashboard Title]
 archetype: [Executive Pulse / Operational Cockpit / Exploratory Tool]
@@ -465,6 +473,12 @@ status: [final / draft / draft-from-capture]
 last_modified: YYYY-MM-DD
 domain_refs: [domains/sales.md, domains/customer.md]
 ---
+
+## Design Spec: [Dashboard Title]
+
+> **Tài liệu này là bản thiết kế tool-agnostic cho dashboard/report.**
+> Nó chuyển playbook thành cấu trúc trình bày cụ thể: views, card roles, loại biểu đồ chuẩn, bộ lọc, thứ tự đọc, so sánh cần có, màu sắc/kích thước theo semantic tokens và các yêu cầu trải nghiệm phân tích.
+> Design spec là hợp đồng giữa Analytics Design và bước triển khai BI; nó không phụ thuộc vào bất kỳ công cụ BI hay nền tảng triển khai cụ thể nào, nhưng được dùng làm input để tạo blueprint triển khai cho công cụ BI được chọn.
 ```
 
 Sections: Brief, Constraints & Filters, Views, Composition (table with Role, Viz Type, Color tokens, Size tokens).

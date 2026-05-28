@@ -8,6 +8,10 @@ domain_refs: [domains/sales.md, domains/customer.md]
 
 ## Design Spec: [Dashboard Title]
 
+> **Tài liệu này là bản thiết kế tool-agnostic cho dashboard/report.**
+> Nó chuyển playbook thành cấu trúc trình bày cụ thể: views, card roles, loại biểu đồ chuẩn, bộ lọc, thứ tự đọc, so sánh cần có, màu sắc/kích thước theo semantic tokens và các yêu cầu trải nghiệm phân tích.
+> Design spec là hợp đồng giữa Analytics Design và bước triển khai BI; nó không phụ thuộc vào bất kỳ công cụ BI hay nền tảng triển khai cụ thể nào, nhưng được dùng làm input để tạo blueprint triển khai cho công cụ BI được chọn.
+
 ### Brief
 
 - **Audience:** [Ai đọc, role gì, context đọc]
