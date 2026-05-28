@@ -171,6 +171,38 @@
 |:---|:---|:---|:---|
 | **Product Performance** | Merchandising | Sales velocity, category analysis, margin (MISA COGS) | [Playbook](../playbooks/product_performance.md) |
 | **Channel Profitability Monthly** | CEO, Finance | Product margin drill-down by channel | [Playbook](../playbooks/channel_profitability_monthly.md) |
+
+## Context: SKU Economics Snapshot
+
+> **dbt Source:** [`mart_sku_economics_monthly`](../../../transformation/models/marts/sales/mart_sku_economics_monthly.sql)
+> **Grain:** `(product_key, snapshot_month)` — one row per SKU per calendar month
+> **Window:** Rolling 24 months (supports YoY)
+> **Refresh:** `dbt build --select +mart_sku_economics_monthly`
+
+Single source of truth for SKU-level economics. Replaces ad-hoc joins of
+`int_misa_sales_lines` + `fact_sales` + `int_return_sku_lines` scattered across
+`product_performance`, `product_profitability`, and `finance_product_cost_margin` dashboards.
+
+### Columns
+
+| Category | Columns |
+|----------|---------|
+| Identity | `product_key`, `product_code`, `product_name`, `snapshot_month` |
+| Revenue & Volume | `units_sold`, `net_revenue`, `order_count`, `daily_velocity` |
+| COGS & Margin | `cogs_amount`, `cogs_per_unit`, `gross_profit`, `gross_margin_pct` |
+| COGS Variance | `cogs_per_unit_3m_avg`, `cogs_variance_pct` |
+| Returns | `return_count`, `return_quantity`, `refund_amount_allocated`, `return_rate` |
+| Return-Adjusted | `return_adjusted_gross_profit`, `return_adjusted_margin_pct` |
+| Operational | `days_since_last_sale`, `is_slow_mover`, `revenue_share_pct`, `margin_outlier` |
+| Channel Concentration | `top_channel_name`, `top_channel_revenue_pct` |
+
+### Key Caveats
+
+- **COGS coverage ~65%**: Only Sapo orders matched to a MISA invoice have `cogs_amount`. Rows without a match have NULL margin columns but are still present (full revenue coverage).
+- **`return_adjusted_margin_pct` is worst-case**: Full refund deducted, zero COGS recovery assumed. Treat as conservative lower bound.
+- **`is_slow_mover` is a proxy**: Based on sales recency alone — no `fact_inventory` yet.
+- **Return SKU approximation**: `int_return_sku_lines` allocates refund proportionally by line revenue; multiple-SKU returns may overstate exposure for low-revenue SKUs in the same order.
+
 ## Context: Inventory Health
 
 > **Status: Planned** — `fact_inventory` model does not exist yet. All metrics below are planned and will be implemented when inventory data pipeline is built.

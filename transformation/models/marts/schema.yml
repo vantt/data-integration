@@ -637,3 +637,52 @@ models:
               arguments:
                 to: ref('dim_date')
                 field: date_key
+
+  - name: mart_sku_economics_monthly
+    description: >
+      Single source of truth for SKU-level economics at monthly grain.
+      One row per (product_key, snapshot_month). Rolling 24-month window for YoY.
+      Combines Sapo sales volume (fact_sales) + MISA COGS (int_misa_sales_lines) +
+      returns (int_return_sku_lines). COGS columns are NULL for ~35% of orders
+      without a MISA invoice match. return_adjusted_margin_pct uses worst-case
+      (full refund, no COGS recovery).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [product_key, snapshot_month]
+    columns:
+      - name: product_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_key
+      - name: snapshot_month
+        tests: [not_null]
+      - name: units_sold
+        tests: [not_null]
+      - name: net_revenue
+        tests: [not_null]
+      - name: order_count
+        tests: [not_null]
+      - name: return_count
+        tests: [not_null]
+      - name: return_quantity
+        tests: [not_null]
+      - name: refund_amount_allocated
+        tests: [not_null]
+      - name: is_slow_mover
+        tests:
+          - accepted_values:
+              arguments:
+                values: [true, false]
+              config:
+                where: "is_slow_mover IS NOT NULL"
+      - name: margin_outlier
+        tests:
+          - accepted_values:
+              arguments:
+                values: [true, false]
+              config:
+                where: "margin_outlier IS NOT NULL"
