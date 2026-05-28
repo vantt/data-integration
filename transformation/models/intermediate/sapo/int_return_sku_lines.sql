@@ -44,15 +44,18 @@ order_bridge AS (
     FROM {{ ref('fact_orders') }}
 ),
 
--- SKU lines from Sapo order items (via fact_sales)
+-- SKU lines from Sapo order items (via fact_sales), aggregated to (order_id, product_key) grain.
+-- fact_sales is line-item grain; same product_key can appear multiple times per order.
+-- Aggregate here to enforce (return_id, product_key) uniqueness downstream.
 order_sku_lines AS (
     SELECT
         fs.order_id,
         fs.product_key,
-        fs.quantity                         AS sold_quantity,
-        fs.revenue                          AS line_revenue
+        SUM(fs.quantity)                    AS sold_quantity,
+        SUM(fs.revenue)                     AS line_revenue
     FROM {{ ref('fact_sales') }} fs
     WHERE fs.revenue > 0
+    GROUP BY fs.order_id, fs.product_key
 ),
 
 -- Order-level revenue totals for proportional allocation
