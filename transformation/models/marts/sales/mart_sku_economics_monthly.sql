@@ -63,13 +63,20 @@ WITH snapshot_months AS (
 ),
 
 -- ----------------------------------------------------------------------------
--- Product dimension: product_key + denormalized attributes + sku for MISA join
+-- Product dimension: product_key + denormalized attributes + alias lookup for MISA
+-- ----------------------------------------------------------------------------
+-- product_code = Sapo SKU (preserved for output column compatibility).
+-- misa_join_key  = effective key for MISA invoice lookup (= sku for base SKUs,
+--                  = base/parent SKU for pack variants via dim_sku_alias).
+-- misa_qty_multiplier = units per pack (1 for base, e.g. 30 for Metabo hộp).
 -- ----------------------------------------------------------------------------
 products AS (
     SELECT
         product_key,
         product_name,
-        sku AS product_code   -- sku = MISA product_code join key
+        sku                                                AS product_code,
+        misa_join_key,
+        COALESCE(misa_qty_multiplier, 1)                   AS misa_qty_multiplier
     FROM {{ ref('dim_products') }}
     WHERE product_key != {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
 ),
@@ -173,24 +180,56 @@ top200_threshold AS (
 ),
 
 -- ----------------------------------------------------------------------------
--- CTE 3: COGS from MISA, joined to product_key via dim_products.sku
--- Scope: NOT is_promo_line, posting_date within 24-month window
+-- CTE 3a: MISA per-unit costs aggregated at misa_join_key level
+-- Computes cogs_per_misa_unit so we can apportion costs across Sapo pack variants
+-- (e.g. base "chai" SKU and "hộp 10 chai" SKU both map to same MISA code).
+-- Scope: NOT is_promo_line, NOT is_service_line, 24-month window
+-- ----------------------------------------------------------------------------
+misa_per_unit AS (
+    SELECT
+        product_code                                       AS misa_join_key,
+        DATE_TRUNC('month', posting_date)::date            AS snapshot_month,
+        SUM(quantity)                                      AS misa_total_qty,
+        SUM(cogs_amount)                                   AS misa_total_cogs,
+        SUM(revenue_net_of_discount)                       AS misa_total_revenue,
+        CASE WHEN SUM(quantity) > 0
+            THEN SUM(cogs_amount) / SUM(quantity)
+        END                                                AS cogs_per_misa_unit,
+        CASE WHEN SUM(quantity) > 0
+            THEN SUM(revenue_net_of_discount) / SUM(quantity)
+        END                                                AS revenue_per_misa_unit
+    FROM {{ ref('int_misa_sales_lines') }}
+    WHERE is_promo_line = false
+      AND is_service_line = false
+      AND posting_date >= DATE_TRUNC('month', current_date) - INTERVAL '24 months'
+      AND posting_date <  DATE_TRUNC('month', current_date)
+    GROUP BY product_code, DATE_TRUNC('month', posting_date)::date
+),
+
+-- CTE 3b: Apportion MISA cogs to each Sapo variant.
+-- variant_cogs = variant_qty × misa_qty_multiplier × cogs_per_misa_unit.
+-- This correctly handles pack variants (e.g. selling 2 "hộp 10" = 20 base units
+-- against MISA's per-base-unit cost) and avoids double-counting when multiple
+-- Sapo SKUs share one MISA code.
 -- ----------------------------------------------------------------------------
 misa_cogs AS (
     SELECT
-        p.product_key,
-        DATE_TRUNC('month', m.posting_date)::date AS snapshot_month,
-
-        SUM(m.quantity)                                         AS misa_quantity,
-        SUM(m.cogs_amount)                                      AS cogs_amount,
-        SUM(m.revenue_net_of_discount)                          AS misa_revenue_net,
-        SUM(m.gross_profit)                                     AS gross_profit
-    FROM {{ ref('int_misa_sales_lines') }} m
-    INNER JOIN products p ON m.product_code = p.product_code
-    WHERE m.is_promo_line = false
-      AND m.posting_date >= DATE_TRUNC('month', current_date) - INTERVAL '24 months'
-      AND m.posting_date <  DATE_TRUNC('month', current_date)
-    GROUP BY p.product_key, DATE_TRUNC('month', m.posting_date)::date
+        sa.product_key,
+        sa.snapshot_month,
+        sa.units_sold * p.misa_qty_multiplier                   AS misa_quantity,
+        sa.units_sold * p.misa_qty_multiplier * mpu.cogs_per_misa_unit
+                                                                AS cogs_amount,
+        sa.units_sold * p.misa_qty_multiplier * mpu.revenue_per_misa_unit
+                                                                AS misa_revenue_net,
+        sa.units_sold * p.misa_qty_multiplier
+            * (mpu.revenue_per_misa_unit - mpu.cogs_per_misa_unit)
+                                                                AS gross_profit
+    FROM sales_agg sa
+    INNER JOIN products p     ON sa.product_key = p.product_key
+    INNER JOIN misa_per_unit mpu
+              ON p.misa_join_key = mpu.misa_join_key
+             AND sa.snapshot_month = mpu.snapshot_month
+    WHERE mpu.cogs_per_misa_unit IS NOT NULL
 ),
 
 -- ----------------------------------------------------------------------------
