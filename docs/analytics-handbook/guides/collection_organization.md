@@ -1,10 +1,11 @@
 # Hướng dẫn Tổ chức Collection trong Metabase
 
 > **Dành cho:** Tất cả người dùng Metabase, AI Agents tạo dashboard
-> **Cập nhật:** 2026-04-19
+> **Cập nhật:** 2026-05-27 (restructure: 6 top-level + Finance + Analytics + sub Logistics/Data Platform)
 > **Bảo trì:** Data Team
 > **Tham chiếu kỹ thuật:** [`collection_registry.yml`](../collection_registry.yml)
 > **Xem thêm:** [Report Segmentation Guide](./report_segmentation.md) — Phân lớp báo cáo theo scope
+> **Migration:** [plans/260527-1327-metabase-collection-restructure/](../../../plans/260527-1327-metabase-collection-restructure/)
 
 ## 1. Vấn đề
 
@@ -54,42 +55,51 @@ Tần suất (daily/weekly/monthly) là thuộc tính của dashboard, không ph
 
 ## 3. Cấu trúc hiện tại
 
-> **Thay đổi 2026-04-19:** Thêm B2B Operations và Analytics collection. Xem [Report Segmentation Guide](./report_segmentation.md) để hiểu 3-layer architecture.
+> **Thay đổi 2026-05-27:** Restructure lên **6 top-level**. Thêm `Finance` (driven by P&L mart explosion), `Analytics` (Layer 3 — formally created), `📍 Start Here` (onboarding), sub `Operations > Logistics` + `Operations > Data Platform` (audience fix), `Operations > US CrossBorder` (CrossBorder scope tách riêng). Xoá 3 sub-1-board (Retail Ops, CrossBorder Ops, Order Management).
 
 ```text
-                              ┌─────────────────────────────────┐
-                              │         Metabase Root            │
-                              └──┬─────────┬─────────┬──────────┬┘
-                                 │         │         │          │
-              ┌──────────────────┤    ┌────┴────┐   ┌┴────────┐ │
-              │                  │    │         │   │         │ │
-        ┌─────┴─────┐      ┌─────┴────┴──┐  ┌───┴───┴──┐  ┌───┴─┴────┐
-        │ Executive │      │  Operations │  │Marketing │  │Analytics │
-        │   [L1]    │      │    [L2]     │  │& Customer│  │   [L3]   │
-        │           │      │             │  │ [L2-Ret] │  │          │
-        │ 5 boards  │      │             │  │ 4 boards │  │ 4 boards │
-        └───────────┘      │             │  └──────────┘  └──────────┘
-                           │             │
-              ┌────────────┼─────────────┼────────────┐
-              │            │             │            │
-        ┌─────┴─────┐ ┌────┴────┐ ┌─────┴────┐ ┌─────┴─────┐
-        │  Retail   │ │   B2B   │ │  Daily   │ │ Periodic  │
-        │Operations │ │Operations│ │Monitoring│ │ Reviews   │
-        │ [Retail]  │ │  [B2B]  │ │ [Retail] │ │ [Retail]  │
-        │ 1 board   │ │ 4 boards│ │ 4 boards │ │ 2 boards  │
-        └───────────┘ └─────────┘ └──────────┘ └───────────┘
+                          ┌────────────────────────────────┐
+                          │        Metabase Root            │
+                          └─┬──────┬──────┬──────┬──────┬──┘
+                            │      │      │      │      │
+        ┌───────────────────┼──────┼──────┼──────┼──────┼─────────┐
+        │                   │      │      │      │      │         │
+  ┌─────┴──────┐  ┌────────┴┐  ┌──┴───┐  │  ┌──┴────┐  │  ┌─────┴────┐
+  │📍 Start    │  │Executive│  │Finance│ │  │Mkt &  │  │  │Analytics │
+  │   Here     │  │  [L1]   │  │ [L1.5]│ │  │Customer│  │  │   [L3]   │
+  │  [All]     │  │ 3 brd   │  │ 3 brd │ │  │[L2-Ret]│  │  │  4 brd   │
+  └────────────┘  └─────────┘  └───────┘ │  │ 6 brd  │  │  └──────────┘
+                                          │  └────────┘  │
+                                     ┌────┴────┐         │
+                                     │Operations│        │
+                                     │   [L2]   │        │
+                                     │   1 brd  │        │
+                                     │   root   │        │
+                                     └────┬─────┘
+      ┌──────────┬──────────┬──────────┬──┴─────┬──────────┬──────────┐
+      │          │          │          │        │          │          │
+┌─────┴────┐ ┌───┴───┐ ┌───┴────┐ ┌───┴────┐ ┌─┴──────┐ ┌─┴───────┐
+│  Daily   │ │Periodic│ │  B2B  │ │   US   │ │Logistics│ │  Data   │
+│Monitoring│ │Reviews │ │  Ops  │ │CrossBor│ │  (NEW)  │ │Platform │
+│ [Retail] │ │[Retail]│ │ [B2B] │ │ [US]   │ │ [All]   │ │  (NEW)  │
+│  5 brd   │ │ 2 brd  │ │ 2 brd │ │  1 brd │ │  1 brd  │ │ 1 brd   │
+└──────────┘ └────────┘ └───────┘ └────────┘ └─────────┘ └─────────┘
 ```
 
-| Collection | Layer | Câu hỏi chính | Ai mở? | Scope | Dashboards |
+| Collection | Layer | Câu hỏi chính | Ai mở? | Scope | Dashboards count |
 |:---|:---|:---|:---|:---|:---|
-| **Executive** | L1 | "Công ty đang thế nào?" | CEO, Founders, Directors | scope_sales [All] | CEO Weekly Pulse, CEO Monthly Scorecard, Order Profitability, Finance P&L, Logistics |
-| **Operations** | L2 | "Hôm nay cần làm gì?" | Ops team | (xem sub-collections) | — |
-| ↳ Retail Operations | L2 | "Bán lẻ ra sao?" | Sales Ops (Retail) | scope_retail [Retail] | Promotion Analysis |
-| ↳ B2B Operations | L2 | "Khách sỉ thế nào?" | B2B Sales | scope_b2b [B2B] | B2B Daily Sales, B2B Orders Tracking, Partner Performance, B2B Margin |
-| ↳ Daily Monitoring | L2 | "Ngay bây giờ ra sao?" | Store Managers | scope_retail [Retail] | Daily Sales, Yesterday's Sales, Today's Orders, Yesterday's Orders |
-| ↳ Periodic Reviews | L2 | "Tuần/Tháng này?" | Sales Ops Lead | scope_retail [Retail] | Sales Ops Weekly, Sales Ops Monthly |
-| **Marketing & Customers** | L2-Retail | "Kênh/Khách retail?" | Marketing Manager, CS | scope_retail [Retail] | Marketing Weekly, Marketing Monthly, Customer Ops, Customer Retention |
-| **Analytics** | L3 | "So sánh segment?" | Analysts, Leadership | scope_sales + breakdown [Cross] | Customer Intelligence, Channel Profitability, Product Profitability, Acquisition Analysis |
+| **📍 Start Here** | — | "Where do I go?" | All users | [All] | 1 (Welcome) |
+| **Executive** | L1 | "Công ty đang thế nào?" | CEO, Founders, Board | scope_sales [All] | 3 |
+| **Finance** | L1.5 | "Tiền đi đâu?" | CFO, FP&A, Accounting | scope_sales [All] | 3 (+5 roadmap) |
+| **Marketing & Customers** | L2-Retail | "Kênh/Khách retail?" | Marketing, CS | scope_retail [Retail] | 6 |
+| **Operations** | L2 | "Hôm nay làm gì?" | Ops team | (sub-collections) | 6 subs |
+| ↳ US CrossBorder (NEW) | L2-US | "Export/arrangement?" | US Ops | scope_us [US] | 1 |
+| ↳ Daily Monitoring | L2 | "Bây giờ ra sao?" | Store Managers | scope_retail [Retail] | 5 |
+| ↳ Periodic Reviews | L2 | "Tuần/Tháng?" | Sales Ops Lead | scope_retail [Retail] | 2 |
+| ↳ B2B Operations | L2-B2B | "Khách sỉ?" | B2B AM | scope_b2b [B2B] | 2 |
+| ↳ Logistics (NEW) | L2 | "Giao hàng?" | Logistics Manager | scope_sales [All] | 1 |
+| ↳ Data Platform (NEW) | Internal | "Pipeline?" | Data Engineering | — | 1 |
+| **Analytics** | L3 | "So sánh segment?" | Analysts, Leadership | scope_sales + breakdown [Cross] | 4 |
 
 ---
 
@@ -141,6 +151,9 @@ Dashboard mới cần tạo
        ├── Dành cho theo dõi khách sỉ / đối tác (B2B)?
        │       → Operations > B2B Operations [B2B] — Layer 2
        │
+       ├── Dành cho US CrossBorder / export arrangement?
+       │       → Operations > US CrossBorder [US] — Layer 2
+       │
        ├── Dành cho vận hành retail hàng ngày? (xem nhiều lần/ngày)
        │       → Operations > Daily Monitoring [Retail] — Layer 2
        │
@@ -180,6 +193,8 @@ Cấu trúc hiện tại (4 top-level + sub-collections) phù hợp với team n
 | **B2B team có KPI riêng biệt với Retail** | Đã tách: `Operations > B2B Operations` |
 | **Xuất hiện domain mới** (Finance, Logistics) có audience riêng | Tạo top-level collection mới |
 | **Cần phân tích cross-segment thường xuyên** | Đã có: `Analytics` collection cho Layer 3 |
+| **Finance domain explode (P&L marts mới)** | **Đã tách 2026-05-27: `Finance` top-level — driven by `fact_order_economics`, `fact_order_costs`, `fact_order_returns`** |
+| **Audience mismatch trong sub-collection** (vd Data team lẫn Store Manager) | **Đã fix 2026-05-27: tách `Operations > Logistics` và `Operations > Data Platform` khỏi Daily Monitoring** |
 
 **Nguyên tắc:**
 - **Gộp** khi cùng người dùng
