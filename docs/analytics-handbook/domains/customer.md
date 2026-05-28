@@ -1,5 +1,9 @@
 # Customer Domain
 
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
+
 > **Owner:** Marketing / Customer Success
 > **Update Frequency:** Daily / Monthly
 > **Cập nhật:** 2026-04-19
@@ -43,13 +47,34 @@ WHERE c.customer_type = 'RETAIL'
 - Total customer count cho reporting
 
 ---
-
 ## Context: Acquisition & Value
 
 > **Description:** Metrics related to acquiring customers and their lifetime value.
 > **dbt Source:** `dim_customers`, `fact_orders`
 
-### 1. Customer Acquisition Cost (CAC)
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Acquisition & Value | Are acquisition cost and customer value economically balanced? | 1. Customer Acquisition Cost (CAC), 2. Customer Lifetime Value (CLV), 3. ARPU (Average Revenue Per User) | `dim_customers`, `fact_orders` | None documented |
+
+### Analytical Questions
+
+#### Q1. Acquisition & Value Readiness
+
+- **Question:** Are acquisition cost and customer value economically balanced?
+- **Definition:** This question defines whether `Acquisition & Value` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** customer economics, value/strategic.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 1. Customer Acquisition Cost (CAC), 2. Customer Lifetime Value (CLV), 3. ARPU (Average Revenue Per User)
+
+### Metrics
+
+#### 1. Customer Acquisition Cost (CAC)
 
 > **dbt Model:** `fact_marketing_spend` (Planned), `dim_customers`
 
@@ -59,12 +84,18 @@ WHERE c.customer_type = 'RETAIL'
   Marketing_Spend / New_Customers
   ```
 
-### 2. Customer Lifetime Value (CLV)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 2. Customer Lifetime Value (CLV)
 
 > **Phase 1 Status:** Ready (Historical LTV)
 > **Phase 2 Status:** Planned (Projected CLV)
 
-#### Phase 1: Historical LTV (Operational)
+##### Phase 1: Historical LTV (Operational)
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) - `lifetime_value`
 
@@ -74,7 +105,7 @@ WHERE c.customer_type = 'RETAIL'
   SUM(order_total) WHERE status = 'completed'
   ```
 
-#### Phase 2: Projected CLV (Analytical)
+##### Phase 2: Projected CLV (Analytical)
 
 > **dbt Model:** Not yet implemented (Planned for Advanced Analytics)
 
@@ -104,7 +135,13 @@ WHERE c.customer_type = 'RETAIL'
   ```
   _See `clv_calc` CTE in Customer Playbook archives for full logic._
 
-### 3. ARPU (Average Revenue Per User)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 3. ARPU (Average Revenue Per User)
 
 > **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -114,12 +151,40 @@ WHERE c.customer_type = 'RETAIL'
   SUM(Revenue) / COUNT(Active_Users)
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Retention & Engagement
 
 > **Description:** Metrics tracking user activity and churn.
 > **Default Scope:** scope_retail (`customer_type = 'RETAIL'`) — Retention concepts áp dụng chủ yếu cho retail customers.
 
-### 4. Monthly Active Users (MAU)
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Retention & Engagement | Are customers returning and staying active in the expected cycle? | 4. Monthly Active Users (MAU), 5. Retention Rate, 6. Churn Rate | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Retention & Engagement Readiness
+
+- **Question:** Are customers returning and staying active in the expected cycle?
+- **Definition:** This question defines whether `Retention & Engagement` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** retention, leading/lagging mix.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 4. Monthly Active Users (MAU), 5. Retention Rate, 6. Churn Rate
+
+### Metrics
+
+#### 4. Monthly Active Users (MAU)
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
 > **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
@@ -136,7 +201,13 @@ WHERE c.customer_type = 'RETAIL'
     AND o.status NOT IN ('CANCELLED', 'Voided')
   ```
 
-### 5. Retention Rate
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** count
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 5. Retention Rate
 
 > **dbt Model:** [fact_orders](../../../transformation/models/marts/sales/fact_orders.sql)
 > **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
@@ -162,7 +233,13 @@ WHERE c.customer_type = 'RETAIL'
   ...
   ```
 
-### 6. Churn Rate
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 6. Churn Rate
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql)
 > **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
@@ -176,16 +253,44 @@ WHERE c.customer_type = 'RETAIL'
   WHERE customer_type = 'RETAIL'
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Segmentation
 
 > **Description:** Grouping customers by behavior.
 
-### 7. RFM Segment
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Segmentation | Which customer groups should be prioritized for care, retention, or reactivation? | 7. RFM Segment | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Segmentation Readiness
+
+- **Question:** Which customer groups should be prioritized for care, retention, or reactivation?
+- **Definition:** This question defines whether `Segmentation` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** segmentation, strategic/actionable.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 7. RFM Segment
+
+### Metrics
+
+#### 7. RFM Segment
 
 > **Phase 1 Status:** Ready (Rule-Based)
 > **Phase 2 Status:** Planned (Statistics-Based NTILE)
 
-#### Phase 1: Rule-Based Segmentation (Operational)
+##### Phase 1: Rule-Based Segmentation (Operational)
 
 > **dbt Model:** [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) - `value_group`, `customer_status`
 
@@ -201,7 +306,7 @@ WHERE c.customer_type = 'RETAIL'
 
 > **See:** [customer-segmentation.md](../../context/customer-segmentation.md) for full 8-dimension customer segmentation model.
 
-#### Phase 2: Statistics-Based Segmentation (Analytical)
+##### Phase 2: Statistics-Based Segmentation (Analytical)
 
 > **dbt Model:** Not yet implemented (Planned for Marketing Analysis)
 
@@ -227,9 +332,15 @@ WHERE c.customer_type = 'RETAIL'
   FROM rfm_calc
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Implementation Planning
 
-### 1. Deployment Strategy
+#### 1. Deployment Strategy
 
 - **Phase 1 (Immediate):** Deploy **"Operational Customer Dashboard"**.
   - **Audience:** Customer Success & Sales Operations.
@@ -241,14 +352,14 @@ WHERE c.customer_type = 'RETAIL'
   - **Key Features:** CLV Projections, Market Segmentation (NTILE), CAC & ROI Analysis.
   - **Prerequisite:** Completion of `fact_marketing_spend` and predictive modeling dbt implementation.
 
-### 2. Preparation Checklist
+#### 2. Preparation Checklist
 
 - [x] **Dbt Models:** `dim_customers` and `fact_orders` are built and verified.
 - [x] **Data Freshness:** Pipeline runs daily (ensuring `recency_days` is accurate).
 - [ ] **Permissions:** Ensure Marketing & CS teams have "Collection View" access to "Customer Analytics" collection.
 - [ ] **Marketing Data:** Accelerate the implementation of `fact_marketing_spend` (Required for CAC).
 
-### 3. Execution Steps
+#### 3. Execution Steps
 
 1.  **BI Tool Configuration:**
     - Create Collection: `Customer Analytics`.

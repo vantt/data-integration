@@ -1,5 +1,9 @@
 # Finance Domain
 
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
+
 > **Owner:** CFO / Finance Team
 > **Update Frequency:** Daily / Monthly
 
@@ -9,7 +13,27 @@
 > **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 > **Grain:** Per Order / Monthly
 
-### 1. Gross Revenue (GMV)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Profit & Loss (P&L) — Sapo Revenue | How do revenue, COGS, and profit combine into P&L performance? | 1. Gross Revenue (GMV), 2. Net Revenue, 3. Revenue Breakdown (Waterfall Components) | [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Profit & Loss (P&L) — Sapo Revenue Readiness
+
+- **Question:** How do revenue, COGS, and profit combine into P&L performance?
+- **Definition:** This question defines whether `Profit & Loss (P&L) — Sapo Revenue` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** finance, lagging/value.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 1. Gross Revenue (GMV), 2. Net Revenue, 3. Revenue Breakdown (Waterfall Components)
+
+### Metrics
+
+#### 1. Gross Revenue (GMV)
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -22,7 +46,13 @@
   - **Table:** `fact_orders`
   - **Field:** `gross_revenue` (Sum)
 
-### 2. Net Revenue
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 2. Net Revenue
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -32,7 +62,13 @@
   SUM(net_revenue)
   ```
 
-### 3. Revenue Breakdown (Waterfall Components)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 3. Revenue Breakdown (Waterfall Components)
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -45,6 +81,12 @@
   UNION ALL SELECT 'Net Revenue', SUM(net_revenue) FROM fact_orders WHERE status NOT IN ('CANCELLED','Voided')
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: COGS & Margin — MISA Sales Ledger
 
 > **Description:** Cost of Goods Sold and gross margin from MISA AMIS accounting system. Per-invoice-line grain with product-level COGS. Covers all channels (DAILY, ECOM, CS, KHAC).
@@ -52,7 +94,27 @@
 > **Grain:** Per Invoice Line
 > **Channel Classification:** `channel_code` (DAILY=Bán lẻ tại quầy, ECOM=Thương mại điện tử, CS=Công sở/B2B, KHAC=Khác) + `voucher_source_hint` (SAPO_DEALER, SHOPEE, AEON, OTHER)
 
-### 4. COGS (Giá vốn hàng bán)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| COGS & Margin — MISA Sales Ledger | How are COGS and margin changing by product or channel? | 4. COGS (Giá vốn hàng bán), 5. Gross Profit (Lãi gộp), 6. Gross Margin % (Biên lợi nhuận gộp), 7. Gross Margin by Channel, 8. COGS Ratio (Tỷ lệ giá vốn/doanh thu) | [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. COGS & Margin — MISA Sales Ledger Readiness
+
+- **Question:** How are COGS and margin changing by product or channel?
+- **Definition:** This question defines whether `COGS & Margin — MISA Sales Ledger` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** finance, margin quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 4. COGS (Giá vốn hàng bán), 5. Gross Profit (Lãi gộp), 6. Gross Margin % (Biên lợi nhuận gộp), 7. Gross Margin by Channel, 8. COGS Ratio (Tỷ lệ giá vốn/doanh thu)
+
+### Metrics
+
+#### 4. COGS (Giá vốn hàng bán)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -65,7 +127,13 @@
   - **Table:** `int_misa_sales_lines`
   - **Field:** `cogs_amount` (Sum)
 
-### 5. Gross Profit (Lãi gộp)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 5. Gross Profit (Lãi gộp)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -76,7 +144,13 @@
   -- equivalent: SUM(revenue_net_of_discount) - SUM(cogs_amount)
   ```
 
-### 6. Gross Margin % (Biên lợi nhuận gộp)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 6. Gross Margin % (Biên lợi nhuận gộp)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -90,7 +164,13 @@
   - Watch: 25-40%
   - Alert: < 25%
 
-### 7. Gross Margin by Channel
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 7. Gross Margin by Channel
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -108,7 +188,13 @@
   GROUP BY channel_name
   ```
 
-### 8. COGS Ratio (Tỷ lệ giá vốn/doanh thu)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 8. COGS Ratio (Tỷ lệ giá vốn/doanh thu)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -118,6 +204,12 @@
   SUM(cogs_amount) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0) AS cogs_ratio
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Order-Level Profitability
 
 > **Description:** Per-order P&L combining Sapo revenue, MISA COGS, and Shopee platform fees. Enables profitability analysis by channel, customer, staff, geography.
@@ -126,7 +218,27 @@
 > **Join Keys:** `voucher_no` (MISA) = `order_code` (Sapo) = `order_code` (Shopee fees)
 > **Coverage:** ~65% of completed orders in MISA date range (cancelled/draft orders excluded from MISA)
 
-### 9. Order Gross Profit (Lãi gộp đơn hàng)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Order-Level Profitability | How much profit remains per order or channel after direct costs? | 9. Order Gross Profit (Lãi gộp đơn hàng), 10. Channel Net Profit (Lãi ròng kênh), 11. Operating Margin %, 12. Net Margin %, 13. EBITDA | [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Order-Level Profitability Readiness
+
+- **Question:** How much profit remains per order or channel after direct costs?
+- **Definition:** This question defines whether `Order-Level Profitability` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** profitability, unit economics.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 9. Order Gross Profit (Lãi gộp đơn hàng), 10. Channel Net Profit (Lãi ròng kênh), 11. Operating Margin %, 12. Net Margin %, 13. EBITDA
+
+### Metrics
+
+#### 9. Order Gross Profit (Lãi gộp đơn hàng)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -138,7 +250,13 @@
   WHERE has_cogs  -- chỉ đơn có dữ liệu COGS từ MISA
   ```
 
-### 10. Channel Net Profit (Lãi ròng kênh)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 10. Channel Net Profit (Lãi ròng kênh)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -160,24 +278,54 @@
   ```
 - **Note:** `channel_net_profit` includes Shopee fees (service, payment, fixed, infra, voucher Xtra, taxes) for Shopee orders. Non-Shopee orders: channel_net_profit = gross_profit.
 
-### P&L Metrics — Planned (requires `fact_gl_entries`)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### P&L Metrics — Planned (requires `fact_gl_entries`)
 
 > **Status: Planned** — Metrics below require General Ledger integration. Operating expenses, depreciation, interest are not yet available.
 
-### 11. Operating Margin %
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** Planned / defined by the source model when implemented.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 11. Operating Margin %
 
 - **Business Definition:** Operating Income (EBIT) as a percentage of Revenue. Requires GL OpEx data.
 - **Status:** Planned — `fact_gl_entries` not yet built.
 
-### 12. Net Margin %
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** Planned / defined by the source model when implemented.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 12. Net Margin %
 
 - **Business Definition:** Net Income as a percentage of Revenue. Requires full GL.
 - **Status:** Planned — `fact_gl_entries` not yet built.
 
-### 13. EBITDA
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** Planned / defined by the source model when implemented.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 13. EBITDA
 
 - **Business Definition:** Earnings Before Interest, Taxes, Depreciation, and Amortization. Requires full GL.
 - **Status:** Planned — `fact_gl_entries` not yet built.
+
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** Planned / defined by the source model when implemented.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
 
 ## Context: Shopee Platform Economics
 
@@ -186,7 +334,27 @@
 > **Grain:** Per Shopee Order
 > **Note:** Only covers orders with released payouts (payout_released_at IS NOT NULL).
 
-### 12. Shopee Net Settlement (Tổng phát hành)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Shopee Platform Economics | How do Shopee fees and settlements affect channel margin? | 12. Shopee Net Settlement (Tổng phát hành), 13. Shopee Platform Fee Rate (Tỷ lệ phí sàn), 14. Shopee Fee Breakdown, 15. Shopee Settlement Margin (Biên lợi nhuận sàn) | [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Shopee Platform Economics Readiness
+
+- **Question:** How do Shopee fees and settlements affect channel margin?
+- **Definition:** This question defines whether `Shopee Platform Economics` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** marketplace economics, reconciliation/value.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 12. Shopee Net Settlement (Tổng phát hành), 13. Shopee Platform Fee Rate (Tỷ lệ phí sàn), 14. Shopee Fee Breakdown, 15. Shopee Settlement Margin (Biên lợi nhuận sàn)
+
+### Metrics
+
+#### 12. Shopee Net Settlement (Tổng phát hành)
 
 > **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
 
@@ -196,7 +364,13 @@
   SUM(net_settlement)
   ```
 
-### 13. Shopee Platform Fee Rate (Tỷ lệ phí sàn)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 13. Shopee Platform Fee Rate (Tỷ lệ phí sàn)
 
 > **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
 
@@ -208,7 +382,13 @@
   * 100.0 / NULLIF(SUM(gross_revenue), 0) AS platform_fee_rate_pct
   ```
 
-### 14. Shopee Fee Breakdown
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 14. Shopee Fee Breakdown
 
 > **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
 
@@ -233,7 +413,13 @@
   UNION ALL SELECT 'Personal Income Tax', SUM(ABS(personal_income_tax)) FROM int_shopee_order_fees
   ```
 
-### 15. Shopee Settlement Margin (Biên lợi nhuận sàn)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 15. Shopee Settlement Margin (Biên lợi nhuận sàn)
 
 > **dbt Model:** [`int_shopee_order_fees`](../../../transformation/models/intermediate/shopee/int_shopee_order_fees.sql)
 
@@ -247,23 +433,63 @@
   - Watch: 60-75%
   - Alert: < 60%
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Balance Sheet & Liquidity — Planned
 
 > **Status: Planned** — Requires `fact_account_balances` (not yet built).
 > **Description:** Health of the business and cash position.
 > **dbt Source:** `fact_account_balances`
 
-### 16. Current Ratio
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Balance Sheet & Liquidity — Planned | Is liquidity and collection risk within an acceptable range? | 16. Current Ratio, 17. Quick Ratio, 18. Days Sales Outstanding (DSO) | `fact_account_balances` | Source/model implementation required for planned metrics |
+
+### Analytical Questions
+
+#### Q1. Balance Sheet & Liquidity — Planned Readiness
+
+- **Question:** Is liquidity and collection risk within an acceptable range?
+- **Definition:** This question defines whether `Balance Sheet & Liquidity — Planned` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** liquidity, strategic risk.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 16. Current Ratio, 17. Quick Ratio, 18. Days Sales Outstanding (DSO)
+
+### Metrics
+
+#### 16. Current Ratio
 
 - **Business Definition:** Ability to pay short-term obligations (Assets / Liabilities).
 - **Status:** Planned — `fact_account_balances` not yet built.
 
-### 17. Quick Ratio
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** Planned / defined by the source model when implemented.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 17. Quick Ratio
 
 - **Business Definition:** Measure of immediate liquidity.
 - **Status:** Planned — `fact_account_balances` not yet built.
 
-### 18. Days Sales Outstanding (DSO)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** Planned / defined by the source model when implemented.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 18. Days Sales Outstanding (DSO)
 
 - **Business Definition:** Average number of days to collect payment after a sale.
 - **Logic (SQL):**
@@ -272,12 +498,40 @@
   ```
 - **Status:** Planned — `fact_account_balances` not yet built.
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** hours/days
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Cash Flow
 
 > **Description:** Cash movement tracking.
 > **dbt Source:** [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql)
 
-### 19. Net Cash Flow
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Cash Flow | Is actual cash movement positive or negative by period? | 19. Net Cash Flow | [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Cash Flow Readiness
+
+- **Question:** Is actual cash movement positive or negative by period?
+- **Definition:** This question defines whether `Cash Flow` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** cash flow, lagging/value.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 19. Net Cash Flow
+
+### Metrics
+
+#### 19. Net Cash Flow
 
 - **Business Definition:** Difference between Cash Inflow and Cash Outflow.
 - **Logic (SQL):**
@@ -295,6 +549,12 @@
 <!-- ============================================================ -->
 <!-- COST_LEDGER_SECTION_START — owned by Phase 05 Cost Ledger agent -->
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Cost Ledger — Per-Order Costs
 
 > **Description:** Long-format cost ledger — 1 row per (order_id, cost_type). Covers COGS (from MISA), Shopee platform fees, taxes, shipping, and seller discounts (from Sapo). Amounts are always positive (ABS); sign/direction is derived from cost_category. Enables breakdown of "where does money go?" by channel and cost type.
@@ -305,7 +565,27 @@
 > **Channel Join:** `dim_channels` via `channel_key`
 > **Coverage:** COGS only for orders matched in MISA; Shopee fees only for Shopee orders; discounts for all Sapo orders with discount_items.
 
-### 1. Total Costs (Tổng chi phí)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Cost Ledger — Per-Order Costs | Which cost groups dominate by order, channel, or month? | 1. Total Costs (Tổng chi phí), 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí), 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí), 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí), 5. Cost Composition by Month (Cơ cấu chi phí theo tháng), 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất) | [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Cost Ledger — Per-Order Costs Readiness
+
+- **Question:** Which cost groups dominate by order, channel, or month?
+- **Definition:** This question defines whether `Cost Ledger — Per-Order Costs` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** cost analysis, value/quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 1. Total Costs (Tổng chi phí), 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí), 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí), 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí), 5. Cost Composition by Month (Cơ cấu chi phí theo tháng), 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất)
+
+### Metrics
+
+#### 1. Total Costs (Tổng chi phí)
 
 > **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
 
@@ -319,7 +599,13 @@
   - **Table:** `fact_order_costs`
   - **Field:** `amount` (Sum)
 
-### 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 2. COGS Ratio — Cost Ledger (Tỷ lệ giá vốn / tổng chi phí)
 
 > **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
 
@@ -335,7 +621,13 @@
   FROM fact_order_costs
   ```
 
-### 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 3. Platform Fees Ratio (Tỷ lệ phí sàn / tổng chi phí)
 
 > **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
 
@@ -355,7 +647,13 @@
   - Watch: 8–12%
   - Alert: > 12%
 
-### 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 4. Voucher / Discount Ratio (Tỷ lệ chiết khấu / tổng chi phí)
 
 > **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
 
@@ -371,7 +669,13 @@
   FROM fact_order_costs
   ```
 
-### 5. Cost Composition by Month (Cơ cấu chi phí theo tháng)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 5. Cost Composition by Month (Cơ cấu chi phí theo tháng)
 
 > **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
 
@@ -387,7 +691,13 @@
   ORDER BY 1, 2
   ```
 
-### 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 6. Top Channels by Total Cost (Kênh tốn nhiều chi phí nhất)
 
 > **dbt Model:** [`fact_order_costs`](../../../transformation/models/marts/sales/fact_order_costs.sql)
 
@@ -415,6 +725,12 @@
 <!-- ============================================================ -->
 <!-- RETURN_IMPACT_SECTION_START — owned by Phase 05 Return Impact agent -->
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Returns & Refund Liability
 
 > **Description:** Per-return event tracking refund exposure, return rate, and reason analysis. Returns are recognized at return date — original order P&L is not restated. Dashboard: Return Impact Analysis [All].
@@ -423,7 +739,27 @@
 > **Key Fields:** `return_id`, `order_code`, `return_date`, `return_timestamp`, `refund_amount`, `return_quantity`, `return_status`, `refund_status`, `return_reason`, `channel_key`, `date_key`
 > **Join:** `fact_order_returns.order_code` → `fact_orders.order_code` for order-date cohort; `channel_key` → `dim_channels` for channel name
 
-### R1. Return Rate MTD (Ty le hoan hang)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Returns & Refund Liability | How much revenue risk and refund liability is created by returns? | R1. Return Rate MTD (Ty le hoan hang), R2. Refund Liability (Gia tri hoan tien), R3. Average Days-to-Return (So ngay trung binh den hoan), R4. Return Reason Top (Ly do hoan pho bien), R5. Return Rate by Channel (Ty le hoan theo kenh), R6. Return Revenue Impact (Doanh thu bi hoan) | [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Returns & Refund Liability Readiness
+
+- **Question:** How much revenue risk and refund liability is created by returns?
+- **Definition:** This question defines whether `Returns & Refund Liability` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** returns risk, finance operations.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** R1. Return Rate MTD (Ty le hoan hang), R2. Refund Liability (Gia tri hoan tien), R3. Average Days-to-Return (So ngay trung binh den hoan), R4. Return Reason Top (Ly do hoan pho bien), R5. Return Rate by Channel (Ty le hoan theo kenh), R6. Return Revenue Impact (Doanh thu bi hoan)
+
+### Metrics
+
+#### R1. Return Rate MTD (Ty le hoan hang)
 
 > **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
 
@@ -448,7 +784,13 @@
   ```
 - **Threshold:** Healthy < 2% | Watch 2-5% | Alert > 5%
 
-### R2. Refund Liability (Gia tri hoan tien)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### R2. Refund Liability (Gia tri hoan tien)
 
 > **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
 
@@ -462,7 +804,12 @@
   ```
 - **Unit:** VND
 
-### R3. Average Days-to-Return (So ngay trung binh den hoan)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the business formula follows the metric definition and source grain above.
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### R3. Average Days-to-Return (So ngay trung binh den hoan)
 
 > **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql) JOIN [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -479,7 +826,12 @@
   ```
 - **Unit:** Days
 
-### R4. Return Reason Top (Ly do hoan pho bien)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the business formula follows the metric definition and source grain above.
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### R4. Return Reason Top (Ly do hoan pho bien)
 
 > **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
 
@@ -492,7 +844,13 @@
   GROUP BY 1 ORDER BY 2 DESC LIMIT 1
   ```
 
-### R5. Return Rate by Channel (Ty le hoan theo kenh)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### R5. Return Rate by Channel (Ty le hoan theo kenh)
 
 > **dbt Models:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql), [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql)
 
@@ -516,7 +874,13 @@
   ```
 - **Alert Threshold:** > 5% triggers investigation.
 
-### R6. Return Revenue Impact (Doanh thu bi hoan)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### R6. Return Revenue Impact (Doanh thu bi hoan)
 
 > **dbt Model:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
 
@@ -536,6 +900,12 @@
 <!-- ============================================================ -->
 <!-- CHANNEL_PL_SECTION_START — owned by Phase 05 Channel P&L agent -->
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Channel P&L Waterfall & Loss-Leader Detection
 
 > **Description:** Per-channel P&L combining Sapo revenue, MISA COGS, and Shopee platform fees at order level. Enables waterfall decomposition (Gross Revenue → Discounts → Net Revenue → COGS → Platform Fees → Net Profit) and loss-leader detection. Dashboard: Channel P&L Deep Dive [Cross].
@@ -544,7 +914,27 @@
 > **Filters:** `is_sales_channel = true AND status NOT IN ('CANCELLED','Voided') AND has_cogs = true`
 > **Join Keys:** `channel_key` → `dim_channels`; Shopee fees are pre-joined in mart via `order_code`
 
-### CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Channel P&L Waterfall & Loss-Leader Detection | Which channels generate net profit and which behave as loss leaders? | CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh), CPL2. Loss Leader Flag (Cờ kênh lỗ), CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước), CPL4. Waterfall Components (Thành phần thác nước P&L), CPL5. Channel Scorecard (Bảng điểm kênh), CPL6. Net Margin % Heatmap — Channel × Month | [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Channel P&L Waterfall & Loss-Leader Detection Readiness
+
+- **Question:** Which channels generate net profit and which behave as loss leaders?
+- **Definition:** This question defines whether `Channel P&L Waterfall & Loss-Leader Detection` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** channel profitability, comparative.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh), CPL2. Loss Leader Flag (Cờ kênh lỗ), CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước), CPL4. Waterfall Components (Thành phần thác nước P&L), CPL5. Channel Scorecard (Bảng điểm kênh), CPL6. Net Margin % Heatmap — Channel × Month
+
+### Metrics
+
+#### CPL1. Channel Net Margin % (Biên lợi nhuận ròng kênh)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -569,7 +959,13 @@
   - Watch: 0–20%
   - Alert (Loss Leader): < 0%
 
-### CPL2. Loss Leader Flag (Cờ kênh lỗ)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### CPL2. Loss Leader Flag (Cờ kênh lỗ)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -587,7 +983,13 @@
   HAVING SUM(e.channel_net_profit) < 0
   ```
 
-### CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### CPL3. Channel Variance vs Prior Period (Biến động so với kỳ trước)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -626,7 +1028,13 @@
   ORDER BY margin_delta_pp ASC
   ```
 
-### CPL4. Waterfall Components (Thành phần thác nước P&L)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### CPL4. Waterfall Components (Thành phần thác nước P&L)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -652,7 +1060,13 @@
   ) AS t("Khoan muc", "Gia tri")
   ```
 
-### CPL5. Channel Scorecard (Bảng điểm kênh)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### CPL5. Channel Scorecard (Bảng điểm kênh)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -673,7 +1087,13 @@
   ORDER BY "Net Margin %" ASC
   ```
 
-### CPL6. Net Margin % Heatmap — Channel × Month
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### CPL6. Net Margin % Heatmap — Channel × Month
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -697,6 +1117,12 @@
 <!-- ============================================================ -->
 <!-- SKU_MARGIN_SECTION_START — owned by Phase 05 SKU Margin agent -->
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: SKU Cost & Margin Variance
 
 > **Description:** Per-SKU gross margin and COGS tracking from MISA sales ledger. Enables merchandising analysis of which SKUs drive profit vs. which have abnormal COGS drift. Promo lines excluded (`NOT is_promo_line`) to reflect true product economics.
@@ -704,7 +1130,27 @@
 > **Grain:** Per SKU (aggregated from invoice lines)
 > **Audience:** Merchandising Manager, Finance
 
-### M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| SKU Cost & Margin Variance | Which SKUs have abnormal margin or COGS variance? | M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU), M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị), M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng), M4. SKU Revenue Share (Tỷ trọng doanh thu SKU), M5. Margin Outlier Flag (Cờ margin bất thường) | [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. SKU Cost & Margin Variance Readiness
+
+- **Question:** Which SKUs have abnormal margin or COGS variance?
+- **Definition:** This question defines whether `SKU Cost & Margin Variance` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** sku margin, anomaly detection.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU), M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị), M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng), M4. SKU Revenue Share (Tỷ trọng doanh thu SKU), M5. Margin Outlier Flag (Cờ margin bất thường)
+
+### Metrics
+
+#### M1. SKU Gross Margin % (Biên lợi nhuận gộp theo SKU)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -728,7 +1174,13 @@
   - Watch: 20–40%
   - Alert (Outlier): < 10% → flag as low-margin
 
-### M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### M2. COGS Per Unit (Giá vốn trung bình mỗi đơn vị)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -749,7 +1201,12 @@
   ```
 - **Unit:** VND per unit
 
-### M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the business formula follows the metric definition and source grain above.
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### M3. COGS Variance vs 3-Month Average (Sai lệch giá vốn so với trung bình 3 tháng)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -793,7 +1250,13 @@
   ```
 - **Threshold:** |variance| > 10% → flag for investigation
 
-### M4. SKU Revenue Share (Tỷ trọng doanh thu SKU)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### M4. SKU Revenue Share (Tỷ trọng doanh thu SKU)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -815,7 +1278,13 @@
   GROUP BY product_code, product_name
   ```
 
-### M5. Margin Outlier Flag (Cờ margin bất thường)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### M5. Margin Outlier Flag (Cờ margin bất thường)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -846,6 +1315,12 @@
 <!-- ============================================================ -->
 <!-- RECON_SECTION_START — owned by Phase 05 Recon agent -->
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Daily Reconciliation (Sapo ↔ MISA ↔ Shopee)
 
 > **Status: Proxy mode** — `recon_sapo_orders_daily` and `recon_misa_daily` tables are **not yet built**.
@@ -858,7 +1333,27 @@
 > **Known Limitation:** `has_cogs` coverage ≈ 65% of completed orders in MISA date range — unmatched orders include cancelled/draft + orders before MISA ingestion window.
 > **Caveat:** This is a derived proxy, not a true reconciliation ledger. Build `recon_sapo_orders_daily` + `recon_misa_daily` dbt models for a proper recon pipeline.
 
-### RC1. MISA Coverage % (Tỷ lệ khớp MISA)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Daily Reconciliation (Sapo ↔ MISA ↔ Shopee) | Do Sapo, MISA, and Shopee reconcile well enough to trust finance reporting? | RC1. MISA Coverage % (Tỷ lệ khớp MISA), RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice), RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee), RC4. Recon Status Distribution (Phân loại trạng thái đối soát), RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày), RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí) | [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql) | None documented |
+
+### Analytical Questions
+
+#### Q1. Daily Reconciliation (Sapo ↔ MISA ↔ Shopee) Readiness
+
+- **Question:** Do Sapo, MISA, and Shopee reconcile well enough to trust finance reporting?
+- **Definition:** This question defines whether `Daily Reconciliation (Sapo ↔ MISA ↔ Shopee)` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** accounting reconciliation, operational quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** RC1. MISA Coverage % (Tỷ lệ khớp MISA), RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice), RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee), RC4. Recon Status Distribution (Phân loại trạng thái đối soát), RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày), RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí)
+
+### Metrics
+
+#### RC1. MISA Coverage % (Tỷ lệ khớp MISA)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -879,7 +1374,13 @@
   - Watch: 50-70%
   - Alert: < 50%
 
-### RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### RC2. Unmatched Rate — No MISA (Tỷ lệ thiếu MISA invoice)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -900,7 +1401,13 @@
   - Watch: 30-50%
   - Alert: > 50%
 
-### RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### RC3. Shopee Fee Coverage % (Tỷ lệ có dữ liệu phí Shopee)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -919,7 +1426,13 @@
     AND e.status = 'COMPLETED'
   ```
 
-### RC4. Recon Status Distribution (Phân loại trạng thái đối soát)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### RC4. Recon Status Distribution (Phân loại trạng thái đối soát)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -941,7 +1454,13 @@
   ORDER BY 2 DESC
   ```
 
-### RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### RC5. Daily Unmatched Trend (Xu hướng đơn chưa đối soát theo ngày)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -964,7 +1483,13 @@
   ORDER BY 1
   ```
 
-### RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### RC6. Sapo↔Shopee Fee Gap (Đơn Shopee thiếu dữ liệu phí)
 
 > **dbt Model:** [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 
@@ -983,6 +1508,12 @@
 
 <!-- RECON_SECTION_END -->
 <!-- ============================================================ -->
+
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
 
 ## Related Dashboards
 

@@ -1,5 +1,9 @@
 # Product Domain
 
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
+
 > **Owner:** Merchandising / Inventory
 > **Update Frequency:** Real-time / Daily
 
@@ -8,7 +12,29 @@
 > **Description:** Sales velocity and revenue contribution.
 > **dbt Source:** `dim_products`, `order_line_items`
 
-### 1. Units Sold
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Product Performance | Which products are driving volume, revenue, and margin? | 1. Units Sold, 2. Product Revenue, 3. Product-Level COGS (Giá vốn theo sản phẩm), 4. Gross Margin by Product, 5. Gross Margin by Category/Channel, 6. Return Rate | `dim_products`, `order_line_items` | None documented |
+
+### Analytical Questions
+
+#### Q1. Product Performance Readiness
+
+- **Question:** Which products are driving volume, revenue, and margin?
+- **Definition:** This question defines whether `Product Performance` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** merchandising performance, volume/value/quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 1. Units Sold, 2. Product Revenue, 3. Product-Level COGS (Giá vốn theo sản phẩm), 4. Gross Margin by Product, 5. Gross Margin by Category/Channel, 6. Return Rate
+
+### Metrics
+
+#### 1. Units Sold
 
 > **dbt Model:** [fact_sales](../../../transformation/models/marts/sales/fact_sales.sql)
 
@@ -22,7 +48,13 @@
   SUM(quantity) * 1.0 / NULLIF(COUNT(DISTINCT DATE(created_on)), 0) as daily_velocity
   ```
 
-### 2. Product Revenue
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** count
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 2. Product Revenue
 
 > **dbt Model:** [fact_sales](../../../transformation/models/marts/sales/fact_sales.sql)
 
@@ -32,7 +64,13 @@
   SUM(line_amount)
   ```
 
-### 3. Product-Level COGS (Giá vốn theo sản phẩm)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 3. Product-Level COGS (Giá vốn theo sản phẩm)
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -50,7 +88,13 @@
   GROUP BY product_code, product_name
   ```
 
-### 4. Gross Margin by Product
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 4. Gross Margin by Product
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -74,7 +118,13 @@
   - Normal: 30-50%
   - Low-margin: < 30%
 
-### 5. Gross Margin by Category/Channel
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 5. Gross Margin by Category/Channel
 
 > **dbt Model:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql)
 
@@ -91,7 +141,13 @@
   GROUP BY channel_name
   ```
 
-### 6. Return Rate
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 6. Return Rate
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -103,13 +159,18 @@
   ```
 - **Note:** Return tracking via order status transitions; may undercount partial returns.
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Related Dashboards
 
 | Dashboard | Audience | Purpose | Link |
 |:---|:---|:---|:---|
 | **Product Performance** | Merchandising | Sales velocity, category analysis, margin (MISA COGS) | [Playbook](../playbooks/product_performance.md) |
 | **Channel Profitability Monthly** | CEO, Finance | Product margin drill-down by channel | [Playbook](../playbooks/channel_profitability_monthly.md) |
-
 ## Context: Inventory Health
 
 > **Status: Planned** — `fact_inventory` model does not exist yet. All metrics below are planned and will be implemented when inventory data pipeline is built.
@@ -117,7 +178,29 @@
 > **Description:** Stock levels and efficiency.
 > **dbt Source:** `fact_inventory`
 
-### 7. Inventory Turnover
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Inventory Health | Is inventory turning fast enough while avoiding stockouts and dead stock? | 7. Inventory Turnover, 8. Sell-through Rate, 9. Days of Supply, 10. Out of Stock (OOS) Rate, 11. Inventory Value, 12. Slow-Moving Stock (Dead Stock) | `fact_inventory` | None documented |
+
+### Analytical Questions
+
+#### Q1. Inventory Health Readiness
+
+- **Question:** Is inventory turning fast enough while avoiding stockouts and dead stock?
+- **Definition:** This question defines whether `Inventory Health` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** inventory, operational quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 7. Inventory Turnover, 8. Sell-through Rate, 9. Days of Supply, 10. Out of Stock (OOS) Rate, 11. Inventory Value, 12. Slow-Moving Stock (Dead Stock)
+
+### Metrics
+
+#### 7. Inventory Turnover
 
 > **dbt Model:** `fact_inventory`
 
@@ -127,7 +210,13 @@
   COGS / Avg_Inventory
   ```
 
-### 8. Sell-through Rate
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 8. Sell-through Rate
 
 > **dbt Model:** `fact_inventory`
 
@@ -137,7 +226,13 @@
   Units_Sold / (Start_Stock + Received)
   ```
 
-### 9. Days of Supply
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 9. Days of Supply
 
 > **dbt Model:** `fact_inventory`
 
@@ -147,7 +242,13 @@
   Current_Stock / Daily_Sales_Rate
   ```
 
-### 10. Out of Stock (OOS) Rate
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** hours/days
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 10. Out of Stock (OOS) Rate
 
 > **dbt Model:** `fact_inventory`
 
@@ -157,7 +258,13 @@
   Count(OOS_SKUs) / Total_SKUs
   ```
 
-### 11. Inventory Value
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 11. Inventory Value
 
 > **dbt Model:** `fact_inventory`
 
@@ -167,7 +274,13 @@
   SUM(quantity * cost_price)
   ```
 
-### 12. Slow-Moving Stock (Dead Stock)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 12. Slow-Moving Stock (Dead Stock)
 
 > **dbt Model:** `fact_inventory`
 
@@ -187,3 +300,9 @@
   HAVING DATEDIFF(day, MAX(o.created_on), CURRENT_DATE) > 90
       OR MAX(o.created_on) IS NULL
   ```
+
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.

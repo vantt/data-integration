@@ -1,5 +1,9 @@
 # Sales Domain
 
+> **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
+> Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
+> Đây là nguồn tham chiếu chính thức cho business logic; dashboard, playbook, design spec và blueprint phải tham chiếu lại tài liệu này thay vì tự định nghĩa lại metric.
+
 > **Owner:** Sales Team / Data Team
 > **Update Frequency:** Real-time / Daily
 > **Cập nhật:** 2026-04-19
@@ -45,14 +49,33 @@ WHERE c.customer_type = 'RETAIL'
 ```
 
 ---
-
 ## Context: Order Performance
 
 > **Description:** Core metrics regarding order volume, revenue, and efficiency.
 > **dbt Source:** `fact_orders`
 > **Grain:** Per Order
 
-### 1. Gross Revenue (GMV)
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Order Performance | Are revenue, order volume, and order value moving because of volume, value, or order quality? | 1. Gross Revenue (GMV), 2. Net Revenue, 2b. Total Collected, 3. Return Rate & Count, 4. Total Orders, 5. AOV (Average Order Value) | `fact_orders` | None documented |
+
+### Analytical Questions
+
+#### Q1. Order Performance Readiness
+
+- **Question:** Are revenue, order volume, and order value moving because of volume, value, or order quality?
+- **Definition:** This question defines whether `Order Performance` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** revenue/order performance, lagging, volume/value.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 1. Gross Revenue (GMV), 2. Net Revenue, 2b. Total Collected, 3. Return Rate & Count, 4. Total Orders, 5. AOV (Average Order Value)
+
+### Metrics
+
+#### 1. Gross Revenue (GMV)
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 > **Terminology Guide:** [Revenue Terminology](../guides/revenue_terminology.md)
@@ -66,7 +89,13 @@ WHERE c.customer_type = 'RETAIL'
   - **Table:** `fact_orders`
   - **Field:** `Gross Revenue` (Aggregation: Sum)
 
-### 2. Net Revenue
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 2. Net Revenue
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -79,7 +108,13 @@ WHERE c.customer_type = 'RETAIL'
   - **Table:** `fact_orders`
   - **Field:** `Net Revenue` (Aggregation: Sum)
 
-### 2b. Total Collected
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 2b. Total Collected
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -92,7 +127,13 @@ WHERE c.customer_type = 'RETAIL'
   - **Table:** `fact_orders`
   - **Field:** `Total Collected` (Aggregation: Sum)
 
-### 3. Return Rate & Count
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 3. Return Rate & Count
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -103,7 +144,13 @@ WHERE c.customer_type = 'RETAIL'
   COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END)
   ```
 
-### 4. Total Orders
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 4. Total Orders
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -113,7 +160,13 @@ WHERE c.customer_type = 'RETAIL'
   COUNT(DISTINCT order_id)
   ```
 
-### 5. AOV (Average Order Value)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** count
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 5. AOV (Average Order Value)
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -123,11 +176,17 @@ WHERE c.customer_type = 'RETAIL'
   SUM(net_revenue) / COUNT(DISTINCT order_id)
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Available Dashboards
 
 > **Naming convention:** Dashboard có suffix `[All]`, `[Retail]`, `[B2B]`, hoặc `[Cross]` để chỉ scope. Xem [Report Segmentation Guide](../guides/report_segmentation.md).
 
-### Layer 1 — Executive [All]
+#### Layer 1 — Executive [All]
 
 | Dashboard Name | Scope | Audience | Purpose |
 |:---|:---|:---|:---|
@@ -135,7 +194,7 @@ WHERE c.customer_type = 'RETAIL'
 | **CEO Monthly Scorecard [All]** | scope_sales | CEO / Board | Comprehensive monthly review: targets, channels, segments, efficiency |
 | **Order Profitability [All]** | scope_sales | CEO / CFO / Sales Director | P&L per order, gross margin, channel net profit |
 
-### Layer 2 — Retail Operations [Retail]
+#### Layer 2 — Retail Operations [Retail]
 
 | Dashboard Name | Scope | Audience | Purpose |
 |:---|:---|:---|:---|
@@ -147,7 +206,7 @@ WHERE c.customer_type = 'RETAIL'
 | **Sales Ops Weekly [Retail]** | scope_retail | Sales Ops / CS Lead | Weekly order processing, team performance |
 | **Sales Ops Monthly [Retail]** | scope_retail | Sales Ops / Ops Mgr | Monthly operational efficiency, staff KPIs |
 
-### Layer 2 — B2B Operations [B2B]
+#### Layer 2 — B2B Operations [B2B]
 
 | Dashboard Name | Scope | Audience | Purpose |
 |:---|:---|:---|:---|
@@ -156,29 +215,27 @@ WHERE c.customer_type = 'RETAIL'
 | **Partner Performance [B2B]** | scope_b2b | B2B Manager | CTV/Partner metrics |
 | **B2B Margin Analysis [B2B]** | scope_b2b | Finance / B2B Sales | Wholesale margin analysis |
 
-### Layer 2 — Marketing & Customers [Retail]
+#### Layer 2 — Marketing & Customers [Retail]
 
 | Dashboard Name | Scope | Audience | Purpose |
 |:---|:---|:---|:---|
 | **Marketing Weekly Tracker [Retail]** | scope_retail | Marketing Manager | Weekly channel performance, acquisition, promotions |
 | **Marketing Monthly Analysis [Retail]** | scope_retail | Marketing / CMO | Monthly deep dive: channel strategy, cohort retention |
 
-### Layer 3 — Analytics [Cross]
+#### Layer 3 — Analytics [Cross]
 
 | Dashboard Name | Scope | Audience | Purpose |
 |:---|:---|:---|:---|
 | **Channel Profitability [Cross]** | scope_sales + breakdown | Analysts / Leadership | Margin comparison by customer_type |
-
 ## Composite Metrics
 
-### Health Score (Business Health)
+#### Health Score (Business Health)
 
 > **Guide:** [Health Score — Chỉ số Sức khỏe Kinh doanh](../guides/health_score.md)
 
 - **Business Definition:** Điểm tổng hợp 0-100 đánh giá sức khỏe kinh doanh dựa trên 4 chiều: Revenue Momentum (WoW), Order Momentum (WoW), Customer Loyalty (Returning Rate), AOV Stability. Hiển thị tại tab Tổng quan của Daily/Yesterday dashboards.
 - **Thang điểm:** 75-100 Khỏe mạnh | 50-74 Cần chú ý | 0-49 Báo động
 - **Source Tables:** `fact_orders`, `dim_customers`
-
 ## Related Playbooks
 
 | Playbook                                                           | Description                                                                           |
@@ -194,14 +251,33 @@ WHERE c.customer_type = 'RETAIL'
 | **[Marketing Monthly Analysis](../playbooks/marketing_monthly_analysis.md)** | Marketing's monthly strategic analysis with cohort & campaign deep dive.   |
 | **[Sales Ops Weekly Review](../playbooks/sales_ops_weekly_review.md)** | CS/Sales Ops weekly operational review & team performance.                        |
 | **[Sales Ops Monthly Summary](../playbooks/sales_ops_monthly_summary.md)** | CS/Sales Ops monthly operations summary & staff KPIs.                        |
-
 ## Context: Order List (Reconciliation)
 
 > **Description:** Row-level order listing for cross-checking BI records against the source sales system (Sapo). Used to verify data completeness and correctness.
 > **dbt Source:** `fact_orders` joined with `dim_channels`, `dim_customers`
 > **Grain:** Per Order
 
-### 17. Order Detail List
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Order List (Reconciliation) | Is the order-level list complete enough to reconcile BI records against Sapo? | 17. Order Detail List | `fact_orders` joined with `dim_channels`, `dim_customers` | None documented |
+
+### Analytical Questions
+
+#### Q1. Order List (Reconciliation) Readiness
+
+- **Question:** Is the order-level list complete enough to reconcile BI records against Sapo?
+- **Definition:** This question defines whether `Order List (Reconciliation)` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** operational reconciliation, detail grain.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 17. Order Detail List
+
+### Metrics
+
+#### 17. Order Detail List
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -227,11 +303,39 @@ WHERE c.customer_type = 'RETAIL'
 
 - **Playbook:** [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** Planned / defined by the source model when implemented.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Operational Trends
 
 > **Description:** Analysis of sales patterns over time (hourly, daily) and by dimensions.
 
-### 6. Hourly Sales Trend
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Operational Trends | How do sales patterns change by hour, day, and channel? | 6. Hourly Sales Trend, 7. Hourly Heatmap (Day of Week Analysis), 8. Sales by Channel | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Operational Trends Readiness
+
+- **Question:** How do sales patterns change by hour, day, and channel?
+- **Definition:** This question defines whether `Operational Trends` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** operational cadence, leading/lagging mix.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 6. Hourly Sales Trend, 7. Hourly Heatmap (Day of Week Analysis), 8. Sales by Channel
+
+### Metrics
+
+#### 6. Hourly Sales Trend
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -245,7 +349,13 @@ WHERE c.customer_type = 'RETAIL'
   GROUP BY 1
   ```
 
-### 7. Hourly Heatmap (Day of Week Analysis)
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 7. Hourly Heatmap (Day of Week Analysis)
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -262,7 +372,13 @@ WHERE c.customer_type = 'RETAIL'
   ORDER BY 2, 1
   ```
 
-### 8. Sales by Channel
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 8. Sales by Channel
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -277,11 +393,39 @@ WHERE c.customer_type = 'RETAIL'
   GROUP BY 1
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Product Performance
 
 > **Description:** Best selling products and category performance.
 
-### 9. Top Selling Products
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Product Performance | Which products are driving volume, revenue, and margin? | 9. Top Selling Products | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Product Performance Readiness
+
+- **Question:** Which products are driving volume, revenue, and margin?
+- **Definition:** This question defines whether `Product Performance` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** merchandising performance, volume/value/quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 9. Top Selling Products
+
+### Metrics
+
+#### 9. Top Selling Products
 
 > **dbt Model:** [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql)
 
@@ -298,9 +442,37 @@ WHERE c.customer_type = 'RETAIL'
   ORDER BY revenue DESC
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Customer Engagement
 
-### 10. New vs Returning Customers
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Customer Engagement | How do new and returning customers contribute to growth? | 10. New vs Returning Customers | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Customer Engagement Readiness
+
+- **Question:** How do new and returning customers contribute to growth?
+- **Definition:** This question defines whether `Customer Engagement` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** customer behavior, leading/lagging mix.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 10. New vs Returning Customers
+
+### Metrics
+
+#### 10. New vs Returning Customers
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -313,9 +485,37 @@ WHERE c.customer_type = 'RETAIL'
   END
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Payment Operations
 
-### 11. Payment Method Distribution
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Payment Operations | Do payment methods or statuses create operational or reconciliation risk? | 11. Payment Method Distribution, 12. Payment Status | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Payment Operations Readiness
+
+- **Question:** Do payment methods or statuses create operational or reconciliation risk?
+- **Definition:** This question defines whether `Payment Operations` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** finance operations, operational quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 11. Payment Method Distribution, 12. Payment Status
+
+### Metrics
+
+#### 11. Payment Method Distribution
 
 > **dbt Model:** [`stg_sapo_payments`](../../../transformation/models/staging/stg_sapo_payments.sql)
 
@@ -332,7 +532,13 @@ WHERE c.customer_type = 'RETAIL'
   GROUP BY 1
   ```
 
-### 12. Payment Status
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 12. Payment Status
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -341,6 +547,12 @@ WHERE c.customer_type = 'RETAIL'
   ```sql
   SELECT payment_status, COUNT(*), SUM(total_collected) FROM fact_orders GROUP BY 1
   ```
+
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
 
 ## Context: Promotions & Discounts
 
@@ -353,7 +565,29 @@ WHERE c.customer_type = 'RETAIL'
 >
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md#42-quy-tắc-vàng)
 
-### 13. Discount Impact
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Promotions & Discounts | Do discounts and promotions create enough incremental value to justify their cost? | 13. Discount Impact, 14. Promotion Performance | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Promotions & Discounts Readiness
+
+- **Question:** Do discounts and promotions create enough incremental value to justify their cost?
+- **Definition:** This question defines whether `Promotions & Discounts` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** promotion efficiency, value/quality.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 13. Discount Impact, 14. Promotion Performance
+
+### Metrics
+
+#### 13. Discount Impact
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 > **Required Scope:** scope_retail (`customer_type = 'RETAIL'`)
@@ -371,7 +605,13 @@ WHERE c.customer_type = 'RETAIL'
   WHERE c.customer_type = 'RETAIL'
   ```
 
-### 14. Promotion Performance
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** VND
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 14. Promotion Performance
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 > **Required Scope:** scope_retail (`customer_type = 'RETAIL'`)
@@ -391,6 +631,12 @@ WHERE c.customer_type = 'RETAIL'
   GROUP BY 1
   ```
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Sales Targets
 
 > **Description:** Comparison of actual performance against defined goals.
@@ -399,7 +645,29 @@ WHERE c.customer_type = 'RETAIL'
 
 `fact_targets` stores target rules with flexible cycle types (`daily`, `weekly`, `monthly`, `quarterly`, `yearly`) and scope filters (branch, team, staff, channel, product). Each target has a `cycle_start_date`, `cycle_end_date`, and `cycle_type` derived automatically from the input sheet.
 
-### 15. Target Achievement Rate
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Sales Targets | Is sales performance ahead of or behind target pace? | 15. Target Achievement Rate, 16. Variance to Target | `fact_targets` | None documented |
+
+### Analytical Questions
+
+#### Q1. Sales Targets Readiness
+
+- **Question:** Is sales performance ahead of or behind target pace?
+- **Definition:** This question defines whether `Sales Targets` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** target tracking, strategic lagging.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 15. Target Achievement Rate, 16. Variance to Target
+
+### Metrics
+
+#### 15. Target Achievement Rate
 
 > **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
 
@@ -409,7 +677,13 @@ WHERE c.customer_type = 'RETAIL'
   SUM(actual_revenue) / NULLIF(SUM(target_val), 0)
   ```
 
-### 16. Variance to Target
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+#### 16. Variance to Target
 
 > **dbt Model:** [`fact_targets`](../../../transformation/models/marts/core/fact_targets.sql)
 
@@ -423,9 +697,37 @@ WHERE c.customer_type = 'RETAIL'
 > Do not attempt to join `fact_orders` and `fact_targets` directly in a Native Query as they have different grains (Order vs Cycle/Scope).
 > **Recommended Approach:** Create a **semantic data model** (or dbt mart `mart_sales_actual_vs_target`) to pre-aggregate `fact_orders` to match the target's cycle and scope before joining with `fact_targets`.
 
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** %
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
 ## Context: Location Analysis
 
-### 15. Sales by Region/Location
+> **Grain:** See metric-level grain notes
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Location Analysis | Which regions or locations are contributing to or dragging performance? | 15. Sales by Region/Location | See metric-level dbt sources | None documented |
+
+### Analytical Questions
+
+#### Q1. Location Analysis Readiness
+
+- **Question:** Which regions or locations are contributing to or dragging performance?
+- **Definition:** This question defines whether `Location Analysis` is healthy, drifting, or needs deeper investigation based on the metrics in this context.
+- **Nature:** location performance, comparative.
+- **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
+- **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
+- **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
+- **Related Metrics:** 15. Sales by Region/Location
+
+### Metrics
+
+#### 15. Sales by Region/Location
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
@@ -440,3 +742,9 @@ WHERE c.customer_type = 'RETAIL'
   JOIN dim_locations l USING (location_id)
   GROUP BY 1, 2
   ```
+
+- **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
+- **Formula:** See `Logic (SQL)` for the reusable calculation expression; the the business formula follows the metric definition and source grain above.
+- **Unit:** business-defined
+- **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
+- **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
