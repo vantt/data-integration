@@ -1,10 +1,13 @@
 # Playbook: Inventory Health
 
+> **Status:** DEFERRED — pending data foundation (xem audit report 260528-0834)
+> **Blocker:** `fact_inventory` table not yet built. Dashboard blocked until inventory mart is implemented.
+
 ## Overview
 
 - **Audience:** Inventory Managers
 - **Goal:** Optimization of stock levels and dead stock identification.
-- **Collection:** `Product Analytics`
+- **Collection:** `Analytics`
 
 ## Filters
 

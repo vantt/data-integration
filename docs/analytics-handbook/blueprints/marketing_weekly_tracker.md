@@ -104,19 +104,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Weekly Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Weekly Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -162,19 +160,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Online-Ecom Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Online-Ecom Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -220,19 +216,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Offline Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Offline Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -278,19 +272,15 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Online-Ecom Share %": { "suffix": "%", "decimals": 1 }
-    }
+      "Online-Ecom Share %": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -780,16 +770,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -829,16 +812,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -880,19 +856,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "New Customer Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "New Customer Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -938,19 +912,15 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "New Customer Share %": { "suffix": "%", "decimals": 1 }
-    }
+      "New Customer Share %": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1263,19 +1233,15 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Discounted Orders %": { "suffix": "%", "decimals": 1 }
-    }
+      "Discounted Orders %": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1313,19 +1279,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Avg Discount Amount": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Avg Discount Amount": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1363,19 +1327,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Total Discount Given": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Total Discount Given": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1525,19 +1487,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Social Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Social Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1579,16 +1539,9 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -1632,19 +1585,17 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Previous Week",
-        "label": "vs last week"
-      }
-    ],
     "column_settings": {
-      "Social AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "Social AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```

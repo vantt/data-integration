@@ -98,16 +98,9 @@ FROM current_mau cm, prev_mau pm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_30d",
-        "type": "anotherColumn",
-        "column": "30 ngay truoc",
-        "label": "vs 30 ngay truoc"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -141,16 +134,9 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```

@@ -53,16 +53,8 @@ WHERE c.channel_format = 'Social'
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ],
     "column_settings": {
       "Doanh thu Social": {
         "number_style": "currency",
@@ -70,7 +62,8 @@ WHERE c.channel_format = 'Social'
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -95,16 +88,9 @@ WHERE c.channel_format = 'Social'
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -137,16 +123,8 @@ WHERE c.channel_format = 'Social'
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ],
     "column_settings": {
       "AOV Social": {
         "number_style": "currency",
@@ -154,7 +132,8 @@ WHERE c.channel_format = 'Social'
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```

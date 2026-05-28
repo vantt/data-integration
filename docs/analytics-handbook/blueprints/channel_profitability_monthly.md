@@ -126,16 +126,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
       "Doanh thu": {
         "number_style": "currency",
@@ -143,7 +135,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -181,16 +174,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
       "Gia von": {
         "number_style": "currency",
@@ -198,7 +183,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -236,16 +222,8 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_period",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
       "Lai gop": {
         "number_style": "currency",
@@ -253,7 +231,8 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```

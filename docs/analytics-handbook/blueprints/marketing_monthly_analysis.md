@@ -81,16 +81,8 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -98,7 +90,8 @@ FROM this_month tm, last_month lm
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -133,16 +126,9 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -175,16 +161,9 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -221,16 +200,8 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ],
     "column_settings": {
       "AOV": {
         "number_style": "currency",
@@ -238,7 +209,8 @@ FROM this_month tm, last_month lm
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -852,16 +824,9 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -900,16 +865,9 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -955,19 +913,14 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM pp Change",
-        "label": "vs last month (pp)"
-      }
-    ],
     "column_settings": {
-      "New Customer Rev %": { "suffix": "%" }
-    }
+      "New Customer Rev %": {
+        "suffix": "%"
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1090,16 +1043,9 @@ FROM current_count c, prev_count p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ]
+    "table.pivot": false
   }
 }
 ```
@@ -1164,19 +1110,14 @@ FROM stats s, prev p
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM pp",
-        "label": "vs last month (pp)"
-      }
-    ],
     "column_settings": {
-      "Active Rate %": { "suffix": "%" }
-    }
+      "Active Rate %": {
+        "suffix": "%"
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1345,19 +1286,16 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM %",
-        "label": "vs last month"
-      }
-    ],
     "column_settings": {
-      "Discount Amount": { "number_style": "currency", "currency": "VND", "compact": true }
-    }
+      "Discount Amount": {
+        "number_style": "currency",
+        "currency": "VND",
+        "compact": true
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1393,19 +1331,14 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM pp",
-        "label": "vs last month (pp)"
-      }
-    ],
     "column_settings": {
-      "Discounted %": { "suffix": "%" }
-    }
+      "Discounted %": {
+        "suffix": "%"
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
@@ -1441,19 +1374,14 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "scalar",
+  "display": "table",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "MoM pp",
-        "label": "vs last month (pp)"
-      }
-    ],
     "column_settings": {
-      "Avg Discount %": { "suffix": "%" }
-    }
+      "Avg Discount %": {
+        "suffix": "%"
+      }
+    },
+    "table.pivot": false
   }
 }
 ```
