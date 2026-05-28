@@ -34,5 +34,6 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('int_shopee_order_fees')
-              field: order_code
+              arguments:
+                to: ref('int_shopee_order_fees')
+                field: order_code

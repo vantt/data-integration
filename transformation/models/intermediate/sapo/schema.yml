@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: int_return_sku_lines
+    description: >
+      Returns × SKU approximation (Case B). Grain: (return_id, product_key).
+      CAVEAT: Sapo returns API is order-level only — no per-line-item breakdown.
+      All SKUs present in a returned order are included. refund_amount_allocated
+      is proportional by line revenue share within the order.
+      Use for ranking / triage direction — not precise per-SKU refund accounting.
+    columns:
+      - name: return_sku_key
+        description: "Surrogate key: MD5(return_id || product_key)"
+        tests: [unique, not_null]
+      - name: return_id
+        tests: [not_null]
+      - name: order_code
+        tests: [not_null]
+      - name: product_key
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_key
+      - name: return_date
+        tests: [not_null]
+      - name: channel_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_channels')
+                field: channel_key
+              config:
+                severity: warn
+                where: "channel_key IS NOT NULL"
+      - name: refund_amount_allocated
+        description: "Proportional refund = (line_revenue / order_total_revenue) × return refund_amount"
+      - name: refund_amount_order_total
+        description: "Raw order-level refund amount (sanity check — should match SUM per return_id)"

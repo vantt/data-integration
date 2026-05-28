@@ -17,7 +17,9 @@ models:
       - name: channel_code
         tests:
           - accepted_values:
-              values: ['DAILY', 'ECOM', 'CS', 'KHAC', 'UNKNOWN']
+              arguments:
+                values: ['DAILY', 'ECOM', 'CS', 'KHAC', 'UNKNOWN']
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns: [voucher_no, line_no]
+          arguments:
+            combination_of_columns: [voucher_no, line_no]
