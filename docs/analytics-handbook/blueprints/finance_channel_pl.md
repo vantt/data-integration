@@ -10,6 +10,7 @@
 > **Description:** Audience: Finance/Sales Director. Scope: Cross-segment, all channels. Câu hỏi: Channel nào lỗ sau khi trừ phí platform?
 > **Domain:** [Channel P&L Waterfall & Loss-Leader Detection](../domains/finance.md#context-channel-pl-waterfall--loss-leader-detection)
 > **Mart source:** `fact_order_economics` + `int_misa_sales_lines` (2026-05-27)
+> **Target source:** `dim_channel_targets` seed CSV (manually maintained; `dbt seed --select dim_channel_targets` to refresh)
 
 Dashboard phân tích lợi nhuận theo kênh bán hàng — waterfall từ doanh thu gộp đến lợi nhuận ròng sau phí platform, bảng điểm kênh, heatmap margin theo tháng, bảng biến động so kỳ trước, và cảnh báo loss-leader. Dành cho Finance Director và Sales Director trong MBR hàng tháng.
 
@@ -197,34 +198,59 @@ Bảng điểm kênh — Net Revenue, Gross Margin, Net Margin, Khối lượng 
 
 #### ❓ Question: Channel Scorecard Table
 
-Một dòng/kênh: Net Revenue, Gross Margin %, Net Margin %, Số đơn, Platform Fees. Sắp xếp Net Margin % tăng dần (kênh lỗ nhất lên đầu). Conditional formatting: Net Margin % < 0 = đỏ, ≥ 20% = xanh.
+Một dòng/kênh: Net Revenue, Gross Margin %, Net Margin %, Target %, Variance pp, Số đơn, Platform Fees. Target kéo từ dim_channel_targets (metric_type='NET_MARGIN_PCT', tháng hiện tại). Sắp xếp Net Margin % tăng dần (kênh lỗ nhất lên đầu). Conditional formatting: Net Margin % < 0 = đỏ, ≥ 20% = xanh; Variance pp < -3 = đỏ nhạt.
 
 **Domain Reference**: [CPL5 — Channel Scorecard](../domains/finance.md#cpl5-channel-scorecard-bảng-điểm-kênh)
 
 ```sql
+WITH actuals AS (
+    SELECT
+        c.channel_key,
+        c.channel_name,
+        COUNT(*)                                                                              AS order_count,
+        COALESCE(SUM(e.net_revenue), 0)                                                       AS net_revenue,
+        ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1)                AS gross_margin_pct,
+        ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1)          AS net_margin_pct,
+        COALESCE(
+            SUM(
+                ABS(COALESCE(e.shopee_platform_fees, 0))
+              + ABS(COALESCE(e.shopee_infra_fee, 0))
+              + ABS(COALESCE(e.shopee_voucher_xtra_fee, 0))
+            ),
+            0
+        )                                                                                     AS platform_fees
+    FROM fact_order_economics e
+    JOIN dim_channels c USING (channel_key)
+    WHERE e.has_cogs
+      AND e.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel
+      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND c.channel_name = {{channel}}]]
+    GROUP BY c.channel_key, c.channel_name
+),
+
+targets AS (
+    SELECT
+        channel_key,
+        target_value AS target_margin_pct
+    FROM dim_channel_targets
+    WHERE metric_type = 'NET_MARGIN_PCT'
+      AND target_source = 'BUDGET'
+      AND period_month = date_trunc('month', current_date)
+)
+
 SELECT
-    c.channel_name                                                                        AS "Kenh",
-    COUNT(*)                                                                              AS "So don",
-    COALESCE(SUM(e.net_revenue), 0)                                                       AS "Net Revenue",
-    ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1)                AS "Gross Margin %",
-    ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1)          AS "Net Margin %",
-    COALESCE(
-        SUM(
-            ABS(COALESCE(e.shopee_platform_fees, 0))
-          + ABS(COALESCE(e.shopee_infra_fee, 0))
-          + ABS(COALESCE(e.shopee_voucher_xtra_fee, 0))
-        ),
-        0
-    )                                                                                     AS "Platform Fees"
-FROM fact_order_economics e
-JOIN dim_channels c USING (channel_key)
-WHERE e.has_cogs
-  AND e.status NOT IN ('CANCELLED', 'Voided')
-  AND c.is_sales_channel
-  [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-  [[AND c.channel_name = {{channel}}]]
-GROUP BY c.channel_name
-ORDER BY "Net Margin %" ASC
+    a.channel_name                                                    AS "Kenh",
+    a.order_count                                                     AS "So don",
+    a.net_revenue                                                     AS "Net Revenue",
+    a.gross_margin_pct                                                AS "Gross Margin %",
+    a.net_margin_pct                                                  AS "Net Margin %",
+    t.target_margin_pct                                               AS "Target %",
+    ROUND(COALESCE(a.net_margin_pct, 0) - COALESCE(t.target_margin_pct, 0), 1) AS "Variance pp",
+    a.platform_fees                                                   AS "Platform Fees"
+FROM actuals a
+LEFT JOIN targets t USING (channel_key)
+ORDER BY a.net_margin_pct ASC
 ```
 
 ```json metabase-viz
@@ -246,6 +272,14 @@ ORDER BY "Net Margin %" ASC
         "operator": ">=",
         "value": 20,
         "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Variance pp"],
+        "type": "single",
+        "operator": "<",
+        "value": -3,
+        "color": "#F9D45C",
         "highlight_row": false
       }
     ],
@@ -270,6 +304,15 @@ ORDER BY "Net Margin %" ASC
       "Net Margin %": {
         "number_style": "percent",
         "scale": 0.01,
+        "decimals": 1
+      },
+      "Target %": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      },
+      "Variance pp": {
+        "number_style": "decimal",
         "decimals": 1
       }
     }
@@ -529,24 +572,47 @@ ORDER BY "Delta Margin pp" ASC
 {"row": 3, "col":0, "size_x":18, "size_y":8}
 ```
 
-#### ❓ Question: Net Margin Trend by Channel
+#### ❓ Question: Net Margin Trend by Channel (with Budget Target)
 
-Multi-line: Net Margin % theo tháng × kênh. Xem xu hướng dài hạn 12 tháng.
+Multi-line: Net Margin % theo tháng × kênh. Overlay "Budget Target %" từ dim_channel_targets (metric_type='NET_MARGIN_PCT'). Xem xu hướng 12 tháng so với kế hoạch.
 
 ```sql
+-- Actual net margin per channel per month
+WITH actuals AS (
+    SELECT
+        c.channel_name                                                                AS channel_name,
+        date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))               AS period_month,
+        ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS net_margin_pct
+    FROM fact_order_economics e
+    JOIN dim_channels c USING (channel_key)
+    WHERE e.has_cogs
+      AND e.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel
+      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= (current_date - INTERVAL '12 months')
+      [[AND c.channel_name = {{channel}}]]
+    GROUP BY c.channel_name,
+             date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))
+),
+
+-- Budget targets for the same window
+budget AS (
+    SELECT
+        channel_name,
+        period_month,
+        target_value AS target_margin_pct
+    FROM dim_channel_targets
+    WHERE metric_type = 'NET_MARGIN_PCT'
+      AND target_source = 'BUDGET'
+      AND period_month >= (current_date - INTERVAL '12 months')
+)
+
 SELECT
-    c.channel_name                                                                AS "Kenh",
-    date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))               AS "Thang",
-    ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS "Net Margin %"
-FROM fact_order_economics e
-JOIN dim_channels c USING (channel_key)
-WHERE e.has_cogs
-  AND e.status NOT IN ('CANCELLED', 'Voided')
-  AND c.is_sales_channel
-  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= (current_date - INTERVAL '12 months')
-  [[AND c.channel_name = {{channel}}]]
-GROUP BY c.channel_name,
-         date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))
+    a.channel_name              AS "Kenh",
+    a.period_month              AS "Thang",
+    a.net_margin_pct            AS "Net Margin %",
+    b.target_margin_pct         AS "Budget Target %"
+FROM actuals a
+LEFT JOIN budget b USING (channel_name, period_month)
 ORDER BY "Thang", "Kenh"
 ```
 
@@ -555,12 +621,24 @@ ORDER BY "Thang", "Kenh"
   "display": "line",
   "visualization_settings": {
     "graph.dimensions": ["Thang", "Kenh"],
-    "graph.metrics": ["Net Margin %"],
+    "graph.metrics": ["Net Margin %", "Budget Target %"],
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "Net Margin (%)",
     "graph.colors": ["#509EE3", "#88BDE6", "#A989C5", "#F2A86F", "#F9D45C"],
+    "series_settings": {
+      "Budget Target %": {
+        "line.style": "dashed",
+        "color": "#EF8C8C",
+        "show_series_values": false
+      }
+    },
     "column_settings": {
       "Net Margin %": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      },
+      "Budget Target %": {
         "number_style": "percent",
         "scale": 0.01,
         "decimals": 1

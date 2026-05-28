@@ -2,6 +2,34 @@ version: 2
 
 models:
   # Dimensions
+  - name: dim_channel_targets
+    description: >
+      Channel-level budget/target dimension. One row per (channel_key, period_month,
+      metric_type, target_source). Built from seed_channel_targets CSV; channel_key
+      resolved via join to dim_channels by channel_name.
+      metric_type: NET_REVENUE (VND), NET_MARGIN_PCT (%), ORDER_COUNT (count).
+    columns:
+      - name: channel_target_key
+        tests: [unique, not_null]
+      - name: channel_key
+        tests: [not_null]
+      - name: period_month
+        tests: [not_null]
+      - name: metric_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['NET_REVENUE', 'NET_MARGIN_PCT', 'ORDER_COUNT']
+      - name: target_source
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['BUDGET', 'STRETCH', 'MIN_VIABLE']
+      - name: target_value
+        tests: [not_null]
+
   - name: dim_customers
     description: "Customer dimension with 8 segmentation dimensions. See docs/context/customer-segmentation.md"
     columns:
@@ -113,13 +141,15 @@ models:
         data_type: varchar
         tests:
           - accepted_values:
-              values: ['Online-Ecommerce', 'Offline', 'Internal']
+              arguments:
+                values: ['Online-Ecommerce', 'Offline', 'Internal']
       - name: channel_format
         description: "Tier 2. Marketplace / Social / Web / Retail / B2B / Direct / System / CrossBorder Fulfillment / Other."
         data_type: varchar
         tests:
           - accepted_values:
-              values: ['Marketplace', 'Social', 'Web', 'Retail', 'B2B', 'Direct', 'System', 'CrossBorder Fulfillment', 'Other']
+              arguments:
+                values: ['Marketplace', 'Social', 'Web', 'Retail', 'B2B', 'Direct', 'System', 'CrossBorder Fulfillment', 'Other']
       - name: platform
         data_type: varchar
       - name: channel_brand
@@ -133,7 +163,8 @@ models:
         data_type: varchar
         tests:
           - accepted_values:
-              values: ['channel', 'customer_type', 'team', 'purpose', 'arrangement']
+              arguments:
+                values: ['channel', 'customer_type', 'team', 'purpose', 'arrangement']
       - name: is_sales_channel
         description: "true = real sales channel (not System/Internal)"
         data_type: boolean

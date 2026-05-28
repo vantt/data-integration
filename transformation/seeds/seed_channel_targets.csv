@@ -1,0 +1,109 @@
+channel_name,period_month,metric_type,target_value,target_source,notes
+Shopee (Unspecified),2026-01-01,NET_REVENUE,800000000,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-01-01,NET_MARGIN_PCT,12.0,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-01-01,ORDER_COUNT,3500,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-02-01,NET_REVENUE,750000000,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-02-01,NET_MARGIN_PCT,12.0,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-02-01,ORDER_COUNT,3200,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-03-01,NET_REVENUE,850000000,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-03-01,NET_MARGIN_PCT,12.5,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-03-01,ORDER_COUNT,3700,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-04-01,NET_REVENUE,850000000,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-04-01,NET_MARGIN_PCT,12.5,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-04-01,ORDER_COUNT,3700,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-05-01,NET_REVENUE,900000000,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-05-01,NET_MARGIN_PCT,13.0,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-05-01,ORDER_COUNT,4000,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-06-01,NET_REVENUE,900000000,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-06-01,NET_MARGIN_PCT,13.0,BUDGET,Placeholder — update with real budget
+Shopee (Unspecified),2026-06-01,ORDER_COUNT,4000,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-01-01,NET_REVENUE,300000000,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-01-01,NET_MARGIN_PCT,10.0,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-01-01,ORDER_COUNT,1200,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-02-01,NET_REVENUE,280000000,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-02-01,NET_MARGIN_PCT,10.0,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-02-01,ORDER_COUNT,1100,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-03-01,NET_REVENUE,320000000,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-03-01,NET_MARGIN_PCT,10.5,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-03-01,ORDER_COUNT,1300,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-04-01,NET_REVENUE,320000000,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-04-01,NET_MARGIN_PCT,10.5,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-04-01,ORDER_COUNT,1300,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-05-01,NET_REVENUE,350000000,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-05-01,NET_MARGIN_PCT,11.0,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-05-01,ORDER_COUNT,1400,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-06-01,NET_REVENUE,350000000,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-06-01,NET_MARGIN_PCT,11.0,BUDGET,Placeholder — update with real budget
+Lazada (Unspecified),2026-06-01,ORDER_COUNT,1400,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-01-01,NET_REVENUE,200000000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-01-01,NET_MARGIN_PCT,8.0,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-01-01,ORDER_COUNT,900,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-02-01,NET_REVENUE,190000000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-02-01,NET_MARGIN_PCT,8.0,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-02-01,ORDER_COUNT,850,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-03-01,NET_REVENUE,220000000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-03-01,NET_MARGIN_PCT,8.5,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-03-01,ORDER_COUNT,1000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-04-01,NET_REVENUE,220000000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-04-01,NET_MARGIN_PCT,8.5,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-04-01,ORDER_COUNT,1000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-05-01,NET_REVENUE,250000000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-05-01,NET_MARGIN_PCT,9.0,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-05-01,ORDER_COUNT,1100,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-06-01,NET_REVENUE,250000000,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-06-01,NET_MARGIN_PCT,9.0,BUDGET,Placeholder — update with real budget
+TiktokShop,2026-06-01,ORDER_COUNT,1100,BUDGET,Placeholder — update with real budget
+Web,2026-01-01,NET_REVENUE,150000000,BUDGET,Placeholder — update with real budget
+Web,2026-01-01,NET_MARGIN_PCT,22.0,BUDGET,Placeholder — update with real budget
+Web,2026-01-01,ORDER_COUNT,600,BUDGET,Placeholder — update with real budget
+Web,2026-02-01,NET_REVENUE,140000000,BUDGET,Placeholder — update with real budget
+Web,2026-02-01,NET_MARGIN_PCT,22.0,BUDGET,Placeholder — update with real budget
+Web,2026-02-01,ORDER_COUNT,560,BUDGET,Placeholder — update with real budget
+Web,2026-03-01,NET_REVENUE,160000000,BUDGET,Placeholder — update with real budget
+Web,2026-03-01,NET_MARGIN_PCT,22.5,BUDGET,Placeholder — update with real budget
+Web,2026-03-01,ORDER_COUNT,640,BUDGET,Placeholder — update with real budget
+Web,2026-04-01,NET_REVENUE,160000000,BUDGET,Placeholder — update with real budget
+Web,2026-04-01,NET_MARGIN_PCT,22.5,BUDGET,Placeholder — update with real budget
+Web,2026-04-01,ORDER_COUNT,640,BUDGET,Placeholder — update with real budget
+Web,2026-05-01,NET_REVENUE,175000000,BUDGET,Placeholder — update with real budget
+Web,2026-05-01,NET_MARGIN_PCT,23.0,BUDGET,Placeholder — update with real budget
+Web,2026-05-01,ORDER_COUNT,700,BUDGET,Placeholder — update with real budget
+Web,2026-06-01,NET_REVENUE,175000000,BUDGET,Placeholder — update with real budget
+Web,2026-06-01,NET_MARGIN_PCT,23.0,BUDGET,Placeholder — update with real budget
+Web,2026-06-01,ORDER_COUNT,700,BUDGET,Placeholder — update with real budget
+Facebook,2026-01-01,NET_REVENUE,100000000,BUDGET,Placeholder — update with real budget
+Facebook,2026-01-01,NET_MARGIN_PCT,18.0,BUDGET,Placeholder — update with real budget
+Facebook,2026-01-01,ORDER_COUNT,400,BUDGET,Placeholder — update with real budget
+Facebook,2026-02-01,NET_REVENUE,95000000,BUDGET,Placeholder — update with real budget
+Facebook,2026-02-01,NET_MARGIN_PCT,18.0,BUDGET,Placeholder — update with real budget
+Facebook,2026-02-01,ORDER_COUNT,380,BUDGET,Placeholder — update with real budget
+Facebook,2026-03-01,NET_REVENUE,110000000,BUDGET,Placeholder — update with real budget
+Facebook,2026-03-01,NET_MARGIN_PCT,18.5,BUDGET,Placeholder — update with real budget
+Facebook,2026-03-01,ORDER_COUNT,440,BUDGET,Placeholder — update with real budget
+Facebook,2026-04-01,NET_REVENUE,110000000,BUDGET,Placeholder — update with real budget
+Facebook,2026-04-01,NET_MARGIN_PCT,18.5,BUDGET,Placeholder — update with real budget
+Facebook,2026-04-01,ORDER_COUNT,440,BUDGET,Placeholder — update with real budget
+Facebook,2026-05-01,NET_REVENUE,120000000,BUDGET,Placeholder — update with real budget
+Facebook,2026-05-01,NET_MARGIN_PCT,19.0,BUDGET,Placeholder — update with real budget
+Facebook,2026-05-01,ORDER_COUNT,480,BUDGET,Placeholder — update with real budget
+Facebook,2026-06-01,NET_REVENUE,120000000,BUDGET,Placeholder — update with real budget
+Facebook,2026-06-01,NET_MARGIN_PCT,19.0,BUDGET,Placeholder — update with real budget
+Facebook,2026-06-01,ORDER_COUNT,480,BUDGET,Placeholder — update with real budget
+GrabMart,2026-01-01,NET_REVENUE,50000000,BUDGET,Placeholder — update with real budget
+GrabMart,2026-01-01,NET_MARGIN_PCT,15.0,BUDGET,Placeholder — update with real budget
+GrabMart,2026-01-01,ORDER_COUNT,250,BUDGET,Placeholder — update with real budget
+GrabMart,2026-02-01,NET_REVENUE,48000000,BUDGET,Placeholder — update with real budget
+GrabMart,2026-02-01,NET_MARGIN_PCT,15.0,BUDGET,Placeholder — update with real budget
+GrabMart,2026-02-01,ORDER_COUNT,240,BUDGET,Placeholder — update with real budget
+GrabMart,2026-03-01,NET_REVENUE,55000000,BUDGET,Placeholder — update with real budget
+GrabMart,2026-03-01,NET_MARGIN_PCT,15.5,BUDGET,Placeholder — update with real budget
+GrabMart,2026-03-01,ORDER_COUNT,275,BUDGET,Placeholder — update with real budget
+GrabMart,2026-04-01,NET_REVENUE,55000000,BUDGET,Placeholder — update with real budget
+GrabMart,2026-04-01,NET_MARGIN_PCT,15.5,BUDGET,Placeholder — update with real budget
+GrabMart,2026-04-01,ORDER_COUNT,275,BUDGET,Placeholder — update with real budget
+GrabMart,2026-05-01,NET_REVENUE,60000000,BUDGET,Placeholder — update with real budget
+GrabMart,2026-05-01,NET_MARGIN_PCT,16.0,BUDGET,Placeholder — update with real budget
+GrabMart,2026-05-01,ORDER_COUNT,300,BUDGET,Placeholder — update with real budget
+GrabMart,2026-06-01,NET_REVENUE,60000000,BUDGET,Placeholder — update with real budget
+GrabMart,2026-06-01,NET_MARGIN_PCT,16.0,BUDGET,Placeholder — update with real budget
+GrabMart,2026-06-01,ORDER_COUNT,300,BUDGET,Placeholder — update with real budget
