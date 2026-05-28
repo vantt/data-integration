@@ -24,11 +24,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### Filter: Period
@@ -57,7 +57,7 @@ SELECT
 San pham nao tao lai, san pham nao keo xuong?
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Products
@@ -81,7 +81,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":4, "size_y":3}
+{"row": 3, "col":0, "size_x":4, "size_y":3}
 ```
 
 #### Question: Avg Margin %
@@ -115,7 +115,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{"row":2, "col":4, "size_x":5, "size_y":3}
+{"row": 3, "col":4, "size_x":5, "size_y":3}
 ```
 
 #### Question: Highest Margin Product
@@ -158,7 +158,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{"row":2, "col":9, "size_x":5, "size_y":3}
+{"row": 3, "col":9, "size_x":5, "size_y":3}
 ```
 
 #### Question: Lowest Margin Product
@@ -201,7 +201,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Ranking Heading
@@ -209,7 +209,7 @@ LIMIT 1
 Top 20 san pham theo lai gop
 
 ```json metabase-pos
-{"row":5, "col":0, "size_x":18, "size_y":1}
+{"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Top Products by Profit
@@ -252,7 +252,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":9, "size_y":9}
+{"row": 7, "col":0, "size_x":9, "size_y":9}
 ```
 
 #### Question: Bottom Margin Products
@@ -301,7 +301,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{"row":6, "col":9, "size_x":9, "size_y":9}
+{"row": 7, "col":9, "size_x":9, "size_y":9}
 ```
 
 #### 📝 Text: Detail Heading
@@ -309,7 +309,7 @@ LIMIT 20
 Chi tiet san pham — margin, doanh thu, gia von theo kenh
 
 ```json metabase-pos
-{"row":15, "col":0, "size_x":18, "size_y":1}
+{"row": 16, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Product Detail Table
@@ -370,5 +370,15 @@ ORDER BY "Lai gop" DESC
 ```
 
 ```json metabase-pos
-{"row":16, "col":0, "size_x":18, "size_y":10}
+{"row": 17, "col":0, "size_x":18, "size_y":10}
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_misa_sales_lines · **Cadence:** rolling-30d · **Scope:** NOT is_promo_line · **Caveats:** SKU-level COGS only
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

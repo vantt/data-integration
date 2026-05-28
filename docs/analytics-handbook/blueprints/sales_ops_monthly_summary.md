@@ -5,11 +5,11 @@
 
 Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completion rate, conditional formatting throughout. Monthly operational review for Sales Ops / Operations Manager.
 
-## Collection: Operations > Periodic Reviews
+## 📂 Collection: Operations > Periodic Reviews
 
-### Dashboard: Sales Ops Monthly Summary
+### Dashboard: Sales Ops Monthly Summary [Retail]
 
-**Description**: Monthly operational summary — order efficiency, quality analysis, channel health, social commerce results, staff productivity, payment operations. 3 tabs: Tong quan thang, Kenh & Chi nhanh, Doi ngu & Thanh toan.
+**Description**: Audience: Sales Ops Lead / Operations Manager. Scope: Retail (customer_type='RETAIL'). Monthly operational summary — order efficiency, quality analysis, channel health, social commerce results, staff productivity, payment operations, monthly margin & loss-order alert. 4 tabs: Tong quan thang, Kenh & Chi nhanh, Doi ngu & Thanh toan, Margin.
 
 ---
 
@@ -50,11 +50,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Review ket qua thang — doanh thu, don hang, chat luong van hanh
@@ -62,7 +62,7 @@ SELECT
 # Review ket qua thang — doanh thu, don hang, chat luong van hanh
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
@@ -70,7 +70,7 @@ SELECT
 # Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
 
 ```json metabase-pos
-{"row":5, "col":0, "size_x":18, "size_y":1}
+{"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo doi xu huong 6 thang — cancellation va return rate vs target
@@ -78,7 +78,7 @@ SELECT
 # Theo doi xu huong 6 thang — cancellation va return rate vs target
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":1}
+{"row": 13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Orders
@@ -124,7 +124,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":3}
+{"row": 3, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Net Revenue
@@ -175,7 +175,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -230,7 +230,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Completion Rate
@@ -263,7 +263,7 @@ WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -301,7 +301,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":6, "size_y":6}
+{"row": 7, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### Question: Avg Time to Complete
@@ -354,7 +354,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{"row":6, "col":6, "size_x":6, "size_y":6}
+{"row": 7, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### Question: Cancelled & Returns Summary
@@ -419,7 +419,7 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{"row":6, "col":12, "size_x":6, "size_y":6}
+{"row": 7, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -458,7 +458,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":9, "size_y":6}
+{"row": 14, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Return Rate Trend (6M)
@@ -497,7 +497,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":13, "col":9, "size_x":9, "size_y":6}
+{"row": 14, "col":9, "size_x":9, "size_y":6}
 ```
 
 #### Question: Top 10 Returned Products
@@ -543,12 +543,37 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{"row":19, "col":0, "size_x":18, "size_y":6}
+{"row": 20, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: Kenh & Chi nhanh
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Xac dinh kenh chiem workload — ranking orders va revenue
 
@@ -563,7 +588,7 @@ LIMIT 10
 # Danh gia hieu suat van hanh kenh — completion, cancel, return rates
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phan tich huy don theo kenh — kenh nao huy nhieu nhat?
@@ -571,7 +596,7 @@ LIMIT 10
 # Phan tich huy don theo kenh — kenh nao huy nhieu nhat?
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Danh gia hieu suat chi nhanh — volume va van de can xu ly
@@ -579,7 +604,7 @@ LIMIT 10
 # Danh gia hieu suat chi nhanh — volume va van de can xu ly
 
 ```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders by Channel
@@ -611,7 +636,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 2, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Channel
@@ -647,7 +672,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 2, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -716,7 +741,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -751,7 +776,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 16, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Cancellation Share by Channel
@@ -783,7 +808,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 16, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -817,7 +842,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 23, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Branch Performance Table
@@ -872,12 +897,37 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 23, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: Doi ngu & Thanh toan
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Theo doi hieu suat Social Commerce — revenue va nhan vien
 
@@ -892,7 +942,7 @@ ORDER BY 3 DESC
 # Danh gia hieu suat nhan vien toan kenh — ranking va completion
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiem tra xu huong thanh toan va doi soat — PTTT shift va pending alert
@@ -900,7 +950,7 @@ ORDER BY 3 DESC
 # Kiem tra xu huong thanh toan va doi soat — PTTT shift va pending alert
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Social Revenue
@@ -955,7 +1005,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social Orders
@@ -1007,7 +1057,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social AOV
@@ -1066,7 +1116,7 @@ FROM this_month tm, last_month lm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---
@@ -1104,7 +1154,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: CS Staff Leaderboard
@@ -1152,7 +1202,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 5, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
@@ -1191,7 +1241,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Staff Performance Table
@@ -1248,7 +1298,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1282,7 +1332,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 19, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Payment Method Trend (6M)
@@ -1316,7 +1366,7 @@ ORDER BY 1, 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 19, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Payment Status Summary
@@ -1365,7 +1415,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 25, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 ---
@@ -1375,5 +1425,189 @@ ORDER BY 2 DESC
 Source: fact_orders · Updated monthly · Excludes incomplete current month
 
 ```json metabase-pos
-{ "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 30, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+---
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+### Tab: Margin
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+#### 📝 Text: Phan tich bien loi nhuan theo kenh — kenh nao hieu qua nhat?
+
+# Phan tich bien loi nhuan theo kenh — kenh nao hieu qua nhat?
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Monthly Margin by Channel
+
+Table: channel breakdown with order count, revenue, gross margin %, and MoM delta in percentage points — sorted by gross margin % DESC.
+
+```sql
+WITH
+this_month AS (
+    SELECT
+        c.channel_name                                                        AS channel,
+        COUNT(DISTINCT e.order_id)                                            AS orders_tm,
+        COALESCE(SUM(e.net_revenue), 0)                                       AS revenue_tm,
+        COALESCE(SUM(e.gross_profit), 0)                                      AS gp_tm,
+        ROUND(
+            COALESCE(SUM(e.gross_profit), 0)
+            / NULLIF(SUM(e.net_revenue), 0) * 100
+        , 1)                                                                  AS margin_pct_tm
+    FROM fact_order_economics e
+    JOIN dim_channels c ON e.channel_key = c.channel_key
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND e.date_key <  CAST(date_trunc('month', current_date) AS DATE)
+    GROUP BY c.channel_name
+),
+last_month AS (
+    SELECT
+        c.channel_name                                                        AS channel,
+        ROUND(
+            COALESCE(SUM(e.gross_profit), 0)
+            / NULLIF(SUM(e.net_revenue), 0) * 100
+        , 1)                                                                  AS margin_pct_lm
+    FROM fact_order_economics e
+    JOIN dim_channels c ON e.channel_key = c.channel_key
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
+      AND e.date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+    GROUP BY c.channel_name
+)
+SELECT
+    tm.channel                                                AS "Channel",
+    tm.orders_tm                                              AS "Orders",
+    tm.revenue_tm                                             AS "Revenue",
+    tm.margin_pct_tm                                          AS "Gross Margin %",
+    ROUND(tm.margin_pct_tm - COALESCE(lm.margin_pct_lm, 0), 1) AS "MoM Δ pp"
+FROM this_month tm
+LEFT JOIN last_month lm ON tm.channel = lm.channel
+ORDER BY tm.margin_pct_tm DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "column_settings": {
+      "Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Gross Margin %"],
+        "type": "single",
+        "operator": "<",
+        "value": 20,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["MoM Δ pp"],
+        "type": "single",
+        "operator": "<",
+        "value": 0,
+        "color": "#F9D45C",
+        "highlight_row": false
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### Question: Loss-Order Alert (Monthly)
+
+Scalar — count of completed orders where channel_net_profit < 0 (loss-making orders), with MoM comparison.
+
+```sql
+WITH
+this_month AS (
+    SELECT COUNT(DISTINCT order_id) AS val
+    FROM fact_order_economics
+    WHERE channel_net_profit < 0
+      AND status NOT IN ('CANCELLED', 'Voided')
+      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND date_key <  CAST(date_trunc('month', current_date) AS DATE)
+),
+last_month AS (
+    SELECT COUNT(DISTINCT order_id) AS val
+    FROM fact_order_economics
+    WHERE channel_net_profit < 0
+      AND status NOT IN ('CANCELLED', 'Voided')
+      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
+      AND date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+)
+SELECT
+    tm.val AS "Don Lo (thang nay)",
+    lm.val AS "Thang truoc"
+FROM this_month tm, last_month lm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "mom",
+        "type": "anotherColumn",
+        "column": "Thang truoc",
+        "label": "vs thang truoc"
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 6, "size_y": 3 }
+```
+
+#### 📝 Text: Footer
+
+Source: fact_order_economics · Updated monthly · Scope: Retail · COGS from MISA — orders without COGS show gross_profit = net_revenue
+
+```json metabase-pos
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

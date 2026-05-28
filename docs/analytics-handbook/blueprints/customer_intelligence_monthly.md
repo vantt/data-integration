@@ -68,7 +68,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Active Customers (30d)
@@ -111,7 +111,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 2, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: New Customers (Last Month)
@@ -154,7 +154,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 2, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: One-Time Buyer Rate
@@ -207,7 +207,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 2, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -217,7 +217,7 @@ FROM current_period c, previous_period p
 # Assess customer status distribution — identify at-risk concentration
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -234,11 +234,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### ❓ Question: Customer Status Distribution
@@ -280,7 +280,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":6, "size_y":6}
+{"row": 7, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Customer Segment Distribution
@@ -322,7 +322,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row":6, "col":6, "size_x":6, "size_y":6}
+{"row": 7, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue from Top 20% Customers
@@ -358,7 +358,7 @@ FROM ranked
 ```
 
 ```json metabase-pos
-{"row":6, "col":12, "size_x":6, "size_y":6}
+{"row": 7, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -368,7 +368,7 @@ FROM ranked
 # Track growth dynamics — is acquisition outpacing churn?
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":1}
+{"row": 13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Acquisition vs Churn (6M)
@@ -424,7 +424,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":13, "col":0, "size_x":18, "size_y":6}
+{"row": 14, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
@@ -434,7 +434,7 @@ ORDER BY 1
 # Review segment health scorecard — flag segments with high churn or low activity
 
 ```json metabase-pos
-{"row":19, "col":0, "size_x":18, "size_y":1}
+{"row": 20, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Customer Health Scorecard
@@ -502,12 +502,37 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row":20, "col":0, "size_x":18, "size_y":5}
+{"row": 21, "col":0, "size_x":18, "size_y":5}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Value & Segmentation
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Analyze customer value — where is revenue concentrated?
 
@@ -973,7 +998,32 @@ ORDER BY 3 DESC
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Behavior & Insights
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Analyze purchase behavior — channel and product preferences by segment
 
@@ -1292,3 +1342,13 @@ Source: dim_customers · fact_orders · Updated monthly · Excludes Unknown cust
 ```json metabase-pos
 { "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

@@ -49,11 +49,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Tab Overview Heading
@@ -61,7 +61,7 @@ SELECT
 Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Gross Margin %
@@ -94,7 +94,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":5}
+{"row": 3, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### Question: Total Revenue
@@ -149,7 +149,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total COGS
@@ -204,7 +204,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total Gross Profit
@@ -259,7 +259,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### 📝 Text: Channel Comparison Heading
@@ -267,7 +267,7 @@ FROM this_period t, prev_period p
 So sanh hieu qua giua cac kenh ban hang
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":18, "size_y":1}
+{"row": 8, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Margin by Channel
@@ -328,7 +328,7 @@ ORDER BY "Gross Margin %" DESC
 ```
 
 ```json metabase-pos
-{"row":8, "col":0, "size_x":9, "size_y":6}
+{"row": 9, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Revenue vs COGS by Channel
@@ -377,12 +377,37 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{"row":8, "col":9, "size_x":9, "size_y":6}
+{"row": 9, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_order_economics + dim_channels · **Cadence:** monthly · **Scope:** is_sales_channel + has_cogs · **Caveats:** MISA coverage gap
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Trends & Product Detail
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Trends Heading
 
 Xu huong margin theo kenh — kenh nao dang cai thien?
@@ -602,3 +627,13 @@ ORDER BY "Gross Margin %" ASC
 ```json metabase-pos
 { "row": 8, "col": 9, "size_x": 9, "size_y": 9 }
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_order_economics + dim_channels · **Cadence:** monthly · **Scope:** is_sales_channel + has_cogs · **Caveats:** MISA coverage gap
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

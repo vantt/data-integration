@@ -4,11 +4,11 @@
 
 Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich co cau phi, xu huong MoM, va chi tiet don hang/san pham bi mat margin nhieu nhat.
 
-## 📂 Collection: Operations > Periodic Reviews
+## 📂 Collection: Analytics
 
-### Dashboard: Shopee Channel Economics
+### Dashboard: Shopee Channel Economics [Cross]
 
-**Description**: Phan tich kinh te kenh Shopee — settlement margin, co cau phi san, xu huong theo thang, va chi tiet don hang/san pham co settlement thap nhat.
+**Description**: Audience: Operations Manager / Finance. Scope: Cross-segment Shopee channel deep-dive. Phan tich kinh te kenh Shopee — settlement margin, co cau phi san, xu huong theo thang, va chi tiet don hang/san pham co settlement thap nhat.
 
 ---
 
@@ -41,15 +41,15 @@ Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich
 
 ```sql
 SELECT '📅 Kỳ quyết toán Shopee — xem tab Settlement để biết ngày chính xác'
-  AS "Chu kỳ báo cáo"
+  AS " "
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Overview Heading
@@ -57,7 +57,7 @@ SELECT '📅 Kỳ quyết toán Shopee — xem tab Settlement để biết ngày
 ## Monitor chi phi ban hang Shopee — ty le tien thuc nhan sau phi san
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Settlement Margin %
@@ -96,7 +96,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":5}
+{"row": 3, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### Question: Gross Revenue
@@ -128,7 +128,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Net Settlement
@@ -160,7 +160,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Platform Fee Rate %
@@ -200,7 +200,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### Question: Chu ky bao cao
@@ -227,7 +227,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{"row":5, "col":6, "size_x":12, "size_y":2}
+{"row": 6, "col":6, "size_x":12, "size_y":2}
 ```
 
 #### 📝 Text: Fee Breakdown Heading
@@ -235,7 +235,7 @@ WHERE payout_released_at IS NOT NULL
 ## Phan tich co cau phi — loai phi nao chiem nhieu nhat?
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":18, "size_y":1}
+{"row": 8, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Fee Breakdown
@@ -286,7 +286,7 @@ ORDER BY "Gia tri phi (VND)" DESC
 ```
 
 ```json metabase-pos
-{"row":8, "col":0, "size_x":9, "size_y":6}
+{"row": 9, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Revenue to Settlement Waterfall
@@ -335,12 +335,37 @@ ORDER BY "Thu tu"
 ```
 
 ```json metabase-pos
-{"row":8, "col":9, "size_x":9, "size_y":6}
+{"row": 9, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_shopee_order_fees · **Cadence:** payout-period · **Scope:** payout_released_at IS NOT NULL · **Caveats:** Shopee fee data only
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Trends & Details
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Kỳ payout Shopee 30 ngày: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Trend Heading
 
@@ -625,4 +650,290 @@ ORDER BY "Settlement Margin %" ASC NULLS LAST
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 9 }
+```
+
+---
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_shopee_order_fees · **Cadence:** payout-period · **Scope:** payout_released_at IS NOT NULL · **Caveats:** Shopee fee data only
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+### 📑 Tab: Shopee P&L Cascade
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Kỳ payout Shopee 30 ngày: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
+#### 📝 Text: PnL Cascade Heading
+
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_shopee_order_fees · **Cadence:** payout-period · **Scope:** payout_released_at IS NOT NULL · **Caveats:** Shopee fee data only
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+## Shopee P&L Cascade — chi phi that su va diem hoa von theo don hang
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### 📝 Text: PnL Caveat
+
+**Luu y:** Du lieu nay join Shopee fees (int_shopee_order_fees) voi MISA COGS (fact_order_economics). Don hang has_cogs=FALSE khong co COGS → true_margin se bi inflation. Chi giai thich duoc tren tap mau co MISA match.
+
+```json metabase-pos
+{ "row": 1, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Shopee Margin vs COGS Scatter
+
+Phan tan don hang theo order_value va true_margin — phat hien diem hoa von. True margin = (net_settlement - cogs_amount) / gross_revenue. Mau xanh = co loi nhuan, do = lo.
+
+```sql
+WITH order_buckets AS (
+    SELECT
+        fees.order_code,
+        fees.gross_revenue,
+        fees.net_settlement,
+        COALESCE(econ.cogs_amount, 0)                                           AS cogs_amount,
+        econ.has_cogs,
+        CASE
+            WHEN fees.gross_revenue < 100000  THEN '< 100K'
+            WHEN fees.gross_revenue < 200000  THEN '100K-200K'
+            WHEN fees.gross_revenue < 500000  THEN '200K-500K'
+            WHEN fees.gross_revenue < 1000000 THEN '500K-1M'
+            ELSE '> 1M'
+        END                                                                     AS order_value_bucket,
+        CASE
+            WHEN fees.gross_revenue < 100000  THEN 50000
+            WHEN fees.gross_revenue < 200000  THEN 150000
+            WHEN fees.gross_revenue < 500000  THEN 350000
+            WHEN fees.gross_revenue < 1000000 THEN 750000
+            ELSE 1500000
+        END                                                                     AS bucket_midpoint
+    FROM int_shopee_order_fees fees
+    LEFT JOIN fact_order_economics econ ON fees.order_code = econ.order_code
+    WHERE fees.payout_released_at IS NOT NULL
+      [[AND {{date_range}}]]
+      [[AND {{order_type}}]]
+)
+SELECT
+    order_value_bucket                                                           AS "Nhom gia tri don hang",
+    bucket_midpoint                                                              AS "Gia tri trung binh (VND)",
+    ROUND(
+        (SUM(net_settlement) - SUM(cogs_amount)) * 1.0
+        / NULLIF(SUM(gross_revenue), 0),
+        4
+    )                                                                            AS "True Margin %",
+    COUNT(*)                                                                     AS "So don hang",
+    SUM(CASE WHEN has_cogs THEN 1 ELSE 0 END)                                   AS "Don co COGS (MISA)"
+FROM order_buckets
+GROUP BY order_value_bucket, bucket_midpoint
+ORDER BY bucket_midpoint
+```
+
+```json metabase-viz
+{
+  "display": "scatter",
+  "visualization_settings": {
+    "graph.dimensions": ["Gia tri trung binh (VND)"],
+    "graph.metrics": ["True Margin %"],
+    "scatter.bubble": "So don hang",
+    "graph.x_axis.title_text": "Gia tri don hang trung binh (VND)",
+    "graph.y_axis.title_text": "True Margin % (sau Shopee fees + COGS)",
+    "graph.goal_value": 0,
+    "graph.show_goal": true,
+    "graph.goal_label": "Diem hoa von (0%)",
+    "series_settings": {
+      "True Margin %": { "color": "#509EE3" }
+    },
+    "column_settings": {
+      "True Margin %": {
+        "number_style": "percent",
+        "decimals": 1
+      },
+      "Gia tri trung binh (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 2, "col": 0, "size_x": 12, "size_y": 8 }
+```
+
+#### Question: Cost Waterfall % of Net Revenue
+
+Ty le % cua tung loai chi phi so voi net_revenue — horizontal bar de thay loai phi nao "can" margin nhieu nhat. Tinh tren tap don hang co MISA COGS match.
+
+```sql
+WITH base AS (
+    SELECT
+        NULLIF(SUM(econ.net_revenue), 0)                                        AS total_net_revenue,
+        COALESCE(SUM(econ.cogs_amount), 0)                                      AS total_cogs,
+        COALESCE(SUM(ABS(fees.service_fee)), 0)                                 AS total_service_fee,
+        COALESCE(SUM(ABS(fees.payment_fee)), 0)                                 AS total_payment_fee,
+        COALESCE(SUM(ABS(fees.fixed_fee)), 0)                                   AS total_fixed_fee,
+        COALESCE(SUM(ABS(fees.infrastructure_fee)), 0)                          AS total_infra_fee,
+        COALESCE(SUM(ABS(fees.voucher_xtra_fee)), 0)                            AS total_xtra_fee,
+        COALESCE(SUM(ABS(fees.vat_tax)) + SUM(ABS(fees.personal_income_tax)), 0) AS total_taxes,
+        COALESCE(SUM(econ.gross_profit - (econ.net_revenue - fees.net_settlement)), 0) AS total_net_profit
+    FROM int_shopee_order_fees fees
+    INNER JOIN fact_order_economics econ ON fees.order_code = econ.order_code
+    WHERE fees.payout_released_at IS NOT NULL
+      AND econ.has_cogs = TRUE
+      [[AND {{date_range}}]]
+      [[AND {{order_type}}]]
+)
+SELECT
+    "Khoan muc",
+    ROUND("Phan tram" * 100, 2) AS "% cua Net Revenue"
+FROM (
+    SELECT 'COGS (Hang hoa)'     AS "Khoan muc", total_cogs / total_net_revenue AS "Phan tram", 1 AS sort_order FROM base
+    UNION ALL
+    SELECT 'Service Fee',        total_service_fee / total_net_revenue,          2 FROM base
+    UNION ALL
+    SELECT 'Payment Fee',        total_payment_fee / total_net_revenue,          3 FROM base
+    UNION ALL
+    SELECT 'Fixed Fee',          total_fixed_fee / total_net_revenue,            4 FROM base
+    UNION ALL
+    SELECT 'Infrastructure Fee', total_infra_fee / total_net_revenue,            5 FROM base
+    UNION ALL
+    SELECT 'Voucher Xtra Fee',   total_xtra_fee / total_net_revenue,             6 FROM base
+    UNION ALL
+    SELECT 'Taxes',              total_taxes / total_net_revenue,                7 FROM base
+) breakdown
+ORDER BY sort_order
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Khoan muc"],
+    "graph.metrics": ["% cua Net Revenue"],
+    "graph.colors": ["#EF8C8C"],
+    "graph.x_axis.title_text": "% cua Net Revenue",
+    "graph.y_axis.title_text": "",
+    "column_settings": {
+      "% cua Net Revenue": {
+        "number_style": "percent",
+        "decimals": 1,
+        "scale": 0.01
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 2, "col": 12, "size_x": 6, "size_y": 8 }
+```
+
+#### Question: Orders Below Breakeven (True Margin < 0)
+
+So don hang lo that su sau khi tinh COGS + phi Shopee. Chi hien thi don co MISA match (has_cogs=TRUE).
+
+```sql
+SELECT
+    fees.order_code                                                             AS "Ma don hang",
+    fees.payout_released_at                                                     AS "Ngay phat hanh",
+    fees.gross_revenue                                                          AS "Gross Revenue (VND)",
+    fees.net_settlement                                                         AS "Net Settlement (VND)",
+    COALESCE(econ.cogs_amount, 0)                                               AS "COGS (VND)",
+    fees.net_settlement - COALESCE(econ.cogs_amount, 0)                         AS "True Profit (VND)",
+    ROUND(
+        (fees.net_settlement - COALESCE(econ.cogs_amount, 0)) * 1.0
+        / NULLIF(fees.gross_revenue, 0),
+        4
+    )                                                                           AS "True Margin %"
+FROM int_shopee_order_fees fees
+INNER JOIN fact_order_economics econ ON fees.order_code = econ.order_code
+WHERE fees.payout_released_at IS NOT NULL
+  AND econ.has_cogs = TRUE
+  AND (fees.net_settlement - COALESCE(econ.cogs_amount, 0)) < 0
+  [[AND {{date_range}}]]
+  [[AND {{order_type}}]]
+ORDER BY "True Profit (VND)" ASC
+LIMIT 50
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.cell_height": "compact",
+    "table.column_formatting": [
+      {
+        "columns": ["True Margin %"],
+        "type": "single",
+        "operator": "<",
+        "value": 0,
+        "color": "#EF8C8C",
+        "highlight_row": true
+      }
+    ],
+    "column_settings": {
+      "Gross Revenue (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Net Settlement (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "COGS (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "True Profit (VND)": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "True Margin %": {
+        "number_style": "percent",
+        "decimals": 1
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 8 }
 ```

@@ -35,11 +35,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
@@ -47,7 +47,7 @@ SELECT
 # CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Kiểm tra tiến độ target tháng — on-track hay cần điều chỉnh?
@@ -55,7 +55,7 @@ SELECT
 # Kiểm tra tiến độ target tháng — on-track hay cần điều chỉnh?
 
 ```json metabase-pos
-{"row":5, "col":0, "size_x":18, "size_y":1}
+{"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
@@ -63,7 +63,7 @@ SELECT
 # Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
 
 ```json metabase-pos
-{"row":9, "col":0, "size_x":18, "size_y":1}
+{"row": 10, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Net Revenue
@@ -114,7 +114,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":3}
+{"row": 3, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Gross Revenue
@@ -165,7 +165,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Total Orders
@@ -213,7 +213,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: AOV
@@ -268,7 +268,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -314,7 +314,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":12, "size_y":3}
+{"row": 7, "col":0, "size_x":12, "size_y":3}
 ```
 
 #### Question: Pace Index
@@ -364,7 +364,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row":6, "col":12, "size_x":6, "size_y":3}
+{"row": 7, "col":12, "size_x":6, "size_y":3}
 ```
 
 ---
@@ -403,12 +403,37 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":10, "col":0, "size_x":18, "size_y":6}
+{"row": 11, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window)
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: Kenh ban hang
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Phân tích cấu trúc kênh bán hàng — Online-Ecom vs Offline
 
@@ -423,7 +448,7 @@ ORDER BY 1
 # Xác định top kênh bán hàng — ranking và biến động WoW
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Revenue by Channel Category
@@ -466,7 +491,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Channel Category WoW Comparison
@@ -525,7 +550,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 2, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
@@ -564,7 +589,7 @@ LIMIT 8
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Channel Performance Table
@@ -644,12 +669,37 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window)
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### Tab: Khach hang & Canh bao
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Đánh giá sức khỏe khách hàng — acquisition và retention
 
@@ -664,7 +714,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 # Theo dõi tỷ lệ New vs Returning 14 ngày — chất lượng tăng trưởng
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiểm tra cảnh báo vận hành — đơn hủy, trả hàng, chiết khấu
@@ -672,7 +722,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 # Kiểm tra cảnh báo vận hành — đơn hủy, trả hàng, chiết khấu
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: New Customers
@@ -716,7 +766,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Returning Revenue %
@@ -751,7 +801,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Returning Customers
@@ -803,7 +853,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---
@@ -848,7 +898,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -898,7 +948,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 13, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Return Count
@@ -944,7 +994,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 13, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Discount Rate
@@ -975,7 +1025,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 13, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 #### 📝 Text: Source & Freshness
@@ -983,5 +1033,165 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 Source: fact_orders · Updated weekly (Mon-Sun) · **Scope: All sales channels (is_sales_channel = true)** · Excludes cancelled orders
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+---
+
+### Section: Profitability (P&L)
+
+> **Scope:** `fact_order_economics` — `is_sales_channel = true AND status NOT IN ('CANCELLED','Voided') AND has_cogs = true`
+> **Window:** Tuần trước (Mon–Sun) vs tuần trước nữa (WoW). `order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days' AND order_timestamp < date_trunc('week', current_date)`
+> **Domain References:** [Order Gross Profit](../domains/finance.md#9-order-gross-profit), [Channel Net Profit](../domains/finance.md#10-channel-net-profit-lãi-ròng-kênh)
+
+#### 📝 Text: Lợi nhuận tuần qua — Net Profit, Gross Margin, Kênh lỗ
+
+# Lợi nhuận tuần qua — Net Profit, Gross Margin, Kênh lỗ
+
+```json metabase-pos
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Weekly Net Profit
+
+**Domain Reference**: [Channel Net Profit](../domains/finance.md#10-channel-net-profit-lãi-ròng-kênh) — Scalar WoW: lãi ròng kênh tuần qua vs tuần trước. CEO phát hiện ngay doanh thu tăng nhưng lợi nhuận giảm (margin erosion).
+
+```sql
+WITH
+this_week AS (
+    SELECT COALESCE(SUM(channel_net_profit), 0) AS val
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND has_cogs
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+),
+last_week AS (
+    SELECT COALESCE(SUM(channel_net_profit), 0) AS val
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND has_cogs
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+)
+SELECT
+    tw.val AS "Net Profit",
+    lw.val AS "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ],
+    "column_settings": {
+      "Net Profit": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 6, "size_y": 3 }
+```
+
+#### Question: Gross Margin %
+
+**Domain Reference**: [Order Gross Profit](../domains/finance.md#9-order-gross-profit) — Scalar WoW: biên lợi nhuận gộp % tuần qua. Tín hiệu áp lực chi phí hoặc định giá.
+
+```sql
+WITH
+this_week AS (
+    SELECT
+        ROUND(
+            SUM(gross_profit) * 100.0 / NULLIF(SUM(net_revenue), 0),
+            1
+        ) AS val
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND has_cogs
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+),
+last_week AS (
+    SELECT
+        ROUND(
+            SUM(gross_profit) * 100.0 / NULLIF(SUM(net_revenue), 0),
+            1
+        ) AS val
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND has_cogs
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+)
+SELECT
+    tw.val AS "Gross Margin %",
+    lw.val AS "Tuan truoc"
+FROM this_week tw, last_week lw
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "wow",
+        "type": "anotherColumn",
+        "column": "Tuan truoc",
+        "label": "vs tuan truoc"
+      }
+    ],
+    "column_settings": {
+      "Gross Margin %": { "suffix": "%", "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 18, "col": 6, "size_x": 6, "size_y": 3 }
+```
+
+#### Question: Loss-Making Channel Count
+
+**Domain Reference**: [Channel Net Profit](../domains/finance.md#10-channel-net-profit-lãi-ròng-kênh) — Scalar alert: số kênh đang lỗ trong tuần qua. Nếu > 0 → cần điều tra ngay chiến lược giá và chi phí sàn.
+
+```sql
+SELECT COUNT(*) AS "Kenh lo"
+FROM (
+    SELECT channel_key
+    FROM fact_order_economics
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND has_cogs
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND order_timestamp < date_trunc('week', current_date)
+    GROUP BY channel_key
+    HAVING SUM(channel_net_profit) < 0
+) loss_channels
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {}
+}
+```
+
+```json metabase-pos
+{ "row": 18, "col": 12, "size_x": 6, "size_y": 3 }
 ```

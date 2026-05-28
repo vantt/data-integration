@@ -71,7 +71,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Total Orders (B2B)
@@ -108,7 +108,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 2, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: AOV (B2B)
@@ -161,7 +161,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 2, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Unique Customers (B2B)
@@ -183,7 +183,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 2, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -193,7 +193,7 @@ WHERE date(o.order_timestamp) = current_date
 # Phan bo theo loai khach va kenh
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -206,11 +206,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### Question: Revenue by Customer Type
@@ -252,7 +252,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{"row":6, "col":0, "size_x":9, "size_y":5}
+{"row": 7, "col":0, "size_x":9, "size_y":5}
 ```
 
 #### Question: Revenue by Channel (B2B)
@@ -294,7 +294,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":6, "col":9, "size_x":9, "size_y":5}
+{"row": 7, "col":9, "size_x":9, "size_y":5}
 ```
 
 ---
@@ -304,7 +304,7 @@ ORDER BY 2 DESC
 # Top khach hang B2B hom nay
 
 ```json metabase-pos
-{"row":11, "col":0, "size_x":18, "size_y":1}
+{"row": 12, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Top B2B Customers Today
@@ -346,12 +346,37 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{"row":12, "col":0, "size_x":18, "size_y":6}
+{"row": 13, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_customers · **Cadence:** daily · **Scope:** customer_type IN ('WHOLESALE','PARTNER')
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Chi tiet don hang
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Danh sach don B2B hom nay
 

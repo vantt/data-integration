@@ -24,11 +24,11 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": {} }
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Monitor pipeline đơn hàng — trạng thái xử lý và fulfillment rate
@@ -36,7 +36,7 @@ SELECT
 # Monitor pipeline đơn hàng — trạng thái xử lý và fulfillment rate
 
 ```json metabase-pos
-{"row":1, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Fulfillment Rate
@@ -67,7 +67,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 ```
 
 ```json metabase-pos
-{"row":2, "col":0, "size_x":6, "size_y":5}
+{"row": 3, "col":0, "size_x":6, "size_y":5}
 ```
 
 #### Question: Tổng đơn hôm nay
@@ -101,7 +101,7 @@ WHERE status != 'DRAFT'
 ```
 
 ```json metabase-pos
-{"row":2, "col":6, "size_x":4, "size_y":3}
+{"row": 3, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### Question: Đơn đã xuất kho
@@ -135,7 +135,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 ```
 
 ```json metabase-pos
-{"row":2, "col":10, "size_x":4, "size_y":3}
+{"row": 3, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### Question: Thời gian hoàn thành TB
@@ -170,7 +170,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 ```
 
 ```json metabase-pos
-{"row":2, "col":14, "size_x":4, "size_y":3}
+{"row": 3, "col":14, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -180,7 +180,7 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 # Kiểm tra phân bổ trạng thái — drop-off ở bước nào?
 
 ```json metabase-pos
-{"row":7, "col":0, "size_x":18, "size_y":1}
+{"row": 8, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Phễu trạng thái đơn
@@ -212,7 +212,7 @@ END
 ```
 
 ```json metabase-pos
-{"row":8, "col":0, "size_x":9, "size_y":6}
+{"row": 9, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Fulfillment Status Breakdown
@@ -241,7 +241,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row":8, "col":9, "size_x":9, "size_y":6}
+{"row": 9, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -251,7 +251,7 @@ ORDER BY 2 DESC
 # Phân tích lượng đơn theo giờ — peak hours và pattern DoD
 
 ```json metabase-pos
-{"row":14, "col":0, "size_x":18, "size_y":1}
+{"row": 15, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Đơn hàng theo giờ (DoD)
@@ -300,7 +300,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":15, "col":0, "size_x":12, "size_y":6}
+{"row": 16, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### Question: Đơn hàng lũy kế (DoD)
@@ -353,12 +353,37 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row":15, "col":12, "size_x":6, "size_y":6}
+{"row": 16, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_logistics · **Cadence:** daily · **Scope:** Active fulfillment · **Caveats:** Realtime + 7d trend
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Tốc độ xử lý
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Đánh giá tốc độ xử lý — time to ship và bottleneck
 
@@ -698,7 +723,32 @@ ORDER BY "Chờ (giờ)" DESC
 
 ---
 
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_logistics · **Cadence:** daily · **Scope:** Active fulfillment · **Caveats:** Realtime + 7d trend
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
 ### 📑 Tab: Chi tiết & Nhân viên
+
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### 📝 Text: Đánh giá hiệu suất nhân viên — ranking volume và tốc độ
 
@@ -860,3 +910,13 @@ Source: fact_orders · Updated hourly · Excludes drafts
 ```json metabase-pos
 { "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + dim_logistics · **Cadence:** daily · **Scope:** Active fulfillment · **Caveats:** Realtime + 7d trend
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+

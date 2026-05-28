@@ -13,6 +13,21 @@ P&L per order — gross margin, channel net profit, cost structure, order detail
 
 **Description**: Loi nhuan don hang — tong quan P&L, so sanh kenh, chi tiet tung don. Danh cho CEO, CFO, Sales Director. **Scope: tat ca kenh (user-driven filter).**
 
+
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Period filter ở đầu — mặc định ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 ---
 
 #### Filter: Period
@@ -448,3 +463,13 @@ ORDER BY e.gross_profit DESC
 ```json metabase-pos
 {"row":21, "col":0, "size_x":18, "size_y":10}
 ```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_order_economics · **Cadence:** custom · **Scope:** has_cogs, status=COMPLETED, is_sales_channel · **Caveats:** Period filter parametric
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
