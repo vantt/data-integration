@@ -1,9 +1,9 @@
 # Hướng dẫn Phân lớp Báo cáo (Report Segmentation Guide)
 
 > **Dành cho:** Tất cả người dùng tạo/xem báo cáo
-> **Cập nhật:** 2026-04-19
+> **Cập nhật:** 2026-05-27 (Analytics collection ✅ formally created; Finance L1.5 added)
 > **Bảo trì:** Data Team
-> **Tham chiếu:** [Sales Segmentation Guide](../../context/sales-segmentation-guide.md), [Customer Segmentation](../../context/customer-segmentation.md)
+> **Tham chiếu:** [Sales Segmentation Guide](../../context/sales-segmentation-guide.md), [Customer Segmentation](../../context/customer-segmentation.md), [Collection Organization](./collection_organization.md)
 
 ## Tài liệu này trả lời những câu hỏi nào?
 
@@ -259,45 +259,55 @@ WHERE customer_type = 'RETAIL'
 
 ## 6. Collection Structure
 
+> **2026-05-27 update:** Restructure thành 6 top-level. Authoritative source: [`collection_registry.yml`](../collection_registry.yml).
+
 ```
-📁 Executive                          [Layer 1]
+📍 Start Here                         [Onboarding]
+└── Welcome to ChợPulse BI
+
+📁 Executive                          [Layer 1 - All]
 ├── CEO Weekly Pulse [All]
 ├── CEO Monthly Scorecard [All]
-├── Order Profitability [All]
+└── Sales Monthly Business Review [All]
+
+📁 Finance                            [Layer 1.5 - All]   ← NEW 2026-05-27
 ├── Finance P&L [All]
-└── Logistics Operations [All]
+├── Order Profitability [All]
+└── Product Profitability [All]
+   # Roadmap: Cost Ledger / Return Impact / Channel P&L / SKU Margin / Recon
 
-📁 Operations                         [Layer 2]
-├── 📁 Retail Operations
-│   ├── 📁 Daily Monitoring
-│   │   ├── Daily Sales [Retail]
-│   │   ├── Yesterday's Sales [Retail]
-│   │   └── Today's Orders [Retail]
-│   ├── 📁 Periodic Reviews
-│   │   ├── Sales Ops Weekly [Retail]
-│   │   └── Sales Ops Monthly [Retail]
-│   └── Promotion Analysis [Retail]
-│
-├── 📁 B2B Operations
-│   ├── B2B Daily Sales [B2B]
-│   ├── B2B Orders Tracking [B2B]
-│   ├── Partner Performance [B2B]
-│   └── B2B Margin Analysis [B2B]
-│
-└── 📁 Ingestion Health
-    └── Data Pipeline Health
-
-📁 Marketing & Customers              [Layer 2-Retail]
+📁 Marketing & Customers              [Layer 2 - Retail]
 ├── Marketing Weekly Tracker [Retail]
 ├── Marketing Monthly Analysis [Retail]
+├── Marketing ROI [Retail]
 ├── Customer Operational [Retail]
-└── Customer Retention [Retail]
+├── Customer Retention & Lifecycle [Retail]
+└── Promotion Analysis [Retail]
 
-📁 Analytics                          [Layer 3]
-├── Customer Intelligence [Cross]
-├── Channel Profitability [Cross]
-├── Product Profitability [Cross]
-└── Acquisition Analysis [Cross]
+📁 Operations                         [Layer 2]
+├── US CrossBorder Daily [US]         (root, không sub)
+├── 📁 Daily Monitoring               [Retail]
+│   ├── Daily Sales [Retail]
+│   ├── Yesterday's Sales [Retail]
+│   ├── Order Listing [Retail]
+│   ├── Order Detail [Retail]
+│   └── Social Commerce Operations [Retail]
+├── 📁 Periodic Reviews               [Retail]
+│   ├── Sales Ops Weekly Review [Retail]
+│   └── Sales Ops Monthly Summary [Retail]
+├── 📁 B2B Operations                 [B2B]
+│   ├── B2B Daily Sales [B2B]
+│   └── B2B Orders Tracking [B2B]
+├── 📁 Logistics                      [All]              ← NEW 2026-05-27
+│   └── Logistics Operations Center [All]
+└── 📁 Data Platform                  [Internal]         ← NEW 2026-05-27
+    └── Ingestion Health Monitor
+
+📁 Analytics                          [Layer 3 - Cross]   ← formally created 2026-05-27
+├── Customer Intelligence Monthly [Cross]
+├── Channel Profitability Monthly [Cross]
+├── Product Performance [Cross]
+└── Shopee Channel Economics [Cross]
 ```
 
 ---
@@ -388,16 +398,24 @@ GROUP BY cu.customer_type
 
 ## 9. Migration Guide cho Dashboards Hiện tại
 
-| Blueprint hiện tại | Action | New Indicator |
-|-------------------|--------|---------------|
-| sales_daily_operation | Thêm `customer_type = 'RETAIL'` | [Retail] |
-| sales_yesterday_operation | Thêm `customer_type = 'RETAIL'` | [Retail] |
-| sales_promotion_analysis | Thêm `customer_type = 'RETAIL'` | [Retail] |
-| marketing_weekly_tracker | Thêm `customer_type = 'RETAIL'` | [Retail] |
-| customer_operational_dashboard | Thêm `customer_type = 'RETAIL'` | [Retail] |
-| ceo_weekly_pulse | Ensure `is_sales_channel = true` | [All] |
-| order_profitability | Ensure `is_sales_channel = true` | [All] |
-| channel_profitability_monthly | Add segment breakdown | [Cross] |
+> **Status 2026-05-27:** Migration ✅ DONE. Bản cũ archived per [plans/260527-1327-metabase-collection-restructure/phase-02](../../../plans/260527-1327-metabase-collection-restructure/phase-02-archive-duplicates.md). Bảng dưới giữ làm reference lịch sử.
+
+| Blueprint | Action (executed) | Final Indicator | Status |
+|-------------------|--------|---------------|---|
+| sales_daily_operation | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
+| sales_yesterday_operation | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
+| sales_promotion_analysis | Added `customer_type = 'RETAIL'` + moved → Marketing & Customers | [Retail] | ✅ |
+| marketing_weekly_tracker | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
+| customer_operational_dashboard | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
+| ceo_weekly_pulse | Ensured `is_sales_channel = true` | [All] | ✅ |
+| order_profitability | Ensured `is_sales_channel = true` + moved → Finance | [All] | ✅ |
+| channel_profitability_monthly | Added segment breakdown + moved → Analytics | [Cross] | ✅ |
+| customer_intelligence_monthly | Moved → Analytics | [Cross] | ✅ |
+| product_performance | Moved → Analytics | [Cross] | ✅ |
+| shopee_channel_economics | Moved → Analytics | [Cross] | ✅ |
+| finance_pl + product_profitability | Moved → Finance | [All] | ✅ |
+| ingestion_health | Moved → Operations > Data Platform | [Internal] | ✅ |
+| logistics_operations | Moved → Operations > Logistics | [All] | ✅ |
 
 ---
 

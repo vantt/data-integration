@@ -5,7 +5,7 @@
 - **Audience:** Sales Operator, Customer Support Lead, Operations Manager
 - **Goal:** Monthly operational summary — order processing efficiency, quality analysis, social commerce results, channel & branch health, staff productivity, and payment reconciliation for the closed month.
 - **Cadence:** 2nd-3rd of each month, reviewing the closed month.
-- **Archetype:** Operational Cockpit (3 tabs)
+- **Archetype:** Operational Cockpit (4 tabs)
 - **Collection:** `Operations` > `Periodic Reviews`
 - **Design Spec:** [Sales Ops Monthly Summary (Redesign)](../designs/sales_ops_monthly_summary.md)
 - **Related:** [Sales Ops Weekly Review](./sales_ops_weekly_review.md), [Social Commerce Operations](./customer_support_social_commerce.md), [Orders Reconciliation](./orders_list_reconciliation.md)
@@ -19,6 +19,7 @@
 5. **Branch Performance:** Chi nhanh nao xu ly nhieu don nhat? Chi nhanh nao can cai thien?
 6. **Payment Reconciliation:** Tong thanh toan da thu vs pending? Phuong thuc nao pho bien nhat?
 7. **Staff Productivity:** Nhan vien nao xu ly nhieu don nhat? AOV trung binh moi nhan vien?
+8. **Margin Health:** Kenh nao co bien loi nhuan cao nhat? Co bao nhieu don lo trong thang?
 
 ## Filters
 
@@ -27,10 +28,10 @@
 
 ## Data Lineage
 
-- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql)
+- **Core Models:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql), [`fact_sales`](../../../transformation/models/marts/sales/fact_sales.sql), [`fact_payments`](../../../transformation/models/marts/sales/fact_payments.sql), [`fact_order_economics`](../../../transformation/models/marts/sales/fact_order_economics.sql)
 - **Dimensions:** `dim_channels`, `dim_staff`, `dim_branch_location`, `dim_customers`, `dim_payment_methods`, `dim_order_status`, `dim_products`
 
-## Dashboard Structure (3 Tabs)
+## Dashboard Structure (4 Tabs)
 
 ### Tab 1: Tong quan thang (Monthly Overview)
 
@@ -80,6 +81,17 @@
 | **Payment Method Trend (6M)** | Stacked Area | [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution) | Monthly stacked by method. Shows shift in preferences. |
 | **Payment Status Summary** | Formatted Table | [Payment Status](../domains/sales.md#12-payment-status) | Status, Orders, Amount, % of Total. Flag pending > 5% yellow. |
 
+### Tab 4: Margin
+
+**Purpose:** Bien loi nhuan theo kenh va canh bao don lo thang.
+
+| Chart Title | Visualization Type | Metric Reference | Notes/Config |
+| :--- | :--- | :--- | :--- |
+| **Monthly Margin by Channel** | Formatted Table | `fact_order_economics.gross_profit / net_revenue` | Channel, Orders, Revenue, Gross Margin %, MoM Δ pp. Sorted Margin DESC. Red if Margin <20%, Yellow if MoM Δ<0. |
+| **Loss-Order Alert (Monthly)** | Scalar + MoM Compare | `fact_order_economics.channel_net_profit < 0` | Count of loss-making orders. MoM comparison. Escalate if count rising. |
+
+**Data Note:** Gross Margin % uses MISA COGS data. Orders without COGS match (`has_cogs = false`) will show gross_profit = net_revenue — check `misa_line_count` to verify coverage.
+
 ## Operational Actions
 
 - **Completion Rate < 90%:** Deep dive into OPEN and stuck orders. Check fulfillment pipeline bottleneck.
@@ -88,12 +100,16 @@
 - **Staff Productivity Imbalance (> 3x between highest and lowest):** Review order assignment fairness. Consider workload redistribution.
 - **Pending Payments > 5%:** Escalate to finance team. Check bank transfer confirmation delays.
 - **Branch Completion < 85%:** Investigate branch-specific issues — staffing, inventory, fulfillment delays.
+- **Channel Gross Margin % < 20%:** Investigate pricing or COGS spike for that channel. Cross-check with MISA data.
+- **MoM Margin Δ < -3 pp:** Rapid deterioration — check if new discount campaign or COGS increase hit within the month.
+- **Loss-Order Count rising MoM:** Root-cause analysis required — check if pricing error, COGS data anomaly, or Shopee fee change.
 
 ## Implementation Notes
 
 - **Differs from Sales Ops Weekly Review:** Weekly is a quick operational check (WoW). Monthly adds **6-month trends, branch analysis, staff leaderboard, and channel health matrix** for management decisions (MoM).
 - **Differs from CEO Monthly Scorecard:** CEO sees strategic metrics (revenue, growth, segments). This shows **operational metrics** (completion rate, processing time, staff productivity, payment health).
-- **3-tab design:** Tab 1 is the quick monthly pulse (5-7 min). Tabs 2-3 are deep-dives for specific audiences (channel managers, team leads, finance).
+- **4-tab design:** Tab 1 is the quick monthly pulse (5-7 min). Tabs 2-3 are deep-dives for specific audiences (channel managers, team leads, finance). Tab 4 (Margin) is for Operations Manager + Finance monthly review.
 - **`time_to_complete_hours`:** Calculated in `fact_orders` as `DATEDIFF(hour, order_timestamp, completed_at)`. NULL for non-completed orders — exclude from average.
 - **Staff Data Caveat:** Not all orders have assigned staff (marketplace auto-orders). Filter to `seller_staff_key IS NOT NULL` for meaningful staff comparisons.
-- Max ~27 visual elements across 3 tabs (~9-10 per tab). Operations Manager reviews in detail (20-30 min).
+- **COGS Coverage Caveat (Tab 4):** `fact_order_economics` joins MISA via `order_code = voucher_no`. Orders without MISA match have `has_cogs = false` — gross_profit = net_revenue in those rows (overstated). Review monthly MISA sync health before relying on margin figures.
+- Max ~43 visual elements across 4 tabs. Operations Manager reviews Tab 4 in 5-10 min after Tab 1 overview.

@@ -19,7 +19,8 @@
 2. **Trend** — Doanh thu theo ngay co duy tri momentum?
 3. **Category breakdown** — Loai SP nao drive tang truong, loai nao sut giam?
 4. **Top/Bottom products** — San pham cu the nao dang ban chay, san pham nao can can thiep?
-5. **Action** — Dieu chinh product mix, day kenh cho SP tiem nang, review SP sut giam.
+5. **Profitability** — Kenh ban hang nao co margin cao? Kenh nao dang an mon loi nhuan?
+6. **Action** — Dieu chinh product mix, day kenh cho SP tiem nang, cat/renegotiate low-margin channels.
 
 ## Filters
 
@@ -65,7 +66,28 @@
 | **Margin by Channel**          | Horizontal Bar     | [Gross Margin by Category/Channel](../domains/product.md#5-gross-margin-by-categorychannel) | Compare DAILY vs ECOM vs CS margin %. |
 | **Low-Margin Products**        | Table              | [Product-Level COGS](../domains/product.md#3-product-level-cogs-giá-vốn-theo-sản-phẩm) | Products with margin < 30%. Alert list. |
 
-### Section 4: Planned — Inventory-dependent (requires `fact_inventory`)
+### Section 4: Product Profitability
+
+> **Source:** [`int_misa_sales_lines`](../../../transformation/models/intermediate/misa/int_misa_sales_lines.sql) — MISA COGS data, excludes promo lines.
+
+| Chart Title | Visualization Type | Metric Reference | Notes/Config |
+| :--- | :--- | :--- | :--- |
+| **Product Category Profitability Heatmap** | Scatter (bubble) | Channel-level Revenue × Margin % | X=Revenue, Y=Margin %, size=order_count. Tier: High>=40%, Medium 25-40%, Low<25%. |
+
+**Action Triggers:**
+
+| Condition | Action |
+|:---|:---|
+| Channel "Low (<25%)" AND high revenue | Review pricing and COGS for that channel — potentially a loss leader. Negotiate cost reduction or raise price floor. |
+| Channel "High (>=40%)" AND low revenue | Prioritize scaling this channel — strong margin supports growth investment. |
+| Channel margin drops MoM below 25% | Escalate to management — likely fee increase or COGS spike. Check if channel still viable. |
+
+**Key decisions enabled:**
+- Kill or renegotiate low-margin channels/SKUs before volume makes the loss structural.
+- Increase buy-down and marketing spend on high-margin channels.
+- Mix-shift: redirect inventory and promotion budget toward top-right quadrant (high revenue + high margin).
+
+### Section 5: Planned — Inventory-dependent (requires `fact_inventory`)
 
 > **Status: Planned** — `fact_inventory` model does not exist yet. Metrics below will be added when inventory data pipeline is built.
 
