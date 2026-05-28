@@ -2,6 +2,8 @@
 
 > Schema reference for all entities, models, and business metrics
 
+For the system-wide table map, grains, keys, relationships, ERD-style view, and planned analytical tables, see [`data-model.md`](./data-model.md). This dictionary focuses on table/column definitions and field meanings.
+
 ## Table of Contents
 
 1. [Source Entities](#source-entities)

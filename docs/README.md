@@ -20,7 +20,8 @@ This documentation follows a **progressive disclosure** model. Start with Level 
 | Document | Description | Time |
 |----------|-------------|------|
 | [Data Flow](./architecture/data-flow.md) | End-to-end pipeline flow, 7 hops explained | 30 min |
-| [Data Dictionary](./architecture/data-dictionary.md) | Schema reference, entities, business metrics | 30 min |
+| [Data Model](./architecture/data-model.md) | Table relationships, grains, keys, and planned model map | 20 min |
+| [Data Dictionary](./architecture/data-dictionary.md) | Column reference, entities, business metrics | 30 min |
 
 ### Level 3: Operate (2-3 hours)
 
@@ -49,7 +50,9 @@ Find any topic in one lookup:
 |----------|---------------|
 | [Architecture](./architecture/overview.md) | System design, components, principles |
 | [Data Flow](./architecture/data-flow.md) | Pipeline flow from source to serving |
-| [Data Dictionary](./architecture/data-dictionary.md) | Entity schemas, field definitions |
+| [Data Model](./architecture/data-model.md) | Table inventory, grains, keys, relationships, planned models |
+| [Data Dictionary](./architecture/data-dictionary.md) | Entity schemas, column definitions, field meanings |
+| [Source Entities](./architecture/source-entities/index.md) | Raw source payloads, ingestion envelope, source-level schemas |
 | [Glossary](./development/glossary.md) | Terms, naming conventions |
 
 ### Component Documentation
@@ -61,6 +64,21 @@ Find any topic in one lookup:
 | **Orchestration** (Dagster) | [orchestration/docs/README.md](../orchestration/docs/README.md) | Jobs, Assets, Schedules, Resources |
 | **Webhook System** | [webhook_receiver/docs/README.md](../webhook_receiver/docs/README.md) | API, Security, CloudflareD1 |
 | **Analytics** (Metabase) | [analytics-handbook/README.md](./analytics-handbook/README.md) | Domains, Playbooks, Blueprints |
+
+### Documentation Roles
+
+Use these ownership boundaries when deciding where to document tables, sources, metrics, and relationships:
+
+| Document Type | Location | Role |
+|---------------|----------|------|
+| **Data Model** | [architecture/data-model.md](./architecture/data-model.md) | Owns the system-wide analytical model: table inventory, fact/dimension roles, grain, primary keys, foreign keys, cross-source joins, relationship diagrams, and planned table additions. Use it to answer "what tables exist or should exist, and how do they connect?" |
+| **Data Dictionary** | [architecture/data-dictionary.md](./architecture/data-dictionary.md) | Owns table and column definitions: field names, types, descriptions, examples, allowed values, and important business meaning. Use it to answer "what does this table or column mean?" |
+| **Source Entity Docs** | [architecture/source-entities/](./architecture/source-entities/index.md) | Own raw source contracts before dbt modeling: API/file payloads, nested JSON structures, raw natural keys, source-specific status/timestamp fields, ingestion envelope, and source availability. Use them to answer "what does the upstream source provide?" |
+| **Transformation Model Catalog** | [../transformation/docs/MODELS.md](../transformation/docs/MODELS.md) | Owns dbt model lineage and implementation placement: `src_`, `stg_`, `std_`, `int_`, marts, materialization, and dependencies. Use it to answer "where is this modeled in dbt and what depends on it?" |
+| **dbt Schema Files** | [../transformation/models/sources.yml](../transformation/models/sources.yml), `transformation/models/**/schema.yml` | Own executable dbt metadata: source declarations, model columns, tests, and dbt-facing descriptions. Use them to enforce implementation correctness. |
+| **Analytics Domains** | [analytics-handbook/domains/](./analytics-handbook/domains/) | Own business questions, metric definitions, formulas, scope, caveats, and references to data models used. They may mark missing sources as `planned`, but they do not own full table schemas or ERDs. |
+
+For a new datasource that is needed by a metric but not yet implemented in dbt, document it in layers: raw payload in `source-entities/`, analytical grain and relationships in `data-model.md`, column details in `data-dictionary.md`, implementation metadata in dbt YAML once built, and only a `planned` reference from the relevant analytics domain.
 
 ### Architecture Decisions (ADR)
 

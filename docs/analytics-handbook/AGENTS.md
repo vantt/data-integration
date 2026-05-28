@@ -24,6 +24,25 @@ If a user asks for "A dashboard showing Net Revenue", you must:
 
 ---
 
+## Documentation Boundary: Data Model vs Analytics Domain
+
+Analytics handbook documents do not own the full system data model.
+
+| Need | Write it in |
+|:---|:---|
+| Business question, metric definition, formula, scope, caveats | `docs/analytics-handbook/domains/*.md` |
+| Dashboard purpose, reading flow, action triggers | `docs/analytics-handbook/playbooks/*.md` |
+| Tool-agnostic dashboard layout, card roles, visualization choices | `docs/analytics-handbook/designs/*.md` |
+| Deployable BI SQL/configuration | `docs/analytics-handbook/blueprints/*.md` |
+| Table inventory, grain, primary/foreign keys, fact/dimension relationships, ERD, planned analytical tables | `docs/architecture/data-model.md` |
+| Column definitions, field meanings, data types, examples | `docs/architecture/data-dictionary.md` |
+| Raw source payloads, nested structures, source natural keys, ingestion envelope | `docs/architecture/source-entities/<source>.md` |
+| dbt source/model columns and tests | `transformation/models/**/schema.yml`, `transformation/models/sources.yml` |
+
+If a domain metric needs a datasource that is not in dbt yet, mark the metric as `planned` in the domain and list the missing model/fields in `Needs Added`. Put the broader table relationship and grain in `docs/architecture/data-model.md`; put raw payload schema in `docs/architecture/source-entities/`; put column-level dictionary detail in `docs/architecture/data-dictionary.md`.
+
+---
+
 ## 📐 Naming Conventions
 
 ### File Naming
