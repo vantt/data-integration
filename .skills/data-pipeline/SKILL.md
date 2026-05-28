@@ -1,3 +1,8 @@
+---
+name: data-pipeline
+description: End-to-end data pipeline work across ingestion, modeling, serving, trust, and operations in the data-integration2 project.
+---
+
 # Data Pipeline Skill (5 Functional Groups)
 
 Skill hỗ trợ thêm/fix/deploy data pipeline end-to-end.  
