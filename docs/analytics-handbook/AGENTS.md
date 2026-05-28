@@ -64,6 +64,31 @@ If a domain metric needs a datasource that is not in dbt yet, mark the metric as
 - Good: `CEO Weekly Pulse`, `Marketing Monthly Analysis`, `Sales Ops Weekly Review`
 - Bad: `Weekly Report`, `Monthly Dashboard`, `New Dashboard`
 
+#### **Rule 6 — Scope Suffix is MANDATORY** ⚠️
+
+Every dashboard name MUST end with a scope suffix in square brackets:
+
+| Suffix | Meaning | Example |
+|:---|:---|:---|
+| `[All]` | All customer types (`scope_sales`) | `CEO Weekly Pulse [All]` |
+| `[Retail]` | Retail customers only (`scope_retail`) | `Promotion Analysis [Retail]` |
+| `[B2B]` | B2B/Wholesale customers only (`scope_b2b`) | `B2B Daily Sales [B2B]` |
+| `[Cross]` | Cross-segment comparison | `Channel Profitability [Cross]` |
+| `[US]` | US cross-border arrangements | `US CrossBorder Daily [US]` |
+| `[Internal]` | Internal ops (e.g. recon, ingestion health) | `Accounting Reconciliation Cockpit [Internal]` |
+
+**Where to apply the suffix:**
+1. `dashboard_name:` in YAML frontmatter — `dashboard_name: Finance Services Revenue [All]`
+2. Blueprint h1 title — `# 📘 Blueprint: Finance Services Revenue [All]`
+3. Dashboard h3 — `### 🖥️ Dashboard: Finance Services Revenue [All]`
+4. `collection_registry.yml` dashboards list — `- "Finance Services Revenue [All]"`
+
+**All four must match.** Mismatch → deploy script creates a duplicate dashboard with the new name instead of updating the existing one (lesson learned 2026-05-28: had to manually archive `Finance Services Revenue` id 93 after rename to `Finance Services Revenue [All]` id 95).
+
+**Why mandatory:** Same dashboard concept may exist for both [Retail] and [B2B] (e.g. `Daily Sales [Retail]` vs `B2B Daily Sales [B2B]`). The suffix prevents name collision and makes the audience explicit.
+
+**Registry check:** When adding a new dashboard, update `collection_registry.yml` BEFORE first deploy. The registry entry must use the exact same name (with suffix) — drift triggers the daily Lark alert (`scripts/validate-collections.js`).
+
 ### Question (Card) Naming
 
 - Descriptive, standalone-readable. Include time scope if relevant.
@@ -634,6 +659,8 @@ When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
 3.  **Update Design Spec:** Open `designs/executive_dashboard.md` (if exists).
     - Add new card to Composition table with role, viz type, color/size tokens.
     - Update `last_modified` in frontmatter.
-4.  **Check Collection Registry:** Read `collection_registry.yml` to confirm the target collection path.
-5.  **Create/Update Blueprint:** Translate Design Spec → blueprint using `METABASE_VIZ_CATALOG.md`.
+4.  **Check Collection Registry:** Read `collection_registry.yml` to confirm the target collection path. If creating a NEW dashboard:
+    - Pick scope suffix per **Rule 6** (`[All]/[Retail]/[B2B]/[Cross]/[US]/[Internal]`).
+    - **Register the dashboard name (with suffix) in `collection_registry.yml` FIRST** under the chosen collection's `dashboards:` list. Skipping this step → deploy lands the dashboard in root + creates duplicates on later renames.
+5.  **Create/Update Blueprint:** Translate Design Spec → blueprint using `METABASE_VIZ_CATALOG.md`. Ensure scope suffix is consistent across 4 places: `dashboard_name:` YAML, h1, h3, registry entry.
 6.  **Deploy (Optional):** Use `/deploy-metabase-blueprint` to push to Metabase.
