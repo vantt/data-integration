@@ -1,5 +1,5 @@
 ---
-dashboard_name: Product Inventory Health
+dashboard_name: Product Inventory Health [All]
 collection: Operations > Logistics
 database: Sapo DuckDB
 description: "Daily inventory snapshots: OOS, slow-mover, days-of-supply, capital tied up"
@@ -8,7 +8,7 @@ cadence: Daily
 status: ACTIVE
 ---
 
-# Product Inventory Health Blueprint
+# Product Inventory Health [All] Blueprint
 
 **Playbook**: [Inventory Health](../playbooks/product_inventory.md)
 

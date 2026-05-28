@@ -1,4 +1,4 @@
-# 📘 Blueprint: Finance Services Revenue
+# 📘 Blueprint: Finance Services Revenue [All]
 
 **Playbook**: [Finance Services Revenue](../playbooks/finance_services_revenue.md)
 
@@ -11,7 +11,7 @@
 
 ```yaml
 ---
-dashboard_name: Finance Services Revenue
+dashboard_name: Finance Services Revenue [All]
 collection: Finance
 database: Sapo DuckDB
 description: "Track services revenue (DV* + CPBH codes) separately from products P&L — 2.4B VND/năm"
@@ -28,7 +28,7 @@ requires_flag: is_service_line in int_misa_sales_lines
 
 Theo dõi doanh thu dịch vụ (DV* + CPBH) riêng biệt khỏi P&L hàng hóa — phục vụ CFO trong buổi MBR hàng tháng.
 
-### 🖥️ Dashboard: Finance Services Revenue
+### 🖥️ Dashboard: Finance Services Revenue [All]
 
 **Description**: Dashboard doanh thu dịch vụ (DVCCNS US HR + các DV* codes) — hiển thị 2.4B VND/năm riêng biệt khỏi hàng hóa để CFO nắm rõ cơ cấu doanh thu.
 

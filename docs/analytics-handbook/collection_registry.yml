@@ -79,6 +79,7 @@ collections:
       - "Product Cost-to-Margin Heatmap [Cross]"  # dashboard ID 76
       - "Channel P&L Deep Dive [Cross]"           # dashboard ID 77
       - "Accounting Reconciliation Cockpit [Internal]"  # dashboard ID 78
+      - "Finance Services Revenue [All]"           # NEW 2026-05-28 (DVCCNS US HR + DV*/CPBH services, 2.4B VND/năm)
 
   # ---------------------------------------------------------------------------
   # MARKETING & CUSTOMERS — "Kênh/Khách thế nào?"
