@@ -1,5 +1,4 @@
 {{ config(
-    materialized='table',
     tags=['mart', 'customer', 'snapshot'],
     location="{{ get_rolling_location() }}"
 ) }}

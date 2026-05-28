@@ -1,5 +1,4 @@
 {{ config(
-    materialized='table',
     tags=['mart', 'sales', 'sku', 'monthly'],
     location="{{ get_rolling_location() }}"
 ) }}
