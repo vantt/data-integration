@@ -27,6 +27,7 @@ SELECT
     product_name_on_document,
     unit_of_measure,
     is_promo_line,
+    (product_code LIKE 'DV%' OR product_code LIKE 'CPBH%') AS is_service_line,
 
     -- Customer
     customer_code,

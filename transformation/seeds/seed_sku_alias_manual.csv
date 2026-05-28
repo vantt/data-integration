@@ -1,0 +1,2 @@
+sapo_pack_sku,sapo_pack_unit,sapo_base_sku,sapo_base_unit,units_per_pack,misa_join_key,misa_qty_multiplier,notes
+VCSP20002H030,Hộp,VCSP20002H030,Hộp,30,VCSP20002G001,30,"Metabo: Sapo sells as Hộp (30 gói). MISA records as Gói (G001). misa_join_key=VCSP20002G001; misa_qty_multiplier=30 (1 Hộp = 30 Gói). AUTO_PACKSIZE covers Thùng→Hộp separately."

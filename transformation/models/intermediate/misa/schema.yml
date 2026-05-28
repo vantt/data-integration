@@ -14,6 +14,12 @@ models:
         tests: [not_null]
       - name: cogs_amount
         tests: [not_null]
+      - name: is_service_line
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
       - name: channel_code
         tests:
           - accepted_values:

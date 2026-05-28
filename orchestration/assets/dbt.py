@@ -36,6 +36,8 @@ class SapoDbtTranslator(DagsterDbtTranslator):
                     return AssetKey(["sapo", "sapo_customers_batch_asset"])
                 elif name == "account":
                     return AssetKey(["sapo", "sapo_accounts_batch_asset"])
+                elif name == "product":
+                    return AssetKey(["sapo", "sapo_products_batch_asset"])
                 elif name == "targets_raw":
                     return AssetKey(["sheets", "sheets_targets_asset"])
                 elif name == "marketing_spend_raw":

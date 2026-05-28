@@ -32,6 +32,22 @@ seeds:
         priority: integer
         description: varchar
 
+  - name: seed_sku_alias_manual
+    description: >
+      Manual overrides for MISA↔Sapo SKU mismatches where MISA uses a different
+      code than the Sapo base SKU (e.g. Metabo: MISA=VCSP20002G001 Gói vs
+      Sapo=VCSP20002H030 Hộp). Consumed by dim_sku_alias alongside AUTO_PACKSIZE rows.
+    config:
+      column_types:
+        sapo_pack_sku: varchar
+        sapo_pack_unit: varchar
+        sapo_base_sku: varchar
+        sapo_base_unit: varchar
+        units_per_pack: integer
+        misa_join_key: varchar
+        misa_qty_multiplier: integer
+        notes: varchar
+
   - name: seed_channel_targets
     description: >
       Raw CSV seed: channel-level budget targets maintained manually. One row per
