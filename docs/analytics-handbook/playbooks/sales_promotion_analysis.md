@@ -75,11 +75,24 @@ The Discount ROI tab answers whether promotion spending generates incremental re
 
 ### Scenario B: Discount Abuse Monitoring
 
-**Goal:** Identify stores or channels giving excessive discretionary discounts.
+**Goal:** Identify customers, codes, or staff abusing discretionary discounts.
 
-1. Create a "Discount by Store" table.
-2. Sort by `Discount Rate %` DESC.
-3. Drill down into specific orders for outliers (e.g., > 50% discount).
+1. Go to **Tab: Phát hiện lạm dụng & Bất thường**.
+2. Check **Abuse Risk Scorecard** — any count > 0 triggers action.
+3. **Top 20 Customers** table: sort by "Tong CK 30d" — flag rows with "Nghi van" status.
+4. **Suspicious Codes** table: unique_ratio < 0.2 = code is widely shared/leaked → kill immediately.
+5. **Staff Leaderboard**: "Rui ro cao" = escalate to Sales Manager same day.
+6. **Staff × Customer**: any row appearing = investigate within 1 week.
+
+### Scenario D: Discount Cannibalization Check
+
+**Goal:** Verify that promo-period sales gains are incremental, not cannibalized from non-promoted categories.
+
+1. Go to **Tab: Discount ROI** → **Discount Cannibalization by Product Type** table.
+2. Filter by "Co KM = Y" (promoted types) — check Delta units: are they up?
+3. Filter by "Co KM = N" (non-promoted types) — check Delta units: are they down by similar amount?
+4. If non-promo drop ≈ promo gain → demand shifted, no incremental lift → review promo strategy.
+5. If non-promo stable or up → promotion is generating additive demand → good signal.
 
 ### Scenario C: Payment Cost Optimization
 
@@ -95,9 +108,20 @@ The Discount ROI tab answers whether promotion spending generates incremental re
 | :----- | :-------- | :---- | :----- |
 | **Discount Rate %** | > 15% of GMV | Marketing Manager | Review top discount channels, check for abuse patterns |
 | **Discount Rate %** | > 25% of GMV | Finance | Escalate — margin erosion alert, freeze discretionary discounts |
-| **AOV Uplift** | Promo AOV < Non-Promo AOV | Marketing Manager | Re-evaluate promo targeting — attracting low-value orders |
+| **AOV by Band** | AOV monotonic increase across all discount bands | Marketing Manager | Likely threshold effect not lift — re-evaluate min-spend promo design |
+| **AOV by Band** | AOV inverted-U with peak at low band (1-10%) | Marketing Manager | Optimal band exists — tighten max discount, concentrate promos at that band |
 | **Top Promo Concentration** | Top 1 promo > 50% of promo revenue | Sales Ops | Diversify promo portfolio, reduce single-promo dependency |
 | **High-Discount Orders** | > 5 orders/week with CK > 30% from same branch | Sales Ops | Audit branch, check for discount abuse or system error |
+
+### Abuse Detection Triggers (Tab: Phát hiện lạm dụng & Bất thường)
+
+| Signal | Threshold | Owner | Action | SLA |
+| :----- | :-------- | :---- | :----- | :-- |
+| **Suspicious customers count** | > 5 in 30d | Finance + Sales Ops | Weekly review of flagged customer list — cross-check order patterns | 7 days |
+| **Promo code unique_ratio** | < 0.3 AND total_uses > 10 | Marketing | Kill or restrict code immediately — stop discount bleeding | 48 hours |
+| **Staff high-discount orders** | > 10 orders with CK > 30% | Sales Manager | Review staff, check if discretionary discounts authorized | 3 days |
+| **Staff-customer concentration** | Same staff + same customer >= 3 orders AND avg_ck > 20% | Sales Manager + Finance | Investigate for collusion — compare against peer staff patterns | 7 days |
+| **Cannibalization signal** | Non-promo category units drop ≈ promo category units gain (same period) | Marketing | Review promo strategy — shift to additive demand generation, avoid best-sellers | 14 days |
 | **Promo Usage Count** | MoM drop > 30% | Marketing Manager | Check if promo expired, communicate with channels |
 | **Channel Discount Rate** | Any channel > 20% avg discount | Sales Ops | Review channel-specific discount policies |
 
