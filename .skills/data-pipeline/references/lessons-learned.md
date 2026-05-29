@@ -3236,3 +3236,35 @@ DuckDB gotcha: nếu cột là TIMESTAMP thì phải cast `MIN(col)::DATE` — `
 5. Khi audit blueprint: grep `'cycle-indicator\|Chu k\|date_range'` — nếu cycle-indicator không có `{{date_range}}` thì phải fix.
 
 **Reference:** `docs/analytics-handbook/blueprints/channel_profitability_monthly.md` — working implementation.
+
+---
+
+### L96 — Metabase field filter injection fails when the target table has a SQL alias
+
+**Group:** SERVE
+
+**Symptom:** Tất cả cards trả về `Binder Error: Referenced table "main.fact_orders" not found! Candidate tables: "ch"` khi filter được áp dụng. Không có filter → cards chạy bình thường.
+
+**Root cause:** Metabase field filter injection sử dụng fully-qualified table name: `AND "main"."fact_orders"."order_timestamp" >= ?`. DuckDB binder resolve tên này dựa trên table name — KHÔNG phải alias. Khi table được viết là `FROM fact_orders o`, DuckDB chỉ biết alias `o`, không biết `"main"."fact_orders"`, nên binder thất bại.
+
+```sql
+-- SAI — fact_orders có alias 'o', injection sẽ fail
+FROM fact_orders o
+JOIN dim_channels ch ON o.channel_key = ch.channel_key
+WHERE ch.channel_name = 'US'
+  [[AND {{date_range}}]]  -- injects AND "main"."fact_orders"."order_timestamp" >= ? → ERROR
+
+-- ĐÚNG — không dùng alias, hoặc alias bằng chính tên table
+FROM fact_orders
+JOIN dim_channels ON fact_orders.channel_key = dim_channels.channel_key
+WHERE dim_channels.channel_name = 'US'
+  [[AND {{date_range}}]]  -- injects AND "main"."fact_orders"."order_timestamp" >= ? → OK
+```
+
+**Rules:**
+1. Table được tham chiếu bởi `field_id` của filter **KHÔNG ĐƯỢC** có alias trong FROM clause.
+2. Nếu cần alias (ví dụ join nhiều bảng cùng tên), dùng alias bằng chính tên table: `FROM fact_orders fact_orders`.
+3. Các table khác (JOIN) vẫn có thể có alias tự do — chỉ table của field_id là bị ảnh hưởng.
+4. Đây là extension của L95: L95 nói về table không trong FROM, L96 nói về table trong FROM nhưng có alias.
+
+**Reference:** `docs/analytics-handbook/blueprints/us_crossborder_operations.md`
