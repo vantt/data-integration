@@ -1,4 +1,4 @@
-# 📘 Blueprint: Sales Monthly Business Review
+# 📘 Blueprint: Sales Monthly Business Review [All]
 
 **Design Spec**: [Sales Monthly Business Review](../designs/sales_monthly_review.md)
 
@@ -14,7 +14,7 @@ Strategic dashboards for leadership — company performance, targets, and high-l
 
 ---
 
-### 🖥️ Dashboard: Sales Monthly Business Review
+### 🖥️ Dashboard: Sales Monthly Business Review [All]
 
 **Description**: Bao cao MBR hang thang — 4 tabs: Tong quan, Hieu suat tai chinh, Dong luc tang truong, Suc khoe van hanh. MoM + vs Target comparison tren tat ca KPI.
 

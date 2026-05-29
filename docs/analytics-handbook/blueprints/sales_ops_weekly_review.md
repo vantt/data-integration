@@ -1,4 +1,4 @@
-# Sales Ops Weekly Review Blueprint (Redesign)
+# Sales Ops Weekly Review [Retail] Blueprint (Redesign)
 
 **Design Spec**: [Sales Ops Weekly Review (Redesign)](../designs/sales_ops_weekly_review.md)
 **Playbook**: [Sales Ops Weekly Review](../playbooks/sales_ops_weekly_review.md)

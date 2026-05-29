@@ -1,7 +1,7 @@
 ---
 dashboard_name: Product Inventory Health [All]
 collection: Operations > Logistics
-database: Sapo DuckDB
+database: Sapo
 description: "Daily inventory snapshots: OOS, slow-mover, days-of-supply, capital tied up"
 audience: Inventory Manager, Ops Manager
 cadence: Daily
@@ -14,7 +14,7 @@ status: ACTIVE
 
 Dashboard kiểm tra tồn kho hàng ngày — OOS alerts, slow-mover exposure, stock value theo location. 3 tabs: Current Stock / Slow-Mover & Dead Stock / Inventory Trend.
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 ## 📂 Collection: Operations > Logistics
 
@@ -56,12 +56,26 @@ Dashboard kiểm tra tồn kho hàng ngày — OOS alerts, slow-mover exposure, 
 
 ### 📑 Tab: Current Stock
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Snapshot: ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Tình trạng tồn kho hôm nay — OOS, low-stock, và giá trị vốn tồn theo location
 
 # Tình trạng tồn kho hôm nay — OOS, low-stock, và giá trị vốn tồn theo location
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 24, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 24, "size_y": 1 }
 ```
 
 #### Question: OOS SKUs
@@ -88,7 +102,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Low Stock SKUs
@@ -115,7 +129,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 4, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Tổng Giá Trị Tồn Kho
@@ -142,7 +156,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM fact_inventory_snapshot)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 8, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Tổng SKU Có Hàng
@@ -169,7 +183,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM fact_inventory_snapshot)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 12, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Giá Trị Tồn Kho Theo Location
@@ -202,7 +216,7 @@ ORDER BY SUM(stock_value_at_mac) DESC NULLS LAST
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 6, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Top 20 SKU Theo Giá Trị Tồn Kho
@@ -239,7 +253,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 12, "size_x": 12, "size_y": 6 }
+{ "row": 6, "col": 12, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Danh Sách SKU OOS
@@ -274,19 +288,33 @@ ORDER BY sku, location_name
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 24, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 24, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Slow-Mover & Dead Stock
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Snapshot: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Lookback: ' || strftime(current_date - 90, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Hàng tồn chậm và tồn chết — vốn bị chôn vùi cần xử lý
 
 # Hàng tồn chậm và tồn chết — vốn bị chôn vùi cần xử lý
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 24, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 24, "size_y": 1 }
 ```
 
 #### Question: Slow-Mover Value At Risk
@@ -314,7 +342,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Dead Stock Value At Risk
@@ -342,7 +370,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Slow-Mover SKU Count
@@ -370,7 +398,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Dead Stock SKU Count
@@ -398,7 +426,7 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 18, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 18, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Danh Sách Slow-Mover Chi Tiết
@@ -438,7 +466,7 @@ LIMIT 50
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 24, "size_y": 8 }
+{ "row": 6, "col": 0, "size_x": 24, "size_y": 8 }
 ```
 
 #### Question: Slow-Mover Value Theo Category
@@ -470,7 +498,7 @@ ORDER BY SUM(slow_mover_value_at_risk) DESC NULLS LAST
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 14, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Committed Value At Risk
@@ -505,19 +533,33 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 12, "size_y": 6 }
+{ "row": 14, "col": 12, "size_x": 12, "size_y": 6 }
 ```
 
 ---
 
 ### 📑 Tab: Inventory Trend
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT '📅 Trend 90 ngày: ' || strftime(current_date - 90, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Xu hướng tồn kho — giá trị, OOS rate, và so sánh location
 
 # Xu hướng tồn kho — giá trị, OOS rate, và so sánh location
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 24, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 24, "size_y": 1 }
 ```
 
 #### Question: Stock Value Trend 90 Ngày
@@ -551,7 +593,7 @@ ORDER BY snapshot_date
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 16, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 16, "size_y": 6 }
 ```
 
 #### Question: OOS Rate Trend 90 Ngày
@@ -588,7 +630,7 @@ ORDER BY snapshot_date
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 16, "size_x": 8, "size_y": 6 }
+{ "row": 3, "col": 16, "size_x": 8, "size_y": 6 }
 ```
 
 #### Question: Stock Value Trend Theo Location 30 Ngày
@@ -623,7 +665,7 @@ ORDER BY snapshot_date, location_name
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 16, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 16, "size_y": 6 }
 ```
 
 #### Question: Slow-Mover Value Trend 90 Ngày
@@ -658,7 +700,7 @@ ORDER BY snapshot_date
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 16, "size_x": 8, "size_y": 6 }
+{ "row": 9, "col": 16, "size_x": 8, "size_y": 6 }
 ```
 
 #### Question: Monthly Stock Value Summary
@@ -697,5 +739,5 @@ ORDER BY 1 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 24, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 24, "size_y": 6 }
 ```

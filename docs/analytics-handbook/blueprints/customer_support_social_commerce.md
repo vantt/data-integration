@@ -1,4 +1,4 @@
-# Social Commerce Operations Blueprint
+# Social Commerce Operations [Retail] Blueprint
 
 **Design Spec**: [Social Commerce Operations](../designs/customer_support_social_commerce.md)
 
@@ -6,7 +6,7 @@ Single-view Operational Cockpit for CS Team Leader — real-time social commerce
 
 ## 📂 Collection: Operations > Daily Monitoring
 
-### Dashboard: Social Commerce Operations
+### Dashboard: Social Commerce Operations [Retail]
 
 **Description**: Theo dõi real-time doanh thu social commerce — KPIs với DoD, phân tích kênh, hiệu suất nhân viên, chi tiết đơn hàng.
 

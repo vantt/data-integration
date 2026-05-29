@@ -1,4 +1,4 @@
-# 📘 Blueprint: Marketing Monthly Analysis
+# 📘 Blueprint: Marketing Monthly Analysis [Retail]
 
 **Playbook**: [Marketing Monthly Analysis](../playbooks/marketing_monthly_analysis.md)
 **Design Spec**: [Marketing Monthly Analysis Design](../designs/marketing_monthly_analysis.md)

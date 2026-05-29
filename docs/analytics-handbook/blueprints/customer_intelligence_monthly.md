@@ -1,4 +1,4 @@
-# 📘 Blueprint: Customer Intelligence Monthly
+# 📘 Blueprint: Customer Intelligence Monthly [Cross]
 
 > **Target Collection:** `Marketing & Customers`
 > **Design Spec:** `designs/customer_intelligence_monthly.md`
@@ -11,7 +11,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ---
 
-### 🖥️ Dashboard: Customer Intelligence Monthly
+### 🖥️ Dashboard: Customer Intelligence Monthly [Cross]
 
 **Description**: Monthly deep-dive — customer health scorecard, value concentration, segment dynamics, purchase behavior, channel effectiveness, and acquisition quality across 3 focused tabs.
 
@@ -19,12 +19,33 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ### 📑 Tab: Overview & Health
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Tháng trước: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
+  '  ·  MoM: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
+
 #### 📝 Text: Boi canh mua vu + YoY Caveat
 
 **Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu); 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** ⚠ **YoY Caveat:** Các heroes dùng `mart_customer_status_snapshot_monthly` (Total Customers, Active Customers, Total LTV, Repeat %) **chưa có YoY** vì mart hiện không tồn tại trong DB. YoY sẽ được thêm sau khi mart được build với >= 24 months data. Heroes từ `dim_customers` (New Customers) đã có YoY.
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 3 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 3 }
 ```
 
 #### 📝 Text: Monitor customer base health — growth, activity, and retention pulse check
@@ -32,7 +53,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 # Monitor customer base health — growth, activity, and retention pulse check
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Total Customers
@@ -81,7 +102,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 6, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Active Customers (30d)
@@ -130,7 +151,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 6, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: New Customers (Last Month)
@@ -189,7 +210,7 @@ FROM current_period c, previous_period p, prior_year py
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 3 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 3 }
 ```
 
 #### ❓ Question: One-Time Buyer Rate
@@ -243,7 +264,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 6, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -253,28 +274,7 @@ FROM current_period c, previous_period p
 # Assess customer status distribution — identify at-risk concentration
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### ❓ Question: Chu kỳ báo cáo
-
-```sql
-SELECT
-  '📅 Tháng trước: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
-  '  ·  MoM: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
-  AS "Chu kỳ báo cáo"
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Customer Status Distribution
@@ -316,7 +316,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":6, "size_y":6}
+{"row": 13, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Customer Segment Distribution
@@ -358,7 +358,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 7, "col":6, "size_x":6, "size_y":6}
+{"row": 13, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Revenue from Top 20% Customers
@@ -394,7 +394,7 @@ FROM ranked
 ```
 
 ```json metabase-pos
-{"row": 7, "col":12, "size_x":6, "size_y":6}
+{"row": 13, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -404,7 +404,7 @@ FROM ranked
 # Track growth dynamics — is acquisition outpacing churn?
 
 ```json metabase-pos
-{"row": 13, "col":0, "size_x":18, "size_y":1}
+{"row": 19, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Monthly Acquisition vs Churn (6M)
@@ -460,7 +460,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":18, "size_y":6}
+{"row": 20, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
@@ -470,7 +470,7 @@ ORDER BY 1
 # Review segment health scorecard — flag segments with high churn or low activity
 
 ```json metabase-pos
-{"row": 20, "col":0, "size_x":18, "size_y":1}
+{"row": 26, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Customer Health Scorecard
@@ -538,7 +538,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 21, "col":0, "size_x":18, "size_y":5}
+{"row": 27, "col":0, "size_x":18, "size_y":5}
 ```
 
 ---

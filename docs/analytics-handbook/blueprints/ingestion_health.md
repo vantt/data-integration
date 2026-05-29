@@ -1,4 +1,4 @@
-# 📘 Blueprint: Ingestion Health Monitor
+# 📘 Blueprint: Ingestion Health Monitor [Internal]
 
 **Design Spec**: [ingestion_health.md](../designs/ingestion_health.md)
 **Playbook**: [ingestion_health.md](../playbooks/ingestion_health.md)
@@ -12,7 +12,7 @@ Monitoring wall for ingestion pipeline: per-source SLA status tiles, recon drift
 
 ## 📂 Collection: Operations > Daily Monitoring
 
-### 🖥️ Dashboard: Ingestion Health Monitor
+### 🖥️ Dashboard: Ingestion Health Monitor [Internal]
 
 **Description**: Pipeline trust wall — SLA status per source, recon drift alerts, 30-day volume trends, and failure triage across 3 tabs.
 

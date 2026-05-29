@@ -1,4 +1,4 @@
-# Finance P&L Dashboard Blueprint
+# Finance P&L [All] Blueprint
 
 **Design Spec**: [Finance P&L Dashboard](../designs/finance_pl.md)
 
@@ -6,7 +6,7 @@ Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop
 
 ## 📂 Collection: Executive
 
-### 🖥️ Dashboard: Finance P&L Dashboard
+### 🖥️ Dashboard: Finance P&L [All]
 
 **Description**: P&L tai chinh — doanh thu, gia von, loi nhuan gop, hieu qua kenh ban hang, va chi phi nen tang Shopee. Danh cho CFO/CEO trong buoi MBR hang thang.
 

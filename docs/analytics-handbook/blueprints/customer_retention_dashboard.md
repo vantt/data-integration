@@ -1,4 +1,4 @@
-# 📘 Blueprint: Customer Retention & Lifecycle
+# 📘 Blueprint: Customer Retention & Lifecycle [Retail]
 
 > **Target Collection:** `Marketing & Customers`
 > **Design Spec:** `designs/customer_retention_lifecycle.md`
@@ -11,7 +11,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 
 ---
 
-### 🖥️ Dashboard: Customer Retention & Lifecycle
+### 🖥️ Dashboard: Customer Retention & Lifecycle [Retail]
 
 **Description**: Strategic retention analytics — repeat purchase rates, churn trends, cohort retention heatmap, revenue layer cake, purchase frequency distribution, reactivation tracking, and at-risk watchlist. 3 tabs: Suc khoe Retention, Phan tich Cohort, Hanh vi & Reactivation.
 
@@ -35,7 +35,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 # Monitor retention health — repeat rate, churn, and lifecycle status
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Assess lifecycle distribution — where are customers concentrating?
@@ -43,7 +43,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 # Assess lifecycle distribution — where are customers concentrating?
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Track retention and churn trends — are we improving toward target?
@@ -51,7 +51,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 # Track retention and churn trends — are we improving toward target?
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Review retention scorecard — flag segments with weak retention
@@ -59,7 +59,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 # Review retention scorecard — flag segments with weak retention
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Repeat Purchase Rate
@@ -117,7 +117,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Churn Rate
@@ -173,7 +173,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Avg Customer Lifespan
@@ -227,7 +227,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Active Customer Rate
@@ -283,7 +283,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -329,7 +329,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -390,7 +390,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 7, "col":6, "size_x":6, "size_y":6}
+{"row": 8, "col":6, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Segment x Status Matrix
@@ -427,7 +427,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 7, "col":12, "size_x":6, "size_y":6}
+{"row": 8, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -469,7 +469,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":9, "size_y":6}
+{"row": 15, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### ❓ Question: Repeat Purchase Rate Trend (6M)
@@ -513,7 +513,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 14, "col":9, "size_x":9, "size_y":6}
+{"row": 15, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -576,7 +576,7 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 ```
 
 ```json metabase-pos
-{"row": 21, "col":0, "size_x":18, "size_y":6}
+{"row": 22, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---

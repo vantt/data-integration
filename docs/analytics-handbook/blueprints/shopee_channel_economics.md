@@ -1,4 +1,4 @@
-# Shopee Channel Economics Blueprint
+# Shopee Channel Economics [Cross] Blueprint
 
 **Design Spec**: [Shopee Channel Economics](../designs/shopee_channel_economics.md)
 
@@ -201,33 +201,6 @@ WHERE payout_released_at IS NOT NULL
 
 ```json metabase-pos
 {"row": 3, "col":14, "size_x":4, "size_y":3}
-```
-
-#### Question: Chu ky bao cao
-
-Hien thi pham vi ngay payout thuc te trong ky dang xem — tu ngay den ngay.
-
-```sql
-SELECT
-    STRFTIME(MIN(payout_released_at), '%d/%m/%Y') AS "Tu ngay",
-    STRFTIME(MAX(payout_released_at), '%d/%m/%Y') AS "Den ngay"
-FROM int_shopee_order_fees
-WHERE payout_released_at IS NOT NULL
-  [[AND {{date_range}}]]
-  [[AND {{order_type}}]]
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.cell_height": "compact"
-  }
-}
-```
-
-```json metabase-pos
-{"row": 6, "col":6, "size_x":12, "size_y":2}
 ```
 
 #### 📝 Text: Fee Breakdown Heading

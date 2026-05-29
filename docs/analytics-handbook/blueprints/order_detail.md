@@ -1,4 +1,4 @@
-# Order Detail Blueprint
+# Order Detail Blueprint [Retail]
 
 **Design Spec**: [Order Detail View](../designs/order_detail_view.md)
 
@@ -6,7 +6,7 @@ Chi tiet don hang — header, economics (margin/COGS/fees), line items, payments
 
 ## 📂 Collection: Operations > Order Management
 
-### 🖥️ Dashboard: Order Detail
+### 🖥️ Dashboard: Order Detail [Retail]
 
 **Description**: Chi tiet 1 don hang — thong tin don, tai chinh (P&L), san pham, thanh toan. Truy cap tu Order Listing.
 

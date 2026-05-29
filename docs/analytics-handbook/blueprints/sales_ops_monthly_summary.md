@@ -1,4 +1,4 @@
-# Sales Ops Monthly Summary Blueprint (Redesign)
+# Sales Ops Monthly Summary [Retail] Blueprint (Redesign)
 
 **Design Spec**: [Sales Ops Monthly Summary (Redesign)](../designs/sales_ops_monthly_summary.md)
 **Playbook**: [Sales Ops Monthly Summary](../playbooks/sales_ops_monthly_summary.md)

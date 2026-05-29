@@ -1,4 +1,4 @@
-# Channel Profitability Monthly Blueprint
+# Channel Profitability Monthly [Cross] Blueprint
 
 **Design Spec**: [Channel Profitability Monthly](../designs/channel_profitability_monthly.md)
 
@@ -6,7 +6,7 @@ Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COG
 
 ## 📂 Collection: Executive
 
-### Dashboard: Channel Profitability Monthly
+### Dashboard: Channel Profitability Monthly [Cross]
 
 **Description**: Bien loi nhuan gop theo kenh — tong quan, so sanh cross-channel, xu huong MoM, va phan tich san pham anh huong loi nhuan. Danh cho CEO, Finance, Sales Director.
 

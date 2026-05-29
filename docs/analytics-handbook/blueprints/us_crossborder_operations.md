@@ -347,21 +347,6 @@ ORDER BY o.order_timestamp DESC
 
 ### 📑 Tab: Tuan nay
 
-
-#### ❓ Question: Chu kỳ báo cáo
-
-```sql
-SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
-```
-
 #### ❓ Question: Chu kỳ báo cáo (Weekly)
 
 ```sql
@@ -681,21 +666,6 @@ ORDER BY o.order_timestamp DESC
 ```
 
 ### 📑 Tab: Thang nay
-
-
-#### ❓ Question: Chu kỳ báo cáo
-
-```sql
-SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') AS "Chu kỳ báo cáo"
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
-```
 
 #### ❓ Question: Chu kỳ báo cáo (Monthly)
 

@@ -1,4 +1,4 @@
-# Blueprint: Order Listing
+# Blueprint: Order Listing [Retail]
 
 **Design Spec**: [Order Listing](../designs/order_listing.md)
 **Playbook**: [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)
@@ -13,7 +13,7 @@ Dashboard đối soát đơn hàng — xác minh tính đúng đắn và đầy 
 
 ---
 
-### 🖥️ Dashboard: Order Listing
+### 🖥️ Dashboard: Order Listing [Retail]
 
 **Description**: Công cụ đối soát đơn hàng — Reconciliation Checklist + Data Freshness + KPI DoD + phân bổ (donut/bar) + cảnh báo bất thường + chi tiết đơn. 3 tabs (Today / Yesterday / By Date) đồng bộ hoàn toàn — chỉ khác date predicate.
 

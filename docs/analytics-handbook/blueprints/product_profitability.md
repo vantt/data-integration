@@ -1,4 +1,4 @@
-# Product Profitability Blueprint
+# Product Profitability Blueprint [All]
 
 **Design Spec**: [Product Profitability](../designs/product_profitability.md)
 
@@ -6,7 +6,7 @@ Ranking san pham theo lai gop va margin — top/bottom products, chi tiet theo k
 
 ## 📂 Collection: Executive
 
-### Dashboard: Product Profitability
+### Dashboard: Product Profitability [All]
 
 **Description**: San pham nao tao margin cao, san pham nao keo xuong — ranking, chi tiet, cross-channel. Danh cho Merchandising, Sales Director.
 

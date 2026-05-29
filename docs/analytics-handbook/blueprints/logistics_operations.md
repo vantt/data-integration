@@ -1,4 +1,4 @@
-# Logistics Operations Center Blueprint
+# Logistics Operations Center Blueprint [All]
 
 **Design Spec**: [Logistics Operations Center](../designs/logistics_operations.md)
 
@@ -6,7 +6,7 @@ Operational cockpit for monitoring order fulfillment pipeline — fulfillment ra
 
 ## 📂 Collection: Operations > Daily Monitoring
 
-### Dashboard: Logistics Operations Center
+### Dashboard: Logistics Operations Center [All]
 
 **Description**: Real-time logistics monitoring — Fulfillment Rate gauge, order pipeline funnel, processing speed KPIs with DoD, hourly trends, stuck orders escalation, staff performance across 3 tabs.
 
