@@ -111,12 +111,35 @@ Dashboard-level filters (parameters) are defined using `#### Filter:` headers wi
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past7days"
+  "default": "past7days",
+  "field_id": 141
 }
 \`\`\`
 ```
 
 **Supported filter types:** `date/all-options`, `date/single`, `string/=`, `string/contains`, `number/=`, `number/between`
+
+**`field_id` (required for `date/all-options` and `string/=`):** Binds the filter to a specific database field so Metabase generates a proper WHERE clause. Without `field_id`, the filter is created as a basic variable that fails on relative-date values (e.g. `past30days`).
+
+**`field_id_map` (multi-table dashboards):** When questions on the same dashboard query different tables, declare per-table field IDs. The deploy script detects the table referenced in each question's SQL and binds the correct field. Falls back to top-level `field_id` if no table in the map matches.
+
+```json
+{
+  "slug": "date_range",
+  "type": "date/all-options",
+  "default": "past30days",
+  "field_id": 141,
+  "field_id_map": {
+    "int_misa_sales_lines": 324,
+    "int_shopee_order_fees": 287,
+    "fact_orders": 141
+  }
+}
+```
+
+**Map ordering matters:** First key whose name appears in the question SQL wins. List the most specific tables first; place the fallback table (e.g. `fact_orders`) last.
+
+**Limitation:** A single question joining two mapped tables (e.g. `fact_orders` + `int_misa_sales_lines`) cannot be filtered correctly by one dimension tag. Either (a) restructure the query to a single source table, or (b) remove `{{date_range}}` from that question and hardcode the window.
 
 ### Text Annotation Support
 

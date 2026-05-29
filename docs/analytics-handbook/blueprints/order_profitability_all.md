@@ -17,11 +17,48 @@ P&L per order — gross margin, channel net profit, cost structure, order detail
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 3 tháng gần nhất: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '3 months')::DATE, '%d/%m/%Y') ||
-  ' – ' ||
-  strftime((current_date - INTERVAL '1 day')::DATE, '%d/%m/%Y')
-  AS "Chu kỳ báo cáo"
+WITH filter_bounds AS (
+    SELECT MIN(d.date_actual)::DATE AS p_start, MAX(d.date_actual)::DATE AS p_end
+    FROM fact_order_economics e
+    JOIN dim_date d ON e.date_key = d.date_key
+    WHERE e.status = 'COMPLETED'
+      AND e.has_cogs
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER) * 12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur <= 6
+                  THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR || ' months')::INTERVAL)::DATE
+             END, '%d/%m/%Y') || ' – ' ||
+    strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz

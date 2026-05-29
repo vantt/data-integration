@@ -19,6 +19,19 @@ const fs = require("fs");
  * Auto-detect {{variable}} placeholders in SQL and build Metabase template-tags.
  * Maps common variable names to appropriate types (date, number, text).
  */
+// Pick correct field_id for a card based on which table its SQL references.
+// Supports `field_id_map: { "<table_name>": <field_id>, ... }` on a dashboard filter.
+// Falls back to `field_id` when no table in the map matches the SQL.
+function resolveFieldId(sql, param) {
+  if (param.field_id_map && typeof param.field_id_map === 'object') {
+    for (const [tableName, mappedId] of Object.entries(param.field_id_map)) {
+      const tableRegex = new RegExp(`\\b${tableName}\\b`, 'i');
+      if (tableRegex.test(sql)) return mappedId;
+    }
+  }
+  return param.field_id;
+}
+
 function buildTemplateTags(sql, dashParams = []) {
   const tags = {};
   const regex = /\{\{(\w+)\}\}/g;
@@ -26,32 +39,32 @@ function buildTemplateTags(sql, dashParams = []) {
   while ((match = regex.exec(sql)) !== null) {
     const name = match[1];
     if (tags[name]) continue;
+    const displayName = name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' ');
     const matchingParam = dashParams.find(p =>
       p.slug === name || p.slug.replace(/-/g, '_') === name
     );
+
     // Use Field Filter (dimension type) when field_id is provided — required for
     // date/all-options and string/= dashboard filters to pass values to native queries.
-    if (matchingParam && matchingParam.field_id) {
+    // For multi-table dashboards, declare `field_id_map` on the filter to bind per-table.
+    const fieldId = matchingParam ? resolveFieldId(sql, matchingParam) : null;
+    if (fieldId) {
       tags[name] = {
         id: name,
-        name: name,
-        'display-name': name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
+        name,
+        'display-name': displayName,
         type: 'dimension',
-        dimension: ['field', matchingParam.field_id, null],
+        dimension: ['field', fieldId, null],
         'widget-type': matchingParam.type || 'date/all-options'
       };
-    } else {
-      // Fallback: variable type inferred from name
-      let type = 'text';
-      if (/date|day|month|year|start|end|from|to/i.test(name)) type = 'date';
-      else if (/id|count|num|amount|limit|offset/i.test(name)) type = 'number';
-      tags[name] = {
-        id: name,
-        name: name,
-        'display-name': name.charAt(0).toUpperCase() + name.slice(1).replace(/_/g, ' '),
-        type: type
-      };
+      continue;
     }
+
+    // Fallback: basic variable, type inferred from name.
+    let type = 'text';
+    if (/date|day|month|year|start|end|from|to/i.test(name)) type = 'date';
+    else if (/id|count|num|amount|limit|offset/i.test(name)) type = 'number';
+    tags[name] = { id: name, name, 'display-name': displayName, type };
   }
   return tags;
 }
@@ -211,6 +224,7 @@ async function main() {
       default: f.default || null,
       sectionId: f.sectionId || undefined,
       field_id: f.field_id || null,
+      field_id_map: f.field_id_map || null,
     }));
 
     if (dryRun) {
