@@ -345,12 +345,12 @@ FROM this_month tm, prev_month pm
 
 #### ❓ Question: Target Achievement
 
-Revenue achievement vs monthly target — actual/target/rate table.
+Revenue achievement vs monthly target — gauge showing % of target achieved.
 
-<!-- NOTE: Metabase `progress` widget only supports static `progress.goal` (cannot bind to a query column).
-     Workaround in use: display:table with actual_gmv, target_gmv, achievement_pct columns;
-     conditional formatting on achievement_pct gives green/red signal.
-     Revisit on Metabase upgrades if dynamic-goal progress becomes supported. -->
+<!-- NOTE: Metabase `progress` widget only supports static `progress.goal` (cannot bind to query column).
+     Using `gauge` instead: SQL returns achievement % (0-100+), gauge segments show red/yellow/green zones.
+     Segments: <80% red (behind), 80-100% yellow (on track), ≥100% green (achieved).
+     Revisit `progress` on Metabase upgrades if dynamic-goal becomes supported. -->
 
 **Domain Reference**: [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate)
 
@@ -372,41 +372,23 @@ monthly_target AS (
       AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
-    a.actual_gmv                                                                          AS "Thực hiện (GMV)",
-    t.target_gmv                                                                          AS "Target tháng",
-    ROUND(a.actual_gmv * 100.0 / NULLIF(t.target_gmv, 0), 1)                             AS "Đạt %"
+    ROUND(a.actual_gmv * 100.0 / NULLIF(t.target_gmv, 0), 1) AS "Đạt %"
 FROM mtd_actual a
 CROSS JOIN monthly_target t
 ```
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "gauge",
   "visualization_settings": {
-    "table.pivot": false,
+    "gauge.segments": [
+      { "min": 0,   "max": 80,  "color": "#EF8C8C", "label": "Behind" },
+      { "min": 80,  "max": 100, "color": "#F9D45C", "label": "On Track" },
+      { "min": 100, "max": 130, "color": "#84BB4C", "label": "Achieved" }
+    ],
     "column_settings": {
-      "Thực hiện (GMV)": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Target tháng":    { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Đạt %":           { "suffix": "%", "decimals": 1 }
-    },
-    "table.column_formatting": [
-      {
-        "columns": ["Đạt %"],
-        "type": "single",
-        "operator": ">=",
-        "value": 100,
-        "color": "#84BB4C",
-        "highlight_row": false
-      },
-      {
-        "columns": ["Đạt %"],
-        "type": "single",
-        "operator": "<",
-        "value": 100,
-        "color": "#EF8C8C",
-        "highlight_row": false
-      }
-    ]
+      "Đạt %": { "suffix": "%", "decimals": 1 }
+    }
   }
 }
 ```
@@ -665,30 +647,31 @@ Gross Margin % tháng trước với target 40% — table with MoM + YoY compari
 
 ```sql
 -- YoY added 2026-05-28
+-- date_key is INTEGER YYYYMMDD — use CAST(strftime(...,'%Y%m%d') AS INTEGER) for range filters
 WITH
 this_month AS (
     SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND date_key <  CAST(date_trunc('month', current_date) AS DATE)
+      AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
+      AND date_key <  CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
 ),
 prev_month AS (
     SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
-      AND date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%Y%m%d') AS INTEGER)
+      AND date_key <  CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
 ),
 prev_year AS (
     SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '13 months' AS DATE)
-      AND date_key <  CAST(date_trunc('month', current_date) - INTERVAL '12 months' AS DATE)
+      AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '13 months')::DATE, '%Y%m%d') AS INTEGER)
+      AND date_key <  CAST(strftime((date_trunc('month', current_date) - INTERVAL '12 months')::DATE, '%Y%m%d') AS INTEGER)
 )
 SELECT
     COALESCE(tm.val, 0)                                           AS "Gross Margin %",
@@ -733,6 +716,7 @@ Net profit tháng vs tháng trước theo kênh bán hàng — grouped bar.
 **Domain Reference**: [Channel Net Profit](../domains/finance.md#6-channel-net-profit)
 
 ```sql
+-- date_key is INTEGER YYYYMMDD — use CAST(strftime(...,'%Y%m%d') AS INTEGER) for range filters
 WITH
 this_month AS (
     SELECT
@@ -742,8 +726,8 @@ this_month AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND e.date_key < CAST(date_trunc('month', current_date) AS DATE)
+      AND e.date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
     GROUP BY c.channel_name
 ),
 prev_month AS (
@@ -754,8 +738,8 @@ prev_month AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
-      AND e.date_key < CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND e.date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
     GROUP BY c.channel_name
 )
 SELECT
@@ -797,14 +781,15 @@ Cấu trúc chi phí tháng: %COGS, %Platform Fees, %Tax, %Shipping của Net Re
 **Domain Reference**: [Cost Structure](../domains/finance.md#10-cost-structure)
 
 ```sql
+-- date_key is INTEGER YYYYMMDD — use CAST(strftime(...,'%Y%m%d') AS INTEGER) for range filters
 WITH
 nr AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS total_net_revenue
     FROM fact_order_economics
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND date_key < CAST(date_trunc('month', current_date) AS DATE)
+      AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
+      AND date_key <  CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
 ),
 costs AS (
     SELECT
@@ -812,8 +797,8 @@ costs AS (
         SUM(amount) AS total_cost
     FROM fact_order_costs
     WHERE channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND date_key < CAST(date_trunc('month', current_date) AS DATE)
+      AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
+      AND date_key <  CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
       AND cost_category IN ('COGS', 'PLATFORM_FEE', 'TAX', 'SHIPPING')
     GROUP BY cost_category
 )
