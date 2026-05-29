@@ -15,14 +15,44 @@ ROAS per channel — tong spend vs revenue, xu huong, chi tiet per kenh. Dung fa
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
+WITH filter_bounds AS (
+    SELECT make_date((MIN(date_key)/10000)::BIGINT, ((MIN(date_key)/100)%100)::BIGINT, (MIN(date_key)%100)::BIGINT) AS p_start,
+           make_date((MAX(date_key)/10000)::BIGINT, ((MAX(date_key)/100)%100)::BIGINT, (MAX(date_key)%100)::BIGINT) AS p_end
+    FROM fact_marketing_spend
+    WHERE date_key > 0
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
 SELECT
-  '📅 Tháng trước: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
-  '  ·  MoM: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
-  AS "Chu kỳ báo cáo"
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -400,16 +430,12 @@ Table — channel, spend, revenue, ROAS, margin %, profitable_roas vs prior 30 d
 *Attribution: channel-level join. CAC/payback analysis pending.*
 
 ```sql
--- Current 30-day window
-WITH current_window AS (
-    SELECT
-        (current_date - INTERVAL '30 days')::DATE AS period_start,
-        (current_date - INTERVAL '1 day')::DATE   AS period_end
-),
-prior_window AS (
-    SELECT
-        (current_date - INTERVAL '60 days')::DATE AS period_start,
-        (current_date - INTERVAL '31 days')::DATE AS period_end
+WITH filter_bounds AS (
+    SELECT make_date((MIN(date_key)/10000)::BIGINT, ((MIN(date_key)/100)%100)::BIGINT, (MIN(date_key)%100)::BIGINT) AS p_start,
+           make_date((MAX(date_key)/10000)::BIGINT, ((MAX(date_key)/100)%100)::BIGINT, (MAX(date_key)%100)::BIGINT) AS p_end
+    FROM fact_marketing_spend
+    WHERE date_key > 0
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
 ),
 
 -- Current period spend
@@ -417,9 +443,9 @@ current_spend AS (
     SELECT
         m.channel_key,
         SUM(m.spend_amount) AS spend
-    FROM fact_marketing_spend m, current_window w
-    WHERE m.date_key BETWEEN CAST(strftime(w.period_start, '%Y%m%d') AS INTEGER)
-                         AND CAST(strftime(w.period_end,   '%Y%m%d') AS INTEGER)
+    FROM fact_marketing_spend m, filter_bounds
+    WHERE m.date_key BETWEEN CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+                         AND CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
     GROUP BY m.channel_key
 ),
 
@@ -429,21 +455,23 @@ current_econ AS (
         e.channel_key,
         SUM(e.net_revenue)   AS revenue,
         SUM(e.gross_profit)  AS gross_profit
-    FROM fact_order_economics e, current_window w
+    FROM fact_order_economics e, filter_bounds
     WHERE e.status = 'COMPLETED'
-      AND e.date_key BETWEEN CAST(strftime(w.period_start, '%Y%m%d') AS INTEGER)
-                         AND CAST(strftime(w.period_end,   '%Y%m%d') AS INTEGER)
+      AND e.date_key BETWEEN CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+                         AND CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
     GROUP BY e.channel_key
 ),
 
--- Prior period spend
+-- Prior period spend (symmetric window before p_start)
 prior_spend AS (
     SELECT
         m.channel_key,
         SUM(m.spend_amount) AS spend
-    FROM fact_marketing_spend m, prior_window w
-    WHERE m.date_key BETWEEN CAST(strftime(w.period_start, '%Y%m%d') AS INTEGER)
-                         AND CAST(strftime(w.period_end,   '%Y%m%d') AS INTEGER)
+    FROM fact_marketing_spend m, filter_bounds
+    WHERE m.date_key >= CAST(strftime(
+            (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1),
+            '%Y%m%d') AS INTEGER)
+      AND m.date_key <  CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
     GROUP BY m.channel_key
 ),
 
@@ -453,10 +481,12 @@ prior_econ AS (
         e.channel_key,
         SUM(e.net_revenue)  AS revenue,
         SUM(e.gross_profit) AS gross_profit
-    FROM fact_order_economics e, prior_window w
+    FROM fact_order_economics e, filter_bounds
     WHERE e.status = 'COMPLETED'
-      AND e.date_key BETWEEN CAST(strftime(w.period_start, '%Y%m%d') AS INTEGER)
-                         AND CAST(strftime(w.period_end,   '%Y%m%d') AS INTEGER)
+      AND e.date_key >= CAST(strftime(
+            (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1),
+            '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
     GROUP BY e.channel_key
 )
 
@@ -473,8 +503,8 @@ SELECT
     )                                                                           AS "Bien lai gross (%)",
     -- Profitable ROAS = gross_profit / spend  (= ROAS × margin %)
     ROUND(COALESCE(ce.gross_profit, 0)::DOUBLE / NULLIF(cs.spend, 0), 2)       AS "Profitable ROAS",
-    -- Prior period profitable ROAS
-    ROUND(COALESCE(pe.gross_profit, 0)::DOUBLE / NULLIF(ps.spend, 0), 2)       AS "Profitable ROAS (30 ngay truoc)",
+    -- Prior period profitable ROAS (dynamic symmetric window)
+    ROUND(COALESCE(pe.gross_profit, 0)::DOUBLE / NULLIF(ps.spend, 0), 2)       AS "Profitable ROAS (ky truoc)",
     -- Delta = current - prior
     ROUND(
         COALESCE(ce.gross_profit, 0)::DOUBLE / NULLIF(cs.spend, 0)
@@ -541,19 +571,21 @@ Scatter — X = ROAS, Y = Bien lai gross (%), bubble size = Chi phi. Phat hien k
 *Attribution: channel-level join. CAC/payback analysis pending.*
 
 ```sql
-WITH current_window AS (
-    SELECT
-        (current_date - INTERVAL '30 days')::DATE AS period_start,
-        (current_date - INTERVAL '1 day')::DATE   AS period_end
+WITH filter_bounds AS (
+    SELECT make_date((MIN(date_key)/10000)::BIGINT, ((MIN(date_key)/100)%100)::BIGINT, (MIN(date_key)%100)::BIGINT) AS p_start,
+           make_date((MAX(date_key)/10000)::BIGINT, ((MAX(date_key)/100)%100)::BIGINT, (MAX(date_key)%100)::BIGINT) AS p_end
+    FROM fact_marketing_spend
+    WHERE date_key > 0
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
 ),
 
 channel_spend AS (
     SELECT
         m.channel_key,
         SUM(m.spend_amount) AS spend
-    FROM fact_marketing_spend m, current_window w
-    WHERE m.date_key BETWEEN CAST(strftime(w.period_start, '%Y%m%d') AS INTEGER)
-                         AND CAST(strftime(w.period_end,   '%Y%m%d') AS INTEGER)
+    FROM fact_marketing_spend m, filter_bounds
+    WHERE m.date_key BETWEEN CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+                         AND CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
     GROUP BY m.channel_key
 ),
 
@@ -562,10 +594,10 @@ channel_econ AS (
         e.channel_key,
         SUM(e.net_revenue)  AS revenue,
         SUM(e.gross_profit) AS gross_profit
-    FROM fact_order_economics e, current_window w
+    FROM fact_order_economics e, filter_bounds
     WHERE e.status = 'COMPLETED'
-      AND e.date_key BETWEEN CAST(strftime(w.period_start, '%Y%m%d') AS INTEGER)
-                         AND CAST(strftime(w.period_end,   '%Y%m%d') AS INTEGER)
+      AND e.date_key BETWEEN CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+                         AND CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
     GROUP BY e.channel_key
 )
 

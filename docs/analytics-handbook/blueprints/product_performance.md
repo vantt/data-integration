@@ -54,27 +54,34 @@ Dashboard theo doi hieu suat san pham — doanh thu, so luong, xu huong, phan ti
 
 #### Question: Doanh thu san pham
 
-Hero metric — tong doanh thu san pham last 30 days vs previous 30 days.
+Hero metric — tong doanh thu san pham this period vs previous period.
 
 ```sql
 WITH
+filter_bounds AS (
+    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    FROM fact_orders o
+    JOIN fact_sales s ON s.order_id = o.order_id
+    WHERE o.status != 'CANCELLED'
+      [[AND {{date_range}}]]
+      [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
 this_period AS (
     SELECT COALESCE(SUM(s.revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      [[AND {{date_range}}]]
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(s.revenue), 0) as val
     FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.order_timestamp::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -106,27 +113,34 @@ FROM this_period t, prev_period p
 
 #### Question: So luong ban
 
-Supporting KPI — tong quantity sold last 30 days vs previous 30 days.
+Supporting KPI — tong quantity sold this period vs previous period.
 
 ```sql
 WITH
+filter_bounds AS (
+    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    FROM fact_orders o
+    JOIN fact_sales s ON s.order_id = o.order_id
+    WHERE o.status != 'CANCELLED'
+      [[AND {{date_range}}]]
+      [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
 this_period AS (
     SELECT COALESCE(SUM(s.quantity), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      [[AND {{date_range}}]]
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(s.quantity), 0) as val
     FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.order_timestamp::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -149,27 +163,34 @@ FROM this_period t, prev_period p
 
 #### Question: So san pham ban duoc
 
-Supporting KPI — distinct products co sales last 30 days vs previous 30 days.
+Supporting KPI — distinct products co sales this period vs previous period.
 
 ```sql
 WITH
+filter_bounds AS (
+    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    FROM fact_orders o
+    JOIN fact_sales s ON s.order_id = o.order_id
+    WHERE o.status != 'CANCELLED'
+      [[AND {{date_range}}]]
+      [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
 this_period AS (
     SELECT COUNT(DISTINCT s.product_key) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      [[AND {{date_range}}]]
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ),
 prev_period AS (
     SELECT COUNT(DISTINCT s.product_key) as val
     FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.order_timestamp::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -192,10 +213,18 @@ FROM this_period t, prev_period p
 
 #### Question: Doanh thu trung binh/san pham
 
-Supporting KPI — revenue per distinct product last 30 days vs previous 30 days.
+Supporting KPI — revenue per distinct product this period vs previous period.
 
 ```sql
 WITH
+filter_bounds AS (
+    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    FROM fact_orders o
+    JOIN fact_sales s ON s.order_id = o.order_id
+    WHERE o.status != 'CANCELLED'
+      [[AND {{date_range}}]]
+      [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
 this_period AS (
     SELECT
         CASE WHEN COUNT(DISTINCT s.product_key) = 0 THEN 0
@@ -204,8 +233,7 @@ this_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      [[AND {{date_range}}]]
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ),
@@ -215,10 +243,10 @@ prev_period AS (
              ELSE ROUND(SUM(s.revenue) / COUNT(DISTINCT s.product_key), 0)
         END as val
     FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.order_timestamp::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -261,14 +289,44 @@ FROM this_period t, prev_period p
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    FROM fact_orders o
+    WHERE o.status != 'CANCELLED'
+      [[AND {{date_range}}]]
+      [[AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
 SELECT
-  '📅 Tháng trước: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
-  '  ·  MoM: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
-  AS "Chu kỳ báo cáo"
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -521,7 +579,45 @@ ORDER BY "Doanh thu" DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+WITH filter_bounds AS (
+    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    FROM fact_orders o
+    JOIN fact_sales s ON s.order_id = o.order_id
+    WHERE o.status != 'CANCELLED'
+      [[AND {{date_range}}]]
+      [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -791,7 +887,45 @@ ORDER BY COALESCE(t.doanh_thu, 0) DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+WITH filter_bounds AS (
+    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    FROM fact_orders o
+    JOIN fact_sales s ON s.order_id = o.order_id
+    WHERE o.status != 'CANCELLED'
+      [[AND {{date_range}}]]
+      [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -1192,7 +1326,43 @@ ORDER BY t.doanh_thu DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+WITH filter_bounds AS (
+    SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      [[AND {{date_range}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz

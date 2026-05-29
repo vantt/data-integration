@@ -46,7 +46,44 @@ Dashboard đối soát nội bộ: Sapo ↔ MISA ↔ Shopee. Dành cho kế toá
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -186,11 +223,19 @@ WHERE c.channel_name ILIKE '%shopee%'
 So don hang khong co MISA invoice trong 30 ngay gan nhat.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+)
 SELECT COUNT(*) AS "Don chua doi soat (30 ngay)"
-FROM fact_order_economics
+FROM fact_order_economics, filter_bounds
 WHERE status = 'COMPLETED'
   AND NOT has_cogs
-  AND date_key >= CAST(current_date - INTERVAL '30 days' AS INTEGER)
+  AND date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+  AND date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ```
 
 ```json metabase-viz
@@ -364,7 +409,44 @@ ORDER BY 2 DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -391,9 +473,16 @@ Don hang chua doi soat — Missing MISA invoice hoac Missing Shopee fee data
 Danh sach don hang COMPLETED khong co MISA invoice — 30 ngay gan nhat. Xem order_code + doanh thu de biet can hoi MISA team doi soat invoice nao.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+)
 SELECT
     e.order_code        AS "Ma don hang",
-    CAST(CAST(e.date_key AS VARCHAR) AS DATE) AS "Ngay dat hang",
+    (CAST(e.date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((e.date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(e.date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay dat hang",
     COALESCE(c.channel_name, 'Unknown') AS "Kenh",
     e.gross_revenue     AS "Doanh thu gop (VND)",
     e.net_revenue       AS "Doanh thu thuan (VND)",
@@ -401,9 +490,11 @@ SELECT
     'MISSING_MISA'      AS "Loai exception"
 FROM fact_order_economics e
 LEFT JOIN dim_channels c ON e.channel_key = c.channel_key
+CROSS JOIN filter_bounds
 WHERE e.status = 'COMPLETED'
   AND NOT e.has_cogs
-  AND e.date_key >= CAST(current_date - INTERVAL '30 days' AS INTEGER)
+  AND e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ORDER BY e.date_key DESC, e.net_revenue DESC
 LIMIT 200
 ```
@@ -444,19 +535,28 @@ Don Shopee khong co du lieu settlement fee — channel_net_profit se bi overstat
 **Domain Reference**: [RC6 — Shopee Fee Gap](../domains/finance.md#rc6-saposhopee-fee-gap-đơn-shopee-thiếu-dữ-liệu-phí)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+)
 SELECT
     e.order_code        AS "Ma don hang",
-    CAST(CAST(e.date_key AS VARCHAR) AS DATE) AS "Ngay dat hang",
+    (CAST(e.date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((e.date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(e.date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay dat hang",
     e.gross_revenue     AS "Doanh thu gop (VND)",
     e.net_revenue       AS "Doanh thu thuan (VND)",
     e.gross_profit      AS "Gross Profit (VND)",
     'MISSING_SHOPEE_FEES' AS "Loai exception"
 FROM fact_order_economics e
 JOIN dim_channels c ON e.channel_key = c.channel_key
+CROSS JOIN filter_bounds
 WHERE c.channel_name ILIKE '%shopee%'
   AND e.status = 'COMPLETED'
   AND NOT e.has_platform_fees
-  AND e.date_key >= CAST(current_date - INTERVAL '30 days' AS INTEGER)
+  AND e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ORDER BY e.date_key DESC, e.net_revenue DESC
 LIMIT 200
 ```
@@ -511,7 +611,44 @@ LIMIT 200
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -540,6 +677,13 @@ Line chart — ty le don khong co MISA invoice theo ngay. Spike bat thuong → k
 **Domain Reference**: [RC5 — Daily Unmatched Trend](../domains/finance.md#rc5-daily-unmatched-trend-xu-hướng-đơn-chưa-đối-soát-theo-ngày)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+)
 SELECT
     CAST(CAST(date_key AS VARCHAR) AS DATE)             AS "Ngay",
     COUNT(*) AS "Tong don",
@@ -549,9 +693,10 @@ SELECT
         / NULLIF(COUNT(*), 0),
         1
     )                                                   AS "Unmatched %"
-FROM fact_order_economics
+FROM fact_order_economics, filter_bounds
 WHERE status = 'COMPLETED'
-  AND date_key >= CAST(current_date - INTERVAL '30 days' AS INTEGER)
+  AND date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+  AND date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 GROUP BY 1
 ORDER BY 1
 ```
@@ -589,13 +734,21 @@ ORDER BY 1
 Bar + line combo — tong don hang theo ngay (bar) vs don chua khop (line overlay).
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+)
 SELECT
     CAST(CAST(date_key AS VARCHAR) AS DATE)             AS "Ngay",
     COUNT(*) AS "Tong don",
     SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END)       AS "Don chua khop MISA"
-FROM fact_order_economics
+FROM fact_order_economics, filter_bounds
 WHERE status = 'COMPLETED'
-  AND date_key >= CAST(current_date - INTERVAL '30 days' AS INTEGER)
+  AND date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+  AND date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 GROUP BY 1
 ORDER BY 1
 ```
@@ -637,7 +790,44 @@ ORDER BY 1
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
+           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    FROM fact_order_economics
+    WHERE status = 'COMPLETED'
+      [[AND {{date_range}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz

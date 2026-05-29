@@ -35,7 +35,46 @@ Dashboard phân tích cơ cấu chi phí theo order — COGS, phí sàn, thuế,
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    FROM fact_order_costs
+    JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
+    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
+    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel = true
+      [[AND {{date_range}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -53,22 +92,36 @@ Tổng chi phí tháng này — tất cả loại: COGS + phí sàn + thuế + v
 **Domain Reference**: [Total Costs](../domains/finance.md#1-total-costs-tổng-chi-phí)
 
 ```sql
-WITH this_period AS (
+WITH filter_bounds AS (
+    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    FROM fact_order_costs
+    JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
+    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
+    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel = true
+      [[AND {{date_range}}]]
+),
+this_period AS (
     SELECT COALESCE(SUM(fc.amount), 0) AS val
     FROM fact_order_costs fc
     JOIN fact_orders fo ON fc.order_id = fo.order_id
+    JOIN dim_channels ch ON fc.channel_key = ch.channel_key
+    CROSS JOIN filter_bounds
     WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-      AND fo.is_sales_channel = true
-      AND fc.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+      AND ch.is_sales_channel = true
+      AND fo.order_timestamp::DATE >= filter_bounds.p_start
+      AND fo.order_timestamp::DATE <= filter_bounds.p_end
 ),
 prev_period AS (
     SELECT COALESCE(SUM(fc.amount), 0) AS val
     FROM fact_order_costs fc
     JOIN fact_orders fo ON fc.order_id = fo.order_id
+    JOIN dim_channels ch ON fc.channel_key = ch.channel_key
+    CROSS JOIN filter_bounds
     WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-      AND fo.is_sales_channel = true
-      AND fc.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS INTEGER)
-      AND fc.date_key < CAST(date_trunc('month', current_date) AS INTEGER)
+      AND ch.is_sales_channel = true
+      AND fo.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND fo.order_timestamp::DATE <  filter_bounds.p_start
 )
 SELECT
     t.val AS "Tong chi phi",
@@ -105,6 +158,15 @@ Tỷ lệ COGS / tổng chi phí tháng này — COGS chiếm bao nhiêu % "ti�
 **Domain Reference**: [COGS Ratio — Cost Ledger](../domains/finance.md#2-cogs-ratio--cost-ledger-tỷ-lệ-giá-vốn--tổng-chi-phí)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    FROM fact_order_costs
+    JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
+    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
+    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel = true
+      [[AND {{date_range}}]]
+)
 SELECT
     ROUND(
         SUM(CASE WHEN fc.cost_category = 'COGS' THEN fc.amount ELSE 0 END) * 100.0
@@ -113,9 +175,12 @@ SELECT
     ) AS "COGS %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
+JOIN dim_channels ch ON fc.channel_key = ch.channel_key
+CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+  AND ch.is_sales_channel = true
+  AND fo.order_timestamp::DATE >= filter_bounds.p_start
+  AND fo.order_timestamp::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -145,6 +210,15 @@ Tỷ lệ phí sàn (Shopee) / tổng chi phí tháng này.
 **Domain Reference**: [Platform Fees Ratio](../domains/finance.md#3-platform-fees-ratio-tỷ-lệ-phí-sàn--tổng-chi-phí)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    FROM fact_order_costs
+    JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
+    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
+    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel = true
+      [[AND {{date_range}}]]
+)
 SELECT
     ROUND(
         SUM(CASE WHEN fc.cost_category = 'PLATFORM_FEE' THEN fc.amount ELSE 0 END) * 100.0
@@ -153,9 +227,12 @@ SELECT
     ) AS "Phi san %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
+JOIN dim_channels ch ON fc.channel_key = ch.channel_key
+CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+  AND ch.is_sales_channel = true
+  AND fo.order_timestamp::DATE >= filter_bounds.p_start
+  AND fo.order_timestamp::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -185,6 +262,15 @@ Tỷ lệ chiết khấu / voucher / tổng chi phí tháng này.
 **Domain Reference**: [Voucher / Discount Ratio](../domains/finance.md#4-voucher--discount-ratio-tỷ-lệ-chiết-khấu--tổng-chi-phí)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    FROM fact_order_costs
+    JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
+    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
+    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
+      AND c.is_sales_channel = true
+      [[AND {{date_range}}]]
+)
 SELECT
     ROUND(
         SUM(CASE WHEN fc.cost_category = 'DISCOUNT' THEN fc.amount ELSE 0 END) * 100.0
@@ -193,9 +279,12 @@ SELECT
     ) AS "Chiet khau %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
+JOIN dim_channels ch ON fc.channel_key = ch.channel_key
+CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+  AND ch.is_sales_channel = true
+  AND fo.order_timestamp::DATE >= filter_bounds.p_start
+  AND fo.order_timestamp::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -226,7 +315,7 @@ Stacked bar — cơ cấu chi phí theo tháng: COGS / Phí sàn / Thuế / Vậ
 
 ```sql
 SELECT
-    date_trunc('month', CAST(CAST(fc.date_key AS VARCHAR) AS DATE)) AS "Thang",
+    date_trunc('month', strptime(fc.date_key::VARCHAR, '%Y%m%d')::DATE) AS "Thang",
     CASE fc.cost_category
         WHEN 'COGS'         THEN 'Gia von (COGS)'
         WHEN 'PLATFORM_FEE' THEN 'Phi san'
@@ -238,9 +327,10 @@ SELECT
     COALESCE(SUM(fc.amount), 0)                                      AS "So tien"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
+JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '11 months' AS INTEGER)
+  AND ch.is_sales_channel = true
+  AND fc.date_key >= CAST(strftime((date_trunc('month', current_date)::DATE - INTERVAL '11 months')::DATE, '%Y%m%d') AS INTEGER)
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -287,7 +377,7 @@ Line chart — xu hướng tỷ lệ phí sàn (%) qua 6 tháng gần nhất. Al
 
 ```sql
 SELECT
-    date_trunc('month', CAST(CAST(fc.date_key AS VARCHAR) AS DATE)) AS "Thang",
+    date_trunc('month', strptime(fc.date_key::VARCHAR, '%Y%m%d')::DATE) AS "Thang",
     ROUND(
         SUM(CASE WHEN fc.cost_category = 'PLATFORM_FEE' THEN fc.amount ELSE 0 END) * 100.0
         / NULLIF(SUM(fc.amount), 0),
@@ -295,9 +385,10 @@ SELECT
     ) AS "Ty le phi san %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
+JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '5 months' AS INTEGER)
+  AND ch.is_sales_channel = true
+  AND fc.date_key >= CAST(strftime((date_trunc('month', current_date)::DATE - INTERVAL '5 months')::DATE, '%Y%m%d') AS INTEGER)
 GROUP BY 1
 ORDER BY 1
 ```
@@ -346,11 +437,11 @@ SELECT
     ROUND(SUM(CASE WHEN fc.cost_category = 'TAX'          THEN fc.amount ELSE 0 END) * 100.0 / NULLIF(SUM(fc.amount), 0), 1) AS "Thue %",
     ROUND(SUM(CASE WHEN fc.cost_category = 'SHIPPING'     THEN fc.amount ELSE 0 END) * 100.0 / NULLIF(SUM(fc.amount), 0), 1) AS "Van chuyen %"
 FROM fact_order_costs fc
-LEFT JOIN dim_channels c ON fc.channel_key = c.channel_key
+JOIN dim_channels c ON fc.channel_key = c.channel_key
 JOIN fact_orders fo ON fc.order_id = fo.order_id
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+  AND c.is_sales_channel = true
+  AND fc.date_key >= CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
 GROUP BY c.channel_name
 ORDER BY "Tong chi phi" DESC
 LIMIT 20
@@ -411,9 +502,10 @@ SELECT
     COALESCE(SUM(fc.amount), 0) AS "So tien"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
+JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+  AND ch.is_sales_channel = true
+  AND fc.date_key >= CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
 GROUP BY fc.cost_category
 ORDER BY "So tien" DESC
 ```
@@ -467,18 +559,18 @@ SELECT
     END                                 AS "Loai chi phi",
     COALESCE(SUM(fc.amount), 0)         AS "So tien"
 FROM fact_order_costs fc
-LEFT JOIN dim_channels c ON fc.channel_key = c.channel_key
+JOIN dim_channels c ON fc.channel_key = c.channel_key
 JOIN fact_orders fo ON fc.order_id = fo.order_id
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND fo.is_sales_channel = true
-  AND fc.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+  AND c.is_sales_channel = true
+  AND fc.date_key >= CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
   AND c.channel_name IN (
       SELECT COALESCE(c2.channel_name, 'Unknown')
       FROM fact_order_costs fc2
-      LEFT JOIN dim_channels c2 ON fc2.channel_key = c2.channel_key
+      JOIN dim_channels c2 ON fc2.channel_key = c2.channel_key
       JOIN fact_orders fo2 ON fc2.order_id = fo2.order_id
-      WHERE fo2.status NOT IN ('CANCELLED', 'Voided') AND fo2.is_sales_channel = true
-        AND fc2.date_key >= CAST(date_trunc('month', current_date) AS INTEGER)
+      WHERE fo2.status NOT IN ('CANCELLED', 'Voided') AND c2.is_sales_channel = true
+        AND fc2.date_key >= CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
       GROUP BY c2.channel_name
       ORDER BY SUM(fc2.amount) DESC
       LIMIT 10

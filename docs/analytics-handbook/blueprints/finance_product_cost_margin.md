@@ -47,7 +47,45 @@ Dashboard phân tích margin và chi phí theo từng SKU — xác định sản
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(posting_date)::DATE AS p_start, MAX(posting_date)::DATE AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      AND revenue_net_of_discount > 0
+      [[AND {{date_range}}]]
+      [[AND channel_name = {{channel}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -168,25 +206,36 @@ Số SKU có COGS per unit tháng hiện tại lệch > 10% so với trung bình
 **Domain Reference**: [COGS Variance vs 3-Month Average](../domains/finance.md#m3-cogs-variance-vs-3-month-average-sai-lệch-giá-vốn-so-với-trung-bình-3-tháng)
 
 ```sql
-WITH current_cogs AS (
-    SELECT
-        product_code,
-        SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_current
+WITH filter_bounds AS (
+    SELECT MIN(posting_date)::DATE AS p_start, MAX(posting_date)::DATE AS p_end
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
       AND quantity > 0
-      AND posting_date >= date_trunc('month', current_date)
+      [[AND {{date_range}}]]
+      [[AND channel_name = {{channel}}]]
+),
+current_cogs AS (
+    SELECT
+        product_code,
+        SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_current
+    FROM int_misa_sales_lines, filter_bounds
+    WHERE NOT is_promo_line
+      AND quantity > 0
+      AND posting_date >= filter_bounds.p_start
+      AND posting_date <= filter_bounds.p_end
+      [[AND channel_name = {{channel}}]]
     GROUP BY product_code
 ),
 avg_3m AS (
     SELECT
         product_code,
         SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_3m_avg
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
       AND quantity > 0
-      AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
-      AND posting_date <  date_trunc('month', current_date)
+      AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND posting_date <  filter_bounds.p_start
+      [[AND channel_name = {{channel}}]]
     GROUP BY product_code
 )
 SELECT COUNT(*) AS "SKU COGS spike (> 10%)"
@@ -296,7 +345,15 @@ Table: SKU × Revenue × COGS × Margin % × COGS variance vs 3-month avg. Condi
 **Domain Reference**: [COGS Variance vs 3-Month Average](../domains/finance.md#m3-cogs-variance-vs-3-month-average-sai-lệch-giá-vốn-so-với-trung-bình-3-tháng)
 
 ```sql
-WITH current_period AS (
+WITH filter_bounds AS (
+    SELECT MIN(posting_date)::DATE AS p_start, MAX(posting_date)::DATE AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      AND revenue_net_of_discount > 0
+      [[AND {{date_range}}]]
+      [[AND channel_name = {{channel}}]]
+),
+current_period AS (
     SELECT
         product_code,
         product_name,
@@ -305,10 +362,11 @@ WITH current_period AS (
         SUM(gross_profit)                                                               AS gross_profit,
         SUM(quantity)                                                                   AS qty,
         SUM(cogs_amount) / NULLIF(SUM(quantity), 0)                                    AS cogs_per_unit_current
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
       AND revenue_net_of_discount > 0
-      [[AND posting_date >= {{date_range}}]]
+      AND posting_date >= filter_bounds.p_start
+      AND posting_date <= filter_bounds.p_end
       [[AND channel_name = {{channel}}]]
     GROUP BY product_code, product_name
 ),
@@ -316,11 +374,12 @@ avg_3m AS (
     SELECT
         product_code,
         SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_3m_avg
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
       AND quantity > 0
-      AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
-      AND posting_date <  date_trunc('month', current_date)
+      AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND posting_date <  filter_bounds.p_start
+      [[AND channel_name = {{channel}}]]
     GROUP BY product_code
 )
 SELECT
@@ -488,27 +547,38 @@ SKU có COGS/unit tháng này lệch > 10% so với avg 3 tháng trước — so
 **Domain Reference**: [COGS Variance vs 3-Month Average](../domains/finance.md#m3-cogs-variance-vs-3-month-average-sai-lệch-giá-vốn-so-với-trung-bình-3-tháng)
 
 ```sql
-WITH current_cogs AS (
+WITH filter_bounds AS (
+    SELECT MIN(posting_date)::DATE AS p_start, MAX(posting_date)::DATE AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      AND quantity > 0
+      [[AND {{date_range}}]]
+      [[AND channel_name = {{channel}}]]
+),
+current_cogs AS (
     SELECT
         product_code,
         product_name,
         SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_current,
         COUNT(DISTINCT voucher_no)                   AS don_count
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
       AND quantity > 0
-      AND posting_date >= date_trunc('month', current_date)
+      AND posting_date >= filter_bounds.p_start
+      AND posting_date <= filter_bounds.p_end
+      [[AND channel_name = {{channel}}]]
     GROUP BY product_code, product_name
 ),
 avg_3m AS (
     SELECT
         product_code,
         SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_3m_avg
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
       AND quantity > 0
-      AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
-      AND posting_date <  date_trunc('month', current_date)
+      AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND posting_date <  filter_bounds.p_start
+      [[AND channel_name = {{channel}}]]
     GROUP BY product_code
 )
 SELECT

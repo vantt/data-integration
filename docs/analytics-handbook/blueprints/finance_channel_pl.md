@@ -48,7 +48,45 @@ Dashboard phân tích lợi nhuận theo kênh bán hàng — waterfall từ doa
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics
+    WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
+      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -176,7 +214,45 @@ FROM (
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics
+    WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
+      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -203,7 +279,17 @@ Một dòng/kênh: Net Revenue, Gross Margin %, Net Margin %, Target %, Variance
 **Domain Reference**: [CPL5 — Channel Scorecard](../domains/finance.md#cpl5-channel-scorecard-bảng-điểm-kênh)
 
 ```sql
-WITH actuals AS (
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics e
+    JOIN dim_channels c USING (channel_key)
+    WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
+      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND c.channel_name = {{channel}}]]
+),
+
+actuals AS (
     SELECT
         c.channel_key,
         c.channel_name,
@@ -231,12 +317,12 @@ WITH actuals AS (
 
 targets AS (
     SELECT
-        channel_key,
-        target_value AS target_margin_pct
-    FROM dim_channel_targets
-    WHERE metric_type = 'NET_MARGIN_PCT'
-      AND target_source = 'BUDGET'
-      AND period_month = date_trunc('month', current_date)
+        t.channel_key,
+        t.target_value AS target_margin_pct
+    FROM dim_channel_targets t, filter_bounds
+    WHERE t.metric_type = 'NET_MARGIN_PCT'
+      AND t.target_source = 'BUDGET'
+      AND t.period_month = date_trunc('month', filter_bounds.p_start)
 )
 
 SELECT
@@ -341,7 +427,45 @@ ORDER BY a.net_margin_pct ASC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics
+    WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
+      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -368,16 +492,26 @@ Heatmap: Channel (row) × Month (col), giá trị = Net Margin %. Dùng pivot ta
 **Domain Reference**: [CPL6 — Net Margin % Heatmap](../domains/finance.md#cpl6-net-margin--heatmap--channel--month)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics e
+    JOIN dim_channels c USING (channel_key)
+    WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
+      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND c.channel_name = {{channel}}]]
+)
 SELECT
     c.channel_name                                                                AS "Kenh",
     date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))               AS "Thang",
     ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS "Net Margin %"
 FROM fact_order_economics e
-JOIN dim_channels c USING (channel_key)
+JOIN dim_channels c USING (channel_key), filter_bounds
 WHERE e.has_cogs
   AND e.status NOT IN ('CANCELLED', 'Voided')
   AND c.is_sales_channel
-  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= (current_date - INTERVAL '12 months')
+  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= filter_bounds.p_start
+  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <= filter_bounds.p_end
   [[AND c.channel_name = {{channel}}]]
 GROUP BY c.channel_name,
          date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))
@@ -436,7 +570,45 @@ ORDER BY "Thang", "Kenh"
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics
+    WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
+      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -463,32 +635,43 @@ Bảng biến động MoM: 1 row/channel × (Rev hiện tại, Rev trước, Δ 
 **Domain Reference**: [CPL3 — Channel Variance vs Prior Period](../domains/finance.md#cpl3-channel-variance-vs-prior-period-biến-động-so-với-kỳ-trước)
 
 ```sql
-WITH cur AS (
-    SELECT
-        e.channel_key,
-        SUM(e.net_revenue)                                                         AS rev_cur,
-        ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS margin_cur
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
     FROM fact_order_economics e
     JOIN dim_channels c USING (channel_key)
+    WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
+      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND c.channel_name = {{channel}}]]
+),
+cur AS (
+    SELECT
+        e.channel_key,
+        SUM(e.net_revenue)                                                           AS rev_cur,
+        ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS margin_cur
+    FROM fact_order_economics e
+    JOIN dim_channels c USING (channel_key), filter_bounds
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= date_trunc('month', current_date)
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <  current_date
+      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= filter_bounds.p_start
+      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <= filter_bounds.p_end
+      [[AND c.channel_name = {{channel}}]]
     GROUP BY e.channel_key
 ),
 prior AS (
     SELECT
         e.channel_key,
-        SUM(e.net_revenue)                                                         AS rev_prior,
+        SUM(e.net_revenue)                                                           AS rev_prior,
         ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS margin_prior
     FROM fact_order_economics e
-    JOIN dim_channels c USING (channel_key)
+    JOIN dim_channels c USING (channel_key), filter_bounds
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <  date_trunc('month', current_date)
+      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <  filter_bounds.p_start
+      [[AND c.channel_name = {{channel}}]]
     GROUP BY e.channel_key
 )
 SELECT
@@ -578,17 +761,27 @@ Multi-line: Net Margin % theo tháng × kênh. Overlay "Budget Target %" từ di
 
 ```sql
 -- Actual net margin per channel per month
-WITH actuals AS (
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics e
+    JOIN dim_channels c USING (channel_key)
+    WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
+      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND c.channel_name = {{channel}}]]
+),
+actuals AS (
     SELECT
         c.channel_name                                                                AS channel_name,
         date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))               AS period_month,
         ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS net_margin_pct
     FROM fact_order_economics e
-    JOIN dim_channels c USING (channel_key)
+    JOIN dim_channels c USING (channel_key), filter_bounds
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= (current_date - INTERVAL '12 months')
+      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= filter_bounds.p_start
+      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <= filter_bounds.p_end
       [[AND c.channel_name = {{channel}}]]
     GROUP BY c.channel_name,
              date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))
@@ -597,13 +790,14 @@ WITH actuals AS (
 -- Budget targets for the same window
 budget AS (
     SELECT
-        channel_name,
-        period_month,
-        target_value AS target_margin_pct
-    FROM dim_channel_targets
-    WHERE metric_type = 'NET_MARGIN_PCT'
-      AND target_source = 'BUDGET'
-      AND period_month >= (current_date - INTERVAL '12 months')
+        t.channel_name,
+        t.period_month,
+        t.target_value AS target_margin_pct
+    FROM dim_channel_targets t, filter_bounds
+    WHERE t.metric_type = 'NET_MARGIN_PCT'
+      AND t.target_source = 'BUDGET'
+      AND t.period_month >= date_trunc('month', filter_bounds.p_start)
+      AND t.period_month <= date_trunc('month', filter_bounds.p_end)
 )
 
 SELECT
@@ -669,7 +863,45 @@ ORDER BY "Thang", "Kenh"
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
+           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    FROM fact_order_economics
+    WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
+      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
