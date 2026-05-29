@@ -323,7 +323,8 @@ async function main() {
 
       // Prepare for Dashboard Sync
       const pos = q.pos || { row: 0, col: 0, size_x: 4, size_y: 4 };
-      const cardConfig = { id: card.id, ...pos };
+      // Include question name on cardConfig so normalizers (e.g. cycle-indicator) can identify cards
+      const cardConfig = { id: card.id, name: q.name, ...pos };
 
       // Propagate dashcard-level settings from blueprint viz block.
       // Keys prefixed with "dashcard." belong on the dashcard, not the card.
@@ -419,6 +420,22 @@ async function main() {
       if (tc.tab) textCardConfig.tab = tc.tab;
       cardConfigs.push(textCardConfig);
       console.log(`📝 Text card: "${tc.name}" at row ${pos.row}, col ${pos.col}`);
+    }
+
+    // Parse-time validation: warn when multiple cards share row=0, col=0 in the same tab
+    // Helps blueprint authors catch cycle-indicator conflicts before deployment
+    const row0ByTab = {};
+    for (const cfg of cardConfigs) {
+      if (cfg.row === 0 && cfg.col === 0) {
+        const tabKey = cfg.tab || '__no_tab__';
+        row0ByTab[tabKey] = (row0ByTab[tabKey] || []).concat(cfg.name || '(text card)');
+      }
+    }
+    for (const [tabKey, cards] of Object.entries(row0ByTab)) {
+      if (cards.length > 1) {
+        const tabLabel = tabKey === '__no_tab__' ? '(no tab)' : tabKey;
+        console.warn(`⚠️  Blueprint conflict: tab "${tabLabel}" has ${cards.length} cards at row=0, col=0 — cycle-indicator may not render first [${cards.join(', ')}]`);
+      }
     }
 
     // Sync to Dashboard (tabs and cards in one PUT)
