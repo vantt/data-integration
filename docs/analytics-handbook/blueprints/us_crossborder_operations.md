@@ -15,7 +15,20 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 
 ### Dashboard: US CrossBorder Daily [US]
 
-**Description**: Daily monitoring of US CrossBorder orders — revenue tracking, order status, fulfillment pipeline. 2 tabs: Tong quan, Chi tiet don hang.
+**Description**: Daily monitoring of US CrossBorder orders — revenue tracking, order status, fulfillment pipeline. Dynamic period filter covers any date range.
+
+---
+
+#### Filter: Period
+
+```json metabase-filter
+{
+  "slug": "date_range",
+  "type": "date/all-options",
+  "default": "thismonth",
+  "field_id": 141
+}
+```
 
 ---
 
@@ -24,10 +37,45 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
 SELECT
-  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
-  '  ·  Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y')
-  AS " "
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -38,25 +86,46 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
-#### 📝 Text: Don US CrossBorder hom nay — export va arrangement
+#### 📝 Text: Don US CrossBorder trong ky
 
-# Don US CrossBorder hom nay — export va arrangement
+# Don US CrossBorder trong ky
 
 ```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":1}
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Net Revenue (US)
 
-US CrossBorder revenue today vs yesterday.
+US CrossBorder net revenue this period vs previous period.
 
 ```sql
-SELECT
-    COALESCE(SUM(CASE WHEN e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END), 0) as "Doanh thu US",
-    COALESCE(SUM(CASE WHEN e.date_key = CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END), 0) as "Hom qua"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+),
+prev_bounds AS (
+    SELECT p_start, p_end,
+        (EXTRACT(YEAR FROM p_end)::INTEGER - EXTRACT(YEAR FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM filter_bounds
+),
+this_period AS (
+    SELECT COALESCE(SUM(e.total_us_revenue_excl_vat), 0) AS val
+    FROM fact_us_shipment_economics e, filter_bounds
+    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+),
+prev_period AS (
+    SELECT COALESCE(SUM(e.total_us_revenue_excl_vat), 0) AS val
+    FROM fact_us_shipment_economics e, prev_bounds
+    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+)
+SELECT t.val AS "Doanh thu US", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
 
 ```json metabase-viz
@@ -76,47 +145,87 @@ WHERE e.date_key >= CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS 
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":6, "size_y":3}
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Total Orders (US)
 
-US CrossBorder order count today vs yesterday.
+US CrossBorder order count this period vs previous period.
 
 ```sql
-SELECT
-    COUNT(DISTINCT CASE WHEN e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN e.date_key = CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER) THEN e.order_id END) as "Hom qua"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+),
+prev_bounds AS (
+    SELECT p_start, p_end,
+        (EXTRACT(YEAR FROM p_end)::INTEGER - EXTRACT(YEAR FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM filter_bounds
+),
+this_period AS (
+    SELECT COUNT(DISTINCT e.order_id) AS val
+    FROM fact_us_shipment_economics e, filter_bounds
+    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+),
+prev_period AS (
+    SELECT COUNT(DISTINCT e.order_id) AS val
+    FROM fact_us_shipment_economics e, prev_bounds
+    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+)
+SELECT t.val AS "Total Orders", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
 
 ```json metabase-viz
-{
-  "display": "scalar"
-}
+{ "display": "scalar" }
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":4, "size_y":3}
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: AOV (US)
 
-Average order value for US CrossBorder.
+Average order value for US CrossBorder this period vs previous period.
 
 ```sql
-SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END) /
-              COUNT(DISTINCT CASE WHEN e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END), 0) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN e.date_key = CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER) THEN e.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN e.date_key = CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END) /
-              COUNT(DISTINCT CASE WHEN e.date_key = CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER) THEN e.order_id END), 0) END as "Hom qua"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+),
+prev_bounds AS (
+    SELECT p_start, p_end,
+        (EXTRACT(YEAR FROM p_end)::INTEGER - EXTRACT(YEAR FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM filter_bounds
+),
+this_period AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT e.order_id) = 0 THEN 0
+             ELSE ROUND(SUM(e.total_us_revenue_excl_vat) / COUNT(DISTINCT e.order_id), 0) END AS val
+    FROM fact_us_shipment_economics e, filter_bounds
+    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+),
+prev_period AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT e.order_id) = 0 THEN 0
+             ELSE ROUND(SUM(e.total_us_revenue_excl_vat) / COUNT(DISTINCT e.order_id), 0) END AS val
+    FROM fact_us_shipment_economics e, prev_bounds
+    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+)
+SELECT t.val AS "AOV", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
 
 ```json metabase-viz
@@ -136,19 +245,43 @@ WHERE e.date_key >= CAST(STRFTIME(current_date - INTERVAL '1 day', '%Y%m%d') AS 
 ```
 
 ```json metabase-pos
-{"row": 3, "col":10, "size_x":4, "size_y":3}
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Unique Customers (US)
 
-Distinct customers ordering via US channel today.
+Distinct customers ordering via US channel in selected period.
 
 ```sql
-SELECT
-    COUNT(DISTINCT o.customer_key) as "Khach hang"
-FROM fact_us_shipment_economics e
-JOIN fact_orders o ON e.order_id = o.order_id
-WHERE e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+),
+prev_bounds AS (
+    SELECT p_start, p_end,
+        (EXTRACT(YEAR FROM p_end)::INTEGER - EXTRACT(YEAR FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM filter_bounds
+),
+this_period AS (
+    SELECT COUNT(DISTINCT o2.customer_key) AS val
+    FROM fact_us_shipment_economics e
+    JOIN fact_orders o2 ON e.order_id = o2.order_id, filter_bounds
+    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+),
+prev_period AS (
+    SELECT COUNT(DISTINCT o2.customer_key) AS val
+    FROM fact_us_shipment_economics e
+    JOIN fact_orders o2 ON e.order_id = o2.order_id, prev_bounds
+    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+)
+SELECT t.val AS "Khach hang", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
 
 ```json metabase-viz
@@ -156,7 +289,7 @@ WHERE e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
 ```
 
 ```json metabase-pos
-{"row": 3, "col":14, "size_x":4, "size_y":3}
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 #### 📝 Text: Trang thai don va fulfillment
@@ -164,21 +297,21 @@ WHERE e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
 # Trang thai don va fulfillment
 
 ```json metabase-pos
-{"row": 6, "col":0, "size_x":18, "size_y":1}
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders by Status (US)
 
-Distribution of order statuses for US CrossBorder.
+Distribution of order statuses for US CrossBorder in selected period.
 
 ```sql
 SELECT
-    o.status as "Trang thai",
-    COUNT(DISTINCT o.order_id) as "So don"
+    o.status AS "Trang thai",
+    COUNT(DISTINCT o.order_id) AS "So don"
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) = current_date
-  AND ch.channel_name = 'US'
+WHERE ch.channel_name = 'US'
+  [[AND {{date_range}}]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -195,21 +328,21 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":9, "size_y":5}
+{ "row": 7, "col": 0, "size_x": 9, "size_y": 5 }
 ```
 
 #### Question: Fulfillment Status (US)
 
-Distribution of fulfillment statuses for US CrossBorder.
+Distribution of fulfillment statuses for US CrossBorder in selected period.
 
 ```sql
 SELECT
-    COALESCE(o.fulfillment_status, 'Unknown') as "Fulfillment",
-    COUNT(DISTINCT o.order_id) as "So don"
+    COALESCE(o.fulfillment_status, 'Unknown') AS "Fulfillment",
+    COUNT(DISTINCT o.order_id) AS "So don"
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) = current_date
-  AND ch.channel_name = 'US'
+WHERE ch.channel_name = 'US'
+  [[AND {{date_range}}]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -226,29 +359,37 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 7, "col":9, "size_x":9, "size_y":5}
+{ "row": 7, "col": 9, "size_x": 9, "size_y": 5 }
 ```
 
-#### 📝 Text: Xu huong 7 ngay
+#### 📝 Text: Xu huong theo ngay trong ky
 
-# Xu huong 7 ngay
+# Xu huong theo ngay trong ky
 
 ```json metabase-pos
-{"row": 12, "col":0, "size_x":18, "size_y":1}
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### Question: US Revenue Trend (7 Days)
+#### Question: Revenue & Orders Trend (US)
 
-Daily revenue trend for US CrossBorder over last 7 days.
+Daily revenue and order count trend within selected period.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+)
 SELECT
-    CAST(CAST(e.date_key AS VARCHAR) AS DATE) as "Ngay",
-    SUM(e.total_us_revenue_excl_vat) as "Doanh thu US",
-    COUNT(DISTINCT e.order_id) as "So don"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(current_date - INTERVAL '6 days', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+    make_date((e.date_key/10000)::INTEGER, ((e.date_key%10000)/100)::INTEGER, (e.date_key%100)::INTEGER) AS "Ngay",
+    SUM(e.total_us_revenue_excl_vat) AS "Doanh thu US",
+    COUNT(DISTINCT e.order_id) AS "So don"
+FROM fact_us_shipment_economics e, filter_bounds fb
+WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
 GROUP BY e.date_key
 ORDER BY e.date_key
 ```
@@ -277,12 +418,12 @@ ORDER BY e.date_key
 ```
 
 ```json metabase-pos
-{"row": 13, "col":0, "size_x":18, "size_y":6}
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
-#### 📝 Text: Danh sach don US hom nay
+#### 📝 Text: Danh sach don US trong ky
 
-# Danh sach don US hom nay
+# Danh sach don US trong ky
 
 ```json metabase-pos
 { "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
@@ -290,22 +431,31 @@ ORDER BY e.date_key
 
 #### Question: US Orders List
 
-Detailed list of US CrossBorder orders today.
+Detailed list of US CrossBorder orders in selected period.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(date(o2.order_timestamp)) AS p_start,
+           MAX(date(o2.order_timestamp)) AS p_end
+    FROM fact_orders o2
+    JOIN dim_channels ch2 ON o2.channel_key = ch2.channel_key
+    WHERE ch2.channel_name = 'US'
+      [[AND {{date_range}}]]
+)
 SELECT
-    e.order_code as "Ma don",
-    CAST(CAST(e.date_key AS VARCHAR) AS DATE) as "Ngay",
-    COALESCE(c.full_name, 'Unknown') as "Khach hang",
-    e.total_us_revenue_excl_vat as "Doanh thu US",
-    o.status as "Trang thai",
-    o.fulfillment_status as "Fulfillment",
-    o.payment_status as "Thanh toan",
-    CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END as "Data Quality"
+    e.order_code AS "Ma don",
+    make_date((e.date_key/10000)::INTEGER, ((e.date_key%10000)/100)::INTEGER, (e.date_key%100)::INTEGER) AS "Ngay",
+    COALESCE(c.full_name, 'Unknown') AS "Khach hang",
+    e.total_us_revenue_excl_vat AS "Doanh thu US",
+    o.status AS "Trang thai",
+    o.fulfillment_status AS "Fulfillment",
+    o.payment_status AS "Thanh toan",
+    CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END AS "Data Quality"
 FROM fact_us_shipment_economics e
 JOIN fact_orders o ON e.order_id = o.order_id
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key, filter_bounds fb
+WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
 ORDER BY o.order_timestamp DESC
 ```
 
@@ -320,15 +470,24 @@ ORDER BY o.order_timestamp DESC
 { "row": 20, "col": 0, "size_x": 18, "size_y": 12 }
 ```
 
-#### ❓ Question: Don thieu gia US (hom nay)
+#### ❓ Question: Don thieu gia US (trong ky)
 
-So don hom nay co SKU chua co trong price list US.
+So don trong ky co SKU chua co trong price list US.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+)
 SELECT
-    COUNT(*) as "Don thieu gia"
-FROM fact_us_shipment_economics e
-WHERE e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+    COUNT(*) AS "Don thieu gia"
+FROM fact_us_shipment_economics e, filter_bounds fb
+WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
   AND e.has_unpriced_sku = TRUE
 ```
 
@@ -340,16 +499,25 @@ WHERE e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
 { "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
 ```
 
-#### ❓ Question: SKU chua co gia (hom nay)
+#### ❓ Question: SKU chua co gia (trong ky)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(date(o.order_timestamp)) AS p_start,
+           MAX(date(o.order_timestamp)) AS p_end
+    FROM fact_orders o
+    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    WHERE ch.channel_name = 'US'
+      [[AND {{date_range}}]]
+)
 SELECT
     l.sku                              AS "SKU",
     COUNT(DISTINCT l.order_id)         AS "So don",
     SUM(l.quantity)                    AS "So luong"
-FROM int_us_shipment_line_prices l
+FROM int_us_shipment_line_prices l, filter_bounds fb
 WHERE l.is_price_missing = TRUE
-  AND l.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+  AND l.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND l.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
 GROUP BY l.sku
 ORDER BY COUNT(DISTINCT l.order_id) DESC
 ```
@@ -370,7 +538,6 @@ ORDER BY COUNT(DISTINCT l.order_id) DESC
 
 ---
 
-
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_us_shipment_economics · **Cadence:** daily · **Scope:** US CrossBorder non-cancelled · **Caveats:** Export arrangement
@@ -379,789 +546,3 @@ ORDER BY COUNT(DISTINCT l.order_id) DESC
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
 ```
-
-### 📑 Tab: Tuan nay
-
-#### ❓ Question: Chu kỳ báo cáo
-
-```sql
-SELECT
-  '📅 Tuần này: ' || strftime(date_trunc('week', current_date), '%d/%m/%Y') ||
-  ' → ' || strftime(current_date, '%d/%m/%Y') ||
-  '  ·  Tuần trước: ' || strftime(date_trunc('week', current_date) - INTERVAL '7 days', '%d/%m/%Y') ||
-  ' → ' || strftime(date_trunc('week', current_date) - INTERVAL '1 day', '%d/%m/%Y')
-  AS " "
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
-```
-
-#### 📝 Text: Don US CrossBorder tuan nay
-
-# Don US CrossBorder tuan nay
-
-```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: Net Revenue (Weekly)
-
-US CrossBorder net revenue this week vs last week.
-
-```sql
-SELECT
-    COALESCE(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-                       AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END), 0) as "Doanh thu US",
-    COALESCE(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-                       AND e.date_key <  CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END), 0) as "Tuan truoc"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "Doanh thu US": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
-```
-
-#### Question: Total Orders (Weekly)
-
-US CrossBorder order count this week vs last week.
-
-```sql
-SELECT
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-                          AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-                          AND e.date_key <  CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER) THEN e.order_id END) as "Tuan truoc"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
-```
-
-#### Question: AOV (Weekly)
-
-Average order value for US CrossBorder this week vs last week.
-
-```sql
-SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-                              AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END) /
-              COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END), 0) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <  CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER) THEN e.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-                              AND e.date_key <  CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END) /
-              COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <  CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER) THEN e.order_id END), 0) END as "Tuan truoc"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
-```
-
-#### Question: Unique Customers (Weekly)
-
-Distinct customers this week vs last week.
-
-```sql
-SELECT
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-                          AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN o.customer_key END) as "Khach hang",
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-                          AND e.date_key <  CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER) THEN o.customer_key END) as "Tuan truoc"
-FROM fact_us_shipment_economics e
-JOIN fact_orders o ON e.order_id = o.order_id
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date) - INTERVAL '7 days', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
-```
-
-#### 📝 Text: Phan phoi trang thai (Weekly)
-
-# Phan phoi trang thai
-
-```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: Orders by Status (Weekly)
-
-Order status distribution this week.
-
-```sql
-SELECT
-    o.status as "Trang thai",
-    COUNT(DISTINCT o.order_id) as "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) >= date_trunc('week', current_date)
-  AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-GROUP BY 1
-ORDER BY 2 DESC
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["Trang thai"],
-    "graph.metrics": ["So don"],
-    "graph.colors": ["#509EE3"]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 5 }
-```
-
-#### Question: Fulfillment Status (Weekly)
-
-Fulfillment status distribution this week.
-
-```sql
-SELECT
-    COALESCE(o.fulfillment_status, 'Unknown') as "Fulfillment",
-    COUNT(DISTINCT o.order_id) as "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) >= date_trunc('week', current_date)
-  AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-GROUP BY 1
-ORDER BY 2 DESC
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["Fulfillment"],
-    "graph.metrics": ["So don"],
-    "graph.colors": ["#88BF4D"]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 5 }
-```
-
-#### 📝 Text: Xu huong tung ngay trong tuan
-
-# Xu huong tung ngay trong tuan
-
-```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: Daily Trend This Week (US)
-
-Daily revenue and order count trend within the current calendar week.
-
-```sql
-SELECT
-    CAST(CAST(e.date_key AS VARCHAR) AS DATE) as "Ngay",
-    SUM(e.total_us_revenue_excl_vat) as "Doanh thu US",
-    COUNT(DISTINCT e.order_id) as "So don"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-GROUP BY e.date_key
-ORDER BY e.date_key
-```
-
-```json metabase-viz
-{
-  "display": "combo",
-  "visualization_settings": {
-    "graph.dimensions": ["Ngay"],
-    "graph.metrics": ["Doanh thu US", "So don"],
-    "graph.colors": ["#509EE3", "#EF8C8C"],
-    "series_settings": {
-      "Doanh thu US": { "display": "bar" },
-      "So don": { "display": "line", "axis": "right" }
-    },
-    "column_settings": {
-      "Doanh thu US": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 6 }
-```
-
-#### 📝 Text: Danh sach don tuan nay
-
-# Danh sach don tuan nay
-
-```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: US Orders List (Weekly)
-
-List of US CrossBorder orders this week.
-
-```sql
-SELECT
-    e.order_code as "Ma don",
-    CAST(CAST(e.date_key AS VARCHAR) AS DATE) as "Ngay",
-    COALESCE(c.full_name, 'Unknown') as "Khach hang",
-    e.total_us_revenue_excl_vat as "Doanh thu US",
-    o.status as "Trang thai",
-    o.fulfillment_status as "Fulfillment",
-    o.payment_status as "Thanh toan",
-    CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END as "Data Quality"
-FROM fact_us_shipment_economics e
-JOIN fact_orders o ON e.order_id = o.order_id
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-ORDER BY o.order_timestamp DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": { "table.pivot": false }
-}
-```
-
-```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 12 }
-```
-
-#### ❓ Question: Don thieu gia US (tuan nay)
-
-So don tuan nay co SKU chua co trong price list US.
-
-```sql
-SELECT
-    COUNT(*) as "Don thieu gia"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-  AND e.has_unpriced_sku = TRUE
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "scalar.switch_positive_negative": true } }
-```
-
-```json metabase-pos
-{ "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
-```
-
-#### ❓ Question: SKU chua co gia (tuan nay)
-
-```sql
-SELECT
-    l.sku                              AS "SKU",
-    COUNT(DISTINCT l.order_id)         AS "So don",
-    SUM(l.quantity)                    AS "So luong"
-FROM int_us_shipment_line_prices l
-WHERE l.is_price_missing = TRUE
-  AND l.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
-  AND l.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-GROUP BY l.sku
-ORDER BY COUNT(DISTINCT l.order_id) DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false,
-    "card.title": "SKU chưa có giá — cần bổ sung vào price list"
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 35, "col": 0, "size_x": 9, "size_y": 6 }
-```
-
----
-
-
-#### 📝 Text: Source & Freshness
-
-**Source:** fact_us_shipment_economics · **Cadence:** daily · **Scope:** US CrossBorder non-cancelled · **Caveats:** Export arrangement
-<!-- text-id:source-freshness -->
-
-```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-### 📑 Tab: Thang nay
-
-#### ❓ Question: Chu kỳ báo cáo
-
-```sql
-SELECT
-  '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') ||
-  ' → ' || strftime(current_date, '%d/%m/%Y') ||
-  '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') ||
-  ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y')
-  AS " "
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
-```
-
-#### 📝 Text: Don US CrossBorder thang nay
-
-# Don US CrossBorder thang nay
-
-```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: Net Revenue (Monthly)
-
-US CrossBorder net revenue this month vs last month.
-
-```sql
-SELECT
-    COALESCE(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-                       AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END), 0) as "Doanh thu US",
-    COALESCE(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-                       AND e.date_key <  CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END), 0) as "Thang truoc"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "Doanh thu US": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
-```
-
-#### Question: Total Orders (Monthly)
-
-US CrossBorder order count this month vs last month.
-
-```sql
-SELECT
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-                          AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-                          AND e.date_key <  CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER) THEN e.order_id END) as "Thang truoc"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
-```
-
-#### Question: AOV (Monthly)
-
-Average order value for US CrossBorder this month vs last month.
-
-```sql
-SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-                              AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END) /
-              COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN e.order_id END), 0) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <  CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER) THEN e.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-                              AND e.date_key <  CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER) THEN e.total_us_revenue_excl_vat END) /
-              COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-                                    AND e.date_key <  CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER) THEN e.order_id END), 0) END as "Thang truoc"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
-```
-
-#### Question: Unique Customers (Monthly)
-
-Distinct customers this month vs last month.
-
-```sql
-SELECT
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-                          AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER) THEN o.customer_key END) as "Khach hang",
-    COUNT(DISTINCT CASE WHEN e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-                          AND e.date_key <  CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER) THEN o.customer_key END) as "Thang truoc"
-FROM fact_us_shipment_economics e
-JOIN fact_orders o ON e.order_id = o.order_id
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-```
-
-```json metabase-viz
-{ "display": "scalar" }
-```
-
-```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
-```
-
-#### 📝 Text: Phan phoi trang thai (Monthly)
-
-# Phan phoi trang thai
-
-```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: Orders by Status (Monthly)
-
-Order status distribution this month.
-
-```sql
-SELECT
-    o.status as "Trang thai",
-    COUNT(DISTINCT o.order_id) as "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) >= date_trunc('month', current_date)
-  AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-GROUP BY 1
-ORDER BY 2 DESC
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["Trang thai"],
-    "graph.metrics": ["So don"],
-    "graph.colors": ["#509EE3"]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 5 }
-```
-
-#### Question: Fulfillment Status (Monthly)
-
-Fulfillment status distribution this month.
-
-```sql
-SELECT
-    COALESCE(o.fulfillment_status, 'Unknown') as "Fulfillment",
-    COUNT(DISTINCT o.order_id) as "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) >= date_trunc('month', current_date)
-  AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-GROUP BY 1
-ORDER BY 2 DESC
-```
-
-```json metabase-viz
-{
-  "display": "bar",
-  "visualization_settings": {
-    "graph.dimensions": ["Fulfillment"],
-    "graph.metrics": ["So don"],
-    "graph.colors": ["#88BF4D"]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 5 }
-```
-
-#### 📝 Text: Xu huong tung tuan trong thang
-
-# Xu huong tung tuan trong thang
-
-```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: Weekly Trend This Month (US)
-
-Weekly revenue and order count within the current calendar month.
-
-```sql
-SELECT
-    date_trunc('week', CAST(CAST(e.date_key AS VARCHAR) AS DATE)) as "Tuan",
-    SUM(e.total_us_revenue_excl_vat) as "Doanh thu US",
-    COUNT(DISTINCT e.order_id) as "So don"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-GROUP BY 1
-ORDER BY 1
-```
-
-```json metabase-viz
-{
-  "display": "combo",
-  "visualization_settings": {
-    "graph.dimensions": ["Tuan"],
-    "graph.metrics": ["Doanh thu US", "So don"],
-    "graph.colors": ["#509EE3", "#EF8C8C"],
-    "series_settings": {
-      "Doanh thu US": { "display": "bar" },
-      "So don": { "display": "line", "axis": "right" }
-    },
-    "column_settings": {
-      "Doanh thu US": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 6 }
-```
-
-#### 📝 Text: Danh sach don thang nay
-
-# Danh sach don thang nay
-
-```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### Question: US Orders List (Monthly)
-
-List of US CrossBorder orders this month.
-
-```sql
-SELECT
-    e.order_code as "Ma don",
-    CAST(CAST(e.date_key AS VARCHAR) AS DATE) as "Ngay",
-    COALESCE(c.full_name, 'Unknown') as "Khach hang",
-    e.total_us_revenue_excl_vat as "Doanh thu US",
-    o.status as "Trang thai",
-    o.fulfillment_status as "Fulfillment",
-    o.payment_status as "Thanh toan",
-    CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END as "Data Quality"
-FROM fact_us_shipment_economics e
-JOIN fact_orders o ON e.order_id = o.order_id
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-ORDER BY o.order_timestamp DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": { "table.pivot": false }
-}
-```
-
-```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 12 }
-```
-
-#### ❓ Question: Don thieu gia US (thang nay)
-
-So don thang nay co SKU chua co trong price list US.
-
-```sql
-SELECT
-    COUNT(*) as "Don thieu gia"
-FROM fact_us_shipment_economics e
-WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-  AND e.has_unpriced_sku = TRUE
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "scalar.switch_positive_negative": true } }
-```
-
-```json metabase-pos
-{ "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
-```
-
-#### ❓ Question: SKU chua co gia (thang nay)
-
-```sql
-SELECT
-    l.sku                              AS "SKU",
-    COUNT(DISTINCT l.order_id)         AS "So don",
-    SUM(l.quantity)                    AS "So luong"
-FROM int_us_shipment_line_prices l
-WHERE l.is_price_missing = TRUE
-  AND l.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-  AND l.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-GROUP BY l.sku
-ORDER BY COUNT(DISTINCT l.order_id) DESC
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false,
-    "card.title": "SKU chưa có giá — cần bổ sung vào price list"
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 35, "col": 0, "size_x": 9, "size_y": 6 }
-```
-
-#### 📝 Text: Top san pham US thang nay
-
-# Top sản phẩm US tháng này
-
-```json metabase-pos
-{ "row": 42, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### ❓ Question: Top 10 SKU theo doanh thu US (thang nay)
-
-```sql
-SELECT
-    l.sku                              AS "SKU",
-    SUM(l.line_revenue_excl_vat)       AS "Doanh thu US",
-    SUM(l.quantity)                    AS "So luong",
-    COUNT(DISTINCT l.order_id)         AS "So don"
-FROM int_us_shipment_line_prices l
-WHERE l.is_price_missing = FALSE
-  AND l.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
-  AND l.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
-GROUP BY l.sku
-ORDER BY SUM(l.line_revenue_excl_vat) DESC
-LIMIT 10
-```
-
-```json metabase-viz
-{
-  "display": "row",
-  "visualization_settings": {
-    "graph.dimensions": ["SKU"],
-    "graph.metrics": ["Doanh thu US"],
-    "graph.colors": ["#509EE3"],
-    "column_settings": {
-      "Doanh thu US": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 43, "col": 0, "size_x": 18, "size_y": 8 }
-```
-
-#### 📝 Text: Source & Freshness
-
-**Source:** fact_us_shipment_economics · **Cadence:** daily · **Scope:** US CrossBorder non-cancelled · **Caveats:** Export arrangement
-<!-- text-id:source-freshness -->
-
-```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
