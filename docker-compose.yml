@@ -106,6 +106,29 @@ services:
       caddy: files.etl.local
       caddy.reverse_proxy: "{{upstreams 8080}}"
 
+  detail_view:
+    build:
+      context: .
+      dockerfile: Dockerfile.detailview
+    container_name: detail_view
+    restart: unless-stopped
+    ports:
+      - "3005:8000"
+    env_file:
+      - .env.docker
+    environment:
+      - OLAP_DB_PATH=/app/var/data_lake/serving/olap.duckdb
+      - APP_TZ=Asia/Ho_Chi_Minh
+      - DETAIL_VIEW_PORT=8000
+    networks:
+      - caddy_net
+    volumes:
+      # Read-only: app uses duckdb read_only=True; :ro is defense-in-depth at the OS level.
+      - ./app_data/data_lake:/app/var/data_lake:ro
+    labels:
+      caddy: detail.local
+      caddy.reverse_proxy: "{{upstreams 8000}}"
+
 volumes:
   monitoring_db:
     # Stored in Docker VM — isolated from Windows filesystem scanning (no dllhost/Defender lock)

@@ -20,6 +20,7 @@ app_data
 *.log
 *.log.*
 **/venv/
+**/.venv/
 **/__pycache__/
 **/target/
 **/dbt_packages/

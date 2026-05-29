@@ -64,6 +64,7 @@ Find any topic in one lookup:
 | **Orchestration** (Dagster) | [orchestration/docs/README.md](../orchestration/docs/README.md) | Jobs, Assets, Schedules, Resources |
 | **Webhook System** | [webhook_receiver/docs/README.md](../webhook_receiver/docs/README.md) | API, Security, CloudflareD1 |
 | **Analytics** (Metabase) | [analytics-handbook/README.md](./analytics-handbook/README.md) | Domains, Playbooks, Blueprints |
+| **detailView** (FastAPI) | [detailView/docs/README.md](../detailView/docs/README.md) | Order/Customer insight pages, hexagonal, read-only DuckDB |
 
 ### Documentation Roles
 

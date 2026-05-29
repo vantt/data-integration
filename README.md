@@ -123,6 +123,9 @@ data-integration2/
 ├── webhook_consumer/       # Webhook polling
 │   └── cloudflared1_consumer/
 │
+├── detailView/             # Order/Customer insight web app (FastAPI, read-only)
+│   └── app/                # Hexagonal: domain · application · adapters
+│
 ├── data_lake/              # Data storage
 │   ├── sapo_raw/           # Raw Parquet files
 │   ├── export/marts/       # Transformed data
@@ -147,6 +150,7 @@ data-integration2/
 | Transformation | [dbt](https://www.getdbt.com/) | SQL-based ELT |
 | Orchestration | [Dagster](https://dagster.io/) | Job scheduling |
 | Serving | DuckDB + Metabase | Analytics & BI |
+| Insight app | FastAPI + Jinja2 + HTMX | Read-only order/customer detail views |
 | Webhooks | Cloudflare Workers | Real-time event buffering |
 
 ## Documentation
@@ -167,6 +171,7 @@ data-integration2/
 - [Orchestration Layer](orchestration/docs/README.md) - Dagster jobs & schedules
 - [Webhook Receiver](webhook_receiver/docs/README.md) - Cloudflare Worker setup
 - [Analytics Handbook](docs/analytics-handbook/README.md) - BI domains, playbooks, blueprints
+- [detailView](detailView/docs/README.md) - Read-only order/customer insight web app
 - [Architecture Decisions](docs/decisions/) - 13 ADRs documenting design rationale
 
 ## Common Commands

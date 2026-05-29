@@ -104,6 +104,14 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 - **Context:** SQL models (`.sql`) and YAML configurations.
 - **Dependencies:** `dbt-duckdb`.
 
+### 6. Detail View App (`data-integration2/detailView`)
+
+- **Purpose:** Read-only web app showing the COMPLETE warehouse insight for ONE order or ONE customer (search by code/id → detail page). Complements Metabase (single-entity drill-down, not aggregation).
+- **Tech:** Python, FastAPI + Jinja2 + HTMX. **Hexagonal architecture** (domain ⟂ ports ⟂ adapters).
+- **Data:** Opens `data_lake/serving/olap.duckdb` with `read_only=True` (same DB Metabase reads; zero lock risk). Queries `fact_*`/`dim_*`/`mart_*` views only — NEVER `int_*`.
+- **Boundaries:** `domain/` + `application/` are pure (NO duckdb/fastapi imports — enforced by an architecture test). SQL lives ONLY in `adapters/outbound/duckdb/`.
+- **Runtime:** Docker service `detail_view` (port `3005:8000`, Caddy `detail.local`). No auth (LAN-only). Deps: own `detailView/requirements.txt`.
+
 ---
 
 ## AI Agent Rules for Multi-Project Repos
@@ -118,6 +126,7 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
     - **Consumer** files ONLY in `/webhook_consumer/`
     - **Transformation** files ONLY in `/transformation/`
     - **Orchestration** files ONLY in `/orchestration/`
+    - **DetailView** files ONLY in `/detailView/`
     - **NEVER** mix dependencies (e.g., do not verify `package.json` if working in a Python `ingestion` folder).
 4.  **Local Context Discovery**:
     - **MANDATORY**: Before starting work in a sub-component (e.g., `transformation/`), check if a local `AGENTS.md` exists (e.g., `transformation/AGENTS.md`).
