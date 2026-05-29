@@ -66,6 +66,10 @@ sources:
       - name: team_members_raw
         description: "Staff membership with SCD2 (effective_from/to)"
 
+      # US Shipment Price List (Google Sheets)
+      - name: us_shipment_prices_raw
+        description: "SKU-level US export deal prices with effective_from date versioning. Sapo records US prices as 0; this is the source of truth."
+
   - name: shopee_raw
     schema: main
     meta:

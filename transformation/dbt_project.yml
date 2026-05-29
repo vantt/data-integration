@@ -63,6 +63,8 @@ models:
         +tags: ["int", "shopee"]
       misa:
         +tags: ["int", "misa"]
+      us_shipment:
+        +tags: ["int", "us_shipment"]
 
     marts:
       +schema: marts

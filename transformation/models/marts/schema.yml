@@ -1,6 +1,24 @@
 version: 2
 
 models:
+  # US Shipment
+  - name: fact_us_shipment_economics
+    description: >
+      US CrossBorder order economics — actual deal revenue from the US Shipment Price List.
+      Grain: one row per US order (order_id). Sapo records US prices as 0; use this mart
+      for all US revenue reporting instead of fact_orders.net_revenue.
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: order_code
+        tests: [not_null]
+      - name: total_us_revenue_excl_vat
+        description: "Sum of (quantity × us_price_excl_vat) across all line items"
+      - name: total_us_revenue_incl_vat
+        description: "Sum of (quantity × us_price_incl_vat) across all line items"
+      - name: has_unpriced_sku
+        description: "TRUE if any line item had no matching price in the price list"
+
   # Dimensions
   - name: dim_channel_targets
     description: >

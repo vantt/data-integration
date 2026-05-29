@@ -52,14 +52,12 @@ US CrossBorder revenue today vs yesterday.
 
 ```sql
 SELECT
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END), 0) as "Net Revenue",
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hom qua"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN e.total_us_revenue_excl_vat END), 0) as "Doanh thu US",
+    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN e.total_us_revenue_excl_vat END), 0) as "Hom qua"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -67,7 +65,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Net Revenue": {
+      "Doanh thu US": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -88,14 +86,12 @@ US CrossBorder order count today vs yesterday.
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hom qua"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN e.order_id END) as "Total Orders",
+    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN e.order_id END) as "Hom qua"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -114,18 +110,16 @@ Average order value for US CrossBorder.
 
 ```sql
 SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END) /
-              COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END), 0) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
-         ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END) /
-              COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END), 0) END as "Hom qua"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN e.order_id END) = 0 THEN 0
+         ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN e.total_us_revenue_excl_vat END) /
+              COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN e.order_id END), 0) END as "AOV",
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN e.order_id END) = 0 THEN 0
+         ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN e.total_us_revenue_excl_vat END) /
+              COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN e.order_id END), 0) END as "Hom qua"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -155,11 +149,9 @@ Distinct customers ordering via US channel today.
 ```sql
 SELECT
     COUNT(DISTINCT o.customer_key) as "Khach hang"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) = current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -255,14 +247,12 @@ Daily revenue trend for US CrossBorder over last 7 days.
 ```sql
 SELECT
     date(o.order_timestamp) as "Ngay",
-    SUM(o.net_revenue) as "Doanh thu",
-    COUNT(DISTINCT o.order_id) as "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SUM(e.total_us_revenue_excl_vat) as "Doanh thu US",
+    COUNT(DISTINCT e.order_id) as "So don"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= current_date - INTERVAL '6 days'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 GROUP BY 1
 ORDER BY 1
 ```
@@ -272,14 +262,14 @@ ORDER BY 1
   "display": "combo",
   "visualization_settings": {
     "graph.dimensions": ["Ngay"],
-    "graph.metrics": ["Doanh thu", "So don"],
+    "graph.metrics": ["Doanh thu US", "So don"],
     "graph.colors": ["#509EE3", "#EF8C8C"],
     "series_settings": {
-      "Doanh thu": { "display": "bar" },
+      "Doanh thu US": { "display": "bar" },
       "So don": { "display": "line", "axis": "right" }
     },
     "column_settings": {
-      "Doanh thu": {
+      "Doanh thu US": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -308,17 +298,18 @@ Detailed list of US CrossBorder orders today.
 
 ```sql
 SELECT
-    o.order_code as "Ma don",
+    e.order_code as "Ma don",
     date(o.order_timestamp) as "Ngay",
     COALESCE(c.full_name, 'Unknown') as "Khach hang",
+    e.total_us_revenue_excl_vat as "Doanh thu US",
     o.status as "Trang thai",
     o.fulfillment_status as "Fulfillment",
-    o.payment_status as "Thanh toan"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    o.payment_status as "Thanh toan",
+    CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END as "Data Quality"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) = current_date
-  AND ch.channel_name = 'US'
 ORDER BY o.order_timestamp DESC
 ```
 
@@ -333,12 +324,33 @@ ORDER BY o.order_timestamp DESC
 { "row": 20, "col": 0, "size_x": 18, "size_y": 12 }
 ```
 
+#### ❓ Question: Don thieu gia US (hom nay)
+
+So don hom nay co SKU chua co trong price list US.
+
+```sql
+SELECT
+    COUNT(*) as "Don thieu gia"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
+WHERE date(o.order_timestamp) = current_date
+  AND e.has_unpriced_sku = TRUE
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "scalar.switch_positive_negative": true } }
+```
+
+```json metabase-pos
+{ "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
+```
+
 ---
 
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders · **Cadence:** daily · **Scope:** channel='US CrossBorder' · **Caveats:** Export arrangement
+**Source:** fact_us_shipment_economics · **Cadence:** daily · **Scope:** US CrossBorder non-cancelled · **Caveats:** Export arrangement
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -381,15 +393,13 @@ US CrossBorder net revenue this week vs last week.
 ```sql
 SELECT
     COALESCE(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date)
-                       AND date(o.order_timestamp) <= current_date THEN o.net_revenue END), 0) as "Net Revenue",
+                       AND date(o.order_timestamp) <= current_date THEN e.total_us_revenue_excl_vat END), 0) as "Doanh thu US",
     COALESCE(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
-                       AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN o.net_revenue END), 0) as "Tuan truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+                       AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN e.total_us_revenue_excl_vat END), 0) as "Tuan truoc"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -397,7 +407,7 @@ WHERE date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Net Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Doanh thu US": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
@@ -414,15 +424,13 @@ US CrossBorder order count this week vs last week.
 ```sql
 SELECT
     COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date)
-                          AND date(o.order_timestamp) <= current_date THEN o.order_id END) as "Total Orders",
+                          AND date(o.order_timestamp) <= current_date THEN e.order_id END) as "Total Orders",
     COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
-                          AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN o.order_id END) as "Tuan truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+                          AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN e.order_id END) as "Tuan truoc"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -440,23 +448,21 @@ Average order value for US CrossBorder this week vs last week.
 ```sql
 SELECT
     CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date)
-                                    AND date(o.order_timestamp) <= current_date THEN o.order_id END) = 0 THEN 0
+                                    AND date(o.order_timestamp) <= current_date THEN e.order_id END) = 0 THEN 0
          ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date)
-                              AND date(o.order_timestamp) <= current_date THEN o.net_revenue END) /
+                              AND date(o.order_timestamp) <= current_date THEN e.total_us_revenue_excl_vat END) /
               COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date)
-                                    AND date(o.order_timestamp) <= current_date THEN o.order_id END), 0) END as "AOV",
+                                    AND date(o.order_timestamp) <= current_date THEN e.order_id END), 0) END as "AOV",
     CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
-                                    AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN o.order_id END) = 0 THEN 0
+                                    AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN e.order_id END) = 0 THEN 0
          ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
-                              AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN o.net_revenue END) /
+                              AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN e.total_us_revenue_excl_vat END) /
               COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
-                                    AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN o.order_id END), 0) END as "Tuan truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+                                    AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN e.order_id END), 0) END as "Tuan truoc"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -484,12 +490,10 @@ SELECT
                           AND date(o.order_timestamp) <= current_date THEN o.customer_key END) as "Khach hang",
     COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
                           AND date(o.order_timestamp) <  date_trunc('week', current_date) THEN o.customer_key END) as "Tuan truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -582,29 +586,40 @@ ORDER BY 2 DESC
 
 #### Question: Daily Trend This Week (US)
 
-Daily order count trend within the current calendar week.
+Daily revenue and order count trend within the current calendar week.
 
 ```sql
 SELECT
     date(o.order_timestamp) as "Ngay",
-    COUNT(DISTINCT o.order_id) as "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SUM(e.total_us_revenue_excl_vat) as "Doanh thu US",
+    COUNT(DISTINCT e.order_id) as "So don"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('week', current_date)
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 GROUP BY 1
 ORDER BY 1
 ```
 
 ```json metabase-viz
 {
-  "display": "bar",
+  "display": "combo",
   "visualization_settings": {
     "graph.dimensions": ["Ngay"],
-    "graph.metrics": ["So don"],
-    "graph.colors": ["#509EE3"]
+    "graph.metrics": ["Doanh thu US", "So don"],
+    "graph.colors": ["#509EE3", "#EF8C8C"],
+    "series_settings": {
+      "Doanh thu US": { "display": "bar" },
+      "So don": { "display": "line", "axis": "right" }
+    },
+    "column_settings": {
+      "Doanh thu US": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -627,18 +642,19 @@ List of US CrossBorder orders this week.
 
 ```sql
 SELECT
-    o.order_code as "Ma don",
+    e.order_code as "Ma don",
     date(o.order_timestamp) as "Ngay",
     COALESCE(c.full_name, 'Unknown') as "Khach hang",
+    e.total_us_revenue_excl_vat as "Doanh thu US",
     o.status as "Trang thai",
     o.fulfillment_status as "Fulfillment",
-    o.payment_status as "Thanh toan"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    o.payment_status as "Thanh toan",
+    CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END as "Data Quality"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) >= date_trunc('week', current_date)
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
 ORDER BY o.order_timestamp DESC
 ```
 
@@ -653,12 +669,34 @@ ORDER BY o.order_timestamp DESC
 { "row": 20, "col": 0, "size_x": 18, "size_y": 12 }
 ```
 
+#### ❓ Question: Don thieu gia US (tuan nay)
+
+So don tuan nay co SKU chua co trong price list US.
+
+```sql
+SELECT
+    COUNT(*) as "Don thieu gia"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
+WHERE date(o.order_timestamp) >= date_trunc('week', current_date)
+  AND date(o.order_timestamp) <= current_date
+  AND e.has_unpriced_sku = TRUE
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "scalar.switch_positive_negative": true } }
+```
+
+```json metabase-pos
+{ "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
+```
+
 ---
 
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders · **Cadence:** daily · **Scope:** channel='US CrossBorder' · **Caveats:** Export arrangement
+**Source:** fact_us_shipment_economics · **Cadence:** daily · **Scope:** US CrossBorder non-cancelled · **Caveats:** Export arrangement
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -701,15 +739,13 @@ US CrossBorder net revenue this month vs last month.
 ```sql
 SELECT
     COALESCE(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date)
-                       AND date(o.order_timestamp) <= current_date THEN o.net_revenue END), 0) as "Net Revenue",
+                       AND date(o.order_timestamp) <= current_date THEN e.total_us_revenue_excl_vat END), 0) as "Doanh thu US",
     COALESCE(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-                       AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN o.net_revenue END), 0) as "Thang truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+                       AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN e.total_us_revenue_excl_vat END), 0) as "Thang truoc"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -717,7 +753,7 @@ WHERE date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Net Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Doanh thu US": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
     }
   }
 }
@@ -734,15 +770,13 @@ US CrossBorder order count this month vs last month.
 ```sql
 SELECT
     COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date)
-                          AND date(o.order_timestamp) <= current_date THEN o.order_id END) as "Total Orders",
+                          AND date(o.order_timestamp) <= current_date THEN e.order_id END) as "Total Orders",
     COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-                          AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN o.order_id END) as "Thang truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+                          AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN e.order_id END) as "Thang truoc"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -760,23 +794,21 @@ Average order value for US CrossBorder this month vs last month.
 ```sql
 SELECT
     CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date)
-                                    AND date(o.order_timestamp) <= current_date THEN o.order_id END) = 0 THEN 0
+                                    AND date(o.order_timestamp) <= current_date THEN e.order_id END) = 0 THEN 0
          ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date)
-                              AND date(o.order_timestamp) <= current_date THEN o.net_revenue END) /
+                              AND date(o.order_timestamp) <= current_date THEN e.total_us_revenue_excl_vat END) /
               COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date)
-                                    AND date(o.order_timestamp) <= current_date THEN o.order_id END), 0) END as "AOV",
+                                    AND date(o.order_timestamp) <= current_date THEN e.order_id END), 0) END as "AOV",
     CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-                                    AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN o.order_id END) = 0 THEN 0
+                                    AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN e.order_id END) = 0 THEN 0
          ELSE ROUND(SUM(CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-                              AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN o.net_revenue END) /
+                              AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN e.total_us_revenue_excl_vat END) /
               COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-                                    AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN o.order_id END), 0) END as "Thang truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+                                    AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN e.order_id END), 0) END as "Thang truoc"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -804,12 +836,10 @@ SELECT
                           AND date(o.order_timestamp) <= current_date THEN o.customer_key END) as "Khach hang",
     COUNT(DISTINCT CASE WHEN date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
                           AND date(o.order_timestamp) <  date_trunc('month', current_date) THEN o.customer_key END) as "Thang truoc"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-viz
@@ -902,29 +932,40 @@ ORDER BY 2 DESC
 
 #### Question: Weekly Trend This Month (US)
 
-Weekly order count within the current calendar month.
+Weekly revenue and order count within the current calendar month.
 
 ```sql
 SELECT
     date_trunc('week', date(o.order_timestamp)) as "Tuan",
-    COUNT(DISTINCT o.order_id) as "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SUM(e.total_us_revenue_excl_vat) as "Doanh thu US",
+    COUNT(DISTINCT e.order_id) as "So don"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 WHERE date(o.order_timestamp) >= date_trunc('month', current_date)
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
 GROUP BY 1
 ORDER BY 1
 ```
 
 ```json metabase-viz
 {
-  "display": "bar",
+  "display": "combo",
   "visualization_settings": {
     "graph.dimensions": ["Tuan"],
-    "graph.metrics": ["So don"],
-    "graph.colors": ["#509EE3"]
+    "graph.metrics": ["Doanh thu US", "So don"],
+    "graph.colors": ["#509EE3", "#EF8C8C"],
+    "series_settings": {
+      "Doanh thu US": { "display": "bar" },
+      "So don": { "display": "line", "axis": "right" }
+    },
+    "column_settings": {
+      "Doanh thu US": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -947,18 +988,19 @@ List of US CrossBorder orders this month.
 
 ```sql
 SELECT
-    o.order_code as "Ma don",
+    e.order_code as "Ma don",
     date(o.order_timestamp) as "Ngay",
     COALESCE(c.full_name, 'Unknown') as "Khach hang",
+    e.total_us_revenue_excl_vat as "Doanh thu US",
     o.status as "Trang thai",
     o.fulfillment_status as "Fulfillment",
-    o.payment_status as "Thanh toan"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    o.payment_status as "Thanh toan",
+    CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END as "Data Quality"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.order_timestamp) >= date_trunc('month', current_date)
   AND date(o.order_timestamp) <= current_date
-  AND ch.channel_name = 'US'
 ORDER BY o.order_timestamp DESC
 ```
 
@@ -973,9 +1015,31 @@ ORDER BY o.order_timestamp DESC
 { "row": 20, "col": 0, "size_x": 18, "size_y": 12 }
 ```
 
+#### ❓ Question: Don thieu gia US (thang nay)
+
+So don thang nay co SKU chua co trong price list US.
+
+```sql
+SELECT
+    COUNT(*) as "Don thieu gia"
+FROM fact_us_shipment_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
+WHERE date(o.order_timestamp) >= date_trunc('month', current_date)
+  AND date(o.order_timestamp) <= current_date
+  AND e.has_unpriced_sku = TRUE
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "scalar.switch_positive_negative": true } }
+```
+
+```json metabase-pos
+{ "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
+```
+
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders · **Cadence:** daily · **Scope:** channel='US CrossBorder' · **Caveats:** Export arrangement
+**Source:** fact_us_shipment_economics · **Cadence:** daily · **Scope:** US CrossBorder non-cancelled · **Caveats:** Export arrangement
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

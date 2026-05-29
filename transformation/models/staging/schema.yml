@@ -1,6 +1,18 @@
 version: 2
 
 models:
+  - name: stg_us_shipment_prices
+    description: "US Shipment Price List — one row per (SKU, effective_from). Source of actual deal prices for US CrossBorder orders."
+    columns:
+      - name: price_key
+        tests: [unique, not_null]
+      - name: sku
+        tests: [not_null]
+      - name: us_price_excl_vat
+        tests: [not_null]
+      - name: effective_from
+        tests: [not_null]
+
   - name: stg_sapo_orders
     columns:
       - name: order_id
