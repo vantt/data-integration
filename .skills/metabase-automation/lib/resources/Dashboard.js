@@ -14,17 +14,23 @@ class Dashboard {
         const existing = await this.find(name);
         if (existing) {
              console.log(`ℹ️ Dashboard '${name}' exists (ID: ${existing.id})`);
-             
+
              // If archived, unarchive it
              if (existing.archived) {
                  console.log(`♻️ Unarchiving Dashboard '${name}'...`);
                  await this.core.request(`/api/dashboard/${existing.id}`, 'PUT', { archived: false });
              }
-             
+
              // Ensure it's in the right collection (fix potential mismatch)
              if (existing.collection_id !== collectionId) {
                   console.log(`📦 Moving Dashboard '${name}' to collection ${collectionId}...`);
                   await this.core.request(`/api/dashboard/${existing.id}`, 'PUT', { collection_id: collectionId });
+             }
+
+             // Sync description from blueprint if provided and differs from live state
+             if (description != null && description !== existing.description) {
+                  console.log(`📝 Updating description for Dashboard '${name}'...`);
+                  await this.core.request(`/api/dashboard/${existing.id}`, 'PUT', { description });
              }
 
              return existing;

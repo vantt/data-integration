@@ -17,7 +17,7 @@ class MetabaseCore {
         const authHeader = options.authHeader || 'x-api-key';
         this.headers = {
             [authHeader]: apiKeyOrToken,
-            "Content-Type": "application/json"
+            "Content-Type": "application/json; charset=utf-8"
         };
     }
 

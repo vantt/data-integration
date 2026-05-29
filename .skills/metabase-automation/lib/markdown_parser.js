@@ -157,6 +157,8 @@ function parseMarkdownConfig(filePath) {
         const questionMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
         const filterMatch = trimmed.match(/^####\s+(?:🔍\s+)?Filter:\s*(.+)/);
         const textMatch = trimmed.match(/^####\s+(?:📝\s+)?Text:\s*(.+)/);
+        // Dashboard description: "**Description**: ..." line right after Dashboard header
+        const descriptionMatch = trimmed.match(/^\*\*Description\*\*:\s*(.+)/i);
 
         if (collectionMatch) {
             const rawName = collectionMatch[1].trim();
@@ -203,12 +205,16 @@ function parseMarkdownConfig(filePath) {
         else if (dashboardMatch) {
             if (!currentCollection) continue;
             const name = dashboardMatch[1].trim();
-            currentDashboard = { name, questions: [], textCards: [], tabs: [], collection_name: currentCollection.name };
+            currentDashboard = { name, description: null, questions: [], textCards: [], tabs: [], collection_name: currentCollection.name };
             currentCollection.dashboards.push(currentDashboard);
             config.dashboards.push(currentDashboard);
             currentQuestion = null;
             currentTab = null;
             currentTextCard = null;
+        }
+        // Dashboard-level description (must follow ### Dashboard, before any Tab/Question/Text)
+        else if (descriptionMatch && currentDashboard && !currentTab && !currentQuestion && !currentTextCard && !currentDashboard.description) {
+            currentDashboard.description = descriptionMatch[1].trim();
         }
         else if (tabMatch) {
             if (!currentDashboard) continue;

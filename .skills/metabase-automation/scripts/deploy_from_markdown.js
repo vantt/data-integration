@@ -136,7 +136,7 @@ async function main() {
   // 3. Execution
 
   // Resolve target database: blueprint > env var > fallback
-  const dbName = config.database || process.env.METABASE_DB_NAME || "Sapo DuckDB";
+  const dbName = config.database || process.env.METABASE_DB_NAME || "Sapo";
   const defaultDbId = await client.findDatabaseId(dbName);
   if (!defaultDbId) {
     console.error("❌ Could not find target Database. Set METABASE_DB_NAME.");
@@ -227,7 +227,7 @@ async function main() {
       continue;
     }
 
-    const dashRemote = await client.dashboard.ensure(dashboard.name, "", colId, dashParams);
+    const dashRemote = await client.dashboard.ensure(dashboard.name, dashboard.description || null, colId, dashParams);
 
     // If filters exist and dashboard was pre-existing, update parameters via PUT
     if (dashParams.length > 0) {
