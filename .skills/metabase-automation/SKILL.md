@@ -177,7 +177,7 @@ Instead of writing a custom script for every dashboard, define your resources in
 
 ```javascript
 module.exports = {
-  database: "Sapo DuckDB",
+  database: "Sapo",
   collection: "Sales Analytics",
   dashboard: { name: "Daily Sales" },
   questions: [
@@ -221,12 +221,12 @@ node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_metrics
 
 - **Tables**: Use `client.table.find("name")` and `client.table.getFields(id)` to discover metadata.
 
-## ⚠️ Troubleshooting & Compatibility (v0.58+)
+## ⚠️ Troubleshooting & Compatibility (v0.60+)
 
 ### 1. Dashboard Cards Not Syncing
 
 **Symptoms**: Deployment success log but empty dashboard.
-**Cause**: Metabase v0.58+ deprecated `POST /api/dashboard/:id/cards` and `PUT` with `ordered_cards`.
+**Cause**: Metabase v0.60+ requires `PUT /api/dashboard/:id` with `dashcards` payload (legacy `POST /api/dashboard/:id/cards` and `ordered_cards` no longer supported).
 **Solution**:
 
 - Use `PUT /api/dashboard/:id` with `dashcards` payload.
@@ -249,5 +249,5 @@ node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_metrics
 ### 4. Tabs Not Appearing After Deployment
 
 **Symptoms**: Cards deployed but all on one flat view, no tabs.
-**Cause**: Tabs and dashcards must be sent in a **single PUT** request. Sending tabs separately is silently ignored by Metabase v0.58+.
+**Cause**: Tabs and dashcards must be sent in a **single PUT** request. Sending tabs separately is silently ignored by Metabase v0.60+.
 **Solution**: Use `dashboard.syncCards(id, cardConfigs, tabNames)` which combines both in one payload. The `deploy_from_markdown.js` script handles this automatically when `### 📑 Tab:` headers are present in the blueprint.

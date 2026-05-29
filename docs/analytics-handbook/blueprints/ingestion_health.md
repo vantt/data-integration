@@ -832,7 +832,7 @@ SELECT '📅 7 ngày gần nhất: ' || strftime((current_date - INTERVAL '7 day
 # Volume rows_written theo nguồn — 30 ngày gần nhất
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Sapo Batch — Volume 30d
@@ -873,7 +873,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Sapo Realtime & Incremental — Volume 30d
@@ -910,7 +910,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: External Sources — Volume 30d
@@ -954,7 +954,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -964,7 +964,7 @@ ORDER BY 1
 # Tỷ lệ thành công 7 ngày — phát hiện asset liên tục thất bại
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Success Rate per Asset (7d)
@@ -1014,7 +1014,7 @@ ORDER BY "Success %" ASC
 ```
 
 ```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---
@@ -1051,7 +1051,7 @@ SELECT '📅 7 ngày gần nhất: ' || strftime((current_date - INTERVAL '7 day
 # Runs thất bại và bị bỏ qua — 7 ngày gần nhất
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Runs Failed or Skipped (7d)
@@ -1100,7 +1100,7 @@ ORDER BY run_started_at DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---
@@ -1110,7 +1110,7 @@ ORDER BY run_started_at DESC
 # Log đầy đủ tất cả runs — 200 runs gần nhất
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Full Run Log (200 runs)
@@ -1171,17 +1171,7 @@ LIMIT 200
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 10 }
-```
-
----
-
-#### 📝 Text: Footer
-
-Source: ingestion_health.duckdb · ingestion_runs · Refreshed on each Dagster run · SLA ref: orchestration/config/ingestion_sla.yaml
-
-```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 10 }
 ```
 
 #### 📝 Text: Source & Freshness

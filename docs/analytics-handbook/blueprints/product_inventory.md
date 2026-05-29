@@ -291,6 +291,15 @@ ORDER BY sku, location_name
 { "row": 12, "col": 0, "size_x": 24, "size_y": 6 }
 ```
 
+#### 📝 Text: Source & Freshness
+
+**Source:** `mart_inventory_health` · `fact_inventory_snapshot` · **Cadence:** daily · **Scope:** snapshot_date = latest available
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 24, "size_y": 1 }
+```
+
 ---
 
 ### 📑 Tab: Slow-Mover & Dead Stock
@@ -536,6 +545,15 @@ LIMIT 20
 { "row": 14, "col": 12, "size_x": 12, "size_y": 6 }
 ```
 
+#### 📝 Text: Source & Freshness
+
+**Source:** `mart_inventory_health` · **Cadence:** daily · **Scope:** snapshot_date = latest available
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 24, "size_y": 1 }
+```
+
 ---
 
 ### 📑 Tab: Inventory Trend
@@ -740,4 +758,13 @@ ORDER BY 1 DESC
 
 ```json metabase-pos
 { "row": 15, "col": 0, "size_x": 24, "size_y": 6 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** `mart_inventory_health` · `fact_inventory_snapshot` · **Cadence:** daily · **Scope:** snapshot_date = latest available
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 24, "size_y": 1 }
 ```

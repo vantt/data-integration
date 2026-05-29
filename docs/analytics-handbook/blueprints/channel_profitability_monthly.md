@@ -147,22 +147,16 @@ FROM this_period t, prev_period p, prev_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Doanh thu":         { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Ky truoc":          { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Cung ky nam truoc": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "MoM %":             { "suffix": "%", "decimals": 1 },
-      "YoY %":             { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
+      "Doanh thu": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -200,7 +194,7 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Gia von": {
@@ -209,8 +203,7 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -248,7 +241,7 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Lai gop": {
@@ -257,8 +250,7 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -418,7 +410,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 Xu huong margin theo kenh — kenh nao dang cai thien?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Margin Trend by Channel
@@ -462,7 +454,7 @@ ORDER BY "Thang" ASC, "Kenh" ASC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue Mix Trend
@@ -505,7 +497,7 @@ ORDER BY "Thang" ASC, "Kenh" ASC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Product Detail Heading
@@ -513,7 +505,7 @@ ORDER BY "Thang" ASC, "Kenh" ASC
 San pham anh huong loi nhuan — san pham nao tao lai, san pham nao keo xuong?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top Products by Profit
@@ -555,7 +547,7 @@ LIMIT 15
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 9, "size_y": 9 }
+{ "row": 10, "col": 0, "size_x": 9, "size_y": 9 }
 ```
 
 #### Question: Low-Margin Products
@@ -630,7 +622,7 @@ ORDER BY "Gross Margin %" ASC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 9, "size_x": 9, "size_y": 9 }
+{ "row": 10, "col": 9, "size_x": 9, "size_y": 9 }
 ```
 
 #### 📝 Text: Source & Freshness

@@ -88,16 +88,7 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -137,16 +128,7 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -160,7 +142,6 @@ Customers acquired in the previous calendar month, with MoM + YoY comparison.
 
 ```sql
 -- YoY added 2026-05-28; uses dim_customers (no snapshot mart dependency)
--- migrated from scalar.comparisons (broken on v0.58.11) to display:table
 WITH current_period AS (
     SELECT COUNT(*) as value
     FROM dim_customers
@@ -192,20 +173,8 @@ FROM current_period c, previous_period p, prior_year py
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "column_settings": {
-      "MoM %": { "suffix": "%", "decimals": 1 },
-      "YoY %": { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -248,16 +217,11 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ],
     "column_settings": {
-      "One-Time %": { "suffix": "%", "decimals": 1 }
+      "One-Time %": {
+        "suffix": "%",
+        "decimals": 1
+      }
     }
   }
 }
@@ -575,7 +539,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Analyze customer value — where is revenue concentrated?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Total Customer LTV
@@ -609,23 +573,20 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ],
     "column_settings": {
-      "Total LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Total LTV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Avg LTV per Customer
@@ -659,23 +620,20 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ],
     "column_settings": {
-      "Avg LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Avg LTV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Avg Orders per Customer
@@ -708,21 +666,12 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Repeat Purchase Rate
@@ -760,23 +709,18 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "prev_month",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ],
     "column_settings": {
-      "Repeat %": { "suffix": "%", "decimals": 1 }
+      "Repeat %": {
+        "suffix": "%",
+        "decimals": 1
+      }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -786,7 +730,7 @@ FROM current_period c, previous_period p
 # Examine LTV distribution — identify value clusters and Pareto effect
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Customer Value Distribution
@@ -831,7 +775,7 @@ ORDER BY MIN(lifetime_value)
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Segment Revenue Share
@@ -869,7 +813,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -879,7 +823,7 @@ ORDER BY
 # Track segment performance trends — spending trajectory by segment
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: AOV by Segment Trend (6M)
@@ -926,7 +870,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 14, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Segment Trend (6M)
@@ -972,7 +916,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 14, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -982,7 +926,7 @@ ORDER BY 1, 2
 # Review segment detail — identify underperforming segments for action
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Segment Revenue & Metrics Detail
@@ -1041,7 +985,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 ---
@@ -1078,7 +1022,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Analyze purchase behavior — channel and product preferences by segment
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Assess channel effectiveness — which channels serve which segments best?
@@ -1086,7 +1030,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Assess channel effectiveness — which channels serve which segments best?
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Revenue by Segment
@@ -1132,7 +1076,7 @@ ORDER BY 1, 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -1142,7 +1086,7 @@ ORDER BY 1, 3 DESC
 # Compare product affinity — VIP vs first-time buyer preferences
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Top 10 Products — VIP Customers
@@ -1181,7 +1125,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 10 Products — First-Time Buyers
@@ -1221,7 +1165,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1231,7 +1175,7 @@ LIMIT 10
 # Evaluate new customer quality — are acquisition cohorts improving?
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: New Customer Quality Trend (6M)
@@ -1297,7 +1241,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -1307,7 +1251,7 @@ ORDER BY 1
 # Review demographics and loyalty — targeting and engagement signals
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Loyalty Point Distribution by Segment
@@ -1344,7 +1288,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 25, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Gender Distribution by Segment
@@ -1380,15 +1324,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 9, "size_x": 9, "size_y": 6 }
-```
-
-#### 📝 Text: Footer
-
-Source: dim_customers · fact_orders · Updated monthly · Excludes Unknown customers & cancelled orders
-
-```json metabase-pos
-{ "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 25, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Source & Freshness

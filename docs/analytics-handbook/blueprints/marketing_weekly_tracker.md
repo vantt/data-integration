@@ -64,7 +64,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 # Đánh giá hiệu suất kênh tuần — kênh nào hiệu quả, kênh nào cần điều chỉnh?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Weekly Revenue
@@ -104,7 +104,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Weekly Revenue": {
@@ -113,14 +113,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Online-Ecom Revenue
@@ -160,7 +159,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Online-Ecom Revenue": {
@@ -169,14 +168,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Offline Revenue
@@ -216,7 +214,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Offline Revenue": {
@@ -225,14 +223,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Online-Ecom Share %
@@ -272,21 +269,20 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Online-Ecom Share %": {
         "suffix": "%",
         "decimals": 1
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
@@ -296,7 +292,7 @@ FROM this_week tw, last_week lw
 # Theo dõi xu hướng Online-Ecom vs Offline — momentum và crossover
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -361,7 +357,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 8, "col":0, "size_x":12, "size_y":6}
+{ "row": 10, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Brand
@@ -401,7 +397,7 @@ LIMIT 5
 ```
 
 ```json metabase-pos
-{"row": 8, "col":12, "size_x":6, "size_y":6}
+{ "row": 10, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -411,7 +407,7 @@ LIMIT 5
 # Xác định platform hiệu quả — ranking doanh thu và volume
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":18, "size_y":1}
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Platform
@@ -452,7 +448,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 15, "col":0, "size_x":9, "size_y":6}
+{ "row": 17, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Orders by Platform
@@ -488,7 +484,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 15, "col":9, "size_x":9, "size_y":6}
+{ "row": 17, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -498,7 +494,7 @@ ORDER BY 2 DESC
 # So sánh chi tiết kênh WoW — highlight biến động > 20%
 
 ```json metabase-pos
-{"row": 21, "col":0, "size_x":18, "size_y":1}
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Performance Table
@@ -605,7 +601,7 @@ ORDER BY tw.revenue DESC
 ```
 
 ```json metabase-pos
-{"row": 22, "col":0, "size_x":18, "size_y":8}
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---
@@ -617,7 +613,7 @@ ORDER BY tw.revenue DESC
 # Biên lợi nhuận kênh tuần — phát hiện kênh margin trượt sớm
 
 ```json metabase-pos
-{"row": 30, "col":0, "size_x":18, "size_y":1}
+{ "row": 32, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Weekly Channel Margin & Delta
@@ -703,7 +699,7 @@ ORDER BY tw.rev DESC
 ```
 
 ```json metabase-pos
-{"row": 31, "col":0, "size_x":18, "size_y":8}
+{ "row": 33, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---
@@ -740,7 +736,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Đánh giá acquisition tuần — bao nhiêu khách mới và từ đâu?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: New Customers
@@ -770,15 +766,13 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Returning Customers
@@ -812,15 +806,13 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Revenue
@@ -856,7 +848,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "New Customer Revenue": {
@@ -865,14 +857,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Share %
@@ -912,21 +903,20 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "New Customer Share %": {
         "suffix": "%",
         "decimals": 1
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
@@ -936,7 +926,7 @@ FROM this_week tw, last_week lw
 # Xác định kênh acquisition hiệu quả nhất
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: New Customers by Channel
@@ -977,7 +967,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: New vs Returning Revenue
@@ -1023,7 +1013,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1033,7 +1023,7 @@ ORDER BY 1
 # Theo dõi xu hướng acquisition 14 ngày — volume và chất lượng
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: New Customer Acquisition Trend
@@ -1095,7 +1085,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Customer Type Split
@@ -1130,7 +1120,7 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -1167,7 +1157,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Kiểm soát chi phí khuyến mãi — discount có hợp lý?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Discount Rate %
@@ -1199,7 +1189,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 5 }
 ```
 
 #### ❓ Question: Discounted Orders %
@@ -1233,21 +1223,20 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Discounted Orders %": {
         "suffix": "%",
         "decimals": 1
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Avg Discount Amount
@@ -1279,7 +1268,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Avg Discount Amount": {
@@ -1288,14 +1277,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Total Discount Given
@@ -1327,7 +1315,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Total Discount Given": {
@@ -1336,14 +1324,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
@@ -1353,7 +1340,7 @@ FROM this_week tw, last_week lw
 # Đánh giá hiệu suất promotion — promo nào mang lại giá trị?
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Discounted vs Full Price
@@ -1386,7 +1373,7 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Promotion Leaderboard
@@ -1437,7 +1424,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 9, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
@@ -1447,7 +1434,7 @@ LIMIT 10
 # Theo dõi hiệu suất Social Commerce — Facebook vs Zalo
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Social Revenue
@@ -1487,7 +1474,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Social Revenue": {
@@ -1496,14 +1483,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 16, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Social Orders
@@ -1539,15 +1525,13 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 16, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Social AOV
@@ -1585,7 +1569,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Social AOV": {
@@ -1594,14 +1578,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 16, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 ---
@@ -1642,7 +1625,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 20, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 10 Products This Week
@@ -1690,15 +1673,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 9, "size_x": 9, "size_y": 6 }
-```
-
-#### 📝 Text: Footer
-
-Source: fact_orders, dim_channels, dim_customers, dim_promotions · Updated daily · Excludes CANCELLED & Voided
-
-```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 20, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Source & Freshness

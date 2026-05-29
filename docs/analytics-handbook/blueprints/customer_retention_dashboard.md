@@ -103,15 +103,12 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
+    "column_settings": {
+      "Repeat Rate %": {
+        "suffix": "%",
+        "decimals": 1
       }
-    ],
-    "column_settings": { "Repeat Rate %": { "suffix": "%", "decimals": 1 } }
+    }
   }
 }
 ```
@@ -159,15 +156,12 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
+    "column_settings": {
+      "Churn Rate %": {
+        "suffix": "%",
+        "decimals": 1
       }
-    ],
-    "column_settings": { "Churn Rate %": { "suffix": "%", "decimals": 1 } }
+    }
   }
 }
 ```
@@ -213,15 +207,11 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
+    "column_settings": {
+      "Avg Lifespan (days)": {
+        "suffix": " days"
       }
-    ],
-    "column_settings": { "Avg Lifespan (days)": { "suffix": " days" } }
+    }
   }
 }
 ```
@@ -269,15 +259,12 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
+    "column_settings": {
+      "Active Rate %": {
+        "suffix": "%",
+        "decimals": 1
       }
-    ],
-    "column_settings": { "Active Rate %": { "suffix": "%", "decimals": 1 } }
+    }
   }
 }
 ```
@@ -613,7 +600,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Analyze cohort retention — which cohorts stick, which churn early?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Examine cohort retention matrix — identify drop-off patterns
@@ -621,7 +608,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Examine cohort retention matrix — identify drop-off patterns
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Track revenue by cohort — are recent cohorts contributing enough?
@@ -629,7 +616,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Track revenue by cohort — are recent cohorts contributing enough?
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Compare new vs returning — revenue dependency and growth quality
@@ -637,7 +624,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Compare new vs returning — revenue dependency and growth quality
 
 ```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Avg Month-1 Retention
@@ -684,7 +671,7 @@ LEFT JOIN m1_retention r ON s.cohort_month = r.cohort_month
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Best Cohort (M1 Retention)
@@ -734,7 +721,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Avg Orders per Customer
@@ -764,21 +751,12 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Returning Revenue Ratio
@@ -811,7 +789,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -880,7 +858,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 ---
@@ -921,7 +899,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -967,7 +945,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 24, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: New vs Returning Customers (6M)
@@ -1008,7 +986,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 24, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1045,7 +1023,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Analyze purchase behavior — timing signals and reactivation effectiveness
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Examine purchase frequency — distribution shape and conversion opportunity
@@ -1053,7 +1031,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Examine purchase frequency — distribution shape and conversion opportunity
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Track reactivation performance — is win-back ROI improving?
@@ -1061,7 +1039,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Track reactivation performance — is win-back ROI improving?
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Prioritize at-risk outreach — high-value customers needing action NOW
@@ -1069,7 +1047,7 @@ SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DAT
 # Prioritize at-risk outreach — high-value customers needing action NOW
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Avg Days Between Purchases
@@ -1124,21 +1102,17 @@ FROM current_val c, prev_val p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
+    "column_settings": {
+      "Avg Gap (days)": {
+        "suffix": " days"
       }
-    ],
-    "column_settings": { "Avg Gap (days)": { "suffix": " days" } }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Reactivated Customers (Last Month)
@@ -1191,21 +1165,12 @@ FROM reactivated_current c, reactivated_prev p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: At-Risk Customers Count
@@ -1230,7 +1195,7 @@ WHERE customer_id != 'Unknown'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: One-Time Buyer Rate
@@ -1272,21 +1237,18 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Prev Month",
-        "label": "vs prev month"
+    "column_settings": {
+      "One-Time %": {
+        "suffix": "%",
+        "decimals": 1
       }
-    ],
-    "column_settings": { "One-Time %": { "suffix": "%", "decimals": 1 } }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -1333,7 +1295,7 @@ ORDER BY MIN(total_orders_count)
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Days Between Purchases Distribution
@@ -1388,7 +1350,7 @@ ORDER BY MIN(days_between)
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1451,7 +1413,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -1508,15 +1470,7 @@ LIMIT 50
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 8 }
-```
-
-#### 📝 Text: Footer
-
-Source: dim_customers · fact_orders · Updated monthly · Excludes Unknown & cancelled orders
-
-```json metabase-pos
-{ "row": 27, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### 📝 Text: Source & Freshness

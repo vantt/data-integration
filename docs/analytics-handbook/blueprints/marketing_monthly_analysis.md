@@ -101,22 +101,16 @@ FROM this_month tm, last_month lm, prior_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Net Revenue":       { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Tháng trước":       { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Cùng kỳ năm trước": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "MoM %":             { "suffix": "%", "decimals": 1 },
-      "YoY %":             { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -151,10 +145,8 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -197,20 +189,8 @@ FROM this_month tm, last_month lm, prior_year py
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "column_settings": {
-      "MoM %": { "suffix": "%", "decimals": 1 },
-      "YoY %": { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -246,7 +226,7 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "AOV": {
@@ -255,8 +235,7 @@ FROM this_month tm, last_month lm
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -461,7 +440,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Theo dõi structural shift kênh 6 tháng — Online-Ecom đang chiếm ưu thế?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Mix Trend (6M)
@@ -497,7 +476,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### 📝 Text: Đánh giá hiệu suất platform — revenue, orders, khách mới, MoM
@@ -505,7 +484,7 @@ ORDER BY 1, 2
 # Đánh giá hiệu suất platform — revenue, orders, khách mới, MoM
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Platform Performance Matrix
@@ -605,7 +584,7 @@ ORDER BY tm.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### 📝 Text: Phân tích portfolio thương hiệu kênh — ai chiếm tỷ trọng lớn nhất?
@@ -613,7 +592,7 @@ ORDER BY tm.revenue DESC
 # Phân tích portfolio thương hiệu kênh — ai chiếm tỷ trọng lớn nhất?
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Brand Revenue
@@ -649,7 +628,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 17, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Market
@@ -685,7 +664,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 17, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 #### 📝 Text: Xác định brand tăng trưởng và brand cần đẩy mạnh marketing
@@ -693,7 +672,7 @@ ORDER BY 2 DESC
 # Xác định brand tăng trưởng và brand cần đẩy mạnh marketing
 
 ```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Brand Performance Summary
@@ -768,7 +747,7 @@ ORDER BY tm.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 24, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Channel Type (B2C vs B2B)
@@ -804,7 +783,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 24, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -841,7 +820,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Đánh giá acquisition — khách mới có tăng và từ kênh nào?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: New Customers (Month)
@@ -870,15 +849,13 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Returning Customers (Month)
@@ -911,15 +888,13 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Revenue Share
@@ -959,20 +934,19 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "New Customer Rev %": {
         "suffix": "%"
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: New Customer Acquisition Trend (6M)
@@ -1015,7 +989,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: New Customers by Channel
@@ -1051,7 +1025,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 7, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 #### 📝 Text: Kiểm tra sức khỏe segment và retention — churn có kiểm soát?
@@ -1059,7 +1033,7 @@ ORDER BY 2 DESC
 # Kiểm tra sức khỏe segment và retention — churn có kiểm soát?
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: At Risk Customers
@@ -1089,15 +1063,13 @@ FROM current_count c, prev_count p
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 14, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Churn Rate Gauge
@@ -1126,7 +1098,7 @@ WHERE customer_id IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 14, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Active Customer Rate
@@ -1156,20 +1128,19 @@ FROM stats s, prev p
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Active Rate %": {
         "suffix": "%"
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 14, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Customer Value Group Movement
@@ -1204,7 +1175,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 18, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Cohort Retention Heatmap
@@ -1266,7 +1237,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 18, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1303,7 +1274,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Phân tích ROI campaign — promotion nào mang lại giá trị?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Total Discount Amount
@@ -1332,7 +1303,7 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Discount Amount": {
@@ -1340,14 +1311,13 @@ FROM this_month tm, last_month lm
         "currency": "VND",
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Discounted Order Percentage
@@ -1377,20 +1347,19 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Discounted %": {
         "suffix": "%"
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Average Discount Depth
@@ -1420,20 +1389,19 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Avg Discount %": {
         "suffix": "%"
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Promotion Leaderboard
@@ -1494,7 +1462,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### ❓ Question: Discount Trend (6M)
@@ -1529,7 +1497,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue Discounted vs Full-Price (6M)
@@ -1569,7 +1537,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Xác định sản phẩm drive revenue và brand cần attention
@@ -1577,7 +1545,7 @@ ORDER BY 1
 # Xác định sản phẩm drive revenue và brand cần attention
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Top 15 Products by Revenue
@@ -1650,7 +1618,7 @@ LIMIT 15
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### 📝 Text: Phân tích địa lý và peak hours — tối ưu marketing scheduling
@@ -1658,7 +1626,7 @@ LIMIT 15
 # Phân tích địa lý và peak hours — tối ưu marketing scheduling
 
 ```json metabase-pos
-{ "row": 26, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 28, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Province (Top 10)
@@ -1695,7 +1663,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 27, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 29, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Order Heatmap — Day x Hour
@@ -1740,18 +1708,9 @@ ORDER BY EXTRACT(DOW FROM order_timestamp), 2
 ```
 
 ```json metabase-pos
-{ "row": 27, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 29, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
-#### 📝 Text: Footer
-
-Source: fact_orders, dim_channels, dim_customers, dim_promotions, fact_sales · Updated daily · Excludes CANCELLED & Voided
-
-```json metabase-pos
-{ "row": 33, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
----
 
 
 #### 📝 Text: Source & Freshness
@@ -1785,7 +1744,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Marketing P&L — ROAS, margin contribution và channel profit (Retail only, last-click attribution)
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: ROAS + Margin by Channel
@@ -1908,7 +1867,7 @@ ORDER BY COALESCE(p.rev, 0) / NULLIF(s.spend, 0) DESC NULLS LAST
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### 📝 Text: Xác định channel profit contribution — kênh nào đang profit, kênh nào đang drain budget?
@@ -1916,7 +1875,7 @@ ORDER BY COALESCE(p.rev, 0) / NULLIF(s.spend, 0) DESC NULLS LAST
 # Xác định channel profit contribution — kênh nào đang profit, kênh nào đang drain budget?
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Profit Contribution vs Spend
@@ -2003,15 +1962,7 @@ ORDER BY COALESCE(pc.net_profit, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 7 }
-```
-
-#### 📝 Text: Footer (ROI & Margin)
-
-Source: fact_marketing_spend, fact_order_economics, dim_channels, dim_customers · Scope: RETAIL only · Attribution: last-click via channel_key · ROAS = revenue/spend · Profitable ROAS = ROAS × margin% · CAC analysis pending (acquisition_source NULL) · Updated daily
-
-```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 7 }
 ```
 
 #### 📝 Text: Source & Freshness

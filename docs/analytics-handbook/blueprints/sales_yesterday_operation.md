@@ -28,7 +28,7 @@ Redesigned dashboard with integrated DoD comparisons, gauge health score, sectio
 # Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Health Score
@@ -99,7 +99,7 @@ FROM scores
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 5 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 5 }
 ```
 
 #### Question: Health Breakdown
@@ -210,7 +210,7 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 12, "size_y": 5 }
+{ "row": 4, "col": 6, "size_x": 12, "size_y": 5 }
 ```
 
 ---
@@ -220,7 +220,7 @@ SELECT * FROM (
 # Review kết quả hôm qua — doanh thu, đơn hàng, AOV so với hôm kia
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -260,14 +260,6 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm kia",
-        "label": "vs hôm kia"
-      }
-    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -281,7 +273,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 ```
 
 ```json metabase-pos
-{"row": 9, "col":0, "size_x":6, "size_y":3}
+{ "row": 11, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Gross Revenue
@@ -304,14 +296,6 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm kia",
-        "label": "vs hôm kia"
-      }
-    ],
     "column_settings": {
       "Gross Revenue": {
         "number_style": "currency",
@@ -325,7 +309,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 ```
 
 ```json metabase-pos
-{"row": 9, "col":6, "size_x":4, "size_y":3}
+{ "row": 11, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Total Orders
@@ -347,21 +331,12 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm kia",
-        "label": "vs hôm kia"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{"row": 9, "col":10, "size_x":4, "size_y":3}
+{ "row": 11, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: AOV
@@ -392,14 +367,6 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm kia",
-        "label": "vs hôm kia"
-      }
-    ],
     "column_settings": {
       "AOV": {
         "number_style": "currency",
@@ -413,7 +380,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 ```
 
 ```json metabase-pos
-{"row": 9, "col":14, "size_x":4, "size_y":3}
+{ "row": 11, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -423,7 +390,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '2 days'
 # Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
 
 ```json metabase-pos
-{"row": 12, "col":0, "size_x":18, "size_y":1}
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: New Customers
@@ -443,7 +410,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 13, "col":0, "size_x":3, "size_y":3}
+{ "row": 15, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returning Customers
@@ -463,7 +430,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 13, "col":3, "size_x":3, "size_y":3}
+{ "row": 15, "col": 3, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Returns
@@ -483,7 +450,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 13, "col":6, "size_x":3, "size_y":3}
+{ "row": 15, "col": 6, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Total Collected
@@ -516,7 +483,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 13, "col":9, "size_x":3, "size_y":3}
+{ "row": 15, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Discount Rate
@@ -539,7 +506,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 13, "col":12, "size_x":3, "size_y":3}
+{ "row": 15, "col": 12, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: Items per Order
@@ -561,7 +528,7 @@ WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 13, "col":15, "size_x":3, "size_y":3}
+{ "row": 15, "col": 15, "size_x": 3, "size_y": 3 }
 ```
 
 ---
@@ -571,7 +538,7 @@ WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
 # Phân tích doanh thu theo giờ — peak hours và so sánh với hôm kia
 
 ```json metabase-pos
-{"row": 16, "col":0, "size_x":18, "size_y":1}
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Hourly Sales Trend
@@ -626,7 +593,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 17, "col":0, "size_x":12, "size_y":6}
+{ "row": 19, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Cumulative Revenue
@@ -683,7 +650,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 17, "col":12, "size_x":6, "size_y":6}
+{ "row": 19, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -720,7 +687,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: So sánh hiệu suất kênh WoW — highlight kênh tăng/giảm mạnh
@@ -728,7 +695,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # So sánh hiệu suất kênh WoW — highlight kênh tăng/giảm mạnh
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
@@ -736,7 +703,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Revenue by Channel
@@ -777,7 +744,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Channel Category
@@ -811,7 +778,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Channel Performance vs Day Before
@@ -900,7 +867,7 @@ ORDER BY COALESCE(y.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Sales by Branch
@@ -946,7 +913,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -983,7 +950,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phân tích đóng góp theo loại sản phẩm
@@ -991,7 +958,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Phân tích đóng góp theo loại sản phẩm
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top 10 Products by Revenue
@@ -1034,7 +1001,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Top 10 Products by Quantity
@@ -1069,7 +1036,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Product Type
@@ -1111,7 +1078,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 9, "size_y": 8 }
+{ "row": 10, "col": 0, "size_x": 9, "size_y": 8 }
 ```
 
 #### Question: Product Performance Table
@@ -1160,7 +1127,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 9, "size_x": 9, "size_y": 8 }
+{ "row": 10, "col": 9, "size_x": 9, "size_y": 8 }
 ```
 
 ---
@@ -1197,7 +1164,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Đánh giá chân dung khách hàng — new vs returning, segment
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiểm tra phân bổ thanh toán và mức độ chiết khấu
@@ -1205,7 +1172,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Returning Customer Rate
@@ -1228,7 +1195,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 3, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: At Risk Customers
@@ -1245,7 +1212,7 @@ WHERE customer_status = 'At Risk'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: New vs Returning Customers
@@ -1288,7 +1255,7 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 12, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 12, "size_y": 3 }
 ```
 
 #### Question: Revenue by Customer Segment
@@ -1331,7 +1298,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Orders by Status
@@ -1360,7 +1327,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Payment Method Distribution
@@ -1394,7 +1361,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Discount Impact
@@ -1435,7 +1402,7 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 3 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 3 }
 ```
 
 #### 📝 Text: Source & Freshness
@@ -1443,5 +1410,5 @@ WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
 Source: fact_orders · Updated daily · Excludes cancelled/voided orders
 
 ```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
 ```

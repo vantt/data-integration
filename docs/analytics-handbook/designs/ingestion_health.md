@@ -129,7 +129,7 @@ Multi-tab layout (Operational Cockpit pattern):
 - [x] Annotations are specific (not "Overview")
 - [x] Detail tables at bottom of each tab
 - [x] No `donut` with > 5 slices
-- [x] No `gauge` without clear range (using `single-value` + conditional color instead — scalar.comparisons broken on v0.58.11)
+- [x] No `gauge` without clear range (using `single-value` + conditional color instead)
 - [x] DuckDB SQL dialect throughout (no MySQL/Postgres-only syntax)
 - [x] NULLIF used in all divisions
 - [x] TIMESTAMPTZ preserved; displayed in Asia/Ho_Chi_Minh via Metabase timezone setting

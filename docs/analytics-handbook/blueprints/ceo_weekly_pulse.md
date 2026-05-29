@@ -974,14 +974,6 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 { "row": 14, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
-#### 📝 Text: Source & Freshness
-
-Source: fact_orders · Updated weekly (Mon-Sun) · **Scope: All sales channels (is_sales_channel = true)** · Excludes cancelled orders
-
-```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 ---
 
 ### Section: Profitability (P&L)
@@ -1137,4 +1129,13 @@ FROM (
 
 ```json metabase-pos
 { "row": 19, "col": 12, "size_x": 6, "size_y": 3 }
+```
+
+#### 📝 Text: Source & Freshness
+
+Source: fact_orders · Updated weekly (Mon-Sun) · **Scope: All sales channels (is_sales_channel = true)** · Excludes cancelled orders
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
 ```

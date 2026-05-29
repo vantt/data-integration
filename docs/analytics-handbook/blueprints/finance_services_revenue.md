@@ -13,7 +13,7 @@
 ---
 dashboard_name: Finance Services Revenue [All]
 collection: Finance
-database: Sapo DuckDB
+database: Sapo
 description: "Track services revenue (DV* + CPBH codes) separately from products P&L — 2.4B VND/năm"
 audience: CFO, Finance Manager
 cadence: Monthly
@@ -22,7 +22,7 @@ requires_flag: is_service_line in int_misa_sales_lines
 ---
 ```
 
-> **Database:** Sapo DuckDB
+> **Database:** Sapo
 
 ## 📂 Collection: Finance
 
@@ -98,22 +98,16 @@ FROM this_month t, prev_month p, prev_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Doanh thu DV tháng này": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Tháng trước":            { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Cùng kỳ năm ngoái":     { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "MoM %":                  { "suffix": "%", "decimals": 1 },
-      "YoY %":                  { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
+      "Doanh thu DV tháng này": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -355,7 +349,8 @@ LIMIT 5
 
 #### 📝 Text: Source & Freshness
 
-**Nguồn:** `int_misa_sales_lines` WHERE `is_service_line = true` · **Cadence:** Monthly · **Caveats:** Dịch vụ không có COGS → không so sánh margin với hàng hóa · **Requires P0:** `is_service_line` flag
+**Source:** `int_misa_sales_lines` WHERE `is_service_line = true` · **Cadence:** Monthly · **Caveats:** Dịch vụ không có COGS → không so sánh margin với hàng hóa · **Requires P0:** `is_service_line` flag
+<!-- text-id:source-freshness -->
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
@@ -425,22 +420,16 @@ FROM this_month t, prev_month p, prev_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "US HR Revenue tháng này": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Tháng trước":             { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Cùng kỳ năm ngoái":      { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "MoM %":                   { "suffix": "%", "decimals": 1 },
-      "YoY %":                   { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
+      "US HR Revenue tháng này": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -521,7 +510,8 @@ ORDER BY 3 DESC
 
 #### 📝 Text: Source & Freshness
 
-**Nguồn:** `int_misa_sales_lines` WHERE `product_code IN ('DVCCNS','DVCCNS1')` · **Cadence:** Monthly · **Caveats:** Revenue = 100% contribution margin (zero COGS) — không dùng gross margin % · **Requires P0:** `is_service_line` flag
+**Source:** `int_misa_sales_lines` WHERE `product_code IN ('DVCCNS','DVCCNS1')` · **Cadence:** Monthly · **Caveats:** Revenue = 100% contribution margin (zero COGS) — không dùng gross margin % · **Requires P0:** `is_service_line` flag
+<!-- text-id:source-freshness -->
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
@@ -645,7 +635,8 @@ ORDER BY 1 DESC
 
 #### 📝 Text: Source & Freshness
 
-**Nguồn:** `int_misa_sales_lines` WHERE `is_service_line = true` · **Cadence:** Monthly · **Scope:** Tất cả DV* + CPBH codes · **Requires P0:** `is_service_line` flag
+**Source:** `int_misa_sales_lines` WHERE `is_service_line = true` · **Cadence:** Monthly · **Scope:** Tất cả DV* + CPBH codes · **Requires P0:** `is_service_line` flag
+<!-- text-id:source-freshness -->
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }

@@ -112,16 +112,7 @@ FROM this_week tw, last_week lw
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -161,16 +152,13 @@ FROM this_week tw, last_week lw
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "Net Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
@@ -216,16 +204,13 @@ FROM this_week tw, last_week lw
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
@@ -549,7 +534,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Xac dinh kenh chiem workload — ranking orders va revenue
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: So sanh hieu suat kenh WoW — highlight bien dong > 30%
@@ -557,7 +542,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # So sanh hieu suat kenh WoW — highlight bien dong > 30%
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Danh gia hieu suat chi nhanh — volume va WoW change
@@ -565,7 +550,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Danh gia hieu suat chi nhanh — volume va WoW change
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders by Channel
@@ -599,7 +584,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 4, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Channel
@@ -635,7 +620,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 4, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -719,7 +704,7 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 7 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 7 }
 ```
 
 ---
@@ -753,7 +738,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 19, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Branch Performance Table
@@ -829,7 +814,7 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 17, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 19, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -866,7 +851,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Theo doi hieu suat Social Commerce — revenue, orders, AOV
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Danh gia hieu suat nhan vien — ranking doanh thu va top social
@@ -874,7 +859,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Danh gia hieu suat nhan vien — ranking doanh thu va top social
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiem tra thanh toan va doi soat — phan bo PTTT va pending alert
@@ -882,7 +867,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Kiem tra thanh toan va doi soat — phan bo PTTT va pending alert
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Social Revenue
@@ -921,23 +906,20 @@ FROM this_week tw, last_week lw
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "Social Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Social Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social Orders
@@ -975,21 +957,12 @@ FROM this_week tw, last_week lw
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social AOV
@@ -1032,23 +1005,20 @@ FROM this_week tw, last_week lw
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "wow",
-        "type": "anotherColumn",
-        "column": "Tuan truoc",
-        "label": "vs tuan truoc"
-      }
-    ],
     "column_settings": {
-      "Social AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Social AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---
@@ -1087,7 +1057,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Top Staff - Social Channels
@@ -1128,7 +1098,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1163,7 +1133,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Payment Status Summary
@@ -1221,20 +1191,9 @@ ORDER BY s.orders DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 15, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
----
-
-#### 📝 Text: Footer
-
-Source: fact_orders · Updated weekly (Mon-Sun) · Excludes incomplete current week
-
-```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
----
 
 
 #### 📝 Text: Source & Freshness
@@ -1268,7 +1227,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Bien dong bien lo theo kenh — phat hien kenh co bien lo giam manh hoac am
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Weekly Margin by Channel
@@ -1356,7 +1315,7 @@ ORDER BY "Bien lo %" DESC NULLS LAST
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---
@@ -1366,7 +1325,7 @@ ORDER BY "Bien lo %" DESC NULLS LAST
 # Canh bao don hang am — so don co channel_net_profit < 0 tuan nay vs tuan truoc
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Loss-Order Alert
@@ -1407,7 +1366,7 @@ FROM this_week tw, last_week lw
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 9, "size_y": 4 }
+{ "row": 13, "col": 0, "size_x": 9, "size_y": 4 }
 ```
 
 #### 📝 Text: Source & Freshness

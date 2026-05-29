@@ -137,22 +137,16 @@ FROM this_month tm, prev_month pm, prev_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Net Revenue":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Tháng trước":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Cùng kỳ năm trước":     { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "MoM %":                 { "suffix": "%", "decimals": 1 },
-      "YoY %":                 { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -191,7 +185,7 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "GMV": {
@@ -200,8 +194,7 @@ FROM this_month tm, prev_month pm
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -252,20 +245,8 @@ FROM this_month tm, prev_month pm, prev_year py
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "column_settings": {
-      "MoM %": { "suffix": "%", "decimals": 1 },
-      "YoY %": { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -307,7 +288,7 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "AOV": {
@@ -316,8 +297,7 @@ FROM this_month tm, prev_month pm
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -354,10 +334,8 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -369,11 +347,10 @@ FROM this_month tm, prev_month pm
 
 Revenue achievement vs monthly target — actual/target/rate table.
 
-<!-- FIX (2026-05-28): Metabase v0.58.11 progress widget only supports static `progress.goal`.
-     Dynamic goal from fact_targets is not possible without scalar.comparisons (also broken).
-     Workaround: display:table with actual_gmv, target_gmv, achievement_pct columns.
-     Conditional formatting on achievement_pct gives green/red signal.
-     Previous SQL discarded target_gmv in SELECT — the CROSS JOIN was a no-op. -->
+<!-- NOTE: Metabase `progress` widget only supports static `progress.goal` (cannot bind to a query column).
+     Workaround in use: display:table with actual_gmv, target_gmv, achievement_pct columns;
+     conditional formatting on achievement_pct gives green/red signal.
+     Revisit on Metabase upgrades if dynamic-goal progress becomes supported. -->
 
 **Domain Reference**: [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate)
 
@@ -910,7 +887,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 ## Đánh giá hiệu suất kênh bán hàng — kênh nào cần đẩy mạnh?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Theo dõi structural shift kênh 6 tháng — Online-Ecom đang lên?
@@ -918,7 +895,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 ## Theo dõi structural shift kênh 6 tháng — Online-Ecom đang lên?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiểm tra sức khỏe danh mục khách hàng — acquisition, at-risk, churn
@@ -926,7 +903,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 ## Kiểm tra sức khỏe danh mục khách hàng — acquisition, at-risk, churn
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Channel Category
@@ -967,7 +944,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Channel Performance Table
@@ -1049,7 +1026,7 @@ ORDER BY tm.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 3, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Channel Mix Trend (6M)
@@ -1092,7 +1069,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### ❓ Question: New Customers
@@ -1123,15 +1100,13 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 17, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: At Risk Customers
@@ -1158,7 +1133,7 @@ WHERE customer_status = 'At Risk'
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 17, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Churned Customers
@@ -1180,7 +1155,7 @@ WHERE customer_status = 'Churned'
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 17, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Customer Segment Distribution
@@ -1218,7 +1193,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 20, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue by Customer Segment
@@ -1260,7 +1235,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 20, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
@@ -1294,6 +1269,11 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 
 #### 📝 Text: Xác định sản phẩm và thương hiệu drive growth
 
+## Xác định sản phẩm và thương hiệu drive growth
+
+```json metabase-pos
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### 📝 Text: Source & Freshness
 
@@ -1304,18 +1284,12 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-## Xác định sản phẩm và thương hiệu drive growth
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 #### 📝 Text: Kiểm soát hiệu quả vận hành — chiết khấu, trả hàng có trong tầm?
 
 ## Kiểm soát hiệu quả vận hành — chiết khấu, trả hàng có trong tầm?
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Top 10 Products by Revenue
@@ -1394,7 +1368,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### ❓ Question: Revenue by Brand
@@ -1437,7 +1411,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### ❓ Question: Discount Rate
@@ -1472,21 +1446,20 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Discount Rate %": {
         "suffix": "%",
         "decimals": 1
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 18, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Total Discount Amount
@@ -1522,7 +1495,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 18, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Return Count
@@ -1555,15 +1528,13 @@ FROM this_month tm, prev_month pm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 18, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 #### ❓ Question: Revenue Breakdown Table
@@ -1639,13 +1610,6 @@ ORDER BY sort_order
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 4 }
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 4 }
 ```
 
-#### 📝 Text: Source & Freshness
-
-Source: fact_orders · Updated monthly · **Scope: All sales channels (is_sales_channel = true)** · Excludes cancelled orders
-
-```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
-```

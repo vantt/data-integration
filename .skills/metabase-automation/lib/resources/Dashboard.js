@@ -76,15 +76,41 @@ class Dashboard {
         return { tabsPayload, tabMap };
     }
 
+    /**
+     * Validate that no tab has a non-cycle card at row=0 conflicting with the
+     * cycle-indicator ("Chu kỳ báo cáo"). Logs a warning — does NOT auto-fix.
+     * Blueprint is the source of truth; fix conflicts in the blueprint file.
+     */
+    validateCycleIndicatorPosition(cardConfigs, tabMap) {
+        const CYCLE_NAME = 'Chu kỳ báo cáo';
+        const byTab = new Map();
+        for (const cfg of cardConfigs) {
+            let tabKey = cfg.tab && tabMap.has(cfg.tab) ? String(tabMap.get(cfg.tab))
+                       : cfg.dashboard_tab_id != null ? String(cfg.dashboard_tab_id)
+                       : '__none__';
+            if (!byTab.has(tabKey)) byTab.set(tabKey, []);
+            byTab.get(tabKey).push(cfg);
+        }
+        for (const [, tabCards] of byTab) {
+            const cycleCard = tabCards.find(c => c.name === CYCLE_NAME && c.row === 0);
+            if (!cycleCard) continue;
+            const conflicts = tabCards.filter(c => c !== cycleCard && c.row === 0);
+            if (conflicts.length > 0) {
+                const label = cycleCard.tab || 'default';
+                console.warn(`⚠️  Blueprint conflict: tab "${label}" has ${conflicts.length} card(s) at row=0 alongside cycle-indicator — fix row positions in the blueprint file.`);
+            }
+        }
+    }
+
     async syncCards(dashboardId, cardConfigs, tabNames = []) {
         // Version Check
-        const isModern = this.core.isVersionAtLeast("v0.58.0");
+        const isModern = this.core.isVersionAtLeast("v0.60.0");
         console.log(`ℹ️ Metabase Version: ${this.core.version} (Strategy: ${isModern ? 'Modern/Dashcards' : 'Legacy/OrderedCards'})`);
 
         // cardConfigs: [{ id, row, col, size_x, size_y, parameter_mappings }]
         
         const dashboard = await this.core.request(`/api/dashboard/${dashboardId}`);
-        // Support both property names if Metabase version varies, but v0.58+ uses dashcards
+        // Support both property names if Metabase version varies, but v0.60+ uses dashcards
         let currentCards = dashboard.dashcards || dashboard.ordered_cards || [];
         const existingTabs = dashboard.tabs || [];
 
@@ -97,6 +123,10 @@ class Dashboard {
             tabMap = result.tabMap;
             console.log(`📑 Tab payload: ${tabsPayload.map(t => `${t.name}(${t.id})`).join(', ')}`);
         }
+
+        // Validate cycle-indicator position — warns if blueprint has row=0 conflict.
+        // Blueprint is source of truth: fix conflicts in the blueprint file, not here.
+        this.validateCycleIndicatorPosition(cardConfigs, tabMap);
 
         let tempIdCounter = -1;
         const usedDashCardIds = new Set();

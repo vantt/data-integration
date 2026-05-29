@@ -53,7 +53,7 @@ WHERE c.channel_format = 'Social'
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Doanh thu Social": {
@@ -62,8 +62,7 @@ WHERE c.channel_format = 'Social'
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -88,10 +87,8 @@ WHERE c.channel_format = 'Social'
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -123,7 +120,7 @@ WHERE c.channel_format = 'Social'
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "AOV Social": {
@@ -132,8 +129,7 @@ WHERE c.channel_format = 'Social'
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -532,16 +528,6 @@ LIMIT 20
 
 ```json metabase-pos
 {"row": 28, "col":0, "size_x":18, "size_y":6}
-```
-
----
-
-#### 📝 Text: Footer
-
-Source: fact_orders · dim_channels (Social only) · Updated real-time · Filter: channel_format = Social
-
-```json metabase-pos
-{"row": 34, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### 📝 Text: Source & Freshness

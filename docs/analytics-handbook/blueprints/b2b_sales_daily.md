@@ -26,7 +26,7 @@ Daily monitoring for wholesale and partner orders — revenue, order volume, key
 # Doanh thu B2B hom nay — khach si va doi tac
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Net Revenue (B2B)
@@ -48,7 +48,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Net Revenue": {
@@ -57,14 +57,13 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Total Orders (B2B)
@@ -86,15 +85,13 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: AOV (B2B)
@@ -124,7 +121,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "AOV": {
@@ -133,14 +130,13 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Unique Customers (B2B)
@@ -162,7 +158,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -172,7 +168,7 @@ WHERE date(o.order_timestamp) = current_date
 # Phan bo theo loai khach va kenh
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -231,7 +227,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":9, "size_y":5}
+{ "row": 9, "col": 0, "size_x": 9, "size_y": 5 }
 ```
 
 #### Question: Revenue by Channel (B2B)
@@ -273,7 +269,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 7, "col":9, "size_x":9, "size_y":5}
+{ "row": 9, "col": 9, "size_x": 9, "size_y": 5 }
 ```
 
 ---
@@ -283,7 +279,7 @@ ORDER BY 2 DESC
 # Top khach hang B2B hom nay
 
 ```json metabase-pos
-{"row": 12, "col":0, "size_x":18, "size_y":1}
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top B2B Customers Today
@@ -325,7 +321,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{"row": 13, "col":0, "size_x":18, "size_y":6}
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -362,7 +358,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Danh sach don B2B hom nay
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: B2B Orders List
@@ -414,7 +410,7 @@ ORDER BY o.order_timestamp DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 12 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 12 }
 ```
 
 ---
@@ -424,7 +420,7 @@ ORDER BY o.order_timestamp DESC
 Source: fact_orders · Updated real-time · **Scope: B2B only (customer_type IN ('WHOLESALE', 'PARTNER'))**
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---

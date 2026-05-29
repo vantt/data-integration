@@ -101,14 +101,6 @@ FROM this_period tp, prev_period pp
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs 30 ngày trước"
-      }
-    ],
     "column_settings": {
       "Tong CK": {
         "number_style": "currency",
@@ -165,14 +157,6 @@ FROM this_period tp, prev_period pp
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs 30 ngày trước"
-      }
-    ],
     "column_settings": {
       "Ty le CK %": {
         "suffix": "%"
@@ -228,14 +212,6 @@ FROM this_period tp, prev_period pp
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs 30 ngày trước"
-      }
-    ],
     "column_settings": {
       "Tan suat CK %": {
         "suffix": "%"
@@ -284,16 +260,7 @@ FROM this_period tp, prev_period pp
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs 30 ngày trước"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -649,7 +616,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 ## Xác định promotion hiệu quả — ranking doanh thu và usage
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Total Promo Revenue
@@ -690,14 +657,6 @@ FROM this_period tp, prev_period pp
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs 30 ngày trước"
-      }
-    ],
     "column_settings": {
       "DT Promo": {
         "number_style": "currency",
@@ -711,7 +670,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Promo Usage Count
@@ -751,21 +710,12 @@ FROM this_period tp, prev_period pp
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs 30 ngày trước"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Unique Promos Active
@@ -794,7 +744,7 @@ WHERE o.status != 'CANCELLED'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Avg Revenue per Promo
@@ -843,14 +793,6 @@ FROM this_period tp, prev_period pp
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Ky truoc",
-        "label": "vs 30 ngày trước"
-      }
-    ],
     "column_settings": {
       "DT TB/CT": {
         "number_style": "currency",
@@ -864,7 +806,7 @@ FROM this_period tp, prev_period pp
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 #### 📝 Text: Review top 10 promotion — doanh thu và lượt sử dụng
@@ -872,7 +814,7 @@ FROM this_period tp, prev_period pp
 ## Review top 10 promotion — doanh thu và lượt sử dụng
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Top 10 Promotions by Revenue
@@ -918,7 +860,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 10 Promotions by Usage
@@ -956,7 +898,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Tra cứu chi tiết promotion — code, usage, revenue, discount rate
@@ -964,7 +906,7 @@ LIMIT 10
 ## Tra cứu chi tiết promotion — code, usage, revenue, discount rate
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Promotion Performance Table
@@ -1044,7 +986,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 #### 📝 Text: Theo dõi xu hướng sử dụng promotion — top 5 codes
@@ -1052,7 +994,7 @@ ORDER BY "Doanh thu" DESC
 ## Theo dõi xu hướng sử dụng promotion — top 5 codes
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Promo Usage Trend
@@ -1108,7 +1050,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 25, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -1145,7 +1087,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 ## Phân tích tác động promo theo kênh — kênh nào phụ thuộc nhiều?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Promo Revenue Share by Channel
@@ -1201,7 +1143,7 @@ ORDER BY SUM(o.net_revenue) DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Discount Rate by Channel
@@ -1242,7 +1184,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: So sánh hiệu suất kênh MoM — highlight biến động lớn
@@ -1250,7 +1192,7 @@ ORDER BY 2 DESC
 ## So sánh hiệu suất kênh MoM — highlight biến động lớn
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Promo Performance Table
@@ -1350,7 +1292,7 @@ ORDER BY tp.promo_revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### 📝 Text: Điều tra đơn chiết khấu cao — flag đơn > 30% CK để audit
@@ -1358,7 +1300,7 @@ ORDER BY tp.promo_revenue DESC
 ## Điều tra đơn chiết khấu cao — flag đơn > 30% CK để audit
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: High-Discount Orders List
@@ -1432,18 +1374,9 @@ LIMIT 100
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
-#### 📝 Text: Footer
-
-Source: fact_orders · dim_promotions · dim_channels · Updated daily · Excludes cancelled orders
-
-```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
----
 
 
 #### 📝 Text: Source & Freshness
@@ -1479,6 +1412,11 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 
 #### 📝 Text: Discount ROI — đo lường hiệu quả thực của chiết khấu, không chỉ chi phí
 
+## Discount ROI — đo lường hiệu quả thực của chiết khấu, không chỉ chi phí
+
+```json metabase-pos
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+```
 
 #### 📝 Text: Source & Freshness
 
@@ -1487,12 +1425,6 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-## Discount ROI — đo lường hiệu quả thực của chiết khấu, không chỉ chi phí
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Discount ROI by Promotion Code
@@ -1625,7 +1557,7 @@ LIMIT 50
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 #### 📝 Text: Xu hướng ROI chiết khấu theo tháng — phát hiện chiến dịch hiệu quả tăng/giảm
@@ -1633,7 +1565,7 @@ LIMIT 50
 ## Xu hướng ROI chiết khấu theo tháng — phát hiện chiến dịch hiệu quả tăng/giảm
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Discount ROI Trend (Monthly)
@@ -1723,7 +1655,7 @@ ORDER BY thang
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### 📝 Text: Phân tích cannibalization — chiết khấu có tạo ra doanh thu thật hay chỉ dịch chuyển?
@@ -1733,7 +1665,7 @@ ORDER BY thang
 > **Caveat:** Category-level proxy; SKU-level cannibalization needs further analysis. Signal: if non-promo categories drop ≈ promo categories gain → consumers shifted, no incremental lift.
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Discount Cannibalization by Product Type
@@ -1831,15 +1763,7 @@ LIMIT 40
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 8 }
-```
-
-#### 📝 Text: Footer
-
-Source: fact_orders · dim_promotions · dim_channels · Updated daily · Excludes CANCELLED/Voided · Retail only · ROI estimation: no holdout group
-
-```json metabase-pos
-{ "row": 27, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---

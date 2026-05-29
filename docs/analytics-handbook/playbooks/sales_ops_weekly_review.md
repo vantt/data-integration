@@ -81,7 +81,7 @@
 | Chart Title | Visualization Type | Metric Reference | Notes/Config |
 | :--- | :--- | :--- | :--- |
 | **Weekly Margin by Channel** | Formatted Table | `fact_order_economics.gross_profit` | Kenh, Don hang, Doanh thu, Bien lo %, WoW Δ pp. Sort by Bien lo % DESC. RED row if Bien lo % < 0. YELLOW if WoW Δ pp <= -5. |
-| **Loss-Order Alert** | Scalar | `fact_order_economics.channel_net_profit` | COUNT(orders WHERE channel_net_profit < 0) tuan nay. No WoW comparison display (plain scalar, v0.58.11 compat). |
+| **Loss-Order Alert** | Scalar | `fact_order_economics.channel_net_profit` | COUNT(orders WHERE channel_net_profit < 0) tuan nay, kèm WoW comparison (scalar.comparisons type=anotherColumn). |
 
 ## Operational Actions
 

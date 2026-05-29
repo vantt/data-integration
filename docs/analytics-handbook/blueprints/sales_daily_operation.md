@@ -259,14 +259,6 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -320,14 +312,6 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ],
     "column_settings": {
       "Gross Revenue": {
         "number_style": "currency",
@@ -363,16 +347,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -408,14 +383,6 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "dod",
-        "type": "anotherColumn",
-        "column": "Hôm qua",
-        "label": "vs hôm qua"
-      }
-    ],
     "column_settings": {
       "AOV": {
         "number_style": "currency",
@@ -722,7 +689,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: So sánh hiệu suất kênh DoD — highlight kênh tăng/giảm mạnh
@@ -730,7 +697,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # So sánh hiệu suất kênh DoD — highlight kênh tăng/giảm mạnh
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
@@ -738,7 +705,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Phân bổ doanh thu chi nhánh — xác định nơi cần tăng cường
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Revenue by Channel
@@ -779,7 +746,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Channel Category
@@ -813,7 +780,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Channel Performance vs Yesterday
@@ -902,7 +869,7 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Sales by Branch
@@ -950,7 +917,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### 📝 Text: Source & Freshness
@@ -958,7 +925,7 @@ ORDER BY 3 DESC
 Source: `fact_orders` · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Ranking kênh: hôm nay · DoD table (Channel Performance): hôm nay vs hôm qua · Bao gồm tất cả trạng thái đơn
 
 ```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---
@@ -985,7 +952,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phân tích đóng góp theo loại sản phẩm
@@ -993,7 +960,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Phân tích đóng góp theo loại sản phẩm
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top 10 Products by Revenue
@@ -1036,7 +1003,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Top 10 Products by Quantity
@@ -1071,7 +1038,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Product Type
@@ -1113,7 +1080,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 9, "size_y": 8 }
+{ "row": 10, "col": 0, "size_x": 9, "size_y": 8 }
 ```
 
 #### Question: Product Performance Table
@@ -1162,7 +1129,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 9, "size_x": 9, "size_y": 8 }
+{ "row": 10, "col": 9, "size_x": 9, "size_y": 8 }
 ```
 
 #### 📝 Text: Source & Freshness
@@ -1170,7 +1137,7 @@ LIMIT 20
 Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Khung thời gian: hôm nay (by sol_timestamp, không phải order_timestamp)
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---
@@ -1197,7 +1164,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Đánh giá chân dung khách hàng — new vs returning, segment
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiểm tra phân bổ thanh toán và mức độ chiết khấu
@@ -1205,7 +1172,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Returning Customer Rate
@@ -1228,7 +1195,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 3, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: At Risk Customers
@@ -1244,7 +1211,7 @@ WHERE customer_status = 'At Risk'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 3, "size_x": 3, "size_y": 3 }
+{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
 ```
 
 #### Question: New vs Returning Customers
@@ -1287,7 +1254,7 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 12, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 12, "size_y": 3 }
 ```
 
 #### Question: Revenue by Customer Segment
@@ -1330,7 +1297,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Orders by Status
@@ -1359,7 +1326,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Payment Method Distribution
@@ -1393,7 +1360,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Discount Impact
@@ -1434,7 +1401,7 @@ WHERE date(o.order_timestamp) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 3 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 3 }
 ```
 
 #### 📝 Text: Source & Freshness
@@ -1442,7 +1409,7 @@ WHERE date(o.order_timestamp) = current_date
 Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_customers` (At Risk = RFM snapshot, không theo ngày) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Hôm nay (by order_timestamp) · Bao gồm tất cả trạng thái đơn
 
 ```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---

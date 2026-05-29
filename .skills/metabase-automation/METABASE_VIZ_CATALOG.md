@@ -10,7 +10,7 @@
 | # | Standard Term | Metabase `display` | Settings Notes |
 |---|--------------|-------------------|----------------|
 | 1 | `single-value` | `scalar` | Default scalar behavior |
-| 2 | `single-value-with-trend` | `scalar` | + `scalar.comparisons` (see template below) |
+| 2 | `single-value-with-trend` | `smartscalar` | + `scalar.comparisons`. UI label: "Trend". **REQUIRES time-series query** (`GROUP BY` date column). Native-SQL widgets returning single-row `(current, comparison)` columns will FAIL with "Group only by a time field" error. For non-time-series widgets, fall back to plain `scalar`. |
 | 3 | `progress-toward-goal` | `progress` | + `progress.goal`, `progress.color` |
 | 4 | `gauge` | `gauge` | + `gauge.segments` (min/max/color per zone) |
 | 5 | `line-chart` | `line` | Single series |
@@ -159,8 +159,8 @@ When capturing a live dashboard back to standard vocabulary, many standard terms
 | `area` | default | `area-chart` |
 | `line` | ≥2 series | `multi-line-chart` |
 | `line` | 1 series | `line-chart` |
-| `scalar` | has `scalar.comparisons` | `single-value-with-trend` |
-| `scalar` | no comparisons | `single-value` |
+| `smartscalar` | (always has `scalar.comparisons`) | `single-value-with-trend` |
+| `scalar` | — | `single-value` |
 | `table` | has `table.column_formatting` | `data-table-formatted` |
 | `table` | default | `data-table` |
 | `pivot` | has conditional formatting (intensity encoding) | `heatmap` |
@@ -177,11 +177,13 @@ When capturing a live dashboard back to standard vocabulary, many standard terms
 
 ## 5. JSON Templates
 
-### scalar + trend (single-value-with-trend)
+### smartscalar + trend (single-value-with-trend) — TIME-SERIES ONLY
+
+> **Prerequisite**: SQL must return a date column + a metric column (e.g. `SELECT day, SUM(revenue) GROUP BY day`). Metabase computes `insights` from the date dimension and uses `previousValue` automatically. The `anotherColumn` pattern below works only when a date column is also present in the result.
 
 ```json
 {
-  "display": "scalar",
+  "display": "smartscalar",
   "visualization_settings": {
     "scalar.comparisons": [
       {

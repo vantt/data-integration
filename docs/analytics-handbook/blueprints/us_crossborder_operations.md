@@ -347,7 +347,7 @@ ORDER BY o.order_timestamp DESC
 
 ### 📑 Tab: Tuan nay
 
-#### ❓ Question: Chu kỳ báo cáo (Weekly)
+#### ❓ Question: Chu kỳ báo cáo
 
 ```sql
 SELECT
@@ -667,7 +667,7 @@ ORDER BY o.order_timestamp DESC
 
 ### 📑 Tab: Thang nay
 
-#### ❓ Question: Chu kỳ báo cáo (Monthly)
+#### ❓ Question: Chu kỳ báo cáo
 
 ```sql
 SELECT

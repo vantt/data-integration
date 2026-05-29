@@ -345,7 +345,7 @@ SELECT '📅 Kỳ payout Shopee 30 ngày: ' || strftime((current_date - INTERVAL
 ## Xu huong settlement — margin dang cai thien hay xau di?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Settlement Margin Trend
@@ -392,7 +392,7 @@ ORDER BY "Thang"
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Fee Composition Trend
@@ -443,7 +443,7 @@ ORDER BY "Thang"
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Low Settlement Orders Heading
@@ -451,7 +451,7 @@ ORDER BY "Thang"
 ## Chi tiet don hang — don nao co settlement thap nhat?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders with Lowest Settlement
@@ -531,7 +531,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 #### 📝 Text: Product Settlement Heading
@@ -539,7 +539,7 @@ LIMIT 20
 ## Hieu qua theo san pham — san pham nao bi mat margin nhieu nhat tren Shopee?
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Product Settlement Summary
@@ -622,7 +622,7 @@ ORDER BY "Settlement Margin %" ASC NULLS LAST
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 ---
@@ -656,20 +656,10 @@ SELECT '📅 Kỳ payout Shopee 30 ngày: ' || strftime((current_date - INTERVAL
 
 #### 📝 Text: PnL Cascade Heading
 
-
-#### 📝 Text: Source & Freshness
-
-**Source:** int_shopee_order_fees · **Cadence:** payout-period · **Scope:** payout_released_at IS NOT NULL · **Caveats:** Shopee fee data only
-<!-- text-id:source-freshness -->
-
-```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 ## Shopee P&L Cascade — chi phi that su va diem hoa von theo don hang
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: PnL Caveat
@@ -677,7 +667,7 @@ SELECT '📅 Kỳ payout Shopee 30 ngày: ' || strftime((current_date - INTERVAL
 **Luu y:** Du lieu nay join Shopee fees (int_shopee_order_fees) voi MISA COGS (fact_order_economics). Don hang has_cogs=FALSE khong co COGS → true_margin se bi inflation. Chi giai thich duoc tren tap mau co MISA match.
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Shopee Margin vs COGS Scatter
@@ -759,7 +749,7 @@ ORDER BY bucket_midpoint
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 12, "size_y": 8 }
+{ "row": 4, "col": 0, "size_x": 12, "size_y": 8 }
 ```
 
 #### Question: Cost Waterfall % of Net Revenue
@@ -827,7 +817,7 @@ ORDER BY sort_order
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 12, "size_x": 6, "size_y": 8 }
+{ "row": 4, "col": 12, "size_x": 6, "size_y": 8 }
 ```
 
 #### Question: Orders Below Breakeven (True Margin < 0)
@@ -908,5 +898,14 @@ LIMIT 50
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** int_shopee_order_fees · **Cadence:** payout-period · **Scope:** payout_released_at IS NOT NULL · **Caveats:** Shopee fee data only
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```

@@ -111,22 +111,16 @@ FROM this_period t, prev_period p, prev_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Doanh thu thuan":    { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Ky truoc":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Cung ky nam truoc":  { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "MoM %":              { "suffix": "%", "decimals": 1 },
-      "YoY %":              { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
+      "Doanh thu thuan": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -162,7 +156,7 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Gia von": {
@@ -171,8 +165,7 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -219,22 +212,16 @@ FROM this_period t, prev_period p, prev_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Loi nhuan gop":      { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Ky truoc":           { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Cung ky nam truoc":  { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "MoM %":              { "suffix": "%", "decimals": 1 },
-      "YoY %":              { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
+      "Loi nhuan gop": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
   }
 }
 ```
@@ -468,7 +455,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 Loi nhuan theo kenh ban hang — kenh nao hieu qua nhat?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Margin by Channel
@@ -529,7 +516,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue vs COGS by Channel
@@ -581,7 +568,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Channel Trend Heading
@@ -589,7 +576,7 @@ ORDER BY 2 DESC
 Xu huong margin kenh — kenh nao dang cai thien?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: COGS Ratio Trend
@@ -634,7 +621,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -671,7 +658,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 Chi phi ban hang tren Shopee — phi san chiem bao nhieu?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Shopee Settlement MTD
@@ -701,7 +688,7 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Tien thuc nhan": {
@@ -710,14 +697,13 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Settlement Margin Percent
@@ -756,7 +742,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 5 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 5 }
 ```
 
 #### ❓ Question: Platform Fee Rate
@@ -796,7 +782,7 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Ty le phi san %": {
@@ -804,14 +790,13 @@ FROM this_period t, prev_period p
         "scale": 0.01,
         "decimals": 1
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Shopee Gross Revenue
@@ -841,7 +826,7 @@ FROM this_period t, prev_period p
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Doanh thu gop Shopee": {
@@ -850,14 +835,13 @@ FROM this_period t, prev_period p
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 #### 📝 Text: Shopee Fee Heading
@@ -865,7 +849,7 @@ FROM this_period t, prev_period p
 Cau truc phi — loai phi nao chiem nhieu nhat?
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Shopee Fee Breakdown
@@ -951,7 +935,7 @@ ORDER BY "Gia tri phi" DESC
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue to Settlement Waterfall
@@ -1036,7 +1020,7 @@ FROM (
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Source & Freshness

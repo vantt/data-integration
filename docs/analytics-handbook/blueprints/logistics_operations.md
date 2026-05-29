@@ -86,10 +86,8 @@ WHERE status != 'DRAFT'
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -113,10 +111,8 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -141,10 +137,8 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -369,7 +363,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Đánh giá tốc độ xử lý — time to ship và bottleneck
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: TB giờ đến xuất kho
@@ -395,15 +389,13 @@ WHERE first_shipped_at IS NOT NULL
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: Tỷ lệ xuất cùng ngày
@@ -436,15 +428,13 @@ WHERE status NOT IN ('DRAFT', 'CANCELLED')
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Đơn chờ > 24h
@@ -474,7 +464,7 @@ WHERE status = 'OPEN'
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Đơn hoàn thành hôm nay
@@ -493,15 +483,13 @@ WHERE status NOT IN ('DRAFT')
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -511,7 +499,7 @@ WHERE status NOT IN ('DRAFT')
 # Theo dõi tốc độ xử lý theo giờ — khi nào xử lý nhanh/chậm?
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: TB giờ xử lý theo giờ (DoD)
@@ -562,7 +550,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 8, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Heatmap xuất kho
@@ -614,7 +602,7 @@ ORDER BY EXTRACT(DOW FROM order_timestamp), 2
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 8, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -624,7 +612,7 @@ ORDER BY EXTRACT(DOW FROM order_timestamp), 2
 # Escalate đơn hàng bị nghẽn — OPEN > 24h cần xử lý ngay
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Chi tiết đơn kẹt
@@ -676,7 +664,7 @@ ORDER BY "Chờ (giờ)" DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 ---
@@ -713,7 +701,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Đánh giá hiệu suất nhân viên — ranking volume và tốc độ
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: NV — Số đơn xử lý
@@ -745,7 +733,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: NV — TB giờ xử lý
@@ -778,7 +766,7 @@ ORDER BY 2 ASC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -788,7 +776,7 @@ ORDER BY 2 ASC
 # Tra cứu chi tiết đơn hàng hôm nay — full data lookup
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Bảng chi tiết đơn hàng
@@ -856,17 +844,7 @@ ORDER BY o.order_timestamp DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 9 }
-```
-
----
-
-#### 📝 Text: Footer
-
-Source: fact_orders · Updated hourly · Excludes drafts
-
-```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 #### 📝 Text: Source & Freshness

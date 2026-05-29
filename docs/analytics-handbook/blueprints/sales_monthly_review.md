@@ -125,14 +125,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -178,16 +170,7 @@ FROM this_month tm, prev_month pm
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -229,14 +212,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "AOV": {
         "number_style": "currency",
@@ -291,14 +266,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Gross Revenue": {
         "number_style": "currency",
@@ -345,14 +312,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Total Collected": {
         "number_style": "currency",
@@ -451,16 +410,7 @@ FROM this_month tm, prev_month pm
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -501,16 +451,7 @@ FROM this_month tm, prev_month pm
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -547,16 +488,7 @@ FROM this_month tm, prev_month pm
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
@@ -713,7 +645,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Target Achievement by Branch
@@ -767,7 +699,7 @@ ORDER BY "Achievement %" DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### 📝 Text: Phân tích variance — yếu tố nào đóng góp chênh lệch target?
@@ -775,7 +707,7 @@ ORDER BY "Achievement %" DESC
 ## Phân tích variance — yếu tố nào đóng góp chênh lệch target?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Variance Waterfall
@@ -829,7 +761,7 @@ ORDER BY "Variance" ASC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: MoM Revenue Change
@@ -862,14 +794,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "MoM Change": {
         "number_style": "currency",
@@ -883,7 +807,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 10, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 #### 📝 Text: Review chi tiết chi nhánh — revenue, target, achievement, MoM
@@ -891,7 +815,7 @@ FROM this_month tm, prev_month pm
 ## Review chi tiết chi nhánh — revenue, target, achievement, MoM
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Branch Performance Table
@@ -1010,7 +934,7 @@ ORDER BY tm.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 ---
@@ -1047,7 +971,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Xác định kênh drive revenue — ranking và so sánh MoM
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Channel
@@ -1087,7 +1011,7 @@ ORDER BY "Net Revenue" DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Channel Mix MoM
@@ -1144,7 +1068,7 @@ ORDER BY COALESCE(tm.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Theo dõi structural shift kênh 6 tháng — Online đang chiếm ưu thế?
@@ -1152,7 +1076,7 @@ ORDER BY COALESCE(tm.revenue, 0) DESC
 ## Theo dõi structural shift kênh 6 tháng — Online đang chiếm ưu thế?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Revenue Trend (6M)
@@ -1187,7 +1111,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### ❓ Question: Online vs Offline Share
@@ -1225,7 +1149,7 @@ ORDER BY "Net Revenue" DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 10, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 #### 📝 Text: Đánh giá phân khúc khách hàng — VIP contribution và growth
@@ -1233,7 +1157,7 @@ ORDER BY "Net Revenue" DESC
 ## Đánh giá phân khúc khách hàng — VIP contribution và growth
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Customer Segment
@@ -1281,7 +1205,7 @@ ORDER BY "Net Revenue" DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 17, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: New vs Returning Revenue Share
@@ -1324,7 +1248,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 17, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1361,7 +1285,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Kiểm soát chiết khấu — có vượt ngưỡng 15% GMV?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Discount Rate %
@@ -1392,7 +1316,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### ❓ Question: Total Discount Amount
@@ -1425,14 +1349,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Total Discount": {
         "number_style": "currency",
@@ -1446,7 +1362,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Discounted Orders %
@@ -1485,14 +1401,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Discounted Orders %": {
         "suffix": "%"
@@ -1503,7 +1411,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### ❓ Question: Return Rate
@@ -1542,14 +1450,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Return Rate %": {
         "suffix": "%"
@@ -1560,7 +1460,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 #### 📝 Text: Xác định top sản phẩm bán chạy và sản phẩm bị trả nhiều
@@ -1568,7 +1468,7 @@ FROM this_month tm, prev_month pm
 ## Xác định top sản phẩm bán chạy và sản phẩm bị trả nhiều
 
 ```json metabase-pos
-{ "row": 4, "col": 6, "size_x": 12, "size_y": 1 }
+{ "row": 6, "col": 6, "size_x": 12, "size_y": 1 }
 ```
 
 #### ❓ Question: Top 10 Products by Revenue
@@ -1612,7 +1512,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 5 Returned Products
@@ -1647,7 +1547,7 @@ LIMIT 5
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Review chi tiết sản phẩm — revenue, quantity, MoM theo loại
@@ -1655,7 +1555,7 @@ LIMIT 5
 ## Review chi tiết sản phẩm — revenue, quantity, MoM theo loại
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Product Type
@@ -1698,7 +1598,7 @@ ORDER BY "Revenue" DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 14, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Product Performance Table
@@ -1806,18 +1706,9 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 9, "size_x": 9, "size_y": 9 }
+{ "row": 14, "col": 9, "size_x": 9, "size_y": 9 }
 ```
 
-#### 📝 Text: Footer
-
-Source: fact_orders · dim_customers · Closed month data · Completed orders only
-
-```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
----
 
 
 #### 📝 Text: Source & Freshness
@@ -1851,7 +1742,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Phân tích lợi nhuận tháng — Net Profit, Gross Margin, hiệu quả kênh
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Monthly Net Profit vs Last Month
@@ -1890,14 +1781,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Net Profit": {
         "number_style": "currency",
@@ -1911,7 +1794,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 4 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 4 }
 ```
 
 #### ❓ Question: Gross Margin % vs Last Month
@@ -1955,14 +1838,6 @@ FROM this_month tm, prev_month pm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs tháng trước"
-      }
-    ],
     "column_settings": {
       "Gross Margin %": {
         "suffix": "%"
@@ -1973,25 +1848,15 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 4 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 4 }
 ```
 
 #### 📝 Text: Xu hướng biên lợi nhuận gộp 12 tháng — phát hiện suy giảm sớm
 
-
-#### 📝 Text: Source & Freshness
-
-**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided
-<!-- text-id:source-freshness -->
-
-```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
 ## Xu hướng biên lợi nhuận gộp 12 tháng — phát hiện suy giảm sớm
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Gross Margin % Trend (12M)
@@ -2033,7 +1898,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 7 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 7 }
 ```
 
 #### 📝 Text: Top/Bottom kênh theo lợi nhuận — xác định kênh sinh lời và kênh cần cắt giảm
@@ -2041,7 +1906,7 @@ ORDER BY 1
 ## Top/Bottom kênh theo lợi nhuận — xác định kênh sinh lời và kênh cần cắt giảm
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Channel Profit Contribution (Top 10)
@@ -2107,5 +1972,14 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 9 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 25, "col": 0, "size_x": 18, "size_y": 1 }
 ```

@@ -144,15 +144,7 @@ LIMIT 1
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.field": "San pham",
-    "scalar.comparisons": [
-      {
-        "id": "margin",
-        "type": "anotherColumn",
-        "column": "Margin %",
-        "label": "margin"
-      }
-    ]
+    "scalar.field": "San pham"
   }
 }
 ```
@@ -187,15 +179,7 @@ LIMIT 1
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.field": "San pham",
-    "scalar.comparisons": [
-      {
-        "id": "margin",
-        "type": "anotherColumn",
-        "column": "Margin %",
-        "label": "margin"
-      }
-    ]
+    "scalar.field": "San pham"
   }
 }
 ```

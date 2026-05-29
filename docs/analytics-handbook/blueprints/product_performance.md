@@ -49,7 +49,7 @@ Dashboard theo doi hieu suat san pham — doanh thu, so luong, xu huong, phan ti
 # Review hieu suat san pham thang — doanh thu, velocity, va xu huong MoM
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Doanh thu san pham
@@ -88,14 +88,6 @@ FROM this_period t, prev_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
       "Doanh thu san pham": {
         "number_style": "currency",
@@ -109,7 +101,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 4 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### Question: So luong ban
@@ -147,21 +139,12 @@ FROM this_period t, prev_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: So san pham ban duoc
@@ -199,21 +182,12 @@ FROM this_period t, prev_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 10, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### Question: Doanh thu trung binh/san pham
@@ -258,14 +232,6 @@ FROM this_period t, prev_period p
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
       "DT trung binh/SP": {
         "number_style": "currency",
@@ -279,7 +245,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 14, "size_x": 4, "size_y": 4 }
+{ "row": 4, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 ---
@@ -289,7 +255,7 @@ FROM this_period t, prev_period p
 # Phan tich xu huong doanh thu san pham — momentum MoM
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -385,7 +351,7 @@ ORDER BY "Ngay"
 ```
 
 ```json metabase-pos
-{"row": 8, "col":0, "size_x":12, "size_y":6}
+{ "row": 10, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: So luong ban theo ngay
@@ -446,7 +412,7 @@ ORDER BY "Ngay"
 ```
 
 ```json metabase-pos
-{"row": 8, "col":12, "size_x":6, "size_y":6}
+{ "row": 10, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -456,7 +422,7 @@ ORDER BY "Ngay"
 # Xac dinh dong gop theo loai san pham — ranking va composition
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":18, "size_y":1}
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Doanh thu theo loai san pham
@@ -500,7 +466,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{"row": 15, "col":0, "size_x":9, "size_y":6}
+{ "row": 17, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Ty trong doanh thu theo loai san pham
@@ -534,7 +500,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{"row": 15, "col":9, "size_x":9, "size_y":6}
+{ "row": 17, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -571,7 +537,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Danh gia tang truong theo loai san pham — dieu chinh product mix
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Tang truong doanh thu theo loai SP
@@ -639,7 +605,7 @@ ORDER BY "Tang truong MoM %" DESC NULLS LAST
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -649,7 +615,7 @@ ORDER BY "Tang truong MoM %" DESC NULLS LAST
 # Theo doi category mix shift — loai nao dang chiem uu the?
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Category Mix Trend
@@ -695,7 +661,7 @@ ORDER BY "Ngay"
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -705,7 +671,7 @@ ORDER BY "Ngay"
 # Review chi tiet loai san pham — highlight tang/giam manh
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Bang hieu suat loai san pham
@@ -804,7 +770,7 @@ ORDER BY COALESCE(t.doanh_thu, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 ---
@@ -841,7 +807,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Xac dinh top 20 san pham ban chay — focus marketing va stock
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top 20 SP theo doanh thu
@@ -886,7 +852,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 9, "size_y": 9 }
+{ "row": 3, "col": 0, "size_x": 9, "size_y": 9 }
 ```
 
 #### Question: Top 20 SP theo so luong
@@ -923,7 +889,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 9, "size_x": 9, "size_y": 9 }
+{ "row": 3, "col": 9, "size_x": 9, "size_y": 9 }
 ```
 
 ---
@@ -933,7 +899,7 @@ LIMIT 20
 # Canh bao som — san pham tang truong va sut giam manh nhat
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top 10 SP tang truong MoM
@@ -993,7 +959,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Top 10 SP sut giam MoM
@@ -1053,7 +1019,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1063,7 +1029,7 @@ LIMIT 10
 # Phan tich velocity — san pham nao quay nhanh nhat?
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top 20 SP theo daily velocity
@@ -1101,7 +1067,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -1111,7 +1077,7 @@ LIMIT 20
 # Tra cuu chi tiet san pham — tim kiem, sap xep, loc tu do
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 26, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Bang chi tiet san pham
@@ -1206,20 +1172,9 @@ ORDER BY t.doanh_thu DESC
 ```
 
 ```json metabase-pos
-{ "row": 25, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 27, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
----
-
-#### 📝 Text: Footer
-
-Source: fact_orders · dim_products · Updated daily · Excludes cancelled orders
-
-```json metabase-pos
-{ "row": 34, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
----
 
 
 #### 📝 Text: Source & Freshness
@@ -1253,7 +1208,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Bien loi nhuan gop theo san pham — dua tren gia von tu MISA
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Gross Margin %
@@ -1285,7 +1240,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 5 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 5 }
 ```
 
 #### Question: Top 20 san pham theo loi nhuan
@@ -1325,7 +1280,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 12, "size_y": 8 }
+{ "row": 3, "col": 6, "size_x": 12, "size_y": 8 }
 ```
 
 ---
@@ -1335,7 +1290,7 @@ LIMIT 20
 # So sanh margin giua cac kenh ban hang
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Margin by Channel
@@ -1414,7 +1369,7 @@ ORDER BY "Margin %" DESC
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: San pham margin thap
@@ -1496,7 +1451,7 @@ ORDER BY "Margin %" ASC
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 9, "size_x": 9, "size_y": 9 }
+{ "row": 12, "col": 9, "size_x": 9, "size_y": 9 }
 ```
 
 ---
@@ -1506,7 +1461,7 @@ ORDER BY "Margin %" ASC
 # Phan tich sinh loi theo kenh — Revenue vs Margin % de tim diem toi uu
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Product Category Profitability Heatmap
@@ -1564,7 +1519,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### 📝 Text: Source & Freshness

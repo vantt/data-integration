@@ -98,10 +98,8 @@ FROM current_mau cm, prev_mau pm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -134,10 +132,8 @@ FROM this_month tm, last_month lm
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -404,7 +400,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Phan tich acquisition trend 6 thang — momentum tang hay giam?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Xac dinh kenh acquisition hieu qua — volume va revenue don dau
@@ -412,7 +408,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Xac dinh kenh acquisition hieu qua — volume va revenue don dau
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phan tich phan bo dia ly — tinh nao co khach gia tri cao?
@@ -420,7 +416,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Phan tich phan bo dia ly — tinh nao co khach gia tri cao?
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Customer Acquisition Trend (6M)
@@ -465,7 +461,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### ❓ Question: New Customers by Channel
@@ -507,7 +503,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: First-Order Revenue by Channel
@@ -553,7 +549,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 8, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 10, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 15 Provinces by Customers
@@ -583,7 +579,7 @@ LIMIT 15
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 9, "size_y": 8 }
+{ "row": 17, "col": 0, "size_x": 9, "size_y": 8 }
 ```
 
 #### ❓ Question: Top 15 Provinces by LTV
@@ -616,7 +612,7 @@ LIMIT 15
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 9, "size_x": 9, "size_y": 8 }
+{ "row": 17, "col": 9, "size_x": 9, "size_y": 8 }
 ```
 
 ---
@@ -653,7 +649,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Review ma tran suc khoe segment — xac dinh diem nong can hanh dong
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Uu tien cham soc VIP — khach nao sap mat? Goi ngay!
@@ -661,7 +657,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Uu tien cham soc VIP — khach nao sap mat? Goi ngay!
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Sap xep uu tien reactivation — khach gia tri cao can giu truoc
@@ -669,7 +665,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Sap xep uu tien reactivation — khach gia tri cao can giu truoc
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Xac dinh co hoi recovery — khach churned gia tri cao can win-back
@@ -677,7 +673,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Xac dinh co hoi recovery — khach churned gia tri cao can win-back
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 26, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Segment x Status Health Matrix
@@ -735,7 +731,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 3, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
 #### ❓ Question: VIP Customer Watchlist
@@ -789,7 +785,7 @@ LIMIT 50
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### ❓ Question: At-Risk Reactivation Priority
@@ -836,7 +832,7 @@ LIMIT 50
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### ❓ Question: Churned High-Value Customers
@@ -885,15 +881,7 @@ LIMIT 50
 ```
 
 ```json metabase-pos
-{ "row": 25, "col": 0, "size_x": 18, "size_y": 8 }
-```
-
-#### 📝 Text: Footer
-
-Source: dim_customers · fact_orders · Updated daily · Excludes Unknown customers & cancelled orders
-
-```json metabase-pos
-{ "row": 33, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 27, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### 📝 Text: Source & Freshness

@@ -74,7 +74,7 @@ class MetabaseCore {
             try {
                 // /api/session/properties usually contains version info
                 const props = await this.request('/api/session/properties');
-                this.version = props.version?.tag || "v0.0.0"; // e.g., "v0.58.2"
+                this.version = props.version?.tag || "v0.0.0"; // e.g., "v0.60.2"
             } catch (vErr) {
                 console.warn("⚠️ Could not detect Metabase version:", vErr.message);
                 this.version = "v0.0.0";
@@ -90,7 +90,7 @@ class MetabaseCore {
 
     /**
      * Helper to check if current version satisfies a requirement
-     * @param {string} minVersion - e.g. "v0.58.0"
+     * @param {string} minVersion - e.g. "v0.60.0"
      */
     isVersionAtLeast(minVersion) {
         // Simple string/lexical comparison for now, or strip 'v'

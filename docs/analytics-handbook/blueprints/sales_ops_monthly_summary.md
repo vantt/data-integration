@@ -94,7 +94,7 @@ SELECT
 **Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders) — Hero metric with MoM + YoY comparison.
 
 ```sql
--- YoY added 2026-05-28; migrated from scalar.comparisons (broken on v0.58.11) to display:table
+-- YoY added 2026-05-28
 WITH
 this_month AS (
     SELECT COUNT(DISTINCT order_id) as val
@@ -128,20 +128,8 @@ FROM this_month tm, last_month lm, prior_year py
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "column_settings": {
-      "MoM %": { "suffix": "%", "decimals": 1 },
-      "YoY %": { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">=", "value":  5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">=", "value": 10, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#EF8C8C", "highlight_row": false }
-    ]
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -181,16 +169,13 @@ FROM this_month tm, last_month lm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
-      "Net Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
@@ -236,16 +221,13 @@ FROM this_month tm, last_month lm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
-      "AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
@@ -331,7 +313,7 @@ ORDER BY 2 DESC
 Average hours from order creation to completion — with MoM + YoY comparison.
 
 ```sql
--- YoY added 2026-05-28; migrated from scalar.comparisons (broken on v0.58.11) to display:table
+-- YoY added 2026-05-28
 WITH
 this_month AS (
     SELECT ROUND(AVG(time_to_complete_hours), 1) as val
@@ -371,22 +353,14 @@ FROM this_month tm, last_month lm, prior_year py
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Avg Hours":              { "suffix": " hrs", "decimals": 1 },
-      "Tháng trước (hrs)":      { "suffix": " hrs", "decimals": 1 },
-      "Cùng kỳ năm trước (hrs)":{ "suffix": " hrs", "decimals": 1 },
-      "MoM %":                  { "suffix": "%", "decimals": 1 },
-      "YoY %":                  { "suffix": "%", "decimals": 1 }
-    },
-    "table.pivot": false,
-    "table.column_formatting": [
-      { "columns": ["MoM %"], "type": "single", "operator": ">",  "value":  5, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["MoM %"], "type": "single", "operator": "<",  "value": -5, "color": "#84BB4C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": ">",  "value": 10, "color": "#EF8C8C", "highlight_row": false },
-      { "columns": ["YoY %"], "type": "single", "operator": "<",  "value":-10, "color": "#84BB4C", "highlight_row": false }
-    ]
+      "Avg Hours": {
+        "suffix": " hrs",
+        "decimals": 1
+      }
+    }
   }
 }
 ```
@@ -618,7 +592,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Xac dinh kenh chiem workload — ranking orders va revenue
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Danh gia hieu suat van hanh kenh — completion, cancel, return rates
@@ -626,7 +600,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Danh gia hieu suat van hanh kenh — completion, cancel, return rates
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Phan tich huy don theo kenh — kenh nao huy nhieu nhat?
@@ -634,7 +608,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Phan tich huy don theo kenh — kenh nao huy nhieu nhat?
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Danh gia hieu suat chi nhanh — volume va van de can xu ly
@@ -642,7 +616,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Danh gia hieu suat chi nhanh — volume va van de can xu ly
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Orders by Channel
@@ -674,7 +648,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 4, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Revenue by Channel
@@ -710,7 +684,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 4, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -779,7 +753,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -814,7 +788,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 18, "col": 0, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Cancellation Share by Channel
@@ -846,7 +820,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 16, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 18, "col": 12, "size_x": 6, "size_y": 6 }
 ```
 
 ---
@@ -880,7 +854,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 25, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Branch Performance Table
@@ -935,7 +909,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 25, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -972,7 +946,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Theo doi hieu suat Social Commerce — revenue va nhan vien
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Danh gia hieu suat nhan vien toan kenh — ranking va completion
@@ -980,7 +954,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Danh gia hieu suat nhan vien toan kenh — ranking va completion
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiem tra xu huong thanh toan va doi soat — PTTT shift va pending alert
@@ -988,7 +962,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Kiem tra xu huong thanh toan va doi soat — PTTT shift va pending alert
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Social Revenue
@@ -1027,23 +1001,20 @@ FROM this_month tm, last_month lm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
-      "Social Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Social Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social Orders
@@ -1081,21 +1052,12 @@ FROM this_month tm, last_month lm
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Social AOV
@@ -1138,23 +1100,20 @@ FROM this_month tm, last_month lm
 {
   "display": "scalar",
   "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ],
     "column_settings": {
-      "Social AOV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Social AOV": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---
@@ -1192,7 +1151,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: CS Staff Leaderboard
@@ -1240,7 +1199,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 7, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
@@ -1279,7 +1238,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 14, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### Question: Staff Performance Table
@@ -1336,7 +1295,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 14, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 ---
@@ -1370,7 +1329,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 21, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Payment Method Trend (6M)
@@ -1404,7 +1363,7 @@ ORDER BY 1, 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 21, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 #### Question: Payment Status Summary
@@ -1453,20 +1412,9 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 25, "col": 0, "size_x": 18, "size_y": 5 }
+{ "row": 27, "col": 0, "size_x": 18, "size_y": 5 }
 ```
 
----
-
-#### 📝 Text: Footer
-
-Source: fact_orders · Updated monthly · Excludes incomplete current month
-
-```json metabase-pos
-{ "row": 30, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
----
 
 
 #### 📝 Text: Source & Freshness
@@ -1500,7 +1448,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 # Phan tich bien loi nhuan theo kenh — kenh nao hieu qua nhat?
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Monthly Margin by Channel
@@ -1581,7 +1529,7 @@ ORDER BY tm.margin_pct_tm DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 8 }
+{ "row": 4, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### Question: Loss-Order Alert (Monthly)
@@ -1615,29 +1563,12 @@ FROM this_month tm, last_month lm
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {
-    "scalar.comparisons": [
-      {
-        "id": "mom",
-        "type": "anotherColumn",
-        "column": "Thang truoc",
-        "label": "vs thang truoc"
-      }
-    ]
-  }
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 6, "size_y": 3 }
-```
-
-#### 📝 Text: Footer
-
-Source: fact_order_economics · Updated monthly · Scope: Retail · COGS from MISA — orders without COGS show gross_profit = net_revenue
-
-```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 12, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### 📝 Text: Source & Freshness

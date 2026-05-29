@@ -26,7 +26,7 @@ Track B2B order lifecycle — payment collection, fulfillment status, outstandin
 # Tinh hinh cong no B2B
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Outstanding Amount (B2B)
@@ -61,7 +61,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 4, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Unpaid Orders Count (B2B)
@@ -83,7 +83,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Partial Payment Orders (B2B)
@@ -105,7 +105,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Avg Days Outstanding (B2B)
@@ -128,7 +128,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 4, "col": 14, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -138,7 +138,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 # Phan tich tuoi cong no
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -210,7 +210,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":9, "size_y":5}
+{ "row": 9, "col": 0, "size_x": 9, "size_y": 5 }
 ```
 
 #### Question: Outstanding by Customer Type
@@ -251,7 +251,7 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{"row": 7, "col":9, "size_x":9, "size_y":5}
+{ "row": 9, "col": 9, "size_x": 9, "size_y": 5 }
 ```
 
 ---
@@ -261,7 +261,7 @@ ORDER BY 3 DESC
 # Top khach hang cong no
 
 ```json metabase-pos
-{"row": 12, "col":0, "size_x":18, "size_y":1}
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Top Customers by Outstanding
@@ -304,7 +304,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{"row": 13, "col":0, "size_x":18, "size_y":6}
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -341,7 +341,7 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 # Tinh trang giao hang B2B
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Pending Fulfillment (B2B)
@@ -363,7 +363,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: In Transit (B2B)
@@ -385,7 +385,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Delivered Today (B2B)
@@ -408,7 +408,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 ```
 
 ```json metabase-pos
-{ "row": 1, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---
@@ -418,7 +418,7 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
 # Don hang cho xu ly
 
 ```json metabase-pos
-{ "row": 4, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Pending B2B Orders List
@@ -463,7 +463,7 @@ ORDER BY o.order_timestamp ASC
 ```
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 10 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 10 }
 ```
 
 ---
@@ -473,7 +473,7 @@ ORDER BY o.order_timestamp ASC
 Source: fact_orders · Updated real-time · **Scope: B2B only (customer_type IN ('WHOLESALE', 'PARTNER'))**
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---

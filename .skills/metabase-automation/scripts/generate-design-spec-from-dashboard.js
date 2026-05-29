@@ -37,8 +37,11 @@ function reverseVizType(card, dc) {
   const display = card.display || "table";
   const viz = { ...(card.visualization_settings || {}), ...(dc.visualization_settings || {}) };
 
+  if (display === "smartscalar") {
+    return "single-value-with-trend";
+  }
   if (display === "scalar") {
-    return viz["scalar.comparisons"] ? "single-value-with-trend" : "single-value";
+    return "single-value";
   }
   if (display === "progress") return "progress-toward-goal";
   if (display === "gauge") return "gauge";
