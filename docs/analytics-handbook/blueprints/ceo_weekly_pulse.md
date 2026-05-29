@@ -96,7 +96,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Net Revenue": {
@@ -105,8 +105,7 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -145,7 +144,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Gross Revenue": {
@@ -154,8 +153,7 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -194,10 +192,8 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
@@ -239,7 +235,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "AOV": {
@@ -248,8 +244,7 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
@@ -427,7 +422,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Phân tích cấu trúc kênh bán hàng — Online-Ecom vs Offline
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Xác định top kênh bán hàng — ranking và biến động WoW
@@ -435,7 +430,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Xác định top kênh bán hàng — ranking và biến động WoW
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Revenue by Channel Category
@@ -478,7 +473,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 6 }
 ```
 
 #### Question: Channel Category WoW Comparison
@@ -537,7 +532,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 12, "size_y": 6 }
+{ "row": 3, "col": 6, "size_x": 12, "size_y": 6 }
 ```
 
 ---
@@ -576,7 +571,7 @@ LIMIT 8
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 10, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### Question: Channel Performance Table
@@ -656,7 +651,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 16, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -693,7 +688,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Đánh giá sức khỏe khách hàng — acquisition và retention
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Theo dõi tỷ lệ New vs Returning 14 ngày — chất lượng tăng trưởng
@@ -701,7 +696,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Theo dõi tỷ lệ New vs Returning 14 ngày — chất lượng tăng trưởng
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### 📝 Text: Kiểm tra cảnh báo vận hành — đơn hủy, trả hàng, chiết khấu
@@ -709,7 +704,7 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 # Kiểm tra cảnh báo vận hành — đơn hủy, trả hàng, chiết khấu
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: New Customers
@@ -738,15 +733,13 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Returning Revenue %
@@ -781,7 +774,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Returning Customers
@@ -818,15 +811,13 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 ---
@@ -871,7 +862,7 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
@@ -906,15 +897,13 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 14, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Return Count
@@ -945,15 +934,13 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false
-  }
+  "display": "scalar",
+  "visualization_settings": {}
 }
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 14, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Discount Rate
@@ -984,7 +971,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 14, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
 #### 📝 Text: Source & Freshness
@@ -992,7 +979,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 Source: fact_orders · Updated weekly (Mon-Sun) · **Scope: All sales channels (is_sales_channel = true)** · Excludes cancelled orders
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---
@@ -1008,7 +995,7 @@ Source: fact_orders · Updated weekly (Mon-Sun) · **Scope: All sales channels (
 # Lợi nhuận tuần qua — Net Profit, Gross Margin, Kênh lỗ
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### Question: Weekly Net Profit
@@ -1018,22 +1005,24 @@ Source: fact_orders · Updated weekly (Mon-Sun) · **Scope: All sales channels (
 ```sql
 WITH
 this_week AS (
-    SELECT COALESCE(SUM(channel_net_profit), 0) AS val
-    FROM fact_order_economics
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND has_cogs
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+    SELECT COALESCE(SUM(e.channel_net_profit), 0) AS val
+    FROM fact_order_economics e
+    JOIN fact_orders o ON e.order_id = o.order_id
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.has_cogs
+      AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
 ),
 last_week AS (
-    SELECT COALESCE(SUM(channel_net_profit), 0) AS val
-    FROM fact_order_economics
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND has_cogs
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+    SELECT COALESCE(SUM(e.channel_net_profit), 0) AS val
+    FROM fact_order_economics e
+    JOIN fact_orders o ON e.order_id = o.order_id
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.has_cogs
+      AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val AS "Net Profit",
@@ -1043,7 +1032,7 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Net Profit": {
@@ -1052,14 +1041,13 @@ FROM this_week tw, last_week lw
         "decimals": 0,
         "compact": true
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 19, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Gross Margin %
@@ -1071,28 +1059,30 @@ WITH
 this_week AS (
     SELECT
         ROUND(
-            SUM(gross_profit) * 100.0 / NULLIF(SUM(net_revenue), 0),
+            SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0),
             1
         ) AS val
-    FROM fact_order_economics
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND has_cogs
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+    FROM fact_order_economics e
+    JOIN fact_orders o ON e.order_id = o.order_id
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.has_cogs
+      AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT
         ROUND(
-            SUM(gross_profit) * 100.0 / NULLIF(SUM(net_revenue), 0),
+            SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0),
             1
         ) AS val
-    FROM fact_order_economics
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND has_cogs
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+    FROM fact_order_economics e
+    JOIN fact_orders o ON e.order_id = o.order_id
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.has_cogs
+      AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val AS "Gross Margin %",
@@ -1102,21 +1092,20 @@ FROM this_week tw, last_week lw
 
 ```json metabase-viz
 {
-  "display": "table",
+  "display": "scalar",
   "visualization_settings": {
     "column_settings": {
       "Gross Margin %": {
         "suffix": "%",
         "decimals": 1
       }
-    },
-    "table.pivot": false
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 6, "size_x": 6, "size_y": 3 }
+{ "row": 19, "col": 6, "size_x": 6, "size_y": 3 }
 ```
 
 #### Question: Loss-Making Channel Count
@@ -1126,15 +1115,16 @@ FROM this_week tw, last_week lw
 ```sql
 SELECT COUNT(*) AS "Kenh lo"
 FROM (
-    SELECT channel_key
-    FROM fact_order_economics
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND has_cogs
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
-    GROUP BY channel_key
-    HAVING SUM(channel_net_profit) < 0
+    SELECT e.channel_key
+    FROM fact_order_economics e
+    JOIN fact_orders o ON e.order_id = o.order_id
+    WHERE e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.has_cogs
+      AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.order_timestamp < date_trunc('week', current_date)
+    GROUP BY e.channel_key
+    HAVING SUM(e.channel_net_profit) < 0
 ) loss_channels
 ```
 
@@ -1146,5 +1136,5 @@ FROM (
 ```
 
 ```json metabase-pos
-{ "row": 18, "col": 12, "size_x": 6, "size_y": 3 }
+{ "row": 19, "col": 12, "size_x": 6, "size_y": 3 }
 ```
