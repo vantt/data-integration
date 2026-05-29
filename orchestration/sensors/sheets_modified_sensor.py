@@ -50,11 +50,19 @@ _DEFAULT_MARKETING_URL = (
     "https://docs.google.com/spreadsheets/d/"
     "1wQpT4lCZWrPE7fnbRNTKiNDRFzVT2u_WhN-9uY9u3lc/export?format=csv"
 )
+_DEFAULT_US_PRICES_URL = (
+    "https://docs.google.com/spreadsheets/d/"
+    "1PWPQzzML_-i9yUrjGyhUcW0ABkrGEtXE2k49EaW4gwc/export?format=csv&gid=304875363"
+)
 
 SHEET_URLS = {
     "targets": os.environ.get("SHEETS_SENSOR_TARGETS_URL", _DEFAULT_TARGETS_URL),
     "marketing_spend": os.environ.get(
         "SHEETS_SENSOR_MARKETING_URL", _DEFAULT_MARKETING_URL
+    ),
+    # US Shipment price changes are infrequent but high-impact; detect immediately.
+    "us_shipment_prices": os.environ.get(
+        "SHEETS_SENSOR_US_SHIPMENT_PRICES_URL", _DEFAULT_US_PRICES_URL
     ),
 }
 

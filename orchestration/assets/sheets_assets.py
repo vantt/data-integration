@@ -20,6 +20,7 @@ try:
     import gsheet_targets
     import gsheet_marketing_spend
     import gsheet_team_config
+    import gsheet_us_shipment_prices
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
 
@@ -142,6 +143,53 @@ def sheets_team_config_asset(context):
         context.log.info("Team Config Sync Finished.")
         return Output(
             value="Team Config Sync Completed",
+            metadata={
+                "status": MetadataValue.text("Success"),
+                "rows_written": MetadataValue.text("unknown"),
+            },
+        )
+    except Exception as e:
+        context.log.error(f"Error: {e}")
+        raise
+    finally:
+        try:
+            _record_health(
+                asset_key=asset_key_str,
+                run_id=context.run_id,
+                run_started_at=started,
+                status=status,
+                rows_written=None,
+                metadata={"gsheet_row_count": None},
+            )
+        except Exception as _e:
+            context.log.warning(f"ingestion_health record_run failed: {_e}")
+
+
+@asset(group_name="sheets_ingestion", key_prefix=["sheets"])
+def sheets_us_shipment_prices_asset(context):
+    """Daily sync for US Shipment Price List Google Sheet.
+
+    Ingests SKU-level US export prices with effective_from date versioning.
+    Used to enrich US CrossBorder orders whose Sapo net_revenue is 0.
+    Writes to ingestion_health via orchestration.ops.ingestion_health.
+    """
+    asset_key_str = "sheets/sheets_us_shipment_prices_asset"
+    started = datetime.now(timezone.utc)
+    context.log.info("Starting Google Sheet US Shipment Prices Sync...")
+    load_dlt_configuration(context.log.info)
+    cwd = os.getcwd()
+    status = "failed"
+    try:
+        try:
+            os.chdir(DLT_DIR)
+            gsheet_us_shipment_prices.run()
+        finally:
+            os.chdir(cwd)
+
+        status = "success"
+        context.log.info("US Shipment Prices Sync Finished.")
+        return Output(
+            value="US Shipment Prices Sync Completed",
             metadata={
                 "status": MetadataValue.text("Success"),
                 "rows_written": MetadataValue.text("unknown"),
