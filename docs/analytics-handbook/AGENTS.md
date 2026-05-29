@@ -87,6 +87,8 @@ Every dashboard name MUST end with a scope suffix in square brackets:
 
 **Why mandatory:** Same dashboard concept may exist for both [Retail] and [B2B] (e.g. `Daily Sales [Retail]` vs `B2B Daily Sales [B2B]`). The suffix prevents name collision and makes the audience explicit.
 
+**Exception — system landing pages:** Onboarding/welcome dashboards that are NOT analytics (no SQL, no data scope, just navigation/docs) are exempt from the suffix requirement. Example: `Welcome to ChợPulse BI` (in `📍 Start Here` collection). These are routed to users via collection placement, not scope; adding a suffix would be misleading. All four places (live name, h1, h3, registry) must still match — exemption applies uniformly.
+
 **Registry check:** When adding a new dashboard, update `collection_registry.yml` BEFORE first deploy. The registry entry must use the exact same name (with suffix) — drift triggers the daily Lark alert (`scripts/validate-collections.js`).
 
 ### Question (Card) Naming

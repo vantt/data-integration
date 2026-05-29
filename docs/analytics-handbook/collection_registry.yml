@@ -148,7 +148,7 @@ collections:
         description: "Pipeline health, ingestion monitoring."
         audience: [Data Engineering]
         dashboards:
-          - Ingestion Health Monitor
+          - "Ingestion Health Monitor [Internal]"
 
   # ---------------------------------------------------------------------------
   # ANALYTICS — "So sánh segment / deep-dive?" (NEW 2026-05-27 — Layer 3)
