@@ -3195,3 +3195,44 @@ Fix hết tất cả widget sai display trong blueprint **trước** khi chạy 
 2. Trước mỗi deploy: scan toàn file blueprint tìm `"display": "table"` — widget có 2 cột (this_week + last_week) thường phải là scalar.
 3. Manual Metabase UI edits không được persist qua redeploy — mọi thay đổi muốn giữ phải được ghi vào blueprint.
 4. Khi user báo fix N widget → kiểm tra luôn các widget tương tự trong cùng tab/blueprint để tránh missed fixes gây regression.
+
+---
+
+### L95 — Metabase cycle-indicator không nhận filter nếu thiếu `[[AND {{date_range}}]]` trong SQL
+
+**Group:** SERVE
+
+**Symptom:** Cycle-indicator (scalar "Chu kỳ báo cáo") luôn hiển thị cùng một giá trị cố định bất kể user chọn filter Period nào. Card có reload (spinner xuất hiện) nhưng output không đổi.
+
+**Root cause:** Metabase chỉ wire dashboard filter vào card khi card có template tag `{{date_range}}` trong SQL. Nếu cycle-indicator dùng hardcoded `current_date - INTERVAL 'X months'`, Metabase set `parameter_mappings: []` cho dashcard đó — filter không bao giờ được truyền vào query. Card luôn chạy không có filter, trả về hardcoded dates.
+
+**Fix:** Cycle-indicator phải dùng `filter_bounds` CTE với `[[AND {{date_range}}]]`:
+```sql
+WITH filter_bounds AS (
+    SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
+    FROM <table>
+    WHERE <base_conditions>
+      [[AND {{date_range}}]]      -- bắt buộc để wire filter
+      [[AND {{channel}}]]
+),
+period_adj AS (
+    -- detect weekly/monthly/quarterly/yearly từ raw data bounds
+    ...
+),
+prev_calc AS (
+    -- n_months từ adjusted boundaries → prev_start luôn là ngày 01
+    ...
+)
+SELECT '📅 Kỳ này: ...' AS "Chu kỳ báo cáo" FROM prev_calc
+```
+
+DuckDB gotcha: nếu cột là TIMESTAMP thì phải cast `MIN(col)::DATE` — `TIMESTAMP - TIMESTAMP` trả về INTERVAL, không cast được sang INTEGER để tính duration.
+
+**Rules:**
+1. Mọi cycle-indicator/display-label card PHẢI có `[[AND {{date_range}}]]` trong SQL — không có thì Metabase không wire filter.
+2. Dùng `filter_bounds` CTE với raw `MIN/MAX(date_col)::DATE` làm nguồn dữ liệu — không dùng `current_date` hardcode.
+3. TIMESTAMP columns: `MIN(col)::DATE` hoặc `MIN(col::DATE)` — không dùng `MIN(col)` raw vì arithmetic sau đó sẽ fail.
+4. Pattern chuẩn: `filter_bounds` → `period_adj` (heuristic week/month/quarter/year) → `prev_calc` (n_months cho prev_start aligned).
+5. Khi audit blueprint: grep `'cycle-indicator\|Chu k\|date_range'` — nếu cycle-indicator không có `{{date_range}}` thì phải fix.
+
+**Reference:** `docs/analytics-handbook/blueprints/channel_profitability_monthly.md` — working implementation.
