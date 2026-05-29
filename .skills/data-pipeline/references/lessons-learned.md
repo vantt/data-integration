@@ -3146,3 +3146,52 @@ for node in manifest['nodes'].values():
 2. Key prefix depends on model folder: `marts/` → `['marts', name]`, `intermediate/` → `[name]`, `staging/` → `['staging', name]`.
 3. After adding any `AssetSelection.assets(...)` referencing a dbt model by key, verify with `workspaceOrError.locationOrLoadError` — a `RepositoryLocation` (not `PythonError`) confirms success.
 4. `python3 -c "from orchestration.definitions import defs"` does NOT catch job resolution errors — always reload the Dagster code location and inspect `locationOrLoadError`.
+
+---
+
+### L93 — `fact_order_economics` không có `order_timestamp` — query filter trên cột này lỗi runtime
+
+**Group:** SERVE
+
+**Symptom:** Các widget Metabase query `fact_order_economics` với filter `AND order_timestamp >= ...` báo lỗi "column not found" khi chạy. Widget hiển thị error thay vì số liệu.
+
+**Root cause:** `fact_order_economics` chỉ kế thừa `date_key` (YYYYMMDD integer, ICT) từ `fact_orders` — không expose `order_timestamp`. Cột này chỉ tồn tại trong `fact_orders`. Các query P&L (Weekly Net Profit, Gross Margin %, Loss-Making Channel Count) được viết nhầm filter trực tiếp trên `fact_order_economics`.
+
+**Fix:**
+```sql
+-- WRONG — order_timestamp không tồn tại trong fact_order_economics
+FROM fact_order_economics
+WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+
+-- CORRECT — JOIN fact_orders để lấy order_timestamp
+FROM fact_order_economics e
+JOIN fact_orders o ON e.order_id = o.order_id
+WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
+```
+
+**Rules:**
+1. `fact_order_economics` columns: `order_id`, `order_code`, `channel_key`, `date_key`, `status`, revenue/cogs/profit fields — KHÔNG có `order_timestamp`.
+2. Mọi time-window filter trên `fact_order_economics` phải dùng `JOIN fact_orders ON order_id` hoặc convert sang `date_key` (YYYYMMDD integer, ICT timezone).
+3. Khi viết query mới cho bất kỳ mart nào, kiểm tra schema SQL file trước khi dùng column timestamp.
+
+---
+
+### L94 — Blueprint redeploy ghi đè UI manual edits — luôn audit toàn bộ blueprint trước khi deploy
+
+**Group:** SERVE
+
+**Symptom:** Sau khi fix và redeploy blueprint, các widget không liên quan (Cancelled Orders, Return Count) bị "revert" từ scalar về table. User báo "widgets bị biến thành tables".
+
+**Root cause:** Deploy script enforce **toàn bộ** blueprint state xuống Metabase — bao gồm tất cả widget, không chỉ các widget được yêu cầu fix. Những widget đó đã được ai đó sửa thủ công trong Metabase UI thành scalar, nhưng blueprint chưa được cập nhật. Redeploy ghi đè lại state từ blueprint (table).
+
+**Fix:** Trước khi deploy bất kỳ blueprint nào, grep toàn bộ `"display": "table"` trong file để tìm widget nào còn sai:
+```bash
+grep -n '"display": "table"' docs/analytics-handbook/blueprints/<file>.md
+```
+Fix hết tất cả widget sai display trong blueprint **trước** khi chạy deploy.
+
+**Rules:**
+1. Redeploy = full state sync — không có "partial deploy" cho từng widget.
+2. Trước mỗi deploy: scan toàn file blueprint tìm `"display": "table"` — widget có 2 cột (this_week + last_week) thường phải là scalar.
+3. Manual Metabase UI edits không được persist qua redeploy — mọi thay đổi muốn giữ phải được ghi vào blueprint.
+4. Khi user báo fix N widget → kiểm tra luôn các widget tương tự trong cùng tab/blueprint để tránh missed fixes gây regression.
