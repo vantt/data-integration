@@ -18,7 +18,8 @@ Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COG
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past3months"
+  "default": "past3months",
+  "field_id": 324
 }
 ```
 
@@ -27,7 +28,8 @@ Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COG
 ```json metabase-filter
 {
   "slug": "channel",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 349
 }
 ```
 
@@ -66,7 +68,7 @@ SELECT
 
 #### 📝 Text: Tab Overview Heading
 
-Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
+## Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
 
 ```json metabase-pos
 {"row": 4, "col":0, "size_x":18, "size_y":1}
@@ -84,8 +86,8 @@ SELECT
     ) AS "Gross Margin %"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 ```
 
 ```json metabase-viz
@@ -102,7 +104,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":6, "size_y":5}
+{"row": 5, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### Question: Total Revenue
@@ -117,8 +119,8 @@ this_period AS (
     SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS val
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
-      [[AND posting_date >= {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS val
@@ -126,7 +128,7 @@ prev_period AS (
     WHERE NOT is_promo_line
       AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
       AND posting_date <  date_trunc('month', current_date)
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 ),
 prev_year AS (
     SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS val
@@ -134,7 +136,7 @@ prev_year AS (
     WHERE NOT is_promo_line
       AND posting_date >= date_trunc('month', current_date) - INTERVAL '13 months'
       AND posting_date <  date_trunc('month', current_date) - INTERVAL '12 months'
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 )
 SELECT
     t.val                                                                    AS "Doanh thu",
@@ -162,7 +164,7 @@ FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":12, "size_y":4}
+{"row": 5, "col":6, "size_x":6, "size_y":4}
 ```
 
 #### Question: Total COGS
@@ -175,8 +177,8 @@ this_period AS (
     SELECT COALESCE(SUM(cogs_amount), 0) AS val
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
-      [[AND posting_date >= {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(cogs_amount), 0) AS val
@@ -184,7 +186,7 @@ prev_period AS (
     WHERE NOT is_promo_line
       AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
       AND posting_date <  date_trunc('month', current_date)
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 )
 SELECT
     t.val AS "Gia von",
@@ -209,7 +211,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row": 3, "col":10, "size_x":4, "size_y":3}
+{"row": 5, "col":12, "size_x":3, "size_y":4}
 ```
 
 #### Question: Total Gross Profit
@@ -222,8 +224,8 @@ this_period AS (
     SELECT COALESCE(SUM(gross_profit), 0) AS val
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
-      [[AND posting_date >= {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(gross_profit), 0) AS val
@@ -231,7 +233,7 @@ prev_period AS (
     WHERE NOT is_promo_line
       AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
       AND posting_date <  date_trunc('month', current_date)
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 )
 SELECT
     t.val AS "Lai gop",
@@ -256,15 +258,15 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row": 3, "col":14, "size_x":4, "size_y":3}
+{"row": 5, "col":15, "size_x":3, "size_y":4}
 ```
 
 #### 📝 Text: Channel Comparison Heading
 
-So sanh hieu qua giua cac kenh ban hang
+## So sanh hieu qua giua cac kenh ban hang
 
 ```json metabase-pos
-{"row": 8, "col":0, "size_x":18, "size_y":1}
+{"row": 9, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Margin by Channel
@@ -280,8 +282,8 @@ SELECT
     ) AS "Gross Margin %"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY channel_name
 ORDER BY "Gross Margin %" DESC
 ```
@@ -325,7 +327,7 @@ ORDER BY "Gross Margin %" DESC
 ```
 
 ```json metabase-pos
-{"row": 9, "col":0, "size_x":9, "size_y":6}
+{"row": 10, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Revenue vs COGS by Channel
@@ -339,8 +341,8 @@ SELECT
     SUM(cogs_amount)                           AS "Gia von"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY channel_name
 ORDER BY "Doanh thu" DESC
 ```
@@ -374,7 +376,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{"row": 9, "col":9, "size_x":9, "size_y":6}
+{"row": 10, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
@@ -407,7 +409,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 
 #### 📝 Text: Trends Heading
 
-Xu huong margin theo kenh — kenh nao dang cai thien?
+## Xu huong margin theo kenh — kenh nao dang cai thien?
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
@@ -427,8 +429,8 @@ SELECT
     )                                                              AS "Gross Margin %"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY date_trunc('month', posting_date), channel_name
 ORDER BY "Thang" ASC, "Kenh" ASC
 ```
@@ -468,8 +470,8 @@ SELECT
     SUM(revenue_net_of_discount)            AS "Doanh thu"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY date_trunc('month', posting_date), channel_name
 ORDER BY "Thang" ASC, "Kenh" ASC
 ```
@@ -502,7 +504,7 @@ ORDER BY "Thang" ASC, "Kenh" ASC
 
 #### 📝 Text: Product Detail Heading
 
-San pham anh huong loi nhuan — san pham nao tao lai, san pham nao keo xuong?
+## San pham anh huong loi nhuan — san pham nao tao lai, san pham nao keo xuong?
 
 ```json metabase-pos
 { "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
@@ -518,8 +520,8 @@ SELECT
     SUM(gross_profit)           AS "Lai gop"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name
 ORDER BY "Lai gop" DESC
 LIMIT 15
@@ -566,8 +568,8 @@ SELECT
     )                                                                   AS "Gross Margin %"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name, channel_name
 HAVING
     SUM(revenue_net_of_discount) > 0

@@ -18,7 +18,8 @@ Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past30days"
+  "default": "past30days",
+  "field_id": 141
 }
 ```
 
@@ -27,7 +28,8 @@ Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop
 ```json metabase-filter
 {
   "slug": "channel",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 349
 }
 ```
 
@@ -56,20 +58,12 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
-#### 📝 Text: Boi canh mua vu — Seasonal Context
-
-**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu) — spike pre-Tết, gần-zero tuần Tết, Feb chậm; 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale — spike 3-10x; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** Caveat: MISA COGS coverage ~65% — YoY Gross Profit chỉ tin cậy nếu coverage năm trước tương đương.
-
-```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":2}
-```
-
 #### 📝 Text: PL Overview Heading
 
-Doanh thu va loi nhuan gop — ket qua kinh doanh ky nay
+## Doanh thu va loi nhuan gop — ket qua kinh doanh ky nay
 
 ```json metabase-pos
-{"row": 4, "col":0, "size_x":18, "size_y":1}
+{"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Net Revenue MTD
@@ -83,7 +77,7 @@ this_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      [[AND order_timestamp >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
@@ -126,7 +120,46 @@ FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":18, "size_y":4}
+{"row": 3, "col": 0, "size_x": 9, "size_y": 4}
+```
+
+#### ❓ Question: Gross Margin Percent
+
+Gauge — bien lai gop % so voi nguong 40%. Green >40%, yellow 25-40%, red <25%.
+
+```sql
+SELECT
+    ROUND(
+        SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
+        1
+    ) AS "Bien lai gop %"
+FROM int_misa_sales_lines
+WHERE NOT is_promo_line
+  [[AND {{date_range}}]]
+```
+
+```json metabase-viz
+{
+  "display": "gauge",
+  "visualization_settings": {
+    "gauge.segments": [
+      { "min": 0,  "max": 25,  "color": "#EF8C8C", "label": "Thap" },
+      { "min": 25, "max": 40,  "color": "#F9D45C", "label": "Can canh bao" },
+      { "min": 40, "max": 100, "color": "#84BB4C", "label": "Dat target" }
+    ],
+    "column_settings": {
+      "Bien lai gop %": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 3, "col": 9, "size_x": 9, "size_y": 4}
 ```
 
 #### ❓ Question: COGS MTD
@@ -139,7 +172,7 @@ this_period AS (
     SELECT COALESCE(SUM(cogs_amount), 0) AS val
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
-      [[AND posting_date >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(cogs_amount), 0) AS val
@@ -171,7 +204,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":4, "size_y":3}
+{"row": 7, "col": 0, "size_x": 9, "size_y": 4}
 ```
 
 #### ❓ Question: Gross Profit MTD
@@ -185,7 +218,7 @@ this_period AS (
     SELECT COALESCE(SUM(gross_profit), 0) AS val
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
-      [[AND posting_date >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(gross_profit), 0) AS val
@@ -227,59 +260,20 @@ FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":18, "size_y":4}
-```
-
-#### ❓ Question: Gross Margin Percent
-
-Gauge — bien lai gop % so voi nguong 40%. Green >40%, yellow 25-40%, red <25%.
-
-```sql
-SELECT
-    ROUND(
-        SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
-        1
-    ) AS "Bien lai gop %"
-FROM int_misa_sales_lines
-WHERE NOT is_promo_line
-  [[AND posting_date >= {{date_range}}]]
-```
-
-```json metabase-viz
-{
-  "display": "gauge",
-  "visualization_settings": {
-    "gauge.segments": [
-      { "min": 0,  "max": 25,  "color": "#EF8C8C", "label": "Thap" },
-      { "min": 25, "max": 40,  "color": "#F9D45C", "label": "Can canh bao" },
-      { "min": 40, "max": 100, "color": "#84BB4C", "label": "Dat target" }
-    ],
-    "column_settings": {
-      "Bien lai gop %": {
-        "number_style": "percent",
-        "scale": 0.01,
-        "decimals": 1
-      }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{"row": 3, "col":14, "size_x":4, "size_y":5}
+{"row": 7, "col": 9, "size_x": 9, "size_y": 4}
 ```
 
 #### 📝 Text: PL Trend Heading
 
-Xu huong doanh thu va gia von — margin co duy tri?
+## Xu huong doanh thu va gia von — margin co duy tri?
 
 ```json metabase-pos
-{"row": 8, "col":0, "size_x":18, "size_y":1}
+{"row": 11, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: Revenue vs COGS Trend
 
-Combo chart — doanh thu (bar) va gia von (line) theo thang. Two CTEs unioned then pivoted via monthly aggregation. Revenue from fact_orders, COGS from int_misa_sales_lines.
+Combo chart — doanh thu (bar) va gia von (line) theo thang. Two CTEs unioned then pivoted via monthly aggregation. Revenue from fact_orders, COGS from int_misa_sales_lines. Fixed 13-month window — trend chart shows full year context regardless of filter.
 
 ```sql
 WITH revenue_monthly AS (
@@ -289,7 +283,7 @@ WITH revenue_monthly AS (
         NULL::DOUBLE                         AS "Gia von"
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      [[AND order_timestamp >= {{date_range}}]]
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '12 months'
     GROUP BY 1
 ),
 cogs_monthly AS (
@@ -299,7 +293,7 @@ cogs_monthly AS (
         SUM(cogs_amount)                  AS "Gia von"
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
-      [[AND posting_date >= {{date_range}}]]
+      AND posting_date >= date_trunc('month', current_date) - INTERVAL '12 months'
     GROUP BY 1
 ),
 combined AS (
@@ -353,7 +347,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 9, "col":0, "size_x":12, "size_y":6}
+{"row": 12, "col": 0, "size_x": 12, "size_y": 6}
 ```
 
 #### ❓ Question: Revenue Waterfall
@@ -370,28 +364,28 @@ FROM (
             (SELECT COALESCE(SUM(gross_revenue), 0)
              FROM fact_orders
              WHERE status NOT IN ('CANCELLED', 'Voided')
-               [[AND order_timestamp >= {{date_range}}]]
+               [[AND {{date_range}}]]
             )
         ),
         ('Chiet khau',
             (SELECT COALESCE(-SUM(ABS(discount_amount)), 0)
              FROM fact_orders
              WHERE status NOT IN ('CANCELLED', 'Voided')
-               [[AND order_timestamp >= {{date_range}}]]
+               [[AND {{date_range}}]]
             )
         ),
         ('Thue VAT',
             (SELECT COALESCE(-SUM(ABS(tax_amount)), 0)
              FROM fact_orders
              WHERE status NOT IN ('CANCELLED', 'Voided')
-               [[AND order_timestamp >= {{date_range}}]]
+               [[AND {{date_range}}]]
             )
         ),
         ('Doanh thu thuan',
             (SELECT COALESCE(SUM(net_revenue), 0)
              FROM fact_orders
              WHERE status NOT IN ('CANCELLED', 'Voided')
-               [[AND order_timestamp >= {{date_range}}]]
+               [[AND {{date_range}}]]
             )
         )
 ) AS t("Khoan muc", "Gia tri")
@@ -419,11 +413,18 @@ FROM (
 ```
 
 ```json metabase-pos
-{"row": 9, "col":12, "size_x":6, "size_y":6}
+{"row": 12, "col": 12, "size_x": 6, "size_y": 6}
 ```
 
 ---
 
+#### 📝 Text: Boi canh mua vu — Seasonal Context
+
+**Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu) — spike pre-Tết, gần-zero tuần Tết, Feb chậm; 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale — spike 3-10x; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** Caveat: MISA COGS coverage ~65% — YoY Gross Profit chỉ tin cậy nếu coverage năm trước tương đương.
+
+```json metabase-pos
+{"row": 97, "col": 0, "size_x": 18, "size_y": 2}
+```
 
 #### 📝 Text: Source & Freshness
 
@@ -452,7 +453,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 
 #### 📝 Text: Channel Heading
 
-Loi nhuan theo kenh ban hang — kenh nao hieu qua nhat?
+## Loi nhuan theo kenh ban hang — kenh nao hieu qua nhat?
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
@@ -472,8 +473,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND channel_name IS NOT NULL
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -531,8 +532,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND channel_name IS NOT NULL
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -573,7 +574,7 @@ ORDER BY 2 DESC
 
 #### 📝 Text: Channel Trend Heading
 
-Xu huong margin kenh — kenh nao dang cai thien?
+## Xu huong margin kenh — kenh nao dang cai thien?
 
 ```json metabase-pos
 { "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
@@ -594,8 +595,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND channel_name IS NOT NULL
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -626,7 +627,6 @@ ORDER BY 1, 2
 
 ---
 
-
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + int_misa_sales_lines · **Cadence:** monthly · **Scope:** is_sales_channel=true · **Caveats:** MISA COGS coverage ~65%
@@ -655,7 +655,7 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 
 #### 📝 Text: Shopee Heading
 
-Chi phi ban hang tren Shopee — phi san chiem bao nhieu?
+## Chi phi ban hang tren Shopee — phi san chiem bao nhieu?
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
@@ -671,7 +671,7 @@ this_period AS (
     SELECT COALESCE(SUM(net_settlement), 0) AS val
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(net_settlement), 0) AS val
@@ -718,7 +718,7 @@ SELECT
     ) AS "Ty le thuc nhan %"
 FROM int_shopee_order_fees
 WHERE payout_released_at IS NOT NULL
-  [[AND payout_released_at >= {{date_range}}]]
+  [[AND {{date_range}}]]
 ```
 
 ```json metabase-viz
@@ -742,7 +742,7 @@ WHERE payout_released_at IS NOT NULL
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 5 }
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Platform Fee Rate
@@ -760,7 +760,7 @@ this_period AS (
         ) AS val
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT
@@ -796,7 +796,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Shopee Gross Revenue
@@ -809,7 +809,7 @@ this_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) AS val
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) AS val
@@ -841,15 +841,15 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 7, "col": 0, "size_x": 9, "size_y": 4 }
 ```
 
 #### 📝 Text: Shopee Fee Heading
 
-Cau truc phi — loai phi nao chiem nhieu nhat?
+## Cau truc phi — loai phi nao chiem nhieu nhat?
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 11, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Shopee Fee Breakdown
@@ -866,49 +866,49 @@ FROM (
         SUM(ABS(service_fee))         AS "Gia tri phi"
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Payment Fee',
         SUM(ABS(payment_fee))
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Fixed Fee',
         SUM(ABS(fixed_fee))
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Infrastructure Fee',
         SUM(ABS(infrastructure_fee))
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Voucher Xtra Fee',
         SUM(ABS(voucher_xtra_fee))
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'VAT Tax',
         SUM(ABS(vat_tax))
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Personal Income Tax',
         SUM(ABS(personal_income_tax))
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ) fees
 WHERE "Gia tri phi" > 0
 ORDER BY "Gia tri phi" DESC
@@ -935,7 +935,7 @@ ORDER BY "Gia tri phi" DESC
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Revenue to Settlement Waterfall
@@ -952,49 +952,49 @@ FROM (
         SUM(gross_revenue) AS "Gia tri"
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Phi dich vu',
         SUM(total_platform_fees)
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Phi ha tang & Voucher',
         SUM(-(ABS(infrastructure_fee) + ABS(voucher_xtra_fee)))
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Phi van chuyen',
         SUM(total_shipping_net)
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Chiet khau & Khuyen mai',
         SUM(total_discounts)
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Thue',
         SUM(total_taxes)
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
     UNION ALL
     SELECT
         'Tien thuc nhan',
         SUM(net_settlement)
     FROM int_shopee_order_fees
     WHERE payout_released_at IS NOT NULL
-      [[AND payout_released_at >= {{date_range}}]]
+      [[AND {{date_range}}]]
 ) AS wf
 ```
 
@@ -1020,7 +1020,7 @@ FROM (
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Source & Freshness
@@ -1031,4 +1031,3 @@ FROM (
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
 ```
-

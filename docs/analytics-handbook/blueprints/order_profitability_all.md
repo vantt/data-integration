@@ -17,7 +17,11 @@ P&L per order — gross margin, channel net profit, cost structure, order detail
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Period filter ở đầu — mặc định ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT '📅 3 tháng gần nhất: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '3 months')::DATE, '%d/%m/%Y') ||
+  ' – ' ||
+  strftime((current_date - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -36,7 +40,8 @@ SELECT '📅 Period filter ở đầu — mặc định ' || strftime((current_d
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past3months"
+  "default": "past3months",
+  "field_id": 77
 }
 ```
 
@@ -45,7 +50,8 @@ SELECT '📅 Period filter ở đầu — mặc định ' || strftime((current_d
 ```json metabase-filter
 {
   "slug": "channel",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 179
 }
 ```
 
@@ -122,7 +128,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":6, "size_y":2}
+{"row": 3, "col":6, "size_x":4, "size_y":4}
 ```
 
 #### Question: Total Channel Net Profit
@@ -151,7 +157,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row": 3, "col":12, "size_x":6, "size_y":2}
+{"row": 3, "col":10, "size_x":4, "size_y":4}
 ```
 
 #### Question: Orders with COGS
@@ -179,7 +185,7 @@ WHERE status = 'COMPLETED'
 ```
 
 ```json metabase-pos
-{"row": 5, "col":6, "size_x":12, "size_y":2}
+{"row": 3, "col":14, "size_x":4, "size_y":4}
 ```
 
 ---
@@ -455,7 +461,7 @@ ORDER BY e.gross_profit DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_order_economics · **Cadence:** custom · **Scope:** has_cogs, status=COMPLETED, is_sales_channel · **Caveats:** Period filter parametric
+**Source:** fact_order_economics · **Cadence:** custom · **Scope:** has_cogs, status=COMPLETED, all channels · **Caveats:** Period filter parametric
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

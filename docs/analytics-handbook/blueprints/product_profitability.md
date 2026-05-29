@@ -37,7 +37,8 @@ SELECT
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past3months"
+  "default": "past30days",
+  "field_id": 324
 }
 ```
 
@@ -46,7 +47,8 @@ SELECT
 ```json metabase-filter
 {
   "slug": "channel",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 349
 }
 ```
 
@@ -54,7 +56,7 @@ SELECT
 
 #### 📝 Text: Dashboard Heading
 
-San pham nao tao lai, san pham nao keo xuong?
+## San pham nao tao lai, san pham nao keo xuong?
 
 ```json metabase-pos
 {"row": 2, "col":0, "size_x":18, "size_y":1}
@@ -69,8 +71,8 @@ SELECT COUNT(DISTINCT product_name) AS "So san pham"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 ```
 
 ```json metabase-viz
@@ -97,8 +99,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 ```
 
 ```json metabase-viz
@@ -132,8 +134,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name
 HAVING COUNT(*) >= 3
 ORDER BY "Margin %" DESC
@@ -167,8 +169,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name
 HAVING COUNT(*) >= 3
 ORDER BY "Margin %" ASC
@@ -190,7 +192,7 @@ LIMIT 1
 
 #### 📝 Text: Ranking Heading
 
-Top 20 san pham theo lai gop
+## Top 20 san pham theo lai gop
 
 ```json metabase-pos
 {"row": 6, "col":0, "size_x":18, "size_y":1}
@@ -207,8 +209,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name
 ORDER BY "Lai gop" DESC
 LIMIT 20
@@ -253,8 +255,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name
 HAVING COUNT(*) >= 2
 ORDER BY "Gross Margin %" ASC
@@ -290,7 +292,7 @@ LIMIT 20
 
 #### 📝 Text: Detail Heading
 
-Chi tiet san pham — margin, doanh thu, gia von theo kenh
+## Chi tiet san pham — margin, doanh thu, gia von theo kenh
 
 ```json metabase-pos
 {"row": 16, "col":0, "size_x":18, "size_y":1}
@@ -315,8 +317,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name, channel_name
 ORDER BY "Lai gop" DESC
 ```

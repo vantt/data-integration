@@ -51,6 +51,52 @@ SELECT
 {"row": 2, "col":0, "size_x":18, "size_y":1}
 ```
 
+#### ❓ Question: Monthly Net Revenue
+
+Doanh thu thuần tháng trước — full-width hero metric với MoM comparison.
+
+```sql
+WITH
+this_month AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+),
+prev_month AS (
+    SELECT COALESCE(SUM(net_revenue), 0) as val
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+)
+SELECT
+    tm.val as "Net Revenue",
+    pm.val as "Thang truoc"
+FROM this_month tm, prev_month pm
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Net Revenue": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 3, "col": 0, "size_x": 18, "size_y": 4}
+```
+
 #### ❓ Question: GMV vs Target
 
 Hero metric — GMV thang truoc vs muc tieu GMV, hien thi progress bar.
@@ -92,7 +138,7 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":6, "size_y":6}
+{"row": 7, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### ❓ Question: Net Revenue
@@ -138,7 +184,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":4, "size_y":3}
+{"row": 7, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Total Orders
@@ -175,7 +221,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 3, "col":10, "size_x":4, "size_y":3}
+{"row": 7, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: AOV
@@ -225,15 +271,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 3, "col":14, "size_x":4, "size_y":3}
-```
-
-#### 📝 Text: Kiểm tra chỉ số phụ — gross revenue, thu tiền, khách hàng, hoàn trả
-
-## Kiểm tra chỉ số phụ — gross revenue, thu tiền, khách hàng, hoàn trả
-
-```json metabase-pos
-{"row": 6, "col":6, "size_x":12, "size_y":1}
+{"row": 7, "col":14, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Gross Revenue
@@ -279,7 +317,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 7, "col":6, "size_x":3, "size_y":3}
+{"row": 10, "col":6, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Total Collected
@@ -325,7 +363,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 7, "col":9, "size_x":3, "size_y":3}
+{"row": 10, "col":10, "size_x":4, "size_y":3}
 ```
 
 #### ❓ Question: Variance to Target
@@ -372,7 +410,15 @@ CROSS JOIN monthly_target t
 ```
 
 ```json metabase-pos
-{"row": 7, "col":12, "size_x":3, "size_y":3}
+{"row": 10, "col":14, "size_x":4, "size_y":3}
+```
+
+#### 📝 Text: Kiểm tra khách hàng — mới, quay lại và hoàn trả
+
+## Kiểm tra khách hàng — mới, quay lại và hoàn trả
+
+```json metabase-pos
+{"row": 13, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: New Customers
@@ -415,7 +461,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 7, "col":15, "size_x":3, "size_y":3}
+{"row": 14, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Returning Customers
@@ -456,7 +502,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 10, "col":6, "size_x":3, "size_y":3}
+{"row": 14, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### ❓ Question: Return Count
@@ -493,7 +539,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{"row": 10, "col":9, "size_x":3, "size_y":3}
+{"row": 14, "col":12, "size_x":6, "size_y":3}
 ```
 
 #### 📝 Text: Theo dõi trajectory doanh thu 12 tháng — momentum và target pace
@@ -501,7 +547,7 @@ FROM this_month tm, prev_month pm
 ## Theo dõi trajectory doanh thu 12 tháng — momentum và target pace
 
 ```json metabase-pos
-{"row": 13, "col":0, "size_x":18, "size_y":1}
+{"row": 17, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### ❓ Question: 12-Month Revenue Trend
@@ -554,7 +600,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":12, "size_y":6}
+{"row": 18, "col":0, "size_x":12, "size_y":6}
 ```
 
 #### ❓ Question: Achievement Rate by Month
@@ -609,7 +655,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 14, "col":12, "size_x":6, "size_y":6}
+{"row": 18, "col":12, "size_x":6, "size_y":6}
 ```
 
 ---
@@ -640,128 +686,59 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
-#### 📝 Text: Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
+#### 📝 Text: Phân tích target achievement tháng — revenue vs target, gap analysis
 
-# Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
+# Phân tích target achievement tháng — revenue vs target, gap analysis
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### ❓ Question: Target Achievement by Branch
+#### ❓ Question: Target Achievement
 
-Ranking chi nhanh theo % dat target — 100% reference line.
+Revenue achievement vs monthly target — gauge showing % of target achieved.
 
 ```sql
-WITH branch_actuals AS (
-    SELECT
-        bl.branch_location_name as branch_name,
-        SUM(fo.net_revenue) as actual_revenue
-    FROM fact_orders fo
-    JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-      AND fo.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND fo.order_timestamp < date_trunc('month', current_date)
-    GROUP BY 1
+WITH
+mtd_actual AS (
+    SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
 ),
-branch_targets AS (
-    SELECT
-        bl.branch_location_name as branch_name,
-        SUM(ft.target_val) as target_revenue
-    FROM fact_targets ft
-    JOIN dim_branch_location bl ON ft.branch_location_key = bl.branch_location_key
-    WHERE ft.cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND ft.cycle_end_date < date_trunc('month', current_date)
-    GROUP BY 1
+monthly_target AS (
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
+    FROM fact_targets
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND cycle_end_date < date_trunc('month', current_date)
 )
 SELECT
-    a.branch_name as "Chi nhanh",
-    CASE WHEN COALESCE(t.target_revenue, 0) = 0 THEN 0
-         ELSE ROUND(a.actual_revenue * 100.0 / t.target_revenue, 1) END as "Achievement %"
-FROM branch_actuals a
-LEFT JOIN branch_targets t ON a.branch_name = t.branch_name
-ORDER BY "Achievement %" DESC
+    ROUND(a.actual_gmv * 100.0 / NULLIF(t.target_gmv, 0), 1) AS "Đạt %"
+FROM mtd_actual a
+CROSS JOIN monthly_target t
 ```
 
 ```json metabase-viz
 {
-  "display": "row",
+  "display": "gauge",
   "visualization_settings": {
-    "graph.dimensions": ["Chi nhanh"],
-    "graph.metrics": ["Achievement %"],
-    "graph.colors": ["#509EE3"],
-    "graph.x_axis.title_text": "Achievement %",
-    "graph.goal_value": 100,
-    "graph.goal_label": "Target 100%",
-    "graph.show_goal": true
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 18, "size_y": 6 }
-```
-
-#### 📝 Text: Phân tích variance — yếu tố nào đóng góp chênh lệch target?
-
-## Phân tích variance — yếu tố nào đóng góp chênh lệch target?
-
-```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### ❓ Question: Variance Waterfall
-
-Yeu to nao dong gop chenh lech target — waterfall theo chi nhanh.
-
-```sql
-WITH branch_variance AS (
-    SELECT
-        bl.branch_location_name as branch_name,
-        SUM(fo.net_revenue) as actual_revenue,
-        COALESCE(
-            (SELECT SUM(ft.target_val)
-             FROM fact_targets ft
-             WHERE ft.branch_location_key = bl.branch_location_key
-               AND ft.cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
-               AND ft.cycle_end_date < date_trunc('month', current_date)),
-            0
-        ) as target_revenue
-    FROM fact_orders fo
-    JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-      AND fo.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND fo.order_timestamp < date_trunc('month', current_date)
-    GROUP BY bl.branch_location_name, bl.branch_location_key
-)
-SELECT
-    branch_name as "Chi nhanh",
-    actual_revenue - target_revenue as "Variance"
-FROM branch_variance
-ORDER BY "Variance" ASC
-```
-
-```json metabase-viz
-{
-  "display": "waterfall",
-  "visualization_settings": {
-    "graph.dimensions": ["Chi nhanh"],
-    "graph.metrics": ["Variance"],
-    "graph.show_values": true,
+    "gauge.segments": [
+      { "min": 0,   "max": 80,  "color": "#EF8C8C", "label": "Behind" },
+      { "min": 80,  "max": 100, "color": "#F9D45C", "label": "On Track" },
+      { "min": 100, "max": 130, "color": "#84BB4C", "label": "Achieved" }
+    ],
     "column_settings": {
-      "Variance": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
+      "Đạt %": { "suffix": "%", "decimals": 1 }
     }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 12, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: MoM Revenue Change
@@ -807,7 +784,178 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 12, "size_x": 6, "size_y": 6 }
+{ "row": 3, "col": 6, "size_x": 6, "size_y": 4 }
+```
+
+#### ❓ Question: Variance to Target
+
+Gap tuyet doi giua doanh thu thuc va target.
+
+```sql
+WITH
+mtd_actual AS (
+    SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
+    FROM fact_orders
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND order_timestamp < date_trunc('month', current_date)
+),
+monthly_target AS (
+    SELECT COALESCE(SUM(target_val), 0) as target_gmv
+    FROM fact_targets
+    WHERE metric_code = 'gmv'
+      AND cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND cycle_end_date < date_trunc('month', current_date)
+)
+SELECT
+    a.actual_gmv - t.target_gmv as "Variance"
+FROM mtd_actual a
+CROSS JOIN monthly_target t
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Variance": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 3, "col": 12, "size_x": 6, "size_y": 4 }
+```
+
+#### 📝 Text: Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
+
+## Đánh giá target achievement chi nhánh — xác định nơi cần hỗ trợ
+
+```json metabase-pos
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Target Achievement by Branch
+
+Ranking chi nhanh theo % dat target — 100% reference line.
+
+```sql
+WITH branch_actuals AS (
+    SELECT
+        bl.branch_location_name as branch_name,
+        SUM(fo.net_revenue) as actual_revenue
+    FROM fact_orders fo
+    JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
+    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+      AND fo.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND fo.order_timestamp < date_trunc('month', current_date)
+    GROUP BY 1
+),
+branch_targets AS (
+    SELECT
+        bl.branch_location_name as branch_name,
+        SUM(ft.target_val) as target_revenue
+    FROM fact_targets ft
+    JOIN dim_branch_location bl ON ft.branch_key = bl.branch_location_key
+    WHERE ft.cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ft.cycle_end_date < date_trunc('month', current_date)
+    GROUP BY 1
+)
+SELECT
+    a.branch_name as "Chi nhanh",
+    CASE WHEN COALESCE(t.target_revenue, 0) = 0 THEN 0
+         ELSE ROUND(a.actual_revenue * 100.0 / t.target_revenue, 1) END as "Achievement %"
+FROM branch_actuals a
+LEFT JOIN branch_targets t ON a.branch_name = t.branch_name
+ORDER BY "Achievement %" DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Chi nhanh"],
+    "graph.metrics": ["Achievement %"],
+    "graph.colors": ["#509EE3"],
+    "graph.x_axis.title_text": "Achievement %",
+    "graph.goal_value": 100,
+    "graph.goal_label": "Target 100%",
+    "graph.show_goal": true
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 8, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### 📝 Text: Phân tích variance — yếu tố nào đóng góp chênh lệch target?
+
+## Phân tích variance — yếu tố nào đóng góp chênh lệch target?
+
+```json metabase-pos
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Variance Waterfall
+
+Yeu to nao dong gop chenh lech target — waterfall theo chi nhanh.
+
+```sql
+WITH branch_variance AS (
+    SELECT
+        bl.branch_location_name as branch_name,
+        SUM(fo.net_revenue) as actual_revenue,
+        COALESCE(
+            (SELECT SUM(ft.target_val)
+             FROM fact_targets ft
+             WHERE ft.branch_key = bl.branch_location_key
+               AND ft.cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
+               AND ft.cycle_end_date < date_trunc('month', current_date)),
+            0
+        ) as target_revenue
+    FROM fact_orders fo
+    JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
+    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+      AND fo.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND fo.order_timestamp < date_trunc('month', current_date)
+    GROUP BY bl.branch_location_name, bl.branch_location_key
+)
+SELECT
+    branch_name as "Chi nhanh",
+    actual_revenue - target_revenue as "Variance"
+FROM branch_variance
+ORDER BY "Variance" ASC
+```
+
+```json metabase-viz
+{
+  "display": "waterfall",
+  "visualization_settings": {
+    "graph.dimensions": ["Chi nhanh"],
+    "graph.metrics": ["Variance"],
+    "graph.show_values": true,
+    "column_settings": {
+      "Variance": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 15, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 #### 📝 Text: Review chi tiết chi nhánh — revenue, target, achievement, MoM
@@ -815,7 +963,7 @@ FROM this_month tm, prev_month pm
 ## Review chi tiết chi nhánh — revenue, target, achievement, MoM
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Branch Performance Table
@@ -851,7 +999,7 @@ targets AS (
         bl.branch_location_name as branch_name,
         SUM(ft.target_val) as target_revenue
     FROM fact_targets ft
-    JOIN dim_branch_location bl ON ft.branch_location_key = bl.branch_location_key
+    JOIN dim_branch_location bl ON ft.branch_key = bl.branch_location_key
     WHERE ft.cycle_start_date >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ft.cycle_end_date < date_trunc('month', current_date)
     GROUP BY 1
@@ -934,7 +1082,7 @@ ORDER BY tm.revenue DESC
 ```
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 9 }
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 9 }
 ```
 
 ---
@@ -1316,7 +1464,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 6 }
+{ "row": 3, "col": 0, "size_x": 6, "size_y": 4 }
 ```
 
 #### ❓ Question: Total Discount Amount
@@ -1362,7 +1510,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Discounted Orders %
@@ -1411,7 +1559,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 4 }
 ```
 
 #### ❓ Question: Return Rate
@@ -1460,7 +1608,7 @@ FROM this_month tm, prev_month pm
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 14, "size_x": 4, "size_y": 4 }
 ```
 
 #### 📝 Text: Xác định top sản phẩm bán chạy và sản phẩm bị trả nhiều
@@ -1468,7 +1616,7 @@ FROM this_month tm, prev_month pm
 ## Xác định top sản phẩm bán chạy và sản phẩm bị trả nhiều
 
 ```json metabase-pos
-{ "row": 6, "col": 6, "size_x": 12, "size_y": 1 }
+{ "row": 7, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Top 10 Products by Revenue
@@ -1512,7 +1660,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Top 5 Returned Products
@@ -1547,7 +1695,7 @@ LIMIT 5
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
+{ "row": 8, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
 #### 📝 Text: Review chi tiết sản phẩm — revenue, quantity, MoM theo loại
@@ -1555,7 +1703,7 @@ LIMIT 5
 ## Review chi tiết sản phẩm — revenue, quantity, MoM theo loại
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 14, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Revenue by Product Type
@@ -1598,7 +1746,7 @@ ORDER BY "Revenue" DESC
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 15, "col": 0, "size_x": 9, "size_y": 6 }
 ```
 
 #### ❓ Question: Product Performance Table
@@ -1706,7 +1854,7 @@ LIMIT 20
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 9, "size_x": 9, "size_y": 9 }
+{ "row": 15, "col": 9, "size_x": 9, "size_y": 9 }
 ```
 
 
@@ -1758,8 +1906,8 @@ this_month AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
       AND e.has_cogs
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND e.date_key <  CAST(date_trunc('month', current_date) AS DATE)
+      AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 ),
 prev_month AS (
     SELECT COALESCE(SUM(e.channel_net_profit), 0) AS val
@@ -1768,8 +1916,8 @@ prev_month AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
       AND e.has_cogs
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
-      AND e.date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
 )
 SELECT
     tm.val AS "Net Profit",
@@ -1805,17 +1953,14 @@ Biên lợi nhuận gộp tháng trước — scalar với MoM comparison. Tính
 WITH
 this_month AS (
     SELECT
-        CASE WHEN SUM(e.net_revenue) = 0 THEN 0
-             ELSE ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1)
-        END AS val,
-        ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS margin_raw
+        ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS val
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
       AND e.has_cogs
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND e.date_key <  CAST(date_trunc('month', current_date) AS DATE)
+      AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 ),
 prev_month AS (
     SELECT
@@ -1825,8 +1970,8 @@ prev_month AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
       AND e.has_cogs
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
-      AND e.date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
 )
 SELECT
     tm.val AS "Gross Margin %",
@@ -1865,7 +2010,7 @@ Trajectory biên lợi nhuận gộp 12 tháng — line chart. Filter: sales cha
 
 ```sql
 SELECT
-    date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))::date AS "Thang",
+    CAST(LEFT(CAST(e.date_key AS VARCHAR), 4) || '-' || SUBSTRING(CAST(e.date_key AS VARCHAR), 5, 2) || '-01' AS DATE) AS "Thang",
     ROUND(
         SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0),
         1
@@ -1875,8 +2020,8 @@ JOIN dim_channels c ON e.channel_key = c.channel_key
 WHERE e.status NOT IN ('CANCELLED', 'Voided')
   AND c.is_sales_channel
   AND e.has_cogs
-  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= (date_trunc('month', current_date) - INTERVAL '12 months')
-  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <  date_trunc('month', current_date)
+  AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '12 months', '%Y%m%d') AS INTEGER)
+  AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 GROUP BY 1
 ORDER BY 1
 ```
@@ -1927,8 +2072,8 @@ JOIN dim_channels c ON e.channel_key = c.channel_key
 WHERE e.status NOT IN ('CANCELLED', 'Voided')
   AND c.is_sales_channel
   AND e.has_cogs
-  AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-  AND e.date_key <  CAST(date_trunc('month', current_date) AS DATE)
+  AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
+  AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 GROUP BY c.channel_name
 ORDER BY "Net Profit" DESC
 LIMIT 10
