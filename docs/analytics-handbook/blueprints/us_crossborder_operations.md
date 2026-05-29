@@ -34,7 +34,7 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 
 ### 📑 Tab: Tong quan
 
-#### ❓ Question: Chu kỳ báo cáo
+#### Question: Chu kỳ báo cáo
 
 ```sql
 WITH filter_bounds AS (
@@ -145,7 +145,7 @@ SELECT t.val AS "Doanh thu US", p.val AS "Ky truoc" FROM this_period t, prev_per
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 5, "size_y": 3 }
 ```
 
 #### Question: Total Orders (US)
@@ -187,7 +187,7 @@ SELECT t.val AS "Total Orders", p.val AS "Ky truoc" FROM this_period t, prev_per
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 5, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: AOV (US)
@@ -245,7 +245,7 @@ SELECT t.val AS "AOV", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 9, "size_x": 4, "size_y": 3 }
 ```
 
 #### Question: Unique Customers (US)
@@ -289,7 +289,7 @@ SELECT t.val AS "Khach hang", p.val AS "Ky truoc" FROM this_period t, prev_perio
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 13, "size_x": 5, "size_y": 3 }
 ```
 
 #### 📝 Text: Trang thai don va fulfillment
@@ -470,7 +470,15 @@ ORDER BY o.order_timestamp DESC
 { "row": 20, "col": 0, "size_x": 18, "size_y": 12 }
 ```
 
-#### ❓ Question: Don thieu gia US (trong ky)
+#### 📝 Text: Canh bao thieu gia
+
+# Canh bao thieu gia
+
+```json metabase-pos
+{ "row": 32, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Don thieu gia US (trong ky)
 
 So don trong ky co SKU chua co trong price list US.
 
@@ -496,10 +504,10 @@ WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
 ```
 
 ```json metabase-pos
-{ "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
+{ "row": 33, "col": 0, "size_x": 6, "size_y": 3 }
 ```
 
-#### ❓ Question: SKU chua co gia (trong ky)
+#### Question: SKU chua co gia (trong ky)
 
 ```sql
 WITH filter_bounds AS (
@@ -533,7 +541,7 @@ ORDER BY COUNT(DISTINCT l.order_id) DESC
 ```
 
 ```json metabase-pos
-{ "row": 35, "col": 0, "size_x": 9, "size_y": 6 }
+{ "row": 36, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
 ---
