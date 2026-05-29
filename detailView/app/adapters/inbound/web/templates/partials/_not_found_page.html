@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{#
+  Full-page 404 — used when order or customer lookup returns None.
+  Context vars: entity (str e.g. "Order"), ref (str e.g. "HD99999")
+  §1.4 shared state: friendly message + "try another code" + back-to-home.
+#}
+
+{% block title %}{{ entity }} not found — detailView{% endblock %}
+
+{% block content %}
+<div class="empty-state" role="main" aria-labelledby="notfound-heading">
+
+  <div class="empty-state__icon" aria-hidden="true">&#128270;</div>
+
+  <h1 class="empty-state__title" id="notfound-heading">
+    {{ entity }} not found
+  </h1>
+
+  <p class="empty-state__body">
+    No {{ entity | lower }} found for
+    <strong>&ldquo;{{ ref }}&rdquo;</strong>.
+    Check the code and try again.
+  </p>
+
+  <div class="empty-state__action" style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+    <a href="/" aria-label="Back to home search">&#8592; Back to search</a>
+
+    {# Inline retry — repopulates search box with the failed ref #}
+    <button type="button"
+            onclick="document.getElementById('search-q').value='{{ ref }}';
+                     document.getElementById('search-q').focus()"
+            aria-label="Try searching for {{ ref }} again">
+      Try &ldquo;{{ ref }}&rdquo; again
+    </button>
+  </div>
+
+</div>
+{% endblock %}

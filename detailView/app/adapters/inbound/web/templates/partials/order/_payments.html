@@ -1,0 +1,76 @@
+{#
+  Order > Payments tab — §2.2, §8.4
+  Source: fact_payments × dim_payment_methods
+  Table: method name/type, amount, status, payment_timestamp, paid_on.
+  Summary: total paid, COD vs prepaid mix.
+#}
+{% from "macros.html" import badge, caveat %}
+{% set pmts = order.payments %}
+
+<section aria-label="Payments">
+  {% if not pmts %}
+  <div class="empty-state">
+    <p class="empty-state__title">No payment records</p>
+    <p class="empty-state__body">No payment entries found for this order.</p>
+  </div>
+  {% else %}
+
+  <div class="table-scroll">
+    <table class="data-table" aria-label="Payment records">
+      <thead>
+        <tr>
+          <th scope="col">Method</th>
+          <th scope="col">Type</th>
+          <th scope="col" class="num">Amount</th>
+          <th scope="col">Status</th>
+          <th scope="col">Payment timestamp</th>
+          <th scope="col">Paid on</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pmts %}
+        <tr>
+          <td>{{ p.payment_method_name or "—" }}</td>
+          <td>{{ p.payment_method_type or "—" }}</td>
+          <td class="num">{{ p.amount | vnd }}</td>
+          <td>
+            {% if p.status %}
+              {% set tone = "good" if p.status | upper in ("PAID", "COMPLETED", "SUCCESS") else
+                            "warn" if p.status | upper in ("PENDING", "PROCESSING") else
+                            "bad"  if p.status | upper in ("FAILED", "VOIDED", "CANCELLED") else "neutral" %}
+              {{ badge(p.status, tone, "payment_status") }}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ p.payment_timestamp | dt }}</td>
+          <td>{{ p.paid_on | dt }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="2"><strong>Total paid</strong></td>
+          <td class="num">
+            {% set total = namespace(val=0) %}
+            {% for p in pmts %}
+              {% if p.amount is not none %}{% set total.val = total.val + p.amount %}{% endif %}
+            {% endfor %}
+            <strong>{{ total.val | vnd }}</strong>
+          </td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  {# COD vs prepaid mix summary #}
+  {% set cod_count = pmts | selectattr("payment_method_type", "equalto", "COD") | list | length %}
+  {% set prepaid_count = pmts | length - cod_count %}
+  <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin-top:var(--space-3)">
+    Mix: <strong>{{ cod_count }}</strong> COD &nbsp;·&nbsp; <strong>{{ prepaid_count }}</strong> prepaid
+    {% if order.financial.cod_amount is not none %}
+      &nbsp;·&nbsp; COD amount {{ order.financial.cod_amount | vnd }}
+    {% endif %}
+  </p>
+
+  {% endif %}
+</section>

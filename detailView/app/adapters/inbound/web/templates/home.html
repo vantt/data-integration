@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{#
+  Home page — §1.3 / §8.2
+  Minimal: centred hero search with helper text. No data grid.
+  The header already has its own search cluster; this provides a larger,
+  prominent duplicate for the landing state.
+#}
+{% from "macros.html" import caveat %}
+
+{% block title %}detailView — Order & Customer Insights{% endblock %}
+
+{% block content %}
+<section class="home-hero" aria-labelledby="home-heading">
+
+  <h1 class="home-hero__title" id="home-heading">
+    Look up the full story of one entity
+  </h1>
+  <p class="home-hero__hint">
+    Search by <strong>order code</strong> (e.g. HD00123) or by
+    <strong>customer ID, phone, or email</strong>.
+  </p>
+
+  {#
+    Home search panel — same HTMX contract as the header form.
+    hx-get /search → HX-Redirect (single hit) | #search-results partial (multi) | hint (none)
+  #}
+  <div class="home-search-panel" role="search" aria-label="Entity lookup">
+    <form hx-get="/search"
+          hx-target="#search-results"
+          hx-swap="innerHTML"
+          hx-trigger="submit"
+          id="home-search-form">
+
+      {# Segmented control #}
+      <div class="search-mode-toggle" role="group" aria-label="Search mode">
+        <button type="button"
+                class="search-mode-toggle__btn active"
+                aria-pressed="true"
+                data-mode="order"
+                onclick="homeSetMode(this,'order')"
+                id="home-mode-order">Order</button>
+        <button type="button"
+                class="search-mode-toggle__btn"
+                aria-pressed="false"
+                data-mode="customer"
+                onclick="homeSetMode(this,'customer')"
+                id="home-mode-customer">Customer</button>
+      </div>
+
+      <input type="hidden" name="mode" id="home-mode-val" value="order">
+
+      <div style="display:flex;gap:.5rem;">
+        <input type="search"
+               class="search-input"
+               name="q"
+               id="home-q"
+               autocomplete="off"
+               placeholder="Order code e.g. HD00123"
+               aria-label="Search query"
+               style="flex:1">
+        <button type="submit" class="search-submit" aria-label="Search">&#128269;</button>
+      </div>
+
+      <p class="home-search-hint">
+        Order: exact code &nbsp;·&nbsp; Customer: id / phone / email
+      </p>
+    </form>
+  </div>
+
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function homeSetMode(btn, mode) {
+    document.getElementById('home-mode-val').value = mode;
+    document.querySelectorAll('#home-search-form .search-mode-toggle__btn').forEach(function(b) {
+      var active = b.dataset.mode === mode;
+      b.setAttribute('aria-pressed', active ? 'true' : 'false');
+      b.classList.toggle('active', active);
+    });
+    var ph = { order: 'Order code e.g. HD00123', customer: 'Customer ID, phone or email' };
+    document.getElementById('home-q').placeholder = ph[mode] || '';
+    document.getElementById('home-q').focus();
+    // Also sync header form mode
+    setSearchMode(document.querySelector('[data-mode="' + mode + '"]'), mode);
+  }
+</script>
+{% endblock %}

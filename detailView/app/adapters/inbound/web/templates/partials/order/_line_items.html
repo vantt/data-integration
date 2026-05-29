@@ -1,0 +1,89 @@
+{#
+  Order > Line Items tab — §2.2, §8.4
+  Source: fact_sales × dim_products
+  Table: sku, product_name, variant_name, brand, category, qty,
+         unit_price (revenue/qty), line revenue, per-line discount,
+         distributed discount, weight.
+  Footer: Σ line revenue vs net_revenue reconciliation note.
+  US: add us_price column if available.
+  Note: no per-line COGS (order-level only).
+#}
+{% from "macros.html" import caveat %}
+{% set items = order.line_items %}
+{% set f = order.financial %}
+
+<section aria-label="Line items">
+  {% if not items %}
+  <div class="empty-state">
+    <p class="empty-state__title">No line items</p>
+    <p class="empty-state__body">No product data found for this order.</p>
+  </div>
+  {% else %}
+
+  <div class="table-scroll">
+    <table class="data-table" aria-label="Order line items">
+      <thead>
+        <tr>
+          <th scope="col">SKU</th>
+          <th scope="col">Product</th>
+          <th scope="col">Variant</th>
+          <th scope="col">Brand</th>
+          <th scope="col">Category</th>
+          <th scope="col" class="num">Qty</th>
+          <th scope="col" class="num">Unit price</th>
+          <th scope="col" class="num">Line revenue</th>
+          <th scope="col" class="num">Discount</th>
+          <th scope="col" class="num">Dist. discount</th>
+          <th scope="col" class="num">Weight (g)</th>
+          {% if f.is_us %}<th scope="col" class="num">US price incl. VAT</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td><code>{{ item.sku or "—" }}</code></td>
+          <td>{{ item.product_name or "—" }}</td>
+          <td>{{ item.variant_name or "—" }}</td>
+          <td>{{ item.brand_name or "—" }}</td>
+          <td>{{ item.category or "—" }}</td>
+          <td class="num">{{ item.quantity or "—" }}</td>
+          <td class="num">{{ item.unit_price | vnd if item.unit_price is not none else "—" }}</td>
+          <td class="num">{{ item.revenue | vnd }}</td>
+          <td class="num">{{ item.discount_amount | vnd }}</td>
+          <td class="num">{{ item.distributed_discount_amount | vnd }}</td>
+          <td class="num">{{ item.weight_grams or "—" }}</td>
+          {% if f.is_us %}
+          <td class="num">{{ item.us_price_incl_vat | vnd }}</td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="{% if f.is_us %}6{% else %}5{% endif %}">
+            <strong>Σ Line revenue</strong>
+          </td>
+          <td></td>
+          <td class="num">
+            {% set total = namespace(val=0) %}
+            {% for item in items %}
+              {% if item.revenue is not none %}
+                {% set total.val = total.val + item.revenue %}
+              {% endif %}
+            {% endfor %}
+            <strong>{{ total.val | vnd }}</strong>
+          </td>
+          <td colspan="{% if f.is_us %}4{% else %}3{% endif %}"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  {# Reconciliation note: compare Σ line revenue vs net_revenue #}
+  {% if f.net_revenue is not none %}
+  {{ caveat("Σ line revenue above should match net_revenue (" ~ (f.net_revenue | vnd) ~ "); differences indicate bundled discounts or data gaps.", "info") }}
+  {% endif %}
+  {{ caveat("No per-line COGS available — cost data is at order level only.", "info") }}
+
+  {% endif %}
+</section>

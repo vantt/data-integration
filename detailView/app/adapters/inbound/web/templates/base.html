@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}detailView{% endblock %}</title>
+  {# Design tokens — all CSS custom properties #}
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  {# Structural skeleton — layout, grid, breakpoints #}
+  <link rel="stylesheet" href="/static/css/skeleton.css">
+  {# Component design system — built on tokens #}
+  <link rel="stylesheet" href="/static/css/app.css">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{#
+  §1.2 Floating header: brand | segmented search cluster | context slot
+  HTMX contract (§6): hx-get /search, target #search-results, HX-Redirect on single hit.
+  Mode state is held in a hidden input updated by the segmented control JS.
+#}
+<header class="app-header" role="banner">
+
+  {# Brand #}
+  <a href="/" class="app-header__brand" aria-label="detailView home">detailView</a>
+
+  {# Search cluster — centred, dominant #}
+  <form class="search-cluster"
+        role="search"
+        aria-label="Entity search"
+        hx-get="/search"
+        hx-target="#search-results"
+        hx-swap="innerHTML"
+        hx-trigger="submit"
+        hx-push-url="false"
+        id="search-form">
+
+    {# Segmented [Order | Customer] control #}
+    <div class="search-mode-toggle" role="group" aria-label="Search mode">
+      <button type="button"
+              class="search-mode-toggle__btn{% if request.query_params.get('mode','order') != 'customer' %} active{% endif %}"
+              aria-pressed="{% if request.query_params.get('mode','order') != 'customer' %}true{% else %}false{% endif %}"
+              data-mode="order"
+              onclick="setSearchMode(this, 'order')"
+              id="mode-order">Order</button>
+      <button type="button"
+              class="search-mode-toggle__btn{% if request.query_params.get('mode') == 'customer' %} active{% endif %}"
+              aria-pressed="{% if request.query_params.get('mode') == 'customer' %}true{% else %}false{% endif %}"
+              data-mode="customer"
+              onclick="setSearchMode(this, 'customer')"
+              id="mode-customer">Customer</button>
+    </div>
+
+    {# Hidden mode input — read by hx-get as query param #}
+    <input type="hidden" name="mode" id="search-mode-val"
+           value="{{ request.query_params.get('mode', 'order') }}">
+
+    {# Text input — placeholder switches by mode via JS #}
+    <input type="search"
+           class="search-input"
+           name="q"
+           id="search-q"
+           autocomplete="off"
+           placeholder="Order code e.g. HD00123"
+           aria-label="Search query"
+           value="{{ request.query_params.get('q', '') }}">
+
+    {# Submit button #}
+    <button type="submit" class="search-submit" aria-label="Search">&#128269;</button>
+
+    {# HTMX loading indicator #}
+    <span class="htmx-indicator" aria-live="polite" aria-label="Searching">…</span>
+  </form>
+
+  {# Context slot: breadcrumb injected by detail pages #}
+  <div class="app-header__context" aria-label="Current entity">
+    {% block header_context %}{% endblock %}
+  </div>
+
+</header>
+
+{#
+  #search-results: HTMX target for search responses.
+  Positioned absolutely below the header via CSS.
+  Closes when user clicks outside (JS below).
+#}
+<div id="search-results" role="region" aria-label="Search results" aria-live="polite"></div>
+
+{# Main content area #}
+<main class="page-wrapper" id="main-content">
+  {% block content %}{% endblock %}
+</main>
+
+<script src="/static/vendor/htmx.min.js"></script>
+
+<script>
+  // --- Segmented mode toggle ---
+  function setSearchMode(btn, mode) {
+    // Update hidden input
+    document.getElementById('search-mode-val').value = mode;
+    // Toggle aria-pressed + active class
+    document.querySelectorAll('.search-mode-toggle__btn').forEach(function(b) {
+      var isActive = b.dataset.mode === mode;
+      b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      b.classList.toggle('active', isActive);
+    });
+    // Update placeholder
+    var placeholders = {
+      order: 'Order code e.g. HD00123',
+      customer: 'Customer ID, phone or email'
+    };
+    document.getElementById('search-q').placeholder = placeholders[mode] || '';
+    document.getElementById('search-q').focus();
+  }
+
+  // --- Dismiss search-results when clicking outside ---
+  document.addEventListener('click', function(e) {
+    var results = document.getElementById('search-results');
+    var form = document.getElementById('search-form');
+    if (results && !results.contains(e.target) && !form.contains(e.target)) {
+      results.innerHTML = '';
+    }
+  });
+
+  // --- Tab keyboard navigation (arrow keys on tablist) ---
+  document.addEventListener('keydown', function(e) {
+    var tablist = e.target.closest('[role="tablist"]');
+    if (!tablist) return;
+    var tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    var idx = tabs.indexOf(e.target);
+    if (idx === -1) return;
+    var next = null;
+    if (e.key === 'ArrowRight') next = tabs[(idx + 1) % tabs.length];
+    if (e.key === 'ArrowLeft')  next = tabs[(idx - 1 + tabs.length) % tabs.length];
+    if (e.key === 'Home') next = tabs[0];
+    if (e.key === 'End')  next = tabs[tabs.length - 1];
+    if (next) { e.preventDefault(); next.focus(); next.click(); }
+  });
+</script>
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

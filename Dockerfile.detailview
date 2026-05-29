@@ -1,0 +1,26 @@
+# detailView — read-only Order/Customer insight web app (FastAPI + Jinja2 + HTMX)
+# Build context = repo root (.) so it matches the other first-party services.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install deps first for layer caching. tzdata/pytz are required for ICT timezone handling.
+COPY detailView/requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# App code only (NOT detailView/.venv, tests, docs) → keeps the image small.
+COPY detailView/app /app/app
+
+# Serving DB is bind-mounted read-only at this path by docker-compose.
+ENV OLAP_DB_PATH=/app/var/data_lake/serving/olap.duckdb \
+    APP_TZ=Asia/Ho_Chi_Minh \
+    DETAIL_VIEW_PORT=8000 \
+    PYTHONUNBUFFERED=1
+
+EXPOSE 8000
+
+# Liveness: schema-presence check (no parquet needed).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/healthz', timeout=4).status==200 else 1)" || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

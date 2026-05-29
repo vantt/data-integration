@@ -1,0 +1,17 @@
+{#
+  Not-found inline hint — rendered into #search-results when 0 matches.
+  Context vars: q (str), mode (str)
+  Shown below the search bar; compact, friendly.
+#}
+<div role="status"
+     aria-live="polite"
+     class="search-hint">
+  <span aria-hidden="true">&#128269;</span>
+  No match for
+  <strong>&ldquo;{{ q }}&rdquo;</strong>
+  {% if mode == "order" %}
+    — try the exact order code (e.g. HD00123).
+  {% else %}
+    — try customer ID, phone, or email.
+  {% endif %}
+</div>

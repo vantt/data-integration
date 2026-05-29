@@ -1,0 +1,149 @@
+"""Customer insight aggregate — the complete single-customer view.
+
+Field names mirror dim_customers + mart_customer_status_snapshot_monthly (researcher-02).
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from decimal import Decimal
+
+from .shared import Badge, DataQualityFlag, Tone, safe_ratio
+
+RETAIL = "RETAIL"
+
+
+@dataclass
+class CustomerProfile:
+    customer_id: str
+    full_name: str | None = None
+    phone: str | None = None
+    email: str | None = None
+    dob: date | None = None
+    sex: str | None = None
+    address1: str | None = None
+    ward: str | None = None
+    district: str | None = None
+    province: str | None = None
+    country: str | None = None
+    geo_region: str | None = None
+    loyalty_point: int | None = None
+    customer_type: str | None = None
+    customer_group: str | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+@dataclass
+class CustomerValueMetrics:
+    lifetime_value: Decimal | None = None
+    total_orders_count: int | None = None
+    value_group: str | None = None
+    # Aggregated over the customer's orders (computed by the repository query)
+    total_gross_profit: Decimal | None = None
+    total_cogs: Decimal | None = None
+    avg_gross_margin_pct: float | None = None
+    total_return_amount: Decimal | None = None
+    return_count: int | None = None
+    cogs_order_count: int | None = None  # orders with has_cogs, for coverage caveat
+
+    @property
+    def aov(self) -> float | None:
+        return safe_ratio(self.lifetime_value, self.total_orders_count)
+
+
+@dataclass
+class CustomerBehavior:
+    recency_days: int | None = None
+    frequency: int | None = None  # = total_orders_count
+    monetary: Decimal | None = None  # = lifetime_value
+    lifecycle_stage: str | None = None
+    channel_preference: str | None = None
+    product_affinity: str | None = None
+    payment_behavior: str | None = None
+    geo_region: str | None = None
+    customer_type: str | None = None
+    first_order_date: datetime | None = None
+    last_order_date: datetime | None = None
+    lifespan_days: int | None = None
+
+    @property
+    def cohort_month(self) -> str | None:
+        return self.first_order_date.strftime("%Y-%m") if self.first_order_date else None
+
+
+@dataclass
+class StatusSnapshot:
+    snapshot_month: date | None = None
+    status: str | None = None  # ACTIVE / AT_RISK / CHURNED
+    is_new: bool = False
+    days_since_last_order: int | None = None
+    value_group: str | None = None
+
+
+@dataclass
+class OrderSummary:
+    """One row in a customer's order history (links to /orders/{order_code})."""
+
+    order_code: str
+    order_date: datetime | None = None
+    status: str | None = None
+    channel_name: str | None = None
+    seller_name: str | None = None
+    total_collected: Decimal | None = None
+    gross_profit: Decimal | None = None
+    gross_margin_pct: float | None = None
+    payment_label: str | None = None
+    has_return: bool = False
+    carrier_id: str | None = None
+
+
+@dataclass
+class CustomerDetail:
+    profile: CustomerProfile
+    value_metrics: CustomerValueMetrics = field(default_factory=lambda: CustomerValueMetrics())
+    behavior: CustomerBehavior = field(default_factory=CustomerBehavior)
+    status_timeline: list[StatusSnapshot] = field(default_factory=list)
+    order_history: list[OrderSummary] = field(default_factory=list)
+
+    @property
+    def is_retail(self) -> bool:
+        return (self.profile.customer_type or "").upper() == RETAIL
+
+    @property
+    def timeline_available(self) -> bool:
+        """Status snapshot mart is RETAIL-only; show a notice otherwise."""
+        return self.is_retail
+
+    def identity_badges(self) -> list[Badge]:
+        out: list[Badge] = []
+        value_tone = {
+            "VALUE_VIP": Tone.GOOD, "VALUE_GOLD": Tone.GOOD,
+            "VALUE_SILVER": Tone.NEUTRAL, "VALUE_BRONZE": Tone.NEUTRAL,
+        }
+        lifecycle_tone = {
+            "LIFECYCLE_ACTIVE": Tone.GOOD, "LIFECYCLE_NEW": Tone.GOOD,
+            "LIFECYCLE_AT_RISK": Tone.WARN, "LIFECYCLE_CHURNED": Tone.BAD,
+        }
+        if self.profile.customer_type:
+            out.append(Badge(self.profile.customer_type, Tone.NEUTRAL, "customer_type"))
+        if self.value_metrics.value_group:
+            out.append(Badge(self.value_metrics.value_group,
+                             value_tone.get(self.value_metrics.value_group, Tone.NEUTRAL), "value"))
+        if self.behavior.lifecycle_stage:
+            out.append(Badge(self.behavior.lifecycle_stage,
+                             lifecycle_tone.get(self.behavior.lifecycle_stage, Tone.NEUTRAL), "lifecycle"))
+        return out
+
+    def quality_flags(self) -> list[DataQualityFlag]:
+        flags = [
+            DataQualityFlag("acq_unknown", "Acquisition source not tracked", "info"),
+            DataQualityFlag("nightly_sync", "Profile syncs nightly (not real-time)", "info"),
+        ]
+        if not self.is_retail:
+            flags.append(DataQualityFlag("timeline_retail", "Status timeline: RETAIL customers only", "info"))
+        vm = self.value_metrics
+        if vm.cogs_order_count is not None and vm.total_orders_count:
+            if vm.cogs_order_count < vm.total_orders_count:
+                flags.append(DataQualityFlag("cogs_partial", "Margin from partial COGS coverage", "warn"))
+        return flags

@@ -1,0 +1,57 @@
+{#
+  Customer > Value Metrics tab — §3.2, §8.5, §8.6
+  Source: dim_customers + aggregates over fact_orders / fact_order_economics
+  KPI grid: LTV, total orders, AOV, value_group.
+  Total gross profit, total COGS, avg gross margin % (with COGS-coverage caveat).
+  Total returns (amount + count).
+#}
+{% from "macros.html" import kpi_stat, badge, caveat %}
+{% set vm = customer.value_metrics %}
+
+<section aria-label="Value metrics">
+
+  {# Top KPI grid — 4 stats #}
+  <div class="kpi-grid kpi-grid--4up" style="margin-bottom:var(--space-5)"
+       aria-label="Headline value KPIs">
+    {{ kpi_stat("Lifetime value (LTV)", vm.lifetime_value | vnd, hero=True) }}
+    {{ kpi_stat("Total orders", vm.total_orders_count or "—") }}
+    {{ kpi_stat("AOV", vm.aov | vnd if vm.aov is not none else "—") }}
+    {{ kpi_stat("Value group",
+        vm.value_group or "—",
+        sub=("" if vm.value_group else "not assigned")) }}
+  </div>
+
+  {# Profitability block #}
+  <h2 class="panel-heading">Profitability contribution</h2>
+
+  <div class="kpi-grid kpi-grid--3up" style="margin-bottom:var(--space-3)"
+       aria-label="Profitability KPIs">
+    {{ kpi_stat("Gross profit contributed", vm.total_gross_profit | vnd) }}
+    {{ kpi_stat("Total COGS", vm.total_cogs | vnd) }}
+    {{ kpi_stat("Avg gross margin",
+        vm.avg_gross_margin_pct | pct if vm.avg_gross_margin_pct is not none else "—") }}
+  </div>
+
+  {# COGS coverage caveat — shown whenever partial coverage exists #}
+  {% if vm.cogs_order_count is not none and vm.total_orders_count %}
+    {% if vm.cogs_order_count < vm.total_orders_count %}
+      {% set pct_covered = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
+      {{ caveat(
+        "Margin computed from partial COGS coverage — "
+        ~ vm.cogs_order_count ~ " of " ~ vm.total_orders_count
+        ~ " orders (" ~ pct_covered ~ "%) have MISA COGS data.",
+        "warn"
+      ) }}
+    {% endif %}
+  {% endif %}
+
+  {# Returns block #}
+  <h2 class="panel-heading">Returns</h2>
+
+  <div class="kpi-grid kpi-grid--2up"
+       aria-label="Returns summary">
+    {{ kpi_stat("Total return amount", vm.total_return_amount | vnd) }}
+    {{ kpi_stat("Return events", vm.return_count or "0") }}
+  </div>
+
+</section>

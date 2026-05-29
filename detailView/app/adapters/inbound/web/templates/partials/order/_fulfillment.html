@@ -1,0 +1,68 @@
+{#
+  Order > Fulfillment tab — §2.2, §8.4
+  Source: fact_orders + fact_order_economics
+  Shows: status badges, first_shipped_at, carrier_id, cod_amount,
+         shipping address, time_to_complete_hours.
+  Note: leg-level carrier tracking not available in serving layer.
+#}
+{% from "macros.html" import badge, badge_row, caveat %}
+
+<section aria-label="Fulfillment details">
+
+  {# Status badges row #}
+  <div style="margin-bottom:1rem">
+    {{ badge_row(order.status_badges()) }}
+  </div>
+
+  <dl class="quick-facts" style="max-width:480px;row-gap:.5rem">
+
+    {% set h = order.header %}
+    {% set f = order.financial %}
+    {% set s = order.shipping %}
+
+    {% if h.first_shipped_at %}
+    <dt>First shipped</dt>
+    <dd>{{ h.first_shipped_at | dt }}</dd>
+    {% endif %}
+
+    {% if h.time_to_complete_hours is not none %}
+    <dt>Time to complete</dt>
+    <dd>{{ h.time_to_complete_hours }} h</dd>
+    {% endif %}
+
+    {% if f.carrier_id %}
+    <dt>Carrier</dt>
+    <dd>{{ f.carrier_id }}</dd>
+    {% endif %}
+
+    {% if f.cod_amount is not none %}
+    <dt>COD amount</dt>
+    <dd>{{ f.cod_amount | vnd }}</dd>
+    {% endif %}
+
+    {# Shipping address #}
+    {% if s.address %}
+    <dt>Address</dt>
+    <dd>{{ s.address }}</dd>
+    {% endif %}
+
+    {% if s.ward or s.district %}
+    <dt>Ward / District</dt>
+    <dd>{{ [s.ward, s.district] | select | join(", ") }}</dd>
+    {% endif %}
+
+    {% if s.province %}
+    <dt>Province</dt>
+    <dd>{{ s.province }}</dd>
+    {% endif %}
+
+    {% if s.country %}
+    <dt>Country</dt>
+    <dd>{{ s.country }}</dd>
+    {% endif %}
+
+  </dl>
+
+  {{ caveat("Leg-level carrier tracking is not available in the serving layer.", "info") }}
+
+</section>

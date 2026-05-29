@@ -1,0 +1,111 @@
+{#
+  Customer > Order History tab — §3.2, §8.6, FR-11
+  Source: fact_orders × economics × dims
+  Table (newest first): order_code (→ /orders/{code}), date, status, channel,
+  seller, total_collected, gross_profit + margin%, payment method, return flag, carrier.
+  Rows are clickable links to the order detail page.
+#}
+{% from "macros.html" import badge %}
+{% set orders = customer.order_history %}
+
+<section aria-label="Order history">
+  {% if not orders %}
+  <div class="empty-state">
+    <p class="empty-state__title">No orders</p>
+    <p class="empty-state__body">No order history found for this customer.</p>
+  </div>
+  {% else %}
+
+  <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin-bottom:var(--space-2)">
+    {{ orders | length }} order(s) — newest first. Click a row to view order detail.
+  </p>
+
+  <div class="table-scroll">
+    <table class="data-table" aria-label="Customer order history">
+      <thead>
+        <tr>
+          <th scope="col">Order code</th>
+          <th scope="col">Date</th>
+          <th scope="col">Status</th>
+          <th scope="col">Channel</th>
+          <th scope="col">Seller</th>
+          <th scope="col" class="num">Total collected</th>
+          <th scope="col" class="num">Gross profit</th>
+          <th scope="col" class="num">Margin</th>
+          <th scope="col">Payment</th>
+          <th scope="col">Return</th>
+          <th scope="col">Carrier</th>
+        </tr>
+      </thead>
+      <tbody>
+        {# Sorted newest-first: order_history comes pre-sorted from service,
+           but we show as-is since the domain/repo owns sort order. #}
+        {% for o in orders %}
+        <tr class="row-link"
+            onclick="window.location.href='/orders/{{ o.order_code }}'"
+            title="View order {{ o.order_code }}"
+            tabindex="0"
+            onkeydown="if(event.key==='Enter'||event.key===' ')window.location.href='/orders/{{ o.order_code }}'">
+          <td>
+            {# Explicit link for a11y — screen readers use this #}
+            <a href="/orders/{{ o.order_code }}"
+               onclick="event.stopPropagation()"
+               aria-label="Order {{ o.order_code }}">
+              <code>{{ o.order_code }}</code>
+            </a>
+          </td>
+          <td>{{ o.order_date | dt }}</td>
+          <td>
+            {% if o.status %}
+              {% set stone = "good" if o.status | upper == "COMPLETED" else
+                             "bad"  if o.status | upper in ("CANCELLED","VOIDED") else
+                             "warn" if o.status | upper in ("PENDING","PROCESSING") else "neutral" %}
+              {{ badge(o.status, stone, "status") }}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ o.channel_name or "—" }}</td>
+          <td>{{ o.seller_name or "—" }}</td>
+          <td class="num">{{ o.total_collected | vnd }}</td>
+          <td class="num">{{ o.gross_profit | vnd }}</td>
+          <td class="num">{{ o.gross_margin_pct | pct }}</td>
+          <td>{{ o.payment_label or "—" }}</td>
+          <td style="text-align:center">
+            {% if o.has_return %}
+              <span title="Has return" aria-label="Has return">&#8626;</span>
+            {% else %}
+              <span aria-hidden="true">—</span>
+            {% endif %}
+          </td>
+          <td>{{ o.carrier_id or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="5"><strong>{{ orders | length }} orders</strong></td>
+          <td class="num">
+            {% set total = namespace(val=0) %}
+            {% for o in orders %}
+              {% if o.total_collected is not none %}
+                {% set total.val = total.val + o.total_collected %}
+              {% endif %}
+            {% endfor %}
+            <strong>{{ total.val | vnd }}</strong>
+          </td>
+          <td class="num">
+            {% set gp = namespace(val=0) %}
+            {% for o in orders %}
+              {% if o.gross_profit is not none %}
+                {% set gp.val = gp.val + o.gross_profit %}
+              {% endif %}
+            {% endfor %}
+            <strong>{{ gp.val | vnd }}</strong>
+          </td>
+          <td colspan="4"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  {% endif %}
+</section>

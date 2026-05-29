@@ -1,0 +1,136 @@
+{#
+  Order > Financial tab — §2.2, §8.4
+  Revenue waterfall: gross → discount → net → VAT → collected → COGS → gross profit →
+  Shopee fees → channel net profit.
+  US orders: swap revenue block to US revenue (excl/incl VAT, line count, unpriced warning).
+  Returns shown as reference-only note (NOT subtracted from P&L).
+  Source: fact_orders + fact_order_economics (+ fact_us_shipment_economics if US).
+#}
+{% from "macros.html" import caveat, badge %}
+{% set f = order.financial %}
+
+<section aria-label="Financial waterfall">
+
+  {% if f.is_us %}
+  {# ---- US CrossBorder revenue block ---- #}
+  <div class="waterfall-section-title">
+    <h2>Revenue (US CrossBorder)</h2>
+    {{ badge("US CrossBorder", "accent", "us") }}
+  </div>
+  <div class="waterfall" aria-label="US revenue breakdown">
+    <span class="waterfall__label">Revenue excl. VAT</span>
+    <span class="waterfall__amount">{{ f.us_revenue_excl_vat | vnd }}</span>
+    <span class="waterfall__label">Revenue incl. VAT</span>
+    <span class="waterfall__amount">{{ f.us_revenue_incl_vat | vnd }}</span>
+    <span class="waterfall__label waterfall__label--indent">Line items</span>
+    <span class="waterfall__amount">{{ f.us_line_item_count or "—" }}</span>
+    <hr class="waterfall__divider">
+  </div>
+  {% if f.has_unpriced_sku %}
+    {{ caveat("Some SKUs are missing US price (" ~ (f.unpriced_sku_count or "?") ~ " SKU(s)) — revenue may be understated", "warn") }}
+  {% endif %}
+
+  {% else %}
+  {# ---- Domestic revenue waterfall ---- #}
+  <div class="waterfall-section-title"><h2>Revenue waterfall</h2></div>
+  <div class="waterfall" aria-label="Revenue breakdown">
+
+    <span class="waterfall__label">Gross revenue</span>
+    <span class="waterfall__amount">{{ f.gross_revenue | vnd }}</span>
+
+    <span class="waterfall__label waterfall__label--indent">− Discount</span>
+    <span class="waterfall__amount">{{ f.discount_amount | vnd }}</span>
+
+    <span class="waterfall__label waterfall__label--total">= Net revenue</span>
+    <span class="waterfall__amount" style="font-weight:var(--font-weight-bold)">{{ f.net_revenue | vnd }}</span>
+
+    <span class="waterfall__label waterfall__label--indent">+ VAT / tax</span>
+    <span class="waterfall__amount">{{ f.tax_amount | vnd }}</span>
+
+    <span class="waterfall__label waterfall__label--total">= Total collected</span>
+    <span class="waterfall__amount" style="font-weight:var(--font-weight-bold)">{{ f.total_collected | vnd }}</span>
+
+    <hr class="waterfall__divider">
+  </div>
+  {% endif %}
+
+  {# ---- Profit block (shared: domestic + US) ---- #}
+  <div class="waterfall" aria-label="Profit breakdown" style="margin-top:var(--space-3)">
+
+    <span class="waterfall__label waterfall__label--indent">
+      − COGS
+      {% if not f.has_cogs %}{{ badge("no MISA match", "warn", "cogs") }}{% endif %}
+    </span>
+    <span class="waterfall__amount">{{ f.cogs_amount | vnd }}</span>
+
+    <span class="waterfall__label waterfall__label--total">
+      = Gross profit
+      {% if f.gross_margin_pct is not none %}
+        <small style="font-weight:var(--font-weight-normal)">&nbsp;· {{ f.gross_margin_pct | pct }}</small>
+      {% endif %}
+    </span>
+    <span class="waterfall__amount" style="font-weight:var(--font-weight-bold)">{{ f.gross_profit | vnd }}</span>
+
+    {% if not f.margin_is_verified %}
+    <span style="grid-column:1/-1">
+      {{ caveat("Margin unverified — no MISA COGS match for this order", "warn") }}
+    </span>
+    {% endif %}
+
+    {# Shopee fees breakdown (only if present) #}
+    {% if f.has_platform_fees or f.shopee_platform_fees is not none %}
+    <hr class="waterfall__divider">
+    <span class="waterfall__label waterfall__label--section">Shopee fees</span>
+    <span class="waterfall__amount"></span>
+
+    {% if f.shopee_platform_fees is not none %}
+    <span class="waterfall__label waterfall__label--indent">− Platform / service fee</span>
+    <span class="waterfall__amount">{{ f.shopee_platform_fees | vnd }}</span>
+    {% endif %}
+    {% if f.shopee_infra_fee is not none %}
+    <span class="waterfall__label waterfall__label--indent">− Infrastructure fee</span>
+    <span class="waterfall__amount">{{ f.shopee_infra_fee | vnd }}</span>
+    {% endif %}
+    {% if f.shopee_voucher_xtra_fee is not none %}
+    <span class="waterfall__label waterfall__label--indent">− Voucher extra fee</span>
+    <span class="waterfall__amount">{{ f.shopee_voucher_xtra_fee | vnd }}</span>
+    {% endif %}
+    {% if f.shopee_taxes is not none %}
+    <span class="waterfall__label waterfall__label--indent">− Shopee taxes</span>
+    <span class="waterfall__amount">{{ f.shopee_taxes | vnd }}</span>
+    {% endif %}
+    {% if f.shopee_net_settlement is not none %}
+    <span class="waterfall__label waterfall__label--indent">= Net settlement</span>
+    <span class="waterfall__amount">{{ f.shopee_net_settlement | vnd }}</span>
+    {% endif %}
+    {% endif %}
+
+    {% if not f.has_platform_fees and f.shopee_platform_fees is none %}
+      <span style="grid-column:1/-1">
+        {{ caveat("No platform-fee data available for this order", "info") }}
+      </span>
+    {% endif %}
+
+    <hr class="waterfall__divider">
+
+    <span class="waterfall__label waterfall__label--total">
+      = Channel net profit
+      {% if f.channel_net_margin_pct is not none %}
+        <small style="font-weight:var(--font-weight-normal)">&nbsp;· {{ f.channel_net_margin_pct | pct }}</small>
+      {% endif %}
+    </span>
+    <span class="waterfall__amount" style="font-weight:var(--font-weight-bold)">{{ f.channel_net_profit | vnd }}</span>
+
+  </div>
+
+  {# Returns — reference note only, NOT subtracted from P&L #}
+  {% if f.has_returns %}
+  <div style="margin-top:var(--space-4)">
+    {{ caveat(
+      "Returns: " ~ (f.return_amount | vnd) ~ " · " ~ (f.return_count or 0) ~ " event(s) — reference only, NOT subtracted from this order's P&L",
+      "info"
+    ) }}
+  </div>
+  {% endif %}
+
+</section>

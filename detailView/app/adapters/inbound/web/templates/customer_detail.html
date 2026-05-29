@@ -1,0 +1,175 @@
+{% extends "base.html" %}
+{#
+  Customer detail page — §3, §8.5
+  Layout: 2fr main (tab bar + #tab-panel) | 1fr sidebar (sticky)
+  Value Metrics tab renders inline on first paint; others lazy via HTMX.
+#}
+{% from "macros.html" import badge, badge_row, caveat, flag_chips, kpi_stat %}
+
+{% block title %}{{ customer.profile.full_name or customer.profile.customer_id }} — detailView{% endblock %}
+
+{% block header_context %}
+  Customer · {{ customer.profile.full_name or customer.profile.customer_id }}
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+
+  {# ================================================================ #}
+  {# MAIN — tab bar + lazy HTMX panel (§3.2, §8.5, §8.6)            #}
+  {# ================================================================ #}
+  <section class="detail-main" aria-label="Customer detail tabs">
+
+    <nav role="tablist" aria-label="Customer sections" class="tab-bar">
+      {% for t in tabs %}
+      {% set is_timeline = t.value == "status-timeline" %}
+      {% set timeline_disabled = is_timeline and not customer.timeline_available %}
+      <div class="tab-bar__item" role="presentation">
+        <button
+          role="tab"
+          class="tab-bar__btn"
+          aria-selected="{{ 'true' if t == active_tab else 'false' }}"
+          aria-controls="tab-panel"
+          data-tab="{{ t.value }}"
+          {% if not timeline_disabled %}
+          hx-get="/customers/{{ customer_id }}/tab/{{ t.value }}"
+          hx-target="#tab-panel"
+          hx-swap="innerHTML"
+          hx-push-url="false"
+          hx-indicator="#tab-loading"
+          onclick="activateTab(this)"
+          {% else %}
+          aria-disabled="true"
+          title="Status timeline is available for RETAIL customers only"
+          style="opacity:.5;cursor:not-allowed"
+          {% endif %}
+          {% if t == active_tab %}autofocus{% endif %}>
+          {{ t.value | replace("-", " ") | title }}
+        </button>
+      </div>
+      {% endfor %}
+      <span id="tab-loading" class="htmx-indicator" aria-label="Loading tab" style="align-self:center;margin-left:.5rem">…</span>
+    </nav>
+
+    <div id="tab-panel"
+         role="tabpanel"
+         aria-label="{{ active_tab.value | replace('-',' ') | title }} tab"
+         aria-busy="false"
+         tabindex="0">
+      {# Value Metrics renders immediately on first paint #}
+      {% include "partials/customer/_value_metrics.html" %}
+    </div>
+
+  </section>
+
+  {# ================================================================ #}
+  {# SIDEBAR — sticky "Customer profile" (§3.1, §8.5)               #}
+  {# ================================================================ #}
+  <aside class="detail-sidebar" aria-label="Customer summary">
+
+    {# Card 1: Identity #}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Customer</p>
+      <p class="entity-name">{{ customer.profile.full_name or "—" }}</p>
+      <p class="entity-id">id {{ customer.profile.customer_id }}</p>
+      {{ badge_row(customer.identity_badges()) }}
+    </div>
+
+    {# Card 2: Headline KPIs — LTV (hero), orders, AOV, recency #}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Headline KPIs</p>
+      <div class="kpi-grid">
+        {{ kpi_stat("LTV", customer.value_metrics.lifetime_value | vnd, hero=True) }}
+        {{ kpi_stat("Orders", customer.value_metrics.total_orders_count or "—") }}
+        {{ kpi_stat("AOV", customer.value_metrics.aov | vnd if customer.value_metrics.aov else "—") }}
+        {{ kpi_stat("Recency", (customer.behavior.recency_days ~ " d") if customer.behavior.recency_days is not none else "—") }}
+      </div>
+    </div>
+
+    {# Card 3: Contact & geo #}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Contact &amp; location</p>
+      <dl class="quick-facts">
+        {% if customer.profile.phone %}
+        <dt>Phone</dt><dd>{{ customer.profile.phone }}</dd>
+        {% endif %}
+        {% if customer.profile.email %}
+        <dt>Email</dt><dd>{{ customer.profile.email }}</dd>
+        {% endif %}
+        {% if customer.profile.address1 %}
+        <dt>Address</dt><dd>{{ customer.profile.address1 }}</dd>
+        {% endif %}
+        {% if customer.profile.ward or customer.profile.district %}
+        <dt>Ward/District</dt>
+        <dd>{{ [customer.profile.ward, customer.profile.district] | select | join(", ") }}</dd>
+        {% endif %}
+        {% if customer.profile.province %}
+        <dt>Province</dt><dd>{{ customer.profile.province }}</dd>
+        {% endif %}
+        {% if customer.profile.country %}
+        <dt>Country</dt><dd>{{ customer.profile.country }}</dd>
+        {% endif %}
+        {% if customer.profile.geo_region %}
+        <dt>Region</dt><dd>{{ customer.profile.geo_region }}</dd>
+        {% endif %}
+        {% if customer.profile.loyalty_point is not none %}
+        <dt>Loyalty pts</dt><dd>{{ customer.profile.loyalty_point }}</dd>
+        {% endif %}
+        {% if customer.profile.dob %}
+        <dt>DoB</dt><dd>{{ customer.profile.dob | dateonly }}</dd>
+        {% endif %}
+        {% if customer.profile.sex %}
+        <dt>Sex</dt><dd>{{ customer.profile.sex }}</dd>
+        {% endif %}
+      </dl>
+    </div>
+
+    {# Card 4: Dates & tenure #}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Dates</p>
+      <dl class="quick-facts">
+        {% if customer.behavior.first_order_date %}
+        <dt>First order</dt><dd>{{ customer.behavior.first_order_date | dateonly }}</dd>
+        {% endif %}
+        {% if customer.behavior.last_order_date %}
+        <dt>Last order</dt><dd>{{ customer.behavior.last_order_date | dateonly }}</dd>
+        {% endif %}
+        {% if customer.behavior.lifespan_days is not none %}
+        <dt>Tenure</dt><dd>{{ customer.behavior.lifespan_days }} d</dd>
+        {% endif %}
+        {% if customer.profile.created_at %}
+        <dt>Account created</dt><dd>{{ customer.profile.created_at | dt }}</dd>
+        {% endif %}
+      </dl>
+    </div>
+
+    {# Caveats: acquisition unknown + sync nightly #}
+    <div class="sidebar-card">
+      {{ caveat("Acquisition source not tracked", "info") }}
+      {{ caveat("Profile syncs nightly — not real-time", "info") }}
+      {% if not customer.is_retail %}
+        {{ caveat("Status timeline available for RETAIL customers only", "info") }}
+      {% endif %}
+    </div>
+
+  </aside>
+
+</div>{# /detail-grid #}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function activateTab(btn) {
+    document.querySelectorAll('[role="tab"]').forEach(function(t) {
+      t.setAttribute('aria-selected', 'false');
+    });
+    btn.setAttribute('aria-selected', 'true');
+    var panel = document.getElementById('tab-panel');
+    if (panel) panel.setAttribute('aria-busy', 'true');
+    panel.addEventListener('htmx:afterSwap', function once() {
+      panel.setAttribute('aria-busy', 'false');
+      panel.removeEventListener('htmx:afterSwap', once);
+    });
+  }
+</script>
+{% endblock %}

@@ -1,0 +1,255 @@
+/*
+ * tokens.css — Design tokens for detailView
+ * ==========================================
+ * Mood: "ops console" — dense, scannable, high data-legibility.
+ * Calm, professional. Light theme primary; dark-mode token overrides via
+ * prefers-color-scheme: dark. All values consumed via var() in app.css.
+ *
+ * Token taxonomy:
+ *   --color-*          raw palette
+ *   --surface-*        semantic surfaces
+ *   --text-*           semantic text roles
+ *   --border-*         border colors
+ *   --accent-*         brand accent (single hue — indigo)
+ *   --tone-*           status/signal tones (good/warn/bad/info/neutral)
+ *   --radius-*         border radii
+ *   --shadow-*         box shadows
+ *   --space-*          spacing scale (4-pt grid)
+ *   --font-*           type scale & stacks
+ *   --z-*              z-index ladder
+ *   --layout-*         layout constants
+ */
+
+/* ============================================================
+   LIGHT THEME (default)
+   ============================================================ */
+:root {
+
+  /* ---- Raw neutrals (cool-gray palette) ---- */
+  --color-gray-0:   #ffffff;
+  --color-gray-25:  #fafafa;
+  --color-gray-50:  #f5f5f7;
+  --color-gray-100: #ebebed;
+  --color-gray-150: #e0e0e4;
+  --color-gray-200: #d4d4d9;
+  --color-gray-300: #b8b8bf;
+  --color-gray-400: #8e8e96;
+  --color-gray-500: #6b6b73;
+  --color-gray-600: #4c4c55;
+  --color-gray-700: #36363e;
+  --color-gray-800: #242428;
+  --color-gray-900: #141417;
+
+  /* ---- Brand accent — indigo (calm, professional) ---- */
+  --color-accent-50:  #eef2ff;
+  --color-accent-100: #e0e7ff;
+  --color-accent-200: #c7d2fe;
+  --color-accent-400: #818cf8;
+  --color-accent-500: #6366f1;  /* primary accent */
+  --color-accent-600: #4f46e5;
+  --color-accent-700: #4338ca;
+  --color-accent-800: #3730a3;
+
+  /* ---- Semantic surfaces ---- */
+  --surface-page:       var(--color-gray-50);
+  --surface-base:       var(--color-gray-0);
+  --surface-raised:     var(--color-gray-0);
+  --surface-sunken:     var(--color-gray-50);
+  --surface-overlay:    var(--color-gray-0);
+  --surface-header:     var(--color-gray-0);
+  --surface-hover:      var(--color-gray-50);
+  --surface-active:     var(--color-accent-50);
+
+  /* ---- Semantic text ---- */
+  --text-primary:    var(--color-gray-800);
+  --text-secondary:  var(--color-gray-500);
+  --text-muted:      var(--color-gray-400);
+  --text-link:       var(--color-accent-600);
+  --text-link-hover: var(--color-accent-700);
+  --text-on-accent:  var(--color-gray-0);
+  --text-code:       var(--color-gray-700);
+
+  /* ---- Borders ---- */
+  --border-default: var(--color-gray-200);
+  --border-subtle:  var(--color-gray-150);
+  --border-strong:  var(--color-gray-300);
+  --border-focus:   var(--color-accent-500);
+
+  /* ---- Tone: good (green — completed, active, paid) ---- */
+  --tone-good-bg:       #dcfce7;
+  --tone-good-fg:       #166534;
+  --tone-good-border:   #86efac;
+  --tone-good-bg-dim:   #f0fdf4;
+
+  /* ---- Tone: warn (amber — at-risk, unverified, partial) ---- */
+  --tone-warn-bg:       #fef9c3;
+  --tone-warn-fg:       #854d0e;
+  --tone-warn-border:   #fde047;
+  --tone-warn-bg-dim:   #fefce8;
+
+  /* ---- Tone: bad (red — cancelled, churned, missing) ---- */
+  --tone-bad-bg:        #fee2e2;
+  --tone-bad-fg:        #991b1b;
+  --tone-bad-border:    #fca5a5;
+  --tone-bad-bg-dim:    #fff1f2;
+
+  /* ---- Tone: info (sky-blue — informational caveats) ---- */
+  --tone-info-bg:       #e0f2fe;
+  --tone-info-fg:       #075985;
+  --tone-info-border:   #7dd3fc;
+  --tone-info-bg-dim:   #f0f9ff;
+
+  /* ---- Tone: neutral (gray — unknown / unset / secondary) ---- */
+  --tone-neutral-bg:    var(--color-gray-100);
+  --tone-neutral-fg:    var(--color-gray-600);
+  --tone-neutral-border:var(--color-gray-300);
+
+  /* ---- Tone: accent (indigo — US CrossBorder, special) ---- */
+  --tone-accent-bg:     var(--color-accent-100);
+  --tone-accent-fg:     var(--color-accent-700);
+  --tone-accent-border: var(--color-accent-200);
+
+  /* ---- Radii ---- */
+  --radius-xs:  2px;
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  10px;
+  --radius-xl:  14px;
+  --radius-full:9999px;
+
+  /* ---- Shadows ---- */
+  --shadow-xs:  0 1px 2px rgba(0,0,0,.06);
+  --shadow-sm:  0 1px 4px rgba(0,0,0,.08), 0 0 1px rgba(0,0,0,.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,.10), 0 0 1px rgba(0,0,0,.06);
+  --shadow-lg:  0 8px 24px rgba(0,0,0,.12), 0 0 1px rgba(0,0,0,.06);
+  --shadow-header: 0 1px 0 var(--border-default), 0 2px 8px rgba(0,0,0,.06);
+
+  /* ---- Spacing scale (4-pt grid) ---- */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* ---- Type scale (major third, 1.25) ---- */
+  --font-stack:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", "Cascadia Code", "Fira Code", ui-monospace,
+    "SF Mono", Menlo, Consolas, monospace;
+
+  --font-size-2xs: 0.625rem;   /* 10px — strip labels */
+  --font-size-xs:  0.6875rem;  /* 11px — badge, meta */
+  --font-size-sm:  0.75rem;    /* 12px — captions, labels */
+  --font-size-md:  0.8125rem;  /* 13px — body data (dense table) */
+  --font-size-base:0.875rem;   /* 14px — default body */
+  --font-size-lg:  1rem;       /* 16px — kpi values, headings */
+  --font-size-xl:  1.125rem;   /* 18px — entity names */
+  --font-size-2xl: 1.375rem;   /* 22px — hero KPI */
+  --font-size-3xl: 1.75rem;    /* 28px — home hero title */
+
+  --line-height-tight:  1.3;
+  --line-height-normal: 1.5;
+  --line-height-loose:  1.65;
+
+  --font-weight-normal:   400;
+  --font-weight-medium:   500;
+  --font-weight-semibold: 600;
+  --font-weight-bold:     700;
+
+  /* ---- Z-index ladder ---- */
+  --z-base:    1;
+  --z-above:   10;
+  --z-header:  100;
+  --z-dropdown:200;
+  --z-overlay: 300;
+
+  /* ---- Layout constants ---- */
+  --header-height:      56px;
+  --content-max-width:  1300px;
+  --sidebar-min-width:  280px;
+  --grid-gap:           20px;
+  --sidebar-width:      1fr;
+  --main-width:         2fr;
+  --panel-padding:      20px;
+  --card-padding:       14px;
+
+  /* ---- Motion ---- */
+  --duration-fast:   100ms;
+  --duration-normal: 180ms;
+  --ease-out:        cubic-bezier(0.25, 0, 0.1, 1);
+}
+
+
+/* ============================================================
+   DARK THEME — token overrides only
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Surfaces */
+    --surface-page:       #0f0f13;
+    --surface-base:       #1a1a21;
+    --surface-raised:     #22222c;
+    --surface-sunken:     #141419;
+    --surface-overlay:    #22222c;
+    --surface-header:     #1a1a21;
+    --surface-hover:      #252530;
+    --surface-active:     #1e1e3a;
+
+    /* Text */
+    --text-primary:    #e8e8ed;
+    --text-secondary:  #9898a6;
+    --text-muted:      #6a6a78;
+    --text-link:       var(--color-accent-400);
+    --text-link-hover: #a5b4fc;
+    --text-code:       #c4c4d4;
+
+    /* Borders */
+    --border-default: #2e2e3c;
+    --border-subtle:  #252530;
+    --border-strong:  #3c3c4e;
+    --border-focus:   var(--color-accent-400);
+
+    /* Tones — darkened backgrounds, lightened text */
+    --tone-good-bg:       #14532d;
+    --tone-good-fg:       #86efac;
+    --tone-good-border:   #166534;
+    --tone-good-bg-dim:   #052e16;
+
+    --tone-warn-bg:       #713f12;
+    --tone-warn-fg:       #fde047;
+    --tone-warn-border:   #854d0e;
+    --tone-warn-bg-dim:   #422006;
+
+    --tone-bad-bg:        #7f1d1d;
+    --tone-bad-fg:        #fca5a5;
+    --tone-bad-border:    #991b1b;
+    --tone-bad-bg-dim:    #450a0a;
+
+    --tone-info-bg:       #0c4a6e;
+    --tone-info-fg:       #7dd3fc;
+    --tone-info-border:   #075985;
+    --tone-info-bg-dim:   #082f49;
+
+    --tone-neutral-bg:    #252530;
+    --tone-neutral-fg:    #a8a8b8;
+    --tone-neutral-border:#3c3c4e;
+
+    --tone-accent-bg:     #1e1e3a;
+    --tone-accent-fg:     #a5b4fc;
+    --tone-accent-border: #3730a3;
+
+    /* Shadows */
+    --shadow-xs:  0 1px 2px rgba(0,0,0,.3);
+    --shadow-sm:  0 1px 4px rgba(0,0,0,.4), 0 0 1px rgba(0,0,0,.2);
+    --shadow-md:  0 4px 12px rgba(0,0,0,.5), 0 0 1px rgba(0,0,0,.3);
+    --shadow-lg:  0 8px 24px rgba(0,0,0,.6), 0 0 1px rgba(0,0,0,.3);
+    --shadow-header: 0 1px 0 var(--border-default), 0 2px 8px rgba(0,0,0,.4);
+  }
+}

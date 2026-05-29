@@ -1,0 +1,80 @@
+{#
+  Order > Returns tab — §2.2, §8.4
+  Source: fact_order_returns
+  Per event: return_date (ICT), refund_amount, return_quantity,
+             return_status, refund_status, return_reason.
+  Totals at footer. Empty state if no returns.
+#}
+{% from "macros.html" import badge, caveat %}
+{% set rets = order.returns %}
+
+<section aria-label="Return events">
+  {% if not rets %}
+  <div class="empty-state">
+    <p class="empty-state__icon" aria-hidden="true">&#10003;</p>
+    <p class="empty-state__title">No returns</p>
+    <p class="empty-state__body">No return events recorded for this order.</p>
+  </div>
+  {% else %}
+
+  {{ caveat("Return amounts are shown for reference only — they are NOT subtracted from this order's P&L.", "info") }}
+
+  <div class="table-scroll" style="margin-top:var(--space-3)">
+    <table class="data-table" aria-label="Return events">
+      <thead>
+        <tr>
+          <th scope="col">Return date</th>
+          <th scope="col" class="num">Refund amount</th>
+          <th scope="col" class="num">Qty returned</th>
+          <th scope="col">Return status</th>
+          <th scope="col">Refund status</th>
+          <th scope="col">Reason</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rets %}
+        <tr>
+          <td>{{ r.return_date | dt }}</td>
+          <td class="num">{{ r.refund_amount | vnd }}</td>
+          <td class="num">{{ r.return_quantity or "—" }}</td>
+          <td>
+            {% if r.return_status %}
+              {{ badge(r.return_status, "neutral", "return_status") }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if r.refund_status %}
+              {% set rtone = "good" if r.refund_status | upper in ("REFUNDED","COMPLETED") else
+                             "warn" if r.refund_status | upper in ("PENDING","PROCESSING") else "neutral" %}
+              {{ badge(r.refund_status, rtone, "refund_status") }}
+            {% else %}—{% endif %}
+          </td>
+          <td>{{ r.return_reason or "—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td><strong>Total</strong></td>
+          <td class="num">
+            {% set total = namespace(val=0) %}
+            {% for r in rets %}
+              {% if r.refund_amount is not none %}{% set total.val = total.val + r.refund_amount %}{% endif %}
+            {% endfor %}
+            <strong>{{ total.val | vnd }}</strong>
+          </td>
+          <td class="num">
+            {% set qty = namespace(val=0) %}
+            {% for r in rets %}
+              {% if r.return_quantity is not none %}{% set qty.val = qty.val + r.return_quantity %}{% endif %}
+            {% endfor %}
+            <strong>{{ qty.val }}</strong>
+          </td>
+          <td colspan="3"></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+
+  {% endif %}
+</section>

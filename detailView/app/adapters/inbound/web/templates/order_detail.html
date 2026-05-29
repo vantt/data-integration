@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{#
+  Order detail page — §2, §8.3
+  Layout: 2fr main (tab bar + #tab-panel) | 1fr sidebar (sticky)
+  Financial tab renders inline on first paint; other tabs lazy via HTMX.
+#}
+{% from "macros.html" import badge, badge_row, caveat, flag_chips, kpi_stat, waterfall_row %}
+
+{% block title %}Order {{ order.header.order_code }} — detailView{% endblock %}
+
+{% block header_context %}
+  Order {{ order.header.order_code }}
+{% endblock %}
+
+{% block content %}
+<div class="detail-grid">
+
+  {# ================================================================ #}
+  {# MAIN — tab bar + lazy HTMX panel (§2.2, §8.3, §8.4)            #}
+  {# ================================================================ #}
+  <section class="detail-main" aria-label="Order detail tabs">
+
+    {# Tab bar — role=tablist, each button role=tab #}
+    <nav role="tablist" aria-label="Order sections" class="tab-bar">
+      {% for t in tabs %}
+      <div class="tab-bar__item" role="presentation">
+        <button
+          role="tab"
+          class="tab-bar__btn"
+          aria-selected="{{ 'true' if t == active_tab else 'false' }}"
+          aria-controls="tab-panel"
+          data-tab="{{ t.value }}"
+          hx-get="/orders/{{ order_code }}/tab/{{ t.value }}"
+          hx-target="#tab-panel"
+          hx-swap="innerHTML"
+          hx-push-url="false"
+          hx-indicator="#tab-loading"
+          onclick="activateTab(this)"
+          {% if t == active_tab %}autofocus{% endif %}>
+          {{ t.value | replace("-", " ") | title }}
+        </button>
+      </div>
+      {% endfor %}
+      <span id="tab-loading" class="htmx-indicator" aria-label="Loading tab" style="align-self:center;margin-left:.5rem">…</span>
+    </nav>
+
+    {# Tab panel — HTMX swap target #}
+    <div id="tab-panel"
+         role="tabpanel"
+         aria-label="{{ active_tab.value | replace('-',' ') | title }} tab"
+         aria-busy="false"
+         tabindex="0">
+      {# Financial tab renders immediately on first paint — no round trip #}
+      {% include "partials/order/_financial.html" %}
+    </div>
+
+  </section>
+
+  {# ================================================================ #}
+  {# SIDEBAR — sticky "Order at a glance" (§2.1, §8.3)              #}
+  {# ================================================================ #}
+  <aside class="detail-sidebar" aria-label="Order summary">
+
+    {# Card 1: Identity #}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Order</p>
+      <p class="entity-name">{{ order.header.order_code }}</p>
+      {% if order.header.order_id %}
+      <p class="entity-id">id {{ order.header.order_id }}</p>
+      {% endif %}
+      {{ badge_row(order.status_badges()) }}
+    </div>
+
+    {# Card 2: Money headline #}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Money</p>
+      <dl class="quick-facts">
+
+        <dt>{{ "US Revenue (incl. VAT)" if order.financial.is_us else "Effective revenue" }}</dt>
+        <dd>{{ order.financial.effective_revenue | vnd }}
+          {% if order.financial.is_us %}{{ badge("US CrossBorder", "neutral", "us") }}{% endif %}
+        </dd>
+
+        <dt>Gross profit</dt>
+        <dd>{{ order.financial.gross_profit | vnd }}
+          {% if order.financial.gross_margin_pct is not none %}
+            <small>({{ order.financial.gross_margin_pct | pct }})</small>
+          {% endif %}
+          {% if not order.financial.margin_is_verified %}
+            {{ badge("unverified", "warn", "margin") }}
+          {% endif %}
+        </dd>
+
+        <dt>Channel net profit</dt>
+        <dd>{{ order.financial.channel_net_profit | vnd }}
+          {% if order.financial.channel_net_margin_pct is not none %}
+            <small>({{ order.financial.channel_net_margin_pct | pct }})</small>
+          {% endif %}
+        </dd>
+
+      </dl>
+    </div>
+
+    {# Card 3: Customer mini-card (links to customer page) #}
+    {% if order.customer.customer_id %}
+    <a href="/customers/{{ order.customer.customer_id }}"
+       class="sidebar-card sidebar-card--link"
+       aria-label="View customer {{ order.customer.full_name or order.customer.customer_id }}">
+      <p class="sidebar-card__heading">Customer &#8594;</p>
+      <p class="entity-name">{{ order.customer.full_name or "—" }}</p>
+      <div class="badge-row">
+        {% if order.customer.customer_type %}
+          {{ badge(order.customer.customer_type, "neutral", "customer_type") }}
+        {% endif %}
+        {% if order.customer.value_group %}
+          {{ badge(order.customer.value_group, "good", "value") }}
+        {% endif %}
+      </div>
+      <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin-top:var(--space-2)">
+        LTV <span class="money">{{ order.customer.lifetime_value | vnd }}</span>
+      </p>
+    </a>
+    {% endif %}
+
+    {# Card 4: Quick facts #}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Quick facts</p>
+      <dl class="quick-facts">
+        {% if order.channel.channel_name %}
+        <dt>Channel</dt><dd>{{ order.channel.channel_name }}</dd>
+        {% endif %}
+        {% if order.staff.seller_name %}
+        <dt>Seller</dt><dd>{{ order.staff.seller_name }}</dd>
+        {% endif %}
+        {% if order.staff.branch_name %}
+        <dt>Branch</dt><dd>{{ order.staff.branch_name }}</dd>
+        {% endif %}
+        {% if order.header.created_at %}
+        <dt>Created</dt><dd>{{ order.header.created_at | dt }}</dd>
+        {% endif %}
+        {% if order.header.first_shipped_at %}
+        <dt>Shipped</dt><dd>{{ order.header.first_shipped_at | dt }}</dd>
+        {% endif %}
+        {% if order.financial.carrier_id %}
+        <dt>Carrier</dt><dd>{{ order.financial.carrier_id }}</dd>
+        {% endif %}
+        {% if order.financial.cod_amount %}
+        <dt>COD</dt><dd>{{ order.financial.cod_amount | vnd }}</dd>
+        {% endif %}
+      </dl>
+    </div>
+
+    {# Card 5: Data-quality flags #}
+    {% set flags = order.quality_flags() %}
+    {% if flags %}
+    <div class="sidebar-card">
+      <p class="sidebar-card__heading">Data quality</p>
+      {{ flag_chips(flags) }}
+    </div>
+    {% endif %}
+
+  </aside>
+
+</div>{# /detail-grid #}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Highlight the active tab button and set aria-selected
+  function activateTab(btn) {
+    document.querySelectorAll('[role="tab"]').forEach(function(t) {
+      t.setAttribute('aria-selected', 'false');
+    });
+    btn.setAttribute('aria-selected', 'true');
+    // Set aria-busy on panel while HTMX fetches
+    var panel = document.getElementById('tab-panel');
+    if (panel) panel.setAttribute('aria-busy', 'true');
+    document.getElementById('tab-panel').addEventListener('htmx:afterSwap', function once() {
+      panel.setAttribute('aria-busy', 'false');
+      panel.removeEventListener('htmx:afterSwap', once);
+    });
+  }
+</script>
+{% endblock %}

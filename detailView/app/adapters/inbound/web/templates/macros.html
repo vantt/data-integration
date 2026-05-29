@@ -1,0 +1,99 @@
+{#
+  macros.html — reusable Jinja2 macros imported by all templates.
+
+  Usage in any template:
+    {% from "macros.html" import badge, caveat, kpi_stat, money_cell %}
+
+  Macros:
+    badge(label, tone, kind)        — Badge chip (text always present; color is not sole signal)
+    caveat(label, severity)         — Inline data-quality callout (info / warn)
+    kpi_stat(label, value, sub)     — Stat box: label / big-value / optional sub
+    money_cell(amount)              — <td> with right-aligned VND or em-dash
+    flag_chips(flags)               — Row of caveat chips from list[DataQualityFlag]
+    badge_row(badges)               — Row of badge chips from list[Badge]
+#}
+
+{# ------------------------------------------------------------------ #}
+{# badge — renders a single Badge chip                                  #}
+{# tone: neutral | good | warn | bad                                    #}
+{# ------------------------------------------------------------------ #}
+{% macro badge(label, tone="neutral", kind="") %}
+<span class="badge badge--{{ tone }}"
+      data-kind="{{ kind }}"
+      role="status"
+      aria-label="{{ kind }}: {{ label }}">{{ label }}</span>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# badge_row — renders a list of Badge domain objects                  #}
+{# ------------------------------------------------------------------ #}
+{% macro badge_row(badges) %}
+{% if badges %}
+<div class="badge-row">
+  {% for b in badges %}
+  {{ badge(b.label, b.tone.value, b.kind) }}
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# caveat — inline data-quality callout                                #}
+{# severity: "info" | "warn"                                           #}
+{# ------------------------------------------------------------------ #}
+{% macro caveat(label, severity="info") %}
+<div class="caveat caveat--{{ severity }}" role="note">
+  <span class="caveat__icon" aria-hidden="true">{% if severity == "warn" %}⚠{% else %}ⓘ{% endif %}</span>
+  <span>{{ label }}</span>
+</div>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# flag_chips — renders a list of DataQualityFlag domain objects       #}
+{# ------------------------------------------------------------------ #}
+{% macro flag_chips(flags) %}
+{% if flags %}
+<div class="flag-row">
+  {% for f in flags %}
+  {{ caveat(f.label, f.severity) }}
+  {% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# kpi_stat — label / big-value / optional sub text                   #}
+{# hero: bool — applies larger value font                              #}
+{# ------------------------------------------------------------------ #}
+{% macro kpi_stat(label, value, sub=None, hero=False) %}
+<div class="kpi-stat">
+  <span class="kpi-stat__label">{{ label }}</span>
+  <span class="kpi-stat__value{% if hero %} kpi-stat__value--hero{% endif %}">{{ value }}</span>
+  {% if sub is not none and sub != "" %}
+  <span class="kpi-stat__sub">{{ sub }}</span>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# money_cell — <td> with right-aligned VND amount                    #}
+{# Expects amount already passed through |vnd filter at call site,    #}
+{# or pass the raw value and let the macro apply it.                  #}
+{# ------------------------------------------------------------------ #}
+{% macro money_cell(amount) %}
+<td class="num">{{ amount | vnd }}</td>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# waterfall_row — one row in a revenue waterfall                     #}
+{# prefix: "−" / "+" / "=" / "" for visual sign                      #}
+{# ------------------------------------------------------------------ #}
+{% macro waterfall_row(label, amount, prefix="", indent=False, total=False, section=False) %}
+<span class="waterfall__label
+  {%- if indent %} waterfall__label--indent{% endif %}
+  {%- if total %}  waterfall__label--total{% endif %}
+  {%- if section %} waterfall__label--section{% endif %}">
+  {% if prefix %}<span aria-hidden="true">{{ prefix }}&nbsp;</span>{% endif %}{{ label }}
+</span>
+<span class="waterfall__amount">{{ amount | vnd }}</span>
+{% endmacro %}

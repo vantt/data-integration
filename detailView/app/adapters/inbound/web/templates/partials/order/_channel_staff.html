@@ -1,0 +1,92 @@
+{#
+  Order > Channel & Staff tab — §2.2, §8.4
+  Source: dim_channels, dim_promotions, discount_codes, dim_staff, dim_branches
+  Channel: name/code/category/format/platform/brand/market,
+           promo code(s), max_discount_rate, primary_discount_nature.
+  Staff: seller (primary), creator, team, branch.
+#}
+{% from "macros.html" import badge %}
+{% set ch = order.channel %}
+{% set st = order.staff %}
+
+<section aria-label="Channel and staff">
+
+  <h2 class="panel-heading">Channel</h2>
+  <dl class="quick-facts" style="max-width:480px;margin-bottom:var(--space-5)">
+
+    {% if ch.channel_name %}
+    <dt>Name</dt><dd>{{ ch.channel_name }}</dd>
+    {% endif %}
+
+    {% if ch.channel_code %}
+    <dt>Code</dt><dd><code>{{ ch.channel_code }}</code></dd>
+    {% endif %}
+
+    {% if ch.channel_category %}
+    <dt>Category</dt><dd>{{ ch.channel_category }}</dd>
+    {% endif %}
+
+    {% if ch.channel_format %}
+    <dt>Format</dt><dd>{{ ch.channel_format }}</dd>
+    {% endif %}
+
+    {% if ch.platform %}
+    <dt>Platform</dt><dd>{{ ch.platform }}</dd>
+    {% endif %}
+
+    {% if ch.channel_brand %}
+    <dt>Brand</dt><dd>{{ ch.channel_brand }}</dd>
+    {% endif %}
+
+    {% if ch.market %}
+    <dt>Market</dt>
+    <dd>
+      {% set mktone = "neutral" if ch.market == "Domestic" else "warn" %}
+      {{ badge(ch.market, mktone, "market") }}
+    </dd>
+    {% endif %}
+
+    {% if ch.promotion_code %}
+    <dt>Promo code</dt><dd><code>{{ ch.promotion_code }}</code></dd>
+    {% endif %}
+
+    {% if ch.max_discount_rate is not none %}
+    <dt>Max discount</dt><dd>{{ ch.max_discount_rate | pct }}</dd>
+    {% endif %}
+
+    {% if ch.primary_discount_nature %}
+    <dt>Discount nature</dt><dd>{{ ch.primary_discount_nature }}</dd>
+    {% endif %}
+
+  </dl>
+
+  <h2 class="panel-heading">Staff</h2>
+  <dl class="quick-facts" style="max-width:480px">
+
+    {% if st.seller_name %}
+    <dt>Seller (primary)</dt>
+    <dd>
+      {{ st.seller_name }}
+      {% if st.seller_email %}<small style="color:var(--text-muted)">&lt;{{ st.seller_email }}&gt;</small>{% endif %}
+    </dd>
+    {% endif %}
+
+    {% if st.creator_name %}
+    <dt>Creator</dt><dd>{{ st.creator_name }}</dd>
+    {% endif %}
+
+    {% if st.team_name %}
+    <dt>Team</dt><dd>{{ st.team_name }}</dd>
+    {% endif %}
+
+    {% if st.branch_name %}
+    <dt>Branch</dt><dd>{{ st.branch_name }}</dd>
+    {% endif %}
+
+  </dl>
+
+  {% if not ch.channel_name and not st.seller_name %}
+  <p style="color:var(--text-secondary);font-size:var(--font-size-base)">No channel or staff data available.</p>
+  {% endif %}
+
+</section>

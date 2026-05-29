@@ -1,0 +1,78 @@
+{#
+  Customer > Behavior (RFM / segmentation) tab — §3.2, §8.6
+  Source: dim_customers
+  RFM trio: Recency (recency_days), Frequency (total_orders_count),
+            Monetary (lifetime_value).
+  Segmentation chips: lifecycle_stage, channel_preference, product_affinity,
+                      payment_behavior, geo_region, customer_type.
+  Cohort month (= trunc(first_order_date)).
+#}
+{% from "macros.html" import kpi_stat, badge %}
+{% set beh = customer.behavior %}
+{% set vm  = customer.value_metrics %}
+
+<section aria-label="Behavior and RFM segmentation">
+
+  {# RFM trio #}
+  <h2 class="panel-heading">RFM</h2>
+  <div class="kpi-grid kpi-grid--3up" style="margin-bottom:var(--space-5)"
+       aria-label="RFM metrics">
+    {{ kpi_stat(
+        "R — Recency",
+        (beh.recency_days ~ " days") if beh.recency_days is not none else "—",
+        sub="days since last order"
+    ) }}
+    {{ kpi_stat(
+        "F — Frequency",
+        beh.frequency or vm.total_orders_count or "—",
+        sub="total orders"
+    ) }}
+    {{ kpi_stat(
+        "M — Monetary",
+        beh.monetary | vnd if beh.monetary is not none else (vm.lifetime_value | vnd),
+        sub="lifetime value"
+    ) }}
+  </div>
+
+  {# Segmentation chips #}
+  <h2 class="panel-heading">Segmentation</h2>
+  <div class="badge-row" style="margin-bottom:var(--space-4)" aria-label="Segmentation labels">
+    {% if beh.lifecycle_stage %}
+      {% set ltone = {"LIFECYCLE_ACTIVE":"good","LIFECYCLE_NEW":"good",
+                      "LIFECYCLE_AT_RISK":"warn","LIFECYCLE_CHURNED":"bad"} %}
+      {{ badge(beh.lifecycle_stage, ltone.get(beh.lifecycle_stage, "neutral"), "lifecycle") }}
+    {% endif %}
+    {% if beh.channel_preference %}
+      {{ badge(beh.channel_preference, "neutral", "channel_pref") }}
+    {% endif %}
+    {% if beh.product_affinity %}
+      {{ badge(beh.product_affinity, "neutral", "product_affinity") }}
+    {% endif %}
+    {% if beh.payment_behavior %}
+      {{ badge(beh.payment_behavior, "neutral", "payment_behavior") }}
+    {% endif %}
+    {% if beh.geo_region %}
+      {{ badge(beh.geo_region, "neutral", "geo_region") }}
+    {% endif %}
+    {% if beh.customer_type %}
+      {{ badge(beh.customer_type, "neutral", "customer_type") }}
+    {% endif %}
+  </div>
+
+  {# Dates + cohort #}
+  <dl class="quick-facts" style="max-width:380px">
+    {% if beh.first_order_date %}
+    <dt>First order</dt><dd>{{ beh.first_order_date | dt }}</dd>
+    {% endif %}
+    {% if beh.last_order_date %}
+    <dt>Last order</dt><dd>{{ beh.last_order_date | dt }}</dd>
+    {% endif %}
+    {% if beh.lifespan_days is not none %}
+    <dt>Lifespan</dt><dd>{{ beh.lifespan_days }} days</dd>
+    {% endif %}
+    {% if beh.cohort_month %}
+    <dt>Cohort month</dt><dd>{{ beh.cohort_month }}</dd>
+    {% endif %}
+  </dl>
+
+</section>
