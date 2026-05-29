@@ -340,6 +340,34 @@ WHERE e.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
 { "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
 ```
 
+#### ❓ Question: SKU chua co gia (hom nay)
+
+```sql
+SELECT
+    l.sku                              AS "SKU",
+    COUNT(DISTINCT l.order_id)         AS "So don",
+    SUM(l.quantity)                    AS "So luong"
+FROM int_us_shipment_line_prices l
+WHERE l.is_price_missing = TRUE
+  AND l.date_key = CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+GROUP BY l.sku
+ORDER BY COUNT(DISTINCT l.order_id) DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "card.title": "SKU chưa có giá — cần bổ sung vào price list"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 35, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
 ---
 
 
@@ -681,6 +709,35 @@ WHERE e.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS
 { "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
 ```
 
+#### ❓ Question: SKU chua co gia (tuan nay)
+
+```sql
+SELECT
+    l.sku                              AS "SKU",
+    COUNT(DISTINCT l.order_id)         AS "So don",
+    SUM(l.quantity)                    AS "So luong"
+FROM int_us_shipment_line_prices l
+WHERE l.is_price_missing = TRUE
+  AND l.date_key >= CAST(STRFTIME(date_trunc('week', current_date), '%Y%m%d') AS INTEGER)
+  AND l.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+GROUP BY l.sku
+ORDER BY COUNT(DISTINCT l.order_id) DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "card.title": "SKU chưa có giá — cần bổ sung vào price list"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 35, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
 ---
 
 
@@ -1020,6 +1077,83 @@ WHERE e.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') A
 
 ```json metabase-pos
 { "row": 32, "col": 0, "size_x": 9, "size_y": 3 }
+```
+
+#### ❓ Question: SKU chua co gia (thang nay)
+
+```sql
+SELECT
+    l.sku                              AS "SKU",
+    COUNT(DISTINCT l.order_id)         AS "So don",
+    SUM(l.quantity)                    AS "So luong"
+FROM int_us_shipment_line_prices l
+WHERE l.is_price_missing = TRUE
+  AND l.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
+  AND l.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+GROUP BY l.sku
+ORDER BY COUNT(DISTINCT l.order_id) DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "card.title": "SKU chưa có giá — cần bổ sung vào price list"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 35, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### 📝 Text: Top san pham US thang nay
+
+# Top sản phẩm US tháng này
+
+```json metabase-pos
+{ "row": 42, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Top 10 SKU theo doanh thu US (thang nay)
+
+```sql
+SELECT
+    l.sku                              AS "SKU",
+    SUM(l.line_revenue_excl_vat)       AS "Doanh thu US",
+    SUM(l.quantity)                    AS "So luong",
+    COUNT(DISTINCT l.order_id)         AS "So don"
+FROM int_us_shipment_line_prices l
+WHERE l.is_price_missing = FALSE
+  AND l.date_key >= CAST(STRFTIME(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
+  AND l.date_key <= CAST(STRFTIME(current_date, '%Y%m%d') AS INTEGER)
+GROUP BY l.sku
+ORDER BY SUM(l.line_revenue_excl_vat) DESC
+LIMIT 10
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["SKU"],
+    "graph.metrics": ["Doanh thu US"],
+    "graph.colors": ["#509EE3"],
+    "column_settings": {
+      "Doanh thu US": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 43, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
 #### 📝 Text: Source & Freshness
