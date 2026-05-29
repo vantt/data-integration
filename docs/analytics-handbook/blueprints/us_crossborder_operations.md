@@ -38,10 +38,10 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 ),
@@ -100,10 +100,10 @@ US CrossBorder net revenue this period vs previous period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 ),
@@ -154,10 +154,10 @@ US CrossBorder order count this period vs previous period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 ),
@@ -196,10 +196,10 @@ Average order value for US CrossBorder this period vs previous period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 ),
@@ -254,10 +254,10 @@ Distinct customers ordering via US channel in selected period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 ),
@@ -268,16 +268,16 @@ prev_bounds AS (
     FROM filter_bounds
 ),
 this_period AS (
-    SELECT COUNT(DISTINCT o2.customer_key) AS val
+    SELECT COUNT(DISTINCT fo.customer_key) AS val
     FROM fact_us_shipment_economics e
-    JOIN fact_orders o2 ON e.order_id = o2.order_id, filter_bounds
+    JOIN fact_orders fo ON e.order_id = fo.order_id, filter_bounds
     WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
       AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ),
 prev_period AS (
-    SELECT COUNT(DISTINCT o2.customer_key) AS val
+    SELECT COUNT(DISTINCT fo.customer_key) AS val
     FROM fact_us_shipment_economics e
-    JOIN fact_orders o2 ON e.order_id = o2.order_id, prev_bounds
+    JOIN fact_orders fo ON e.order_id = fo.order_id, prev_bounds
     WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
 )
@@ -306,10 +306,10 @@ Distribution of order statuses for US CrossBorder in selected period.
 
 ```sql
 SELECT
-    o.status AS "Trang thai",
-    COUNT(DISTINCT o.order_id) AS "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    fact_orders.status AS "Trang thai",
+    COUNT(DISTINCT fact_orders.order_id) AS "So don"
+FROM fact_orders
+JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
 WHERE ch.channel_name = 'US'
   [[AND {{date_range}}]]
 GROUP BY 1
@@ -337,10 +337,10 @@ Distribution of fulfillment statuses for US CrossBorder in selected period.
 
 ```sql
 SELECT
-    COALESCE(o.fulfillment_status, 'Unknown') AS "Fulfillment",
-    COUNT(DISTINCT o.order_id) AS "So don"
-FROM fact_orders o
-JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    COALESCE(fact_orders.fulfillment_status, 'Unknown') AS "Fulfillment",
+    COUNT(DISTINCT fact_orders.order_id) AS "So don"
+FROM fact_orders
+JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
 WHERE ch.channel_name = 'US'
   [[AND {{date_range}}]]
 GROUP BY 1
@@ -376,10 +376,10 @@ Daily revenue and order count trend within selected period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 )
@@ -435,10 +435,10 @@ Detailed list of US CrossBorder orders in selected period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o2.order_timestamp)) AS p_start,
-           MAX(date(o2.order_timestamp)) AS p_end
-    FROM fact_orders o2
-    JOIN dim_channels ch2 ON o2.channel_key = ch2.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch2 ON fact_orders.channel_key = ch2.channel_key
     WHERE ch2.channel_name = 'US'
       [[AND {{date_range}}]]
 )
@@ -447,16 +447,16 @@ SELECT
     make_date((e.date_key/10000)::INTEGER, ((e.date_key%10000)/100)::INTEGER, (e.date_key%100)::INTEGER) AS "Ngay",
     COALESCE(c.full_name, 'Unknown') AS "Khach hang",
     e.total_us_revenue_excl_vat AS "Doanh thu US",
-    o.status AS "Trang thai",
-    o.fulfillment_status AS "Fulfillment",
-    o.payment_status AS "Thanh toan",
+    fo.status AS "Trang thai",
+    fo.fulfillment_status AS "Fulfillment",
+    fo.payment_status AS "Thanh toan",
     CASE WHEN e.has_unpriced_sku THEN 'Thieu gia' ELSE '' END AS "Data Quality"
 FROM fact_us_shipment_economics e
-JOIN fact_orders o ON e.order_id = o.order_id
-LEFT JOIN dim_customers c ON o.customer_key = c.customer_key, filter_bounds fb
+JOIN fact_orders fo ON e.order_id = fo.order_id
+LEFT JOIN dim_customers c ON fo.customer_key = c.customer_key, filter_bounds fb
 WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
   AND e.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
-ORDER BY o.order_timestamp DESC
+ORDER BY fo.order_timestamp DESC
 ```
 
 ```json metabase-viz
@@ -484,10 +484,10 @@ So don trong ky co SKU chua co trong price list US.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 )
@@ -511,10 +511,10 @@ WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(o.order_timestamp)) AS p_start,
-           MAX(date(o.order_timestamp)) AS p_end
-    FROM fact_orders o
-    JOIN dim_channels ch ON o.channel_key = ch.channel_key
+    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
+           MAX(date(fact_orders.order_timestamp)) AS p_end
+    FROM fact_orders
+    JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
 )
