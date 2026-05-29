@@ -10,6 +10,8 @@ Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COG
 
 **Description**: Bien loi nhuan gop theo kenh — tong quan, so sanh cross-channel, xu huong MoM, va phan tich san pham anh huong loi nhuan. Danh cho CEO, Finance, Sales Director.
 
+> **⚠️ US CrossBorder excluded** — US CrossBorder orders have no MISA COGS postings (export/arrangement channel). Revenue from this channel now lives in `fact_us_shipment_economics` but gross margin is incalculable without COGS. **Do not add US to this report until MISA covers US orders.** See [US CrossBorder Operations](us_crossborder_operations.md) for US revenue tracking.
+
 ---
 
 #### Filter: Period
@@ -36,6 +38,14 @@ Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COG
 ---
 
 ### 📑 Tab: Channel Overview
+
+#### 📝 Text: Luu y — US CrossBorder bi loai tru
+
+> **US CrossBorder không có trong báo cáo này.** Kênh này không có dữ liệu MISA (đơn xuất khẩu/sắp xếp, không phải bán lẻ nội địa). Doanh thu US thực tế xem tại dashboard **US CrossBorder Operations**.
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+```
 
 #### ❓ Question: Chu kỳ báo cáo
 
@@ -94,7 +104,7 @@ FROM prev_calc
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{ "row": 2, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
 #### 📝 Text: Boi canh mua vu + Caveat Blueprint
@@ -102,7 +112,7 @@ FROM prev_calc
 **Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu); 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** ⚠ Caveat: Blueprint này là candidate for deprecation (audit 2026-05) — overlap với finance_channel_pl. YoY added as quick value trong khi pending consolidation. MISA COGS coverage ~65%.
 
 ```json metabase-pos
-{"row": 2, "col":0, "size_x":18, "size_y":2}
+{"row": 4, "col":0, "size_x":18, "size_y":2}
 ```
 
 #### 📝 Text: Tab Overview Heading
@@ -110,7 +120,7 @@ FROM prev_calc
 ## Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
 
 ```json metabase-pos
-{"row": 4, "col":0, "size_x":18, "size_y":1}
+{"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Gross Margin %
@@ -143,7 +153,7 @@ WHERE NOT is_promo_line
 ```
 
 ```json metabase-pos
-{"row": 5, "col":0, "size_x":6, "size_y":4}
+{"row": 7, "col":0, "size_x":6, "size_y":4}
 ```
 
 #### Question: Total Revenue
@@ -210,7 +220,7 @@ FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-pos
-{"row": 5, "col":6, "size_x":6, "size_y":4}
+{"row": 7, "col":6, "size_x":6, "size_y":4}
 ```
 
 #### Question: Total COGS
@@ -264,7 +274,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row": 5, "col":12, "size_x":3, "size_y":4}
+{"row": 7, "col":12, "size_x":3, "size_y":4}
 ```
 
 #### Question: Total Gross Profit
@@ -318,7 +328,7 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row": 5, "col":15, "size_x":3, "size_y":4}
+{"row": 7, "col":15, "size_x":3, "size_y":4}
 ```
 
 #### 📝 Text: Channel Comparison Heading
@@ -326,7 +336,7 @@ FROM this_period t, prev_period p
 ## So sanh hieu qua giua cac kenh ban hang
 
 ```json metabase-pos
-{"row": 9, "col":0, "size_x":18, "size_y":1}
+{"row": 11, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Margin by Channel

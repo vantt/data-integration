@@ -1514,12 +1514,12 @@ Donut — transaction count by payment method.
 
 ```sql
 SELECT
-    pm.payment_method_name as "Payment Method",
-    COUNT(*) as "Transactions"
+    pm.payment_method_name AS "Payment Method",
+    COUNT(*) AS "Transactions"
 FROM fact_payments p
 JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
-WHERE date(p.payment_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND date(p.payment_timestamp) < date_trunc('month', current_date)
+WHERE 1=1
+  [[AND {{date_range}}]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1546,13 +1546,13 @@ Stacked area — monthly payment method distribution over 6 months.
 
 ```sql
 SELECT
-    date_trunc('month', p.payment_timestamp)::date as month,
-    pm.payment_method_name as payment_method,
-    COUNT(*) as transactions
+    date_trunc('month', p.payment_timestamp)::DATE AS month,
+    pm.payment_method_name AS payment_method,
+    COUNT(*) AS transactions
 FROM fact_payments p
 JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
-WHERE date(p.payment_timestamp) >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND date(p.payment_timestamp) < date_trunc('month', current_date)
+WHERE 1=1
+  [[AND {{date_range}}]]
 GROUP BY 1, 2
 ORDER BY 1, 3 DESC
 ```
@@ -1579,18 +1579,21 @@ Payment status with conditional formatting — flag pending > 5%.
 **Domain Reference**: [Payment Status](../domains/sales.md#12-payment-status)
 
 ```sql
+WITH total_orders AS (
+    SELECT COUNT(DISTINCT order_id) AS total
+    FROM fact_orders
+    WHERE customer_type = 'RETAIL'
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
-    payment_status as "Status",
-    COUNT(DISTINCT order_id) as "Orders",
-    SUM(net_revenue) as "Total Amount",
-    ROUND(COUNT(DISTINCT order_id) * 100.0 / NULLIF(
-        (SELECT COUNT(DISTINCT order_id) FROM fact_orders
-         WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-           AND order_timestamp < date_trunc('month', current_date)), 0
-    ), 1) as "% of Total"
+    payment_status AS "Status",
+    COUNT(DISTINCT order_id) AS "Orders",
+    SUM(net_revenue) AS "Total Amount",
+    ROUND(COUNT(DISTINCT order_id) * 100.0 / NULLIF((SELECT total FROM total_orders), 0), 1) AS "% of Total"
 FROM fact_orders
-WHERE order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND order_timestamp < date_trunc('month', current_date)
+WHERE customer_type = 'RETAIL'
+  [[AND {{date_range}}]]
   [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -1699,8 +1702,14 @@ FROM prev_calc
 Table: channel breakdown with order count, revenue, gross margin %, and MoM delta in percentage points — sorted by gross margin % DESC.
 
 ```sql
-WITH
-this_month AS (
+WITH filter_bounds AS (
+    SELECT MIN(e.date_key) AS p_start, MAX(e.date_key) AS p_end
+    FROM fact_order_economics e
+    WHERE e.customer_type = 'RETAIL'
+      AND e.status NOT IN ('CANCELLED', 'Voided')
+      [[AND {{date_range}}]]
+),
+this_period AS (
     SELECT
         c.channel_name                                                        AS channel,
         COUNT(DISTINCT e.order_id)                                            AS orders_tm,
@@ -1711,24 +1720,27 @@ this_month AS (
             / NULLIF(SUM(e.net_revenue), 0) * 100
         , 1)                                                                  AS margin_pct_tm
     FROM fact_order_economics e
-    JOIN dim_channels c ON e.channel_key = c.channel_key
-    WHERE e.status NOT IN ('CANCELLED', 'Voided')
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND e.date_key <  CAST(date_trunc('month', current_date) AS DATE)
+    JOIN dim_channels c ON e.channel_key = c.channel_key, filter_bounds
+    WHERE e.customer_type = 'RETAIL'
+      AND e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.date_key >= filter_bounds.p_start
+      AND e.date_key <= filter_bounds.p_end
+      [[AND {{date_range}}]]
     GROUP BY c.channel_name
 ),
-last_month AS (
+prev_period AS (
     SELECT
         c.channel_name                                                        AS channel,
         ROUND(
             COALESCE(SUM(e.gross_profit), 0)
             / NULLIF(SUM(e.net_revenue), 0) * 100
-        , 1)                                                                  AS margin_pct_lm
+        , 1)                                                                  AS margin_pct_pp
     FROM fact_order_economics e
-    JOIN dim_channels c ON e.channel_key = c.channel_key
-    WHERE e.status NOT IN ('CANCELLED', 'Voided')
-      AND e.date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
-      AND e.date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+    JOIN dim_channels c ON e.channel_key = c.channel_key, filter_bounds
+    WHERE e.customer_type = 'RETAIL'
+      AND e.status NOT IN ('CANCELLED', 'Voided')
+      AND e.date_key >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start) - 1)
+      AND e.date_key <  filter_bounds.p_start
     GROUP BY c.channel_name
 )
 SELECT
@@ -1736,9 +1748,9 @@ SELECT
     tm.orders_tm                                              AS "Orders",
     tm.revenue_tm                                             AS "Revenue",
     tm.margin_pct_tm                                          AS "Gross Margin %",
-    ROUND(tm.margin_pct_tm - COALESCE(lm.margin_pct_lm, 0), 1) AS "MoM Δ pp"
-FROM this_month tm
-LEFT JOIN last_month lm ON tm.channel = lm.channel
+    ROUND(tm.margin_pct_tm - COALESCE(pp.margin_pct_pp, 0), 1) AS "MoM Δ pp"
+FROM this_period tm
+LEFT JOIN prev_period pp ON tm.channel = pp.channel
 ORDER BY tm.margin_pct_tm DESC
 ```
 
@@ -1780,27 +1792,37 @@ ORDER BY tm.margin_pct_tm DESC
 Scalar — count of completed orders where channel_net_profit < 0 (loss-making orders), with MoM comparison.
 
 ```sql
-WITH
-this_month AS (
-    SELECT COUNT(DISTINCT order_id) AS val
+WITH filter_bounds AS (
+    SELECT MIN(date_key) AS p_start, MAX(date_key) AS p_end
     FROM fact_order_economics
-    WHERE channel_net_profit < 0
+    WHERE customer_type = 'RETAIL'
+      AND channel_net_profit < 0
       AND status NOT IN ('CANCELLED', 'Voided')
-      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
-      AND date_key <  CAST(date_trunc('month', current_date) AS DATE)
+      [[AND {{date_range}}]]
 ),
-last_month AS (
+this_period AS (
     SELECT COUNT(DISTINCT order_id) AS val
-    FROM fact_order_economics
-    WHERE channel_net_profit < 0
+    FROM fact_order_economics, filter_bounds
+    WHERE customer_type = 'RETAIL'
+      AND channel_net_profit < 0
       AND status NOT IN ('CANCELLED', 'Voided')
-      AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '2 months' AS DATE)
-      AND date_key <  CAST(date_trunc('month', current_date) - INTERVAL '1 month' AS DATE)
+      AND date_key >= filter_bounds.p_start
+      AND date_key <= filter_bounds.p_end
+      [[AND {{date_range}}]]
+),
+prev_period AS (
+    SELECT COUNT(DISTINCT order_id) AS val
+    FROM fact_order_economics, filter_bounds
+    WHERE customer_type = 'RETAIL'
+      AND channel_net_profit < 0
+      AND status NOT IN ('CANCELLED', 'Voided')
+      AND date_key >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start) - 1)
+      AND date_key <  filter_bounds.p_start
 )
 SELECT
     tm.val AS "Don Lo (thang nay)",
-    lm.val AS "Thang truoc"
-FROM this_month tm, last_month lm
+    pp.val AS "Thang truoc"
+FROM this_period tm, prev_period pp
 ```
 
 ```json metabase-viz

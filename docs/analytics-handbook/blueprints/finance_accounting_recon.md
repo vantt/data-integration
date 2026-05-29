@@ -685,7 +685,7 @@ WITH filter_bounds AS (
       [[AND {{date_range}}]]
 )
 SELECT
-    CAST(CAST(date_key AS VARCHAR) AS DATE)             AS "Ngay",
+    (CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay",
     COUNT(*) AS "Tong don",
     SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END)       AS "Don chua khop MISA",
     ROUND(
@@ -742,7 +742,7 @@ WITH filter_bounds AS (
       [[AND {{date_range}}]]
 )
 SELECT
-    CAST(CAST(date_key AS VARCHAR) AS DATE)             AS "Ngay",
+    (CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay",
     COUNT(*) AS "Tong don",
     SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END)       AS "Don chua khop MISA"
 FROM fact_order_economics, filter_bounds
