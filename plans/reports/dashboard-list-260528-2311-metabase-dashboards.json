@@ -1,0 +1,349 @@
+{
+  "fetched_at": "2026-05-28T16:12:52.212Z",
+  "total": 49,
+  "dashboards": [
+    {
+      "id": 1,
+      "name": "E-commerce Insights",
+      "description": "Overview of sample data and hypothetical sales",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 8,
+      "name": "Sales Ops Weekly Review [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 9,
+      "name": "Sales Ops Monthly Summary [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 13,
+      "name": "Marketing Monthly Analysis [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 14,
+      "name": "Customer Retention & Lifecycle [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 15,
+      "name": "Customer Intelligence Monthly [Cross]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 26,
+      "name": "Order Listing [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 27,
+      "name": "Social Commerce Operations [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 28,
+      "name": "Logistics Operations Center [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 30,
+      "name": "Product Performance [Cross]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 31,
+      "name": "Sales Monthly Business Review [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 32,
+      "name": "Shopee Channel Economics [Cross]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 33,
+      "name": "Channel Profitability Monthly [Cross]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 34,
+      "name": "Finance P&L [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 35,
+      "name": "Order Profitability [All]",
+      "description": "Audience: CFO/Finance Director. Scope: All sales channels with parametric channel filter. C�u h?i: Margin/profit theo channel? [Old 'Order Profitability' archived 2026-05-27]",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 36,
+      "name": "Product Profitability [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 37,
+      "name": "Marketing ROI [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 38,
+      "name": "Order Detail [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 40,
+      "name": "Ingestion Health Monitor [Internal]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 41,
+      "name": "Daily Sales [Retail]",
+      "description": "Audience: Store Manager. Scope: Retail customers only (customer_type='RETAIL'). C�u h?i: B�n l? h�m nay dang di d�u? [Old 'Daily Sales Dashboard' archived 2026-05-27 � was mixed scope]",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 42,
+      "name": "Yesterday's Sales [Retail]",
+      "description": "Audience: Store Manager. Scope: Retail customers only. C�u h?i: B�n l? h�m qua d� ra sao? [Old 'Yesterday's Sales Dashboard' archived 2026-05-27 � was mixed scope]",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 43,
+      "name": "CEO Weekly Pulse [All]",
+      "description": "Audience: CEO/Founders/Board. Scope: All sales channels (is_sales_channel=true, excludes Internal/STAFF/KOL). C�u h?i: Doanh thu tu?n n�y so v?i tu?n tru?c? [Old 'CEO Weekly Pulse' archived 2026-05-27]",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 44,
+      "name": "CEO Monthly Scorecard [All]",
+      "description": "Audience: CEO/Founders/Board. Scope: All sales channels. C�u h?i: Doanh thu th�ng n�y so v?i th�ng tru?c + YoY? [Old 'CEO Monthly Scorecard' archived 2026-05-27 � used channel_name='US' exclusion only]",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 46,
+      "name": "Promotion Analysis [Retail]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 47,
+      "name": "Marketing Weekly Tracker [Retail]",
+      "description": "Audience: Marketing Manager. Scope: Retail customers only. C�u h?i: Marketing tu?n n�y theo k�nh? [Old 'Marketing Weekly Tracker' archived 2026-05-27 � was mixed scope, AOV/discount sai]",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 48,
+      "name": "Customer Operational [Retail]",
+      "description": "Audience: Customer Success Lead. Scope: Retail customers only. C�u h?i: MAU, retention, at-risk customers? [Old 'Customer Operational Dashboard' archived 2026-05-27 � was mixed scope]",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 49,
+      "name": "B2B Daily Sales [B2B]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 50,
+      "name": "B2B Orders Tracking [B2B]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 51,
+      "name": "US CrossBorder Daily [US]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 73,
+      "name": "Welcome to Ch?Pulse BI",
+      "description": "Audience: All users. Scope: Onboarding. C�u h?i: T�i n�n m? folder n�o? M?i role ? 1 collection. M?i dashboard c� suffix [All]/[Retail]/[B2B]/[Cross]/[US]/[Internal] cho bi?t scope.",
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 74,
+      "name": "Cost Ledger Analyzer [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 75,
+      "name": "Return Impact Analysis [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 76,
+      "name": "Product Cost-to-Margin Heatmap [Cross]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 77,
+      "name": "Channel P&L Deep Dive [Cross]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 78,
+      "name": "Accounting Reconciliation Cockpit [Internal]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 79,
+      "name": "Sales Monthly Business Review",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 82,
+      "name": "Channel Profitability Monthly",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 83,
+      "name": "Customer Intelligence Monthly",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 84,
+      "name": "Customer Retention & Lifecycle",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 85,
+      "name": "Social Commerce Operations",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 86,
+      "name": "Finance P&L Dashboard",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 87,
+      "name": "Ingestion Health Monitor",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 88,
+      "name": "Logistics Operations Center",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 89,
+      "name": "Order Detail",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 90,
+      "name": "Order Listing",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 91,
+      "name": "Order Profitability",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 92,
+      "name": "Product Profitability",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 94,
+      "name": "Product Inventory Health [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    },
+    {
+      "id": 95,
+      "name": "Finance Services Revenue [All]",
+      "description": null,
+      "collection_id": null,
+      "collection_path": "Our analytics"
+    }
+  ]
+}

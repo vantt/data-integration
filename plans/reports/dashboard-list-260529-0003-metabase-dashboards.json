@@ -1,0 +1,191 @@
+{
+  "fetched_at": "2026-05-29T03:21:52Z",
+  "total": 37,
+  "dashboards": [
+    {
+      "id": 1,
+      "name": "E-commerce Insights",
+      "collection_id": 2
+    },
+    {
+      "id": 8,
+      "name": "Sales Ops Weekly Review [Retail]",
+      "collection_id": 49
+    },
+    {
+      "id": 9,
+      "name": "Sales Ops Monthly Summary [Retail]",
+      "collection_id": 49
+    },
+    {
+      "id": 13,
+      "name": "Marketing Monthly Analysis [Retail]",
+      "collection_id": 52
+    },
+    {
+      "id": 14,
+      "name": "Customer Retention & Lifecycle [Retail]",
+      "collection_id": 52
+    },
+    {
+      "id": 15,
+      "name": "Customer Intelligence Monthly [Cross]",
+      "collection_id": 52
+    },
+    {
+      "id": 26,
+      "name": "Order Listing [Retail]",
+      "collection_id": 48
+    },
+    {
+      "id": 27,
+      "name": "Social Commerce Operations [Retail]",
+      "collection_id": 48
+    },
+    {
+      "id": 28,
+      "name": "Logistics Operations Center [All]",
+      "collection_id": 48
+    },
+    {
+      "id": 30,
+      "name": "Product Performance [Cross]",
+      "collection_id": 93
+    },
+    {
+      "id": 31,
+      "name": "Sales Monthly Business Review [All]",
+      "collection_id": 46
+    },
+    {
+      "id": 32,
+      "name": "Shopee Channel Economics [Cross]",
+      "collection_id": 93
+    },
+    {
+      "id": 33,
+      "name": "Channel Profitability Monthly [Cross]",
+      "collection_id": 46
+    },
+    {
+      "id": 34,
+      "name": "Finance P&L [All]",
+      "collection_id": 46
+    },
+    {
+      "id": 35,
+      "name": "Order Profitability [All]",
+      "collection_id": 46
+    },
+    {
+      "id": 36,
+      "name": "Product Profitability [All]",
+      "collection_id": 46
+    },
+    {
+      "id": 37,
+      "name": "Marketing ROI [Retail]",
+      "collection_id": 52
+    },
+    {
+      "id": 38,
+      "name": "Order Detail [Retail]",
+      "collection_id": 98
+    },
+    {
+      "id": 40,
+      "name": "Ingestion Health Monitor [Internal]",
+      "collection_id": 48
+    },
+    {
+      "id": 41,
+      "name": "Daily Sales [Retail]",
+      "collection_id": 48
+    },
+    {
+      "id": 42,
+      "name": "Yesterday's Sales [Retail]",
+      "collection_id": 48
+    },
+    {
+      "id": 43,
+      "name": "CEO Weekly Pulse [All]",
+      "collection_id": 46
+    },
+    {
+      "id": 44,
+      "name": "CEO Monthly Scorecard [All]",
+      "collection_id": 46
+    },
+    {
+      "id": 46,
+      "name": "Promotion Analysis [Retail]",
+      "collection_id": 52
+    },
+    {
+      "id": 47,
+      "name": "Marketing Weekly Tracker [Retail]",
+      "collection_id": 52
+    },
+    {
+      "id": 48,
+      "name": "Customer Operational [Retail]",
+      "collection_id": 52
+    },
+    {
+      "id": 49,
+      "name": "B2B Daily Sales [B2B]",
+      "collection_id": 60
+    },
+    {
+      "id": 50,
+      "name": "B2B Orders Tracking [B2B]",
+      "collection_id": 60
+    },
+    {
+      "id": 51,
+      "name": "US CrossBorder Daily [US]",
+      "collection_id": 97
+    },
+    {
+      "id": 73,
+      "name": "Welcome to Ch?Pulse BI",
+      "collection_id": 91
+    },
+    {
+      "id": 74,
+      "name": "Cost Ledger Analyzer [All]",
+      "collection_id": 92
+    },
+    {
+      "id": 75,
+      "name": "Return Impact Analysis [All]",
+      "collection_id": 92
+    },
+    {
+      "id": 76,
+      "name": "Product Cost-to-Margin Heatmap [Cross]",
+      "collection_id": 92
+    },
+    {
+      "id": 77,
+      "name": "Channel P&L Deep Dive [Cross]",
+      "collection_id": 92
+    },
+    {
+      "id": 78,
+      "name": "Accounting Reconciliation Cockpit [Internal]",
+      "collection_id": 92
+    },
+    {
+      "id": 94,
+      "name": "Product Inventory Health [All]",
+      "collection_id": 94
+    },
+    {
+      "id": 95,
+      "name": "Finance Services Revenue [All]",
+      "collection_id": 92
+    }
+  ]
+}
