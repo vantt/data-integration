@@ -7,6 +7,8 @@ updated: 2026-05-28
 
 See [research-foundation.md](research-foundation.md) for sources.
 
+> **Review update (2026-05-28 1745)**: Parser location in §2 diagram shows `.skills/analytics-design/lib/design-spec-parser.js` — this matches proposed [D9](../critical-problems.md#d9-proposed-parser-ownership-at-analytics-designlib) but contradicts current [D8](../decisions.md#d8-spec-schema-location-analytics-design) language ("shared parser lives in metabase-automation until 2nd tool added"). If user confirms D9, D8's transitional clause is superseded. **Phase 0 day-1 must lock D9 before Phase 2 code begins.**
+
 ## 1. Current State + Pain Points
 
 **Current flow**: Blueprint `.md` hand-authored → `deploy_from_markdown.js` → Metabase API

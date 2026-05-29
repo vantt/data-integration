@@ -43,9 +43,24 @@ updated: 2026-05-28
 
 ---
 
+## Review Updates (2026-05-28 1745)
+
+2 adversarial reviews by sonnet agents:
+- → [reports/review-decisions-260528-1745.md](reports/review-decisions-260528-1745.md) — D1-D8 verdict: D4/D7 solid, D1/D2/D3/D5/D6/D8 questionable. Proposes **D9** (parser location), **D10** (SQL authoring ownership).
+- → [reports/review-problems-260528-1745.md](reports/review-problems-260528-1745.md) — Reclassified C4/C5 → M, escalated M4/M5 → C8/C9, added C7 (Phase 0 day-1 hard block), M16/M17/Q7.
+
+**Critical actions pending user confirm** (see [critical-problems.md §5](critical-problems.md#section-5-proposed-decisions-await-user-confirm--from-review-2026-05-28)):
+1. D9 — parser at `analytics-design/lib/` (recommend approve)
+2. D10 — SQL authoring ownership (recommend: auto-captured only)
+3. D2 forcing function — `status: final` require `metric_ref` post-Phase 4?
+4. D3 pilot gate — Phase 3 contingent on Phase 1 3-dashboard pilot?
+
+---
+
 ## Quick Links
 
-- → [critical-problems.md](critical-problems.md) — open issues, deferred decisions, open questions
+- → [critical-problems.md](critical-problems.md) — open issues, deferred decisions, open questions (+ Section 5 proposed decisions)
+- → [reports/](reports/) — review reports (decisions + problems)
 - → [reference/architecture.md](reference/architecture.md) — system design, hybrid spec, validation layers
 - → [reference/spec-format-design.md](reference/spec-format-design.md) — enhanced spec format v2
 - → [reference/parser-deployer-spec.md](reference/parser-deployer-spec.md) — parser/deployer implementation spec

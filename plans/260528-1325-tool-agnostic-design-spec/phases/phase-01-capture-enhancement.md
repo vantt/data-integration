@@ -5,8 +5,19 @@ priority: P0
 depends_on: [phase-00]
 created: 2026-05-28
 updated: 2026-05-28
-duration_estimate: "1-2 days"
+duration_estimate: "2-3 days (added pilot gate)"
 ---
+
+## Updates from Review (2026-05-28 1745)
+
+**Pilot gate added** — Phase 3 schedule contingent on Phase 1 capture quality pilot:
+- Pilot scope: capture 3 dashboards covering diversity (simple, complex composite, multi-tab)
+- **Go/no-go gate**: if pilot SQL fidelity insufficient, Phase 3 schedule revisits before mass migration
+- Acceptance bar drafted in Phase 0 step 16 ([Q7](../critical-problems.md#section-4-open-questions))
+
+**Stress scenario flagged** (review-problems §stress #2): timezone-corrupted captured SQL can pass visual diff but be ~15% wrong. Intersects known ICT/UTC footgun. → mandatory numerical sample check in acceptance bar.
+
+**[M17](../critical-problems.md#m17-auto-captured-sql--generated-vs-authored-accountability-gap--new-from-review)** — convention defined here: auto-captured specs get `status: draft-from-capture`; SQL blocks marked with `# AUTO-CAPTURED <timestamp>` header.
 
 ## Goal
 
@@ -81,6 +92,26 @@ a live Metabase dashboard produces a spec that passes Phase 0's JSON Schema vali
    - Composition table must match v1 spec in card count + tab structure
    - Widget Details section must be present for all cards
 
+10. **NEW — Pilot gate (3-dashboard sample)**:
+    Capture 3 dashboards of varying complexity from staging:
+    - Simple: pick a single-tab, ≤10 widget dashboard (e.g., `ingestion_health`)
+    - Medium: 2-tab, mix of viz types (e.g., `sales_yesterday_operation`)
+    - Complex: `sales_daily_operation` (4 tabs, 30+ widgets, composite metrics)
+    For each captured spec:
+    - Apply [Q7 acceptance bar](../critical-problems.md#section-4-open-questions) (drafted Phase 0 step 16):
+      - Numerical check: aggregate values (SUM/COUNT) computed from captured SQL on 7-day window match values from current production blueprint within ±0.1%
+      - Visual diff vs current dashboard on staging
+      - Named reviewer signs off
+    - **TIMEZONE CHECK (mandatory)**: confirm captured SQL uses `date(timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh')` pattern where original blueprint did. Stress scenario #2 demands this.
+    - Record results in `../reports/phase-01-pilot-results.md`
+
+11. **Phase 3 go/no-go gate**: if pilot shows < 3/3 dashboards pass acceptance bar, **STOP** before Phase 3 mass migration. Options:
+    - Improve capture script + repeat pilot
+    - Accept manual review per dashboard (revise Phase 3 estimate)
+    - Hybrid: auto-capture simple, manual transcribe complex
+
+12. **[M17](../critical-problems.md#m17-auto-captured-sql--generated-vs-authored-accountability-gap--new-from-review) convention**: inject `# AUTO-CAPTURED <ISO-timestamp>` header above each `sql:` block in widget-config. Document in `WIDGET_CONFIG_SCHEMA.md`.
+
 ## Files Touched
 
 - 🔧 `D:\Vantt\app\data-integration\.skills\metabase-automation\scripts\generate-design-spec-from-dashboard.js` — extend to emit v2
@@ -95,6 +126,9 @@ a live Metabase dashboard produces a spec that passes Phase 0's JSON Schema vali
 - [ ] Widget Details section present for all cards (no skipped widgets)
 - [ ] All Metabase viz types map to standard vocab: 0 `unknown` entries in output
 - [ ] Round-trip readiness: captured spec can be fed into Phase 2 deployer without manual edits
+- [ ] **Pilot gate (3 dashboards)**: all 3 pass acceptance bar (numerical ±0.1%, visual diff, timezone check, reviewer sign-off)
+- [ ] Pilot results documented at `../reports/phase-01-pilot-results.md`
+- [ ] Go/no-go decision recorded for Phase 3 commit
 
 ## Risks
 

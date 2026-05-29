@@ -5,8 +5,20 @@ priority: P0
 depends_on: []
 created: 2026-05-28
 updated: 2026-05-28
-duration_estimate: "1 day"
+duration_estimate: "1-1.5 days"
 ---
+
+## Updates from Review (2026-05-28 1745)
+
+**Day-1 hard block — decide before any schema code**:
+- [C7](../critical-problems.md#c7-schema-design-coupled-to-c2-phase-0-ordering--new-from-review) — must decide [C2](../critical-problems.md#c2-monolith-spec-vs-companion-file) (monolith vs companion file) on day 1. 30-minute review of 1 sample spec, NOT a multi-day spike.
+- [D9 proposed](../critical-problems.md#d9-proposed-parser-ownership-at-analytics-designlib) — confirm parser location `.skills/analytics-design/lib/` (not metabase-automation) before Phase 2 plan locks.
+- [D10 proposed](../critical-problems.md#d10-proposed-sql-authoring-ownership-in-widget-config) — confirm SQL authoring ownership (recommend: C, auto-captured only).
+- D2 forcing function — decide: does `status: final` require `metric_ref` post-Phase 4, or allow inline SQL forever?
+
+**Reclassifications from review**:
+- C4 (error reporting), C5 (fixture location) downgraded to M — not Phase 0 blockers.
+- M4 (markdown parsing) escalated to [C8](../critical-problems.md#c8-was-m4-markdown-table-parsing--escalated-from-m4) — add to Phase 0 scope: test markdown-it against ALL 26 v1 specs.
 
 ## Goal
 
@@ -38,6 +50,14 @@ so Phase 1 (capture) and Phase 2 (parser/deployer) can build against a stable co
 
 ## Steps
 
+**Day 1 morning — hard-block decisions (30 min)**:
+
+0a. Decide [C2](../critical-problems.md#c2-monolith-spec-vs-companion-file) (monolith vs companion file): review existing `sales_daily_operation.md` blueprint (1451 lines) — would single .md file at projected 1200 lines feel painful to navigate? Pick A/B/C and document. **Do NOT start step 8 (schema) before this is locked.**
+0b. Confirm [D9 proposed](../critical-problems.md#d9-proposed-parser-ownership-at-analytics-designlib): parser at `.skills/analytics-design/lib/` (default: yes, approve).
+0c. Confirm [D10 proposed](../critical-problems.md#d10-proposed-sql-authoring-ownership-in-widget-config): SQL authoring ownership (default: C, auto-captured only).
+
+**Day 1 — schema spike**:
+
 1. Read source files:
    - `D:\Vantt\app\data-integration\docs\analytics-handbook\blueprints\sales_daily_operation.md` (ground truth)
    - `D:\Vantt\app\data-integration\docs\analytics-handbook\designs\sales_daily_operation.md` (current v1 spec)
@@ -45,8 +65,7 @@ so Phase 1 (capture) and Phase 2 (parser/deployer) can build against a stable co
    - `D:\Vantt\app\data-integration\.skills\analytics-design\VISUALIZATION_VOCABULARY.md`
    - D7 and D8 in `../decisions.md`
 
-2. Decide C.3 (monolith vs companion): author the 5 widgets inline; if the file exceeds
-   1200 lines and feels painful to navigate, choose companion pattern; document in `../critical-problems.md`.
+2. (C2 already decided in step 0a). Author the 5 widgets per locked format.
 
 3. Decide C.1 (DRY thresholds): choose one model for gauge segments:
    - Option A: frontmatter `defaults:` → widgets `inherit_from: defaults` (recommended starting point)
@@ -91,7 +110,11 @@ so Phase 1 (capture) and Phase 2 (parser/deployer) can build against a stable co
 13. Validate: run `node validate-analytics-artifacts.js` on the updated `sales_daily_operation.md`.
     All 5 widgets must pass JSON Schema validation.
 
-14. Document E.4 (error reporting quality bar) decision in `../critical-problems.md`.
+14. (E.4 downgraded to M — defer to Phase 2 deployer build, no Phase 0 action needed.)
+
+15. **NEW from review — [C8](../critical-problems.md#c8-was-m4-markdown-table-parsing--escalated-from-m4) verification**: test markdown-it parser against ALL 26 v1 specs in `docs/analytics-handbook/designs/`. Catalog any parse failures. If failures > 0, evaluate alternatives before Phase 2 parser build.
+
+16. **NEW — define [Q7](../critical-problems.md#section-4-open-questions) acceptance bar for Phase 1**: what numerical/visual check certifies auto-captured SQL is correct? Draft for Phase 1 implementer.
 
 ## Files Touched
 
@@ -110,11 +133,15 @@ so Phase 1 (capture) and Phase 2 (parser/deployer) can build against a stable co
 - [ ] `widget-config.schema.json` published to `.skills/analytics-design/schemas/`
 - [ ] Schema gaps (if any) documented and schema updated before closing phase
 - [ ] Format spec v2 frozen: `spec_version: 2` frontmatter fields stable, ready for Phase 1 to emit
-- [ ] C.1 resolved: threshold DRY model chosen and documented
-- [ ] C.3 resolved: monolith vs companion decision recorded
-- [ ] C.6 resolved: composition table vs widget details source-of-truth chosen
-- [ ] E.4 resolved: error reporting quality bar defined
-- [ ] G.3 resolved: test fixture location decided
+- [ ] C1 resolved: threshold DRY model chosen and documented
+- [ ] C2 resolved (DAY 1): monolith vs companion decision recorded
+- [ ] C3 resolved: composition table vs widget details source-of-truth chosen
+- [ ] C7 satisfied: C2 decided before any schema code written
+- [ ] C8 verified: markdown-it tested against all 26 v1 specs; parse failures catalogued
+- [ ] D9 confirmed: parser location locked (`.skills/analytics-design/lib/`)
+- [ ] D10 confirmed: SQL authoring ownership locked
+- [ ] D2 forcing function decided
+- [ ] Q7 drafted: SQL correctness acceptance bar for Phase 1
 - [ ] VISUALIZATION_VOCABULARY.md has per-tool support column for all viz types
 
 ## Risks
