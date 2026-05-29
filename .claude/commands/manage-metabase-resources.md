@@ -32,7 +32,7 @@ Create a script using `.skills/metabase-automation/scripts/metabase_client.js`:
 const MetabaseClient = require("./.skills/metabase-automation/scripts/metabase_client");
 const client = new MetabaseClient(METABASE_URL, API_KEY);
 await client.connect();
-const dbId = await client.findDatabaseId("Sapo DuckDB");
+const dbId = await client.findDatabaseId("Sapo");
 // ... resource creation
 ```
 

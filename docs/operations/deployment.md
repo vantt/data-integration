@@ -286,7 +286,7 @@ docker logs -f metabase
 3. Add Database:
    - Type: DuckDB
    - Path: `/app/var/data_lake/serving/olap.duckdb`
-4. Name: "Sapo DuckDB"
+4. Name: "Sapo"
 
 **Critical: Serving Views After Mount Changes**
 

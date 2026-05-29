@@ -9,7 +9,7 @@ const METABASE_PASSWORD = process.env.METABASE_PASSWORD;
 const METABASE_SESSION_ID = process.env.METABASE_SESSION_TOKEN;
 const API_KEY = process.env.METABASE_API_KEY; // Or whatever your auth uses
 
-const DB_NAME = "Sapo DuckDB"; // Updated based on available DBs
+const DB_NAME = "Sapo"; // Updated based on available DBs
 const COLLECTION_NAME = "Sales Analytics";
 const DASHBOARD_NAME = "Daily Sales Performance";
 

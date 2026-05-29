@@ -970,7 +970,7 @@ Role-based defaults (fallback):
 
 ### Phase 9 — Blueprint Assembly
 
-**9a. SQL**: Viết/điều chỉnh SQL dựa trên domain definitions (Phase 0), abstract data shapes (Phase 5), và enrichment requirements (Phase 6). **SQL dialect: DuckDB** (target database "Sapo DuckDB"). DuckDB largely PostgreSQL-compatible nhưng có khác biệt — đặc biệt date/time functions (`DATE_TRUNC`, `INTERVAL`, `CURRENT_DATE` đều hỗ trợ). Xem DuckDB docs khi dùng advanced functions.
+**9a. SQL**: Viết/điều chỉnh SQL dựa trên domain definitions (Phase 0), abstract data shapes (Phase 5), và enrichment requirements (Phase 6). **SQL dialect: DuckDB** (target database "Sapo"). DuckDB largely PostgreSQL-compatible nhưng có khác biệt — đặc biệt date/time functions (`DATE_TRUNC`, `INTERVAL`, `CURRENT_DATE` đều hỗ trợ). Xem DuckDB docs khi dùng advanced functions.
 
 **9b. Filter Wiring**: Dịch filter design (Phase 4e) sang Metabase implementation:
 - Filter type (date/range, category/single-select) → Metabase parameter type (`date/all-options`, `string/=`)

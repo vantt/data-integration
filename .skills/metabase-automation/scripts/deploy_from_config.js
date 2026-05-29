@@ -8,7 +8,7 @@ const fs = require('fs');
  * 
  * Config File Format (CommonJS):
  * module.exports = {
- *   database: "Sapo DuckDB",
+ *   database: "Sapo",
  *   collection: "Sales Analytics",
  *   dashboard: {
  *     name: "Daily Sales Performance",

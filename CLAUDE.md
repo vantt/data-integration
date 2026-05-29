@@ -55,7 +55,7 @@ node .skills/metabase-automation/scripts/capture_dashboard.js <dashboard_id> [ou
 - `METABASE_URL` — Base URL (default: http://127.0.0.1:3000/)
 - `METABASE_API_KEY` — API Key (preferred auth method)
 - `METABASE_SESSION_ID` — Session token (alternative auth)
-- `METABASE_DB_NAME` — Target database name (default: "Sapo DuckDB")
+- `METABASE_DB_NAME` — Target database name (default: "Sapo")
 
 ## Important
 

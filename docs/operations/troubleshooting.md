@@ -352,7 +352,7 @@ FROM read_parquet('data_lake/export/marts/rolling/fact_orders/*.parquet');
 python scripts/provisioning/bootstrap_serving_views.py
 
 # Or sync Metabase database
-# Metabase Admin → Databases → Sapo DuckDB → Sync database schema
+# Metabase Admin → Databases → Sapo → Sync database schema
 ```
 
 ---

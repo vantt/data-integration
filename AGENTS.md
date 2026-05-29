@@ -229,7 +229,7 @@ Three ingestion channels feed an append-only Parquet data lake with segregated s
 ## Metabase MCP Configuration
 
 - **Server Name:** `metabase` | **Tool:** `metabase-ai-assistant` | **URL:** `http://127.0.0.1:3000/`
-- **Primary DB:** Sapo DuckDB (ID=2, type=duckdb, schema=main)
+- **Primary DB:** Sapo (ID=2, type=duckdb, schema=main)
 - Use `mcp_metabase_db_schemas(database_id=2)` to explore schemas.
 - Many admin/write tools disabled in `mcp_config.json` for safety.
 
