@@ -40,14 +40,53 @@ Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COG
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
+),
+-- Derive clean period boundaries from raw data dates:
+-- weekly  (duration ≤ 6d)                    → Mon–Sun of data's week
+-- closed  (p_end > 30d ago, non-weekly)       → 1st of month .. last day of p_end's month
+-- this year   (recent, starts Jan, >100d)     → 01/01 .. 31/12
+-- this quarter (recent, 35–100d)              → 01/Qstart .. last day of quarter
+-- everything else (this month, past12m, …)   → 1st of month .. last day of p_end's month
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+-- n_months uses adjusted p_start/p_end so prev_start aligns to period boundary
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER) * 12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
 SELECT
-  '📅 Tháng trước: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') ||
-  '  ·  MoM: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%d/%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::DATE, '%d/%m/%Y')
-  AS "Chu kỳ báo cáo"
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur <= 6
+                  THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR || ' months')::INTERVAL)::DATE
+             END, '%d/%m/%Y') || ' – ' ||
+    strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -115,6 +154,13 @@ Supporting KPI — tong doanh thu ky nay vs ky truoc + cung ky nam truoc.
 -- YoY added 2026-05-28; note: blueprint deprecation candidate per audit — YoY added as quick value while pending
 -- YoY window is filter-independent (last closed month -12 months) since {{date_range}} can't be shifted 12 months
 WITH
+filter_bounds AS (
+    SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
+),
 this_period AS (
     SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS val
     FROM int_misa_sales_lines
@@ -124,10 +170,10 @@ this_period AS (
 ),
 prev_period AS (
     SELECT COALESCE(SUM(revenue_net_of_discount), 0) AS val
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
-      AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
-      AND posting_date <  date_trunc('month', current_date)
+      AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND posting_date <  filter_bounds.p_start
       [[AND {{channel}}]]
 ),
 prev_year AS (
@@ -173,6 +219,13 @@ Supporting KPI — tong gia von ky nay vs ky truoc.
 
 ```sql
 WITH
+filter_bounds AS (
+    SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
+),
 this_period AS (
     SELECT COALESCE(SUM(cogs_amount), 0) AS val
     FROM int_misa_sales_lines
@@ -182,10 +235,10 @@ this_period AS (
 ),
 prev_period AS (
     SELECT COALESCE(SUM(cogs_amount), 0) AS val
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
-      AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
-      AND posting_date <  date_trunc('month', current_date)
+      AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND posting_date <  filter_bounds.p_start
       [[AND {{channel}}]]
 )
 SELECT
@@ -220,6 +273,13 @@ Supporting KPI — tong lai gop ky nay vs ky truoc.
 
 ```sql
 WITH
+filter_bounds AS (
+    SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
+),
 this_period AS (
     SELECT COALESCE(SUM(gross_profit), 0) AS val
     FROM int_misa_sales_lines
@@ -229,10 +289,10 @@ this_period AS (
 ),
 prev_period AS (
     SELECT COALESCE(SUM(gross_profit), 0) AS val
-    FROM int_misa_sales_lines
+    FROM int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
-      AND posting_date >= date_trunc('month', current_date) - INTERVAL '3 months'
-      AND posting_date <  date_trunc('month', current_date)
+      AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND posting_date <  filter_bounds.p_start
       [[AND {{channel}}]]
 )
 SELECT
@@ -396,7 +456,33 @@ ORDER BY "Doanh thu" DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  MoM: ' || strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('month', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+WITH filter_bounds AS (
+    SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
+    FROM int_misa_sales_lines
+    WHERE NOT is_promo_line
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
+)
+SELECT '📅 Kỳ báo cáo: ' ||
+    strftime(
+      CASE WHEN (p_end - p_start)::INTEGER <= 6
+        THEN date_trunc('week',  p_start)::DATE
+        ELSE date_trunc('month', p_start)::DATE
+      END, '%d/%m/%Y') || ' – ' ||
+    strftime(
+      CASE
+        WHEN (p_end - p_start)::INTEGER <= 6
+          THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+        WHEN p_end < current_date - 30
+          THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+        WHEN (p_end - p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+          THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+        WHEN (p_end - p_start)::INTEGER BETWEEN 35 AND 100
+          THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+        ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+      END, '%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM filter_bounds
 ```
 
 ```json metabase-viz
