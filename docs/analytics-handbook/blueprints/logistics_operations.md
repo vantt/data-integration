@@ -126,13 +126,13 @@ Thời gian hoàn thành trung bình (giờ) hôm nay với DoD comparison. Lowe
 
 ```sql
 SELECT
-    ROUND(AVG(CASE WHEN date(order_timestamp) = current_date THEN time_to_complete_hours END), 1) as "TB hoàn thành (h)",
-    ROUND(AVG(CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN time_to_complete_hours END), 1) as "Hôm qua"
+    ROUND(AVG(CASE WHEN date(updated_at) = current_date THEN time_to_complete_hours END), 1) as "TB hoàn thành (h)",
+    ROUND(AVG(CASE WHEN date(updated_at) = current_date - INTERVAL '1 day' THEN time_to_complete_hours END), 1) as "Hôm qua"
 FROM fact_orders
-WHERE status NOT IN ('DRAFT', 'CANCELLED')
+WHERE status = 'COMPLETED'
   AND time_to_complete_hours IS NOT NULL
-  AND date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+  AND date(updated_at) >= current_date - INTERVAL '1 day'
+  AND date(updated_at) <= current_date
 ```
 
 ```json metabase-viz
@@ -373,18 +373,18 @@ Thời gian trung bình từ tạo đơn đến xuất kho đầu tiên. DoD com
 ```sql
 SELECT
     ROUND(AVG(CASE
-        WHEN date(order_timestamp) = current_date
+        WHEN date(first_shipped_at) = current_date
         THEN date_diff('hour', order_timestamp, first_shipped_at)
     END), 1) as "TB giờ xuất kho",
     ROUND(AVG(CASE
-        WHEN date(order_timestamp) = current_date - INTERVAL '1 day'
+        WHEN date(first_shipped_at) = current_date - INTERVAL '1 day'
         THEN date_diff('hour', order_timestamp, first_shipped_at)
     END), 1) as "Hôm qua"
 FROM fact_orders
 WHERE first_shipped_at IS NOT NULL
   AND status NOT IN ('DRAFT', 'CANCELLED')
-  AND date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+  AND date(first_shipped_at) >= current_date - INTERVAL '1 day'
+  AND date(first_shipped_at) <= current_date
 ```
 
 ```json metabase-viz
@@ -406,24 +406,23 @@ Same-day ship rate hôm nay với DoD comparison.
 SELECT
     ROUND(
         COUNT(CASE
-            WHEN date(order_timestamp) = current_date
+            WHEN date(first_shipped_at) = current_date
              AND date(first_shipped_at) = date(order_timestamp) THEN 1 END) * 100.0
         / NULLIF(COUNT(CASE
-            WHEN date(order_timestamp) = current_date
-             AND first_shipped_at IS NOT NULL THEN 1 END), 0), 1
+            WHEN date(first_shipped_at) = current_date THEN 1 END), 0), 1
     ) as "Xuất cùng ngày %",
     ROUND(
         COUNT(CASE
-            WHEN date(order_timestamp) = current_date - INTERVAL '1 day'
+            WHEN date(first_shipped_at) = current_date - INTERVAL '1 day'
              AND date(first_shipped_at) = date(order_timestamp) THEN 1 END) * 100.0
         / NULLIF(COUNT(CASE
-            WHEN date(order_timestamp) = current_date - INTERVAL '1 day'
-             AND first_shipped_at IS NOT NULL THEN 1 END), 0), 1
+            WHEN date(first_shipped_at) = current_date - INTERVAL '1 day' THEN 1 END), 0), 1
     ) as "Hôm qua"
 FROM fact_orders
 WHERE status NOT IN ('DRAFT', 'CANCELLED')
-  AND date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+  AND first_shipped_at IS NOT NULL
+  AND date(first_shipped_at) >= current_date - INTERVAL '1 day'
+  AND date(first_shipped_at) <= current_date
 ```
 
 ```json metabase-viz
