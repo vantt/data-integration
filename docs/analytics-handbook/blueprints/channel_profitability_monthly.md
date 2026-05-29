@@ -397,7 +397,7 @@ ORDER BY "Gross Margin %" DESC
 ```
 
 ```json metabase-pos
-{"row": 10, "col":0, "size_x":9, "size_y":6}
+{"row": 12, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Revenue vs COGS by Channel
@@ -446,7 +446,7 @@ ORDER BY "Doanh thu" DESC
 ```
 
 ```json metabase-pos
-{"row": 10, "col":9, "size_x":9, "size_y":6}
+{"row": 12, "col":9, "size_x":9, "size_y":6}
 ```
 
 ---
