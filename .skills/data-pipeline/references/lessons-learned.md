@@ -3322,3 +3322,51 @@ FROM filter_bounds
 5. Khi thêm filter `date_range` cho bất kỳ dashboard nào: kiểm tra cycle-indicator với cả "past 7 days", "past 3 months" lẫn "thismonth", "thisquarter".
 
 **Reference:** `docs/analytics-handbook/blueprints/us_crossborder_operations.md`, `.skills/metabase-automation/references/filter-date-range-pattern.md`
+
+---
+
+### L98 — DuckDB: `DATE - DATE` returns `BIGINT`, not `INTEGER` — `DATE - BIGINT` has no overload
+
+**Group:** SERVE
+
+**Symptom:** Cycle-indicator card trả về lỗi:
+```
+Binder Error: No function matches the given name and argument types '-(DATE, BIGINT)'.
+Candidate functions: -(DATE, INTEGER) -> DATE, -(DATE, DATE) -> BIGINT, ...
+```
+Card không hiển thị gì, query thất bại hoàn toàn.
+
+**Root cause:** Trong DuckDB, `DATE - DATE` trả về `BIGINT` (số ngày). Nhưng phép trừ `DATE - BIGINT` không được hỗ trợ — chỉ có `DATE - INTEGER`. Khi viết:
+
+```sql
+p_start - (p_end - p_start + 1)
+```
+
+DuckDB xử lý như sau:
+1. `p_end - p_start` = `BIGINT` (overload `-(DATE, DATE) -> BIGINT`)
+2. `BIGINT + 1` = `BIGINT` (integer literal `1` được promote lên BIGINT)
+3. `p_start - BIGINT` = ❌ NO OVERLOAD — chỉ có `-(DATE, INTEGER) -> DATE`
+
+**Fix:** Cast `(p_end - p_start)` sang `INTEGER` trước khi dùng làm operand:
+
+```sql
+-- ❌ SAI — DATE - BIGINT không có overload
+p_start - (p_end - p_start + 1)
+
+-- ✅ ĐÚNG — cast BIGINT → INTEGER trước
+p_start - (p_end - p_start)::INTEGER - 1
+```
+
+Hoặc dùng INTERVAL (an toàn hơn nhưng dài hơn):
+```sql
+(p_start::TIMESTAMP - ((p_end - p_start)::INTEGER + 1 || ' days')::INTERVAL)::DATE
+```
+
+**Rules:**
+1. `DATE - DATE` = `BIGINT` trong DuckDB — KHÔNG phải `INTEGER`.
+2. `DATE - INTEGER` có overload; `DATE - BIGINT` KHÔNG có overload.
+3. Khi muốn `p_start - N_days` mà `N_days` được tính từ `DATE - DATE`: luôn cast `::INTEGER` trước.
+4. Integer literals (`1`, `7`, v.v.) được infer là `INTEGER` — `DATE - 1` hoạt động. `DATE - (expression returning BIGINT)` thì không.
+5. Rule tương tự áp dụng cho `TIMESTAMP - TIMESTAMP` (trả `INTERVAL`) — không cast được sang `INTEGER`.
+
+**Reference:** `docs/analytics-handbook/blueprints/us_crossborder_operations.md` (card: Chu kỳ báo cáo)
