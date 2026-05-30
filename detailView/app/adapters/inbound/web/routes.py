@@ -113,16 +113,13 @@ def register_routes(
                 status_code=404,
             )
 
-        # Map tab enum → partial template
+        # Map tab enum → partial template (merged panels reuse the original
+        # section partials via {% include %}, so markup/HTMX stays DRY).
         _tab_template = {
             OrderTab.FINANCIAL: "partials/order/_financial.html",
-            OrderTab.LINE_ITEMS: "partials/order/_line_items.html",
-            OrderTab.COST_LEDGER: "partials/order/_cost_ledger.html",
-            OrderTab.PAYMENTS: "partials/order/_payments.html",
-            OrderTab.FULFILLMENT: "partials/order/_fulfillment.html",
-            OrderTab.RETURNS: "partials/order/_returns.html",
-            OrderTab.CHANNEL_STAFF: "partials/order/_channel_staff.html",
-            OrderTab.TIMELINE: "partials/order/_timeline.html",
+            OrderTab.ITEMS: "partials/order/_line_items.html",
+            OrderTab.OPERATIONS: "partials/order/_operations.html",
+            OrderTab.CONTEXT: "partials/order/_context.html",
         }
 
         return templates.TemplateResponse(
@@ -148,7 +145,7 @@ def register_routes(
             {
                 "request": request,
                 "customer": customer,
-                "active_tab": CustomerTab.VALUE_METRICS,
+                "active_tab": CustomerTab.OVERVIEW,
                 "tabs": list(CustomerTab),
                 "customer_id": customer_id,
             },
@@ -176,8 +173,7 @@ def register_routes(
             )
 
         _tab_template = {
-            CustomerTab.VALUE_METRICS: "partials/customer/_value_metrics.html",
-            CustomerTab.BEHAVIOR: "partials/customer/_behavior.html",
+            CustomerTab.OVERVIEW: "partials/customer/_overview.html",
             CustomerTab.STATUS_TIMELINE: "partials/customer/_status_timeline.html",
             CustomerTab.ORDER_HISTORY: "partials/customer/_order_history.html",
         }

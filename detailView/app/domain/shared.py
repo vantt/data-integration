@@ -45,20 +45,18 @@ class DataQualityFlag:
     severity: str = "info"  # "info" | "warn"
 
 
+# Tabs are consolidated by user task (fewer, fuller panels — see UI_SPECS §2.2/§3.2):
+#   Order:    Financial(+cost breakdown) · Items · Operations(payments+fulfillment+returns) · Context(channel+staff+timeline)
+#   Customer: Overview(value+behaviour) · Status Timeline · Order History
 class OrderTab(str, Enum):
-    FINANCIAL = "financial"
-    LINE_ITEMS = "line-items"
-    COST_LEDGER = "cost-ledger"
-    PAYMENTS = "payments"
-    FULFILLMENT = "fulfillment"
-    RETURNS = "returns"
-    CHANNEL_STAFF = "channel-staff"
-    TIMELINE = "timeline"
+    FINANCIAL = "financial"      # revenue/profit waterfall + cost-ledger breakdown
+    ITEMS = "items"              # line items / SKUs
+    OPERATIONS = "operations"    # payments + fulfillment + returns (order lifecycle)
+    CONTEXT = "context"          # channel & source + staff/team + timeline
 
 
 class CustomerTab(str, Enum):
-    VALUE_METRICS = "value-metrics"
-    BEHAVIOR = "behavior"
+    OVERVIEW = "overview"            # value metrics + behaviour/RFM + segmentation
     STATUS_TIMELINE = "status-timeline"
     ORDER_HISTORY = "order-history"
 

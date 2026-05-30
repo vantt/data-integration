@@ -56,8 +56,8 @@
          aria-label="{{ active_tab.value | replace('-',' ') | title }} tab"
          aria-busy="false"
          tabindex="0">
-      {# Value Metrics renders immediately on first paint #}
-      {% include "partials/customer/_value_metrics.html" %}
+      {# Overview (value metrics + behaviour) renders immediately on first paint #}
+      {% include "partials/customer/_overview.html" %}
     </div>
 
   </section>

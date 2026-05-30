@@ -41,6 +41,8 @@ class DuckDbOrderRepository:
             payment_rows = fetch_all_dicts(conn, load_sql("order_payments"), [order_id])
             # Returns join on order_code (not order_id) — see researcher-01 §3.
             return_rows = fetch_all_dicts(conn, load_sql("order_returns"), [canonical_code])
+            # Shipments join on order_code (fact_fulfillments has no order_id FK).
+            shipment_rows = fetch_all_dicts(conn, load_sql("order_shipments"), [canonical_code])
 
         return OrderDetail(
             header=om.map_header(header_row),
@@ -49,6 +51,7 @@ class DuckDbOrderRepository:
             cost_ledger=[om.map_cost_row(r) for r in cost_rows],
             payments=[om.map_payment(r) for r in payment_rows],
             returns=[om.map_return_event(r) for r in return_rows],
+            shipments=[om.map_shipment(r) for r in shipment_rows],
             channel=om.map_channel(header_row),
             staff=om.map_staff(header_row),
             shipping=om.map_shipping(header_row),

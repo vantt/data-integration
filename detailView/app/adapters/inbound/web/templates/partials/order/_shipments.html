@@ -1,0 +1,55 @@
+{#
+  Order > Shipments section — fact_fulfillments (grain: 1 row per shipment).
+  Columns: fulfillment_code, tracking_code, carrier, service, status badge, COD, shipped_at.
+  Shows an empty-state when the order has no shipment records.
+  Included by _operations.html as the first section (before Fulfillment).
+#}
+{% from "macros.html" import badge, caveat %}
+{% set shps = order.shipments %}
+
+<section aria-label="Shipments">
+  <h3 style="margin:0 0 var(--space-3)">Shipments</h3>
+
+  {% if not shps %}
+  <div class="empty-state">
+    <p class="empty-state__title">No shipment records</p>
+    <p class="empty-state__body">No shipment legs found for this order.</p>
+  </div>
+
+  {% else %}
+
+  <div class="table-scroll">
+    <table class="data-table" aria-label="Shipment records">
+      <thead>
+        <tr>
+          <th scope="col">Code</th>
+          <th scope="col">Tracking</th>
+          <th scope="col">Carrier</th>
+          <th scope="col">Service</th>
+          <th scope="col">Status</th>
+          <th scope="col" class="num">COD</th>
+          <th scope="col">Shipped at</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in shps %}
+        <tr>
+          <td>{{ s.fulfillment_code or "—" }}</td>
+          <td>{{ s.tracking_code or "—" }}</td>
+          <td>{{ s.carrier_id or "—" }}</td>
+          <td>{{ s.shipping_service or "—" }}</td>
+          <td>
+            {% if s.status %}
+              {{ badge(s.status, s.status_tone().value, "shipment_status") }}
+            {% else %}—{% endif %}
+          </td>
+          <td class="num">{{ s.cod_amount | vnd }}</td>
+          <td>{{ s.shipped_at | dt }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% endif %}
+</section>

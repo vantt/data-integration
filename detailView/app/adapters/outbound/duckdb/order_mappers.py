@@ -17,6 +17,7 @@ from app.domain.order import (
     OrderHeader,
     Payment,
     ReturnEvent,
+    Shipment,
     ShippingInfo,
     StaffInfo,
 )
@@ -170,6 +171,21 @@ def map_return_event(row: Row) -> ReturnEvent:
         return_status=rc.as_str(row.get("return_status")),
         refund_status=rc.as_str(row.get("refund_status")),
         return_reason=rc.as_str(row.get("return_reason")),
+    )
+
+
+def map_shipment(row: Row) -> Shipment:
+    """Map one fact_fulfillments row to a Shipment value object."""
+    return Shipment(
+        fulfillment_id=rc.as_str(row.get("fulfillment_id")),
+        fulfillment_code=rc.as_str(row.get("fulfillment_code")),
+        tracking_code=rc.as_str(row.get("tracking_code")),
+        carrier_id=rc.as_str(row.get("carrier_id")),
+        shipping_service=rc.as_str(row.get("shipping_service")),
+        status=rc.as_str(row.get("status")),
+        cod_amount=rc.as_decimal(row.get("cod_amount")),
+        created_at=rc.as_datetime(row.get("created_at")),
+        shipped_at=rc.as_datetime(row.get("shipped_at")),
     )
 
 

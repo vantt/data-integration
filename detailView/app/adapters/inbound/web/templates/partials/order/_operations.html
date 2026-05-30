@@ -1,0 +1,19 @@
+{#
+  Order > Operations tab — merged order-lifecycle view.
+  Sections (stacked, single column): Shipments → Fulfillment & shipping → Payments → Returns.
+  Each section reuses its original partial so markup/HTMX/data bindings stay DRY.
+  Context provides `order`.
+#}
+{% include "partials/order/_shipments.html" %}
+
+<hr class="section-divider" style="margin:var(--space-5) 0">
+
+{% include "partials/order/_fulfillment.html" %}
+
+<hr class="section-divider" style="margin:var(--space-5) 0">
+
+{% include "partials/order/_payments.html" %}
+
+<hr class="section-divider" style="margin:var(--space-5) 0">
+
+{% include "partials/order/_returns.html" %}

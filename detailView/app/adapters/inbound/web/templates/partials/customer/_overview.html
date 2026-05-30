@@ -1,0 +1,10 @@
+{#
+  Customer > Overview tab — merged "who is this customer & how valuable".
+  Sections (stacked): Value metrics → Behaviour (RFM + segmentation). Reuses original
+  partials so markup/data bindings stay DRY. Context provides `customer`.
+#}
+{% include "partials/customer/_value_metrics.html" %}
+
+<hr class="section-divider" style="margin:var(--space-5) 0">
+
+{% include "partials/customer/_behavior.html" %}

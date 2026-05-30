@@ -134,3 +134,9 @@
   {% endif %}
 
 </section>
+
+{# Cost breakdown — merged from the former Cost Ledger tab: the granular cost rows
+   (COGS / platform fee / tax / shipping / discount) behind the waterfall above. #}
+<section aria-label="Cost breakdown" style="margin-top:var(--space-5)">
+  {% include "partials/order/_cost_ledger.html" %}
+</section>

@@ -71,19 +71,19 @@ Tab order + content:
 
 | Tab | Source | Key content |
 |---|---|---|
-| **Financial** (default) | `fact_orders` + `fact_order_economics` (+ `fact_us_shipment_economics` if US) | Revenue waterfall as a vertical list: gross_revenue → −discount_amount → net_revenue → +tax_amount → total_collected → −cogs_amount → gross_profit (margin%) → −shopee fees → channel_net_profit (margin%). US: swap revenue block to US revenue (excl/incl VAT, line_item_count, unpriced warning). Show return_amount as reference-only note (NOT subtracted). Caveats inline. |
-| **Line Items** | `fact_sales` × `dim_products` | Table: sku, product_name, variant_name, brand, category, qty, unit_price (revenue/qty), line revenue, per-line discount, distributed discount, weight. Footer: Σ line revenue vs net_revenue reconciliation note. US: add us_price columns if available. No per-line COGS (note). |
-| **Cost Ledger** | `fact_order_costs` | Rows grouped by `cost_category` (COGS / PLATFORM_FEE / TAX / SHIPPING / DISCOUNT). Per row: cost_type, amount, source_system, source_record (traceability), fee_source (actual/estimated). Category subtotals. |
-| **Payments** | `fact_payments` × `dim_payment_methods` | Table: method name/type, amount, status, payment_timestamp, paid_on. Summary: total paid, COD vs prepaid mix. |
-| **Fulfillment** | `fact_orders` + `fact_order_economics` | status/payment/fulfillment badges, first_shipped_at, carrier_id, cod_amount, shipping address (province/district/ward/country), time_to_complete_hours. Note: leg-level tracking not in serving layer. |
-| **Returns** | `fact_order_returns` | Per event: return_date (ICT), refund_amount, return_quantity, return_status, refund_status, return_reason. Totals. Empty state if none. |
-| **Channel & Staff** | dims | Channel: name/code/category/format/platform/brand/market; promo code(s) (`dim_promotions` + `discount_codes`), max_discount_rate, primary_discount_nature. Staff: seller (primary), creator, team, branch. |
-| **Timeline** | `fact_orders` + `dim_date`/`dim_time` | Vertical timeline: created (ICT, day_period, is_weekend/business_hour), first_shipped_at, completed (time_to_complete_hours), payment paid_on(s), return event(s). |
+> Consolidated 8 → **4 tabs** (by user task + usage frequency; sparse single-purpose tabs merged so the wide 2fr column isn't empty). Merged panels reuse the original section partials via `{% include %}`.
+
+| Tab | Source | Key content |
+|---|---|---|
+| **Financial** (default) | `fact_orders` + `fact_order_economics` (+ `fact_us_shipment_economics` if US) + `fact_order_costs` | Revenue/profit waterfall: gross → −discount → net → +VAT → collected → −COGS → gross profit (margin%) → −Shopee fees → channel net profit (margin%). US: swap to US revenue (excl/incl VAT, line count, unpriced warning). Returns = reference-only note (NOT subtracted). Inline caveats. **+ Cost breakdown section** = `fact_order_costs` grouped by `cost_category` (COGS/PLATFORM_FEE/TAX/SHIPPING/DISCOUNT) w/ cost_type, amount, source_system, source_record, fee_source. |
+| **Items** | `fact_sales` × `dim_products` | Table: sku, product/variant, brand, category, qty, unit_price (revenue/qty), line revenue, per-line + distributed discount, weight. Σ vs net_revenue note. US price cols if available. No per-line COGS (note). |
+| **Operations** | `fact_orders`/economics + `fact_payments`×`dim_payment_methods` + `fact_order_returns` | Stacked sections — **Fulfillment** (status/payment/fulfillment badges, first_shipped_at, carrier, COD, shipping address, time_to_complete) · **Payments** (method, amount, status, paid_on; COD vs prepaid mix) · **Returns** (per event: date/refund/qty/status/reason; empty-state aware). |
+| **Context** | dims + `dim_date`/`dim_time` | Stacked — **Channel & Source** (name/code/category/format/platform/brand/market; promo code(s), max_discount_rate, primary_discount_nature) · **Staff/Team** (seller primary, creator, team, branch) · **Timeline** (created/shipped/completed, time_to_complete, paid_on(s), return event(s)). |
 
 ### 2.3 Order behaviors
 - Tabs lazy-load (only Financial loads on first paint; others on click). Active tab reflected in URL hash for shareability.
 - All money/timestamps via shared renderers. Missing → "—".
-- US order: Financial + Line Items adapt automatically based on `is_us` flag.
+- US order: Financial + Items adapt automatically based on `is_us` flag.
 
 ---
 
@@ -100,8 +100,11 @@ Tab order + content:
 
 | Tab | Source | Key content |
 |---|---|---|
-| **Value Metrics** (default) | `dim_customers` + aggregates over `fact_orders`/`fact_order_economics` | KPI grid: LTV (total_collected), total orders, AOV, value_group; total gross profit contributed, total COGS, avg gross margin % (with COGS-coverage caveat); total returns (amount + count). |
-| **Behavior (RFM/segmentation)** | `dim_customers` | RFM trio: Recency (recency_days), Frequency (total_orders_count), Monetary (lifetime_value). Segmentation chips: lifecycle_stage, channel_preference, product_affinity, payment_behavior, geo_region, customer_type. Cohort month (= trunc(first_order_date)). |
+> Consolidated 4 → **3 tabs**: Value Metrics + Behaviour merged into **Overview** (sparse single-metric panels combined).
+
+| Tab | Source | Key content |
+|---|---|---|
+| **Overview** (default) | `dim_customers` + aggregates over `fact_orders`/`fact_order_economics` | Stacked — **Value metrics** (LTV, total orders, AOV, value_group; total gross profit, total COGS, avg margin % w/ COGS-coverage caveat; total returns) · **Behaviour/RFM** (Recency/Frequency/Monetary; segmentation chips: lifecycle_stage, channel_preference, product_affinity, payment_behavior, geo_region, customer_type; cohort month = trunc(first_order_date)). |
 | **Status Timeline** | `mart_customer_status_snapshot_monthly` | 24-month horizontal strip of monthly status (ACTIVE/AT_RISK/CHURNED), is_new marker on acquisition month, days_since_last_order tooltip, value_group trend (approx note). **RETAIL only** — non-RETAIL → "RETAIL only" notice, no data. |
 | **Order History** | `fact_orders` × economics × dims | Table (newest first): order_code (→ links to order page), date, status, channel, seller, total_collected, gross_profit + margin%, discount info, payment method, return flag, carrier. Pagination/scroll if long. |
 
@@ -306,3 +309,135 @@ ORDER HISTORY «fact_orders × economics × dims»  (rows → /orders/{code})
 │ tab panel     │               └──────────────────┘     └──────────────────┘   └──────────────┘
 └───────────────┘
 ```
+
+---
+
+## 9. Shipments section — design brief (for `claude design`)
+
+**What:** an order can ship in one or more legs (avg ~1–3). This section shows every shipment of the
+order. **Placement:** FIRST section of the **Operations** tab (above Fulfillment · Payments · Returns).
+**Source:** `fact_fulfillments` → domain `Shipment` (one card/row per leg).
+
+### Data per shipment (what to surface, by priority)
+| Field | Display | Priority |
+|---|---|---|
+| `status` | **Hero** — status badge w/ tone: DELIVERED=good · SHIPPING/PENDING=warn · PACKED=neutral · CANCELLED/FAILED=bad | ★★★ |
+| `tracking_code` | monospace, **copy-on-click**; the thing CS reads to the customer / pastes into a carrier site | ★★★ |
+| `carrier_id` + `shipping_service` | carrier name + service tier (e.g. "SPX · Standard") | ★★ |
+| `fulfillment_code` | the shipment's human code (e.g. `FUN18213`) — secondary identifier | ★★ |
+| `shipped_at` | date-time ICT (relative ok, e.g. "2d ago"); NULL = "not shipped yet" | ★★ |
+| `cod_amount` | VND money, only if > 0 → emphasize (COD shipments matter operationally) | ★★ |
+| `created_at` | date-time ICT, muted | ★ |
+| `fulfillment_id` | **de-emphasize / omit** — internal numeric id, can be negative; not user-facing | ☆ |
+
+### Layout & behaviour
+- **Multiple legs → vertical list of compact cards** (not a wide sparse table). Each card: status badge top-left,
+  carrier+service top-right, tracking_code as a prominent copyable line, then a small meta row (code · shipped_at · COD).
+- **Order legs newest-first** (`shipped_at` desc, NULLs last — i.e. not-yet-shipped legs at the end or flagged).
+- **Section header**: "Shipments" + count chip (e.g. "Shipments · 2"); optional one-line summary of the mix
+  (e.g. "1 delivered · 1 shipping").
+- **Status as the visual anchor** — a viewer should grok delivery state in <1s. Consider a tiny stage indicator
+  PACKED → SHIPPING → DELIVERED (with CANCELLED/FAILED as a distinct error treatment) — optional, nice-to-have.
+- **tracking_code**: monospace + a copy affordance; do NOT auto-link (we have no per-carrier tracking-URL map yet —
+  leave a hook/comment for a future `carrier → tracking-URL` template).
+- **COD**: when present, give it a small money emphasis (it's cash the carrier collects).
+
+### States
+- **No shipments** (order not yet fulfilled): calm empty-state — "No shipments yet" + the order's
+  `fulfillment_status` for context. Don't show an empty table shell.
+- **Single shipment**: same card, no count chip needed.
+- **Long tracking codes**: must not overflow on mobile — wrap or truncate-with-copy.
+
+### A11y / responsive / mood
+- Semantic: a list (`<ul>`/cards) or a `<table>` with real headers; status badge carries **text** (not color-only).
+- < 700px: cards stack full-width; tracking_code stays fully visible/copyable.
+- Mood: same "ops console" system as the rest — dense, scannable, tabular-nums for money/dates. Shipment status
+  is the one place a little color/iconography earns its keep.
+
+### ASCII intent
+```
+Shipments · 2          1 delivered · 1 shipping
+┌───────────────────────────────────────────────────────────┐
+│ [DELIVERED]                               SPX · Standard    │
+│ Tracking  SPXVN063279123185                          ⧉ copy │
+│ Code FUN18213 · shipped 2026-05-28 14:20 (ICT) · COD 350.000₫│
+└───────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│ [SHIPPING]                                GHTK · Express    │
+│ Tracking  GHTK20260529X8821                          ⧉ copy │
+│ Code FUN18250 · not shipped yet · COD —                     │
+└───────────────────────────────────────────────────────────┘
+
+empty:  ┌────────────────────────────────────────────┐
+        │  No shipments yet · fulfillment: IN_PROGRESS │
+        └────────────────────────────────────────────┘
+```
+
+### Caveats for the designer
+- One order ↔ many shipments (design for N, not 1). Some legs have NULL `shipped_at` / NULL `cod_amount`.
+- `fulfillment_id` is internal (may be negative) — never feature it; `fulfillment_code` + `tracking_code` are the human keys.
+- This section is **searchable**: users can find the order by typing the shipment code / id / tracking code in the
+  header search — so those values shown here should be exact + copyable.
+
+---
+
+## 10. Returns section — design brief (for `claude design`)
+
+**What:** per-return events for the order (refunds / goods returned). **Placement:** LAST section of the
+**Operations** tab (after Shipments · Fulfillment · Payments). **Source:** `fact_order_returns` → domain
+`ReturnEvent`. **Reality check (live data):** returns are LOW-VOLUME — most orders have **0**, those that
+do usually have **1** (rarely more). Optimize for the empty + single case; still handle N.
+
+### Data per return (priority high→low)
+| Field | Display | Priority |
+|---|---|---|
+| `refund_amount` | **Hero** — VND money returned to customer | ★★★ |
+| `refund_status` | badge — `paid`=good (refund done) · `unpaid`=warn (pending). Raw lowercase → Title-case it. | ★★★ |
+| `return_status` | badge — `returned`=neutral/info · `cancelled`=muted/bad. Raw lowercase → Title-case. | ★★ |
+| `return_date` | date (ICT), relative ok | ★★ |
+| `return_quantity` | qty of units returned; **often NULL → "—"** | ★ |
+| `return_reason` | free text (Vietnamese), **often blank → "No reason recorded"** (muted) | ★ |
+
+### Layout & behaviour
+- Low volume → **compact card(s)** (or a tight table). Single return = one card; no count chrome needed.
+- Each card: `refund_amount` as the anchor number; two status badges (refund + return); a muted meta row
+  (date · qty · reason).
+- If multiple: list newest-first by `return_date`; section header "Returns · N" + **total refunded** sum.
+- **Reconciliation note (important):** returns are recognized at return date and are **NOT subtracted from this
+  order's P&L** — show a one-line caveat ("Reference only — not deducted from order profit") consistent with the
+  Financial tab's returns note. This context matters so users don't double-count.
+
+### States
+- **No returns** (the common case): calm empty state — "No returns" (single muted line). This is normal/healthy,
+  NOT an error tone. Don't render an empty table shell.
+- **Blank reason / NULL quantity:** graceful placeholders ("No reason recorded" / "—"), never empty gaps.
+- **Large refund** (seen up to ~21.6M₫): money must stay readable/aligned (tabular-nums).
+
+### A11y / responsive / mood
+- Status badges carry TEXT (Title-cased), not color-only. List or table with real headers.
+- < 700px: cards stack full-width; money right-aligned/tabular.
+- Mood: same "ops console". Returns is muted by default (low signal); the refund money + refund_status are the
+  only things that should pop.
+
+### ASCII intent
+```
+Returns · 1                                 total refunded 2.472.945₫
+┌───────────────────────────────────────────────────────────┐
+│ 2.472.945 ₫                       [Refund: Paid] [Returned] │
+│ 2026-01-12 (ICT) · qty —                                    │
+│ Reason: KHÁCH TRẢ HÀNG                                      │
+└───────────────────────────────────────────────────────────┘
+ⓘ Reference only — returns are not deducted from this order's P&L.
+
+empty:  ┌──────────────────────────┐
+        │  No returns               │
+        └──────────────────────────┘
+```
+
+### Caveats for the designer
+- `return_status` / `refund_status` are RAW lowercase Sapo values (`returned`/`cancelled`, `paid`/`unpaid`) —
+  Title-case in the UI; map to tones above.
+- `return_reason` is unstructured Vietnamese and frequently empty; `return_quantity` frequently NULL — design
+  must look intentional when these are absent.
+- Order-level totals (`return_amount`, `return_count`) already appear as a reference note on the Financial tab;
+  this section is the per-event detail. Keep them consistent, not contradictory.

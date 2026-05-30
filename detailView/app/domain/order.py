@@ -11,6 +11,37 @@ from decimal import Decimal
 
 from .shared import Badge, DataQualityFlag, Tone, safe_ratio
 
+# Shipment status → badge tone mapping (used by the web template).
+_SHIPMENT_TONE: dict[str, Tone] = {
+    "DELIVERED": Tone.GOOD,
+    "SHIPPING": Tone.WARN,
+    "PACKED": Tone.NEUTRAL,
+    "CANCELLED": Tone.BAD,
+    "FAILED": Tone.BAD,
+    "PENDING": Tone.WARN,
+}
+
+
+@dataclass
+class Shipment:
+    """Value object for one shipment leg (grain: 1 row per fact_fulfillments row)."""
+
+    fulfillment_id: str | None = None
+    fulfillment_code: str | None = None
+    tracking_code: str | None = None
+    carrier_id: str | None = None
+    shipping_service: str | None = None
+    status: str | None = None
+    cod_amount: Decimal | None = None
+    created_at: datetime | None = None
+    shipped_at: datetime | None = None
+
+    def status_tone(self) -> Tone:
+        """Map shipment status to a badge tone for the UI layer."""
+        if self.status is None:
+            return Tone.NEUTRAL
+        return _SHIPMENT_TONE.get(self.status.upper(), Tone.NEUTRAL)
+
 
 @dataclass
 class OrderHeader:
@@ -178,6 +209,7 @@ class OrderDetail:
     cost_ledger: list[CostRow] = field(default_factory=list)
     payments: list[Payment] = field(default_factory=list)
     returns: list[ReturnEvent] = field(default_factory=list)
+    shipments: list[Shipment] = field(default_factory=list)
     channel: ChannelInfo = field(default_factory=ChannelInfo)
     staff: StaffInfo = field(default_factory=StaffInfo)
     shipping: ShippingInfo = field(default_factory=ShippingInfo)

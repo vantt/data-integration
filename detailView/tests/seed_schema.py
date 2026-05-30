@@ -79,6 +79,14 @@ _DDL = [
     """CREATE TABLE mart_customer_status_snapshot_monthly (
         customer_key VARCHAR, snapshot_month DATE, status VARCHAR, is_new BOOLEAN,
         days_since_last_order BIGINT, value_group VARCHAR )""",
+    # fact_fulfillments: FROZEN schema — grain: 1 row per shipment leg.
+    # Mirrors the serving view the lead builds in parallel (see task spec §FROZEN schema).
+    """CREATE TABLE fact_fulfillments (
+        fulfillment_id VARCHAR, fulfillment_code VARCHAR,
+        order_id VARCHAR, order_code VARCHAR,
+        tracking_code VARCHAR, carrier_id VARCHAR, shipping_service VARCHAR,
+        status VARCHAR, cod_amount DECIMAL(18,2),
+        created_at TIMESTAMPTZ, shipped_at TIMESTAMPTZ )""",
 ]
 
 

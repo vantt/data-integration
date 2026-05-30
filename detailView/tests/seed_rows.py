@@ -2,6 +2,7 @@
 
 Scenario:
 - ORD-NORMAL     : domestic order, has COGS, 2 line items, 1 payment, returns (by order_code).
+                   Has 2 shipment legs (SHIP-A delivered, SHIP-B shipping) in fact_fulfillments.
 - ORD-US         : US CrossBorder order, fact_orders.net_revenue = 0 + fact_us_shipment row.
 - ORD-NOCOGS     : domestic order with has_cogs = FALSE.
 - ORD-BY-ID-ONLY : order whose order_id ('9991') differs from order_code ('CODE-ALPHA');
@@ -20,6 +21,7 @@ def seed_rows(con: duckdb.DuckDBPyConnection) -> None:
     _seed_economics(con)
     _seed_children(con)
     _seed_customers(con)
+    _seed_fulfillments(con)
 
 
 def _seed_dims(con: duckdb.DuckDBPyConnection) -> None:
@@ -129,6 +131,31 @@ def _seed_children(con: duckdb.DuckDBPyConnection) -> None:
         "INSERT INTO fact_order_returns VALUES "
         "('RET1', 1001, 'ORD-NORMAL', DATE '2026-01-20', 150000, 1, 'COMPLETED', "
         "'REFUNDED', 'damaged')"
+    )
+
+
+def _seed_fulfillments(con: duckdb.DuckDBPyConnection) -> None:
+    """Two shipment legs for ORD-NORMAL; exercises all search paths (code, id, tracking)."""
+    # fulfillment_id, fulfillment_code, order_id, order_code,
+    # tracking_code, carrier_id, shipping_service,
+    # status, cod_amount, created_at, shipped_at
+    rows = [
+        (
+            "FF-001", "SHIP-A", "1001", "ORD-NORMAL",
+            "GHTK-TRACK-001", "GHTK", "standard",
+            "DELIVERED", 1100000,
+            "2026-01-09 10:00:00+07", "2026-01-10 14:00:00+07",
+        ),
+        (
+            "FF-002", "SHIP-B", "1001", "ORD-NORMAL",
+            "GHTK-TRACK-002", "GHTK", "express",
+            "SHIPPING", None,
+            "2026-01-09 11:00:00+07", None,
+        ),
+    ]
+    con.executemany(
+        "INSERT INTO fact_fulfillments VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        rows,
     )
 
 

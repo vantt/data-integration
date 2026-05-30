@@ -24,20 +24,48 @@ class DuckDbSearchAdapter:
     def resolve_order(self, query: str) -> str | None:
         """Return the canonical order_code for the query, else None.
 
-        Matching priority (both exact / case-insensitive):
-          1. order_code match  (e.g. user types '260529N88MBG3U')
-          2. order_id match    (e.g. user types '1036830915')
+        Matching priority (exact, case-insensitive):
+          1. order_code  (rank 0)
+          2. order_id    (rank 1)
+          3. fulfillment_code / fulfillment_id / tracking_code via fact_fulfillments (rank 2)
 
-        The query is passed three times to satisfy the three positional '?' placeholders
-        in search_order.sql (CASE expression + WHERE clause pair).
+        fact_fulfillments may not exist on older DBs; the SQL guards with a UNION ALL that
+        produces zero rows when the view is absent — the INNER JOIN simply returns nothing
+        rather than crashing. A missing view therefore produces no match, not an error.
+
+        search_order.sql has 6 positional '?' placeholders:
+          [0] CASE order_code, [1] WHERE order_code, [2] WHERE order_id,
+          [3] WHERE fulfillment_code, [4] WHERE fulfillment_id, [5] WHERE tracking_code.
         """
         if not query or not query.strip():
             return None
         q = query.strip()
-        # Three '?' in search_order.sql: CASE WHEN clause, WHERE order_code, WHERE order_id.
-        with read_only_connection(self._db_path) as conn:
-            row = fetch_one_dict(conn, load_sql("search_order"), [q, q, q])
+        # 6 params: CASE order_code, WHERE order_code, WHERE order_id,
+        #           WHERE fulfillment_code, WHERE fulfillment_id, WHERE tracking_code.
+        params = [q, q, q, q, q, q]
+        try:
+            with read_only_connection(self._db_path) as conn:
+                row = fetch_one_dict(conn, load_sql("search_order"), params)
+        except Exception:
+            # Guard: if fact_fulfillments is structurally absent and DuckDB raises at parse
+            # time (older schema without the view), fall back to order-only search.
+            row = self._resolve_order_fallback(q)
         return rc.as_str(row.get("order_code")) if row else None
+
+    def _resolve_order_fallback(self, q: str) -> dict | None:
+        """Order-only search used when fact_fulfillments is unavailable."""
+        _FALLBACK_SQL = (
+            "SELECT order_code, "
+            "CASE WHEN UPPER(order_code) = UPPER(?) THEN 0 ELSE 1 END AS match_rank "
+            "FROM fact_orders "
+            "WHERE UPPER(order_code) = UPPER(?) OR order_id = ? "
+            "ORDER BY match_rank LIMIT 1"
+        )
+        try:
+            with read_only_connection(self._db_path) as conn:
+                return fetch_one_dict(conn, _FALLBACK_SQL, [q, q, q])
+        except Exception:
+            return None
 
     def resolve_customer(self, query: str) -> list[CustomerHit]:
         """Resolve a customer by id / phone / email. 0..10 hits."""
