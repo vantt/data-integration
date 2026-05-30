@@ -38,6 +38,16 @@ models:
       - name: status
         description: "DELIVERED / SHIPPING / PACKED / CANCELLED / FAILED / PENDING"
 
+  # Observability
+  - name: mart_data_quality
+    description: >
+      Single-row (dq_key='global') system data-quality / coverage snapshot powering the
+      detailView "Data health" surface: COGS & platform-fee coverage, fulfillment / return /
+      US rates, carrier & acquisition NULL rates. Recomputed each pipeline run.
+    columns:
+      - name: dq_key
+        tests: [unique, not_null]
+
   # Dimensions
   - name: dim_channel_targets
     description: >
