@@ -48,11 +48,56 @@ Tabs organize dashboard cards into separate views. Place `### 📑 Tab:` headers
 
 #### Widget 1 — Chu kỳ báo cáo (đầu tab, row 0–1)
 
-Mục đích: Khai báo khung thời gian — người đọc biết chính xác mình đang xem dữ liệu của ngày/tuần/tháng nào.
+Mục đích: Khai báo khung thời gian — người đọc biết chính xác mình đang xem dữ liệu của kỳ nào, và kỳ trước là kỳ nào.
 
 **Type:** ❓ Question (SQL scalar) — không phải text card
 
-**SQL mẫu (daily):**
+> **Xem full pattern:** `.skills/metabase-automation/references/filter-date-range-pattern.md`
+
+**SQL chuẩn (dynamic — tự detect weekly/monthly/quarterly/yearly, đáp ứng filter):**
+```sql
+WITH filter_bounds AS (
+    -- Thay <date_col> và <table> theo field_id của dashboard. KHÔNG alias <table>
+    SELECT MIN(<date_col>) AS p_start, MAX(<date_col>) AS p_end
+    FROM <table>
+    WHERE <base_conditions>
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
+```
+
+**SQL fallback (daily-only dashboard không có date filter):**
 ```sql
 SELECT
   '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
@@ -67,12 +112,10 @@ SELECT
 
 **Vị trí:** row: 0, col: 0, size_x: 18, size_y: 2 — bắt buộc size_y: 2 mới hiển thị đủ
 
-**Nội dung SQL thay đổi theo loại dashboard:**
-- Daily: hôm nay + hôm qua
-- Weekly: tuần hiện tại (D-6 → hôm nay)
-- Monthly: tháng hiện tại
-
-**Ràng buộc:** Không đặt widget nào khác tại row 0 — Metabase ưu tiên text card khi conflict, Chu kỳ báo cáo sẽ bị đẩy xuống (đây là bug đã gặp và fix trong thực tế).
+**Ràng buộc:**
+- Không đặt widget nào khác tại row 0 — Metabase ưu tiên text card khi conflict
+- `[[AND {{date_range}}]]` PHẢI có trong filter_bounds WHERE — không có thì filter không wire (L95)
+- `<table>` trong filter_bounds KHÔNG ĐƯỢC có alias (L96)
 
 ---
 
@@ -97,6 +140,9 @@ Source: [bảng] · [cadence] · **Scope: [filters]** · [time window] · [cavea
 ---
 
 ### Filter Support
+
+> **Full date filter reference:** `.skills/metabase-automation/references/filter-date-range-pattern.md`
+> Covers: field_id lookup, filter_bounds pattern, KPI comparison, column type variants (DATE/TIMESTAMP/date_key INTEGER), anti-patterns, và checklist.
 
 Dashboard-level filters (parameters) are defined using `#### Filter:` headers with a `metabase-filter` JSON block. Place them before any Tab or Question headers.
 
