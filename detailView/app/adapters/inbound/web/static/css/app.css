@@ -144,6 +144,13 @@ body { background: var(--bg-page); background-image: var(--bg-vignette); backgro
 }
 .icon-btn:hover { color: var(--accent); border-color: var(--border-strong); }
 
+/* Theme toggle — show the icon for the action available in the CURRENT theme:
+   dark (default) shows the sun (→ go light); light shows the moon (→ go dark). */
+.theme-toggle__sun  { display: block; }
+.theme-toggle__moon { display: none; }
+html[data-theme="light"] .theme-toggle__sun  { display: none; }
+html[data-theme="light"] .theme-toggle__moon { display: block; }
+
 /* ─────────────────────────────────────────────────────────
    DETAIL GRID  (2fr main : 1fr sidebar)
    Contract for Order + Customer screens:
