@@ -26,7 +26,12 @@ Dashboard theo doi muc do phoi nhiem refund, ty le hoan hang theo kenh, phan tic
 {
   "slug": "return_date",
   "type": "date/all-options",
-  "default": "thismonth"
+  "default": "thismonth",
+  "field_id": 468,
+  "field_id_map": {
+    "fact_order_returns": 468,
+    "int_return_sku_lines": 512
+  }
 }
 ```
 
@@ -35,7 +40,8 @@ Dashboard theo doi muc do phoi nhiem refund, ty le hoan hang theo kenh, phan tic
 ```json metabase-filter
 {
   "slug": "channel",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 179
 }
 ```
 
@@ -46,7 +52,42 @@ Dashboard theo doi muc do phoi nhiem refund, ty le hoan hang theo kenh, phan tic
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -71,22 +112,26 @@ Refund liability va ty le hoan hang — muc do rui ro tai chinh ky nay
 Ty le hoan hang thang nay — so don hang hoan / tong don hang hop le cung ky. Alert neu > 5%.
 
 ```sql
-WITH returns_mtd AS (
-    SELECT COUNT(DISTINCT r.order_code) AS returned_orders
-    FROM fact_order_returns r
-    WHERE r.return_date >= date_trunc('month', current_date)
-      AND r.return_date < current_date
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
 ),
-orders_mtd AS (
+returns_period AS (
+    SELECT COUNT(DISTINCT order_code) AS returned_orders
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+orders_period AS (
     SELECT COUNT(DISTINCT o.order_code) AS total_orders
-    FROM fact_orders o
+    FROM fact_orders o, filter_bounds
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date)
-      AND o.order_timestamp < current_date
+      AND o.order_timestamp::DATE >= filter_bounds.p_start
+      AND o.order_timestamp::DATE <= filter_bounds.p_end
 )
 SELECT
     ROUND(COALESCE(r.returned_orders, 0) * 100.0 / NULLIF(o.total_orders, 0), 2) AS "Ty le hoan %"
-FROM returns_mtd r, orders_mtd o
+FROM returns_period r, orders_period o
 ```
 
 ```json metabase-viz
@@ -116,8 +161,8 @@ Tong gia tri hoan tien thang nay — phoi nhiem tai chinh truc tiep.
 SELECT
     COALESCE(SUM(refund_amount), 0) AS "Refund Liability"
 FROM fact_order_returns
-WHERE return_date >= date_trunc('month', current_date)
-  AND return_date < current_date
+WHERE 1=1
+  [[AND {{return_date}}]]
 ```
 
 ```json metabase-viz
@@ -148,14 +193,13 @@ Stack by top-3 return reasons. Thay the scalar trung binh vi trung binh khong co
 ```sql
 WITH lag_data AS (
     SELECT
-        COALESCE(r.return_reason, 'Khong ro') AS return_reason,
-        date_diff('day', DATE(o.order_timestamp), r.return_date) AS lag_days
-    FROM fact_order_returns r
-    JOIN fact_orders o ON r.order_code = o.order_code
-    WHERE r.return_date >= date_trunc('month', current_date)
-      AND r.return_date < current_date
-      AND o.status NOT IN ('CANCELLED', 'Voided')
-      AND date_diff('day', DATE(o.order_timestamp), r.return_date) >= 0
+        COALESCE(fact_order_returns.return_reason, 'Khong ro') AS return_reason,
+        date_diff('day', DATE(fact_orders.order_timestamp), fact_order_returns.return_date) AS lag_days
+    FROM fact_order_returns
+    JOIN fact_orders ON fact_order_returns.order_code = fact_orders.order_code
+    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
+      [[AND {{return_date}}]]
+      AND date_diff('day', DATE(fact_orders.order_timestamp), fact_order_returns.return_date) >= 0
 ),
 top_reasons AS (
     SELECT return_reason
@@ -209,7 +253,7 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 3, "col":9, "size_x":9, "size_y":5}
+{"row": 3, "col":13, "size_x":5, "size_y":5}
 ```
 
 #### ❓ Question: Top Return Reason MTD
@@ -220,8 +264,8 @@ Ly do hoan pho bien nhat thang nay theo so luong.
 SELECT
     COALESCE(return_reason, 'Khong ro') AS "Ly do hoan #1"
 FROM fact_order_returns
-WHERE return_date >= date_trunc('month', current_date)
-  AND return_date < current_date
+WHERE 1=1
+  [[AND {{return_date}}]]
 GROUP BY 1
 ORDER BY COUNT(*) DESC
 LIMIT 1
@@ -235,7 +279,7 @@ LIMIT 1
 ```
 
 ```json metabase-pos
-{"row": 3, "col":13, "size_x":5, "size_y":3}
+{"row": 3, "col":9, "size_x":4, "size_y":3}
 ```
 
 ---
@@ -255,7 +299,42 @@ LIMIT 1
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -282,10 +361,10 @@ Horizontal bar — ty le hoan % theo kenh, sort DESC. Highlight do > 5% (alert t
 ```sql
 WITH ret AS (
     SELECT
-        r.channel_key,
-        COUNT(DISTINCT r.order_code) AS returned_orders
-    FROM fact_order_returns r
-    [[WHERE r.return_date >= {{return_date}}]]
+        channel_key,
+        COUNT(DISTINCT order_code) AS returned_orders
+    FROM fact_order_returns
+    [[WHERE {{return_date}}]]
     GROUP BY 1
 ),
 ord AS (
@@ -294,11 +373,10 @@ ord AS (
         COUNT(DISTINCT o.order_code) AS total_orders
     FROM fact_orders o
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-    [[AND o.order_timestamp >= {{return_date}}]]
     GROUP BY 1
 )
 SELECT
-    c.channel_name                                                        AS "Kenh ban hang",
+    dim_channels.channel_name                                             AS "Kenh ban hang",
     COALESCE(ret.returned_orders, 0)                                      AS "Don hoan",
     COALESCE(ord.total_orders, 0)                                         AS "Tong don",
     ROUND(
@@ -307,9 +385,9 @@ SELECT
     )                                                                     AS "Ty le hoan %"
 FROM ord
 LEFT JOIN ret USING (channel_key)
-JOIN dim_channels c USING (channel_key)
-WHERE c.is_sales_channel
-  [[AND c.channel_name = {{channel}}]]
+JOIN dim_channels USING (channel_key)
+WHERE dim_channels.is_sales_channel
+  [[AND {{channel}}]]
 ORDER BY "Ty le hoan %" DESC NULLS LAST
 ```
 
@@ -361,11 +439,11 @@ Table — chi tiet so don hoan, gia tri hoan, ty le hoan per channel, sort by re
 ```sql
 WITH ret AS (
     SELECT
-        r.channel_key,
-        COUNT(DISTINCT r.order_code)   AS returned_orders,
-        COALESCE(SUM(r.refund_amount), 0) AS refund_total
-    FROM fact_order_returns r
-    [[WHERE r.return_date >= {{return_date}}]]
+        channel_key,
+        COUNT(DISTINCT order_code)   AS returned_orders,
+        COALESCE(SUM(refund_amount), 0) AS refund_total
+    FROM fact_order_returns
+    [[WHERE {{return_date}}]]
     GROUP BY 1
 ),
 ord AS (
@@ -374,7 +452,6 @@ ord AS (
         COUNT(DISTINCT o.order_code)   AS total_orders
     FROM fact_orders o
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-    [[AND o.order_timestamp >= {{return_date}}]]
     GROUP BY 1
 )
 SELECT
@@ -445,7 +522,42 @@ ORDER BY "Gia tri hoan (VND)" DESC NULLS LAST
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -476,7 +588,7 @@ SELECT
     COALESCE(SUM(refund_amount), 0)       AS "Gia tri hoan (VND)"
 FROM fact_order_returns
 WHERE 1=1
-  [[AND return_date >= {{return_date}}]]
+  [[AND {{return_date}}]]
 GROUP BY 1
 ORDER BY "Gia tri hoan (VND)" DESC
 LIMIT 10
@@ -516,7 +628,7 @@ SELECT
     COUNT(*)                             AS "So luong hoan"
 FROM fact_order_returns
 WHERE 1=1
-  [[AND return_date >= {{return_date}}]]
+  [[AND {{return_date}}]]
 GROUP BY 1
 ORDER BY "So luong hoan" DESC
 LIMIT 10
@@ -556,7 +668,42 @@ LIMIT 10
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -586,8 +733,8 @@ SELECT
     COUNT(*)                         AS "So don hoan",
     COALESCE(SUM(refund_amount), 0)  AS "Gia tri hoan (VND)"
 FROM fact_order_returns
-WHERE return_date >= (current_date - INTERVAL '90 days')
-  AND return_date < current_date
+WHERE 1=1
+  [[AND {{return_date}}]]
 GROUP BY 1
 ORDER BY 1
 ```
@@ -725,7 +872,42 @@ ORDER BY c.order_month, c.return_month
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date), '%d/%m/%Y') || ' → ' || strftime(current_date, '%d/%m/%Y') || '  ·  Tháng trước: ' || strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%d/%m/%Y') || ' → ' || strftime(date_trunc('month', current_date) - INTERVAL '1 day', '%d/%m/%Y') AS " "
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+period_adj AS (
+    SELECT
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN date_trunc('week',  p_start)::DATE
+             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
+        CASE WHEN (p_end-p_start)::INTEGER<=6
+               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
+             WHEN p_end < current_date-30
+               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
+             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
+               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
+             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
+               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
+             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
+        (p_end-p_start)::INTEGER AS raw_dur
+    FROM filter_bounds
+),
+prev_calc AS (
+    SELECT p_start, p_end, raw_dur,
+        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
+         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
+    FROM period_adj
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
+                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
+    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM prev_calc
 ```
 
 ```json metabase-viz
@@ -750,6 +932,11 @@ Table — top 20 SKU co tong gia tri hoan cao nhat thang nay. Sort by refund DES
 Du lieu tu int_return_sku_lines (phan bo ty le theo revenue). Flag do khi refund > 5M VND.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+)
 SELECT
     dp.sku                                                         AS "SKU",
     dp.product_name                                                AS "Ten san pham",
@@ -757,8 +944,9 @@ SELECT
     ROUND(SUM(rs.refund_amount_allocated), 0)                      AS "Refund (VND)"
 FROM int_return_sku_lines rs
 JOIN dim_products dp ON rs.product_key = dp.product_key
-WHERE rs.return_date >= date_trunc('month', current_date)
-  AND rs.return_date < current_date
+CROSS JOIN filter_bounds
+WHERE rs.return_date >= filter_bounds.p_start
+  AND rs.return_date <= filter_bounds.p_end
   AND dp.sku != 'Unknown'
 GROUP BY 1, 2
 ORDER BY "Refund (VND)" DESC
@@ -801,13 +989,19 @@ Table — ty le hoan per SKU = so don hoan / tong don ban cung ky. Flag do khi r
 Tu so: int_return_sku_lines. Mau so: fact_sales. Min 3 don ban de loc nhieu.
 
 ```sql
-WITH returns_per_sku AS (
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+returns_per_sku AS (
     SELECT
         rs.product_key,
         COUNT(DISTINCT rs.return_id) AS return_count
     FROM int_return_sku_lines rs
-    WHERE rs.return_date >= date_trunc('month', current_date)
-      AND rs.return_date < current_date
+    CROSS JOIN filter_bounds
+    WHERE rs.return_date >= filter_bounds.p_start
+      AND rs.return_date <= filter_bounds.p_end
     GROUP BY 1
 ),
 sold_per_sku AS (
@@ -816,8 +1010,9 @@ sold_per_sku AS (
         COUNT(DISTINCT fs.order_id) AS sold_orders
     FROM fact_sales fs
     JOIN fact_orders fo ON fs.order_id = fo.order_id
-    WHERE fo.order_timestamp >= date_trunc('month', current_date)
-      AND fo.order_timestamp < current_date
+    CROSS JOIN filter_bounds
+    WHERE fo.order_timestamp::DATE >= filter_bounds.p_start
+      AND fo.order_timestamp::DATE <= filter_bounds.p_end
       AND fo.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1
 ),
@@ -828,14 +1023,16 @@ portfolio_avg AS (
             2
         ) AS avg_rate
     FROM fact_order_returns r
+    CROSS JOIN filter_bounds
     CROSS JOIN (
-        SELECT order_id FROM fact_orders
-        WHERE order_timestamp >= date_trunc('month', current_date)
-          AND order_timestamp < current_date
-          AND status NOT IN ('CANCELLED', 'Voided')
+        SELECT fo.order_id FROM fact_orders fo
+        CROSS JOIN filter_bounds
+        WHERE fo.order_timestamp::DATE >= filter_bounds.p_start
+          AND fo.order_timestamp::DATE <= filter_bounds.p_end
+          AND fo.status NOT IN ('CANCELLED', 'Voided')
     ) fo2
-    WHERE r.return_date >= date_trunc('month', current_date)
-      AND r.return_date < current_date
+    WHERE r.return_date >= filter_bounds.p_start
+      AND r.return_date <= filter_bounds.p_end
 )
 SELECT
     dp.sku                                                                     AS "SKU",
@@ -906,11 +1103,17 @@ Ma tran: ly do hoan × SKU — SKU nao tap trung nhieu ly do nhat?
 Table — top 15 SKU (by refund) × ly do hoan (count + refund). Phat hien SKU co cu the 1 ly do chiem uu the.
 
 ```sql
-WITH top_skus AS (
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+top_skus AS (
     SELECT rs.product_key
     FROM int_return_sku_lines rs
-    WHERE rs.return_date >= date_trunc('month', current_date)
-      AND rs.return_date < current_date
+    CROSS JOIN filter_bounds
+    WHERE rs.return_date >= filter_bounds.p_start
+      AND rs.return_date <= filter_bounds.p_end
     GROUP BY 1
     ORDER BY SUM(rs.refund_amount_allocated) DESC
     LIMIT 15
@@ -923,9 +1126,10 @@ SELECT
     ROUND(SUM(rs.refund_amount_allocated), 0)          AS "Refund (VND)"
 FROM int_return_sku_lines rs
 JOIN dim_products dp ON rs.product_key = dp.product_key
+CROSS JOIN filter_bounds
 WHERE rs.product_key IN (SELECT product_key FROM top_skus)
-  AND rs.return_date >= date_trunc('month', current_date)
-  AND rs.return_date < current_date
+  AND rs.return_date >= filter_bounds.p_start
+  AND rs.return_date <= filter_bounds.p_end
 GROUP BY 1, 2, 3
 ORDER BY "Refund (VND)" DESC
 ```
@@ -963,15 +1167,21 @@ Bang hanh dong: SKU → xu huong hoan → khuyen nghi can thiep
 Top 30 SKU (min 3 don ban) voi return rate + ly do chinh → khuyen nghi hanh dong + owner.
 
 ```sql
-WITH sku_rates AS (
+WITH filter_bounds AS (
+    SELECT MIN(return_date) AS p_start, MAX(return_date) AS p_end
+    FROM fact_order_returns
+    WHERE [[AND {{return_date}}]]
+),
+sku_rates AS (
     SELECT
         rs.product_key,
         COUNT(DISTINCT rs.return_id)                                               AS return_count,
         ROUND(SUM(rs.refund_amount_allocated), 0)                                  AS total_refund,
         MODE() WITHIN GROUP (ORDER BY COALESCE(rs.return_reason, 'Khong ro'))      AS top_reason
     FROM int_return_sku_lines rs
-    WHERE rs.return_date >= date_trunc('month', current_date)
-      AND rs.return_date < current_date
+    CROSS JOIN filter_bounds
+    WHERE rs.return_date >= filter_bounds.p_start
+      AND rs.return_date <= filter_bounds.p_end
     GROUP BY 1
 ),
 sold_cnt AS (
@@ -980,8 +1190,9 @@ sold_cnt AS (
         COUNT(DISTINCT fs.order_id) AS sold_orders
     FROM fact_sales fs
     JOIN fact_orders fo ON fs.order_id = fo.order_id
-    WHERE fo.order_timestamp >= date_trunc('month', current_date)
-      AND fo.order_timestamp < current_date
+    CROSS JOIN filter_bounds
+    WHERE fo.order_timestamp::DATE >= filter_bounds.p_start
+      AND fo.order_timestamp::DATE <= filter_bounds.p_end
       AND fo.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1
 )

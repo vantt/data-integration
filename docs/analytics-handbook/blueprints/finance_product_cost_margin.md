@@ -27,7 +27,8 @@ Dashboard phân tích margin và chi phí theo từng SKU — xác định sản
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past30days"
+  "default": "past30days",
+  "field_id": 324
 }
 ```
 
@@ -38,7 +39,8 @@ Dashboard phân tích margin và chi phí theo từng SKU — xác định sản
 ```json metabase-filter
 {
   "slug": "channel",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 349
 }
 ```
 
@@ -53,7 +55,7 @@ WITH filter_bounds AS (
     WHERE NOT is_promo_line
       AND revenue_net_of_discount > 0
       [[AND {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 ),
 period_adj AS (
     SELECT
@@ -107,8 +109,8 @@ SELECT COUNT(DISTINCT product_code) AS "Tong SKU"
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 ```
 
 ```json metabase-viz
@@ -139,8 +141,8 @@ SELECT
 FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
-  [[AND posting_date >= {{date_range}}]]
-  [[AND channel_name = {{channel}}]]
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
 ```
 
 ```json metabase-viz
@@ -178,8 +180,8 @@ FROM (
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
       AND revenue_net_of_discount > 0
-      [[AND posting_date >= {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code
     HAVING SUM(revenue_net_of_discount) > 0
 ) t
@@ -212,7 +214,7 @@ WITH filter_bounds AS (
     WHERE NOT is_promo_line
       AND quantity > 0
       [[AND {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 ),
 current_cogs AS (
     SELECT
@@ -223,7 +225,7 @@ current_cogs AS (
       AND quantity > 0
       AND posting_date >= filter_bounds.p_start
       AND posting_date <= filter_bounds.p_end
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code
 ),
 avg_3m AS (
@@ -235,7 +237,7 @@ avg_3m AS (
       AND quantity > 0
       AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND posting_date <  filter_bounds.p_start
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code
 )
 SELECT COUNT(*) AS "SKU COGS spike (> 10%)"
@@ -290,7 +292,7 @@ FROM int_misa_sales_lines
 WHERE NOT is_promo_line
   AND revenue_net_of_discount > 0
   AND posting_date >= current_date - INTERVAL '30 days'
-  [[AND channel_name = {{channel}}]]
+  [[AND {{channel}}]]
 GROUP BY product_name, channel_name
 HAVING SUM(revenue_net_of_discount) > 0
 ORDER BY "Doanh thu" DESC
@@ -351,7 +353,7 @@ WITH filter_bounds AS (
     WHERE NOT is_promo_line
       AND revenue_net_of_discount > 0
       [[AND {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 ),
 current_period AS (
     SELECT
@@ -367,7 +369,7 @@ current_period AS (
       AND revenue_net_of_discount > 0
       AND posting_date >= filter_bounds.p_start
       AND posting_date <= filter_bounds.p_end
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code, product_name
 ),
 avg_3m AS (
@@ -379,7 +381,7 @@ avg_3m AS (
       AND quantity > 0
       AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND posting_date <  filter_bounds.p_start
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code
 )
 SELECT
@@ -493,8 +495,8 @@ FROM (
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
       AND revenue_net_of_discount > 0
-      [[AND posting_date >= {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{date_range}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code
 ) t
 GROUP BY 1
@@ -553,7 +555,7 @@ WITH filter_bounds AS (
     WHERE NOT is_promo_line
       AND quantity > 0
       [[AND {{date_range}}]]
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
 ),
 current_cogs AS (
     SELECT
@@ -566,7 +568,7 @@ current_cogs AS (
       AND quantity > 0
       AND posting_date >= filter_bounds.p_start
       AND posting_date <= filter_bounds.p_end
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code, product_name
 ),
 avg_3m AS (
@@ -578,7 +580,7 @@ avg_3m AS (
       AND quantity > 0
       AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND posting_date <  filter_bounds.p_start
-      [[AND channel_name = {{channel}}]]
+      [[AND {{channel}}]]
     GROUP BY product_code
 )
 SELECT
@@ -664,27 +666,27 @@ WITH top_skus AS (
     FROM int_misa_sales_lines
     WHERE NOT is_promo_line
       AND revenue_net_of_discount > 0
-      [[AND posting_date >= {{date_range}}]]
+      [[AND {{date_range}}]]
     GROUP BY product_code
     ORDER BY SUM(revenue_net_of_discount) DESC
     LIMIT 20
 )
 SELECT
-    s.product_name                                                              AS "SKU",
-    COALESCE(s.channel_name, 'Khac')                                           AS "Kenh",
-    SUM(s.revenue_net_of_discount)                                             AS "Doanh thu",
+    product_name                                                                AS "SKU",
+    COALESCE(channel_name, 'Khac')                                             AS "Kenh",
+    SUM(revenue_net_of_discount)                                               AS "Doanh thu",
     ROUND(
-        SUM(s.gross_profit) * 100.0 / NULLIF(SUM(s.revenue_net_of_discount), 0),
+        SUM(gross_profit) * 100.0 / NULLIF(SUM(revenue_net_of_discount), 0),
         1
     )                                                                           AS "Gross Margin %"
-FROM int_misa_sales_lines s
-WHERE s.product_code IN (SELECT product_code FROM top_skus)
-  AND NOT s.is_promo_line
-  AND s.revenue_net_of_discount > 0
-  [[AND s.posting_date >= {{date_range}}]]
-  [[AND s.channel_name = {{channel}}]]
-GROUP BY s.product_name, s.channel_name
-ORDER BY SUM(s.revenue_net_of_discount) DESC
+FROM int_misa_sales_lines
+WHERE product_code IN (SELECT product_code FROM top_skus)
+  AND NOT is_promo_line
+  AND revenue_net_of_discount > 0
+  [[AND {{date_range}}]]
+  [[AND {{channel}}]]
+GROUP BY product_name, channel_name
+ORDER BY SUM(revenue_net_of_discount) DESC
 ```
 
 ```json metabase-viz

@@ -28,7 +28,8 @@ Dashboard phân tích lợi nhuận theo kênh bán hàng — waterfall từ doa
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "thismonth"
+  "default": "thismonth",
+  "field_id": 77
 }
 ```
 
@@ -37,7 +38,8 @@ Dashboard phân tích lợi nhuận theo kênh bán hàng — waterfall từ doa
 ```json metabase-filter
 {
   "slug": "channel",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 179
 }
 ```
 
@@ -49,12 +51,12 @@ Dashboard phân tích lợi nhuận theo kênh bán hàng — waterfall từ doa
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics
     WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 period_adj AS (
     SELECT
@@ -120,32 +122,32 @@ FROM (
             (SELECT SUM(gross_revenue)
              FROM fact_order_economics
              WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-               [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+               [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
         ),
         ('Chiet khau',
             (SELECT -SUM(ABS(discount_amount))
              FROM fact_order_economics
              WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-               [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+               [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
         ),
         ('Doanh thu thuan',
             (SELECT SUM(net_revenue)
              FROM fact_order_economics
              WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-               [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+               [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
         ),
         ('Gia von COGS',
             (SELECT -SUM(COALESCE(cogs_amount, 0))
              FROM fact_order_economics
              WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-               [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+               [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
         ),
         ('Phi platform',
@@ -157,16 +159,16 @@ FROM (
              )
              FROM fact_order_economics
              WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-               [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+               [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
         ),
         ('Loi nhuan rong',
             (SELECT SUM(channel_net_profit)
              FROM fact_order_economics
              WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-               [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+               [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+               [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
         )
 ) AS t("Khoan muc", "Gia tri")
@@ -215,12 +217,12 @@ FROM (
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics
     WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 period_adj AS (
     SELECT
@@ -280,13 +282,13 @@ Một dòng/kênh: Net Revenue, Gross Margin %, Net Margin %, Target %, Variance
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics e
     JOIN dim_channels c USING (channel_key)
     WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
-      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND c.channel_name = {{channel}}]]
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 
 actuals AS (
@@ -310,8 +312,8 @@ actuals AS (
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND c.channel_name = {{channel}}]]
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
     GROUP BY c.channel_key, c.channel_name
 ),
 
@@ -428,12 +430,12 @@ ORDER BY a.net_margin_pct ASC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics
     WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 period_adj AS (
     SELECT
@@ -493,28 +495,28 @@ Heatmap: Channel (row) × Month (col), giá trị = Net Margin %. Dùng pivot ta
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics e
     JOIN dim_channels c USING (channel_key)
     WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
-      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND c.channel_name = {{channel}}]]
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 )
 SELECT
     c.channel_name                                                                AS "Kenh",
-    date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))               AS "Thang",
+    date_trunc('month', strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE)               AS "Thang",
     ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS "Net Margin %"
 FROM fact_order_economics e
 JOIN dim_channels c USING (channel_key), filter_bounds
 WHERE e.has_cogs
   AND e.status NOT IN ('CANCELLED', 'Voided')
   AND c.is_sales_channel
-  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= filter_bounds.p_start
-  AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <= filter_bounds.p_end
-  [[AND c.channel_name = {{channel}}]]
+  AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= filter_bounds.p_start
+  AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <= filter_bounds.p_end
+  [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY c.channel_name,
-         date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))
+         date_trunc('month', strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE)
 ORDER BY "Thang", "Kenh"
 ```
 
@@ -571,12 +573,12 @@ ORDER BY "Thang", "Kenh"
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics
     WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 period_adj AS (
     SELECT
@@ -636,13 +638,13 @@ Bảng biến động MoM: 1 row/channel × (Rev hiện tại, Rev trước, Δ 
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics e
     JOIN dim_channels c USING (channel_key)
     WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
-      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND c.channel_name = {{channel}}]]
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 cur AS (
     SELECT
@@ -654,9 +656,9 @@ cur AS (
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= filter_bounds.p_start
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <= filter_bounds.p_end
-      [[AND c.channel_name = {{channel}}]]
+      AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= filter_bounds.p_start
+      AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <= filter_bounds.p_end
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
     GROUP BY e.channel_key
 ),
 prior AS (
@@ -669,9 +671,9 @@ prior AS (
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <  filter_bounds.p_start
-      [[AND c.channel_name = {{channel}}]]
+      AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <  filter_bounds.p_start
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
     GROUP BY e.channel_key
 )
 SELECT
@@ -762,29 +764,29 @@ Multi-line: Net Margin % theo tháng × kênh. Overlay "Budget Target %" từ di
 ```sql
 -- Actual net margin per channel per month
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(e.date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics e
     JOIN dim_channels c USING (channel_key)
     WHERE e.has_cogs AND e.status NOT IN ('CANCELLED','Voided') AND c.is_sales_channel
-      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND c.channel_name = {{channel}}]]
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 actuals AS (
     SELECT
         c.channel_name                                                                AS channel_name,
-        date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))               AS period_month,
+        date_trunc('month', strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE)               AS period_month,
         ROUND(SUM(e.channel_net_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS net_margin_pct
     FROM fact_order_economics e
     JOIN dim_channels c USING (channel_key), filter_bounds
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= filter_bounds.p_start
-      AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) <= filter_bounds.p_end
-      [[AND c.channel_name = {{channel}}]]
+      AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= filter_bounds.p_start
+      AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <= filter_bounds.p_end
+      [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
     GROUP BY c.channel_name,
-             date_trunc('month', CAST(CAST(e.date_key AS VARCHAR) AS DATE))
+             date_trunc('month', strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE)
 ),
 
 -- Budget targets for the same window
@@ -864,12 +866,12 @@ ORDER BY "Thang", "Kenh"
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_start,
-           MAX(CAST(CAST(date_key AS VARCHAR) AS DATE)) AS p_end
+    SELECT MIN(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_start,
+           MAX(strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS p_end
     FROM fact_order_economics
     WHERE has_cogs AND status NOT IN ('CANCELLED','Voided')
-      [[AND CAST(CAST(date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
+      [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+      [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 ),
 period_adj AS (
     SELECT
@@ -938,7 +940,7 @@ FROM (
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY e.channel_key
     HAVING SUM(e.channel_net_profit) < 0
 ) loss_channels
@@ -977,7 +979,7 @@ FROM (
     WHERE e.has_cogs
       AND e.status NOT IN ('CANCELLED', 'Voided')
       AND c.is_sales_channel
-      [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
+      [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY e.channel_key
     HAVING SUM(e.channel_net_profit) < 0
 ) loss_channels
@@ -1029,8 +1031,8 @@ JOIN dim_channels c USING (channel_key)
 WHERE e.has_cogs
   AND e.status NOT IN ('CANCELLED', 'Voided')
   AND c.is_sales_channel
-  [[AND CAST(CAST(e.date_key AS VARCHAR) AS DATE) >= {{date_range}}]]
-  [[AND c.channel_name = {{channel}}]]
+  [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
+  [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY c.channel_name
 HAVING SUM(e.channel_net_profit) < 0
 ORDER BY "Net Margin %" ASC

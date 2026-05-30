@@ -35,7 +35,11 @@ Dashboard đối soát nội bộ: Sapo ↔ MISA ↔ Shopee. Dành cho kế toá
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past30days"
+  "default": "past30days",
+  "field_id": 77,
+  "field_id_map": {
+    "dim_date": 77
+  }
 }
 ```
 
@@ -47,10 +51,10 @@ Dashboard đối soát nội bộ: Sapo ↔ MISA ↔ Shopee. Dành cho kế toá
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -224,18 +228,19 @@ So don hang khong co MISA invoice trong 30 ngay gan nhat.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 )
 SELECT COUNT(*) AS "Don chua doi soat (30 ngay)"
-FROM fact_order_economics, filter_bounds
-WHERE status = 'COMPLETED'
-  AND NOT has_cogs
-  AND date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-  AND date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+FROM fact_order_economics
+JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+CROSS JOIN filter_bounds
+WHERE fact_order_economics.status = 'COMPLETED'
+  AND NOT fact_order_economics.has_cogs
+  AND dim_date.date_actual BETWEEN filter_bounds.p_start AND filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -410,10 +415,10 @@ ORDER BY 2 DESC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -474,28 +479,28 @@ Danh sach don hang COMPLETED khong co MISA invoice — 30 ngay gan nhat. Xem ord
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 )
 SELECT
-    e.order_code        AS "Ma don hang",
-    (CAST(e.date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((e.date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(e.date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay dat hang",
-    COALESCE(c.channel_name, 'Unknown') AS "Kenh",
-    e.gross_revenue     AS "Doanh thu gop (VND)",
-    e.net_revenue       AS "Doanh thu thuan (VND)",
-    e.status            AS "Trang thai don",
-    'MISSING_MISA'      AS "Loai exception"
-FROM fact_order_economics e
-LEFT JOIN dim_channels c ON e.channel_key = c.channel_key
+    fact_order_economics.order_code        AS "Ma don hang",
+    dim_date.date_actual::DATE             AS "Ngay dat hang",
+    COALESCE(dim_channels.channel_name, 'Unknown') AS "Kenh",
+    fact_order_economics.gross_revenue     AS "Doanh thu gop (VND)",
+    fact_order_economics.net_revenue       AS "Doanh thu thuan (VND)",
+    fact_order_economics.status            AS "Trang thai don",
+    'MISSING_MISA'                         AS "Loai exception"
+FROM fact_order_economics
+JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+LEFT JOIN dim_channels ON dim_channels.channel_key = fact_order_economics.channel_key
 CROSS JOIN filter_bounds
-WHERE e.status = 'COMPLETED'
-  AND NOT e.has_cogs
-  AND e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
-ORDER BY e.date_key DESC, e.net_revenue DESC
+WHERE fact_order_economics.status = 'COMPLETED'
+  AND NOT fact_order_economics.has_cogs
+  AND dim_date.date_actual BETWEEN filter_bounds.p_start AND filter_bounds.p_end
+ORDER BY dim_date.date_actual DESC, fact_order_economics.net_revenue DESC
 LIMIT 200
 ```
 
@@ -536,28 +541,28 @@ Don Shopee khong co du lieu settlement fee — channel_net_profit se bi overstat
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 )
 SELECT
-    e.order_code        AS "Ma don hang",
-    (CAST(e.date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((e.date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(e.date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay dat hang",
-    e.gross_revenue     AS "Doanh thu gop (VND)",
-    e.net_revenue       AS "Doanh thu thuan (VND)",
-    e.gross_profit      AS "Gross Profit (VND)",
-    'MISSING_SHOPEE_FEES' AS "Loai exception"
-FROM fact_order_economics e
-JOIN dim_channels c ON e.channel_key = c.channel_key
+    fact_order_economics.order_code        AS "Ma don hang",
+    dim_date.date_actual::DATE             AS "Ngay dat hang",
+    fact_order_economics.gross_revenue     AS "Doanh thu gop (VND)",
+    fact_order_economics.net_revenue       AS "Doanh thu thuan (VND)",
+    fact_order_economics.gross_profit      AS "Gross Profit (VND)",
+    'MISSING_SHOPEE_FEES'                  AS "Loai exception"
+FROM fact_order_economics
+JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+JOIN dim_channels ON dim_channels.channel_key = fact_order_economics.channel_key
 CROSS JOIN filter_bounds
-WHERE c.channel_name ILIKE '%shopee%'
-  AND e.status = 'COMPLETED'
-  AND NOT e.has_platform_fees
-  AND e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
-ORDER BY e.date_key DESC, e.net_revenue DESC
+WHERE dim_channels.channel_name ILIKE '%shopee%'
+  AND fact_order_economics.status = 'COMPLETED'
+  AND NOT fact_order_economics.has_platform_fees
+  AND dim_date.date_actual BETWEEN filter_bounds.p_start AND filter_bounds.p_end
+ORDER BY dim_date.date_actual DESC, fact_order_economics.net_revenue DESC
 LIMIT 200
 ```
 
@@ -612,10 +617,10 @@ LIMIT 200
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -678,25 +683,26 @@ Line chart — ty le don khong co MISA invoice theo ngay. Spike bat thuong → k
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 )
 SELECT
-    (CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay",
+    dim_date.date_actual::DATE AS "Ngay",
     COUNT(*) AS "Tong don",
-    SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END)       AS "Don chua khop MISA",
+    SUM(CASE WHEN NOT fact_order_economics.has_cogs THEN 1 ELSE 0 END)       AS "Don chua khop MISA",
     ROUND(
-        SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END) * 100.0
+        SUM(CASE WHEN NOT fact_order_economics.has_cogs THEN 1 ELSE 0 END) * 100.0
         / NULLIF(COUNT(*), 0),
         1
     )                                                   AS "Unmatched %"
-FROM fact_order_economics, filter_bounds
-WHERE status = 'COMPLETED'
-  AND date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-  AND date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+FROM fact_order_economics
+JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+CROSS JOIN filter_bounds
+WHERE fact_order_economics.status = 'COMPLETED'
+  AND dim_date.date_actual BETWEEN filter_bounds.p_start AND filter_bounds.p_end
 GROUP BY 1
 ORDER BY 1
 ```
@@ -735,20 +741,21 @@ Bar + line combo — tong don hang theo ngay (bar) vs don chua khop (line overla
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 )
 SELECT
-    (CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS "Ngay",
+    dim_date.date_actual::DATE AS "Ngay",
     COUNT(*) AS "Tong don",
-    SUM(CASE WHEN NOT has_cogs THEN 1 ELSE 0 END)       AS "Don chua khop MISA"
-FROM fact_order_economics, filter_bounds
-WHERE status = 'COMPLETED'
-  AND date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-  AND date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+    SUM(CASE WHEN NOT fact_order_economics.has_cogs THEN 1 ELSE 0 END)       AS "Don chua khop MISA"
+FROM fact_order_economics
+JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+CROSS JOIN filter_bounds
+WHERE fact_order_economics.status = 'COMPLETED'
+  AND dim_date.date_actual BETWEEN filter_bounds.p_start AND filter_bounds.p_end
 GROUP BY 1
 ORDER BY 1
 ```
@@ -791,10 +798,10 @@ ORDER BY 1
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_start,
-           MAX(CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE AS p_end
+    SELECT MIN(dim_date.date_actual)::DATE AS p_start, MAX(dim_date.date_actual)::DATE AS p_end
     FROM fact_order_economics
-    WHERE status = 'COMPLETED'
+    JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
+    WHERE fact_order_economics.status = 'COMPLETED'
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -944,7 +951,7 @@ Xu huong MISA Coverage % theo thang — co cai thien khong?
 
 ```sql
 SELECT
-    date_trunc('month', CAST(CAST(date_key AS VARCHAR) AS DATE)) AS "Thang",
+    date_trunc('month', (CAST(date_key/10000 AS INTEGER)::VARCHAR || '-' || LPAD(CAST((date_key/100)%100 AS INTEGER)::VARCHAR,2,'0') || '-' || LPAD(CAST(date_key%100 AS INTEGER)::VARCHAR,2,'0'))::DATE) AS "Thang",
     COUNT(*) AS "Tong don",
     ROUND(
         SUM(CASE WHEN has_cogs THEN 1 ELSE 0 END) * 100.0
@@ -958,7 +965,7 @@ SELECT
     ) AS "Shopee Fee Coverage %"
 FROM fact_order_economics
 WHERE status = 'COMPLETED'
-  AND date_key >= CAST(date_trunc('month', current_date) - INTERVAL '5 months' AS INTEGER)
+  AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '5 months')::DATE, '%Y%m%d') AS INTEGER)
 GROUP BY 1
 ORDER BY 1
 ```
