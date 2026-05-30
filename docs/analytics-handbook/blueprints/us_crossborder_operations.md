@@ -48,7 +48,7 @@ WITH filter_bounds AS (
 SELECT
     '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
     '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start + 1))::DATE, '%d/%m/%Y') ||
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
     ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
