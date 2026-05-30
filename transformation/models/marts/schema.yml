@@ -19,6 +19,25 @@ models:
       - name: has_unpriced_sku
         description: "TRUE if any line item had no matching price in the price list"
 
+  # Fulfillments / Shipments
+  - name: fact_fulfillments
+    description: >
+      Per-shipment fact — one row per Sapo fulfillment (shipment leg). Sourced from
+      std_fulfillments; order_code resolved via fact_orders.order_id. Enables order
+      lookup by shipment code / id / tracking code, and the Shipments section in the
+      detailView app.
+    columns:
+      - name: fulfillment_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
+      - name: order_code
+        description: "Resolved from fact_orders via order_id (nullable if order absent from mart)"
+      - name: tracking_code
+        description: "Carrier tracking number"
+      - name: status
+        description: "DELIVERED / SHIPPING / PACKED / CANCELLED / FAILED / PENDING"
+
   # Dimensions
   - name: dim_channel_targets
     description: >
