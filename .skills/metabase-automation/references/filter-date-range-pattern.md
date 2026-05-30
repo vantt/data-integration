@@ -31,6 +31,7 @@ AND "main"."<table_name>"."<column_name>" >= ? AND "main"."<table_name>"."<colum
 | R4 | `date_key` INTEGER (YYYYMMDD) dùng `make_date()` để convert | Query trả về sai data |
 | R5 | `filter_bounds` luôn là CTE **đầu tiên** trong WITH chain | DuckDB CTE order |
 | R6 | Template tag `{{date_range}}` phải có `field_id` khớp với table trong filter_bounds | Filter không wire |
+| R7 | `DATE - DATE = BIGINT` trong DuckDB — phải cast `::INTEGER` trước khi trừ từ DATE | `-(DATE, BIGINT)` Binder Error (L98) |
 
 ---
 
@@ -73,58 +74,34 @@ for t in d.get('tables',[]):
 
 ---
 
-## 4. Pattern A — Cycle-Indicator (3-CTE chain)
+## 4. Pattern A — Cycle-Indicator (canonical — 2-CTE, no period_adj)
 
 Dùng cho widget "Chu kỳ báo cáo" — hiển thị kỳ hiện tại và kỳ trước.
 
+> **⚠️ period_adj đã bị loại bỏ** (L97): heuristic snap-to-calendar-boundary misclassify "past 7 days" → weekly, "past 3 months" → quarterly → cycle-indicator hiển thị sai kỳ. Dùng raw dates từ filter_bounds thay vì.
+
 ```sql
 WITH filter_bounds AS (
-    -- [1] Raw data bounds — PHẢI query table khớp field_id, KHÔNG alias table đó
-    SELECT MIN(<date_col>) AS p_start,   -- nếu TIMESTAMP: MIN(<col>)::DATE
-           MAX(<date_col>) AS p_end      -- nếu TIMESTAMP: MAX(<col>)::DATE
-    FROM <field_table>                   -- table tương ứng với field_id, KHÔNG alias
+    -- PHẢI query table khớp field_id, KHÔNG alias table đó (R1, R2)
+    SELECT MIN(<date_col>)::DATE AS p_start,   -- TIMESTAMPTZ: MIN(<col>)::DATE (R3)
+           MAX(<date_col>)::DATE AS p_end
+    FROM <field_table>                          -- KHÔNG alias
     WHERE <base_conditions>
-      [[AND {{date_range}}]]             -- PHẢI có dòng này để wire filter
-      [[AND {{channel}}]]                -- optional: các filter khác
-),
--- [2] Clean period boundaries — detect weekly/monthly/quarterly/yearly từ data bounds
-period_adj AS (
-    SELECT
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN date_trunc('week',  p_start)::DATE   -- weekly: Mon
-             ELSE  date_trunc('month', p_start)::DATE    -- monthly+: 1st of month
-        END AS p_start,
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE  -- Sun
-             WHEN p_end < current_date-30
-               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
-             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
-               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
-             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
-               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
-             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
-        END AS p_end,
-        (p_end-p_start)::INTEGER AS raw_dur
-    FROM filter_bounds
-),
--- [3] Compute prev_start aligned to period boundary (01/ of month/week)
-prev_calc AS (
-    SELECT p_start, p_end, raw_dur,
-        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
-         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
-    FROM period_adj
+      [[AND {{date_range}}]]                    -- PHẢI có để wire filter
+      [[AND {{channel}}]]                       -- optional
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
     '  ·  Kỳ trước: ' ||
-    strftime(CASE WHEN raw_dur<=6
-                  THEN (p_start - INTERVAL '7 days')::DATE
-                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE
-             END,'%d/%m/%Y') || ' – ' ||
-    strftime((p_start-1)::DATE,'%d/%m/%Y')
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
     AS "Chu kỳ báo cáo"
-FROM prev_calc
+FROM filter_bounds
 ```
+
+> **R7 — BIGINT trap**: `p_end - p_start` (DATE - DATE) = `BIGINT` trong DuckDB. `DATE - BIGINT` KHÔNG có overload.
+> Phải cast `::INTEGER` ngay sau: `(p_end - p_start)::INTEGER` trước khi trừ từ DATE.
+> **Không được viết**: `p_start - (p_end - p_start + 1)` — sẽ fail với `Binder Error: -(DATE, BIGINT)`.
 
 **Visualization settings:**
 ```json
@@ -133,15 +110,17 @@ FROM prev_calc
 
 **Position:** `{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }`
 
-### period_adj heuristic logic
+### Cách tính prev_period
 
-| Condition | Detected as | p_end result |
-|-----------|-------------|--------------|
-| `raw_dur ≤ 6` | Weekly | Sunday of the week |
-| `p_end < today-30` | Closed "Previous X" | Last day of p_end's month |
-| `raw_dur > 100 AND month(p_start)=1` | This Year | Dec 31 |
-| `35 ≤ raw_dur ≤ 100` | This Quarter | Last day of quarter |
-| else | This Month / rolling | Last day of p_end's month |
+`prev_start = p_start - duration - 1` trong đó `duration = (p_end - p_start)::INTEGER` (số ngày, inclusive = duration + 1).
+
+| Filter user chọn | p_start | p_end | duration | prev_start | prev_end |
+|-----------------|---------|-------|----------|-----------|---------|
+| thismonth (May 1-29) | May 1 | May 29 | 28 | April 2 | April 30 |
+| past7days (May 23-29) | May 23 | May 29 | 6 | May 16 | May 22 |
+| past3months (Feb-Apr) | Feb 2 | Apr 23 | 80 | Nov 13 | Feb 1 |
+
+Prev_period luôn bằng đúng độ dài kỳ này — đúng cho mọi filter type.
 
 ---
 
@@ -263,7 +242,7 @@ make_date((date_key/10000)::INTEGER, ((date_key%10000)/100)::INTEGER, (date_key%
 ## 8. Anti-Patterns (KHÔNG làm)
 
 ```sql
--- ❌ Alias table của field_id → Binder Error
+-- ❌ Alias table của field_id → Binder Error (R2, L96)
 FROM fact_orders o
 WHERE [[AND {{date_range}}]]   -- injects "main"."fact_orders"."order_timestamp" — binder không tìm thấy 'o'
 
@@ -271,7 +250,7 @@ WHERE [[AND {{date_range}}]]   -- injects "main"."fact_orders"."order_timestamp"
 FROM fact_orders
 WHERE [[AND {{date_range}}]]
 
--- ❌ filter_bounds query table KHÁC với field_id table
+-- ❌ filter_bounds query table KHÁC với field_id table (R1)
 WITH filter_bounds AS (
     SELECT MIN(posting_date) AS p_start FROM fact_us_shipment_economics  -- field_id 324 = int_misa_sales_lines!
     WHERE [[AND {{date_range}}]]   -- injects condition for int_misa_sales_lines, KHÔNG PHẢI fact_us_shipment_economics
@@ -285,6 +264,19 @@ CAST(STRFTIME(date, '%Y%m%d') AS INTEGER)   -- SAI
 
 -- ✅ ĐÚNG
 CAST(strftime(date, '%Y%m%d') AS INTEGER)
+
+-- ❌ DATE - DATE không cast ::INTEGER → Binder Error khi trừ kết quả từ DATE (R7, L98)
+p_start - (p_end - p_start + 1)          -- p_end - p_start = BIGINT; DATE - BIGINT = NO OVERLOAD
+
+-- ✅ Cast ::INTEGER trước
+p_start - (p_end - p_start)::INTEGER - 1  -- DATE - INTEGER = DATE ✓
+
+-- ❌ Dùng period_adj heuristic (L97) — misclassify "past 7 days" → weekly, "past 3 months" → quarterly
+-- Cycle-indicator hiển thị sai kỳ (Mon-Sun thay vì 7 ngày thực tế)
+-- KHÔNG dùng period_adj, KHÔNG snap về calendar boundaries
+
+-- ✅ Show raw filter_bounds dates trực tiếp (Pattern A canonical)
+strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y')
 ```
 
 ---
@@ -294,11 +286,14 @@ CAST(strftime(date, '%Y%m%d') AS INTEGER)
 - [ ] Blueprint có `metabase-filter` block với đúng `field_id`
 - [ ] Mỗi tab có cycle-indicator với `[[AND {{date_range}}]]` trong filter_bounds WHERE
 - [ ] filter_bounds query đúng table tương ứng `field_id`
-- [ ] Table trong filter_bounds WHERE **KHÔNG có alias** (L96)
-- [ ] TIMESTAMP column có `::DATE` cast trong MIN/MAX (L95/L96)
+- [ ] Table trong filter_bounds WHERE **KHÔNG có alias** (R2, L96)
+- [ ] TIMESTAMP column có `::DATE` cast trong MIN/MAX (R3)
 - [ ] date_key dùng `make_date()` để display, `strftime()` để filter
 - [ ] `prev_period` CTE dùng `filter_bounds.p_start` làm upper bound (không có `[[AND {{date_range}}]]`)
 - [ ] Các filter khác (`{{channel}}`, v.v.) có `[[AND]]` cả trong filter_bounds lẫn this_period
+- [ ] Cycle-indicator **KHÔNG dùng `period_adj`** — dùng Pattern A canonical 2-CTE (L97)
+- [ ] Date arithmetic dùng `(p_end - p_start)::INTEGER` trước khi trừ từ DATE (R7, L98)
+- [ ] Test cycle-indicator với `thismonth`, `past7days`, `past3months` — confirm hiện đúng range
 
 ---
 
@@ -307,17 +302,21 @@ CAST(strftime(date, '%Y%m%d') AS INTEGER)
 File: `docs/analytics-handbook/blueprints/channel_profitability_monthly.md`
 
 ```sql
--- ✅ Cycle-indicator (Tab: Channel Overview)
+-- ✅ Cycle-indicator (Tab: Channel Overview) — Pattern A canonical (no period_adj)
 WITH filter_bounds AS (
     SELECT MIN(posting_date) AS p_start, MAX(posting_date) AS p_end
     FROM int_misa_sales_lines           -- field_id 324 = posting_date, KHÔNG alias
     WHERE NOT is_promo_line
       [[AND {{date_range}}]]
       [[AND {{channel}}]]
-),
-period_adj AS ( ... ),
-prev_calc AS ( ... )
-SELECT '📅 Kỳ này: ...' AS "Chu kỳ báo cáo" FROM prev_calc
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||   -- R7: ::INTEGER bắt buộc
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM filter_bounds
 
 -- ✅ KPI card (Total Revenue)
 WITH filter_bounds AS (
@@ -355,3 +354,5 @@ GROUP BY channel_name
 |--------|------------------|
 | L95 | `[[AND {{date_range}}]]` phải trong CTE có table khớp field_id; dùng `filter_bounds` làm bridge |
 | L96 | Table của field_id KHÔNG được có alias — DuckDB binder resolve theo table name, không alias |
+| L97 | `period_adj` heuristic misclassify "past 7 days" → weekly, "past 3 months" → quarterly — bỏ hoàn toàn, dùng raw dates |
+| L98 | `DATE - DATE = BIGINT` trong DuckDB; `DATE - BIGINT` no overload — phải cast `::INTEGER` trước khi dùng làm operand |
