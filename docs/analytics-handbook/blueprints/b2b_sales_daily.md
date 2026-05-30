@@ -403,6 +403,13 @@ ORDER BY o.order_timestamp DESC
         "currency": "VND",
         "decimals": 0,
         "compact": true
+      },
+      "[\"name\",\"Ma don\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don}}"
+        }
       }
     }
   }

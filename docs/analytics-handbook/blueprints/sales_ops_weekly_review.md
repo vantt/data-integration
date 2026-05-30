@@ -21,7 +21,8 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past7days"
+  "default": "past7days",
+  "field_id": 141
 }
 ```
 
@@ -42,42 +43,19 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
-),
-period_adj AS (
-    SELECT
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN date_trunc('week',  p_start)::DATE
-             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
-             WHEN p_end < current_date-30
-               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
-             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
-               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
-             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
-               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
-             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
-        (p_end-p_start)::INTEGER AS raw_dur
-    FROM filter_bounds
-),
-prev_calc AS (
-    SELECT p_start, p_end, raw_dur,
-        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
-         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
-    FROM period_adj
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
     '  ·  Kỳ trước: ' ||
-    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
-                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
-    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
     AS "Chu kỳ báo cáo"
-FROM prev_calc
+FROM filter_bounds
 ```
 
 ```json metabase-viz
@@ -548,42 +526,19 @@ ORDER BY 2, 3
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
-),
-period_adj AS (
-    SELECT
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN date_trunc('week',  p_start)::DATE
-             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
-             WHEN p_end < current_date-30
-               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
-             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
-               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
-             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
-               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
-             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
-        (p_end-p_start)::INTEGER AS raw_dur
-    FROM filter_bounds
-),
-prev_calc AS (
-    SELECT p_start, p_end, raw_dur,
-        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
-         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
-    FROM period_adj
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
     '  ·  Kỳ trước: ' ||
-    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
-                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
-    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
     AS "Chu kỳ báo cáo"
-FROM prev_calc
+FROM filter_bounds
 ```
 
 ```json metabase-viz
@@ -901,42 +856,19 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
-),
-period_adj AS (
-    SELECT
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN date_trunc('week',  p_start)::DATE
-             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
-             WHEN p_end < current_date-30
-               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
-             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
-               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
-             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
-               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
-             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
-        (p_end-p_start)::INTEGER AS raw_dur
-    FROM filter_bounds
-),
-prev_calc AS (
-    SELECT p_start, p_end, raw_dur,
-        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
-         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
-    FROM period_adj
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
     '  ·  Kỳ trước: ' ||
-    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
-                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
-    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
     AS "Chu kỳ báo cáo"
-FROM prev_calc
+FROM filter_bounds
 ```
 
 ```json metabase-viz
@@ -1313,42 +1245,19 @@ ORDER BY s.orders DESC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
-    FROM fact_order_economics
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
+    FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
-),
-period_adj AS (
-    SELECT
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN date_trunc('week',  p_start)::DATE
-             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
-             WHEN p_end < current_date-30
-               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
-             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
-               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
-             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
-               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
-             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
-        (p_end-p_start)::INTEGER AS raw_dur
-    FROM filter_bounds
-),
-prev_calc AS (
-    SELECT p_start, p_end, raw_dur,
-        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
-         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
-    FROM period_adj
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
     '  ·  Kỳ trước: ' ||
-    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
-                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
-    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
     AS "Chu kỳ báo cáo"
-FROM prev_calc
+FROM filter_bounds
 ```
 
 ```json metabase-viz
@@ -1372,7 +1281,14 @@ FROM prev_calc
 Weekly gross margin % per channel with WoW delta. Sort by margin DESC to surface worst-performing channels first.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    -- field_id=141 → fact_orders.order_timestamp, KHÔNG alias fact_orders (R1, R2)
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
+    FROM fact_orders
+    WHERE 1=1
+      [[AND {{date_range}}]]
+),
 this_week AS (
     SELECT
         c.channel_name                                                         AS channel,
@@ -1380,12 +1296,14 @@ this_week AS (
         COALESCE(SUM(e.net_revenue), 0)                                        AS revenue_tw,
         COALESCE(SUM(e.gross_profit), 0)                                       AS gp_tw
     FROM fact_order_economics e
+    JOIN fact_orders fo ON e.order_id = fo.order_id
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
+    JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.status NOT IN ('CANCELLED', 'Voided')
-      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND e.order_timestamp <  date_trunc('week', current_date)
+      AND fo.order_timestamp >= filter_bounds.p_start
+      AND fo.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
     GROUP BY 1
 ),
 last_week AS (
@@ -1394,12 +1312,14 @@ last_week AS (
         COALESCE(SUM(e.gross_profit), 0)                                       AS gp_lw,
         COALESCE(SUM(e.net_revenue), 0)                                        AS revenue_lw
     FROM fact_order_economics e
+    JOIN fact_orders fo ON e.order_id = fo.order_id
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
+    JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.status NOT IN ('CANCELLED', 'Voided')
-      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND e.order_timestamp <  date_trunc('week', current_date) - INTERVAL '7 days'
+      AND fo.order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND fo.order_timestamp <  filter_bounds.p_start
     GROUP BY 1
 )
 SELECT
@@ -1470,24 +1390,35 @@ ORDER BY "Bien lo %" DESC NULLS LAST
 Count of orders where channel_net_profit is negative — this week vs last week. Scalar with WoW comparison. Alert threshold: > 5 loss orders warrants immediate investigation.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    -- field_id=141 → fact_orders.order_timestamp, KHÔNG alias fact_orders (R1, R2)
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
+    FROM fact_orders
+    WHERE 1=1
+      [[AND {{date_range}}]]
+),
 this_week AS (
     SELECT COUNT(DISTINCT e.order_id) AS val
     FROM fact_order_economics e
-    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    JOIN fact_orders fo ON e.order_id = fo.order_id
+    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
+    JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.channel_net_profit < 0
-      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND e.order_timestamp <  date_trunc('week', current_date)
+      AND fo.order_timestamp >= filter_bounds.p_start
+      AND fo.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COUNT(DISTINCT e.order_id) AS val
     FROM fact_order_economics e
-    JOIN dim_customers cu ON e.customer_key = cu.customer_key
+    JOIN fact_orders fo ON e.order_id = fo.order_id
+    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
+    JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.channel_net_profit < 0
-      AND e.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND e.order_timestamp <  date_trunc('week', current_date) - INTERVAL '7 days'
+      AND fo.order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND fo.order_timestamp <  filter_bounds.p_start
 )
 SELECT
     tw.val AS "Don hang am",

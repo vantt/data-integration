@@ -657,7 +657,16 @@ ORDER BY "Chờ (giờ)" DESC
         "color": "#F9D45C",
         "highlight_row": false
       }
-    ]
+    ],
+    "column_settings": {
+      "[\"name\",\"Mã đơn\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Mã đơn}}"
+        }
+      }
+    }
   }
 }
 ```
@@ -836,6 +845,13 @@ ORDER BY o.order_timestamp DESC
         "currency": "VND",
         "decimals": 0,
         "compact": true
+      },
+      "[\"name\",\"Mã đơn\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Mã đơn}}"
+        }
       }
     }
   }

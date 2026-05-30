@@ -486,7 +486,14 @@ ORDER BY e.gross_profit DESC
       "Gia von": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
       "Lai gop": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
       "Phi san": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Lai rong kenh": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
+      "Lai rong kenh": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
+      "[\"name\",\"Ma don\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don}}"
+        }
+      }
     }
   }
 }

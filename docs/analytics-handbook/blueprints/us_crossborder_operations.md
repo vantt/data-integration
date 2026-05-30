@@ -438,7 +438,18 @@ ORDER BY fo.order_timestamp DESC
 ```json metabase-viz
 {
   "display": "table",
-  "visualization_settings": { "table.pivot": false }
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "[\"name\",\"Ma don\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don}}"
+        }
+      }
+    }
+  }
 }
 ```
 

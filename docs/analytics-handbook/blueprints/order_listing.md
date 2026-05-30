@@ -465,7 +465,14 @@ ORDER BY o.discount_amount DESC
       "Gross": { "number_style": "currency", "currency": "VND" },
       "Discount": { "number_style": "currency", "currency": "VND" },
       "Net Revenue": { "number_style": "currency", "currency": "VND" },
-      "Collected": { "number_style": "currency", "currency": "VND" }
+      "Collected": { "number_style": "currency", "currency": "VND" },
+      "[\"name\",\"Order Code\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Order Code}}"
+        }
+      }
     }
   }
 }
@@ -529,15 +536,8 @@ ORDER BY o.order_timestamp DESC
       "[\"name\",\"Order Code\"]": {
         "click_behavior": {
           "type": "link",
-          "linkType": "dashboard",
-          "targetId": 38,
-          "parameterMapping": {
-            "order_id": {
-              "source": { "type": "column", "id": "order_id", "name": "order_id" },
-              "target": { "type": "parameter", "id": "order_id" },
-              "id": "order_id"
-            }
-          }
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Order Code}}"
         }
       }
     }
@@ -1008,7 +1008,14 @@ ORDER BY o.discount_amount DESC
       "Gross": { "number_style": "currency", "currency": "VND" },
       "Discount": { "number_style": "currency", "currency": "VND" },
       "Net Revenue": { "number_style": "currency", "currency": "VND" },
-      "Collected": { "number_style": "currency", "currency": "VND" }
+      "Collected": { "number_style": "currency", "currency": "VND" },
+      "[\"name\",\"Order Code\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Order Code}}"
+        }
+      }
     }
   }
 }
@@ -1072,15 +1079,8 @@ ORDER BY o.order_timestamp DESC
       "[\"name\",\"Order Code\"]": {
         "click_behavior": {
           "type": "link",
-          "linkType": "dashboard",
-          "targetId": 38,
-          "parameterMapping": {
-            "order_id": {
-              "source": { "type": "column", "id": "order_id", "name": "order_id" },
-              "target": { "type": "parameter", "id": "order_id" },
-              "id": "order_id"
-            }
-          }
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Order Code}}"
         }
       }
     }
@@ -1571,7 +1571,14 @@ ORDER BY o.discount_amount DESC
       "Gross": { "number_style": "currency", "currency": "VND" },
       "Discount": { "number_style": "currency", "currency": "VND" },
       "Net Revenue": { "number_style": "currency", "currency": "VND" },
-      "Collected": { "number_style": "currency", "currency": "VND" }
+      "Collected": { "number_style": "currency", "currency": "VND" },
+      "[\"name\",\"Order Code\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Order Code}}"
+        }
+      }
     }
   }
 }
@@ -1635,15 +1642,8 @@ ORDER BY o.order_timestamp DESC
       "[\"name\",\"Order Code\"]": {
         "click_behavior": {
           "type": "link",
-          "linkType": "dashboard",
-          "targetId": 38,
-          "parameterMapping": {
-            "order_id": {
-              "source": { "type": "column", "id": "order_id", "name": "order_id" },
-              "target": { "type": "parameter", "id": "order_id" },
-              "id": "order_id"
-            }
-          }
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Order Code}}"
         }
       }
     }

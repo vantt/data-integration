@@ -576,6 +576,13 @@ LIMIT 20
       }
     ],
     "column_settings": {
+      "[\"name\",\"Ma don hang\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don hang}}"
+        }
+      },
       "Gross Revenue (VND)": {
         "number_style": "currency",
         "currency": "VND",
@@ -974,6 +981,13 @@ LIMIT 50
       }
     ],
     "column_settings": {
+      "[\"name\",\"Ma don hang\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don hang}}"
+        }
+      },
       "Gross Revenue (VND)": {
         "number_style": "currency",
         "currency": "VND",

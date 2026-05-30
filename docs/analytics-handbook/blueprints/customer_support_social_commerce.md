@@ -520,6 +520,13 @@ LIMIT 20
         "currency": "VND",
         "decimals": 0,
         "compact": true
+      },
+      "[\"name\",\"Mã đơn\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Mã đơn}}"
+        }
       }
     }
   }

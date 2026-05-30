@@ -87,7 +87,14 @@ WHERE o.order_id = {{order_id}}
     "table.cell_column": null,
     "column_settings": {
       "[\"name\",\"Ngay Dat\"]": {"date_style": "D/M/YYYY, h:mm A"},
-      "[\"name\",\"Ngay Xuat Kho\"]": {"date_style": "D/M/YYYY, h:mm A"}
+      "[\"name\",\"Ngay Xuat Kho\"]": {"date_style": "D/M/YYYY, h:mm A"},
+      "[\"name\",\"Ma Don\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma Don}}"
+        }
+      }
     }
   }
 }

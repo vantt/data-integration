@@ -521,6 +521,13 @@ LIMIT 200
         "currency": "VND",
         "decimals": 0,
         "compact": true
+      },
+      "[\"name\",\"Ma don hang\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don hang}}"
+        }
       }
     }
   }
@@ -589,6 +596,13 @@ LIMIT 200
         "currency": "VND",
         "decimals": 0,
         "compact": true
+      },
+      "[\"name\",\"Ma don hang\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don hang}}"
+        }
       }
     }
   }

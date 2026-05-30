@@ -1347,6 +1347,13 @@ LIMIT 100
       }
     ],
     "column_settings": {
+      "[\"name\",\"Ma don\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailView.app/orders/{{Ma don}}"
+        }
+      },
       "Doanh thu goc": {
         "number_style": "currency",
         "currency": "VND",
