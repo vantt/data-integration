@@ -92,19 +92,32 @@ Optional body text (markdown). If omitted, heading name is used as `# Heading Na
 
 **Parser HỖ TRỢ `#### Filter:` headers và `metabase-filter` JSON blocks.**
 
+> ⚠️ **QUAN TRỌNG — Date filter có nhiều gotcha:** Trước khi implement `date_range` filter cho bất kỳ dashboard nào, **BẮT BUỘC đọc:**
+> `.skills/metabase-automation/references/filter-date-range-pattern.md`
+>
+> Document này chứa: cơ chế injection, 3 SQL patterns (cycle-indicator / KPI / chart), column type variants, anti-patterns, checklist. Không đọc → dễ gây Binder Error hoặc filter không wire.
+
 Khai báo filters trong blueprint trước các Tab/Question headers:
 
 ```markdown
-#### Filter: Date Range
+#### Filter: Period
 
 \`\`\`json metabase-filter
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past7days"
+  "default": "past3months",
+  "field_id": 324
 }
 \`\`\`
 ```
+
+**`field_id` known values:**
+
+| field_id | Table | Column | Dùng cho |
+|----------|-------|--------|----------|
+| 324 | `int_misa_sales_lines` | `posting_date` | Finance, Channel P&L, Product |
+| 141 | `fact_orders` | `order_timestamp` | Orders, US CrossBorder |
 
 **Auto-wiring:** Deploy script tự động match filter `slug` với SQL `{{template_tag}}` cùng tên. Ví dụ: filter slug `date_range` → auto-wire tới `{{date_range}}` trong SQL.
 

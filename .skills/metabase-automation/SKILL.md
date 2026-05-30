@@ -17,6 +17,7 @@ It assumes you have a **Design Spec** with archetype, viz selections, and compos
 
 - **Strategy**: `.skills/metabase-automation/STRATEGY.md` — translation workflow, semantic layer, deploy mechanics
 - **Viz Catalog**: `.skills/metabase-automation/METABASE_VIZ_CATALOG.md` — standard vocab → Metabase settings
+- **Filter Pattern**: `.skills/metabase-automation/references/filter-date-range-pattern.md` — **đọc trước khi implement bất kỳ `date_range` filter nào**
 
 ## 📂 Structure
 
