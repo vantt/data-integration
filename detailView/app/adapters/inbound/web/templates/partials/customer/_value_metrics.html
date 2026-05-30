@@ -1,57 +1,58 @@
 {#
-  Customer > Value Metrics tab — §3.2, §8.5, §8.6
-  Source: dim_customers + aggregates over fact_orders / fact_order_economics
-  KPI grid: LTV, total orders, AOV, value_group.
-  Total gross profit, total COGS, avg gross margin % (with COGS-coverage caveat).
-  Total returns (amount + count).
+  Customer > Value Metrics sub-section (Precision restyled).
+  Included from _overview.html or fetched standalone.
+  Source: dim_customers · fact_orders · fact_order_economics
+  KPI grid: LTV hero · total orders · AOV
+  Secondary: gross profit · COGS · avg margin (+ COGS-coverage badge) · returns.
 #}
-{% from "macros.html" import kpi_stat, badge, caveat %}
+{% from "macros.html" import caveat, kpi_stat, panel_head %}
 {% set vm = customer.value_metrics %}
 
-<section aria-label="Value metrics">
+<div class="tabpanel stack-4">
 
-  {# Top KPI grid — 4 stats #}
-  <div class="kpi-grid kpi-grid--4up" style="margin-bottom:var(--space-5)"
-       aria-label="Headline value KPIs">
-    {{ kpi_stat("Lifetime value (LTV)", vm.lifetime_value | vnd, hero=True) }}
-    {{ kpi_stat("Total orders", vm.total_orders_count or "—") }}
-    {{ kpi_stat("AOV", vm.aov | vnd if vm.aov is not none else "—") }}
-    {{ kpi_stat("Value group",
-        vm.value_group or "—",
-        sub=("" if vm.value_group else "not assigned")) }}
+  {{ panel_head("Value metrics", "dim_customers · fact_orders · fact_order_economics") }}
+
+  {# Primary KPI grid: LTV spans 2 cols as hero #}
+  <div class="kpi-grid">
+    {{ kpi_stat("Lifetime value", vm.lifetime_value | vnd, hero=True) }}
+    {{ kpi_stat("Total orders",    vm.total_orders_count or "—") }}
+    {{ kpi_stat("Avg order value", vm.aov | vnd if vm.aov is not none else "—") }}
   </div>
 
-  {# Profitability block #}
-  <h2 class="panel-heading">Profitability contribution</h2>
-
-  <div class="kpi-grid kpi-grid--3up" style="margin-bottom:var(--space-3)"
-       aria-label="Profitability KPIs">
+  {# Secondary KPI grid: profitability + returns #}
+  <div class="kpi-grid">
     {{ kpi_stat("Gross profit contributed", vm.total_gross_profit | vnd) }}
-    {{ kpi_stat("Total COGS", vm.total_cogs | vnd) }}
-    {{ kpi_stat("Avg gross margin",
-        vm.avg_gross_margin_pct | pct if vm.avg_gross_margin_pct is not none else "—") }}
+    {{ kpi_stat("Total COGS",               vm.total_cogs | vnd) }}
+
+    {% if vm.avg_gross_margin_pct is not none %}
+      {% if vm.cogs_order_count is not none and vm.total_orders_count
+            and vm.cogs_order_count < vm.total_orders_count %}
+        {% set cov_pct = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
+        {{ kpi_stat("Avg gross margin", vm.avg_gross_margin_pct | pct,
+            sub='<span class="bdg bdg--warn" role="status" aria-label="COGS coverage">'
+                ~ cov_pct | string ~ '% COGS coverage</span>') }}
+      {% else %}
+        {{ kpi_stat("Avg gross margin", vm.avg_gross_margin_pct | pct) }}
+      {% endif %}
+    {% else %}
+      {{ kpi_stat("Avg gross margin", "—") }}
+    {% endif %}
+
+    {{ kpi_stat("Returns",
+        vm.total_return_amount | vnd,
+        sub=((vm.return_count | string ~ " events") if vm.return_count else "0 events")) }}
   </div>
 
-  {# COGS coverage caveat — shown whenever partial coverage exists #}
-  {% if vm.cogs_order_count is not none and vm.total_orders_count %}
-    {% if vm.cogs_order_count < vm.total_orders_count %}
-      {% set pct_covered = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
-      {{ caveat(
-        "Margin computed from partial COGS coverage — "
-        ~ vm.cogs_order_count ~ " of " ~ vm.total_orders_count
-        ~ " orders (" ~ pct_covered ~ "%) have MISA COGS data.",
+  {# COGS partial-coverage caveat #}
+  {% if vm.cogs_order_count is not none and vm.total_orders_count
+        and vm.cogs_order_count < vm.total_orders_count %}
+    {% set cov_pct = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
+    {{ caveat(
+        "Average margin reflects only orders with a matched COGS ("
+        ~ vm.cogs_order_count | string ~ " of " ~ vm.total_orders_count | string
+        ~ " orders, " ~ cov_pct | string ~ "%). Treat as directional.",
         "warn"
-      ) }}
-    {% endif %}
+    ) }}
   {% endif %}
 
-  {# Returns block #}
-  <h2 class="panel-heading">Returns</h2>
-
-  <div class="kpi-grid kpi-grid--2up"
-       aria-label="Returns summary">
-    {{ kpi_stat("Total return amount", vm.total_return_amount | vnd) }}
-    {{ kpi_stat("Return events", vm.return_count or "0") }}
-  </div>
-
-</section>
+</div>

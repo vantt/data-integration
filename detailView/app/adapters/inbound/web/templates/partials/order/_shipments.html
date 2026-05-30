@@ -1,55 +1,193 @@
 {#
-  Order > Shipments section — fact_fulfillments (grain: 1 row per shipment).
-  Columns: fulfillment_code, tracking_code, carrier, service, status badge, COD, shipped_at.
-  Shows an empty-state when the order has no shipment records.
-  Included by _operations.html as the first section (before Fulfillment).
+  Order > Operations > Shipments section.
+  Leg-level fulfillment cards sorted newest-first by shipped_at, NULLs last.
+  Each card: status badge + stage stepper, carrier·service, tracking hero (copy-on-click),
+  meta (fulfillment_code · shipped <dt> · COD).
+  Cancelled/Failed: tracking struck-through, coral card border.
+  Empty state: muted line + fulfillment_status badge.
+  Source: fact_fulfillments (grain: 1 row per shipment leg).
+
+  Copy-on-click JS is appended in _operations.html extra_scripts block.
+  Each .ship-track button carries data-code="{{ tracking_code }}".
 #}
-{% from "macros.html" import badge, caveat %}
-{% set shps = order.shipments %}
+{% from "macros.html" import badge, panel_head %}
+{% set shps_raw = order.shipments %}
 
-<section aria-label="Shipments">
-  <h3 style="margin:0 0 var(--space-3)">Shipments</h3>
+{#
+  Sort: newest shipped_at first, NULLs last.
+  Jinja has no sort-with-None-last built-in, so we split and concatenate.
+#}
+{% set shps_dated  = shps_raw | selectattr("shipped_at") | sort(attribute="shipped_at", reverse=True) | list %}
+{% set shps_null   = shps_raw | rejectattr("shipped_at") | list %}
+{% set shps        = shps_dated + shps_null %}
+{% set n           = shps | length %}
 
-  {% if not shps %}
-  <div class="empty-state">
-    <p class="empty-state__title">No shipment records</p>
-    <p class="empty-state__body">No shipment legs found for this order.</p>
+{# status → tone map (server-side mirror of shipTone) #}
+{% macro ship_tone(status) %}
+  {%- if status in ("DELIVERED",) %}good
+  {%- elif status in ("SHIPPING", "PENDING") %}warn
+  {%- elif status in ("CANCELLED", "FAILED") %}bad
+  {%- else %}neutral{%- endif %}
+{% endmacro %}
+
+{# Build summary counts for the header right slot #}
+{% set summary_map = {} %}
+{% for s in shps %}
+  {% set st = s.status | upper if s.status else "UNKNOWN" %}
+  {% if st in summary_map %}
+    {# Jinja dict mutation workaround #}
+  {% endif %}
+{% endfor %}
+
+<div class="tabpanel stack-4">
+
+  {# ── Section header ── #}
+  <div class="panel-head ship-head">
+    <div class="ship-head__title">
+      <span class="panel-title">Shipments</span>
+      {% if n > 1 %}
+        <span class="ship-count">{{ n }}</span>
+      {% endif %}
+    </div>
+    {% if n > 0 %}
+      {# Status summary: collect counts per status #}
+      <div class="ship-summary">
+        {% set seen = [] %}
+        {% for order_key in ["DELIVERED","SHIPPING","PACKED","PENDING","CANCELLED","FAILED"] %}
+          {% set cnt = shps | selectattr("status", "equalto", order_key) | list | length %}
+          {% if cnt > 0 %}
+            <span class="ship-summary__seg">
+              <i class="ship-tone-dot ship-tone-dot--{{ ship_tone(order_key) | trim }}"></i>
+              {{ cnt }} {{ order_key | lower }}
+            </span>
+          {% endif %}
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="panel-sub">fact_fulfillments · leg-level</div>
+    {% endif %}
   </div>
+
+  {# ── Cards or empty state ── #}
+  {% if n == 0 %}
+    <div class="ship-empty">
+      <div class="ship-empty__title voice"><em>No shipments yet</em></div>
+      <p class="ship-empty__sub">
+        This order has no shipment legs.
+        Fulfillment status is
+        {% if order.header.fulfillment_status %}
+          {{ badge(order.header.fulfillment_status,
+                   order.shipments | first | attr("status_tone") if order.shipments
+                   else "neutral", dot=True) }}
+        {% else %}
+          <span class="muted">—</span>
+        {% endif %}.
+      </p>
+    </div>
 
   {% else %}
+    <div class="ship-list">
+      {% for s in shps %}
+        {% set tone   = ship_tone(s.status | upper if s.status else "") | trim %}
+        {% set is_bad = s.status and s.status | upper in ("CANCELLED", "FAILED") %}
+        {% set code   = s.tracking_code or "" %}
 
-  <div class="table-scroll">
-    <table class="data-table" aria-label="Shipment records">
-      <thead>
-        <tr>
-          <th scope="col">Code</th>
-          <th scope="col">Tracking</th>
-          <th scope="col">Carrier</th>
-          <th scope="col">Service</th>
-          <th scope="col">Status</th>
-          <th scope="col" class="num">COD</th>
-          <th scope="col">Shipped at</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for s in shps %}
-        <tr>
-          <td>{{ s.fulfillment_code or "—" }}</td>
-          <td>{{ s.tracking_code or "—" }}</td>
-          <td>{{ s.carrier_id or "—" }}</td>
-          <td>{{ s.shipping_service or "—" }}</td>
-          <td>
-            {% if s.status %}
-              {{ badge(s.status, s.status_tone().value, "shipment_status") }}
-            {% else %}—{% endif %}
-          </td>
-          <td class="num">{{ s.cod_amount | vnd }}</td>
-          <td>{{ s.shipped_at | dt }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+        <div class="ship-card{% if is_bad %} ship-card--bad{% endif %}"
+             data-ship-card
+             id="ship-card-{{ loop.index }}">
+
+          {# Top row: badge + stepper / carrier #}
+          <div class="ship-card__top">
+            <div class="ship-card__lead">
+              {{ badge(s.status or "UNKNOWN", tone, dot=True) }}
+
+              {# Stage stepper: PACKED → SHIPPING → DELIVERED / error marker #}
+              {% if is_bad %}
+                <span class="ship-stages ship-stages--err"
+                      title="{{ s.status | lower }}" aria-hidden="true">
+                  <span class="ship-stages__err">✕</span>
+                </span>
+              {% else %}
+                {% set stages   = ["PACKED", "SHIPPING", "DELIVERED"] %}
+                {% set curr_idx = stages.index(s.status | upper) if s.status | upper in stages else -1 %}
+                <span class="ship-stages"
+                      title="packed → shipping → delivered" aria-hidden="true">
+                  {% for stage in stages %}
+                    {% set i = loop.index0 %}
+                    {% if i > 0 %}
+                      <span class="ship-stages__bar{{ ' is-on' if i <= curr_idx else '' }}"></span>
+                    {% endif %}
+                    <span class="ship-stages__node
+                                 {{ 'is-on'  if i <= curr_idx else '' }}
+                                 {{ 'is-now' if i == curr_idx else '' }}"></span>
+                  {% endfor %}
+                </span>
+              {% endif %}
+            </div>
+
+            <div class="ship-card__carrier">
+              <span class="ship-carrier__name">{{ s.carrier_id or "—" }}</span>
+              {% if s.shipping_service %}
+                <span class="ship-sep">·</span>
+                <span class="ship-carrier__svc">{{ s.shipping_service }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {# Tracking hero — copy-on-click button #}
+          <button type="button"
+                  class="ship-track"
+                  data-track-btn
+                  data-card-id="{{ loop.index }}"
+                  data-code="{{ code }}"
+                  title="Copy tracking code"
+                  aria-label="Tracking code {{ code }} — copy">
+            <span class="ship-track__label">Tracking</span>
+            <span class="ship-track__code{% if is_bad %} ship-track__code--voided{% endif %}">
+              {{ code if code else "—" }}
+            </span>
+            <span class="ship-track__copy" data-copy-glyph aria-hidden="true">
+              {# copy glyph — Precision style: 1.3 stroke, round caps #}
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none"
+                   stroke="currentColor" stroke-width="1.3"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <rect x="4.3" y="4.3" width="6.4" height="6.4" rx="1.2"/>
+                <path d="M8.4 2.3H3.4a1.1 1.1 0 0 0-1.1 1.1v5"/>
+              </svg>
+              copy
+            </span>
+          </button>
+
+          {# Meta row #}
+          <div class="ship-card__meta">
+            <span class="ship-meta__code mono">{{ s.fulfillment_code or "—" }}</span>
+            <span class="ship-meta__sep">·</span>
+            <span class="ship-meta__time">
+              {% if s.shipped_at %}
+                shipped <span class="mono">{{ s.shipped_at | dt }}</span>
+                <span class="ship-meta__rel">(ICT)</span>
+              {% else %}
+                <span class="ship-meta__null">not shipped yet</span>
+              {% endif %}
+            </span>
+            <span class="ship-meta__sep">·</span>
+            <span class="ship-meta__cod">
+              {% if s.cod_amount and s.cod_amount > 0 %}
+                COD <b class="mono">{{ s.cod_amount | vnd }}</b>
+              {% else %}
+                <span class="muted">COD <span class="dash">—</span></span>
+              {% endif %}
+            </span>
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="note-line">
+    <span class="caveat__mark">ⓘ</span>
+    <span>Tracking codes are copy-only — no carrier link map in the serving layer yet.</span>
   </div>
 
-  {% endif %}
-</section>
+</div>

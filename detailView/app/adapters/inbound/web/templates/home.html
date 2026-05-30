@@ -1,89 +1,136 @@
 {% extends "base.html" %}
 {#
-  Home page — §1.3 / §8.2
-  Minimal: centred hero search with helper text. No data grid.
-  The header already has its own search cluster; this provides a larger,
-  prominent duplicate for the landing state.
+  Home — centered segmented search + hint line.
+  Per design: app.jsx Home + 01-home.png.
+  No data grid. The header already carries a search cluster;
+  this page renders a second, larger search in the body.
+  Context vars: none required.
 #}
-{% from "macros.html" import caveat %}
+{% from "macros.html" import eyebrow %}
 
-{% block title %}detailView — Order & Customer Insights{% endblock %}
+{% block title %}detailView — Order &amp; Customer Insight{% endblock %}
 
 {% block content %}
-<section class="home-hero" aria-labelledby="home-heading">
+<div class="home page-enter">
+  <div class="home__inner">
 
-  <h1 class="home-hero__title" id="home-heading">
-    Look up the full story of one entity
-  </h1>
-  <p class="home-hero__hint">
-    Search by <strong>order code</strong> (e.g. HD00123) or by
-    <strong>customer ID, phone, or email</strong>.
-  </p>
+    <div class="home__eyebrow">
+      {{ eyebrow("Order &amp; Customer insight", accent=True) }}
+    </div>
 
-  {#
-    Home search panel — same HTMX contract as the header form.
-    hx-get /search → HX-Redirect (single hit) | #search-results partial (multi) | hint (none)
-  #}
-  <div class="home-search-panel" role="search" aria-label="Entity lookup">
-    <form hx-get="/search"
-          hx-target="#search-results"
-          hx-swap="innerHTML"
-          hx-trigger="submit"
-          id="home-search-form">
+    <h1 class="home__title">
+      The whole story of <em>one entity</em>.
+    </h1>
 
-      {# Segmented control #}
-      <div class="search-mode-toggle" role="group" aria-label="Search mode">
-        <button type="button"
-                class="search-mode-toggle__btn active"
-                aria-pressed="true"
-                data-mode="order"
-                onclick="homeSetMode(this,'order')"
-                id="home-mode-order">Order</button>
-        <button type="button"
-                class="search-mode-toggle__btn"
-                aria-pressed="false"
-                data-mode="customer"
-                onclick="homeSetMode(this,'customer')"
-                id="home-mode-customer">Customer</button>
-      </div>
+    <p class="home__sub">
+      Look up an order or a customer to see every computed insight —
+      financials, fulfillment, behaviour, segmentation — in a single view.
+    </p>
 
-      <input type="hidden" name="mode" id="home-mode-val" value="order">
+    {#
+      Home search — same HTMX contract as header form.
+      hx-get /search → HX-Redirect (single hit) | #search-results partial (multi) | hint (zero)
+      Uses a separate form id so JS can scope the segmented control independently.
+    #}
+    <div class="home__search">
+      <form class="search"
+            role="search"
+            aria-label="Entity lookup"
+            hx-get="/search"
+            hx-target="#home-results"
+            hx-swap="innerHTML"
+            hx-trigger="submit"
+            id="home-search-form">
 
-      <div style="display:flex;gap:.5rem;">
-        <input type="search"
-               class="search-input"
-               name="q"
-               id="home-q"
-               autocomplete="off"
-               placeholder="Order code e.g. HD00123"
-               aria-label="Search query"
-               style="flex:1">
-        <button type="submit" class="search-submit" aria-label="Search">&#128269;</button>
-      </div>
+        <div class="seg" role="tablist" aria-label="Search mode">
+          <button type="button"
+                  role="tab"
+                  class="seg__btn"
+                  aria-selected="true"
+                  data-mode="order"
+                  id="home-seg-order"
+                  onclick="dvHomeSetMode('order')">Order</button>
+          <button type="button"
+                  role="tab"
+                  class="seg__btn"
+                  aria-selected="false"
+                  data-mode="customer"
+                  id="home-seg-customer"
+                  onclick="dvHomeSetMode('customer')">Customer</button>
+        </div>
 
-      <p class="home-search-hint">
-        Order: exact code &nbsp;·&nbsp; Customer: id / phone / email
-      </p>
-    </form>
+        <input type="hidden" name="mode" id="home-mode-val" value="order" />
+
+        <div class="search__field">
+          <input class="search__input"
+                 type="search"
+                 name="q"
+                 id="home-q"
+                 autocomplete="off"
+                 spellcheck="false"
+                 placeholder="Order code  e.g. HD00123"
+                 aria-label="Search query" />
+          <button type="submit" class="search__submit" aria-label="Search">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                 stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>
+            </svg>
+          </button>
+        </div>
+
+        {# Results dropdown for the home-page search #}
+        <div id="home-results"
+             class="search__results"
+             role="region"
+             aria-label="Search results"
+             aria-live="polite"
+             style="display:none"></div>
+
+      </form>
+    </div>{# /.home__search #}
+
+    <div class="home__hints">
+      <a href="/orders/HD00123" class="home__hint">Try order <b>HD00123</b></a>
+      <a href="/orders/HD00210" class="home__hint">US order <b>HD00210</b></a>
+      <a href="/customers/C7781" class="home__hint">Customer <b>CUS-7781</b></a>
+    </div>
+
   </div>
-
-</section>
+</div>
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  function homeSetMode(btn, mode) {
-    document.getElementById('home-mode-val').value = mode;
-    document.querySelectorAll('#home-search-form .search-mode-toggle__btn').forEach(function(b) {
-      var active = b.dataset.mode === mode;
-      b.setAttribute('aria-pressed', active ? 'true' : 'false');
-      b.classList.toggle('active', active);
-    });
-    var ph = { order: 'Order code e.g. HD00123', customer: 'Customer ID, phone or email' };
-    document.getElementById('home-q').placeholder = ph[mode] || '';
-    document.getElementById('home-q').focus();
-    // Also sync header form mode
-    setSearchMode(document.querySelector('[data-mode="' + mode + '"]'), mode);
+/* Home-page segmented control — scoped to #home-search-form */
+function dvHomeSetMode(mode) {
+  document.getElementById('home-mode-val').value = mode;
+  var ph = { order: 'Order code  e.g. HD00123', customer: 'Customer ID, phone or email' };
+  document.getElementById('home-q').placeholder = ph[mode] || '';
+  document.querySelectorAll('#home-search-form .seg__btn').forEach(function(btn) {
+    btn.setAttribute('aria-selected', btn.dataset.mode === mode ? 'true' : 'false');
+  });
+  document.getElementById('home-q').focus();
+  /* Also sync the header form */
+  if (typeof dvSetSearchMode === 'function') dvSetSearchMode(mode);
+}
+
+/* Show/hide home results on HTMX swap */
+document.body.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target && e.detail.target.id === 'home-results') {
+    var r = document.getElementById('home-results');
+    if (r) r.style.display = r.innerHTML.trim() ? '' : 'none';
   }
+});
+
+/* Dismiss home results when clicking outside */
+document.addEventListener('click', function(e) {
+  var results = document.getElementById('home-results');
+  var form    = document.getElementById('home-search-form');
+  if (!results || !form) return;
+  if (!form.contains(e.target)) {
+    results.innerHTML = '';
+    results.style.display = 'none';
+  }
+});
 </script>
 {% endblock %}

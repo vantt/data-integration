@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="40" viewBox="0 0 200 40" fill="none">
+  
+  <text x="0" y="28" class="w-mind">mind</text>
+  <text x="60" y="28" class="w-vault">Vault</text>
+  <circle cx="135" cy="20" r="3" fill="#e8a341"></circle>
+  <circle cx="135" cy="20" r="6" fill="#e8a341" opacity="0.25"></circle>
+</svg>

@@ -1,92 +1,68 @@
 {#
-  Order > Channel & Staff tab — §2.2, §8.4
-  Source: dim_channels, dim_promotions, discount_codes, dim_staff, dim_branches
-  Channel: name/code/category/format/platform/brand/market,
-           promo code(s), max_discount_rate, primary_discount_nature.
-  Staff: seller (primary), creator, team, branch.
+  Order > Context > Channel & staff section.
+  Two-column .scard grid: Channel (left) · Staff (right).
+  Source: dim_channels · dim_staff · dim_promotions.
 #}
-{% from "macros.html" import badge %}
+{% from "macros.html" import badge, panel_head, fact, eyebrow %}
 {% set ch = order.channel %}
 {% set st = order.staff %}
 
-<section aria-label="Channel and staff">
+<div class="tabpanel stack-4">
 
-  <h2 class="panel-heading">Channel</h2>
-  <dl class="quick-facts" style="max-width:480px;margin-bottom:var(--space-5)">
+  {{ panel_head("Channel & staff",
+     "dim_channels · dim_staff · dim_promotions") }}
 
-    {% if ch.channel_name %}
-    <dt>Name</dt><dd>{{ ch.channel_name }}</dd>
-    {% endif %}
+  <div class="kpi-grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-4)">
 
-    {% if ch.channel_code %}
-    <dt>Code</dt><dd><code>{{ ch.channel_code }}</code></dd>
-    {% endif %}
+    {# Channel card #}
+    <div class="scard">
+      {{ eyebrow("Channel", accent=True) }}
+      <div class="facts" style="margin-top:var(--sp-3)">
+        {% if ch.channel_name or ch.channel_code %}
+          {{ fact("Name",
+             ([ch.channel_name, ch.channel_code] | select | join(" · ")) or "—") }}
+        {% endif %}
+        {% if ch.channel_category or ch.channel_format %}
+          {{ fact("Category",
+             ([ch.channel_category, ch.channel_format] | select | join(" · ")) or "—") }}
+        {% endif %}
+        {% if ch.platform or ch.channel_brand %}
+          {{ fact("Platform",
+             ([ch.platform, ch.channel_brand] | select | join(" · ")) or "—") }}
+        {% endif %}
+        {% if ch.market %}
+          {{ fact("Market", ch.market) }}
+        {% endif %}
+        {% if ch.promotion_code or ch.max_discount_rate is not none or ch.primary_discount_nature %}
+          {% set promo_parts = [] %}
+          {% if ch.promotion_code %}{% set _ = promo_parts.append(ch.promotion_code) %}{% endif %}
+          {% if ch.max_discount_rate is not none %}{% set _ = promo_parts.append("max " ~ (ch.max_discount_rate | pct)) %}{% endif %}
+          {% if ch.primary_discount_nature %}{% set _ = promo_parts.append(ch.primary_discount_nature) %}{% endif %}
+          {{ fact("Promo", promo_parts | join(" · ") if promo_parts else "—") }}
+        {% endif %}
+      </div>
+    </div>
 
-    {% if ch.channel_category %}
-    <dt>Category</dt><dd>{{ ch.channel_category }}</dd>
-    {% endif %}
+    {# Staff card #}
+    <div class="scard">
+      {{ eyebrow("Staff", accent=True) }}
+      <div class="facts" style="margin-top:var(--sp-3)">
+        {% if st.seller_name %}
+          {{ fact("Seller",
+             st.seller_name ~ (" <" ~ st.seller_email ~ ">" if st.seller_email else "")) }}
+        {% endif %}
+        {% if st.creator_name %}
+          {{ fact("Creator", st.creator_name) }}
+        {% endif %}
+        {% if st.team_name %}
+          {{ fact("Team", st.team_name) }}
+        {% endif %}
+        {% if st.branch_name %}
+          {{ fact("Branch", st.branch_name) }}
+        {% endif %}
+      </div>
+    </div>
 
-    {% if ch.channel_format %}
-    <dt>Format</dt><dd>{{ ch.channel_format }}</dd>
-    {% endif %}
+  </div>
 
-    {% if ch.platform %}
-    <dt>Platform</dt><dd>{{ ch.platform }}</dd>
-    {% endif %}
-
-    {% if ch.channel_brand %}
-    <dt>Brand</dt><dd>{{ ch.channel_brand }}</dd>
-    {% endif %}
-
-    {% if ch.market %}
-    <dt>Market</dt>
-    <dd>
-      {% set mktone = "neutral" if ch.market == "Domestic" else "warn" %}
-      {{ badge(ch.market, mktone, "market") }}
-    </dd>
-    {% endif %}
-
-    {% if ch.promotion_code %}
-    <dt>Promo code</dt><dd><code>{{ ch.promotion_code }}</code></dd>
-    {% endif %}
-
-    {% if ch.max_discount_rate is not none %}
-    <dt>Max discount</dt><dd>{{ ch.max_discount_rate | pct }}</dd>
-    {% endif %}
-
-    {% if ch.primary_discount_nature %}
-    <dt>Discount nature</dt><dd>{{ ch.primary_discount_nature }}</dd>
-    {% endif %}
-
-  </dl>
-
-  <h2 class="panel-heading">Staff</h2>
-  <dl class="quick-facts" style="max-width:480px">
-
-    {% if st.seller_name %}
-    <dt>Seller (primary)</dt>
-    <dd>
-      {{ st.seller_name }}
-      {% if st.seller_email %}<small style="color:var(--text-muted)">&lt;{{ st.seller_email }}&gt;</small>{% endif %}
-    </dd>
-    {% endif %}
-
-    {% if st.creator_name %}
-    <dt>Creator</dt><dd>{{ st.creator_name }}</dd>
-    {% endif %}
-
-    {% if st.team_name %}
-    <dt>Team</dt><dd>{{ st.team_name }}</dd>
-    {% endif %}
-
-    {% if st.branch_name %}
-    <dt>Branch</dt><dd>{{ st.branch_name }}</dd>
-    {% endif %}
-
-  </dl>
-
-  {% if not ch.channel_name and not st.seller_name %}
-  <p style="color:var(--text-secondary);font-size:var(--font-size-base)">No channel or staff data available.</p>
-  {% endif %}
-
-</section>
+</div>

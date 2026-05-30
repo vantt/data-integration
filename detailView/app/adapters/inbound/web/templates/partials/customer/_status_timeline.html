@@ -1,95 +1,96 @@
 {#
-  Customer > Status Timeline tab — §3.2, §8.6
-  Source: mart_customer_status_snapshot_monthly
-  24-month horizontal strip: ACTIVE / AT_RISK / CHURNED.
-  is_new marker on acquisition month.
-  Tooltip: days_since_last_order · value_group (approx note).
-  RETAIL only — non-RETAIL → "RETAIL only" notice, no strip.
+  Customer > Status Timeline tab — screen 09.
+  Source: mart_customer_status_snapshot_monthly · 24 months
+  RETAIL-only: non-RETAIL customers see a caveat, no strip.
+  Strip cells: data-st="ACTIVE|AT_RISK|CHURNED|NONE"
+  is_new marker = acquisition month amber dot.
+  Hover tooltip: snapshot_month · status · days_since_last_order · value_group.
 #}
-{% from "macros.html" import caveat, badge %}
-{% set snapshots = customer.status_timeline %}
+{% from "macros.html" import caveat, panel_head %}
 
-<section aria-label="Monthly status timeline">
+<div class="tabpanel stack-4">
 
   {% if not customer.timeline_available %}
-  {# Non-RETAIL: show notice, no data (§3.3 / FR-10) #}
-  <div class="empty-state">
-    <p class="empty-state__icon" aria-hidden="true">&#128203;</p>
-    <p class="empty-state__title">RETAIL customers only</p>
-    <p class="empty-state__body">
-      Monthly status snapshots are computed for RETAIL customers only.
-      This customer's type is
-      <strong>{{ customer.profile.customer_type or "unknown" }}</strong>.
-    </p>
-  </div>
+  {# ── Non-RETAIL notice ─────────────────────────────────── #}
+  {{ panel_head("Status timeline", "mart_customer_status_snapshot_monthly") }}
+  {{ caveat(
+      "<b>RETAIL only.</b> Monthly status snapshots are computed for retail customers only — "
+      ~ "this account is <span style=\"font-family:var(--font-mono)\">"
+      ~ (customer.profile.customer_type or "unknown")
+      ~ "</span>.",
+      "warn", rule=True
+  ) }}
 
-  {% elif not snapshots %}
-  <div class="empty-state">
-    <p class="empty-state__title">No snapshot data</p>
-    <p class="empty-state__body">No monthly status snapshots found for this customer.</p>
-  </div>
+  {% elif not customer.status_timeline %}
+  {# ── No data (RETAIL but empty) ─────────────────────────── #}
+  {{ panel_head("Status timeline", "mart_customer_status_snapshot_monthly") }}
+  {{ caveat("No monthly status snapshots found for this customer.", "info") }}
 
   {% else %}
+  {# ── Strip ──────────────────────────────────────────────── #}
+  {% set snapshots = customer.status_timeline %}
+  {{ panel_head("Status timeline",
+      "mart_customer_status_snapshot_monthly · " ~ (snapshots | length) | string ~ " mo") }}
 
-  <h2 class="panel-heading">Monthly status ({{ snapshots | length }} months)</h2>
+  <div class="scard">
 
-  {# Legend #}
-  <div class="strip-legend" aria-label="Status legend">
-    <span class="strip-legend__item">
-      <span class="badge badge--good" aria-hidden="true">A</span> Active
-    </span>
-    <span class="strip-legend__item">
-      <span class="badge badge--warn" aria-hidden="true">R</span> At risk
-    </span>
-    <span class="strip-legend__item">
-      <span class="badge badge--bad" aria-hidden="true">C</span> Churned
-    </span>
-    <span class="strip-legend__item">★ = acquisition month</span>
-  </div>
-    {{ badge("A = Active",  "good",    "legend") }}
-    {{ badge("R = At risk", "warn",    "legend") }}
-    {{ badge("C = Churned", "bad",     "legend") }}
-    {{ badge("★ = new",     "neutral", "legend") }}
-  </div>
+    {# Month strip — one cell per snapshot #}
+    <div class="strip" role="list" aria-label="Monthly status strip">
+      {% for snap in snapshots %}
+        {% set st = (snap.status or "NONE") | upper %}
+        {# Single-letter abbreviation #}
+        {% set abbr = "A" if st == "ACTIVE"
+                      else "R" if st == "AT_RISK"
+                      else "C" if st == "CHURNED"
+                      else "·" %}
+        {# Tooltip text — all available meta joined #}
+        {% set tip_parts = [] %}
+        {% if snap.snapshot_month %}
+          {% set _ = tip_parts.append(snap.snapshot_month | dateonly) %}
+        {% endif %}
+        {% set _ = tip_parts.append(st) %}
+        {% if snap.days_since_last_order is not none %}
+          {% set _ = tip_parts.append(snap.days_since_last_order | string ~ "d since order") %}
+        {% endif %}
+        {% if snap.value_group %}
+          {% set _ = tip_parts.append(snap.value_group) %}
+        {% endif %}
 
-  {# Month labels row — abbreviated YYYY-MM above each cell #}
-  <div class="status-strip-labels" aria-hidden="true">
-    {% for snap in snapshots %}
-    <span class="status-strip-labels__cell">
-      {% if snap.snapshot_month %}
-        {{ snap.snapshot_month.strftime("%m/%y") }}
-      {% endif %}
-    </span>
-    {% endfor %}
-  </div>
+        <div class="strip-cell"
+             data-st="{{ st }}"
+             data-tip="{{ tip_parts | join(' · ') }}"
+             role="listitem"
+             aria-label="{{ st }}{% if snap.is_new %} (acquisition){% endif %}{% if snap.snapshot_month %}, {{ snap.snapshot_month | dateonly }}{% endif %}">
+          {{- abbr -}}
+          {% if snap.is_new %}<span class="strip-cell__new" aria-hidden="true"></span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
 
-  {# Status strip — horizontal cells #}
-  <div class="status-strip"
-       role="list"
-       aria-label="Monthly status strip">
-    {% for snap in snapshots %}
-      {% set status_upper = (snap.status or "") | upper %}
-      {# Abbreviated label: A / R / C #}
-      {% set abbr = "A" if status_upper == "ACTIVE"
-                    else "R" if status_upper == "AT_RISK"
-                    else "C" if status_upper == "CHURNED"
-                    else "?" %}
-      {# Tooltip: days since last order + value_group #}
-      {% set tip_parts = [] %}
-      {% if snap.snapshot_month %}{% set _ = tip_parts.append(snap.snapshot_month | dateonly) %}{% endif %}
-      {% if snap.days_since_last_order is not none %}{% set _ = tip_parts.append("last order " ~ snap.days_since_last_order ~ "d ago") %}{% endif %}
-      {% if snap.value_group %}{% set _ = tip_parts.append(snap.value_group) %}{% endif %}
-      <div class="status-strip__cell status-strip__cell--{{ status_upper }}{% if snap.is_new %} status-strip__cell--new{% endif %}"
-           role="listitem"
-           title="{{ tip_parts | join(' · ') }}"
-           aria-label="{{ snap.status or 'unknown' }}{% if snap.is_new %} (new){% endif %}{% if snap.snapshot_month %}, {{ snap.snapshot_month | dateonly }}{% endif %}">
-        {{ abbr }}
-      </div>
-    {% endfor %}
-  </div>
+    {# Axis: first … last month labels #}
+    {% if snapshots %}
+    <div class="strip-axis" aria-hidden="true">
+      <span>{{ snapshots[0].snapshot_month | dateonly if snapshots[0].snapshot_month else "" }}</span>
+      <span>{{ snapshots[-1].snapshot_month | dateonly if snapshots[-1].snapshot_month else "" }}</span>
+    </div>
+    {% endif %}
 
-  {{ caveat("Value group shown in tooltip is approximate (monthly snapshot, not real-time).", "info") }}
+    {# Legend #}
+    <div class="strip-legend" aria-label="Status legend">
+      <span><i style="background:var(--moss-500)"  aria-hidden="true"></i>ACTIVE</span>
+      <span><i style="background:var(--amber-500)" aria-hidden="true"></i>AT_RISK</span>
+      <span><i style="background:var(--coral-500)" aria-hidden="true"></i>CHURNED</span>
+      <span><i style="background:var(--accent);border-radius:50%" aria-hidden="true"></i>acquisition</span>
+    </div>
+
+  </div>{# /scard #}
+
+  {{ caveat(
+      "Hover a month for days-since-last-order and value group. "
+      ~ "value_group trend is approximate (monthly snapshot).",
+      "info"
+  ) }}
 
   {% endif %}
 
-</section>
+</div>{# /tabpanel #}

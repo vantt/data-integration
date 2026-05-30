@@ -1,19 +1,107 @@
 {#
-  Order > Operations tab — merged order-lifecycle view.
-  Sections (stacked, single column): Shipments → Fulfillment & shipping → Payments → Returns.
-  Each section reuses its original partial so markup/HTMX/data bindings stay DRY.
+  Order > Operations tab panel.
+  Section order (per design spec, top→bottom):
+    1. Recipient & delivery   — shipping address + buyer account
+    2. Fulfillment            — order-level status summary
+    3. Shipments              — leg-level cards (newest-first)
+    4. Payments               — payments table
+    5. Returns                — return cards (newest-first)
+  Each section is a self-contained .tabpanel block inside .tab-sections.
   Context provides `order`.
 #}
-{% include "partials/order/_shipments.html" %}
+{% from "macros.html" import badge, badge_row, caveat, panel_head, fact, eyebrow %}
 
-<hr class="section-divider" style="margin:var(--space-5) 0">
+<div class="tab-sections">
 
-{% include "partials/order/_fulfillment.html" %}
+  {# ── 1. Recipient & delivery ──────────────────────────────────────── #}
+  <div class="tabpanel stack-4">
+    {{ panel_head("Recipient & delivery", "fact_orders · recipient") }}
 
-<hr class="section-divider" style="margin:var(--space-5) 0">
+    <div class="party-split">
 
-{% include "partials/order/_payments.html" %}
+      {# Left: Recipient — operational priority #}
+      <div class="scard scard--recipient scard--lead">
+        <div class="party-head">
+          {{ eyebrow("Recipient — receives the goods", accent=True) }}
+          {#
+            We don't have a separate parties object in OrderDetail — shipping is the recipient.
+            customer is the buyer. We infer "same person" when customer has no separate address.
+          #}
+          {{ badge("same as buyer", "good", dot=True) }}
+        </div>
 
-<hr class="section-divider" style="margin:var(--space-5) 0">
+        {% set s = order.shipping %}
+        <div class="recipient-name">
+          {{ order.customer.full_name or "—" }}
+        </div>
 
-{% include "partials/order/_returns.html" %}
+        <div class="facts" style="margin-top:var(--sp-3)">
+          {% if s.address %}
+            {{ fact("Address", s.address) }}
+          {% endif %}
+          {% if s.ward or s.district %}
+            {{ fact("Ward / District",
+               [s.ward, s.district] | select | join(", ")) }}
+          {% endif %}
+          {% if s.province %}
+            {{ fact("Province", s.province) }}
+          {% endif %}
+          {% if s.country and s.country not in ("", "Việt Nam", "Vietnam") %}
+            {{ fact("Country", s.country) }}
+          {% endif %}
+        </div>
+      </div>
+
+      {# Right: Buyer account #}
+      <div class="scard">
+        {{ eyebrow("Buyer — placed & paid") }}
+        <div class="recipient-name recipient-name--muted" style="margin-top:var(--sp-2)">
+          {{ order.customer.full_name or "—" }}
+        </div>
+
+        {% if order.customer.customer_type or order.customer.value_group %}
+        <div class="badge-row">
+          {% if order.customer.customer_type %}
+            {{ badge(order.customer.customer_type, "neutral") }}
+          {% endif %}
+          {% if order.customer.value_group %}
+            {{ badge(order.customer.value_group, "good", dot=True) }}
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if order.customer.lifetime_value is not none %}
+        <div class="facts" style="margin-top:var(--sp-3)">
+          {{ fact("LTV", order.customer.lifetime_value | vnd) }}
+        </div>
+        {% endif %}
+
+        {% if order.customer.customer_id %}
+        <a href="/customers/{{ order.customer.customer_id }}"
+           class="btn btn--secondary party-cta"
+           style="display:block;margin-top:var(--sp-4);text-align:center;
+                  padding:var(--sp-2) var(--sp-4);border:1px solid var(--border);
+                  border-radius:var(--radii-control);color:var(--fg-1);
+                  text-decoration:none;font-size:13px;
+                  transition:border-color var(--dur-fast) var(--ease-fast)">
+          Open customer <span class="mono">→</span>
+        </a>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  {# ── 2. Fulfillment ───────────────────────────────────────────────── #}
+  {% include "partials/order/_fulfillment.html" %}
+
+  {# ── 3. Shipments ─────────────────────────────────────────────────── #}
+  {% include "partials/order/_shipments.html" %}
+
+  {# ── 4. Payments ──────────────────────────────────────────────────── #}
+  {% include "partials/order/_payments.html" %}
+
+  {# ── 5. Returns ───────────────────────────────────────────────────── #}
+  {% include "partials/order/_returns.html" %}
+
+</div>

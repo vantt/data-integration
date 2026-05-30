@@ -1,38 +1,42 @@
 {#
-  Search results dropdown — rendered into #search-results when multiple
-  customer hits are returned by SearchService.resolve().
-  Each row links to /customers/{customer_id}.
-  Context vars: hits (list[CustomerHit]), q (str)
+  _search_results.html — HTMX partial: search results dropdown.
+  Rendered into #search-results (header) or #home-results (home page)
+  when SearchService.resolve() returns multiple customer hits.
+
+  Context vars:
+    hits  list[CustomerHit]  — each has .customer_id, .full_name, .phone, .value_group
+    q     str                — the original query (for aria label)
+
+  Single-hit case: server issues HX-Redirect → this partial is never rendered.
+  Zero-hit case:   server renders _not_found_hint.html instead.
 #}
 {% from "macros.html" import badge %}
 
-<ul role="listbox"
-    aria-label="Customer search results for '{{ q }}'"
-    style="list-style:none;margin:0;padding:.25rem 0">
+<div role="listbox"
+     aria-label="Customer results for &ldquo;{{ q }}&rdquo;">
 
   {% for hit in hits %}
-  <li role="option" aria-selected="false">
-    <a href="/customers/{{ hit.customer_id }}"
-       aria-label="Customer {{ hit.full_name or hit.customer_id }}, id {{ hit.customer_id }}">
+  <a href="/customers/{{ hit.customer_id }}"
+     class="result-row"
+     role="option"
+     aria-label="Customer {{ hit.full_name or hit.customer_id }}{% if hit.phone %}, {{ hit.phone }}{% endif %}">
 
-      <span style="flex:1;min-width:0">
-        <span style="font-weight:var(--font-weight-semibold)">{{ hit.full_name or "(no name)" }}</span>
-        {% if hit.phone %}
-        <span style="color:var(--text-muted);font-size:var(--font-size-sm);margin-left:var(--space-1)">
-          · {{ hit.phone }}
-        </span>
-        {% endif %}
-        <span style="color:var(--text-muted);font-size:var(--font-size-xs);margin-left:var(--space-1)">
-          id {{ hit.customer_id }}
-        </span>
-      </span>
+    <div>
+      <div class="result-row__name">{{ hit.full_name or "(no name)" }}</div>
+      <div class="result-row__meta">
+        {{ hit.customer_id }}
+        {% if hit.phone %}&nbsp;·&nbsp;{{ hit.phone }}{% endif %}
+      </div>
+    </div>
 
-      {% if hit.value_group %}
-        {{ badge(hit.value_group, "neutral", "value") }}
-      {% endif %}
+    {% if hit.value_group %}
+    {{- badge(hit.value_group,
+              "accent" if hit.value_group in ("VALUE_VIP","VIP","PLATINUM") else
+              "warn"   if hit.value_group in ("VALUE_GOLD","GOLD") else
+              "neutral") -}}
+    {% endif %}
 
-    </a>
-  </li>
+  </a>
   {% endfor %}
 
-</ul>
+</div>

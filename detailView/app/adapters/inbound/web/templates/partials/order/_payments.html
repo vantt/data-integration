@@ -1,76 +1,77 @@
 {#
-  Order > Payments tab — §2.2, §8.4
-  Source: fact_payments × dim_payment_methods
-  Table: method name/type, amount, status, payment_timestamp, paid_on.
-  Summary: total paid, COD vs prepaid mix.
+  Order > Operations > Payments section.
+  Table: method, type, status, paid_on, amount.
+  Footer: Σ paid · COD % summary.
+  Source: fact_payments × dim_payment_methods.
 #}
-{% from "macros.html" import badge, caveat %}
+{% from "macros.html" import badge, panel_head %}
 {% set pmts = order.payments %}
 
-<section aria-label="Payments">
+<div class="tabpanel stack-4">
+
+  {{ panel_head("Payments", "fact_payments × dim_payment_methods") }}
+
   {% if not pmts %}
-  <div class="empty-state">
-    <p class="empty-state__title">No payment records</p>
-    <p class="empty-state__body">No payment entries found for this order.</p>
+  <div class="ship-empty">
+    <div class="ship-empty__title voice"><em>No payment records</em></div>
+    <p class="ship-empty__sub">No payment entries found for this order.</p>
   </div>
   {% else %}
 
-  <div class="table-scroll">
-    <table class="data-table" aria-label="Payment records">
+  <div class="tbl-wrap">
+    <table class="tbl">
       <thead>
         <tr>
-          <th scope="col">Method</th>
-          <th scope="col">Type</th>
-          <th scope="col" class="num">Amount</th>
-          <th scope="col">Status</th>
-          <th scope="col">Payment timestamp</th>
-          <th scope="col">Paid on</th>
+          <th>Method</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>Paid on</th>
+          <th class="num-h">Amount</th>
         </tr>
       </thead>
       <tbody>
         {% for p in pmts %}
         <tr>
-          <td>{{ p.payment_method_name or "—" }}</td>
-          <td>{{ p.payment_method_type or "—" }}</td>
-          <td class="num">{{ p.amount | vnd }}</td>
+          <td class="cell-strong">{{ p.payment_method_name or "—" }}</td>
+          <td class="muted mono" style="font-size:12px">{{ p.payment_method_type or "—" }}</td>
           <td>
             {% if p.status %}
-              {% set tone = "good" if p.status | upper in ("PAID", "COMPLETED", "SUCCESS") else
-                            "warn" if p.status | upper in ("PENDING", "PROCESSING") else
-                            "bad"  if p.status | upper in ("FAILED", "VOIDED", "CANCELLED") else "neutral" %}
-              {{ badge(p.status, tone, "payment_status") }}
-            {% else %}—{% endif %}
+              {% set ptone = "good" if p.status | upper in ("PAID","COMPLETED","SUCCESS")
+                        else "warn" if p.status | upper in ("PENDING","PROCESSING")
+                        else "bad"  if p.status | upper in ("FAILED","VOIDED","CANCELLED")
+                        else "neutral" %}
+              {{ badge(p.status, ptone, dot=True) }}
+            {% else %}
+              <span class="muted">—</span>
+            {% endif %}
           </td>
-          <td>{{ p.payment_timestamp | dt }}</td>
-          <td>{{ p.paid_on | dt }}</td>
+          <td class="mono muted" style="font-size:12px">
+            {{ p.paid_on | dt if p.paid_on else "—" }}
+          </td>
+          <td class="num cell-strong">{{ p.amount | vnd }}</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="2"><strong>Total paid</strong></td>
-          <td class="num">
-            {% set total = namespace(val=0) %}
-            {% for p in pmts %}
-              {% if p.amount is not none %}{% set total.val = total.val + p.amount %}{% endif %}
-            {% endfor %}
-            <strong>{{ total.val | vnd }}</strong>
+          {% set total = namespace(val=0) %}
+          {% set cod   = namespace(val=0) %}
+          {% for p in pmts %}
+            {% if p.amount is not none %}{% set total.val = total.val + p.amount %}{% endif %}
+            {% if p.payment_method_type and p.payment_method_type | upper == "COD" and p.amount is not none %}
+              {% set cod.val = cod.val + p.amount %}
+            {% endif %}
+          {% endfor %}
+          {% set cod_pct = ((cod.val / total.val * 100) | round | int) if total.val else 0 %}
+          <td colspan="4">
+            Σ paid · COD {{ cod_pct }}%
           </td>
-          <td colspan="3"></td>
+          <td class="num cell-strong">{{ total.val | vnd }}</td>
         </tr>
       </tfoot>
     </table>
   </div>
 
-  {# COD vs prepaid mix summary #}
-  {% set cod_count = pmts | selectattr("payment_method_type", "equalto", "COD") | list | length %}
-  {% set prepaid_count = pmts | length - cod_count %}
-  <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin-top:var(--space-3)">
-    Mix: <strong>{{ cod_count }}</strong> COD &nbsp;·&nbsp; <strong>{{ prepaid_count }}</strong> prepaid
-    {% if order.financial.cod_amount is not none %}
-      &nbsp;·&nbsp; COD amount {{ order.financial.cod_amount | vnd }}
-    {% endif %}
-  </p>
-
   {% endif %}
-</section>
+
+</div>

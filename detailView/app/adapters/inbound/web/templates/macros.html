@@ -1,37 +1,87 @@
 {#
-  macros.html — reusable Jinja2 macros imported by all templates.
+  macros.html — Precision-grounded Jinja2 macros for detailView.
 
-  Usage in any template:
-    {% from "macros.html" import badge, caveat, kpi_stat, money_cell %}
+  Import in any template:
+    {% from "macros.html" import badge, badge_row, caveat, flag_chips,
+       kpi_stat, money_cell, waterfall_row, eyebrow, panel_head, fact %}
 
-  Macros:
-    badge(label, tone, kind)        — Badge chip (text always present; color is not sole signal)
-    caveat(label, severity)         — Inline data-quality callout (info / warn)
-    kpi_stat(label, value, sub)     — Stat box: label / big-value / optional sub
-    money_cell(amount)              — <td> with right-aligned VND or em-dash
-    flag_chips(flags)               — Row of caveat chips from list[DataQualityFlag]
-    badge_row(badges)               — Row of badge chips from list[Badge]
+  FREEZE CONTRACT — macro names and signatures (do not rename):
+
+  badge(label, tone="neutral", dot=False, kind="")
+    Renders .bdg chip. tone ∈ neutral|good|warn|bad|accent.
+    dot=True adds a leading .bdg__dot colour dot.
+    Always carries text — colour is never the only signal.
+
+  badge_row(badges)
+    Renders .badge-row wrapping a list of domain Badge objects
+    (each with .label, .tone.value, .kind attributes).
+
+  caveat(label, severity="info", rule=False)
+    Inline data-quality callout. severity ∈ info|warn.
+    rule=True adds the amber left-border variant (.caveat--rule).
+
+  flag_chips(flags)
+    Renders a stack of caveat rows from list[DataQualityFlag]
+    (each with .label, .severity attributes).
+
+  kpi_stat(label, value, sub=None, hero=False)
+    .kpi stat box. hero=True → .kpi--hero (span 2 cols, larger value).
+
+  money_cell(amount)
+    <td class="num"> with VND-formatted amount (|vnd filter).
+    Pass raw Decimal/int — the macro applies the filter.
+
+  waterfall_row(op, label, amount, total=False, result=False)
+    One .wf-row in a revenue waterfall.
+    op ∈ "+" | "−" | "=" | "" maps to .wf-op--add/sub/eq.
+
+  eyebrow(text, accent=False)
+    .caption eyebrow label. accent=True colours it var(--accent).
+
+  panel_head(title, source=None, right=None)
+    .panel-head section header: Fraunces title + optional mono source sub.
+    right= is optional HTML injected into the right slot (e.g. count chip).
+
+  fact(key, value)
+    One .fact key/value row inside a .facts list.
+
+  Filters expected on env (registered by formatting.py):
+    |vnd    — Decimal/int/None → "1.250.000 ₫" or "—"
+    |pct    — float/None       → "30.4%" or "—"
+    |dt     — datetime/None    → "2026-05-19 14:00" (ICT) or "—"
+    |dateonly — datetime/date/None → "2026-05-19" or "—"
 #}
 
 {# ------------------------------------------------------------------ #}
-{# badge — renders a single Badge chip                                  #}
-{# tone: neutral | good | warn | bad                                    #}
+{# badge                                                               #}
+{# tone: neutral | good | warn | bad | accent                          #}
+{# dot:  bool — leading colour dot                                     #}
 {# ------------------------------------------------------------------ #}
-{% macro badge(label, tone="neutral", kind="") %}
-<span class="badge badge--{{ tone }}"
-      data-kind="{{ kind }}"
+{% macro badge(label, tone="neutral", dot=False, kind="") %}
+{%- set cls = "bdg" ~ (
+    " bdg--good"   if tone == "good"   else
+    " bdg--warn"   if tone == "warn"   else
+    " bdg--bad"    if tone == "bad"    else
+    " bdg--accent" if tone == "accent" else
+    ""
+  ) -%}
+<span class="{{ cls }}"
+      {% if kind %}data-kind="{{ kind }}"{% endif %}
       role="status"
-      aria-label="{{ kind }}: {{ label }}">{{ label }}</span>
+      aria-label="{{ (kind ~ ': ') if kind else '' }}{{ label }}">
+  {%- if dot %}<i class="bdg__dot" aria-hidden="true"></i>{% endif -%}
+  {{- label -}}
+</span>
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
-{# badge_row — renders a list of Badge domain objects                  #}
+{# badge_row — list of domain Badge objects                            #}
 {# ------------------------------------------------------------------ #}
 {% macro badge_row(badges) %}
 {% if badges %}
 <div class="badge-row">
   {% for b in badges %}
-  {{ badge(b.label, b.tone.value, b.kind) }}
+  {{ badge(b.label, b.tone.value if b.tone is not string else b.tone, kind=b.kind|default("")) }}
   {% endfor %}
 </div>
 {% endif %}
@@ -40,60 +90,105 @@
 {# ------------------------------------------------------------------ #}
 {# caveat — inline data-quality callout                                #}
 {# severity: "info" | "warn"                                           #}
+{# rule: True → amber left-border accent strip                         #}
 {# ------------------------------------------------------------------ #}
-{% macro caveat(label, severity="info") %}
-<div class="caveat caveat--{{ severity }}" role="note">
-  <span class="caveat__icon" aria-hidden="true">{% if severity == "warn" %}⚠{% else %}ⓘ{% endif %}</span>
-  <span>{{ label }}</span>
+{% macro caveat(label, severity="info", rule=False) %}
+<div class="caveat caveat--{{ severity }}{% if rule %} caveat--rule{% endif %}" role="note">
+  <span class="caveat__mark" aria-hidden="true">{% if severity == "warn" %}⚠{% else %}ⓘ{% endif %}</span>
+  <div>{{ label | safe }}</div>
 </div>
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
-{# flag_chips — renders a list of DataQualityFlag domain objects       #}
+{# flag_chips — list of DataQualityFlag domain objects                 #}
 {# ------------------------------------------------------------------ #}
 {% macro flag_chips(flags) %}
 {% if flags %}
-<div class="flag-row">
+<div class="stack-3">
   {% for f in flags %}
-  {{ caveat(f.label, f.severity) }}
+  {{ caveat(f.label, f.severity|default("info")) }}
   {% endfor %}
 </div>
 {% endif %}
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
-{# kpi_stat — label / big-value / optional sub text                   #}
-{# hero: bool — applies larger value font                              #}
+{# kpi_stat — KPI box: label / big value / optional sub               #}
+{# hero: bool — .kpi--hero (2-col span, larger value)                 #}
 {# ------------------------------------------------------------------ #}
 {% macro kpi_stat(label, value, sub=None, hero=False) %}
-<div class="kpi-stat">
-  <span class="kpi-stat__label">{{ label }}</span>
-  <span class="kpi-stat__value{% if hero %} kpi-stat__value--hero{% endif %}">{{ value }}</span>
+<div class="kpi{% if hero %} kpi--hero{% endif %}">
+  <div class="kpi__label">{{ label }}</div>
+  <div class="kpi__val">{{ value }}</div>
   {% if sub is not none and sub != "" %}
-  <span class="kpi-stat__sub">{{ sub }}</span>
+  <div class="kpi__sub">{{ sub | safe }}</div>
   {% endif %}
 </div>
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
 {# money_cell — <td> with right-aligned VND amount                    #}
-{# Expects amount already passed through |vnd filter at call site,    #}
-{# or pass the raw value and let the macro apply it.                  #}
+{# Applies |vnd filter; null/None → "—" (em-dash, .dash colour)      #}
 {# ------------------------------------------------------------------ #}
 {% macro money_cell(amount) %}
-<td class="num">{{ amount | vnd }}</td>
+{% set formatted = amount | vnd %}
+<td class="num{% if formatted == '—' %} dash{% endif %}">{{ formatted }}</td>
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
-{# waterfall_row — one row in a revenue waterfall                     #}
-{# prefix: "−" / "+" / "=" / "" for visual sign                      #}
+{# waterfall_row — one row in a revenue/cost waterfall                 #}
+{# op: "+" | "−" | "=" | ""                                           #}
+{# total:  True → .wf-row--total (soft bg)                            #}
+{# result: True → .wf-row--result (raised bg, bold)                   #}
 {# ------------------------------------------------------------------ #}
-{% macro waterfall_row(label, amount, prefix="", indent=False, total=False, section=False) %}
-<span class="waterfall__label
-  {%- if indent %} waterfall__label--indent{% endif %}
-  {%- if total %}  waterfall__label--total{% endif %}
-  {%- if section %} waterfall__label--section{% endif %}">
-  {% if prefix %}<span aria-hidden="true">{{ prefix }}&nbsp;</span>{% endif %}{{ label }}
-</span>
-<span class="waterfall__amount">{{ amount | vnd }}</span>
+{% macro waterfall_row(op, label, amount, total=False, result=False, neg=False) %}
+{%- set row_cls = "wf-row" ~
+    (" wf-row--total"  if total  else "") ~
+    (" wf-row--result" if result else "") -%}
+{%- set op_cls = "wf-op" ~
+    (" wf-op--add" if op == "+" else
+     " wf-op--sub" if op in ("-", "−") else
+     " wf-op--eq"  if op == "=" else "") -%}
+<div class="{{ row_cls }}">
+  <span class="{{ op_cls }}" aria-hidden="true">{{ op }}</span>
+  <span class="wf-label">{{ label | safe }}</span>
+  <span class="wf-amt{% if neg %} wf-amt--neg{% endif %}">{{ amount | vnd }}</span>
+</div>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# eyebrow — .caption label, optionally in accent colour              #}
+{# ------------------------------------------------------------------ #}
+{% macro eyebrow(text, accent=False) %}
+<div class="caption{% if accent %} caption--accent{% endif %}">{{ text }}</div>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# panel_head — section header with optional source sub and right slot #}
+{# title:  section title (Fraunces 22px)                               #}
+{# source: mono uppercase data-source label e.g. "Warehouse · mart"   #}
+{# right:  arbitrary HTML string for the right slot (e.g. count chip) #}
+{# ------------------------------------------------------------------ #}
+{% macro panel_head(title, source=None, right=None) %}
+<div class="panel-head">
+  <div>
+    <div class="panel-title">{{ title }}</div>
+    {% if source %}
+    <div class="panel-sub">{{ source }}</div>
+    {% endif %}
+  </div>
+  {% if right %}
+  <div>{{ right | safe }}</div>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{# ------------------------------------------------------------------ #}
+{# fact — one key/value row inside a .facts list                       #}
+{# ------------------------------------------------------------------ #}
+{% macro fact(key, value) %}
+<div class="fact">
+  <span class="fact__k">{{ key }}</span>
+  <span class="fact__v">{{ value }}</span>
+</div>
 {% endmacro %}

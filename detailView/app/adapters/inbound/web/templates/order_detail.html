@@ -1,184 +1,298 @@
 {% extends "base.html" %}
 {#
-  Order detail page — §2, §8.3
-  Layout: 2fr main (tab bar + #tab-panel) | 1fr sidebar (sticky)
-  Financial tab renders inline on first paint; other tabs lazy via HTMX.
+  Order detail page — Precision "Order at a glance" shell.
+  Layout: .detail-grid → .detail-main (tabbar + #tab-panel) | .detail-sidebar (scard stack)
+  Financial tab renders inline on first paint (no round-trip).
+  Other tabs: dvActivateTab(this, url) → htmx.ajax → #tab-panel swap.
 #}
-{% from "macros.html" import badge, badge_row, caveat, flag_chips, kpi_stat, waterfall_row %}
+{% from "macros.html" import badge, badge_row, caveat, flag_chips, eyebrow, fact %}
 
 {% block title %}Order {{ order.header.order_code }} — detailView{% endblock %}
 
-{% block header_context %}
-  Order {{ order.header.order_code }}
-{% endblock %}
+{% block header_context %}Order {{ order.header.order_code }}{% endblock %}
 
 {% block content %}
-<div class="detail-grid">
+<div class="detail-grid page-enter">
 
-  {# ================================================================ #}
-  {# MAIN — tab bar + lazy HTMX panel (§2.2, §8.3, §8.4)            #}
-  {# ================================================================ #}
+  {# ── MAIN ─────────────────────────────────────────────────────────── #}
   <section class="detail-main" aria-label="Order detail tabs">
 
-    {# Tab bar — role=tablist, each button role=tab #}
-    <nav role="tablist" aria-label="Order sections" class="tab-bar">
-      {% for t in tabs %}
-      <div class="tab-bar__item" role="presentation">
-        <button
-          role="tab"
-          class="tab-bar__btn"
-          aria-selected="{{ 'true' if t == active_tab else 'false' }}"
-          aria-controls="tab-panel"
-          data-tab="{{ t.value }}"
-          hx-get="/orders/{{ order_code }}/tab/{{ t.value }}"
-          hx-target="#tab-panel"
-          hx-swap="innerHTML"
-          hx-push-url="false"
-          hx-indicator="#tab-loading"
-          onclick="activateTab(this)"
-          {% if t == active_tab %}autofocus{% endif %}>
-          {{ t.value | replace("-", " ") | title }}
-        </button>
-      </div>
-      {% endfor %}
-      <span id="tab-loading" class="htmx-indicator" aria-label="Loading tab" style="align-self:center;margin-left:.5rem">…</span>
-    </nav>
+    {# Tab bar — role=tablist, amber underline on active (.tab[aria-selected=true]) #}
+    <div class="tabbar" role="tablist" aria-label="Order tabs">
+      <button class="tab"
+              role="tab"
+              aria-selected="true"
+              aria-controls="tab-panel"
+              id="tab-financial"
+              onclick="dvActivateTab(this, '/orders/{{ order.header.order_code }}/tab/financial')">
+        Financial
+      </button>
+      <button class="tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="tab-panel"
+              id="tab-items"
+              onclick="dvActivateTab(this, '/orders/{{ order.header.order_code }}/tab/items')">
+        Items
+      </button>
+      <button class="tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="tab-panel"
+              id="tab-operations"
+              onclick="dvActivateTab(this, '/orders/{{ order.header.order_code }}/tab/operations')">
+        Operations
+      </button>
+      <button class="tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="tab-panel"
+              id="tab-context"
+              onclick="dvActivateTab(this, '/orders/{{ order.header.order_code }}/tab/context')">
+        Context
+      </button>
+    </div>
 
-    {# Tab panel — HTMX swap target #}
+    {# Shimmer skeleton — shown by dvActivateTab while htmx fetches #}
+    <div id="tab-loading"
+         class="skeleton"
+         aria-hidden="true"
+         style="display:none"
+         aria-busy="false"
+         aria-label="Loading tab content">
+      {% for h in [22, 14, 14, 14, 14] %}
+      <div class="sk-row" style="height:{{ h }}px"></div>
+      {% endfor %}
+    </div>
+
+    {# Tab panel — HTMX swap target; Financial rendered inline on first paint #}
     <div id="tab-panel"
+         class="tabpanel"
          role="tabpanel"
-         aria-label="{{ active_tab.value | replace('-',' ') | title }} tab"
+         aria-labelledby="tab-financial"
+         aria-label="Financial tab"
          aria-busy="false"
          tabindex="0">
-      {# Financial tab renders immediately on first paint — no round trip #}
       {% include "partials/order/_financial.html" %}
     </div>
 
   </section>
 
-  {# ================================================================ #}
-  {# SIDEBAR — sticky "Order at a glance" (§2.1, §8.3)              #}
-  {# ================================================================ #}
-  <aside class="detail-sidebar" aria-label="Order summary">
+  {# ── SIDEBAR — "Order at a glance" ───────────────────────────────── #}
+  <aside class="detail-sidebar" aria-label="Order at a glance">
 
-    {# Card 1: Identity #}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Order</p>
-      <p class="entity-name">{{ order.header.order_code }}</p>
+    {# ── Identity card ── #}
+    <div class="scard">
+      {{ eyebrow("Order at a glance") }}
+      <div class="id-code">{{ order.header.order_code }}</div>
       {% if order.header.order_id %}
-      <p class="entity-id">id {{ order.header.order_id }}</p>
+      <div class="id-sub">order_id {{ order.header.order_id }}</div>
       {% endif %}
       {{ badge_row(order.status_badges()) }}
     </div>
 
-    {# Card 2: Money headline #}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Money</p>
-      <dl class="quick-facts">
+    {# ── Money headline ── #}
+    <div class="scard">
+      {{ eyebrow("Money headline", accent=True) }}
 
-        <dt>{{ "US Revenue (incl. VAT)" if order.financial.is_us else "Effective revenue" }}</dt>
-        <dd>{{ order.financial.effective_revenue | vnd }}
-          {% if order.financial.is_us %}{{ badge("US CrossBorder", "neutral", "us") }}{% endif %}
-        </dd>
-
-        <dt>Gross profit</dt>
-        <dd>{{ order.financial.gross_profit | vnd }}
-          {% if order.financial.gross_margin_pct is not none %}
-            <small>({{ order.financial.gross_margin_pct | pct }})</small>
+      {# Hero row — effective revenue (US = us_revenue_incl_vat) #}
+      <div class="money-line money-line--hero">
+        <span class="money-line__label">
+          {% if order.financial.is_us %}
+            US revenue (incl. VAT)
+            {{ badge("US", "accent") }}
+          {% else %}
+            Net revenue
           {% endif %}
+        </span>
+        <span class="money-line__val">{{ order.financial.effective_revenue | vnd }}</span>
+      </div>
+
+      {# Gross profit + margin % #}
+      <div class="money-line">
+        <span class="money-line__label">
+          Gross profit
           {% if not order.financial.margin_is_verified %}
-            {{ badge("unverified", "warn", "margin") }}
+            {{ badge("unverified", "warn") }}
           {% endif %}
-        </dd>
+        </span>
+        <span class="money-line__val">
+          {{ order.financial.gross_profit | vnd }}
+          {% if order.financial.gross_margin_pct is not none %}
+            <span class="bdg" style="font-size:11px;margin-left:4px">{{ order.financial.gross_margin_pct | pct }}</span>
+          {% endif %}
+        </span>
+      </div>
 
-        <dt>Channel net profit</dt>
-        <dd>{{ order.financial.channel_net_profit | vnd }}
+      {# Channel net + margin % #}
+      <div class="money-line">
+        <span class="money-line__label">Channel net</span>
+        <span class="money-line__val">
+          {{ order.financial.channel_net_profit | vnd }}
           {% if order.financial.channel_net_margin_pct is not none %}
-            <small>({{ order.financial.channel_net_margin_pct | pct }})</small>
+            <span class="bdg" style="font-size:11px;margin-left:4px">{{ order.financial.channel_net_margin_pct | pct }}</span>
           {% endif %}
-        </dd>
-
-      </dl>
+        </span>
+      </div>
     </div>
 
-    {# Card 3: Customer mini-card (links to customer page) #}
+    {# ── Recipient / buyer card — links to customer page ── #}
     {% if order.customer.customer_id %}
-    <a href="/customers/{{ order.customer.customer_id }}"
-       class="sidebar-card sidebar-card--link"
-       aria-label="View customer {{ order.customer.full_name or order.customer.customer_id }}">
-      <p class="sidebar-card__heading">Customer &#8594;</p>
-      <p class="entity-name">{{ order.customer.full_name or "—" }}</p>
-      <div class="badge-row">
-        {% if order.customer.customer_type %}
-          {{ badge(order.customer.customer_type, "neutral", "customer_type") }}
+      {#
+        We collapse recipient + buyer into one .scard--link when they are the same person.
+        The full party_split is shown in the Operations > Recipient & delivery section.
+        Here we show the recipient name + phone + location + customer LTV as a quick card.
+      #}
+      <a href="/customers/{{ order.customer.customer_id }}"
+         class="scard scard--link scard--recipient"
+         aria-label="Open customer {{ order.customer.full_name or order.customer.customer_id }}">
+        <div class="party-head">
+          {{ eyebrow("Recipient · Buyer", accent=True) }}
+          {{ badge("same person", "neutral") }}
+        </div>
+        {% if order.customer.full_name %}
+        <div class="mini-name">{{ order.customer.full_name }}</div>
         {% endif %}
-        {% if order.customer.value_group %}
-          {{ badge(order.customer.value_group, "good", "value") }}
-        {% endif %}
-      </div>
-      <p style="font-size:var(--font-size-sm);color:var(--text-secondary);margin-top:var(--space-2)">
-        LTV <span class="money">{{ order.customer.lifetime_value | vnd }}</span>
-      </p>
-    </a>
+        {# Phone + ship-to from order.shipping #}
+        <div class="facts party-facts">
+          {% if order.shipping.address or order.shipping.district or order.shipping.province %}
+          {{ fact("Ship to",
+            [order.shipping.district, order.shipping.province]
+              | select | reject('eq', '') | join(", ") or "—") }}
+          {% endif %}
+        </div>
+        {# LTV + value group mini-row #}
+        <div class="mini-meta party-link-row">
+          <span class="money-line__label">
+            {% if order.customer.value_group %}
+              {{ badge(order.customer.value_group, "good", dot=True) }}
+            {% endif %}
+            LTV
+            <span class="money-line__val" style="font-size:14px;margin-left:4px">
+              {{ order.customer.lifetime_value | vnd }}
+            </span>
+          </span>
+          <span class="mini-arrow mono">→</span>
+        </div>
+      </a>
     {% endif %}
 
-    {# Card 4: Quick facts #}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Quick facts</p>
-      <dl class="quick-facts">
+    {# ── Quick facts ── #}
+    <div class="scard">
+      {{ eyebrow("Quick facts") }}
+      <div class="facts">
         {% if order.channel.channel_name %}
-        <dt>Channel</dt><dd>{{ order.channel.channel_name }}</dd>
+          {{ fact("Channel", order.channel.channel_name) }}
         {% endif %}
         {% if order.staff.seller_name %}
-        <dt>Seller</dt><dd>{{ order.staff.seller_name }}</dd>
+          {{ fact("Seller", order.staff.seller_name) }}
         {% endif %}
         {% if order.staff.branch_name %}
-        <dt>Branch</dt><dd>{{ order.staff.branch_name }}</dd>
+          {{ fact("Branch", order.staff.branch_name) }}
         {% endif %}
         {% if order.header.created_at %}
-        <dt>Created</dt><dd>{{ order.header.created_at | dt }}</dd>
+          {{ fact("Created", order.header.created_at | dt) }}
         {% endif %}
         {% if order.header.first_shipped_at %}
-        <dt>Shipped</dt><dd>{{ order.header.first_shipped_at | dt }}</dd>
+          {{ fact("Shipped", order.header.first_shipped_at | dt) }}
         {% endif %}
         {% if order.financial.carrier_id %}
-        <dt>Carrier</dt><dd>{{ order.financial.carrier_id }}</dd>
+          {{ fact("Carrier", order.financial.carrier_id) }}
         {% endif %}
         {% if order.financial.cod_amount %}
-        <dt>COD</dt><dd>{{ order.financial.cod_amount | vnd }}</dd>
+          {{ fact("COD", order.financial.cod_amount | vnd) }}
         {% endif %}
-      </dl>
+      </div>
     </div>
 
-    {# Card 5: Data-quality flags #}
+    {# ── Data-quality flags ── #}
     {% set flags = order.quality_flags() %}
     {% if flags %}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Data quality</p>
+    <div class="scard">
+      {{ eyebrow("Data-quality flags") }}
       {{ flag_chips(flags) }}
     </div>
     {% endif %}
 
   </aside>
 
-</div>{# /detail-grid #}
+</div>{# /.detail-grid #}
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  // Highlight the active tab button and set aria-selected
-  function activateTab(btn) {
-    document.querySelectorAll('[role="tab"]').forEach(function(t) {
-      t.setAttribute('aria-selected', 'false');
-    });
-    btn.setAttribute('aria-selected', 'true');
-    // Set aria-busy on panel while HTMX fetches
-    var panel = document.getElementById('tab-panel');
-    if (panel) panel.setAttribute('aria-busy', 'true');
-    document.getElementById('tab-panel').addEventListener('htmx:afterSwap', function once() {
-      panel.setAttribute('aria-busy', 'false');
-      panel.removeEventListener('htmx:afterSwap', once);
-    });
+/* ── Shipment tracking copy-on-click ────────────────────────────────────
+   Precision spec:
+   - Click .ship-track button → copy data-code to clipboard
+   - Flash amber wash on card (.ship-card--copied) for ~1500ms
+   - Swap copy glyph to check + "copied" text for duration
+   - Graceful fallback when navigator.clipboard unavailable
+   - Respects prefers-reduced-motion (skips amber card flash)
+──────────────────────────────────────────────────────────────────────── */
+(function () {
+  var reducedMotion = window.matchMedia &&
+                      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* SVG glyphs — Precision style: 1.3–1.6 stroke, round caps, currentColor */
+  var COPY_HTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.3" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<rect x="4.3" y="4.3" width="6.4" height="6.4" rx="1.2"/>' +
+    '<path d="M8.4 2.3H3.4a1.1 1.1 0 0 0-1.1 1.1v5"/></svg> copy';
+
+  var CHECK_HTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" ' +
+    'stroke="currentColor" stroke-width="1.6" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+    '<path d="M2.7 6.8 5.3 9.4 10.3 3.7"/></svg> copied';
+
+  function flashCopied(btn) {
+    var card  = btn.closest('[data-ship-card]');
+    var glyph = btn.querySelector('[data-copy-glyph]');
+    if (glyph) {
+      glyph.innerHTML = CHECK_HTML;
+      glyph.classList.add('is-copied');
+    }
+    if (card && !reducedMotion) {
+      card.classList.add('ship-card--copied');
+    }
+    setTimeout(function () {
+      if (glyph) {
+        glyph.innerHTML = COPY_HTML;
+        glyph.classList.remove('is-copied');
+      }
+      if (card) { card.classList.remove('ship-card--copied'); }
+    }, 1500);
   }
+
+  /* Delegated click — works after HTMX tab swaps */
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-track-btn]');
+    if (!btn) return;
+    var code = (btn.dataset.code || '').trim();
+    if (!code || code === '—') return;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(
+          function () { flashCopied(btn); },
+          function () { flashCopied(btn); }   /* denied — still confirm visually */
+        );
+      } else {
+        /* Legacy execCommand fallback for non-secure contexts */
+        var ta = document.createElement('textarea');
+        ta.value = code;
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        try { document.execCommand('copy'); } catch (_) {}
+        document.body.removeChild(ta);
+        flashCopied(btn);
+      }
+    } catch (_) {
+      flashCopied(btn);
+    }
+  });
+})();
 </script>
 {% endblock %}

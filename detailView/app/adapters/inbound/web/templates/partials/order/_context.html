@@ -1,9 +1,9 @@
 {#
-  Order > Context tab — merged attribution + timeline view.
-  Sections (stacked): Channel & Staff → Timeline. Reuses original partials. Context: `order`.
+  Order > Context tab panel.
+  Sections (stacked): Channel & staff → Timeline.
+  Context provides `order`.
 #}
-{% include "partials/order/_channel_staff.html" %}
-
-<hr class="section-divider" style="margin:var(--space-5) 0">
-
-{% include "partials/order/_timeline.html" %}
+<div class="tab-sections">
+  {% include "partials/order/_channel_staff.html" %}
+  {% include "partials/order/_timeline.html" %}
+</div>

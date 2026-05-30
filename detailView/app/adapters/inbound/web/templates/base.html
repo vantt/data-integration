@@ -1,143 +1,225 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-density="comfortable" data-numfont="mono" data-accent="amber">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}detailView{% endblock %}</title>
-  {# Design tokens — all CSS custom properties #}
-  <link rel="stylesheet" href="/static/css/tokens.css">
-  {# Structural skeleton — layout, grid, breakpoints #}
-  <link rel="stylesheet" href="/static/css/skeleton.css">
-  {# Component design system — built on tokens #}
-  <link rel="stylesheet" href="/static/css/app.css">
+
+  {#
+    Fonts — vendored locally (woff2 downloaded from Google Fonts CSS2 API).
+    fonts.css contains all @font-face declarations pointing to /static/fonts/*.woff2.
+    Fallback stacks in --font-* tokens cover the no-font case gracefully.
+  #}
+  <link rel="stylesheet" href="/static/fonts/fonts.css" />
+
+  {# Precision design system tokens + primitives #}
+  <link rel="stylesheet" href="/static/css/precision.css" />
+
+  {# App shell + all component styles (built entirely on var(--*) tokens) #}
+  <link rel="stylesheet" href="/static/css/app.css" />
+
   {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-{#
-  §1.2 Floating header: brand | segmented search cluster | context slot
-  HTMX contract (§6): hx-get /search, target #search-results, HX-Redirect on single hit.
-  Mode state is held in a hidden input updated by the segmented control JS.
-#}
-<header class="app-header" role="banner">
+<div class="app">
 
-  {# Brand #}
-  <a href="/" class="app-header__brand" aria-label="detailView home">detailView</a>
+  {#
+    §1.2 Floating header: brand · segmented search · context slot
+    HTMX contract:
+      - form hx-get="/search" → server returns _search_results.html or HX-Redirect
+      - HX-Redirect header on single hit causes HTMX to redirect to the detail page
+      - Multiple hits → server renders _search_results.html into #search-results
+      - Zero hits    → server renders _not_found_hint.html into #search-results
+    Segmented control: JS updates hidden <input name="mode"> + aria-selected
+    Scroll detection: JS adds data-scrolled="true" to strengthen border
+  #}
+  <header class="app-header" role="banner" id="app-header">
 
-  {# Search cluster — centred, dominant #}
-  <form class="search-cluster"
-        role="search"
-        aria-label="Entity search"
-        hx-get="/search"
-        hx-target="#search-results"
-        hx-swap="innerHTML"
-        hx-trigger="submit"
-        hx-push-url="false"
-        id="search-form">
+    {# Brand — links home #}
+    <a href="/" class="brand" aria-label="detailView — go home">
+      <span class="brand__dot" aria-hidden="true"></span>
+      <span class="brand__name">detail<b>View</b></span>
+    </a>
 
-    {# Segmented [Order | Customer] control #}
-    <div class="search-mode-toggle" role="group" aria-label="Search mode">
-      <button type="button"
-              class="search-mode-toggle__btn{% if request.query_params.get('mode','order') != 'customer' %} active{% endif %}"
-              aria-pressed="{% if request.query_params.get('mode','order') != 'customer' %}true{% else %}false{% endif %}"
-              data-mode="order"
-              onclick="setSearchMode(this, 'order')"
-              id="mode-order">Order</button>
-      <button type="button"
-              class="search-mode-toggle__btn{% if request.query_params.get('mode') == 'customer' %} active{% endif %}"
-              aria-pressed="{% if request.query_params.get('mode') == 'customer' %}true{% else %}false{% endif %}"
-              data-mode="customer"
-              onclick="setSearchMode(this, 'customer')"
-              id="mode-customer">Customer</button>
+    {# Search cluster — centred, dominant #}
+    <form class="search"
+          role="search"
+          aria-label="Entity search"
+          hx-get="/search"
+          hx-target="#search-results"
+          hx-swap="innerHTML"
+          hx-trigger="submit"
+          hx-push-url="false"
+          id="search-form">
+
+      {# Segmented [Order | Customer] toggle #}
+      <div class="seg" role="tablist" aria-label="Search mode">
+        <button type="button"
+                role="tab"
+                class="seg__btn"
+                aria-selected="true"
+                data-mode="order"
+                id="seg-order"
+                onclick="dvSetSearchMode('order')">Order</button>
+        <button type="button"
+                role="tab"
+                class="seg__btn"
+                aria-selected="false"
+                data-mode="customer"
+                id="seg-customer"
+                onclick="dvSetSearchMode('customer')">Customer</button>
+      </div>
+
+      {# Hidden mode value — sent as ?mode= query param #}
+      <input type="hidden" name="mode" id="search-mode-val" value="order" />
+
+      {# Text field #}
+      <div class="search__field">
+        <input class="search__input"
+               type="search"
+               name="q"
+               id="search-q"
+               autocomplete="off"
+               spellcheck="false"
+               placeholder="Order code e.g. HD00123"
+               aria-label="Search query"
+               value="{{ request.query_params.get('q', '') if request else '' }}" />
+        <button type="submit" class="search__submit" aria-label="Search">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+               stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+            <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>
+          </svg>
+        </button>
+      </div>
+
+      {# HTMX results target — positioned absolutely below the search cluster via CSS #}
+      <div id="search-results"
+           class="search__results"
+           role="region"
+           aria-label="Search results"
+           aria-live="polite"
+           style="display:none"></div>
+    </form>
+
+    {# Right slot: breadcrumb crumb + settings icon #}
+    <div class="context-slot">
+      {% block header_context %}{% endblock %}
     </div>
 
-    {# Hidden mode input — read by hx-get as query param #}
-    <input type="hidden" name="mode" id="search-mode-val"
-           value="{{ request.query_params.get('mode', 'order') }}">
+  </header>
 
-    {# Text input — placeholder switches by mode via JS #}
-    <input type="search"
-           class="search-input"
-           name="q"
-           id="search-q"
-           autocomplete="off"
-           placeholder="Order code e.g. HD00123"
-           aria-label="Search query"
-           value="{{ request.query_params.get('q', '') }}">
+  {#
+    Page content — tabs use #tab-panel and #tab-loading for HTMX lazy-load.
+    Screens extend this template and fill the `content` block.
+    Layout wrapper classes (contract for Order/Customer screens):
+      .detail-grid       — 2fr:1fr CSS grid container
+      .detail-main       — left column (tabs + tab panels)
+      .detail-sidebar    — right sticky column (at-a-glance card stack)
+  #}
+  <main id="main-content" role="main">
+    {% block content %}{% endblock %}
+  </main>
 
-    {# Submit button #}
-    <button type="submit" class="search-submit" aria-label="Search">&#128269;</button>
+</div>{# /.app #}
 
-    {# HTMX loading indicator #}
-    <span class="htmx-indicator" aria-live="polite" aria-label="Searching">…</span>
-  </form>
-
-  {# Context slot: breadcrumb injected by detail pages #}
-  <div class="app-header__context" aria-label="Current entity">
-    {% block header_context %}{% endblock %}
-  </div>
-
-</header>
-
-{#
-  #search-results: HTMX target for search responses.
-  Positioned absolutely below the header via CSS.
-  Closes when user clicks outside (JS below).
-#}
-<div id="search-results" role="region" aria-label="Search results" aria-live="polite"></div>
-
-{# Main content area #}
-<main class="page-wrapper" id="main-content">
-  {% block content %}{% endblock %}
-</main>
-
+{# HTMX — loaded from vendored file, no external CDN in production #}
 <script src="/static/vendor/htmx.min.js"></script>
 
 <script>
-  // --- Segmented mode toggle ---
-  function setSearchMode(btn, mode) {
-    // Update hidden input
-    document.getElementById('search-mode-val').value = mode;
-    // Toggle aria-pressed + active class
-    document.querySelectorAll('.search-mode-toggle__btn').forEach(function(b) {
-      var isActive = b.dataset.mode === mode;
-      b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-      b.classList.toggle('active', isActive);
-    });
-    // Update placeholder
-    var placeholders = {
-      order: 'Order code e.g. HD00123',
-      customer: 'Customer ID, phone or email'
-    };
-    document.getElementById('search-q').placeholder = placeholders[mode] || '';
-    document.getElementById('search-q').focus();
+/* ── Search mode toggle ─────────────────────────────────── */
+function dvSetSearchMode(mode) {
+  document.getElementById('search-mode-val').value = mode;
+  var placeholders = {
+    order:    'Order code  e.g. HD00123',
+    customer: 'Customer ID, phone or email'
+  };
+  document.getElementById('search-q').placeholder = placeholders[mode] || '';
+  document.querySelectorAll('.seg__btn').forEach(function(btn) {
+    var active = btn.dataset.mode === mode;
+    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  document.getElementById('search-q').focus();
+}
+
+/* ── Dismiss #search-results when clicking outside form ─── */
+document.addEventListener('click', function(e) {
+  var results = document.getElementById('search-results');
+  var form    = document.getElementById('search-form');
+  if (!results || !form) return;
+  if (!form.contains(e.target)) {
+    results.innerHTML = '';
+    results.style.display = 'none';
   }
+});
 
-  // --- Dismiss search-results when clicking outside ---
-  document.addEventListener('click', function(e) {
-    var results = document.getElementById('search-results');
-    var form = document.getElementById('search-form');
-    if (results && !results.contains(e.target) && !form.contains(e.target)) {
-      results.innerHTML = '';
-    }
-  });
+/* Show results container when HTMX swaps content into it */
+document.body.addEventListener('htmx:afterSwap', function(e) {
+  if (e.detail.target && e.detail.target.id === 'search-results') {
+    var r = document.getElementById('search-results');
+    if (r) r.style.display = r.innerHTML.trim() ? '' : 'none';
+  }
+});
 
-  // --- Tab keyboard navigation (arrow keys on tablist) ---
-  document.addEventListener('keydown', function(e) {
-    var tablist = e.target.closest('[role="tablist"]');
-    if (!tablist) return;
-    var tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
-    var idx = tabs.indexOf(e.target);
-    if (idx === -1) return;
-    var next = null;
-    if (e.key === 'ArrowRight') next = tabs[(idx + 1) % tabs.length];
-    if (e.key === 'ArrowLeft')  next = tabs[(idx - 1 + tabs.length) % tabs.length];
-    if (e.key === 'Home') next = tabs[0];
-    if (e.key === 'End')  next = tabs[tabs.length - 1];
-    if (next) { e.preventDefault(); next.focus(); next.click(); }
-  });
+/* ── Sticky header scroll shadow ───────────────────────── */
+(function() {
+  var hdr = document.getElementById('app-header');
+  if (!hdr) return;
+  function onScroll() {
+    hdr.setAttribute('data-scrolled', window.scrollY > 4 ? 'true' : 'false');
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+
+/* ── Tab keyboard navigation (arrow keys on tablist) ───── */
+document.addEventListener('keydown', function(e) {
+  var tablist = e.target.closest('[role="tablist"]');
+  if (!tablist) return;
+  var tabs = Array.from(tablist.querySelectorAll('[role="tab"]:not([disabled])'));
+  var idx  = tabs.indexOf(e.target);
+  if (idx === -1) return;
+  var next = null;
+  if (e.key === 'ArrowRight') next = tabs[(idx + 1) % tabs.length];
+  if (e.key === 'ArrowLeft')  next = tabs[(idx - 1 + tabs.length) % tabs.length];
+  if (e.key === 'Home')       next = tabs[0];
+  if (e.key === 'End')        next = tabs[tabs.length - 1];
+  if (next) { e.preventDefault(); next.focus(); next.click(); }
+});
+
+/* ── Tab activation helper (called by detail screens) ──────
+   Marks the clicked tab aria-selected=true, siblings false,
+   then triggers HTMX load into #tab-panel with #tab-loading
+   as the indicator.
+
+   Usage (in order/customer templates):
+     onclick="dvActivateTab(this, '/orders/HD00123/items')"
+   The second arg is the hx-get URL for the tab content.
+   The tab element must have role="tab" and be inside role="tablist".
+──────────────────────────────────────────────────────────── */
+function dvActivateTab(tabEl, url) {
+  /* update aria-selected */
+  var tablist = tabEl.closest('[role="tablist"]');
+  if (tablist) {
+    tablist.querySelectorAll('[role="tab"]').forEach(function(t) {
+      t.setAttribute('aria-selected', t === tabEl ? 'true' : 'false');
+    });
+  }
+  /* show shimmer */
+  var loading = document.getElementById('tab-loading');
+  var panel   = document.getElementById('tab-panel');
+  if (loading) { loading.style.display = ''; loading.setAttribute('aria-busy', 'true'); }
+  if (panel)   panel.innerHTML = '';
+  /* HTMX fetch */
+  if (url && window.htmx) {
+    htmx.ajax('GET', url, { target: '#tab-panel', swap: 'innerHTML' }).then(function() {
+      if (loading) { loading.style.display = 'none'; loading.setAttribute('aria-busy', 'false'); }
+    });
+  }
+}
 </script>
 
 {% block extra_scripts %}{% endblock %}
+
 </body>
 </html>

@@ -1,117 +1,95 @@
 {#
-  Order > Timeline tab — §2.2, §8.4
-  Source: fact_orders + dim_date / dim_time
-  Vertical timeline: created (ICT, day_period, is_weekend/business_hour),
-  first_shipped_at, completed (time_to_complete_hours),
-  payment paid_on(s), return event(s).
-  All timestamps in ICT via |dt filter.
+  Order > Context > Timeline section.
+  Vertical .timeline / .tl-item list using Precision tl-* classes.
+  Events (chronological): created → first shipped → payments → returns → updated/completed.
+  All timestamps via |dt filter (ICT). Missing → "—".
+  Source: fact_orders · dim_date · dim_time.
 #}
-{% from "macros.html" import badge %}
+{% from "macros.html" import badge, panel_head %}
 {% set h = order.header %}
 {% set f = order.financial %}
 
-<section aria-label="Order timeline">
+<div class="tabpanel stack-4">
 
-  {% set has_any = h.created_at or h.first_shipped_at or order.payments or order.returns %}
+  {{ panel_head("Timeline", "fact_orders · dim_date · dim_time") }}
+
+  {% set has_any = h.created_at or h.first_shipped_at or order.payments or order.returns or h.updated_at %}
 
   {% if not has_any %}
-  <div class="empty-state">
-    <p class="empty-state__title">No timeline data</p>
-    <p class="empty-state__body">Timestamp data is not available for this order.</p>
+  <div class="ship-empty">
+    <div class="ship-empty__title voice"><em>No timeline data</em></div>
+    <p class="ship-empty__sub">Timestamp data is not available for this order.</p>
   </div>
   {% else %}
 
-  <ol class="timeline" aria-label="Order event timeline">
+  <div class="timeline scard" style="padding-left:calc(var(--sp-5) + var(--sp-4))">
 
-    {# Event: Created #}
+    {# Created #}
     {% if h.created_at %}
-    <li class="timeline__event timeline__event--created">
-      <span class="timeline__dot" aria-hidden="true"></span>
-      <div class="timeline__body">
-        <p class="timeline__title">Order created</p>
-        <p class="timeline__meta">{{ h.created_at | dt }}</p>
-      </div>
-    </li>
+    <div class="tl-item tl-item--muted">
+      <div class="tl-time">{{ h.created_at | dt }} <span class="caption" style="margin-left:6px">ICT</span></div>
+      <div class="tl-title">Order created</div>
+    </div>
     {% endif %}
 
-    {# Event: First shipped #}
+    {# First shipped #}
     {% if h.first_shipped_at %}
-    <li class="timeline__event timeline__event--shipped">
-      <span class="timeline__dot" aria-hidden="true"></span>
-      <div class="timeline__body">
-        <p class="timeline__title">First shipped</p>
-        <p class="timeline__meta">
-          {{ h.first_shipped_at | dt }}
-          {% if f.carrier_id %}· carrier {{ f.carrier_id }}{% endif %}
-        </p>
-      </div>
-    </li>
+    <div class="tl-item">
+      <div class="tl-time">{{ h.first_shipped_at | dt }} <span class="caption" style="margin-left:6px">ICT</span></div>
+      <div class="tl-title">First shipped</div>
+      {% if f.carrier_id %}
+      <div class="tl-meta">carrier {{ f.carrier_id }}{% if f.cod_amount %} · COD {{ f.cod_amount | vnd }}{% endif %}</div>
+      {% endif %}
+    </div>
     {% endif %}
 
-    {# Event: Completed / updated (time_to_complete as signal) #}
-    {% if h.updated_at and h.time_to_complete_hours is not none %}
-    <li class="timeline__event timeline__event--completed">
-      <span class="timeline__dot" aria-hidden="true"></span>
-      <div class="timeline__body">
-        <p class="timeline__title">Completed</p>
-        <p class="timeline__meta">
-          {{ h.updated_at | dt }}
-          · time to complete: {{ h.time_to_complete_hours }} h
-        </p>
-      </div>
-    </li>
-    {% elif h.updated_at %}
-    <li class="timeline__event timeline__event--updated">
-      <span class="timeline__dot" aria-hidden="true"></span>
-      <div class="timeline__body">
-        <p class="timeline__title">Last updated</p>
-        <p class="timeline__meta">{{ h.updated_at | dt }}</p>
-      </div>
-    </li>
-    {% endif %}
-
-    {# Events: Payments paid_on #}
+    {# Payment events #}
     {% for p in order.payments %}
       {% if p.paid_on %}
-      <li class="timeline__event timeline__event--payment">
-        <span class="timeline__dot" aria-hidden="true"></span>
-        <div class="timeline__body">
-          <p class="timeline__title">
-            Payment
-            {% if p.payment_method_name %}· {{ p.payment_method_name }}{% endif %}
-          </p>
-          <p class="timeline__meta">
-            {{ p.paid_on | dt }}
-            · {{ p.amount | vnd }}
-            {% if p.status %}
-              &nbsp;
-              {% set tone = "good" if p.status | upper in ("PAID","COMPLETED") else "neutral" %}
-              {{ badge(p.status, tone, "payment_status") }}
-            {% endif %}
-          </p>
+      <div class="tl-item tl-item--good">
+        <div class="tl-time">{{ p.paid_on | dt }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-title">
+          Payment{% if p.payment_method_name %} · {{ p.payment_method_name }}{% endif %}
         </div>
-      </li>
+        <div class="tl-meta">
+          {{ p.amount | vnd }}
+          {% if p.status %}
+            {% set ptone = "good" if p.status | upper in ("PAID","COMPLETED") else "neutral" %}
+            &nbsp;{{ badge(p.status, ptone) }}
+          {% endif %}
+        </div>
+      </div>
       {% endif %}
     {% endfor %}
 
-    {# Events: Returns #}
+    {# Return events #}
     {% for r in order.returns %}
       {% if r.return_date %}
-      <li class="timeline__event timeline__event--return">
-        <span class="timeline__dot" aria-hidden="true"></span>
-        <div class="timeline__body">
-          <p class="timeline__title">Return event</p>
-          <p class="timeline__meta">
-            {{ r.return_date | dt }}
-            · refund {{ r.refund_amount | vnd }}
-            {% if r.return_reason %}· {{ r.return_reason }}{% endif %}
-          </p>
+      <div class="tl-item tl-item--bad">
+        <div class="tl-time">{{ r.return_date | dt }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-title">Return event</div>
+        <div class="tl-meta">
+          refund {{ r.refund_amount | vnd }}
+          {% if r.return_reason %} · {{ r.return_reason }}{% endif %}
         </div>
-      </li>
+      </div>
       {% endif %}
     {% endfor %}
 
-  </ol>
+    {# Completed / last updated #}
+    {% if h.updated_at %}
+    <div class="tl-item tl-item--{{ 'good' if h.time_to_complete_hours is not none else 'muted' }}">
+      <div class="tl-time">{{ h.updated_at | dt }} <span class="caption" style="margin-left:6px">ICT</span></div>
+      <div class="tl-title">
+        {% if h.time_to_complete_hours is not none %}Completed{% else %}Last updated{% endif %}
+      </div>
+      {% if h.time_to_complete_hours is not none %}
+      <div class="tl-meta">time to complete: {{ h.time_to_complete_hours }} h</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
   {% endif %}
 
-</section>
+</div>

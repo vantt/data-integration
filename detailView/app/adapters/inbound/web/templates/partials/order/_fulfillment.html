@@ -1,68 +1,40 @@
 {#
-  Order > Fulfillment tab — §2.2, §8.4
-  Source: fact_orders + fact_order_economics
-  Shows: status badges, first_shipped_at, carrier_id, cod_amount,
-         shipping address, time_to_complete_hours.
-  Note: leg-level carrier tracking not available in serving layer.
+  Order > Operations > Fulfillment section.
+  Order-level summary: status badges, shipped date, carrier, COD, TTC.
+  Note: per-leg details are in Shipments above.
+  Source: fact_orders · fact_order_economics.
 #}
-{% from "macros.html" import badge, badge_row, caveat %}
+{% from "macros.html" import badge, badge_row, caveat, panel_head, fact %}
+{% set h = order.header %}
+{% set f = order.financial %}
 
-<section aria-label="Fulfillment details">
+<div class="tabpanel stack-4">
 
-  {# Status badges row #}
-  <div style="margin-bottom:1rem">
+  {{ panel_head("Fulfillment", "fact_orders · fact_order_economics") }}
+
+  <div class="badge-row" style="margin-bottom:var(--sp-3)">
     {{ badge_row(order.status_badges()) }}
   </div>
 
-  <dl class="quick-facts" style="max-width:480px;row-gap:.5rem">
-
-    {% set h = order.header %}
-    {% set f = order.financial %}
-    {% set s = order.shipping %}
-
+  <div class="scard facts">
     {% if h.first_shipped_at %}
-    <dt>First shipped</dt>
-    <dd>{{ h.first_shipped_at | dt }}</dd>
+      {{ fact("Shipped", h.first_shipped_at | dt) }}
     {% endif %}
-
-    {% if h.time_to_complete_hours is not none %}
-    <dt>Time to complete</dt>
-    <dd>{{ h.time_to_complete_hours }} h</dd>
-    {% endif %}
-
     {% if f.carrier_id %}
-    <dt>Carrier</dt>
-    <dd>{{ f.carrier_id }}</dd>
+      {{ fact("Carrier", f.carrier_id) }}
     {% endif %}
-
     {% if f.cod_amount is not none %}
-    <dt>COD amount</dt>
-    <dd>{{ f.cod_amount | vnd }}</dd>
+      {{ fact("COD", f.cod_amount | vnd if f.cod_amount else "—") }}
     {% endif %}
-
-    {# Shipping address #}
-    {% if s.address %}
-    <dt>Address</dt>
-    <dd>{{ s.address }}</dd>
+    {% if h.time_to_complete_hours is not none %}
+      {{ fact("TTC", h.time_to_complete_hours ~ "h") }}
+    {% else %}
+      {{ fact("TTC", "in transit") }}
     {% endif %}
+  </div>
 
-    {% if s.ward or s.district %}
-    <dt>Ward / District</dt>
-    <dd>{{ [s.ward, s.district] | select | join(", ") }}</dd>
-    {% endif %}
+  {{ caveat(
+    "Order-level summary. Per-leg carrier codes and live status are in Shipments above.",
+    "info") }}
 
-    {% if s.province %}
-    <dt>Province</dt>
-    <dd>{{ s.province }}</dd>
-    {% endif %}
-
-    {% if s.country %}
-    <dt>Country</dt>
-    <dd>{{ s.country }}</dd>
-    {% endif %}
-
-  </dl>
-
-  {{ caveat("Leg-level carrier tracking is not available in the serving layer.", "info") }}
-
-</section>
+</div>

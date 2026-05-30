@@ -1,175 +1,169 @@
 {% extends "base.html" %}
 {#
-  Customer detail page — §3, §8.5
-  Layout: 2fr main (tab bar + #tab-panel) | 1fr sidebar (sticky)
-  Value Metrics tab renders inline on first paint; others lazy via HTMX.
+  Customer detail — Precision "detail-grid" shell.
+  Layout: .detail-grid.page-enter → .detail-main (tabbar + #tab-panel) | .detail-sidebar (.scard stack)
+  Tab route slugs (CustomerTab enum): overview · status-timeline · order-history
+  Overview renders inline on first paint; other tabs are HTMX lazy-loaded via dvActivateTab().
+  Status-timeline tab is disabled when not customer.timeline_available (non-RETAIL).
 #}
-{% from "macros.html" import badge, badge_row, caveat, flag_chips, kpi_stat %}
+{% from "macros.html" import badge, badge_row, caveat, flag_chips, kpi_stat, eyebrow, fact %}
 
 {% block title %}{{ customer.profile.full_name or customer.profile.customer_id }} — detailView{% endblock %}
 
 {% block header_context %}
-  Customer · {{ customer.profile.full_name or customer.profile.customer_id }}
+  <span class="context-crumb">Customer · <b>{{ customer.profile.full_name or customer.profile.customer_id }}</b></span>
 {% endblock %}
 
 {% block content %}
-<div class="detail-grid">
+<div class="detail-grid page-enter">
 
-  {# ================================================================ #}
-  {# MAIN — tab bar + lazy HTMX panel (§3.2, §8.5, §8.6)            #}
-  {# ================================================================ #}
-  <section class="detail-main" aria-label="Customer detail tabs">
+  {# ============================================================ #}
+  {# MAIN — tab bar + lazy HTMX panel                            #}
+  {# ============================================================ #}
+  <section class="detail-main">
 
-    <nav role="tablist" aria-label="Customer sections" class="tab-bar">
-      {% for t in tabs %}
-      {% set is_timeline = t.value == "status-timeline" %}
-      {% set timeline_disabled = is_timeline and not customer.timeline_available %}
-      <div class="tab-bar__item" role="presentation">
-        <button
-          role="tab"
-          class="tab-bar__btn"
-          aria-selected="{{ 'true' if t == active_tab else 'false' }}"
-          aria-controls="tab-panel"
-          data-tab="{{ t.value }}"
-          {% if not timeline_disabled %}
-          hx-get="/customers/{{ customer_id }}/tab/{{ t.value }}"
-          hx-target="#tab-panel"
-          hx-swap="innerHTML"
-          hx-push-url="false"
-          hx-indicator="#tab-loading"
-          onclick="activateTab(this)"
-          {% else %}
-          aria-disabled="true"
-          title="Status timeline is available for RETAIL customers only"
-          style="opacity:.5;cursor:not-allowed"
-          {% endif %}
-          {% if t == active_tab %}autofocus{% endif %}>
-          {{ t.value | replace("-", " ") | title }}
-        </button>
-      </div>
-      {% endfor %}
-      <span id="tab-loading" class="htmx-indicator" aria-label="Loading tab" style="align-self:center;margin-left:.5rem">…</span>
-    </nav>
+    <div class="tabbar" role="tablist" aria-label="Customer sections">
 
+      {# Tab: Value & Behavior (Overview) — always enabled, default #}
+      {% set is_overview = active_tab.value == "overview" %}
+      <button role="tab"
+              class="tab"
+              aria-selected="{{ 'true' if is_overview else 'false' }}"
+              aria-controls="tab-panel"
+              onclick="dvActivateTab(this, '/customers/{{ customer_id }}/tab/overview')">
+        Value &amp; Behavior
+      </button>
+
+      {# Tab: Status Timeline — RETAIL only; disabled otherwise #}
+      {% set is_timeline = active_tab.value == "status-timeline" %}
+      {% set timeline_disabled = not customer.timeline_available %}
+      <button role="tab"
+              class="tab"
+              aria-selected="{{ 'true' if is_timeline else 'false' }}"
+              aria-controls="tab-panel"
+              {% if timeline_disabled %}
+              disabled
+              aria-disabled="true"
+              title="Status timeline is available for RETAIL customers only"
+              {% else %}
+              onclick="dvActivateTab(this, '/customers/{{ customer_id }}/tab/status-timeline')"
+              {% endif %}>
+        Status Timeline
+      </button>
+
+      {# Tab: Order History — always enabled #}
+      {% set is_orders = active_tab.value == "order-history" %}
+      <button role="tab"
+              class="tab"
+              aria-selected="{{ 'true' if is_orders else 'false' }}"
+              aria-controls="tab-panel"
+              onclick="dvActivateTab(this, '/customers/{{ customer_id }}/tab/order-history')">
+        Order History
+      </button>
+
+    </div>{# /tabbar #}
+
+    {# Tab loading shimmer (htmx-indicator) #}
+    <div id="tab-loading"
+         class="skeleton"
+         aria-busy="true"
+         aria-label="Loading"
+         style="display:none;padding:var(--sp-5) 0">
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+    </div>
+
+    {# Tab panel — overview renders inline; others lazy-swap here #}
     <div id="tab-panel"
+         class="tabpanel"
          role="tabpanel"
-         aria-label="{{ active_tab.value | replace('-',' ') | title }} tab"
+         aria-label="Customer detail tab content"
          aria-busy="false"
          tabindex="0">
-      {# Overview (value metrics + behaviour) renders immediately on first paint #}
       {% include "partials/customer/_overview.html" %}
     </div>
 
-  </section>
+  </section>{# /detail-main #}
 
-  {# ================================================================ #}
-  {# SIDEBAR — sticky "Customer profile" (§3.1, §8.5)               #}
-  {# ================================================================ #}
-  <aside class="detail-sidebar" aria-label="Customer summary">
+  {# ============================================================ #}
+  {# SIDEBAR — sticky "Customer profile"                         #}
+  {# ============================================================ #}
+  <aside class="detail-sidebar" aria-label="Customer profile">
 
-    {# Card 1: Identity #}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Customer</p>
-      <p class="entity-name">{{ customer.profile.full_name or "—" }}</p>
-      <p class="entity-id">id {{ customer.profile.customer_id }}</p>
+    {# Card 1 — Identity #}
+    <div class="scard">
+      {{ eyebrow("Customer profile") }}
+      {# Name in Fraunces display font via .id-code--name #}
+      <div class="id-code id-code--name">{{ customer.profile.full_name or "—" }}</div>
+      <div class="id-sub">{{ customer.profile.customer_id }}</div>
       {{ badge_row(customer.identity_badges()) }}
     </div>
 
-    {# Card 2: Headline KPIs — LTV (hero), orders, AOV, recency #}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Headline KPIs</p>
-      <div class="kpi-grid">
-        {{ kpi_stat("LTV", customer.value_metrics.lifetime_value | vnd, hero=True) }}
+    {# Card 2 — Headline KPIs: LTV hero · orders · AOV · recency #}
+    <div class="scard">
+      {{ eyebrow("Headline", accent=True) }}
+      <div class="kpi-grid" style="margin-top:var(--sp-3)">
+        {{ kpi_stat("Lifetime value", customer.value_metrics.lifetime_value | vnd, hero=True) }}
         {{ kpi_stat("Orders", customer.value_metrics.total_orders_count or "—") }}
-        {{ kpi_stat("AOV", customer.value_metrics.aov | vnd if customer.value_metrics.aov else "—") }}
-        {{ kpi_stat("Recency", (customer.behavior.recency_days ~ " d") if customer.behavior.recency_days is not none else "—") }}
+        {{ kpi_stat("AOV", customer.value_metrics.aov | vnd if customer.value_metrics.aov is not none else "—") }}
+        {{ kpi_stat("Recency",
+            (customer.behavior.recency_days | string ~ " d")
+            if customer.behavior.recency_days is not none else "—") }}
       </div>
     </div>
 
-    {# Card 3: Contact & geo #}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Contact &amp; location</p>
-      <dl class="quick-facts">
-        {% if customer.profile.phone %}
-        <dt>Phone</dt><dd>{{ customer.profile.phone }}</dd>
-        {% endif %}
-        {% if customer.profile.email %}
-        <dt>Email</dt><dd>{{ customer.profile.email }}</dd>
-        {% endif %}
+    {# Card 3 — Contact & geo #}
+    <div class="scard">
+      {{ eyebrow("Contact &amp; geo") }}
+      <div class="facts" style="margin-top:var(--sp-3)">
+        {{ fact("Phone",   customer.profile.phone   or "—") }}
+        {{ fact("Email",   customer.profile.email   or "—") }}
         {% if customer.profile.address1 %}
-        <dt>Address</dt><dd>{{ customer.profile.address1 }}</dd>
+        {{ fact("Address",
+            [customer.profile.address1,
+             customer.profile.ward,
+             customer.profile.district,
+             customer.profile.province]
+            | select | join(", ") or "—") }}
         {% endif %}
-        {% if customer.profile.ward or customer.profile.district %}
-        <dt>Ward/District</dt>
-        <dd>{{ [customer.profile.ward, customer.profile.district] | select | join(", ") }}</dd>
-        {% endif %}
-        {% if customer.profile.province %}
-        <dt>Province</dt><dd>{{ customer.profile.province }}</dd>
-        {% endif %}
-        {% if customer.profile.country %}
-        <dt>Country</dt><dd>{{ customer.profile.country }}</dd>
-        {% endif %}
-        {% if customer.profile.geo_region %}
-        <dt>Region</dt><dd>{{ customer.profile.geo_region }}</dd>
-        {% endif %}
+        {{ fact("Region",  customer.profile.geo_region or "—") }}
         {% if customer.profile.loyalty_point is not none %}
-        <dt>Loyalty pts</dt><dd>{{ customer.profile.loyalty_point }}</dd>
+        {{ fact("Loyalty", customer.profile.loyalty_point | string ~ " pts") }}
         {% endif %}
         {% if customer.profile.dob %}
-        <dt>DoB</dt><dd>{{ customer.profile.dob | dateonly }}</dd>
+        {{ fact("DOB",
+            (customer.profile.dob | dateonly) ~
+            (" · " ~ customer.profile.sex if customer.profile.sex else "")) }}
         {% endif %}
-        {% if customer.profile.sex %}
-        <dt>Sex</dt><dd>{{ customer.profile.sex }}</dd>
-        {% endif %}
-      </dl>
+      </div>
     </div>
 
-    {# Card 4: Dates & tenure #}
-    <div class="sidebar-card">
-      <p class="sidebar-card__heading">Dates</p>
-      <dl class="quick-facts">
+    {# Card 4 — Dates & tenure #}
+    <div class="scard">
+      {{ eyebrow("Dates") }}
+      <div class="facts" style="margin-top:var(--sp-3)">
         {% if customer.behavior.first_order_date %}
-        <dt>First order</dt><dd>{{ customer.behavior.first_order_date | dateonly }}</dd>
+        {{ fact("First order", customer.behavior.first_order_date | dateonly) }}
         {% endif %}
         {% if customer.behavior.last_order_date %}
-        <dt>Last order</dt><dd>{{ customer.behavior.last_order_date | dateonly }}</dd>
+        {{ fact("Last order",  customer.behavior.last_order_date  | dateonly) }}
         {% endif %}
         {% if customer.behavior.lifespan_days is not none %}
-        <dt>Tenure</dt><dd>{{ customer.behavior.lifespan_days }} d</dd>
+          {% set yrs = (customer.behavior.lifespan_days / 365) | round(1) %}
+        {{ fact("Tenure", customer.behavior.lifespan_days | string ~ " d (" ~ yrs ~ " y)") }}
         {% endif %}
         {% if customer.profile.created_at %}
-        <dt>Account created</dt><dd>{{ customer.profile.created_at | dt }}</dd>
+        {{ fact("Account",  customer.profile.created_at | dt) }}
         {% endif %}
-      </dl>
+      </div>
     </div>
 
-    {# Caveats: acquisition unknown + sync nightly #}
-    <div class="sidebar-card">
-      {{ caveat("Acquisition source not tracked", "info") }}
-      {{ caveat("Profile syncs nightly — not real-time", "info") }}
-      {% if not customer.is_retail %}
-        {{ caveat("Status timeline available for RETAIL customers only", "info") }}
-      {% endif %}
-    </div>
+    {# Caveats — data quality flags inline #}
+    {{ flag_chips(customer.quality_flags()) }}
 
-  </aside>
+  </aside>{# /detail-sidebar #}
 
 </div>{# /detail-grid #}
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-  function activateTab(btn) {
-    document.querySelectorAll('[role="tab"]').forEach(function(t) {
-      t.setAttribute('aria-selected', 'false');
-    });
-    btn.setAttribute('aria-selected', 'true');
-    var panel = document.getElementById('tab-panel');
-    if (panel) panel.setAttribute('aria-busy', 'true');
-    panel.addEventListener('htmx:afterSwap', function once() {
-      panel.setAttribute('aria-busy', 'false');
-      panel.removeEventListener('htmx:afterSwap', once);
-    });
-  }
-</script>
 {% endblock %}

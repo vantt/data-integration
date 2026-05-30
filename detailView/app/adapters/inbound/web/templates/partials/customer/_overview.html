@@ -1,10 +1,134 @@
 {#
-  Customer > Overview tab — merged "who is this customer & how valuable".
-  Sections (stacked): Value metrics → Behaviour (RFM + segmentation). Reuses original
-  partials so markup/data bindings stay DRY. Context provides `customer`.
+  Customer > Overview tab — "Value & Behavior" (screen 08).
+  Matches design's CustomerValueBehavior: Behavior (RFM + segmentation) first,
+  then a hairline divider, then Value metrics (KPI grid + profitability + returns).
+  Both sections share the same `customer` context variable.
+  Source: dim_customers · fact_orders · fact_order_economics
 #}
-{% include "partials/customer/_value_metrics.html" %}
+{% from "macros.html" import badge, caveat, kpi_stat, eyebrow, panel_head %}
+{% set beh = customer.behavior %}
+{% set vm  = customer.value_metrics %}
 
-<hr class="section-divider" style="margin:var(--space-5) 0">
+<div class="tab-sections">
 
-{% include "partials/customer/_behavior.html" %}
+  {# ── SECTION 1: Behaviour · RFM & segmentation ─────────── #}
+  <div class="tabpanel stack-5">
+    {{ panel_head("Behaviour · RFM & segmentation", "dim_customers") }}
+
+    {# RFM trio — three equal cards #}
+    <div class="rfm">
+      <div class="rfm__cell">
+        <div class="rfm__glyph">R</div>
+        <div class="rfm__name">Recency</div>
+        <div class="rfm__val">
+          {{ (beh.recency_days | string ~ "d") if beh.recency_days is not none else "—" }}
+        </div>
+      </div>
+      <div class="rfm__cell">
+        <div class="rfm__glyph">F</div>
+        <div class="rfm__name">Frequency</div>
+        <div class="rfm__val">
+          {{ beh.frequency or vm.total_orders_count or "—" }}
+        </div>
+      </div>
+      <div class="rfm__cell">
+        <div class="rfm__glyph">M</div>
+        <div class="rfm__name">Monetary</div>
+        <div class="rfm__val">
+          {{ (beh.monetary | vnd) if beh.monetary is not none else (vm.lifetime_value | vnd) }}
+        </div>
+      </div>
+    </div>
+
+    {# Segmentation chips #}
+    <div>
+      {{ eyebrow("Segmentation") }}
+      <div class="badge-row" style="margin-top:var(--sp-3)">
+        {% if beh.lifecycle_stage %}
+          {% set ltone = {
+            "LIFECYCLE_ACTIVE":  "good",
+            "LIFECYCLE_NEW":     "good",
+            "LIFECYCLE_AT_RISK": "warn",
+            "LIFECYCLE_CHURNED": "bad"
+          } %}
+          {{ badge(beh.lifecycle_stage, ltone.get(beh.lifecycle_stage, "neutral"), "lifecycle") }}
+        {% endif %}
+        {% if beh.channel_preference %}
+          {{ badge(beh.channel_preference,  "neutral", "channel") }}
+        {% endif %}
+        {% if beh.product_affinity %}
+          {{ badge(beh.product_affinity,    "neutral", "product") }}
+        {% endif %}
+        {% if beh.payment_behavior %}
+          {{ badge(beh.payment_behavior,    "neutral", "payment") }}
+        {% endif %}
+        {% if beh.geo_region %}
+          {{ badge(beh.geo_region,          "neutral", "geo") }}
+        {% endif %}
+        {% if beh.customer_type %}
+          {{ badge(beh.customer_type,       "neutral", "type") }}
+        {% endif %}
+      </div>
+    </div>
+
+    {# Cohort badge + annotation #}
+    {% if beh.cohort_month %}
+    <div class="row-flex">
+      {{ badge("Cohort " ~ beh.cohort_month, "accent") }}
+      <span class="note-line" style="margin:0">Cohort = month of first order.</span>
+    </div>
+    {% endif %}
+
+  </div>{# /behaviour tabpanel #}
+
+  {# ── SECTION 2: Value metrics ────────────────────────────── #}
+  <div class="tabpanel stack-4">
+    {{ panel_head("Value metrics", "dim_customers · fact_orders · fact_order_economics") }}
+
+    {# Primary KPI grid: LTV hero · orders · AOV #}
+    <div class="kpi-grid">
+      {{ kpi_stat("Lifetime value", vm.lifetime_value | vnd, hero=True) }}
+      {{ kpi_stat("Total orders",    vm.total_orders_count or "—") }}
+      {{ kpi_stat("Avg order value", vm.aov | vnd if vm.aov is not none else "—") }}
+    </div>
+
+    {# Secondary grid: profitability + returns #}
+    <div class="kpi-grid">
+      {{ kpi_stat("Gross profit contributed", vm.total_gross_profit | vnd) }}
+      {{ kpi_stat("Total COGS",               vm.total_cogs | vnd) }}
+
+      {# Avg margin — with COGS coverage sub-badge if partial #}
+      {% if vm.avg_gross_margin_pct is not none %}
+        {% if vm.cogs_order_count is not none and vm.total_orders_count
+              and vm.cogs_order_count < vm.total_orders_count %}
+          {% set cov_pct = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
+          {{ kpi_stat("Avg gross margin", vm.avg_gross_margin_pct | pct,
+              sub='<span class="bdg bdg--warn" role="status" aria-label="COGS coverage">'
+                  ~ cov_pct | string ~ '% COGS coverage</span>') }}
+        {% else %}
+          {{ kpi_stat("Avg gross margin", vm.avg_gross_margin_pct | pct) }}
+        {% endif %}
+      {% else %}
+        {{ kpi_stat("Avg gross margin", "—") }}
+      {% endif %}
+
+      {{ kpi_stat("Returns",
+          vm.total_return_amount | vnd,
+          sub=((vm.return_count | string ~ " events") if vm.return_count else "0 events")) }}
+    </div>
+
+    {# COGS partial-coverage caveat #}
+    {% if vm.cogs_order_count is not none and vm.total_orders_count
+          and vm.cogs_order_count < vm.total_orders_count %}
+      {% set cov_pct = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
+      {{ caveat(
+          "Average margin reflects only orders with a matched COGS ("
+          ~ vm.cogs_order_count | string ~ " of " ~ vm.total_orders_count | string
+          ~ " orders, " ~ cov_pct | string ~ "%). Treat as directional.",
+          "warn"
+      ) }}
+    {% endif %}
+
+  </div>{# /value metrics tabpanel #}
+
+</div>{# /tab-sections #}

@@ -1,0 +1,20 @@
+{#
+  _tab_loading.html — shimmer skeleton shown while a tab panel loads via HTMX.
+  Included inside .detail-main by order_detail.html / customer_detail.html.
+
+  Usage:
+    <div id="tab-loading" aria-busy="true" aria-label="Loading tab content" style="display:none">
+      {% include "partials/_tab_loading.html" %}
+    </div>
+
+  The dvActivateTab() JS in base.html toggles display and aria-busy.
+  prefers-reduced-motion: the shimmer animation collapses to 0.001ms (app.css).
+#}
+<div class="skeleton tabpanel" role="status" aria-label="Loading">
+  <div class="sk-row" style="width:60%"></div>
+  <div class="sk-row" style="width:90%"></div>
+  <div class="sk-row" style="width:75%"></div>
+  <div class="sk-row" style="width:85%"></div>
+  <div class="sk-row" style="width:55%"></div>
+  <div class="sk-row" style="width:92%"></div>
+</div>

@@ -1,38 +1,40 @@
 {% extends "base.html" %}
 {#
-  Full-page 404 — used when order or customer lookup returns None.
-  Context vars: entity (str e.g. "Order"), ref (str e.g. "HD99999")
-  §1.4 shared state: friendly message + "try another code" + back-to-home.
+  _not_found_page.html — full-page 404 state.
+  Per design: app.jsx NotFound + shared state spec.
+  Fraunces-italic "No match" + queried code + back-home button.
+
+  Context vars:
+    entity  str  — entity type label e.g. "Order" or "Customer"
+    ref     str  — the code/id that was not found e.g. "HD99999"
 #}
 
 {% block title %}{{ entity }} not found — detailView{% endblock %}
 
 {% block content %}
-<div class="empty-state" role="main" aria-labelledby="notfound-heading">
+<div class="state page-enter" role="main" aria-labelledby="notfound-heading">
+  <div class="state__inner">
 
-  <div class="empty-state__icon" aria-hidden="true">&#128270;</div>
+    <svg width="34" height="34" viewBox="0 0 16 16" fill="none"
+         stroke="var(--fg-tertiary)" stroke-width="1.2" stroke-linecap="round"
+         style="margin-bottom:var(--sp-4)" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>
+    </svg>
 
-  <h1 class="empty-state__title" id="notfound-heading">
-    {{ entity }} not found
-  </h1>
+    <div class="state__title" id="notfound-heading">
+      <em>No match</em>
+    </div>
 
-  <p class="empty-state__body">
-    No {{ entity | lower }} found for
-    <strong>&ldquo;{{ ref }}&rdquo;</strong>.
-    Check the code and try again.
-  </p>
+    <p class="state__sub">
+      Nothing found for
+      <span class="mono" style="color:var(--fg-1)">&ldquo;{{ ref }}&rdquo;</span>.
+      Check the {{ entity | lower }} code and try again.
+    </p>
 
-  <div class="empty-state__action" style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
-    <a href="/" aria-label="Back to home search">&#8592; Back to search</a>
+    <div class="state__actions">
+      <a href="/" class="btn btn--secondary" aria-label="Back to home search">Back home</a>
+    </div>
 
-    {# Inline retry — repopulates search box with the failed ref #}
-    <button type="button"
-            onclick="document.getElementById('search-q').value='{{ ref }}';
-                     document.getElementById('search-q').focus()"
-            aria-label="Try searching for {{ ref }} again">
-      Try &ldquo;{{ ref }}&rdquo; again
-    </button>
   </div>
-
 </div>
 {% endblock %}

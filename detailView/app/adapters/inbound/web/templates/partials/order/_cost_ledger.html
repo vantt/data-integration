@@ -1,104 +1,91 @@
 {#
-  Order > Cost Ledger tab — §2.2, §8.4
-  Source: fact_order_costs
-  Rows grouped by cost_category (COGS / PLATFORM_FEE / TAX / SHIPPING / DISCOUNT).
-  Per row: cost_type, amount, source_system, source_record (traceability), fee_source (actual/estimated).
-  Category subtotals shown.
+  Order > Financial > Cost breakdown (grouped ledger).
+  Rows grouped by cost_category: COGS / PLATFORM_FEE / TAX / SHIPPING / DISCOUNT.
+  Per row: cost_type, amount, source_system, source_record, fee_source (actual/estimated).
+  Source: fact_order_costs.
+  Rendered inside _financial.html — not a standalone tab panel.
 #}
-{% from "macros.html" import caveat, badge %}
+{% from "macros.html" import badge, panel_head %}
 {% set rows = order.cost_ledger %}
 
-<section aria-label="Cost ledger">
-  {% if not rows %}
-  <div class="empty-state">
-    <p class="empty-state__title">No cost data</p>
-    <p class="empty-state__body">No cost ledger entries found for this order.</p>
-  </div>
-  {% else %}
+{% if rows %}
 
-  {# Group rows by cost_category #}
-  {% set categories = [] %}
-  {% for row in rows %}
-    {% if row.cost_category not in categories %}
-      {% set _ = categories.append(row.cost_category) %}
-    {% endif %}
+{{ panel_head("Cost breakdown", "fact_order_costs") }}
+
+{# Collect unique categories in order #}
+{% set categories = [] %}
+{% for row in rows %}
+  {% if row.cost_category not in categories %}
+    {% set _ = categories.append(row.cost_category) %}
+  {% endif %}
+{% endfor %}
+
+{% set cat_tone = {
+  "COGS": "good",
+  "PLATFORM_FEE": "warn",
+  "TAX": "neutral",
+  "SHIPPING": "neutral",
+  "DISCOUNT": "accent"
+} %}
+
+{% for cat in categories %}
+  {% set cat_rows = rows | selectattr("cost_category", "equalto", cat) | list %}
+  {% set subtotal = namespace(val=0) %}
+  {% for row in cat_rows %}
+    {% if row.amount is not none %}{% set subtotal.val = subtotal.val + row.amount %}{% endif %}
   {% endfor %}
 
-  <div class="table-scroll">
-    <table class="data-table" aria-label="Cost ledger grouped by category">
-      <thead>
-        <tr>
-          <th scope="col">Cost type</th>
-          <th scope="col" class="num">Amount</th>
-          <th scope="col">Source system</th>
-          <th scope="col">Source record</th>
-          <th scope="col">Fee source</th>
-          <th scope="col">Discount rate</th>
-          <th scope="col">Discount nature</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for cat in categories %}
-          {# Category header row #}
-          {% set cat_rows = rows | selectattr("cost_category", "equalto", cat) | list %}
-          <tr aria-label="Category: {{ cat or 'Unknown' }}">
-            <td colspan="7">
-              <span class="cost-group__header">{{ cat or "Uncategorised" }}</span>
-            </td>
+  <div class="group" data-open="true">
+    <div class="group__head">
+      <div class="group__cat">
+        <span class="group__chev">▾</span>
+        {{ badge(cat or "UNKNOWN", cat_tone.get(cat, "neutral")) }}
+      </div>
+      <span class="group__total">{{ subtotal.val | vnd }}</span>
+    </div>
+    <div class="group__body tbl-wrap" style="border-radius:0;border:0;border-top:1px solid var(--border)">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Cost type</th>
+            <th>Source</th>
+            <th>Record</th>
+            <th>Fee src</th>
+            <th class="num-h">Amount</th>
           </tr>
-          {# Data rows for this category #}
+        </thead>
+        <tbody>
           {% for row in cat_rows %}
-          <tr class="cost-group__row">
-            <td>{{ row.cost_type or "—" }}</td>
-            <td class="num">{{ row.amount | vnd }}</td>
-            <td>{{ row.source_system or "—" }}</td>
-            <td><code style="font-size:.75rem">{{ row.source_record or "—" }}</code></td>
+          <tr>
+            <td class="cell-strong mono" style="font-size:12px">{{ row.cost_type or "—" }}</td>
+            <td class="muted">{{ row.source_system or "—" }}</td>
+            <td class="mono muted" style="font-size:11px">{{ row.source_record or "—" }}</td>
             <td>
               {% if row.fee_source == "actual" %}
-                {{ badge("actual", "good", "fee_source") }}
+                {{ badge("actual", "good") }}
               {% elif row.fee_source == "estimated" %}
-                {{ badge("estimated", "warn", "fee_source") }}
+                {{ badge("estimated", "warn") }}
               {% else %}
-                {{ row.fee_source or "—" }}
+                <span class="muted">—</span>
               {% endif %}
             </td>
-            <td class="num">{{ row.discount_rate | pct if row.discount_rate is not none else "—" }}</td>
-            <td>{{ row.discount_nature or "—" }}</td>
+            <td class="num">{{ row.amount | vnd }}</td>
           </tr>
           {% endfor %}
-          {# Category subtotal #}
-          {% set subtotal = namespace(val=0) %}
-          {% for row in cat_rows %}
-            {% if row.amount is not none %}
-              {% set subtotal.val = subtotal.val + row.amount %}
-            {% endif %}
-          {% endfor %}
-          <tr>
-            <td style="font-size:var(--font-size-sm);color:var(--text-muted);font-weight:var(--font-weight-semibold)">
-              Subtotal
-            </td>
-            <td class="num cost-group__total">{{ subtotal.val | vnd }}</td>
-            <td colspan="5"></td>
-          </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td><strong>Total costs</strong></td>
-          <td class="num">
-            {% set grand = namespace(val=0) %}
-            {% for row in rows %}
-              {% if row.amount is not none %}
-                {% set grand.val = grand.val + row.amount %}
-              {% endif %}
-            {% endfor %}
-            <strong>{{ grand.val | vnd }}</strong>
-          </td>
-          <td colspan="5"></td>
-        </tr>
-      </tfoot>
-    </table>
+        </tbody>
+      </table>
+    </div>
   </div>
+{% endfor %}
 
-  {% endif %}
-</section>
+<div class="note-line">
+  <span class="caveat__mark">ⓘ</span>
+  <span>Each row is traceable to its source system + record. Fee source marks actual vs estimated.</span>
+</div>
+
+{% else %}
+<div class="note-line">
+  <span class="caveat__mark">ⓘ</span>
+  <span>No cost ledger entries found for this order.</span>
+</div>
+{% endif %}
