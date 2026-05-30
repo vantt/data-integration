@@ -13,7 +13,7 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 
 > **Database:** Sapo
 
-### Dashboard: US CrossBorder Daily [US]
+### Dashboard: Us CrossBorder [US]
 
 **Description**: Daily monitoring of US CrossBorder orders — revenue tracking, order status, fulfillment pipeline. Dynamic period filter covers any date range.
 
