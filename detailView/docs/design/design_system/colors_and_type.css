@@ -1,0 +1,395 @@
+/* ============================================================
+   Precision Design System — colors_and_type.css
+   The visual language of PassMan. v0.1.
+
+   Load Google Fonts in HTML <head>:
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+   Then import this file. Authoritative tokens live in :root.
+   ============================================================ */
+
+:root {
+  /* ── INK RAMP (warm desaturated grays) ───────────────────── */
+  --ink-000: #0a0a0c;
+  --ink-050: #0e0e10;  /* page base                              */
+  --ink-100: #15151a;  /* card surface                           */
+  --ink-150: #1c1c22;  /* raised surface                         */
+  --ink-200: #232329;  /* hairline                               */
+  --ink-300: #2f2f36;  /* strong border                          */
+  --ink-400: #44413c;  /* disabled fg                            */
+  --ink-500: #6a655d;  /* tertiary text                          */
+  --ink-600: #8a857a;  /* secondary text                         */
+  --ink-700: #b4ad9f;
+  --ink-800: #d8d2c3;
+  --ink-900: #f0ece2;  /* display fg, warm off-white             */
+
+  /* ── SEMANTIC ACCENTS (use only when something is true,
+        wrong, or actionable) ────────────────────────────────── */
+  --amber-500: #e8a341;   /* primary action, verify, pepper dot  */
+  --amber-hi:  #f5b35a;   /* hover                                */
+  --amber-lo:  #b97d23;   /* pressed / muted                      */
+  --amber-bg:  #3a2a14;   /* surface tint for amber chips         */
+
+  --moss-500:  #84b577;   /* success · ready · verified          */
+  --moss-bg:   #1d2818;
+
+  --coral-500: #e0746c;   /* blocking error                       */
+  --coral-bg:  #2b1815;
+
+  --honey-500: #d4a548;   /* warning · pepper hint dot            */
+
+  /* ── ALIASES (semantic) ─────────────────────────────────── */
+  --fg:           var(--ink-900);
+  --fg-1:         var(--ink-800);
+  --fg-2:         var(--ink-700);
+  --fg-muted:     var(--ink-600);
+  --fg-tertiary:  var(--ink-500);
+  --fg-disabled:  var(--ink-400);
+
+  --bg-page:      var(--ink-050);
+  --bg-surface:   var(--ink-100);
+  --bg-raised:    var(--ink-150);
+
+  --border:        var(--ink-200);  /* hairline                   */
+  --border-strong: var(--ink-300);
+  --border-amber:  var(--amber-500);
+
+  --accent:       var(--amber-500);
+  --accent-hover: var(--amber-hi);
+  --accent-press: var(--amber-lo);
+
+  --success:      var(--moss-500);
+  --warning:      var(--honey-500);
+  --danger:       var(--coral-500);
+
+  --on-amber:     #1a0f02;          /* fg on amber button         */
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────── */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:    'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* size scale */
+  --fs-display:    64px;   /* doc hero                            */
+  --fs-h1:         44px;
+  --fs-h2:         28px;
+  --fs-h3:         22px;
+  --fs-name:       20px;   /* profile name                        */
+  --fs-mono-xl:    32px;   /* password slab                       */
+  --fs-body:       15px;
+  --fs-body-sm:    13px;
+  --fs-caption:    10.5px;
+  --fs-micro:      9.5px;
+
+  /* line-heights */
+  --lh-display:    1.02;
+  --lh-tight:      1.15;
+  --lh-snug:       1.3;
+  --lh-body:       1.55;
+
+  /* letter-spacing */
+  --tracking-display: -0.03em;
+  --tracking-tight:   -0.02em;
+  --tracking-name:    -0.015em;
+  --tracking-body:    -0.005em;
+  --tracking-mono:     0.005em;
+  --tracking-caps:     0.22em;
+  --tracking-eyebrow:  0.18em;
+
+  /* font weights */
+  --fw-light:    300;
+  --fw-regular:  400;
+  --fw-medium:   500;
+  --fw-semi:     600;
+  --fw-bold:     700;
+
+  /* ── SPACING (4-base scale, sp/0..sp/8) ─────────────────── */
+  --sp-0: 0;
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 36px;
+  --sp-7: 56px;
+  --sp-8: 80px;
+
+  /* ── RADII ──────────────────────────────────────────────── */
+  --radii-hairline: 2px;
+  --radii-control:  4px;
+  --radii-soft:     8px;
+  --radii-pill:     999px;
+
+  /* ── SHADOW (precision is almost shadowless) ────────────── */
+  --shadow-status-glow: 0 0 8px;             /* + color66 inline   */
+  --shadow-cta-hover:   0 8px 24px rgba(232,163,65,0.20),
+                        0 0 0 1px var(--amber-hi);
+
+  /* ── MOTION ─────────────────────────────────────────────── */
+  --dur-instant: 0ms;
+  --dur-fast:    120ms;
+  --dur-settle:  200ms;
+  --dur-open:    260ms;
+
+  --ease-fast:   cubic-bezier(.2,0,.1,1);
+  --ease-settle: cubic-bezier(.2,.6,.1,1);
+  --ease-open:   cubic-bezier(.2,.8,.2,1);
+
+  /* ── LAYOUT ─────────────────────────────────────────────── */
+  --popup-w: 600px;
+  --popup-h: 520px;
+  --content-max: 1040px;
+
+  /* ── BACKGROUND VIGNETTE (atmospheric — opt in) ─────────── */
+  --bg-vignette: radial-gradient(ellipse at 70% -10%,
+                  rgba(232,163,65,0.04), transparent 60%);
+}
+
+/* ──────────────────────────────────────────────────────────
+   BASE
+   ────────────────────────────────────────────────────────── */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--tracking-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+* { box-sizing: border-box; }
+
+::selection { background: rgba(232,163,65,0.20); color: var(--ink-900); }
+
+/* ──────────────────────────────────────────────────────────
+   SEMANTIC TYPE
+   ────────────────────────────────────────────────────────── */
+
+/* Display — Fraunces, used sparingly */
+.display, h1 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--fg);
+  margin: 0;
+}
+h2 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  margin: 0;
+}
+h3 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  margin: 0;
+}
+
+/* Italic Fraunces is reserved for human voice */
+.voice, em.voice {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--tracking-name);
+  color: var(--fg-1);
+}
+
+/* Body */
+p, .body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--tracking-body);
+  color: var(--fg-2);
+  margin: 0;
+}
+.body-sm { font-size: var(--fs-body-sm); }
+
+/* Name / value */
+.name {
+  font-family: var(--font-body);
+  font-size: var(--fs-name);
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--tracking-name);
+  color: var(--fg);
+}
+
+/* Mono — labels, data, password */
+.mono     { font-family: var(--font-mono); letter-spacing: var(--tracking-mono); }
+.mono-xl  { font-family: var(--font-mono); font-size: var(--fs-mono-xl);
+            letter-spacing: var(--tracking-mono); color: var(--fg);
+            line-height: 1; }
+code      { font-family: var(--font-mono); font-size: 0.95em;
+            color: var(--fg-1); }
+
+/* Captions / eyebrows — Geist Mono, uppercase, tracked */
+.caption, .eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+  line-height: 1;
+}
+.caption--accent, .eyebrow--accent { color: var(--accent); }
+.caption--small { font-size: var(--fs-micro); letter-spacing: var(--tracking-eyebrow); }
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-fast);
+}
+a:hover { color: var(--accent); }
+
+/* Focus */
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   PRIMITIVES
+   ────────────────────────────────────────────────────────── */
+
+.hairline   { height: 1px; background: var(--border); border: 0; }
+.hairline-strong { height: 1px; background: var(--border-strong); border: 0; }
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radii-control);
+  padding: var(--sp-4);
+}
+.card--rule {
+  border-left: 2px solid var(--accent);
+  padding-left: var(--sp-4);
+}
+
+/* Status pill */
+.status {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-body-sm); color: var(--fg);
+}
+.status::before {
+  content: ""; width: 7px; height: 7px; border-radius: var(--radii-pill);
+  background: var(--moss-500);
+  box-shadow: 0 0 8px rgba(132,181,119,0.40);
+}
+.status--ready::before   { background: var(--moss-500);  box-shadow: 0 0 8px rgba(132,181,119,0.40); }
+.status--warn::before    { background: var(--amber-500); box-shadow: 0 0 8px rgba(232,163,65,0.40); }
+.status--blocked::before { background: var(--coral-500); box-shadow: 0 0 8px rgba(224,116,108,0.40); }
+.status--locked::before  { background: var(--ink-400);   box-shadow: none; }
+.status--warn    { color: var(--amber-500); }
+.status--blocked { color: var(--coral-500); }
+.status--locked  { color: var(--ink-700); }
+
+/* Chip */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-700);
+  background: transparent;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radii-hairline);
+}
+.chip--moss  { color: var(--moss-500);  background: rgba(29,40,24,0.50);  border-color: rgba(132,181,119,0.33); }
+.chip--amber { color: var(--amber-500); background: rgba(58,42,20,0.50);  border-color: rgba(232,163,65,0.33); }
+.chip--coral { color: var(--coral-500); background: rgba(43,24,21,0.50);  border-color: rgba(224,116,108,0.33); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-body);
+  border-radius: var(--radii-control);
+  border: 0;
+  cursor: pointer;
+  padding: 12px 22px;
+  transition: background var(--dur-fast) var(--ease-fast),
+              box-shadow var(--dur-fast) var(--ease-fast),
+              color var(--dur-fast) var(--ease-fast);
+}
+.btn--primary {
+  background: var(--accent);
+  color: var(--on-amber);
+}
+.btn--primary:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-cta-hover);
+}
+.btn--primary:active { background: var(--accent-press); box-shadow: none; }
+.btn--secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 11px 22px;
+}
+.btn--secondary:hover { background: rgba(232,163,65,0.08); }
+.btn--ghost {
+  background: transparent;
+  color: var(--fg-muted);
+  padding: 4px 0;
+}
+.btn--ghost:hover { color: var(--accent); }
+.btn:disabled,
+.btn--primary:disabled {
+  background: var(--ink-200);
+  color: var(--ink-400);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Password slab — the hero of every screen */
+.slab {
+  display: flex; align-items: stretch;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  transition: border-color var(--dur-settle) var(--ease-settle);
+}
+.slab__value {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xl);
+  letter-spacing: var(--tracking-mono);
+  color: var(--fg);
+  line-height: 1;
+  display: flex; align-items: center;
+  padding: var(--sp-4) 0;
+}
+.slab__copy {
+  display: flex; align-items: center; gap: var(--sp-2);
+  border: 0; background: transparent;
+  color: var(--fg-1);
+  font-family: var(--font-body); font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-fast);
+}
+.slab__copy:hover { color: var(--accent); }
+.slab--copied               { border-color: var(--accent); }
+.slab--copied .slab__copy   { color: var(--accent); }
