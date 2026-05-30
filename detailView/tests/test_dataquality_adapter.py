@@ -34,7 +34,7 @@ def dq_db_path(tmp_path: Path) -> str:
         con.execute("""
             CREATE TABLE mart_data_quality (
                 dq_key VARCHAR,
-                as_of_utc TIMESTAMPTZ,
+                as_of_ict TIMESTAMPTZ,
                 total_orders INTEGER,
                 cogs_rate_pct DOUBLE,
                 platform_fees_rate_pct DOUBLE,
@@ -64,7 +64,7 @@ def empty_dq_db_path(tmp_path: Path) -> str:
     try:
         con.execute("""
             CREATE TABLE mart_data_quality (
-                dq_key VARCHAR, as_of_utc TIMESTAMPTZ, total_orders INTEGER,
+                dq_key VARCHAR, as_of_ict TIMESTAMPTZ, total_orders INTEGER,
                 cogs_rate_pct DOUBLE, platform_fees_rate_pct DOUBLE,
                 fulfillment_coverage_pct DOUBLE, return_rate_pct DOUBLE,
                 us_share_pct DOUBLE, carrier_null_rate_pct DOUBLE,
@@ -151,7 +151,7 @@ def test_coverage_metrics_has_carrier_link_true_when_col_exists(tmp_path: Path) 
     try:
         con.execute("""
             CREATE TABLE mart_data_quality (
-                dq_key VARCHAR, as_of_utc TIMESTAMPTZ, total_orders INTEGER,
+                dq_key VARCHAR, as_of_ict TIMESTAMPTZ, total_orders INTEGER,
                 cogs_rate_pct DOUBLE, platform_fees_rate_pct DOUBLE,
                 fulfillment_coverage_pct DOUBLE, return_rate_pct DOUBLE,
                 us_share_pct DOUBLE, carrier_null_rate_pct DOUBLE,

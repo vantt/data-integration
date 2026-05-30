@@ -38,7 +38,7 @@ cust AS (
 
 SELECT
     'global'                                                          AS dq_key,
-    now()                                                            AS as_of_utc,
+    now()                                                            AS as_of_ict,  -- TIMESTAMPTZ; serving + app sessions use Asia/Ho_Chi_Minh, so it displays ICT
     econ.total_orders,
     round(100.0 * econ.cogs_matched     / nullif(econ.total_orders, 0), 1) AS cogs_rate_pct,
     round(100.0 * econ.fees_matched     / nullif(econ.total_orders, 0), 1) AS platform_fees_rate_pct,

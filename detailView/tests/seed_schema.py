@@ -91,7 +91,7 @@ _DDL = [
     # Columns match the spec exactly; all rate columns are DOUBLE (nullable).
     """CREATE TABLE mart_data_quality (
         dq_key VARCHAR,
-        as_of_utc TIMESTAMPTZ,
+        as_of_ict TIMESTAMPTZ,
         total_orders INTEGER,
         cogs_rate_pct DOUBLE,
         platform_fees_rate_pct DOUBLE,

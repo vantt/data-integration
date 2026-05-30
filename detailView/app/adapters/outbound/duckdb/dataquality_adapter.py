@@ -28,7 +28,7 @@ _DQ_CACHE_TTL_SECONDS: float = 300.0  # 5 min — aligns with schema cache TTL
 _SELECT_MART = """
 SELECT
     dq_key,
-    as_of_utc,
+    as_of_ict,
     total_orders,
     cogs_rate_pct,
     platform_fees_rate_pct,
@@ -100,8 +100,8 @@ class DuckDbDataQualityAdapter:
             logger.info("DataQualityAdapter: mart_data_quality is empty")
             return None
 
-        # Resolve as_of_utc to a timezone-aware datetime.
-        as_of = _coerce_dt(row.get("as_of_utc"))
+        # Resolve as_of_ict to a timezone-aware datetime.
+        as_of = _coerce_dt(row.get("as_of_ict"))
 
         # Derive capability signals (schema-level booleans).
         has_carrier_link = (

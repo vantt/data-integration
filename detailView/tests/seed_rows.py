@@ -166,7 +166,7 @@ def _seed_data_quality(con: duckdb.DuckDBPyConnection) -> None:
         "INSERT INTO mart_data_quality VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         [
             "DQ-2026-05-30",                 # dq_key
-            "2026-05-30 07:11:44+00",        # as_of_utc (UTC)
+            "2026-05-30 07:11:44+00",        # as_of_ict (TIMESTAMPTZ instant; displays ICT)
             3352,                            # total_orders
             29.3,                            # cogs_rate_pct
             2.7,                             # platform_fees_rate_pct

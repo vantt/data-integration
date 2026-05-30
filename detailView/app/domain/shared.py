@@ -99,7 +99,7 @@ class DataQualitySummary:
 
     # Filesystem-derived version token (lexically-max parquet basename)
     data_version: str
-    # Timestamp from mart_data_quality.as_of_utc (pipeline run time)
+    # Timestamp from mart_data_quality.as_of_ict (pipeline run time)
     as_of: datetime | None
     # Aggregate counts/rates from mart_data_quality
     total_orders: int | None
