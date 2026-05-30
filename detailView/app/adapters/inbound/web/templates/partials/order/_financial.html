@@ -70,10 +70,12 @@
       {% endif %}
     {% endif %}
 
-    {# Returns reference note #}
+    {# Returns reference note — only when there are actual returns on this order #}
+    {% if f.has_returns %}
     {{ caveat(
-       "Returns: " ~ (f.return_amount | vnd) ~ " — reference only, not subtracted from this order's P&L.",
+       "Returns: " ~ (f.return_amount | vnd) ~ " — reference only, not subtracted from this order's P&amp;L.",
        "info") }}
+    {% endif %}
 
   </div>
 

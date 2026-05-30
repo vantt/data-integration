@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -85,3 +86,30 @@ def safe_ratio(numerator: Decimal | float | None, denominator: Decimal | float |
     if numerator is None or denominator in (None, 0):
         return None
     return float(numerator) / float(denominator)
+
+
+@dataclass(frozen=True)
+class DataQualitySummary:
+    """System-level coverage snapshot. Grain: entire dataset.
+
+    Populated from mart_data_quality view (pipeline-refreshed) augmented with
+    filesystem-derived data_version and stale_views from CapabilityAdapter.
+    All rate fields are DOUBLE|None (None = view absent or no data).
+    """
+
+    # Filesystem-derived version token (lexically-max parquet basename)
+    data_version: str
+    # Timestamp from mart_data_quality.as_of_utc (pipeline run time)
+    as_of: datetime | None
+    # Aggregate counts/rates from mart_data_quality
+    total_orders: int | None
+    cogs_rate_pct: float | None
+    platform_fees_rate_pct: float | None
+    fulfillment_coverage_pct: float | None
+    return_rate_pct: float | None
+    us_share_pct: float | None
+    carrier_null_rate_pct: float | None
+    acq_source_null_rate_pct: float | None
+    # Schema-derived signals (computed by CapabilityAdapter)
+    stale_views: list[str]
+    has_carrier_link_map: bool  # True when carrier_url col or dim_carriers view exists

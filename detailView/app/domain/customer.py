@@ -135,11 +135,22 @@ class CustomerDetail:
                              lifecycle_tone.get(self.behavior.lifecycle_stage, Tone.NEUTRAL), "lifecycle"))
         return out
 
-    def quality_flags(self) -> list[DataQualityFlag]:
-        flags = [
-            DataQualityFlag("acq_unknown", "Acquisition source not tracked", "info"),
-            DataQualityFlag("nightly_sync", "Profile syncs nightly (not real-time)", "info"),
-        ]
+    def quality_flags(self, cap=None, dq=None) -> list[DataQualityFlag]:
+        """Compute per-customer data-quality flags.
+
+        Args:
+            cap: Optional CapabilityPort (reserved for future capability checks).
+            dq: Optional DataQualitySummary. When provided, acq_unknown is conditional:
+                only emitted when acq_source_null_rate_pct > 95 (or None). This lets the
+                flag self-silence if the pipeline ever starts populating acquisition source.
+        """
+        flags: list[DataQualityFlag] = []
+        # acq_unknown: self-healing — silences when pipeline populates acquisition source.
+        # Without dq we can't know the rate, so we emit it conservatively.
+        if dq is None or dq.acq_source_null_rate_pct is None or dq.acq_source_null_rate_pct > 95.0:
+            flags.append(DataQualityFlag("acq_unknown", "Acquisition source not tracked", "info"))
+        # nightly_sync: permanent — pipeline cadence is configuration, not a data signal.
+        flags.append(DataQualityFlag("nightly_sync", "Profile syncs nightly (not real-time)", "info"))
         if not self.is_retail:
             flags.append(DataQualityFlag("timeline_retail", "Status timeline: RETAIL customers only", "info"))
         vm = self.value_metrics

@@ -185,9 +185,12 @@
     </div>
   {% endif %}
 
+  {# Self-healing: note disappears automatically once caps.has_carrier_link is true #}
+  {% if not caps.has_carrier_link %}
   <div class="note-line">
     <span class="caveat__mark">ⓘ</span>
     <span>Tracking codes are copy-only — no carrier link map in the serving layer yet.</span>
   </div>
+  {% endif %}
 
 </div>

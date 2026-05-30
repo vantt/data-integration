@@ -160,8 +160,8 @@
       </div>
     </div>
 
-    {# Caveats — data quality flags inline #}
-    {{ flag_chips(customer.quality_flags()) }}
+    {# Data-quality flags — resolved by backend (includes capability-injected flags) #}
+    {{ flag_chips(quality_flags) }}
 
   </aside>{# /detail-sidebar #}
 

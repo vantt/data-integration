@@ -121,6 +121,52 @@
     {% block content %}{% endblock %}
   </main>
 
+  {#
+    §1.N Data health strip — slim footer, muted, unobtrusive.
+    Rendered only when data_health context var is provided by the backend.
+    Shows: as-of timestamp (fallback to data_version) · COGS coverage rate · stale views warn chip.
+    Color is never the sole signal; all info echoed in text.
+  #}
+  {% if data_health %}
+  <footer class="data-health" role="contentinfo" aria-label="Data health summary">
+    <div class="data-health__inner">
+
+      {# Timestamp: prefer as_of datetime, fall back to data_version string #}
+      <span class="data-health__item">
+        <span class="data-health__label">Data as-of</span>
+        <span class="data-health__val">
+          {% if data_health.as_of %}
+            {{ data_health.as_of | dt }} (ICT)
+          {% else %}
+            {{ data_health.data_version }}
+          {% endif %}
+        </span>
+      </span>
+
+      {# COGS coverage rate #}
+      {% if data_health.cogs_rate_pct is not none %}
+      <span class="data-health__sep" aria-hidden="true">·</span>
+      <span class="data-health__item">
+        <span class="data-health__label">COGS</span>
+        <span class="data-health__val">{{ data_health.cogs_rate_pct | round }}% covered</span>
+      </span>
+      {% endif %}
+
+      {# Stale views — warn chip; icon + text (color not sole signal) #}
+      {% if data_health.stale_views %}
+      <span class="data-health__sep" aria-hidden="true">·</span>
+      <span class="data-health__item data-health__item--warn"
+            aria-label="Stale views: {{ data_health.stale_views | join(', ') }}">
+        <span class="data-health__warn-icon" aria-hidden="true">⚠</span>
+        <span class="data-health__label">stale:</span>
+        <span class="data-health__val">{{ data_health.stale_views | join(', ') }}</span>
+      </span>
+      {% endif %}
+
+    </div>
+  </footer>
+  {% endif %}
+
 </div>{# /.app #}
 
 {# HTMX — loaded from vendored file, no external CDN in production #}

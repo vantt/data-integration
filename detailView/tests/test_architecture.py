@@ -2,6 +2,7 @@
 
 1. domain/* and application/* must NOT import infrastructure (duckdb, fastapi).
 2. The three concrete adapters must satisfy their runtime_checkable Protocol ports.
+3. Smoke-queries confirm the SQL executes against :memory: without raising.
 """
 from __future__ import annotations
 
@@ -38,3 +39,18 @@ def test_repositories_satisfy_ports() -> None:
     assert isinstance(DuckDbOrderRepository(db), OrderRepository)
     assert isinstance(DuckDbCustomerRepository(db), CustomerRepository)
     assert isinstance(DuckDbSearchAdapter(db), SearchPort)
+
+
+def test_repositories_smoke_query_nonexistent_returns_none(seeded_db_path: str) -> None:
+    """Smoke: real SQL executes; a missing code/id returns None, not an exception.
+
+    This closes the silent-SQL-failure gap: a structural isinstance() match does not
+    guarantee the queries compile and run. Exercises both repos against the seeded DB.
+    """
+    order_repo = DuckDbOrderRepository(seeded_db_path)
+    result = order_repo.get_by_code("NONEXISTENT-ORDER-XYZ")
+    assert result is None, "get_by_code must return None for unknown code"
+
+    customer_repo = DuckDbCustomerRepository(seeded_db_path)
+    result = customer_repo.get_by_id("NONEXISTENT-CUSTOMER-XYZ")
+    assert result is None, "get_by_id must return None for unknown id"

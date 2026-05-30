@@ -626,3 +626,66 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
 @media (max-width: 700px) {
   .ret-card__top { align-items: flex-start; }
 }
+
+/* ─────────────────────────────────────────────────────────
+   DATA HEALTH STRIP — slim footer, muted, unobtrusive.
+   Only rendered when data_health context var is present.
+   Precision tokens throughout; color never the sole signal.
+   ───────────────────────────────────────────────────────── */
+.data-health {
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-surface) 70%, transparent);
+  padding: 6px var(--gutter);
+  /* push to bottom of .app flex column */
+  margin-top: auto;
+}
+.data-health__inner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px var(--sp-3);
+  max-width: var(--shell-max);
+  margin: 0 auto;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: var(--tracking-mono);
+}
+.data-health__sep {
+  color: var(--fg-disabled);
+  user-select: none;
+}
+.data-health__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--fg-tertiary);
+  white-space: nowrap;
+}
+.data-health__label {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  color: var(--fg-tertiary);
+}
+.data-health__val {
+  color: var(--fg-muted);
+}
+/* Warn variant — amber text + icon; text is the primary signal */
+.data-health__item--warn {
+  color: var(--honey-500);
+}
+.data-health__item--warn .data-health__label,
+.data-health__item--warn .data-health__val {
+  color: var(--honey-500);
+}
+.data-health__warn-icon {
+  font-size: 10px;
+  line-height: 1;
+  flex: none;
+}
+
+/* Stack items vertically on narrow viewports */
+@media (max-width: 700px) {
+  .data-health { padding: var(--sp-3) var(--sp-4); }
+  .data-health__inner { flex-direction: column; align-items: flex-start; gap: var(--sp-2); }
+  .data-health__sep { display: none; }
+}

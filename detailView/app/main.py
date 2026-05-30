@@ -60,6 +60,24 @@ def _register_api(app: FastAPI, services: Services) -> None:
         return asdict(customer)
 
 
+def _register_dq_health(app: FastAPI, services: Services) -> None:
+    """GET /api/health — returns DataQualitySummary as JSON for external monitoring."""
+    from dataclasses import asdict
+
+    @app.get("/api/health")
+    def api_health():
+        if services.data_quality is None:
+            return JSONResponse({"status": "unavailable", "reason": "data_quality adapter not configured"}, status_code=503)
+        summary = services.data_quality.coverage_metrics()
+        if summary is None:
+            return JSONResponse({"status": "unavailable", "reason": "mart_data_quality view absent"}, status_code=503)
+        data = asdict(summary)
+        # Convert datetime to ISO string for JSON serialisation.
+        if data.get("as_of") is not None:
+            data["as_of"] = summary.as_of.isoformat()
+        return {"status": "ok", **data}
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings.from_env()
     app = FastAPI(title=settings.title, docs_url="/api/docs", redoc_url=None)
@@ -67,11 +85,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     _register_health(app, settings)
     _register_api(app, services)
+    _register_dq_health(app, services)
     register_web(
         app,
         order_service=services.order,
         customer_service=services.customer,
         search_service=services.search,
+        capability=services.capability,
+        data_quality=services.data_quality,
     )
     return app
 

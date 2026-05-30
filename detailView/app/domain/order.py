@@ -231,7 +231,14 @@ class OrderDetail:
                 out.append(Badge(value, tone_map.get(value, Tone.NEUTRAL), kind))
         return out
 
-    def quality_flags(self) -> list[DataQualityFlag]:
+    def quality_flags(self, cap=None) -> list[DataQualityFlag]:
+        """Compute per-order data-quality flags.
+
+        Args:
+            cap: Optional CapabilityPort. When provided, enables self-healing flags
+                 that auto-silence when the pipeline adds the relevant schema objects.
+                 Pass None for backward compatibility (all self-healing flags shown).
+        """
         flags: list[DataQualityFlag] = []
         if self.financial.is_us:
             flags.append(DataQualityFlag("is_us", "US CrossBorder revenue", "info"))
@@ -243,4 +250,15 @@ class OrderDetail:
             flags.append(DataQualityFlag("has_returns", "Has returns (reference only in P&L)", "info"))
         if not self.financial.has_platform_fees and (self.financial.shopee_platform_fees is None):
             flags.append(DataQualityFlag("no_platform_fees", "No platform-fee data", "info"))
+        # Self-healing carrier-link flag: silences automatically when the pipeline adds
+        # a carrier_url column to fact_fulfillments OR creates a dim_carriers view.
+        if cap is None or (
+            not cap.has_column("fact_fulfillments", "carrier_url")
+            and not cap.view_exists("dim_carriers")
+        ):
+            flags.append(DataQualityFlag(
+                "no_carrier_link",
+                "Tracking codes are copy-only — no carrier URL map",
+                "info",
+            ))
         return flags

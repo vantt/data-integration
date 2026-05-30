@@ -87,6 +87,19 @@ _DDL = [
         tracking_code VARCHAR, carrier_id VARCHAR, shipping_service VARCHAR,
         status VARCHAR, cod_amount DECIMAL(18,2),
         created_at TIMESTAMPTZ, shipped_at TIMESTAMPTZ )""",
+    # mart_data_quality: FROZEN contract — 1-row aggregate, pipeline-refreshed.
+    # Columns match the spec exactly; all rate columns are DOUBLE (nullable).
+    """CREATE TABLE mart_data_quality (
+        dq_key VARCHAR,
+        as_of_utc TIMESTAMPTZ,
+        total_orders INTEGER,
+        cogs_rate_pct DOUBLE,
+        platform_fees_rate_pct DOUBLE,
+        fulfillment_coverage_pct DOUBLE,
+        return_rate_pct DOUBLE,
+        us_share_pct DOUBLE,
+        carrier_null_rate_pct DOUBLE,
+        acq_source_null_rate_pct DOUBLE )""",
 ]
 
 

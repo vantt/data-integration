@@ -102,7 +102,10 @@
     </table>
   </div>
 
+  {# Self-healing: note disappears automatically once caps.has_per_line_cogs is true #}
+  {% if not caps.has_per_line_cogs %}
   {{ caveat("No per-line COGS — cost of goods is recorded at order level only.", "info") }}
+  {% endif %}
 
   {% endif %}
 

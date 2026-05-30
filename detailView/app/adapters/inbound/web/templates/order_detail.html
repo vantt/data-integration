@@ -205,12 +205,11 @@
       </div>
     </div>
 
-    {# ── Data-quality flags ── #}
-    {% set flags = order.quality_flags() %}
-    {% if flags %}
+    {# ── Data-quality flags — resolved by backend (includes capability-injected flags) #}
+    {% if quality_flags %}
     <div class="scard">
       {{ eyebrow("Data-quality flags") }}
-      {{ flag_chips(flags) }}
+      {{ flag_chips(quality_flags) }}
     </div>
     {% endif %}
 
