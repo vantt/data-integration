@@ -3268,3 +3268,57 @@ WHERE dim_channels.channel_name = 'US'
 4. Đây là extension của L95: L95 nói về table không trong FROM, L96 nói về table trong FROM nhưng có alias.
 
 **Reference:** `docs/analytics-handbook/blueprints/us_crossborder_operations.md`
+
+---
+
+### L97 — Cycle-indicator `period_adj` heuristic misclassifies non-calendar-aligned date ranges
+
+**Group:** SERVE
+
+**Symptom:** Filter "past 7 days" hiển thị cycle-indicator "19/05 – 25/05" (tuần của Mon-Sun chứa ngày đầu) thay vì "23/05 – 29/05" (7 ngày thực tế). Filter "past 3 months" hiển thị "01/03 – 30/06" (quarter boundary) thay vì "01/03 – 30/05". KPI cards có thể show đúng nhưng cycle-indicator sai → user nghĩ filter không hoạt động.
+
+**Root cause:** `period_adj` CTE dùng `raw_dur` (số ngày giữa `p_start` và `p_end`) để đoán loại kỳ:
+
+```sql
+CASE WHEN raw_dur <= 6     THEN -- weekly: snap to Mon-Sun
+     WHEN raw_dur 35-100   THEN -- quarterly: snap to quarter end
+     WHEN raw_dur > 100    THEN -- yearly
+     ELSE                       -- monthly: snap to month end
+END
+```
+
+Vấn đề: heuristic này không phân biệt được "past 7 days" (raw_dur=6) với "thisweek" (raw_dur=0-6), hay "past 3 months" (raw_dur≈90) với "thisquarter" (raw_dur≈89). Kết quả: snap sai boundary → cycle-indicator hiển thị sai kỳ → user mất tin tưởng vào filter.
+
+**Fix:** Bỏ `period_adj` hoàn toàn. Hiển thị raw dates từ `filter_bounds`, dùng same-duration shift cho `prev_period`:
+
+```sql
+-- THAY VÌ 3-CTE chain (filter_bounds → period_adj → prev_calc):
+WITH filter_bounds AS (
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
+    FROM fact_orders
+    WHERE [[AND {{date_range}}]]
+)
+SELECT
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
+    '  ·  Kỳ trước: ' ||
+    strftime((p_start - (p_end - p_start + 1))::DATE, '%d/%m/%Y') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    AS "Chu kỳ báo cáo"
+FROM filter_bounds
+```
+
+**Tại sao `p_end - p_start + 1` hoạt động đúng:**
+- DuckDB: `DATE - DATE = INTEGER` (số ngày)
+- `DATE - INTEGER = DATE` (shift back)
+- `p_end - p_start + 1` = duration tính inclusive (7 ngày thực = 6 ngày diff + 1)
+- Prev_period luôn bằng chính xác độ dài kỳ này → đúng cho mọi filter type
+
+**Rules:**
+1. `period_adj` heuristic chỉ đúng với calendar-aligned periods (This Month, This Quarter, This Year). Không dùng nó khi dashboard hỗ trợ arbitrary date ranges.
+2. Dùng raw `filter_bounds.p_start/p_end` để hiển thị period — chính xác và trung thực.
+3. Dùng `p_start - (p_end - p_start + 1)` làm `prev_start` — works for daily/weekly/monthly/quarterly/yearly uniformly.
+4. KPI cards có thể giữ `n_months` approach cho prev_period nếu muốn calendar-aligned comparison (acceptable trade-off cho monthly use case).
+5. Khi thêm filter `date_range` cho bất kỳ dashboard nào: kiểm tra cycle-indicator với cả "past 7 days", "past 3 months" lẫn "thismonth", "thisquarter".
+
+**Reference:** `docs/analytics-handbook/blueprints/us_crossborder_operations.md`, `.skills/metabase-automation/references/filter-date-range-pattern.md`
