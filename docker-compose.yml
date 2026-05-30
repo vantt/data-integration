@@ -126,7 +126,7 @@ services:
       # Read-only: app uses duckdb read_only=True; :ro is defense-in-depth at the OS level.
       - ./app_data/data_lake:/app/var/data_lake:ro
     labels:
-      caddy: detail.local
+      caddy: detailview.local
       caddy.reverse_proxy: "{{upstreams 8000}}"
 
 volumes:

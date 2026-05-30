@@ -110,7 +110,7 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 - **Tech:** Python, FastAPI + Jinja2 + HTMX. **Hexagonal architecture** (domain ⟂ ports ⟂ adapters).
 - **Data:** Opens `data_lake/serving/olap.duckdb` with `read_only=True` (same DB Metabase reads; zero lock risk). Queries `fact_*`/`dim_*`/`mart_*` views only — NEVER `int_*`.
 - **Boundaries:** `domain/` + `application/` are pure (NO duckdb/fastapi imports — enforced by an architecture test). SQL lives ONLY in `adapters/outbound/duckdb/`.
-- **Runtime:** Docker service `detail_view` (port `3005:8000`, Caddy `detail.local`). No auth (LAN-only). Deps: own `detailView/requirements.txt`.
+- **Runtime:** Docker service `detail_view` (port `3005:8000`, Caddy `detailview.local`). No auth (LAN-only). Deps: own `detailView/requirements.txt`.
 
 ---
 

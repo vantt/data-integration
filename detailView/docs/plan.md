@@ -11,13 +11,13 @@ warehouse already computes economics, RFM, segmentation that source apps can't s
 - Two detail screens: **Order Detail** (`/orders/{order_code}`), **Customer Detail** (`/customers/{customer_id}`).
 - Floating header w/ search box → resolve order code / customer id|phone → open detail page.
 - Reads `app_data/data_lake/serving/olap.duckdb` `read_only=True` (same DB Metabase reads, zero lock risk — empirically verified).
-- No auth. LAN-only behind Caddy (`detail.local`). Runs as a Docker Compose service like metabase/rill.
+- No auth. LAN-only behind Caddy (`detailview.local`). Runs as a Docker Compose service like metabase/rill.
 
 ## Decisions (confirmed)
 | # | Decision | Choice |
 |---|---|---|
 | 1 | Stack | FastAPI + Jinja2 + **HTMX now** (tab/search partial loads). No Node build. |
-| 2 | App name | folder `detailView/`; docker service/container `detail_view`; Caddy `detail.local`; port `3005:8000` |
+| 2 | App name | folder `detailView/`; docker service/container `detail_view`; Caddy `detailview.local`; port `3005:8000` |
 | 3 | Architecture | **Hexagonal** — pure domain ⟂ ports ⟂ adapters (DuckDB driven, Web/JSON driving) |
 | 4 | DB access | `read_only=True`, mount `:ro`, query `fact_*`/`dim_*`/`mart_*` only (hide `int_*`) |
 | 5 | Frontend design | skeleton only now (semantic HTML + CSS vars); `claude design` styles later |

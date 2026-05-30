@@ -6,7 +6,7 @@ RFM, lifecycle, segmentation — the OLAP warehouse already does. Search by code
 
 - **Stack:** FastAPI + Jinja2 + HTMX (no build step, single small container)
 - **Data:** opens `data_lake/serving/olap.duckdb` with `read_only=True` (same DB Metabase reads; zero lock risk)
-- **No auth** (LAN-only, behind Caddy at `detail.local`)
+- **No auth** (LAN-only, behind Caddy at `detailview.local`)
 
 ## Architecture — hexagonal (ports & adapters)
 
@@ -41,7 +41,7 @@ so the DuckDB adapter could be swapped (e.g. Postgres) without touching domain o
 Part of the root `docker-compose.yml` as service `detail_view`:
 ```bash
 docker compose up -d --build detail_view
-# → http://detail.local  (Caddy)  or  http://localhost:3005
+# → http://detailview.local  (Caddy)  or  http://localhost:3005
 ```
 
 ## Run locally (Windows dev)
