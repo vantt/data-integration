@@ -38,44 +38,20 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
       [[AND {{date_range}}]]
-),
-period_adj AS (
-    SELECT
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN date_trunc('week',  p_start)::DATE
-             ELSE  date_trunc('month', p_start)::DATE END AS p_start,
-        CASE WHEN (p_end-p_start)::INTEGER<=6
-               THEN (date_trunc('week', p_start) + INTERVAL '6 days')::DATE
-             WHEN p_end < current_date-30
-               THEN (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE
-             WHEN (p_end-p_start)::INTEGER > 100 AND EXTRACT(MONTH FROM p_start)::INTEGER = 1
-               THEN make_date(EXTRACT(YEAR FROM p_start)::INTEGER, 12, 31)
-             WHEN (p_end-p_start)::INTEGER BETWEEN 35 AND 100
-               THEN (date_trunc('quarter', p_start) + INTERVAL '3 months' - INTERVAL '1 day')::DATE
-             ELSE (date_trunc('month', p_end) + INTERVAL '1 month' - INTERVAL '1 day')::DATE END AS p_end,
-        (p_end-p_start)::INTEGER AS raw_dur
-    FROM filter_bounds
-),
-prev_calc AS (
-    SELECT p_start, p_end, raw_dur,
-        (EXTRACT(YEAR  FROM p_end)::INTEGER - EXTRACT(YEAR  FROM p_start)::INTEGER)*12 +
-         EXTRACT(MONTH FROM p_end)::INTEGER - EXTRACT(MONTH FROM p_start)::INTEGER + 1 AS n_months
-    FROM period_adj
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start,'%d/%m/%Y') || ' – ' || strftime(p_end,'%d/%m/%Y') ||
+    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
     '  ·  Kỳ trước: ' ||
-    strftime(CASE WHEN raw_dur<=6 THEN (p_start - INTERVAL '7 days')::DATE
-                  ELSE (p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE END,'%d/%m/%Y') ||
-    ' – ' || strftime((p_start-1)::DATE,'%d/%m/%Y')
+    strftime((p_start - (p_end - p_start + 1))::DATE, '%d/%m/%Y') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
     AS "Chu kỳ báo cáo"
-FROM prev_calc
+FROM filter_bounds
 ```
 
 ```json metabase-viz
@@ -100,8 +76,8 @@ US CrossBorder net revenue this period vs previous period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -116,14 +92,14 @@ prev_bounds AS (
 this_period AS (
     SELECT COALESCE(SUM(e.total_us_revenue_excl_vat), 0) AS val
     FROM fact_us_shipment_economics e, filter_bounds
-    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ),
 prev_period AS (
     SELECT COALESCE(SUM(e.total_us_revenue_excl_vat), 0) AS val
     FROM fact_us_shipment_economics e, prev_bounds
-    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
-      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
 )
 SELECT t.val AS "Doanh thu US", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
@@ -154,8 +130,8 @@ US CrossBorder order count this period vs previous period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -170,14 +146,14 @@ prev_bounds AS (
 this_period AS (
     SELECT COUNT(DISTINCT e.order_id) AS val
     FROM fact_us_shipment_economics e, filter_bounds
-    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ),
 prev_period AS (
     SELECT COUNT(DISTINCT e.order_id) AS val
     FROM fact_us_shipment_economics e, prev_bounds
-    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
-      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
 )
 SELECT t.val AS "Total Orders", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
@@ -196,8 +172,8 @@ Average order value for US CrossBorder this period vs previous period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -214,16 +190,16 @@ this_period AS (
         CASE WHEN COUNT(DISTINCT e.order_id) = 0 THEN 0
              ELSE ROUND(SUM(e.total_us_revenue_excl_vat) / COUNT(DISTINCT e.order_id), 0) END AS val
     FROM fact_us_shipment_economics e, filter_bounds
-    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ),
 prev_period AS (
     SELECT
         CASE WHEN COUNT(DISTINCT e.order_id) = 0 THEN 0
              ELSE ROUND(SUM(e.total_us_revenue_excl_vat) / COUNT(DISTINCT e.order_id), 0) END AS val
     FROM fact_us_shipment_economics e, prev_bounds
-    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
-      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
 )
 SELECT t.val AS "AOV", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
@@ -254,8 +230,8 @@ Distinct customers ordering via US channel in selected period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -271,15 +247,15 @@ this_period AS (
     SELECT COUNT(DISTINCT fo.customer_key) AS val
     FROM fact_us_shipment_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id, filter_bounds
-    WHERE e.date_key >= CAST(STRFTIME(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
-      AND e.date_key <= CAST(STRFTIME(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
+      AND e.date_key <= CAST(strftime(filter_bounds.p_end, '%Y%m%d') AS INTEGER)
 ),
 prev_period AS (
     SELECT COUNT(DISTINCT fo.customer_key) AS val
     FROM fact_us_shipment_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id, prev_bounds
-    WHERE e.date_key >= CAST(STRFTIME((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
-      AND e.date_key <  CAST(STRFTIME(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
+    WHERE e.date_key >= CAST(strftime((prev_bounds.p_start - (n_months::VARCHAR||' months')::INTERVAL)::DATE, '%Y%m%d') AS INTEGER)
+      AND e.date_key <  CAST(strftime(prev_bounds.p_start, '%Y%m%d') AS INTEGER)
 )
 SELECT t.val AS "Khach hang", p.val AS "Ky truoc" FROM this_period t, prev_period p
 ```
@@ -376,8 +352,8 @@ Daily revenue and order count trend within selected period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -388,8 +364,8 @@ SELECT
     SUM(e.total_us_revenue_excl_vat) AS "Doanh thu US",
     COUNT(DISTINCT e.order_id) AS "So don"
 FROM fact_us_shipment_economics e, filter_bounds fb
-WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
+WHERE e.date_key >= CAST(strftime(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(strftime(fb.p_end, '%Y%m%d') AS INTEGER)
 GROUP BY e.date_key
 ORDER BY e.date_key
 ```
@@ -435,8 +411,8 @@ Detailed list of US CrossBorder orders in selected period.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch2 ON fact_orders.channel_key = ch2.channel_key
     WHERE ch2.channel_name = 'US'
@@ -454,8 +430,8 @@ SELECT
 FROM fact_us_shipment_economics e
 JOIN fact_orders fo ON e.order_id = fo.order_id
 LEFT JOIN dim_customers c ON fo.customer_key = c.customer_key, filter_bounds fb
-WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
+WHERE e.date_key >= CAST(strftime(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(strftime(fb.p_end, '%Y%m%d') AS INTEGER)
 ORDER BY fo.order_timestamp DESC
 ```
 
@@ -484,8 +460,8 @@ So don trong ky co SKU chua co trong price list US.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -494,8 +470,8 @@ WITH filter_bounds AS (
 SELECT
     COUNT(*) AS "Don thieu gia"
 FROM fact_us_shipment_economics e, filter_bounds fb
-WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
-  AND e.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
+WHERE e.date_key >= CAST(strftime(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND e.date_key <= CAST(strftime(fb.p_end, '%Y%m%d') AS INTEGER)
   AND e.has_unpriced_sku = TRUE
 ```
 
@@ -511,8 +487,8 @@ WHERE e.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(date(fact_orders.order_timestamp)) AS p_start,
-           MAX(date(fact_orders.order_timestamp)) AS p_end
+    SELECT MIN(order_timestamp)::DATE AS p_start,
+           MAX(order_timestamp)::DATE AS p_end
     FROM fact_orders
     JOIN dim_channels ch ON fact_orders.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -524,8 +500,8 @@ SELECT
     SUM(l.quantity)                    AS "So luong"
 FROM int_us_shipment_line_prices l, filter_bounds fb
 WHERE l.is_price_missing = TRUE
-  AND l.date_key >= CAST(STRFTIME(fb.p_start, '%Y%m%d') AS INTEGER)
-  AND l.date_key <= CAST(STRFTIME(fb.p_end, '%Y%m%d') AS INTEGER)
+  AND l.date_key >= CAST(strftime(fb.p_start, '%Y%m%d') AS INTEGER)
+  AND l.date_key <= CAST(strftime(fb.p_end, '%Y%m%d') AS INTEGER)
 GROUP BY l.sku
 ORDER BY COUNT(DISTINCT l.order_id) DESC
 ```
