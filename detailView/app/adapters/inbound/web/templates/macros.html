@@ -158,9 +158,10 @@
 
 {# ------------------------------------------------------------------ #}
 {# eyebrow — .caption label, optionally in accent colour              #}
+{# cls: extra CSS class(es) appended to the div (e.g. "scard__eyebrow") #}
 {# ------------------------------------------------------------------ #}
-{% macro eyebrow(text, accent=False) %}
-<div class="caption{% if accent %} caption--accent{% endif %}">{{ text }}</div>
+{% macro eyebrow(text, accent=False, cls="") %}
+<div class="caption{% if accent %} caption--accent{% endif %}{% if cls %} {{ cls }}{% endif %}">{{ text }}</div>
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
@@ -171,12 +172,10 @@
 {# ------------------------------------------------------------------ #}
 {% macro panel_head(title, source=None, right=None) %}
 <div class="panel-head">
-  <div>
-    <div class="panel-title">{{ title }}</div>
-    {% if source %}
-    <div class="panel-sub">{{ source }}</div>
-    {% endif %}
-  </div>
+  <div class="panel-title">{{ title }}</div>
+  {% if source %}
+  <div class="panel-sub">{{ source }}</div>
+  {% endif %}
   {% if right %}
   <div>{{ right | safe }}</div>
   {% endif %}

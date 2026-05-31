@@ -83,7 +83,7 @@
 
     {# ── Identity card ── #}
     <div class="scard">
-      {{ eyebrow("Order at a glance") }}
+      {{ eyebrow("Order at a glance", cls="scard__eyebrow") }}
       <div class="id-code">{{ order.header.order_code }}</div>
       {% if order.header.order_id %}
       <div class="id-sub">order_id {{ order.header.order_id }}</div>
@@ -93,7 +93,7 @@
 
     {# ── Money headline ── #}
     <div class="scard">
-      {{ eyebrow("Money headline", accent=True) }}
+      {{ eyebrow("Money headline", accent=True, cls="scard__eyebrow") }}
 
       {# Hero row — effective revenue (US = us_revenue_incl_vat) #}
       <div class="money-line money-line--hero">
@@ -117,10 +117,10 @@
           {% endif %}
         </span>
         <span class="money-line__val">
-          {{ order.financial.gross_profit | vnd }}
           {% if order.financial.gross_margin_pct is not none %}
-            <span class="bdg" style="font-size:11px;margin-left:4px">{{ order.financial.gross_margin_pct | pct }}</span>
+            <span class="pct" style="margin:0 6px 0 0">({{ order.financial.gross_margin_pct | pct }})</span>
           {% endif %}
+          {{ order.financial.gross_profit | vnd }}
         </span>
       </div>
 
@@ -128,10 +128,10 @@
       <div class="money-line">
         <span class="money-line__label">Channel net</span>
         <span class="money-line__val">
-          {{ order.financial.channel_net_profit | vnd }}
           {% if order.financial.channel_net_margin_pct is not none %}
-            <span class="bdg" style="font-size:11px;margin-left:4px">{{ order.financial.channel_net_margin_pct | pct }}</span>
+            <span class="pct" style="margin:0 6px 0 0">({{ order.financial.channel_net_margin_pct | pct }})</span>
           {% endif %}
+          {{ order.financial.channel_net_profit | vnd }}
         </span>
       </div>
     </div>
@@ -147,7 +147,7 @@
          class="scard scard--link scard--recipient"
          aria-label="Open customer {{ order.customer.full_name or order.customer.customer_id }}">
         <div class="party-head">
-          {{ eyebrow("Recipient · Buyer", accent=True) }}
+          {{ eyebrow("Recipient · Buyer", accent=True, cls="scard__eyebrow") }}
           {{ badge("same person", "neutral") }}
         </div>
         {% if order.customer.full_name %}
@@ -179,7 +179,7 @@
 
     {# ── Quick facts ── #}
     <div class="scard">
-      {{ eyebrow("Quick facts") }}
+      {{ eyebrow("Quick facts", cls="scard__eyebrow") }}
       <div class="facts">
         {% if order.channel.channel_name %}
           {{ fact("Channel", order.channel.channel_name) }}
@@ -208,7 +208,7 @@
     {# ── Data-quality flags — resolved by backend (includes capability-injected flags) #}
     {% if quality_flags %}
     <div class="scard">
-      {{ eyebrow("Data-quality flags") }}
+      {{ eyebrow("Data-quality flags", cls="scard__eyebrow") }}
       {{ flag_chips(quality_flags) }}
     </div>
     {% endif %}

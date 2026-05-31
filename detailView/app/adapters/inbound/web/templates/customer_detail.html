@@ -94,7 +94,7 @@
 
     {# Card 1 — Identity #}
     <div class="scard">
-      {{ eyebrow("Customer profile") }}
+      {{ eyebrow("Customer profile", cls="scard__eyebrow") }}
       {# Name in Fraunces display font via .id-code--name #}
       <div class="id-code id-code--name">{{ customer.profile.full_name or "—" }}</div>
       <div class="id-sub">{{ customer.profile.customer_id }}</div>
@@ -103,8 +103,8 @@
 
     {# Card 2 — Headline KPIs: LTV hero · orders · AOV · recency #}
     <div class="scard">
-      {{ eyebrow("Headline", accent=True) }}
-      <div class="kpi-grid" style="margin-top:var(--sp-3)">
+      {{ eyebrow("Headline", accent=True, cls="scard__eyebrow") }}
+      <div class="kpi-grid">
         {{ kpi_stat("Lifetime value", customer.value_metrics.lifetime_value | vnd, hero=True) }}
         {{ kpi_stat("Orders", customer.value_metrics.total_orders_count or "—") }}
         {{ kpi_stat("AOV", customer.value_metrics.aov | vnd if customer.value_metrics.aov is not none else "—") }}
@@ -116,8 +116,8 @@
 
     {# Card 3 — Contact & geo #}
     <div class="scard">
-      {{ eyebrow("Contact &amp; geo") }}
-      <div class="facts" style="margin-top:var(--sp-3)">
+      {{ eyebrow("Contact & geo", cls="scard__eyebrow") }}
+      <div class="facts">
         {{ fact("Phone",   customer.profile.phone   or "—") }}
         {{ fact("Email",   customer.profile.email   or "—") }}
         {% if customer.profile.address1 %}
@@ -142,8 +142,8 @@
 
     {# Card 4 — Dates & tenure #}
     <div class="scard">
-      {{ eyebrow("Dates") }}
-      <div class="facts" style="margin-top:var(--sp-3)">
+      {{ eyebrow("Dates", cls="scard__eyebrow") }}
+      <div class="facts">
         {% if customer.behavior.first_order_date %}
         {{ fact("First order", customer.behavior.first_order_date | dateonly) }}
         {% endif %}
