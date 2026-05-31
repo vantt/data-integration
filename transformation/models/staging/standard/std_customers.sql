@@ -14,6 +14,7 @@ WITH source_data AS (
 SELECT
     -- Identity
     sapo_customer_id as customer_id,
+    customer_code,
     'sapo' as source_system,
     
     -- Contact

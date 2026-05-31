@@ -35,7 +35,8 @@ SELECT
     
     -- Natural Keys
     customer_id,
-    
+    customer_code,
+
     -- Attributes
     full_name,
     email,
@@ -69,6 +70,7 @@ UNION ALL
 SELECT
     {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }} as customer_key,
     'Unknown' as customer_id,
+    CAST(NULL AS VARCHAR) as customer_code,
     'Unknown' as full_name,
     'Unknown' as email,
     'Unknown' as phone,

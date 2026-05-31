@@ -19,6 +19,7 @@ joined_data AS (
     SELECT
         c.customer_key,
         c.customer_id,
+        c.customer_code,
         c.full_name,
         c.email,
         c.phone,
@@ -71,6 +72,7 @@ joined_data AS (
 SELECT
     customer_key,
     customer_id,
+    customer_code,
     full_name,
     email,
     phone,
