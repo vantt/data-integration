@@ -23,7 +23,7 @@
         {{ waterfall_row(" ", "US revenue (excl. VAT)", f.us_revenue_excl_vat) }}
         {{ waterfall_row("+", "US VAT / sales tax", f.tax_amount) }}
         {{ waterfall_row("=", "US revenue (incl. VAT)", f.us_revenue_incl_vat, total=True) }}
-        {{ waterfall_row("−", "COGS  <span class='caption' style='margin-left:6px'>MISA</span>" ~ (badge("has_cogs","good") if f.has_cogs else ""),
+        {{ waterfall_row("−", "COGS  <span class='caption' style='margin-left:6px'>MISA</span>" | safe ~ (badge("has_cogs","good") if f.has_cogs else ""),
                          f.cogs_amount, neg=True) }}
         {{ waterfall_row("=",
            "Gross profit · <span class='bdg' style='font-size:11px'>" ~ (f.gross_margin_pct | pct) ~ "</span>",
@@ -52,7 +52,7 @@
         {{ waterfall_row("+", "VAT output", f.tax_amount) }}
         {{ waterfall_row("=", "Total collected", f.total_collected, total=True) }}
         {{ waterfall_row("−",
-           "COGS <span class='caption' style='margin-left:6px'>MISA</span>" ~
+           "COGS <span class='caption' style='margin-left:6px'>MISA</span>" | safe ~
            (badge("unverified","warn",dot=True) if not f.has_cogs else ""),
            f.cogs_amount, neg=True) }}
         {{ waterfall_row("=",
