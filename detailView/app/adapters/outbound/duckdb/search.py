@@ -68,14 +68,14 @@ class DuckDbSearchAdapter:
             return None
 
     def resolve_customer(self, query: str) -> list[CustomerHit]:
-        """Resolve a customer by id / phone / email. 0..10 hits."""
+        """Resolve a customer by id / customer_code (CUZN…) / phone / email. 0..10 hits."""
         if not query or not query.strip():
             return []
         term = query.strip()
         phone_digits = rc.digits_only(term)
         # Params order mirrors the placeholders in search_customer.sql:
-        # id, phone-guard, phone-digits, email-guard, email.
-        params = [term, phone_digits, phone_digits, term, term]
+        # id, customer_code, phone-guard, phone-digits, email-guard, email.
+        params = [term, term, phone_digits, phone_digits, term, term]
         with read_only_connection(self._db_path) as conn:
             rows = fetch_all_dicts(conn, load_sql("search_customer"), params)
         return [

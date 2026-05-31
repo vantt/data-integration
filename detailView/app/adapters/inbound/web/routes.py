@@ -86,11 +86,13 @@ def register_routes(
     # Home
     # ------------------------------------------------------------------
     @app.get("/", response_class=HTMLResponse)
-    async def home(request: Request):
-        return templates.TemplateResponse(
-            "home.html",
-            _base_context(request),
-        )
+    async def home(request: Request, nf: str = "", amb: str = ""):
+        ctx = _base_context(request)
+        if nf:
+            # Came from /go/{code} (or Auto search) with no clean redirect:
+            # ambiguous=both order_id & customer_id matched; else just unknown.
+            ctx["resolver_miss"] = {"code": nf, "ambiguous": bool(amb)}
+        return templates.TemplateResponse("home.html", ctx)
 
     # ------------------------------------------------------------------
     # Search  GET /search?mode=order|customer&q=<query>
@@ -116,9 +118,9 @@ def register_routes(
                 ctx,
             )
 
-        # not_found
+        # not_found (or auto-mode ambiguous: token matched both order & customer)
         ctx = _base_context(request)
-        ctx.update({"q": q, "mode": mode})
+        ctx.update({"q": q, "mode": mode, "ambiguous": resolution.ambiguous})
         return templates.TemplateResponse(
             "partials/_not_found_hint.html",
             ctx,

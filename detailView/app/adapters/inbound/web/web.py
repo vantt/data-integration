@@ -27,6 +27,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .formatting import register_filters
+from .resolver_routes import register_resolver_routes
 from .routes import register_routes
 
 logger = logging.getLogger(__name__)
@@ -92,3 +93,7 @@ def register_web(
         capability=capability,
         data_quality=data_quality,
     )
+
+    # Smart resolver (GET /go/{code}) — registered separately to keep routes.py
+    # within the per-file LOC budget. Reuses the same SearchService.
+    register_resolver_routes(app, templates=templates, search_service=search_service)

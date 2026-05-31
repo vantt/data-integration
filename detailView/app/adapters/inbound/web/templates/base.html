@@ -66,12 +66,19 @@
           hx-push-url="false"
           id="search-form">
 
-      {# Segmented [Order | Customer] toggle #}
+      {# Segmented [Auto | Order | Customer] toggle — Auto auto-detects entity type #}
       <div class="seg" role="tablist" aria-label="Search mode">
         <button type="button"
                 role="tab"
                 class="seg__btn"
                 aria-selected="true"
+                data-mode="auto"
+                id="seg-auto"
+                onclick="dvSetSearchMode('auto')">Auto</button>
+        <button type="button"
+                role="tab"
+                class="seg__btn"
+                aria-selected="false"
                 data-mode="order"
                 id="seg-order"
                 onclick="dvSetSearchMode('order')">Order</button>
@@ -85,7 +92,7 @@
       </div>
 
       {# Hidden mode value — sent as ?mode= query param #}
-      <input type="hidden" name="mode" id="search-mode-val" value="order" />
+      <input type="hidden" name="mode" id="search-mode-val" value="auto" />
 
       {# Text field #}
       <div class="search__field">
@@ -95,7 +102,7 @@
                id="search-q"
                autocomplete="off"
                spellcheck="false"
-               placeholder="Order code e.g. HD00123"
+               placeholder="Paste any code — order, customer or shipment"
                aria-label="Search query"
                value="{{ request.query_params.get('q', '') if request else '' }}" />
         <button type="submit" class="search__submit" aria-label="Search">
@@ -223,8 +230,9 @@ function dvToggleTheme() {
 function dvSetSearchMode(mode) {
   document.getElementById('search-mode-val').value = mode;
   var placeholders = {
+    auto:     'Paste any code — order, customer or shipment',
     order:    'Order code  e.g. HD00123',
-    customer: 'Customer ID, phone or email'
+    customer: 'Customer ID, code (CUZN…), phone or email'
   };
   document.getElementById('search-q').placeholder = placeholders[mode] || '';
   document.querySelectorAll('.seg__btn').forEach(function(btn) {

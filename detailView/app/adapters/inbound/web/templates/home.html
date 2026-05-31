@@ -27,6 +27,26 @@
       financials, fulfillment, behaviour, segmentation — in a single view.
     </p>
 
+    {# Resolver miss — shown when /go/{code} could not route the code cleanly. #}
+    {% if resolver_miss %}
+    <div class="home__notice" role="status" aria-live="polite"
+         style="margin:var(--sp-4) 0;padding:10px var(--sp-4);border:1px solid var(--border-strong);
+                border-radius:var(--radii-control);background:var(--bg-surface);font-size:13px;color:var(--fg-1)">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+           stroke-width="1.4" stroke-linecap="round" aria-hidden="true"
+           style="vertical-align:-2px;margin-right:6px;color:var(--accent)">
+        <circle cx="8" cy="8" r="6.5"/><path d="M8 5v3.5M8 11h.01"/>
+      </svg>
+      {% if resolver_miss.ambiguous %}
+      <span class="mono">&ldquo;{{ resolver_miss.code }}&rdquo;</span> matches both an order and a
+      customer. Choose <b>Order</b> or <b>Customer</b> below and search again.
+      {% else %}
+      Couldn’t recognise <span class="mono">&ldquo;{{ resolver_miss.code }}&rdquo;</span>.
+      Try an order code, customer ID/code (CUZN…), or shipment code below.
+      {% endif %}
+    </div>
+    {% endif %}
+
     {#
       Home search — same HTMX contract as header form.
       hx-get /search → HX-Redirect (single hit) | #search-results partial (multi) | hint (zero)
@@ -47,6 +67,13 @@
                   role="tab"
                   class="seg__btn"
                   aria-selected="true"
+                  data-mode="auto"
+                  id="home-seg-auto"
+                  onclick="dvHomeSetMode('auto')">Auto</button>
+          <button type="button"
+                  role="tab"
+                  class="seg__btn"
+                  aria-selected="false"
                   data-mode="order"
                   id="home-seg-order"
                   onclick="dvHomeSetMode('order')">Order</button>
@@ -59,7 +86,7 @@
                   onclick="dvHomeSetMode('customer')">Customer</button>
         </div>
 
-        <input type="hidden" name="mode" id="home-mode-val" value="order" />
+        <input type="hidden" name="mode" id="home-mode-val" value="auto" />
 
         <div class="search__field">
           <input class="search__input"
@@ -68,7 +95,7 @@
                  id="home-q"
                  autocomplete="off"
                  spellcheck="false"
-                 placeholder="Order code  e.g. HD00123"
+                 placeholder="Paste any code — order, customer or shipment"
                  aria-label="Search query" />
           <button type="submit" class="search__submit" aria-label="Search">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
@@ -89,10 +116,11 @@
       </form>
     </div>{# /.home__search #}
 
+    {# Live example codes — routed through /go so they double as a resolver demo. #}
     <div class="home__hints">
-      <a href="/orders/HD00123" class="home__hint">Try order <b>HD00123</b></a>
-      <a href="/orders/HD00210" class="home__hint">US order <b>HD00210</b></a>
-      <a href="/customers/C7781" class="home__hint">Customer <b>CUS-7781</b></a>
+      <a href="/go/SON00003" class="home__hint">Try order <b>SON00003</b></a>
+      <a href="/go/US24A00280" class="home__hint">US order <b>US24A00280</b></a>
+      <a href="/go/CUZN00003" class="home__hint">Customer <b>CUZN00003</b></a>
     </div>
 
   </div>
@@ -104,7 +132,11 @@
 /* Home-page segmented control — scoped to #home-search-form */
 function dvHomeSetMode(mode) {
   document.getElementById('home-mode-val').value = mode;
-  var ph = { order: 'Order code  e.g. HD00123', customer: 'Customer ID, phone or email' };
+  var ph = {
+    auto:     'Paste any code — order, customer or shipment',
+    order:    'Order code  e.g. HD00123',
+    customer: 'Customer ID, code (CUZN…), phone or email'
+  };
   document.getElementById('home-q').placeholder = ph[mode] || '';
   document.querySelectorAll('#home-search-form .seg__btn').forEach(function(btn) {
     btn.setAttribute('aria-selected', btn.dataset.mode === mode ? 'true' : 'false');

@@ -79,6 +79,10 @@ class SearchResolution:
     redirect_to: str | None = None
     customer_hits: list[CustomerHit] = field(default_factory=list)
     not_found: bool = False
+    # Auto-mode only: the same token matched BOTH an order-family id and a
+    # customer id (order_id vs customer_id share the bare-numeric space). The
+    # web adapter must NOT redirect — it surfaces an "ambiguous code" hint.
+    ambiguous: bool = False
 
 
 def safe_ratio(numerator: Decimal | float | None, denominator: Decimal | float | None) -> float | None:

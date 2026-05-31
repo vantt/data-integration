@@ -50,8 +50,31 @@ class SearchService:
                 return SearchResolution(redirect_to=f"/orders/{code}")
             return SearchResolution(not_found=True)
 
+        if mode == "auto":
+            return self._resolve_auto(q)
+
         # default: customer
-        hits = self._search.resolve_customer(q)
+        return self._customer_resolution(self._search.resolve_customer(q))
+
+    def _resolve_auto(self, q: str) -> SearchResolution:
+        """Detect the entity type of a free-form code and route to it.
+
+        Prefixed codes (SON/US/FUN/CUZN/…) match exactly one family, so at most
+        one probe hits. Only a BARE numeric can match both order_id and
+        customer_id; per product decision that case is flagged ambiguous (no
+        silent redirect) rather than guessing.
+        """
+        order_code = self._search.resolve_order(q)   # order_code / order_id / fulfillment
+        hits = self._search.resolve_customer(q)      # customer_id / code / phone / email
+        if order_code and hits:
+            return SearchResolution(ambiguous=True)
+        if order_code:
+            return SearchResolution(redirect_to=f"/orders/{order_code}")
+        return self._customer_resolution(hits)
+
+    @staticmethod
+    def _customer_resolution(hits) -> SearchResolution:
+        """Map customer hits to a redirect (1) / dropdown (many) / not-found (0)."""
         if not hits:
             return SearchResolution(not_found=True)
         if len(hits) == 1:
