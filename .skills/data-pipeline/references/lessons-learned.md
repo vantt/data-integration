@@ -3404,3 +3404,21 @@ CAST(last_order_date AS DATE) + (n::VARCHAR || ' days')::INTERVAL
 4. Compile (`dbt compile`) không catch runtime Catalog errors — chỉ `dbt build` / `dbt run` mới phát hiện.
 
 **Reference:** `transformation/models/marts/core/intermediate/int_customer_metrics.sql` (column: `predicted_next_purchase_date`)
+
+### L100 — Agent delegation: UI agent implements exactly what the prompt says, not what the intent is
+
+**Group:** SERVE
+
+**Symptom:** User asked for an "Actions tab" on the order detail view. Agent added a banner inside the existing Context tab instead. Required a manual fix to add `OrderTab.ACTIONS`, a new template, tab button, and route mapping.
+
+**Root cause:** The orchestrator prompt included a "simpler" fallback suggestion ("add a small banner in `_context.html`") as an option to reduce scope. The agent followed the simpler path literally — it saw "banner in `_context.html`" and implemented exactly that, ignoring the user's original intent of a proper tab.
+
+**Fix:** Added `OrderTab.ACTIONS` to the enum, wired the route, created `_actions.html` partial, added tab button to `order_detail.html`, removed banner from `_context.html`.
+
+**Rules:**
+1. **Never offer a "simpler alternative" in a delegation prompt unless you explicitly want that alternative.** Agents optimize for the path of least resistance; if a simpler path is mentioned, they will take it.
+2. When delegating UI feature work to a sub-agent, be prescriptive: name every file to create/modify, every enum value to add, every route to wire. Don't describe the feature conceptually and expect the agent to derive the implementation.
+3. For tab-based UIs, the minimum set for a new tab is always: enum value + route mapping + template partial + tab button in the shell template. Any prompt that omits one of these will likely produce an incomplete result.
+4. After a UI agent completes, verify the exact output against the spec before marking done — agent summaries describe intent, not actual file contents.
+
+**Reference:** `detailView/app/domain/shared.py` (OrderTab), `detailView/app/adapters/inbound/web/routes.py`, `detailView/app/adapters/inbound/web/templates/order_detail.html`
