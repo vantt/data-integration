@@ -1327,6 +1327,169 @@ ORDER BY
 { "row": 25, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
+---
+
+#### 📝 Text: P3 Behavioral metrics — discount sensitivity and purchase cycle by segment
+
+# P3 Behavioral metrics — discount sensitivity and purchase cycle by segment
+
+```json metabase-pos
+{ "row": 31, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Discount Sensitivity Distribution
+
+Share of retail customers by `discount_sensitivity` label — understand promo dependency vs full-price buying behavior.
+
+```sql
+SELECT
+    COALESCE(discount_sensitivity, 'Unknown / Insufficient data') AS "Discount Sensitivity",
+    COUNT(*) AS "Customers",
+    ROUND(COUNT(*) * 100.0 / NULLIF(
+        (SELECT COUNT(*) FROM dim_customers WHERE customer_type = 'RETAIL' AND customer_id != 'Unknown'), 0
+    ), 1) AS "% of Base"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+GROUP BY 1
+ORDER BY
+    CASE discount_sensitivity
+        WHEN 'PROMO_DEPENDENT' THEN 1
+        WHEN 'PROMO_MIXED'     THEN 2
+        WHEN 'FULL_PRICE'      THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "pie",
+  "visualization_settings": {
+    "pie.dimension": "Discount Sensitivity",
+    "pie.metric": "Customers",
+    "pie.colors": {
+      "PROMO_DEPENDENT":              "#EF8C8C",
+      "PROMO_MIXED":                  "#F9D45C",
+      "FULL_PRICE":                   "#84BB4C",
+      "Unknown / Insufficient data":  "#C2D2E9"
+    },
+    "pie.show_legend": true,
+    "pie.percent_visibility": "inside"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 32, "col": 0, "size_x": 6, "size_y": 6 }
+```
+
+#### ❓ Question: Discount Sensitivity by Segment
+
+Cross-tab: how promo dependency is distributed within each value tier — stacked bar.
+
+```sql
+SELECT
+    value_group AS "Segment",
+    COALESCE(discount_sensitivity, 'Unknown') AS "Discount Sensitivity",
+    COUNT(*) AS "Customers"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+GROUP BY 1, 2
+ORDER BY
+    CASE value_group
+        WHEN 'VALUE_VIP'    THEN 1
+        WHEN 'VALUE_GOLD'   THEN 2
+        WHEN 'VALUE_SILVER' THEN 3
+        ELSE 4
+    END,
+    CASE discount_sensitivity
+        WHEN 'PROMO_DEPENDENT' THEN 1
+        WHEN 'PROMO_MIXED'     THEN 2
+        WHEN 'FULL_PRICE'      THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "stackable.stack_type": "normalized",
+    "graph.dimensions": ["Segment", "Discount Sensitivity"],
+    "graph.metrics": ["Customers"],
+    "series_settings": {
+      "PROMO_DEPENDENT": { "color": "#EF8C8C" },
+      "PROMO_MIXED":     { "color": "#F9D45C" },
+      "FULL_PRICE":      { "color": "#84BB4C" },
+      "Unknown":         { "color": "#C2D2E9" }
+    },
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "% of Segment"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 32, "col": 6, "size_x": 12, "size_y": 6 }
+```
+
+#### ❓ Question: Avg Days Between Orders by Segment
+
+Purchase cycle length per value tier — informs optimal re-engagement timing for each segment.
+
+```sql
+SELECT
+    value_group AS "Segment",
+    COUNT(CASE WHEN avg_days_between_orders IS NOT NULL THEN 1 END) AS "Repeat Customers",
+    ROUND(AVG(avg_days_between_orders), 0) AS "Avg Days Between Orders",
+    ROUND(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY avg_days_between_orders), 0) AS "Median Days",
+    ROUND(MIN(avg_days_between_orders), 0) AS "Min Days",
+    ROUND(MAX(avg_days_between_orders), 0) AS "Max Days"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  AND avg_days_between_orders IS NOT NULL
+GROUP BY 1
+ORDER BY
+    CASE value_group
+        WHEN 'VALUE_VIP'    THEN 1
+        WHEN 'VALUE_GOLD'   THEN 2
+        WHEN 'VALUE_SILVER' THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "Avg Days Between Orders": { "suffix": " days" },
+      "Median Days":             { "suffix": " days" },
+      "Min Days":                { "suffix": " days" },
+      "Max Days":                { "suffix": " days" }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Avg Days Between Orders"],
+        "type": "range",
+        "colors": ["#84BB4C", "#F9D45C", "#EF8C8C"],
+        "min_type": "custom",
+        "min_value": 0,
+        "max_type": "custom",
+        "max_value": 90
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 38, "col": 0, "size_x": 18, "size_y": 5 }
+```
+
 #### 📝 Text: Source & Freshness
 
 **Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** customer_type='RETAIL'

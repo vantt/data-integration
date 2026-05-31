@@ -676,6 +676,177 @@ SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 d
 { "row": 26, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
+#### 📝 Text: P3 Behavioral signals — purchase timing, cancellation risk, pricing sensitivity
+
+# P3 Behavioral signals — purchase timing, cancellation risk, pricing sensitivity
+
+```json metabase-pos
+{ "row": 35, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: Next Purchase Signal Breakdown
+
+Count of retail customers by `next_purchase_signal` and `value_group` — identify who needs outreach now.
+
+```sql
+SELECT
+    COALESCE(next_purchase_signal, 'N/A (1-time buyer)') AS "Signal",
+    value_group AS "Segment",
+    COUNT(*) AS "Customers"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+GROUP BY 1, 2
+ORDER BY
+    CASE next_purchase_signal
+        WHEN 'OVERDUE'   THEN 1
+        WHEN 'DUE_SOON'  THEN 2
+        WHEN 'ON_TRACK'  THEN 3
+        ELSE 4
+    END,
+    CASE value_group
+        WHEN 'VALUE_VIP'    THEN 1
+        WHEN 'VALUE_GOLD'   THEN 2
+        WHEN 'VALUE_SILVER' THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "table.column_formatting": [
+      {
+        "columns": ["Signal"],
+        "type": "single",
+        "operator": "=",
+        "value": "OVERDUE",
+        "color": "#EF8C8C",
+        "highlight_row": true
+      },
+      {
+        "columns": ["Signal"],
+        "type": "single",
+        "operator": "=",
+        "value": "DUE_SOON",
+        "color": "#F9D45C",
+        "highlight_row": false
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 36, "col": 0, "size_x": 9, "size_y": 8 }
+```
+
+#### ❓ Question: Avg Order Value by Segment
+
+Average order value (`avg_order_value`) per `value_group` for retail customers — benchmark spend by tier.
+
+```sql
+SELECT
+    value_group AS "Segment",
+    COUNT(*) AS "Customers",
+    ROUND(AVG(avg_order_value), 0) AS "Avg Order Value",
+    ROUND(MIN(avg_order_value), 0) AS "Min AOV",
+    ROUND(MAX(avg_order_value), 0) AS "Max AOV"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  AND avg_order_value IS NOT NULL
+GROUP BY 1
+ORDER BY
+    CASE value_group
+        WHEN 'VALUE_VIP'    THEN 1
+        WHEN 'VALUE_GOLD'   THEN 2
+        WHEN 'VALUE_SILVER' THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Segment"],
+    "graph.metrics": ["Avg Order Value"],
+    "graph.colors": ["#7172AD"],
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "Avg Order Value (VND)",
+    "column_settings": {
+      "Avg Order Value": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Min AOV": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Max AOV": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 36, "col": 9, "size_x": 9, "size_y": 8 }
+```
+
+#### ❓ Question: High Cancel Rate Customers
+
+Count of retail customers with `cancel_rate` above 30% — flag accounts requiring CS attention.
+
+```sql
+SELECT
+    CASE
+        WHEN cancel_rate >= 0.5  THEN '>= 50% (Very High)'
+        WHEN cancel_rate >= 0.3  THEN '30-49% (High)'
+        WHEN cancel_rate >= 0.1  THEN '10-29% (Moderate)'
+        ELSE '< 10% (Low)'
+    END AS "Cancel Rate Band",
+    value_group AS "Segment",
+    COUNT(*) AS "Customers"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  AND cancel_rate IS NOT NULL
+GROUP BY 1, 2
+ORDER BY
+    CASE
+        WHEN cancel_rate >= 0.5  THEN 1
+        WHEN cancel_rate >= 0.3  THEN 2
+        WHEN cancel_rate >= 0.1  THEN 3
+        ELSE 4
+    END,
+    CASE value_group
+        WHEN 'VALUE_VIP'    THEN 1
+        WHEN 'VALUE_GOLD'   THEN 2
+        WHEN 'VALUE_SILVER' THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["Cancel Rate Band", "Segment"],
+    "graph.metrics": ["Customers"],
+    "series_settings": {
+      "VALUE_VIP":    { "color": "#7172AD" },
+      "VALUE_GOLD":   { "color": "#509EE3" },
+      "VALUE_SILVER": { "color": "#88BDE6" },
+      "VALUE_BRONZE": { "color": "#C2D2E9" }
+    },
+    "graph.x_axis.title_text": "Cancel Rate Band",
+    "graph.y_axis.title_text": "Customers"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 44, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
 #### ❓ Question: Segment x Status Health Matrix
 
 Cross-tabulation of segment x status with Active % and At-Risk LTV.

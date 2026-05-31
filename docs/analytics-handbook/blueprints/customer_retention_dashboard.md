@@ -1473,6 +1473,242 @@ LIMIT 50
 { "row": 21, "col": 0, "size_x": 18, "size_y": 8 }
 ```
 
+---
+
+#### 📝 Text: P3 Predictive signals — overdue customers and upcoming purchase forecast
+
+# P3 Predictive signals — overdue customers and upcoming purchase forecast
+
+```json metabase-pos
+{ "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: OVERDUE Customers — Count and Value at Risk
+
+Retail customers whose predicted next purchase date has already passed (`next_purchase_signal = 'OVERDUE'`). High value at risk requires immediate outreach.
+
+```sql
+SELECT
+    COUNT(*) AS "OVERDUE Customers",
+    SUM(lifetime_value) AS "Total LTV at Risk",
+    ROUND(AVG(lifetime_value), 0) AS "Avg LTV",
+    ROUND(AVG(recency_days), 0) AS "Avg Days Since Last Order"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  AND next_purchase_signal = 'OVERDUE'
+  [[AND value_group = {{segment}}]]
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "OVERDUE Customers": {},
+      "Total LTV at Risk": { "number_style": "currency", "currency": "VND", "compact": true },
+      "Avg LTV":           { "number_style": "currency", "currency": "VND", "compact": true },
+      "Avg Days Since Last Order": { "suffix": " days" }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 30, "col": 0, "size_x": 9, "size_y": 3 }
+```
+
+#### ❓ Question: Next Purchase Signal by Segment
+
+Count of retail customers by `next_purchase_signal` within each value tier — prioritize OVERDUE segments for reactivation.
+
+```sql
+SELECT
+    COALESCE(next_purchase_signal, 'N/A (1-time buyer)') AS "Signal",
+    value_group AS "Segment",
+    COUNT(*) AS "Customers",
+    SUM(lifetime_value) AS "Total LTV"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  [[AND value_group = {{segment}}]]
+GROUP BY 1, 2
+ORDER BY
+    CASE next_purchase_signal
+        WHEN 'OVERDUE'  THEN 1
+        WHEN 'DUE_SOON' THEN 2
+        WHEN 'ON_TRACK' THEN 3
+        ELSE 4
+    END,
+    CASE value_group
+        WHEN 'VALUE_VIP'    THEN 1
+        WHEN 'VALUE_GOLD'   THEN 2
+        WHEN 'VALUE_SILVER' THEN 3
+        ELSE 4
+    END
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "Total LTV": { "number_style": "currency", "currency": "VND", "compact": true }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Signal"],
+        "type": "single",
+        "operator": "=",
+        "value": "OVERDUE",
+        "color": "#EF8C8C",
+        "highlight_row": true
+      },
+      {
+        "columns": ["Signal"],
+        "type": "single",
+        "operator": "=",
+        "value": "DUE_SOON",
+        "color": "#F9D45C",
+        "highlight_row": false
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 30, "col": 9, "size_x": 9, "size_y": 8 }
+```
+
+#### ❓ Question: Upcoming Predicted Purchases — This Week
+
+Retail customers whose `predicted_next_purchase_date` falls within the next 7 days — proactive engagement window.
+
+```sql
+SELECT
+    COUNT(*) AS "Purchasing This Week",
+    SUM(lifetime_value) AS "Total LTV",
+    ROUND(AVG(avg_order_value), 0) AS "Expected Avg Order Value"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  AND predicted_next_purchase_date IS NOT NULL
+  AND predicted_next_purchase_date BETWEEN current_date AND current_date + INTERVAL '7 days'
+  [[AND value_group = {{segment}}]]
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Purchasing This Week":      {},
+      "Total LTV":                 { "number_style": "currency", "currency": "VND", "compact": true },
+      "Expected Avg Order Value":  { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 33, "col": 0, "size_x": 9, "size_y": 3 }
+```
+
+#### ❓ Question: Upcoming Predicted Purchases — This Month
+
+Retail customers whose `predicted_next_purchase_date` falls within the next 30 days — pipeline visibility for the month.
+
+```sql
+SELECT
+    COUNT(*) AS "Purchasing This Month",
+    SUM(lifetime_value) AS "Total LTV",
+    ROUND(AVG(avg_order_value), 0) AS "Expected Avg Order Value"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  AND predicted_next_purchase_date IS NOT NULL
+  AND predicted_next_purchase_date BETWEEN current_date AND current_date + INTERVAL '30 days'
+  [[AND value_group = {{segment}}]]
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Purchasing This Month":     {},
+      "Total LTV":                 { "number_style": "currency", "currency": "VND", "compact": true },
+      "Expected Avg Order Value":  { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 36, "col": 0, "size_x": 9, "size_y": 3 }
+```
+
+#### ❓ Question: OVERDUE Customer Watchlist
+
+OVERDUE customers sorted by LTV — immediate win-back priority list.
+
+```sql
+SELECT
+    full_name AS "Customer",
+    phone AS "Phone",
+    value_group AS "Segment",
+    last_order_date AS "Last Order",
+    recency_days AS "Days Since",
+    predicted_next_purchase_date AS "Was Expected",
+    lifetime_value AS "LTV",
+    avg_order_value AS "Avg Order Value"
+FROM dim_customers
+WHERE customer_type = 'RETAIL'
+  AND customer_id != 'Unknown'
+  AND next_purchase_signal = 'OVERDUE'
+  [[AND value_group = {{segment}}]]
+ORDER BY lifetime_value DESC
+LIMIT 50
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.pivot": false,
+    "column_settings": {
+      "LTV":             { "number_style": "currency", "currency": "VND", "compact": true },
+      "Avg Order Value": { "number_style": "currency", "currency": "VND", "compact": true }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["Days Since"],
+        "type": "range",
+        "colors": ["#F9D45C", "#EF8C8C"],
+        "min_type": "custom",
+        "min_value": 30,
+        "max_type": "custom",
+        "max_value": 120
+      },
+      {
+        "columns": ["LTV"],
+        "type": "single",
+        "operator": ">=",
+        "value": 5000000,
+        "color": "#7172AD",
+        "highlight_row": true
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 39, "col": 0, "size_x": 18, "size_y": 8 }
+```
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** customer_type='RETAIL' · **Caveats:** Cohort rolling
