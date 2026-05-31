@@ -26,7 +26,12 @@ WITH customers AS (
         value_group,
         channel_preference,
         product_affinity,
-        payment_behavior
+        payment_behavior,
+        avg_order_value,
+        avg_days_between_orders,
+        discount_order_rate,
+        cancel_rate,
+        discount_sensitivity
     FROM {{ ref('dim_customers') }}
     WHERE customer_type = 'RETAIL'
       AND customer_id != 'Unknown'
@@ -97,7 +102,25 @@ customer_snapshots AS (
 
         c.customer_type,
         c.channel_preference,
-        c.product_affinity
+        c.product_affinity,
+
+        -- P3 behavioral metrics (current-value approximations, same pattern as value_group)
+        c.avg_order_value,
+        c.avg_days_between_orders,
+        c.discount_order_rate,
+        c.cancel_rate,
+        c.discount_sensitivity,
+
+        -- next_purchase_signal computed from historical days_since_last_order (more accurate
+        -- than dim_customers version which uses current recency_days)
+        CASE
+            WHEN c.avg_days_between_orders IS NULL OR c.total_orders_count <= 1 THEN NULL
+            WHEN date_diff('day', c.last_order_date::date, m.snapshot_month) IS NULL THEN NULL
+            WHEN c.last_order_date::date > m.snapshot_month THEN NULL
+            WHEN date_diff('day', c.last_order_date::date, m.snapshot_month) >= c.avg_days_between_orders * 1.5 THEN 'OVERDUE'
+            WHEN date_diff('day', c.last_order_date::date, m.snapshot_month) >= c.avg_days_between_orders * 0.8 THEN 'DUE_SOON'
+            ELSE 'ON_TRACK'
+        END AS next_purchase_signal
 
     FROM customers c
     CROSS JOIN snapshot_months m
@@ -116,6 +139,12 @@ SELECT
     days_since_last_order,
     customer_type,
     channel_preference,
-    product_affinity
+    product_affinity,
+    avg_order_value,
+    avg_days_between_orders,
+    discount_order_rate,
+    cancel_rate,
+    discount_sensitivity,
+    next_purchase_signal
 FROM customer_snapshots
 ORDER BY customer_key, snapshot_month
