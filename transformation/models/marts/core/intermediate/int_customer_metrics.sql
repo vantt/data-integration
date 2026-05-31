@@ -271,7 +271,7 @@ SELECT
     COALESCE(cr.cancel_rate, 0.0) AS cancel_rate, -- 0 is correct when no cancellations on record
     CASE
         WHEN ip.avg_days_between_orders IS NOT NULL AND a.frequency > 1
-        THEN CAST(a.last_order_date AS DATE) + make_interval(days := ip.avg_days_between_orders)
+        THEN CAST(a.last_order_date AS DATE) + (ip.avg_days_between_orders::VARCHAR || ' days')::INTERVAL
         ELSE NULL
     END AS predicted_next_purchase_date,
 
