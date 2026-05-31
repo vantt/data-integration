@@ -51,6 +51,18 @@
               onclick="dvActivateTab(this, '/orders/{{ order.header.order_code }}/tab/context')">
         Context
       </button>
+
+      {# Tab: Actions — shown only when customer has a pending outreach action #}
+      {% if order.customer.customer_action_type %}
+      <button class="tab"
+              role="tab"
+              aria-selected="false"
+              aria-controls="tab-panel"
+              id="tab-actions"
+              onclick="dvActivateTab(this, '/orders/{{ order.header.order_code }}/tab/actions')">
+        Actions <span class="badge badge--warn">1</span>
+      </button>
+      {% endif %}
     </div>
 
     {# Shimmer skeleton — shown by dvActivateTab while htmx fetches #}

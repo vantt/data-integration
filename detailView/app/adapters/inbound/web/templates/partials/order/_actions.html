@@ -1,0 +1,58 @@
+{#
+  Order > Actions tab — customer outreach action from mart_customer_action_queue.
+  Data via order.customer.customer_action_type / customer_action_rationale.
+  Link to full customer Actions tab for complete context.
+#}
+{% from "macros.html" import caveat, fact, eyebrow %}
+
+{% set _action_labels = {
+  "CALL_NOW":         "🔴 Gọi điện ngay",
+  "REORDER_NUDGE":    "🟠 Nhắc tái mua",
+  "WIN_BACK":         "🟡 Win-back",
+  "SECOND_ORDER":     "🟢 Đơn hàng 2",
+  "HIGH_CANCEL_RISK": "⚫ Rủi ro huỷ"
+} %}
+
+{% set _action_tone = {
+  "CALL_NOW":         "bad",
+  "REORDER_NUDGE":    "warn",
+  "WIN_BACK":         "warn",
+  "SECOND_ORDER":     "good",
+  "HIGH_CANCEL_RISK": "bad"
+} %}
+
+<div class="tabpanel stack-5">
+
+  {{ eyebrow("Outreach action · " ~ (order.customer.full_name or "Customer"), cls="") }}
+
+  {% if order.customer.customer_action_type %}
+  {% set atype = order.customer.customer_action_type | upper %}
+  {% set label = _action_labels.get(atype, atype) %}
+  {% set tone  = _action_tone.get(atype, "neutral") %}
+
+  <div class="scard">
+    <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)">
+      <span class="bdg bdg--{{ tone }}" role="status">{{ label }}</span>
+    </div>
+
+    {% if order.customer.customer_action_rationale %}
+    <p style="margin:0 0 var(--sp-4);line-height:1.5">{{ order.customer.customer_action_rationale }}</p>
+    {% endif %}
+
+    {% if order.customer.customer_id %}
+    <a href="/customers/{{ order.customer.customer_id }}/tab/actions"
+       style="font-size:var(--text-sm);color:var(--accent)">
+      Xem đầy đủ trên trang khách hàng →
+    </a>
+    {% endif %}
+  </div>
+
+  {{ caveat("Dữ liệu được làm mới theo lịch pipeline hàng đêm.", "info") }}
+
+  {% else %}
+
+  {{ caveat("Không có action nào đang chờ cho khách hàng này.", "info") }}
+
+  {% endif %}
+
+</div>

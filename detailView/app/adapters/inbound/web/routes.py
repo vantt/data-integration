@@ -180,6 +180,7 @@ def register_routes(
             OrderTab.ITEMS: "partials/order/_line_items.html",
             OrderTab.OPERATIONS: "partials/order/_operations.html",
             OrderTab.CONTEXT: "partials/order/_context.html",
+            OrderTab.ACTIONS: "partials/order/_actions.html",
         }
 
         quality_flags: list[DataQualityFlag] = order.quality_flags(cap=capability)

@@ -54,6 +54,7 @@ class OrderTab(str, Enum):
     ITEMS = "items"              # line items / SKUs
     OPERATIONS = "operations"    # payments + fulfillment + returns (order lifecycle)
     CONTEXT = "context"          # channel & source + staff/team + timeline
+    ACTIONS = "actions"          # customer outreach action from mart_customer_action_queue
 
 
 class CustomerTab(str, Enum):
