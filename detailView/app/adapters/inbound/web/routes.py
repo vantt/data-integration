@@ -195,8 +195,15 @@ def register_routes(
     # ------------------------------------------------------------------
     # Customer detail  GET /customers/{customer_id}
     # ------------------------------------------------------------------
+    _CUSTOMER_TAB_TEMPLATE = {
+        CustomerTab.OVERVIEW: "partials/customer/_overview.html",
+        CustomerTab.STATUS_TIMELINE: "partials/customer/_status_timeline.html",
+        CustomerTab.ORDER_HISTORY: "partials/customer/_order_history.html",
+        CustomerTab.ACTIONS: "partials/customer/_actions.html",
+    }
+
     @app.get("/customers/{customer_id}", response_class=HTMLResponse)
-    async def customer_detail(request: Request, customer_id: str):
+    async def customer_detail(request: Request, customer_id: str, tab: str = ""):
         customer = customer_service.get_detail(customer_id)
         if customer is None:
             ctx = _base_context(request)
@@ -206,6 +213,12 @@ def register_routes(
                 ctx,
                 status_code=404,
             )
+
+        # Resolve ?tab= query param; fall back to OVERVIEW for unknown/missing values.
+        try:
+            active_tab = CustomerTab(tab) if tab else CustomerTab.OVERVIEW
+        except ValueError:
+            active_tab = CustomerTab.OVERVIEW
 
         dq = None
         if data_quality is not None:
@@ -218,7 +231,8 @@ def register_routes(
         ctx = _base_context(request)
         ctx.update({
             "customer": customer,
-            "active_tab": CustomerTab.OVERVIEW,
+            "active_tab": active_tab,
+            "initial_tab_template": _CUSTOMER_TAB_TEMPLATE[active_tab],
             "tabs": list(CustomerTab),
             "customer_id": customer_id,
             "quality_flags": quality_flags,
