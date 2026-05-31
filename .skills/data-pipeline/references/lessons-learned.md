@@ -3370,3 +3370,37 @@ Hoặc dùng INTERVAL (an toàn hơn nhưng dài hơn):
 5. Rule tương tự áp dụng cho `TIMESTAMP - TIMESTAMP` (trả `INTERVAL`) — không cast được sang `INTEGER`.
 
 **Reference:** `docs/analytics-handbook/blueprints/us_crossborder_operations.md` (card: Chu kỳ báo cáo)
+
+### L99 — DuckDB 1.10: `make_interval()` không tồn tại — dùng string cast thay thế
+
+**Group:** MODEL
+
+**Symptom:** dbt build thất bại với:
+```
+Catalog Error: Scalar Function with name make_interval does not exist!
+Did you mean "make_date"?
+```
+Model `int_customer_metrics` lỗi ở bước tính `predicted_next_purchase_date`.
+
+**Root cause:** `make_interval(days := n)` chỉ có trong DuckDB >= 1.11 (hoặc chưa có). DuckDB 1.10.1 không có hàm này. Code reviewer cảnh báo rủi ro nhưng không confirm version — `make_interval` được dùng thay cho `INTEGER * INTERVAL '1 day'` (cũng chưa verify).
+
+**Fix:** Dùng string cast để convert số nguyên thành INTERVAL:
+
+```sql
+-- ❌ SAI — make_interval không tồn tại trong DuckDB 1.10
+CAST(last_order_date AS DATE) + make_interval(days := n)
+
+-- ❌ CHƯA VERIFY — INTEGER * INTERVAL có thể fail
+CAST(last_order_date AS DATE) + (n * INTERVAL '1 day')
+
+-- ✅ ĐÚNG — string cast luôn hoạt động
+CAST(last_order_date AS DATE) + (n::VARCHAR || ' days')::INTERVAL
+```
+
+**Rules:**
+1. Không dùng `make_interval()` với DuckDB < 1.11 — hàm không tồn tại.
+2. Pattern `(integer::VARCHAR || ' days')::INTERVAL` là cách an toàn nhất để add N days vào DATE/TIMESTAMP bất kể version DuckDB.
+3. Khi code reviewer cảnh báo DuckDB compatibility risk: luôn test trực tiếp trên container thay vì tin vào docs. DuckDB version mismatch giữa docs và runtime là phổ biến.
+4. Compile (`dbt compile`) không catch runtime Catalog errors — chỉ `dbt build` / `dbt run` mới phát hiện.
+
+**Reference:** `transformation/models/marts/core/intermediate/int_customer_metrics.sql` (column: `predicted_next_purchase_date`)
