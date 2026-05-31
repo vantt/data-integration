@@ -60,6 +60,7 @@ class CustomerTab(str, Enum):
     OVERVIEW = "overview"            # value metrics + behaviour/RFM + segmentation
     STATUS_TIMELINE = "status-timeline"
     ORDER_HISTORY = "order-history"
+    ACTIONS = "actions"              # ranked outreach actions from mart_customer_action_queue
 
 
 @dataclass(frozen=True)

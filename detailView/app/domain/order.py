@@ -199,6 +199,9 @@ class CustomerRef:
     customer_type: str | None = None
     value_group: str | None = None
     lifetime_value: Decimal | None = None
+    # Outreach action from mart_customer_action_queue (optional — degrades gracefully)
+    customer_action_type: str | None = None
+    customer_action_rationale: str | None = None
 
 
 @dataclass

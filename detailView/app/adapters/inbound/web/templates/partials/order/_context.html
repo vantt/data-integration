@@ -1,9 +1,51 @@
 {#
   Order > Context tab panel.
-  Sections (stacked): Channel & staff → Timeline.
+  Sections (stacked): [Customer action banner] → Channel & staff → Timeline.
   Context provides `order`.
 #}
+{% from "macros.html" import caveat %}
+
+{# Action type → Vietnamese label mapping #}
+{% set _action_labels = {
+  "CALL_NOW":         "🔴 Gọi điện ngay",
+  "REORDER_NUDGE":    "🟠 Nhắc tái mua",
+  "WIN_BACK":         "🟡 Win-back",
+  "SECOND_ORDER":     "🟢 Đơn hàng 2",
+  "HIGH_CANCEL_RISK": "⚫ Rủi ro huỷ"
+} %}
+
+{% set _action_tone = {
+  "CALL_NOW":         "bad",
+  "REORDER_NUDGE":    "warn",
+  "WIN_BACK":         "warn",
+  "SECOND_ORDER":     "good",
+  "HIGH_CANCEL_RISK": "bad"
+} %}
+
 <div class="tab-sections">
+
+  {# Customer action banner — only when an outreach action is available #}
+  {% if order.customer.customer_action_type %}
+  {% set atype = order.customer.customer_action_type | upper %}
+  {% set alabel = _action_labels.get(atype, atype) %}
+  {% set atone  = _action_tone.get(atype, "neutral") %}
+  <div class="tabpanel">
+    <div class="scard" style="display:flex;align-items:flex-start;gap:var(--sp-3)">
+      <span class="bdg bdg--{{ atone }}" role="status" aria-label="Customer action">{{ alabel }}</span>
+      {% if order.customer.customer_action_rationale %}
+      <span style="line-height:1.5;color:var(--ink-2)">{{ order.customer.customer_action_rationale }}</span>
+      {% endif %}
+      {% if order.customer.customer_id %}
+      <a href="/customers/{{ order.customer.customer_id }}/tab/actions"
+         style="margin-left:auto;white-space:nowrap;font-size:var(--text-sm);color:var(--accent)">
+        Xem chi tiết →
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
   {% include "partials/order/_channel_staff.html" %}
   {% include "partials/order/_timeline.html" %}
+
 </div>

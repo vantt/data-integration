@@ -79,6 +79,7 @@ class DuckDbCustomerRepository:
             history_rows = _safe_fetch(
                 conn, "customer_order_history", [customer_key, _ORDER_HISTORY_LIMIT]
             )
+            action_rows = _safe_fetch(conn, "customer_actions", [customer_key])
 
         return CustomerDetail(
             profile=cm.map_profile(profile_row),
@@ -86,4 +87,5 @@ class DuckDbCustomerRepository:
             behavior=cm.map_behavior(profile_row),
             status_timeline=[cm.map_status_snapshot(r) for r in timeline_rows],
             order_history=[cm.map_order_summary(r) for r in history_rows],
+            actions=[cm.map_action(r) for r in action_rows],
         )

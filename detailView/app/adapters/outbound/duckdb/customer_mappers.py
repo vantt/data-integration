@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.domain.customer import (
+    CustomerAction,
     CustomerBehavior,
     CustomerProfile,
     CustomerValueMetrics,
@@ -88,6 +89,22 @@ def map_status_snapshot(row: Row) -> StatusSnapshot:
         is_new=rc.as_bool(row.get("is_new")),
         days_since_last_order=rc.as_int(row.get("days_since_last_order")),
         value_group=rc.as_str(row.get("value_group")),
+    )
+
+
+def map_action(row: Row) -> CustomerAction:
+    return CustomerAction(
+        action_type=rc.as_str(row.get("action_type")) or "",
+        priority_rank=rc.as_int(row.get("priority_rank")) or 9,
+        action_rationale=rc.as_str(row.get("action_rationale")),
+        value_at_stake=rc.as_decimal(row.get("value_at_stake")),
+        avg_order_value=rc.as_decimal(row.get("avg_order_value")),
+        avg_days_between_orders=rc.as_int(row.get("avg_days_between_orders")),
+        next_purchase_signal=rc.as_str(row.get("next_purchase_signal")),
+        discount_sensitivity=rc.as_str(row.get("discount_sensitivity")),
+        predicted_next_purchase_date=rc.as_date(row.get("predicted_next_purchase_date")),
+        cancel_rate=rc.as_float(row.get("cancel_rate")),
+        recency_days=rc.as_int(row.get("recency_days")),
     )
 
 

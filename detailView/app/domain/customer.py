@@ -10,6 +10,23 @@ from decimal import Decimal
 
 from .shared import Badge, DataQualityFlag, Tone, safe_ratio
 
+
+@dataclass
+class CustomerAction:
+    """One outreach action row from mart_customer_action_queue."""
+
+    action_type: str
+    priority_rank: int
+    action_rationale: str | None = None
+    value_at_stake: Decimal | None = None
+    avg_order_value: Decimal | None = None
+    avg_days_between_orders: int | None = None
+    next_purchase_signal: str | None = None
+    discount_sensitivity: str | None = None
+    predicted_next_purchase_date: date | None = None
+    cancel_rate: float | None = None
+    recency_days: int | None = None
+
 RETAIL = "RETAIL"
 
 
@@ -105,6 +122,11 @@ class CustomerDetail:
     behavior: CustomerBehavior = field(default_factory=CustomerBehavior)
     status_timeline: list[StatusSnapshot] = field(default_factory=list)
     order_history: list[OrderSummary] = field(default_factory=list)
+    actions: list[CustomerAction] = field(default_factory=list)
+
+    @property
+    def has_actions(self) -> bool:
+        return bool(self.actions)
 
     @property
     def is_retail(self) -> bool:

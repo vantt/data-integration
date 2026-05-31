@@ -55,6 +55,7 @@ class DuckDbOrderRepository:
             # order_id is the join key for child collections (VARCHAR in serving layer).
             order_id = header_row.get("order_id")
             canonical_code = header_row.get("order_code") or code
+            customer_key = header_row.get("customer_key")
 
             # OPTIONAL collections — degrade to [] on missing view / binder error.
             line_rows = _safe_fetch(conn, "order_line_items", [order_id])
@@ -64,6 +65,18 @@ class DuckDbOrderRepository:
             return_rows = _safe_fetch(conn, "order_returns", [canonical_code])
             # Shipments join on order_code (fact_fulfillments has no order_id FK).
             shipment_rows = _safe_fetch(conn, "order_shipments", [canonical_code])
+            # Customer outreach action — optional, only fetched when customer_key is present.
+            cust_action_rows = (
+                _safe_fetch(conn, "order_customer_action", [customer_key])
+                if customer_key is not None
+                else []
+            )
+
+        customer_ref = om.map_customer_ref(header_row)
+        if cust_action_rows:
+            action = cust_action_rows[0]
+            customer_ref.customer_action_type = action.get("action_type")
+            customer_ref.customer_action_rationale = action.get("action_rationale")
 
         return OrderDetail(
             header=om.map_header(header_row),
@@ -76,5 +89,5 @@ class DuckDbOrderRepository:
             channel=om.map_channel(header_row),
             staff=om.map_staff(header_row),
             shipping=om.map_shipping(header_row),
-            customer=om.map_customer_ref(header_row),
+            customer=customer_ref,
         )

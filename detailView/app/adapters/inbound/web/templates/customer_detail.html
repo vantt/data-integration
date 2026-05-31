@@ -61,6 +61,18 @@
         Order History
       </button>
 
+      {# Tab: Actions — shown only when customer has pending actions #}
+      {% if customer.has_actions %}
+      {% set is_actions = active_tab.value == "actions" %}
+      <button role="tab"
+              class="tab"
+              aria-selected="{{ 'true' if is_actions else 'false' }}"
+              aria-controls="tab-panel"
+              onclick="dvActivateTab(this, '/customers/{{ customer_id }}/tab/actions')">
+        Actions <span class="badge badge--warn">{{ customer.actions | length }}</span>
+      </button>
+      {% endif %}
+
     </div>{# /tabbar #}
 
     {# Tab loading shimmer (htmx-indicator) #}

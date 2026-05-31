@@ -1,0 +1,98 @@
+{#
+  Customer > Actions tab — ranked outreach actions from mart_customer_action_queue.
+  Shows a single action card per customer (priority_rank 1-5).
+  Source: mart_customer_action_queue
+#}
+{% from "macros.html" import caveat, panel_head, fact, eyebrow %}
+
+{# Action type → Vietnamese display label + tone #}
+{% set _action_labels = {
+  "CALL_NOW":         "🔴 Gọi điện ngay",
+  "REORDER_NUDGE":    "🟠 Nhắc tái mua",
+  "WIN_BACK":         "🟡 Win-back",
+  "SECOND_ORDER":     "🟢 Đơn hàng 2",
+  "HIGH_CANCEL_RISK": "⚫ Rủi ro huỷ"
+} %}
+
+{% set _action_tone = {
+  "CALL_NOW":         "bad",
+  "REORDER_NUDGE":    "warn",
+  "WIN_BACK":         "warn",
+  "SECOND_ORDER":     "good",
+  "HIGH_CANCEL_RISK": "bad"
+} %}
+
+<div class="tabpanel stack-5">
+
+  {{ panel_head("Outreach actions", "mart_customer_action_queue") }}
+
+  {% if not customer.actions %}
+
+  {{ caveat("No pending actions for this customer.", "info") }}
+
+  {% else %}
+
+  {% for action in customer.actions %}
+  {% set atype = action.action_type | upper %}
+  {% set label = _action_labels.get(atype, atype) %}
+  {% set tone  = _action_tone.get(atype, "neutral") %}
+
+  <div class="scard">
+
+    {# Action type header #}
+    <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3)">
+      <span class="bdg bdg--{{ tone }}" role="status" aria-label="Action type">{{ label }}</span>
+      <span class="caption" style="color:var(--ink-3)">Priority {{ action.priority_rank }}</span>
+    </div>
+
+    {# Rationale — primary copy #}
+    {% if action.action_rationale %}
+    <p style="margin:0 0 var(--sp-4);line-height:1.5">{{ action.action_rationale }}</p>
+    {% endif %}
+
+    {# Value at stake — only for revenue-generating actions #}
+    {% if action.value_at_stake is not none %}
+    <div class="kpi-grid" style="margin-bottom:var(--sp-4)">
+      <div class="kpi kpi--hero">
+        <div class="kpi__label">Giá trị dự kiến</div>
+        <div class="kpi__val">{{ action.value_at_stake | vnd }}</div>
+      </div>
+      {% if action.avg_order_value is not none %}
+      <div class="kpi">
+        <div class="kpi__label">AOV trung bình</div>
+        <div class="kpi__val">{{ action.avg_order_value | vnd }}</div>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# Supporting context facts #}
+    <div class="facts">
+      {% if action.recency_days is not none %}
+      {{ fact("Recency", action.recency_days | string ~ " ngày") }}
+      {% endif %}
+      {% if action.avg_days_between_orders is not none %}
+      {{ fact("Chu kỳ mua TB", action.avg_days_between_orders | string ~ " ngày") }}
+      {% endif %}
+      {% if action.predicted_next_purchase_date is not none %}
+      {{ fact("Dự kiến mua lại", action.predicted_next_purchase_date | dateonly) }}
+      {% endif %}
+      {% if action.next_purchase_signal %}
+      {{ fact("Tín hiệu mua", action.next_purchase_signal) }}
+      {% endif %}
+      {% if action.discount_sensitivity %}
+      {{ fact("Nhạy giảm giá", action.discount_sensitivity) }}
+      {% endif %}
+      {% if action.cancel_rate is not none %}
+      {{ fact("Tỷ lệ huỷ", (action.cancel_rate * 100) | round(1) | string ~ "%") }}
+      {% endif %}
+    </div>
+
+  </div>{# /scard #}
+  {% endfor %}
+
+  {{ caveat("Dữ liệu được làm mới theo lịch pipeline hàng đêm.", "info") }}
+
+  {% endif %}
+
+</div>{# /tabpanel #}

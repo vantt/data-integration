@@ -258,6 +258,7 @@ def register_routes(
             CustomerTab.OVERVIEW: "partials/customer/_overview.html",
             CustomerTab.STATUS_TIMELINE: "partials/customer/_status_timeline.html",
             CustomerTab.ORDER_HISTORY: "partials/customer/_order_history.html",
+            CustomerTab.ACTIONS: "partials/customer/_actions.html",
         }
 
         quality_flags: list[DataQualityFlag] = customer.quality_flags(cap=capability, dq=dq)
