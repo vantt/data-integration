@@ -3422,3 +3422,26 @@ CAST(last_order_date AS DATE) + (n::VARCHAR || ' days')::INTERVAL
 4. After a UI agent completes, verify the exact output against the spec before marking done — agent summaries describe intent, not actual file contents.
 
 **Reference:** `detailView/app/domain/shared.py` (OrderTab), `detailView/app/adapters/inbound/web/routes.py`, `detailView/app/adapters/inbound/web/templates/order_detail.html`
+
+### L101 — HTMX tab partial endpoints cannot be used as full-page deep-links
+
+**Group:** SERVE
+
+**Symptom:** Link `href="/customers/{id}/tab/actions"` from the order Actions tab navigated to a raw HTML fragment (just the tab partial) instead of the full customer detail page with the Actions tab active.
+
+**Root cause:** In an HTMX tab pattern, `GET /entity/{id}/tab/{tab}` is a partial endpoint — it returns only the tab content fragment for HTMX to swap into `#tab-panel`. Linking to it directly from a full-page context (not via HTMX) renders the fragment without the page shell — no nav, no sidebar, no base layout.
+
+Two distinct URL spaces exist:
+- `/customers/{id}` → full page (shell + inline first tab)
+- `/customers/{id}/tab/{tab}` → HTMX partial only (fragment, no shell)
+
+**Fix:** Added `?tab=` query param to the full-page route. The route resolves the param to `CustomerTab`, passes `initial_tab_template` into context, and `customer_detail.html` uses `{% include initial_tab_template %}` instead of a hardcoded `_overview.html`. Cross-page links use `?tab=actions` to deep-link into a specific tab on first paint.
+
+**Rules:**
+1. Never `href` to a `/tab/` partial endpoint from outside that page's HTMX context — it will render a naked HTML fragment.
+2. For HTMX tab UIs, deep-linking requires a `?tab=` query param on the full-page route that maps to the correct initial template include.
+3. The full-page route must accept the `tab` param, validate it against the enum (with fallback to default), and pass `initial_tab_template` to the template context.
+4. The shell template should use `{% include initial_tab_template %}` (variable) not `{% include "partials/..." %}` (hardcoded) so any tab can be the first-paint default.
+5. Tab buttons in the shell use `aria-selected` driven by `active_tab.value == "slug"` — this pattern automatically highlights the correct tab when the page renders with a non-default `active_tab`.
+
+**Reference:** `detailView/app/adapters/inbound/web/routes.py` (`customer_detail` handler, `_CUSTOMER_TAB_TEMPLATE`), `detailView/app/adapters/inbound/web/templates/customer_detail.html`
