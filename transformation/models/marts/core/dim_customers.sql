@@ -50,6 +50,13 @@ joined_data AS (
         m.product_affinity,
         m.payment_behavior,
 
+        -- P3 metrics from intermediate model
+        m.avg_days_between_orders,
+        m.avg_order_value,
+        m.discount_order_rate,
+        m.cancel_rate,
+        m.predicted_next_purchase_date,
+
         -- [METRIC] Customer Status (RFM - Recency Component)
         -- Logic:
         -- - Active: Bought within the last 30 days.
@@ -118,6 +125,23 @@ SELECT
     -- payment_behavior: Payment pattern (Auto from payment history)
     payment_behavior,
 
+    -- discount_sensitivity: How dependent on promotions to purchase (Auto from order history).
+    -- NULL when customer has no qualifying (non-cancelled) orders to evaluate.
+    CASE
+        WHEN discount_order_rate IS NULL THEN NULL
+        WHEN discount_order_rate > 0.7 THEN 'PROMO_DEPENDENT'
+        WHEN discount_order_rate > 0.3 THEN 'PROMO_MIXED'
+        ELSE 'FULL_PRICE'
+    END AS discount_sensitivity,
+
+    -- next_purchase_signal: Where customer is in their purchase cycle (Auto, NULL for 1-time buyers)
+    CASE
+        WHEN avg_days_between_orders IS NULL OR frequency <= 1 THEN NULL
+        WHEN recency_days >= avg_days_between_orders * 1.5 THEN 'OVERDUE'
+        WHEN recency_days >= avg_days_between_orders * 0.8 THEN 'DUE_SOON'
+        ELSE 'ON_TRACK'
+    END AS next_purchase_signal,
+
     -- geo_region: Geographic region (Auto from province)
     CASE
         WHEN province IN ('Hồ Chí Minh', 'TP Hồ Chí Minh', 'TP. Hồ Chí Minh', 'HCM', 'Ho Chi Minh') THEN 'GEO_HCMC'
@@ -145,7 +169,14 @@ SELECT
     recency_days,
     lifespan_days,
     customer_status,
-    
+
+    -- P3 metrics
+    avg_order_value,
+    avg_days_between_orders,
+    discount_order_rate,
+    cancel_rate,
+    predicted_next_purchase_date,
+
     created_at,
     source_updated_at as updated_at,
     last_modified

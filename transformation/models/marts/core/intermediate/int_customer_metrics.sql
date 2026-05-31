@@ -178,6 +178,76 @@ payment_behavior_cte AS (
             ELSE 'PAYMENT_PREPAID'
         END as payment_behavior
     FROM payment_stats
+),
+
+-- Average order value using only revenue-generating orders (CANCELLED/DRAFT have total_collected=0)
+avg_order_value_cte AS (
+    SELECT
+        o.customer_key,
+        ROUND(SUM(o.total_collected) / NULLIF(COUNT(DISTINCT o.order_id), 0))::BIGINT AS avg_order_value
+    FROM orders o
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
+    {% endif %}
+    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+    GROUP BY o.customer_key
+),
+
+-- Inter-purchase interval: average days between consecutive non-cancelled, non-draft orders.
+-- Excludes 0-day gaps (same-session/same-day orders) to measure inter-visit cycle, not intra-day repeats.
+order_sequence AS (
+    SELECT
+        o.customer_key,
+        o.order_timestamp,
+        LAG(o.order_timestamp) OVER (
+            PARTITION BY o.customer_key ORDER BY o.order_timestamp
+        ) AS prev_order_timestamp
+    FROM orders o
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
+    {% endif %}
+    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+),
+
+inter_purchase_cte AS (
+    SELECT
+        customer_key,
+        ROUND(AVG(
+            date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(order_timestamp AS DATE))
+        ))::INTEGER AS avg_days_between_orders
+    FROM order_sequence
+    WHERE prev_order_timestamp IS NOT NULL
+      AND date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(order_timestamp AS DATE)) > 0
+    GROUP BY customer_key
+),
+
+-- Discount sensitivity: share of non-cancelled/draft orders that had any discount applied.
+-- NULL when customer has no qualifying orders (distinct from 0 = never discounted).
+discount_rate_cte AS (
+    SELECT
+        o.customer_key,
+        CAST(COUNT(DISTINCT o.order_id) FILTER (WHERE o.discount_amount > 0) AS DOUBLE)
+            / NULLIF(COUNT(DISTINCT o.order_id), 0) AS discount_order_rate
+    FROM orders o
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
+    {% endif %}
+    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+    GROUP BY o.customer_key
+),
+
+-- Cancel rate: share of attempted orders (excl. drafts) that were cancelled.
+cancel_rate_cte AS (
+    SELECT
+        o.customer_key,
+        CAST(COUNT(DISTINCT o.order_id) FILTER (WHERE o.status = 'CANCELLED') AS DOUBLE)
+            / NULLIF(COUNT(DISTINCT o.order_id), 0) AS cancel_rate
+    FROM orders o
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
+    {% endif %}
+    WHERE o.status != 'DRAFT'
+    GROUP BY o.customer_key
 )
 
 SELECT
@@ -194,8 +264,23 @@ SELECT
     COALESCE(pa.product_affinity, 'PRODUCT_MULTI') as product_affinity,
     COALESCE(pb.payment_behavior, 'PAYMENT_PREPAID') as payment_behavior,
 
+    -- P3 metrics
+    ip.avg_days_between_orders,
+    aov.avg_order_value,
+    dr.discount_order_rate,                       -- NULL = no qualifying orders (not 0 = never discounted)
+    COALESCE(cr.cancel_rate, 0.0) AS cancel_rate, -- 0 is correct when no cancellations on record
+    CASE
+        WHEN ip.avg_days_between_orders IS NOT NULL AND a.frequency > 1
+        THEN CAST(a.last_order_date AS DATE) + make_interval(days := ip.avg_days_between_orders)
+        ELSE NULL
+    END AS predicted_next_purchase_date,
+
     current_timestamp as metric_calculated_at
 FROM aggregated a
 LEFT JOIN channel_preference_cte cp ON a.customer_key = cp.customer_key
 LEFT JOIN product_affinity_cte pa ON a.customer_key = pa.customer_key
 LEFT JOIN payment_behavior_cte pb ON a.customer_key = pb.customer_key
+LEFT JOIN avg_order_value_cte aov ON a.customer_key = aov.customer_key
+LEFT JOIN inter_purchase_cte ip ON a.customer_key = ip.customer_key
+LEFT JOIN discount_rate_cte dr ON a.customer_key = dr.customer_key
+LEFT JOIN cancel_rate_cte cr ON a.customer_key = cr.customer_key
