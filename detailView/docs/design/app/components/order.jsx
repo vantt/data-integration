@@ -61,6 +61,7 @@ function OrderSidebar({ o, onNavigate }){
       {/* money headline */}
       <div className="scard">
         <Eyebrow className="scard__eyebrow" accent>{tr("Money headline","Tài chính chính")}</Eyebrow>
+        <VerdictGlance o={o} />
         <div className="money-line money-line--hero">
           <span className="money-line__label">
             {f.is_us ? tr("US revenue","Doanh thu US") : tr("Net revenue","Doanh thu thuần")}
@@ -70,11 +71,11 @@ function OrderSidebar({ o, onNavigate }){
         </div>
         <div className="money-line">
           <span className="money-line__label">{tr("Gross profit","Lợi nhuận gộp")}{f.cogs_amount===null && <Badge tone="warn">unverified</Badge>}</span>
-          <span className="money-line__val"><Money v={f.gross_profit} /><Pct v={f.gross_margin_pct} /></span>
+          <span className="money-line__val"><Pct v={f.gross_margin_pct} /><Money v={f.gross_profit} /></span>
         </div>
         <div className="money-line">
           <span className="money-line__label">{tr("Channel net","Ròng kênh")}</span>
-          <span className="money-line__val"><Money v={f.channel_net_profit} /><Pct v={f.channel_net_margin_pct} /></span>
+          <span className="money-line__val"><Pct v={f.channel_net_margin_pct} /><Money v={f.channel_net_profit} /></span>
         </div>
       </div>
 

@@ -34,6 +34,7 @@ window.DV_DATA = (function () {
       }),
       order_history: [
         { code: "HD00123", date: "2026-05-18 14:20", status: "COMPLETED", channel: "Shopee", seller: "Linh", total: 1_350_000, gp: 380_000, margin: 30.4, discount: 150_000, pay: "COD", ret: false, carrier: "GHN" },
+        { code: "HD00251", date: "2026-05-09 22:10", status: "COMPLETED", channel: "Shopee", seller: "Linh", total: 442_800, gp: -42_000, margin: -10.2, discount: 150_000, pay: "COD", ret: false, carrier: "GHN" },
         { code: "HD00098", date: "2026-04-02 10:05", status: "COMPLETED", channel: "Facebook", seller: "Linh", total: 820_000, gp: 213_000, margin: 26.0, discount: 60_000, pay: "PREPAID", ret: true, carrier: "GHTK" },
         { code: "HD00210", date: "2026-03-19 21:48", status: "SHIPPED", channel: "TikTok US", seller: "Hà", total: 1_180_000, gp: 286_000, margin: 24.2, discount: 0, pay: "PREPAID", ret: false, carrier: "4PX", us: true },
         { code: "HD00071", date: "2026-02-08 09:12", status: "COMPLETED", channel: "Shopee", seller: "Linh", total: 2_640_000, gp: 712_000, margin: 28.1, discount: 220_000, pay: "COD", ret: false, carrier: "GHN" },
@@ -117,6 +118,7 @@ window.DV_DATA = (function () {
     "HD00098": order098(),
     "HD00210": order210US(),
     "HD00076": order076Unverified(),
+    "HD00251": order251Loss(),
   };
 
   /* search index */
@@ -469,6 +471,95 @@ window.DV_DATA = (function () {
         { kind: "normal", time: "2026-02-12 08:20", title: "First shipped", meta: "carrier GHN · COD 1.690.000 ₫" },
         { kind: "normal", time: "2026-02-15 17:10", title: "Payment received", meta: "COD collected" },
         { kind: "good",  time: "2026-02-15 17:10", title: "Completed", meta: "time-to-complete 99h" },
+      ],
+    };
+  }
+
+  /* A flash-sale order that looks fine at gross but loses money once
+     platform fees land — the textbook reason the verdict anchors to
+     channel NET profit, not gross. */
+  function order251Loss(){
+    return {
+      header: {
+        order_code: "HD00251", order_id: "5310",
+        status: "COMPLETED", payment_status: "PAID", fulfillment_status: "DELIVERED",
+        customer_id: "CUS-7781",
+        created_at: "2026-05-09 22:10", first_shipped_at: "2026-05-10 11:05",
+        completed_at: "2026-05-12 16:40", carrier: "GHN", cod_amount: 442_800,
+        channel_name: "Shopee", seller: "Đỗ Mỹ Linh", creator: "Đỗ Mỹ Linh",
+        team: "Online Sales A", branch: "Kho HCM — Tân Bình",
+      },
+      financial: {
+        is_us: false,
+        gross_revenue: 560_000, discount_amount: 150_000, net_revenue: 410_000,
+        tax_amount: 32_800, total_collected: 442_800, cogs_amount: 380_000,
+        gross_profit: 30_000, gross_margin_pct: 7.3,
+        platform_fees: 72_000, channel_net_profit: -42_000, channel_net_margin_pct: -10.2,
+        return_amount: 0,
+        fees_breakdown: [
+          { type: "service",      amount: 30_000 },
+          { type: "payment",      amount: 13_000 },
+          { type: "infra",        amount: 8_000  },
+          { type: "voucher_xtra", amount: 18_000 },
+          { type: "fee_tax",      amount: 3_000  },
+        ],
+      },
+      flags: { is_us: false, has_cogs: true, has_platform_fees: true, has_returns: false },
+      line_items: [
+        { sku: "FN-CRM-050", name: "Kem dưỡng ẩm phục hồi", variant: "50ml", brand: "FINE", category: "Skincare", qty: 1, unit: 300_000, line: 300_000, disc: 80_000, dist: 80_000, weight: 180 },
+        { sku: "FN-LIP-002", name: "Son dưỡng có màu", variant: "Rose", brand: "FINE", category: "Makeup", qty: 1, unit: 260_000, line: 260_000, disc: 70_000, dist: 70_000, weight: 30 },
+      ],
+      cost_ledger: [
+        { category: "COGS", subtotal: 380_000, rows: [
+          { type: "cogs", amount: 380_000, source: "MISA", record: "voucher_no=HD00251", fee_source: "actual" },
+        ]},
+        { category: "PLATFORM_FEE", subtotal: 72_000, rows: [
+          { type: "platform_service", amount: 30_000, source: "Shopee", record: "SF-9988", fee_source: "estimated" },
+          { type: "platform_payment", amount: 13_000, source: "Shopee", record: "PF-2255", fee_source: "estimated" },
+          { type: "platform_infra",   amount: 8_000,  source: "Shopee", record: "IF-0051", fee_source: "estimated" },
+          { type: "voucher_xtra",      amount: 18_000, source: "Shopee", record: "VX-8810", fee_source: "actual" },
+          { type: "fee_tax",           amount: 3_000,  source: "Shopee", record: "FT-0099", fee_source: "estimated" },
+        ]},
+        { category: "TAX", subtotal: 32_800, rows: [
+          { type: "vat_output", amount: 32_800, source: "Sapo", record: "INV-45310", fee_source: "actual" },
+        ]},
+        { category: "SHIPPING", subtotal: 28_000, rows: [
+          { type: "freight", amount: 28_000, source: "GHN", record: "GHN-553102", fee_source: "actual" },
+        ]},
+        { category: "DISCOUNT", subtotal: 150_000, rows: [
+          { type: "flash_discount", amount: 150_000, source: "Sapo", record: "PROMO-FLASH99", fee_source: "actual" },
+        ]},
+      ],
+      payments: [
+        { method: "COD (GHN thu hộ)", type: "COD", amount: 442_800, status: "PAID", ts: "2026-05-12 16:40", paid_on: "2026-05-12" },
+      ],
+      fulfillment: {
+        carrier: "GHN", cod_amount: 442_800, ttc_hours: 66,
+        province: "TP. Hồ Chí Minh", district: "Q.1", ward: "P. Cầu Ông Lãnh", country: "Việt Nam",
+      },
+      shipments: [
+        { status: "DELIVERED", tracking_code: "GHN05531024891", carrier: "GHN", shipping_service: "Standard",
+          fulfillment_code: "FUN53101", shipped_at: "2026-05-10 11:05", delivered_at: "2026-05-12 16:40", cod_amount: 442_800, created_at: "2026-05-09 22:40" },
+      ],
+      parties: {
+        buyer_id: "CUS-7781", same: true, relation: null,
+        recipient: {
+          name: "Nguyễn Minh Anh", phone: "0903 118 224",
+          address1: "27 Trần Hưng Đạo", ward: "P. Cầu Ông Lãnh", district: "Q.1",
+          province: "TP. Hồ Chí Minh", country: "Việt Nam", note: null,
+        },
+      },
+      returns: [],
+      channel: {
+        name: "Shopee", code: "SHP-VN", category: "Marketplace", format: "Online",
+        platform: "Shopee", brand: "FINE Official", market: "Domestic",
+        promo_codes: ["FLASH99"], max_discount_rate: 30, primary_nature: "Flash sale",
+      },
+      timeline: [
+        { kind: "good",  time: "2026-05-09 22:10", title: "Order created", meta: "night · flash sale · weekday" },
+        { kind: "normal", time: "2026-05-10 11:05", title: "First shipped", meta: "carrier GHN · COD 442.800 ₫" },
+        { kind: "normal", time: "2026-05-12 16:40", title: "Payment received", meta: "COD collected by GHN" },
+        { kind: "good",  time: "2026-05-12 16:40", title: "Completed", meta: "time-to-complete 66h" },
       ],
     };
   }

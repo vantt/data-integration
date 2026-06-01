@@ -5,7 +5,10 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "theme": "dark",
   "density": "comfortable",
   "numfont": "mono",
-  "accent": "amber"
+  "accent": "amber",
+  "verdictStyle": "bar",
+  "verdictThin": 10,
+  "verdictDemo": "auto"
 }/*EDITMODE-END*/;
 
 function NotFound({ q, onNavigate, kind }){
@@ -68,6 +71,9 @@ function App(){
   el.setAttribute("data-density", t.density);
   el.setAttribute("data-numfont", t.numfont);
   el.setAttribute("data-accent", t.accent);
+  el.setAttribute("data-verdict-style", t.verdictStyle);
+  el.setAttribute("data-verdict-thin", t.verdictThin);
+  el.setAttribute("data-verdict-demo", t.verdictDemo);
 
   useEffect(()=>{
     const onHash = ()=>{ setBusy(false); setRoute(parseHash()); };
@@ -103,6 +109,15 @@ function App(){
         <TweakColor label="Accent" value={accentHex(t.accent)}
           options={[ "#e8a341", "#84b577", "#d4a548" ]}
           onChange={hex=>setTweak("accent", hexAccent(hex))} />
+        <TweakSection label="Profit / loss verdict" />
+        <TweakRadio label="Treatment" value={t.verdictStyle}
+          options={[{value:"bar",label:"Bar"},{value:"rule",label:"Rule"},{value:"gauge",label:"Gauge"}]}
+          onChange={v=>setTweak("verdictStyle",v)} />
+        <TweakSlider label="Thin-margin below" value={t.verdictThin} min={0} max={30} step={1} unit="%"
+          onChange={v=>setTweak("verdictThin",v)} />
+        <TweakSelect label="Preview state" value={t.verdictDemo}
+          options={[{value:"auto",label:"Auto (from data)"},{value:"profit",label:"Lãi"},{value:"thin",label:"Lãi mỏng"},{value:"loss",label:"Lỗ"},{value:"indeterminate",label:"Chưa xác định"}]}
+          onChange={v=>setTweak("verdictDemo",v)} />
         <TweakSection label="Demo states" />
         <TweakButton label={tr("Preview 503 DB-busy","Xem trạng thái 503")} secondary onClick={()=>setBusy(true)} />
       </TweaksPanel>

@@ -19,6 +19,7 @@ function OrderFinancial({ o }){
     return (
       <div className="tabpanel stack-4">
         <PanelHead title={tr("Financial","Tài chính")} sub="fact_us_shipment_economics" />
+        <ProfitVerdict o={o} />
         <Caveat tone="warn" rule>
           <b>{tr("US CrossBorder order.","Đơn US CrossBorder.")}</b> {tr("Domestic","Doanh thu nội địa")} <span className="mono">net_revenue = 0</span> {tr("— revenue is sourced from US shipment economics.","— doanh thu lấy từ kinh tế lô hàng US.")}
         </Caveat>
@@ -46,6 +47,7 @@ function OrderFinancial({ o }){
   return (
     <div className="tabpanel stack-4">
       <PanelHead title={tr("Financial","Tài chính")} sub="fact_orders · fact_order_economics" />
+      <ProfitVerdict o={o} />
       <div className="waterfall">
         <WfRow op=" " label={tr("Gross revenue","Doanh thu gộp")} amount={f.gross_revenue} bar={bar(f.gross_revenue)} />
         <WfRow op="−" label={<span>{tr("Discount","Chiết khấu")} <Badge>bundle</Badge></span>} amount={f.discount_amount} neg />
@@ -135,7 +137,14 @@ function CostGroup({ g, tone }){
         <span className="group__total"><Money v={g.subtotal} /></span>
       </div>
       <div className="group__body tbl-wrap" style={{borderRadius:0, border:0, borderTop:"1px solid var(--border)"}}>
-        <table className="tbl">
+        <table className="tbl tbl--ledger">
+          <colgroup>
+            <col className="col-type" />
+            <col className="col-source" />
+            <col className="col-record" />
+            <col className="col-feesrc" />
+            <col className="col-amount" />
+          </colgroup>
           <thead><tr><th>{tr("Cost type","Loại chi phí")}</th><th>{tr("Source","Nguồn")}</th><th>{tr("Record","Bản ghi")}</th><th>{tr("Fee src","Nguồn phí")}</th><th className="num-h">{tr("Amount","Số tiền")}</th></tr></thead>
           <tbody>
             {g.rows.map((r,i)=>(
@@ -388,15 +397,17 @@ function OrderRecipient({ o, onNavigate }){
     <div className="tabpanel stack-4">
       <PanelHead title={tr("Recipient & delivery","Người nhận & giao hàng")} sub="fact_orders · recipient" />
       <div className="party-split">
-        {/* recipient — operational priority */}
+        {/* recipient — operational priority. Mirror the buyer card's
+           structure (eyebrow → name → badge-row → facts) so the two
+           columns read in parallel and the badges align on one row. */}
         <div className="scard scard--recipient scard--lead">
-          <div className="party-head">
-            <Eyebrow accent>{tr("Recipient — receives the goods","Người nhận — nhận hàng")}</Eyebrow>
+          <Eyebrow accent>{tr("Recipient — receives the goods","Người nhận — nhận hàng")}</Eyebrow>
+          <div className="recipient-name" style={{marginTop:"var(--sp-2)"}}>{r.name}</div>
+          <div className="badge-row">
             {p.same
               ? <Badge tone="good" dot>{tr("same as buyer","trùng người mua")}</Badge>
               : <Badge tone="warn" dot>{tr("differs from buyer","khác người mua")}</Badge>}
           </div>
-          <div className="recipient-name">{r.name}</div>
           <div className="facts" style={{marginTop:"var(--sp-3)"}}>
             <Fact k={tr("Phone","Điện thoại")} v={r.phone} mono />
             <Fact k={tr("Address","Địa chỉ")} v={fullAddr} />
