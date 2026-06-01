@@ -126,8 +126,14 @@ services:
       # Read-only: app uses duckdb read_only=True; :ro is defense-in-depth at the OS level.
       - ./app_data/data_lake:/app/var/data_lake:ro
     labels:
-      caddy: detailview.local
-      caddy.reverse_proxy: "{{upstreams 8000}}"
+      # Internal LAN domain (Caddy internal CA, auto-detected for .local)
+      caddy_0: detailview.local
+      caddy_0.reverse_proxy: "{{upstreams 8000}}"
+      # Tailscale/internal domain — public TLD (.app) so MUST force internal CA,
+      # otherwise Caddy attempts Let's Encrypt ACME which fails (no public inbound).
+      caddy_1: detailview.app
+      caddy_1.tls: internal
+      caddy_1.reverse_proxy: "{{upstreams 8000}}"
 
 volumes:
   monitoring_db:

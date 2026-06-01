@@ -41,7 +41,7 @@ so the DuckDB adapter could be swapped (e.g. Postgres) without touching domain o
 Part of the root `docker-compose.yml` as service `detail_view`:
 ```bash
 docker compose up -d --build detail_view
-# → http://detailview.local  (Caddy)  or  http://localhost:3005
+# → https://detailview.local  (Caddy)  or  http://localhost:3005
 ```
 
 ## Run locally (Windows dev)
