@@ -22,7 +22,8 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 ```json metabase-filter
 {
   "slug": "action_type",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 773
 }
 ```
 
@@ -31,7 +32,8 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 ```json metabase-filter
 {
   "slug": "value_group",
-  "type": "string/="
+  "type": "string/=",
+  "field_id": 758
 }
 ```
 
