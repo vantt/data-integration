@@ -24,7 +24,7 @@ docker compose up -d rill
 Default URLs:
 
 - `http://localhost:9009`
-- `https://rill.local` if Caddy is running
+- `https://rill.lan.fwg.vn` if Caddy is running
 
 ## Input Contract
 

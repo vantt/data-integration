@@ -3475,14 +3475,14 @@ WHERE 1=1 [[AND {{action_type}}]]
 **Fix:**
 1. Add the internal ID to the SQL SELECT: `customer_id AS "customer_id"`
 2. Hide it in `table.columns`: `{ "name": "customer_id", "enabled": false }`
-3. Reference it in `click_behavior`: `"linkTemplate": "https://detailview.local/customers/{{customer_id}}"`
+3. Reference it in `click_behavior`: `"linkTemplate": "https://detailview.lan.fwg.vn/customers/{{customer_id}}"`
 
 ```json
 "Mã KH": {
   "click_behavior": {
     "type": "link",
     "linkType": "url",
-    "linkTemplate": "https://detailview.local/customers/{{customer_id}}"
+    "linkTemplate": "https://detailview.lan.fwg.vn/customers/{{customer_id}}"
   }
 }
 ```

@@ -580,7 +580,7 @@ LIMIT 20
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Ma don hang}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Ma don hang}}"
         }
       },
       "Gross Revenue (VND)": {
@@ -985,7 +985,7 @@ LIMIT 50
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Ma don hang}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Ma don hang}}"
         }
       },
       "Gross Revenue (VND)": {

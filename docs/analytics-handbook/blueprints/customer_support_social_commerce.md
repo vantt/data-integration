@@ -525,7 +525,7 @@ LIMIT 20
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Mã đơn}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Mã đơn}}"
         }
       }
     }

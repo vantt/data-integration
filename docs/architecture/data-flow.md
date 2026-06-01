@@ -61,7 +61,7 @@ flowchart TB
         SERVE[DuckDB Serving<br/>olap.duckdb]
         MB[Metabase<br/>Dashboards]
         EXP[Standalone Export<br/>sapo_export_latest.duckdb]
-        FS[Fileserver<br/>:3004 / files.etl.local]
+        FS[Fileserver<br/>:3004 / files.etl.lan.fwg.vn]
     end
 
     BA --> DLT_B
@@ -584,7 +584,7 @@ serving/standalone/
     │  data_fileserver service (caddy:alpine)
     ▼
 http://<host>:3004/        (direct host port)
-https://files.etl.local/   (via Caddy reverse-proxy, TLS)
+https://files.etl.lan.fwg.vn/   (via Caddy reverse-proxy, TLS)
 ```
 
 **Use cases:** offline analysis, AI tools, distribution to stakeholders without pipeline access.

@@ -413,7 +413,7 @@ The nightly job materializes all serving views into a self-contained DuckDB file
 | URL | Use case |
 |---|---|
 | `http://<host>:3004/sapo_export_latest.duckdb` | Direct host port — LAN/VPN, scripts, AI tools |
-| `https://files.etl.local/sapo_export_latest.duckdb` | Via Caddy reverse-proxy — TLS, friendly hostname |
+| `https://files.etl.lan.fwg.vn/sapo_export_latest.duckdb` | Via Caddy reverse-proxy — TLS, friendly hostname |
 
 **Auth:** HTTP basic auth on both URLs. Credentials stored in 1Password → "Data Platform / fileserver".
 
@@ -427,7 +427,7 @@ curl -u $FILESERVER_USER:$FILESERVER_PASSWORD \
 
 # Via Caddy (TLS)
 curl -u $FILESERVER_USER:$FILESERVER_PASSWORD \
-  https://files.etl.local/sapo_export_latest.duckdb \
+  https://files.etl.lan.fwg.vn/sapo_export_latest.duckdb \
   -o sapo.duckdb
 
 # Query locally (no pipeline dependency)

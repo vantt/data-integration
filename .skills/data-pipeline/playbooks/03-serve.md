@@ -118,7 +118,7 @@ serving/standalone/
 - Service `data_fileserver` (caddy:alpine) in `docker-compose.yml`
 - Two access points (same content):
   - `http://<host>:3004/` — direct host port (LAN/VPN, scripts, AI tools)
-  - `https://files.etl.local/` — via Caddy reverse-proxy (TLS, friendly hostname)
+  - `https://files.etl.lan.fwg.vn/` — via Caddy reverse-proxy (TLS, friendly hostname)
 - Basic auth credentials: `FILESERVER_USER` / `FILESERVER_PASSWORD_HASH` in `.env.docker`
 
 **CRITICAL — `$$` escape for bcrypt in `.env.docker`:**
@@ -245,7 +245,7 @@ Xem `../references/troubleshooting.md` "Metabase — Dashboard Deploy" section:
 |---------------------|-------------|
 | MODEL → SERVE | Rolling Parquet từ `dim_/fact_` là input. SERVE chỉ READ Parquet, không modify. |
 | SERVE → (Metabase) | `olap.duckdb` views là interface duy nhất. Metabase queries views. |
-| SERVE → (External) | `sapo_export_latest.duckdb` via `:3004` direct or `https://files.etl.local/` — self-contained, no parquet dep. |
+| SERVE → (External) | `sapo_export_latest.duckdb` via `:3004` direct or `https://files.etl.lan.fwg.vn/` — self-contained, no parquet dep. |
 | SERVE + OPS | Dagster serving asset orchestrated by OPS schedules. `deps=[dbt_assets]` enforced. |
 | SERVE + MODEL | `get_rolling_location()` macro shared — Lesson 5 dbt-patterns canonical pattern. |
 

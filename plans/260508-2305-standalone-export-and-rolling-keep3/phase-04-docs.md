@@ -21,7 +21,7 @@
 
 - Tất cả markdown updates < 100 lines bổ sung tổng cộng (concision principle).
 - Diagrams (ASCII) khớp implementation thực.
-- URL examples đầy đủ (cả internal + public form `https://files.etl.local/...`).
+- URL examples đầy đủ (cả internal + public form `https://files.etl.lan.fwg.vn/...`).
 
 ## Related Code Files
 
@@ -45,7 +45,7 @@
        app_data/data_lake/serving/standalone/sapo_export_<TS>.duckdb
                                               sapo_export_latest.duckdb (alias)
      
-     Exposed read-only via `fileserver` service at https://files.etl.local/.
+     Exposed read-only via `fileserver` service at https://files.etl.lan.fwg.vn/.
      Use case: offline / AI analysis without parquet path dependency.
      ```
    - ASCII diagram update.
@@ -67,7 +67,7 @@
 3. **`docs/operations/operations.md`:**
    - Add subsection "Downloading Standalone Export":
      ```
-     URL: https://files.etl.local/sapo_export_latest.duckdb
+     URL: https://files.etl.lan.fwg.vn/sapo_export_latest.duckdb
      Auth: basic — credentials stored in 1Password "Data Platform / fileserver"
      
      Download: curl -u $USER:$PWD <url> -o sapo.duckdb
@@ -87,7 +87,7 @@
      ```
      3. Standalone Export DB (data_lake/serving/standalone/sapo_export_*.duckdb):
         Self-contained snapshot for offline / AI analysis. Built nightly.
-        Exposed via https://files.etl.local/.
+        Exposed via https://files.etl.lan.fwg.vn/.
      ```
 
 6. **Verify links:** sau khi viết xong, grep tất cả relative paths trong docs để confirm chính xác.

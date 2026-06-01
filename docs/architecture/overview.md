@@ -25,7 +25,7 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 - **Transformation:** dbt (SQL-based ELT)
 - **Orchestration:** Dagster (job scheduling)
 - **Serving:** DuckDB + Metabase (BI)
-- **Insight App:** FastAPI + Jinja2 + HTMX — `detailView`, read-only order/customer detail pages (hexagonal; reads `olap.duckdb` read-only; Docker service `detail_view` @ `detailview.local`)
+- **Insight App:** FastAPI + Jinja2 + HTMX — `detailView`, read-only order/customer detail pages (hexagonal; reads `olap.duckdb` read-only; Docker service `detail_view` @ `detailview.lan.fwg.vn`)
 - **Webhooks:** Cloudflare Workers + D1
 - **File Drop:** Shopee Income + MISA Sales Ledger (Excel → pandas → Parquet)
 

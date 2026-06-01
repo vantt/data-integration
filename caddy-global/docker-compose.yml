@@ -6,7 +6,11 @@ networks:
 
 services:
   caddy:
-    image: lucaslorentz/caddy-docker-proxy:ci-alpine
+    # Custom image: caddy-docker-proxy + caddy-dns/cloudflare (see Dockerfile.caddy)
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    image: caddy-global:dns01
     container_name: caddy-global
     restart: unless-stopped
     ports:
@@ -14,15 +18,20 @@ services:
       - "443:443"
     environment:
       - CADDY_INGRESS_NETWORKS=caddy_net
+      # Load global options (acme_dns cloudflare ...) from the mounted base file
+      - CADDY_DOCKER_CADDYFILE_PATH=/etc/caddy/base.Caddyfile
+      # Token for ACME DNS-01; interpolated from --env-file .env.docker at compose time
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
     networks:
       - caddy_net
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - caddy_data:/data
+      - ./base.Caddyfile:/etc/caddy/base.Caddyfile:ro
     # This label allows the dashboard/api of Caddy itself to be accessible if needed, 
     # though usually we keep it hidden.
     # labels:
-    #   caddy: proxy.local
+    #   caddy: proxy.lan.fwg.vn
     #   caddy.reverse_proxy: "{{upstreams 2019}}"
 
 volumes:

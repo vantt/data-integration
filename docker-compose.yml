@@ -42,7 +42,7 @@ services:
       - ./Dockerfile.metabase:/app/Dockerfile.metabase:ro
     command: sh -c "python scripts/ensure_dbt_directories.py && python scripts/ensure_shopee_safety_placeholder.py && (python scripts/maintenance/recover_health_db.py || true) && dbt deps --project-dir /app/transformation && dagster instance concurrency set duckdb_lock 1 && dbt parse --project-dir /app/transformation --profiles-dir /app/transformation && (python scripts/maintenance/unstick_concurrency_pools.py || true) && (python scripts/provisioning/bootstrap_reporting.py || true) && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
     labels:
-      caddy: etl.local
+      caddy: etl.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 3001}}"
 
   metabase:
@@ -62,7 +62,7 @@ services:
       - ./app_data/data_lake:/app/var/data_lake
       - monitoring_db:/app/var/data_lake/monitoring
     labels:
-      caddy: bi.local
+      caddy: bi.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 3000}}"
 
   rill:
@@ -84,7 +84,7 @@ services:
       - ./app_data/rill:/app/rill/.rill
     command: ["start", "--no-open", "--port", "9009", "--env", "RILL_EXPORT_ROOT=/app/var/data_lake/export/rill/current"]
     labels:
-      caddy: rill.local
+      caddy: rill.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 9009}}"
 
   fileserver:
@@ -103,7 +103,7 @@ services:
       # Caddyfile with basic_auth (Option B — inline auth)
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
     labels:
-      caddy: files.etl.local
+      caddy: files.etl.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 8080}}"
 
   detail_view:
@@ -126,14 +126,8 @@ services:
       # Read-only: app uses duckdb read_only=True; :ro is defense-in-depth at the OS level.
       - ./app_data/data_lake:/app/var/data_lake:ro
     labels:
-      # Internal LAN domain (Caddy internal CA, auto-detected for .local)
-      caddy_0: detailview.local
-      caddy_0.reverse_proxy: "{{upstreams 8000}}"
-      # Tailscale/internal domain — public TLD (.app) so MUST force internal CA,
-      # otherwise Caddy attempts Let's Encrypt ACME which fails (no public inbound).
-      caddy_1: detailview.app
-      caddy_1.tls: internal
-      caddy_1.reverse_proxy: "{{upstreams 8000}}"
+      caddy: detailview.lan.fwg.vn
+      caddy.reverse_proxy: "{{upstreams 8000}}"
 
 volumes:
   monitoring_db:

@@ -470,7 +470,7 @@ ORDER BY o.discount_amount DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Order Code}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Order Code}}"
         }
       }
     }
@@ -537,7 +537,7 @@ ORDER BY o.order_timestamp DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Order Code}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Order Code}}"
         }
       }
     }
@@ -1013,7 +1013,7 @@ ORDER BY o.discount_amount DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Order Code}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Order Code}}"
         }
       }
     }
@@ -1080,7 +1080,7 @@ ORDER BY o.order_timestamp DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Order Code}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Order Code}}"
         }
       }
     }
@@ -1576,7 +1576,7 @@ ORDER BY o.discount_amount DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Order Code}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Order Code}}"
         }
       }
     }
@@ -1643,7 +1643,7 @@ ORDER BY o.order_timestamp DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Order Code}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Order Code}}"
         }
       }
     }

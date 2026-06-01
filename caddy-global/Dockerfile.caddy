@@ -1,0 +1,12 @@
+# Custom Caddy image = caddy-docker-proxy + Cloudflare DNS plugin (for ACME DNS-01).
+# The stock lucaslorentz/caddy-docker-proxy image lacks the DNS provider module,
+# so we rebuild Caddy with both modules via xcaddy.
+FROM caddy:2-builder AS builder
+RUN xcaddy build \
+    --with github.com/lucaslorentz/caddy-docker-proxy/v2 \
+    --with github.com/caddy-dns/cloudflare
+
+FROM caddy:2-alpine
+COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+# Run in docker-proxy mode (reads container labels on caddy_net).
+CMD ["caddy", "docker-proxy"]

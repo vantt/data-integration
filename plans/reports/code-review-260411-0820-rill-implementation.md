@@ -28,7 +28,7 @@
 | 17 | Dagster asset calls `publish_rill_assets.py` | PASS | Subprocess call with timeout |
 | 18 | `publish_rill_assets.py` copies to `export/rill/current/` | PASS | Atomic copy with manifest |
 | 19 | Dagster loads rill module | PASS | `definitions.py` imports `rill` in `load_assets_from_modules` |
-| 20 | Docker compose: rill service on `caddy_net` | PASS | Port 9009, correct mounts, `rill.local` label |
+| 20 | Docker compose: rill service on `caddy_net` | PASS | Port 9009, correct mounts, `rill.lan.fwg.vn` label |
 | 21 | `.env.example` in rill project | MISSING | Spec Section 7 mentions it |
 | 22 | Explore dashboards (3) | PASS | `orders_core`, `sales_items_core`, `marketing_spend_core` |
 

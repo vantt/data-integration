@@ -92,7 +92,7 @@ WHERE o.order_id = {{order_id}}
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Ma Don}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Ma Don}}"
         }
       }
     }

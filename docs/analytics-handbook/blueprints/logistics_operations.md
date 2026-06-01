@@ -663,7 +663,7 @@ ORDER BY "Chờ (giờ)" DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Mã đơn}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Mã đơn}}"
         }
       }
     }
@@ -850,7 +850,7 @@ ORDER BY o.order_timestamp DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Mã đơn}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Mã đơn}}"
         }
       }
     }

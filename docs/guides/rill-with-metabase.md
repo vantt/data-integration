@@ -105,7 +105,7 @@ With the new assumption that Rill runs inside the same `docker-compose.yml`, tre
 - mount the Rill project folder at `/app/rill`
 - mount `./app_data/data_lake` at `/app/data_lake`
 - persist Rill runtime state in a dedicated host path such as `./app_data/rill`
-- expose it behind a separate host such as `rill.local`
+- expose it behind a separate host such as `rill.lan.fwg.vn`
 
 Recommended ownership:
 

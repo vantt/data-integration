@@ -15,7 +15,7 @@
 
 | Decision | Choice | Rationale |
 |---|---|---|
-| HTTP expose | **Option B**: inline `caddy:alpine` + `caddy/Caddyfile` (basic_auth) + label `caddy: files.etl.local` cho external Caddy reverse-proxy | Caddy chính KHÔNG handle basic_auth → service tự gắn auth. Vẫn join `caddy_net` để có TLS từ Caddy chính. |
+| HTTP expose | **Option B**: inline `caddy:alpine` + `caddy/Caddyfile` (basic_auth) + label `caddy: files.etl.lan.fwg.vn` cho external Caddy reverse-proxy | Caddy chính KHÔNG handle basic_auth → service tự gắn auth. Vẫn join `caddy_net` để có TLS từ Caddy chính. |
 | GC retention | KEEP=3 (env-overridable) | Rollback + audit; storage cost negligible (~vài GB) |
 | Atomic write | KHÔNG làm | Phức tạp dbt-duckdb override; chưa có incident thực |
 | Schedule | Nightly sau `sapo_serving_db` | Đồng bộ với nightly batch nightly cycle |
@@ -63,14 +63,14 @@ Phase 1 + 3 độc lập, có thể làm song song. Phase 2 cần Phase 1 trư�
 
 1. `docker compose up` → asset `sapo_standalone_export` runs OK trong nightly job.
 2. File `sapo_export_latest.duckdb` xuất hiện trong `app_data/data_lake/serving/standalone/`.
-3. URL `https://files.etl.local/standalone/sapo_export_latest.duckdb` tải được, query được bằng DuckDB CLI ngoài container.
+3. URL `https://files.etl.lan.fwg.vn/standalone/sapo_export_latest.duckdb` tải được, query được bằng DuckDB CLI ngoài container.
 4. `ls rolling/<table>/` thấy ≤ 3 files sau nightly.
 5. Metabase vẫn hoạt động bình thường (không lock contention).
 
 ## Resolved (user 2026-05-08 23:20)
 
 1. Caddy chính KHÔNG handle basic_auth → use Option B (inline Caddyfile).
-2. Hostname `files.etl.local` KHÔNG conflict.
+2. Hostname `files.etl.lan.fwg.vn` KHÔNG conflict.
 3. KHÔNG cần access log cho audit.
 4. Scope: toàn bộ marts (auto-pickup tất cả views trong olap.duckdb).
 

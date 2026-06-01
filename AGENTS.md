@@ -110,7 +110,7 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 - **Tech:** Python, FastAPI + Jinja2 + HTMX. **Hexagonal architecture** (domain ⟂ ports ⟂ adapters).
 - **Data:** Opens `data_lake/serving/olap.duckdb` with `read_only=True` (same DB Metabase reads; zero lock risk). Queries `fact_*`/`dim_*`/`mart_*` views only — NEVER `int_*`.
 - **Boundaries:** `domain/` + `application/` are pure (NO duckdb/fastapi imports — enforced by an architecture test). SQL lives ONLY in `adapters/outbound/duckdb/`.
-- **Runtime:** Docker service `detail_view` (port `3005:8000`, Caddy `detailview.local`). No auth (LAN-only). Deps: own `detailView/requirements.txt`.
+- **Runtime:** Docker service `detail_view` (port `3005:8000`, Caddy `detailview.lan.fwg.vn`). No auth (LAN-only). Deps: own `detailView/requirements.txt`.
 
 ---
 
@@ -263,7 +263,7 @@ Three distinct DuckDB files separate **Write**, **Read**, and **Export**:
 
 1.  **Warehouse DB** (`data_lake/sapo_warehouse.duckdb`): dbt writes here. Uses Docker paths.
 2.  **Serving DB** (`data_lake/serving/olap.duckdb`): Metabase reads here. Contains rolling self-refresh views pointing to latest Parquet exports.
-3.  **Standalone Export DB** (`data_lake/serving/standalone/sapo_export_*.duckdb`): Self-contained snapshot (no parquet dependency). Built nightly by `sapo_standalone_export` asset. Exposed read-only at `https://files.etl.local/` via `data_fileserver` (Caddy). Use for offline analysis, AI tools, or external distribution.
+3.  **Standalone Export DB** (`data_lake/serving/standalone/sapo_export_*.duckdb`): Self-contained snapshot (no parquet dependency). Built nightly by `sapo_standalone_export` asset. Exposed read-only at `https://files.etl.lan.fwg.vn/` via `data_fileserver` (Caddy). Use for offline analysis, AI tools, or external distribution.
 
 **Critical Rule**: Fixing `dbt` only updates warehouse DB. You **MUST** run `generate_serving_db.py` to propagate changes to serving DB. Ensure `PORTABLE_ROOT` matches the Docker mount path.
 

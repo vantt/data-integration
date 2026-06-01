@@ -4,13 +4,13 @@
 
 - Plan: [plan.md](plan.md)
 - Source pattern: `D:/Vantt/app/nu-data-pipeline/docker-compose.yml` service `fileserver` + `caddy/Caddyfile`
-- Existing convention: `data-integration/docker-compose.yml` service labels `caddy: bi.local`, `caddy: rill.local`
+- Existing convention: `data-integration/docker-compose.yml` service labels `caddy: bi.lan.fwg.vn`, `caddy: rill.lan.fwg.vn`
 
 ## Overview
 
 - **Priority:** P1
 - **Status:** Pending
-- **Description:** Thêm service `fileserver` (caddy:alpine, file-browse mode) mount `serving/standalone:ro`, đăng ký vào external Caddy proxy qua label `caddy: files.etl.local` để có URL ổn định + auth/cert quản lý tập trung.
+- **Description:** Thêm service `fileserver` (caddy:alpine, file-browse mode) mount `serving/standalone:ro`, đăng ký vào external Caddy proxy qua label `caddy: files.etl.lan.fwg.vn` để có URL ổn định + auth/cert quản lý tập trung.
 
 ## Key Insights
 
@@ -22,14 +22,14 @@
 ## Requirements
 
 ### Functional
-- URL `https://files.etl.local/standalone/sapo_export_latest.duckdb` resolve được trong LAN/VPN.
+- URL `https://files.etl.lan.fwg.vn/standalone/sapo_export_latest.duckdb` resolve được trong LAN/VPN.
 - Index page liệt kê file (Caddy `file_server browse`).
 - Read-only mount — không cho phép upload/delete.
 
 ### Non-functional
 - Restart-resilient (`restart: unless-stopped`).
 - Service không depend on data_platform start (Caddy nhẹ, idempotent).
-- Auth: basic_auth ở Caddy chính (chia sẻ cùng cơ chế của bi.local/etl.local).
+- Auth: basic_auth ở Caddy chính (chia sẻ cùng cơ chế của bi.lan.fwg.vn/etl.lan.fwg.vn).
 
 ## Architecture
 
@@ -66,7 +66,7 @@ Internet/LAN
 1. **Confirm Caddy chính config:**
    - Tìm Caddy chính: `docker ps | grep caddy` hoặc check `D:/Vantt/app/caddy*` cho compose riêng.
    - Verify nó pickup labels `caddy: <hostname>` + `caddy.reverse_proxy: ...` từ services chung network.
-   - Verify hostname `files.etl.local` chưa conflict (resolve nội bộ DNS / `/etc/hosts`).
+   - Verify hostname `files.etl.lan.fwg.vn` chưa conflict (resolve nội bộ DNS / `/etc/hosts`).
 
 2. **Decide auth location:**
    - **A (preferred):** Caddy chính handle basic_auth bằng global directive trong Caddyfile (xem caddy global config nếu có).
@@ -88,7 +88,7 @@ Internet/LAN
      # Default Caddy config serves /srv. Override CMD nếu cần custom.
      command: ["caddy", "file-server", "--listen", ":8080", "--browse", "--root", "/data"]
      labels:
-       caddy: files.etl.local
+       caddy: files.etl.lan.fwg.vn
        caddy.reverse_proxy: "{{upstreams 8080}}"
        # If basic_auth at central Caddy: add caddy.basic_auth + caddy.basic_auth.<user> labels
    ```
@@ -98,10 +98,10 @@ Internet/LAN
    - `docker compose logs fileserver` — confirm starts without error
    - `curl -I http://data_fileserver:8080/` từ container khác trên `caddy_net` — expect 200/401
    - Trigger Phase 1 manual run để có file
-   - `curl -u user:pwd https://files.etl.local/sapo_export_latest.duckdb -o /tmp/test.duckdb`
+   - `curl -u user:pwd https://files.etl.lan.fwg.vn/sapo_export_latest.duckdb -o /tmp/test.duckdb`
    - `duckdb /tmp/test.duckdb -c "SHOW TABLES;"`
 
-5. **Browse page check:** Mở `https://files.etl.local/` trong browser → thấy listing file `sapo_export_*.duckdb`.
+5. **Browse page check:** Mở `https://files.etl.lan.fwg.vn/` trong browser → thấy listing file `sapo_export_*.duckdb`.
 
 ## Todo List
 
@@ -109,13 +109,13 @@ Internet/LAN
 - [ ] Append `fileserver` service to docker-compose.yml
 - [ ] (Conditional B) Create `caddy/Caddyfile` + env vars
 - [ ] Up service, verify reachable trên caddy_net
-- [ ] Verify URL `files.etl.local` resolve đúng
+- [ ] Verify URL `files.etl.lan.fwg.vn` resolve đúng
 - [ ] Auth working
 - [ ] Download + open .duckdb file successfully
 
 ## Success Criteria
 
-- `https://files.etl.local/sapo_export_latest.duckdb` tải được.
+- `https://files.etl.lan.fwg.vn/sapo_export_latest.duckdb` tải được.
 - Listing page (browse) hiện đầy đủ snapshots timestamped + `_latest`.
 - File tải về có thể attach DuckDB CLI/Python ngoài container (không cần parquet path).
 - Auth required (401 nếu thiếu credentials).
@@ -128,12 +128,12 @@ Internet/LAN
 | Hostname conflict | Pre-check DNS / `/etc/hosts` / Caddy chính routing |
 | Port 8080 trùng trong container | Internal-only — không expose host port; conflict chỉ nếu trong cùng container (impossible với image này) |
 | Public exposure leak | Mount `:ro`; Caddy chính bắt buộc auth; document trong AGENTS.md |
-| Caddy label syntax sai | Test `docker compose config` parse OK; xem `etl.local` working sample |
+| Caddy label syntax sai | Test `docker compose config` parse OK; xem `etl.lan.fwg.vn` working sample |
 
 ## Security Considerations
 
 - File chứa toàn bộ business data → **MANDATORY** basic_auth.
-- Đảm bảo `files.etl.local` chỉ resolve trong LAN/VPN, không expose public.
+- Đảm bảo `files.etl.lan.fwg.vn` chỉ resolve trong LAN/VPN, không expose public.
 - Document credential rotation procedure.
 - Log access log của Caddy để audit ai download.
 - Cân nhắc IP allowlist trong Caddy chính nếu có teammate ngoài VPN.

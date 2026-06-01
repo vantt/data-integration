@@ -445,7 +445,7 @@ ORDER BY fo.order_timestamp DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "https://detailview.local/orders/{{Ma don}}"
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Ma don}}"
         }
       }
     }

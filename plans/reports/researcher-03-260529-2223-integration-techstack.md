@@ -90,7 +90,7 @@ networks:
 
 ```yaml
 labels:
-  caddy: app.local           # hostname for local TLS
+  caddy: app.lan.fwg.vn           # hostname for local TLS
   caddy.reverse_proxy: "{{upstreams <INTERNAL_PORT>}}"
 ```
 
@@ -123,7 +123,7 @@ All first-party services use a custom Dockerfile (`Dockerfile.<name>`) with cont
     volumes:
       - ./app_data/data_lake:/app/var/data_lake
     labels:
-      caddy: detail.local
+      caddy: detail.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams <INTERNAL_PORT>}}"
 ```
 

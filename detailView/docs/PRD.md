@@ -126,7 +126,7 @@ Customer: `dim_customers`, `mart_customer_status_snapshot_monthly`, + order fact
 
 ## 8. Deployment & Integration
 - `Dockerfile.detailview` (python:3.11-slim, install fastapi/uvicorn/duckdb/jinja2/pydantic-settings).
-- Compose service `detail_view`: build context `.`, port `3005:8000`, `env_file: .env.docker`, network `caddy_net`, mount `./app_data/data_lake:/app/var/data_lake:ro`, labels `caddy: detailview.local` + `reverse_proxy {{upstreams 8000}}`.
+- Compose service `detail_view`: build context `.`, port `3005:8000`, `env_file: .env.docker`, network `caddy_net`, mount `./app_data/data_lake:/app/var/data_lake:ro`, labels `caddy: detailview.lan.fwg.vn` + `reverse_proxy {{upstreams 8000}}`.
 - Env: `OLAP_DB_PATH=/app/var/data_lake/serving/olap.duckdb`, `APP_TZ=Asia/Ho_Chi_Minh`, `DETAIL_VIEW_PORT=8000`.
 - Registration: README.md (structure + stack), docs/README.md (component table), AGENTS.md (multi-project §6 + boundary rule), docs/architecture/overview.md (topology), .env.docker(+examples).
 
@@ -144,7 +144,7 @@ Customer: `dim_customers`, `mart_customer_status_snapshot_monthly`, + order fact
 - AC-3: Search resolves order code and customer id/phone; not-found is graceful.
 - AC-4: App connects `read_only` while Metabase live; no lock error. `/healthz` green.
 - AC-5: Domain/application layers have NO import of duckdb/fastapi (architecture test).
-- AC-6: Every source file < 200 LOC; runs in container at `detailview.local`.
+- AC-6: Every source file < 200 LOC; runs in container at `detailview.lan.fwg.vn`.
 
 ## 11. Open Questions
 1. JSON API surface now or later? (default: thin `/api/*` now).

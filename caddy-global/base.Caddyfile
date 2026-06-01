@@ -1,0 +1,11 @@
+# Global options for caddy-global (front proxy).
+# Loaded via CADDY_DOCKER_CADDYFILE_PATH; merged with the label-derived config.
+{
+	# ACME DNS-01 via Cloudflare for every public-domain cert (e.g. *.lan.fwg.vn).
+	# .local domains are unaffected — Caddy still issues those from its internal CA.
+	# Token comes from the container env (passed from .env.docker).
+	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+
+	# Expiry notifications (optional; need not be a receivable mailbox for issuance).
+	email admin@fwg.vn
+}
