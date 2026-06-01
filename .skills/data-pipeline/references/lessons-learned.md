@@ -3475,14 +3475,14 @@ WHERE 1=1 [[AND {{action_type}}]]
 **Fix:**
 1. Add the internal ID to the SQL SELECT: `customer_id AS "customer_id"`
 2. Hide it in `table.columns`: `{ "name": "customer_id", "enabled": false }`
-3. Reference it in `click_behavior`: `"linkTemplate": "http://detailview.local/customers/{{customer_id}}"`
+3. Reference it in `click_behavior`: `"linkTemplate": "https://detailview.local/customers/{{customer_id}}"`
 
 ```json
 "Mã KH": {
   "click_behavior": {
     "type": "link",
     "linkType": "url",
-    "linkTemplate": "http://detailview.local/customers/{{customer_id}}"
+    "linkTemplate": "https://detailview.local/customers/{{customer_id}}"
   }
 }
 ```
@@ -3497,47 +3497,38 @@ WHERE 1=1 [[AND {{action_type}}]]
 
 ---
 
-### L104 — Metabase `field_id` on dashboard parameter + SQL variable template tag = dimension/variable mapping mismatch → all widgets fail when filter active
+### L104 — Metabase all-widgets crash when filter active = `field_id` present but SQL uses wrong syntax
 
 **Group:** SERVE
 
-**Symptom:** Dashboard works fine with no filter selected. As soon as any filter value is chosen, ALL widgets on the dashboard error ("There was a problem displaying this chart.") — even cards that don't use that filter column.
+**Symptom:** Dashboard works fine with no filter selected. As soon as any filter value is chosen, ALL widgets error ("There was a problem displaying this chart.").
 
-**Root cause:** Two incompatible filter modes exist in Metabase:
+**Root cause:** `field_id` on a dashboard parameter makes the deploy script create `dimension`-type template tags. A dimension tag replaces `{{slug}}` with the FULL clause `col = 'value'`. If SQL is written as `[[AND col = {{slug}}]]`, Metabase injects `AND col = col = 'value'` — invalid SQL — crashing every card.
 
-| Mode | Dashboard param | SQL template tag type | parameter_mapping target |
-|------|-----------------|-----------------------|--------------------------|
-| **Variable** | `string/=` (no `field_id`) | `type: "text"` / plain `{{var}}` | `["variable", ["template-tag", "slug"]]` |
-| **Field filter** | `string/=` + `field_id` | `type: "dimension"` + dimension binding | `["dimension", ["template-tag", "slug"]]` |
+**Fix:** Change SQL from variable syntax to field filter syntax. See **L105** for the full recipe.
+```sql
+-- WRONG (causes crash):
+WHERE action_type = 'X' [[AND col = {{value_group}}]]
 
-Adding `field_id` to a dashboard parameter makes Metabase create `["dimension", ...]` parameter_mappings. But SQL cards using `[[AND col = {{slug}}]]` have plain text template tags — they only accept `["variable", ...]` mappings. The mismatch causes Metabase to fail silently at the query level, crashing every card on the dashboard when the filter carries a value.
-
-**Fix:** Remove `field_id` from dashboard parameters that map to plain SQL `{{variable}}` template tags. Accept text input for those filters.
-```json
-{ "slug": "action_type", "type": "string/=" }
+-- CORRECT:
+WHERE action_type = 'X' [[AND {{value_group}}]]
 ```
 
-Verify the mapping type after deploy:
-```js
-const dash = await fetch('/api/dashboard/:id').then(r=>r.json());
-dash.dashcards[0].parameter_mappings;
-// must show ["variable", ...] not ["dimension", ...]
-```
+**Diagnosis:** Check `parameter_mappings[].target[0]` via API:
+- `"dimension"` → field filter mode → SQL must use `[[AND {{slug}}]]`
+- `"variable"` → plain variable mode → SQL must use `[[AND col = {{slug}}]]`
 
-**Rules:**
-1. `field_id` on a dashboard parameter is ONLY safe when the matching SQL card template tag is `type: "dimension"` (a field filter, not a plain variable).
-2. SQL `[[AND col = {{slug}}]]` = plain variable → dashboard param must have NO `field_id`.
-3. SQL `{{slug}}` as a field filter (binds to a column, no `AND col =`) = dimension → dashboard param needs `field_id`.
-4. When all widgets break only after selecting a filter: check `parameter_mappings.target[0]` — if it says `"dimension"` but SQL uses a plain variable, remove `field_id` from the dashboard param.
-5. `date/all-options` is a different case — it always uses field filter mode and requires `field_id` (see filter-date-range-pattern.md).
-
-**Reference:** `docs/analytics-handbook/blueprints/customer_action_queue.md`
+**Reference:** See **L105** for the complete working recipe (field_id + `[[AND {{slug}}]]`)
 
 ---
 
-### L102 — ~~RETRACTED~~ `field_id` on `string/=` dashboard params does NOT safely enable dropdown for plain SQL variable cards
+### L102 — Metabase `string/=` dropdown requires `field_id` on param + `[[AND {{slug}}]]` in SQL (field filter mode)
 
-> **Superseded by L104.** The advice in this entry (add `field_id` to get a dropdown) is correct in intent but dangerous in practice: it breaks every widget on the dashboard when a filter value is selected. Do not add `field_id` to dashboard parameters unless the matching SQL template tags use `type: "dimension"` (field filter mode).
+**Group:** SERVE
+
+**Summary:** To get a searchable dropdown for a `string/=` dashboard filter, use `field_id` on the parameter AND write SQL in field filter syntax. See **L105** for the complete working recipe.
+
+> **Note:** An earlier version of this entry said `field_id` alone causes crashes — that was incomplete. `field_id` is correct; the crash came from wrong SQL syntax (`[[AND col = {{slug}}]]` instead of `[[AND {{slug}}]]`). L104 documents the crash symptom, L105 documents the fix.
 
 **Group:** SERVE
 
