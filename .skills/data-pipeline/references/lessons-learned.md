@@ -3423,6 +3423,39 @@ CAST(last_order_date AS DATE) + (n::VARCHAR || ' days')::INTERVAL
 
 **Reference:** `detailView/app/domain/shared.py` (OrderTab), `detailView/app/adapters/inbound/web/routes.py`, `detailView/app/adapters/inbound/web/templates/order_detail.html`
 
+### L103 — Metabase click_behavior link templates can reference hidden columns — use for internal IDs in URLs
+
+**Group:** SERVE
+
+**Symptom:** Want to make a display column (e.g. `Mã KH`) clickable to a detail page, but the URL requires an internal ID (`customer_id`) that is not the displayed value. Using `/go/{code}` resolver works but adds an unnecessary redirect hop.
+
+**Root cause:** Metabase `click_behavior.linkTemplate` can reference ANY column returned by the query using `{{column_name}}` — including columns marked `"enabled": false` in `table.columns`. Hidden columns are not visible to the user but are available as template variables.
+
+**Fix:**
+1. Add the internal ID to the SQL SELECT: `customer_id AS "customer_id"`
+2. Hide it in `table.columns`: `{ "name": "customer_id", "enabled": false }`
+3. Reference it in `click_behavior`: `"linkTemplate": "http://detailview.local/customers/{{customer_id}}"`
+
+```json
+"Mã KH": {
+  "click_behavior": {
+    "type": "link",
+    "linkType": "url",
+    "linkTemplate": "http://detailview.local/customers/{{customer_id}}"
+  }
+}
+```
+
+**Rules:**
+1. When entity type is known (customer/order), link directly to the entity route — do NOT use a resolver (`/go/`) that adds an extra round-trip.
+2. Use hidden columns (`"enabled": false`) to carry internal IDs needed in link templates without cluttering the table view.
+3. The hidden column name in `linkTemplate` must match the SQL alias exactly (case-sensitive).
+4. `/go/{code}` resolver is for cross-entity lookups (e.g. search bar, barcode scanner) where entity type is ambiguous — not for dashboard links where type is guaranteed.
+
+**Reference:** `docs/analytics-handbook/blueprints/customer_action_queue.md` — "Queue — Danh sach outreach" question
+
+---
+
 ### L102 — Metabase `string/=` filter renders as text input without `field_id`; add `field_id` for dropdown
 
 **Group:** SERVE
