@@ -3423,6 +3423,47 @@ CAST(last_order_date AS DATE) + (n::VARCHAR || ' days')::INTERVAL
 
 **Reference:** `detailView/app/domain/shared.py` (OrderTab), `detailView/app/adapters/inbound/web/routes.py`, `detailView/app/adapters/inbound/web/templates/order_detail.html`
 
+### L105 — Metabase field filter SQL syntax: `[[AND {{slug}}]]` not `[[AND col = {{slug}}]]`
+
+**Group:** SERVE
+
+**Symptom:** Same as L104 — all widgets crash when filter is active. OR: filters silently double-apply (`col = col = 'value'`), returning 0 rows.
+
+**Root cause:** Two SQL template tag modes inject values differently:
+
+| Tag type | Dashboard param | SQL syntax | What Metabase injects |
+|----------|----------------|------------|-----------------------|
+| `text` variable | no `field_id` | `[[AND col = {{slug}}]]` | just the raw value string |
+| `dimension` field filter | has `field_id` | `[[AND {{slug}}]]` | full clause: `col = 'value'` |
+
+When `field_id` is present on a dashboard param, the deploy script auto-creates a `dimension`-type template tag. A dimension tag replaces `{{slug}}` with the **full WHERE clause** (`col = 'value'`). Writing `AND col = {{slug}}` produces `AND col = col = 'value'` — invalid SQL → query fails.
+
+**Fix:** Change SQL from `[[AND col = {{slug}}]]` → `[[AND {{slug}}]]` whenever `field_id` is on the dashboard parameter:
+```sql
+-- WRONG (variable syntax with field_id):
+WHERE 1=1 [[AND action_type = {{action_type}}]]
+
+-- CORRECT (field filter syntax with field_id):
+WHERE 1=1 [[AND {{action_type}}]]
+```
+
+**The full working recipe for dropdown filters:**
+1. Dashboard param: `{ "slug": "action_type", "type": "string/=", "field_id": 773 }`
+2. SQL: `WHERE 1=1 [[AND {{action_type}}]] [[AND {{value_group}}]]`
+3. Deploy script auto-creates `dimension` template tags → parameter_mappings = `["dimension", ...]`
+4. Metabase renders a searchable dropdown fetching values from field 773
+
+**Rules:**
+1. `field_id` present → SQL must use `[[AND {{slug}}]]` (field filter syntax)
+2. No `field_id` → SQL must use `[[AND col = {{slug}}]]` (variable syntax)
+3. Never mix: `field_id` + `[[AND col = {{slug}}]]` = double-clause crash
+4. Check `parameter_mappings[].target[0]`: `"dimension"` confirms field filter mode, `"variable"` confirms plain variable mode
+5. This rule also applies to date filters: `[[AND {{date_range}}]]` not `[[AND date_col = {{date_range}}]]`
+
+**Reference:** `docs/analytics-handbook/blueprints/customer_action_queue.md` · See also L104 (mapping type mismatch)
+
+---
+
 ### L103 — Metabase click_behavior link templates can reference hidden columns — use for internal IDs in URLs
 
 **Group:** SERVE
