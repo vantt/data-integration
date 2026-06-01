@@ -323,6 +323,8 @@ Ranked customer action list — top 500 by priority_rank then lifetime_value DES
 ```sql
 SELECT
     priority_rank                  AS "P",
+    customer_code                  AS "Mã KH",
+    customer_id                    AS "customer_id",
     CASE action_type
         WHEN 'CALL_NOW'         THEN '📞 Gọi ngay'
         WHEN 'REORDER_NUDGE'    THEN '🔄 Tái mua'
@@ -331,7 +333,6 @@ SELECT
         WHEN 'HIGH_CANCEL_RISK' THEN '⚠️ Rủi ro huỷ'
     END                            AS "Hành động",
     full_name                      AS "Tên khách",
-    customer_code                  AS "Mã KH",
     phone                          AS "SĐT",
     value_group                    AS "Nhóm",
     action_rationale               AS "Lý do",
@@ -354,9 +355,10 @@ LIMIT 500
   "visualization_settings": {
     "table.columns": [
       { "name": "P",                    "enabled": true },
+      { "name": "Mã KH",               "enabled": true },
+      { "name": "customer_id",          "enabled": false },
       { "name": "Hành động",            "enabled": true },
       { "name": "Tên khách",            "enabled": true },
-      { "name": "Mã KH",               "enabled": true },
       { "name": "SĐT",                 "enabled": true },
       { "name": "Nhóm",                "enabled": true },
       { "name": "Lý do",               "enabled": true },
@@ -367,6 +369,13 @@ LIMIT 500
       { "name": "Dự kiến mua lại",     "enabled": true }
     ],
     "column_settings": {
+      "Mã KH": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "http://detailview.local/customers/{{customer_id}}"
+        }
+      },
       "Giá trị": {
         "number_style": "currency",
         "currency": "VND",
