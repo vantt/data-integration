@@ -408,7 +408,7 @@ ORDER BY o.order_timestamp DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "http://detailView.app/orders/{{Ma don}}"
+          "linkTemplate": "https://detailview.local/orders/{{Ma don}}"
         }
       }
     }

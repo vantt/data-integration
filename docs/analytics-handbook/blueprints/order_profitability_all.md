@@ -491,7 +491,7 @@ ORDER BY e.gross_profit DESC
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "http://detailView.app/orders/{{Ma don}}"
+          "linkTemplate": "https://detailview.local/orders/{{Ma don}}"
         }
       }
     }

@@ -526,7 +526,7 @@ LIMIT 200
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "http://detailView.app/orders/{{Ma don hang}}"
+          "linkTemplate": "https://detailview.local/orders/{{Ma don hang}}"
         }
       }
     }
@@ -601,7 +601,7 @@ LIMIT 200
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "http://detailView.app/orders/{{Ma don hang}}"
+          "linkTemplate": "https://detailview.local/orders/{{Ma don hang}}"
         }
       }
     }

@@ -525,7 +525,7 @@ LIMIT 20
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "http://detailView.app/orders/{{Mã đơn}}"
+          "linkTemplate": "https://detailview.local/orders/{{Mã đơn}}"
         }
       }
     }

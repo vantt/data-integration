@@ -373,7 +373,7 @@ LIMIT 500
         "click_behavior": {
           "type": "link",
           "linkType": "url",
-          "linkTemplate": "http://detailview.local/customers/{{customer_id}}?tab=actions"
+          "linkTemplate": "https://detailview.local/customers/{{customer_id}}?tab=actions"
         }
       },
       "Giá trị": {
