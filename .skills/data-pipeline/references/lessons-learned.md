@@ -3423,6 +3423,33 @@ CAST(last_order_date AS DATE) + (n::VARCHAR || ' days')::INTERVAL
 
 **Reference:** `detailView/app/domain/shared.py` (OrderTab), `detailView/app/adapters/inbound/web/routes.py`, `detailView/app/adapters/inbound/web/templates/order_detail.html`
 
+### L102 — Metabase `string/=` filter renders as text input without `field_id`; add `field_id` for dropdown
+
+**Group:** SERVE
+
+**Symptom:** Dashboard filter with `"type": "string/="` shows a plain text input box. Users cannot discover valid values (e.g. `CALL_NOW`, `VALUE_VIP`) and must type them exactly from memory.
+
+**Root cause:** A `string/=` filter without `field_id` is treated by Metabase as a raw SQL variable — it cannot fetch the field's value list from the database and falls back to a free-text input. The same filter with `field_id` bound to the actual column causes Metabase to query distinct values from the DB and render a searchable combobox/dropdown.
+
+**Fix:** Look up `field_id` via the Metabase API (`/api/table/{table_id}/query_metadata`), then add it to the filter definition in the blueprint:
+```json
+{
+  "slug": "action_type",
+  "type": "string/=",
+  "field_id": 773
+}
+```
+
+**Rules:**
+1. Every `string/=` dashboard filter **must** include `field_id` — without it, the UI is unusable for categorical fields.
+2. Find `field_id` by querying the Metabase table metadata API or via `node -e` with the MetabaseClient helper.
+3. `date/all-options` filters also require `field_id` (see L95/filter-date-range-pattern.md) — same root cause, different symptom (relative date values fail silently).
+4. Blueprint template: always include `field_id` as a placeholder comment so it's not forgotten during authoring.
+
+**Reference:** `docs/analytics-handbook/blueprints/customer_action_queue.md` — Action Type (field 773), Value Group (field 758)
+
+---
+
 ### L101 — HTMX tab partial endpoints cannot be used as full-page deep-links
 
 **Group:** SERVE
