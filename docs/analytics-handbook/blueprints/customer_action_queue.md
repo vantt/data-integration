@@ -23,10 +23,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 {
   "slug": "action_type",
   "type": "string/=",
-  "values_source_type": "static-list",
-  "values_source_config": {
-    "values": ["CALL_NOW", "REORDER_NUDGE", "WIN_BACK", "SECOND_ORDER", "HIGH_CANCEL_RISK"]
-  }
+  "field_id": 773
 }
 ```
 
@@ -36,10 +33,7 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 {
   "slug": "value_group",
   "type": "string/=",
-  "values_source_type": "static-list",
-  "values_source_config": {
-    "values": ["VALUE_VIP", "VALUE_GOLD", "VALUE_SILVER", "VALUE_BRONZE"]
-  }
+  "field_id": 758
 }
 ```
 
@@ -91,7 +85,7 @@ VIP/Gold khách at-risk — ưu tiên cao nhất, gọi ngay.
 SELECT COUNT(*) AS "📞 Gọi ngay"
 FROM mart_customer_action_queue
 WHERE action_type = 'CALL_NOW'
-[[AND value_group = {{value_group}}]]
+[[AND {{value_group}}]]
 ```
 
 ```json metabase-viz
@@ -117,7 +111,7 @@ Khách quá hạn tái mua — nhắn tin hoặc gọi nhắc.
 SELECT COUNT(*) AS "🔄 Nhắn tái mua"
 FROM mart_customer_action_queue
 WHERE action_type = 'REORDER_NUDGE'
-[[AND value_group = {{value_group}}]]
+[[AND {{value_group}}]]
 ```
 
 ```json metabase-viz
@@ -143,7 +137,7 @@ Khách đã churn — cần offer win-back.
 SELECT COUNT(*) AS "🔙 Win-back"
 FROM mart_customer_action_queue
 WHERE action_type = 'WIN_BACK'
-[[AND value_group = {{value_group}}]]
+[[AND {{value_group}}]]
 ```
 
 ```json metabase-viz
@@ -169,7 +163,7 @@ Khách mua 1 lần, chưa quay lại — push đơn thứ 2.
 SELECT COUNT(*) AS "🆕 Push đơn 2"
 FROM mart_customer_action_queue
 WHERE action_type = 'SECOND_ORDER'
-[[AND value_group = {{value_group}}]]
+[[AND {{value_group}}]]
 ```
 
 ```json metabase-viz
@@ -195,7 +189,7 @@ Tỷ lệ huỷ cao — cần xác nhận đơn chủ động.
 SELECT COUNT(*) AS "⚠️ Rủi ro huỷ"
 FROM mart_customer_action_queue
 WHERE action_type = 'HIGH_CANCEL_RISK'
-[[AND value_group = {{value_group}}]]
+[[AND {{value_group}}]]
 ```
 
 ```json metabase-viz
@@ -239,8 +233,8 @@ SELECT
     SUM(value_at_stake) AS "Giá trị (VND)"
 FROM mart_customer_action_queue
 WHERE 1=1
-[[AND action_type = {{action_type}}]]
-[[AND value_group = {{value_group}}]]
+[[AND {{action_type}}]]
+[[AND {{value_group}}]]
 GROUP BY action_type
 ORDER BY MIN(priority_rank)
 ```
@@ -288,8 +282,8 @@ SELECT
     COUNT(*) AS "Số khách"
 FROM mart_customer_action_queue
 WHERE 1=1
-[[AND action_type = {{action_type}}]]
-[[AND value_group = {{value_group}}]]
+[[AND {{action_type}}]]
+[[AND {{value_group}}]]
 GROUP BY action_type
 ORDER BY MIN(priority_rank)
 ```
@@ -349,8 +343,8 @@ SELECT
     predicted_next_purchase_date   AS "Dự kiến mua lại"
 FROM mart_customer_action_queue
 WHERE 1=1
-[[AND action_type = {{action_type}}]]
-[[AND value_group = {{value_group}}]]
+[[AND {{action_type}}]]
+[[AND {{value_group}}]]
 ORDER BY priority_rank, lifetime_value DESC
 LIMIT 500
 ```
