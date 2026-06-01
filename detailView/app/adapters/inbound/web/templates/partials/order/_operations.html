@@ -21,18 +21,19 @@
 
       {# Left: Recipient — operational priority #}
       <div class="scard scard--recipient scard--lead">
-        <div class="party-head">
-          {{ eyebrow("Recipient — receives the goods", accent=True, cls="scard__eyebrow") }}
-          {#
-            We don't have a separate parties object in OrderDetail — shipping is the recipient.
-            customer is the buyer. We infer "same person" when customer has no separate address.
-          #}
-          {{ badge("same as buyer", "good", dot=True) }}
-        </div>
+        {{ eyebrow("Recipient — receives the goods", accent=True, cls="scard__eyebrow") }}
+        {#
+          We don't have a separate parties object in OrderDetail — shipping is the recipient.
+          customer is the buyer. We infer "same person" when customer has no separate address.
+        #}
 
         {% set s = order.shipping %}
-        <div class="recipient-name">
+        <div class="recipient-name" style="margin-top:var(--sp-2)">
           {{ order.customer.full_name or "—" }}
+        </div>
+
+        <div class="badge-row">
+          {{ badge("same as buyer", "good", dot=True) }}
         </div>
 
         <div class="facts" style="margin-top:var(--sp-3)">

@@ -19,6 +19,56 @@
       {{ caveat(
         "<b>US CrossBorder order.</b> Domestic <code>net_revenue = 0</code> — revenue is sourced from US shipment economics.",
         "warn", rule=True) }}
+      {#– Verdict bar: US orders almost always indeterminate (no channel_net_profit) –#}
+      {% if f.cogs_amount is none or f.channel_net_profit is none %}
+        {% set _vt = "mute" %}{% set _vw = "Chưa xác định" %}
+        {% set _vl = "Chưa thể tính lãi/lỗ — giá vốn (COGS) chưa được xác minh cho đơn này." %}
+      {% elif f.channel_net_profit <= 0 %}
+        {% set _vt = "coral" %}{% set _vw = "Lỗ" %}
+        {% if f.gross_profit is not none and f.gross_profit > 0 and f.shopee_platform_fees is not none %}
+          {% set _vl = "Lợi nhuận gộp vẫn dương (+" ~ (f.gross_profit | vnd) ~ ") nhưng " ~ (f.shopee_platform_fees | vnd) ~ " phí sàn đẩy đơn thành lỗ " ~ (f.channel_net_profit | abs | vnd) ~ "." %}
+        {% else %}
+          {% set _vl = "Đơn này lỗ " ~ (f.channel_net_profit | abs | vnd) ~ " sau mọi chi phí — biên ròng " ~ (f.channel_net_margin_pct | pct) ~ "." %}
+        {% endif %}
+      {% else %}
+        {% set _vt = "moss" %}{% set _vw = "Lãi" %}
+        {% set _vl = "Lãi " ~ (f.channel_net_profit | vnd) ~ " sau mọi chi phí — biên ròng " ~ (f.channel_net_margin_pct | pct) ~ "." %}
+      {% endif %}
+      <div class="verdict verdict--bar verdict--{{ _vt }}">
+        <span class="verdict-dot" aria-hidden="true"></span>
+        <div class="verdict-bar__body">
+          <div class="verdict-word">{{ _vw }}</div>
+          <div class="verdict-line">{{ _vl }}</div>
+        </div>
+        <div class="verdict-bar__figs">
+          <div class="verdict-net">
+            {%- if f.channel_net_profit is none -%}
+              <span class="dash">—</span>
+            {%- elif f.channel_net_profit < 0 -%}
+              −{{ f.channel_net_profit | abs | vnd }}
+            {%- elif f.channel_net_profit > 0 -%}
+              +{{ f.channel_net_profit | vnd }}
+            {%- else -%}
+              {{ f.channel_net_profit | vnd }}
+            {%- endif -%}
+          </div>
+          <div class="verdict-sub">
+            {%- if f.channel_net_margin_pct is none -%}
+              <span class="dash">—</span>
+            {%- elif f.channel_net_margin_pct < 0 -%}
+              −{{ f.channel_net_margin_pct | abs | pct }}
+            {%- else -%}
+              {{ f.channel_net_margin_pct | pct }}
+            {%- endif %} ròng
+            {%- if f.gross_profit is not none %} · gộp
+              {%- if f.gross_profit < 0 %} −{{ f.gross_profit | abs | vnd }}
+              {%- elif f.gross_profit > 0 %} +{{ f.gross_profit | vnd }}
+              {%- else %} {{ f.gross_profit | vnd }}
+              {%- endif %}
+            {%- endif %}
+          </div>
+        </div>
+      </div>
       <div class="waterfall">
         {{ waterfall_row(" ", "US revenue (excl. VAT)", f.us_revenue_excl_vat) }}
         {{ waterfall_row("+", "US VAT / sales tax", f.tax_amount) }}
@@ -44,6 +94,56 @@
 
     {% else %}
       {{ panel_head("Financial", "fact_orders · fact_order_economics") }}
+      {#– Verdict bar: domestic orders have full channel net profit data –#}
+      {% if f.cogs_amount is none or f.channel_net_profit is none %}
+        {% set _vt = "mute" %}{% set _vw = "Chưa xác định" %}
+        {% set _vl = "Chưa thể tính lãi/lỗ — giá vốn (COGS) chưa được xác minh cho đơn này." %}
+      {% elif f.channel_net_profit <= 0 %}
+        {% set _vt = "coral" %}{% set _vw = "Lỗ" %}
+        {% if f.gross_profit is not none and f.gross_profit > 0 and f.shopee_platform_fees is not none %}
+          {% set _vl = "Lợi nhuận gộp vẫn dương (+" ~ (f.gross_profit | vnd) ~ ") nhưng " ~ (f.shopee_platform_fees | vnd) ~ " phí sàn đẩy đơn thành lỗ " ~ (f.channel_net_profit | abs | vnd) ~ "." %}
+        {% else %}
+          {% set _vl = "Đơn này lỗ " ~ (f.channel_net_profit | abs | vnd) ~ " sau mọi chi phí — biên ròng " ~ (f.channel_net_margin_pct | pct) ~ "." %}
+        {% endif %}
+      {% else %}
+        {% set _vt = "moss" %}{% set _vw = "Lãi" %}
+        {% set _vl = "Lãi " ~ (f.channel_net_profit | vnd) ~ " sau mọi chi phí — biên ròng " ~ (f.channel_net_margin_pct | pct) ~ "." %}
+      {% endif %}
+      <div class="verdict verdict--bar verdict--{{ _vt }}">
+        <span class="verdict-dot" aria-hidden="true"></span>
+        <div class="verdict-bar__body">
+          <div class="verdict-word">{{ _vw }}</div>
+          <div class="verdict-line">{{ _vl }}</div>
+        </div>
+        <div class="verdict-bar__figs">
+          <div class="verdict-net">
+            {%- if f.channel_net_profit is none -%}
+              <span class="dash">—</span>
+            {%- elif f.channel_net_profit < 0 -%}
+              −{{ f.channel_net_profit | abs | vnd }}
+            {%- elif f.channel_net_profit > 0 -%}
+              +{{ f.channel_net_profit | vnd }}
+            {%- else -%}
+              {{ f.channel_net_profit | vnd }}
+            {%- endif -%}
+          </div>
+          <div class="verdict-sub">
+            {%- if f.channel_net_margin_pct is none -%}
+              <span class="dash">—</span>
+            {%- elif f.channel_net_margin_pct < 0 -%}
+              −{{ f.channel_net_margin_pct | abs | pct }}
+            {%- else -%}
+              {{ f.channel_net_margin_pct | pct }}
+            {%- endif %} ròng
+            {%- if f.gross_profit is not none %} · gộp
+              {%- if f.gross_profit < 0 %} −{{ f.gross_profit | abs | vnd }}
+              {%- elif f.gross_profit > 0 %} +{{ f.gross_profit | vnd }}
+              {%- else %} {{ f.gross_profit | vnd }}
+              {%- endif %}
+            {%- endif %}
+          </div>
+        </div>
+      </div>
       <div class="waterfall">
         {{ waterfall_row(" ", "Gross revenue", f.gross_revenue) }}
         {{ waterfall_row("−", "Discount <span class='bdg' style='font-size:11px;margin-left:4px'>bundle</span>",

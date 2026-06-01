@@ -107,6 +107,31 @@
     <div class="scard">
       {{ eyebrow("Money headline", accent=True, cls="scard__eyebrow") }}
 
+      {# Verdict glance chip — moss=lãi, honey=lãi mỏng, coral=lỗ, mute=chưa xác định #}
+      {% set f = order.financial %}
+      {% set _indeterminate = (f.cogs_amount is none or f.channel_net_profit is none) %}
+      {% if _indeterminate %}{% set _vtone = "mute" %}{% set _vword = "Chưa xác định" %}
+      {% elif f.channel_net_profit <= 0 %}{% set _vtone = "coral" %}{% set _vword = "Lỗ" %}
+      {% else %}{% set _vtone = "moss" %}{% set _vword = "Lãi" %}{% endif %}
+
+      <div class="verdict-glance verdict--{{ _vtone }}">
+        <span class="verdict-dot verdict-dot--sm" aria-hidden="true"></span>
+        <span class="verdict-glance__word">{{ _vword }}</span>
+        <span class="verdict-glance__fig">
+          {% if _indeterminate %}
+            <span class="dash">—</span>
+          {% else %}
+            <span class="verdict-glance__pct">
+              {%- if f.channel_net_margin_pct < 0 %}−{{ (f.channel_net_margin_pct | abs) | pct }}
+              {%- else %}{{ f.channel_net_margin_pct | pct }}{% endif -%}
+            </span>
+            {% if f.channel_net_profit < 0 %}−{{ (f.channel_net_profit | abs) | vnd }}
+            {% elif f.channel_net_profit > 0 %}+{{ f.channel_net_profit | vnd }}
+            {% else %}{{ f.channel_net_profit | vnd }}{% endif %}
+          {% endif %}
+        </span>
+      </div>
+
       {# Hero row — effective revenue (US = us_revenue_incl_vat) #}
       <div class="money-line money-line--hero">
         <span class="money-line__label">
@@ -130,7 +155,7 @@
         </span>
         <span class="money-line__val">
           {% if order.financial.gross_margin_pct is not none %}
-            <span class="pct" style="margin:0 6px 0 0">({{ order.financial.gross_margin_pct | pct }})</span>
+            <span class="pct">{{ order.financial.gross_margin_pct | pct }}</span>
           {% endif %}
           {{ order.financial.gross_profit | vnd }}
         </span>
@@ -141,7 +166,7 @@
         <span class="money-line__label">Channel net</span>
         <span class="money-line__val">
           {% if order.financial.channel_net_margin_pct is not none %}
-            <span class="pct" style="margin:0 6px 0 0">({{ order.financial.channel_net_margin_pct | pct }})</span>
+            <span class="pct">{{ order.financial.channel_net_margin_pct | pct }}</span>
           {% endif %}
           {{ order.financial.channel_net_profit | vnd }}
         </span>

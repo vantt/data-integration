@@ -44,7 +44,14 @@
       <span class="group__total">{{ subtotal.val | vnd }}</span>
     </div>
     <div class="group__body tbl-wrap" style="border-radius:0;border:0;border-top:1px solid var(--border)">
-      <table class="tbl">
+      <table class="tbl tbl--ledger">
+        <colgroup>
+          <col class="col-type" />
+          <col class="col-source" />
+          <col class="col-record" />
+          <col class="col-feesrc" />
+          <col class="col-amount" />
+        </colgroup>
         <thead>
           <tr>
             <th>Cost type</th>
