@@ -17,7 +17,14 @@ It assumes you have a **Design Spec** with archetype, viz selections, and compos
 
 - **Strategy**: `.skills/metabase-automation/STRATEGY.md` — translation workflow, semantic layer, deploy mechanics
 - **Viz Catalog**: `.skills/metabase-automation/METABASE_VIZ_CATALOG.md` — standard vocab → Metabase settings
-- **Filter Pattern**: `.skills/metabase-automation/references/filter-date-range-pattern.md` — **đọc trước khi implement bất kỳ `date_range` filter nào**
+- **Filter Patterns** — **PHẢI ĐỌC trước khi implement bất kỳ filter nào:**
+
+| Pattern name | File | Dùng cho |
+|---|---|---|
+| **DateBound** | `references/filter-date-range-pattern.md` | `date/all-options` — date picker, filter theo kỳ (daily/weekly/monthly/quarterly/yearly) |
+| **CategoryDrop** | `references/filter-category-dropdown-pattern.md` | `string/=` — searchable dropdown cho categorical fields |
+
+> ⚠️ **Filter là nguồn lỗi phổ biến nhất.** Đọc đúng pattern document trước khi viết bất kỳ filter nào. Sai một bước → text input thay vì dropdown, hoặc crash toàn dashboard khi filter active.
 
 ## 📂 Structure
 

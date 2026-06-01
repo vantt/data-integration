@@ -1,6 +1,9 @@
-# Filter Date Range Pattern — Reference
+# Filter — DateBound Pattern
 
+> **Pattern name:** `DateBound`
+> **Dùng cho:** `date/all-options` dashboard filter — date picker hỗ trợ daily/weekly/monthly/quarterly/yearly.
 > **Canonical example:** `docs/analytics-handbook/blueprints/channel_profitability_monthly.md` (dashboard 33)
+> **Xem thêm:** `filter-category-dropdown-pattern.md` (CategoryDrop) cho `string/=` dropdown filters.
 
 Tài liệu này mô tả đầy đủ cách implement `date_range` filter động trong Metabase blueprint — từ filter definition, cycle-indicator, đến KPI cards và data queries. Follow đúng tài liệu này để filter hoạt động chính xác với mọi loại period (daily, weekly, monthly, quarterly, yearly).
 
