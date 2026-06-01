@@ -225,6 +225,8 @@ async function main() {
       sectionId: f.sectionId || undefined,
       field_id: f.field_id || null,
       field_id_map: f.field_id_map || null,
+      ...(f.values_source_type && { values_source_type: f.values_source_type }),
+      ...(f.values_source_config && { values_source_config: f.values_source_config }),
     }));
 
     if (dryRun) {

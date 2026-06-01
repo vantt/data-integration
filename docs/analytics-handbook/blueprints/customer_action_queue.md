@@ -22,7 +22,11 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 ```json metabase-filter
 {
   "slug": "action_type",
-  "type": "string/="
+  "type": "string/=",
+  "values_source_type": "static-list",
+  "values_source_config": {
+    "values": ["CALL_NOW", "REORDER_NUDGE", "WIN_BACK", "SECOND_ORDER", "HIGH_CANCEL_RISK"]
+  }
 }
 ```
 
@@ -31,7 +35,11 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 ```json metabase-filter
 {
   "slug": "value_group",
-  "type": "string/="
+  "type": "string/=",
+  "values_source_type": "static-list",
+  "values_source_config": {
+    "values": ["VALUE_VIP", "VALUE_GOLD", "VALUE_SILVER", "VALUE_BRONZE"]
+  }
 }
 ```
 
