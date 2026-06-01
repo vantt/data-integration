@@ -3456,30 +3456,49 @@ CAST(last_order_date AS DATE) + (n::VARCHAR || ' days')::INTERVAL
 
 ---
 
-### L102 — Metabase `string/=` filter renders as text input without `field_id`; add `field_id` for dropdown
+### L104 — Metabase `field_id` on dashboard parameter + SQL variable template tag = dimension/variable mapping mismatch → all widgets fail when filter active
 
 **Group:** SERVE
 
-**Symptom:** Dashboard filter with `"type": "string/="` shows a plain text input box. Users cannot discover valid values (e.g. `CALL_NOW`, `VALUE_VIP`) and must type them exactly from memory.
+**Symptom:** Dashboard works fine with no filter selected. As soon as any filter value is chosen, ALL widgets on the dashboard error ("There was a problem displaying this chart.") — even cards that don't use that filter column.
 
-**Root cause:** A `string/=` filter without `field_id` is treated by Metabase as a raw SQL variable — it cannot fetch the field's value list from the database and falls back to a free-text input. The same filter with `field_id` bound to the actual column causes Metabase to query distinct values from the DB and render a searchable combobox/dropdown.
+**Root cause:** Two incompatible filter modes exist in Metabase:
 
-**Fix:** Look up `field_id` via the Metabase API (`/api/table/{table_id}/query_metadata`), then add it to the filter definition in the blueprint:
+| Mode | Dashboard param | SQL template tag type | parameter_mapping target |
+|------|-----------------|-----------------------|--------------------------|
+| **Variable** | `string/=` (no `field_id`) | `type: "text"` / plain `{{var}}` | `["variable", ["template-tag", "slug"]]` |
+| **Field filter** | `string/=` + `field_id` | `type: "dimension"` + dimension binding | `["dimension", ["template-tag", "slug"]]` |
+
+Adding `field_id` to a dashboard parameter makes Metabase create `["dimension", ...]` parameter_mappings. But SQL cards using `[[AND col = {{slug}}]]` have plain text template tags — they only accept `["variable", ...]` mappings. The mismatch causes Metabase to fail silently at the query level, crashing every card on the dashboard when the filter carries a value.
+
+**Fix:** Remove `field_id` from dashboard parameters that map to plain SQL `{{variable}}` template tags. Accept text input for those filters.
 ```json
-{
-  "slug": "action_type",
-  "type": "string/=",
-  "field_id": 773
-}
+{ "slug": "action_type", "type": "string/=" }
+```
+
+Verify the mapping type after deploy:
+```js
+const dash = await fetch('/api/dashboard/:id').then(r=>r.json());
+dash.dashcards[0].parameter_mappings;
+// must show ["variable", ...] not ["dimension", ...]
 ```
 
 **Rules:**
-1. Every `string/=` dashboard filter **must** include `field_id` — without it, the UI is unusable for categorical fields.
-2. Find `field_id` by querying the Metabase table metadata API or via `node -e` with the MetabaseClient helper.
-3. `date/all-options` filters also require `field_id` (see L95/filter-date-range-pattern.md) — same root cause, different symptom (relative date values fail silently).
-4. Blueprint template: always include `field_id` as a placeholder comment so it's not forgotten during authoring.
+1. `field_id` on a dashboard parameter is ONLY safe when the matching SQL card template tag is `type: "dimension"` (a field filter, not a plain variable).
+2. SQL `[[AND col = {{slug}}]]` = plain variable → dashboard param must have NO `field_id`.
+3. SQL `{{slug}}` as a field filter (binds to a column, no `AND col =`) = dimension → dashboard param needs `field_id`.
+4. When all widgets break only after selecting a filter: check `parameter_mappings.target[0]` — if it says `"dimension"` but SQL uses a plain variable, remove `field_id` from the dashboard param.
+5. `date/all-options` is a different case — it always uses field filter mode and requires `field_id` (see filter-date-range-pattern.md).
 
-**Reference:** `docs/analytics-handbook/blueprints/customer_action_queue.md` — Action Type (field 773), Value Group (field 758)
+**Reference:** `docs/analytics-handbook/blueprints/customer_action_queue.md`
+
+---
+
+### L102 — ~~RETRACTED~~ `field_id` on `string/=` dashboard params does NOT safely enable dropdown for plain SQL variable cards
+
+> **Superseded by L104.** The advice in this entry (add `field_id` to get a dropdown) is correct in intent but dangerous in practice: it breaks every widget on the dashboard when a filter value is selected. Do not add `field_id` to dashboard parameters unless the matching SQL template tags use `type: "dimension"` (field filter mode).
+
+**Group:** SERVE
 
 ---
 
