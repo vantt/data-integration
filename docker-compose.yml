@@ -103,7 +103,7 @@ services:
       # Caddyfile with basic_auth (Option B — inline auth)
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
     labels:
-      caddy: files.etl.lan.fwg.vn
+      caddy: files.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 8080}}"
 
   detail_view:
