@@ -6,7 +6,7 @@
 
 > **Owner:** Marketing / Customer Success
 > **Update Frequency:** Daily / Monthly
-> **Cập nhật:** 2026-04-19
+> **Cập nhật:** 2026-05-31
 > **Xem thêm:** [Customer Segmentation](../../context/customer-segmentation.md), [Report Segmentation Guide](../guides/report_segmentation.md)
 
 ---
@@ -262,7 +262,7 @@ WHERE c.customer_type = 'RETAIL'
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |----------|-----------------------------------|-----------------|------------|-------------|
-| Segmentation | Which customer groups should be prioritized for care, retention, or reactivation? | 7. RFM Segment | See metric-level dbt sources | None documented |
+| Segmentation | Which customer groups should be prioritized for care, retention, or reactivation? | 7. RFM Segment, 8. P3 Behavioral Metrics | See metric-level dbt sources | None documented |
 
 ### Analytical Questions
 
@@ -274,7 +274,7 @@ WHERE c.customer_type = 'RETAIL'
 - **Why It Matters:** It gives the reader the business reason for the metric set before they inspect individual KPIs.
 - **Tradeoffs / Caveats:** Read the answer together with each metric scope, grain, and source; planned metrics are not official reporting sources until implemented.
 - **Insight / Action Enabled:** When the signal deteriorates, the owner should verify data freshness, break down by the relevant dimension, and trigger the related playbook action.
-- **Related Metrics:** 7. RFM Segment
+- **Related Metrics:** 7. RFM Segment, 8. P3 Behavioral Metrics (discount_sensitivity, next_purchase_signal)
 
 ### Metrics
 
@@ -328,6 +328,136 @@ WHERE c.customer_type = 'RETAIL'
 - **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
 - **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
 
+#### 8. P3 Behavioral Metrics
+
+> **Phase 1 Status:** Ready (Implemented 2026-05-31)
+> **dbt Model:** [int_customer_metrics](../../../transformation/models/marts/core/intermediate/int_customer_metrics.sql) (source) & [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) (computed labels)
+
+P3 Behavioral Metrics provide deeper insight into customer purchasing patterns and price sensitivity, enabling dynamic segmentation for targeted retention and reactivation campaigns.
+
+##### 8.1 Average Order Value (avg_order_value)
+
+- **Business Definition:** Average revenue per non-cancelled, non-draft order.
+- **Logic (SQL):**
+  ```sql
+  SUM(total_collected) / COUNT(DISTINCT order_id)
+  WHERE status NOT IN ('CANCELLED', 'DRAFT')
+  ```
+- **Unit:** BIGINT (VND)
+- **Grain:** Customer (one row per customer_key)
+- **Scope:** All qualifying orders (excludes cancelled/draft)
+- **Common Misunderstandings:** Includes only revenue-generating orders; cancelled orders with total_collected=0 are excluded.
+- **Pitfalls / Edge Cases:** NULL if customer has no non-cancelled orders; compare across same customer_type to avoid B2B distortion.
+
+##### 8.2 Average Days Between Orders (avg_days_between_orders)
+
+- **Business Definition:** Mean interval (in days) between consecutive non-cancelled, non-draft orders. Excludes same-day gaps to measure inter-visit cycle, not intra-day repeats.
+- **Logic (SQL):**
+  ```sql
+  ROUND(AVG(date_diff('day', prev_order_date, order_date)))::INTEGER
+  WHERE date_diff('day', prev_order_date, order_date) > 0
+  ```
+- **Unit:** INTEGER (days)
+- **Grain:** Customer (one row per customer_key)
+- **Scope:** Only gaps > 0 days (excludes same-day orders)
+- **NULL Condition:** Returned for 1-time buyers (no prior order to measure gap)
+- **Common Misunderstandings:** Measures inter-visit cycle (time between purchases), not calendar days; 0-day gaps excluded by design.
+- **Pitfalls / Edge Cases:** NULL for single-order customers; used in predictive_next_purchase_date calculation (see 8.5).
+
+##### 8.3 Discount Order Rate (discount_order_rate)
+
+- **Business Definition:** Share of non-cancelled, non-draft orders where discount_amount > 0. Range [0.0–1.0] or NULL.
+- **Logic (SQL):**
+  ```sql
+  COUNT(DISTINCT order_id) FILTER (WHERE discount_amount > 0)
+    / NULLIF(COUNT(DISTINCT order_id), 0)
+  WHERE status NOT IN ('CANCELLED', 'DRAFT')
+  ```
+- **Unit:** DOUBLE (0.0–1.0, stored as decimal)
+- **Grain:** Customer (one row per customer_key)
+- **Scope:** Qualifying (non-cancelled/draft) orders only
+- **NULL Condition:** Returned when customer has 0 qualifying orders (distinct from 0.0 = never used discount)
+- **Common Misunderstandings:** NULL ≠ 0; NULL means "no data to evaluate", 0.0 means "evaluated, never discounted".
+- **Pitfalls / Edge Cases:** Sensitive to discount application logic; verify discount_amount definition aligns with business rules.
+
+##### 8.4 Cancel Rate (cancel_rate)
+
+- **Business Definition:** Share of attempted orders (excluding drafts) that were cancelled. Range [0.0–1.0].
+- **Logic (SQL):**
+  ```sql
+  COUNT(DISTINCT order_id) FILTER (WHERE status = 'CANCELLED')
+    / NULLIF(COUNT(DISTINCT order_id), 0)
+  WHERE status != 'DRAFT'
+  ```
+- **Unit:** DOUBLE (0.0–1.0, stored as decimal)
+- **Grain:** Customer (one row per customer_key)
+- **Scope:** Attempted orders (all non-draft statuses)
+- **NULL Condition:** Defaulted to 0.0 in dim_customers if customer has no cancellations
+- **Common Misunderstandings:** Measures order-level cancellation, not item-level; draft orders excluded by design.
+- **Pitfalls / Edge Cases:** High cancel_rate may indicate payment issues, regret, or system problems; investigate root cause per customer segment.
+
+##### 8.5 Predicted Next Purchase Date (predicted_next_purchase_date)
+
+- **Business Definition:** Estimated next purchase date = `last_order_date + avg_days_between_orders`. NULL for 1-time buyers or when avg_days_between_orders is uncomputed.
+- **Logic (SQL):**
+  ```sql
+  CASE
+      WHEN avg_days_between_orders IS NOT NULL AND frequency > 1
+      THEN CAST(last_order_date AS DATE) + make_interval(days := avg_days_between_orders)
+      ELSE NULL
+  END
+  ```
+- **Unit:** DATE
+- **Grain:** Customer (one row per customer_key)
+- **Scope:** Repeat customers only (frequency > 1)
+- **NULL Condition:** Returned for new/1-time buyers (no pattern yet)
+- **Common Misunderstandings:** Predictive estimate, not a guarantee; based on historical average, assumes stable purchase rhythm.
+- **Pitfalls / Edge Cases:** May be inaccurate for highly seasonal customers; always pair with next_purchase_signal (see 8.6) for context.
+
+##### 8.6 Discount Sensitivity (discount_sensitivity) — Computed Label
+
+- **Business Definition:** Purchase dependency on promotions; computed from discount_order_rate thresholds.
+- **Values & Logic:**
+  | Value | Condition | Business Meaning |
+  |-------|-----------|------------------|
+  | `PROMO_DEPENDENT` | discount_order_rate > 0.7 (70%+) | Customer highly likely to discount-hunt; priority for early promotion campaigns |
+  | `PROMO_MIXED` | 0.3 < discount_order_rate ≤ 0.7 | Balanced purchase pattern; can convert with targeted promos |
+  | `FULL_PRICE` | discount_order_rate ≤ 0.3 (≤30%) | Low discount dependency; driven by quality/trust, price-insensitive |
+  | NULL | discount_order_rate IS NULL | No qualifying orders to evaluate |
+- **SQL (in dim_customers):**
+  ```sql
+  CASE
+      WHEN discount_order_rate IS NULL THEN NULL
+      WHEN discount_order_rate > 0.7 THEN 'PROMO_DEPENDENT'
+      WHEN discount_order_rate > 0.3 THEN 'PROMO_MIXED'
+      ELSE 'FULL_PRICE'
+  END AS discount_sensitivity
+  ```
+- **Common Use Cases:** Segment email campaigns by sensitivity; allocate discount budget to PROMO_MIXED cohort (highest ROI); protect FULL_PRICE from margin erosion.
+- **Pitfalls / Edge Cases:** May flip seasonally (holiday spending patterns); review quarterly and pair with recent RFM status.
+
+##### 8.7 Next Purchase Signal (next_purchase_signal) — Computed Label
+
+- **Business Definition:** Lifecycle position relative to customer's own purchase rhythm; enables proactive engagement timing.
+- **Values & Logic:**
+  | Value | Condition | Business Meaning |
+  |-------|-----------|------------------|
+  | `OVERDUE` | recency_days ≥ avg_days_between_orders × 1.5 | Customer is 50%+ late; high reactivation priority |
+  | `DUE_SOON` | recency_days ≥ avg_days_between_orders × 0.8 | Expected purchase window approaching (next ~5-14 days); timing-sensitive offer window |
+  | `ON_TRACK` | recency_days < avg_days_between_orders × 0.8 | Within typical cycle; normal engagement cadence |
+  | NULL | avg_days_between_orders IS NULL or frequency ≤ 1 | 1-time buyer (no pattern); use lifecycle_stage instead |
+- **SQL (in dim_customers):**
+  ```sql
+  CASE
+      WHEN avg_days_between_orders IS NULL OR frequency <= 1 THEN NULL
+      WHEN recency_days >= avg_days_between_orders * 1.5 THEN 'OVERDUE'
+      WHEN recency_days >= avg_days_between_orders * 0.8 THEN 'DUE_SOON'
+      ELSE 'ON_TRACK'
+  END AS next_purchase_signal
+  ```
+- **Common Use Cases:** Trigger "we miss you" campaign for OVERDUE segment; send product recommendations to DUE_SOON cohort; exclude ON_TRACK from re-engagement (avoid fatigue).
+- **Pitfalls / Edge Cases:** NULL for 1-time buyers; recency drift if product is seasonal (manually adjust thresholds for seasonal verticals).
+
 ## Implementation Planning
 
 #### 1. Deployment Strategy
@@ -345,6 +475,7 @@ WHERE c.customer_type = 'RETAIL'
 
 - [x] **Dbt Models:** `dim_customers` and `fact_orders` are built and verified.
 - [x] **Data Freshness:** Pipeline runs daily (ensuring `recency_days` is accurate).
+- [x] **P3 Behavioral Metrics:** `int_customer_metrics` and `dim_customers` P3 columns implemented (2026-05-31).
 - [ ] **Permissions:** Ensure Marketing & CS teams have "Collection View" access to "Customer Analytics" collection.
 - [ ] **Marketing Data:** Accelerate the implementation of `fact_marketing_spend` (Required for CAC).
 #### 3. Execution Steps
