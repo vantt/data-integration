@@ -32,6 +32,13 @@ def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
+def _redirect(request: Request, url: str) -> HTMLResponse | RedirectResponse:
+    """303 for a normal browser GET; HX-Redirect header for HTMX calls."""
+    if _is_htmx(request):
+        return HTMLResponse(content="", headers={"HX-Redirect": url})
+    return RedirectResponse(url=url, status_code=303)
+
+
 def register_routes(
     app,  # FastAPI instance
     templates: Jinja2Templates,
@@ -131,7 +138,20 @@ def register_routes(
     # ------------------------------------------------------------------
     @app.get("/orders/{order_code}", response_class=HTMLResponse)
     async def order_detail(request: Request, order_code: str):
-        order = order_service.get_detail(order_code)
+        # Resolve any identifier (order_id, tracking_code, fulfillment_code, …) to canonical order_code.
+        canonical = search_service.resolve_order_code(order_code)
+        if canonical is None:
+            ctx = _base_context(request)
+            ctx.update({"entity": "Order", "ref": order_code})
+            return templates.TemplateResponse(
+                "partials/_not_found_page.html",
+                ctx,
+                status_code=404,
+            )
+        if canonical.upper() != order_code.upper():
+            return _redirect(request, f"/orders/{canonical}")
+
+        order = order_service.get_detail(canonical)
         if order is None:
             ctx = _base_context(request)
             ctx.update({"entity": "Order", "ref": order_code})
@@ -147,7 +167,7 @@ def register_routes(
             "order": order,
             "active_tab": OrderTab.FINANCIAL,
             "tabs": list(OrderTab),
-            "order_code": order_code,
+            "order_code": canonical,
             "quality_flags": quality_flags,
         })
         return templates.TemplateResponse("order_detail.html", ctx)
@@ -204,7 +224,23 @@ def register_routes(
 
     @app.get("/customers/{customer_id}", response_class=HTMLResponse)
     async def customer_detail(request: Request, customer_id: str, tab: str = ""):
-        customer = customer_service.get_detail(customer_id)
+        # Resolve any identifier (customer_code, phone, email, …) to canonical customer_id.
+        canonical_id = search_service.resolve_customer_id(customer_id)
+        if canonical_id is None:
+            ctx = _base_context(request)
+            ctx.update({"entity": "Customer", "ref": customer_id})
+            return templates.TemplateResponse(
+                "partials/_not_found_page.html",
+                ctx,
+                status_code=404,
+            )
+        if canonical_id != customer_id:
+            redirect_url = f"/customers/{canonical_id}"
+            if tab:
+                redirect_url += f"?tab={tab}"
+            return _redirect(request, redirect_url)
+
+        customer = customer_service.get_detail(canonical_id)
         if customer is None:
             ctx = _base_context(request)
             ctx.update({"entity": "Customer", "ref": customer_id})
@@ -234,7 +270,7 @@ def register_routes(
             "active_tab": active_tab,
             "initial_tab_template": _CUSTOMER_TAB_TEMPLATE[active_tab],
             "tabs": list(CustomerTab),
-            "customer_id": customer_id,
+            "customer_id": canonical_id,
             "quality_flags": quality_flags,
         })
         return templates.TemplateResponse("customer_detail.html", ctx)

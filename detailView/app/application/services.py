@@ -72,6 +72,19 @@ class SearchService:
             return SearchResolution(redirect_to=f"/orders/{order_code}")
         return self._customer_resolution(hits)
 
+    def resolve_order_code(self, q: str) -> str | None:
+        """Canonical order_code for any order identifier (code/id/fulfillment/tracking), or None."""
+        q = (q or "").strip()
+        return self._search.resolve_order(q) if q else None
+
+    def resolve_customer_id(self, q: str) -> str | None:
+        """Canonical customer_id for an unambiguous identifier, or None if not found/ambiguous."""
+        q = (q or "").strip()
+        if not q:
+            return None
+        hits = self._search.resolve_customer(q)
+        return hits[0].customer_id if len(hits) == 1 else None
+
     @staticmethod
     def _customer_resolution(hits) -> SearchResolution:
         """Map customer hits to a redirect (1) / dropdown (many) / not-found (0)."""
