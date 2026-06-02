@@ -193,25 +193,19 @@
         {% if order.customer.full_name %}
         <div class="mini-name">{{ order.customer.full_name }}</div>
         {% endif %}
-        {# Phone + ship-to from order.shipping #}
         <div class="facts party-facts">
+          <div class="fact">
+            <span class="fact__k">LTV</span>
+            <span class="fact__v money-line__val" style="font-size:22px">{{ order.customer.lifetime_value | vnd }}</span>
+          </div>
           {% if order.shipping.address or order.shipping.district or order.shipping.province %}
           {{ fact("Ship to",
             [order.shipping.district, order.shipping.province]
               | select | reject('eq', '') | join(", ") or "—") }}
           {% endif %}
         </div>
-        {# LTV + value group mini-row #}
         <div class="mini-meta party-link-row">
-          <span class="money-line__label">
-            {% if order.customer.value_group %}
-              {{ badge(order.customer.value_group, "good", dot=True) }}
-            {% endif %}
-            LTV
-            <span class="money-line__val" style="font-size:14px;margin-left:4px">
-              {{ order.customer.lifetime_value | vnd }}
-            </span>
-          </span>
+          <span>{% if order.customer.value_group %}{{ badge(order.customer.value_group, "good", dot=True) }}{% endif %}</span>
           <span class="mini-arrow mono">→</span>
         </div>
       </a>
