@@ -159,7 +159,7 @@
            "Gross profit · <span class='bdg' style='font-size:11px'>" ~ (f.gross_margin_pct | pct) ~ "</span>",
            f.gross_profit, result=True) }}
         {{ waterfall_row("−",
-           "Platform fees <span class='caption' style='margin-left:6px'>service · payment · infra · voucher · tax</span>",
+           "Platform fees" ~ ((" <span class='caption' style='margin-left:6px'>" ~ order.channel.platform ~ "</span>") if order.channel.platform else ""),
            f.shopee_platform_fees, neg=True) }}
         {{ waterfall_row("=",
            "Channel net profit · <span class='bdg' style='font-size:11px'>" ~ (f.channel_net_margin_pct | pct) ~ "</span>",

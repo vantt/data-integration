@@ -60,7 +60,7 @@
               aria-controls="tab-panel"
               id="tab-actions"
               onclick="dvActivateTab(this, '/orders/{{ order.header.order_code }}/tab/actions')">
-        Actions <span class="badge badge--warn">1</span>
+        Actions <span class="bdg bdg--warn bdg--pulse">1</span>
       </button>
       {% endif %}
     </div>
@@ -97,8 +97,11 @@
     <div class="scard">
       {{ eyebrow("Order at a glance", cls="scard__eyebrow") }}
       <div class="id-code">{{ order.header.order_code }}</div>
-      {% if order.header.order_id %}
-      <div class="id-sub">order_id {{ order.header.order_id }}</div>
+      {% if order.header.order_id or order.channel.channel_name %}
+      <div class="facts">
+        {% if order.header.order_id %}{{ fact("order_id", order.header.order_id) }}{% endif %}
+        {% if order.channel.channel_name %}{{ fact("Channel", order.channel.channel_name) }}{% endif %}
+      </div>
       {% endif %}
       {{ badge_row(order.status_badges()) }}
     </div>
@@ -233,7 +236,9 @@
         {% if order.header.first_shipped_at %}
           {{ fact("Shipped", order.header.first_shipped_at | dt) }}
         {% endif %}
-        {% if order.financial.carrier_id %}
+        {% if order.shipments and order.shipments[0].shipping_service %}
+          {{ fact("Carrier", order.shipments[0].shipping_service) }}
+        {% elif order.financial.carrier_id %}
           {{ fact("Carrier", order.financial.carrier_id) }}
         {% endif %}
         {% if order.financial.cod_amount %}
@@ -330,5 +335,14 @@
     }
   });
 })();
+
+/* ── Cost breakdown group toggle ──────────────────────────────────────── */
+document.addEventListener('click', function (e) {
+  var head = e.target.closest('.group__head');
+  if (!head) return;
+  var group = head.closest('.group');
+  if (!group) return;
+  group.dataset.open = group.dataset.open === 'false' ? 'true' : 'false';
+});
 </script>
 {% endblock %}

@@ -76,7 +76,7 @@
                 <span class="muted">—</span>
               {% endif %}
             </td>
-            <td class="num">{{ row.amount | vnd }}</td>
+            <td class="num">{% if row.discount_rate is not none %}<span class="caption" style="color:var(--fg-muted);margin-right:4px">{{ row.discount_rate | pct }}</span>{% endif %}{{ row.amount | vnd }}</td>
           </tr>
           {% endfor %}
         </tbody>

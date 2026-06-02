@@ -400,6 +400,11 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
 .bdg--bad  { color: var(--coral-500); background: color-mix(in srgb, var(--coral-bg) 55%, transparent);  border-color: color-mix(in srgb, var(--coral-500) 33%, transparent); }
 .bdg--accent { color: var(--accent); background: color-mix(in srgb, var(--amber-bg) 50%, transparent); border-color: color-mix(in srgb, var(--accent) 33%, transparent); }
 .bdg__dot { width: 6px; height: 6px; border-radius: var(--radii-pill); background: currentColor; }
+@keyframes bdgPulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--honey-500) 45%, transparent); }
+  60% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--honey-500) 0%, transparent); }
+}
+.bdg--pulse { animation: bdgPulse 2.4s ease-in-out infinite; }
 
 /* caveat note */
 .caveat { display: flex; align-items: flex-start; gap: var(--sp-3); padding: 10px var(--sp-4);

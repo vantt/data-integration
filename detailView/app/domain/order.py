@@ -105,6 +105,15 @@ class OrderFinancial:
     def margin_is_verified(self) -> bool:
         return self.has_cogs
 
+    @property
+    def shopee_platform_fee_rate(self) -> float | None:
+        """Shopee platform fees as % of gross_revenue (always positive)."""
+        if (self.shopee_platform_fees is None
+                or self.gross_revenue is None
+                or self.gross_revenue == 0):
+            return None
+        return float(abs(self.shopee_platform_fees) / self.gross_revenue)
+
 
 @dataclass
 class LineItem:
