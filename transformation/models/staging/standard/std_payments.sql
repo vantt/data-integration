@@ -37,6 +37,10 @@ SELECT
     try_cast(created_on as TIMESTAMPTZ) as created_at,
     try_cast(paid_on as TIMESTAMPTZ) as paid_at,
     
-    source_timestamp as extracted_at
+    source_timestamp as extracted_at,
+
+    -- Source lineage (P0 gate discriminator; v3 union sets 'v3')
+    'sapo' as source_system,
+    'v2'   as source_version
 
 FROM source_data

@@ -38,6 +38,10 @@ SELECT
     try_cast(shipped_on as TIMESTAMPTZ) as shipped_at,
     -- delivered_at could be mapped from modified_on if status is success
     
-    source_timestamp as extracted_at
+    source_timestamp as extracted_at,
+
+    -- Source lineage (P0 gate discriminator; v3 union sets 'v3')
+    'sapo' as source_system,
+    'v2'   as source_version
 
 FROM source_data

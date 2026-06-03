@@ -15,6 +15,7 @@ SELECT
     -- Identity
     account_id,
     'sapo' as source_system,
+    'v2'   as source_version,
 
     -- Staff info
     staff_name,

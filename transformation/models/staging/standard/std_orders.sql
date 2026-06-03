@@ -27,6 +27,7 @@ SELECT
     -- when mapping_tag coverage exists, or to the "(Unspecified)" parent row otherwise.
     final_source_id as source_id,
     'sapo' as source_system,
+    'v2'   as source_version,
     
     -- Foreign Keys
     customer_id,

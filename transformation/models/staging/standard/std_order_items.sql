@@ -43,6 +43,10 @@ SELECT
     -- MRP Price, Discount Amount could be calculated here if raw data supports it.
     product_type,
     
-    source_timestamp as extracted_at
+    source_timestamp as extracted_at,
+
+    -- Source lineage (P0 gate discriminator; v3 union sets 'v3')
+    'sapo' as source_system,
+    'v2'   as source_version
 
 FROM source_data
