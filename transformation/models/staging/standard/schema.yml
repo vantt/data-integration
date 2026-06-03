@@ -127,3 +127,9 @@ models:
     columns:
       - name: variant_id
         tests: [unique, not_null]
+
+  - name: std_products
+    description: "Standardized product catalog. Grain: 1/product_id. Thin pass-through over stg_sapo_products."
+    columns:
+      - name: product_id
+        tests: [unique, not_null]

@@ -38,7 +38,7 @@ variants AS (
 ),
 
 products AS (
-    SELECT * FROM {{ ref('stg_sapo_products') }}
+    SELECT * FROM {{ ref('std_products') }}
 ),
 
 brands AS (
