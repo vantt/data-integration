@@ -123,7 +123,7 @@ _STUB_ORDER = OrderDetail(
         channel_category="Marketplace", channel_format="Online",
         platform="Shopee", channel_brand="FINE", market="Domestic",
         promotion_code="SALE520", max_discount_rate=Decimal("0.12"),
-        primary_discount_nature="bundle",
+        primary_discount_type="bundle",
     ),
     staff=StaffInfo(
         seller_name="Nguyễn Linh", seller_email="linh@example.com",

@@ -14,7 +14,7 @@ SELECT
     fo.time_to_complete_hours,
     fo.shipping_address,
     fo.max_discount_rate,
-    fo.primary_discount_nature,
+    fo.primary_discount_type,
     -- domestic revenue waterfall
     fo.gross_revenue,
     fo.discount_amount,

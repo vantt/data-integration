@@ -130,7 +130,7 @@ sapo_discounts_classified AS (
                 THEN 'negotiated_standard'
             ELSE
                 'negotiated_deep'
-        END AS discount_nature,
+        END AS discount_type,
         COALESCE(d.reason, '')       AS source_record,
         om.date_key,
         om.channel_key
@@ -147,7 +147,7 @@ sapo_discounts AS (
         cost_category,
         SUM(amount)                        AS amount,
         MAX(discount_rate)                 AS discount_rate,
-        MAX_BY(discount_nature, amount)    AS discount_nature,
+        MAX_BY(discount_type, amount)      AS discount_type,
         'sapo'               AS source_system,
         MIN(source_record)   AS source_record,
         'actual'             AS fee_source,
@@ -167,7 +167,7 @@ SELECT
     cost_category,
     CAST(amount AS DECIMAL(18, 2))  AS amount,
     NULL                            AS discount_rate,
-    NULL                            AS discount_nature,
+    NULL                            AS discount_type,
     source_system,
     source_record,
     fee_source,
@@ -184,7 +184,7 @@ SELECT
     cost_category,
     CAST(amount AS DECIMAL(18, 2))  AS amount,
     NULL                            AS discount_rate,
-    NULL                            AS discount_nature,
+    NULL                            AS discount_type,
     'shopee'                        AS source_system,
     order_code                      AS source_record,
     'actual'                        AS fee_source,
@@ -201,7 +201,7 @@ SELECT
     cost_category,
     CAST(amount AS DECIMAL(18, 2))  AS amount,
     discount_rate,
-    discount_nature,
+    discount_type,
     source_system,
     source_record,
     fee_source,

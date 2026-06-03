@@ -23,7 +23,7 @@ _DDL = [
         gross_revenue DECIMAL(18,2), discount_amount DECIMAL(18,2), net_revenue DECIMAL(18,2),
         tax_amount DECIMAL(18,2), total_collected DECIMAL(18,2),
         first_shipped_at TIMESTAMPTZ, time_to_complete_hours BIGINT,
-        max_discount_rate DOUBLE, primary_discount_nature VARCHAR, shipping_address VARCHAR,
+        max_discount_rate DOUBLE, primary_discount_type VARCHAR, shipping_address VARCHAR,
         order_timestamp TIMESTAMPTZ, updated_at TIMESTAMPTZ )""",
     """CREATE TABLE fact_order_economics (
         order_id VARCHAR, order_code VARCHAR, cogs_amount DOUBLE, has_cogs BOOLEAN,
@@ -35,7 +35,7 @@ _DDL = [
         return_amount DECIMAL(38,2), return_count BIGINT, has_returns BOOLEAN )""",
     """CREATE TABLE fact_order_costs (
         order_id VARCHAR, order_code VARCHAR, cost_type VARCHAR, cost_category VARCHAR,
-        amount DECIMAL(18,2), discount_rate DOUBLE, discount_nature VARCHAR,
+        amount DECIMAL(18,2), discount_rate DOUBLE, discount_type VARCHAR,
         source_system VARCHAR, source_record VARCHAR, fee_source VARCHAR )""",
     """CREATE TABLE fact_order_returns (
         return_id VARCHAR, order_id BIGINT, order_code VARCHAR, return_date DATE,

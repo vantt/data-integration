@@ -33,11 +33,11 @@
         {% if ch.market %}
           {{ fact("Market", ch.market) }}
         {% endif %}
-        {% if ch.promotion_code or ch.max_discount_rate is not none or ch.primary_discount_nature %}
+        {% if ch.promotion_code or ch.max_discount_rate is not none or ch.primary_discount_type %}
           {% set promo_parts = [] %}
           {% if ch.promotion_code %}{% set _ = promo_parts.append(ch.promotion_code) %}{% endif %}
           {% if ch.max_discount_rate is not none %}{% set _ = promo_parts.append("max " ~ (ch.max_discount_rate | pct)) %}{% endif %}
-          {% if ch.primary_discount_nature %}{% set _ = promo_parts.append(ch.primary_discount_nature) %}{% endif %}
+          {% if ch.primary_discount_type %}{% set _ = promo_parts.append(ch.primary_discount_type) %}{% endif %}
           {{ fact("Promo", promo_parts | join(" · ") if promo_parts else "—") }}
         {% endif %}
       </div>

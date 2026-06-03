@@ -4,7 +4,7 @@ SELECT
     cost_category,
     amount,
     discount_rate,
-    discount_nature,
+    discount_type,
     source_system,
     source_record,
     fee_source

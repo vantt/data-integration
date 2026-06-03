@@ -143,7 +143,7 @@ class CostRow:
     cost_category: str | None = None  # COGS / PLATFORM_FEE / TAX / SHIPPING / DISCOUNT
     amount: Decimal | None = None
     discount_rate: Decimal | None = None
-    discount_nature: str | None = None
+    discount_type: str | None = None
     source_system: str | None = None
     source_record: str | None = None
     fee_source: str | None = None  # actual / estimated
@@ -180,7 +180,7 @@ class ChannelInfo:
     market: str | None = None  # Domestic / Export
     promotion_code: str | None = None
     max_discount_rate: Decimal | None = None
-    primary_discount_nature: str | None = None
+    primary_discount_type: str | None = None
 
 
 @dataclass

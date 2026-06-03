@@ -87,7 +87,7 @@ def map_channel(row: Row) -> ChannelInfo:
         market=rc.as_str(row.get("market")),
         promotion_code=rc.as_str(row.get("promotion_code")),
         max_discount_rate=rc.as_decimal(row.get("max_discount_rate")),
-        primary_discount_nature=rc.as_str(row.get("primary_discount_nature")),
+        primary_discount_type=rc.as_str(row.get("primary_discount_type")),
     )
 
 
@@ -145,7 +145,7 @@ def map_cost_row(row: Row) -> CostRow:
         cost_category=rc.as_str(row.get("cost_category")),
         amount=rc.as_decimal(row.get("amount")),
         discount_rate=rc.as_decimal(row.get("discount_rate")),
-        discount_nature=rc.as_str(row.get("discount_nature")),
+        discount_type=rc.as_str(row.get("discount_type")),
         source_system=rc.as_str(row.get("source_system")),
         source_record=rc.as_str(row.get("source_record")),
         fee_source=rc.as_str(row.get("fee_source")),

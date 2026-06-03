@@ -67,7 +67,7 @@ discount_classified AS (
                 THEN 'negotiated_standard'
             ELSE
                 'negotiated_deep'
-        END AS discount_nature
+        END AS discount_type
     FROM {{ ref('std_order_discount_items') }} d
 ),
 
@@ -75,7 +75,7 @@ discount_order_summary AS (
     SELECT
         order_code,
         MAX(discount_rate)              AS max_discount_rate,
-        MAX_BY(discount_nature, amount) AS primary_discount_nature
+        MAX_BY(discount_type, amount)   AS primary_discount_type
     FROM discount_classified
     GROUP BY order_code
 )
@@ -152,7 +152,7 @@ SELECT
     orders.client_details,
     orders.discount_codes,
     dos.max_discount_rate,
-    dos.primary_discount_nature,
+    dos.primary_discount_type,
 
     created_at as order_timestamp,
     updated_at
