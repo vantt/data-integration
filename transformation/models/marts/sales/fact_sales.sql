@@ -64,7 +64,15 @@ SELECT
     
     -- Metrics
     i.quantity,
-    i.line_amount as revenue,
+    -- Revenue is VAT-EXCLUSIVE: Sapo line prices (line_amount) are VAT-inclusive (giá bán gồm VAT).
+    -- Sapo only reports VAT at order level ($.total_tax), so strip the embedded VAT per line using
+    -- the order's VAT ratio = (total − tax) / total. Zero-tax orders (exports) keep full line_amount;
+    -- 8%/10% items handled automatically via the per-order ratio. Keeps SKU margins on the same
+    -- VAT-exclusive basis as MISA COGS. See docs/analytics-handbook/guides/revenue_terminology.md.
+    i.line_amount * COALESCE(
+        (o.total_amount - COALESCE(o.total_tax_amount, 0)) / NULLIF(o.total_amount, 0),
+        1
+    ) as revenue,
     i.discount_amount,
     i.distributed_discount_amount,
     i.weight_grams,
