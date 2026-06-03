@@ -3556,3 +3556,33 @@ Two distinct URL spaces exist:
 5. Tab buttons in the shell use `aria-selected` driven by `active_tab.value == "slug"` — this pattern automatically highlights the correct tab when the page renders with a non-default `active_tab`.
 
 **Reference:** `detailView/app/adapters/inbound/web/routes.py` (`customer_detail` handler, `_CUSTOMER_TAB_TEMPLATE`), `detailView/app/adapters/inbound/web/templates/customer_detail.html`
+
+---
+
+### L106 — Sapo selling prices are VAT-inclusive; `$.total_tax` is embedded VAT, not additive
+
+**Group:** MODEL
+
+**Symptom:** `net_revenue`, `gross_profit`, margins, LTV/AOV all overstated. `fact_orders` treated `$.total` as pre-tax net and computed `total_collected = total + tax` — double-counting VAT. Cross-source margin vs MISA COGS was apples-to-oranges (revenue VAT-inclusive, COGS VAT-exclusive).
+
+**Root cause:** Sapo selling prices (giá bán) are **VAT-inclusive**. `$.total` (→ `total_amount`) is the gross amount with VAT already inside; `$.total_tax` (→ `tax_amount`) is the VAT **embedded inside** `$.total`, not added on top. Proven on real data: for taxed orders `tax_amount / net_revenue` clusters at **`0.07407 = 8/108`** (8% items) and **`0.0909 = 10/110`** (10% items) — additive VAT would give exactly `0.08`. ~60% of orders carry `tax=0` (US/export channel ~99.6%, genuinely 0% VAT; plus retail/POS with no VAT recorded).
+
+**Fix (apply at earliest layer where the concept exists):**
+```sql
+-- fact_orders.sql (the single canonical revenue waterfall):
+net_revenue     = total_amount - COALESCE(total_tax_amount, 0)   -- was: total_amount
+total_collected = total_amount                                    -- was: total_amount + total_tax_amount (double-count)
+-- fact_sales.sql (no per-line tax in Sapo → strip via order ratio):
+revenue = line_amount * COALESCE((total_amount - total_tax_amount)/NULLIF(total_amount,0), 1)
+```
+Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`→`dim_customers` LTV/AOV, `mart_sku_economics_monthly`) auto-corrects since it inherits `net_revenue`. Impact: net −5.97%, total_collected −5.63%.
+
+**Rules:**
+1. Treat ALL Sapo price/amount fields (`$.total`, `$.price`, `$.line_amount`) as VAT-inclusive.
+2. **Trust Sapo's per-order `$.total_tax`** for the exact embedded VAT — it auto-handles 8% / 10% / 0% (exports). NEVER blanket `/1.08` (breaks exports and 10%-VAT items).
+3. `net_revenue = total − tax`; `total_collected = total` (do NOT add tax on top).
+4. Line-level revenue has no per-line tax → strip via the order ratio `(total−tax)/total`.
+5. Verify any VAT assumption on data first: `tax/net ≈ 8/108` = embedded VAT; `≈ 0.08` = additive (or already net).
+6. Refunds (`fact_order_returns.refund_amount`) have no tax field — stay VAT-inclusive; flagged limitation.
+
+**Reference:** `transformation/models/marts/sales/fact_orders.sql`, `fact_sales.sql` · `docs/context/sapo-platform.md` (§ VAT) · `docs/analytics-handbook/guides/revenue_terminology.md` · report `plans/reports/fix-260603-1536-sapo-vat-inclusive-pricing.md`
