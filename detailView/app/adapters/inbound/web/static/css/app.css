@@ -268,22 +268,22 @@ html[data-theme="light"] .theme-toggle__moon { display: block; }
 /* ─────────────────────────────────────────────────────────
    WATERFALL (financial)
    ───────────────────────────────────────────────────────── */
-.waterfall { border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
-/* label = minmax(0,1fr) so it shrinks (wraps) and never overflows the row;
-   otherwise the rightmost amount column gets clipped by .waterfall overflow:hidden.
-   pct column sits between label and amount; gap-2 keeps the 4 columns compact. */
-.wf-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto auto; align-items: center; gap: var(--sp-2); padding: 11px var(--sp-4); }
-.wf-row + .wf-row { border-top: 1px solid var(--border); }
-.wf-op { font-family: var(--font-mono); font-size: 14px; color: var(--fg-tertiary); text-align: center; }
+/* Real <table>: op | label | % | amount columns align across every row. */
+.waterfall { width: 100%; border-collapse: separate; border-spacing: 0; border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
+.wf-row td { padding: 11px var(--sp-3); vertical-align: middle; }
+.wf-row td:first-child { padding-left: var(--sp-4); }
+.wf-row td:last-child  { padding-right: var(--sp-4); }
+.wf-row + .wf-row td { border-top: 1px solid var(--border); }
+.wf-op { width: 22px; font-family: var(--font-mono); font-size: 14px; color: var(--fg-tertiary); text-align: center; }
 .wf-op--add { color: var(--moss-500); }
 .wf-op--sub { color: var(--coral-500); }
 .wf-op--eq { color: var(--fg-muted); }
-.wf-label { font-size: 14px; color: var(--fg-1); display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.wf-amt { font-family: var(--num-font); font-size: 15px; letter-spacing: var(--tracking-mono); white-space: nowrap; color: var(--fg); }
-.wf-amt--neg { color: var(--coral-500); }
+.wf-label { width: 100%; font-size: 14px; color: var(--fg-1); }            /* absorbs slack → pushes %/amount right */
 .wf-pct { font-family: var(--num-font); font-size: 13px; color: var(--fg-muted); text-align: right; white-space: nowrap; letter-spacing: var(--tracking-mono); }
-.wf-row--total { background: color-mix(in srgb, var(--bg-raised) 60%, transparent); }
-.wf-row--result { background: var(--bg-raised); }
+.wf-amt { font-family: var(--num-font); font-size: 15px; letter-spacing: var(--tracking-mono); white-space: nowrap; text-align: right; color: var(--fg); }
+.wf-amt--neg { color: var(--coral-500); }
+.wf-row--total td { background: color-mix(in srgb, var(--bg-raised) 60%, transparent); }
+.wf-row--result td { background: var(--bg-raised); }
 .wf-row--result .wf-label { font-weight: var(--fw-semi); color: var(--fg); }
 .wf-row--result .wf-amt { font-size: 17px; }
 .wf-bar { height: 4px; border-radius: 2px; background: var(--accent); opacity: .5; margin-top: 5px; }

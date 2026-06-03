@@ -69,7 +69,7 @@
           </div>
         </div>
       </div>
-      <div class="waterfall">
+      <table class="waterfall"><tbody>
         {{ waterfall_row(" ", "US revenue (excl. VAT)", f.us_revenue_excl_vat) }}
         {{ waterfall_row("+", "US VAT / sales tax", f.tax_amount) }}
         {{ waterfall_row("=", "US revenue (incl. VAT)", f.us_revenue_incl_vat, total=True) }}
@@ -80,7 +80,7 @@
            "Gross profit",
            f.gross_profit, result=True,
            pct_val=f.gross_margin_pct) }}
-      </div>
+      </tbody></table>
       <div class="badge-row" style="margin-top:0">
         {{ badge("US CrossBorder", "accent", dot=True) }}
         {% if f.us_line_item_count %}
@@ -146,7 +146,7 @@
           </div>
         </div>
       </div>
-      <div class="waterfall">
+      <table class="waterfall"><tbody>
         {#– Sapo prices are VAT-inclusive: gross/total_collected gồm VAT; net_revenue = total − VAT.
             See docs/analytics-handbook/guides/revenue_terminology.md –#}
         {{ waterfall_row(" ", "Gross revenue <span class='caption' style='margin-left:6px'>gồm VAT</span>" | safe, f.gross_revenue) }}
@@ -177,7 +177,7 @@
            "Channel net profit",
            f.channel_net_profit, result=True,
            pct_val=f.channel_net_margin_pct) }}
-      </div>
+      </tbody></table>
       {% if not f.has_cogs %}
         {{ caveat("Margin unverified — no MISA COGS match for this order.", "warn") }}
       {% endif %}

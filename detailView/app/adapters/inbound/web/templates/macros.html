@@ -136,12 +136,14 @@
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
-{# waterfall_row — one row in a revenue/cost waterfall                 #}
+{# waterfall_row — one <tr> in a revenue/cost waterfall table          #}
+{# (real <table> → op | label | % | amount columns align across rows)  #}
 {# op: "+" | "−" | "=" | ""                                           #}
 {# total:  True → .wf-row--total (soft bg)                            #}
 {# result: True → .wf-row--result (raised bg, bold)                   #}
 {# pct_val: fraction 0..1 (e.g. 0.794). Renders in .wf-pct column.   #}
 {#          None → empty cell (revenue lines get no %).               #}
+{# Wrap calls in <table class="waterfall"><tbody> … </tbody></table>.  #}
 {# ------------------------------------------------------------------ #}
 {% macro waterfall_row(op, label, amount, total=False, result=False, neg=False, pct_val=None) %}
 {%- set row_cls = "wf-row" ~
@@ -151,12 +153,12 @@
     (" wf-op--add" if op == "+" else
      " wf-op--sub" if op in ("-", "−") else
      " wf-op--eq"  if op == "=" else "") -%}
-<div class="{{ row_cls }}">
-  <span class="{{ op_cls }}" aria-hidden="true">{{ op }}</span>
-  <span class="wf-label">{{ label | safe }}</span>
-  <span class="wf-pct">{% if pct_val is not none %}{{ pct_val | pct }}{% endif %}</span>
-  <span class="wf-amt{% if neg %} wf-amt--neg{% endif %}">{{ amount | vnd }}</span>
-</div>
+<tr class="{{ row_cls }}">
+  <td class="{{ op_cls }}" aria-hidden="true">{{ op }}</td>
+  <td class="wf-label">{{ label | safe }}</td>
+  <td class="wf-pct">{% if pct_val is not none %}{{ pct_val | pct }}{% endif %}</td>
+  <td class="wf-amt{% if neg %} wf-amt--neg{% endif %}">{{ amount | vnd }}</td>
+</tr>
 {% endmacro %}
 
 {# ------------------------------------------------------------------ #}
