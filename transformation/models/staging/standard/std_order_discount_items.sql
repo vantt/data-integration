@@ -3,6 +3,12 @@
     tags=['standard', 'orders', 'discounts']
 ) }}
 
+-- STD CONTRACT v2 (2026-06-03) — interface for v3 stg_sapo_v3_order_discount_items:
+--   order_id (BIGINT), order_code (VARCHAR), created_at (TIMESTAMPTZ),
+--   discount_source (VARCHAR), discount_rate (DOUBLE), discount_value (DOUBLE),
+--   amount (DOUBLE), reason (VARCHAR)
+-- Plus: source_system='sapo', source_version IN ('v2','v3').
+
 -- =================================================================================================
 -- HOP: STANDARD ORDER DISCOUNT ITEMS - v2.0
 -- =================================================================================================

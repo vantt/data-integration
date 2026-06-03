@@ -3,6 +3,14 @@
     tags=['standard', 'returns']
 ) }}
 
+-- STD CONTRACT v2 (2026-06-03) — interface for v3 stg_sapo_v3_order_returns:
+--   return_id (BIGINT), order_id (BIGINT), order_code (VARCHAR),
+--   return_status (VARCHAR), refund_status (VARCHAR), return_reason (VARCHAR),
+--   refund_amount (DOUBLE), return_quantity (INTEGER),
+--   issued_at (TIMESTAMPTZ), received_at (TIMESTAMPTZ),
+--   created_at (TIMESTAMPTZ), modified_at (TIMESTAMPTZ)
+-- Plus: source_system='sapo', source_version IN ('v2','v3').
+
 -- =================================================================================================
 -- HOP: STANDARD ORDER RETURNS - v2.0
 -- =================================================================================================

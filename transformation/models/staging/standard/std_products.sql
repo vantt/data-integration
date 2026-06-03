@@ -3,6 +3,19 @@
     tags=['standard', 'products']
 ) }}
 
+-- STD CONTRACT v2 (2026-06-03) — interface for v3 stg_sapo_v3_products:
+--   product_id (BIGINT), tenant_id (BIGINT),
+--   product_name (VARCHAR), product_status (VARCHAR), product_type (VARCHAR), description (VARCHAR),
+--   brand_id (BIGINT), brand (VARCHAR),
+--   category_id (BIGINT), category (VARCHAR), category_code (VARCHAR),
+--   opt1 (VARCHAR), opt2 (VARCHAR), opt3 (VARCHAR),
+--   is_medicine (BOOLEAN), tags (VARCHAR),
+--   image_path (VARCHAR), image_name (VARCHAR),
+--   created_at (TIMESTAMPTZ), modified_at (TIMESTAMPTZ),
+--   variants_json (JSON), options_json (JSON), images_json (JSON),
+--   source_timestamp (TIMESTAMPTZ)
+-- Plus: source_system='sapo', source_version IN ('v2','v3').
+
 -- =================================================================================================
 -- HOP: STANDARD PRODUCTS - v2.0
 -- =================================================================================================
