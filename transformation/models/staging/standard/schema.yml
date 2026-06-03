@@ -6,6 +6,8 @@ models:
     columns:
       - name: order_id
         tests: [unique, not_null]
+      - name: source_version
+        description: "Source API version that produced this record ('v2' for Sapo v2; 'v3' when v3 union is added)."
       - name: status
         tests:
           - accepted_values:
@@ -45,6 +47,8 @@ models:
     columns:
       - name: item_id
         tests: [unique, not_null]
+      - name: source_version
+        description: "Source API version that produced this record ('v2' for Sapo v2; 'v3' when v3 union is added)."
       - name: order_id
         tests:
           - relationships:
@@ -65,6 +69,8 @@ models:
     columns:
       - name: customer_id
         tests: [unique, not_null]
+      - name: source_version
+        description: "Source API version that produced this record ('v2' for Sapo v2; 'v3' when v3 union is added)."
       - name: dob
         description: "Date of Birth"
       - name: sex
@@ -81,6 +87,8 @@ models:
     columns:
       - name: fulfillment_id
         tests: [unique, not_null]
+      - name: source_version
+        description: "Source API version that produced this record ('v2' for Sapo v2; 'v3' when v3 union is added)."
       - name: order_id
       - name: status
         tests:
@@ -93,12 +101,16 @@ models:
     columns:
       - name: account_id
         tests: [unique, not_null]
+      - name: source_version
+        description: "Source API version that produced this record ('v2' for Sapo v2; 'v3' when v3 union is added)."
 
   - name: std_payments
     description: "Standardized Payments (Transactions)."
     columns:
       - name: payment_id
         tests: [unique, not_null]
+      - name: source_version
+        description: "Source API version that produced this record ('v2' for Sapo v2; 'v3' when v3 union is added)."
       - name: order_id
       - name: status
         tests:
