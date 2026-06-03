@@ -2,6 +2,8 @@
 
 **Scope**: This document establishes specific rules and heuristics for AI Agents working within the `data-integration/transformation` (dbt) directory.
 
+> **Source versioning & the std gate (Sapo v2→v3):** before adding/changing any Sapo entity, read `docs/architecture/std-layer-conventions.md` (std gate rule, faithful pass-through, `_v2`/`_v3` suffix, std contract, checksum+fresh-run verification, never move raw/dlt state). Column/model names: `docs/architecture/naming-conventions.md`.
+
 ## Core Mandates
 
 ### 1. Mart Location Configuration (CRITICAL)

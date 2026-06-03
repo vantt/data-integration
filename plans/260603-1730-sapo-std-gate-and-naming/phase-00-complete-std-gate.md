@@ -351,7 +351,11 @@ PASS: parquet checksum for `dim_products` matches pre_p0.txt.
 
 ---
 
-### STEP 0.6 — Create `std_inventories` + repoint `int_sapo_inventories` (inventories ref)
+### STEP 0.6 — SKIPPED (2026-06-03): `stg_sapo_inventories` is dead code
+
+> **⚠️ SKIPPED.** Grep confirms `stg_sapo_inventories` has ZERO consumers (no `ref()` anywhere in the project). `int_sapo_inventories` reads inventory from `std_variants.inventories_json` (gated in Step 0.4), NOT from `stg_sapo_inventories`. So the inventory entity is ALREADY gated via std_variants; creating `std_inventories` over an unused source would violate YAGNI. `stg_sapo_inventories` is flagged as dead code for a future cleanup (out of scope). The original 0.6 below is obsolete.
+
+#### (obsolete) STEP 0.6 — Create `std_inventories` + repoint `int_sapo_inventories` (inventories ref)
 
 **Change A — create `std_inventories.sql`:**
 ```sql

@@ -29,6 +29,8 @@ A selective `dbt build` (#2) only builds the models you named — it can miss br
 
 ## Lock-Handling Guidance
 
+> **⚠️ REALITY CHECK (2026-06-03): CLI `dagster schedule stop/start -f <file>` is INEFFECTIVE on this daemon.** It spins up an ephemeral code-location whose origin ID differs from the running daemon's, so the instigator-state override never reaches the daemon — the schedule keeps firing every 3 min (confirmed via `SchedulerDaemon` "Completed scheduled launch" logs). `dagster schedule list -f` likewise shows a misleading `[STOPPED]`. **Do NOT rely on Strategy A pausing via CLI.** To truly pause, use the Dagster UI toggle. Otherwise: accept that an auto-run may fire mid-edit and transiently FAIL (self-heals on the next tick), and rely on the real gate = a FRESH green run AFTER edits + checksum match. **Minimize the failure window:** create the new `std_` model FIRST (a tick here is safe — consumers still ref `stg_`), THEN repoint consumers.
+
 ### The conflict
 
 `ingest_sapo_realtime_job` runs every 3 min and holds the DuckDB write-lock during its build phase. A concurrent manual `dbt build` on the host will conflict.
