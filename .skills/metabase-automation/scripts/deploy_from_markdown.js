@@ -321,7 +321,12 @@ async function main() {
         });
         console.log(`✅ Updated Question '${q.name}' (ID: ${card.id})`);
       } else {
-        // Create new card for this tab
+        // Dashcard lookup missed — check the collection for an existing active card
+        // with this name before creating. Prevents orphan duplicate accumulation
+        // (root cause: POST /api/card was called unconditionally on every re-deploy
+        // whenever the card was not already wired into this dashboard's dashcards).
+        const collectionCard = colId ? await client.card.findActiveInCollection(q.name, colId) : null;
+
         const payload = {
           name: q.name,
           collection_id: colId,
@@ -333,8 +338,20 @@ async function main() {
           display: q.viz ? q.viz.display : "table",
           visualization_settings: flattenViz(q.viz)
         };
-        card = await client.core.request('/api/card', 'POST', payload);
-        console.log(`✅ Created Question '${q.name}' (ID: ${card.id})`);
+
+        if (collectionCard) {
+          // Update the existing card in place — id stays stable, no orphan created
+          console.log(`ℹ️ Question '${q.name}' found in collection (ID: ${collectionCard.id}) — updating`);
+          try {
+            await client.core.request(`/api/card/${collectionCard.id}`, 'PUT', { archived: false });
+          } catch (e) { /* ignore unarchive errors */ }
+          card = await client.core.request(`/api/card/${collectionCard.id}`, 'PUT', payload);
+          console.log(`✅ Updated Question '${q.name}' (ID: ${card.id})`);
+        } else {
+          // Truly new card — safe to create
+          card = await client.core.request('/api/card', 'POST', payload);
+          console.log(`✅ Created Question '${q.name}' (ID: ${card.id})`);
+        }
       }
 
       // Prepare for Dashboard Sync
