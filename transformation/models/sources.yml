@@ -13,7 +13,20 @@ sources:
     tables:
       # Bảng 1: Orders
       - name: order
-        description: "Raw orders data from Parquet files"
+        description: >
+          Raw orders data from Parquet files. IMPORTANT: Sapo selling prices are VAT-INCLUSIVE.
+          $.total (total_amount) is the gross amount after discount with VAT already embedded — it is NOT pre-tax.
+          $.total_tax (total_tax_amount) is the VAT embedded inside $.total: 8/108 for 8%-VAT items,
+          10/110 for 10%-VAT items, 0 for exports/non-VAT items. It is NOT added on top.
+          Net revenue (VAT-exclusive) = total_amount - total_tax_amount.
+          ~60% of orders carry tax=0 (US/export channel + retail orders with no recorded VAT); for those net_revenue = total_amount.
+        columns:
+          - name: payload
+            description: >
+              Full Sapo order JSON snapshot. Key financial fields:
+              $.total → total_amount (VAT-inclusive gross after discount; cash collected from customer — do NOT add tax on top),
+              $.total_tax → total_tax_amount (VAT embedded in $.total; computed by Sapo as 8/108 or 10/110 per order),
+              $.total_discount → total_discount_amount (total discount applied).
 
       # Bảng 2: Customers
       - name: customer

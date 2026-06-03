@@ -55,7 +55,7 @@
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
-- **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu.
+- **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu. **Sapo giá bán đã gồm VAT** — gross_revenue = total_amount + discount_amount (VAT vẫn nhúng bên trong). Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
   ```sql
   SUM(gross_revenue)
@@ -74,7 +74,7 @@
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
-- **Business Definition:** Doanh thu thuần — sau chiết khấu, trước thuế.
+- **Business Definition:** Doanh thu thuần — sau chiết khấu, **đã trừ VAT** (= total_amount − total_tax_amount). VAT nhúng trong giá bán Sapo, không phải cộng thêm bên ngoài. Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
   ```sql
   SUM(net_revenue)

@@ -23,7 +23,7 @@ Chuẩn hóa schema lưu trữ chi phí để hỗ trợ P&L dashboard per-order
 
 | Column group | Source | Coverage |
 |---|---|---|
-| Revenue waterfall (gross → net → collected) | Sapo | 100% |
+| Revenue waterfall (gross → net → collected) | Sapo — **giá bán VAT-inclusive**: `net = total_amount − total_tax_amount`. Xem [revenue_terminology.md](../analytics-handbook/guides/revenue_terminology.md) | 100% |
 | COGS | MISA (voucher_no = order_code) | ~65% |
 | Platform fees (service/payment/fixed/affiliate/infra/voucher_xtra) | Shopee Seller Center | Shopee only |
 | Discount waterfall | Sapo `discount_items[]` → `discount_nature` + `discount_rate` | ✅ Phân loại đủ 10 loại. Xem [discount-classification.md](discount-classification.md) |

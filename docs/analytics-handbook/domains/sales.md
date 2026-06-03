@@ -80,7 +80,7 @@ WHERE c.customer_type = 'RETAIL'
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 > **Terminology Guide:** [Revenue Terminology](../guides/revenue_terminology.md)
 
-- **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu. Dùng để đánh giá quy mô giao dịch.
+- **Business Definition:** Tổng giá trị hàng hóa theo giá bán, trước chiết khấu. Dùng để đánh giá quy mô giao dịch. **Sapo giá bán đã gồm VAT** — gross_revenue = total_amount + discount_amount. Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
   ```sql
   SUM(gross_revenue)
@@ -99,7 +99,7 @@ WHERE c.customer_type = 'RETAIL'
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
-- **Business Definition:** Doanh thu thuần — số tiền khách trả cho hàng hóa sau chiết khấu, trước thuế. Đây là con số quan trọng nhất cho phân tích kinh doanh.
+- **Business Definition:** Doanh thu thuần — số tiền khách trả cho hàng hóa sau chiết khấu, **đã trừ VAT** (= total_amount − total_tax_amount). VAT nhúng trong giá bán Sapo — net_revenue là con số P&L so sánh như-cho-như với giá vốn. Đây là con số quan trọng nhất cho phân tích kinh doanh. Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
   ```sql
   SUM(net_revenue)

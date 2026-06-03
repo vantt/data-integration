@@ -110,9 +110,9 @@ All raw entities in `sapo_raw` use a unified **envelope schema** — the same ou
 | `price_list_id` | INT | FK to price_list | `123` |
 | `tax_treatment` | VARCHAR | Tax treatment type | `"included"` |
 | `tax_label` | VARCHAR | Tax label | `"VAT"` |
-| `total` | DECIMAL(15,2) | Order total (gross) | `500000` |
+| `total` | DECIMAL(15,2) | Order total after discount — **VAT-inclusive** (cash collected from customer; VAT is embedded, not added on top) | `500000` |
 | `total_discount` | DECIMAL(15,2) | Total discount | `50000` |
-| `total_tax` | DECIMAL(15,2) | Total tax | `0` |
+| `total_tax` | DECIMAL(15,2) | VAT **embedded inside** `total`. Sapo computes per-order: 8/108 for 8%-VAT items, 10/110 for 10%-VAT items, 0 for exports/non-VAT. Net revenue = `total − total_tax`. | `0` |
 | `order_discount_rate` | DECIMAL(5,2) | Discount rate % | `10` |
 | `order_discount_value` | DECIMAL(15,2) | Discount amount | `50000` |
 | `order_discount_amount` | DECIMAL(15,2) | Calculated discount | `50000` |

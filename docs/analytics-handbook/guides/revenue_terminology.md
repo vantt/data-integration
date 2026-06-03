@@ -1,7 +1,7 @@
 # Thuật ngữ Doanh thu & Tài chính Đơn hàng
 
 > **Đối tượng:** CEO, Sales Ops, Marketing, Kế toán
-> **Cập nhật:** 2026-04-01
+> **Cập nhật:** 2026-06-03
 
 ## Mục đích
 
@@ -13,28 +13,30 @@ Tài liệu này thống nhất cách gọi tên các chỉ số tài chính tro
 
 ## 1. Dòng chảy doanh thu (Revenue Waterfall)
 
-Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc cho đến số tiền thực thu ròng:
+Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc (đã gồm VAT) cho đến doanh thu thuần P&L (đã trừ VAT):
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
 │  ① Gross Revenue (Doanh thu gộp)                             │
-│     = Giá bán × Số lượng (trước chiết khấu)                  │
-│     Con số lớn nhất, chưa trừ gì cả.                         │
+│     = Giá bán × Số lượng (trước chiết khấu, ĐÃ gồm VAT)     │
+│     Con số lớn nhất, chưa trừ chiết khấu.                    │
 │     Dùng để đánh giá quy mô giao dịch trước chiết khấu.      │
 ├──────────────────────────────────────────────────────────────┤
 │  − ② Discount Amount (Chiết khấu)                            │
 │     Coupon, khuyến mãi, combo, giảm giá nhân viên...         │
 ├──────────────────────────────────────────────────────────────┤
-│  = ③ Net Revenue (Doanh thu thuần)                           │
-│     Doanh thu sau chiết khấu, trước thuế.                    │
-│     Đây là con số quan trọng nhất cho phân tích kinh doanh.  │
-├──────────────────────────────────────────────────────────────┤
-│  + ④ Tax Amount (Thuế VAT)                                   │
-│     0%, 5%, 8% hoặc 10% tùy mặt hàng (0% cho xuất khẩu).     │
-├──────────────────────────────────────────────────────────────┤
-│  = ⑤ Total Collected (Tổng thu)                              │
-│     Số tiền thực tế thu từ khách (bao gồm thuế).             │
+│  = ③ Total Collected (Tổng thu từ khách)                     │
+│     = $.total (total_amount) — số tiền khách thực trả.       │
+│     Giá bán sau chiết khấu, VAT ĐÃ nhúng bên trong.          │
 │     Đây là con số hiển thị trên hóa đơn.                     │
+├──────────────────────────────────────────────────────────────┤
+│  − ④ Tax Amount (VAT nhúng trong giá bán)                    │
+│     VAT Sapo tính sẵn trong giá bán: 8/108 hoặc 10/110.      │
+│     0 cho đơn xuất khẩu / mặt hàng không chịu thuế.          │
+├──────────────────────────────────────────────────────────────┤
+│  = ⑤ Net Revenue (Doanh thu thuần)                           │
+│     Sau chiết khấu, ĐÃ TRỪ VAT — con số P&L kế toán.         │
+│     Đây là con số quan trọng nhất cho phân tích kinh doanh.   │
 ├──────────────────────────────────────────────────────────────┤
 │  − ⑥ Returns / Refunds (Trả hàng / Hoàn tiền)                │
 │     Giá trị các đơn bị trả lại.                              │
@@ -48,21 +50,24 @@ Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc cho đến số
 
 ### Ví dụ minh họa
 
-| Bước              | Mô tả                         | Đơn hàng A | Đơn hàng B |
-| ------------------- | ------------------------------- | ------------- | ------------- |
-| ① Gross Revenue    | Giá bán × SL (trước CK)    | 1,000,000     | 500,000       |
-| ② Discount         | Coupon 20%                      | −200,000     | 0             |
-| ③ Net Revenue      | Sau chiết khấu, trước thuế | 800,000       | 500,000       |
-| ④ Tax (10%)        | VAT                             | +80,000       | +50,000       |
-| ⑤ Total Collected  | Tổng thu                       | 880,000       | 550,000       |
-| ⑥ Returns          | Trả hàng                      | 0             | −550,000     |
-| ⑦ Realized Revenue | Thực thu ròng                 | 880,000       | 0             |
+| Bước              | Mô tả                                          | Đơn hàng A | Đơn hàng B |
+| ------------------- | ------------------------------------------------ | ------------- | ------------- |
+| ① Gross Revenue    | Giá bán × SL (trước CK, đã gồm VAT)         | 1,000,000     | 500,000       |
+| ② Discount         | Coupon 20%                                       | −200,000     | 0             |
+| ③ Total Collected  | Tổng thu từ khách (= $.total, VAT đã trong đó) | 800,000       | 500,000       |
+| ④ Tax (10/110)     | VAT nhúng trong giá bán (Sapo tính sẵn)         | −72,727      | −45,455      |
+| ⑤ Net Revenue      | Sau chiết khấu, ĐÃ TRỪ VAT (P&L)               | 727,273       | 454,545       |
+| ⑥ Returns          | Trả hàng                                        | 0             | −500,000     |
+| ⑦ Realized Revenue | Thực thu ròng                                  | 800,000       | 0             |
 
-> **⚠ Lưu ý về Realized Revenue:**
+> **⚠ Lưu ý về mô hình VAT nhúng (embedded VAT):**
 >
-> - Con số này **vẫn gồm VAT** (thuế phải nộp Nhà nước). Ở Đơn hàng A: thực thu 880k nhưng trong đó có 80k VAT → doanh thu thực tế giữ lại = 800k (= Net Revenue).
+> - Sapo **giá bán đã gồm VAT**. `$.total` (→ `total_amount`) là số tiền khách trả thực tế — VAT **nhúng bên trong**, không cộng thêm bên ngoài.
+> - `$.total_tax` (→ `total_tax_amount`) là VAT Sapo tính sẵn theo từng đơn: 8/108 cho mặt hàng 8%, 10/110 cho mặt hàng 10%, 0 cho xuất khẩu / không chịu thuế.
+> - **Net Revenue = total_amount − total_tax_amount** (doanh thu P&L, so sánh như-cho-như với giá vốn không VAT).
+> - **~60% đơn có tax = 0** (đơn US xuất khẩu chiếm 99.6% zero-tax, cộng đơn bán lẻ Sapo không ghi VAT). Với những đơn này, net_revenue = total_amount (không có gì để trừ). Pipeline tin vào `$.total_tax` của Sapo — nó xử lý tự động 8%/10%/0%.
 > - Realized Revenue là **góc nhìn dòng tiền** (bao nhiêu tiền thu được từ khách sau trả hàng), **không phải doanh thu kế toán**.
-> - Field này **không có sẵn** trong `fact_orders`. Muốn tính, dùng: `total_collected − giá trị đơn trả hàng`.
+> - Field Realized Revenue **không có sẵn** trong `fact_orders`. Muốn tính, dùng: `total_collected − giá trị đơn trả hàng`.
 > - Để phân tích kinh doanh (so sánh kênh, tính AOV...), luôn dùng **Net Revenue** — không dùng Realized Revenue.
 
 ---
@@ -182,14 +187,14 @@ Các thuật ngữ dưới đây phổ biến trong ngành nhưng **không có t
 
 Khi đọc dashboard, nhớ:
 
-| Bạn thấy                 | Nghĩa là                       | Gồm thuế?   | Gồm discount? |
-| -------------------------- | -------------------------------- | ------------- | -------------- |
-| **Gross Revenue**    | Giá bán × SL (trước CK)     | Không        | Chưa trừ     |
-| **Net Revenue**      | Sau chiết khấu, trước thuế  | Không        | Đã trừ      |
-| **Total Collected**  | Tiền thu từ khách             | **Có** | Đã trừ      |
-| **Realized Revenue** | Thực thu ròng (sau trả hàng) | **Có** | Đã trừ      |
-| **Discount Amount**  | Số tiền giảm giá             | —            | —             |
-| **Tax Amount**       | Thuế VAT                        | —            | —             |
+| Bạn thấy                 | Nghĩa là                              | Gồm VAT?    | Gồm discount? |
+| -------------------------- | --------------------------------------- | ------------- | -------------- |
+| **Gross Revenue**    | Giá bán × SL (trước CK, đã gồm VAT) | **Có** | Chưa trừ     |
+| **Total Collected**  | Tiền khách trả (= $.total, đã gồm VAT) | **Có** | Đã trừ      |
+| **Net Revenue**      | Sau chiết khấu, ĐÃ TRỪ VAT — P&L     | Không        | Đã trừ      |
+| **Realized Revenue** | Thực thu ròng (sau trả hàng, vẫn gồm VAT) | **Có** | Đã trừ      |
+| **Discount Amount**  | Số tiền giảm giá                      | —            | —             |
+| **Tax Amount**       | VAT nhúng trong giá bán               | —            | —             |
 
 **Quy tắc ngón tay cái:**
 
@@ -204,37 +209,40 @@ Khi đọc dashboard, nhớ:
 
 ### 6.1. Dữ liệu gốc Sapo → Thuật ngữ chuẩn
 
-| Sapo API field              | Sapo field name                   | Thuật ngữ chuẩn        | Ghi chú                                                            |
-| --------------------------- | --------------------------------- | ------------------------- | ------------------------------------------------------------------- |
-| `$.total`                 | `total_amount`                  | **Net Revenue**     | Đã trừ discount, KHÔNG gồm thuế = SUM(price×qty) − discount |
-| `$.total_discount`        | `total_discount`                | **Discount Amount** | Tổng chiết khấu                                                  |
-| `$.total_tax`             | `tax_amount`                    | **Tax Amount**      | VAT (0%, 5%, 8% hoặc 10% tùy mặt hàng)                          |
-| *Không có field riêng* | `total_amount + total_discount` | **Gross Revenue**   | = SUM(price×qty), phải tự tính                                  |
-| *Không có field riêng* | `total_amount + tax_amount`     | **Total Collected** | Tổng thu từ khách, phải tự tính                               |
+| Sapo API field              | Sapo field name                   | Thuật ngữ chuẩn        | Ghi chú                                                                                        |
+| --------------------------- | --------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
+| `$.total`                 | `total_amount`                  | **Total Collected** | Tổng tiền khách trả, ĐÃ gồm VAT, sau chiết khấu. Đây là field gốc từ Sapo.              |
+| `$.total_discount`        | `total_discount_amount`         | **Discount Amount** | Tổng chiết khấu                                                                              |
+| `$.total_tax`             | `total_tax_amount`              | **Tax Amount**      | VAT nhúng trong giá bán: 8/108 hoặc 10/110 theo mặt hàng; 0 cho xuất khẩu / không VAT    |
+| *Computed*             | `total_amount + total_discount_amount` | **Gross Revenue**   | Giá bán × SL trước chiết khấu (đã gồm VAT), phải tự tính                              |
+| *Computed*             | `total_amount − total_tax_amount`      | **Net Revenue**     | Doanh thu thuần P&L: sau chiết khấu, ĐÃ TRỪ VAT. Không có sẵn trong Sapo — tự tính    |
 
 ### 6.2. Pipeline: Sapo → Staging → Mart
 
 ```
 Sapo API                   std_orders                 fact_orders
 ─────────────────────────────────────────────────────────────────
-$.total                 →  total_amount            →  net_revenue (trực tiếp)
+$.total                 →  total_amount            →  total_collected (= total_amount; VAT đã trong đó)
 $.total_discount        →  total_discount_amount   →  discount_amount
 $.total_tax             →  total_tax_amount        →  tax_amount
-(computed)              →  (computed)              →  gross_revenue = net_revenue + discount_amount
-(computed)              →  (computed)              →  total_collected = net_revenue + tax_amount
+(computed)              →  (computed)              →  gross_revenue = total_amount + total_discount_amount
+(computed)              →  (computed)              →  net_revenue   = total_amount − total_tax_amount
 ```
 
 ### 6.3. Công thức trong fact_orders
 
 ```sql
--- Doanh thu thuần (sau chiết khấu, trước thuế) — field gốc từ Sapo $.total
-net_revenue      = total_amount
+-- Tổng thu từ khách (sau chiết khấu, VAT đã nhúng trong giá bán) — field gốc từ Sapo $.total
+total_collected  = total_amount
 
--- Giá bán × số lượng = SUM(price × qty), trước chiết khấu & thuế
+-- Doanh thu thuần P&L (sau chiết khấu, ĐÃ TRỪ VAT) — dùng để so sánh với giá vốn không VAT
+net_revenue      = total_amount - total_tax_amount
+-- Lưu ý: ~60% đơn có total_tax_amount = 0 (xuất khẩu US + đơn bán lẻ không ghi VAT)
+--         → với những đơn đó: net_revenue = total_amount (không có gì để trừ)
+--         Pipeline tin vào $.total_tax của Sapo; nó tự xử lý 8%/10%/0% theo từng đơn.
+
+-- Giá bán × số lượng (trước chiết khấu, đã gồm VAT)
 gross_revenue    = total_amount + total_discount_amount
-
--- Tổng thu từ khách (sau chiết khấu, gồm thuế)
-total_collected  = total_amount + total_tax_amount
 
 -- Tỷ lệ chiết khấu (công thức tham khảo, không phải column trong fact_orders)
 -- discount_rate = discount_amount / gross_revenue × 100%
