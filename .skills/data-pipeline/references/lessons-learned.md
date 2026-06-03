@@ -3607,3 +3607,23 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 5. detailView code/templates are baked into the image (not volume-mounted) — rebuild to apply; verify the live HTML, not just the source.
 
 **Reference:** `detailView/app/adapters/inbound/web/templates/partials/order/_financial.html`, `order_detail.html` · See also L106 (the upstream VAT semantics change) · [[project-detailview-code-baked-in-image]]
+
+---
+
+### L108 — CSS grid `1fr` + `overflow:hidden` clips the last column ("tiền rớt")
+
+**Group:** SERVE
+
+**Symptom:** After adding a 4th column (percent) to the detailView P&L waterfall (`.wf-row` grid `20px 1fr auto auto`), the rightmost amount column visually disappeared / got cut off ("bể tùm lum, percent đẩy tiền rớt"). Values were in the HTML, but not visible.
+
+**Root cause:** A grid `1fr` track is implicitly `minmax(auto, 1fr)` — its MIN size is the column's min-content, so it refuses to shrink below the (wrappable) label's intrinsic width. Adding the extra `auto` column made the row's total tracks exceed the container width; the row overflowed to the right, and the wrapper `.waterfall { overflow: hidden }` clipped the rightmost (amount) cell. Each `.wf-row` is its own `display:grid`, so the overflow happened per-row.
+
+**Fix:** Make the flexible column `minmax(0, 1fr)` so it can shrink to 0 (label wraps) and the fixed columns (pct, amount) always stay on-row and visible. Also tightened `gap` to `--sp-2`. Verified with a headless Playwright screenshot + per-row bounding-box check (amount.right ≤ waterfall.right for all rows).
+
+**Rules:**
+1. Any time a grid has a flexible `1fr` next to fixed/`auto` columns AND the container clips overflow, use `minmax(0, 1fr)` (or `minmax(0, …)`) on the flexible track — plain `1fr` won't shrink below min-content and will push siblings out.
+2. `overflow: hidden` on a table/waterfall wrapper hides overflow silently — values look "lost" rather than wrapping. Suspect it when content vanishes after adding a column.
+3. Verify layout regressions VISUALLY (screenshot + bounding-box math), not just by checking the HTML contains the values — `curl`/urllib can't see clipping. Playwright-py is available on host; target host port 3005.
+4. CSS is browser-cached: after a rebuild, hard-refresh (Ctrl+Shift+R) or the old stylesheet masks the fix.
+
+**Reference:** `detailView/app/adapters/inbound/web/static/css/app.css` (`.wf-row`, `.waterfall`) · See also L107 (the change that added the column)
