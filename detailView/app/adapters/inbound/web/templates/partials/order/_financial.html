@@ -150,7 +150,7 @@
         {{ waterfall_row(" ", "Gross revenue <span class='caption' style='margin-left:6px'>gồm VAT</span>" | safe, f.gross_revenue) }}
         {{ waterfall_row("−", "Discount <span class='bdg' style='font-size:11px;margin-left:4px'>bundle</span>",
                          f.discount_amount, neg=True) }}
-        {{ waterfall_row("=", "Total collected <span class='caption' style='margin-left:6px'>khách trả</span>" | safe,
+        {{ waterfall_row("=", "Total collected <span class='caption' style='margin-left:6px'>gồm VAT</span>" | safe,
                          f.total_collected, total=True) }}
         {{ waterfall_row("−", "VAT output <span class='caption' style='margin-left:6px'>nhúng trong giá</span>" | safe,
                          f.tax_amount, neg=True) }}
