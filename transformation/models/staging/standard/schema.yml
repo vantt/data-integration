@@ -79,8 +79,8 @@ models:
         description: "Customer Group Code/Name"
       - name: loyalty_point
         description: "Loyalty points balance"
-      - name: total_expense
-        description: "Total expense recorded in source"
+      - name: total_spend
+        description: "Total amount the customer has spent (source $.total_expense; renamed from total_expense — customer spend, not a business expense)"
 
   - name: std_fulfillments
     description: "Standardized Fulfillments (Shipments)."
