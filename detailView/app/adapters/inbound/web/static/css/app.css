@@ -269,7 +269,10 @@ html[data-theme="light"] .theme-toggle__moon { display: block; }
    WATERFALL (financial)
    ───────────────────────────────────────────────────────── */
 .waterfall { border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
-.wf-row { display: grid; grid-template-columns: 20px 1fr auto auto; align-items: center; gap: var(--sp-3); padding: 11px var(--sp-4); }
+/* label = minmax(0,1fr) so it shrinks (wraps) and never overflows the row;
+   otherwise the rightmost amount column gets clipped by .waterfall overflow:hidden.
+   pct column sits between label and amount; gap-2 keeps the 4 columns compact. */
+.wf-row { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto auto; align-items: center; gap: var(--sp-2); padding: 11px var(--sp-4); }
 .wf-row + .wf-row { border-top: 1px solid var(--border); }
 .wf-op { font-family: var(--font-mono); font-size: 14px; color: var(--fg-tertiary); text-align: center; }
 .wf-op--add { color: var(--moss-500); }
