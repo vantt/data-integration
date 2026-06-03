@@ -17,7 +17,7 @@
 --
 -- New columns vs old dim_products (backward-compatible; old cols preserved):
 --   packsize_root_sku, packsize_quantity, barcode, unit, weight_grams,
---   last_seen_at, is_packsize, is_active_status,
+--   last_seen_at, is_packsize, is_active,
 --   category, category_code, brand_id, brand_name (from catalog),
 --   misa_join_key, misa_qty_multiplier (from dim_sku_alias),
 --   product_source ('catalog' | 'order_items' | 'unknown')
@@ -151,7 +151,7 @@ catalog_final AS (
         is_packsize,
         packsize_root_sku,
         packsize_quantity,
-        (product_status = 'active')                 AS is_active_status,
+        (product_status = 'active')                 AS is_active,
         misa_join_key,
         misa_qty_multiplier,
         product_source
@@ -212,7 +212,7 @@ fallback_variants AS (
         CAST(NULL AS BOOLEAN)                       AS is_packsize,
         CAST(NULL AS VARCHAR)                       AS packsize_root_sku,
         CAST(NULL AS FLOAT)                         AS packsize_quantity,
-        CAST(NULL AS BOOLEAN)                       AS is_active_status,
+        CAST(NULL AS BOOLEAN)                       AS is_active,
         oi.sku                                      AS misa_join_key,
         1                                           AS misa_qty_multiplier,
         'order_items'                               AS product_source
@@ -256,7 +256,7 @@ SELECT
     CAST(NULL AS BOOLEAN)                                   AS is_packsize,
     CAST(NULL AS VARCHAR)                                   AS packsize_root_sku,
     CAST(NULL AS FLOAT)                                     AS packsize_quantity,
-    CAST(NULL AS BOOLEAN)                                   AS is_active_status,
+    CAST(NULL AS BOOLEAN)                                   AS is_active,
     'Unknown'                                               AS misa_join_key,
     1                                                       AS misa_qty_multiplier,
     'unknown'                                               AS product_source
