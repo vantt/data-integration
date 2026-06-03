@@ -140,8 +140,10 @@
 {# op: "+" | "−" | "=" | ""                                           #}
 {# total:  True → .wf-row--total (soft bg)                            #}
 {# result: True → .wf-row--result (raised bg, bold)                   #}
+{# pct_val: fraction 0..1 (e.g. 0.794). Renders in .wf-pct column.   #}
+{#          None → empty cell (revenue lines get no %).               #}
 {# ------------------------------------------------------------------ #}
-{% macro waterfall_row(op, label, amount, total=False, result=False, neg=False) %}
+{% macro waterfall_row(op, label, amount, total=False, result=False, neg=False, pct_val=None) %}
 {%- set row_cls = "wf-row" ~
     (" wf-row--total"  if total  else "") ~
     (" wf-row--result" if result else "") -%}
@@ -152,6 +154,7 @@
 <div class="{{ row_cls }}">
   <span class="{{ op_cls }}" aria-hidden="true">{{ op }}</span>
   <span class="wf-label">{{ label | safe }}</span>
+  <span class="wf-pct">{% if pct_val is not none %}{{ pct_val | pct }}{% endif %}</span>
   <span class="wf-amt{% if neg %} wf-amt--neg{% endif %}">{{ amount | vnd }}</span>
 </div>
 {% endmacro %}

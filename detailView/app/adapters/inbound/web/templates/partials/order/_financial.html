@@ -15,7 +15,7 @@
   <div class="tabpanel stack-4">
 
     {% if f.is_us %}
-      {{ panel_head("Financial", "fact_us_shipment_economics") }}
+      {{ panel_head("P&L", "fact_us_shipment_economics") }}
       {{ caveat(
         "<b>US CrossBorder order.</b> Domestic <code>net_revenue = 0</code> — revenue is sourced from US shipment economics.",
         "warn", rule=True) }}
@@ -75,9 +75,11 @@
         {{ waterfall_row("=", "US revenue (incl. VAT)", f.us_revenue_incl_vat, total=True) }}
         {{ waterfall_row("−", "COGS  <span class='caption' style='margin-left:6px'>MISA</span>" | safe ~ (badge("has_cogs","good") if f.has_cogs else ""),
                          f.cogs_amount, neg=True) }}
+        {#– pct_val = f.gross_margin_pct (fraction); inline badge removed — % now in dedicated column –#}
         {{ waterfall_row("=",
-           "Gross profit · <span class='bdg' style='font-size:11px'>" ~ (f.gross_margin_pct | pct) ~ "</span>",
-           f.gross_profit, result=True) }}
+           "Gross profit",
+           f.gross_profit, result=True,
+           pct_val=f.gross_margin_pct) }}
       </div>
       <div class="badge-row" style="margin-top:0">
         {{ badge("US CrossBorder", "accent", dot=True) }}
@@ -93,7 +95,7 @@
       {% endif %}
 
     {% else %}
-      {{ panel_head("Financial", "fact_orders · fact_order_economics") }}
+      {{ panel_head("P&L", "fact_orders · fact_order_economics") }}
       {#– Verdict bar: domestic orders have full channel net profit data –#}
       {% if f.cogs_amount is none or f.channel_net_profit is none %}
         {% set _vt = "mute" %}{% set _vw = "Chưa xác định" %}
@@ -159,16 +161,22 @@
         {{ waterfall_row("−",
            "COGS <span class='caption' style='margin-left:6px'>MISA</span>" | safe ~
            (badge("unverified","warn",dot=True) if not f.has_cogs else ""),
-           f.cogs_amount, neg=True) }}
+           f.cogs_amount, neg=True,
+           pct_val=((f.cogs_amount / f.net_revenue) if (f.cogs_amount is not none and f.net_revenue) else none)) }}
+        {#– pct_val = f.gross_margin_pct (fraction); inline badge removed — % now in dedicated column –#}
         {{ waterfall_row("=",
-           "Gross profit · <span class='bdg' style='font-size:11px'>" ~ (f.gross_margin_pct | pct) ~ "</span>",
-           f.gross_profit, result=True) }}
+           "Gross profit",
+           f.gross_profit, result=True,
+           pct_val=f.gross_margin_pct) }}
         {{ waterfall_row("−",
            "Platform fees" ~ ((" <span class='caption' style='margin-left:6px'>" ~ order.channel.platform ~ "</span>") if order.channel.platform else ""),
-           (f.shopee_platform_fees | abs) if f.shopee_platform_fees is not none else none, neg=True) }}
+           (f.shopee_platform_fees | abs) if f.shopee_platform_fees is not none else none, neg=True,
+           pct_val=(((f.shopee_platform_fees | abs) / f.net_revenue) if (f.shopee_platform_fees is not none and f.net_revenue) else none)) }}
+        {#– pct_val = f.channel_net_margin_pct (fraction); inline badge removed — % now in dedicated column –#}
         {{ waterfall_row("=",
-           "Channel net profit · <span class='bdg' style='font-size:11px'>" ~ (f.channel_net_margin_pct | pct) ~ "</span>",
-           f.channel_net_profit, result=True) }}
+           "Channel net profit",
+           f.channel_net_profit, result=True,
+           pct_val=f.channel_net_margin_pct) }}
       </div>
       {% if not f.has_cogs %}
         {{ caveat("Margin unverified — no MISA COGS match for this order.", "warn") }}

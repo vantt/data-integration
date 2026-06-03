@@ -269,7 +269,7 @@ html[data-theme="light"] .theme-toggle__moon { display: block; }
    WATERFALL (financial)
    ───────────────────────────────────────────────────────── */
 .waterfall { border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
-.wf-row { display: grid; grid-template-columns: 20px 1fr auto; align-items: center; gap: var(--sp-3); padding: 11px var(--sp-4); }
+.wf-row { display: grid; grid-template-columns: 20px 1fr auto auto; align-items: center; gap: var(--sp-3); padding: 11px var(--sp-4); }
 .wf-row + .wf-row { border-top: 1px solid var(--border); }
 .wf-op { font-family: var(--font-mono); font-size: 14px; color: var(--fg-tertiary); text-align: center; }
 .wf-op--add { color: var(--moss-500); }
@@ -278,6 +278,7 @@ html[data-theme="light"] .theme-toggle__moon { display: block; }
 .wf-label { font-size: 14px; color: var(--fg-1); display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .wf-amt { font-family: var(--num-font); font-size: 15px; letter-spacing: var(--tracking-mono); white-space: nowrap; color: var(--fg); }
 .wf-amt--neg { color: var(--coral-500); }
+.wf-pct { font-family: var(--num-font); font-size: 13px; color: var(--fg-muted); text-align: right; white-space: nowrap; letter-spacing: var(--tracking-mono); }
 .wf-row--total { background: color-mix(in srgb, var(--bg-raised) 60%, transparent); }
 .wf-row--result { background: var(--bg-raised); }
 .wf-row--result .wf-label { font-weight: var(--fw-semi); color: var(--fg); }
