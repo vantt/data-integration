@@ -96,7 +96,14 @@ SELECT
     END AS gross_margin_pct,
 
     -- Shopee platform economics (NULL for non-Shopee orders)
-    sf.total_platform_fees  AS shopee_platform_fees,
+    -- shopee_platform_fees = all fees deducted in channel_net_profit (total_platform_fees + infra + voucher_xtra)
+    -- so waterfall row matches the jump from gross_profit to channel_net_profit.
+    CASE WHEN sf.order_code IS NOT NULL
+        THEN sf.total_platform_fees
+             + COALESCE(sf.infrastructure_fee, 0)
+             + COALESCE(sf.voucher_xtra_fee, 0)
+        ELSE NULL
+    END                     AS shopee_platform_fees,
     sf.infrastructure_fee   AS shopee_infra_fee,
     sf.voucher_xtra_fee     AS shopee_voucher_xtra_fee,
     sf.shopee_taxes,
