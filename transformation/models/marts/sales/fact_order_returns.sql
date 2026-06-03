@@ -9,7 +9,7 @@
 -- channel_key inherited from the originating order.
 
 WITH returns AS (
-    SELECT * FROM {{ ref('stg_sapo_order_returns') }}
+    SELECT * FROM {{ ref('std_order_returns') }}
 ),
 
 order_channels AS (

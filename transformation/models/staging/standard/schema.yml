@@ -113,3 +113,11 @@ models:
         tests: [not_null]
       - name: order_code
         tests: [not_null]
+
+  - name: std_order_returns
+    description: "Standardized order returns. Grain: 1/return_id."
+    columns:
+      - name: return_id
+        tests: [unique, not_null]
+      - name: order_id
+        tests: [not_null]
