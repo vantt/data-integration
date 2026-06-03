@@ -166,7 +166,8 @@ extracted AS (
         -- Nested JSON arrays (as text for downstream unnest models)
         json_extract_string(payload, '$.order_line_items') as order_line_items_json,
         json_extract_string(payload, '$.payments') as payments_json,
-        json_extract_string(payload, '$.fulfillments') as fulfillments_json
+        json_extract_string(payload, '$.fulfillments') as fulfillments_json,
+        json_extract_string(payload, '$.discount_items') as discount_items_json
 
     FROM deduped
     WHERE rn = 1
@@ -175,12 +176,18 @@ extracted AS (
 -- Step 2: Business dedup by order_id — compare new vs existing before overwriting
 -- NOTE: Use explicit column names (not SELECT *) to prevent positional mismatch
 -- when schema evolves between incremental runs (e.g., new columns added to extracted).
-{% set union_cols = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, order_id, modified_on, order_code, order_status, financial_status, fulfillment_status, packed_status, received_status, total_amount, total_discount, tax_amount, customer_id, source_id, location_id, assignee_id, assignee_name, assignee_full_name, assignee_email, account_id, account_name, account_full_name, account_email, user_name, customer_name, customer_phone, customer_email, billing_address_json, shipping_address_json, shipping_province, shipping_district, shipping_ward, shipping_address1, shipping_address2, shipping_city, shipping_zip, shipping_country, shipping_phone, shipping_name, billing_province, billing_district, billing_ward, billing_address1, billing_address2, billing_city, billing_zip, billing_country, billing_company, billing_phone, billing_tax_code, note, tags, discount_codes, client_details, created_on, issued_on, finalized_on, cancelled_on, completed_on, channel_name, payment_method_id, order_line_items_json, payments_json, fulfillments_json' %}
+-- union_cols_base: stable columns always present in the materialized {{ this }} table.
+-- New columns (e.g. discount_items_json) are appended separately with NULL fallback
+-- so that incremental runs don't fail when the column hasn't been added to {{ this }} yet.
+{% set union_cols_base = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, order_id, modified_on, order_code, order_status, financial_status, fulfillment_status, packed_status, received_status, total_amount, total_discount, tax_amount, customer_id, source_id, location_id, assignee_id, assignee_name, assignee_full_name, assignee_email, account_id, account_name, account_full_name, account_email, user_name, customer_name, customer_phone, customer_email, billing_address_json, shipping_address_json, shipping_province, shipping_district, shipping_ward, shipping_address1, shipping_address2, shipping_city, shipping_zip, shipping_country, shipping_phone, shipping_name, billing_province, billing_district, billing_ward, billing_address1, billing_address2, billing_city, billing_zip, billing_country, billing_company, billing_phone, billing_tax_code, note, tags, discount_codes, client_details, created_on, issued_on, finalized_on, cancelled_on, completed_on, channel_name, payment_method_id, order_line_items_json, payments_json, fulfillments_json' %}
+{% set union_cols = union_cols_base + ', discount_items_json' %}
 SELECT * FROM (
     SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
-    SELECT {{ union_cols }} FROM {{ this }}
+    SELECT {{ union_cols_base }},
+        {% if 'discount_items_json' in existing_cols %}discount_items_json{% else %}NULL{% endif %} AS discount_items_json
+    FROM {{ this }}
     WHERE order_id IN (SELECT DISTINCT order_id FROM extracted)
     {% endif %}
 )

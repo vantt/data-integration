@@ -1,20 +1,19 @@
 {{ config(materialized='view', tags=['staging', 'sapo']) }}
 
--- Unnest discount_items array from raw Sapo orders.
+-- Unnest discount_items array from deduplicated Sapo orders.
 -- Grain: 1 row per discount item per order.
+-- Reads from src_sapo_orders (not raw source) to avoid Delta Lake ghost-file multiplication.
 -- B2B wholesale-price-gap rows (reason='', rate=100) are excluded here.
 -- Downstream: used by fact_order_costs to classify discount cost_types.
 
 WITH raw AS (
     SELECT
-        json_extract_string(payload, '$.id')      AS order_id,
-        json_extract_string(payload, '$.code')    AS order_code,
-        json_extract(payload, '$.discount_items') AS discount_items_json,
-        TRY_CAST(
-            json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ
-        ) AS created_at
-    FROM {{ source('sapo_raw', 'order') }}
-    WHERE json_array_length(json_extract(payload, '$.discount_items')) > 0
+        order_id,
+        order_code,
+        TRY_CAST(created_on AS TIMESTAMPTZ) AS created_at,
+        discount_items_json
+    FROM {{ ref('src_sapo_orders') }}
+    WHERE json_array_length(discount_items_json) > 0
 ),
 
 unnested AS (
