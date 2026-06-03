@@ -1,8 +1,15 @@
 """Reusable mart checksum harness (verification-protocol T3).
 Lock-free: reads newest rolling parquet per mart. Order-independent fingerprint.
-Usage: python checksum.py            -> prints checksums for the P0 mart set
-       python checksum.py m1 m2 ...  -> only those marts
-COUNT(*) catches row add/drop; bit_xor(hash(row-json)) catches any value change.
+
+Two modes:
+  Whole-row (default) — catches ANY change incl. column renames (to_json includes names):
+    python checksum.py [m1 m2 ...]
+  Per-column, NAME-AGNOSTIC (for RENAME steps) — fingerprint = sorted multiset of each
+  column's value-checksum, so a pure rename (same values, new name) compares EQUAL:
+    python checksum.py --percol [m1 m2 ...]
+
+Use --percol to prove a column rename changed only the NAME, not any VALUE.
+COUNT(*) always catches row add/drop.
 """
 import duckdb, glob, os, sys
 
@@ -13,7 +20,9 @@ P0_MARTS = [
     "fact_orders", "mart_inventory_health",
 ]
 
-marts = sys.argv[1:] or P0_MARTS
+args = sys.argv[1:]
+percol = "--percol" in args
+marts = [a for a in args if not a.startswith("--")] or P0_MARTS
 con = duckdb.connect()
 for m in marts:
     files = sorted(glob.glob(os.path.join(EXPORT, m, "*.parquet")), key=os.path.getmtime)
@@ -21,9 +30,18 @@ for m in marts:
         print(f"{m}: MISSING"); continue
     p = files[-1].replace("\\", "/")
     try:
-        n, chk = con.execute(
-            f"SELECT COUNT(*), bit_xor(hash(to_json(t))) FROM read_parquet('{p}') t"
-        ).fetchone()
-        print(f"{m}: rows={n} chk={chk} file={os.path.basename(p)}")
+        if percol:
+            # one bit_xor(hash(col)) per source column -> sort the values (drop names)
+            row = con.execute(
+                f"SELECT COUNT(*) AS n, bit_xor(hash(COLUMNS(*))) FROM read_parquet('{p}')"
+            ).fetchone()
+            n = row[0]
+            colfp = sorted(str(v) for v in row[1:])  # name-agnostic multiset
+            print(f"{m}: rows={n} percol={colfp} file={os.path.basename(p)}")
+        else:
+            n, chk = con.execute(
+                f"SELECT COUNT(*), bit_xor(hash(to_json(t))) FROM read_parquet('{p}') t"
+            ).fetchone()
+            print(f"{m}: rows={n} chk={chk} file={os.path.basename(p)}")
     except Exception as e:
         print(f"{m}: ERROR {e}")
