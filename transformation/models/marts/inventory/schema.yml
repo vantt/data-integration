@@ -42,9 +42,10 @@ models:
       - name: source_version
         description: "Source API version ('v2')."
 
-  - name: fact_inventory_onhand
+  - name: fact_inventory_balance
     description: >
-      Sparse effective-dated on-hand balance ledger per (variant_id, location_id).
+      Sparse effective-dated stock-balance ledger per (variant_id, location_id). Natural
+      counterpart to fact_inventory_movements (movements change the balance).
       Grain: 1 row per (variant_id, location_id, movement-day) = that day's CLOSING on-hand
       (~17.6k rows). Replaces the former dense daily carry-forward (fact_inventory_onhand_daily,
       ~1.9M rows / 99.1% redundant). Each row carries an effective range:

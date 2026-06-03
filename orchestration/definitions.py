@@ -196,7 +196,7 @@ ingest_sapo_hourly_job = define_asset_job(
             AssetKey(["staging", "src_sapo_inventory_transactions_v2"]),
             AssetKey(["staging", "std_inventory_movements"]),
             AssetKey(["marts", "fact_inventory_movements"]),
-            AssetKey(["marts", "fact_inventory_onhand"]),
+            AssetKey(["marts", "fact_inventory_balance"]),
         )
     ),
     tags=SYNC_TAGS,

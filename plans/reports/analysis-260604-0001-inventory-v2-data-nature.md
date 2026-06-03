@@ -48,7 +48,7 @@
 
 ## Marts opportunity (implemented)
 - `fact_inventory_movements` — direct from std, filter `quantity_delta != 0`. 31,533 rows.
-- `fact_inventory_onhand` — **sparse effective-dated balance ledger** (1 row per pair per movement-day = 17,616 rows), with `valid_from_date`/`valid_to_date` + `is_current`. Chosen over a dense daily date-spine snapshot, which would have been ~1.9M rows of which **99.1% were redundant no-movement carry-forward**. Current stock = `WHERE is_current`; stock on date X = `WHERE X BETWEEN valid_from_date AND valid_to_date`.
+- `fact_inventory_balance` — **sparse effective-dated stock-balance ledger** (1 row per pair per movement-day = 17,616 rows), with `valid_from_date`/`valid_to_date` + `is_current`. Natural counterpart to `fact_inventory_movements` (movements change the balance). Chosen over a dense daily date-spine snapshot, which would have been ~1.9M rows of which **99.1% were redundant no-movement carry-forward**. Current stock = `WHERE is_current`; stock on date X = `WHERE X BETWEEN valid_from_date AND valid_to_date`.
 - Order-level COGS — join movements on `document_code = order_code` (future).
 
 ## Unresolved questions
