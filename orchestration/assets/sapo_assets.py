@@ -21,6 +21,7 @@ try:
     import run_customers_batch
     import run_accounts_batch
     import run_products_batch
+    import run_inventory_transactions_v2_batch
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
 
@@ -284,6 +285,58 @@ def sapo_history_log_asset(context):
                 status=status,
                 rows_written=rows_written,
                 metadata={"load_info": info_dict},
+            )
+        except Exception as _e:
+            context.log.warning(f"ingestion_health record_run failed: {_e}")
+
+
+@asset(group_name="sapo_ingestion", key_prefix=["sapo"])
+def sapo_inventory_transactions_v2_asset(context):
+    """Hourly batch sync for Sapo Inventory Transactions V2.
+
+    Window is controlled by the 'inventory_window' run tag (default: 'hour').
+    Nightly/fullrefresh jobs set inventory_window='day' to scan the full ICT day.
+    Writes to ingestion_health via orchestration.ops.ingestion_health.
+    """
+    asset_key_str = "sapo/sapo_inventory_transactions_v2_asset"
+    started = datetime.now(timezone.utc)
+    window = context.run.tags.get("inventory_window", "hour")
+    argv = ["--window", window]
+    context.log.info(f"Starting Sapo Inventory Transactions V2 Sync... (window={window})")
+    load_dlt_configuration(context.log.info)
+    cwd = os.getcwd()
+    status = "failed"
+    info_dict: dict = {}
+    rows_written = None
+    load_info = None
+    try:
+        try:
+            os.chdir(DLT_DIR)
+            load_info = run_inventory_transactions_v2_batch.run(argv=argv)
+        finally:
+            os.chdir(cwd)
+
+        info_dict = load_info.asdict() if hasattr(load_info, "asdict") else {}
+        loaded_packages = extract_loaded_packages(info_dict)
+        rows_written = extract_rows_written(info_dict)
+        status = "success" if loaded_packages else "skipped"
+        context.log.info(f"Inventory Transactions V2 Sync Finished. Info: {load_info}")
+        return Output(
+            value="Inventory Transactions V2 Sync Completed",
+            metadata={
+                **_build_metadata(loaded_packages, rows_written),
+                "load_info": MetadataValue.text(str(load_info)),
+            },
+        )
+    finally:
+        try:
+            _record_health(
+                asset_key=asset_key_str,
+                run_id=context.run_id,
+                run_started_at=started,
+                status=status,
+                rows_written=rows_written,
+                metadata={"inventory_window": window, "load_info": info_dict},
             )
         except Exception as _e:
             context.log.warning(f"ingestion_health record_run failed: {_e}")

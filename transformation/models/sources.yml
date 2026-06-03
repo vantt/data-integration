@@ -83,6 +83,18 @@ sources:
       - name: us_shipment_prices_raw
         description: "SKU-level US export deal prices with effective_from date versioning. Sapo records US prices as 0; this is the source of truth."
 
+      # Bảng 11: Inventory Transactions v2 (batch_sync parquet, content-addressed entity_id)
+      - name: inventory_transaction_v2
+        description: >
+          Raw inventory in/out transactions from Sapo (batch_sync ingest). Grain: 1 row per
+          document × product line (e.g., one line per SKU on a sales order, purchase order, or
+          stock adjustment that moved inventory). entity_id is CONTENT-ADDRESSED (SHA of payload):
+          identical re-fetches collapse; any field change (incl. onhand running balance) produces
+          a distinct row. onhand = running stock balance at the moment of the transaction.
+          import_amount / export_amount are the stock-value movements; mac = moving-average cost
+          at transaction time; total_mac = cumulative MAC after the transaction.
+          Business-grain dedup (e.g., last onhand per document) is deferred to the std layer.
+
   - name: shopee_raw
     schema: main
     meta:

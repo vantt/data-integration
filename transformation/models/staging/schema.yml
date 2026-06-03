@@ -73,6 +73,39 @@ models:
       - name: location_id
         tests: [not_null]
 
+  - name: src_sapo_inventory_transactions_v2
+    description: >
+      Flattened inventory transactions from Sapo (batch_sync, content-addressed entity_id).
+      Grain: 1 row per document × product line × content-state. onhand is a running stock
+      balance at the moment of the transaction. import_amount/export_amount are stock-value
+      movements (MAC-based). Business-grain dedup deferred to std layer.
+    columns:
+      - name: entity_id
+        description: "Content hash of payload — unique per distinct payload snapshot. Primary key."
+        tests: [unique, not_null]
+      - name: issued_at_utc
+        description: "Transaction timestamp (TIMESTAMPTZ, UTC). Authoritative business time."
+        tests: [not_null]
+      - name: log_root_id
+        description: "Source document ID (order, purchase order, stock adjustment, etc.)."
+      - name: trans_type_name
+        description: "Human-readable transaction type (e.g., 'Bán hàng', 'Nhập hàng')."
+      - name: variant_id
+        description: "Sapo variant ID of the SKU involved in the transaction."
+        tests: [not_null]
+      - name: sku
+        description: "SKU code of the variant."
+      - name: onhand
+        description: "Running stock balance (units) after this transaction at the given location."
+      - name: export_quantity
+        description: "Units leaving stock (positive = outflow). Null for import-only transactions."
+      - name: import_quantity
+        description: "Units entering stock (positive = inflow). Null for export-only transactions."
+      - name: mac
+        description: "Moving-average cost per unit at the time of this transaction."
+      - name: location_id
+        description: "Sapo warehouse/location ID."
+
   - name: src_misa_sales_lines
     columns:
       - name: voucher_no

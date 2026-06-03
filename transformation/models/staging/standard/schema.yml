@@ -153,3 +153,27 @@ models:
         tests: [not_null]
       - name: price_list_id
         tests: [not_null]
+
+  - name: std_inventory_movements
+    description: >
+      Standardized inventory movement ledger. Grain: 1 row per inventory_movement_id
+      (= entity_id content hash). Source: src_sapo_inventory_transactions_v2 (v2).
+      quantity_delta = import_quantity − export_quantity (+IN / −OUT).
+      movement_direction derived from import_quantity>0 (NOT action field — stock_transfer
+      fires 'received' at both ends; direction from import_quantity>0 is unambiguous).
+      cogs_amount = export_amount (pre-txn MAC). inventory_value = amount (= onhand × mac).
+      onhand is authoritative — never recomputed. total_mac dropped (always 0 in source).
+    columns:
+      - name: inventory_movement_id
+        tests: [unique, not_null]
+      - name: movement_direction
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['IN', 'OUT', 'ZERO']
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: source_version
+        description: "Source API version that produced this record ('v2' for Sapo v2)."

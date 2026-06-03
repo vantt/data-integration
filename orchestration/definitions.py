@@ -155,6 +155,7 @@ _nightly_batch_selection = (
     AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
     AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
     AssetSelection.assets(sapo_assets.sapo_products_batch_asset) |
+    AssetSelection.assets(sapo_assets.sapo_inventory_transactions_v2_asset) |
     AssetSelection.assets(sheets_assets.sheets_targets_asset) |
     AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
     AssetSelection.assets(sheets_assets.sheets_team_config_asset) |
@@ -170,7 +171,7 @@ _nightly_batch_selection = (
 transform_batch_nightly_job = define_asset_job(
     name="transform_batch_nightly_job",
     selection=_nightly_batch_selection,
-    tags=SYNC_TAGS,
+    tags={**SYNC_TAGS, "inventory_window": "day"},
 )
 
 # 3b. Full Refresh Job — manual trigger only, resets all batch cursors
@@ -178,7 +179,27 @@ transform_batch_nightly_job = define_asset_job(
 transform_batch_fullrefresh_job = define_asset_job(
     name="transform_batch_fullrefresh_job",
     selection=_nightly_batch_selection,
-    tags={**SYNC_TAGS, "full_refresh": "true"},
+    tags={**SYNC_TAGS, "full_refresh": "true", "inventory_window": "day"},
+)
+
+# 3c. Generic Sapo hourly job — runs inventory-transactions-v2 ingestion through
+# the real-time inventory chain: ingest → src_ → std_ → fact_inventory_movements
+# (current on-hand + COGS refresh each hour). The daily on-hand snapshot
+# (fact_inventory_onhand_daily, ~1.9M rows, DAILY grain) is intentionally left to
+# the nightly job. Self-refresh serving views auto-pick the latest mart parquet,
+# so no serving asset is needed here. Add future hourly assets to this selection.
+ingest_sapo_hourly_job = define_asset_job(
+    name="ingest_sapo_hourly_job",
+    selection=(
+        AssetSelection.assets(sapo_assets.sapo_inventory_transactions_v2_asset)
+        | AssetSelection.keys(
+            AssetKey(["staging", "src_sapo_inventory_transactions_v2"]),
+            AssetKey(["staging", "std_inventory_movements"]),
+            AssetKey(["marts", "fact_inventory_movements"]),
+            AssetKey(["marts", "fact_inventory_onhand"]),
+        )
+    ),
+    tags=SYNC_TAGS,
 )
 
 # ------------------------------------------------------------------------------
@@ -248,6 +269,7 @@ def _long_dbt_rw_holder(context) -> str | None:
 _INGESTION_JOBS = [
     "ingest_sapo_realtime_job",
     "ingest_sapo_incremental_job",
+    "ingest_sapo_hourly_job",
     "ingest_sheets_sync_job",
     "ingest_filedrop_shopee_job",
     "ingest_filedrop_misa_job",
@@ -312,6 +334,26 @@ def ingest_sapo_incremental_schedule(context):
         return SkipReason(f"incremental: yielding to {holder} (dbt_rw occupied)")
     if _has_active_run(context, "maintain_purge_runs_job"):
         return SkipReason("incremental: yielding to purge_runs (SQLite index.db lock)")
+    return RunRequest(run_key=None)
+
+
+@schedule(
+    job=ingest_sapo_hourly_job,
+    # Run at :25 each hour, skip 3 AM (nightly batch holds dbt_rw ~30-60 min).
+    # Minute :25 avoids collision with realtime (*/3) and incremental (*/10).
+    # If nightly overruns past 4 AM, _long_dbt_rw_holder() skips the tick.
+    cron_schedule="25 0-2,4-23 * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def ingest_sapo_hourly_schedule(context):
+    active = _has_active_run(context, "ingest_sapo_hourly_job")
+    if active:
+        return SkipReason(f"hourly: previous run still active ({active[:8]})")
+    holder = _long_dbt_rw_holder(context)
+    if holder:
+        return SkipReason(f"hourly: yielding to {holder} (dbt_rw occupied)")
+    if _has_active_run(context, "maintain_purge_runs_job"):
+        return SkipReason("hourly: yielding to purge_runs (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
@@ -523,6 +565,7 @@ defs = Definitions(
         # ingest_*
         ingest_sapo_realtime_job,
         ingest_sapo_incremental_job,
+        ingest_sapo_hourly_job,
         ingest_sheets_sync_job,
         ingest_filedrop_shopee_job,
         ingest_filedrop_misa_job,
@@ -542,6 +585,7 @@ defs = Definitions(
         # ingest_*
         ingest_sapo_realtime_schedule,
         ingest_sapo_incremental_schedule,
+        ingest_sapo_hourly_schedule,
         # transform_*
         transform_batch_nightly_schedule,
         # health_*

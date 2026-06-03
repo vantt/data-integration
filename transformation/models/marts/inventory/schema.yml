@@ -1,0 +1,91 @@
+version: 2
+
+models:
+  - name: fact_inventory_movements
+    description: >
+      Inventory movement ledger fact. Grain: 1 row per inventory_movement_id (entity_id
+      content hash). Sourced from std_inventory_movements; filters quantity_delta != 0
+      (excludes zero-qty catalog-init and pure cost-adjustment rows).
+      Both legs of a cancelled fulfillment are preserved (do NOT net/sum — analysis caveat #2).
+      movement_direction: IN (import_quantity>0) / OUT (export_quantity>0).
+      cogs_amount = export_amount (pre-txn MAC — use directly for COGS).
+      document_code links to std_orders.order_code for SON… codes (41% of rows).
+    columns:
+      - name: inventory_movement_id
+        tests: [unique, not_null]
+      - name: issued_date_key
+        tests: [not_null]
+      - name: issued_at
+        tests: [not_null]
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: quantity_delta
+        description: "Signed quantity: +IN (import) / −OUT (export). Zero rows excluded by WHERE clause."
+        tests: [not_null]
+      - name: movement_direction
+        description: "IN / OUT — derived from import_quantity>0, not action field."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['IN', 'OUT']
+      - name: cogs_amount
+        description: "COGS at pre-txn MAC (= export_amount). Use directly; do NOT recompute from mac."
+      - name: inventory_value
+        description: "Post-txn inventory value = onhand × mac (amount column from source)."
+      - name: onhand
+        description: "Running stock balance at moment of transaction. Authoritative — never recomputed."
+      - name: moving_avg_cost
+        description: "Moving average cost per unit (post-txn MAC)."
+      - name: source_version
+        description: "Source API version ('v2')."
+
+  - name: fact_inventory_onhand
+    description: >
+      Sparse effective-dated on-hand balance ledger per (variant_id, location_id).
+      Grain: 1 row per (variant_id, location_id, movement-day) = that day's CLOSING on-hand
+      (~17.6k rows). Replaces the former dense daily carry-forward (fact_inventory_onhand_daily,
+      ~1.9M rows / 99.1% redundant). Each row carries an effective range:
+        - Current stock:   WHERE is_current             (~1,494 pairs; 59 with onhand>0)
+        - Stock on date X: WHERE X BETWEEN valid_from_date AND valid_to_date
+        - Trend over time: step-line on (valid_from_date, onhand) per pair
+      onhand is authoritative (never recomputed). Negative-onhand pairs flagged via is_negative_onhand.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [variant_id, location_id, valid_from_date]
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: location_id
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: valid_from_date
+        description: "Movement-day this closing balance became effective (ICT date)."
+        tests: [not_null]
+      - name: valid_to_date
+        description: "Last day this balance holds (day before next movement-day); DATE '9999-12-31' if current."
+        tests: [not_null]
+      - name: onhand
+        description: "Closing stock quantity for the day. Authoritative from source."
+      - name: moving_avg_cost
+        description: "Moving average cost per unit at close (VND)."
+      - name: inventory_value
+        description: "Inventory value = onhand × mac at close (VND)."
+      - name: is_current
+        description: "true for the latest (open-ended) balance per (variant, location) = current stock."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
+      - name: is_negative_onhand
+        description: "true where onhand < 0 (data anomaly to flag)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [true, false]
