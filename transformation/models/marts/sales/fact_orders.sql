@@ -68,7 +68,7 @@ discount_classified AS (
             ELSE
                 'negotiated_deep'
         END AS discount_nature
-    FROM {{ ref('stg_sapo_order_discount_items') }} d
+    FROM {{ ref('std_order_discount_items') }} d
 ),
 
 discount_order_summary AS (

@@ -105,3 +105,11 @@ models:
           - accepted_values:
               arguments:
                 values: ['SUCCESS', 'PENDING', 'FAILED', 'REFUNDED']
+
+  - name: std_order_discount_items
+    description: "Standardized order discount items. Grain: 1/(order_id × discount_source × reason)."
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: order_code
+        tests: [not_null]

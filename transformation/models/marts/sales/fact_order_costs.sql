@@ -90,7 +90,7 @@ shopee_fees AS (
 ),
 
 -- ============================================================
--- Sapo discounts — from stg_sapo_order_discount_items
+-- Sapo discounts — from std_order_discount_items (via stg_sapo_order_discount_items)
 -- Classify by reason text pattern; aggregate same cost_type
 -- per order (multiple same-type items can exist on one order)
 -- ============================================================
@@ -134,7 +134,7 @@ sapo_discounts_classified AS (
         COALESCE(d.reason, '')       AS source_record,
         om.date_key,
         om.channel_key
-    FROM {{ ref('stg_sapo_order_discount_items') }} d
+    FROM {{ ref('std_order_discount_items') }} d
     JOIN order_meta om ON d.order_code = om.order_code
     WHERE d.amount > 0
 ),
