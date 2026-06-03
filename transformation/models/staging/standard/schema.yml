@@ -121,3 +121,9 @@ models:
         tests: [unique, not_null]
       - name: order_id
         tests: [not_null]
+
+  - name: std_variants
+    description: "Standardized variant catalog. Grain: 1/variant_id. Thin pass-through over stg_sapo_variants; preserves all JSON columns (inventories_json, variant_prices_json, composite_items_json) for downstream unnesting."
+    columns:
+      - name: variant_id
+        tests: [unique, not_null]

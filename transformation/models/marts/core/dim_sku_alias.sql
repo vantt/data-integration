@@ -41,7 +41,7 @@ variants AS (
         packsize_root_id,
         packsize_root_sku,
         product_id
-    FROM {{ ref('stg_sapo_variants') }}
+    FROM {{ ref('std_variants') }}
 ),
 
 -- Only base variants (non-packsize) as lookup for root SKU resolution

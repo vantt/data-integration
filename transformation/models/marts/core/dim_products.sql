@@ -34,7 +34,7 @@ WITH
 -- Catalog source: variant-level attributes from Sapo API
 -- ---------------------------------------------------------------------------
 variants AS (
-    SELECT * FROM {{ ref('stg_sapo_variants') }}
+    SELECT * FROM {{ ref('std_variants') }}
 ),
 
 products AS (

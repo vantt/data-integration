@@ -28,7 +28,7 @@ WITH source AS (
         sku,
         inventories_json,
         source_timestamp
-    FROM {{ ref('stg_sapo_variants') }}
+    FROM {{ ref('std_variants') }}
     WHERE inventories_json IS NOT NULL
       AND inventories_json NOT IN ('[]', 'null', '')
 ),
