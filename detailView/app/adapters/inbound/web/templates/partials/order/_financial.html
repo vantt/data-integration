@@ -1,7 +1,7 @@
 {#
   Order > Financial tab panel.
-  Waterfall: gross → −discount → net → +VAT → total → −COGS → gross profit·margin
-             → −platform fees → channel net·margin.
+  Waterfall: gross(incl VAT) → −discount → total collected → −VAT → net(ex VAT)
+             → −COGS → gross profit·margin → −platform fees → channel net·margin.
   US CrossBorder: swap revenue block (us_revenue_excl/incl_vat).
   Cost breakdown appended as .group ledger (via _cost_ledger include).
   Source: fact_orders · fact_order_economics (+ fact_us_shipment_economics for US).
@@ -26,7 +26,7 @@
       {% elif f.channel_net_profit <= 0 %}
         {% set _vt = "coral" %}{% set _vw = "Lỗ" %}
         {% if f.gross_profit is not none and f.gross_profit > 0 and f.shopee_platform_fees is not none %}
-          {% set _vl = "Lợi nhuận gộp vẫn dương (+" ~ (f.gross_profit | vnd) ~ ") nhưng " ~ (f.shopee_platform_fees | vnd) ~ " phí sàn đẩy đơn thành lỗ " ~ (f.channel_net_profit | abs | vnd) ~ "." %}
+          {% set _vl = "Lợi nhuận gộp vẫn dương (+" ~ (f.gross_profit | vnd) ~ ") nhưng " ~ (f.shopee_platform_fees | abs | vnd) ~ " phí sàn đẩy đơn thành lỗ " ~ (f.channel_net_profit | abs | vnd) ~ "." %}
         {% else %}
           {% set _vl = "Đơn này lỗ " ~ (f.channel_net_profit | abs | vnd) ~ " sau mọi chi phí — biên ròng " ~ (f.channel_net_margin_pct | pct) ~ "." %}
         {% endif %}
@@ -101,7 +101,7 @@
       {% elif f.channel_net_profit <= 0 %}
         {% set _vt = "coral" %}{% set _vw = "Lỗ" %}
         {% if f.gross_profit is not none and f.gross_profit > 0 and f.shopee_platform_fees is not none %}
-          {% set _vl = "Lợi nhuận gộp vẫn dương (+" ~ (f.gross_profit | vnd) ~ ") nhưng " ~ (f.shopee_platform_fees | vnd) ~ " phí sàn đẩy đơn thành lỗ " ~ (f.channel_net_profit | abs | vnd) ~ "." %}
+          {% set _vl = "Lợi nhuận gộp vẫn dương (+" ~ (f.gross_profit | vnd) ~ ") nhưng " ~ (f.shopee_platform_fees | abs | vnd) ~ " phí sàn đẩy đơn thành lỗ " ~ (f.channel_net_profit | abs | vnd) ~ "." %}
         {% else %}
           {% set _vl = "Đơn này lỗ " ~ (f.channel_net_profit | abs | vnd) ~ " sau mọi chi phí — biên ròng " ~ (f.channel_net_margin_pct | pct) ~ "." %}
         {% endif %}
@@ -145,12 +145,17 @@
         </div>
       </div>
       <div class="waterfall">
-        {{ waterfall_row(" ", "Gross revenue", f.gross_revenue) }}
+        {#– Sapo prices are VAT-inclusive: gross/total_collected gồm VAT; net_revenue = total − VAT.
+            See docs/analytics-handbook/guides/revenue_terminology.md –#}
+        {{ waterfall_row(" ", "Gross revenue <span class='caption' style='margin-left:6px'>gồm VAT</span>" | safe, f.gross_revenue) }}
         {{ waterfall_row("−", "Discount <span class='bdg' style='font-size:11px;margin-left:4px'>bundle</span>",
                          f.discount_amount, neg=True) }}
-        {{ waterfall_row("=", "Net revenue", f.net_revenue, total=True) }}
-        {{ waterfall_row("+", "VAT output", f.tax_amount) }}
-        {{ waterfall_row("=", "Total collected", f.total_collected, total=True) }}
+        {{ waterfall_row("=", "Total collected <span class='caption' style='margin-left:6px'>khách trả</span>" | safe,
+                         f.total_collected, total=True) }}
+        {{ waterfall_row("−", "VAT output <span class='caption' style='margin-left:6px'>nhúng trong giá</span>" | safe,
+                         f.tax_amount, neg=True) }}
+        {{ waterfall_row("=", "Net revenue <span class='caption' style='margin-left:6px'>trừ VAT</span>" | safe,
+                         f.net_revenue, total=True) }}
         {{ waterfall_row("−",
            "COGS <span class='caption' style='margin-left:6px'>MISA</span>" | safe ~
            (badge("unverified","warn",dot=True) if not f.has_cogs else ""),
@@ -160,7 +165,7 @@
            f.gross_profit, result=True) }}
         {{ waterfall_row("−",
            "Platform fees" ~ ((" <span class='caption' style='margin-left:6px'>" ~ order.channel.platform ~ "</span>") if order.channel.platform else ""),
-           f.shopee_platform_fees, neg=True) }}
+           (f.shopee_platform_fees | abs) if f.shopee_platform_fees is not none else none, neg=True) }}
         {{ waterfall_row("=",
            "Channel net profit · <span class='bdg' style='font-size:11px'>" ~ (f.channel_net_margin_pct | pct) ~ "</span>",
            f.channel_net_profit, result=True) }}

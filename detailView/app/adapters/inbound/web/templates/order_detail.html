@@ -145,7 +145,13 @@
             Net revenue
           {% endif %}
         </span>
-        <span class="money-line__val">{{ order.financial.effective_revenue | vnd }}</span>
+        <span class="money-line__val">
+          {%- if order.financial.is_us -%}
+            {{ order.financial.effective_revenue | vnd }}
+          {%- else -%}
+            {{ order.financial.net_revenue | vnd }}
+          {%- endif -%}
+        </span>
       </div>
 
       {# Gross profit + margin % #}
