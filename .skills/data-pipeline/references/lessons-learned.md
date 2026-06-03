@@ -3586,3 +3586,24 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 6. Refunds (`fact_order_returns.refund_amount`) have no tax field — stay VAT-inclusive; flagged limitation.
 
 **Reference:** `transformation/models/marts/sales/fact_orders.sql`, `fact_sales.sql` · `docs/context/sapo-platform.md` (§ VAT) · `docs/analytics-handbook/guides/revenue_terminology.md` · report `plans/reports/fix-260603-1536-sapo-vat-inclusive-pricing.md`
+
+---
+
+### L107 — Changing mart semantics silently breaks hardcoded UI waterfalls/labels that assumed the old relationship
+
+**Group:** SERVE
+
+**Symptom:** After the VAT fix (L106) flipped `net_revenue` to VAT-exclusive, the detailView Order → Financial tab waterfall stopped reconciling on screen: it showed `Gross revenue − Discount = Net revenue` but `12,000,000 − 4,050,000 = 7,950,000 ≠ 7,361,111` (displayed net). Sidebar "Money headline" hero labeled "Net revenue" but rendered `total_collected` (7,950,000, VAT-inclusive). Values were individually correct (pure pass-through from mart) — the **ordering/labels** were wrong.
+
+**Root cause:** The waterfall row order and the sidebar `effective_revenue` mapping were authored for the PRE-fix model where `net_revenue = gross − discount = total_amount`. Post-fix that identity moved: `gross − discount = total_collected` (incl VAT), and `net_revenue = total_collected − VAT`. The presentation layer hardcoded the old step sequence, so the on-screen arithmetic no longer added up even though every number was right. No test caught it because the app does zero math — it just lays out mart columns in a fixed visual order.
+
+**Fix:** Reorder the waterfall to match new semantics: `gross(incl VAT) −discount = total_collected −VAT = net_revenue(ex-VAT) −COGS = gross_profit −fees = channel_net`. Sidebar hero: domestic shows `net_revenue` (ex-VAT) to match its "Net revenue" label (US keeps `us_revenue_incl_vat`). Also display platform fees as `abs()` (mart stores them negative; minus-operator + negative value = confusing double-negative). detailView templates are baked into the image → `docker compose up -d --build detail_view` to apply.
+
+**Rules:**
+1. When you change the meaning/derivation of a mart column (VAT basis, sign, units), grep every downstream presentation layer (templates, hardcoded waterfalls, label↔field mappings, BI tooltips) for the OLD assumed relationship — pass-through UIs break silently.
+2. A UI that does no arithmetic is NOT safe from semantic drift: fixed visual ordering encodes an arithmetic identity.
+3. Label must match the field it renders (don't label `total_collected` as "Net revenue").
+4. Mart stores expense/fee as negative → display `| abs` with an explicit minus operator, don't render the raw negative next to a "−".
+5. detailView code/templates are baked into the image (not volume-mounted) — rebuild to apply; verify the live HTML, not just the source.
+
+**Reference:** `detailView/app/adapters/inbound/web/templates/partials/order/_financial.html`, `order_detail.html` · See also L106 (the upstream VAT semantics change) · [[project-detailview-code-baked-in-image]]
