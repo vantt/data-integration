@@ -133,3 +133,11 @@ models:
     columns:
       - name: product_id
         tests: [unique, not_null]
+
+  - name: std_variant_prices
+    description: "Standardized variant prices. Grain: 1/(variant_id × price_list_id). Thin pass-through over stg_sapo_variant_prices."
+    columns:
+      - name: variant_id
+        tests: [not_null]
+      - name: price_list_id
+        tests: [not_null]

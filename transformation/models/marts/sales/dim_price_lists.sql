@@ -31,6 +31,6 @@ SELECT DISTINCT
     'VND'                                                          AS currency_iso,
     is_cost_price                                                  AS is_cost,
     (price_list_code = 'BANLE')::BOOLEAN                          AS is_default
-FROM {{ ref('stg_sapo_variant_prices') }}
+FROM {{ ref('std_variant_prices') }}
 WHERE price_list_id IS NOT NULL
 ORDER BY is_cost DESC, is_default DESC, code

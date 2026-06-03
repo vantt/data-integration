@@ -45,7 +45,7 @@ WITH prices AS (
         price_value::DECIMAL(18,2)      AS price_value,
         price_incl_tax::DECIMAL(18,2)   AS price_incl_tax,
         CURRENT_DATE                    AS snapshot_date
-    FROM {{ ref('stg_sapo_variant_prices') }}
+    FROM {{ ref('std_variant_prices') }}
     WHERE price_value IS NOT NULL
       AND price_value::DECIMAL(18,2) > 0   -- exclude unconfigured channels
 ),
@@ -56,7 +56,7 @@ gianhap AS (
     SELECT
         variant_id::BIGINT              AS variant_id,
         price_value::DECIMAL(18,2)      AS gianhap_cost
-    FROM {{ ref('stg_sapo_variant_prices') }}
+    FROM {{ ref('std_variant_prices') }}
     WHERE price_list_code = 'GIANHAP'
       AND price_value IS NOT NULL
       AND price_value::DECIMAL(18,2) > 0
