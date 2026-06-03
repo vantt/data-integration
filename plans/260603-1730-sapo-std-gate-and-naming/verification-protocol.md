@@ -221,6 +221,8 @@ docker compose start metabase
 # 5. Open Metabase, run a dashboard query touching renamed column, confirm no "unknown column"
 ```
 
+> **⚠️ GLOB-UNION STALE-SCHEMA CAVEAT (learned P1 2a, 2026-06-04):** serving views read `read_parquet('.../rolling/<mart>/*.parquet')` — a GLOB over MULTIPLE files with `union_by_name`. Right after a column rename, an OLD pre-rename parquet still co-exists with the new one until GC removes it → the union exposes the OLD column name, so `bootstrap_serving_views.py` rebuilds the view with the STALE name. **Fix:** wait for the rolling GC to drop old-schema files (or remove them), THEN re-run bootstrap. **Verify (mandatory for rename steps):** (a) query `olap.duckdb` INSIDE a container (`docker exec detail_view sh -c "python3 -c \"import duckdb;c=duckdb.connect('/app/var/data_lake/serving/olap.duckdb',read_only=True);print([x[0] for x in c.execute('DESCRIBE SELECT * FROM <mart>').fetchall()])\""`) and confirm ONLY the NEW column name appears; (b) confirm no remaining rolling parquet has the OLD column (`DESCRIBE` each file). Both must pass before commit.
+
 ---
 
 ### T9 — detailView image rebuild (for detailView code changes)
