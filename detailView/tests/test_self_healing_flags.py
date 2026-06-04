@@ -50,7 +50,7 @@ def _make_customer(*, is_retail: bool = True,
         customer_type="RETAIL" if is_retail else "WHOLESALE",
     )
     vm = CustomerValueMetrics(
-        total_orders_count=total_orders,
+        order_count=total_orders,
         cogs_order_count=cogs_order_count,
     )
     return CustomerDetail(profile=profile, value_metrics=vm)

@@ -158,7 +158,7 @@ _STUB_CUSTOMER = CustomerDetail(
         province="Hồ Chí Minh",
         country="VN",
         geo_region="HCM",
-        loyalty_point=1200,
+        loyalty_points=1200,
         customer_type="RETAIL",
         customer_group="VIP",
         created_at=datetime(2024, 1, 5, tzinfo=timezone.utc),

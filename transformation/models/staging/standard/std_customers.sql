@@ -32,10 +32,10 @@ SELECT
     country,
     
     -- Attributes
-    dob,
-    sex,
+    dob AS birth_date,
+    sex AS gender,
     customer_group,
-    loyalty_point,
+    loyalty_point AS loyalty_points,
 
     -- Metrics
     coalesce(total_expense, 0) as total_spend,  -- P1 R1: customer SPEND (src $.total_expense; 'expense' = business cost, wrong term)

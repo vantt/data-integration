@@ -1261,10 +1261,10 @@ Loyalty engagement levels per segment — bar chart.
 ```sql
 SELECT
     value_group as "Segment",
-    COUNT(CASE WHEN loyalty_point = 0 THEN 1 END) as "0 Points",
-    COUNT(CASE WHEN loyalty_point BETWEEN 1 AND 999 THEN 1 END) as "1-999",
-    COUNT(CASE WHEN loyalty_point BETWEEN 1000 AND 4999 THEN 1 END) as "1K-5K",
-    COUNT(CASE WHEN loyalty_point >= 5000 THEN 1 END) as "5K+"
+    COUNT(CASE WHEN loyalty_points = 0 THEN 1 END) as "0 Points",
+    COUNT(CASE WHEN loyalty_points BETWEEN 1 AND 999 THEN 1 END) as "1-999",
+    COUNT(CASE WHEN loyalty_points BETWEEN 1000 AND 4999 THEN 1 END) as "1K-5K",
+    COUNT(CASE WHEN loyalty_points >= 5000 THEN 1 END) as "5K+"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND order_count > 0
@@ -1298,7 +1298,7 @@ Demographic breakdown for marketing persona targeting.
 ```sql
 SELECT
     value_group as "Segment",
-    COALESCE(NULLIF(sex, ''), 'Unknown') as "Gender",
+    COALESCE(NULLIF(gender, ''), 'Unknown') as "Gender",
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'

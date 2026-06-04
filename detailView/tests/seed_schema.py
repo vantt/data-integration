@@ -54,11 +54,11 @@ _DDL = [
         line_item_count BIGINT, has_unpriced_sku BOOLEAN, unpriced_sku_count DOUBLE )""",
     """CREATE TABLE dim_customers (
         customer_key VARCHAR, customer_id VARCHAR, full_name VARCHAR, email VARCHAR,
-        phone VARCHAR, dob VARCHAR, sex VARCHAR, address1 VARCHAR, ward VARCHAR,
+        phone VARCHAR, birth_date VARCHAR, gender VARCHAR, address1 VARCHAR, ward VARCHAR,
         district VARCHAR, province VARCHAR, country VARCHAR, geo_region VARCHAR,
-        loyalty_point INTEGER, customer_type VARCHAR, customer_group VARCHAR, value_group VARCHAR,
+        loyalty_points INTEGER, customer_type VARCHAR, customer_group VARCHAR, value_group VARCHAR,
         lifecycle_stage VARCHAR, channel_preference VARCHAR, product_affinity VARCHAR,
-        payment_behavior VARCHAR, lifetime_value DECIMAL(38,2), total_orders_count BIGINT,
+        payment_behavior VARCHAR, lifetime_value DECIMAL(38,2), order_count BIGINT,
         first_order_date TIMESTAMPTZ, last_order_date TIMESTAMPTZ, recency_days BIGINT,
         lifespan_days BIGINT, created_at TIMESTAMPTZ, updated_at TIMESTAMPTZ )""",
     """CREATE TABLE dim_products (

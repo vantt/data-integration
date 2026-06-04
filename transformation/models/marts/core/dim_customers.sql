@@ -29,10 +29,10 @@ joined_data AS (
         c.ward,
         c.address1,
         c.country,
-        c.dob,
-        c.sex,
+        c.birth_date,
+        c.gender,
         c.customer_group,
-        c.loyalty_point,
+        c.loyalty_points,
         c.created_at,
         c.updated_at as source_updated_at,
         
@@ -156,10 +156,10 @@ SELECT
     CAST(NULL AS VARCHAR) as acquisition_source,
 
     -- Demographics
-    dob,
-    sex,
+    birth_date,
+    gender,
     customer_group,  -- Keep raw Sapo value for reference
-    loyalty_point,
+    loyalty_points,
 
     -- CLV & RFM
     COALESCE(monetary_value, 0) as lifetime_value,

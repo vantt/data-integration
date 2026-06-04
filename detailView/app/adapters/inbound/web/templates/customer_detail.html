@@ -141,13 +141,13 @@
             | select | join(", ") or "—") }}
         {% endif %}
         {{ fact("Region",  customer.profile.geo_region or "—") }}
-        {% if customer.profile.loyalty_point is not none %}
-        {{ fact("Loyalty", customer.profile.loyalty_point | string ~ " pts") }}
+        {% if customer.profile.loyalty_points is not none %}
+        {{ fact("Loyalty", customer.profile.loyalty_points | string ~ " pts") }}
         {% endif %}
-        {% if customer.profile.dob %}
+        {% if customer.profile.birth_date %}
         {{ fact("DOB",
-            (customer.profile.dob | dateonly) ~
-            (" · " ~ customer.profile.sex if customer.profile.sex else "")) }}
+            (customer.profile.birth_date | dateonly) ~
+            (" · " ~ customer.profile.gender if customer.profile.gender else "")) }}
         {% endif %}
       </div>
     </div>

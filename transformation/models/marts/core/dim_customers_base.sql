@@ -42,10 +42,10 @@ SELECT
     email,
     phone,
     
-    dob,
-    sex,
+    birth_date,
+    gender,
     customer_group,
-    loyalty_point,
+    loyalty_points,
     
     -- Address
     city,
@@ -74,10 +74,10 @@ SELECT
     'Unknown' as full_name,
     'Unknown' as email,
     'Unknown' as phone,
-    NULL as dob,
-    'Unknown' as sex,
+    NULL as birth_date,
+    'Unknown' as gender,
     'Unknown' as customer_group,
-    0 as loyalty_point,
+    0 as loyalty_points,
     'Unknown' as city,
     'Unknown' as province,
     'Unknown' as district,

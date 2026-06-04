@@ -17,15 +17,15 @@ def test_retail_customer_full_aggregate(seeded_db_path: str) -> None:
     detail = repo.get_by_id("CUST-1")
     assert detail is not None
 
-    # Profile incl. VARCHAR dob coerced to date.
+    # Profile incl. VARCHAR birth_date coerced to date.
     assert detail.profile.full_name == "Nguyen Van A"
-    assert detail.profile.dob == date(1990, 5, 15)
+    assert detail.profile.birth_date == date(1990, 5, 15)
     assert detail.is_retail is True
     assert detail.timeline_available is True
 
     # Value metrics aggregated over the 2 orders (ORD-NORMAL + ORD-NOCOGS).
     vm = detail.value_metrics
-    assert vm.total_orders_count == 2
+    assert vm.order_count == 2
     assert vm.lifetime_value == Decimal("1760000")  # 1,100,000 + 660,000
     assert vm.total_gross_profit == Decimal("1200000")  # 600,000 + 600,000
     assert vm.total_cogs == Decimal("400000")  # only ORD-NORMAL has COGS

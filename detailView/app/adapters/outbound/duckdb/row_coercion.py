@@ -1,6 +1,6 @@
 """Pure coercion helpers — raw DuckDB row values -> domain-friendly Python types.
 
-Keeps duckdb-specific quirks (VARCHAR ids, VARCHAR dob, Decimal/float money) out of
+Keeps duckdb-specific quirks (VARCHAR ids, VARCHAR birth_date, Decimal/float money) out of
 the repositories and out of the domain. No duckdb import here on purpose: these are
 plain functions over already-fetched values, so they stay trivially unit-testable.
 """
@@ -61,7 +61,7 @@ def as_datetime(value: Any) -> datetime | None:
 
 
 def as_date(value: Any) -> date | None:
-    """Coerce a DATE-or-VARCHAR (dim_customers.dob is VARCHAR) to date."""
+    """Coerce a DATE-or-VARCHAR (dim_customers.birth_date is VARCHAR) to date."""
     if value is None:
         return None
     if isinstance(value, datetime):
