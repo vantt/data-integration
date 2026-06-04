@@ -25,12 +25,12 @@ Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang 
 
 ```sql
 SELECT
-  '📅 Tuần qua: ' ||
-  strftime(date_trunc('week', current_date)::DATE - 7, '%d/%m/%Y') || ' – ' ||
-  strftime(date_trunc('week', current_date)::DATE - 1, '%d/%m/%Y') ||
+  '📅 Tuần này: ' ||
+  strftime(date_trunc('week', current_date)::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime(current_date, '%d/%m/%Y') ||
   '  ·  WoW: ' ||
-  strftime(date_trunc('week', current_date)::DATE - 14, '%d/%m/%Y') || ' – ' ||
-  strftime(date_trunc('week', current_date)::DATE - 8, '%d/%m/%Y')
+  strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y')
   AS "Chu kỳ báo cáo"
 ```
 
@@ -42,9 +42,9 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
-#### 📝 Text: CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
+#### 📝 Text: CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần này
 
-# CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần qua
+# CEO Weekly Pulse — Đánh giá tiến độ doanh thu và sức khỏe kinh doanh tuần này
 
 ```json metabase-pos
 {"row": 2, "col":0, "size_x":18, "size_y":1}
@@ -58,9 +58,9 @@ SELECT
 {"row": 6, "col":0, "size_x":18, "size_y":1}
 ```
 
-#### 📝 Text: Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
+#### 📝 Text: Theo dõi xu hướng doanh thu tuần này + tuần trước (WoW) — momentum tăng hay giảm?
 
-# Theo dõi xu hướng doanh thu 14 ngày — momentum tăng hay giảm?
+# Theo dõi xu hướng doanh thu tuần này + tuần trước (WoW) — momentum tăng hay giảm?
 
 ```json metabase-pos
 {"row": 10, "col":0, "size_x":18, "size_y":1}
@@ -77,16 +77,16 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date)
+      AND ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "Net Revenue",
@@ -125,16 +125,16 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date)
+      AND ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "Gross Revenue",
@@ -173,16 +173,16 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date)
+      AND ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "Total Orders",
@@ -214,8 +214,8 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date)
+      AND ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT
@@ -224,8 +224,8 @@ last_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "AOV",
@@ -362,8 +362,8 @@ SELECT
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND ordered_at >= current_date - INTERVAL '14 days'
-  AND ordered_at < current_date
+  AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND ordered_at < current_date + INTERVAL '1 day'
 GROUP BY 1
 ORDER BY 1
 ```
@@ -390,10 +390,72 @@ ORDER BY 1
 
 ---
 
+#### 📝 Text: Danh sách đơn hàng tuần này — chi tiết theo đơn
+
+# Danh sách đơn hàng tuần này — chi tiết theo đơn
+
+```json metabase-pos
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### Question: Đơn hàng tuần này
+
+**Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders) — Order-level detail list for the current week (Mon-to-date). Drill-down backing the revenue KPIs above.
+
+```sql
+SELECT
+    o.order_id as "order_id",
+    o.order_code as "Mã đơn",
+    strftime(o.ordered_at AT TIME ZONE 'Asia/Ho_Chi_Minh', '%d/%m %H:%M') as "Thời gian",
+    COALESCE(ch.channel_name, 'Unknown') as "Kênh",
+    c.full_name as "Khách hàng",
+    o.status as "Trạng thái",
+    o.gross_revenue as "Gross",
+    o.discount_amount as "Chiết khấu",
+    o.net_revenue as "Net Revenue"
+FROM fact_orders o
+LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
+LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
+WHERE o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.ordered_at >= date_trunc('week', current_date)
+  AND o.ordered_at < current_date + INTERVAL '1 day'
+ORDER BY o.ordered_at DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "table.pivot": false,
+  "visualization_settings": {
+    "table.columns": [
+      {"name": "order_id", "enabled": false}
+    ],
+    "column_settings": {
+      "Gross": { "number_style": "currency", "currency": "VND", "decimals": 0 },
+      "Chiết khấu": { "number_style": "currency", "currency": "VND", "decimals": 0 },
+      "Net Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0 },
+      "[\"name\",\"Mã đơn\"]": {
+        "click_behavior": {
+          "type": "link",
+          "linkType": "url",
+          "linkTemplate": "https://detailview.lan.fwg.vn/orders/{{Mã đơn}}"
+        }
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 9 }
+```
+
+---
+
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window)
+**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD Revenue vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -406,7 +468,14 @@ ORDER BY 1
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT
+  '📅 Tuần này: ' ||
+  strftime(date_trunc('week', current_date)::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime(current_date, '%d/%m/%Y') ||
+  '  ·  WoW: ' ||
+  strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -445,8 +514,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date)
+  AND o.ordered_at < current_date + INTERVAL '1 day'
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -489,8 +558,8 @@ WITH this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date)
+      AND o.ordered_at < current_date + INTERVAL '1 day'
     GROUP BY 1
 ),
 last_week AS (
@@ -501,8 +570,8 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
     GROUP BY 1
 )
 SELECT
@@ -549,8 +618,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date)
+  AND o.ordered_at < current_date + INTERVAL '1 day'
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 8
@@ -588,8 +657,8 @@ WITH this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date)
+      AND o.ordered_at < current_date + INTERVAL '1 day'
     GROUP BY 1
 ),
 last_week AS (
@@ -601,8 +670,8 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
     GROUP BY 1
 )
 SELECT
@@ -659,7 +728,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window)
+**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD Revenue vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -672,7 +741,14 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') || '  ·  WoW: ' || strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' || strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT
+  '📅 Tuần này: ' ||
+  strftime(date_trunc('week', current_date)::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime(current_date, '%d/%m/%Y') ||
+  '  ·  WoW: ' ||
+  strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%d/%m/%Y') || ' – ' ||
+  strftime((date_trunc('week', current_date) - INTERVAL '1 day')::DATE, '%d/%m/%Y')
+  AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -691,9 +767,9 @@ SELECT '📅 Tuần này: ' || strftime((date_trunc('week', current_date))::DATE
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
-#### 📝 Text: Theo dõi tỷ lệ New vs Returning 14 ngày — chất lượng tăng trưởng
+#### 📝 Text: Theo dõi tỷ lệ New vs Returning tuần này + tuần trước (WoW) — chất lượng tăng trưởng
 
-# Theo dõi tỷ lệ New vs Returning 14 ngày — chất lượng tăng trưởng
+# Theo dõi tỷ lệ New vs Returning tuần này + tuần trước (WoW) — chất lượng tăng trưởng
 
 ```json metabase-pos
 { "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
@@ -716,14 +792,14 @@ WITH
 this_week AS (
     SELECT COUNT(DISTINCT customer_key) as val
     FROM dim_customers
-    WHERE date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND date(first_order_date) < date_trunc('week', current_date)
+    WHERE date(first_order_date) >= date_trunc('week', current_date)
+      AND date(first_order_date) <= current_date
 ),
 last_week AS (
     SELECT COUNT(DISTINCT customer_key) as val
     FROM dim_customers
-    WHERE date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND date(first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND date(first_order_date) < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "New Customers",
@@ -749,15 +825,15 @@ FROM this_week tw, last_week lw
 ```sql
 SELECT
     ROUND(
-        SUM(CASE WHEN date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days' THEN o.net_revenue ELSE 0 END) * 100.0
+        SUM(CASE WHEN date(c.first_order_date) < date_trunc('week', current_date) THEN o.net_revenue ELSE 0 END) * 100.0
         / NULLIF(SUM(o.net_revenue), 0), 1
     ) as "Returning Revenue %"
 FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date)
+  AND o.ordered_at < current_date + INTERVAL '1 day'
 ```
 
 ```json metabase-viz
@@ -789,9 +865,9 @@ this_week AS (
     LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
-      AND date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date)
+      AND o.ordered_at < current_date + INTERVAL '1 day'
+      AND date(c.first_order_date) < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COUNT(DISTINCT o.customer_key) as val
@@ -799,9 +875,9 @@ last_week AS (
     LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      AND date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
+      AND date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val as "Returning Customers",
@@ -838,8 +914,8 @@ FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.ordered_at >= current_date - INTERVAL '14 days'
-  AND o.ordered_at < current_date
+  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < current_date + INTERVAL '1 day'
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -878,16 +954,16 @@ this_week AS (
     FROM fact_orders
     WHERE status = 'CANCELLED'
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date)
+      AND ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
     WHERE status = 'CANCELLED'
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "Cancelled Orders",
@@ -915,16 +991,18 @@ WITH
 this_week AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND ordered_at >= date_trunc('week', current_date)
+      AND ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE status NOT IN ('CANCELLED', 'Voided')
+      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "Returns",
@@ -953,8 +1031,8 @@ SELECT
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND ordered_at < date_trunc('week', current_date)
+  AND ordered_at >= date_trunc('week', current_date)
+  AND ordered_at < current_date + INTERVAL '1 day'
 ```
 
 ```json metabase-viz
@@ -979,12 +1057,12 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ### Section: Profitability (P&L)
 
 > **Scope:** `fact_order_economics` — `is_sales_channel = true AND status NOT IN ('CANCELLED','Voided') AND has_cogs = true`
-> **Window:** Tuần trước (Mon–Sun) vs tuần trước nữa (WoW). `ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days' AND ordered_at < date_trunc('week', current_date)`
+> **Window:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon–Sun). `this_week: ordered_at >= date_trunc('week', current_date) AND < current_date + INTERVAL '1 day'` · `last_week: ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days' AND < date_trunc('week', current_date)`
 > **Domain References:** [Order Gross Profit](../domains/finance.md#9-order-gross-profit), [Channel Net Profit](../domains/finance.md#10-channel-net-profit-lãi-ròng-kênh)
 
-#### 📝 Text: Lợi nhuận tuần qua — Net Profit, Gross Margin, Kênh lỗ
+#### 📝 Text: Lợi nhuận tuần này — Net Profit, Gross Margin, Kênh lỗ
 
-# Lợi nhuận tuần qua — Net Profit, Gross Margin, Kênh lỗ
+# Lợi nhuận tuần này — Net Profit, Gross Margin, Kênh lỗ
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1003,8 +1081,8 @@ this_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date)
+      AND o.ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COALESCE(SUM(e.channel_net_profit), 0) AS val
@@ -1013,8 +1091,8 @@ last_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val AS "Net Profit",
@@ -1059,8 +1137,8 @@ this_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date)
+      AND o.ordered_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT
@@ -1073,8 +1151,8 @@ last_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val AS "Gross Margin %",
@@ -1113,8 +1191,8 @@ FROM (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date)
+      AND o.ordered_at < current_date + INTERVAL '1 day'
     GROUP BY e.channel_key
     HAVING SUM(e.channel_net_profit) < 0
 ) loss_channels
@@ -1133,7 +1211,7 @@ FROM (
 
 #### 📝 Text: Source & Freshness
 
-Source: fact_orders · Updated weekly (Mon-Sun) · **Scope: All sales channels (is_sales_channel = true)** · Excludes cancelled orders
+**Source:** fact_orders + dim_customers + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD Revenue vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
