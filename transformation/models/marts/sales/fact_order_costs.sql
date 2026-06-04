@@ -8,7 +8,7 @@
 -- Sources: MISA (COGS), Shopee revenue sheet (platform fees + taxes + shipping),
 --          Sapo discount_items (seller vouchers, bundle deals, manual discounts).
 -- Amounts are ALWAYS positive (ABS). Sign convention is derived from cost_category.
--- See docs/architecture/order-pl-schema-design.md for taxonomy.
+-- See docs/architecture/order-pl/order-pl-schema-design.md for taxonomy.
 
 WITH order_meta AS (
     SELECT order_id, order_code, channel_key, date_key

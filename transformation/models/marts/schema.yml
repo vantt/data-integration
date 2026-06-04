@@ -518,9 +518,9 @@ models:
       - name: discount_codes
         description: "JSON list of discount codes"
       - name: max_discount_rate
-        description: "Highest discount_rate (0-100) across all discount items on this order. NULL for orders with no discount_items. See: docs/architecture/discount-classification.md"
+        description: "Highest discount_rate (0-100) across all discount items on this order. NULL for orders with no discount_items. See: docs/architecture/order-pl/discount-classification.md"
       - name: primary_discount_type
-        description: "discount_type of the highest-amount discount item on this order. NULL for orders with no discounts. See: docs/architecture/discount-classification.md"
+        description: "discount_type of the highest-amount discount item on this order. NULL for orders with no discounts. See: docs/architecture/order-pl/discount-classification.md"
         tests:
           - accepted_values:
               arguments:
@@ -635,9 +635,9 @@ models:
       - name: channel_key
         description: "Inherited from fact_orders"
       - name: discount_rate
-        description: "Raw rate (0-100) from Sapo discount_items. NULL for COGS and platform fee rows. Note: always 0 for voucher_promotional (Sapo design). See: docs/architecture/discount-classification.md"
+        description: "Raw rate (0-100) from Sapo discount_items. NULL for COGS and platform fee rows. Note: always 0 for voucher_promotional (Sapo design). See: docs/architecture/order-pl/discount-classification.md"
       - name: discount_type
-        description: "Semantic classification of this discount. NULL for COGS and platform fee rows. See: docs/architecture/discount-classification.md"
+        description: "Semantic classification of this discount. NULL for COGS and platform fee rows. See: docs/architecture/order-pl/discount-classification.md"
         tests:
           - accepted_values:
               arguments:

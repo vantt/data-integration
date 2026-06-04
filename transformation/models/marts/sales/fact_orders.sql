@@ -38,7 +38,7 @@ teams AS (
 ),
 
 -- Classify discount items to order-level summary
--- See: docs/architecture/discount-classification.md
+-- See: docs/architecture/order-pl/discount-classification.md
 discount_classified AS (
     SELECT
         d.order_code,

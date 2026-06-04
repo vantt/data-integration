@@ -23,7 +23,7 @@
 - `transformation/models/marts/sales/fact_order_costs.sql` — thêm `discount_rate`, `discount_nature`
 - `transformation/models/marts/sales/fact_orders.sql` — thêm `max_discount_rate`, `primary_discount_nature`
 - `transformation/models/marts/schema.yml` — docs + `accepted_values` tests
-- `docs/architecture/discount-classification.md` — taxonomy, logic, report examples
+- `docs/architecture/order-pl/discount-classification.md` — taxonomy, logic, report examples
 
 **Tests:** 22/22 PASS (bao gồm 2 `accepted_values` tests mới)
 
