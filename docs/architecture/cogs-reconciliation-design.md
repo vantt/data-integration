@@ -172,6 +172,14 @@ detailView is single-order drill-down → ideal place to show **both**, never to
 
 ---
 
+## 11. Action items / tasks
+
+| ID | Task | Priority | Status |
+| --- | --- | --- | --- |
+| **BUG-1** | **Fix TK642 lumping in `fact_order_economics.sql:32`** — `SUM(cogs_amount)` includes TK642 promo (1.08B) in COGS. Filter to true COGS: `... WHERE cogs_account LIKE '632%'` in the `misa_order` CTE (interim), OR repoint COGS sourcing to `int_order_cogs_reconciled` (proper, phase 3). Same for `fact_order_costs` cogs CTE. After fix: `cogs_amount`/`gross_profit`/`channel_net_profit` drop the promo contamination; route the 642 portion to a `promo_goods_cost` cost_type. | **High** | OPEN |
+
+**Coordination:** `fact_order_economics.sql` / `fact_order_costs.sql` are currently being edited by the concurrent overhead session — **do NOT edit concurrently**. Either (a) hand BUG-1 to that session (it directly affects their `channel_net_profit` baseline), or (b) apply after their work merges. Verify the fix via a Dagster run (COGS total drops by ~1.08B; promo surfaces separately).
+
 ## Unresolved questions
 
 1. ~~Precedence~~ → **RESOLVED: Sapo-MAC primary, MISA reconciliation** (§4).
