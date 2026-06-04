@@ -32,9 +32,10 @@ net_revenue (Sapo VAT-inclusive: net = total − total_tax)
 | 04 | `phase-04-overhead-allocation.md` | `int_order_overhead_allocation` (closure-based pools/base) + `fully_loaded_net_profit` | TODO |
 | 05 | `phase-05-pl-marts-serving.md` | unified `fact_order_economics`/`fact_order_costs` columns + serving views + Metabase P&L | TODO |
 | 06 | `phase-06-detailview-pl.md` | detailView per-line COGS/margin + reconciliation panel + full P&L (coordinate w/ concurrent detailView work) | TODO |
+| 07 | `phase-07-shopee-fee-fixes.md` | **Shopee platform-fee fixes** (tier-2): BUG-2 service-fee double-count (use F detail, drop D aggregate) + BUG-3 payment-fee column rename. Corrects `channel_net_profit`. | TODO |
 
 ## Dependencies
-`01 → 02 → 03 → 04 → 05 → 06`. BUG-1 (inside 02) can ship early/independently. 04 needs 01 (overhead data) + 03 (count-once rule). 06 last (and after the concurrent detailView stream merges).
+`01 → 02 → 03 → 04 → 05 → 06`. **Tier-correctness fixes BUG-1 (in 02) + phase-07 (Shopee fees) must precede phase-04** — they fix the COGS (tier-1) and platform-fee (tier-2) inputs that overhead allocation uses as its `channel_net_profit` base. Both can ship early/independently. 04 needs 01 (overhead data) + 03 (count-once) + clean tier-1/tier-2. 06 last (after concurrent detailView stream merges).
 
 ## Coordination / concurrency (CRITICAL)
 - A concurrent work-stream (same git identity) is editing `detailView` (customer pages), and ran P1/P2 renames + the overhead design. **`fact_order_economics.sql` / `fact_order_costs.sql` are shared** — confirm not being edited before phases 02/05; avoid interleaved commits.
