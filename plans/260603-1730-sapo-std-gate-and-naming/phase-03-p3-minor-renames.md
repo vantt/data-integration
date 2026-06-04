@@ -1,7 +1,7 @@
 ---
 title: "Phase 3 — P3 optional minor renames"
 description: "Low-priority cosmetic renames: dob→birth_date, sex→gender, loyalty_point→loyalty_points, zip→postal_code, client_details→client_info. Safe to skip."
-status: pending
+status: complete
 priority: P3
 effort: 1h
 ---
@@ -17,7 +17,7 @@ effort: 1h
 
 ## Overview
 - **Priority:** P3 — cosmetic; zero semantic impact; safe to skip indefinitely
-- **Status:** pending
+- **Status:** complete (2026-06-04)
 - **Lock strategy:** Strategy A for all `dbt build` steps. Parse is lock-free.
 - **Decision gate:** Only proceed if schema cleanliness justifies the serving rebuild + detailView image rebuild + blueprint update cost. The same coordinated deploy window as P1/P2 applies.
 - **Explicitly excluded:** `order_code → order_number` — rejected per naming-conventions.md §2. `order_code` is alphanumeric (`260316A6VJXGMT`); `_number` implies a numeric sequence. Final decision, not revisitable in this plan.

@@ -1,7 +1,7 @@
 ---
 title: "Phase 0 — Complete the std gate (structural, no renames)"
 description: "Create 6 missing std models, repoint 8 bypassing consumers, add source_version='v2', schema tests, validation harness."
-status: pending
+status: complete
 priority: P1
 effort: 6h
 ---
@@ -19,7 +19,7 @@ effort: 6h
 
 ## Overview
 - **Priority:** P1 — blocks all rename phases and future v3 union
-- **Status:** pending
+- **Status:** complete (2026-06-04)
 - **Risk level:** Low — pure structural refactor; v2 data flows unchanged through thin pass-through models
 - **Validation gate:** byte-identical row counts + key-column checksums before/after (T3 harness)
 - **Lock strategy:** Strategy A (pause both realtime + incremental schedules) for Steps that run `dbt build`. Steps that only run `dbt parse` or read parquet are lock-free.

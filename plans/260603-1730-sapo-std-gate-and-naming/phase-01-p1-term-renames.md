@@ -1,7 +1,7 @@
 ---
 title: "Phase 1 — P1 wrong/ambiguous term renames"
 description: "Fix semantically incorrect or ambiguous column names at std contract then cascade to published marts, serving, blueprints, detailView."
-status: pending
+status: complete
 priority: P1
 effort: 5h
 ---
@@ -18,7 +18,7 @@ effort: 5h
 
 ## Overview
 - **Priority:** P1 — semantically wrong names must not bake into the v3 contract
-- **Status:** pending — blocked by Phase 0
+- **Status:** complete (2026-06-04)
 - **Lock strategy:** Strategy A (Dagster UI pause, not CLI — CLI is ineffective on this daemon; see verification-protocol.md Lock-Handling Guidance) for all `dbt build` steps. Parse is lock-free.
 - **Structure:** Tier 1 (1 std-internal step, batch OK) + Tier 2 (5 per-column atomic cascades, ordered by blast radius). Each column = one independently shippable + revertible commit.
 

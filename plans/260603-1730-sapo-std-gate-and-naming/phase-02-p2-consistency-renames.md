@@ -1,7 +1,7 @@
 ---
 title: "Phase 2 — P2 consistency renames"
 description: "Standardize _timestamp→_at timestamps, total_orders_count→order_count, fact_sales.revenue→net_revenue, last_modified→last_modified_at."
-status: pending
+status: complete
 priority: P2
 effort: 4h
 ---
@@ -17,7 +17,7 @@ effort: 4h
 
 ## Overview
 - **Priority:** P2 — convention drift; not semantically wrong, but inconsistent
-- **Status:** pending — blocked by Phase 1
+- **Status:** complete (2026-06-04)
 - **Lock strategy:** Strategy A for all `dbt build` steps. Parse is lock-free.
 - **Largest blast radius:** R7 `order_timestamp → ordered_at` — 24 Metabase blueprint files + 3 dbt models.
 - **Structure:** std-layer step first (R10 only, cheap), then single coordinated mart cascade, then serving rebuild, then detailView, then blueprints. All mart steps in one window — one serving rebuild cycle.

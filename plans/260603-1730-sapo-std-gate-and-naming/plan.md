@@ -30,11 +30,11 @@ created: 2026-06-03
 
 | # | File | Description | Status | Depends on |
 |---|------|-------------|--------|------------|
-| 0 | [phase-00-complete-std-gate.md](phase-00-complete-std-gate.md) | Create 6 missing std models, repoint 8 bypassing consumers, add `source_version`, tests, validation harness | pending | — |
-| 1 | [phase-01-p1-term-renames.md](phase-01-p1-term-renames.md) | Wrong/ambiguous terms: `total_expense→total_spend`, `item_id→order_line_id`, `is_active_status→is_active`, `discount_nature→discount_type`, `tax_amount→vat_amount`, `sol_timestamp→ordered_at` | pending | P0 complete |
-| 2 | [phase-02-p2-consistency-renames.md](phase-02-p2-consistency-renames.md) | Consistency: `_timestamp→_at` timestamps, `total_orders_count→order_count`, `fact_sales.revenue→net_revenue`, money/ratio rules | pending | P1 complete |
-| 3 | [phase-03-p3-minor-renames.md](phase-03-p3-minor-renames.md) | Optional minor: `dob→birth_date`, `sex→gender`, `loyalty_point→loyalty_points`, `zip→postal_code`, `client_details→client_info` | pending | P2 complete (optional) |
-| 4 | [phase-04-rename-v2-files.md](phase-04-rename-v2-files.md) | Rename v2 `src_sapo_*`/`stg_sapo_*` model files → `_v2` suffix (std_* stays unversioned) so v3 adds `*_v3` cleanly. Internal-only. | pending | P0 complete; run after P3 |
+| 0 | [phase-00-complete-std-gate.md](phase-00-complete-std-gate.md) | Create 6 missing std models, repoint 8 bypassing consumers, add `source_version`, tests, validation harness | done | — |
+| 1 | [phase-01-p1-term-renames.md](phase-01-p1-term-renames.md) | Wrong/ambiguous terms: `total_expense→total_spend`, `item_id→order_line_id`, `is_active_status→is_active`, `discount_nature→discount_type`, `tax_amount→vat_amount`, `sol_timestamp→ordered_at` | done | P0 complete |
+| 2 | [phase-02-p2-consistency-renames.md](phase-02-p2-consistency-renames.md) | Consistency: `_timestamp→_at` timestamps, `total_orders_count→order_count`, `fact_sales.revenue→net_revenue`, money/ratio rules | done | P1 complete |
+| 3 | [phase-03-p3-minor-renames.md](phase-03-p3-minor-renames.md) | Optional minor: `dob→birth_date`, `sex→gender`, `loyalty_point→loyalty_points`, `zip→postal_code`, `client_details→client_info` | done | P2 complete (optional) |
+| 4 | [phase-04-rename-v2-files.md](phase-04-rename-v2-files.md) | Rename v2 `src_sapo_*`/`stg_sapo_*` model files → `_v2` suffix (std_* stays unversioned) so v3 adds `*_v3` cleanly. Internal-only. | done | P0 complete; run after P3 |
 
 **P0 blocks all rename phases.** Each rename phase is independently shippable — user can stop after P0, or after P1, etc. The std-internal renames (in std_* models only) are cheap. Published-mart cascade (fact_*, dim_*, Metabase, detailView) is expensive — treat as a coordinated deploy event.
 

@@ -1,7 +1,7 @@
 ---
 title: "Phase 4 — Rename v2 src/stg files to _v2 suffix"
 description: "Rename all v2 src_sapo_*/stg_sapo_* dbt models to _v2 suffix so v3 files add cleanly alongside. std_* stays unversioned. Internal-only; marts/serving/Metabase/detailView untouched."
-status: pending
+status: complete
 priority: P2
 effort: 3h
 ---
