@@ -180,7 +180,43 @@ Google Sheet (config + budgeted rate) ─┘                                 └
 3. **Base ưu tiên**: 1 pool theo doanh thu (đơn giản) / theo lãi gộp / ABC-lite nhiều pool ngay?
 4. **Realtime hay không**: cần số ngay trong tháng (budgeted + true-up) hay chỉ báo cáo
    **sau khi chốt sổ** là đủ? (Quyết định độ phức tạp ~gấp đôi.)
-5. **Đơn hủy/hoàn** có gánh overhead không?
+5. **Đơn hủy/hoàn** có gánh overhead không? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q5" ngay dưới.
+
+## Quyết định Q5 — Đơn hủy/hoàn có gánh overhead không? (CHỐT v1, 2026-06-04)
+
+### Câu hỏi
+Khi phân bổ overhead (TK642/635/641-chung) xuống từng đơn ở tier-3 (`fully_loaded_net_profit`), các **đơn hủy** (cancelled) và **đơn hoàn/trả** (returned/refunded) có được tính một phần overhead không?
+
+### Reframe — đây là câu hỏi về MẪU SỐ, không phải đạo đức
+Pool overhead tháng là **con số CỐ ĐỊNH đã chi tiền thật**, độc lập với việc đơn nào "xứng đáng". Ràng buộc closure `SUM(allocated) == pool_period` (design §6) bắt buộc toàn bộ pool **phải rơi vào đâu đó**. Vậy câu hỏi thật là: *đơn hủy/hoàn có nằm trong **tập đơn để chia pool (base)** không?*
+- **Loại khỏi base** → phần overhead chúng "ăn" bị dồn ngầm sang đơn tốt → đơn tốt gánh hộ, và **mất visibility** chi phí của tỷ lệ hủy/hoàn.
+- **Đưa vào base** → đơn hủy hiện một khoản overhead + "lỗ" → đơn tốt nhẹ hơn.
+
+### Phải tách 3 trạng thái — chúng KHÁC NHAU về kinh tế (đừng gộp "hủy" với "hoàn")
+| Trạng thái | Đã tiêu nguồn lực thật? | Phán quyết v1 |
+|---|---|---|
+| **Hủy TRƯỚC fulfill** (khách bom giỏ, hủy ngay; chưa pick/pack/ship) | ~0 | **KHÔNG gánh** — đưa vào base chỉ tạo "lỗ ảo" trên mọi giỏ bỏ → nhiễu |
+| **Hoàn/trả** (đã giao rồi trả) | Gánh **NHIỀU HƠN** đơn thường (xuôi + ngược: ship về, kiểm, nhập lại, xử lý refund) | Đơn gốc **GIỮ** phần overhead đã phân bổ; **KHÔNG** cộng thêm chi phí ngược vào đơn gốc |
+| **Hủy SAU fulfill / RTO** (giao không thành công) | Gánh thật (đã pick/pack/ship) | **CÓ gánh** phần ops; phần ship hỏng đã là **direct cost tier-2** |
+
+### Nguyên tắc quyết định: số này DÙNG ĐỂ LÀM GÌ?
+`fully_loaded_net_profit` được định nghĩa là **"để báo cáo, KHÔNG dùng quyết định nhận/từ chối đơn"**; overhead **không nằm** ở tier quyết định (`channel_net_profit`). ⇒ Với quyết định accept/reject, Q5 không áp dụng. Độ chính xác activity-based (ABC) cầu kỳ trên đơn hủy có **giá trị thấp** ở tier báo cáo → **YAGNI**.
+
+### 🎯 Quy tắc v1 (KISS, closure-safe, implement được với data hiện có)
+> **Base phân bổ = đơn ĐÃ FULFILL trong kỳ** (proxy: có `std_fulfillments` / có COGS / `status` ∈ {shipped, completed, returned}), trọng số theo `net_revenue` (hoặc `gross_profit`).
+> - **Hủy trước fulfill → LOẠI khỏi base** (zero activity, không lỗ ảo).
+> - **Hoàn/trả → đơn gốc GIỮ allocation** (nó là đơn fulfilled thật trong kỳ); **không** đẩy reverse cost về đơn gốc — reverse logistics đã là direct cost tier-2 (`shipping_fee_return_refund`, `shipping_fee_failed_delivery`) + đã có `fact_order_returns`.
+> - **RTO / hủy sau fulfill → Ở TRONG base** (đã tiêu ops).
+
+Closure vẫn đúng: pool chia trên tập fulfilled. Data đủ để implement: `fact_orders.status`, `std_fulfillments`, `fact_order_returns`.
+
+### ⚠️ Cái bẫy phải tránh — đừng để overhead "che" chi phí churn
+Nếu tỷ lệ hủy/hoàn/RTO đáng kể (TMĐT VN thường 8–15% RTO), **đừng chôn** nó vào overhead per-order — nó sẽ **biến mất khỏi tầm nhìn** và không ai hành động. Artifact đúng để quản trị = **1 KPI riêng "cost of churn / failed fulfillment"** (data có sẵn: `fact_order_returns` + `shipping_fee_failed_delivery` + `shipping_fee_return_refund`). Surface riêng → drive giảm RTO; chôn vào overhead → giấu vấn đề.
+
+### Lộ trình nâng cấp (chỉ khi cần)
+Lên activity-based (đơn hủy-sau-fulfill và hoàn gánh đúng phần tiêu thụ xuôi/ngược) **chỉ khi** có quyết định cụ thể cần độ chính xác đó (vd: định giá phí xử lý, đàm phán RTO với sàn). v1 không làm.
+
+**Trạng thái:** CHỐT v1. Còn mở: Q1 (MISA API/export), Q2 (pool scope), Q3 (base), Q4 (realtime vs closure) — xem danh sách trên.
 
 ## Phase-01 — chốt schema ingestion (pre-work cho phase-04, CHƯA implement)
 
