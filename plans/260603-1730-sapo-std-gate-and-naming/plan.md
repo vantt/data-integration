@@ -1,7 +1,7 @@
 ---
 title: "Sapo std gate completion + column naming standardization"
 description: "Complete the std_* conformance layer for 6 missing entities; apply P1/P2/P3 renames as prep for v2→v3 migration."
-status: pending
+status: complete
 priority: P1
 effort: 16h
 branch: main
@@ -15,6 +15,14 @@ created: 2026-06-03
 
 **Source analysis:** `plans/reports/arch-260603-1730-sapo-v2-v3-migration-gate.md`
 **Naming rules:** `docs/architecture/naming-conventions.md`
+
+> **✅ STATUS 2026-06-04 — ALL PHASES COMPLETE & PUSHED.**
+> - **P0** std gate (5 new std models, 8 consumers repointed; 0.6 skipped as dead code).
+> - **P1** term renames (6): total_spend, discount_type, is_active, order_line_id, vat_amount, ordered_at(fact_sales).
+> - **P2** consistency (5): returned_at, last_modified_at, order_count, net_revenue(fact_sales), ordered_at(fact_orders).
+> - **P3** minor (5): birth_date, gender, loyalty_points, client_info, postal_code.
+> - **P4** rename 22 `src/stg_sapo_*` → `_v2` + source alias `sapo_v2_raw` (D1 middle-ground; physical raw + dlt state untouched).
+> Every rename verified: percol pure-rename, fresh Dagster run PASS=389, serving/blueprint/detailView/rill in sync. Marts byte-stable except renamed columns. Remaining for actual v3: answer Q1–Q5, then build `src_sapo_*_v3`/`stg_sapo_*_v3` + the UNION in each `std_*`.
 
 ---
 
