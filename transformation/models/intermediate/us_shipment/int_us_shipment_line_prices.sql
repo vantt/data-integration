@@ -6,7 +6,7 @@
 
 -- Enrich US CrossBorder order line items with actual deal prices from the price list.
 -- Sapo records US shipment net_revenue=0; this model computes the real per-line revenue.
--- Grain: one row per order line item (order_id × item_id).
+-- Grain: one row per order line item (order_id × order_line_id).
 --
 -- Join logic: for each line item, find the price row where
 --   sku matches AND effective_from <= order_date
@@ -28,7 +28,7 @@ WITH us_orders AS (
 
 order_items AS (
     SELECT
-        i.item_id,
+        i.order_line_id,
         i.order_id,
         upper(trim(cast(i.sku as varchar))) AS sku,
         i.quantity
@@ -46,7 +46,7 @@ prices AS (
 )
 
 SELECT
-    oi.item_id,
+    oi.order_line_id,
     oi.order_id,
     uo.order_code,
     uo.channel_key,
@@ -66,6 +66,6 @@ LEFT JOIN prices p
     ON p.sku = oi.sku
     AND p.effective_from <= cast(uo.order_timestamp AS date)
 QUALIFY ROW_NUMBER() OVER (
-    PARTITION BY oi.item_id
+    PARTITION BY oi.order_line_id
     ORDER BY p.effective_from DESC NULLS LAST
 ) = 1

@@ -13,7 +13,7 @@ WITH source_data AS (
 
 SELECT
     -- IDs
-    item_id,
+    item_id AS order_line_id,
     order_id,
     product_id,
     variant_id,

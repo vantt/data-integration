@@ -117,7 +117,7 @@ class OrderFinancial:
 
 @dataclass
 class LineItem:
-    item_id: int | None = None
+    order_line_id: int | None = None
     sku: str | None = None
     product_name: str | None = None
     variant_name: str | None = None

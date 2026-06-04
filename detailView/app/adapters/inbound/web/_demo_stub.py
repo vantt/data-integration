@@ -87,14 +87,14 @@ _STUB_ORDER = OrderDetail(
     ),
     line_items=[
         LineItem(
-            item_id=1, sku="A-01", product_name="Kem dưỡng da 50ml",
+            order_line_id=1, sku="A-01", product_name="Kem dưỡng da 50ml",
             variant_name="Vanilla", brand_name="FINE", category="Skincare",
             unit="hộp", quantity=2, revenue=Decimal("600000"),
             discount_amount=Decimal("0"), distributed_discount_amount=Decimal("75000"),
             weight_grams=Decimal("120"),
         ),
         LineItem(
-            item_id=2, sku="B-12", product_name="Serum vitamin C",
+            order_line_id=2, sku="B-12", product_name="Serum vitamin C",
             variant_name="Large 50ml", brand_name="FG", category="Skincare",
             unit="hộp", quantity=1, revenue=Decimal("650000"),
             discount_amount=Decimal("150000"), distributed_discount_amount=Decimal("75000"),

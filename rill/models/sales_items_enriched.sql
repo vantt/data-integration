@@ -1,6 +1,6 @@
 SELECT
     s.order_id,
-    s.item_id,
+    s.order_line_id,
     s.sol_timestamp AS sale_timestamp,
     date_trunc('day', s.sol_timestamp) AS sale_date,
     EXTRACT(HOUR FROM s.sol_timestamp) AS sale_hour,

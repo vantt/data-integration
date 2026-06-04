@@ -123,7 +123,7 @@ def map_customer_ref(row: Row) -> CustomerRef:
 
 def map_line_item(row: Row) -> LineItem:
     return LineItem(
-        item_id=rc.as_int(row.get("item_id")),
+        order_line_id=rc.as_int(row.get("order_line_id")),
         sku=rc.as_str(row.get("sku")),
         product_name=rc.as_str(row.get("product_name")),
         variant_name=rc.as_str(row.get("variant_name")),

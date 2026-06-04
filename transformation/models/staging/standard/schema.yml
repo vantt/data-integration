@@ -45,7 +45,7 @@ models:
   - name: std_order_items
     description: "Line items v2.0"
     columns:
-      - name: item_id
+      - name: order_line_id
         tests: [unique, not_null]
       - name: source_version
         description: "Source API version that produced this record ('v2' for Sapo v2; 'v3' when v3 union is added)."

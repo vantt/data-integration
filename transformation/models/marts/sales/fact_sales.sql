@@ -60,7 +60,7 @@ SELECT
     
     -- Degenerate Keys
     i.order_id,
-    i.item_id,
+    i.order_line_id,
     
     -- Metrics
     i.quantity,

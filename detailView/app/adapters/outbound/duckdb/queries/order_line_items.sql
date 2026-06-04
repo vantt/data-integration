@@ -2,7 +2,7 @@
 -- NOTE: per-line US price lives only in int_us_shipment_line_prices, an int_* model that
 -- the read-only serving contract forbids querying. So LineItem.us_price_incl_vat stays None.
 SELECT
-    fs.item_id,
+    fs.order_line_id,
     dp.sku,
     dp.product_name,
     dp.variant_name,
@@ -17,4 +17,4 @@ SELECT
 FROM fact_sales fs
 LEFT JOIN dim_products dp ON fs.product_key = dp.product_key
 WHERE fs.order_id = ?
-ORDER BY fs.item_id;
+ORDER BY fs.order_line_id;

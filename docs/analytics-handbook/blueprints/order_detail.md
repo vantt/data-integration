@@ -190,7 +190,7 @@ SELECT
 FROM fact_sales s
 LEFT JOIN dim_products p ON s.product_key = p.product_key
 WHERE s.order_id = {{order_id}}
-ORDER BY s.item_id
+ORDER BY s.order_line_id
 ```
 
 ```json metabase-viz
