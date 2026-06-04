@@ -126,8 +126,8 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 │ HOP 5: STAGING LAYER (dbt)                                                  │
 │                                                                             │
 │  models/staging/                                                            │
-│  ├── src_sapo_*.sql   (INCREMENTAL: JSON extract + tech/biz dedup)          │
-│  ├── stg_sapo_*.sql   (VIEW: enrichment joins + unnest)                     │
+│  ├── src_sapo_*_v2.sql   (INCREMENTAL: JSON extract + tech/biz dedup)       │
+│  ├── stg_sapo_*_v2.sql   (VIEW: enrichment joins + unnest)                  │
 │  └── std_*.sql        (VIEW: business normalization)                        │
 │                                                                             │
 │  Key: src_ extracts + deduplicates, outputs flat data (no payload).         │

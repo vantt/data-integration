@@ -79,7 +79,7 @@ measures:
   - name: item_revenue
     display_name: Item Revenue
     description: "Line-item revenue (for product performance analysis)"
-    expression: sum(revenue)
+    expression: sum(net_revenue)
   # Discount metrics (MUST use scope_retail for meaningful analysis)
   - name: direct_discount_amount
     display_name: Direct Discount Amount
@@ -94,7 +94,7 @@ measures:
   # Derived metrics
   - name: avg_selling_price
     display_name: Average Selling Price
-    expression: sum(revenue) / nullif(sum(quantity), 0)
+    expression: sum(net_revenue) / nullif(sum(quantity), 0)
   - name: avg_items_per_order
     display_name: Avg Items Per Order
     expression: sum(quantity) / nullif(count(distinct order_id), 0)
@@ -106,7 +106,7 @@ measures:
   - name: sales_item_revenue
     display_name: Sales Item Revenue [All]
     description: "Layer 1 Executive scope — item revenue from sales channels"
-    expression: sum(revenue) filter (where scope_sales)
+    expression: sum(net_revenue) filter (where scope_sales)
   - name: retail_quantity
     display_name: Retail Quantity [Retail]
     description: "Layer 2 Retail scope — customer_type=RETAIL only"
@@ -114,5 +114,5 @@ measures:
   - name: retail_item_revenue
     display_name: Retail Item Revenue [Retail]
     description: "Layer 2 Retail scope — item revenue from retail customers"
-    expression: sum(revenue) filter (where scope_retail)
+    expression: sum(net_revenue) filter (where scope_retail)
 

@@ -23,10 +23,10 @@ Chuẩn hóa schema lưu trữ chi phí để hỗ trợ P&L dashboard per-order
 
 | Column group | Source | Coverage |
 |---|---|---|
-| Revenue waterfall (gross → net → collected) | Sapo — **giá bán VAT-inclusive**: `net = total_amount − total_tax_amount`. Xem [revenue_terminology.md](../analytics-handbook/guides/revenue_terminology.md) | 100% |
+| Revenue waterfall (gross → net → collected) | Sapo — **giá bán VAT-inclusive**: `net = total_amount − vat_amount`. Xem [revenue_terminology.md](../analytics-handbook/guides/revenue_terminology.md) | 100% |
 | COGS | MISA (voucher_no = order_code) | ~65% |
 | Platform fees (service/payment/fixed/affiliate/infra/voucher_xtra) | Shopee Seller Center | Shopee only |
-| Discount waterfall | Sapo `discount_items[]` → `discount_nature` + `discount_rate` | ✅ Phân loại đủ 10 loại. Xem [discount-classification.md](discount-classification.md) |
+| Discount waterfall | Sapo `discount_items[]` → `discount_type` + `discount_rate` | ✅ Phân loại đủ 10 loại. Xem [discount-classification.md](discount-classification.md) |
 | Shipping cost (carrier) | ❌ chưa có | — |
 | Returns / refunds | ❌ chưa có | — |
 | Payment gateway fee | ❌ chưa có | — |
@@ -54,7 +54,7 @@ return_id         VARCHAR
 order_id          BIGINT
 order_code        VARCHAR
 return_date       DATE          -- ICT date_key
-return_timestamp  TIMESTAMPTZ
+returned_at       TIMESTAMPTZ
 refund_amount     DECIMAL
 return_status     VARCHAR
 return_reason     VARCHAR

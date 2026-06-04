@@ -78,7 +78,7 @@ Tab order + content:
 | **Financial** (default) | `fact_orders` + `fact_order_economics` (+ `fact_us_shipment_economics` if US) + `fact_order_costs` | Revenue/profit waterfall: gross → −discount → net → +VAT → collected → −COGS → gross profit (margin%) → −Shopee fees → channel net profit (margin%). US: swap to US revenue (excl/incl VAT, line count, unpriced warning). Returns = reference-only note (NOT subtracted). Inline caveats. **+ Cost breakdown section** = `fact_order_costs` grouped by `cost_category` (COGS/PLATFORM_FEE/TAX/SHIPPING/DISCOUNT) w/ cost_type, amount, source_system, source_record, fee_source. |
 | **Items** | `fact_sales` × `dim_products` | Table: sku, product/variant, brand, category, qty, unit_price (revenue/qty), line revenue, per-line + distributed discount, weight. Σ vs net_revenue note. US price cols if available. No per-line COGS (note). |
 | **Operations** | `fact_orders`/economics + `fact_payments`×`dim_payment_methods` + `fact_order_returns` | Stacked sections — **Fulfillment** (status/payment/fulfillment badges, first_shipped_at, carrier, COD, shipping address, time_to_complete) · **Payments** (method, amount, status, paid_on; COD vs prepaid mix) · **Returns** (per event: date/refund/qty/status/reason; empty-state aware). |
-| **Context** | dims + `dim_date`/`dim_time` | Stacked — **Channel & Source** (name/code/category/format/platform/brand/market; promo code(s), max_discount_rate, primary_discount_nature) · **Staff/Team** (seller primary, creator, team, branch) · **Timeline** (created/shipped/completed, time_to_complete, paid_on(s), return event(s)). |
+| **Context** | dims + `dim_date`/`dim_time` | Stacked — **Channel & Source** (name/code/category/format/platform/brand/market; promo code(s), max_discount_rate, primary_discount_type) · **Staff/Team** (seller primary, creator, team, branch) · **Timeline** (created/shipped/completed, time_to_complete, paid_on(s), return event(s)). |
 
 ### 2.3 Order behaviors
 - Tabs lazy-load (only Financial loads on first paint; others on click). Active tab reflected in URL hash for shareability.
@@ -91,8 +91,8 @@ Tab order + content:
 
 ### 3.1 Sidebar (1fr, sticky) — "Customer profile"
 1. **Identity**: `full_name` (big), `customer_id` (muted). Badges: `customer_type`, `value_group`, `lifecycle_stage`.
-2. **Headline KPIs** (stat grid): `lifetime_value` (hero), `total_orders_count`, AOV (=ltv/orders), `recency_days`.
-3. **Contact & geo**: phone, email, address (address1/ward/district/province/country), `geo_region`, `loyalty_point`, dob/sex.
+2. **Headline KPIs** (stat grid): `lifetime_value` (hero), `order_count`, AOV (=ltv/orders), `recency_days`.
+3. **Contact & geo**: phone, email, address (address1/ward/district/province/country), `geo_region`, `loyalty_points`, birth_date/gender.
 4. **Dates**: first_order_date, last_order_date, tenure (`lifespan_days`), account created_at.
 5. **Caveats**: acquisition_source unknown; profile sync nightly (not real-time).
 
@@ -269,7 +269,7 @@ CHANNEL & STAFF «dims»                                   TIMELINE «fact_order
 │ │  Gross profit contributed · total COGS ·         │ │ │ └──────────────────────────────────┘ │
 │ │  avg margin% [⚠ ~65% COGS coverage] · returns    │ │ │ ┌─ Contact & geo ──────────────────┐ │
 │ │                                                  │ │ │ │ 09xx · email · address1/ward/…   │ │
-│ │  (other tabs: see 8.6)                           │ │ │ │ geo_region · loyalty · dob/sex   │ │
+│ │  (other tabs: see 8.6)                           │ │ │ │ geo_region · loyalty · birth_date/gender   │ │
 │ └──────────────────────────────────────────────────┘ │ │ └──────────────────────────────────┘ │
 │                                                       │ │ ┌─ Dates ──────────────────────────┐ │
 │                                                       │ │ │ first 2024-02 · last 2026-05     │ │

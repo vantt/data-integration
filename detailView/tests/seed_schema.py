@@ -45,8 +45,8 @@ _DDL = [
         payment_key VARCHAR, order_id VARCHAR, payment_method_key VARCHAR,
         amount DECIMAL(18,2), status VARCHAR, payment_timestamp TIMESTAMPTZ, paid_on TIMESTAMPTZ )""",
     """CREATE TABLE fact_sales (
-        product_key VARCHAR, order_id VARCHAR, item_id VARCHAR, quantity DECIMAL(18,2),
-        revenue DECIMAL(18,2), discount_amount DECIMAL(18,2),
+        product_key VARCHAR, order_id VARCHAR, order_line_id VARCHAR, quantity DECIMAL(18,2),
+        net_revenue DECIMAL(18,2), discount_amount DECIMAL(18,2),
         distributed_discount_amount DECIMAL(18,2), weight_grams DECIMAL(18,2) )""",
     """CREATE TABLE fact_us_shipment_economics (
         order_id VARCHAR, order_code VARCHAR,

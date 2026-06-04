@@ -74,7 +74,7 @@
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
-- **Business Definition:** Doanh thu thuần — sau chiết khấu, **đã trừ VAT** (= total_amount − total_tax_amount). VAT nhúng trong giá bán Sapo, không phải cộng thêm bên ngoài. Xem [Revenue Terminology](../guides/revenue_terminology.md).
+- **Business Definition:** Doanh thu thuần — sau chiết khấu, **đã trừ VAT** (= total_amount − vat_amount). VAT nhúng trong giá bán Sapo, không phải cộng thêm bên ngoài. Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
   ```sql
   SUM(net_revenue)
@@ -95,7 +95,7 @@
   ```sql
   SELECT 'Gross Revenue' AS component, SUM(gross_revenue) AS amount FROM fact_orders WHERE status NOT IN ('CANCELLED','Voided')
   UNION ALL SELECT 'Discounts', -SUM(discount_amount) FROM fact_orders WHERE status NOT IN ('CANCELLED','Voided')
-  UNION ALL SELECT 'Tax', SUM(tax_amount) FROM fact_orders WHERE status NOT IN ('CANCELLED','Voided')
+  UNION ALL SELECT 'Tax', SUM(vat_amount) FROM fact_orders WHERE status NOT IN ('CANCELLED','Voided')
   UNION ALL SELECT 'Net Revenue', SUM(net_revenue) FROM fact_orders WHERE status NOT IN ('CANCELLED','Voided')
   ```
 
@@ -754,7 +754,7 @@
 > **Description:** Per-return event tracking refund exposure, return rate, and reason analysis. Returns are recognized at return date — original order P&L is not restated. Dashboard: Return Impact Analysis [All].
 > **dbt Source:** [`fact_order_returns`](../../../transformation/models/marts/sales/fact_order_returns.sql)
 > **Grain:** Per Return Event (one row per Sapo return)
-> **Key Fields:** `return_id`, `order_code`, `return_date`, `return_timestamp`, `refund_amount`, `return_quantity`, `return_status`, `refund_status`, `return_reason`, `channel_key`, `date_key`
+> **Key Fields:** `return_id`, `order_code`, `return_date`, `returned_at`, `refund_amount`, `return_quantity`, `return_status`, `refund_status`, `return_reason`, `channel_key`, `date_key`
 > **Join:** `fact_order_returns.order_code` → `fact_orders.order_code` for order-date cohort; `channel_key` → `dim_channels` for channel name
 
 ### Context Overview
@@ -794,8 +794,8 @@
       SELECT COUNT(DISTINCT order_code) AS total_orders
       FROM fact_orders
       WHERE status NOT IN ('CANCELLED', 'Voided')
-        AND order_timestamp >= date_trunc('month', current_date)
-        AND order_timestamp < current_date
+        AND ordered_at >= date_trunc('month', current_date)
+        AND ordered_at < current_date
   )
   SELECT ROUND(r.returned_orders * 100.0 / NULLIF(o.total_orders, 0), 2) AS return_rate_pct
   FROM returns_mtd r, orders_mtd o
@@ -835,7 +835,7 @@
 - **Logic (SQL):**
   ```sql
   SELECT ROUND(AVG(
-      date_diff('day', DATE(o.order_timestamp), r.return_date)
+      date_diff('day', DATE(o.ordered_at), r.return_date)
   ), 1) AS avg_days_to_return
   FROM fact_order_returns r
   JOIN fact_orders o ON r.order_code = o.order_code

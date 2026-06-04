@@ -127,9 +127,9 @@ customer_type = Bản chất quan hệ         value_group = Giá trị đóng g
 **Logic đánh giá (thứ tự ưu tiên):**
 ```sql
 CASE
-  WHEN total_expense >= 50000000 OR order_count >= 20 THEN 'VALUE_VIP'
-  WHEN total_expense >= 20000000 THEN 'VALUE_GOLD'
-  WHEN total_expense >= 5000000 THEN 'VALUE_SILVER'
+  WHEN total_spend >= 50000000 OR order_count >= 20 THEN 'VALUE_VIP'
+  WHEN total_spend >= 20000000 THEN 'VALUE_GOLD'
+  WHEN total_spend >= 5000000 THEN 'VALUE_SILVER'
   ELSE 'VALUE_BRONZE'
 END
 ```

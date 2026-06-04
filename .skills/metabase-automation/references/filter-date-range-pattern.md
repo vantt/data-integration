@@ -73,7 +73,7 @@ for t in d.get('tables',[]):
 | field_id | Table | Column | Type | Dùng cho |
 |----------|-------|--------|------|----------|
 | 324 | `int_misa_sales_lines` | `posting_date` | Date | Finance, Channel P&L, Product |
-| 141 | `fact_orders` | `order_timestamp` | DateTimeWithTZ | Orders, US CrossBorder |
+| 141 | `fact_orders` | `ordered_at` | DateTimeWithTZ | Orders, US CrossBorder |
 
 ---
 
@@ -202,11 +202,11 @@ WHERE ...
   [[AND {{date_range}}]]
 ```
 
-### 7.2 TIMESTAMP / DateTimeWithTZ column (e.g., `order_timestamp`)
+### 7.2 TIMESTAMP / DateTimeWithTZ column (e.g., `ordered_at`)
 ```sql
 -- Phải cast ::DATE trước MIN/MAX — TIMESTAMP - TIMESTAMP = INTERVAL, không cast được sang INTEGER
-SELECT MIN(order_timestamp)::DATE AS p_start,
-       MAX(order_timestamp)::DATE AS p_end
+SELECT MIN(ordered_at)::DATE AS p_start,
+       MAX(ordered_at)::DATE AS p_end
 FROM fact_orders              -- KHÔNG alias fact_orders nếu field_id = 141
 WHERE ...
   [[AND {{date_range}}]]
@@ -216,8 +216,8 @@ WHERE ...
 ```sql
 -- filter_bounds query table có DATE/TIMESTAMP (không phải date_key table)
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders           -- KHÔNG alias
     WHERE ...
       [[AND {{date_range}}]]
@@ -247,7 +247,7 @@ make_date((date_key/10000)::INTEGER, ((date_key%10000)/100)::INTEGER, (date_key%
 ```sql
 -- ❌ Alias table của field_id → Binder Error (R2, L96)
 FROM fact_orders o
-WHERE [[AND {{date_range}}]]   -- injects "main"."fact_orders"."order_timestamp" — binder không tìm thấy 'o'
+WHERE [[AND {{date_range}}]]   -- injects "main"."fact_orders"."ordered_at" — binder không tìm thấy 'o'
 
 -- ✅ Không alias
 FROM fact_orders

@@ -326,7 +326,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE c.is_sales_channel = true
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  [[AND date(o.order_timestamp) >= {{date_range}}]]
+  [[AND date(o.ordered_at) >= {{date_range}}]]
 ```
 
 ### 7.2 Layer 2 Retail Query Template
@@ -343,7 +343,7 @@ JOIN dim_customers cu ON o.customer_key = cu.customer_key
 WHERE c.is_sales_channel = true
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND cu.customer_type = 'RETAIL'
-  [[AND date(o.order_timestamp) >= {{date_range}}]]
+  [[AND date(o.ordered_at) >= {{date_range}}]]
 ```
 
 ### 7.3 Layer 2 B2B Query Template
@@ -360,7 +360,7 @@ JOIN dim_customers cu ON o.customer_key = cu.customer_key
 WHERE c.is_sales_channel = true
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND cu.customer_type IN ('WHOLESALE', 'PARTNER')
-  [[AND date(o.order_timestamp) >= {{date_range}}]]
+  [[AND date(o.ordered_at) >= {{date_range}}]]
 ```
 
 ### 7.4 Layer 3 Cross-Segment Query Template
@@ -378,7 +378,7 @@ JOIN dim_customers cu ON o.customer_key = cu.customer_key
 WHERE c.is_sales_channel = true
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND cu.customer_type IN ('RETAIL', 'WHOLESALE', 'PARTNER')
-  [[AND date(o.order_timestamp) >= {{date_range}}]]
+  [[AND date(o.ordered_at) >= {{date_range}}]]
 GROUP BY cu.customer_type
 ```
 

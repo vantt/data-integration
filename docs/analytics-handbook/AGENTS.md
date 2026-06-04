@@ -268,7 +268,7 @@ SELECT ... FROM ...
 SELECT ...
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= ...
+  AND ordered_at >= ...
 ```
 
 ```json metabase-viz
@@ -349,8 +349,8 @@ All SQL in blueprints targets **DuckDB** (via Metabase Native Query). Follow the
 WHERE status NOT IN ('CANCELLED', 'Voided')
 
 -- Date ranges: use date_trunc + INTERVAL, never hardcoded dates
-AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-AND order_timestamp < date_trunc('month', current_date)
+AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+AND ordered_at < date_trunc('month', current_date)
 ```
 
 ### Date Functions (DuckDB syntax)
@@ -376,12 +376,12 @@ Use CTE pattern — `this_period` vs `last_period`:
 
 ```sql
 WITH this_week AS (
-    SELECT ... WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-                 AND order_timestamp < date_trunc('week', current_date)
+    SELECT ... WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+                 AND ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
-    SELECT ... WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-                 AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+    SELECT ... WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+                 AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT ..., ROUND((tw.value - lw.value) * 100.0 / NULLIF(lw.value, 0), 1) as "WoW %"
 FROM this_week tw LEFT JOIN last_week lw ON ...

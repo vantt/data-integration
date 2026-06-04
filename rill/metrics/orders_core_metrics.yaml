@@ -92,9 +92,9 @@ measures:
     display_name: Discount Amount
     description: "domains/sales.md#13-discount-impact — Total discounts applied"
     expression: sum(discount_amount)
-  - name: tax_amount
-    display_name: Tax Amount
-    expression: sum(tax_amount)
+  - name: vat_amount
+    display_name: VAT Amount
+    expression: sum(vat_amount)
   - name: total_collected
     display_name: Total Collected
     description: "domains/sales.md#2b-total-collected — Tổng thu từ khách (gồm thuế)"

@@ -35,7 +35,7 @@ Dashboard hien tai co nhieu van de:
 
 | Constraint | Rule | Applies to | Rationale |
 |------------|------|------------|-----------|
-| Exclude current incomplete week | `order_timestamp < date_trunc('week', current_date)` | All cards | Tuan hien tai chua ket thuc — so sanh khong cong bang |
+| Exclude current incomplete week | `ordered_at < date_trunc('week', current_date)` | All cards | Tuan hien tai chua ket thuc — so sanh khong cong bang |
 
 **Interactive Filters:**
 

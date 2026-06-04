@@ -31,15 +31,15 @@ Sapo `discount_items[]` hiện được phân loại thành 4 bucket dựa trên
 
 ---
 
-## Giải pháp: Taxonomy `discount_nature`
+## Giải pháp: Taxonomy `discount_type`
 
 Thêm 2 column vào `fact_order_costs` (Sapo discounts only):
 - `discount_rate` — pass-through từ staging (hiện bị drop)
-- `discount_nature` — classification kết hợp reason + rate
+- `discount_type` — classification kết hợp reason + rate
 
 ### Bảng phân loại
 
-| discount_nature | Logic | Ghi chú |
+| discount_type | Logic | Ghi chú |
 |---|---|---|
 | `voucher_promotional` | reason ILIKE 'voucher seller:%' | rate=0 luôn; amount mang giá trị |
 | `bundle` | reason = 'Bundle Deal' | Chiến lược sản phẩm |
@@ -59,7 +59,7 @@ Thêm 2 column vào `fact_order_costs` (Sapo discounts only):
 | Column mới | Loại | Mô tả |
 |---|---|---|
 | `max_discount_rate` | DECIMAL | Highest rate across all discount items |
-| `primary_discount_nature` | VARCHAR | discount_nature with largest amount |
+| `primary_discount_type` | VARCHAR | discount_type with largest amount |
 
 ---
 
@@ -101,7 +101,7 @@ WITH classified AS (
       WHEN reason = '' AND discount_rate >= 40
         THEN 'negotiated_deep'
       ELSE 'unknown'
-    END AS discount_nature
+    END AS discount_type
   FROM stg_sapo_order_discount_items
 )
 SELECT * FROM classified;
@@ -109,7 +109,7 @@ SELECT * FROM classified;
 
 **Columns trong `fact_order_costs`:**
 - Giữ: `order_id`, `order_code`, `discount_source`, `amount`, `reason`
-- **Thêm:** `discount_rate`, `discount_nature`
+- **Thêm:** `discount_rate`, `discount_type`
 
 ### Mart: `fact_orders`
 
@@ -118,9 +118,9 @@ SELECT
   o.*,
   MAX(CASE WHEN cost_type ILIKE 'discount%' THEN discount_rate ELSE 0 END)
     OVER (PARTITION BY order_id) AS max_discount_rate,
-  FIRST_VALUE(discount_nature)
+  FIRST_VALUE(discount_type)
     OVER (PARTITION BY order_id ORDER BY amount DESC)
-    AS primary_discount_nature
+    AS primary_discount_type
 FROM fact_orders o
 LEFT JOIN fact_order_costs c ON o.order_id = c.order_id;
 ```
@@ -136,13 +136,13 @@ SELECT
   DATE_TRUNC('month', order_date) AS month,
   COUNT(*) AS order_count,
   AVG(CASE
-    WHEN primary_discount_nature NOT IN ('wholesale_explicit', 'overseas', 'negotiated_deep')
+    WHEN primary_discount_type NOT IN ('wholesale_explicit', 'overseas', 'negotiated_deep')
       THEN max_discount_rate
     ELSE NULL
   END) AS avg_discount_rate_retail
 FROM fact_orders
-WHERE primary_discount_nature IS NOT NULL
-  AND primary_discount_nature NOT IN ('wholesale_explicit', 'overseas', 'negotiated_deep')
+WHERE primary_discount_type IS NOT NULL
+  AND primary_discount_type NOT IN ('wholesale_explicit', 'overseas', 'negotiated_deep')
 GROUP BY 1;
 ```
 
@@ -150,12 +150,12 @@ GROUP BY 1;
 
 ```sql
 SELECT
-  primary_discount_nature,
+  primary_discount_type,
   COUNT(*) AS order_count,
   SUM(total_discount) AS total_discount_amount,
   ROUND(100.0 * SUM(total_discount) / SUM(SUM(total_discount)) OVER (), 2) AS pct
 FROM fact_orders
-WHERE primary_discount_nature IS NOT NULL
+WHERE primary_discount_type IS NOT NULL
 GROUP BY 1
 ORDER BY total_discount_amount DESC;
 ```
@@ -165,8 +165,8 @@ ORDER BY total_discount_amount DESC;
 ```sql
 SELECT
   DATE_TRUNC('month', order_date) AS month,
-  COUNT(*) FILTER (WHERE primary_discount_nature = 'negotiated_deep') AS negotiated_deep_orders,
-  SUM(CASE WHEN primary_discount_nature = 'negotiated_deep' THEN total_discount ELSE 0 END) AS amount
+  COUNT(*) FILTER (WHERE primary_discount_type = 'negotiated_deep') AS negotiated_deep_orders,
+  SUM(CASE WHEN primary_discount_type = 'negotiated_deep' THEN total_discount ELSE 0 END) AS amount
 FROM fact_orders
 GROUP BY 1
 ORDER BY 1 DESC;
@@ -194,7 +194,7 @@ Lưu `reason` text gốc trong `fact_order_costs` để drill-down. Classificati
 
 ### 5. Edge case: Multiple discounts per order
 
-Đơn có 3 discount items (e.g., voucher + bundle + seller) → 3 rows trong `fact_order_costs`. `primary_discount_nature` = nature của item có amount lớn nhất (metric cho order-level logic).
+Đơn có 3 discount items (e.g., voucher + bundle + seller) → 3 rows trong `fact_order_costs`. `primary_discount_type` = nature của item có amount lớn nhất (metric cho order-level logic).
 
 ---
 
@@ -202,8 +202,8 @@ Lưu `reason` text gốc trong `fact_order_costs` để drill-down. Classificati
 
 | Hạng mục | Ưu tiên | Trạng thái |
 |---|---|---|
-| Add `discount_rate`, `discount_nature` to `fact_order_costs` | P0 | 🔲 Cần build |
-| Add `max_discount_rate`, `primary_discount_nature` to `fact_orders` | P0 | 🔲 Cần build |
+| Add `discount_rate`, `discount_type` to `fact_order_costs` | P0 | 🔲 Cần build |
+| Add `max_discount_rate`, `primary_discount_type` to `fact_orders` | P0 | 🔲 Cần build |
 | Discount decomposition dashboard | P1 | 🔲 Cần build |
 | Validate taxonomy on historical data | P1 | 🔲 Cần build |
 

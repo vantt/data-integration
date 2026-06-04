@@ -33,7 +33,7 @@ def test_normal_order_full_aggregate(seeded_db_path: str) -> None:
     assert fin.effective_revenue == Decimal("1100000")
     assert fin.margin_is_verified is True
 
-    # 2 line items, ordered by item_id.
+    # 2 line items, ordered by order_line_id.
     assert [li.sku for li in detail.line_items] == ["SKU-001", "SKU-002"]
     assert detail.line_items[0].quantity == 2
     assert detail.line_items[0].us_price_incl_vat is None

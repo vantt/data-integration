@@ -67,7 +67,7 @@ Ly do tach 2 dashboard: Metabase khong ho tro master-detail trong 1 dashboard. P
 | Column | Source | Note |
 |--------|--------|------|
 | Order Code | fact_orders.order_code | Link sang detail dashboard |
-| Date | fact_orders.order_timestamp | Format: DD/MM HH:mm |
+| Date | fact_orders.ordered_at | Format: DD/MM HH:mm |
 | Channel | dim_channels.channel_name | |
 | Branch | dim_branch_location.branch_location_name | |
 | Status | dim_order_status.status_code | Conditional formatting |
@@ -108,7 +108,7 @@ Moi card la 1 native SQL question nhan `{{order_id}}` parameter.
 | Field | Source | Format |
 |-------|--------|--------|
 | Order Code | fact_orders.order_code | |
-| Order Date | fact_orders.order_timestamp | DD/MM/YYYY HH:mm |
+| Order Date | fact_orders.ordered_at | DD/MM/YYYY HH:mm |
 | Status | dim_order_status.status_code | |
 | Payment Status | fact_orders.payment_status | |
 | Fulfillment Status | fact_orders.fulfillment_status | |
@@ -118,7 +118,7 @@ Moi card la 1 native SQL question nhan `{{order_id}}` parameter.
 | Province | dim_geography.province | |
 | District | dim_geography.district | |
 | First Shipped At | fact_orders.first_shipped_at | DD/MM/YYYY HH:mm |
-| Hours to First Ship | DATEDIFF(hour, order_timestamp, first_shipped_at) | |
+| Hours to First Ship | DATEDIFF(hour, ordered_at, first_shipped_at) | |
 | Hours to Complete | fact_orders.time_to_complete_hours | |
 
 **Card 4 — Order Economics** (pivoted single-row table)
@@ -129,7 +129,7 @@ Moi card la 1 native SQL question nhan `{{order_id}}` parameter.
 | Discount | fact_orders.discount_amount | VND |
 | Discount Rate | discount_amount / NULLIF(gross_revenue, 0) | % |
 | Net Revenue | fact_orders.net_revenue | VND |
-| Tax | fact_orders.tax_amount | VND |
+| Tax | fact_orders.vat_amount | VND |
 | Total Collected | fact_orders.total_collected | VND |
 | COGS | fact_order_economics.cogs_amount | VND, NULL = chua co |
 | Gross Profit | fact_order_economics.gross_profit | VND |
@@ -146,8 +146,8 @@ Moi card la 1 native SQL question nhan `{{order_id}}` parameter.
 | Variant | dim_products.variant_name | |
 | SKU | dim_products.sku | |
 | Qty | fact_sales.quantity | |
-| Unit Price | fact_sales.revenue / fact_sales.quantity | VND |
-| Revenue | fact_sales.revenue | VND |
+| Unit Price | fact_sales.net_revenue / fact_sales.quantity | VND |
+| Revenue | fact_sales.net_revenue | VND |
 | Discount | fact_sales.discount_amount | VND |
 | Distributed Discount | fact_sales.distributed_discount_amount | VND |
 | Weight (g) | fact_sales.weight_grams | |

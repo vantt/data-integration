@@ -29,8 +29,8 @@ Logistics domain bao gồm 5 contexts:
 
 | Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
 |---|---|---|---|---|
-| Pipeline Health | Bao nhiêu % đơn đã được xuất kho? Có đơn nào bị nghẽn không? | Fulfillment Rate, Orders Pending > 24h | `fact_orders.fulfillment_status`, `first_shipped_at`, `order_timestamp` | Stage-level events (packed_at) |
-| Processing Speed | Đơn mất bao lâu từ lúc tạo đến lúc ship? Có ship same-day không? | Order Cycle Time, Same-Day Ship Rate | `first_shipped_at - order_timestamp` | Per-stage breakdown |
+| Pipeline Health | Bao nhiêu % đơn đã được xuất kho? Có đơn nào bị nghẽn không? | Fulfillment Rate, Orders Pending > 24h | `fact_orders.fulfillment_status`, `first_shipped_at`, `ordered_at` | Stage-level events (packed_at) |
+| Processing Speed | Đơn mất bao lâu từ lúc tạo đến lúc ship? Có ship same-day không? | Order Cycle Time, Same-Day Ship Rate | `first_shipped_at - ordered_at` | Per-stage breakdown |
 | Completion | Đơn hoàn thành nhanh hay chậm? | Time to Complete | `time_to_complete_hours` | Closure event timeline |
 
 ### Analytical Questions
@@ -82,7 +82,7 @@ Logistics domain bao gồm 5 contexts:
 > **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Phần trăm đơn eligible (đã có ít nhất 1 fulfillment với status `fulfilled`) trên tổng đơn được tạo trong kỳ. Loại DRAFT và CANCELLED khỏi mẫu số vì không thuộc pipeline fulfillment.
-- **Business Logic:** Grain per order. Numerator = COUNT đơn có `fulfillment_status = 'fulfilled'`. Denominator = COUNT đơn `status NOT IN ('DRAFT', 'CANCELLED')`. Time basis = `order_timestamp` (ICT).
+- **Business Logic:** Grain per order. Numerator = COUNT đơn có `fulfillment_status = 'fulfilled'`. Denominator = COUNT đơn `status NOT IN ('DRAFT', 'CANCELLED')`. Time basis = `ordered_at` (ICT).
 - **Formula:** `Fulfillment Rate (%) = Fulfilled Orders / Eligible Orders × 100`
 - **Logic (SQL):**
   ```sql
@@ -98,29 +98,29 @@ Logistics domain bao gồm 5 contexts:
 
 > **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) (join `std_fulfillments` qua `first_shipped_at`)
 
-- **Business Definition:** Thời gian trung bình (giờ) từ lúc tạo đơn (`order_timestamp`) đến lần fulfillment thành công đầu tiên (`first_shipped_at`). Chỉ tính đơn đã ship — đơn chưa ship loại khỏi mẫu.
-- **Business Logic:** Grain per order. AVG của `date_diff('hour', order_timestamp, first_shipped_at)` với `first_shipped_at IS NOT NULL`. Loại DRAFT, CANCELLED.
-- **Formula:** `Avg Hours to First Ship = AVG(first_shipped_at - order_timestamp) WHERE first_shipped_at IS NOT NULL`
+- **Business Definition:** Thời gian trung bình (giờ) từ lúc tạo đơn (`ordered_at`) đến lần fulfillment thành công đầu tiên (`first_shipped_at`). Chỉ tính đơn đã ship — đơn chưa ship loại khỏi mẫu.
+- **Business Logic:** Grain per order. AVG của `date_diff('hour', ordered_at, first_shipped_at)` với `first_shipped_at IS NOT NULL`. Loại DRAFT, CANCELLED.
+- **Formula:** `Avg Hours to First Ship = AVG(first_shipped_at - ordered_at) WHERE first_shipped_at IS NOT NULL`
 - **Logic (SQL):**
   ```sql
-  AVG(date_diff('hour', order_timestamp, first_shipped_at))
+  AVG(date_diff('hour', ordered_at, first_shipped_at))
   -- WHERE first_shipped_at IS NOT NULL AND status NOT IN ('DRAFT', 'CANCELLED')
   ```
 - **Unit:** Hours
 - **Classification:** lagging | absolute
 - **Common Misunderstandings:** Nhầm với `time_to_complete_hours` — Time to Complete đo đến status COMPLETED (bao gồm cả delivery), không phải đến ship lần đầu.
-- **Pitfalls / Edge Cases:** Đơn có nhiều fulfillments — chỉ dùng `first_shipped_at` (MIN); nếu dùng ALL fulfillments sẽ skew. Negative hours (`first_shipped_at < order_timestamp`) thường do timezone bug — cần filter.
+- **Pitfalls / Edge Cases:** Đơn có nhiều fulfillments — chỉ dùng `first_shipped_at` (MIN); nếu dùng ALL fulfillments sẽ skew. Negative hours (`first_shipped_at < ordered_at`) thường do timezone bug — cần filter.
 
 #### 3. Tỷ lệ ship cùng ngày (Same-Day Ship Rate)
 
 > **dbt Source:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
 - **Business Definition:** Phần trăm đơn được xuất kho cùng calendar date (ICT) với ngày tạo đơn. Đo lường khả năng same-day fulfillment — KPI quan trọng với khách online và marketplaces.
-- **Business Logic:** Grain per order. Numerator = COUNT đơn `CAST(first_shipped_at AS DATE) = CAST(order_timestamp AS DATE)`. Denominator = COUNT đơn đã ship (`first_shipped_at IS NOT NULL`).
+- **Business Logic:** Grain per order. Numerator = COUNT đơn `CAST(first_shipped_at AS DATE) = CAST(ordered_at AS DATE)`. Denominator = COUNT đơn đã ship (`first_shipped_at IS NOT NULL`).
 - **Formula:** `Same-Day Ship Rate (%) = Same-Day Shipped Orders / Total Shipped Orders × 100`
 - **Logic (SQL):**
   ```sql
-  COUNT(CASE WHEN CAST(first_shipped_at AS DATE) = CAST(order_timestamp AS DATE) THEN 1 END) * 100.0
+  COUNT(CASE WHEN CAST(first_shipped_at AS DATE) = CAST(ordered_at AS DATE) THEN 1 END) * 100.0
   / NULLIF(COUNT(CASE WHEN first_shipped_at IS NOT NULL THEN 1 END), 0)
   ```
 - **Unit:** %
@@ -134,7 +134,7 @@ Logistics domain bao gồm 5 contexts:
 
 - **Business Definition:** Thời gian trung bình (giờ) từ tạo đơn đến lúc đơn chuyển sang `status = 'COMPLETED'` — đo end-to-end vòng đời đơn hàng (bao gồm ship + giao + thanh toán).
 - **Business Logic:** Grain per order. AVG của `time_to_complete_hours` (pre-computed trong `fact_orders`). Chỉ tính đơn `status = 'COMPLETED'`.
-- **Formula:** `Avg Time to Complete = AVG(completed_at - order_timestamp) WHERE status = 'COMPLETED'`
+- **Formula:** `Avg Time to Complete = AVG(completed_at - ordered_at) WHERE status = 'COMPLETED'`
 - **Logic (SQL):**
   ```sql
   AVG(time_to_complete_hours)

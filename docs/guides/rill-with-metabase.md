@@ -363,7 +363,7 @@ Recommended measures:
 - `gross_revenue = sum(gross_revenue)`
 - `net_revenue = sum(net_revenue)`
 - `discount_amount = sum(discount_amount)`
-- `tax_amount = sum(tax_amount)`
+- `vat_amount = sum(vat_amount)`
 - `total_collected = sum(total_collected)`
 - `avg_order_value = sum(net_revenue) / nullif(count(*), 0)`
 - `completed_orders = count(*) filter (where is_completed)`
@@ -682,9 +682,9 @@ Repeat the same source-model pattern for `src_dim_channels`, `src_dim_branch_loc
 # rill/models/orders_enriched.sql
 SELECT
   o.order_id,
-  o.order_timestamp,
-  date_trunc('day', o.order_timestamp) AS order_date,
-  date_trunc('hour', o.order_timestamp) AS hour_start,
+  o.ordered_at,
+  date_trunc('day', o.ordered_at) AS order_date,
+  date_trunc('hour', o.ordered_at) AS hour_start,
   c.channel_name,
   c.channel_category,
   b.branch_location_name,
@@ -697,10 +697,10 @@ SELECT
   o.gross_revenue,
   o.net_revenue,
   o.discount_amount,
-  o.tax_amount,
+  o.vat_amount,
   o.total_collected,
   o.first_shipped_at,
-  date_diff('hour', o.order_timestamp, o.first_shipped_at) AS hours_to_first_ship,
+  date_diff('hour', o.ordered_at, o.first_shipped_at) AS hours_to_first_ship,
   o.time_to_complete_hours AS hours_to_complete,
   o.status = 'COMPLETED' AS is_completed,
   o.status = 'CANCELLED' AS is_cancelled,

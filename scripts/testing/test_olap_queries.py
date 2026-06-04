@@ -14,7 +14,7 @@ query_1 = """
 SELECT 
     c.category_name,
     COUNT(s.order_id) as total_orders,
-    SUM(s.revenue) as total_revenue
+    SUM(s.net_revenue) as total_revenue
 FROM main_marts.fact_sales s
 JOIN main_marts.dim_product_category c ON s.category_key = c.category_key
 GROUP BY 1

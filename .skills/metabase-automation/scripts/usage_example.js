@@ -17,7 +17,7 @@ async function main() {
     // 2. Questions
     const q1 = await client.card.ensure(
         "Revenue",
-        "SELECT sum(net_revenue) as revenue FROM fact_orders WHERE date(order_timestamp) = current_date",
+        "SELECT sum(net_revenue) as revenue FROM fact_orders WHERE date(ordered_at) = current_date",
         2,
         col.id,
         { display: "scalar" }
@@ -25,7 +25,7 @@ async function main() {
 
     const q2 = await client.card.ensure(
         "Order Detail",
-        "SELECT * FROM fact_orders WHERE date(order_timestamp) = current_date LIMIT 50",
+        "SELECT * FROM fact_orders WHERE date(ordered_at) = current_date LIMIT 50",
         2,
         col.id,
         { display: "table" }

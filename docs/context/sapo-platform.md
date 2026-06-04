@@ -56,11 +56,11 @@
 | Sapo API field | Column (staging) | Ý nghĩa |
 |---|---|---|
 | `$.total` | `total_amount` | Tổng thu từ khách sau CK — **VAT đã nhúng bên trong**, không phải giá chưa thuế |
-| `$.total_tax` | `total_tax_amount` | VAT **nhúng trong** `$.total`: 8/108 (8% VAT), 10/110 (10% VAT), 0 (xuất khẩu/không VAT) |
+| `$.total_tax` | `vat_amount` | VAT **nhúng trong** `$.total`: 8/108 (8% VAT), 10/110 (10% VAT), 0 (xuất khẩu/không VAT) |
 | `$.price`, `$.line_amount` | `unit_price`, `line_amount` | Giá bán dòng — cũng đã gồm VAT; Sapo không cung cấp tax per-line |
 
 **Công thức:**
-- `Net Revenue (VAT-exclusive) = total_amount − total_tax_amount`
+- `Net Revenue (VAT-exclusive) = total_amount − vat_amount`
 - `Total Collected = total_amount` — KHÔNG cộng thêm thuế (double-count VAT)
 
 **~60% đơn có `$.total_tax = 0`:** đơn US/xuất khẩu (99.6% zero-tax, xử lý qua `fact_us_shipment_economics`) + đơn bán lẻ/POS không ghi VAT → `net_revenue = total_amount`. Pipeline tin vào `$.total_tax` Sapo, không áp /1.08 đồng loạt (sai với xuất khẩu và 10%-VAT).

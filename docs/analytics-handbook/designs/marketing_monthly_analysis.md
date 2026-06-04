@@ -37,7 +37,7 @@ Dashboard hien tai co nhieu van de:
 
 | Constraint | Rule | Applies to | Rationale |
 |------------|------|------------|-----------|
-| Exclude current incomplete month | `order_timestamp < date_trunc('month', current_date)` | All cards | Thang hien tai chua ket thuc — so sanh khong cong bang |
+| Exclude current incomplete month | `ordered_at < date_trunc('month', current_date)` | All cards | Thang hien tai chua ket thuc — so sanh khong cong bang |
 | Exclude cancelled/voided | `status NOT IN ('CANCELLED', 'Voided')` | Revenue/order cards | Chi tinh don hop le |
 
 **Interactive Filters:**

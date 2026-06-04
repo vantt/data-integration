@@ -492,8 +492,8 @@ SELECT
     o.created_at,
     o.modified_at
 
-FROM {{ ref('stg_sapo_orders') }} o
-LEFT JOIN {{ ref('stg_sapo_customers') }} c
+FROM {{ ref('stg_sapo_orders_v2') }} o
+LEFT JOIN {{ ref('stg_sapo_customers_v2') }} c
     ON o.customer_id = c.customer_id
 LEFT JOIN {{ ref('dim_geography') }} g
     ON o.shipping_ward_id = g.ward_id
@@ -606,15 +606,15 @@ Sapo Order
     └── [History]   ──► sapo_raw/order/ingest_method=history_log/
             │
             ▼
-    src_sapo_orders (INCREMENTAL: extract JSON + tech dedup + biz dedup)
+    src_sapo_orders_v2 (INCREMENTAL: extract JSON + tech dedup + biz dedup)
             │  Output: flat columns, 1 row per order_id, no payload
             │
-            ├──► stg_sapo_order_items (unnest line items)
-            ├──► stg_sapo_payments (unnest payments)
-            ├──► stg_sapo_fulfillments (unnest fulfillments)
+            ├──► stg_sapo_order_items_v2 (unnest line items)
+            ├──► stg_sapo_payments_v2 (unnest payments)
+            ├──► stg_sapo_fulfillments_v2 (unnest fulfillments)
             │
             ▼
-    stg_sapo_orders (VIEW: enrichment joins)
+    stg_sapo_orders_v2 (VIEW: enrichment joins)
             │
             ▼
     std_orders (VIEW: status mapping + normalization)

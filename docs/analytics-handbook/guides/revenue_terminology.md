@@ -63,8 +63,8 @@ Mỗi đơn hàng đi qua các bước sau, từ giá bán gốc (đã gồm VAT
 > **⚠ Lưu ý về mô hình VAT nhúng (embedded VAT):**
 >
 > - Sapo **giá bán đã gồm VAT**. `$.total` (→ `total_amount`) là số tiền khách trả thực tế — VAT **nhúng bên trong**, không cộng thêm bên ngoài.
-> - `$.total_tax` (→ `total_tax_amount`) là VAT Sapo tính sẵn theo từng đơn: 8/108 cho mặt hàng 8%, 10/110 cho mặt hàng 10%, 0 cho xuất khẩu / không chịu thuế.
-> - **Net Revenue = total_amount − total_tax_amount** (doanh thu P&L, so sánh như-cho-như với giá vốn không VAT).
+> - `$.total_tax` (→ `vat_amount`) là VAT Sapo tính sẵn theo từng đơn: 8/108 cho mặt hàng 8%, 10/110 cho mặt hàng 10%, 0 cho xuất khẩu / không chịu thuế.
+> - **Net Revenue = total_amount − vat_amount** (doanh thu P&L, so sánh như-cho-như với giá vốn không VAT).
 > - **~60% đơn có tax = 0** (đơn US xuất khẩu chiếm 99.6% zero-tax, cộng đơn bán lẻ Sapo không ghi VAT). Với những đơn này, net_revenue = total_amount (không có gì để trừ). Pipeline tin vào `$.total_tax` của Sapo — nó xử lý tự động 8%/10%/0%.
 > - Realized Revenue là **góc nhìn dòng tiền** (bao nhiêu tiền thu được từ khách sau trả hàng), **không phải doanh thu kế toán**.
 > - Field Realized Revenue **không có sẵn** trong `fact_orders`. Muốn tính, dùng: `total_collected − giá trị đơn trả hàng`.
@@ -213,9 +213,9 @@ Khi đọc dashboard, nhớ:
 | --------------------------- | --------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
 | `$.total`                 | `total_amount`                  | **Total Collected** | Tổng tiền khách trả, ĐÃ gồm VAT, sau chiết khấu. Đây là field gốc từ Sapo.              |
 | `$.total_discount`        | `total_discount_amount`         | **Discount Amount** | Tổng chiết khấu                                                                              |
-| `$.total_tax`             | `total_tax_amount`              | **Tax Amount**      | VAT nhúng trong giá bán: 8/108 hoặc 10/110 theo mặt hàng; 0 cho xuất khẩu / không VAT    |
+| `$.total_tax`             | `vat_amount`                    | **Tax Amount**      | VAT nhúng trong giá bán: 8/108 hoặc 10/110 theo mặt hàng; 0 cho xuất khẩu / không VAT    |
 | *Computed*             | `total_amount + total_discount_amount` | **Gross Revenue**   | Giá bán × SL trước chiết khấu (đã gồm VAT), phải tự tính                              |
-| *Computed*             | `total_amount − total_tax_amount`      | **Net Revenue**     | Doanh thu thuần P&L: sau chiết khấu, ĐÃ TRỪ VAT. Không có sẵn trong Sapo — tự tính    |
+| *Computed*             | `total_amount − vat_amount`            | **Net Revenue**     | Doanh thu thuần P&L: sau chiết khấu, ĐÃ TRỪ VAT. Không có sẵn trong Sapo — tự tính    |
 
 ### 6.2. Pipeline: Sapo → Staging → Mart
 
@@ -224,9 +224,9 @@ Sapo API                   std_orders                 fact_orders
 ─────────────────────────────────────────────────────────────────
 $.total                 →  total_amount            →  total_collected (= total_amount; VAT đã trong đó)
 $.total_discount        →  total_discount_amount   →  discount_amount
-$.total_tax             →  total_tax_amount        →  tax_amount
+$.total_tax             →  vat_amount              →  vat_amount
 (computed)              →  (computed)              →  gross_revenue = total_amount + total_discount_amount
-(computed)              →  (computed)              →  net_revenue   = total_amount − total_tax_amount
+(computed)              →  (computed)              →  net_revenue   = total_amount − vat_amount
 ```
 
 ### 6.3. Công thức trong fact_orders
@@ -236,8 +236,8 @@ $.total_tax             →  total_tax_amount        →  tax_amount
 total_collected  = total_amount
 
 -- Doanh thu thuần P&L (sau chiết khấu, ĐÃ TRỪ VAT) — dùng để so sánh với giá vốn không VAT
-net_revenue      = total_amount - total_tax_amount
--- Lưu ý: ~60% đơn có total_tax_amount = 0 (xuất khẩu US + đơn bán lẻ không ghi VAT)
+net_revenue      = total_amount - vat_amount
+-- Lưu ý: ~60% đơn có vat_amount = 0 (xuất khẩu US + đơn bán lẻ không ghi VAT)
 --         → với những đơn đó: net_revenue = total_amount (không có gì để trừ)
 --         Pipeline tin vào $.total_tax của Sapo; nó tự xử lý 8%/10%/0% theo từng đơn.
 
@@ -253,7 +253,7 @@ gross_revenue    = total_amount + total_discount_amount
 | Field                           | Nghĩa                                                     |
 | ------------------------------- | ---------------------------------------------------------- |
 | `quantity`                    | Số lượng mua                                            |
-| `revenue`                     | =`line_amount` (giá trị dòng sau line-level discount) |
+| `net_revenue`                 | =`line_amount` (giá trị dòng sau line-level discount) |
 | `discount_amount`             | Chiết khấu trực tiếp trên dòng                       |
 | `distributed_discount_amount` | Phần chiết khấu order-level phân bổ xuống dòng      |
 

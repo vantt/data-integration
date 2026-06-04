@@ -38,7 +38,7 @@ Dashboard hien tai co nhieu van de:
 | Constraint | Rule | Applies to | Rationale |
 |------------|------|------------|-----------|
 | Exclude cancelled/voided | `status NOT IN ('CANCELLED', 'Voided')` | All revenue/order cards | Don huy khong tinh vao performance |
-| Exclude current incomplete week | `order_timestamp < date_trunc('week', current_date)` | All cards | Tuan hien tai chua ket thuc — so sanh khong cong bang |
+| Exclude current incomplete week | `ordered_at < date_trunc('week', current_date)` | All cards | Tuan hien tai chua ket thuc — so sanh khong cong bang |
 
 **Interactive Filters:**
 

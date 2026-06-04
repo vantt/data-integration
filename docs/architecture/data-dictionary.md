@@ -439,7 +439,7 @@ Per-invoice-line sales detail from MISA AMIS accounting system. Contains COGS (g
 
 ## Staging Models
 
-### `stg_sapo_orders`
+### `stg_sapo_orders_v2`
 
 Deduplicated order data - one row per order with latest state.
 
@@ -470,7 +470,7 @@ Deduplicated order data - one row per order with latest state.
 
 ---
 
-### `stg_sapo_customers`
+### `stg_sapo_customers_v2`
 
 Deduplicated customer data.
 
@@ -490,7 +490,7 @@ Deduplicated customer data.
 
 ---
 
-### `stg_sapo_accounts`
+### `stg_sapo_accounts_v2`
 
 Deduplicated staff accounts.
 
@@ -766,7 +766,7 @@ Order-level fact table.
 | `source_name`        | VARCHAR       | Order channel         |
 | `gross_amount`       | DECIMAL(15,2) | Total before discount |
 | `discount_amount`    | DECIMAL(15,2) | Discount applied      |
-| `tax_amount`         | DECIMAL(15,2) | Tax amount            |
+| `vat_amount`         | DECIMAL(15,2) | Tax amount            |
 | `net_amount`         | DECIMAL(15,2) | Final amount          |
 | `line_item_count`    | INTEGER       | Number of items       |
 | `created_at`         | TIMESTAMP     | Order creation time   |
@@ -913,8 +913,8 @@ See [GLOSSARY.md](../development/glossary.md#naming-conventions) for detailed na
 
 | Object Type   | Prefix            | Example                       |
 | ------------- | ----------------- | ----------------------------- |
-| Source model  | `src_`            | `src_sapo_orders`             |
-| Staging model | `stg_`            | `stg_sapo_orders`             |
+| Source model  | `src_`            | `src_sapo_orders_v2`          |
+| Staging model | `stg_`            | `stg_sapo_orders_v2`          |
 | Intermediate  | `int_`            | `int_orders_enriched`         |
 | Dimension     | `dim_`            | `dim_customers`               |
 | Fact          | `fact_`           | `fact_orders`                 |

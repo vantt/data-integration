@@ -191,7 +191,7 @@ WHERE c.customer_type = 'RETAIL'
   SELECT COUNT(DISTINCT customer_key)
   FROM fact_orders o
   JOIN dim_customers c ON o.customer_key = c.customer_key
-  WHERE o.order_timestamp >= CURRENT_DATE - INTERVAL '30 days'
+  WHERE o.ordered_at >= CURRENT_DATE - INTERVAL '30 days'
     AND c.customer_type = 'RETAIL'
     AND o.status NOT IN ('CANCELLED', 'Voided')
   ```
@@ -217,7 +217,7 @@ WHERE c.customer_type = 'RETAIL'
   WITH cohort_activity AS (
       SELECT
           DATE_TRUNC('month', c.first_order_date) as cohort_month,
-          DATE_TRUNC('month', o.order_timestamp) as activity_month,
+          DATE_TRUNC('month', o.ordered_at) as activity_month,
           COUNT(DISTINCT c.customer_key) as customers
       FROM dim_customers c
       JOIN fact_orders o ON c.customer_key = o.customer_key

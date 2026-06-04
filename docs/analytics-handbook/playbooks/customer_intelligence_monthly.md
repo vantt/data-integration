@@ -46,7 +46,7 @@
 |:---|:---|:---|:---|
 | **Total Customer LTV** | Scalar (Hero) | Sum of `lifetime_value` | Cumulative LTV, MoM trend |
 | **Avg LTV per Customer** | Scalar | Avg `lifetime_value` | MoM trend |
-| **Avg Orders per Customer** | Scalar | Avg `total_orders_count` | Purchase frequency, MoM trend |
+| **Avg Orders per Customer** | Scalar | Avg `order_count` | Purchase frequency, MoM trend |
 | **Repeat Purchase Rate** | Scalar | [Retention Rate](../domains/customer.md#5-retention-rate) | % with >1 order, MoM trend |
 | **Customer Value Distribution** | Bar (histogram) | LTV range buckets | Shape of customer value base (0, <500K, 500K-1M, 1M-2M, 2M-5M, 5M-10M, 10M+) |
 | **Segment Revenue Share** | Donut | Revenue by VALUE_VIP / GOLD / SILVER / BRONZE | Revenue concentration by segment |

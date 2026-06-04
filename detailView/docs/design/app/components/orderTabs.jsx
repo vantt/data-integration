@@ -25,7 +25,7 @@ function OrderFinancial({ o }){
         </Caveat>
         <div className="waterfall">
           <WfRow op=" " label={tr("US revenue (excl VAT)","Doanh thu US (trước VAT)")} amount={f.us_revenue_excl_vat} bar={92} />
-          <WfRow op="+" label={tr("US VAT / sales tax","VAT / thuế US")} amount={f.tax_amount} />
+          <WfRow op="+" label={tr("US VAT / sales tax","VAT / thuế US")} amount={f.vat_amount} />
           <WfRow op="=" label={tr("US revenue (incl VAT)","Doanh thu US (gồm VAT)")} amount={f.us_revenue_incl_vat} total />
           <WfRow op="−" label={<span>{tr("COGS","Giá vốn")} <span className="caption" style={{marginLeft:6}}>MISA</span></span>} amount={f.cogs_amount} neg badge={<Badge tone="good">has_cogs</Badge>} />
           <WfRow op="=" label={<span>{tr("Gross profit","Lợi nhuận gộp")} · <Pct v={f.gross_margin_pct} /></span>} amount={f.gross_profit} result />
@@ -52,7 +52,7 @@ function OrderFinancial({ o }){
         <WfRow op=" " label={tr("Gross revenue","Doanh thu gộp")} amount={f.gross_revenue} bar={bar(f.gross_revenue)} />
         <WfRow op="−" label={<span>{tr("Discount","Chiết khấu")} <Badge>bundle</Badge></span>} amount={f.discount_amount} neg />
         <WfRow op="=" label={tr("Net revenue","Doanh thu thuần")} amount={f.net_revenue} total bar={bar(f.net_revenue)} />
-        <WfRow op="+" label={tr("VAT output","VAT đầu ra")} amount={f.tax_amount} />
+        <WfRow op="+" label={tr("VAT output","VAT đầu ra")} amount={f.vat_amount} />
         <WfRow op="=" label={tr("Total collected","Tổng thu")} amount={f.total_collected} total />
         <WfRow op="−" label={<span>{tr("COGS","Giá vốn")} <span className="caption" style={{marginLeft:6}}>MISA</span>{!verified && <Badge tone="warn" dot>unverified</Badge>}</span>} amount={f.cogs_amount} neg />
         <WfRow op="=" label={<span>{tr("Gross profit","Lợi nhuận gộp")} · <Pct v={f.gross_margin_pct} /></span>} amount={f.gross_profit} result />
@@ -546,7 +546,7 @@ function OrderChannelStaff({ o }){
             <Fact k={tr("Category","Phân loại")} v={`${c.category} · ${c.format}`} />
             <Fact k={tr("Platform","Nền tảng")} v={`${c.platform} · ${c.brand}`} />
             <Fact k={tr("Market","Thị trường")} v={c.market} />
-            <Fact k={tr("Promo","Khuyến mãi")} v={c.promo_codes.length ? `${c.promo_codes.join(", ")} · max ${c.max_discount_rate}% · ${c.primary_nature}` : "—"} />
+            <Fact k={tr("Promo","Khuyến mãi")} v={c.promo_codes.length ? `${c.promo_codes.join(", ")} · max ${c.max_discount_rate}% · ${c.primary_discount_type}` : "—"} />
           </div>
         </div>
         <div className="scard"><Eyebrow accent>{tr("Staff","Nhân sự")}</Eyebrow>

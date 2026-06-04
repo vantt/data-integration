@@ -26,7 +26,7 @@ domain_refs: [domains/customer.md]
 | Constraint | Rule | Applies to | Rationale |
 |------------|------|------------|-----------|
 | Exclude Unknown customers | `customer_id != 'Unknown'` | All cards | System/anonymous records skew metrics |
-| Only customers with orders | `total_orders_count > 0` | Most cards | Focus on paying customers |
+| Only customers with orders | `order_count > 0` | Most cards | Focus on paying customers |
 | Exclude cancelled/voided orders | `status NOT IN ('CANCELLED', 'Voided')` | Order-based cards | Don't count failed transactions |
 
 **Interactive Filters:**

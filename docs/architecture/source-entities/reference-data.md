@@ -135,7 +135,7 @@ SELECT
   COUNT(DISTINCT stg_customers.customer_id) as customer_count,
   SUM(fact_orders.net_amount) as total_revenue,
   AVG(fact_orders.net_amount) as avg_order_value
-FROM stg_sapo_customers
+FROM stg_sapo_customers_v2
 LEFT JOIN fact_orders ON stg_customers.customer_id = fact_orders.customer_id
 GROUP BY customer_group
 ORDER BY total_revenue DESC

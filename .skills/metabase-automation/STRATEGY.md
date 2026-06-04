@@ -117,7 +117,7 @@ Khai báo filters trong blueprint trước các Tab/Question headers:
 | field_id | Table | Column | Dùng cho |
 |----------|-------|--------|----------|
 | 324 | `int_misa_sales_lines` | `posting_date` | Finance, Channel P&L, Product |
-| 141 | `fact_orders` | `order_timestamp` | Orders, US CrossBorder |
+| 141 | `fact_orders` | `ordered_at` | Orders, US CrossBorder |
 
 **Auto-wiring:** Deploy script tự động match filter `slug` với SQL `{{template_tag}}` cùng tên. Ví dụ: filter slug `date_range` → auto-wire tới `{{date_range}}` trong SQL.
 

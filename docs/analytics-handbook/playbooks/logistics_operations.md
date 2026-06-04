@@ -9,7 +9,7 @@
 
 ## Data Lineage
 
-- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — status, fulfillment_status, order_timestamp, first_shipped_at, time_to_complete_hours
+- **Core Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql) — status, fulfillment_status, ordered_at, first_shipped_at, time_to_complete_hours
 - **Dimensions:** [`dim_order_status`](../../../transformation/models/marts/core/dim_order_status.sql), [`dim_staff`](../../../transformation/models/marts/core/dim_staff.sql), [`dim_channels`](../../../transformation/models/marts/core/dim_channels.sql), [`dim_date`](../../../transformation/models/marts/core/dim_date.sql), [`dim_branch_location`](../../../transformation/models/marts/core/dim_branch_location.sql)
 - **Planned models (not yet available):** `fact_fulfillments`, `fact_shipments`, `dim_carriers`
 
@@ -58,7 +58,7 @@
 
 | Chart Title | Visualization Type | Metric Reference | Notes/Config |
 |:---|:---|:---|:---|
-| **Avg Hours to First Ship** | Scalar + trend | [Order Cycle Time](../domains/logistics.md#2-order-cycle-time) | `AVG(date_diff('hour', order_timestamp, first_shipped_at))`. Hero card. DoD. |
+| **Avg Hours to First Ship** | Scalar + trend | [Order Cycle Time](../domains/logistics.md#2-order-cycle-time) | `AVG(date_diff('hour', ordered_at, first_shipped_at))`. Hero card. DoD. |
 | **Same-Day Ship Rate** | Scalar + trend | [Same-Day Ship Rate](../domains/logistics.md#3-same-day-ship-rate) | `COUNT(same day shipped) / total eligible`. DoD. |
 | **Orders Pending > 24h** | Scalar | Count WHERE status = 'OPEN' AND age > 24h | Red when > 0. Escalation signal. |
 | **Completed Today** | Scalar + trend | Count WHERE status = 'COMPLETED' AND today | DoD comparison. |
@@ -92,9 +92,9 @@
 
 1. **Status mapping**: `fact_orders.status` values: OPEN, COMPLETED, CANCELLED, ARCHIVED, DRAFT. Exclude DRAFT from pipeline counts.
 2. **Fulfillment Rate formula**: `COUNT(CASE WHEN fulfillment_status = 'fulfilled') / COUNT(*) WHERE status NOT IN ('DRAFT', 'CANCELLED')`.
-3. **Time to first ship**: `date_diff('hour', order_timestamp, first_shipped_at)` — only for orders with `first_shipped_at IS NOT NULL`.
+3. **Time to first ship**: `date_diff('hour', ordered_at, first_shipped_at)` — only for orders with `first_shipped_at IS NOT NULL`.
 4. **Timezones**: All timestamps are TIMESTAMPTZ. Display in Asia/Ho_Chi_Minh at serving layer.
-5. **Stuck orders**: `WHERE status = 'OPEN' AND date_diff('hour', order_timestamp, NOW()) > 24`.
+5. **Stuck orders**: `WHERE status = 'OPEN' AND date_diff('hour', ordered_at, NOW()) > 24`.
 
 ### Common Pitfalls
 

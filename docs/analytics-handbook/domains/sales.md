@@ -99,7 +99,7 @@ WHERE c.customer_type = 'RETAIL'
 
 > **dbt Model:** [`fact_orders`](../../../transformation/models/marts/sales/fact_orders.sql)
 
-- **Business Definition:** Doanh thu thuần — số tiền khách trả cho hàng hóa sau chiết khấu, **đã trừ VAT** (= total_amount − total_tax_amount). VAT nhúng trong giá bán Sapo — net_revenue là con số P&L so sánh như-cho-như với giá vốn. Đây là con số quan trọng nhất cho phân tích kinh doanh. Xem [Revenue Terminology](../guides/revenue_terminology.md).
+- **Business Definition:** Doanh thu thuần — số tiền khách trả cho hàng hóa sau chiết khấu, **đã trừ VAT** (= total_amount − vat_amount). VAT nhúng trong giá bán Sapo — net_revenue là con số P&L so sánh như-cho-như với giá vốn. Đây là con số quan trọng nhất cho phân tích kinh doanh. Xem [Revenue Terminology](../guides/revenue_terminology.md).
 - **Logic (SQL):**
   ```sql
   SUM(net_revenue)
@@ -288,7 +288,7 @@ WHERE c.customer_type = 'RETAIL'
 | :---- | :----- | :------ |
 | `order_id` | `fact_orders` | Primary business key — match with Sapo order ID |
 | `order_code` | `stg_sapo_orders` | Human-readable code (e.g. `#1234`) — visible in Sapo UI |
-| `order_timestamp` | `fact_orders.order_timestamp` | Order creation time |
+| `ordered_at` | `fact_orders.ordered_at` | Order creation time |
 | `status` | `fact_orders` | Order status (open, completed, cancelled) |
 | `payment_status` | `fact_orders` | paid, pending, refunded |
 | `fulfillment_status` | `fact_orders` | fulfilled, unfulfilled, returned |
@@ -343,7 +343,7 @@ WHERE c.customer_type = 'RETAIL'
 - **Logic (SQL):**
   ```sql
   SELECT
-      EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
+      EXTRACT(HOUR FROM ordered_at) as hour_of_day,
       SUM(net_revenue) as sales
   FROM fact_orders
   GROUP BY 1
@@ -435,7 +435,7 @@ WHERE c.customer_type = 'RETAIL'
   SELECT
       p.product_name,
       SUM(oli.quantity) as units_sold,
-      SUM(oli.revenue) as revenue
+      SUM(oli.net_revenue) as revenue
   FROM fact_sales oli -- mapped from order_line_items
   JOIN dim_products p USING (product_id)
   GROUP BY 1

@@ -25,7 +25,7 @@ domain_refs: [domains/logistics.md]
 | Order status, fulfillment_status | Available | `fact_orders` | OPEN, COMPLETED, CANCELLED, ARCHIVED, DRAFT |
 | `first_shipped_at` | Available | `fact_orders` via `std_fulfillments` | First shipment timestamp per order |
 | `time_to_complete_hours` | Available | `fact_orders` | `date_diff('hour', created_at, completed_at)` |
-| `order_timestamp` (created_at) | Available | `fact_orders` | Order creation timestamp |
+| `ordered_at` (created_at) | Available | `fact_orders` | Order creation timestamp |
 | Carrier-level data | **Planned** | No `dim_carriers` or `fact_shipments` | Cannot break down by carrier |
 | Delivery timestamps | **Planned** | No delivery tracking | Cannot compute delivery time |
 | Per-fulfillment detail | **Planned** | No `fact_fulfillments` mart | Only first shipment available |

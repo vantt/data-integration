@@ -109,7 +109,7 @@
 - **Differs from Sales Ops Weekly Review:** Weekly is a quick operational check (WoW). Monthly adds **6-month trends, branch analysis, staff leaderboard, and channel health matrix** for management decisions (MoM).
 - **Differs from CEO Monthly Scorecard:** CEO sees strategic metrics (revenue, growth, segments). This shows **operational metrics** (completion rate, processing time, staff productivity, payment health).
 - **4-tab design:** Tab 1 is the quick monthly pulse (5-7 min). Tabs 2-3 are deep-dives for specific audiences (channel managers, team leads, finance). Tab 4 (Margin) is for Operations Manager + Finance monthly review.
-- **`time_to_complete_hours`:** Calculated in `fact_orders` as `DATEDIFF(hour, order_timestamp, completed_at)`. NULL for non-completed orders — exclude from average.
+- **`time_to_complete_hours`:** Calculated in `fact_orders` as `DATEDIFF(hour, ordered_at, completed_at)`. NULL for non-completed orders — exclude from average.
 - **Staff Data Caveat:** Not all orders have assigned staff (marketplace auto-orders). Filter to `seller_staff_key IS NOT NULL` for meaningful staff comparisons.
 - **COGS Coverage Caveat (Tab 4):** `fact_order_economics` joins MISA via `order_code = voucher_no`. Orders without MISA match have `has_cogs = false` — gross_profit = net_revenue in those rows (overstated). Review monthly MISA sync health before relying on margin figures.
 - Max ~43 visual elements across 4 tabs. Operations Manager reviews Tab 4 in 5-10 min after Tab 1 overview.

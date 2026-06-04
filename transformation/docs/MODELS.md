@@ -8,8 +8,8 @@
 ┌──────────────────────────────────────────────────────────────────────┐
 │                           STAGING LAYER                               │
 ├──────────────────────────────────────────────────────────────────────┤
-│ src_sapo_orders ──► stg_sapo_orders                                  │
-│ src_sapo_customers ──► stg_sapo_customers                            │
+│ src_sapo_orders_v2 ──► stg_sapo_orders_v2                            │
+│ src_sapo_customers_v2 ──► stg_sapo_customers_v2                      │
 │ src_sapo_accounts ──► stg_sapo_accounts                              │
 │ src_sapo_targets ──► stg_sapo_targets                                │
 └─────────────────────────────┬────────────────────────────────────────┘
@@ -41,11 +41,11 @@
 
 ## Staging Models
 
-### src_sapo_orders
+### src_sapo_orders_v2
 
 **Type:** Source Extraction
 **Materialization:** Incremental (delete+insert)
-**Path:** `models/staging/src_sapo_orders.sql`
+**Path:** `models/staging/src_sapo_orders_v2.sql`
 **Tags:** source, sapo
 **unique_key:** `order_id`
 
@@ -70,29 +70,29 @@
 - **order_line_items_json, payments_json, fulfillments_json** (nested arrays as text for unnest models)
 
 **Consumers:**
-- `stg_sapo_orders` (enrichment joins)
-- `stg_sapo_order_items` (unnest order_line_items_json)
-- `stg_sapo_payments` (unnest payments_json)
-- `stg_sapo_fulfillments` (unnest fulfillments_json)
+- `stg_sapo_orders_v2` (enrichment joins)
+- `stg_sapo_order_items_v2` (unnest order_line_items_json)
+- `stg_sapo_payments_v2` (unnest payments_json)
+- `stg_sapo_fulfillments_v2` (unnest fulfillments_json)
 
 ---
 
-### stg_sapo_orders
+### stg_sapo_orders_v2
 
 **Type:** Staging
 **Materialization:** View
-**Path:** `models/staging/stg_sapo_orders.sql`
+**Path:** `models/staging/stg_sapo_orders_v2.sql`
 **Tags:** staging, orders
 
-**Purpose:** Enrichment joins only. All dedup already done in src_sapo_orders.
+**Purpose:** Enrichment joins only. All dedup already done in src_sapo_orders_v2.
 
 **Key Logic:**
-- Reads from `ref('src_sapo_orders')` (flat, 1 row per order_id)
+- Reads from `ref('src_sapo_orders_v2')` (flat, 1 row per order_id)
 - LEFT JOIN ref_order_sources (tag-based mapping)
 - LEFT JOIN ref_payment_methods, ref_order_sources, ref_branch_locations
 
 **Output Columns:**
-All columns from src_sapo_orders plus:
+All columns from src_sapo_orders_v2 plus:
 | Column | Type | Description |
 |--------|------|-------------|
 | final_source_id | VARCHAR | Resolved source (tag mapping or original) |
@@ -106,11 +106,11 @@ All columns from src_sapo_orders plus:
 
 ---
 
-### stg_sapo_customers
+### stg_sapo_customers_v2
 
 **Type:** Staging
 **Materialization:** View
-**Path:** `models/staging/stg_sapo_customers.sql`
+**Path:** `models/staging/stg_sapo_customers_v2.sql`
 **Tags:** staging, customers, otp
 
 **Output Columns:**
@@ -156,8 +156,8 @@ All columns from src_sapo_orders plus:
 **Purpose:** Enrich orders with customer and geography data.
 
 **Dependencies:**
-- stg_sapo_orders
-- stg_sapo_customers
+- stg_sapo_orders_v2
+- stg_sapo_customers_v2
 - dim_geography
 
 **Output Columns:**
@@ -189,7 +189,7 @@ SELECT
     item.quantity,
     item.price,
     item.line_amount
-FROM stg_sapo_orders o,
+FROM stg_sapo_orders_v2 o,
 UNNEST(o.order_line_items) as item
 ```
 
@@ -221,7 +221,7 @@ UNNEST(o.order_line_items) as item
 **Tags:** mart, core, olap
 
 **Dependencies:**
-- stg_sapo_customers
+- stg_sapo_customers_v2
 
 **Output Columns:**
 | Column | Type | Description |
@@ -358,15 +358,15 @@ UNNEST(o.order_line_items) as item
 source('sapo_raw', 'order')
     │
     ▼
-src_sapo_orders (INCREMENTAL — extract + dedup)
-    ├──► stg_sapo_order_items ──► std_order_items ──► fact_sales, dim_products
-    ├──► stg_sapo_payments ──► std_payments ──► fact_payments
-    ├──► stg_sapo_fulfillments ──► std_fulfillments
+src_sapo_orders_v2 (INCREMENTAL — extract + dedup)
+    ├──► stg_sapo_order_items_v2 ──► std_order_items ──► fact_sales, dim_products
+    ├──► stg_sapo_payments_v2 ──► std_payments ──► fact_payments
+    ├──► stg_sapo_fulfillments_v2 ──► std_fulfillments
     │
     ▼
-stg_sapo_orders (VIEW — enrichment) ──► std_orders ──► fact_orders, fact_sales
+stg_sapo_orders_v2 (VIEW — enrichment) ──► std_orders ──► fact_orders, fact_sales
 
-src_sapo_customers ──► stg_sapo_customers ──► std_customers ──► dim_customers
+src_sapo_customers_v2 ──► stg_sapo_customers_v2 ──► std_customers ──► dim_customers
 
 stg_sapo_accounts ──► dim_staff ──┐
                                   ├──► fact_targets

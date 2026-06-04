@@ -102,4 +102,4 @@
 - **Differs from CEO Weekly Pulse:** CEO version is strategic (revenue & growth). This version is **operational** (order processing, team performance, channel workload).
 - **Differs from Monthly Summary:** Monthly adds **6-month trends, branch health matrix, staff leaderboard, cancellation analysis** for management decisions (MoM). This weekly version uses WoW for fast operational rhythm.
 - **Staff Data Caveat:** `dim_staff` data comes from Sapo's assigned salesperson field. Not all orders have a staff assignment (especially marketplace orders). Filter to `seller_staff_key IS NOT NULL` for meaningful staff comparisons.
-- **Incomplete Week Exclusion:** All queries use `order_timestamp < date_trunc('week', current_date)` to exclude the current incomplete week — ensures fair WoW comparison.
+- **Incomplete Week Exclusion:** All queries use `ordered_at < date_trunc('week', current_date)` to exclude the current incomplete week — ensures fair WoW comparison.
