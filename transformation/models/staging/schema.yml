@@ -13,60 +13,60 @@ models:
       - name: effective_from
         tests: [not_null]
 
-  - name: stg_sapo_orders
+  - name: stg_sapo_orders_v2
     columns:
       - name: order_id
         tests: [not_null]
 
-  - name: stg_sapo_order_items
+  - name: stg_sapo_order_items_v2
     columns:
       - name: item_id
         tests: [not_null]
       - name: order_id
         tests: [not_null]
 
-  - name: stg_sapo_payments
+  - name: stg_sapo_payments_v2
     columns:
       - name: payment_id
         tests: [not_null]
       - name: amount
         tests: [not_null]
 
-  - name: stg_sapo_fulfillments
+  - name: stg_sapo_fulfillments_v2
     columns:
       - name: fulfillment_id
         tests: [not_null]
 
-  - name: stg_sapo_order_returns
+  - name: stg_sapo_order_returns_v2
     columns:
       - name: return_id
         tests: [unique, not_null]
 
-  - name: stg_sapo_customers
+  - name: stg_sapo_customers_v2
     columns:
       - name: sapo_customer_id
         tests: [not_null]
 
-  - name: stg_sapo_products
+  - name: stg_sapo_products_v2
     columns:
       - name: product_id
         tests: [not_null]
 
-  - name: stg_sapo_variants
+  - name: stg_sapo_variants_v2
     columns:
       - name: variant_id
         tests: [not_null]
       - name: product_id
         tests: [not_null]
 
-  - name: stg_sapo_variant_prices
+  - name: stg_sapo_variant_prices_v2
     columns:
       - name: variant_id
         tests: [not_null]
       - name: price_list_id
         tests: [not_null]
 
-  - name: stg_sapo_inventories
+  - name: stg_sapo_inventories_v2
     columns:
       - name: variant_id
         tests: [not_null]
@@ -126,7 +126,7 @@ models:
       - name: cogs_amount
         tests: [not_null]
 
-  - name: stg_sapo_order_discount_items
+  - name: stg_sapo_order_discount_items_v2
     description: "Unnested discount_items array from raw Sapo orders. Grain: 1 row per discount item per order. B2B wholesale-price-gap rows excluded."
     columns:
       - name: order_id
