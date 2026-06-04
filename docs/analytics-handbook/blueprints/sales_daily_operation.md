@@ -530,7 +530,7 @@ SELECT ROUND(
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date
+WHERE date(s.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -975,7 +975,7 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date
+WHERE date(s.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1018,7 +1018,7 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date
+WHERE date(s.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1053,7 +1053,7 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date
+WHERE date(s.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1098,7 +1098,7 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date
+WHERE date(s.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1, 2
@@ -1134,7 +1134,7 @@ LIMIT 20
 
 #### 📝 Text: Source & Freshness
 
-Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Khung thời gian: hôm nay (by sol_timestamp, không phải order_timestamp)
+Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Khung thời gian: hôm nay (by ordered_at, không phải order_timestamp)
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }

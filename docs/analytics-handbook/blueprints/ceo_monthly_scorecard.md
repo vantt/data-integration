@@ -1293,8 +1293,8 @@ WITH this_month AS (
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
     WHERE s.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND date(s.sol_timestamp) < date_trunc('month', current_date)
+      AND date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(s.ordered_at) < date_trunc('month', current_date)
     GROUP BY 1, 2
 ),
 last_month AS (
@@ -1304,8 +1304,8 @@ last_month AS (
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
     WHERE s.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND date(s.sol_timestamp) < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND date(s.ordered_at) < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
 )
 SELECT
@@ -1369,8 +1369,8 @@ SELECT
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE s.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND date(s.sol_timestamp) < date_trunc('month', current_date)
+  AND date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND date(s.ordered_at) < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10

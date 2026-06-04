@@ -1751,8 +1751,8 @@ FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers cust ON s.customer_key = cust.customer_key
 WHERE cust.customer_type = 'RETAIL'
-  AND date(s.sol_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND date(s.sol_timestamp) < date_trunc('week', current_date)
+  AND date(s.ordered_at) >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND date(s.ordered_at) < date_trunc('week', current_date)
 GROUP BY 1, 2
 ORDER BY 4 DESC
 LIMIT 10

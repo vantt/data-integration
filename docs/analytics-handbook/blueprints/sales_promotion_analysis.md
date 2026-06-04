@@ -1691,8 +1691,8 @@ promo_period AS (
     FROM fact_sales fs
     JOIN dim_products p ON fs.product_key = p.product_key
     JOIN dim_customers c ON fs.customer_key = c.customer_key
-    WHERE fs.sol_timestamp >= current_date - INTERVAL '30 days'
-      AND fs.sol_timestamp < current_date
+    WHERE fs.ordered_at >= current_date - INTERVAL '30 days'
+      AND fs.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
       AND fs.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -1704,8 +1704,8 @@ prior_period AS (
     FROM fact_sales fs
     JOIN dim_products p ON fs.product_key = p.product_key
     JOIN dim_customers c ON fs.customer_key = c.customer_key
-    WHERE fs.sol_timestamp >= current_date - INTERVAL '60 days'
-      AND fs.sol_timestamp < current_date - INTERVAL '30 days'
+    WHERE fs.ordered_at >= current_date - INTERVAL '60 days'
+      AND fs.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
       AND fs.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -1716,8 +1716,8 @@ promo_active_types AS (
     FROM fact_sales fs
     JOIN dim_products p ON fs.product_key = p.product_key
     JOIN dim_customers c ON fs.customer_key = c.customer_key
-    WHERE fs.sol_timestamp >= current_date - INTERVAL '30 days'
-      AND fs.sol_timestamp < current_date
+    WHERE fs.ordered_at >= current_date - INTERVAL '30 days'
+      AND fs.ordered_at < current_date
       AND fs.discount_amount > 0
       AND c.customer_type = 'RETAIL'
       AND fs.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)

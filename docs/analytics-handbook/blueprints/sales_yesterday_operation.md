@@ -518,7 +518,7 @@ SELECT ROUND(
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -973,7 +973,7 @@ FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1016,7 +1016,7 @@ FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1051,7 +1051,7 @@ FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1096,7 +1096,7 @@ FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.sol_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1, 2

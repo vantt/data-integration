@@ -97,16 +97,16 @@ sales_base AS (
         fs.product_key,
         fs.order_id,
         fs.channel_key,
-        DATE_TRUNC('month', fs.sol_timestamp)::date AS snapshot_month,
-        DATE(fs.sol_timestamp)                       AS sale_date,
+        DATE_TRUNC('month', fs.ordered_at)::date AS snapshot_month,
+        DATE(fs.ordered_at)                       AS sale_date,
         fs.quantity,
         fs.revenue                                   AS line_revenue
     FROM {{ ref('fact_sales') }} fs
     -- Only sales channels (no internal / system)
     INNER JOIN valid_channels vc ON fs.channel_key = vc.channel_key
     -- Date range: 24 months back (match snapshot_months window)
-    WHERE fs.sol_timestamp >= DATE_TRUNC('month', current_date) - INTERVAL '24 months'
-      AND fs.sol_timestamp <  DATE_TRUNC('month', current_date)
+    WHERE fs.ordered_at >= DATE_TRUNC('month', current_date) - INTERVAL '24 months'
+      AND fs.ordered_at <  DATE_TRUNC('month', current_date)
       -- Exclude Unknown product
       AND fs.product_key != {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
       -- Revenue > 0 excludes gift/promo items at fact_sales level

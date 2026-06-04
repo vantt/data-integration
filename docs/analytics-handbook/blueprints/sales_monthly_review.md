@@ -1629,8 +1629,8 @@ SELECT
     SUM(fs.revenue) as "Revenue"
 FROM fact_sales fs
 JOIN dim_products dp ON fs.product_key = dp.product_key
-WHERE fs.sol_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND fs.sol_timestamp < date_trunc('month', current_date)
+WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND fs.ordered_at < date_trunc('month', current_date)
   AND fs.order_id IN (
       SELECT order_id FROM fact_orders
       WHERE status NOT IN ('CANCELLED', 'Voided')
@@ -1675,8 +1675,8 @@ FROM fact_sales fs
 JOIN dim_products dp ON fs.product_key = dp.product_key
 JOIN fact_orders fo ON fs.order_id = fo.order_id
 WHERE fo.fulfillment_status = 'RETURNED'
-  AND fs.sol_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND fs.sol_timestamp < date_trunc('month', current_date)
+  AND fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND fs.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY "So luong tra" DESC
 LIMIT 5
@@ -1716,8 +1716,8 @@ SELECT
     SUM(fs.revenue) as "Revenue"
 FROM fact_sales fs
 JOIN dim_product_types dpt ON fs.product_type_key = dpt.product_type_key
-WHERE fs.sol_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND fs.sol_timestamp < date_trunc('month', current_date)
+WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND fs.ordered_at < date_trunc('month', current_date)
   AND fs.order_id IN (
       SELECT order_id FROM fact_orders
       WHERE status NOT IN ('CANCELLED', 'Voided')
@@ -1762,8 +1762,8 @@ this_month AS (
         SUM(fs.quantity) as quantity
     FROM fact_sales fs
     JOIN dim_products dp ON fs.product_key = dp.product_key
-    WHERE fs.sol_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND fs.sol_timestamp < date_trunc('month', current_date)
+    WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND fs.ordered_at < date_trunc('month', current_date)
       AND fs.order_id IN (
           SELECT order_id FROM fact_orders
           WHERE status NOT IN ('CANCELLED', 'Voided')
@@ -1776,8 +1776,8 @@ prev_month AS (
         SUM(fs.revenue) as revenue
     FROM fact_sales fs
     JOIN dim_products dp ON fs.product_key = dp.product_key
-    WHERE fs.sol_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND fs.sol_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND fs.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       AND fs.order_id IN (
           SELECT order_id FROM fact_orders
           WHERE status NOT IN ('CANCELLED', 'Voided')
@@ -1792,8 +1792,8 @@ returns AS (
     JOIN dim_products dp ON fs.product_key = dp.product_key
     JOIN fact_orders fo ON fs.order_id = fo.order_id
     WHERE fo.fulfillment_status = 'RETURNED'
-      AND fs.sol_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND fs.sol_timestamp < date_trunc('month', current_date)
+      AND fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND fs.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
 )
 SELECT

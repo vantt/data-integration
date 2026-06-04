@@ -92,7 +92,7 @@ SELECT
     -- Pro-rated amounts (Simple logic for now)
     -- Ideally we'd allocate order-level discount to items here
     
-    o.created_at as sol_timestamp,
+    o.created_at as ordered_at,
     o.updated_at
 
 FROM items i

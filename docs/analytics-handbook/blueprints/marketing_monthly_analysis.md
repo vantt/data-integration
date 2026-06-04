@@ -688,8 +688,8 @@ WITH this_month AS (
         COUNT(DISTINCT s.order_id) as order_count
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
-    WHERE date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND date(s.sol_timestamp) < date_trunc('month', current_date)
+    WHERE date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(s.ordered_at) < date_trunc('month', current_date)
     GROUP BY 1
 ),
 last_month AS (
@@ -698,8 +698,8 @@ last_month AS (
         SUM(s.revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
-    WHERE date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND date(s.sol_timestamp) < date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND date(s.ordered_at) < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
 )
 SELECT
@@ -1561,8 +1561,8 @@ WITH this_month AS (
         SUM(s.revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
-    WHERE date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND date(s.sol_timestamp) < date_trunc('month', current_date)
+    WHERE date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND date(s.ordered_at) < date_trunc('month', current_date)
     GROUP BY 1, 2
 ),
 last_month AS (
@@ -1571,8 +1571,8 @@ last_month AS (
         SUM(s.revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
-    WHERE date(s.sol_timestamp) >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND date(s.sol_timestamp) < date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND date(s.ordered_at) < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
 )
 SELECT
