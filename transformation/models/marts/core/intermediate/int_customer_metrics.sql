@@ -201,7 +201,7 @@ order_sequence AS (
         o.ordered_at,
         LAG(o.ordered_at) OVER (
             PARTITION BY o.customer_key ORDER BY o.ordered_at
-        ) AS prev_order_timestamp
+        ) AS prev_ordered_at
     FROM orders o
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
@@ -213,11 +213,11 @@ inter_purchase_cte AS (
     SELECT
         customer_key,
         ROUND(AVG(
-            date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(ordered_at AS DATE))
+            date_diff('day', CAST(prev_ordered_at AS DATE), CAST(ordered_at AS DATE))
         ))::INTEGER AS avg_days_between_orders
     FROM order_sequence
-    WHERE prev_order_timestamp IS NOT NULL
-      AND date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(ordered_at AS DATE)) > 0
+    WHERE prev_ordered_at IS NOT NULL
+      AND date_diff('day', CAST(prev_ordered_at AS DATE), CAST(ordered_at AS DATE)) > 0
     GROUP BY customer_key
 ),
 
