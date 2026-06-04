@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Order Financial tab — Hiện tại vs Đề xuất (mockup)</title>
+<style>
+  :root{
+    --bg:#faf9f7; --card:#fff; --border:#e7e3dc; --ink:#2b2723; --muted:#8a8278;
+    --green:#2f7d5b; --green-bg:#eef6f1; --red:#c0492f; --red-bg:#fbeeea;
+    --amber:#b07d18; --amber-bg:#fbf3e2; --accent:#6b5fd6; --accent-bg:#efedfb;
+    --neutral-bg:#f1efea; --sub:#f6f4f0;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:24px}
+  h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:22px;margin:0 0 4px}
+  .lede{color:var(--muted);margin:0 0 20px;font-size:13px}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media(max-width:900px){.cols{grid-template-columns:1fr}}
+  .col-h{font-family:Georgia,serif;font-size:15px;margin:0 0 10px;padding:6px 10px;border-radius:8px}
+  .col-h.cur{background:var(--neutral-bg);color:#6a625a}
+  .col-h.new{background:var(--green-bg);color:var(--green)}
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+  .phead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .ptitle{font-family:Georgia,serif;font-size:17px}
+  .psub{font:11px/1 ui-monospace,Menlo,Consolas,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+  /* verdict */
+  .verdict{display:flex;gap:12px;align-items:center;border-radius:10px;padding:12px 14px;margin-bottom:12px}
+  .verdict.win{background:var(--green-bg)}
+  .vdot{width:10px;height:10px;border-radius:50%;flex:0 0 auto}
+  .win .vdot{background:var(--green)}
+  .vword{font-weight:700;font-size:15px;color:var(--green)}
+  .vline{font-size:12.5px;color:#5d564e}
+  .vfigs{margin-left:auto;text-align:right}
+  .vnet{font-size:20px;font-weight:700;color:var(--green)}
+  .vsub{font-size:12px;color:var(--muted)}
+  .vfoot{font-size:11.5px;color:var(--muted);margin-top:4px;border-top:1px dashed var(--border);padding-top:5px}
+  /* badges */
+  .bdg{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;
+    padding:2px 7px;border-radius:999px;background:var(--neutral-bg);color:#6a625a;vertical-align:middle}
+  .bdg.good{background:var(--green-bg);color:var(--green)}
+  .bdg.warn{background:var(--amber-bg);color:var(--amber)}
+  .bdg.accent{background:var(--accent-bg);color:var(--accent)}
+  .bdg .d{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .cap{font-size:11px;color:var(--muted);margin-left:6px}
+  .new-tag{font-size:9.5px;font-weight:700;color:var(--green);background:var(--green-bg);
+    padding:1px 5px;border-radius:4px;margin-left:6px;letter-spacing:.03em}
+  /* waterfall */
+  table.wf{width:100%;border-collapse:collapse}
+  .wf td{padding:6px 4px;border-bottom:1px solid #f0ede7}
+  .wf .op{width:16px;color:var(--muted);text-align:center}
+  .wf .lab{font-size:13px}
+  .wf .pct{width:54px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;font-size:12.5px}
+  .wf .amt{width:120px;text-align:right;font-variant-numeric:tabular-nums}
+  .wf .neg .amt{color:var(--red)}
+  .wf tr.total td{background:var(--sub)}
+  .wf tr.result td{background:#f0efe9;font-weight:700}
+  .wf tr.decision td{background:var(--green-bg)}
+  .wf tr.decision .lab,.wf tr.decision .amt,.wf tr.decision .pct{color:var(--green);font-weight:700}
+  .wf .star{color:var(--green)}
+  .ll-foot{font-size:12px;color:var(--muted);margin-top:8px;display:flex;justify-content:space-between;
+    padding:7px 4px;border-top:1px dashed var(--border)}
+  .ll-foot b{color:#5d564e}
+  /* composition bar */
+  .compbar{display:flex;height:26px;border-radius:6px;overflow:hidden;margin:2px 0 8px}
+  .seg{display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;font-weight:600;white-space:nowrap}
+  .seg.cogs{background:#b07a52}.seg.promo{background:#c98aa8}.seg.fee{background:#cf8a3a}
+  .seg.oh{background:#8f86d6}.seg.profit{background:#3f9e72}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--muted)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle}
+  /* cost ledger */
+  .grp{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+  .grp-h{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--sub);cursor:default}
+  .grp-h .chev{color:var(--muted);margin-right:6px}
+  .grp-t{font-variant-numeric:tabular-nums;font-weight:600}
+  .led{width:100%;border-collapse:collapse;font-size:12px}
+  .led th{text-align:left;color:var(--muted);font-weight:600;padding:6px 10px;border-top:1px solid var(--border);font-size:11px}
+  .led td{padding:5px 10px;border-top:1px solid #f0ede7}
+  .led .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+  .led .num{text-align:right;font-variant-numeric:tabular-nums}
+  .led .muted{color:var(--muted)}
+  /* recon collapsed */
+  .recon{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;
+    padding:9px 12px;border:1px dashed var(--border);border-radius:8px;color:#5d564e;background:#fcfbf9}
+  .recon b{font-variant-numeric:tabular-nums}
+  .note{display:flex;gap:7px;font-size:11.5px;color:var(--muted);margin-top:8px}
+  .caveat{display:flex;gap:8px;font-size:12px;padding:8px 10px;border-radius:8px;background:var(--amber-bg);color:#7a5b16;margin-top:8px}
+  .annot{font-size:11px;color:var(--green);margin:0 0 10px;padding:6px 10px;background:var(--green-bg);border-radius:6px}
+  .x{color:var(--red)}
+</style>
+</head>
+<body>
+  <h1>Order Financial tab — Hiện tại vs Đề xuất</h1>
+  <p class="lede">Cùng 1 đơn (Shopee, có hàng tặng). Mockup tĩnh, số minh hoạ. Mục tiêu: đề xuất phải <b>rõ hơn</b> hiện tại, không rối hơn. Cột phải đánh dấu <span class="new-tag">MỚI</span> phần thêm.</p>
+
+  <div class="cols">
+
+    <!-- ================= CURRENT ================= -->
+    <div>
+      <div class="col-h cur">● HIỆN TẠI (app đang chạy)</div>
+      <div class="panel">
+        <div class="phead"><span class="ptitle">P&amp;L</span><span class="psub">fact_orders · fact_order_economics</span></div>
+        <div class="verdict win">
+          <span class="vdot"></span>
+          <div><div class="vword">Lãi</div><div class="vline">Lãi 1.954.545 sau mọi chi phí — biên ròng 35,8%.</div></div>
+          <div class="vfigs"><div class="vnet">+1.954.545</div><div class="vsub">35,8% ròng · gộp +2.354.545</div></div>
+        </div>
+        <table class="wf"><tbody>
+          <tr><td class="op"></td><td class="lab">Gross revenue <span class="cap">gồm VAT</span></td><td class="pct"></td><td class="amt">6.500.000</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">Discount <span class="bdg">bundle</span></td><td class="pct"></td><td class="amt">−500.000</td></tr>
+          <tr class="total"><td class="op">=</td><td class="lab">Total collected <span class="cap">gồm VAT</span></td><td class="pct"></td><td class="amt">6.000.000</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">VAT output <span class="cap">nhúng trong giá</span></td><td class="pct"></td><td class="amt">−545.455</td></tr>
+          <tr class="total"><td class="op">=</td><td class="lab">Net revenue <span class="cap">trừ VAT</span></td><td class="pct"></td><td class="amt">5.454.545</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">COGS <span class="cap">MISA</span> <span class="bdg warn"><span class="d"></span>unverified</span></td><td class="pct">56,8%</td><td class="amt">−3.100.000</td></tr>
+          <tr class="result"><td class="op">=</td><td class="lab">Gross profit</td><td class="pct">43,2%</td><td class="amt">2.354.545</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">Platform fees <span class="cap">Shopee</span></td><td class="pct">7,3%</td><td class="amt">−400.000</td></tr>
+          <tr class="result"><td class="op">=</td><td class="lab">Channel net profit</td><td class="pct">35,8%</td><td class="amt">1.954.545</td></tr>
+        </tbody></table>
+        <div class="caveat"><span>⚠</span><div>Margin unverified — no MISA COGS match for this order.</div></div>
+      </div>
+      <div class="panel">
+        <div class="phead"><span class="ptitle">Cost breakdown</span><span class="psub">fact_order_costs</span></div>
+        <div class="grp"><div class="grp-h"><span><span class="chev">▾</span><span class="bdg good">COGS</span></span><span class="grp-t">−3.100.000</span></div>
+          <table class="led"><thead><tr><th>Cost type</th><th>Source</th><th>Record</th><th>Fee src</th><th class="num">Amount</th></tr></thead>
+          <tbody><tr><td class="mono">cogs</td><td class="muted">misa</td><td class="mono muted">SON07311</td><td><span class="bdg good">actual</span></td><td class="num">−3.100.000</td></tr></tbody></table>
+        </div>
+        <div class="grp"><div class="grp-h"><span><span class="chev">▾</span><span class="bdg warn">PLATFORM_FEE</span></span><span class="grp-t">−400.000</span></div>
+          <table class="led"><thead><tr><th>Cost type</th><th>Source</th><th>Record</th><th>Fee src</th><th class="num">Amount</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">platform_service</td><td class="muted">shopee</td><td class="mono muted">…</td><td><span class="bdg good">actual</span></td><td class="num">−200.000</td></tr>
+            <tr><td class="mono">platform_infra</td><td class="muted">shopee</td><td class="mono muted">…</td><td><span class="bdg good">actual</span></td><td class="num">−200.000</td></tr>
+          </tbody></table>
+        </div>
+        <div class="note"><span>ⓘ</span><span>Mỗi dòng truy được nguồn. (Lưu ý: platform_service + platform_infra đang double-count — BUG-2.)</span></div>
+      </div>
+    </div>
+
+    <!-- ================= PROPOSED ================= -->
+    <div>
+      <div class="col-h new">✦ ĐỀ XUẤT (rõ hơn, thêm tối giản)</div>
+      <div class="panel">
+        <div class="phead"><span class="ptitle">P&amp;L</span><span class="psub">order economics</span></div>
+        <div class="verdict win">
+          <span class="vdot"></span>
+          <div>
+            <div class="vword">Lãi <span class="bdg good"><span class="d"></span>COGS: Sapo-MAC</span></div>
+            <div class="vline">Lãi gộp +2.45M; trừ phí sàn → <b>lãi đóng góp +1.95M</b>.</div>
+          </div>
+          <div class="vfigs">
+            <div class="vnet">+1.954.545</div><div class="vsub">35,8% đóng góp · gộp 45,0%</div>
+          </div>
+        </div>
+        <div class="vfoot">ⓘ Sau phân bổ chi phí vận hành (ước tính): <b>lãi ròng đầy đủ +1.654.545 · 30,3%</b> <span class="new-tag">MỚI</span></div>
+
+        <div style="margin:12px 0 4px;font-size:11px;color:var(--muted)">Cơ cấu trên Net revenue <span class="new-tag">MỚI</span></div>
+        <div class="compbar">
+          <div class="seg cogs" style="width:55%">COGS 55%</div>
+          <div class="seg promo" style="width:1.8%"></div>
+          <div class="seg fee" style="width:7.3%">7%</div>
+          <div class="seg oh" style="width:5.5%">OH</div>
+          <div class="seg profit" style="width:30.3%">Lãi 30%</div>
+        </div>
+        <div class="legend">
+          <span><i style="background:#b07a52"></i>COGS</span>
+          <span><i style="background:#c98aa8"></i>Hàng tặng</span>
+          <span><i style="background:#cf8a3a"></i>Phí sàn</span>
+          <span><i style="background:#8f86d6"></i>Vận hành</span>
+          <span><i style="background:#3f9e72"></i>Lãi ròng</span>
+        </div>
+
+        <table class="wf" style="margin-top:12px"><tbody>
+          <tr><td class="op"></td><td class="lab">Gross revenue <span class="cap">gồm VAT</span></td><td class="pct"></td><td class="amt">6.500.000</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">Discount <span class="bdg">bundle</span></td><td class="pct"></td><td class="amt">−500.000</td></tr>
+          <tr class="total"><td class="op">=</td><td class="lab">Total collected <span class="cap">gồm VAT</span></td><td class="pct"></td><td class="amt">6.000.000</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">VAT output <span class="cap">nhúng trong giá</span></td><td class="pct"></td><td class="amt">−545.455</td></tr>
+          <tr class="total"><td class="op">=</td><td class="lab">Net revenue <span class="cap">trừ VAT</span></td><td class="pct"></td><td class="amt">5.454.545</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">COGS <span class="bdg good"><span class="d"></span>Sapo-MAC</span></td><td class="pct">55,0%</td><td class="amt">−3.000.000</td></tr>
+          <tr class="result"><td class="op">=</td><td class="lab">Lãi gộp</td><td class="pct">45,0%</td><td class="amt">2.454.545</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">Hàng tặng <span class="cap">promo</span> <span class="new-tag">MỚI</span></td><td class="pct"></td><td class="amt">−100.000</td></tr>
+          <tr class="neg"><td class="op">−</td><td class="lab">Phí sàn Shopee <span class="cap">▸ chi tiết</span></td><td class="pct">7,3%</td><td class="amt">−400.000</td></tr>
+          <tr class="decision"><td class="op">=</td><td class="lab"><span class="star">★</span> Lãi đóng góp (kênh)</td><td class="pct">35,8%</td><td class="amt">+1.954.545</td></tr>
+        </tbody></table>
+        <div class="ll-foot"><span>＋ Chi phí vận hành (phân bổ) <span class="bdg warn">ước tính</span> <span class="new-tag">MỚI</span></span><span>−300.000</span></div>
+        <div class="ll-foot"><span><b>= Lãi ròng đầy đủ</b> <span class="cap">để báo cáo</span></span><span><b>+1.654.545</b> &nbsp;30,3%</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="phead"><span class="ptitle">Cost breakdown</span><span class="psub">order costs</span></div>
+        <div class="grp"><div class="grp-h"><span><span class="chev">▾</span><span class="bdg good">COGS</span></span><span class="grp-t">−3.000.000</span></div>
+          <table class="led"><thead><tr><th>Cost type</th><th>Source</th><th>Record</th><th>Fee src</th><th class="num">Amount</th></tr></thead>
+          <tbody><tr><td class="mono">cogs</td><td class="muted">sapo_mac</td><td class="mono muted">SON07311</td><td><span class="bdg good">actual</span></td><td class="num">−3.000.000</td></tr></tbody></table>
+        </div>
+        <div class="grp"><div class="grp-h"><span><span class="chev">▾</span><span class="bdg accent">PROMO_GOODS</span> <span class="new-tag">MỚI</span></span><span class="grp-t">−100.000</span></div>
+          <table class="led"><thead><tr><th>Cost type</th><th>Source</th><th>Record</th><th>Fee src</th><th class="num">Amount</th></tr></thead>
+          <tbody><tr><td class="mono">promo_goods</td><td class="muted">sapo_mac</td><td class="mono muted">SON07311</td><td><span class="bdg good">actual</span></td><td class="num">−100.000</td></tr></tbody></table>
+        </div>
+        <div class="grp"><div class="grp-h"><span><span class="chev">▾</span><span class="bdg warn">PLATFORM_FEE</span></span><span class="grp-t">−400.000</span></div>
+          <table class="led"><thead><tr><th>Cost type</th><th>Source</th><th>Record</th><th>Fee src</th><th class="num">Amount</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">platform_infra</td><td class="muted">shopee</td><td class="mono muted">F-detail</td><td><span class="bdg good">actual</span></td><td class="num">−150.000</td></tr>
+            <tr><td class="mono">platform_voucher_xtra</td><td class="muted">shopee</td><td class="mono muted">F-detail</td><td><span class="bdg good">actual</span></td><td class="num">−150.000</td></tr>
+            <tr><td class="mono">platform_payment</td><td class="muted">shopee</td><td class="mono muted">D</td><td><span class="bdg good">actual</span></td><td class="num">−100.000</td></tr>
+          </tbody></table>
+        </div>
+        <div class="grp"><div class="grp-h"><span><span class="chev">▾</span><span class="bdg accent">OVERHEAD</span> <span class="new-tag">MỚI</span></span><span class="grp-t">−300.000</span></div>
+          <table class="led"><thead><tr><th>Cost type</th><th>Source</th><th>Record</th><th>Fee src</th><th class="num">Amount</th></tr></thead>
+          <tbody><tr><td class="mono">overhead_admin</td><td class="muted">misa+gsheet</td><td class="mono muted">2026-05</td><td><span class="bdg warn">estimated</span></td><td class="num">−300.000</td></tr></tbody></table>
+        </div>
+        <div class="note"><span>ⓘ</span><span>Mỗi dòng truy được nguồn + actual/ước tính (giữ nguyên thế mạnh hiện có).</span></div>
+      </div>
+
+      <div class="panel" style="padding:10px 12px">
+        <div class="recon">
+          <span>▸ Đối chiếu COGS <span class="new-tag">MỚI</span> <span class="cap">audit, gập mặc định</span></span>
+          <span>Sapo-MAC <b>3.000.000</b> vs MISA-632 <b>2.900.000</b> · lệch <b>+100k (+3,4%)</b></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
