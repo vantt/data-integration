@@ -35,12 +35,12 @@ B2B revenue today vs yesterday.
 
 ```sql
 SELECT
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END), 0) as "Net Revenue",
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hom qua"
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.net_revenue END), 0) as "Net Revenue",
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hom qua"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(o.order_timestamp) <= current_date
+WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) <= current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.status NOT IN ('CANCELLED', 'Voided')
@@ -72,12 +72,12 @@ B2B order count today vs yesterday.
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hom qua"
+    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END) as "Total Orders",
+    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hom qua"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(o.order_timestamp) <= current_date
+WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) <= current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.status NOT IN ('CANCELLED', 'Voided')
@@ -100,20 +100,20 @@ B2B average order value — typically higher than retail.
 
 ```sql
 SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END), 0
+            SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END), 0
          ) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
+            SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
          ) END as "Hom qua"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(o.order_timestamp) <= current_date
+WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) <= current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.status NOT IN ('CANCELLED', 'Voided')
@@ -147,7 +147,7 @@ Number of B2B customers ordering today.
 SELECT COUNT(DISTINCT o.customer_key) as "Khach B2B"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.status NOT IN ('CANCELLED', 'Voided')
@@ -199,7 +199,7 @@ SELECT
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.status NOT IN ('CANCELLED', 'Voided')
@@ -241,7 +241,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.status NOT IN ('CANCELLED', 'Voided')
@@ -294,7 +294,7 @@ SELECT
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.status NOT IN ('CANCELLED', 'Voided')
@@ -375,14 +375,14 @@ SELECT
     o.discount_amount as "Chiet khau",
     o.status as "Trang thai",
     o.payment_status as "Thanh toan",
-    o.order_timestamp as "Thoi gian"
+    o.ordered_at as "Thoi gian"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-ORDER BY o.order_timestamp DESC
+ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-viz

@@ -43,12 +43,12 @@ Hero metric — Tổng doanh thu từ kênh Social hôm nay với DoD comparison
 
 ```sql
 SELECT
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END), 0) as "Doanh thu Social",
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hôm qua"
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.net_revenue END), 0) as "Doanh thu Social",
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hôm qua"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-viz
@@ -77,12 +77,12 @@ Số đơn từ kênh Social hôm nay với DoD comparison.
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) as "Số đơn Social",
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hôm qua"
+    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END) as "Số đơn Social",
+    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hôm qua"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-viz
@@ -102,20 +102,20 @@ Giá trị trung bình đơn Social hôm nay với DoD comparison.
 
 ```sql
 SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END), 0
+            SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END), 0
          ) END as "AOV Social",
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
+            SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
          ) END as "Hôm qua"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-viz
@@ -147,14 +147,14 @@ WITH
 total AS (
     SELECT COALESCE(SUM(net_revenue), 0) as total_rev
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
 ),
 social AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as social_rev
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE c.channel_format = 'Social'
-      AND date(o.order_timestamp) = current_date
+      AND date(o.ordered_at) = current_date
 )
 SELECT
     CASE WHEN t.total_rev = 0 THEN 0
@@ -200,7 +200,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) = current_date
+  AND date(o.ordered_at) = current_date
 GROUP BY c.channel_name
 ORDER BY 2 DESC
 ```
@@ -238,14 +238,14 @@ Xu hướng doanh thu theo kênh Social 7 ngày gần nhất — multi-line char
 
 ```sql
 SELECT
-    date(o.order_timestamp) as "Ngày",
+    date(o.ordered_at) as "Ngày",
     c.channel_name as "Kênh",
     COALESCE(SUM(o.net_revenue), 0) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) >= current_date - INTERVAL '6 days'
-GROUP BY date(o.order_timestamp), c.channel_name
+  AND date(o.ordered_at) >= current_date - INTERVAL '6 days'
+GROUP BY date(o.ordered_at), c.channel_name
 ORDER BY 1, 2
 ```
 
@@ -294,7 +294,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) = current_date
+  AND date(o.ordered_at) = current_date
 GROUP BY s.full_name
 ORDER BY 2 DESC
 ```
@@ -334,7 +334,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) = current_date
+  AND date(o.ordered_at) = current_date
 GROUP BY s.full_name
 ORDER BY 2 DESC
 ```
@@ -378,7 +378,7 @@ today AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_staff s ON o.seller_staff_key = s.staff_key
     WHERE c.channel_format = 'Social'
-      AND date(o.order_timestamp) = current_date
+      AND date(o.ordered_at) = current_date
     GROUP BY s.full_name
 ),
 yesterday AS (
@@ -390,7 +390,7 @@ yesterday AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_staff s ON o.seller_staff_key = s.staff_key
     WHERE c.channel_format = 'Social'
-      AND date(o.order_timestamp) = current_date - INTERVAL '1 day'
+      AND date(o.ordered_at) = current_date - INTERVAL '1 day'
     GROUP BY s.full_name
 )
 SELECT
@@ -486,7 +486,7 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 
 ```sql
 SELECT
-    o.order_timestamp as "Thời gian",
+    o.ordered_at as "Thời gian",
     o.order_code as "Mã đơn",
     c.channel_name as "Kênh",
     s.full_name as "Nhân viên",
@@ -496,8 +496,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE c.channel_format = 'Social'
-  AND date(o.order_timestamp) = current_date
-ORDER BY o.order_timestamp DESC
+  AND date(o.ordered_at) = current_date
+ORDER BY o.ordered_at DESC
 LIMIT 20
 ```
 

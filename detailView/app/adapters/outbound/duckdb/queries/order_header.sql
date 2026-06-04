@@ -8,7 +8,7 @@ SELECT
     fo.status,
     fo.payment_status,
     fo.fulfillment_status,
-    fo.order_timestamp                          AS created_at,
+    fo.ordered_at                               AS created_at,
     fo.first_shipped_at,
     fo.updated_at,
     fo.time_to_complete_hours,

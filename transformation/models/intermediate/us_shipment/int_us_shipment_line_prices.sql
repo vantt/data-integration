@@ -19,7 +19,7 @@ WITH us_orders AS (
         o.order_code,
         o.channel_key,
         o.date_key,
-        o.order_timestamp
+        o.ordered_at
     FROM {{ ref('fact_orders') }} o
     JOIN {{ ref('dim_channels') }} ch ON o.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
@@ -64,7 +64,7 @@ FROM order_items oi
 JOIN us_orders uo ON oi.order_id = uo.order_id
 LEFT JOIN prices p
     ON p.sku = oi.sku
-    AND p.effective_from <= cast(uo.order_timestamp AS date)
+    AND p.effective_from <= cast(uo.ordered_at AS date)
 QUALIFY ROW_NUMBER() OVER (
     PARTITION BY oi.order_line_id
     ORDER BY p.effective_from DESC NULLS LAST

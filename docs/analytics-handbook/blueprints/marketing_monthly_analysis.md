@@ -71,22 +71,22 @@ WITH this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at < date_trunc('month', current_date)
 ),
 last_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 ),
 prior_year AS (
     SELECT COALESCE(SUM(net_revenue), 0) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
-      AND order_timestamp <  date_trunc('month', current_date) - INTERVAL '12 months'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND ordered_at <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
     tm.value                                                                        AS "Net Revenue",
@@ -126,15 +126,15 @@ WITH this_month AS (
     SELECT COUNT(DISTINCT order_id) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at < date_trunc('month', current_date)
 ),
 last_month AS (
     SELECT COUNT(DISTINCT order_id) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
 SELECT
     tm.value as "Total Orders",
@@ -206,16 +206,16 @@ WITH this_month AS (
                 ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at < date_trunc('month', current_date)
 ),
 last_month AS (
     SELECT CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
                 ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
 SELECT
     tm.value as "AOV",
@@ -254,8 +254,8 @@ SELECT ROUND(
 ) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND order_timestamp < date_trunc('month', current_date)
+  AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND ordered_at < date_trunc('month', current_date)
 ```
 
 ```json metabase-viz
@@ -282,12 +282,12 @@ Monthly revenue with MoM growth rate — combo chart (bar + line).
 ```sql
 WITH monthly AS (
     SELECT
-        date_trunc('month', order_timestamp)::date as month,
+        date_trunc('month', ordered_at)::date as month,
         SUM(net_revenue) as revenue
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND ordered_at < date_trunc('month', current_date)
     GROUP BY 1
 )
 SELECT
@@ -341,8 +341,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -372,15 +372,15 @@ Side-by-side comparison of channel revenue: this month vs last month.
 ```sql
 SELECT
     c.channel_category as "Channel",
-    SUM(CASE WHEN o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-                  AND o.order_timestamp < date_trunc('month', current_date) THEN o.net_revenue ELSE 0 END) as "This Month",
-    SUM(CASE WHEN o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-                  AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month' THEN o.net_revenue ELSE 0 END) as "Last Month"
+    SUM(CASE WHEN o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+                  AND o.ordered_at < date_trunc('month', current_date) THEN o.net_revenue ELSE 0 END) as "This Month",
+    SUM(CASE WHEN o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+                  AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month' THEN o.net_revenue ELSE 0 END) as "Last Month"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+  AND o.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -449,14 +449,14 @@ Monthly revenue stacked by channel category over 6 months.
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as month,
+    date_trunc('month', o.ordered_at)::date as month,
     c.channel_category as "Channel",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.ordered_at < date_trunc('month', current_date)
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -506,8 +506,8 @@ WITH this_month AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     LEFT JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp < date_trunc('month', current_date)
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
 ),
 last_month AS (
@@ -518,8 +518,8 @@ last_month AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
 )
 SELECT
@@ -606,8 +606,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND c.channel_brand IS NOT NULL
 GROUP BY 1
 ORDER BY 2 DESC
@@ -642,8 +642,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND c.market IS NOT NULL
 GROUP BY 1
 ORDER BY 2 DESC
@@ -761,8 +761,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND c.is_sales_channel = true
 GROUP BY 1
 ORDER BY 2 DESC
@@ -866,8 +866,8 @@ WITH this_month AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp < date_trunc('month', current_date)
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at < date_trunc('month', current_date)
       AND date(c.first_order_date) < date_trunc('month', current_date) - INTERVAL '1 month'
 ),
 last_month AS (
@@ -875,8 +875,8 @@ last_month AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       AND date(c.first_order_date) < date_trunc('month', current_date) - INTERVAL '2 months'
 )
 SELECT
@@ -911,8 +911,8 @@ WITH this_month AS (
     FROM fact_orders o
     LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp < date_trunc('month', current_date)
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at < date_trunc('month', current_date)
 ),
 last_month AS (
     SELECT
@@ -923,8 +923,8 @@ last_month AS (
     FROM fact_orders o
     LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
 SELECT
     tm.value as "New Customer Rev %",
@@ -1006,9 +1006,9 @@ JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND date(cust.first_order_date) >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND date(cust.first_order_date) < date_trunc('month', current_date)
-  AND date(cust.first_order_date) = date(o.order_timestamp)
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND date(cust.first_order_date) = date(o.ordered_at)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1194,12 +1194,12 @@ WITH cohort_sizes AS (
 retention_activity AS (
     SELECT
         date_trunc('month', c.first_order_date) as cohort_month,
-        date_diff('month', c.first_order_date, o.order_timestamp) as month_number,
+        date_diff('month', c.first_order_date, o.ordered_at) as month_number,
         COUNT(DISTINCT c.customer_id) as active_customers
     FROM dim_customers c
     JOIN fact_orders o ON c.customer_key = o.customer_key
     WHERE c.first_order_date >= (current_date - INTERVAL '12' MONTH)
-      AND o.order_timestamp >= c.first_order_date
+      AND o.ordered_at >= c.first_order_date
       AND o.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1, 2
 )
@@ -1284,15 +1284,15 @@ WITH this_month AS (
     SELECT COALESCE(SUM(discount_amount), 0) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at < date_trunc('month', current_date)
     ),
 last_month AS (
     SELECT COALESCE(SUM(discount_amount), 0) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
 SELECT
     tm.value as "Discount Amount",
@@ -1328,16 +1328,16 @@ WITH this_month AS (
            / NULLIF(COUNT(*), 0), 1) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at < date_trunc('month', current_date)
 ),
 last_month AS (
     SELECT ROUND(COUNT(CASE WHEN discount_amount > 0 THEN 1 END) * 100.0
            / NULLIF(COUNT(*), 0), 1) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
 SELECT
     tm.value as "Discounted %",
@@ -1370,16 +1370,16 @@ WITH this_month AS (
                 THEN discount_amount * 100.0 / NULLIF(gross_revenue, 0) END), 1) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at < date_trunc('month', current_date)
 ),
 last_month AS (
     SELECT ROUND(AVG(CASE WHEN discount_amount > 0
                 THEN discount_amount * 100.0 / NULLIF(gross_revenue, 0) END), 1) as value
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
 SELECT
     tm.value as "Avg Discount %",
@@ -1421,8 +1421,8 @@ WITH promo_orders AS (
     JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND p.promotion_code IS NOT NULL
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp < date_trunc('month', current_date)
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
 ),
 baseline AS (
@@ -1432,8 +1432,8 @@ baseline AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND promotion_key IS NULL
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND ordered_at < date_trunc('month', current_date)
 )
 SELECT
     po.promo_code as "Promo Code",
@@ -1471,12 +1471,12 @@ Monthly discount rate with 15% goal line.
 
 ```sql
 SELECT
-    date_trunc('month', order_timestamp)::date as month,
+    date_trunc('month', ordered_at)::date as month,
     ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND order_timestamp < date_trunc('month', current_date)
+  AND ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND ordered_at < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY 1
 ```
@@ -1506,13 +1506,13 @@ Monthly revenue split: discounted orders vs full-price.
 
 ```sql
 SELECT
-    date_trunc('month', order_timestamp)::date as month,
+    date_trunc('month', ordered_at)::date as month,
     SUM(CASE WHEN COALESCE(discount_amount, 0) = 0 THEN net_revenue ELSE 0 END) as "Full-Price Revenue",
     SUM(CASE WHEN discount_amount > 0 THEN net_revenue ELSE 0 END) as "Discounted Revenue"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND order_timestamp < date_trunc('month', current_date)
+  AND ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND ordered_at < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY 1
 ```
@@ -1640,8 +1640,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_geography g ON o.shipping_geography_key = g.geography_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND g.province IS NOT NULL
 GROUP BY 1
 ORDER BY 2 DESC
@@ -1672,18 +1672,18 @@ Peak ordering windows for marketing scheduling.
 
 ```sql
 SELECT
-    CASE EXTRACT(DOW FROM order_timestamp)
+    CASE EXTRACT(DOW FROM ordered_at)
         WHEN 0 THEN 'Sun' WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue'
         WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri'
         WHEN 6 THEN 'Sat' END as "Day",
-    EXTRACT(HOUR FROM order_timestamp)::int as "Hour",
+    EXTRACT(HOUR FROM ordered_at)::int as "Hour",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
-  AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-  AND order_timestamp < date_trunc('month', current_date)
-GROUP BY 1, 2, EXTRACT(DOW FROM order_timestamp)
-ORDER BY EXTRACT(DOW FROM order_timestamp), 2
+  AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+  AND ordered_at < date_trunc('month', current_date)
+GROUP BY 1, 2, EXTRACT(DOW FROM ordered_at)
+ORDER BY EXTRACT(DOW FROM ordered_at), 2
 ```
 
 ```json metabase-viz
@@ -1778,8 +1778,8 @@ perf AS (
         SUM(o.channel_net_profit) AS net_profit
     FROM fact_order_economics o
     JOIN dim_customers c USING (customer_key)
-    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp <  date_trunc('month', current_date)
+    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at <  date_trunc('month', current_date)
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_type = 'RETAIL'
     GROUP BY o.channel_key
@@ -1790,8 +1790,8 @@ prev_perf AS (
         SUM(o.net_revenue) AS rev
     FROM fact_order_economics o
     JOIN dim_customers c USING (customer_key)
-    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.order_timestamp <  date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.ordered_at <  date_trunc('month', current_date) - INTERVAL '1 month'
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_type = 'RETAIL'
     GROUP BY o.channel_key
@@ -1907,8 +1907,8 @@ profit_cur AS (
         SUM(o.channel_net_profit) AS net_profit
     FROM fact_order_economics o
     JOIN dim_customers c USING (customer_key)
-    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp <  date_trunc('month', current_date)
+    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at <  date_trunc('month', current_date)
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_type = 'RETAIL'
     GROUP BY o.channel_key
@@ -1919,8 +1919,8 @@ profit_prev AS (
         SUM(o.channel_net_profit) AS net_profit
     FROM fact_order_economics o
     JOIN dim_customers c USING (customer_key)
-    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.order_timestamp <  date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.ordered_at <  date_trunc('month', current_date) - INTERVAL '1 month'
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_type = 'RETAIL'
     GROUP BY o.channel_key

@@ -89,12 +89,12 @@ FROM fact_orders
 WITH current_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
 ),
 previous_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
 )
 SELECT c.val as "Total Orders", p.val as "Previous"
 FROM current_period c, previous_period p
@@ -117,13 +117,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Net Revenue", p.val as "Previous"
@@ -154,13 +154,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Total Collected", p.val as "Previous"
@@ -191,13 +191,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Gross Revenue", p.val as "Previous"
@@ -228,13 +228,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Total Discount", p.val as "Previous"
@@ -265,13 +265,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
       AND status = 'CANCELLED'
 ),
 previous_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status = 'CANCELLED'
 )
 SELECT c.val as "Cancelled", p.val as "Previous"
@@ -295,12 +295,12 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date
+    WHERE date(ordered_at) = current_date
 ),
 previous_period AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
 )
 SELECT c.val as "Returns", p.val as "Previous"
 FROM current_period c, previous_period p
@@ -334,7 +334,7 @@ SELECT
     status as "Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date
+WHERE date(ordered_at) = current_date
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -361,7 +361,7 @@ SELECT
     payment_status as "Payment Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date
+WHERE date(ordered_at) = current_date
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -390,7 +390,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND o.status NOT IN ('CANCELLED', 'Voided')
 GROUP BY 1
 ORDER BY 3 DESC
@@ -445,7 +445,7 @@ SELECT
     END as "Flag"
 FROM fact_orders o
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND (
     (o.total_collected = 0 AND o.discount_amount > 0)
     OR o.net_revenue < 0
@@ -498,7 +498,7 @@ ORDER BY o.discount_amount DESC
 SELECT
     o.order_id as "order_id",
     o.order_code as "Order Code",
-    strftime(o.order_timestamp, '%H:%M') as "Time",
+    strftime(o.ordered_at, '%H:%M') as "Time",
     o.status as "Status",
     o.gross_revenue as "Gross",
     o.discount_amount as "Discount",
@@ -515,8 +515,8 @@ FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-WHERE date(o.order_timestamp) = current_date
-ORDER BY o.order_timestamp DESC
+WHERE date(o.ordered_at) = current_date
+ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-viz
@@ -632,12 +632,12 @@ FROM fact_orders
 WITH current_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
 ),
 previous_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
 )
 SELECT c.val as "Total Orders", p.val as "Previous"
 FROM current_period c, previous_period p
@@ -660,13 +660,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Net Revenue", p.val as "Previous"
@@ -697,13 +697,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Total Collected", p.val as "Previous"
@@ -734,13 +734,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Gross Revenue", p.val as "Previous"
@@ -771,13 +771,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Total Discount", p.val as "Previous"
@@ -808,13 +808,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
       AND status = 'CANCELLED'
 ),
 previous_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
       AND status = 'CANCELLED'
 )
 SELECT c.val as "Cancelled", p.val as "Previous"
@@ -838,12 +838,12 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
 ),
 previous_period AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = current_date - INTERVAL '2 days'
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
 )
 SELECT c.val as "Returns", p.val as "Previous"
 FROM current_period c, previous_period p
@@ -877,7 +877,7 @@ SELECT
     status as "Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(ordered_at) = current_date - INTERVAL '1 day'
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -904,7 +904,7 @@ SELECT
     payment_status as "Payment Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE date(order_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(ordered_at) = current_date - INTERVAL '1 day'
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -933,7 +933,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.status NOT IN ('CANCELLED', 'Voided')
 GROUP BY 1
 ORDER BY 3 DESC
@@ -988,7 +988,7 @@ SELECT
     END as "Flag"
 FROM fact_orders o
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND (
     (o.total_collected = 0 AND o.discount_amount > 0)
     OR o.net_revenue < 0
@@ -1041,7 +1041,7 @@ ORDER BY o.discount_amount DESC
 SELECT
     o.order_id as "order_id",
     o.order_code as "Order Code",
-    strftime(o.order_timestamp, '%H:%M') as "Time",
+    strftime(o.ordered_at, '%H:%M') as "Time",
     o.status as "Status",
     o.gross_revenue as "Gross",
     o.discount_amount as "Discount",
@@ -1058,8 +1058,8 @@ FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
-ORDER BY o.order_timestamp DESC
+WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
+ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-viz
@@ -1195,12 +1195,12 @@ FROM fact_orders
 WITH current_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}}
+    WHERE date(ordered_at) = {{date}}
 ),
 previous_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}} - INTERVAL '1 day'
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
 )
 SELECT c.val as "Total Orders", p.val as "Previous"
 FROM current_period c, previous_period p
@@ -1223,13 +1223,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}}
+    WHERE date(ordered_at) = {{date}}
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}} - INTERVAL '1 day'
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Net Revenue", p.val as "Previous"
@@ -1260,13 +1260,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}}
+    WHERE date(ordered_at) = {{date}}
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}} - INTERVAL '1 day'
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Total Collected", p.val as "Previous"
@@ -1297,13 +1297,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}}
+    WHERE date(ordered_at) = {{date}}
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}} - INTERVAL '1 day'
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Gross Revenue", p.val as "Previous"
@@ -1334,13 +1334,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}}
+    WHERE date(ordered_at) = {{date}}
       AND status NOT IN ('CANCELLED', 'Voided')
 ),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}} - INTERVAL '1 day'
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
       AND status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT c.val as "Total Discount", p.val as "Previous"
@@ -1371,13 +1371,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}}
+    WHERE date(ordered_at) = {{date}}
       AND status = 'CANCELLED'
 ),
 previous_period AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}} - INTERVAL '1 day'
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
       AND status = 'CANCELLED'
 )
 SELECT c.val as "Cancelled", p.val as "Previous"
@@ -1401,12 +1401,12 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}}
+    WHERE date(ordered_at) = {{date}}
 ),
 previous_period AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
-    WHERE date(order_timestamp) = {{date}} - INTERVAL '1 day'
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
 )
 SELECT c.val as "Returns", p.val as "Previous"
 FROM current_period c, previous_period p
@@ -1440,7 +1440,7 @@ SELECT
     status as "Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE date(order_timestamp) = {{date}}
+WHERE date(ordered_at) = {{date}}
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1467,7 +1467,7 @@ SELECT
     payment_status as "Payment Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE date(order_timestamp) = {{date}}
+WHERE date(ordered_at) = {{date}}
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1496,7 +1496,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.order_timestamp) = {{date}}
+WHERE date(o.ordered_at) = {{date}}
   AND o.status NOT IN ('CANCELLED', 'Voided')
 GROUP BY 1
 ORDER BY 3 DESC
@@ -1551,7 +1551,7 @@ SELECT
     END as "Flag"
 FROM fact_orders o
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE date(o.order_timestamp) = {{date}}
+WHERE date(o.ordered_at) = {{date}}
   AND (
     (o.total_collected = 0 AND o.discount_amount > 0)
     OR o.net_revenue < 0
@@ -1604,7 +1604,7 @@ ORDER BY o.discount_amount DESC
 SELECT
     o.order_id as "order_id",
     o.order_code as "Order Code",
-    strftime(o.order_timestamp, '%H:%M') as "Time",
+    strftime(o.ordered_at, '%H:%M') as "Time",
     o.status as "Status",
     o.gross_revenue as "Gross",
     o.discount_amount as "Discount",
@@ -1621,8 +1621,8 @@ FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-WHERE date(o.order_timestamp) = {{date}}
-ORDER BY o.order_timestamp DESC
+WHERE date(o.ordered_at) = {{date}}
+ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-viz

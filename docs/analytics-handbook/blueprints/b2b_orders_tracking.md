@@ -36,8 +36,8 @@ Track B2B order lifecycle — payment collection, fulfillment status, outstandin
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -73,8 +73,8 @@ Total unpaid amount from B2B customers.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -87,8 +87,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -117,8 +117,8 @@ Number of B2B orders awaiting payment.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -130,8 +130,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -148,8 +148,8 @@ Orders with partial payment received.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -161,8 +161,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.payment_status = 'PARTIAL'
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -179,22 +179,22 @@ Average days since order for unpaid B2B orders.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
 )
 SELECT
-    ROUND(AVG(DATEDIFF('day', date(o.order_timestamp), current_date)), 1) as "Ngay trung binh"
+    ROUND(AVG(DATEDIFF('day', date(o.ordered_at), current_date)), 1) as "Ngay trung binh"
 FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -221,17 +221,17 @@ Outstanding amounts by age bucket.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
 )
 SELECT
     CASE
-        WHEN DATEDIFF('day', date(o.order_timestamp), current_date) <= 7 THEN '0-7 ngay'
-        WHEN DATEDIFF('day', date(o.order_timestamp), current_date) <= 14 THEN '8-14 ngay'
-        WHEN DATEDIFF('day', date(o.order_timestamp), current_date) <= 30 THEN '15-30 ngay'
+        WHEN DATEDIFF('day', date(o.ordered_at), current_date) <= 7 THEN '0-7 ngay'
+        WHEN DATEDIFF('day', date(o.ordered_at), current_date) <= 14 THEN '8-14 ngay'
+        WHEN DATEDIFF('day', date(o.ordered_at), current_date) <= 30 THEN '15-30 ngay'
         ELSE '> 30 ngay'
     END as "Tuoi no",
     COUNT(DISTINCT o.order_id) as "So don",
@@ -242,8 +242,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY 1
 ORDER BY CASE "Tuoi no" WHEN '0-7 ngay' THEN 1 WHEN '8-14 ngay' THEN 2 WHEN '15-30 ngay' THEN 3 ELSE 4 END
 ```
@@ -277,8 +277,8 @@ Wholesale vs Partner outstanding breakdown.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -293,8 +293,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.customer_type
 ORDER BY 3 DESC
 ```
@@ -337,8 +337,8 @@ Top 10 B2B customers with highest outstanding amounts.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -348,15 +348,15 @@ SELECT
     c.customer_type as "Loai",
     COUNT(DISTINCT o.order_id) as "Don chua TT",
     SUM(o.net_revenue) as "Cong no",
-    MIN(date(o.order_timestamp)) as "Don cu nhat"
+    MIN(date(o.ordered_at)) as "Don cu nhat"
 FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.full_name, c.customer_type
 ORDER BY 4 DESC
 LIMIT 10
@@ -401,8 +401,8 @@ LIMIT 10
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -438,8 +438,8 @@ B2B orders awaiting fulfillment.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -451,8 +451,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.fulfillment_status IN ('PENDING', 'PROCESSING')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -469,8 +469,8 @@ B2B orders currently in transit.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -482,8 +482,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.fulfillment_status = 'SHIPPED'
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -500,8 +500,8 @@ B2B orders delivered today.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -514,8 +514,8 @@ WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.fulfillment_status = 'DELIVERED'
   AND date(o.updated_at) = current_date
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -542,8 +542,8 @@ List of B2B orders pending fulfillment.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -555,17 +555,17 @@ SELECT
     o.net_revenue as "Gia tri",
     o.fulfillment_status as "Giao hang",
     o.payment_status as "Thanh toan",
-    o.order_timestamp as "Ngay dat",
-    DATEDIFF('day', date(o.order_timestamp), current_date) as "So ngay"
+    o.ordered_at as "Ngay dat",
+    DATEDIFF('day', date(o.ordered_at), current_date) as "So ngay"
 FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
   AND o.fulfillment_status IN ('PENDING', 'PROCESSING', 'SHIPPED')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp::DATE >= filter_bounds.p_start
-  AND o.order_timestamp::DATE <= filter_bounds.p_end
-ORDER BY o.order_timestamp ASC
+  AND o.ordered_at::DATE >= filter_bounds.p_start
+  AND o.ordered_at::DATE <= filter_bounds.p_end
+ORDER BY o.ordered_at ASC
 ```
 
 ```json metabase-viz

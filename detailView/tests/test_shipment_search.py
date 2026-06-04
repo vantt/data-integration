@@ -108,7 +108,7 @@ def test_missing_fulfillments_view_does_not_crash(tmp_path: pytest.TempPathFacto
             "gross_revenue DECIMAL(18,2), discount_amount DECIMAL(18,2), "
             "net_revenue DECIMAL(18,2), vat_amount DECIMAL(18,2), "
             "total_collected DECIMAL(18,2), first_shipped_at TIMESTAMPTZ, "
-            "time_to_complete_hours BIGINT, order_timestamp TIMESTAMPTZ, "
+            "time_to_complete_hours BIGINT, ordered_at TIMESTAMPTZ, "
             "updated_at TIMESTAMPTZ)"
         )
         con.execute(

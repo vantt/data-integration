@@ -126,8 +126,8 @@ orders_period AS (
     SELECT COUNT(DISTINCT o.order_code) AS total_orders
     FROM fact_orders o, filter_bounds
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp::DATE >= filter_bounds.p_start
-      AND o.order_timestamp::DATE <= filter_bounds.p_end
+      AND o.ordered_at::DATE >= filter_bounds.p_start
+      AND o.ordered_at::DATE <= filter_bounds.p_end
 )
 SELECT
     ROUND(COALESCE(r.returned_orders, 0) * 100.0 / NULLIF(o.total_orders, 0), 2) AS "Ty le hoan %"
@@ -194,12 +194,12 @@ Stack by top-3 return reasons. Thay the scalar trung binh vi trung binh khong co
 WITH lag_data AS (
     SELECT
         COALESCE(fact_order_returns.return_reason, 'Khong ro') AS return_reason,
-        date_diff('day', DATE(fact_orders.order_timestamp), fact_order_returns.return_date) AS lag_days
+        date_diff('day', DATE(fact_orders.ordered_at), fact_order_returns.return_date) AS lag_days
     FROM fact_order_returns
     JOIN fact_orders ON fact_order_returns.order_code = fact_orders.order_code
     WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
       [[AND {{return_date}}]]
-      AND date_diff('day', DATE(fact_orders.order_timestamp), fact_order_returns.return_date) >= 0
+      AND date_diff('day', DATE(fact_orders.ordered_at), fact_order_returns.return_date) >= 0
 ),
 top_reasons AS (
     SELECT return_reason
@@ -790,7 +790,7 @@ Table — return rate phan ra theo order_month (row) x return_month (col). Cho b
 ```sql
 WITH cohort AS (
     SELECT
-        date_trunc('month', DATE(o.order_timestamp))  AS order_month,
+        date_trunc('month', DATE(o.ordered_at))  AS order_month,
         date_trunc('month', r.return_date)            AS return_month,
         COUNT(DISTINCT r.order_code)                  AS returned_orders
     FROM fact_order_returns r
@@ -801,11 +801,11 @@ WITH cohort AS (
 ),
 order_totals AS (
     SELECT
-        date_trunc('month', order_timestamp) AS order_month,
+        date_trunc('month', ordered_at) AS order_month,
         COUNT(DISTINCT order_code)           AS total_orders
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= (current_date - INTERVAL '12 months')
+      AND ordered_at >= (current_date - INTERVAL '12 months')
     GROUP BY 1
 )
 SELECT
@@ -1011,8 +1011,8 @@ sold_per_sku AS (
     FROM fact_sales fs
     JOIN fact_orders fo ON fs.order_id = fo.order_id
     CROSS JOIN filter_bounds
-    WHERE fo.order_timestamp::DATE >= filter_bounds.p_start
-      AND fo.order_timestamp::DATE <= filter_bounds.p_end
+    WHERE fo.ordered_at::DATE >= filter_bounds.p_start
+      AND fo.ordered_at::DATE <= filter_bounds.p_end
       AND fo.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1
 ),
@@ -1027,8 +1027,8 @@ portfolio_avg AS (
     CROSS JOIN (
         SELECT fo.order_id FROM fact_orders fo
         CROSS JOIN filter_bounds
-        WHERE fo.order_timestamp::DATE >= filter_bounds.p_start
-          AND fo.order_timestamp::DATE <= filter_bounds.p_end
+        WHERE fo.ordered_at::DATE >= filter_bounds.p_start
+          AND fo.ordered_at::DATE <= filter_bounds.p_end
           AND fo.status NOT IN ('CANCELLED', 'Voided')
     ) fo2
     WHERE r.return_date >= filter_bounds.p_start
@@ -1191,8 +1191,8 @@ sold_cnt AS (
     FROM fact_sales fs
     JOIN fact_orders fo ON fs.order_id = fo.order_id
     CROSS JOIN filter_bounds
-    WHERE fo.order_timestamp::DATE >= filter_bounds.p_start
-      AND fo.order_timestamp::DATE <= filter_bounds.p_end
+    WHERE fo.ordered_at::DATE >= filter_bounds.p_start
+      AND fo.ordered_at::DATE <= filter_bounds.p_end
       AND fo.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1
 )

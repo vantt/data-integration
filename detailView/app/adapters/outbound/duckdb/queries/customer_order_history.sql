@@ -3,7 +3,7 @@
 -- payment method seen for the order; has_return from economics flag.
 SELECT
     fo.order_code,
-    fo.order_timestamp                          AS order_date,
+    fo.ordered_at                               AS order_date,
     fo.status,
     ch.channel_name,
     seller.full_name                            AS seller_name,
@@ -25,5 +25,5 @@ LEFT JOIN fact_order_economics foe ON fo.order_id = foe.order_id
 LEFT JOIN dim_channels ch          ON fo.channel_key = ch.channel_key
 LEFT JOIN dim_staff seller         ON fo.seller_staff_key = seller.staff_key
 WHERE fo.customer_key = ?
-ORDER BY fo.order_timestamp DESC NULLS LAST
+ORDER BY fo.ordered_at DESC NULLS LAST
 LIMIT ?;

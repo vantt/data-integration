@@ -832,15 +832,15 @@ Average order value trend by segment over 6 months.
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as "Month",
+    date_trunc('month', o.ordered_at)::date as "Month",
     cust.value_group as "Segment",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
   AND cust.order_count > 0
 GROUP BY 1, 2
@@ -879,14 +879,14 @@ Revenue composition by segment over time — stacked area.
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as "Month",
+    date_trunc('month', o.ordered_at)::date as "Month",
     cust.value_group as "Segment",
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
   AND cust.order_count > 0
 GROUP BY 1, 2
@@ -1046,8 +1046,8 @@ FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY 1, 3 DESC
@@ -1103,8 +1103,8 @@ JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE cust.value_group = 'VALUE_VIP'
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -1140,10 +1140,10 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_products p ON s.product_key = p.product_key
-WHERE date_trunc('month', o.order_timestamp) = date_trunc('month', cust.first_order_date)
+WHERE date_trunc('month', o.ordered_at) = date_trunc('month', cust.first_order_date)
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
 GROUP BY 1
 ORDER BY 2 DESC
@@ -1190,7 +1190,7 @@ WITH first_orders AS (
         o.net_revenue as first_order_value
     FROM dim_customers c
     JOIN fact_orders o ON c.customer_key = o.customer_key
-        AND date_trunc('month', o.order_timestamp) = date_trunc('month', c.first_order_date)
+        AND date_trunc('month', o.ordered_at) = date_trunc('month', c.first_order_date)
     WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND c.first_order_date < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
@@ -1202,8 +1202,8 @@ repeat_30d AS (
         fo.customer_key
     FROM first_orders fo
     JOIN fact_orders o2 ON fo.customer_key = o2.customer_key
-        AND o2.order_timestamp > (SELECT MIN(first_order_date) FROM dim_customers WHERE customer_key = fo.customer_key)
-        AND o2.order_timestamp <= (SELECT MIN(first_order_date) + INTERVAL '30 days' FROM dim_customers WHERE customer_key = fo.customer_key)
+        AND o2.ordered_at > (SELECT MIN(first_order_date) FROM dim_customers WHERE customer_key = fo.customer_key)
+        AND o2.ordered_at <= (SELECT MIN(first_order_date) + INTERVAL '30 days' FROM dim_customers WHERE customer_key = fo.customer_key)
         AND o2.status NOT IN ('CANCELLED', 'Voided')
 )
 SELECT

@@ -2,11 +2,11 @@ WITH base AS (
     SELECT
         o.order_id,
         o.order_code,
-        o.order_timestamp,
-        date_trunc('day', o.order_timestamp) AS order_date,
-        date_trunc('hour', o.order_timestamp) AS hour_start,
-        EXTRACT(HOUR FROM o.order_timestamp) AS order_hour,
-        strftime(o.order_timestamp, '%a') AS day_of_week,
+        o.ordered_at,
+        date_trunc('day', o.ordered_at) AS order_date,
+        date_trunc('hour', o.ordered_at) AS hour_start,
+        EXTRACT(HOUR FROM o.ordered_at) AS order_hour,
+        strftime(o.ordered_at, '%a') AS day_of_week,
         c.channel_name,
         c.channel_code,
         c.channel_category,
@@ -44,7 +44,7 @@ WITH base AS (
         o.time_to_complete_hours AS hours_to_complete,
         CASE
             WHEN o.first_shipped_at IS NULL THEN NULL
-            ELSE date_diff('hour', o.order_timestamp, o.first_shipped_at)
+            ELSE date_diff('hour', o.ordered_at, o.first_shipped_at)
         END AS hours_to_first_ship
     FROM src_fact_orders o
     LEFT JOIN src_dim_channels c ON o.channel_key = c.channel_key
@@ -64,14 +64,14 @@ flags AS (
         lower(COALESCE(fulfillment_status, '')) IN ('partial', 'partially_fulfilled') AS is_partial_fulfillment,
         CASE
             WHEN first_shipped_at IS NULL THEN false
-            ELSE CAST(first_shipped_at AS DATE) = CAST(order_timestamp AS DATE)
+            ELSE CAST(first_shipped_at AS DATE) = CAST(ordered_at AS DATE)
         END AS ship_same_day_flag,
         CASE
-            WHEN status = 'OPEN' THEN date_diff('hour', order_timestamp, current_timestamp) > 24
+            WHEN status = 'OPEN' THEN date_diff('hour', ordered_at, current_timestamp) > 24
             ELSE false
         END AS pending_gt_24h_flag,
         CASE
-            WHEN status = 'OPEN' THEN date_diff('hour', order_timestamp, current_timestamp) > 48
+            WHEN status = 'OPEN' THEN date_diff('hour', ordered_at, current_timestamp) > 48
             ELSE false
         END AS pending_gt_48h_flag,
         -- Scope flags for 3-layer architecture (see report_segmentation.md)

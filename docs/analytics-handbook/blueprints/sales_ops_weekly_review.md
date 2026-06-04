@@ -43,8 +43,8 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
@@ -99,15 +99,15 @@ WITH
 this_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -137,16 +137,16 @@ this_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -187,8 +187,8 @@ this_week AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
@@ -197,8 +197,8 @@ last_week AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -238,8 +238,8 @@ SELECT
         / NULLIF(COUNT(DISTINCT order_id), 0), 1
     ) as "Completed %"
 FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
+WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ```
 
@@ -271,8 +271,8 @@ SELECT
     status as "Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
+WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -308,8 +308,8 @@ SELECT
     fulfillment_status as "Fulfilment Status",
     COUNT(DISTINCT order_id) as "Orders"
 FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
+WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND ordered_at < date_trunc('week', current_date)
   AND fulfillment_status IS NOT NULL
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
@@ -342,8 +342,8 @@ this_week AS (
         COUNT(DISTINCT CASE WHEN status = 'CANCELLED' THEN order_id END) as cancelled,
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
     FROM fact_orders
-    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
@@ -351,8 +351,8 @@ last_week AS (
         COUNT(DISTINCT CASE WHEN status = 'CANCELLED' THEN order_id END) as cancelled,
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
     FROM fact_orders
-    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT * FROM (
@@ -417,14 +417,14 @@ Combo chart: daily order bars (this week blue, last week grey) + AOV line.
 
 ```sql
 SELECT
-    date(order_timestamp) as "Ngay",
+    date(ordered_at) as "Ngay",
     COUNT(DISTINCT order_id) as "Don hang",
     CASE WHEN COUNT(DISTINCT CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN order_id END) = 0 THEN 0
          ELSE SUM(CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN net_revenue ELSE 0 END)
               / COUNT(DISTINCT CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN order_id END) END as "AOV"
 FROM fact_orders
-WHERE order_timestamp >= current_date - INTERVAL '14 days'
-  AND order_timestamp < date_trunc('week', current_date)
+WHERE ordered_at >= current_date - INTERVAL '14 days'
+  AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 1
@@ -458,7 +458,7 @@ Order intensity by hour x day of week — pivot table with conditional formattin
 
 ```sql
 SELECT
-    CASE EXTRACT(DOW FROM order_timestamp)
+    CASE EXTRACT(DOW FROM ordered_at)
         WHEN 0 THEN 'CN'
         WHEN 1 THEN 'T2'
         WHEN 2 THEN 'T3'
@@ -467,12 +467,12 @@ SELECT
         WHEN 5 THEN 'T6'
         WHEN 6 THEN 'T7'
     END as "Thu",
-    EXTRACT(DOW FROM order_timestamp) as dow_sort,
-    LPAD(CAST(EXTRACT(HOUR FROM order_timestamp) AS VARCHAR), 2, '0') || 'h' as "Gio",
+    EXTRACT(DOW FROM ordered_at) as dow_sort,
+    LPAD(CAST(EXTRACT(HOUR FROM ordered_at) AS VARCHAR), 2, '0') || 'h' as "Gio",
     COUNT(DISTINCT order_id) as "Don"
 FROM fact_orders
-WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
+WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1, 2, 3
 ORDER BY 2, 3
@@ -526,8 +526,8 @@ ORDER BY 2, 3
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
@@ -585,8 +585,8 @@ SELECT
     COUNT(DISTINCT o.order_id) as "Don hang"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -618,8 +618,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -658,8 +658,8 @@ this_week AS (
         COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 ),
@@ -670,8 +670,8 @@ last_week AS (
         COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 )
@@ -739,8 +739,8 @@ SELECT
     COUNT(DISTINCT o.order_id) as "Don hang"
 FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -774,8 +774,8 @@ this_week AS (
         COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 ),
@@ -786,8 +786,8 @@ last_week AS (
         COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-    WHERE o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 )
@@ -856,8 +856,8 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
@@ -915,8 +915,8 @@ this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
@@ -925,8 +925,8 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -967,8 +967,8 @@ this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
@@ -977,8 +977,8 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -1012,8 +1012,8 @@ this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
@@ -1024,8 +1024,8 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -1067,8 +1067,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
   AND st.staff_key IS NOT NULL
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
@@ -1109,8 +1109,8 @@ JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND c.channel_format IN ('Facebook', 'Zalo')
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
   AND st.staff_key IS NOT NULL
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
@@ -1183,8 +1183,8 @@ summary AS (
         COUNT(DISTINCT order_id) as orders,
         SUM(net_revenue) as amount
     FROM fact_orders
-    WHERE order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 ),
@@ -1245,8 +1245,8 @@ ORDER BY s.orders DESC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
@@ -1282,9 +1282,9 @@ Weekly gross margin % per channel with WoW delta. Sort by margin DESC to surface
 
 ```sql
 WITH filter_bounds AS (
-    -- field_id=141 → fact_orders.order_timestamp, KHÔNG alias fact_orders (R1, R2)
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    -- field_id=141 → fact_orders.ordered_at, KHÔNG alias fact_orders (R1, R2)
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
@@ -1302,8 +1302,8 @@ this_week AS (
     JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.status NOT IN ('CANCELLED', 'Voided')
-      AND fo.order_timestamp >= filter_bounds.p_start
-      AND fo.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND fo.ordered_at >= filter_bounds.p_start
+      AND fo.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
     GROUP BY 1
 ),
 last_week AS (
@@ -1318,8 +1318,8 @@ last_week AS (
     JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.status NOT IN ('CANCELLED', 'Voided')
-      AND fo.order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND fo.order_timestamp <  filter_bounds.p_start
+      AND fo.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND fo.ordered_at <  filter_bounds.p_start
     GROUP BY 1
 )
 SELECT
@@ -1391,9 +1391,9 @@ Count of orders where channel_net_profit is negative — this week vs last week.
 
 ```sql
 WITH filter_bounds AS (
-    -- field_id=141 → fact_orders.order_timestamp, KHÔNG alias fact_orders (R1, R2)
-    SELECT MIN(order_timestamp)::DATE AS p_start,
-           MAX(order_timestamp)::DATE AS p_end
+    -- field_id=141 → fact_orders.ordered_at, KHÔNG alias fact_orders (R1, R2)
+    SELECT MIN(ordered_at)::DATE AS p_start,
+           MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE 1=1
       [[AND {{date_range}}]]
@@ -1406,8 +1406,8 @@ this_week AS (
     JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.channel_net_profit < 0
-      AND fo.order_timestamp >= filter_bounds.p_start
-      AND fo.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND fo.ordered_at >= filter_bounds.p_start
+      AND fo.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
 ),
 last_week AS (
     SELECT COUNT(DISTINCT e.order_id) AS val
@@ -1417,8 +1417,8 @@ last_week AS (
     JOIN filter_bounds ON TRUE
     WHERE cu.customer_type = 'RETAIL'
       AND e.channel_net_profit < 0
-      AND fo.order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND fo.order_timestamp <  filter_bounds.p_start
+      AND fo.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND fo.ordered_at <  filter_bounds.p_start
 )
 SELECT
     tw.val AS "Don hang am",

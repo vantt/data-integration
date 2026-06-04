@@ -154,7 +154,7 @@ SELECT
     dos.max_discount_rate,
     dos.primary_discount_type,
 
-    created_at as order_timestamp,
+    created_at as ordered_at,
     updated_at
 
 FROM orders

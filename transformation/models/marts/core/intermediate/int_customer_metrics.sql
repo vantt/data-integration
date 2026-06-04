@@ -43,7 +43,7 @@ customer_orders AS (
     SELECT
         o.customer_key,
         o.order_id,
-        o.order_timestamp,
+        o.ordered_at,
         o.total_collected
     FROM orders o
     {% if is_incremental() %}
@@ -55,8 +55,8 @@ customer_orders AS (
 aggregated AS (
     SELECT
         customer_key,
-        MIN(order_timestamp) as first_order_date,
-        MAX(order_timestamp) as last_order_date,
+        MIN(ordered_at) as first_order_date,
+        MAX(ordered_at) as last_order_date,
         COUNT(DISTINCT order_id) as frequency,
         SUM(total_collected) as monetary_value
     FROM customer_orders
@@ -198,9 +198,9 @@ avg_order_value_cte AS (
 order_sequence AS (
     SELECT
         o.customer_key,
-        o.order_timestamp,
-        LAG(o.order_timestamp) OVER (
-            PARTITION BY o.customer_key ORDER BY o.order_timestamp
+        o.ordered_at,
+        LAG(o.ordered_at) OVER (
+            PARTITION BY o.customer_key ORDER BY o.ordered_at
         ) AS prev_order_timestamp
     FROM orders o
     {% if is_incremental() %}
@@ -213,11 +213,11 @@ inter_purchase_cte AS (
     SELECT
         customer_key,
         ROUND(AVG(
-            date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(order_timestamp AS DATE))
+            date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(ordered_at AS DATE))
         ))::INTEGER AS avg_days_between_orders
     FROM order_sequence
     WHERE prev_order_timestamp IS NOT NULL
-      AND date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(order_timestamp AS DATE)) > 0
+      AND date_diff('day', CAST(prev_order_timestamp AS DATE), CAST(ordered_at AS DATE)) > 0
     GROUP BY customer_key
 ),
 

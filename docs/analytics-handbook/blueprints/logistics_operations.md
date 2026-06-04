@@ -50,7 +50,7 @@ SELECT ROUND(
 ) as "Fulfillment Rate"
 FROM fact_orders
 WHERE status NOT IN ('DRAFT', 'CANCELLED')
-  AND date(order_timestamp) = current_date
+  AND date(ordered_at) = current_date
 ```
 
 ```json metabase-viz
@@ -76,12 +76,12 @@ Tổng đơn hàng hôm nay (trừ DRAFT) với DoD comparison.
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date THEN order_id END) as "Tổng đơn",
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' THEN order_id END) as "Hôm qua"
+    COUNT(DISTINCT CASE WHEN date(ordered_at) = current_date THEN order_id END) as "Tổng đơn",
+    COUNT(DISTINCT CASE WHEN date(ordered_at) = current_date - INTERVAL '1 day' THEN order_id END) as "Hôm qua"
 FROM fact_orders
 WHERE status != 'DRAFT'
-  AND date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+  AND date(ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(ordered_at) <= current_date
 ```
 
 ```json metabase-viz
@@ -101,12 +101,12 @@ WHERE status != 'DRAFT'
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date AND fulfillment_status = 'fulfilled' THEN order_id END) as "Đã xuất kho",
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' AND fulfillment_status = 'fulfilled' THEN order_id END) as "Hôm qua"
+    COUNT(DISTINCT CASE WHEN date(ordered_at) = current_date AND fulfillment_status = 'fulfilled' THEN order_id END) as "Đã xuất kho",
+    COUNT(DISTINCT CASE WHEN date(ordered_at) = current_date - INTERVAL '1 day' AND fulfillment_status = 'fulfilled' THEN order_id END) as "Hôm qua"
 FROM fact_orders
 WHERE status NOT IN ('DRAFT', 'CANCELLED')
-  AND date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+  AND date(ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(ordered_at) <= current_date
 ```
 
 ```json metabase-viz
@@ -164,7 +164,7 @@ Drop-off theo từng bước pipeline: OPEN → COMPLETED → CANCELLED → ARCH
 SELECT status as "Trạng thái", COUNT(*) as "Số đơn"
 FROM fact_orders
 WHERE status != 'DRAFT'
-  AND date(order_timestamp) = current_date
+  AND date(ordered_at) = current_date
 GROUP BY status
 ORDER BY CASE status
     WHEN 'OPEN' THEN 1
@@ -198,7 +198,7 @@ SELECT
     COUNT(*) as "Số đơn"
 FROM fact_orders
 WHERE status NOT IN ('DRAFT', 'CANCELLED')
-  AND date(order_timestamp) = current_date
+  AND date(ordered_at) = current_date
 GROUP BY fulfillment_status
 ORDER BY 2 DESC
 ```
@@ -234,20 +234,20 @@ So sánh lượng đơn theo giờ hôm nay vs hôm qua — peak hours, real-tim
 ```sql
 WITH current_orders AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM ordered_at) as hour_of_day,
         COUNT(*) as orders_today
     FROM fact_orders
     WHERE status NOT IN ('DRAFT', 'CANCELLED')
-      AND date(order_timestamp) = current_date
+      AND date(ordered_at) = current_date
     GROUP BY 1
 ),
 previous_orders AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM ordered_at) as hour_of_day,
         COUNT(*) as orders_yesterday
     FROM fact_orders
     WHERE status NOT IN ('DRAFT', 'CANCELLED')
-      AND date(order_timestamp) = current_date - INTERVAL '1 day'
+      AND date(ordered_at) = current_date - INTERVAL '1 day'
     GROUP BY 1
 )
 SELECT
@@ -286,20 +286,20 @@ WITH hours AS (
 ),
 current_orders AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM ordered_at) as hour_of_day,
         COUNT(*) as cnt
     FROM fact_orders
     WHERE status NOT IN ('DRAFT', 'CANCELLED')
-      AND date(order_timestamp) = current_date
+      AND date(ordered_at) = current_date
     GROUP BY 1
 ),
 previous_orders AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM ordered_at) as hour_of_day,
         COUNT(*) as cnt
     FROM fact_orders
     WHERE status NOT IN ('DRAFT', 'CANCELLED')
-      AND date(order_timestamp) = current_date - INTERVAL '1 day'
+      AND date(ordered_at) = current_date - INTERVAL '1 day'
     GROUP BY 1
 )
 SELECT
@@ -374,11 +374,11 @@ Thời gian trung bình từ tạo đơn đến xuất kho đầu tiên. DoD com
 SELECT
     ROUND(AVG(CASE
         WHEN date(first_shipped_at) = current_date
-        THEN date_diff('hour', order_timestamp, first_shipped_at)
+        THEN date_diff('hour', ordered_at, first_shipped_at)
     END), 1) as "TB giờ xuất kho",
     ROUND(AVG(CASE
         WHEN date(first_shipped_at) = current_date - INTERVAL '1 day'
-        THEN date_diff('hour', order_timestamp, first_shipped_at)
+        THEN date_diff('hour', ordered_at, first_shipped_at)
     END), 1) as "Hôm qua"
 FROM fact_orders
 WHERE first_shipped_at IS NOT NULL
@@ -407,14 +407,14 @@ SELECT
     ROUND(
         COUNT(CASE
             WHEN date(first_shipped_at) = current_date
-             AND date(first_shipped_at) = date(order_timestamp) THEN 1 END) * 100.0
+             AND date(first_shipped_at) = date(ordered_at) THEN 1 END) * 100.0
         / NULLIF(COUNT(CASE
             WHEN date(first_shipped_at) = current_date THEN 1 END), 0), 1
     ) as "Xuất cùng ngày %",
     ROUND(
         COUNT(CASE
             WHEN date(first_shipped_at) = current_date - INTERVAL '1 day'
-             AND date(first_shipped_at) = date(order_timestamp) THEN 1 END) * 100.0
+             AND date(first_shipped_at) = date(ordered_at) THEN 1 END) * 100.0
         / NULLIF(COUNT(CASE
             WHEN date(first_shipped_at) = current_date - INTERVAL '1 day' THEN 1 END), 0), 1
     ) as "Hôm qua"
@@ -445,7 +445,7 @@ SELECT COUNT(*) as "Đơn kẹt"
 FROM fact_orders
 WHERE status = 'OPEN'
   AND fulfillment_status != 'fulfilled'
-  AND date_diff('hour', order_timestamp, current_timestamp) > 24
+  AND date_diff('hour', ordered_at, current_timestamp) > 24
 ```
 
 ```json metabase-viz
@@ -472,12 +472,12 @@ Số đơn COMPLETED hôm nay với DoD comparison.
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date AND status = 'COMPLETED' THEN order_id END) as "Hoàn thành",
-    COUNT(DISTINCT CASE WHEN date(order_timestamp) = current_date - INTERVAL '1 day' AND status = 'COMPLETED' THEN order_id END) as "Hôm qua"
+    COUNT(DISTINCT CASE WHEN date(ordered_at) = current_date AND status = 'COMPLETED' THEN order_id END) as "Hoàn thành",
+    COUNT(DISTINCT CASE WHEN date(ordered_at) = current_date - INTERVAL '1 day' AND status = 'COMPLETED' THEN order_id END) as "Hôm qua"
 FROM fact_orders
 WHERE status NOT IN ('DRAFT')
-  AND date(order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(order_timestamp) <= current_date
+  AND date(ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(ordered_at) <= current_date
 ```
 
 ```json metabase-viz
@@ -508,22 +508,22 @@ Biến động thời gian xử lý trung bình theo giờ trong ngày — DoD o
 ```sql
 WITH current_speed AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        ROUND(AVG(date_diff('hour', order_timestamp, first_shipped_at)), 1) as avg_hours_today
+        EXTRACT(HOUR FROM ordered_at) as hour_of_day,
+        ROUND(AVG(date_diff('hour', ordered_at, first_shipped_at)), 1) as avg_hours_today
     FROM fact_orders
     WHERE status NOT IN ('DRAFT', 'CANCELLED')
       AND first_shipped_at IS NOT NULL
-      AND date(order_timestamp) = current_date
+      AND date(ordered_at) = current_date
     GROUP BY 1
 ),
 previous_speed AS (
     SELECT
-        EXTRACT(HOUR FROM order_timestamp) as hour_of_day,
-        ROUND(AVG(date_diff('hour', order_timestamp, first_shipped_at)), 1) as avg_hours_yesterday
+        EXTRACT(HOUR FROM ordered_at) as hour_of_day,
+        ROUND(AVG(date_diff('hour', ordered_at, first_shipped_at)), 1) as avg_hours_yesterday
     FROM fact_orders
     WHERE status NOT IN ('DRAFT', 'CANCELLED')
       AND first_shipped_at IS NOT NULL
-      AND date(order_timestamp) = current_date - INTERVAL '1 day'
+      AND date(ordered_at) = current_date - INTERVAL '1 day'
     GROUP BY 1
 )
 SELECT
@@ -558,7 +558,7 @@ Cường độ xuất kho theo ngày x giờ (7 ngày gần nhất). Design: hea
 
 ```sql
 SELECT
-    CASE EXTRACT(DOW FROM order_timestamp)
+    CASE EXTRACT(DOW FROM ordered_at)
         WHEN 0 THEN 'CN'
         WHEN 1 THEN 'T2'
         WHEN 2 THEN 'T3'
@@ -567,15 +567,15 @@ SELECT
         WHEN 5 THEN 'T6'
         WHEN 6 THEN 'T7'
     END as "Ngày",
-    EXTRACT(HOUR FROM order_timestamp) as "Giờ",
+    EXTRACT(HOUR FROM ordered_at) as "Giờ",
     COUNT(CASE WHEN first_shipped_at IS NOT NULL THEN 1 END) as "Xuất kho"
 FROM fact_orders
 WHERE status NOT IN ('DRAFT', 'CANCELLED')
-  AND date(order_timestamp) >= current_date - INTERVAL '6 days'
-  AND date(order_timestamp) <= current_date
+  AND date(ordered_at) >= current_date - INTERVAL '6 days'
+  AND date(ordered_at) <= current_date
 GROUP BY 1, 2,
-    EXTRACT(DOW FROM order_timestamp)
-ORDER BY EXTRACT(DOW FROM order_timestamp), 2
+    EXTRACT(DOW FROM ordered_at)
+ORDER BY EXTRACT(DOW FROM ordered_at), 2
 ```
 
 ```json metabase-viz
@@ -625,14 +625,14 @@ SELECT
     o.payment_status as "TT thanh toán",
     s.full_name as "Nhân viên",
     bl.branch_location_name as "Chi nhánh",
-    ROUND(date_diff('hour', o.order_timestamp, current_timestamp), 1) as "Chờ (giờ)",
-    o.order_timestamp as "Thời gian tạo"
+    ROUND(date_diff('hour', o.ordered_at, current_timestamp), 1) as "Chờ (giờ)",
+    o.ordered_at as "Thời gian tạo"
 FROM fact_orders o
 LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 WHERE o.status = 'OPEN'
   AND o.fulfillment_status != 'fulfilled'
-  AND date_diff('hour', o.order_timestamp, current_timestamp) > 24
+  AND date_diff('hour', o.ordered_at, current_timestamp) > 24
 ORDER BY "Chờ (giờ)" DESC
 ```
 
@@ -723,7 +723,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.status NOT IN ('DRAFT', 'CANCELLED')
-  AND date(o.order_timestamp) = current_date
+  AND date(o.ordered_at) = current_date
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -751,12 +751,12 @@ Ranking nhân viên theo tốc độ xử lý trung bình hôm nay — horizonta
 ```sql
 SELECT
     s.full_name as "Nhân viên",
-    ROUND(AVG(date_diff('hour', o.order_timestamp, o.first_shipped_at)), 1) as "TB giờ xử lý"
+    ROUND(AVG(date_diff('hour', o.ordered_at, o.first_shipped_at)), 1) as "TB giờ xử lý"
 FROM fact_orders o
 JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.status NOT IN ('DRAFT', 'CANCELLED')
   AND o.first_shipped_at IS NOT NULL
-  AND date(o.order_timestamp) = current_date
+  AND date(o.ordered_at) = current_date
 GROUP BY 1
 ORDER BY 2 ASC
 ```
@@ -801,11 +801,11 @@ SELECT
     s.full_name as "Nhân viên",
     bl.branch_location_name as "Chi nhánh",
     o.net_revenue as "Doanh thu",
-    o.order_timestamp as "Thời gian tạo",
+    o.ordered_at as "Thời gian tạo",
     o.first_shipped_at as "Xuất kho lúc",
     CASE
         WHEN o.first_shipped_at IS NOT NULL
-        THEN ROUND(date_diff('hour', o.order_timestamp, o.first_shipped_at), 1)
+        THEN ROUND(date_diff('hour', o.ordered_at, o.first_shipped_at), 1)
         ELSE NULL
     END as "Giờ đến XK"
 FROM fact_orders o
@@ -813,8 +813,8 @@ LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 LEFT JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 WHERE o.status != 'DRAFT'
-  AND date(o.order_timestamp) = current_date
-ORDER BY o.order_timestamp DESC
+  AND date(o.ordered_at) = current_date
+ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-viz

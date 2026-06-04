@@ -69,7 +69,7 @@ recent AS (
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+    WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -81,7 +81,7 @@ previous AS (
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+    WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -93,7 +93,7 @@ customer_loyalty AS (
         ) as returning_rate
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+    WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -140,7 +140,7 @@ recent AS (
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+    WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -152,7 +152,7 @@ previous AS (
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as aov
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
+    WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -164,7 +164,7 @@ customer_loyalty AS (
         ) as returning_rate
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) BETWEEN current_date - INTERVAL '6 days' AND current_date
+    WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -245,12 +245,12 @@ SELECT * FROM (
 
 ```sql
 SELECT
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END), 0) as "Net Revenue",
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hôm qua"
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.net_revenue END), 0) as "Net Revenue",
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hôm qua"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(o.order_timestamp) <= current_date
+WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) <= current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -298,12 +298,12 @@ SELECT
 
 ```sql
 SELECT
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.gross_revenue END), 0) as "Gross Revenue",
-    COALESCE(SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.gross_revenue END), 0) as "Hôm qua"
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.gross_revenue END), 0) as "Gross Revenue",
+    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.gross_revenue END), 0) as "Hôm qua"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(o.order_timestamp) <= current_date
+WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) <= current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -334,12 +334,12 @@ Supporting KPI with DoD comparison. **Scope: Retail only.**
 
 ```sql
 SELECT
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hôm qua"
+    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END) as "Total Orders",
+    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hôm qua"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(o.order_timestamp) <= current_date
+WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) <= current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -361,20 +361,20 @@ Supporting KPI with DoD comparison. **Scope: Retail only.**
 
 ```sql
 SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(o.order_timestamp) = current_date THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date THEN o.order_id END), 0
+            SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END), 0
          ) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
+    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
          ELSE ROUND(
-            SUM(CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.order_timestamp) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
+            SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
+            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
          ) END as "Hôm qua"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
-  AND date(o.order_timestamp) <= current_date
+WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
+  AND date(o.ordered_at) <= current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -409,7 +409,7 @@ WHERE date(o.order_timestamp) >= current_date - INTERVAL '1 day'
 SELECT COUNT(DISTINCT o.customer_key) as "New Customers"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND date(c.first_order_date) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -431,7 +431,7 @@ WHERE date(o.order_timestamp) = current_date
 SELECT COUNT(DISTINCT o.customer_key) as "Returning Customers"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND date(c.first_order_date) < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -451,7 +451,7 @@ WHERE date(o.order_timestamp) = current_date
 SELECT COUNT(DISTINCT o.order_id) as "Returns"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND o.fulfillment_status = 'RETURNED'
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -473,7 +473,7 @@ WHERE date(o.order_timestamp) = current_date
 SELECT COALESCE(SUM(o.total_collected), 0) as "Total Collected"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -508,7 +508,7 @@ SELECT
     ) as "Discount Rate %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -554,22 +554,22 @@ Compare today's hourly performance with yesterday — real-time.
 ```sql
 WITH current_sales AS (
     SELECT
-        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM o.ordered_at) as hour_of_day,
         SUM(o.net_revenue) as sales_today
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) = current_date
+    WHERE date(o.ordered_at) = current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 ),
 previous_sales AS (
     SELECT
-        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM o.ordered_at) as hour_of_day,
         SUM(o.net_revenue) as sales_yesterday
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -610,22 +610,22 @@ WITH hours AS (
 ),
 today_hourly AS (
     SELECT
-        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM o.ordered_at) as hour_of_day,
         SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) = current_date
+    WHERE date(o.ordered_at) = current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
 ),
 yesterday_hourly AS (
     SELECT
-        EXTRACT(HOUR FROM o.order_timestamp) as hour_of_day,
+        EXTRACT(HOUR FROM o.ordered_at) as hour_of_day,
         SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -719,7 +719,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -761,7 +761,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -796,7 +796,7 @@ WITH today AS (
     FROM fact_orders o
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) = current_date
+    WHERE date(o.ordered_at) = current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -809,7 +809,7 @@ yesterday AS (
     FROM fact_orders o
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.order_timestamp) = current_date - INTERVAL '1 day'
+    WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -886,7 +886,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1134,7 +1134,7 @@ LIMIT 20
 
 #### 📝 Text: Source & Freshness
 
-Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Khung thời gian: hôm nay (by ordered_at, không phải order_timestamp)
+Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Khung thời gian: hôm nay (by ordered_at, không phải ordered_at)
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1185,7 +1185,7 @@ SELECT
     ) as "Returning Rate %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -1228,7 +1228,7 @@ SELECT
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1270,7 +1270,7 @@ SELECT
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1308,7 +1308,7 @@ SELECT
     COUNT(DISTINCT o.order_id) as "Đơn hàng"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1378,7 +1378,7 @@ SELECT
         THEN o.discount_amount * 100.0 / NULLIF(o.gross_revenue, 0) END), 1) as "TB CK %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.order_timestamp) = current_date
+WHERE date(o.ordered_at) = current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ```
@@ -1406,7 +1406,7 @@ WHERE date(o.order_timestamp) = current_date
 
 #### 📝 Text: Source & Freshness
 
-Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_customers` (At Risk = RFM snapshot, không theo ngày) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Hôm nay (by order_timestamp) · Bao gồm tất cả trạng thái đơn
+Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_customers` (At Risk = RFM snapshot, không theo ngày) · Real-time · **Scope: customer_type = 'RETAIL' · is_sales_channel = true** · Hôm nay (by ordered_at) · Bao gồm tất cả trạng thái đơn
 
 ```json metabase-pos
 { "row": 22, "col": 0, "size_x": 18, "size_y": 1 }

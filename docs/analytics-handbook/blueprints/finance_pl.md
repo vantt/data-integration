@@ -46,7 +46,7 @@ Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -111,7 +111,7 @@ Hero metric — doanh thu thuan ky nay vs ky truoc + cung ky nam truoc. Exclude 
 -- YoY added 2026-05-28: filter-independent YoY uses fixed closed-month windows
 WITH
 filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       [[AND {{date_range}}]]
@@ -127,8 +127,8 @@ prev_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders, filter_bounds
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND order_timestamp <  filter_bounds.p_start
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <  filter_bounds.p_start
       [[AND {{channel}}]]
 ),
 -- YoY: same closed month, prior year (last full month -12 months)
@@ -136,8 +136,8 @@ prev_year AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '13 months'
-      AND order_timestamp <  date_trunc('month', current_date) - INTERVAL '12 months'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '13 months'
+      AND ordered_at <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
 SELECT
     t.val                                                                    AS "Doanh thu thuan",
@@ -339,12 +339,12 @@ Combo chart — doanh thu (bar) va gia von (line) theo thang. Two CTEs unioned t
 ```sql
 WITH revenue_monthly AS (
     SELECT
-        date_trunc('month', order_timestamp) AS "Thang",
+        date_trunc('month', ordered_at) AS "Thang",
         SUM(net_revenue)                     AS "Doanh thu thuan",
         NULL::DOUBLE                         AS "Gia von"
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '12 months'
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
     GROUP BY 1
 ),
 cogs_monthly AS (

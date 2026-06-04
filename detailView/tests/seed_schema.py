@@ -24,7 +24,7 @@ _DDL = [
         vat_amount DECIMAL(18,2), total_collected DECIMAL(18,2),
         first_shipped_at TIMESTAMPTZ, time_to_complete_hours BIGINT,
         max_discount_rate DOUBLE, primary_discount_type VARCHAR, shipping_address VARCHAR,
-        order_timestamp TIMESTAMPTZ, updated_at TIMESTAMPTZ )""",
+        ordered_at TIMESTAMPTZ, updated_at TIMESTAMPTZ )""",
     """CREATE TABLE fact_order_economics (
         order_id VARCHAR, order_code VARCHAR, cogs_amount DOUBLE, has_cogs BOOLEAN,
         gross_profit DECIMAL(38,2), gross_margin_pct DOUBLE,

@@ -77,7 +77,7 @@ current_mau AS (
     SELECT COUNT(DISTINCT o.customer_key) as val
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE o.order_timestamp >= current_date - INTERVAL '30 days'
+    WHERE o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -86,8 +86,8 @@ prev_mau AS (
     SELECT COUNT(DISTINCT o.customer_key) as val
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+    WHERE o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -296,13 +296,13 @@ Stacked area — growth quality: how many monthly customers are new vs returning
 ```sql
 WITH monthly_customers AS (
     SELECT DISTINCT
-        date_trunc('month', o.order_timestamp)::date as month,
+        date_trunc('month', o.ordered_at)::date as month,
         o.customer_key,
         c.first_order_date
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-      AND o.order_timestamp < date_trunc('month', current_date)
+    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND o.ordered_at < date_trunc('month', current_date)
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_id != 'Unknown'
 )
@@ -338,12 +338,12 @@ Line chart — MAU trend over 6 months showing momentum.
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as "Month",
+    date_trunc('month', o.ordered_at)::date as "Month",
     COUNT(DISTINCT o.customer_key) as "Active Customers"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -473,7 +473,7 @@ WITH first_orders AS (
     SELECT
         o.customer_key,
         o.channel_key,
-        ROW_NUMBER() OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) as rn
+        ROW_NUMBER() OVER (PARTITION BY o.customer_key ORDER BY o.ordered_at) as rn
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE cust.created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -516,7 +516,7 @@ WITH first_orders AS (
         o.customer_key,
         o.channel_key,
         o.net_revenue,
-        ROW_NUMBER() OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) as rn
+        ROW_NUMBER() OVER (PARTITION BY o.customer_key ORDER BY o.ordered_at) as rn
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE cust.created_at >= date_trunc('month', current_date) - INTERVAL '1 month'

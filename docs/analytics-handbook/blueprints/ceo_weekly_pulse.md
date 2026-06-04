@@ -77,16 +77,16 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val as "Net Revenue",
@@ -125,16 +125,16 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val as "Gross Revenue",
@@ -173,16 +173,16 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val as "Total Orders",
@@ -214,8 +214,8 @@ this_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT
@@ -224,8 +224,8 @@ last_week AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val as "AOV",
@@ -267,8 +267,8 @@ WITH mtd_actual AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('month', current_date)
-      AND order_timestamp < current_date
+      AND ordered_at >= date_trunc('month', current_date)
+      AND ordered_at < current_date
 ),
 monthly_target AS (
     SELECT COALESCE(SUM(target_val), 0) as target_gmv
@@ -309,8 +309,8 @@ WITH mtd_actual AS (
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('month', current_date)
-      AND order_timestamp < current_date
+      AND ordered_at >= date_trunc('month', current_date)
+      AND ordered_at < current_date
 ),
 monthly_target AS (
     SELECT COALESCE(SUM(target_val), 0) as target_gmv
@@ -357,13 +357,13 @@ CROSS JOIN monthly_target t
 
 ```sql
 SELECT
-    date(order_timestamp) as order_date,
+    date(ordered_at) as order_date,
     SUM(net_revenue) as revenue
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND order_timestamp >= current_date - INTERVAL '14 days'
-  AND order_timestamp < current_date
+  AND ordered_at >= current_date - INTERVAL '14 days'
+  AND ordered_at < current_date
 GROUP BY 1
 ORDER BY 1
 ```
@@ -445,8 +445,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -489,8 +489,8 @@ WITH this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
     GROUP BY 1
 ),
 last_week AS (
@@ -501,8 +501,8 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
     GROUP BY 1
 )
 SELECT
@@ -549,8 +549,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 8
@@ -588,8 +588,8 @@ WITH this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
     GROUP BY 1
 ),
 last_week AS (
@@ -601,8 +601,8 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
     GROUP BY 1
 )
 SELECT
@@ -756,8 +756,8 @@ FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.order_timestamp < date_trunc('week', current_date)
+  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND o.ordered_at < date_trunc('week', current_date)
 ```
 
 ```json metabase-viz
@@ -789,8 +789,8 @@ this_week AS (
     LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
       AND date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days'
 ),
 last_week AS (
@@ -799,8 +799,8 @@ last_week AS (
     LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       AND date(c.first_order_date) < date_trunc('week', current_date) - INTERVAL '14 days'
 )
 SELECT
@@ -828,9 +828,9 @@ FROM this_week tw, last_week lw
 
 ```sql
 SELECT
-    date(o.order_timestamp) as order_date,
+    date(o.ordered_at) as order_date,
     CASE
-        WHEN date(c.first_order_date) = date(o.order_timestamp) THEN 'New'
+        WHEN date(c.first_order_date) = date(o.ordered_at) THEN 'New'
         ELSE 'Returning'
     END as customer_type,
     COUNT(DISTINCT o.order_id) as orders
@@ -838,8 +838,8 @@ FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.order_timestamp >= current_date - INTERVAL '14 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '14 days'
+  AND o.ordered_at < current_date
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -878,16 +878,16 @@ this_week AS (
     FROM fact_orders
     WHERE status = 'CANCELLED'
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
     WHERE status = 'CANCELLED'
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val as "Cancelled Orders",
@@ -916,15 +916,15 @@ this_week AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
     WHERE channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND order_timestamp < date_trunc('week', current_date)
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
     FROM fact_orders
     WHERE channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val as "Returns",
@@ -953,8 +953,8 @@ SELECT
 FROM fact_orders
 WHERE status NOT IN ('CANCELLED', 'Voided')
   AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND order_timestamp < date_trunc('week', current_date)
+  AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+  AND ordered_at < date_trunc('week', current_date)
 ```
 
 ```json metabase-viz
@@ -979,7 +979,7 @@ WHERE status NOT IN ('CANCELLED', 'Voided')
 ### Section: Profitability (P&L)
 
 > **Scope:** `fact_order_economics` — `is_sales_channel = true AND status NOT IN ('CANCELLED','Voided') AND has_cogs = true`
-> **Window:** Tuần trước (Mon–Sun) vs tuần trước nữa (WoW). `order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days' AND order_timestamp < date_trunc('week', current_date)`
+> **Window:** Tuần trước (Mon–Sun) vs tuần trước nữa (WoW). `ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days' AND ordered_at < date_trunc('week', current_date)`
 > **Domain References:** [Order Gross Profit](../domains/finance.md#9-order-gross-profit), [Channel Net Profit](../domains/finance.md#10-channel-net-profit-lãi-ròng-kênh)
 
 #### 📝 Text: Lợi nhuận tuần qua — Net Profit, Gross Margin, Kênh lỗ
@@ -1003,8 +1003,8 @@ this_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COALESCE(SUM(e.channel_net_profit), 0) AS val
@@ -1013,8 +1013,8 @@ last_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val AS "Net Profit",
@@ -1059,8 +1059,8 @@ this_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT
@@ -1073,8 +1073,8 @@ last_week AS (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.order_timestamp < date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
 SELECT
     tw.val AS "Gross Margin %",
@@ -1113,8 +1113,8 @@ FROM (
     WHERE e.status NOT IN ('CANCELLED', 'Voided')
       AND e.has_cogs
       AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-      AND o.order_timestamp >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.order_timestamp < date_trunc('week', current_date)
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND o.ordered_at < date_trunc('week', current_date)
     GROUP BY e.channel_key
     HAVING SUM(e.channel_net_profit) < 0
 ) loss_channels

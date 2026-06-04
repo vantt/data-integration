@@ -42,7 +42,7 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
 ```sql
 -- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -104,7 +104,7 @@ FROM filter_bounds
 ```sql
 -- YoY added 2026-05-28; dynamic filter_bounds pattern
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -114,8 +114,8 @@ this_period AS (
     SELECT COUNT(DISTINCT order_id) AS val
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-      AND order_timestamp >= filter_bounds.p_start
-      AND order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
@@ -123,16 +123,16 @@ prev_period AS (
     SELECT COUNT(DISTINCT order_id) AS val
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-      AND order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND order_timestamp <   filter_bounds.p_start
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 prior_year AS (
     SELECT COUNT(DISTINCT order_id) AS val
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-      AND order_timestamp >= (filter_bounds.p_start - INTERVAL '12 months')
-      AND order_timestamp <  (filter_bounds.p_end   - INTERVAL '12 months' + INTERVAL '1 day')
+      AND ordered_at >= (filter_bounds.p_start - INTERVAL '12 months')
+      AND ordered_at <  (filter_bounds.p_end   - INTERVAL '12 months' + INTERVAL '1 day')
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -161,7 +161,7 @@ FROM this_period tm, prev_period pp, prior_year py
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
@@ -173,8 +173,8 @@ this_period AS (
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= filter_bounds.p_start
-      AND order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
@@ -183,8 +183,8 @@ prev_period AS (
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND order_timestamp <   filter_bounds.p_start
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -219,7 +219,7 @@ FROM this_period tm, prev_period pp
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
@@ -233,8 +233,8 @@ this_period AS (
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= filter_bounds.p_start
-      AND order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
@@ -245,8 +245,8 @@ prev_period AS (
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND order_timestamp <   filter_bounds.p_start
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -353,7 +353,7 @@ Average hours from order creation to completion — with MoM + YoY comparison.
 ```sql
 -- YoY added 2026-05-28; dynamic filter_bounds pattern
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status = 'COMPLETED'
@@ -367,8 +367,8 @@ this_period AS (
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status = 'COMPLETED'
       AND time_to_complete_hours IS NOT NULL
-      AND order_timestamp >= filter_bounds.p_start
-      AND order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
@@ -378,8 +378,8 @@ prev_period AS (
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status = 'COMPLETED'
       AND time_to_complete_hours IS NOT NULL
-      AND order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND order_timestamp <   filter_bounds.p_start
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 prior_year AS (
@@ -388,8 +388,8 @@ prior_year AS (
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status = 'COMPLETED'
       AND time_to_complete_hours IS NOT NULL
-      AND order_timestamp >= (filter_bounds.p_start - INTERVAL '12 months')
-      AND order_timestamp <  (filter_bounds.p_end   - INTERVAL '12 months' + INTERVAL '1 day')
+      AND ordered_at >= (filter_bounds.p_start - INTERVAL '12 months')
+      AND ordered_at <  (filter_bounds.p_end   - INTERVAL '12 months' + INTERVAL '1 day')
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -425,7 +425,7 @@ Cancelled and return counts with MoM comparison — formatted table with conditi
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -437,8 +437,8 @@ this_period AS (
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) AS returned
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-      AND order_timestamp >= filter_bounds.p_start
-      AND order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
@@ -448,8 +448,8 @@ prev_period AS (
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) AS returned
     FROM fact_orders, filter_bounds
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-      AND order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND order_timestamp <   filter_bounds.p_start
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT * FROM (
@@ -501,7 +501,7 @@ Monthly cancellation rate over 6 months with target goal line.
 
 ```sql
 SELECT
-    date_trunc('month', order_timestamp)::DATE AS month,
+    date_trunc('month', ordered_at)::DATE AS month,
     ROUND(
         COUNT(DISTINCT CASE WHEN status = 'CANCELLED' THEN order_id END) * 100.0
         / NULLIF(COUNT(DISTINCT order_id), 0), 1
@@ -540,7 +540,7 @@ Monthly return rate over 6 months with target goal line.
 
 ```sql
 SELECT
-    date_trunc('month', order_timestamp)::DATE AS month,
+    date_trunc('month', ordered_at)::DATE AS month,
     ROUND(
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) * 100.0
         / NULLIF(COUNT(DISTINCT order_id), 0), 1
@@ -578,7 +578,7 @@ Products with the most returns in the closed month — with conditional formatti
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -593,8 +593,8 @@ JOIN fact_sales s ON o.order_id = s.order_id
 JOIN dim_products p ON s.product_key = p.product_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND o.fulfillment_status = 'RETURNED'
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -646,7 +646,7 @@ LIMIT 10
 ```sql
 -- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -708,7 +708,7 @@ Horizontal bar — ranking channels by order volume.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -720,8 +720,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -749,7 +749,7 @@ Horizontal bar — ranking channels by revenue.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -762,8 +762,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -796,7 +796,7 @@ Operational health by channel — with conditional formatting on problem areas.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -817,8 +817,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -874,7 +874,7 @@ Horizontal bar — which channels have the most cancellations.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -887,8 +887,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND o.status = 'CANCELLED'
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -916,7 +916,7 @@ Donut — cancellation distribution across channels.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -929,8 +929,8 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND o.status = 'CANCELLED'
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -959,7 +959,7 @@ Horizontal bar — ranking branches by order volume.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -971,8 +971,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND bl.branch_location_name = {{branch}}]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -1000,7 +1000,7 @@ Branch performance with conditional formatting on problem areas.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1017,8 +1017,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND bl.branch_location_name = {{branch}}]]
 GROUP BY 1
 ORDER BY 3 DESC
@@ -1077,7 +1077,7 @@ ORDER BY 3 DESC
 ```sql
 -- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1131,7 +1131,7 @@ FROM filter_bounds
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) — channel filter via subquery to keep table unaliased
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
@@ -1146,8 +1146,8 @@ this_period AS (
     WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= filter_bounds.p_start
-      AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 prev_period AS (
@@ -1157,8 +1157,8 @@ prev_period AS (
     WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND o.order_timestamp <   filter_bounds.p_start
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <   filter_bounds.p_start
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -1194,7 +1194,7 @@ Social order count with MoM comparison.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) — channel filter via subquery to keep table unaliased
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
@@ -1209,8 +1209,8 @@ this_period AS (
     WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= filter_bounds.p_start
-      AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 prev_period AS (
@@ -1220,8 +1220,8 @@ prev_period AS (
     WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND o.order_timestamp <   filter_bounds.p_start
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <   filter_bounds.p_start
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -1248,7 +1248,7 @@ Social channel AOV with MoM comparison.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) — channel filter via subquery to keep table unaliased
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
@@ -1265,8 +1265,8 @@ this_period AS (
     WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= filter_bounds.p_start
-      AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 prev_period AS (
@@ -1278,8 +1278,8 @@ prev_period AS (
     WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND o.status NOT IN ('CANCELLED', 'Voided')
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.order_timestamp >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND o.order_timestamp <   filter_bounds.p_start
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <   filter_bounds.p_start
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
@@ -1317,7 +1317,7 @@ Donut — Facebook vs Zalo revenue split.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
@@ -1333,8 +1333,8 @@ JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND c.channel_format IN ('Facebook', 'Zalo')
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -1364,7 +1364,7 @@ Monthly social commerce staff leaderboard — with top 3 highlight.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) — channel filter via subquery; date already bounded by p_start/p_end
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND status NOT IN ('CANCELLED', 'Voided')
@@ -1379,8 +1379,8 @@ total_rev AS (
     WHERE o2.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       AND o2.status NOT IN ('CANCELLED', 'Voided')
       AND c2.channel_format IN ('Facebook', 'Zalo')
-      AND o2.order_timestamp >= filter_bounds.p_start
-      AND o2.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+      AND o2.ordered_at >= filter_bounds.p_start
+      AND o2.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
 )
 SELECT
     st.full_name AS "Staff",
@@ -1395,8 +1395,8 @@ JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND c.channel_format IN ('Facebook', 'Zalo')
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   AND st.staff_key IS NOT NULL
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
@@ -1428,7 +1428,7 @@ Horizontal bar — ranking all staff by total revenue across all channels.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1442,8 +1442,8 @@ JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND o.status NOT IN ('CANCELLED', 'Voided')
   AND st.staff_key IS NOT NULL
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
@@ -1474,7 +1474,7 @@ Monthly staff productivity with conditional formatting.
 ```sql
 -- filter_bounds: fact_orders (no alias, R2) for injection; data query uses aliased join
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1492,8 +1492,8 @@ FROM fact_orders o
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
 WHERE o.customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
   AND st.staff_key IS NOT NULL
-  AND o.order_timestamp >= filter_bounds.p_start
-  AND o.order_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 3 DESC
@@ -1545,7 +1545,7 @@ Donut — transaction count by payment method.
 -- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
 -- Payment filtered via payment_timestamp using bounds from fact_orders
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1585,7 +1585,7 @@ Stacked area — monthly payment method distribution over 6 months.
 -- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
 -- Payment filtered via payment_timestamp using bounds from fact_orders
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1688,7 +1688,7 @@ ORDER BY 2 DESC
 ```sql
 -- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1727,7 +1727,7 @@ Table: channel breakdown with order count, revenue, gross margin %, and MoM delt
 -- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
 -- Convert bounds → date_key integers for fact_order_economics (R4)
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]
@@ -1815,7 +1815,7 @@ Scalar — count of completed orders where channel_net_profit < 0 (loss-making o
 -- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
 -- Convert bounds → date_key integers for fact_order_economics (R4, R7)
 WITH filter_bounds AS (
-    SELECT MIN(order_timestamp)::DATE AS p_start, MAX(order_timestamp)::DATE AS p_end
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
     WHERE customer_key IN (SELECT customer_key FROM dim_customers WHERE customer_type = 'RETAIL')
       [[AND {{date_range}}]]

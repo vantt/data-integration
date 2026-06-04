@@ -466,13 +466,13 @@ Monthly trend of repeat purchase rate among buyers each month.
 ```sql
 WITH monthly_buyers AS (
     SELECT
-        date_trunc('month', order_timestamp)::date as month,
+        date_trunc('month', ordered_at)::date as month,
         customer_key,
         COUNT(DISTINCT order_id) as orders_in_month
     FROM fact_orders
     WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-      AND order_timestamp < date_trunc('month', current_date)
+      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND ordered_at < date_trunc('month', current_date)
     GROUP BY 1, 2
 )
 SELECT
@@ -651,7 +651,7 @@ m1_retention AS (
     WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND c.first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
       AND c.customer_id != 'Unknown'
-      AND date_diff('month', c.first_order_date, o.order_timestamp) = 1
+      AND date_diff('month', c.first_order_date, o.ordered_at) = 1
       AND o.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1
 )
@@ -698,7 +698,7 @@ m1_retention AS (
     WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
       AND c.first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
       AND c.customer_id != 'Unknown'
-      AND date_diff('month', c.first_order_date, o.order_timestamp) = 1
+      AND date_diff('month', c.first_order_date, o.ordered_at) = 1
       AND o.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1
 )
@@ -767,15 +767,15 @@ Percentage of total revenue coming from returning customers.
 SELECT
     ROUND(
         SUM(CASE
-            WHEN date_trunc('month', o.order_timestamp) != date_trunc('month', c.first_order_date)
+            WHEN date_trunc('month', o.ordered_at) != date_trunc('month', c.first_order_date)
             THEN o.net_revenue ELSE 0
         END) * 100.0 / NULLIF(SUM(o.net_revenue), 0), 1
     ) as "Returning Revenue %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '3 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
 ```
 
@@ -811,12 +811,12 @@ WITH cohort_sizes AS (
 retention_activity AS (
     SELECT
         date_trunc('month', c.first_order_date) as cohort_month,
-        date_diff('month', c.first_order_date, o.order_timestamp) as month_number,
+        date_diff('month', c.first_order_date, o.ordered_at) as month_number,
         COUNT(DISTINCT c.customer_id) as active_customers
     FROM dim_customers c
     JOIN fact_orders o ON c.customer_key = o.customer_key
     WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
-      AND o.order_timestamp >= c.first_order_date
+      AND o.ordered_at >= c.first_order_date
       AND c.customer_id != 'Unknown'
       AND o.status NOT IN ('CANCELLED', 'Voided')
     GROUP BY 1, 2
@@ -869,14 +869,14 @@ Total revenue by acquisition cohort over time — shows legacy vs new contributi
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as revenue_month,
+    date_trunc('month', o.ordered_at)::date as revenue_month,
     strftime(date_trunc('month', c.first_order_date), '%Y-%m') as cohort,
     SUM(o.net_revenue) as revenue
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '12 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY 1, 2
@@ -910,9 +910,9 @@ Monthly revenue split by new customers (first order month) vs returning customer
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as month,
+    date_trunc('month', o.ordered_at)::date as month,
     CASE
-        WHEN date_trunc('month', o.order_timestamp) = date_trunc('month', c.first_order_date)
+        WHEN date_trunc('month', o.ordered_at) = date_trunc('month', c.first_order_date)
         THEN 'New Customer'
         ELSE 'Returning Customer'
     END as customer_type,
@@ -920,8 +920,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY 1, 2
@@ -954,9 +954,9 @@ Monthly count of new vs returning purchasers.
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as month,
+    date_trunc('month', o.ordered_at)::date as month,
     CASE
-        WHEN date_trunc('month', o.order_timestamp) = date_trunc('month', c.first_order_date)
+        WHEN date_trunc('month', o.ordered_at) = date_trunc('month', c.first_order_date)
         THEN 'New Customer'
         ELSE 'Returning Customer'
     END as customer_type,
@@ -964,8 +964,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-  AND o.order_timestamp < date_trunc('month', current_date)
+  AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+  AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY 1, 2
@@ -1059,8 +1059,8 @@ WITH purchase_gaps AS (
     SELECT
         o.customer_key,
         date_diff('day',
-            CAST(LAG(o.order_timestamp) OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) AS DATE),
-            CAST(o.order_timestamp AS DATE)
+            CAST(LAG(o.ordered_at) OVER (PARTITION BY o.customer_key ORDER BY o.ordered_at) AS DATE),
+            CAST(o.ordered_at AS DATE)
         ) as days_between
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
@@ -1077,14 +1077,14 @@ prev_gaps AS (
     SELECT
         o.customer_key,
         date_diff('day',
-            CAST(LAG(o.order_timestamp) OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) AS DATE),
-            CAST(o.order_timestamp AS DATE)
+            CAST(LAG(o.ordered_at) OVER (PARTITION BY o.customer_key ORDER BY o.ordered_at) AS DATE),
+            CAST(o.ordered_at AS DATE)
         ) as days_between
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND c.customer_id != 'Unknown'
-      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       [[AND c.value_group = {{segment}}]]
 ),
 prev_val AS (
@@ -1125,17 +1125,17 @@ WITH reactivated_current AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     JOIN (
-        SELECT customer_key, MAX(order_timestamp) as prev_order
+        SELECT customer_key, MAX(ordered_at) as prev_order
         FROM fact_orders
         WHERE status NOT IN ('CANCELLED', 'Voided')
-          AND order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+          AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
         GROUP BY 1
     ) prev ON o.customer_key = prev.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.order_timestamp < date_trunc('month', current_date)
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
-      AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
+      AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.ordered_at AS DATE)) > 30
       [[AND c.value_group = {{segment}}]]
 ),
 reactivated_prev AS (
@@ -1143,17 +1143,17 @@ reactivated_prev AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     JOIN (
-        SELECT customer_key, MAX(order_timestamp) as prev_order
+        SELECT customer_key, MAX(ordered_at) as prev_order
         FROM fact_orders
         WHERE status NOT IN ('CANCELLED', 'Voided')
-          AND order_timestamp < date_trunc('month', current_date) - INTERVAL '2 months'
+          AND ordered_at < date_trunc('month', current_date) - INTERVAL '2 months'
         GROUP BY 1
     ) prev ON o.customer_key = prev.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.order_timestamp < date_trunc('month', current_date) - INTERVAL '1 month'
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
+      AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       AND c.customer_id != 'Unknown'
-      AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
+      AND date_diff('day', CAST(prev.prev_order AS DATE), CAST(o.ordered_at AS DATE)) > 30
       [[AND c.value_group = {{segment}}]]
 )
 SELECT
@@ -1307,8 +1307,8 @@ WITH purchase_gaps AS (
     SELECT
         o.customer_key,
         date_diff('day',
-            CAST(LAG(o.order_timestamp) OVER (PARTITION BY o.customer_key ORDER BY o.order_timestamp) AS DATE),
-            CAST(o.order_timestamp AS DATE)
+            CAST(LAG(o.ordered_at) OVER (PARTITION BY o.customer_key ORDER BY o.ordered_at) AS DATE),
+            CAST(o.ordered_at AS DATE)
         ) as days_between
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
@@ -1362,7 +1362,7 @@ Monthly count of reactivated customers (returned after 30+ day gap) with revenue
 ```sql
 WITH reactivated AS (
     SELECT
-        date_trunc('month', o.order_timestamp)::date as month,
+        date_trunc('month', o.ordered_at)::date as month,
         o.customer_key,
         SUM(o.net_revenue) as revenue
     FROM fact_orders o
@@ -1370,17 +1370,17 @@ WITH reactivated AS (
     JOIN (
         SELECT
             customer_key,
-            order_timestamp,
-            LAG(order_timestamp) OVER (PARTITION BY customer_key ORDER BY order_timestamp) as prev_order
+            ordered_at,
+            LAG(ordered_at) OVER (PARTITION BY customer_key ORDER BY ordered_at) as prev_order
         FROM fact_orders
         WHERE status NOT IN ('CANCELLED', 'Voided')
     ) gaps ON o.customer_key = gaps.customer_key
-        AND o.order_timestamp = gaps.order_timestamp
+        AND o.ordered_at = gaps.ordered_at
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND gaps.prev_order IS NOT NULL
-      AND date_diff('day', CAST(gaps.prev_order AS DATE), CAST(o.order_timestamp AS DATE)) > 30
-      AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
-      AND o.order_timestamp < date_trunc('month', current_date)
+      AND date_diff('day', CAST(gaps.prev_order AS DATE), CAST(o.ordered_at AS DATE)) > 30
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND o.ordered_at < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
       [[AND c.value_group = {{segment}}]]
     GROUP BY 1, 2

@@ -59,7 +59,7 @@ Hero metric — tong doanh thu san pham this period vs previous period.
 ```sql
 WITH
 filter_bounds AS (
-    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -80,8 +80,8 @@ prev_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND o.order_timestamp::DATE <  filter_bounds.p_start
+      AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -118,7 +118,7 @@ Supporting KPI — tong quantity sold this period vs previous period.
 ```sql
 WITH
 filter_bounds AS (
-    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -139,8 +139,8 @@ prev_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND o.order_timestamp::DATE <  filter_bounds.p_start
+      AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -168,7 +168,7 @@ Supporting KPI — distinct products co sales this period vs previous period.
 ```sql
 WITH
 filter_bounds AS (
-    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -189,8 +189,8 @@ prev_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND o.order_timestamp::DATE <  filter_bounds.p_start
+      AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -218,7 +218,7 @@ Supporting KPI — revenue per distinct product this period vs previous period.
 ```sql
 WITH
 filter_bounds AS (
-    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -245,8 +245,8 @@ prev_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND o.order_timestamp::DATE <  filter_bounds.p_start
+      AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at::DATE <  filter_bounds.p_start
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 )
@@ -290,7 +290,7 @@ FROM this_period t, prev_period p
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     WHERE o.status != 'CANCELLED'
       [[AND {{date_range}}]]
@@ -345,29 +345,29 @@ Trend doanh thu hang ngay — overlay this month vs last month.
 WITH
 this_month AS (
     SELECT
-        date(o.order_timestamp) as ngay,
+        date(o.ordered_at) as ngay,
         COALESCE(SUM(s.net_revenue), 0) as doanh_thu
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
-    GROUP BY date(o.order_timestamp)
+    GROUP BY date(o.ordered_at)
 ),
 last_month AS (
     SELECT
-        date(o.order_timestamp) + INTERVAL '30 days' as ngay,
+        date(o.ordered_at) + INTERVAL '30 days' as ngay,
         COALESCE(SUM(s.net_revenue), 0) as doanh_thu
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
-    GROUP BY date(o.order_timestamp) + INTERVAL '30 days'
+    GROUP BY date(o.ordered_at) + INTERVAL '30 days'
 )
 SELECT
     COALESCE(t.ngay, l.ngay) as "Ngay",
@@ -420,29 +420,29 @@ Trend quantity hang ngay — overlay this month vs last month.
 WITH
 this_month AS (
     SELECT
-        date(o.order_timestamp) as ngay,
+        date(o.ordered_at) as ngay,
         COALESCE(SUM(s.quantity), 0) as so_luong
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
-    GROUP BY date(o.order_timestamp)
+    GROUP BY date(o.ordered_at)
 ),
 last_month AS (
     SELECT
-        date(o.order_timestamp) + INTERVAL '30 days' as ngay,
+        date(o.ordered_at) + INTERVAL '30 days' as ngay,
         COALESCE(SUM(s.quantity), 0) as so_luong
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
-    GROUP BY date(o.order_timestamp) + INTERVAL '30 days'
+    GROUP BY date(o.ordered_at) + INTERVAL '30 days'
 )
 SELECT
     COALESCE(t.ngay, l.ngay) as "Ngay",
@@ -495,8 +495,8 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   [[AND pt.product_type_name = {{product_type}}]]
   [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 GROUP BY pt.product_type_name
@@ -539,8 +539,8 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   [[AND pt.product_type_name = {{product_type}}]]
   [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 GROUP BY pt.product_type_name
@@ -580,7 +580,7 @@ ORDER BY "Doanh thu" DESC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -650,8 +650,8 @@ this_period AS (
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND pt.product_type_name = {{product_type}}]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY pt.product_type_name
@@ -664,8 +664,8 @@ prev_period AS (
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       [[AND pt.product_type_name = {{product_type}}]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY pt.product_type_name
@@ -720,18 +720,18 @@ Cau thanh doanh thu theo loai SP qua thoi gian — stacked area.
 
 ```sql
 SELECT
-    date(o.order_timestamp) as "Ngay",
+    date(o.ordered_at) as "Ngay",
     pt.product_type_name as "Loai san pham",
     COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   [[AND pt.product_type_name = {{product_type}}]]
   [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
-GROUP BY date(o.order_timestamp), pt.product_type_name
+GROUP BY date(o.ordered_at), pt.product_type_name
 ORDER BY "Ngay"
 ```
 
@@ -785,8 +785,8 @@ this_period AS (
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND pt.product_type_name = {{product_type}}]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY pt.product_type_name
@@ -800,8 +800,8 @@ prev_period AS (
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       [[AND pt.product_type_name = {{product_type}}]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY pt.product_type_name
@@ -888,7 +888,7 @@ ORDER BY COALESCE(t.doanh_thu, 0) DESC
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(o.order_timestamp)::DATE AS p_start, MAX(o.order_timestamp)::DATE AS p_end
+    SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -956,8 +956,8 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_products p ON s.product_key = p.product_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
   [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 GROUP BY p.product_name, p.variant_name
@@ -1001,8 +1001,8 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_products p ON s.product_key = p.product_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
   [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 GROUP BY p.product_name, p.variant_name
@@ -1051,8 +1051,8 @@ this_period AS (
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_products p ON s.product_key = p.product_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY s.product_key, p.product_name, p.variant_name
@@ -1064,8 +1064,8 @@ prev_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY s.product_key
@@ -1111,8 +1111,8 @@ this_period AS (
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_products p ON s.product_key = p.product_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY s.product_key, p.product_name, p.variant_name
@@ -1124,8 +1124,8 @@ prev_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY s.product_key
@@ -1178,8 +1178,8 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_products p ON s.product_key = p.product_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
   [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 GROUP BY p.product_name, p.variant_name
@@ -1232,8 +1232,8 @@ this_period AS (
     LEFT JOIN dim_products p ON s.product_key = p.product_key
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND pt.product_type_name = {{product_type}}]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY s.product_key, p.product_name, p.variant_name, pt.product_type_name
@@ -1247,8 +1247,8 @@ prev_period AS (
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       [[AND pt.product_type_name = {{product_type}}]]
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
     GROUP BY s.product_key

@@ -51,7 +51,7 @@ Thong tin chinh cua don hang.
 ```sql
 SELECT
     o.order_code AS "Ma Don",
-    o.order_timestamp AT TIME ZONE 'Asia/Ho_Chi_Minh' AS "Ngay Dat",
+    o.ordered_at AT TIME ZONE 'Asia/Ho_Chi_Minh' AS "Ngay Dat",
     os.status_code AS "Trang Thai",
     o.payment_status AS "Thanh Toan",
     o.fulfillment_status AS "Van Chuyen",
@@ -63,7 +63,7 @@ SELECT
     o.first_shipped_at AT TIME ZONE 'Asia/Ho_Chi_Minh' AS "Ngay Xuat Kho",
     CASE
         WHEN o.first_shipped_at IS NULL THEN NULL
-        ELSE ROUND(date_diff('minute', o.order_timestamp, o.first_shipped_at) / 60.0, 1)
+        ELSE ROUND(date_diff('minute', o.ordered_at, o.first_shipped_at) / 60.0, 1)
     END AS "Gio Toi Xuat Kho",
     CASE
         WHEN o.time_to_complete_hours IS NULL THEN NULL

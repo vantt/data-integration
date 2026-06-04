@@ -76,8 +76,8 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -86,8 +86,8 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
@@ -130,8 +130,8 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -142,8 +142,8 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
@@ -184,8 +184,8 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -197,8 +197,8 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
@@ -236,8 +236,8 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -246,8 +246,8 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
@@ -289,8 +289,8 @@ WITH base AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
@@ -383,8 +383,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1, 2
@@ -446,8 +446,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND o.discount_amount > 0
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -494,8 +494,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND o.discount_amount > 0
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -538,14 +538,14 @@ Xu huong tien chiet khau (bar) va ty le CK (line) theo thang — combo chart.
 
 ```sql
 SELECT
-    date_trunc('month', o.order_timestamp)::date as "Thang",
+    date_trunc('month', o.ordered_at)::date as "Thang",
     SUM(o.discount_amount) as "Tien CK",
     ROUND(SUM(o.discount_amount) * 100.0 / NULLIF(SUM(o.gross_revenue), 0), 1) as "Ty le CK %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '6 months'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '6 months'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -631,8 +631,8 @@ this_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -642,8 +642,8 @@ prev_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
@@ -685,8 +685,8 @@ this_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -696,8 +696,8 @@ prev_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 )
@@ -729,8 +729,8 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND p.promotion_code IS NOT NULL
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -762,8 +762,8 @@ this_period AS (
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND p.promotion_code IS NOT NULL
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -777,8 +777,8 @@ prev_period AS (
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND p.promotion_code IS NOT NULL
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -830,8 +830,8 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -876,8 +876,8 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -928,8 +928,8 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1, 2
@@ -1009,8 +1009,8 @@ WITH top5 AS (
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status != 'CANCELLED'
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '6 months'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '6 months'
+      AND o.ordered_at < current_date
       AND p.promotion_code IS NOT NULL
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1019,7 +1019,7 @@ WITH top5 AS (
     LIMIT 5
 )
 SELECT
-    date_trunc('month', o.order_timestamp)::date as "Thang",
+    date_trunc('month', o.ordered_at)::date as "Thang",
     COALESCE(p.promotion_code, 'Khac') as "Ma KM",
     COUNT(DISTINCT o.order_id) as "So don"
 FROM fact_orders o
@@ -1027,8 +1027,8 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
   AND o.discount_amount > 0
-  AND o.order_timestamp >= current_date - INTERVAL '6 months'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '6 months'
+  AND o.ordered_at < current_date
   AND p.promotion_code IN (SELECT promotion_code FROM top5)
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1103,8 +1103,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1158,8 +1158,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 GROUP BY 1
@@ -1212,8 +1212,8 @@ this_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -1226,8 +1226,8 @@ prev_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
     WHERE o.status != 'CANCELLED'
-      AND o.order_timestamp >= current_date - INTERVAL '60 days'
-      AND o.order_timestamp < current_date - INTERVAL '30 days'
+      AND o.ordered_at >= current_date - INTERVAL '60 days'
+      AND o.ordered_at < current_date - INTERVAL '30 days'
       AND c.customer_type = 'RETAIL'
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1
@@ -1310,7 +1310,7 @@ Danh sach don hang co chiet khau > 30% — conditional formatting tren Discount 
 ```sql
 SELECT
     o.order_code as "Ma don",
-    o.order_timestamp::date as "Ngay",
+    o.ordered_at::date as "Ngay",
     ch.channel_name as "Kenh",
     COALESCE(p.promotion_code, o.discount_codes, '') as "Ma KM",
     o.gross_revenue as "Doanh thu goc",
@@ -1322,8 +1322,8 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND o.gross_revenue > 0
   AND o.discount_amount * 1.0 / o.gross_revenue > 0.3
   AND c.customer_type = 'RETAIL'
@@ -1453,8 +1453,8 @@ period_scope AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 ),
@@ -1470,8 +1470,8 @@ channel_baseline AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= current_date - INTERVAL '30 days'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY o.channel_key
@@ -1585,7 +1585,7 @@ Xu huong ROI chiet khau toan bo (aggregate) theo thang — line chart. 6 thang g
 WITH
 monthly_baseline AS (
     SELECT
-        date_trunc('month', o.order_timestamp)::date AS thang,
+        date_trunc('month', o.ordered_at)::date AS thang,
         o.channel_key,
         CASE WHEN COUNT(DISTINCT CASE WHEN o.discount_amount = 0 THEN o.order_id END) = 0
              THEN 0
@@ -1595,15 +1595,15 @@ monthly_baseline AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND o.order_timestamp >= current_date - INTERVAL '6 months'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '6 months'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1, 2
 ),
 monthly_promo AS (
     SELECT
-        date_trunc('month', o.order_timestamp)::date AS thang,
+        date_trunc('month', o.ordered_at)::date AS thang,
         o.channel_key,
         SUM(o.discount_amount)                                    AS total_discount,
         SUM(o.net_revenue)                                        AS total_actual_revenue,
@@ -1612,8 +1612,8 @@ monthly_promo AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.status NOT IN ('CANCELLED', 'Voided')
       AND o.discount_amount > 0
-      AND o.order_timestamp >= current_date - INTERVAL '6 months'
-      AND o.order_timestamp < current_date
+      AND o.ordered_at >= current_date - INTERVAL '6 months'
+      AND o.ordered_at < current_date
       AND c.customer_type = 'RETAIL'
       AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
     GROUP BY 1, 2
@@ -1821,8 +1821,8 @@ suspicious_customers AS (
         JOIN dim_customers c ON o.customer_key = c.customer_key
         LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
         WHERE o.status != 'CANCELLED'
-          AND o.order_timestamp >= current_date - INTERVAL '30 days'
-          AND o.order_timestamp < current_date
+          AND o.ordered_at >= current_date - INTERVAL '30 days'
+          AND o.ordered_at < current_date
           AND c.customer_type = 'RETAIL'
           AND o.discount_amount > 0
           AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1843,8 +1843,8 @@ suspicious_codes AS (
         JOIN dim_customers c ON o.customer_key = c.customer_key
         LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
         WHERE o.status != 'CANCELLED'
-          AND o.order_timestamp >= current_date - INTERVAL '30 days'
-          AND o.order_timestamp < current_date
+          AND o.ordered_at >= current_date - INTERVAL '30 days'
+          AND o.ordered_at < current_date
           AND c.customer_type = 'RETAIL'
           AND o.discount_amount > 0
           AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1864,8 +1864,8 @@ suspicious_staff AS (
         FROM fact_orders o
         JOIN dim_customers c ON o.customer_key = c.customer_key
         WHERE o.status != 'CANCELLED'
-          AND o.order_timestamp >= current_date - INTERVAL '30 days'
-          AND o.order_timestamp < current_date
+          AND o.ordered_at >= current_date - INTERVAL '30 days'
+          AND o.ordered_at < current_date
           AND c.customer_type = 'RETAIL'
           AND o.seller_staff_key IS NOT NULL
           AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1949,8 +1949,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.discount_amount > 0
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -2011,8 +2011,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.discount_amount > 0
   AND COALESCE(p.promotion_code, o.discount_codes) IS NOT NULL
@@ -2091,8 +2091,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.seller_staff_key IS NOT NULL
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -2161,8 +2161,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.status != 'CANCELLED'
-  AND o.order_timestamp >= current_date - INTERVAL '30 days'
-  AND o.order_timestamp < current_date
+  AND o.ordered_at >= current_date - INTERVAL '30 days'
+  AND o.ordered_at < current_date
   AND c.customer_type = 'RETAIL'
   AND o.seller_staff_key IS NOT NULL
   AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)

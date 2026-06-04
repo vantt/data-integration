@@ -37,7 +37,7 @@ Dashboard phân tích cơ cấu chi phí theo order — COGS, phí sàn, thuế,
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
@@ -94,7 +94,7 @@ Tổng chi phí tháng này — tất cả loại: COGS + phí sàn + thuế + v
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
@@ -110,8 +110,8 @@ this_period AS (
     CROSS JOIN filter_bounds
     WHERE fo.status NOT IN ('CANCELLED', 'Voided')
       AND ch.is_sales_channel = true
-      AND fo.order_timestamp::DATE >= filter_bounds.p_start
-      AND fo.order_timestamp::DATE <= filter_bounds.p_end
+      AND fo.ordered_at::DATE >= filter_bounds.p_start
+      AND fo.ordered_at::DATE <= filter_bounds.p_end
 ),
 prev_period AS (
     SELECT COALESCE(SUM(fc.amount), 0) AS val
@@ -121,8 +121,8 @@ prev_period AS (
     CROSS JOIN filter_bounds
     WHERE fo.status NOT IN ('CANCELLED', 'Voided')
       AND ch.is_sales_channel = true
-      AND fo.order_timestamp::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND fo.order_timestamp::DATE <  filter_bounds.p_start
+      AND fo.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND fo.ordered_at::DATE <  filter_bounds.p_start
 )
 SELECT
     t.val AS "Tong chi phi",
@@ -160,7 +160,7 @@ Tỷ lệ COGS / tổng chi phí tháng này — COGS chiếm bao nhiêu % "ti�
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
@@ -180,8 +180,8 @@ JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND ch.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -212,7 +212,7 @@ Tỷ lệ phí sàn (Shopee) / tổng chi phí tháng này.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
@@ -232,8 +232,8 @@ JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND ch.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -264,7 +264,7 @@ Tỷ lệ chiết khấu / voucher / tổng chi phí tháng này.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
@@ -284,8 +284,8 @@ JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND ch.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
 ```
 
 ```json metabase-viz
@@ -316,7 +316,7 @@ Stacked bar — cơ cấu chi phí theo tháng: COGS / Phí sàn / Thuế / Vậ
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
@@ -341,8 +341,8 @@ JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND ch.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -389,7 +389,7 @@ Line chart — xu hướng tỷ lệ phí sàn (%) qua 6 tháng gần nhất. Al
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
@@ -410,8 +410,8 @@ JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND ch.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY 1
 ORDER BY 1
 ```
@@ -452,7 +452,7 @@ Table — top 20 kênh theo tổng chi phí với % breakdown từng loại. Sor
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
@@ -474,8 +474,8 @@ JOIN fact_orders fo ON fc.order_id = fo.order_id
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND c.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.channel_name
 ORDER BY "Tong chi phi" DESC
 LIMIT 20
@@ -525,7 +525,7 @@ Donut — tổng chi phí tháng này phân theo cost_category.
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
@@ -549,8 +549,8 @@ JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND ch.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY fc.cost_category
 ORDER BY "So tien" DESC
 ```
@@ -593,7 +593,7 @@ Horizontal stacked bar — tổng chi phí + breakdown theo cost_category cho t�
 
 ```sql
 WITH filter_bounds AS (
-    SELECT MIN(fact_orders.order_timestamp::DATE) AS p_start, MAX(fact_orders.order_timestamp::DATE) AS p_end
+    SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
     JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
@@ -618,8 +618,8 @@ JOIN fact_orders fo ON fc.order_id = fo.order_id
 CROSS JOIN filter_bounds
 WHERE fo.status NOT IN ('CANCELLED', 'Voided')
   AND c.is_sales_channel = true
-  AND fo.order_timestamp::DATE >= filter_bounds.p_start
-  AND fo.order_timestamp::DATE <= filter_bounds.p_end
+  AND fo.ordered_at::DATE >= filter_bounds.p_start
+  AND fo.ordered_at::DATE <= filter_bounds.p_end
   AND c.channel_name IN (
       SELECT COALESCE(c2.channel_name, 'Unknown')
       FROM fact_order_costs fc2
@@ -627,8 +627,8 @@ WHERE fo.status NOT IN ('CANCELLED', 'Voided')
       JOIN fact_orders fo2 ON fc2.order_id = fo2.order_id
       CROSS JOIN filter_bounds
       WHERE fo2.status NOT IN ('CANCELLED', 'Voided') AND c2.is_sales_channel = true
-        AND fo2.order_timestamp::DATE >= filter_bounds.p_start
-        AND fo2.order_timestamp::DATE <= filter_bounds.p_end
+        AND fo2.ordered_at::DATE >= filter_bounds.p_start
+        AND fo2.ordered_at::DATE <= filter_bounds.p_end
       GROUP BY c2.channel_name
       ORDER BY SUM(fc2.amount) DESC
       LIMIT 10
