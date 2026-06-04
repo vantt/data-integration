@@ -21,7 +21,7 @@ SELECT
     r.return_id,
     r.order_id,
     r.order_code,
-    COALESCE(r.issued_at, r.created_at)                                       AS return_timestamp,
+    COALESCE(r.issued_at, r.created_at)                                       AS returned_at,
     DATE(COALESCE(r.issued_at, r.created_at))                                 AS return_date,
     r.refund_amount,
     r.return_quantity,

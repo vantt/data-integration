@@ -654,7 +654,7 @@ models:
         tests: [not_null]
       - name: order_code
         tests: [not_null]
-      - name: return_timestamp
+      - name: returned_at
         description: "Thời điểm hoàn trả (issued_at hoặc created_at)"
       - name: return_date
         description: "Ngày hoàn trả tính theo múi giờ ICT"
