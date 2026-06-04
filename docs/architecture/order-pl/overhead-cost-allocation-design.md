@@ -175,12 +175,28 @@ Google Sheet (config + budgeted rate) ─┘                                 └
 
 ## Câu hỏi còn mở (cần chốt trước khi lên plan)
 
-1. **MISA**: có API (AMIS) hay export thủ công? Chốt sổ 642 trễ bao lâu sau cuối tháng?
+1. **MISA**: có API (AMIS) hay export thủ công? Chốt sổ 642 trễ bao lâu sau cuối tháng? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q1" dưới.
 2. **Phạm vi pool**: chỉ TK642, hay gồm 635 (lãi vay) + phần 641 chung không trace được? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q2" dưới.
 3. **Base ưu tiên**: 1 pool theo doanh thu (đơn giản) / theo lãi gộp / ABC-lite nhiều pool ngay? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q3" dưới.
 4. **Realtime hay không**: cần số ngay trong tháng (budgeted + true-up) hay chỉ báo cáo
-   **sau khi chốt sổ** là đủ? (Quyết định độ phức tạp ~gấp đôi.)
+   **sau khi chốt sổ** là đủ? (Quyết định độ phức tạp ~gấp đôi.) → ✅ **ĐÃ CHỐT (v1 = B)** — xem §"Quyết định Q4" dưới.
 5. **Đơn hủy/hoàn** có gánh overhead không? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q5" ngay dưới.
+
+## Quyết định Q1 — Nguồn overhead: MISA API hay export thủ công? (CHỐT v1, 2026-06-04)
+
+### Câu hỏi
+Pool TK642 (và sau này 641-common) lấy từ **MISA AMIS API** hay **export Sổ cái thủ công**?
+
+### 🎯 Quyết định v1
+> **v1 = export THỦ CÔNG.** Xuất Sổ cái TK642 từ MISA → CSV/XLSX → ingest theo pattern `gsheet_marketing_spend.py` (file-drop → `src_` → `stg_`). `source = 'misa_export'`.
+> - **Cadence:** export *sau khi MISA chốt sổ* tháng → khớp tự nhiên với Q4 (closure-only).
+> - **Estimate tạm:** khi chưa có export tương ứng (tháng chưa chốt / kỳ thiếu data) → dùng rate ước tính (xem Q4 — provisional) thay vì để trống.
+> - **API (AMIS) = v2** nếu khối lượng/tần suất tăng — không làm v1 (YAGNI).
+
+### Hệ quả & TODO
+- Ingestion idempotent, partition `year/month`; manual drop → re-ingest an toàn.
+- Manual + post-closure ⇒ **fit tự nhiên Q4 closure-only** (data vốn về theo đợt sau chốt sổ).
+- 📌 **TODO (cần trước khi build phase-04):** lấy **1 export Sổ cái TK642 thật** để (a) xác nhận count-once overlap với sales-ledger-642 (~1.08B promo), (b) seed dữ liệu lịch sử + xác định độ trễ chốt sổ thực tế.
 
 ## Quyết định Q2 — Phạm vi pool overhead (CHỐT v1, 2026-06-04)
 
@@ -244,6 +260,36 @@ Hai câu dính nhau: base phải khớp **cost-driver** (nguyên nhân), giữ *
 
 **Trạng thái:** CHỐT v1 = 2-pool ABC-lite (handling→order_count, admin→net_revenue); gross_profit loại; full-ABC để sau.
 
+## Quyết định Q4 — Realtime hay Closure-only? (CHỐT v1 = B, 2026-06-04)
+
+### Vấn đề
+MISA chốt sổ TK642 **sau** cuối tháng vài ngày–vài tuần → pool thật của tháng M chỉ biết ~M+10..15. fully_loaded nên: **chờ chốt sổ** (closure) hay **ước tính realtime + true-up**?
+
+### Bối cảnh quyết định (vì sao nghiêng closure)
+1. **fully_loaded là report-only**, KHÔNG dùng accept/reject (quyết định dùng `channel_net_profit` tier-2, đã realtime sẵn) → nhu cầu realtime của fully_loaded **rất thấp**.
+2. Cadence tự nhiên của P&L đầy đủ là **hàng tháng, sau chốt sổ** → trễ mid-M+1 là chấp nhận được.
+3. Budgeted + true-up làm **số tháng trước đổi sau chốt sổ** → bào mòn niềm tin cho 1 số chỉ để báo cáo.
+4. **Q1 = export thủ công** → data vốn về theo đợt sau chốt sổ → closure là fit tự nhiên.
+
+### 🎯 Quyết định v1 = **B (Closure-only nền + provisional estimate NHẸ)**
+> - **Chính = closure-based actual:** export TK642 tháng M về → phân bổ pool thật → fully_loaded tháng M **FINAL**, `is_overhead_estimated = false`.
+> - **Provisional (nhẹ) cho tháng CHƯA chốt:** dùng **trailing actual rate** (pool actual ÷ base của 1–3 tháng đã chốt gần nhất) áp cho đơn tháng hiện tại → hiện fully_loaded tạm, cờ `is_overhead_estimated = true`. Khi actual về → **GHI ĐÈ** (re-materialize tháng đó). KHÔNG book variance, KHÔNG restate tháng đã chốt.
+> - Chưa có actual nào (DN mới) → dùng `overhead_allocation_config.budgeted_rate`, hoặc NULL + cờ "chưa có".
+
+Đây **không phải** full true-up (~2x). Là **~1.2x** — chỉ est→actual swap trên tháng đang mở, không có máy móc variance/restatement.
+
+### So sánh 3 mức (đã chọn B)
+| Mức | Mô tả | Phức tạp |
+|---|---|---|
+| A. Closure-only thuần | tháng chưa chốt → fully_loaded NULL | 1.0x |
+| **B. Closure + provisional nhẹ** ⭐ | actual sau chốt + ước tính trailing-rate cho tháng hiện tại, cờ estimated, est→actual swap | ~1.2x |
+| C. Full realtime + true-up | budgeted + variance + restatement | ~2x (loại) |
+
+### Khớp design hiện có
+Field `is_overhead_estimated` (BOOLEAN) + `overhead_allocation_config.budgeted_rate` đã có sẵn — design anticipate đúng hướng B. Triết lý decision-first: overhead ước tính bị **làm mờ/gắn nhãn**, không cạnh tranh `channel_net_profit`.
+
+**Trạng thái:** CHỐT v1 = B.
+
 ## Quyết định Q5 — Đơn hủy/hoàn có gánh overhead không? (CHỐT v1, 2026-06-04)
 
 ### Câu hỏi
@@ -278,11 +324,11 @@ Nếu tỷ lệ hủy/hoàn/RTO đáng kể (TMĐT VN thường 8–15% RTO), **
 ### Lộ trình nâng cấp (chỉ khi cần)
 Lên activity-based (đơn hủy-sau-fulfill và hoàn gánh đúng phần tiêu thụ xuôi/ngược) **chỉ khi** có quyết định cụ thể cần độ chính xác đó (vd: định giá phí xử lý, đàm phán RTO với sàn). v1 không làm.
 
-**Trạng thái:** CHỐT v1. Còn mở: **Q1** (MISA API/export), **Q4** (realtime vs closure). (Q2, Q3 đã chốt — xem trên.)
+**Trạng thái:** CHỐT v1. ✅ **Toàn bộ Q1–Q5 đã chốt** — xem các §Quyết định ở trên. Phase-04 sẵn sàng build (chỉ còn cần 1 export Sổ cái TK642 thật để seed data + xác nhận count-once).
 
 ## Phase-01 — chốt schema ingestion (pre-work cho phase-04, CHƯA implement)
 
-Std-gate đã xong (`std_misa_sales_lines` live, verified Dagster 2026-06-04). Hai nguồn overhead dưới đây đã chốt **schema**, nhưng **ingestion hoãn tới phase-04** (chờ trả lời Q1: MISA AMIS API hay export thủ công).
+Std-gate đã xong (`std_misa_sales_lines` live, verified Dagster 2026-06-04). Hai nguồn overhead dưới đây đã chốt **schema**, ingestion implement ở phase-04 (Q1 đã chốt = **export thủ công** — xem §Quyết định Q1).
 
 **`overhead_costs_monthly`** (pool số tiền overhead theo tháng — nguồn MISA):
 | Cột | Kiểu | Ghi chú |
@@ -290,7 +336,7 @@ Std-gate đã xong (`std_misa_sales_lines` live, verified Dagster 2026-06-04). H
 | `period_month` | DATE | ngày đầu tháng |
 | `account` | VARCHAR | **v1: chỉ TK642** (net 642-promo). 635 để ngoài; 641-chung defer v2 (xem Q2). Cột vẫn nhận account khác để mở rộng. |
 | `amount` | BIGINT | VND, **net VAT** |
-| `source` | VARCHAR | `'misa_amis'` (API) \| `'misa_export'` (thủ công) |
+| `source` | VARCHAR | **v1 = `'misa_export'`** (thủ công, xem Q1); `'misa_amis'` (API) = v2 |
 | `ingested_at` | TIMESTAMPTZ | |
 - Partition `year=YYYY/month=M`. **COUNT-ONCE:** pool này PHẢI loại phần 642 promo đã nằm ở sales-ledger (tier-2 `promo_goods_cost`) — xem CONTRACT plan §4.
 
@@ -305,4 +351,4 @@ Std-gate đã xong (`std_misa_sales_lines` live, verified Dagster 2026-06-04). H
 | `version` | INTEGER |
 - Env `SOURCES__SPREADSHEET_URL__OVERHEAD_CONFIG` → parquet → `src_overhead_allocation_config`. Giữ `version`/`effective_*` cho lịch sử config.
 
-**Chặn (blocker phase-04):** Q1 (API vs export) + Q2-Q5 ở trên phải chốt với user trước khi build ingestion + `int_order_overhead_allocation`.
+**Phase-04 readiness:** ✅ Q1–Q5 đã chốt (design đủ để build). Còn cần thực tế: 1 export **Sổ cái TK642** thật để seed data lịch sử + xác nhận count-once overlap với sales-ledger-642 trước khi enforce dedup.
