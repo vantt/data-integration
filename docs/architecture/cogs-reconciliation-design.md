@@ -38,6 +38,26 @@ Current pipeline ingests **one** MISA report: `So_chi_tiet_ban_hang_*.xlsx` → 
 
 ---
 
+## 1c. Rationale — why a separate COGS view (and a live lumping bug)
+
+COGS is the cost that **varies per unit sold** and **matches revenue** (matching principle). Keeping it separate builds the profit ladder, each tier answering a distinct decision:
+
+```
+Revenue
+ − COGS (variable/unit)            → Gross margin   → "Does each product earn before fixed costs?" (pricing, SKU mix, discount floor)
+ − Variable selling (ship/fee/promo) → Contribution   → "Is this channel/order worth doing?"
+ − Fixed overhead (rent/salary)     → Net profit     → "Is the whole business viable?"
+```
+
+Lumping all costs into one bucket destroys all three questions (only a blended profit/loss remains, with no *why*). Separation gives: per-unit pricing decisions, variable-vs-fixed scalability, root-cause diagnosis (COGS↑ vs promo↑ vs overhead↑), cross-period/SKU comparability, clean attribution (COGS attaches to a line; overhead must be allocated), and accounting/inventory-valuation compliance (TK632 vs TK641/642 are legally distinct).
+
+**LIVE BUG (this repo):** `fact_order_economics.sql:32` does `SUM(cogs_amount)` from `int_misa_sales_lines` with **no TK632 filter** → it lumps the 1.08B of **TK642 promo** into COGS. Consequences happening now:
+- `gross_profit = net_revenue − cogs_amount` (l.90) → **gross margin understated** on orders with gift lines.
+- **1.08B promo spend invisible** — buried in COGS, not visible as marketing.
+- `channel_net_profit` (l.116) inherits the same contamination → channel ranking skewed.
+
+Classic failure modes the separation prevents: absorption-costing "death spiral" (fixed cost / fewer units → fake unit-cost rise → price hikes in a slump), wrong promo/pricing calls from blended margin, and the MISA+Sapo **double-count** (§5). → Another reason to build `int_order_cogs_reconciled` (filter 632, split promo).
+
 ## 2. Current state (baseline)
 
 - `int_misa_sales_lines` — **line grain** (`voucher_no`, `line_no`), has `product_code`, `quantity`, `cogs_amount`, `gross_profit`, `is_service_line` (`product_code LIKE 'DV%' OR 'CPBH%'`).
@@ -63,7 +83,8 @@ Measured (2026-06-04):
 
 ## 4. Decision (chốt): Sapo-MAC primary, MISA reconciliation
 
-- **Primary goods-COGS = Sapo-MAC** (line-level, ~100% fulfilled orders, real-time, single consistent basis). `cogs_goods_primary = cogs_goods_sapo`.
+- **COGS definition = option A (Cost of Goods SOLD):** COGS counts only lines with revenue (`revenue > 0`). **Gift/promo lines (`revenue = 0`) are NOT COGS** → routed to `promo_goods_cost`. Matches accounting definition + MISA's own treatment (gifts → TK642, not TK632). Total profit unchanged (promo cost still subtracted, just labelled separately).
+- **Primary goods-COGS = Sapo-MAC** (line-level, ~100% fulfilled orders, real-time, single consistent basis). `cogs_goods_primary = cogs_goods_sapo` (on revenue>0 lines).
 - **MISA = reconciliation only** — still materialized per line (TK632 portion) + `cogs_variance`, surfaced for audit, **never summed** into the COGS total.
 - Switching later (if ever) = one dbt var (`cogs_primary_source`), no schema change.
 
@@ -155,7 +176,7 @@ detailView is single-order drill-down → ideal place to show **both**, never to
 
 1. ~~Precedence~~ → **RESOLVED: Sapo-MAC primary, MISA reconciliation** (§4).
 2. **product_code ↔ sku mapping** — 96% match; handle the ~4% (8 codes) unmatched + the 8 Sapo SKUs MISA never sees. Mapping table or accept gaps?
-2b. ~~TK642 promo goods ↔ Sapo trans_type~~ → **RESOLVED (verified):** Sapo has NO promo/giveaway trans_type. Sales COGS = `trans_type=301` (sale_order_fulfillment, 26,125 rows, 48.4B). The 1,709 MISA promo lines have no non-301 counterpart → promo goods are fulfilled as zero-price sale orders → they **ride inside trans_type 301**. So Sapo-MAC COGS(301) **includes promo cost**, whereas MISA splits it to TK642 → this is a known component of the MISA-632 vs Sapo-MAC variance (~1.08B). To separate promo in Sapo, must join order-line `revenue=0` (inventory data alone can't flag it) — OPTIONAL future refinement; default = promo stays in COGS (operational view: goods shipped = has cost).
+2b. ~~TK642 promo goods ↔ Sapo trans_type~~ → **RESOLVED (verified):** Sapo has NO promo/giveaway trans_type. Sales COGS = `trans_type=301` (sale_order_fulfillment, 26,125 rows, 48.4B). The 1,709 MISA promo lines have no non-301 counterpart → promo goods are fulfilled as zero-price sale orders → they **ride inside trans_type 301**. So Sapo-MAC COGS(301) **includes promo cost**, whereas MISA splits it to TK642 → this is a known component of the MISA-632 vs Sapo-MAC variance (~1.08B). **DECISION (option A):** COGS = goods SOLD only. Sapo COGS computed on order lines with `revenue>0`; promo/gift lines (`revenue=0`) split to `promo_goods_cost`. **Requires joining order-line revenue** (`std_order_items`/`fact_sales`) — NOT optional, it is the design. This also captures the **gift-no-invoice case** (Sapo has MAC, MISA has nothing — goods bought without invoice): cost kept from Sapo-MAC, routed to `promo_goods_cost`, flagged `cogs_source='sapo_only'`. Net profit unchanged; COGS no longer inflated by gifts.
    - Other non-sale OUT to exclude from sales-COGS: `200/203 stock_transfer` (inter-warehouse, 16B), `400/401 stock_adjustment/balance`. Sales-COGS filter = `trans_type=301` only; returns (`350`) net against it.
 3. **MISA quantity vs Sapo quantity per (order, sku)** — do they agree? If not, which drives unit-economics?
 4. **Marketplace COGS** — Sapo-MAC only; confirm acceptable for those channels' P&L.
