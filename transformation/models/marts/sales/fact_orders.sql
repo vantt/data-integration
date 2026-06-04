@@ -149,7 +149,7 @@ SELECT
     fs.first_shipped_at,                                     -- Ngày xuất kho đầu tiên
     date_diff('hour', created_at, completed_at) as time_to_complete_hours,
     
-    orders.client_details,
+    orders.client_info,
     orders.discount_codes,
     dos.max_discount_rate,
     dos.primary_discount_type,
