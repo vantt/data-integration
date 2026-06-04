@@ -14,11 +14,13 @@
 ## Key Insights (from analysis — verified on real data)
 - **BUG-2 (double-count):** D col AB `Phí Dịch Vụ` (`service_fee`) = F (`infrastructure_fee` + `voucher_xtra_fee`) **exactly** (diff=0, 136 orders). But pipeline ingests BOTH and sums BOTH → service fee counted **2×** in `fact_order_costs` (`platform_service` + `platform_infra` + `platform_voucher_xtra`) and `fact_order_economics` (`total_platform_fees` already has service_fee, then +infra+xtra again). Over-count ~−2.76M (May, 3 shops).
 - **BUG-3 (dropped column):** Shopee renamed D `Phí thanh toán` → `Phí xử lý giao dịch` (May 2026); parser maps only old key → `payment_fee` lost (~−4.6M).
+- **ROOT CAUSE (systemic):** parser is a **whitelist rename** (`income-parser.py:150` `{k:v ... if k in df.columns}`); only **3 structural** headers are guarded (`REQUIRED_DOANH_THU_HEADERS:109` — keys/dates, NOT fees). So any fee column Shopee renames/adds/removes is **silently dropped** (not renamed → dbt selects the missing snake_case name → NULL → fee vanishes, no error). Already **3 drift cases** in ~1 month (payment_fee rename, new `NTTD` col ignored, `auto_topup` gone). **Fees WILL keep silently disappearing** without a drift guard.
 
 ## Requirements
 - Service fee sourced **only from F** (`order_service_fees` detail); D aggregate dropped.
 - `payment_fee` captured for both old + new Shopee column names.
 - No double-count; `channel_net_profit` accurate. Keep F breakdown for reporting.
+- **Schema-drift guard (prevent future silent fee loss):** parser must SURFACE any unmapped column (esp. ones containing `Phí`/`Thuế`/amounts) instead of silently dropping it; ideally a per-order payout reconciliation checksum.
 
 ## Architecture / data flow
 `Doanh Thu`(D)→`order_revenue` (drop service_fee), `Service Fee Details`(F)→`order_service_fees` (sole service-fee source). Join key = order_code. Service fee = Σ F detail per order.
@@ -33,6 +35,7 @@
 ## Implementation Steps
 1. **PRE-REQ verify (open Q1):** confirm the 4 Apr-2026 orders in D-without-F have `service_fee=0`; else they'd lose service fee after the fix. Query both sheets.
 2. Edit parser (step 1 above). Re-parse a sample file → confirm no `service_fee` col, `payment_fee` mapped for both naming eras.
+2b. **Add schema-drift guard to parser** (prevents the NEXT silent fee loss): after reading each sheet, compute `unmapped = set(df.columns) − set(RENAME_DICT)`; if any unmapped column matches a fee/tax pattern (`Phí`/`Thuế`/numeric amounts) → emit a loud `[!] SCHEMA_DRIFT` warning (and record to monitoring / raise per policy). Optionally add a per-order payout reconciliation checksum (`revenue − Σfees − tax == seller-net-payout column`) like the MISA parser's "Tổng cộng" checksum — confirm which D column = seller net payout first.
 3. Edit the 4 dbt files. `dbt parse` clean.
 4. **Re-ingest ALL archived Shopee files** (delete existing shopee parquet, re-run file-drop asset) — existing parquet carries double-count + missing payment_fee.
 5. `dbt build` shopee chain + the 2 marts (pause schedules; lock-safe).
@@ -42,6 +45,7 @@
 ## Todo
 - [ ] Verify Apr-2026 4-orders service_fee=0 (pre-req)
 - [ ] Parser: drop aggregate + add payment_fee aliases
+- [ ] Parser: schema-drift guard (alert on unmapped Phí/Thuế columns) + optional payout reconciliation checksum
 - [ ] stg/int/fact_order_costs edits + fact_order_economics comment
 - [ ] Re-ingest all archived Shopee files
 - [ ] Guard test `assert_shopee_no_platform_service_double_count`
