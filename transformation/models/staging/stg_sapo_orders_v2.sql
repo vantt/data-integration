@@ -12,7 +12,7 @@
 -- =================================================================================================
 
 WITH orders AS (
-    SELECT * FROM {{ ref('src_sapo_orders') }}
+    SELECT * FROM {{ ref('src_sapo_orders_v2') }}
 ),
 
 mapped_tags AS (

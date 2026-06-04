@@ -26,7 +26,7 @@
 -- =================================================================================================
 
 WITH source_data AS (
-    SELECT * FROM {{ ref('stg_sapo_products') }}
+    SELECT * FROM {{ ref('stg_sapo_products_v2') }}
 )
 
 SELECT

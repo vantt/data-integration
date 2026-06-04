@@ -13,7 +13,7 @@
 -- =================================================================================================
 
 WITH source AS (
-    SELECT * FROM {{ ref('src_sapo_products') }}
+    SELECT * FROM {{ ref('src_sapo_products_v2') }}
 ),
 
 unnested AS (

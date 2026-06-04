@@ -8,7 +8,7 @@
 -- =================================================================================================
 
 WITH source_data AS (
-    SELECT * FROM {{ ref('stg_sapo_fulfillments') }}
+    SELECT * FROM {{ ref('stg_sapo_fulfillments_v2') }}
 )
 
 SELECT

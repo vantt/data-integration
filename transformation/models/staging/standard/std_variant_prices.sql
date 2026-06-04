@@ -21,7 +21,7 @@
 -- =================================================================================================
 
 WITH source_data AS (
-    SELECT * FROM {{ ref('stg_sapo_variant_prices') }}
+    SELECT * FROM {{ ref('stg_sapo_variant_prices_v2') }}
 )
 
 SELECT

@@ -19,7 +19,7 @@
 -- =================================================================================================
 
 WITH source_data AS (
-    SELECT * FROM {{ ref('stg_sapo_order_discount_items') }}
+    SELECT * FROM {{ ref('stg_sapo_order_discount_items_v2') }}
 )
 
 SELECT
