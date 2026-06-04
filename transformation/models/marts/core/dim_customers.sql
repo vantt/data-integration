@@ -70,7 +70,7 @@ joined_data AS (
         END as customer_status,
 
         -- Calculate a combined updated timestamp for incremental loading
-        GREATEST(c.updated_at, COALESCE(m.metric_calculated_at, c.updated_at)) as last_modified
+        GREATEST(c.updated_at, COALESCE(m.metric_calculated_at, c.updated_at)) as last_modified_at
         
     FROM customers c
     LEFT JOIN metrics m ON c.customer_key = m.customer_key
@@ -179,10 +179,10 @@ SELECT
 
     created_at,
     source_updated_at as updated_at,
-    last_modified
+    last_modified_at
 
 FROM joined_data
 
 {% if is_incremental() %}
-WHERE last_modified >= (SELECT MAX(last_modified) FROM {{ this }})
+WHERE last_modified_at >= (SELECT MAX(last_modified_at) FROM {{ this }})
 {% endif %}
