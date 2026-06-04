@@ -1,0 +1,27 @@
+version: 2
+
+models:
+  - name: int_order_cogs_reconciled
+    description: "Per order×SKU COGS reconciliation: Sapo-MAC vs MISA-632; cogs_goods_primary is var-driven (default sapo_mac)"
+    columns:
+      - name: order_code
+        tests: [not_null]
+      - name: sku
+        tests: [not_null]
+      - name: cogs_source
+        description: "Which system(s) have a COGS figure for this order×SKU: 'both' | 'sapo_mac' | 'misa' | 'none'"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['both', 'sapo_mac', 'misa', 'none']
+      - name: cogs_goods_primary
+        description: "Var-driven primary COGS (var cogs_primary_source, default sapo_mac). The ONLY column for downstream COGS totals — never substitute cogs_goods_sapo/misa directly."
+      - name: cogs_goods_misa
+        description: "MISA TK632 COGS for this order×SKU. Reconciliation-only — never summed with cogs_goods_sapo (double-count)."
+      - name: cogs_variance
+        description: "cogs_goods_sapo − cogs_goods_misa. NULL when either side is absent."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_code, sku]

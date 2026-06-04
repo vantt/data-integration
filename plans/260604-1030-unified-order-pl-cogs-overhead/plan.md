@@ -27,7 +27,7 @@ net_revenue (Sapo VAT-inclusive: net = total − total_tax)
 | # | File | Scope | Status |
 |---|------|-------|--------|
 | 01 | `phase-01-data-foundations-std-gate.md` | `std_misa_sales_lines`; ingest MISA monthly overhead (`overhead_costs_monthly`) + gsheet `overhead_allocation_config` | std-gate ✅ DONE (std_misa_sales_lines + int repoint, verified Dagster); overhead ingestion = schema chốt, implement deferred to phase-04 (blocked on Q1 MISA API vs export) |
-| 02 | `phase-02-cogs-reconciliation.md` | `int_order_cogs_reconciled` (Sapo-MAC primary + MISA-632 recon + variance) **incl. BUG-1** (filter 632 in `fact_order_economics`/`fact_order_costs`) | BUG-1 ✓ interim (`cogs_account LIKE '632%'`, commit f4f5783, verified Dagster); int_order_cogs_reconciled TODO (needs phase-01 std_) |
+| 02 | `phase-02-cogs-reconciliation.md` | `int_order_cogs_reconciled` (Sapo-MAC primary + MISA-632 recon + variance) **incl. BUG-1** (filter 632 in `fact_order_economics`/`fact_order_costs`) | ✅ DONE — BUG-1 interim (f4f5783) + `int_order_cogs_reconciled` built (rolling parquet, var-driven primary, 5 tests pass, serving bootstrapped, verified Dagster). cogs_goods_primary=48.45B (Sapo-MAC full coverage); both=4,696 recon, misa-only=4,375, none=975 pure-return. Fact repoint = phase-05 |
 | 03 | `phase-03-cost-taxonomy-promo-642-dedup.md` | `promo_goods_cost` (revenue=0 split, gift-no-invoice); cross-tier **642 count-once** rule | TODO |
 | 04 | `phase-04-overhead-allocation.md` | `int_order_overhead_allocation` (closure-based pools/base) + `fully_loaded_net_profit` | TODO |
 | 05 | `phase-05-pl-marts-serving.md` | unified `fact_order_economics`/`fact_order_costs` columns + serving views + Metabase P&L | TODO |
