@@ -251,7 +251,7 @@ SELECT
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1
 ORDER BY
     CASE customer_status
@@ -293,7 +293,7 @@ SELECT
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1
 ORDER BY
     CASE value_group
@@ -336,7 +336,7 @@ WITH ranked AS (
         NTILE(5) OVER (ORDER BY lifetime_value DESC) as quintile
     FROM dim_customers
     WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+      AND order_count > 0
 )
 SELECT
     ROUND(
@@ -448,13 +448,13 @@ SELECT
     ROUND(COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Active %",
     ROUND(COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "At Risk %",
     ROUND(COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Churned %",
-    ROUND(COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Repeat %",
+    ROUND(COUNT(CASE WHEN order_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Repeat %",
     ROUND(AVG(lifetime_value), 0) as "Avg LTV",
-    ROUND(AVG(total_orders_count), 1) as "Avg Orders",
+    ROUND(AVG(order_count), 1) as "Avg Orders",
     ROUND(AVG(recency_days), 0) as "Avg Recency"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1
 ORDER BY
     CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END
@@ -751,12 +751,12 @@ SELECT
     COUNT(*) as "Customers",
     ROUND(
         COUNT(*) * 100.0 / NULLIF(
-            (SELECT COUNT(*) FROM dim_customers WHERE customer_id != 'Unknown' AND total_orders_count > 0), 0
+            (SELECT COUNT(*) FROM dim_customers WHERE customer_id != 'Unknown' AND order_count > 0), 0
         ), 1
     ) as "% of Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1
 ORDER BY MIN(lifetime_value)
 ```
@@ -788,7 +788,7 @@ SELECT
     SUM(lifetime_value) as "Revenue"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1
 ORDER BY
     CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END
@@ -842,7 +842,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.order_timestamp < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
-  AND cust.total_orders_count > 0
+  AND cust.order_count > 0
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -888,7 +888,7 @@ WHERE o.status NOT IN ('CANCELLED', 'Voided')
   AND o.order_timestamp >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.order_timestamp < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
-  AND cust.total_orders_count > 0
+  AND cust.order_count > 0
 GROUP BY 1, 2
 ORDER BY 1, 2
 ```
@@ -944,11 +944,11 @@ SELECT
         ), 1
     ) as "Revenue %",
     ROUND(AVG(lifetime_value), 0) as "Avg LTV",
-    ROUND(AVG(total_orders_count), 1) as "Avg Orders",
+    ROUND(AVG(order_count), 1) as "Avg Orders",
     ROUND(AVG(recency_days), 0) as "Avg Recency"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1267,7 +1267,7 @@ SELECT
     COUNT(CASE WHEN loyalty_point >= 5000 THEN 1 END) as "5K+"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1
 ORDER BY
     CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END
@@ -1302,7 +1302,7 @@ SELECT
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
 GROUP BY 1, 2
 ORDER BY
     CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 WHEN 'VALUE_SILVER' THEN 3 ELSE 4 END,

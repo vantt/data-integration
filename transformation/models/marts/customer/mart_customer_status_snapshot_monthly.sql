@@ -21,7 +21,7 @@ WITH customers AS (
         customer_type,
         first_order_date,
         last_order_date,
-        total_orders_count,
+        order_count,
         lifetime_value,
         value_group,
         channel_preference,
@@ -35,7 +35,7 @@ WITH customers AS (
     FROM {{ ref('dim_customers') }}
     WHERE customer_type = 'RETAIL'
       AND customer_id != 'Unknown'
-      AND total_orders_count > 0
+      AND order_count > 0
       AND first_order_date IS NOT NULL
 ),
 
@@ -88,10 +88,10 @@ customer_snapshots AS (
         c.value_group,
 
         -- Lifetime metrics up to snapshot month-end (approximated from dim_customers)
-        -- Note: total_orders_count and lifetime_value in dim_customers are current values.
+        -- Note: order_count and lifetime_value in dim_customers are current values.
         -- For true point-in-time these would need re-aggregation from fact_orders;
         -- using current values is acceptable for trend analysis at monthly grain.
-        c.total_orders_count AS orders_to_date,
+        c.order_count AS orders_to_date,
         c.lifetime_value AS lifetime_value_to_date,
 
         -- Days since last order as-of month-end
@@ -114,7 +114,7 @@ customer_snapshots AS (
         -- next_purchase_signal computed from historical days_since_last_order (more accurate
         -- than dim_customers version which uses current recency_days)
         CASE
-            WHEN c.avg_days_between_orders IS NULL OR c.total_orders_count <= 1 THEN NULL
+            WHEN c.avg_days_between_orders IS NULL OR c.order_count <= 1 THEN NULL
             WHEN date_diff('day', c.last_order_date::date, m.snapshot_month) IS NULL THEN NULL
             WHEN c.last_order_date::date > m.snapshot_month THEN NULL
             WHEN date_diff('day', c.last_order_date::date, m.snapshot_month) >= c.avg_days_between_orders * 1.5 THEN 'OVERDUE'

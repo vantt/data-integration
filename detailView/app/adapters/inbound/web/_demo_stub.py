@@ -165,7 +165,7 @@ _STUB_CUSTOMER = CustomerDetail(
     ),
     value_metrics=CustomerValueMetrics(
         lifetime_value=Decimal("52000000"),
-        total_orders_count=24,
+        order_count=24,
         value_group="VALUE_VIP",
         total_gross_profit=Decimal("15000000"),
         total_cogs=Decimal("30000000"),

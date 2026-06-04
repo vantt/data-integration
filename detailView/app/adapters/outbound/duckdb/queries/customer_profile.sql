@@ -21,7 +21,7 @@ SELECT
     updated_at,
     -- value / RFM metrics
     lifetime_value,
-    total_orders_count,
+    order_count,
     value_group,
     recency_days,
     lifecycle_stage,

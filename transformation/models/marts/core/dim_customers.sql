@@ -163,7 +163,7 @@ SELECT
 
     -- CLV & RFM
     COALESCE(monetary_value, 0) as lifetime_value,
-    COALESCE(frequency, 0) as total_orders_count,
+    COALESCE(frequency, 0) as order_count,
     first_order_date,
     last_order_date,
     recency_days,

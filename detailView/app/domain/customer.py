@@ -54,7 +54,7 @@ class CustomerProfile:
 @dataclass
 class CustomerValueMetrics:
     lifetime_value: Decimal | None = None
-    total_orders_count: int | None = None
+    order_count: int | None = None
     value_group: str | None = None
     # Aggregated over the customer's orders (computed by the repository query)
     total_gross_profit: Decimal | None = None
@@ -66,13 +66,13 @@ class CustomerValueMetrics:
 
     @property
     def aov(self) -> float | None:
-        return safe_ratio(self.lifetime_value, self.total_orders_count)
+        return safe_ratio(self.lifetime_value, self.order_count)
 
 
 @dataclass
 class CustomerBehavior:
     recency_days: int | None = None
-    frequency: int | None = None  # = total_orders_count
+    frequency: int | None = None  # = order_count
     monetary: Decimal | None = None  # = lifetime_value
     lifecycle_stage: str | None = None
     channel_preference: str | None = None
@@ -176,7 +176,7 @@ class CustomerDetail:
         if not self.is_retail:
             flags.append(DataQualityFlag("timeline_retail", "Status timeline: RETAIL customers only", "info"))
         vm = self.value_metrics
-        if vm.cogs_order_count is not None and vm.total_orders_count:
-            if vm.cogs_order_count < vm.total_orders_count:
+        if vm.cogs_order_count is not None and vm.order_count:
+            if vm.cogs_order_count < vm.order_count:
                 flags.append(DataQualityFlag("cogs_partial", "Margin from partial COGS coverage", "warn"))
         return flags

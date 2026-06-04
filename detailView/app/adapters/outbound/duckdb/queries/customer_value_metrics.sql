@@ -3,7 +3,7 @@
 -- cogs_order_count = orders where has_cogs (for the coverage caveat in the UI).
 SELECT
     SUM(fo.total_collected)                                       AS lifetime_value,
-    COUNT(DISTINCT fo.order_id)                                   AS total_orders_count,
+    COUNT(DISTINCT fo.order_id)                                   AS order_count,
     SUM(foe.gross_profit)                                         AS total_gross_profit,
     SUM(foe.cogs_amount)                                          AS total_cogs,
     AVG(foe.gross_margin_pct)                                     AS avg_gross_margin_pct,

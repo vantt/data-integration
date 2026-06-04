@@ -111,7 +111,7 @@
       <tfoot>
         <tr>
           <td colspan="8" class="muted">
-            {{ orders | length }} of {{ customer.value_metrics.total_orders_count or orders | length }}
+            {{ orders | length }} of {{ customer.value_metrics.order_count or orders | length }}
             orders · newest first
           </td>
         </tr>

@@ -285,7 +285,7 @@ SELECT
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
   AND customer_status IN ('Active', 'At Risk', 'Churned')
   [[AND value_group = {{segment}}]]
 GROUP BY 1
@@ -348,7 +348,7 @@ SELECT
     SUM(lifetime_value) as "Total LTV"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
   AND customer_status IN ('Active', 'At Risk', 'Churned')
   [[AND value_group = {{segment}}]]
 GROUP BY 1
@@ -391,7 +391,7 @@ SELECT
     COUNT(*) as "Customers"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
   AND customer_status IN ('Active', 'At Risk', 'Churned')
   [[AND value_group = {{segment}}]]
 GROUP BY 1, 2
@@ -516,12 +516,12 @@ SELECT
     ROUND(COUNT(CASE WHEN customer_status = 'Active' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Active %",
     ROUND(COUNT(CASE WHEN customer_status = 'At Risk' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "At Risk %",
     ROUND(COUNT(CASE WHEN customer_status = 'Churned' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Churned %",
-    ROUND(COUNT(CASE WHEN total_orders_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Repeat Rate %",
+    ROUND(COUNT(CASE WHEN order_count > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1) as "Repeat Rate %",
     ROUND(AVG(lifetime_value), 0) as "Avg LTV",
     ROUND(AVG(recency_days), 0) as "Avg Recency (days)"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
-  AND total_orders_count > 0
+  AND order_count > 0
   [[AND value_group = {{segment}}]]
 GROUP BY 1
 ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 3 END
@@ -730,16 +730,16 @@ Average number of orders among paying customers, with MoM comparison.
 
 ```sql
 WITH current_period AS (
-    SELECT ROUND(AVG(total_orders_count), 1) as value
+    SELECT ROUND(AVG(order_count), 1) as value
     FROM dim_customers
     WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+      AND order_count > 0
 ),
 previous_period AS (
-    SELECT ROUND(AVG(total_orders_count), 1) as value
+    SELECT ROUND(AVG(order_count), 1) as value
     FROM dim_customers
     WHERE customer_id != 'Unknown'
-      AND total_orders_count > 0
+      AND order_count > 0
       AND first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
 )
 SELECT
@@ -1183,7 +1183,7 @@ SELECT
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND customer_status = 'At Risk'
-  AND total_orders_count > 0
+  AND order_count > 0
   [[AND value_group = {{segment}}]]
 ```
 
@@ -1260,25 +1260,25 @@ How many orders do customers typically place? Understand one-time vs repeat beha
 ```sql
 SELECT
     CASE
-        WHEN total_orders_count = 1 THEN '1 order'
-        WHEN total_orders_count = 2 THEN '2 orders'
-        WHEN total_orders_count = 3 THEN '3 orders'
-        WHEN total_orders_count BETWEEN 4 AND 5 THEN '4-5 orders'
-        WHEN total_orders_count BETWEEN 6 AND 10 THEN '6-10 orders'
+        WHEN order_count = 1 THEN '1 order'
+        WHEN order_count = 2 THEN '2 orders'
+        WHEN order_count = 3 THEN '3 orders'
+        WHEN order_count BETWEEN 4 AND 5 THEN '4-5 orders'
+        WHEN order_count BETWEEN 6 AND 10 THEN '6-10 orders'
         ELSE '11+ orders'
     END as "Order Count",
     COUNT(*) as "Customers",
     ROUND(
         COUNT(*) * 100.0 / NULLIF(
-            (SELECT COUNT(*) FROM dim_customers WHERE total_orders_count > 0 AND customer_id != 'Unknown'), 0
+            (SELECT COUNT(*) FROM dim_customers WHERE order_count > 0 AND customer_id != 'Unknown'), 0
         ), 1
     ) as "% of Total"
 FROM dim_customers
-WHERE total_orders_count > 0
+WHERE order_count > 0
   AND customer_id != 'Unknown'
   [[AND value_group = {{segment}}]]
 GROUP BY 1
-ORDER BY MIN(total_orders_count)
+ORDER BY MIN(order_count)
 ```
 
 ```json metabase-viz
@@ -1430,11 +1430,11 @@ SELECT
     last_order_date as "Last Order",
     recency_days as "Days Since",
     lifetime_value as "Lifetime Value",
-    total_orders_count as "Orders"
+    order_count as "Orders"
 FROM dim_customers
 WHERE customer_id != 'Unknown'
   AND customer_status = 'At Risk'
-  AND total_orders_count > 0
+  AND order_count > 0
   [[AND value_group = {{segment}}]]
 ORDER BY lifetime_value DESC
 LIMIT 50

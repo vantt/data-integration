@@ -42,7 +42,7 @@ def map_profile(row: Row) -> CustomerProfile:
 def map_behavior(row: Row) -> CustomerBehavior:
     return CustomerBehavior(
         recency_days=rc.as_int(row.get("recency_days")),
-        frequency=rc.as_int(row.get("total_orders_count")),
+        frequency=rc.as_int(row.get("order_count")),
         monetary=rc.as_decimal(row.get("lifetime_value")),
         lifecycle_stage=rc.as_str(row.get("lifecycle_stage")),
         channel_preference=rc.as_str(row.get("channel_preference")),
@@ -66,12 +66,12 @@ def map_value_metrics(profile_row: Row, agg_row: Row | None) -> CustomerValueMet
     lifetime_value = rc.as_decimal(agg.get("lifetime_value"))
     if lifetime_value is None:
         lifetime_value = rc.as_decimal(profile_row.get("lifetime_value"))
-    total_orders = rc.as_int(agg.get("total_orders_count"))
+    total_orders = rc.as_int(agg.get("order_count"))
     if not total_orders:
-        total_orders = rc.as_int(profile_row.get("total_orders_count"))
+        total_orders = rc.as_int(profile_row.get("order_count"))
     return CustomerValueMetrics(
         lifetime_value=lifetime_value,
-        total_orders_count=total_orders,
+        order_count=total_orders,
         value_group=rc.as_str(profile_row.get("value_group")),
         total_gross_profit=rc.as_decimal(agg.get("total_gross_profit")),
         total_cogs=rc.as_decimal(agg.get("total_cogs")),

@@ -39,7 +39,7 @@ SELECT
 
     -- Metrics
     coalesce(total_expense, 0) as total_spend,  -- P1 R1: customer SPEND (src $.total_expense; 'expense' = business cost, wrong term)
-    coalesce(orders_count, 0) as total_orders_count,
+    coalesce(orders_count, 0) as order_count,
     debt,
     
     -- Timestamps

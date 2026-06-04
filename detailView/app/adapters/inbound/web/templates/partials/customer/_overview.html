@@ -28,7 +28,7 @@
         <div class="rfm__glyph">F</div>
         <div class="rfm__name">Frequency</div>
         <div class="rfm__val">
-          {{ beh.frequency or vm.total_orders_count or "—" }}
+          {{ beh.frequency or vm.order_count or "—" }}
         </div>
       </div>
       <div class="rfm__cell">
@@ -88,7 +88,7 @@
     {# Primary KPI grid: LTV hero · orders · AOV #}
     <div class="kpi-grid">
       {{ kpi_stat("Lifetime value", vm.lifetime_value | vnd, hero=True) }}
-      {{ kpi_stat("Total orders",    vm.total_orders_count or "—") }}
+      {{ kpi_stat("Total orders",    vm.order_count or "—") }}
       {{ kpi_stat("Avg order value", vm.aov | vnd if vm.aov is not none else "—") }}
     </div>
 
@@ -99,9 +99,9 @@
 
       {# Avg margin — with COGS coverage sub-badge if partial #}
       {% if vm.avg_gross_margin_pct is not none %}
-        {% if vm.cogs_order_count is not none and vm.total_orders_count
-              and vm.cogs_order_count < vm.total_orders_count %}
-          {% set cov_pct = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
+        {% if vm.cogs_order_count is not none and vm.order_count
+              and vm.cogs_order_count < vm.order_count %}
+          {% set cov_pct = (vm.cogs_order_count / vm.order_count * 100) | round(0) | int %}
           {{ kpi_stat("Avg gross margin", vm.avg_gross_margin_pct | pct,
               sub='<span class="bdg bdg--warn" role="status" aria-label="COGS coverage">'
                   ~ cov_pct | string ~ '% COGS coverage</span>') }}
@@ -118,12 +118,12 @@
     </div>
 
     {# COGS partial-coverage caveat #}
-    {% if vm.cogs_order_count is not none and vm.total_orders_count
-          and vm.cogs_order_count < vm.total_orders_count %}
-      {% set cov_pct = (vm.cogs_order_count / vm.total_orders_count * 100) | round(0) | int %}
+    {% if vm.cogs_order_count is not none and vm.order_count
+          and vm.cogs_order_count < vm.order_count %}
+      {% set cov_pct = (vm.cogs_order_count / vm.order_count * 100) | round(0) | int %}
       {{ caveat(
           "Average margin reflects only orders with a matched COGS ("
-          ~ vm.cogs_order_count | string ~ " of " ~ vm.total_orders_count | string
+          ~ vm.cogs_order_count | string ~ " of " ~ vm.order_count | string
           ~ " orders, " ~ cov_pct | string ~ "%). Treat as directional.",
           "warn"
       ) }}

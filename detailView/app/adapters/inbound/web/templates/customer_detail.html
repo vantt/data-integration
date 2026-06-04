@@ -118,7 +118,7 @@
       {{ eyebrow("Headline", accent=True, cls="scard__eyebrow") }}
       <div class="kpi-grid">
         {{ kpi_stat("Lifetime value", customer.value_metrics.lifetime_value | vnd, hero=True) }}
-        {{ kpi_stat("Orders", customer.value_metrics.total_orders_count or "—") }}
+        {{ kpi_stat("Orders", customer.value_metrics.order_count or "—") }}
         {{ kpi_stat("AOV", customer.value_metrics.aov | vnd if customer.value_metrics.aov is not none else "—") }}
         {{ kpi_stat("Recency",
             (customer.behavior.recency_days | string ~ " d")

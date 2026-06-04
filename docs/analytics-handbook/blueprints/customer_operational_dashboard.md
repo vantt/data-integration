@@ -913,7 +913,7 @@ VIP customers sorted by recency — prioritize outreach for those becoming inact
 SELECT
     full_name as "Customer",
     phone as "Phone",
-    total_orders_count as "Orders",
+    order_count as "Orders",
     lifetime_value as "LTV",
     recency_days as "Days Since Last Order",
     customer_status as "Status",
@@ -969,7 +969,7 @@ SELECT
     phone as "Phone",
     email as "Email",
     value_group as "Segment",
-    total_orders_count as "Orders",
+    order_count as "Orders",
     lifetime_value as "LTV",
     recency_days as "Days Inactive",
     last_order_date as "Last Order"
@@ -1016,7 +1016,7 @@ SELECT
     phone as "Phone",
     email as "Email",
     value_group as "Segment",
-    total_orders_count as "Orders",
+    order_count as "Orders",
     lifetime_value as "LTV",
     recency_days as "Days Inactive",
     last_order_date as "Last Order"

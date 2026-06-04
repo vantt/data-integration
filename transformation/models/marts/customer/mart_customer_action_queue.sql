@@ -21,7 +21,7 @@ WITH customers AS (
         next_purchase_signal,
         discount_sensitivity,
         lifetime_value,
-        total_orders_count,
+        order_count,
         avg_order_value,
         avg_days_between_orders,
         cancel_rate,
@@ -34,7 +34,7 @@ WITH customers AS (
     FROM {{ ref('dim_customers') }}
     WHERE customer_type = 'RETAIL'
       AND customer_id != 'Unknown'
-      AND total_orders_count > 0
+      AND order_count > 0
 ),
 
 classified AS (
@@ -51,9 +51,9 @@ classified AS (
                 THEN 'REORDER_NUDGE'
             WHEN value_group = 'VALUE_SILVER' AND customer_status = 'Churned'
                 THEN 'WIN_BACK'
-            WHEN total_orders_count = 1 AND recency_days BETWEEN 15 AND 45
+            WHEN order_count = 1 AND recency_days BETWEEN 15 AND 45
                 THEN 'SECOND_ORDER'
-            WHEN cancel_rate > 0.5 AND total_orders_count >= 3
+            WHEN cancel_rate > 0.5 AND order_count >= 3
                 THEN 'HIGH_CANCEL_RISK'
             ELSE NULL
         END AS action_type
@@ -72,7 +72,7 @@ SELECT
     next_purchase_signal,
     discount_sensitivity,
     lifetime_value,
-    total_orders_count,
+    order_count,
     avg_order_value,
     avg_days_between_orders,
     cancel_rate,
