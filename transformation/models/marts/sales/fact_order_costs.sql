@@ -156,6 +156,24 @@ sapo_discounts AS (
         MIN(channel_key)     AS channel_key
     FROM sapo_discounts_classified
     GROUP BY order_id, order_code, cost_type, cost_category
+),
+
+-- ============================================================
+-- Promo goods cost — revenue=0 gift lines valued at Sapo-MAC
+-- Marketing cost, NOT COGS (phase-03)
+-- ============================================================
+promo_goods AS (
+    SELECT
+        om.order_id,
+        p.order_code,
+        p.cost_type,
+        p.cost_category,
+        CAST(SUM(p.promo_goods_cost_amount) AS DECIMAL(18, 2)) AS amount,
+        om.date_key,
+        om.channel_key
+    FROM {{ ref('int_order_promo_goods_cost') }} p
+    JOIN order_meta om ON p.order_code = om.order_code
+    GROUP BY om.order_id, p.order_code, p.cost_type, p.cost_category, om.date_key, om.channel_key
 )
 
 -- ============================================================
@@ -209,3 +227,20 @@ SELECT
     date_key,
     channel_key
 FROM sapo_discounts
+
+UNION ALL
+
+SELECT
+    order_id,
+    order_code,
+    cost_type,
+    cost_category,
+    amount,
+    NULL                            AS discount_rate,
+    NULL                            AS discount_type,
+    'sapo'                          AS source_system,
+    order_code                      AS source_record,
+    'actual'                        AS fee_source,
+    date_key,
+    channel_key
+FROM promo_goods

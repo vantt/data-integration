@@ -66,6 +66,15 @@ order_returns AS (
         COUNT(*)           AS return_count
     FROM {{ ref('fact_order_returns') }}
     GROUP BY order_code
+),
+
+-- Promo goods cost — revenue=0 gift lines valued at Sapo-MAC (phase-03)
+order_promo AS (
+    SELECT
+        order_code,
+        SUM(promo_goods_cost_amount) AS promo_goods_cost
+    FROM {{ ref('int_order_promo_goods_cost') }}
+    GROUP BY order_code
 )
 
 SELECT
@@ -87,6 +96,9 @@ SELECT
     m.cogs_amount,
     m.misa_line_count,
     m.cogs_amount IS NOT NULL AS has_cogs,
+
+    -- Promo goods cost (revenue=0 gift lines; marketing cost, NOT COGS — phase-03)
+    pg.promo_goods_cost,
 
     -- Gross Profit = Net Revenue - COGS
     o.net_revenue - COALESCE(m.cogs_amount, 0) AS gross_profit,
@@ -150,3 +162,4 @@ LEFT JOIN misa_order m    ON o.order_code = m.order_code
 LEFT JOIN shopee_fees sf  ON o.order_code = sf.order_code
 LEFT JOIN fulfillments ff ON o.order_id   = ff.order_id
 LEFT JOIN order_returns r ON o.order_code = r.order_code
+LEFT JOIN order_promo pg  ON o.order_code = pg.order_code
