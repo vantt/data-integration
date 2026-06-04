@@ -43,7 +43,7 @@ raw_data AS (
         ingest_method,
         _dlt_load_id,
         payload
-    FROM {{ source('sapo_raw', 'customer_group') }}
+    FROM {{ source('sapo_v2_raw', 'customer_group') }}
     {% if is_incremental() %}
     WHERE _dlt_load_id > (SELECT max_load_id FROM _cursor)
     {% endif %}

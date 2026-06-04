@@ -8,7 +8,7 @@
 -- effective_from determines which price applies to a given order date.
 
 WITH raw AS (
-    SELECT * FROM {{ source('sapo_raw', 'us_shipment_prices_raw') }}
+    SELECT * FROM {{ source('sapo_v2_raw', 'us_shipment_prices_raw') }}
 ),
 
 cleaned AS (

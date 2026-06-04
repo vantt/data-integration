@@ -4,7 +4,7 @@
 ) }}
 
 WITH raw_members AS (
-    SELECT * FROM {{ source('sapo_raw', 'team_members_raw') }}
+    SELECT * FROM {{ source('sapo_v2_raw', 'team_members_raw') }}
 ),
 
 cleaned AS (
