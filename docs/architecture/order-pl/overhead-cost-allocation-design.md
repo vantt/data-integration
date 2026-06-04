@@ -176,11 +176,73 @@ Google Sheet (config + budgeted rate) ─┘                                 └
 ## Câu hỏi còn mở (cần chốt trước khi lên plan)
 
 1. **MISA**: có API (AMIS) hay export thủ công? Chốt sổ 642 trễ bao lâu sau cuối tháng?
-2. **Phạm vi pool**: chỉ TK642, hay gồm 635 (lãi vay) + phần 641 chung không trace được?
-3. **Base ưu tiên**: 1 pool theo doanh thu (đơn giản) / theo lãi gộp / ABC-lite nhiều pool ngay?
+2. **Phạm vi pool**: chỉ TK642, hay gồm 635 (lãi vay) + phần 641 chung không trace được? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q2" dưới.
+3. **Base ưu tiên**: 1 pool theo doanh thu (đơn giản) / theo lãi gộp / ABC-lite nhiều pool ngay? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q3" dưới.
 4. **Realtime hay không**: cần số ngay trong tháng (budgeted + true-up) hay chỉ báo cáo
    **sau khi chốt sổ** là đủ? (Quyết định độ phức tạp ~gấp đôi.)
 5. **Đơn hủy/hoàn** có gánh overhead không? → ✅ **ĐÃ CHỐT (v1)** — xem §"Quyết định Q5" ngay dưới.
+
+## Quyết định Q2 — Phạm vi pool overhead (CHỐT v1, 2026-06-04)
+
+### Câu hỏi
+Pool overhead phân bổ xuống đơn (tier-3) gồm những tài khoản nào: chỉ TK642, hay thêm 635 (lãi vay) + phần 641 chung?
+
+### Nguyên tắc xương sống: COUNT-ONCE + match-to-purpose
+Pool chỉ chứa chi phí **(a) thật, (b) chung/không trace được xuống đơn, (c) CHƯA bị tính ở tier-2**. Bất cứ gì đã là direct cost tier-2 (ship, phí sàn, phí thanh toán) **tuyệt đối không** vào pool — count-once, giống rule 642-promo.
+
+| TK | Tên | Bản chất |
+|---|---|---|
+| **642** | Chi phí quản lý DN (G&A) | Lương quản lý, thuê VP, khấu hao admin, phần mềm, kế toán/pháp lý → **chung, không trace được** |
+| **641** | Chi phí bán hàng | (a) *traceable* = ship/phí sàn/phí thanh toán → **ĐÃ ở tier-2**; (b) *common* = lương sales cứng, marketing thương hiệu, showroom |
+| **635** | Chi phí tài chính | Chủ yếu **lãi vay**, lỗ tỷ giá |
+
+### Phán quyết từng tài khoản
+- **TK642 → CÓ (lõi pool).** Nhưng phải là **642 tiền mặt G&A thật, đã LOẠI phần 642-promo** nằm trong sales-ledger (đã thành `promo_goods_cost` tier-2). Count-once cốt tử.
+- **TK635 → KHÔNG.** Lãi vay là **quyết định tài chính** (cấu trúc vốn), không phải vận hành. Operating profit đo *trước* lãi vay; nhét vào per-order sẽ bóp méo so sánh vận hành giữa 2 DN khác mức vay. `fully_loaded` là số hiệu quả vận hành, không phải định giá DN. *Nếu* sau này cần view cost-of-capital → làm **layer riêng có nhãn** (vd "cost of capital on inventory"), KHÔNG trộn vào G&A.
+- **TK641-common → CÓ về nguyên tắc, NHƯNG defer v1** vì rủi ro double-count: nếu sổ 641 MISA không tách sạch *traceable* (ship/sàn — đã ở tier-2) khỏi *common* (lương/quảng cáo) → dễ tính 2 lần phí ship/sàn.
+
+### 🎯 Quyết định v1
+> **Pool v1 = TK642 G&A tiền mặt (net 642-promo).** Sạch, không double-count, không tranh cãi.
+> **−635 (lãi vay): để NGOÀI** (financing cost; thêm layer cost-of-capital riêng chỉ khi sếp yêu cầu).
+> **+641-common: DEFER v2** (chờ làm rõ sub-account).
+
+### 📌 TODO (để mở v2 — làm rõ trước khi thêm 641-common)
+- [ ] Lấy danh mục sub-account TK641 từ MISA; phân loại từng sub-account: *traceable* (loại — đã ở tier-2) vs *common* (đưa vào pool).
+- [ ] Xác nhận không có khoản 641 nào bị tính 2 lần với phí sàn/ship tier-2 trước khi include.
+- [ ] (Tùy) đánh giá 635: phần nào là **tài trợ tồn kho** → nếu muốn, tách thành layer cost-of-capital riêng (KHÔNG vào G&A).
+
+**Trạng thái:** CHỐT v1 = 642-only. Cột `account` trong `overhead_costs_monthly` vẫn nhận account khác để mở rộng — chỉ phạm vi *v1* giới hạn 642.
+
+## Quyết định Q3 — Base phân bổ overhead (CHỐT v1, 2026-06-04)
+
+### Câu hỏi & 3 lựa chọn
+Chia pool xuống đơn theo base nào: ① 1 pool theo `net_revenue` (đơn giản) · ② theo `gross_profit` · ③ ABC-lite (nhiều pool, nhiều driver)?
+
+### Điểm mấu chốt
+> **Bóp méo lớn nhất của overhead TMĐT = chi phí scale-theo-số-đơn (pick/pack/ship/CS) lại đem chia theo doanh thu.** Đơn 5tr và đơn 50k tốn pick/pack/CS gần như nhau, nhưng revenue-base gán cho đơn lớn gấp ~100 lần → **đơn nhỏ bị under-cost hệ thống**, giấu mất sự thật đơn nhỏ/rẻ thường lỗ sau ops thật.
+
+- **① net_revenue:** đơn giản, ai cũng hiểu, closure đương nhiên đúng — NHƯNG under-cost đơn nhỏ (sai giả định overhead scale theo doanh thu).
+- **② gross_profit: LOẠI** — hồi quy ngược-đời, phạt sản phẩm tốt nhất; là phân bổ "khả năng gánh" chứ không phải "nguyên nhân". Không khuyến nghị.
+- **③ ABC-lite:** match pool với cost-driver thật → lộ ra đơn nhỏ đắt đỏ; cần config + driver data (số đơn ✓, số món ✓ đều có).
+
+### 🎯 Quyết định v1: 2-pool ABC-lite (điểm ngọt giữa naive và full-ABC)
+| Pool | Chứa | Base (driver) |
+|---|---|---|
+| **A — Handling/volume** | phần 642 scale theo xử lý: kho, đóng gói, CS | **`order_count`** (hoặc số món) |
+| **B — General/admin** | quản lý, VP, phần mềm, finance-admin | **`net_revenue`** |
+
+- Bắt đúng bóp méo #1 (chi phí xử lý đơn nhỏ) với độ phức tạp tối thiểu.
+- **Schema `overhead_allocation_config` đã hỗ trợ sẵn** (`pool_id`, `base_metric` ∈ {net_revenue, gross_profit, order_count}).
+- **Tránh gross_profit base. Tránh full-ABC v1** (quá nhiều config cho 1 số report-only → YAGNI).
+- **v0 fallback:** nếu KHÔNG tách được pool 642 thành handling vs admin → tạm 1 pool theo `net_revenue`, **kèm cảnh báo rõ "under-cost đơn nhỏ"**; config schema cho phép tách 2-pool sau mà không làm lại.
+
+### 📌 Câu quyết định độ phức tạp (cần làm rõ khi build phase-04)
+- [ ] Có tách được pool 642 thành "handling" (kho/đóng gói/CS) vs "admin" qua sub-account MISA không? Tách được → 2-pool; không → v0 single-revenue + cảnh báo.
+
+### Liên kết Q2 ↔ Q3
+Hai câu dính nhau: base phải khớp **cost-driver** (nguyên nhân), giữ **count-once** thiêng liêng. Doanh thu là driver tốt cho admin nhưng **tệ** cho chi phí xử lý → đó là lý do v1 tách 2 sub-pool theo driver thay vì 1 pool revenue thuần.
+
+**Trạng thái:** CHỐT v1 = 2-pool ABC-lite (handling→order_count, admin→net_revenue); gross_profit loại; full-ABC để sau.
 
 ## Quyết định Q5 — Đơn hủy/hoàn có gánh overhead không? (CHỐT v1, 2026-06-04)
 
@@ -216,7 +278,7 @@ Nếu tỷ lệ hủy/hoàn/RTO đáng kể (TMĐT VN thường 8–15% RTO), **
 ### Lộ trình nâng cấp (chỉ khi cần)
 Lên activity-based (đơn hủy-sau-fulfill và hoàn gánh đúng phần tiêu thụ xuôi/ngược) **chỉ khi** có quyết định cụ thể cần độ chính xác đó (vd: định giá phí xử lý, đàm phán RTO với sàn). v1 không làm.
 
-**Trạng thái:** CHỐT v1. Còn mở: Q1 (MISA API/export), Q2 (pool scope), Q3 (base), Q4 (realtime vs closure) — xem danh sách trên.
+**Trạng thái:** CHỐT v1. Còn mở: **Q1** (MISA API/export), **Q4** (realtime vs closure). (Q2, Q3 đã chốt — xem trên.)
 
 ## Phase-01 — chốt schema ingestion (pre-work cho phase-04, CHƯA implement)
 
@@ -226,7 +288,7 @@ Std-gate đã xong (`std_misa_sales_lines` live, verified Dagster 2026-06-04). H
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `period_month` | DATE | ngày đầu tháng |
-| `account` | VARCHAR | TK642 / 635 / 641-chung |
+| `account` | VARCHAR | **v1: chỉ TK642** (net 642-promo). 635 để ngoài; 641-chung defer v2 (xem Q2). Cột vẫn nhận account khác để mở rộng. |
 | `amount` | BIGINT | VND, **net VAT** |
 | `source` | VARCHAR | `'misa_amis'` (API) \| `'misa_export'` (thủ công) |
 | `ingested_at` | TIMESTAMPTZ | |
