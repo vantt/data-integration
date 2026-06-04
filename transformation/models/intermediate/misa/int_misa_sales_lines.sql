@@ -64,4 +64,4 @@ SELECT
     source_file,
     ingested_at
 
-FROM {{ ref('stg_misa_sales_lines') }}
+FROM {{ ref('std_misa_sales_lines') }}

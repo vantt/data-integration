@@ -181,3 +181,30 @@ Google Sheet (config + budgeted rate) ─┘                                 └
 4. **Realtime hay không**: cần số ngay trong tháng (budgeted + true-up) hay chỉ báo cáo
    **sau khi chốt sổ** là đủ? (Quyết định độ phức tạp ~gấp đôi.)
 5. **Đơn hủy/hoàn** có gánh overhead không?
+
+## Phase-01 — chốt schema ingestion (pre-work cho phase-04, CHƯA implement)
+
+Std-gate đã xong (`std_misa_sales_lines` live, verified Dagster 2026-06-04). Hai nguồn overhead dưới đây đã chốt **schema**, nhưng **ingestion hoãn tới phase-04** (chờ trả lời Q1: MISA AMIS API hay export thủ công).
+
+**`overhead_costs_monthly`** (pool số tiền overhead theo tháng — nguồn MISA):
+| Cột | Kiểu | Ghi chú |
+|---|---|---|
+| `period_month` | DATE | ngày đầu tháng |
+| `account` | VARCHAR | TK642 / 635 / 641-chung |
+| `amount` | BIGINT | VND, **net VAT** |
+| `source` | VARCHAR | `'misa_amis'` (API) \| `'misa_export'` (thủ công) |
+| `ingested_at` | TIMESTAMPTZ | |
+- Partition `year=YYYY/month=M`. **COUNT-ONCE:** pool này PHẢI loại phần 642 promo đã nằm ở sales-ledger (tier-2 `promo_goods_cost`) — xem CONTRACT plan §4.
+
+**`overhead_allocation_config`** (GSheet — pattern `gsheet_marketing_spend.py`):
+| Cột | Kiểu |
+|---|---|
+| `pool_id` / `pool_name` | VARCHAR |
+| `account_pattern` | VARCHAR (vd `'642%'`) |
+| `base_metric` | VARCHAR (`net_revenue`\|`gross_profit`\|`order_count`) |
+| `channel_weight` / `budgeted_rate` | DECIMAL |
+| `effective_from` / `effective_to` | DATE |
+| `version` | INTEGER |
+- Env `SOURCES__SPREADSHEET_URL__OVERHEAD_CONFIG` → parquet → `src_overhead_allocation_config`. Giữ `version`/`effective_*` cho lịch sử config.
+
+**Chặn (blocker phase-04):** Q1 (API vs export) + Q2-Q5 ở trên phải chốt với user trước khi build ingestion + `int_order_overhead_allocation`.

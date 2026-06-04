@@ -48,9 +48,8 @@ SELECT
     -- Discounts / subsidies
     rev.total_discounts,
 
-    -- Platform fees (from Doanh thu)
+    -- Platform fees (from Doanh thu; service_fee removed — use infrastructure_fee+voucher_xtra_fee from F-sheet below)
     rev.total_platform_fees,
-    rev.service_fee,
     rev.payment_fee,
     rev.fixed_fee,
 

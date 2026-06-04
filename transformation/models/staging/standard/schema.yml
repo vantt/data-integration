@@ -154,6 +154,22 @@ models:
       - name: price_list_id
         tests: [not_null]
 
+  - name: std_misa_sales_lines
+    description: "Faithful MISA sales-line std-gate. Grain: 1/(voucher_no, line_no). cogs_amount and gross_profit are mixed 632+642 totals, unfiltered — downstream int/fact apply the 632-only filter."
+    columns:
+      - name: voucher_no
+        tests: [not_null]
+      - name: line_no
+        tests: [not_null]
+      - name: cogs_account
+        description: "Raw MISA account; values incl 632, 632.1, 632.3, 642, 642.14 — NOT filtered here."
+      - name: cost_account_group
+        description: "Derived bucket: '632'=COGS goods sold, '642'=promo/giveaway goods cost, else 'other'."
+      - name: source_system
+        description: "'misa' literal."
+      - name: source_version
+        description: "MISA report-format version tag; bump when parser/report changes."
+
   - name: std_inventory_movements
     description: >
       Standardized inventory movement ledger. Grain: 1 row per inventory_movement_id
