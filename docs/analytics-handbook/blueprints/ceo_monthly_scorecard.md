@@ -1289,7 +1289,7 @@ WITH this_month AS (
         p.product_name,
         p.brand_name,
         SUM(s.quantity) as units,
-        SUM(s.revenue) as revenue
+        SUM(s.net_revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
     WHERE s.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1300,7 +1300,7 @@ WITH this_month AS (
 last_month AS (
     SELECT
         p.product_name,
-        SUM(s.revenue) as revenue
+        SUM(s.net_revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
     WHERE s.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
@@ -1365,7 +1365,7 @@ Top brands by revenue — horizontal bar chart.
 ```sql
 SELECT
     p.brand_name as "Brand",
-    SUM(s.revenue) as "Revenue"
+    SUM(s.net_revenue) as "Revenue"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE s.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)

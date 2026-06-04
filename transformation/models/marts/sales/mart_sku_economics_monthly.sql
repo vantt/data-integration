@@ -100,7 +100,7 @@ sales_base AS (
         DATE_TRUNC('month', fs.ordered_at)::date AS snapshot_month,
         DATE(fs.ordered_at)                       AS sale_date,
         fs.quantity,
-        fs.revenue                                   AS line_revenue
+        fs.net_revenue                               AS line_revenue
     FROM {{ ref('fact_sales') }} fs
     -- Only sales channels (no internal / system)
     INNER JOIN valid_channels vc ON fs.channel_key = vc.channel_key
@@ -110,7 +110,7 @@ sales_base AS (
       -- Exclude Unknown product
       AND fs.product_key != {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}
       -- Revenue > 0 excludes gift/promo items at fact_sales level
-      AND fs.revenue > 0
+      AND fs.net_revenue > 0
 ),
 
 -- Order-level status filter: exclude cancelled/voided orders

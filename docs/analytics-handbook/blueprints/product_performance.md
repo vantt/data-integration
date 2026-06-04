@@ -67,7 +67,7 @@ filter_bounds AS (
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ),
 this_period AS (
-    SELECT COALESCE(SUM(s.revenue), 0) as val
+    SELECT COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -76,7 +76,7 @@ this_period AS (
       [[AND s.channel_key IN (SELECT channel_key FROM dim_channels WHERE channel_name = {{channel}})]]
 ),
 prev_period AS (
-    SELECT COALESCE(SUM(s.revenue), 0) as val
+    SELECT COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
@@ -228,7 +228,7 @@ filter_bounds AS (
 this_period AS (
     SELECT
         CASE WHEN COUNT(DISTINCT s.product_key) = 0 THEN 0
-             ELSE ROUND(SUM(s.revenue) / COUNT(DISTINCT s.product_key), 0)
+             ELSE ROUND(SUM(s.net_revenue) / COUNT(DISTINCT s.product_key), 0)
         END as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
@@ -240,7 +240,7 @@ this_period AS (
 prev_period AS (
     SELECT
         CASE WHEN COUNT(DISTINCT s.product_key) = 0 THEN 0
-             ELSE ROUND(SUM(s.revenue) / COUNT(DISTINCT s.product_key), 0)
+             ELSE ROUND(SUM(s.net_revenue) / COUNT(DISTINCT s.product_key), 0)
         END as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
@@ -346,7 +346,7 @@ WITH
 this_month AS (
     SELECT
         date(o.order_timestamp) as ngay,
-        COALESCE(SUM(s.revenue), 0) as doanh_thu
+        COALESCE(SUM(s.net_revenue), 0) as doanh_thu
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -359,7 +359,7 @@ this_month AS (
 last_month AS (
     SELECT
         date(o.order_timestamp) + INTERVAL '30 days' as ngay,
-        COALESCE(SUM(s.revenue), 0) as doanh_thu
+        COALESCE(SUM(s.net_revenue), 0) as doanh_thu
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -490,7 +490,7 @@ Ranking loai SP theo doanh thu — horizontal bar.
 ```sql
 SELECT
     pt.product_type_name as "Loai san pham",
-    COALESCE(SUM(s.revenue), 0) as "Doanh thu"
+    COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
@@ -534,7 +534,7 @@ Phan bo % doanh thu theo loai SP — donut chart.
 ```sql
 SELECT
     pt.product_type_name as "Loai san pham",
-    COALESCE(SUM(s.revenue), 0) as "Doanh thu"
+    COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
@@ -645,7 +645,7 @@ WITH
 this_period AS (
     SELECT
         pt.product_type_name as loai,
-        COALESCE(SUM(s.revenue), 0) as val
+        COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
@@ -659,7 +659,7 @@ this_period AS (
 prev_period AS (
     SELECT
         pt.product_type_name as loai,
-        COALESCE(SUM(s.revenue), 0) as val
+        COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
@@ -722,7 +722,7 @@ Cau thanh doanh thu theo loai SP qua thoi gian — stacked area.
 SELECT
     date(o.order_timestamp) as "Ngay",
     pt.product_type_name as "Loai san pham",
-    COALESCE(SUM(s.revenue), 0) as "Doanh thu"
+    COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
@@ -779,7 +779,7 @@ WITH
 this_period AS (
     SELECT
         pt.product_type_name as loai,
-        COALESCE(SUM(s.revenue), 0) as doanh_thu,
+        COALESCE(SUM(s.net_revenue), 0) as doanh_thu,
         COALESCE(SUM(s.quantity), 0) as so_luong
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
@@ -794,7 +794,7 @@ this_period AS (
 prev_period AS (
     SELECT
         pt.product_type_name as loai,
-        COALESCE(SUM(s.revenue), 0) as doanh_thu,
+        COALESCE(SUM(s.net_revenue), 0) as doanh_thu,
         COALESCE(SUM(s.quantity), 0) as so_luong
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
@@ -951,7 +951,7 @@ Ranking san pham theo revenue — horizontal bar.
 ```sql
 SELECT
     p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END as "San pham",
-    COALESCE(SUM(s.revenue), 0) as "Doanh thu"
+    COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_products p ON s.product_key = p.product_key
@@ -1046,7 +1046,7 @@ this_period AS (
     SELECT
         s.product_key,
         p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END as ten_sp,
-        COALESCE(SUM(s.revenue), 0) as val
+        COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_products p ON s.product_key = p.product_key
@@ -1060,7 +1060,7 @@ this_period AS (
 prev_period AS (
     SELECT
         s.product_key,
-        COALESCE(SUM(s.revenue), 0) as val
+        COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -1106,7 +1106,7 @@ this_period AS (
     SELECT
         s.product_key,
         p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END as ten_sp,
-        COALESCE(SUM(s.revenue), 0) as val
+        COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     LEFT JOIN dim_products p ON s.product_key = p.product_key
@@ -1120,7 +1120,7 @@ this_period AS (
 prev_period AS (
     SELECT
         s.product_key,
-        COALESCE(SUM(s.revenue), 0) as val
+        COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
@@ -1225,7 +1225,7 @@ this_period AS (
         s.product_key,
         p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END as ten_sp,
         pt.product_type_name as loai,
-        COALESCE(SUM(s.revenue), 0) as doanh_thu,
+        COALESCE(SUM(s.net_revenue), 0) as doanh_thu,
         COALESCE(SUM(s.quantity), 0) as so_luong
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
@@ -1241,7 +1241,7 @@ this_period AS (
 prev_period AS (
     SELECT
         s.product_key,
-        COALESCE(SUM(s.revenue), 0) as doanh_thu,
+        COALESCE(SUM(s.net_revenue), 0) as doanh_thu,
         COALESCE(SUM(s.quantity), 0) as so_luong
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id

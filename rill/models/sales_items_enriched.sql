@@ -32,7 +32,7 @@ SELECT
     creator.full_name AS creator_name,
     os.status_code AS status,
     s.quantity,
-    s.revenue,
+    s.net_revenue,
     s.discount_amount,
     s.distributed_discount_amount,
     COALESCE(s.discount_amount, 0) + COALESCE(s.distributed_discount_amount, 0) AS total_discount_amount,

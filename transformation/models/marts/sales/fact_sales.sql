@@ -72,7 +72,7 @@ SELECT
     i.line_amount * COALESCE(
         (o.total_amount - COALESCE(o.vat_amount, 0)) / NULLIF(o.total_amount, 0),
         1
-    ) as revenue,
+    ) as net_revenue,
     i.discount_amount,
     i.distributed_discount_amount,
     i.weight_grams,

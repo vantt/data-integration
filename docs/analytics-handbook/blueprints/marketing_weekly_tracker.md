@@ -1746,7 +1746,7 @@ SELECT
     p.product_name as "Product",
     p.brand_name as "Brand",
     SUM(s.quantity) as "Units",
-    SUM(s.revenue) as "Revenue"
+    SUM(s.net_revenue) as "Revenue"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers cust ON s.customer_key = cust.customer_key

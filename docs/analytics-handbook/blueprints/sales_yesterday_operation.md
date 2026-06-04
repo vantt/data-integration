@@ -968,7 +968,7 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 ```sql
 SELECT
     p.product_name as "Sản phẩm",
-    SUM(s.revenue) as "Doanh thu"
+    SUM(s.net_revenue) as "Doanh thu"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
@@ -1046,7 +1046,7 @@ Horizontal bar replacing pie chart — no slice limit.
 ```sql
 SELECT
     COALESCE(p.product_type, 'Unknown') as "Loại SP",
-    SUM(s.revenue) as "Doanh thu"
+    SUM(s.net_revenue) as "Doanh thu"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
@@ -1090,8 +1090,8 @@ SELECT
     p.product_name as "Sản phẩm",
     COALESCE(p.product_type, 'Unknown') as "Loại",
     SUM(s.quantity) as "SL",
-    SUM(s.revenue) as "Doanh thu",
-    ROUND(SUM(s.revenue) / NULLIF(SUM(s.quantity), 0), 0) as "Giá TB"
+    SUM(s.net_revenue) as "Doanh thu",
+    ROUND(SUM(s.net_revenue) / NULLIF(SUM(s.quantity), 0), 0) as "Giá TB"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id

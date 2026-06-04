@@ -1626,7 +1626,7 @@ San pham ban chay nhat — horizontal bar.
 ```sql
 SELECT
     dp.product_name as "San pham",
-    SUM(fs.revenue) as "Revenue"
+    SUM(fs.net_revenue) as "Revenue"
 FROM fact_sales fs
 JOIN dim_products dp ON fs.product_key = dp.product_key
 WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -1713,7 +1713,7 @@ Loai SP dong gop doanh thu — horizontal bar.
 ```sql
 SELECT
     dpt.product_type_name as "Loai san pham",
-    SUM(fs.revenue) as "Revenue"
+    SUM(fs.net_revenue) as "Revenue"
 FROM fact_sales fs
 JOIN dim_product_types dpt ON fs.product_type_key = dpt.product_type_key
 WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -1758,7 +1758,7 @@ WITH
 this_month AS (
     SELECT
         dp.product_name as product_name,
-        SUM(fs.revenue) as revenue,
+        SUM(fs.net_revenue) as revenue,
         SUM(fs.quantity) as quantity
     FROM fact_sales fs
     JOIN dim_products dp ON fs.product_key = dp.product_key
@@ -1773,7 +1773,7 @@ this_month AS (
 prev_month AS (
     SELECT
         dp.product_name as product_name,
-        SUM(fs.revenue) as revenue
+        SUM(fs.net_revenue) as revenue
     FROM fact_sales fs
     JOIN dim_products dp ON fs.product_key = dp.product_key
     WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'

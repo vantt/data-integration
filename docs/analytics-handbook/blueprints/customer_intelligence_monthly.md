@@ -1096,7 +1096,7 @@ What VIP customers buy most — guide retention offers (last 3 months).
 ```sql
 SELECT
     p.product_name as "Product",
-    SUM(s.revenue) as "Revenue"
+    SUM(s.net_revenue) as "Revenue"
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
@@ -1135,7 +1135,7 @@ Entry products for new customers — guide acquisition funnels (last 3 months).
 ```sql
 SELECT
     p.product_name as "Product",
-    SUM(s.revenue) as "Revenue"
+    SUM(s.net_revenue) as "Revenue"
 FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers cust ON o.customer_key = cust.customer_key

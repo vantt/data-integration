@@ -10,7 +10,7 @@ SELECT
     dp.category,
     dp.unit,
     fs.quantity,
-    fs.revenue,
+    fs.net_revenue AS revenue,
     fs.discount_amount,
     fs.distributed_discount_amount,
     fs.weight_grams

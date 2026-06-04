@@ -107,7 +107,7 @@ brand_revenue AS (
     SELECT
         s.customer_key,
         p.brand_name,
-        SUM(s.revenue) as brand_revenue
+        SUM(s.net_revenue) as brand_revenue
     FROM sales s
     JOIN products p ON s.product_key = p.product_key
     {% if is_incremental() %}

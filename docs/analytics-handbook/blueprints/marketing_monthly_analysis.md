@@ -683,7 +683,7 @@ Product brand performance with MoM comparison.
 WITH this_month AS (
     SELECT
         p.brand_name,
-        SUM(s.revenue) as revenue,
+        SUM(s.net_revenue) as revenue,
         SUM(s.quantity) as units,
         COUNT(DISTINCT s.order_id) as order_count
     FROM fact_sales s
@@ -695,7 +695,7 @@ WITH this_month AS (
 last_month AS (
     SELECT
         p.brand_name,
-        SUM(s.revenue) as revenue
+        SUM(s.net_revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
     WHERE date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '2 months'
@@ -1558,7 +1558,7 @@ WITH this_month AS (
         p.product_name,
         p.brand_name,
         SUM(s.quantity) as units,
-        SUM(s.revenue) as revenue
+        SUM(s.net_revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
     WHERE date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -1568,7 +1568,7 @@ WITH this_month AS (
 last_month AS (
     SELECT
         p.product_name,
-        SUM(s.revenue) as revenue
+        SUM(s.net_revenue) as revenue
     FROM fact_sales s
     JOIN dim_products p ON s.product_key = p.product_key
     WHERE date(s.ordered_at) >= date_trunc('month', current_date) - INTERVAL '2 months'

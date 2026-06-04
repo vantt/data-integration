@@ -399,8 +399,8 @@ models:
               arguments:
                 to: ref('dim_time')
                 field: time_key
-      - name: revenue
-        description: "Total revenue (quantity * line_amount)"
+      - name: net_revenue
+        description: "VAT-exclusive line net revenue (VAT-strip of line_amount using per-order tax ratio)"
       - name: discount_amount
         description: "Direct discount amount"
       - name: distributed_discount_amount

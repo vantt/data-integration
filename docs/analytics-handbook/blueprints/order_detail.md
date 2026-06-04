@@ -180,9 +180,9 @@ SELECT
     s.quantity AS "SL",
     CASE
         WHEN s.quantity = 0 THEN NULL
-        ELSE ROUND(s.revenue / s.quantity, 0)
+        ELSE ROUND(s.net_revenue / s.quantity, 0)
     END AS "Don Gia",
-    s.revenue AS "Doanh Thu",
+    s.net_revenue AS "Doanh Thu",
     s.discount_amount AS "CK Truc Tiep",
     s.distributed_discount_amount AS "CK Phan Bo",
     COALESCE(s.discount_amount, 0) + COALESCE(s.distributed_discount_amount, 0) AS "Tong CK",

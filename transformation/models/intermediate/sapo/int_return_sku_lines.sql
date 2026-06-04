@@ -52,9 +52,9 @@ order_sku_lines AS (
         fs.order_id,
         fs.product_key,
         SUM(fs.quantity)                    AS sold_quantity,
-        SUM(fs.revenue)                     AS line_revenue
+        SUM(fs.net_revenue)                 AS line_revenue
     FROM {{ ref('fact_sales') }} fs
-    WHERE fs.revenue > 0
+    WHERE fs.net_revenue > 0
     GROUP BY fs.order_id, fs.product_key
 ),
 
@@ -62,9 +62,9 @@ order_sku_lines AS (
 order_revenue_totals AS (
     SELECT
         order_id,
-        SUM(revenue) AS total_order_revenue
+        SUM(net_revenue) AS total_order_revenue
     FROM {{ ref('fact_sales') }}
-    WHERE revenue > 0
+    WHERE net_revenue > 0
     GROUP BY order_id
 ),
 
