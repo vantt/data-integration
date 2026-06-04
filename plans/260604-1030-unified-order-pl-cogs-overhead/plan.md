@@ -27,12 +27,12 @@ net_revenue (Sapo VAT-inclusive: net = total − total_tax)
 | # | File | Scope | Status |
 |---|------|-------|--------|
 | 01 | `phase-01-data-foundations-std-gate.md` | `std_misa_sales_lines`; ingest MISA monthly overhead (`overhead_costs_monthly`) + gsheet `overhead_allocation_config` | TODO |
-| 02 | `phase-02-cogs-reconciliation.md` | `int_order_cogs_reconciled` (Sapo-MAC primary + MISA-632 recon + variance) **incl. BUG-1** (filter 632 in `fact_order_economics`/`fact_order_costs`) | TODO |
+| 02 | `phase-02-cogs-reconciliation.md` | `int_order_cogs_reconciled` (Sapo-MAC primary + MISA-632 recon + variance) **incl. BUG-1** (filter 632 in `fact_order_economics`/`fact_order_costs`) | BUG-1 ✓ interim (`cogs_account LIKE '632%'`, commit f4f5783, verified Dagster); int_order_cogs_reconciled TODO (needs phase-01 std_) |
 | 03 | `phase-03-cost-taxonomy-promo-642-dedup.md` | `promo_goods_cost` (revenue=0 split, gift-no-invoice); cross-tier **642 count-once** rule | TODO |
 | 04 | `phase-04-overhead-allocation.md` | `int_order_overhead_allocation` (closure-based pools/base) + `fully_loaded_net_profit` | TODO |
 | 05 | `phase-05-pl-marts-serving.md` | unified `fact_order_economics`/`fact_order_costs` columns + serving views + Metabase P&L | TODO |
 | 06 | `phase-06-detailview-pl.md` | detailView per-line COGS/margin + reconciliation panel + full P&L (coordinate w/ concurrent detailView work) | TODO |
-| 07 | `phase-07-shopee-fee-fixes.md` | **Shopee platform-fee fixes** (tier-2): BUG-2 service-fee double-count (use F detail, drop D aggregate) + BUG-3 payment-fee column rename. Corrects `channel_net_profit`. | TODO |
+| 07 | `phase-07-shopee-fee-fixes.md` | **Shopee platform-fee fixes** (tier-2): BUG-2 service-fee double-count (use F detail, drop D aggregate) + BUG-3 payment-fee column rename. Corrects `channel_net_profit`. | ✅ DONE (commit f4f5783) — parser+stg+int+marts, drift guard, guard test, clean re-ingest (also fixed months 2-4 dup parquet), verified Dagster run SUCCESS |
 
 ## Dependencies
 `01 → 02 → 03 → 04 → 05 → 06`. **Tier-correctness fixes BUG-1 (in 02) + phase-07 (Shopee fees) must precede phase-04** — they fix the COGS (tier-1) and platform-fee (tier-2) inputs that overhead allocation uses as its `channel_net_profit` base. Both can ship early/independently. 04 needs 01 (overhead data) + 03 (count-once) + clean tier-1/tier-2. 06 last (after concurrent detailView stream merges).
