@@ -172,14 +172,14 @@ Các thuật ngữ dưới đây phổ biến trong ngành nhưng **không có t
 | ------------------------------------------ | -------------------------------- | --------------------------------------------- |
 | **Commission / Phí sàn**           | % sàn thu trên mỗi đơn      | Sapo không nhận dữ liệu phí từ sàn     |
 | **Shipping Fee / Phí vận chuyển** | Phí ship                        | Sapo không tách riêng shipping fee         |
-| **COGS (Giá vốn hàng bán)**      | Chi phí nhập hàng             | Chưa tích hợp dữ liệu kho/nhập hàng    |
-| **Gross Profit (Lãi gộp)**         | Net Revenue − COGS              | Không tính được vì thiếu COGS          |
 | **CAC (Customer Acquisition Cost)**  | Chi phí để có 1 khách mới  | Cần tích hợp đầy đủ chi phí marketing |
 | **CLV:CAC Ratio**                    | Lifetime Value ÷ CAC            | Thiếu CAC chính xác                        |
 | **Abandoned Cart Rate**              | Tỷ lệ bỏ giỏ hàng           | Sapo không track giỏ hàng bỏ dở          |
 | **Conversion Rate (Web)**            | % visitor → buyer               | Cần Google Analytics, chưa tích hợp       |
 | **NPS (Net Promoter Score)**         | Chỉ số hài lòng khách hàng | Chưa có khảo sát                          |
 | **Voucher sàn (Platform subsidy)**  | Sàn tự trợ giá               | Không nằm trong data Sapo                   |
+
+> **COGS & Gross Profit nay đã có:** Pipeline inventory-v2 (moving-average cost / MAC) + COGS reconciliation (Sapo-MAC primary, MISA TK632 đối soát) cung cấp COGS theo từng đơn. Chuỗi P&L đầy đủ: Net Revenue − **COGS** = **Gross Profit** − phí/chiết khấu kênh = **Channel net profit (lãi đóng góp)** − overhead phân bổ = **Fully-loaded net profit**. Xem `docs/architecture/order-pl/` (cogs-reconciliation-design.md, order-pl-schema-design.md, overhead-cost-allocation-design.md).
 
 ---
 
