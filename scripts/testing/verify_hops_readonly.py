@@ -33,13 +33,13 @@ try:
             print(f"{hop_name:<10} | {schema}.{table:<25} | ❌ Error: {e}")
             return 0
 
-    # HOP 4: Raw Data is Parquet, but 'src_sapo_orders' reads it.
-    # We check src_sapo_orders to verify Hop 4 -> 5 interface.
-    check_table("main_staging", "src_sapo_orders", "HOP 4 (Src)")
+    # HOP 4: Raw Data is Parquet, but 'src_sapo_orders_v2' reads it.
+    # We check src_sapo_orders_v2 to verify Hop 4 -> 5 interface.
+    check_table("main_staging", "src_sapo_orders_v2", "HOP 4 (Src)")
 
     # HOP 5: Staging (Cleaned)
-    check_table("main_staging", "stg_sapo_orders", "HOP 5 (Stg)")
-    check_table("main_staging", "stg_sapo_customers", "HOP 5 (Stg)")
+    check_table("main_staging", "stg_sapo_orders_v2", "HOP 5 (Stg)")
+    check_table("main_staging", "stg_sapo_customers_v2", "HOP 5 (Stg)")
 
     # HOP 6: Marts (OLAP)
     orders_count = check_table("main_marts", "fact_orders", "HOP 6 (Fct)")

@@ -19,7 +19,8 @@ def main():
         legacy_tables = []
         for schema, table in tables:
             print(f"{schema}.{table}")
-            # Identify legacy tables: start with stg_ or src_ but NOT stg_sapo_ or src_sapo_
+            # Identify legacy tables: start with stg_ or src_ but NOT stg_sapo_*_v2 or src_sapo_*_v2
+            # Note: old non-_v2 src_sapo_*/stg_sapo_* tables are orphans after P4 rename — Step 4.7 drops them manually.
             if (table.startswith('stg_') and not table.startswith('stg_sapo_')) or \
                (table.startswith('src_') and not table.startswith('src_sapo_')) or \
                (table.startswith('stag_')): # specific mention by user
@@ -48,12 +49,12 @@ def main():
 
         # Check if 0 rows, warn user
         if f_orders == 0:
-            print("⚠️ WARNING: fact_orders is empty. Has the upstream 'stg_sapo_orders' been populated?")
+            print("⚠️ WARNING: fact_orders is empty. Has the upstream 'stg_sapo_orders_v2' been populated?")
 
         print("\n=== 4. Verifying Data in HOP 5 (Staging) ===")
         try:
-            stg_orders = con.sql("SELECT COUNT(*) FROM main_staging.stg_sapo_orders").fetchone()[0]
-            print(f"✅ stg_sapo_orders row count: {stg_orders}")
+            stg_orders = con.sql("SELECT COUNT(*) FROM main_staging.stg_sapo_orders_v2").fetchone()[0]
+            print(f"✅ stg_sapo_orders_v2 row count: {stg_orders}")
         except Exception as e:
             print(f"❌ Error checking staging: {e}")
 
