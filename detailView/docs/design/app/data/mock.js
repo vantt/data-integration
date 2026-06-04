@@ -12,7 +12,7 @@ window.DV_DATA = (function () {
         phone: "0903 118 224", email: "minhanh.ng@gmail.com",
         address1: "27 Trần Hưng Đạo", ward: "P. Cầu Ông Lãnh", district: "Q.1",
         province: "TP. Hồ Chí Minh", country: "Việt Nam", geo_region: "HCMC",
-        loyalty_points: 4820, birth_date: "1991-07-14", gender: "Nữ",
+        loyalty_point: 4820, dob: "1991-07-14", sex: "Nữ",
         first_order_date: "2024-02-09", last_order_date: "2026-05-18",
         lifespan_days: 829, created_at: "2024-01-22", recency_days: 12,
       },
@@ -51,7 +51,7 @@ window.DV_DATA = (function () {
         phone: "0938 552 017", email: "baolong.tran@outlook.com",
         address1: "112 Nguyễn Văn Cừ", ward: "P. An Hòa", district: "Q. Ninh Kiều",
         province: "Cần Thơ", country: "Việt Nam", geo_region: "Mekong Delta",
-        loyalty_points: 1190, birth_date: "1986-03-02", gender: "Nam",
+        loyalty_point: 1190, dob: "1986-03-02", sex: "Nam",
         first_order_date: "2024-08-30", last_order_date: "2026-02-11",
         lifespan_days: 530, created_at: "2024-08-12", recency_days: 108,
       },
@@ -86,7 +86,7 @@ window.DV_DATA = (function () {
         phone: "0287 305 990", email: "muahang@hongha-cosmetics.vn",
         address1: "Lô C12 KCN Tân Bình", ward: "P. Tây Thạnh", district: "Q. Tân Phú",
         province: "TP. Hồ Chí Minh", country: "Việt Nam", geo_region: "HCMC",
-        loyalty_points: 0, birth_date: "—", gender: "—",
+        loyalty_point: 0, dob: "—", sex: "—",
         first_order_date: "2023-05-04", last_order_date: "2026-05-26",
         lifespan_days: 1118, created_at: "2023-04-28", recency_days: 4,
       },
@@ -166,7 +166,7 @@ window.DV_DATA = (function () {
       financial: {
         is_us: false,
         gross_revenue: 1_400_000, discount_amount: 150_000, net_revenue: 1_250_000,
-        vat_amount: 100_000, total_collected: 1_350_000, cogs_amount: 870_000,
+        tax_amount: 100_000, total_collected: 1_350_000, cogs_amount: 870_000,
         gross_profit: 380_000, gross_margin_pct: 30.4,
         platform_fees: 60_000, channel_net_profit: 320_000, channel_net_margin_pct: 25.6,
         return_amount: 0,
@@ -177,6 +177,17 @@ window.DV_DATA = (function () {
           { type: "voucher_xtra", amount: 10_000 },
           { type: "fee_tax",      amount: 5_000  },
         ],
+        /* NEW — phases 02-06 */
+        cogs_source: "both",
+        promo_goods_cost: 0,
+        allocated_overhead: 48_000,
+        is_overhead_estimated: true,
+        fully_loaded_net_profit: 272_000,
+        fully_loaded_margin_pct: 21.8,
+        sapo_mac_cogs: 870_000,
+        misa_cogs_632: 850_000,
+        cogs_variance: 20_000,
+        cogs_variance_pct: 2.4,
       },
       flags: { is_us: false, has_cogs: true, has_platform_fees: true, has_returns: false },
       line_items: [
@@ -202,6 +213,10 @@ window.DV_DATA = (function () {
         ]},
         { category: "DISCOUNT", subtotal: 150_000, rows: [
           { type: "bundle_discount", amount: 150_000, source: "Sapo", record: "PROMO-MAY15", fee_source: "actual" },
+        ]},
+        { category: "OVERHEAD", subtotal: 48_000, rows: [
+          { type: "overhead_admin", amount: 32_000, source: "MISA+GSheet", record: "2026-05", fee_source: "estimated" },
+          { type: "overhead_ops", amount: 16_000, source: "MISA+GSheet", record: "2026-05", fee_source: "estimated" },
         ]},
       ],
       payments: [
@@ -229,7 +244,7 @@ window.DV_DATA = (function () {
       channel: {
         name: "Shopee", code: "SHP-VN", category: "Marketplace", format: "Online",
         platform: "Shopee", brand: "FINE Official", market: "Domestic",
-        promo_codes: ["MAY15"], max_discount_rate: 15, primary_discount_type: "Bundle",
+        promo_codes: ["MAY15"], max_discount_rate: 15, primary_nature: "Bundle",
       },
       timeline: [
         { kind: "good",  time: "2026-05-18 14:20", title: "Order created", meta: "afternoon · business hours · weekday" },
@@ -254,11 +269,22 @@ window.DV_DATA = (function () {
       financial: {
         is_us: false,
         gross_revenue: 880_000, discount_amount: 60_000, net_revenue: 820_000,
-        vat_amount: 65_600, total_collected: 885_600, cogs_amount: 607_000,
+        tax_amount: 65_600, total_collected: 885_600, cogs_amount: 607_000,
         gross_profit: 213_000, gross_margin_pct: 26.0,
         platform_fees: 0, channel_net_profit: 213_000, channel_net_margin_pct: 26.0,
         return_amount: 180_000,
         fees_breakdown: [],
+        /* NEW — phases 02-06 */
+        cogs_source: "misa",
+        promo_goods_cost: 40_000,
+        allocated_overhead: null,
+        is_overhead_estimated: false,
+        fully_loaded_net_profit: null,
+        fully_loaded_margin_pct: null,
+        sapo_mac_cogs: null,
+        misa_cogs_632: 607_000,
+        cogs_variance: null,
+        cogs_variance_pct: null,
       },
       flags: { is_us: false, has_cogs: true, has_platform_fees: false, has_returns: true },
       line_items: [
@@ -268,6 +294,9 @@ window.DV_DATA = (function () {
       cost_ledger: [
         { category: "COGS", subtotal: 607_000, rows: [
           { type: "cogs", amount: 607_000, source: "MISA", record: "voucher_no=HD00098", fee_source: "actual" },
+        ]},
+        { category: "PROMO_GOODS", subtotal: 40_000, rows: [
+          { type: "promo_goods", amount: 40_000, source: "Sapo", record: "GIFT-APR02", fee_source: "actual" },
         ]},
         { category: "TAX", subtotal: 65_600, rows: [
           { type: "vat_output", amount: 65_600, source: "Sapo", record: "INV-44798", fee_source: "actual" },
@@ -305,7 +334,7 @@ window.DV_DATA = (function () {
       channel: {
         name: "Facebook", code: "FB-SHOP", category: "Social", format: "Online",
         platform: "Facebook", brand: "FINE Official", market: "Domestic",
-        promo_codes: ["APR"], max_discount_rate: 10, primary_discount_type: "Voucher",
+        promo_codes: ["APR"], max_discount_rate: 10, primary_nature: "Voucher",
       },
       timeline: [
         { kind: "good",  time: "2026-04-02 10:05", title: "Order created", meta: "morning · business hours · weekday" },
@@ -333,11 +362,13 @@ window.DV_DATA = (function () {
         us_revenue_excl_vat: 1_090_000, us_revenue_incl_vat: 1_180_000,
         us_line_item_count: 3, has_unpriced_sku: true,
         gross_revenue: 0, discount_amount: 0, net_revenue: 0,
-        vat_amount: 90_000, total_collected: 1_180_000, cogs_amount: 804_000,
+        tax_amount: 90_000, total_collected: 1_180_000, cogs_amount: 804_000,
         gross_profit: 286_000, gross_margin_pct: 24.2,
         platform_fees: 0, channel_net_profit: 286_000, channel_net_margin_pct: 24.2,
         return_amount: 0,
         fees_breakdown: [],
+        /* NEW */
+        cogs_source: "misa",
       },
       flags: { is_us: true, has_cogs: true, has_platform_fees: false, has_returns: false },
       line_items: [
@@ -382,7 +413,7 @@ window.DV_DATA = (function () {
       channel: {
         name: "TikTok Shop US", code: "TTS-US", category: "Marketplace", format: "Online · CrossBorder",
         platform: "TikTok", brand: "FINE Global", market: "Export",
-        promo_codes: [], max_discount_rate: 0, primary_discount_type: "None",
+        promo_codes: [], max_discount_rate: 0, primary_nature: "None",
       },
       timeline: [
         { kind: "good",  time: "2026-03-19 21:48", title: "Order created", meta: "night · off-hours · weekday" },
@@ -406,7 +437,7 @@ window.DV_DATA = (function () {
       financial: {
         is_us: false,
         gross_revenue: 1_780_000, discount_amount: 90_000, net_revenue: 1_690_000,
-        vat_amount: 135_200, total_collected: 1_825_200, cogs_amount: null,
+        tax_amount: 135_200, total_collected: 1_825_200, cogs_amount: null,
         gross_profit: null, gross_margin_pct: null,
         platform_fees: 72_000, channel_net_profit: null, channel_net_margin_pct: null,
         return_amount: 0,
@@ -415,6 +446,17 @@ window.DV_DATA = (function () {
           { type: "payment", amount: 22_000 },
           { type: "infra",   amount: 10_000 },
         ],
+        /* NEW — phases 02-06 (null = backend not yet deployed) */
+        cogs_source: "none",
+        promo_goods_cost: null,
+        allocated_overhead: null,
+        is_overhead_estimated: false,
+        fully_loaded_net_profit: null,
+        fully_loaded_margin_pct: null,
+        sapo_mac_cogs: null,
+        misa_cogs_632: null,
+        cogs_variance: null,
+        cogs_variance_pct: null,
       },
       flags: { is_us: false, has_cogs: false, has_platform_fees: true, has_returns: true },
       line_items: [
@@ -464,7 +506,7 @@ window.DV_DATA = (function () {
       channel: {
         name: "Lazada", code: "LZD-VN", category: "Marketplace", format: "Online",
         platform: "Lazada", brand: "K-Beauty Store", market: "Domestic",
-        promo_codes: ["FEB"], max_discount_rate: 8, primary_discount_type: "Voucher",
+        promo_codes: ["FEB"], max_discount_rate: 8, primary_nature: "Voucher",
       },
       timeline: [
         { kind: "good",  time: "2026-02-11 13:40", title: "Order created", meta: "afternoon · business hours · weekday" },
@@ -492,7 +534,7 @@ window.DV_DATA = (function () {
       financial: {
         is_us: false,
         gross_revenue: 560_000, discount_amount: 150_000, net_revenue: 410_000,
-        vat_amount: 32_800, total_collected: 442_800, cogs_amount: 380_000,
+        tax_amount: 32_800, total_collected: 442_800, cogs_amount: 380_000,
         gross_profit: 30_000, gross_margin_pct: 7.3,
         platform_fees: 72_000, channel_net_profit: -42_000, channel_net_margin_pct: -10.2,
         return_amount: 0,
@@ -503,6 +545,17 @@ window.DV_DATA = (function () {
           { type: "voucher_xtra", amount: 18_000 },
           { type: "fee_tax",      amount: 3_000  },
         ],
+        /* NEW — phases 02-06 */
+        cogs_source: "sapo_mac",
+        promo_goods_cost: 0,
+        allocated_overhead: 35_000,
+        is_overhead_estimated: true,
+        fully_loaded_net_profit: -77_000,
+        fully_loaded_margin_pct: -18.8,
+        sapo_mac_cogs: 380_000,
+        misa_cogs_632: null,
+        cogs_variance: null,
+        cogs_variance_pct: null,
       },
       flags: { is_us: false, has_cogs: true, has_platform_fees: true, has_returns: false },
       line_items: [
@@ -529,6 +582,9 @@ window.DV_DATA = (function () {
         { category: "DISCOUNT", subtotal: 150_000, rows: [
           { type: "flash_discount", amount: 150_000, source: "Sapo", record: "PROMO-FLASH99", fee_source: "actual" },
         ]},
+        { category: "OVERHEAD", subtotal: 35_000, rows: [
+          { type: "overhead_admin", amount: 35_000, source: "MISA+GSheet", record: "2026-05", fee_source: "estimated" },
+        ]},
       ],
       payments: [
         { method: "COD (GHN thu hộ)", type: "COD", amount: 442_800, status: "PAID", ts: "2026-05-12 16:40", paid_on: "2026-05-12" },
@@ -553,7 +609,7 @@ window.DV_DATA = (function () {
       channel: {
         name: "Shopee", code: "SHP-VN", category: "Marketplace", format: "Online",
         platform: "Shopee", brand: "FINE Official", market: "Domestic",
-        promo_codes: ["FLASH99"], max_discount_rate: 30, primary_discount_type: "Flash sale",
+        promo_codes: ["FLASH99"], max_discount_rate: 30, primary_nature: "Flash sale",
       },
       timeline: [
         { kind: "good",  time: "2026-05-09 22:10", title: "Order created", meta: "night · flash sale · weekday" },

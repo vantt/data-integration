@@ -87,8 +87,8 @@ function CustomerSidebar({ c }){
           <Fact k="Email" v={p.email} />
           <Fact k={tr("Address","Địa chỉ")} v={`${p.address1}, ${p.ward}, ${p.district}, ${p.province}`} />
           <Fact k={tr("Region","Khu vực")} v={p.geo_region} />
-          <Fact k={tr("Loyalty","Điểm")} v={p.loyalty_points.toLocaleString("vi-VN")} mono />
-          <Fact k={tr("DOB / Sex","NS / GT")} v={`${p.birth_date} · ${p.gender}`} />
+          <Fact k={tr("Loyalty","Điểm")} v={p.loyalty_point.toLocaleString("vi-VN")} mono />
+          <Fact k={tr("DOB / Sex","NS / GT")} v={`${p.dob} · ${p.sex}`} />
         </div>
       </div>
 

@@ -88,7 +88,8 @@ data/
 components/           inline-JSX (Babel) — each exports to window at file end
   ui.jsx              primitives: tr(), Money, Pct, Badge, Caveat, Kpi, StatusPill, Eyebrow, Sparkline
   header.jsx          floating header: brand, segmented Order/Customer search, results, context crumb
-  orderTabs.jsx       all order tab panels (Financial, Items, Operations*, Context)
+  financial.jsx       REDESIGNED Financial tab: verdict addons, composition bar, PL waterfall, cost ledger, COGS recon
+  orderTabs.jsx       all order tab panels (Financial delegates to financial.jsx, Items, Operations*, Context)
   order.jsx           order shell: tab bar + sidebar ("Order at a glance")
   customerTabs.jsx    customer tab panels (Value & Behavior, Status Timeline, Order History)
   customer.jsx        customer shell: tab bar + sidebar ("Customer profile")
@@ -123,7 +124,14 @@ Screenshots in `screens/` (dark theme, ~1305px wide desktop). Two-column grid ev
 | # | File | Screen |
 |---|---|---|
 | 01 | `01-home.png` | **Home** — centered search only (segmented Order/Customer toggle, mono input, hint line). No data grid. |
-| 02 | `02-order-financial.png` | **Order ▸ Financial** (default tab) — revenue waterfall as a vertical op-list (gross → −discount → net → +VAT → total → −COGS → gross profit · margin% → −platform fees → channel net · margin%), inline caveats. |
+| 02 | `02-order-financial.png` | **Order ▸ Financial** (default tab) — REDESIGNED. Verdict + COGS badge + fully-loaded footnote → composition bar → 4-col waterfall (op \| label \| % \| amount) → decision tier → overhead footer → cost ledger (+ OVERHEAD/PROMO_GOODS) → COGS reconciliation. |
+| 02b | `02b-order-financial-waterfall.png` | Financial waterfall detail — % column aligned, decision tier (Channel net profit) emphasized in moss. |
+| 02c | `02c-order-financial-costs-recon.png` | Cost breakdown with ledger groups + OVERHEAD NEW tag. |
+| 02d | `02d-order-financial-bottom.png` | OVERHEAD group expanded + COGS reconciliation collapsed panel. |
+| 02e | `02e-order-financial-recon.png` | COGS reconciliation showing Sapo-MAC vs MISA-632 variance. |
+| 11 | `11-order-financial-loss.png` | **Loss order (HD00251)** — coral verdict, composition bar showing loss segment, fully-loaded deepens loss. |
+| 12 | `12-order-financial-unverified.png` | **Unverified order (HD00076)** — graceful degradation: no composition bar, no overhead, no recon. |
+| 13 | `13-order-financial-promo.png` | **Promo goods order (HD00098)** — shows Promo goods cost row between Gross profit and Channel net. |
 | 03 | `03-order-items.png` | **Order ▸ Items** — line-item table (SKU, product/variant, brand, qty, unit, line, discount, weight), Σ reconciliation vs net revenue, "no per-line COGS" note. |
 | 04 | `04-order-operations-top.png` | **Order ▸ Operations** (top) — Recipient & delivery, then Fulfillment. |
 | 05 | `05-order-operations-shipments.png` | **Order ▸ Operations ▸ Shipments** — leg-level shipment cards (detailed below). |
@@ -267,7 +275,123 @@ A single calm muted line "No returns" in a small bordered box. **No empty table 
 
 ## Files to reference
 
-- Shipments + Returns + all order panels: `app/components/orderTabs.jsx`
-- Mock data shapes (orders incl. `shipments[]` / `returns[]`, customers): `app/data/mock.js`
-- All component CSS (search `.ship-` and `.ret-`): `app/styles/app.css`
+- **Financial tab (redesigned):** `app/components/financial.jsx` — all 5 zones (verdict addons, composition bar, PL waterfall, cost ledger, COGS recon)
+- Shipments + Returns + other order panels: `app/components/orderTabs.jsx`
+- Mock data shapes (orders incl. new financial fields, `shipments[]` / `returns[]`, customers): `app/data/mock.js`
+- All component CSS (search `.comp-`, `.wf-row--pl`, `.wf-footer-`, `.recon-`, `.ship-`, `.ret-`): `app/styles/app.css`
 - Tokens: `design_system/colors_and_type.css` · Guide: `design_system/PRECISION_GUIDE.md`
+
+---
+
+## ▸ Section spec: FINANCIAL TAB (redesigned)  (`financial.jsx`; CSS `.comp-*`, `.wf-*--pl`, `.wf-footer-*`, `.recon-*` in `app.css`)
+
+Reorganized so a non-finance user can answer at a glance: **"Did this order make money, how much, where did it go, and can I trust the numbers?"** Five progressive-disclosure zones.
+
+### Zone 1 — Verdict bar + addons
+
+Keeps the existing `ProfitVerdict` component (bar/rule/gauge treatments via `data-verdict-style`).
+
+**COGS source badge** — shown below the verdict bar. Maps `cogs_source` field:
+| Value | Badge | Tone | Tooltip |
+|---|---|---|---|
+| `sapo_mac` | `Sapo-MAC` | good | Giá vốn từ tồn kho Sapo |
+| `misa` | `MISA` | neutral | Giá vốn kế toán TK632 |
+| `both` | `Sapo + MISA` | good | Có cả hai (đối chiếu được) |
+| `none` | `No COGS` | warn | Chưa có giá vốn → margin chưa xác định |
+
+**Fully-loaded footnote** — muted line below verdict, conditional on `allocated_overhead != null`:
+> ⓘ After operating cost allocation (est.): Fully-loaded net profit +272.000 đ · 21.8%
+
+Never competes with the verdict hero number; it's a quiet report figure.
+
+### Zone 2 — Composition bar
+
+Horizontal 100%-stacked bar of **Net Revenue** broken into cost segments + profit. CSS `.comp-bar`.
+
+| Segment | Color token | Condition |
+|---|---|---|
+| COGS | `amber-lo` mixed with `ink-300` | `cogs_amount > 0` |
+| Promo | `coral-500` at 65% | `promo_goods_cost > 0` |
+| Platform fees | `honey-500` at 75% | `platform_fees > 0` |
+| Overhead | `ink-500` | `allocated_overhead > 0` |
+| Profit / Loss | `moss-500` / `coral-500` | always (remainder) |
+
+Legend below the bar shows each segment's VN label + percentage. Zero segments are skipped. If `cogs_amount` is null (unverified), the entire bar is hidden.
+
+### Zone 3 — P&L Waterfall
+
+**4-column grid**: `op (20px) | label (1fr) | % (72px) | amount (140px)`. Header row with `P&L LINE | % | AMOUNT`. All numbers use `font-variant-numeric: tabular-nums` for column alignment.
+
+| # | Op | Label | % basis | Amount field |
+|---|---|---|---|---|
+| 1 | | Gross revenue `[incl VAT]` | — | `gross_revenue` |
+| 2 | − | Discount `BUNDLE` | — | `discount_amount` |
+| 3 | = | Net revenue `[excl VAT]` | — | `net_revenue` (total row) |
+| 4 | + | Tax amount `[embedded in price]` | — | `tax_amount` |
+| 5 | = | Total collected `[incl VAT]` | — | `total_collected` (total row) |
+| 6 | − | COGS + source badge | cogs/net | `cogs_amount` (neg) |
+| 7 | = | Gross profit | `gross_margin_pct` | `gross_profit` (result) |
+| 8 | − | Promo goods cost `promo` | promo/net | `promo_goods_cost` (neg, **only if > 0**) |
+| 9 | − | Platform fees `Shopee ▸ detail` | fees/net | `platform_fees` (neg) |
+| 10 | = | ★ **Channel net profit** | `channel_net_margin_pct` | `channel_net_profit` (**decision tier**) |
+
+**Decision tier** (row 10): CSS `.wf-row--decision` — moss-tinted background, bold label + amount in `moss-500`, star glyph. When negative, amount flips to `coral-500`.
+
+**EN labels + VN tooltips**: every label has a `title` attribute with Vietnamese name + short definition (see `TOOLTIP_MAP` in `financial.jsx`). Cursor shows `help` on hover.
+
+**Tags**: `[incl VAT]`, `[excl VAT]`, `[embedded in price]` rendered in mono caption style (`.wf-tag`).
+
+### Fully-loaded footer (below waterfall, conditional)
+
+Rendered only when `allocated_overhead > 0`. Dashed-border box (`.wf-footer-muted`), two rows:
+- `+ Allocated overhead [est.] ESTIMATED badge  −48.000 đ`
+- `= Fully-loaded net profit [for reporting]  +272.000 đ  21.8%`
+
+Muted styling — never visually competes with the decision tier above.
+
+### Zone 4 — Cost breakdown
+
+Same grouped collapsible ledger as before, extended with two new `cost_category` values:
+- **`PROMO_GOODS`** — tone `accent`, green `NEW` tag
+- **`OVERHEAD`** — tone `accent`, green `NEW` tag, `(allocated)` suffix
+
+Each row remains traceable: `cost_type · source · record · fee_source (actual/estimated) · amount`.
+
+### Zone 5 — COGS reconciliation (collapsed)
+
+Rendered only when `cogs_source === "both"` (both Sapo-MAC and MISA data exist). CSS `.recon-*`.
+
+**Collapsed** (default): dashed border, one-line preview:
+> ▸ COGS RECONCILIATION  audit · collapsed by default
+> Sapo-MAC **870.000 đ** vs MISA-632 **850.000 đ** · variance **+20.000 đ (+2.4%)**
+
+**Expanded** (click): 3-column grid showing Sapo-MAC value, MISA TK632 value, and variance. Variance > 5% highlights in `honey-500`.
+
+### New data fields (mock data, `order.financial`)
+
+| Field | Type | When null |
+|---|---|---|
+| `cogs_source` | `"sapo_mac"` \| `"misa"` \| `"both"` \| `"none"` | Falls back to inferring from `has_cogs` |
+| `promo_goods_cost` | number | Row hidden |
+| `allocated_overhead` | number | Footer + composition segment hidden |
+| `is_overhead_estimated` | boolean | Controls badge |
+| `fully_loaded_net_profit` | number | Footnote hidden |
+| `fully_loaded_margin_pct` | number | Pct hidden |
+| `sapo_mac_cogs` | number | Recon hidden |
+| `misa_cogs_632` | number | Recon hidden |
+| `cogs_variance` | number | Recon hidden |
+| `cogs_variance_pct` | number | Recon hidden |
+
+### Graceful degradation
+
+When all new fields are null (backend phases pending), the page renders **exactly as before**: verdict + waterfall (ending at channel net) + cost ledger. No composition bar, no overhead footer, no reconciliation. Tested on HD00076.
+
+### Demo orders
+
+| Order | State | New features shown |
+|---|---|---|
+| HD00123 | Profitable, Shopee | All 5 zones: both-source badge, overhead, fully-loaded, composition, recon |
+| HD00251 | Loss, Shopee | Coral verdict, loss composition segment, overhead deepens loss |
+| HD00098 | Profitable, Facebook, gift | Promo goods cost row, MISA-only badge, PROMO_GOODS in ledger |
+| HD00076 | Unverified, Lazada | Graceful degradation — `No COGS` badge, no new zones |
+| HD00210 | US CrossBorder | Separate US variant (unchanged), MISA badge added |
