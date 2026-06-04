@@ -21,7 +21,7 @@ _DDL = [
         channel_key VARCHAR, seller_staff_key VARCHAR, creator_staff_key VARCHAR,
         team_key VARCHAR, status VARCHAR, payment_status VARCHAR, fulfillment_status VARCHAR,
         gross_revenue DECIMAL(18,2), discount_amount DECIMAL(18,2), net_revenue DECIMAL(18,2),
-        tax_amount DECIMAL(18,2), total_collected DECIMAL(18,2),
+        vat_amount DECIMAL(18,2), total_collected DECIMAL(18,2),
         first_shipped_at TIMESTAMPTZ, time_to_complete_hours BIGINT,
         max_discount_rate DOUBLE, primary_discount_type VARCHAR, shipping_address VARCHAR,
         order_timestamp TIMESTAMPTZ, updated_at TIMESTAMPTZ )""",

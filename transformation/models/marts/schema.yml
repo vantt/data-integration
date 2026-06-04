@@ -509,10 +509,10 @@ models:
         description: "Tổng chiết khấu (coupon, promotion, combo)"
       - name: net_revenue
         description: "Doanh thu thuần (sau chiết khấu, trước thuế). Field gốc từ Sapo $.total"
-      - name: tax_amount
-        description: "Thuế VAT (8% hoặc 10%)"
+      - name: vat_amount
+        description: "Thuế VAT (8% hoặc 10%) nhúng trong giá bán Sapo ($.total_tax)"
       - name: total_collected
-        description: "Tổng thu từ khách (sau chiết khấu, gồm thuế). Formula: net_revenue + tax_amount"
+        description: "Tổng thu từ khách (sau chiết khấu, gồm thuế). Formula: net_revenue + vat_amount"
       - name: client_details
         description: "JSON details about client (IP, User Agent)"
       - name: discount_codes

@@ -70,7 +70,7 @@ SELECT
     -- 8%/10% items handled automatically via the per-order ratio. Keeps SKU margins on the same
     -- VAT-exclusive basis as MISA COGS. See docs/analytics-handbook/guides/revenue_terminology.md.
     i.line_amount * COALESCE(
-        (o.total_amount - COALESCE(o.total_tax_amount, 0)) / NULLIF(o.total_amount, 0),
+        (o.total_amount - COALESCE(o.vat_amount, 0)) / NULLIF(o.total_amount, 0),
         1
     ) as revenue,
     i.discount_amount,

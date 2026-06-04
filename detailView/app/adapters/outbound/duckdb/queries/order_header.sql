@@ -19,7 +19,7 @@ SELECT
     fo.gross_revenue,
     fo.discount_amount,
     fo.net_revenue,
-    fo.tax_amount,
+    fo.vat_amount,
     fo.total_collected,
     -- economics (P&L) — LEFT JOIN: may be absent
     foe.cogs_amount,

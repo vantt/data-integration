@@ -106,7 +106,7 @@ SELECT
     -- Financials
     total_amount,
     total_discount as total_discount_amount,
-    tax_amount as total_tax_amount,
+    tax_amount as vat_amount,
     'VND' as currency_code,
     
     -- Address Snapshots (JSON)

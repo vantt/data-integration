@@ -38,7 +38,7 @@ WITH base AS (
         o.gross_revenue,
         o.discount_amount,
         o.net_revenue,
-        o.tax_amount,
+        o.vat_amount,
         o.total_collected,
         o.first_shipped_at,
         o.time_to_complete_hours AS hours_to_complete,

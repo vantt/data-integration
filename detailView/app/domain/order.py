@@ -62,7 +62,7 @@ class OrderFinancial:
     gross_revenue: Decimal | None = None
     discount_amount: Decimal | None = None
     net_revenue: Decimal | None = None
-    tax_amount: Decimal | None = None
+    vat_amount: Decimal | None = None
     total_collected: Decimal | None = None
     # Profit
     cogs_amount: Decimal | None = None

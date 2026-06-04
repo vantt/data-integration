@@ -135,14 +135,14 @@ SELECT
     -- Financial Metrics (Revenue Waterfall)
     -- See: docs/analytics-handbook/guides/revenue_terminology.md
     -- IMPORTANT: Sapo selling prices (giá bán) are VAT-INCLUSIVE. $.total (total_amount) is the
-    -- gross amount with VAT already inside; $.total_tax (total_tax_amount) is that embedded VAT
+    -- gross amount with VAT already inside; $.total_tax (vat_amount) is that embedded VAT
     -- (Sapo computes it exactly per-order: 8/108 for 8% items, 10/110 for 10% items, 0 for exports).
     -- Therefore: net revenue = total − tax (VAT-exclusive), and the cash collected from the
     -- customer = total (VAT already inside — do NOT add tax on top, that double-counts VAT).
     total_amount + total_discount_amount as gross_revenue,                 -- Giá bán × SL trước chiết khấu (đã gồm VAT)
     total_discount_amount as discount_amount,                              -- Chiết khấu
-    total_amount - COALESCE(total_tax_amount, 0) as net_revenue,           -- Doanh thu thuần sau chiết khấu, ĐÃ TRỪ VAT
-    total_tax_amount as tax_amount,                                        -- VAT nhúng trong giá bán (Sapo $.total_tax)
+    total_amount - COALESCE(vat_amount, 0) as net_revenue,                 -- Doanh thu thuần sau chiết khấu, ĐÃ TRỪ VAT
+    vat_amount,                                                            -- VAT nhúng trong giá bán (Sapo $.total_tax)
     total_amount as total_collected,                                       -- Tổng khách trả = giá bán (đã gồm VAT)
     
     -- Performance Metrics

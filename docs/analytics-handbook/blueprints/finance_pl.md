@@ -436,7 +436,7 @@ FROM (
             )
         ),
         ('Thue VAT',
-            (SELECT COALESCE(-SUM(ABS(tax_amount)), 0)
+            (SELECT COALESCE(-SUM(ABS(vat_amount)), 0)
              FROM fact_orders
              WHERE status NOT IN ('CANCELLED', 'Voided')
                [[AND {{date_range}}]]

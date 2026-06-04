@@ -20,7 +20,7 @@ WITH orders AS (
         gross_revenue,
         discount_amount,
         net_revenue,
-        tax_amount,
+        vat_amount,
         total_collected
     FROM {{ ref('fact_orders') }}
 ),
@@ -78,7 +78,7 @@ SELECT
     o.gross_revenue,
     o.discount_amount,
     o.net_revenue,
-    o.tax_amount,
+    o.vat_amount,
     o.total_collected,
 
     -- COGS (from MISA)

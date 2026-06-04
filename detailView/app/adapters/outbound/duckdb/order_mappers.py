@@ -47,7 +47,7 @@ def map_financial(row: Row) -> OrderFinancial:
         gross_revenue=rc.as_decimal(row.get("gross_revenue")),
         discount_amount=rc.as_decimal(row.get("discount_amount")),
         net_revenue=rc.as_decimal(row.get("net_revenue")),
-        tax_amount=rc.as_decimal(row.get("tax_amount")),
+        vat_amount=rc.as_decimal(row.get("vat_amount")),
         total_collected=rc.as_decimal(row.get("total_collected")),
         cogs_amount=rc.as_decimal(row.get("cogs_amount")),
         gross_profit=rc.as_decimal(row.get("gross_profit")),

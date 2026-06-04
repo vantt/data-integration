@@ -123,7 +123,7 @@ SELECT
         ELSE ROUND(o.discount_amount * 100.0 / o.gross_revenue, 1)
     END AS "Ty Le CK %",
     o.net_revenue AS "Doanh Thu Thuan",
-    o.tax_amount AS "Thue",
+    o.vat_amount AS "Thue",
     o.total_collected AS "Tong Thu",
     e.cogs_amount AS "Gia Von (MISA)",
     e.gross_profit AS "Lai Gop",
