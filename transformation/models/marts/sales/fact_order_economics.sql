@@ -34,6 +34,8 @@ misa_order AS (
         SUM(gross_profit)             AS misa_gross_profit,
         COUNT(*)                      AS misa_line_count
     FROM {{ ref('int_misa_sales_lines') }}
+    -- BUG-1: only TK632 = true COGS; exclude TK642 promo-goods (counted as promo cost, not COGS)
+    WHERE cogs_account LIKE '632%'
     GROUP BY voucher_no
 ),
 
@@ -96,8 +98,9 @@ SELECT
     END AS gross_margin_pct,
 
     -- Shopee platform economics (NULL for non-Shopee orders)
-    -- shopee_platform_fees = all fees deducted in channel_net_profit (total_platform_fees + infra + voucher_xtra)
-    -- so waterfall row matches the jump from gross_profit to channel_net_profit.
+    -- shopee_platform_fees = total_platform_fees (payment/fixed/affiliate/piship) + infra + voucher_xtra.
+    -- service_fee (D-aggregate) was removed upstream (phase-07: it equalled infra+voucher_xtra → double-count).
+    -- F-detail rows (infra + voucher_xtra) are now the sole service-fee source; sum is non-duplicated.
     CASE WHEN sf.order_code IS NOT NULL
         THEN sf.total_platform_fees
              + COALESCE(sf.infrastructure_fee, 0)

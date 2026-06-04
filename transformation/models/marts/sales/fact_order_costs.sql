@@ -32,7 +32,8 @@ cogs AS (
         MIN(om.channel_key)                 AS channel_key
     FROM {{ ref('int_misa_sales_lines') }} m
     JOIN order_meta om ON m.voucher_no = om.order_code
-    WHERE m.cogs_amount IS NOT NULL
+    -- BUG-1: TK632 = true COGS only (exclude TK642 promo-goods)
+    WHERE m.cogs_amount IS NOT NULL AND m.cogs_account LIKE '632%'
     GROUP BY om.order_id, m.voucher_no
 ),
 
@@ -52,7 +53,7 @@ shopee_wide AS (
         om.order_id,
         om.date_key,
         om.channel_key,
-        rev.service_fee,
+        -- service_fee (D aggregate) removed: phase-07 drop — it == infra+voucher_xtra (F detail) → double-count
         rev.payment_fee,
         rev.fixed_fee,
         rev.affiliate_commission_fee,
@@ -68,9 +69,9 @@ shopee_wide AS (
 ),
 
 shopee_fees AS (
-    SELECT order_id, order_code, 'platform_service'     AS cost_type, 'PLATFORM_FEE' AS cost_category, ABS(service_fee)              AS amount, date_key, channel_key FROM shopee_wide WHERE ABS(COALESCE(service_fee, 0)) > 0
-    UNION ALL
-    SELECT order_id, order_code, 'platform_payment',    'PLATFORM_FEE',              ABS(payment_fee),                                          date_key, channel_key FROM shopee_wide WHERE ABS(COALESCE(payment_fee, 0)) > 0
+    -- service_fee (D aggregate) dropped: == infra + voucher_xtra (F detail) → double-count. F detail is sole source.
+    -- First arm carries the AS aliases that define the UNION column names (cost_type/cost_category/amount).
+    SELECT order_id, order_code, 'platform_payment' AS cost_type, 'PLATFORM_FEE' AS cost_category, ABS(payment_fee) AS amount,             date_key, channel_key FROM shopee_wide WHERE ABS(COALESCE(payment_fee, 0)) > 0
     UNION ALL
     SELECT order_id, order_code, 'platform_fixed',      'PLATFORM_FEE',              ABS(fixed_fee),                                            date_key, channel_key FROM shopee_wide WHERE ABS(COALESCE(fixed_fee, 0)) > 0
     UNION ALL

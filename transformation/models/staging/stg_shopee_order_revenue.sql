@@ -31,9 +31,8 @@ SELECT
     CAST(seller_coin_cashback AS BIGINT)               AS seller_coin_cashback,
     CAST(seller_cofunded_coin_cashback AS BIGINT)      AS seller_cofunded_coin_cashback,
 
-    -- Platform fees
+    -- Platform fees (service_fee removed: D-sheet duplicate of F-sheet infrastructure_fee+voucher_xtra_fee)
     CAST(fixed_fee AS BIGINT)              AS fixed_fee,
-    CAST(service_fee AS BIGINT)            AS service_fee,
     CAST(payment_fee AS BIGINT)            AS payment_fee,
     CAST(affiliate_commission_fee AS BIGINT) AS affiliate_commission_fee,
     CAST(piship_service_fee AS BIGINT)     AS piship_service_fee,
@@ -64,7 +63,6 @@ SELECT
         AS total_discounts,
 
     COALESCE(CAST(fixed_fee AS BIGINT), 0)
-        + COALESCE(CAST(service_fee AS BIGINT), 0)
         + COALESCE(CAST(payment_fee AS BIGINT), 0)
         + COALESCE(CAST(affiliate_commission_fee AS BIGINT), 0)
         + COALESCE(CAST(piship_service_fee AS BIGINT), 0)

@@ -43,8 +43,8 @@ DOANH_THU_RENAME = {
     "Mã hoàn xu do Người Bán chịu": "seller_coin_cashback",
     "Mã hoàn xu Đồng Tài Trợ do Người Bán chịu": "seller_cofunded_coin_cashback",
     "Phí cố định": "fixed_fee",
-    "Phí Dịch Vụ": "service_fee",
     "Phí thanh toán": "payment_fee",
+    "Phí xử lý giao dịch": "payment_fee",   # Shopee renamed this column in May 2026
     "Phí hoa hồng Tiếp thị liên kết": "affiliate_commission_fee",
     "Phí dịch vụ PiShip": "piship_service_fee",
     "Mức Nạp Tiền Tự Động (từ doanh thu đơn hàng)": "auto_topup_amount",
@@ -109,6 +109,24 @@ NUMERIC_CLEANUP_COLS = [
 REQUIRED_DOANH_THU_HEADERS = {"Mã đơn hàng", "Đơn hàng / Sản phẩm", "Ngày hoàn thành thanh toán"}
 REQUIRED_SFD_HEADERS = {"Mã đơn hàng", "Phí Hạ Tầng", "Voucher Xtra"}
 
+# Fee/tax columns we DELIBERATELY do not map (so the drift guard doesn't cry wolf).
+# "Phí Dịch Vụ" = D-sheet service-fee aggregate; dropped on purpose because it
+# duplicates the F-sheet detail (infrastructure_fee + voucher_xtra_fee). See phase-07.
+INTENTIONALLY_DROPPED_FEE_COLS = {"Phí Dịch Vụ"}
+
+
+def _warn_schema_drift(df, rename_dict, sheet_name):
+    """Surface unmapped fee/tax columns so Shopee header drift never silently drops a fee again."""
+    unmapped = [c for c in df.columns if c not in rename_dict and c not in INTENTIONALLY_DROPPED_FEE_COLS]
+    suspicious = [c for c in unmapped if ("Phí" in str(c)) or ("Thuế" in str(c))]
+    if suspicious:
+        msg = (
+            f"[!] SCHEMA_DRIFT in '{sheet_name}': unmapped fee/tax column(s) {suspicious}"
+            " — add to rename dict or a fee will be silently dropped!"
+        )
+        print(msg)
+        warnings.warn(msg)
+
 
 def to_int_vnd(series):
     """Clean string→Int64 for VND amount columns. Handles "-", "", numeric strings."""
@@ -146,9 +164,17 @@ def parse_shopee_income(file_path):
     if missing:
         raise ValueError(f"Doanh thu sheet missing required headers: {missing}")
 
+    # Drift guard: warn on any unmapped fee/tax column BEFORE rename
+    _warn_schema_drift(df_dt, DOANH_THU_RENAME, "Doanh thu")
+
     # Rename VN → snake_case (only rename columns that exist in the rename dict)
     rename_map = {k: v for k, v in DOANH_THU_RENAME.items() if k in df_dt.columns}
     df_dt = df_dt.rename(columns=rename_map)
+
+    # Belt-and-suspenders: drop raw "Phí Dịch Vụ" if it survived the rename
+    # (should never happen, but guards against future dict re-addition)
+    if "Phí Dịch Vụ" in df_dt.columns:
+        df_dt = df_dt.drop(columns=["Phí Dịch Vụ"])
 
     # Drop trailing all-NaN columns
     df_dt = df_dt.dropna(axis=1, how="all")
@@ -194,6 +220,9 @@ def parse_shopee_income(file_path):
     missing_sfd = REQUIRED_SFD_HEADERS - set(df_sfd.columns)
     if missing_sfd:
         raise ValueError(f"Service Fee Details sheet missing required headers: {missing_sfd}")
+
+    # Drift guard: warn on any unmapped fee/tax column BEFORE rename
+    _warn_schema_drift(df_sfd, SERVICE_FEE_RENAME, "Service Fee Details")
 
     rename_sfd = {k: v for k, v in SERVICE_FEE_RENAME.items() if k in df_sfd.columns}
     df_sfd = df_sfd.rename(columns=rename_sfd)
