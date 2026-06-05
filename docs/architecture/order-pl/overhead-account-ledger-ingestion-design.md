@@ -39,7 +39,10 @@ input_source/
 ## 3. Grain + raw retention
 
 - **Working data = grain `(account, period_month)`** (account = leaf sâu nhất file cho: 64211, 64214, 642172, 6422…). 6422 = 1 dòng/tháng; mỗi 6421-sub 1 dòng/tháng → ~10–12 dòng/tháng. Roll-up 6421/6422 lúc nào cũng được; KHÔNG gộp sớm (keep/drop quyết ở mức sub-account).
-- **Raw line-level:** GIỮ TOÀN BỘ (data cực nhỏ ~vài trăm KB/kỳ → prune là YAGNI) cho audit + re-classify. **KHÔNG prune** ở v1. (Chỉ thêm retention khi raw thật sự phình — chưa cần.)
+- **Idempotency (chống trùng) NẰM Ở ROLLUP** `std_misa_account_ledger` (key `(account, month)`), KHÔNG phải ở việc giữ raw → raw bản chất là **tầng tạm, prune được**.
+- **Raw line-level** (`misa_raw/account_ledger`, partition year/month): nguồn cho rollup + audit + re-classify + checksum.
+  - **v1:** rollup là VIEW re-derive từ raw → tạm **GIỮ raw** (prune lúc này sẽ mất lịch sử rollup).
+  - **Prune (chu kỳ đúng) = khi rollup thành persistent-incremental** (tự giữ lịch sử, không re-derive) → raw thành tầng tạm xóa được sau khi qua **horizon re-export/điều chỉnh kế toán** (kỳ còn bị re-stated tới ~chốt năm + audit). Đề xuất cửa sổ **rolling ~18 tháng / "năm tài chính trước"** — data nhỏ nên generous OK, chỉnh dễ.
 
 ## 4. Idempotency — UPSERT, KHÔNG append (kế toán xuất trùng/xuất lại)
 
@@ -105,7 +108,7 @@ reconcile (phase-04): std_misa_account_ledger ⨯ std_misa_sales_lines ⨯ int_o
 ```
 
 ## Open items
-1. ~~Retention raw~~ → CHỐT: giữ toàn bộ, không prune (data nhỏ).
+1. Prune raw: idempotency ở rollup → raw prune được. **v1 giữ raw** (rollup là VIEW re-derive); **prune = v1.1** khi rollup thành persistent-incremental, cửa sổ ~18 tháng/năm-tài-chính-trước (horizon re-export). Data nhỏ → chưa gấp.
 2. `64213` (phân bổ chi phí trả trước) — phân bổ cái gì? Nếu không rõ → **default `keep_admin`** (9.68M nhỏ, sai số bé); xác nhận khi tiện.
 3. Reconcile 64214(103M) vs sales-642(1.08B) — **phase-04** (cần cả 2 report trong model).
 4. gsheet: ai duy trì; channel-attribution ads = **v1 common (net_revenue)**, v2 mới gán channel.

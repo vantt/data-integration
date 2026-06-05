@@ -1,0 +1,11 @@
+account,account_group,treatment,pool_id,base_metric,channel,effective_from,effective_to,note
+64211,6421,keep_handling,handling,order_count,,2025-12-01,,Bao bi/dong goi (mang PE Foam, hop carton)
+64213,6421,keep_admin,admin,net_revenue,,2025-12-01,,Phan bo chi phi tra truoc (default admin - xac nhan noi dung phan bo)
+64214,6421,drop_promo_count_once,,,,2025-12-01,,Hang tang - da o promo_goods_cost tier-2a (Sapo-MAC); count-once
+642172,6421,keep_marketing,marketing,net_revenue,,2025-12-01,,Quang cao Facebook (dedup vs gsheet_marketing_spend; channel = v2)
+642174,6421,drop_traceable,,,,2025-12-01,,Hoa hong co dinh + phi xu ly giao dich - da o tier-2 Shopee
+642175,6421,keep_marketing,marketing,net_revenue,,2025-12-01,,Ho tro quang cao + phi web EDI (MIXED - review: ad-support vs platform-fee)
+642176,6421,drop_traceable,,,,2025-12-01,,Phi van chuyen - da o tier-2 Shopee
+642177,6421,keep_admin,admin,net_revenue,,2025-12-01,,Phi duy tri tai khoan quan tri
+642178,6421,keep_admin,admin,net_revenue,,2025-12-01,,Ho tro kinh doanh (Zalo Business, in card/thiep)
+6422,6422,keep_admin,admin,net_revenue,,2025-12-01,,G&A (cuoc internet, thue bao dien thoai, ...)
