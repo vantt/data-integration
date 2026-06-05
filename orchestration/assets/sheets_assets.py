@@ -21,6 +21,7 @@ try:
     import gsheet_marketing_spend
     import gsheet_team_config
     import gsheet_us_shipment_prices
+    import gsheet_overhead_classification
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
 
@@ -206,6 +207,55 @@ def sheets_us_shipment_prices_asset(context):
                 run_started_at=started,
                 status=status,
                 rows_written=None,
+                metadata={"gsheet_row_count": None},
+            )
+        except Exception as _e:
+            context.log.warning(f"ingestion_health record_run failed: {_e}")
+
+
+@asset(group_name="sheets_ingestion", key_prefix=["sheets"])
+def sheets_overhead_classification_asset(context):
+    """Nightly sync for Overhead Account Classification Google Sheet.
+
+    Ingests MISA overhead sub-account classification rules (treatment, pool_id,
+    base_metric) that control how each account is allocated in the P&L.
+    Overwrites a full snapshot parquet on each run — the sheet is the live master.
+    Writes to ingestion_health via orchestration.ops.ingestion_health.
+    """
+    asset_key_str = "sheets/sheets_overhead_classification_asset"
+    started = datetime.now(timezone.utc)
+    context.log.info("Starting Google Sheet Overhead Classification Sync...")
+    load_dlt_configuration(context.log.info)
+    cwd = os.getcwd()
+    status = "failed"
+    try:
+        try:
+            os.chdir(DLT_DIR)
+            gsheet_overhead_classification.run()
+        finally:
+            os.chdir(cwd)
+
+        status = "success"
+        context.log.info("Overhead Classification Sync Finished.")
+        return Output(
+            value="Overhead Classification Sync Completed",
+            metadata={
+                "status": MetadataValue.text("Success"),
+                # TODO: surface row count from gsheet_overhead_classification.run() in a follow-up
+                "rows_written": MetadataValue.text("unknown"),
+            },
+        )
+    except Exception as e:
+        context.log.error(f"Error: {e}")
+        raise
+    finally:
+        try:
+            _record_health(
+                asset_key=asset_key_str,
+                run_id=context.run_id,
+                run_started_at=started,
+                status=status,
+                rows_written=None,  # gsheet runner doesn't surface count yet
                 metadata={"gsheet_row_count": None},
             )
         except Exception as _e:

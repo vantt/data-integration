@@ -13,6 +13,36 @@ models:
       - name: effective_from
         tests: [not_null]
 
+  - name: stg_overhead_account_classification
+    description: >
+      Overhead Account Classification — one row per MISA leaf sub-account. Defines
+      how each 6421/6422 account is treated in the P&L: pooled allocation (keep_*)
+      or excluded (drop_*). Source: Google Sheet snapshot, loaded nightly.
+    columns:
+      - name: account
+        description: "MISA leaf sub-account code (VARCHAR — codes like 64211, never cast to int)"
+        tests: [not_null]
+      - name: treatment
+        description: "P&L treatment for this account"
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - keep_admin
+                - keep_handling
+                - keep_marketing
+                - keep_selling
+                - drop_traceable
+                - drop_promo_count_once
+      - name: pool_id
+        description: "Allocation pool identifier (required for keep_* rows)"
+      - name: base_metric
+        description: "Allocation base for keep_* rows: net_revenue | order_count | gross_profit"
+      - name: effective_from
+        description: "Date this classification takes effect (NULL = no start constraint)"
+      - name: effective_to
+        description: "Date this classification expires (NULL = open-ended / currently active)"
+
   - name: stg_sapo_orders_v2
     columns:
       - name: order_id

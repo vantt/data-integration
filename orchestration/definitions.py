@@ -104,6 +104,7 @@ _sheets_sources = (
     | AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset)
     | AssetSelection.assets(sheets_assets.sheets_team_config_asset)
     | AssetSelection.assets(sheets_assets.sheets_us_shipment_prices_asset)
+    | AssetSelection.assets(sheets_assets.sheets_overhead_classification_asset)
 )
 ingest_sheets_sync_job = define_asset_job(
     name="ingest_sheets_sync_job",
@@ -174,6 +175,7 @@ _nightly_batch_selection = (
     AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
     AssetSelection.assets(sheets_assets.sheets_team_config_asset) |
     AssetSelection.assets(sheets_assets.sheets_us_shipment_prices_asset) |
+    AssetSelection.assets(sheets_assets.sheets_overhead_classification_asset) |
     AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
     AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
     AssetSelection.assets(misa_amis_assets.misa_account_ledger_file_drop_asset) |

@@ -84,6 +84,16 @@ sources:
       - name: us_shipment_prices_raw
         description: "SKU-level US export deal prices with effective_from date versioning. Sapo records US prices as 0; this is the source of truth."
 
+      # Overhead Account Classification (Google Sheets)
+      - name: overhead_account_classification_raw
+        description: >
+          MISA overhead sub-account classification rules — source of truth for how each
+          6421/6422 leaf account is treated in the P&L. treatment ∈ {keep_admin,
+          keep_handling, keep_marketing, keep_selling, drop_traceable,
+          drop_promo_count_once}. keep_* accounts are pooled and allocated to channels
+          via base_metric (net_revenue | order_count | gross_profit). Loaded nightly
+          via full snapshot overwrite.
+
       # Bảng 11: Inventory Transactions v2 (batch_sync parquet, content-addressed entity_id)
       - name: inventory_transaction_v2
         description: >
