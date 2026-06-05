@@ -3647,3 +3647,40 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 4. Verify a waterfall by arithmetic: assert the visible-rows chain == the displayed result value on a real order, not just that each row renders.
 
 **Reference:** `detailView/app/adapters/inbound/web/templates/partials/order/_financial.html` · `transformation/tests/assert_promo_account_not_in_keep_pool.sql`, `assert_no_promo_in_overhead_costs.sql` · See also L107 (mart semantics breaking UI), L106 (VAT-inclusive), and the Phase-05 repoint (`int_order_cogs_reconciled`)
+
+---
+
+### L110 — MISA `invoice_no` resets monthly/quarterly — never a standalone join key
+
+**Group:** TRUST
+
+**Symptom:** Reconciling MISA account-ledger 64214 (promo) to Sapo orders, a single-field join on `invoice_no` produced wildly wrong matches: the same number (e.g. `00000001`, `00000450`) appeared across multiple months/years for unrelated documents, so an `invoice_no`-only anti-join mislabeled ~40M as "no Sapo order / counted zero times". Per-document the real order-less amount was far smaller.
+
+**Root cause:** MISA's `invoice_no` (số hóa đơn) is a counter that **resets each month/quarter**, not a global unique id. Joining MISA→Sapo (or MISA-ledger→MISA-sales-lines) on `invoice_no` alone fans out / mis-pairs records. The earlier "40.4M standalone" figure was a monthly-sum anti-join artifact, not a per-document fact (only ~15.3M was truly order-less).
+
+**Fix:** Join MISA documents with a **3-part key**: `(invoice_no, DATE_TRUNC('month', posting_date), amount)`. With the composite key, 60.3M of the 87.8M invoice-linked 64214 confirmed counted-once via Sapo-MAC COGS; genuine under-count collapsed from "40M" to ~29M (mostly true gifting / MISA-internal vouchers).
+
+**Rules:**
+1. Treat MISA `invoice_no` (and any "resetting counter" id) as non-unique — always qualify with period + amount (or the voucher_no) before joining or anti-joining.
+2. Never conclude "no match / uncounted" from a monthly-SUM gap (A−B by month). Drill to per-document before claiming a coverage gap — sum gaps hide both matched-but-shifted and key-collision rows.
+3. A promo/gift row with a populated `invoice_no` is order-LINKED; only `invoice_no IS NULL` (e.g. voucher XK00155) is genuinely order-less.
+
+**Reference:** `transformation/models/staging/standard/std_misa_account_ledger.sql`, `std_misa_sales_lines.sql` · `docs/architecture/order-pl/promo-count-once-reconciliation.md` · `var/data_lake/misa_raw/account_ledger/**` (raw has `voucher_no`,`invoice_no`,`description`)
+
+---
+
+### L111 — MISA `VCSC*` vs Sapo `VTSC*` SKU codes are the same physical product (alias gap)
+
+**Group:** TRUST
+
+**Symptom:** In `int_order_cogs_reconciled`, ~5.7M (10 promo rows) showed as `misa`-only (no Sapo match) — a spurious reconciliation gap implying uncounted cost, even though the promo units WERE dispatched in Sapo.
+
+**Root cause:** MISA codes the product as `VCSC*` while Sapo dispatches the same physical SKU under `VTSC*`. The COGS reconciliation joins on SKU code, so the prefix difference makes one side look unmatched. Cost is still counted once (Sapo dispatch flows into COGS), but the FULL OUTER JOIN surfaces a false `misa`-only / `sapo`-only split.
+
+**Fix (recommended, not yet applied):** add a `VCSC* ↔ VTSC*` alias mapping via `dim_sku_alias` (already exists in serving) and normalize the SKU key before the COGS reconciliation join, so these rows resolve to `both`. Until then, treat the ~5.7M misa/sapo-only split on these SKUs as cosmetic (does not affect the count-once total).
+
+**Rules:**
+1. When a reconciliation joins on a business code (SKU, account, partner) sourced from two systems, check for system-specific prefixing/aliasing before trusting "unmatched" buckets — an alias gap inflates apparent variance without any real money gap.
+2. Use `dim_sku_alias` (or an equivalent crosswalk) as the canonical key for cross-system SKU joins; don't join raw vendor codes.
+
+**Reference:** `transformation/models/intermediate/cogs/int_order_cogs_reconciled.sql` · `dim_sku_alias` · `docs/architecture/order-pl/promo-count-once-reconciliation.md`
