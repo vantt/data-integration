@@ -15,18 +15,18 @@ File mẫu: `app_data/input_source/So_chi_tiet_6421 6422.xlsx` — 1 sheet `SỔ
 
 ## 1. Folder & nhận diện file — folder-per-report-type
 
-Convention sẵn có = mỗi nguồn 1 folder (`shopee/`, `misa-amis/`). Mở rộng cho report type:
+Convention sẵn có = mỗi nguồn 1 folder. **RENAME** cho rõ report-type (đối xứng):
 ```
 input_source/
   shopee/
-  misa-amis/             ← GIỮ NGUYÊN: Sổ bán hàng → COGS (không đụng)
+  misa-sales-ledger/     ← RENAME từ misa-amis/: Sổ bán hàng → COGS
   misa-account-ledger/   ← THÊM: Sổ tài khoản → overhead
       _archive/
 ```
 - **Routing = folder** (robust nhất; 0 logic đoán — bài học drift Shopee). KHÔNG content-sniffing để chọn parser.
 - **Guard nhận diện (defense-in-depth):** parser assert sheet-title = `SỔ CHI TIẾT CÁC TÀI KHOẢN` → drop nhầm folder thì **FAIL TO**, không corrupt im lặng.
 - Sensor mới `ingest_filedrop_misa_account_ledger_sensor` → job mới → parser mới → `std_misa_account_ledger` (đúng phase-01: report-specific std, không monolithic `std_misa`).
-- *(Minimal churn: không rename `misa-amis/`. Option sạch hơn — gom `misa/sales-ledger/` + `misa/account-ledger/` — bỏ qua, không đáng churn.)*
+- **Rename `misa-amis/` → `misa-sales-ledger/`:** đụng `MISA_INPUT_DIR` env (.env*), sensor `_MISA_INPUT_DIR`, default trong `run-misa-sales-file-drop.py`, archive path. Churn vừa phải, đáng vì rõ + đối xứng. *(Nested `misa/sales-ledger/`+`misa/account-ledger/` sạch hơn nhưng churn hơn — chọn flat.)*
 
 ## 2. Parser (section-based) — tái dùng pattern Shopee-Adjustment
 
@@ -39,7 +39,7 @@ input_source/
 ## 3. Grain + raw retention
 
 - **Working data = grain `(account, period_month)`** (account = leaf sâu nhất file cho: 64211, 64214, 642172, 6422…). 6422 = 1 dòng/tháng; mỗi 6421-sub 1 dòng/tháng → ~10–12 dòng/tháng. Roll-up 6421/6422 lúc nào cũng được; KHÔNG gộp sớm (keep/drop quyết ở mức sub-account).
-- **Raw line-level:** GIỮ ngắn hạn (retention ~12 tháng) cho audit + re-classify khi tinh chỉnh mapping; **prune** raw cũ hơn. Monthly rollup giữ vĩnh viễn. (Đây là "chu kỳ tái tổng hợp để release".)
+- **Raw line-level:** GIỮ TOÀN BỘ (data cực nhỏ ~vài trăm KB/kỳ → prune là YAGNI) cho audit + re-classify. **KHÔNG prune** ở v1. (Chỉ thêm retention khi raw thật sự phình — chưa cần.)
 
 ## 4. Idempotency — UPSERT, KHÔNG append (kế toán xuất trùng/xuất lại)
 
@@ -54,6 +54,9 @@ input_source/
 
 Mạnh hơn append-only của shopee/sales (vốn double khi re-export). Triển khai: full-refresh các (account,month) partition file chứa, trước khi ghi.
 
+> ⚠️ **Key idempotency KHÁC nhau từng nguồn — KHÔNG dùng 1 hàm chung mù:** account-ledger = `(account, month)`, 1 export/kỳ → replace-by-month an toàn. **Shopee = nhiều shop/tháng** (FINE/JPC/THU) → replace-by-month sẽ XÓA shop khác → Shopee phải key `(shop|source_file, month)`. → **Roll-out theo nhịp:** (1) làm upsert cho account-ledger trước (greenfield), verify Dagster; (2) pass RIÊNG retrofit shopee + misa-sales với key riêng + verify lại pipeline đang chạy. Không big-bang.
+> 🔧 **Micro-fix tách riêng (an toàn, lợi tất cả ngay):** `write_partitioned_parquet` đặt tên file theo ts mức GIÂY → 2 file cùng giây ghi đè (bug đã gặp). Thêm discriminator (hash source_file / counter) vào filename — KHÔNG đổi semantics, fix luôn cùng đợt account-ledger.
+
 ## 5. Net cost rule — `Nợ − (Có WHERE TK đối ứng ≠ 911)`
 
 642 là TK chi phí (bản chất Nợ): Nợ = chi phí phát sinh; Có = giảm chi phí (hoàn nhập rebate/sửa) HOẶC **kết chuyển 911 cuối kỳ** (chuyển toàn bộ số dư sang xác định KQKD).
@@ -67,6 +70,7 @@ Mạnh hơn append-only của shopee/sales (vốn double khi re-export). Triển
 
 `treatment` ∈ `keep_admin | keep_handling | keep_marketing | keep_selling | drop_traceable | drop_promo_count_once`.
 
+- **Channel attribution (ads-theo-sàn):** FB/Google ads thường đa-kênh, khó gán 1 channel. → **v1: ads = `keep_marketing` → common, base `net_revenue`, cột `channel` để TRỐNG.** v2 bật channel-weighted khi map được ad-platform→channel tin cậy (YAGNI giờ). Shopee Ads (rõ kênh) có thể gán sớm nếu tách được.
 - **Guard:** account xuất hiện trong data mà **chưa có** trong seed → cảnh báo "chưa phân loại" — KHÔNG tự đưa vào/ra pool mù.
 - Map sơ bộ từ file mẫu (chốt cuối khi reconcile):
 
@@ -101,8 +105,8 @@ reconcile (phase-04): std_misa_account_ledger ⨯ std_misa_sales_lines ⨯ int_o
 ```
 
 ## Open items
-1. Retention raw: 12 tháng OK? prune cron/asset riêng hay trong nightly?
-2. `64213` (phân bổ chi phí trả trước) — phân bổ cái gì? (thuê/bảo hiểm/công cụ → keep_admin hay keep_handling).
-3. Reconcile 64214(103M) vs sales-642(1.08B) — phase-04.
-4. gsheet build: ai duy trì + cột `channel` cho ads-theo-sàn map kênh nào.
-5. Sales-ledger COGS có nên cũng chuyển sang upsert (re-export) không — để riêng, không thuộc doc này.
+1. ~~Retention raw~~ → CHỐT: giữ toàn bộ, không prune (data nhỏ).
+2. `64213` (phân bổ chi phí trả trước) — phân bổ cái gì? Nếu không rõ → **default `keep_admin`** (9.68M nhỏ, sai số bé); xác nhận khi tiện.
+3. Reconcile 64214(103M) vs sales-642(1.08B) — **phase-04** (cần cả 2 report trong model).
+4. gsheet: ai duy trì; channel-attribution ads = **v1 common (net_revenue)**, v2 mới gán channel.
+5. Upsert retrofit shopee + misa-sales (key riêng) + micro-fix filename-collision — **pass RIÊNG sau account-ledger**, verify lại pipeline đang chạy. Không bundle.
