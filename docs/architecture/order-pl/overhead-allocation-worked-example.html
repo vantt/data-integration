@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chi phí Overhead phân bổ — Đơn 260316A6VJXGMT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --font-display:'Fraunces',Georgia,serif;
+  --font-body:'Plus Jakarta Sans',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono','SF Mono',monospace;
+  /* Light — premium cream + navy/gold */
+  --bg:#f7f4ee;
+  --surface:#ffffff;
+  --surface2:#f1ece2;
+  --surface-elevated:#fffdf8;
+  --border:rgba(40,40,70,0.10);
+  --border-bright:rgba(40,40,70,0.18);
+  --text:#1b2435;
+  --text-dim:#6c6557;
+  --accent:#1e3a5f;        /* deep navy */
+  --gold:#b07d18;          /* gold */
+  --gold-dim:rgba(176,125,24,0.10);
+  --green:#1f7a4d;
+  --green-dim:rgba(31,122,77,0.10);
+  --red:#b4332a;
+  --red-dim:rgba(180,51,42,0.09);
+  --amber:#b5780c;
+  --amber-dim:rgba(181,120,12,0.10);
+}
+[data-theme="dark"]{
+  --bg:#0f1626;
+  --surface:#162033;
+  --surface2:#1d293f;
+  --surface-elevated:#1d2b44;
+  --border:rgba(180,200,230,0.10);
+  --border-bright:rgba(180,200,230,0.20);
+  --text:#dce4ef;
+  --text-dim:#8b94a6;
+  --accent:#6ea2dc;
+  --gold:#d8ac4e;
+  --gold-dim:rgba(216,172,78,0.12);
+  --green:#5dc98c;
+  --green-dim:rgba(93,201,140,0.12);
+  --red:#e8746a;
+  --red-dim:rgba(232,116,106,0.12);
+  --amber:#e0b153;
+  --amber-dim:rgba(224,177,83,0.12);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme]){
+    --bg:#0f1626;--surface:#162033;--surface2:#1d293f;--surface-elevated:#1d2b44;
+    --border:rgba(180,200,230,0.10);--border-bright:rgba(180,200,230,0.20);
+    --text:#dce4ef;--text-dim:#8b94a6;--accent:#6ea2dc;--gold:#d8ac4e;--gold-dim:rgba(216,172,78,0.12);
+    --green:#5dc98c;--green-dim:rgba(93,201,140,0.12);--red:#e8746a;--red-dim:rgba(232,116,106,0.12);
+    --amber:#e0b153;--amber-dim:rgba(224,177,83,0.12);
+  }
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  margin:0;background:var(--bg);color:var(--text);
+  font-family:var(--font-body);font-size:16px;line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:920px;margin:0 auto;padding:0 24px 96px;}
+
+/* Theme toggle */
+.theme-toggle{position:fixed;top:16px;right:16px;z-index:300;width:38px;height:38px;border-radius:9px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text-dim);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:17px;
+  transition:background .15s,color .15s;box-shadow:0 1px 4px rgba(0,0,0,0.08);}
+.theme-toggle:hover{background:var(--surface2);color:var(--text);}
+
+/* Hero */
+.hero{padding:64px 0 36px;border-bottom:1px solid var(--border);}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--gold);font-weight:500;display:flex;align-items:center;gap:9px;}
+.eyebrow::before{content:"";width:26px;height:2px;background:var(--gold);display:inline-block;}
+.hero h1{font-family:var(--font-display);font-weight:600;font-size:clamp(30px,5vw,46px);
+  line-height:1.08;margin:18px 0 10px;letter-spacing:-0.01em;}
+.hero .sub{color:var(--text-dim);font-size:17px;max-width:620px;}
+.order-chip{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:7px 14px;
+  border:1px solid var(--border-bright);border-radius:999px;background:var(--surface);
+  font-family:var(--font-mono);font-size:13px;font-weight:500;}
+.order-chip b{color:var(--gold);}
+
+/* Headline number band */
+.headline{margin-top:30px;display:grid;grid-template-columns:auto 1fr;gap:24px;align-items:center;
+  padding:26px 28px;border-radius:16px;background:color-mix(in srgb,var(--surface) 88%,var(--accent) 12%);
+  border:1px solid var(--border-bright);box-shadow:0 6px 26px rgba(0,0,0,0.07);}
+.headline__num{font-family:var(--font-mono);font-weight:700;font-size:clamp(30px,6vw,52px);
+  color:var(--gold);line-height:1;white-space:nowrap;}
+.headline__txt{color:var(--text-dim);font-size:15px;}
+.headline__txt b{color:var(--text);font-weight:600;}
+@media(max-width:560px){.headline{grid-template-columns:1fr;}}
+
+/* Section */
+section{margin-top:56px;}
+.sec-label{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text-dim);font-weight:500;display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.sec-num{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;
+  background:var(--accent);color:#fff;font-size:12px;font-weight:700;font-family:var(--font-mono);}
+[data-theme="dark"] .sec-num{color:#0f1626;}
+@media (prefers-color-scheme:dark){:root:not([data-theme]) .sec-num{color:#0f1626;}}
+h2{font-family:var(--font-display);font-weight:600;font-size:clamp(23px,3.4vw,30px);
+  margin:0 0 8px;letter-spacing:-0.01em;}
+h3{font-family:var(--font-display);font-weight:600;font-size:20px;margin:26px 0 10px;}
+p{margin:0 0 14px;}
+.lead{font-size:17px;color:var(--text-dim);}
+
+/* KPI grid */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:8px;}
+@media(max-width:720px){.kpis{grid-template-columns:repeat(2,1fr);}}
+.kpi{padding:16px 18px;border-radius:12px;background:var(--surface);border:1px solid var(--border);}
+.kpi__k{font-size:12.5px;color:var(--text-dim);font-weight:500;letter-spacing:.01em;}
+.kpi__v{font-family:var(--font-mono);font-weight:700;font-size:21px;margin-top:6px;}
+.kpi__s{font-size:11.5px;color:var(--text-dim);margin-top:3px;font-family:var(--font-mono);}
+.kpi--profit .kpi__v{color:var(--green);}
+.kpi--cost .kpi__v{color:var(--red);}
+.kpi--final{background:color-mix(in srgb,var(--surface) 84%,var(--gold) 16%);border-color:var(--border-bright);}
+.kpi--final .kpi__v{color:var(--gold);}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-top:14px;}
+.card--note{background:var(--gold-dim);border-color:color-mix(in srgb,var(--border) 50%,var(--gold) 50%);}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+@media(max-width:640px){.two-col{grid-template-columns:1fr;}}
+.concept__t{font-family:var(--font-display);font-weight:600;font-size:18px;margin-bottom:4px;}
+.concept__t .en{font-family:var(--font-mono);font-size:12px;color:var(--gold);margin-left:8px;font-weight:500;}
+
+/* Pipeline */
+.pipe{display:flex;flex-direction:column;gap:0;margin-top:10px;}
+.pipe__step{display:grid;grid-template-columns:42px 1fr;gap:16px;}
+.pipe__rail{display:flex;flex-direction:column;align-items:center;}
+.pipe__dot{width:30px;height:30px;border-radius:8px;background:var(--accent);color:#fff;display:flex;
+  align-items:center;justify-content:center;font-family:var(--font-mono);font-weight:700;font-size:13px;flex:none;}
+[data-theme="dark"] .pipe__dot{color:#0f1626;}
+.pipe__line{width:2px;flex:1;background:var(--border-bright);margin:4px 0;min-height:14px;}
+.pipe__step:last-child .pipe__line{display:none;}
+.pipe__body{padding-bottom:18px;}
+.pipe__h{font-weight:700;font-size:15px;}
+.pipe__d{color:var(--text-dim);font-size:14px;margin-top:2px;}
+.pipe__d code{font-size:12.5px;}
+
+/* Tables */
+.tbl-wrap{overflow-x:auto;margin-top:12px;border:1px solid var(--border);border-radius:12px;}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:440px;}
+thead th{background:var(--surface2);text-align:left;font-weight:600;font-size:12px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--text-dim);padding:11px 14px;white-space:nowrap;}
+tbody td{padding:10px 14px;border-top:1px solid var(--border);}
+.num{font-family:var(--font-mono);text-align:right;white-space:nowrap;}
+.acc{font-family:var(--font-mono);font-size:12.5px;color:var(--gold);font-weight:500;}
+tr.total td{border-top:2px solid var(--border-bright);font-weight:700;background:var(--surface2);}
+tr.total .num{color:var(--gold);}
+.pool-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin:22px 0 0;}
+.pool-name{font-family:var(--font-mono);font-weight:700;font-size:15px;}
+.tag{font-family:var(--font-mono);font-size:11px;font-weight:500;padding:3px 9px;border-radius:999px;
+  background:var(--surface2);color:var(--text-dim);border:1px solid var(--border);}
+.tag--rev{color:var(--accent);background:var(--accent);background:color-mix(in srgb,var(--surface) 80%,var(--accent) 20%);}
+.tag--cnt{color:var(--gold);background:var(--gold-dim);}
+.pool-total{margin-left:auto;font-family:var(--font-mono);font-weight:700;color:var(--gold);}
+
+/* Formula block */
+.formula{font-family:var(--font-mono);font-size:15px;background:var(--surface2);border:1px solid var(--border);
+  border-left:3px solid var(--gold);border-radius:10px;padding:14px 18px;margin:14px 0;overflow-x:auto;}
+.formula .op{color:var(--gold);}
+.codeblock{font-family:var(--font-mono);font-size:13.5px;line-height:1.7;background:var(--surface2);
+  border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin:12px 0;overflow-x:auto;white-space:pre;}
+
+/* Waterfall result */
+.wf{margin-top:14px;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.wf__row{display:grid;grid-template-columns:24px 1fr auto;gap:12px;align-items:center;padding:12px 18px;border-top:1px solid var(--border);}
+.wf__row:first-child{border-top:0;}
+.wf__op{font-family:var(--font-mono);text-align:center;color:var(--text-dim);}
+.wf__lbl{font-size:14.5px;}
+.wf__amt{font-family:var(--font-mono);font-weight:600;text-align:right;white-space:nowrap;}
+.wf__row--cost{background:var(--red-dim);}.wf__row--cost .wf__amt{color:var(--red);}.wf__row--cost .wf__op{color:var(--red);}
+.wf__row--result{background:var(--green-dim);}.wf__row--result .wf__amt{color:var(--green);font-weight:700;font-size:17px;}
+.wf__row--result .wf__lbl{font-weight:700;}
+.wf__pct{font-family:var(--font-mono);font-size:12px;color:var(--text-dim);margin-left:8px;}
+
+/* Recon */
+.check td:first-child{width:60%;}
+.ok{color:var(--green);font-weight:700;font-family:var(--font-mono);}
+
+/* Callout list */
+.notes{list-style:none;padding:0;margin:12px 0 0;}
+.notes li{position:relative;padding:12px 0 12px 26px;border-top:1px solid var(--border);font-size:14.5px;}
+.notes li:first-child{border-top:0;}
+.notes li::before{content:"";position:absolute;left:0;top:18px;width:9px;height:9px;border-radius:2px;background:var(--gold);}
+.notes b{color:var(--text);}
+
+code{font-family:var(--font-mono);font-size:0.86em;background:var(--surface2);padding:1px 6px;border-radius:5px;
+  border:1px solid var(--border);}
+.hl{color:var(--gold);font-weight:600;}
+.muted{color:var(--text-dim);}
+footer{margin-top:64px;padding-top:22px;border-top:1px solid var(--border);font-size:13px;color:var(--text-dim);}
+footer .src-tbl{font-size:13px;}
+.divider{height:1px;background:var(--border);margin:0;}
+</style>
+</head>
+<body>
+<button class="theme-toggle" id="themeToggle" title="Đổi giao diện sáng/tối" aria-label="Toggle theme"></button>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header class="hero">
+    <div class="eyebrow">Báo cáo nội bộ · Tài chính đơn hàng</div>
+    <h1>Vì sao đơn này gánh<br>chi phí Overhead như vậy?</h1>
+    <p class="sub">Giải thích đầy đủ công thức và số liệu thật dùng để phân bổ chi phí vận hành chung (overhead) xuống một đơn hàng. Số liệu kỳ tháng 03/2026.</p>
+    <span class="order-chip">Mã đơn <b>260316A6VJXGMT</b> · Hoàn thành 16/03/2026</span>
+
+    <div class="headline">
+      <div class="headline__num">2.133.775&nbsp;₫</div>
+      <div class="headline__txt">
+        Tổng chi phí overhead đơn này gánh — <b>không phải hóa đơn riêng</b>, mà là <b>phần đóng góp công bằng</b> của đơn vào chi phí bộ máy, tính bằng cách <b>phân bổ theo tỷ lệ</b>. Đây là số <b>thật (ACTUAL)</b> từ sổ kế toán MISA, không phải ước tính.
+      </div>
+    </div>
+  </header>
+
+  <!-- EXEC SUMMARY -->
+  <section>
+    <div class="sec-label"><span class="sec-num">0</span> Tóm tắt</div>
+    <h2>Một dòng để hiểu</h2>
+    <p class="lead">Đơn này <span class="hl">chiếm 1,6286% doanh thu thuần</span> của tháng 03/2026, nên nó gánh <span class="hl">1,6286%</span> mỗi “hồ” chi phí tính theo doanh thu — cộng thêm <span class="hl">1/154</span> phần của hồ tính theo số đơn.</p>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi__k">Doanh thu thuần đơn</div><div class="kpi__v">7.361.111</div><div class="kpi__s">₫ · net revenue</div></div>
+      <div class="kpi kpi--profit"><div class="kpi__k">Lãi đóng góp kênh</div><div class="kpi__v">4.161.776</div><div class="kpi__s">₫ · trước overhead</div></div>
+      <div class="kpi kpi--cost"><div class="kpi__k">− Overhead phân bổ</div><div class="kpi__v">2.133.775</div><div class="kpi__s">₫ · 4 hồ chi phí</div></div>
+      <div class="kpi kpi--final"><div class="kpi__k">= Lãi ròng đầy đủ</div><div class="kpi__v">2.028.000</div><div class="kpi__s">₫ · biên 27,55%</div></div>
+    </div>
+  </section>
+
+  <!-- CONCEPTS -->
+  <section>
+    <div class="sec-label"><span class="sec-num">1</span> Nền tảng</div>
+    <h2>Hai khái niệm cần nắm</h2>
+    <div class="two-col">
+      <div class="card">
+        <div class="concept__t">Overhead <span class="en">chi phí chung</span></div>
+        <p class="muted" style="margin:0;font-size:14.5px">Chi phí vận hành chung của cả công ty (thuê mặt bằng, lương quản lý, internet, marketing chung…) — <b>không gắn riêng</b> vào một đơn nào. Luôn phải trả dù bán được hàng hay không.</p>
+      </div>
+      <div class="card">
+        <div class="concept__t">Phân bổ <span class="en">allocate · pro-rata</span></div>
+        <p class="muted" style="margin:0;font-size:14.5px">Để biết một đơn lãi/lỗ <b>thật</b> sau khi gánh cả bộ máy, ta chia overhead chung xuống từng đơn <b>theo tỷ lệ đóng góp</b> của đơn đó.</p>
+      </div>
+    </div>
+    <h3>Hai thước đo (base metric) dùng để chia</h3>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Base metric</th><th>Ý nghĩa</th><th class="num">“Phần” của đơn này</th></tr></thead>
+        <tbody>
+          <tr><td><code>net_revenue</code></td><td>Chia theo doanh thu thuần</td><td class="num">7.361.111 / 451.983.189 = <span class="hl">1,6286%</span></td></tr>
+          <tr><td><code>order_count</code></td><td>Chia đều mỗi đơn 1 suất</td><td class="num">1 / 154 = <span class="hl">0,6494%</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:13.5px;margin-top:10px">451.983.189 ₫ = tổng doanh thu thuần của <b>154 đơn hoàn thành</b> trong tháng 03/2026.</p>
+  </section>
+
+  <!-- PROCESS -->
+  <section>
+    <div class="sec-label"><span class="sec-num">2</span> Quy trình</div>
+    <h2>Tính qua 2 bước</h2>
+    <div class="pipe">
+      <div class="pipe__step"><div class="pipe__rail"><div class="pipe__dot">1</div><div class="pipe__line"></div></div>
+        <div class="pipe__body"><div class="pipe__h">POOL — gom thành 4 “hồ” chi phí</div>
+          <div class="pipe__d">Gộp các tài khoản 642x của sổ cái MISA thành 4 hồ overhead theo bảng phân loại. <code>pool_net = Σ net_cost</code> các tài khoản <code>keep_*</code> trong hồ. Mỗi hồ có 1 base metric.</div></div>
+      </div>
+      <div class="pipe__step"><div class="pipe__rail"><div class="pipe__dot">2</div><div class="pipe__line"></div></div>
+        <div class="pipe__body"><div class="pipe__h">ALLOCATE — rải xuống từng đơn theo tỷ lệ</div>
+          <div class="pipe__d">Mỗi đơn gánh một phần <code>pool_net</code> tỷ lệ với base metric của nó. Overhead của đơn = tổng 4 hồ.</div></div>
+      </div>
+      <div class="pipe__step"><div class="pipe__rail"><div class="pipe__dot">✓</div></div>
+        <div class="pipe__body"><div class="pipe__h">Nhánh ACTUAL (số thật)</div>
+          <div class="pipe__d">Đơn thuộc tháng 03/2026 — đã đóng sổ &lt; tháng hiện tại (06/2026) → lấy thẳng <code>pool_net</code> thật của MISA, <b>không</b> dùng ước tính.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STEP 1: POOLS -->
+  <section>
+    <div class="sec-label"><span class="sec-num">3</span> Bước 1</div>
+    <h2>Bốn hồ overhead tháng 03/2026</h2>
+    <p class="lead">Chỉ tài khoản gắn nhãn <code>keep_*</code> mới vào hồ. Tài khoản <code>drop_*</code> (chi phí truy được trực tiếp, hoặc hàng khuyến mãi đã đếm 1 lần) bị loại để tránh đếm trùng.</p>
+
+    <div class="pool-head"><span class="pool-name">admin</span><span class="tag tag--rev">base: net_revenue</span><span class="pool-total">116.108.474 ₫</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tài khoản</th><th>Nội dung</th><th class="num">net_cost (₫)</th></tr></thead>
+      <tbody>
+        <tr><td class="acc">6422</td><td>G&amp;A — cước internet, chi phí quản lý chung…</td><td class="num">107.357.324</td></tr>
+        <tr><td class="acc">642178</td><td>Hỗ trợ kinh doanh (Zalo Business…)</td><td class="num">5.014.850</td></tr>
+        <tr><td class="acc">64213</td><td>Phân bổ chi phí trả trước</td><td class="num">1.936.300</td></tr>
+        <tr><td class="acc">642177</td><td>Phí duy trì tài khoản quản trị</td><td class="num">1.800.000</td></tr>
+        <tr class="total"><td colspan="2">Tổng hồ admin</td><td class="num">116.108.474</td></tr>
+      </tbody>
+    </table></div>
+
+    <div class="pool-head"><span class="pool-name">handling</span><span class="tag tag--cnt">base: order_count</span><span class="pool-total">1.050.000 ₫</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tài khoản</th><th>Nội dung</th><th class="num">net_cost (₫)</th></tr></thead>
+      <tbody><tr><td class="acc">64211</td><td>Bao bì / đóng gói (màng PE Foam…)</td><td class="num">1.050.000</td></tr></tbody>
+    </table></div>
+
+    <div class="pool-head"><span class="pool-name">marketing</span><span class="tag tag--rev">base: net_revenue</span><span class="pool-total">11.343.410 ₫</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tài khoản</th><th>Nội dung</th><th class="num">net_cost (₫)</th></tr></thead>
+      <tbody><tr><td class="acc">642172</td><td>Quảng cáo Facebook (chung, không truy được về đơn)</td><td class="num">11.343.410</td></tr></tbody>
+    </table></div>
+
+    <div class="pool-head"><span class="pool-name">selling</span><span class="tag tag--rev">base: net_revenue</span><span class="pool-total">3.146.451 ₫</span></div>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Tài khoản</th><th>Nội dung</th><th class="num">net_cost (₫)</th></tr></thead>
+      <tbody><tr><td class="acc">642175</td><td>Hỗ trợ quảng cáo + phí web EDI</td><td class="num">3.146.451</td></tr></tbody>
+    </table></div>
+
+    <div class="card card--note" style="margin-top:18px">
+      <b>net_cost = Nợ − Có</b> (loại trừ bút toán kết chuyển 911). Tháng 03/2026 các tài khoản này không có phát sinh Có (hoàn nhập) nên net_cost = đúng số Nợ.
+    </div>
+  </section>
+
+  <!-- STEP 2: ALLOCATION -->
+  <section>
+    <div class="sec-label"><span class="sec-num">4</span> Bước 2</div>
+    <h2>Công thức phân bổ xuống đơn</h2>
+    <div class="formula">allocated_pool <span class="op">=</span> pool_net <span class="op">×</span> order_base <span class="op">/</span> tot_base</div>
+    <p class="muted" style="font-size:14px">
+      <code>order_base</code> = giá trị base của đơn (doanh thu thuần, hoặc 1 nếu đếm theo số đơn) ·
+      <code>tot_base</code> = tổng base toàn bộ đơn hoàn thành trong tháng.
+    </p>
+
+    <h3>Áp số thật cho từng hồ</h3>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Hồ</th><th>base</th><th class="num">pool_net (A)</th><th class="num">order_base (B)</th><th class="num">tot_base (C)</th><th class="num">A×B/C</th></tr></thead>
+      <tbody>
+        <tr><td class="acc">admin</td><td>net_revenue</td><td class="num">116.108.474</td><td class="num">7.361.111</td><td class="num">451.983.189</td><td class="num"><b>1.890.972</b></td></tr>
+        <tr><td class="acc">handling</td><td>order_count</td><td class="num">1.050.000</td><td class="num">1</td><td class="num">154</td><td class="num"><b>6.818</b></td></tr>
+        <tr><td class="acc">marketing</td><td>net_revenue</td><td class="num">11.343.410</td><td class="num">7.361.111</td><td class="num">451.983.189</td><td class="num"><b>184.742</b></td></tr>
+        <tr><td class="acc">selling</td><td>net_revenue</td><td class="num">3.146.451</td><td class="num">7.361.111</td><td class="num">451.983.189</td><td class="num"><b>51.244</b></td></tr>
+        <tr class="total"><td colspan="5">TỔNG overhead phân bổ</td><td class="num">2.133.775</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Cách hiểu nhanh hơn — dùng “phần %”</h3>
+    <p class="muted" style="font-size:14.5px">Ba hồ theo doanh thu → đơn gánh đúng <b>1,6286%</b> mỗi hồ:</p>
+    <div class="codeblock">admin     = 116.108.474 × 1,6286%  =  1.890.972 ₫
+marketing =  11.343.410 × 1,6286%  =    184.742 ₫
+selling   =   3.146.451 × 1,6286%  =     51.244 ₫</div>
+    <p class="muted" style="font-size:14.5px">Hồ handling theo số đơn → chia đều cho 154 đơn:</p>
+    <div class="codeblock">handling  = 1.050.000 ÷ 154 đơn      =      6.818 ₫</div>
+    <div class="card card--note">
+      <b>Vì sao handling chia đều mà không theo doanh thu?</b> Vì chi phí bao bì/đóng gói gắn với <b>việc xử lý một đơn</b>, không phụ thuộc đơn to hay nhỏ — nên mỗi đơn gánh 1 suất bằng nhau mới hợp lý.
+    </div>
+  </section>
+
+  <!-- RESULT -->
+  <section>
+    <div class="sec-label"><span class="sec-num">5</span> Kết quả</div>
+    <h2>Dòng chảy vào P&amp;L</h2>
+    <div class="wf">
+      <div class="wf__row"><span class="wf__op"> </span><span class="wf__lbl">Lãi đóng góp kênh <span class="wf__pct">contribution margin</span></span><span class="wf__amt">4.161.776 ₫</span></div>
+      <div class="wf__row wf__row--cost"><span class="wf__op">−</span><span class="wf__lbl">Overhead phân bổ <span class="wf__pct">Σ 4 hồ</span></span><span class="wf__amt">−2.133.775 ₫</span></div>
+      <div class="wf__row wf__row--result"><span class="wf__op">=</span><span class="wf__lbl">Lãi ròng đầy đủ <span class="wf__pct">fully-loaded · 27,55%</span></span><span class="wf__amt">2.028.000 ₫</span></div>
+    </div>
+    <p class="muted" style="font-size:14px;margin-top:12px">Đây chính là 4 dòng <code>OVERHEAD</code> trong bảng <b>Cost breakdown</b> (<code>overhead_admin</code>, <code>overhead_handling</code>, <code>overhead_marketing</code>, <code>overhead_selling</code>) và dòng <b>Fully-loaded net profit</b> ở chân bảng P&amp;L trên giao diện.</p>
+  </section>
+
+  <!-- RECON -->
+  <section>
+    <div class="sec-label"><span class="sec-num">6</span> Đối chiếu</div>
+    <h2>Số khớp 100%</h2>
+    <div class="tbl-wrap"><table class="check">
+      <thead><tr><th>Kiểm tra</th><th class="num">Kết quả</th></tr></thead>
+      <tbody>
+        <tr><td>Σ 4 hồ = <code>allocated_overhead</code> trong <code>fact_order_economics</code></td><td class="num"><span class="ok">2.133.775 ✓</span></td></tr>
+        <tr><td><code>channel_net_profit − overhead = fully_loaded</code></td><td class="num"><span class="ok">2.028.000 ✓</span></td></tr>
+        <tr><td><code>fully_loaded / net_revenue = margin</code></td><td class="num"><span class="ok">27,55% ✓</span></td></tr>
+        <tr><td>Mỗi <code>pool_net</code> = Σ net_cost tài khoản keep_* (bước 1)</td><td class="num"><span class="ok">admin 4 tk = 116.108.474 ✓</span></td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <!-- NOTES -->
+  <section>
+    <div class="sec-label"><span class="sec-num">7</span> Ghi chú</div>
+    <h2>Cần lưu ý</h2>
+    <ul class="notes">
+      <li><b>ACTUAL vs ESTIMATED.</b> Đơn này là ACTUAL vì tháng 03/2026 đã đóng sổ. Đơn của <b>tháng hiện tại</b> dùng <b>ước tính</b> = đơn giá overhead trung bình 3 tháng đã đóng gần nhất (vì MISA tháng hiện tại chưa chốt) → khi đó badge <code>estimated</code> sẽ hiện.</li>
+      <li><b>Overhead là chi phí PHÂN BỔ, không phải hóa đơn của riêng đơn này.</b> Dùng cho <b>báo cáo lãi/lỗ đầy đủ</b>, không dùng để quyết định giá/khuyến mãi cho từng đơn — việc đó nhìn <b>Channel net profit</b> (trước overhead).</li>
+      <li><b>Tài khoản <code>drop_*</code> bị loại khỏi hồ:</b> ví dụ 64214 (hàng khuyến mãi — đã đếm 1 lần toàn cục), 642174 / 642176 (chi phí truy được trực tiếp về đơn) → tránh đếm trùng.</li>
+      <li><b>Bảng phân loại tài khoản có hiệu lực theo thời gian (SCD2):</b> hiện tất cả hiệu lực từ 2025-12-01. Nếu sau này một tài khoản đổi hồ, hệ thống tự khớp theo tháng phát sinh.</li>
+    </ul>
+  </section>
+
+  <!-- SOURCES -->
+  <footer>
+    <div class="sec-label" style="margin-bottom:12px"><span class="sec-num" style="background:var(--gold)">⌕</span> Nguồn dữ liệu (truy vết)</div>
+    <div class="tbl-wrap"><table class="src-tbl">
+      <thead><tr><th>Số liệu</th><th>Model / file</th></tr></thead>
+      <tbody>
+        <tr><td>net_revenue đơn, số đơn/doanh thu tháng</td><td><code>fact_orders</code></td></tr>
+        <tr><td>pool_net mỗi hồ × tháng</td><td><code>int_overhead_pool_monthly</code></td></tr>
+        <tr><td>phân bổ mỗi (đơn × hồ)</td><td><code>int_order_overhead_allocation</code></td></tr>
+        <tr><td>4 dòng OVERHEAD trong ledger</td><td><code>fact_order_costs</code></td></tr>
+        <tr><td>allocated_overhead, fully_loaded_*</td><td><code>fact_order_economics</code></td></tr>
+        <tr><td>net_cost từng tài khoản</td><td><code>std_misa_account_ledger</code> ← <code>misa_raw/account_ledger</code></td></tr>
+        <tr><td>account → hồ, base, treatment</td><td>gsheet <code>overhead_account_classification</code></td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin-top:16px">Công thức tham chiếu: <code>int_order_overhead_allocation.sql</code> (nhánh ACTUAL) + <code>int_overhead_pool_monthly.sql</code>. · Kỳ dữ liệu: tháng 03/2026 · Mã đơn: 260316A6VJXGMT.</p>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var t=document.getElementById('themeToggle');
+  var saved=localStorage.getItem('theme');
+  var initial=saved||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  if(saved)document.documentElement.setAttribute('data-theme',initial);
+  t.textContent=initial==='dark'?'☀':'☾';
+  t.addEventListener('click',function(){
+    var cur=document.documentElement.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    var next=cur==='light'?'dark':'light';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem('theme',next);
+    t.textContent=next==='dark'?'☀':'☾';
+  });
+})();
+</script>
+</body>
+</html>

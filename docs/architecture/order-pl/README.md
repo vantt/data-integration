@@ -20,6 +20,7 @@ net_revenue (Sapo VAT-inclusive: net = total − total_tax)
 | `overhead-cost-allocation-design.md` | 3 | Closure-based overhead allocation (TK6422 + 6421-keep) → `fully_loaded_net_profit`; MISA monthly + GSheet config. §Quyết định Q1–Q5 (TT133). |
 | `overhead-account-ledger-ingestion-design.md` | 3 | Ingest MISA "Sổ chi tiết các tài khoản" (6421/6422) — folder/sensor/section-parser/grain(account×month)/upsert/classification gsheet/count-once. Feeds the overhead pool. |
 | `overhead-allocation-and-classification-guide.md` | 3 | **Tra cứu**: cách điền gsheet `overhead_account_classification` (cột/treatment/base) + **công thức phân bổ** (pool→pro-rata→closure) + ví dụ + ước tính trong tháng (Q4-B). |
+| `overhead-allocation-worked-example.md` (+`.html`) | 3 | **Ví dụ thực tế** (đơn `260316A6VJXGMT`, kỳ 03/2026): bóc tách 4 pool → tài khoản MISA, áp công thức pro-rata với số liệu thật, đối chiếu khớp 100%. `.html` = bản đẹp cho nhân viên đọc. |
 
 ## Cross-cutting (kept in parent `docs/architecture/`, NOT moved)
 - `std-layer-conventions.md` — std-gate rules (apply to all sources).
