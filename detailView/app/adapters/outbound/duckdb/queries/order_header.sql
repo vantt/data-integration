@@ -39,6 +39,17 @@ SELECT
     foe.has_cogs,
     foe.has_platform_fees,
     foe.has_returns,
+    -- Phase-06: P&L tier-3 fields (fully-loaded overhead + promo goods)
+    foe.promo_goods_cost,
+    foe.allocated_overhead,
+    foe.is_overhead_estimated,
+    foe.fully_loaded_net_profit,
+    foe.fully_loaded_margin_pct,
+    -- TODO: replace with foe.cogs_source once mart exposes the string column (phase-05)
+    CASE
+        WHEN foe.has_cogs THEN 'misa'
+        ELSE 'none'
+    END AS cogs_source,
     -- US CrossBorder economics — LEFT JOIN: present only for US orders
     us.total_us_revenue_excl_vat,
     us.total_us_revenue_incl_vat,

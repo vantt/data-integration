@@ -1,10 +1,14 @@
 {#
   Order > Financial tab panel.
   Waterfall: gross(incl VAT) → −discount → total collected → −VAT → net(ex VAT)
-             → −COGS → gross profit·margin → −platform fees → channel net·margin.
+             → −COGS → gross profit·margin → −platform fees → channel net·margin
+             → [promo goods cost] → channel net profit (decision tier)
+             → [overhead footer] → fully-loaded net profit.
   US CrossBorder: swap revenue block (us_revenue_excl/incl_vat).
   Cost breakdown appended as .group ledger (via _cost_ledger include).
   Source: fact_orders · fact_order_economics (+ fact_us_shipment_economics for US).
+  Phase-06 adds: cogs badge, comp bar (Zone 2), promo row, decision tier,
+  fully-loaded footer (Zone 3), COGS recon (Zone 5, gated cogs_source=='both').
 #}
 {% from "macros.html" import waterfall_row, caveat, badge, panel_head %}
 {% set f = order.financial %}
@@ -75,7 +79,6 @@
         {{ waterfall_row("=", "US revenue (incl. VAT)", f.us_revenue_incl_vat, total=True) }}
         {{ waterfall_row("−", "COGS  <span class='caption' style='margin-left:6px'>MISA</span>" | safe ~ (badge("has_cogs","good") if f.has_cogs else ""),
                          f.cogs_amount, neg=True) }}
-        {#– pct_val = f.gross_margin_pct (fraction); inline badge removed — % now in dedicated column –#}
         {{ waterfall_row("=",
            "Gross profit",
            f.gross_profit, result=True,
@@ -111,41 +114,103 @@
         {% set _vt = "moss" %}{% set _vw = "Lãi" %}
         {% set _vl = "Lãi " ~ (f.channel_net_profit | vnd) ~ " sau mọi chi phí — biên ròng " ~ (f.channel_net_margin_pct | pct) ~ "." %}
       {% endif %}
-      <div class="verdict verdict--bar verdict--{{ _vt }}">
-        <span class="verdict-dot" aria-hidden="true"></span>
-        <div class="verdict-bar__body">
-          <div class="verdict-word">{{ _vw }}</div>
-          <div class="verdict-line">{{ _vl }}</div>
-        </div>
-        <div class="verdict-bar__figs">
-          <div class="verdict-net">
-            {%- if f.channel_net_profit is none -%}
-              <span class="dash">—</span>
-            {%- elif f.channel_net_profit < 0 -%}
-              −{{ f.channel_net_profit | abs | vnd }}
-            {%- elif f.channel_net_profit > 0 -%}
-              +{{ f.channel_net_profit | vnd }}
-            {%- else -%}
-              {{ f.channel_net_profit | vnd }}
-            {%- endif -%}
+
+      {# ── Zone 1: Verdict bar + COGS badge + fully-loaded footnote ── #}
+      <div class="verdict-zone">
+        <div class="verdict verdict--bar verdict--{{ _vt }}">
+          <span class="verdict-dot" aria-hidden="true"></span>
+          <div class="verdict-bar__body">
+            <div class="verdict-word">{{ _vw }}</div>
+            <div class="verdict-line">{{ _vl }}</div>
           </div>
-          <div class="verdict-sub">
-            {%- if f.channel_net_margin_pct is none -%}
-              <span class="dash">—</span>
-            {%- elif f.channel_net_margin_pct < 0 -%}
-              −{{ f.channel_net_margin_pct | abs | pct }}
-            {%- else -%}
-              {{ f.channel_net_margin_pct | pct }}
-            {%- endif %} ròng
-            {%- if f.gross_profit is not none %} · gộp
-              {%- if f.gross_profit < 0 %} −{{ f.gross_profit | abs | vnd }}
-              {%- elif f.gross_profit > 0 %} +{{ f.gross_profit | vnd }}
-              {%- else %} {{ f.gross_profit | vnd }}
+          <div class="verdict-bar__figs">
+            <div class="verdict-net">
+              {%- if f.channel_net_profit is none -%}
+                <span class="dash">—</span>
+              {%- elif f.channel_net_profit < 0 -%}
+                −{{ f.channel_net_profit | abs | vnd }}
+              {%- elif f.channel_net_profit > 0 -%}
+                +{{ f.channel_net_profit | vnd }}
+              {%- else -%}
+                {{ f.channel_net_profit | vnd }}
+              {%- endif -%}
+            </div>
+            <div class="verdict-sub">
+              {%- if f.channel_net_margin_pct is none -%}
+                <span class="dash">—</span>
+              {%- elif f.channel_net_margin_pct < 0 -%}
+                −{{ f.channel_net_margin_pct | abs | pct }}
+              {%- else -%}
+                {{ f.channel_net_margin_pct | pct }}
+              {%- endif %} ròng
+              {%- if f.gross_profit is not none %} · gộp
+                {%- if f.gross_profit < 0 %} −{{ f.gross_profit | abs | vnd }}
+                {%- elif f.gross_profit > 0 %} +{{ f.gross_profit | vnd }}
+                {%- else %} {{ f.gross_profit | vnd }}
+                {%- endif %}
               {%- endif %}
-            {%- endif %}
+            </div>
           </div>
         </div>
-      </div>
+
+        {# COGS source badge row #}
+        <div class="verdict-addons">
+          {% if f.cogs_source == 'sapo_mac' %}
+            {{ badge("Sapo-MAC", "good", dot=True) }}
+          {% elif f.cogs_source == 'misa' %}
+            {{ badge("MISA", "neutral") }}
+          {% elif f.cogs_source == 'both' %}
+            {{ badge("Sapo + MISA", "good", dot=True) }}
+          {% else %}
+            {{ badge("No COGS", "warn", dot=True) }}
+          {% endif %}
+        </div>
+
+        {# Fully-loaded footnote — only when overhead is allocated #}
+        {% if f.allocated_overhead is not none and f.fully_loaded_net_profit is not none %}
+        <div class="fl-note" title="Lãi ròng đầy đủ — Lãi đóng góp − chi phí vận hành. Để báo cáo.">
+          <span class="fl-note__mark">ⓘ</span>
+          <span>Sau phân bổ chi phí vận hành (ước tính):
+            <span class="fl-note__fig">Fully-loaded net profit
+              <span class="mono">{{ "+" if f.fully_loaded_net_profit >= 0 else "−" }}{{ f.fully_loaded_net_profit | abs | vnd }}</span>
+              {% if f.fully_loaded_margin_pct is not none %}
+                <span class="mono"> · {{ f.fully_loaded_margin_pct | pct }}</span>
+              {% endif %}
+            </span>
+          </span>
+        </div>
+        {% endif %}
+      </div>{# /verdict-zone #}
+
+      {# ── Zone 2: Composition bar ── #}
+      {% if f.cogs_amount is not none and f.net_revenue %}
+        {% set _segs = comp_segments(f) %}
+        {% if _segs %}
+        <div class="comp-bar-wrap">
+          <div class="comp-bar__head">
+            <span class="comp-bar__title caption">NET REVENUE COMPOSITION</span>
+          </div>
+          <div class="comp-bar" role="img" aria-label="Revenue composition by cost category">
+            {% for seg in _segs %}
+            <div class="{{ seg.cls }}" style="width:{{ seg.width_pct }}%" title="{{ seg.label }}: {{ seg.amount | int | vnd }} ({{ seg.width_pct }}%)">
+              {% if seg.width_pct >= 8 %}<span class="comp-seg__pct">{{ seg.width_pct }}%</span>{% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          <div class="comp-legend">
+            {% for seg in _segs %}
+            <div class="comp-legend__item">
+              <span class="comp-legend__dot {{ seg.cls.split()[1] if ' ' in seg.cls else '' }}"></span>
+              <span>{{ seg.label }}</span>
+              <span class="comp-legend__pct">{{ seg.width_pct }}%</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      {% endif %}
+
+      {# ── Zone 3: Waterfall ── #}
       <table class="waterfall"><tbody>
         {#– Sapo prices are VAT-inclusive: gross/total_collected gồm VAT; net_revenue = total − VAT.
             See docs/analytics-handbook/guides/revenue_terminology.md –#}
@@ -160,10 +225,9 @@
                          f.net_revenue, total=True) }}
         {{ waterfall_row("−",
            "COGS <span class='caption' style='margin-left:6px'>MISA</span>" | safe ~
-           (badge("unverified","warn",dot=True) if not f.has_cogs else ""),
+           (badge("unverified","warn",dot=True) if f.cogs_source in (none, 'none') else ""),
            f.cogs_amount, neg=True,
            pct_val=((f.cogs_amount / f.net_revenue) if (f.cogs_amount is not none and f.net_revenue) else none)) }}
-        {#– pct_val = f.gross_margin_pct (fraction); inline badge removed — % now in dedicated column –#}
         {{ waterfall_row("=",
            "Gross profit",
            f.gross_profit, result=True,
@@ -172,14 +236,74 @@
            "Platform fees" ~ ((" <span class='caption' style='margin-left:6px'>" ~ order.channel.platform ~ "</span>") if order.channel.platform else ""),
            (f.shopee_platform_fees | abs) if f.shopee_platform_fees is not none else none, neg=True,
            pct_val=(((f.shopee_platform_fees | abs) / f.net_revenue) if (f.shopee_platform_fees is not none and f.net_revenue) else none)) }}
-        {#– pct_val = f.channel_net_margin_pct (fraction); inline badge removed — % now in dedicated column –#}
-        {{ waterfall_row("=",
-           "Channel net profit",
-           f.channel_net_profit, result=True,
-           pct_val=f.channel_net_margin_pct) }}
+
+        {# Promo goods cost row — only when > 0; stored POSITIVE, shown as cost #}
+        {% if f.promo_goods_cost is not none and f.promo_goods_cost > 0 %}
+          {{ waterfall_row("−",
+             "Promo goods cost <span class='wf-tag'>promo</span>" | safe,
+             f.promo_goods_cost, neg=True,
+             pct_val=((f.promo_goods_cost / f.net_revenue) if f.net_revenue else none)) }}
+        {% endif %}
+
+        {# Channel net profit — decision tier. Frozen macro can't add wf-row--decision, so raw HTML. #}
+        {%- set _cnp_neg = f.channel_net_profit is not none and f.channel_net_profit < 0 -%}
+        <tr class="wf-row wf-row--result wf-row--decision">
+          <td class="wf-op wf-op--eq" aria-hidden="true">=</td>
+          <td class="wf-label">
+            <span class="wf-star" aria-hidden="true">★</span>
+            Channel net profit
+            <span class='caption' style='margin-left:6px' title="Lãi đóng góp kênh — trước phân bổ overhead vận hành">contribution margin</span>
+          </td>
+          <td class="wf-pct">{% if f.channel_net_margin_pct is not none %}{{ f.channel_net_margin_pct | pct }}{% endif %}</td>
+          <td class="wf-amt{% if _cnp_neg %} wf-amt--neg{% endif %}">
+            {%- if f.channel_net_profit is none -%}
+              <span class="dash">—</span>
+            {%- elif f.channel_net_profit < 0 -%}
+              −{{ f.channel_net_profit | abs | vnd }}
+            {%- elif f.channel_net_profit > 0 -%}
+              +{{ f.channel_net_profit | vnd }}
+            {%- else -%}
+              {{ f.channel_net_profit | vnd }}
+            {%- endif -%}
+          </td>
+        </tr>
       </tbody></table>
-      {% if not f.has_cogs %}
-        {{ caveat("Margin unverified — no MISA COGS match for this order.", "warn") }}
+
+      {# Fully-loaded footer — overhead + fully-loaded net profit (gated) #}
+      {% if f.allocated_overhead is not none and f.allocated_overhead > 0 %}
+      <div class="wf-footer-muted">
+        <div class="wf-footer-row">
+          <span class="wf-footer__op">−</span>
+          <span class="wf-footer__label">
+            Allocated overhead
+            <span class="wf-tag">[allocated]</span>
+            {% if f.is_overhead_estimated %}{{ badge("estimated", "warn") }}{% endif %}
+          </span>
+          <span class="wf-footer__amt mono">−{{ f.allocated_overhead | vnd }}</span>
+        </div>
+        <div class="wf-footer-row wf-footer-row--result">
+          <span class="wf-footer__op">=</span>
+          <span class="wf-footer__label">
+            Fully-loaded net profit
+            <span class="wf-tag">[for reporting]</span>
+          </span>
+          <span class="wf-footer__amt mono">
+            {% if f.fully_loaded_net_profit is not none %}
+              {{ "+" if f.fully_loaded_net_profit >= 0 else "−" }}{{ f.fully_loaded_net_profit | abs | vnd }}
+              {% if f.fully_loaded_margin_pct is not none %}
+                <span class="wf-footer__pct">{{ f.fully_loaded_margin_pct | pct }}</span>
+              {% endif %}
+            {% else %}
+              <span class="dash">—</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Caveat: no-COGS warning (replaces old has_cogs check) #}
+      {% if f.cogs_source in (none, 'none') %}
+        {{ caveat("Margin unverified — no COGS match for this order.", "warn") }}
       {% endif %}
     {% endif %}
 
@@ -196,5 +320,31 @@
   <div class="tabpanel stack-4">
     {% include "partials/order/_cost_ledger.html" %}
   </div>
+
+  {# ── Zone 5: COGS reconciliation — gated on cogs_source == 'both' ── #}
+  {# Currently will NOT render (cogs_source='both' requires both Sapo-MAC + MISA data).
+     Implemented with graceful non-render via native <details>/<summary>. #}
+  {% if f.cogs_source == 'both' %}
+  <div class="tabpanel stack-4">
+    <details class="recon-panel">
+      <summary class="recon-panel__head">
+        <span class="recon-panel__chev">▸</span>
+        <span class="recon-panel__title">COGS Reconciliation</span>
+        <span class="recon-panel__tag">{{ badge("Sapo + MISA", "good") }}</span>
+      </summary>
+      <div class="recon-detail">
+        <div class="recon-panel__preview">
+          <span>Comparing Sapo-MAC vs MISA COGS for this order.</span>
+          <span class="recon-sep">·</span>
+          <span class="mono">COGS: {{ f.cogs_amount | vnd }}</span>
+        </div>
+        <p class="muted" style="font-size:13px;margin-top:var(--sp-3)">
+          Full per-source COGS breakdown available when <code>sapo_mac_cogs</code> / <code>misa_cogs_632</code>
+          columns are exposed from <code>fact_order_economics</code> (future mart phase).
+        </p>
+      </div>
+    </details>
+  </div>
+  {% endif %}
 
 </div>

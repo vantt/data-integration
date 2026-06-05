@@ -86,6 +86,13 @@ class OrderFinancial:
     has_cogs: bool = False
     has_platform_fees: bool = False
     has_returns: bool = False
+    # Phase-06: P&L tier-3 fields
+    promo_goods_cost: Decimal | None = None
+    cogs_source: str | None = None        # 'misa' | 'none' (extend when sapo_mac/both available)
+    allocated_overhead: Decimal | None = None
+    is_overhead_estimated: bool | None = None
+    fully_loaded_net_profit: Decimal | None = None
+    fully_loaded_margin_pct: float | None = None
     # US CrossBorder (fact_us_shipment_economics) — net_revenue=0 in fact_orders for US
     is_us: bool = False
     us_revenue_excl_vat: Decimal | None = None
@@ -103,6 +110,8 @@ class OrderFinancial:
 
     @property
     def margin_is_verified(self) -> bool:
+        if self.cogs_source is not None:
+            return self.cogs_source in ('sapo_mac', 'both', 'misa')
         return self.has_cogs
 
     @property
@@ -256,8 +265,8 @@ class OrderDetail:
             flags.append(DataQualityFlag("is_us", "US CrossBorder revenue", "info"))
             if self.financial.has_unpriced_sku:
                 flags.append(DataQualityFlag("unpriced_sku", "Some SKUs missing US price", "warn"))
-        if not self.financial.has_cogs:
-            flags.append(DataQualityFlag("no_cogs", "Margin unverified — no MISA COGS match", "warn"))
+        if self.financial.cogs_source in (None, 'none'):
+            flags.append(DataQualityFlag("no_cogs", "Margin unverified — no COGS match for this order", "warn"))
         if self.financial.has_returns:
             flags.append(DataQualityFlag("has_returns", "Has returns (reference only in P&L)", "info"))
         if not self.financial.has_platform_fees and (self.financial.shopee_platform_fees is None):

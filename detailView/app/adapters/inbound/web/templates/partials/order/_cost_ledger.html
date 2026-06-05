@@ -25,7 +25,9 @@
   "PLATFORM_FEE": "warn",
   "TAX": "neutral",
   "SHIPPING": "neutral",
-  "DISCOUNT": "accent"
+  "DISCOUNT": "accent",
+  "PROMO_GOODS": "accent",
+  "OVERHEAD": "accent"
 } %}
 
 {% for cat in categories %}
@@ -40,6 +42,12 @@
       <div class="group__cat">
         <span class="group__chev">▾</span>
         {{ badge(cat or "UNKNOWN", cat_tone.get(cat, "neutral")) }}
+        {% if cat in ("PROMO_GOODS", "OVERHEAD") %}
+          <span class="group__new-tag">NEW</span>
+        {% endif %}
+        {% if cat == "OVERHEAD" %}
+          <span class="wf-tag" style="margin-left:6px">(allocated)</span>
+        {% endif %}
       </div>
       <span class="group__total">{{ subtotal.val | vnd }}</span>
     </div>

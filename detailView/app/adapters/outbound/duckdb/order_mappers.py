@@ -66,6 +66,12 @@ def map_financial(row: Row) -> OrderFinancial:
         has_cogs=rc.as_bool(row.get("has_cogs")),
         has_platform_fees=rc.as_bool(row.get("has_platform_fees")),
         has_returns=rc.as_bool(row.get("has_returns")),
+        promo_goods_cost=rc.as_decimal(row.get("promo_goods_cost")),
+        cogs_source=rc.as_str(row.get("cogs_source")),
+        allocated_overhead=rc.as_decimal(row.get("allocated_overhead")),
+        is_overhead_estimated=rc.as_bool(row.get("is_overhead_estimated")),
+        fully_loaded_net_profit=rc.as_decimal(row.get("fully_loaded_net_profit")),
+        fully_loaded_margin_pct=rc.as_float(row.get("fully_loaded_margin_pct")),
         # US CrossBorder — net_revenue is 0 in fact_orders for US orders.
         is_us=is_us,
         us_revenue_excl_vat=rc.as_decimal(row.get("total_us_revenue_excl_vat")),
