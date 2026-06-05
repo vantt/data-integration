@@ -75,6 +75,15 @@ order_promo AS (
         SUM(promo_goods_cost_amount) AS promo_goods_cost
     FROM {{ ref('int_order_promo_goods_cost') }}
     GROUP BY order_code
+),
+
+-- Overhead allocation aggregated to order level (phase-04)
+order_overhead AS (
+    SELECT order_code,
+           SUM(allocated_amount)          AS allocated_overhead,
+           BOOL_OR(is_overhead_estimated) AS is_overhead_estimated
+    FROM {{ ref('int_order_overhead_allocation') }}
+    GROUP BY order_code
 )
 
 SELECT
@@ -148,6 +157,33 @@ SELECT
         )::DOUBLE / o.net_revenue
     END AS channel_net_margin_pct,
 
+    -- Tier-3 (REPORT only): allocated overhead → fully-loaded net profit. NOT for accept/reject (use channel_net_profit). phase-04
+    oh.allocated_overhead,
+    COALESCE(oh.is_overhead_estimated, FALSE) AS is_overhead_estimated,
+    CASE
+        WHEN oh.allocated_overhead IS NOT NULL
+        THEN o.net_revenue
+                - COALESCE(m.cogs_amount, 0)
+                + COALESCE(sf.total_platform_fees, 0)
+                + COALESCE(sf.infrastructure_fee, 0)
+                + COALESCE(sf.voucher_xtra_fee, 0)
+                + COALESCE(sf.shopee_taxes, 0)
+                - oh.allocated_overhead
+        ELSE NULL
+    END AS fully_loaded_net_profit,
+    CASE
+        WHEN o.net_revenue = 0 OR oh.allocated_overhead IS NULL THEN NULL
+        ELSE (
+            o.net_revenue
+            - COALESCE(m.cogs_amount, 0)
+            + COALESCE(sf.total_platform_fees, 0)
+            + COALESCE(sf.infrastructure_fee, 0)
+            + COALESCE(sf.voucher_xtra_fee, 0)
+            + COALESCE(sf.shopee_taxes, 0)
+            - oh.allocated_overhead
+        )::DOUBLE / o.net_revenue
+    END AS fully_loaded_margin_pct,
+
     -- Fulfillment (primary shipment)
     ff.cod_amount,
     ff.carrier_id,
@@ -163,3 +199,4 @@ LEFT JOIN shopee_fees sf  ON o.order_code = sf.order_code
 LEFT JOIN fulfillments ff ON o.order_id   = ff.order_id
 LEFT JOIN order_returns r ON o.order_code = r.order_code
 LEFT JOIN order_promo pg  ON o.order_code = pg.order_code
+LEFT JOIN order_overhead oh ON o.order_code = oh.order_code

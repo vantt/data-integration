@@ -174,6 +174,23 @@ promo_goods AS (
     FROM {{ ref('int_order_promo_goods_cost') }} p
     JOIN order_meta om ON p.order_code = om.order_code
     GROUP BY om.order_id, p.order_code, p.cost_type, p.cost_category, om.date_key, om.channel_key
+),
+
+-- ============================================================
+-- Overhead allocation — pro-rata pools spread to orders (phase-04)
+-- One row per order × pool (e.g. overhead_admin, overhead_handling)
+-- ============================================================
+overhead AS (
+    SELECT
+        om.order_id,
+        a.order_code,
+        'overhead_' || a.pool_id                              AS cost_type,
+        'OVERHEAD'                                            AS cost_category,
+        CAST(ABS(a.allocated_amount) AS DECIMAL(18, 2))      AS amount,
+        CASE WHEN a.is_overhead_estimated THEN 'estimated' ELSE 'actual' END AS fee_source,
+        om.date_key, om.channel_key
+    FROM {{ ref('int_order_overhead_allocation') }} a
+    JOIN order_meta om ON a.order_code = om.order_code
 )
 
 -- ============================================================
@@ -244,3 +261,20 @@ SELECT
     date_key,
     channel_key
 FROM promo_goods
+
+UNION ALL
+
+SELECT
+    order_id,
+    order_code,
+    cost_type,
+    cost_category,
+    amount,
+    NULL                            AS discount_rate,
+    NULL                            AS discount_type,
+    'derived'                       AS source_system,
+    order_code                      AS source_record,
+    fee_source,
+    date_key,
+    channel_key
+FROM overhead
