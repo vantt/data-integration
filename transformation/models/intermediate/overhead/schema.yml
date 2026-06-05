@@ -1,0 +1,71 @@
+version: 2
+
+models:
+  - name: int_overhead_pool_monthly
+    description: >
+      Monthly overhead pool totals derived from MISA account-ledger + overhead account
+      classification gsheet. Grain: (pool_id, period_month). Only keep_* treatments
+      are included; drop_* accounts are excluded. pool_net drives the allocation
+      denominator in int_order_overhead_allocation.
+    columns:
+      - name: pool_id
+        description: "Overhead pool identifier from classification gsheet (e.g. 'admin', 'selling')."
+        tests: [not_null]
+      - name: base_metric
+        description: "Allocation base for this pool: 'net_revenue' | 'order_count' | 'gross_profit'."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['net_revenue', 'order_count', 'gross_profit']
+      - name: period_month
+        description: "First day of the month (DATE) for this pool total. Derived from std_misa_account_ledger.posting_date."
+        tests: [not_null]
+      - name: pool_net
+        description: >
+          Sum of net_cost (Nợ − Có-excl-911) across all keep_* accounts in this pool×month.
+          Can be negative if credit reversals dominate. Used as the allocation numerator.
+      - name: n_accounts
+        description: "Count of distinct MISA accounts contributing to this pool×month. For audit / anomaly detection."
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [pool_id, period_month]
+
+  - name: int_order_overhead_allocation
+    description: >
+      Per-order overhead allocation. Grain: (order_code, pool_id). Each fulfilled order
+      receives one row per active overhead pool in its period_month, carrying its
+      pro-rata share of that pool's pool_net. Long format — downstream fact_order_costs
+      emits OVERHEAD cost rows, and fact_order_economics can SUM per order across pools.
+    columns:
+      - name: order_code
+        description: "Sapo order code. FK to fact_order_economics.order_code."
+        tests: [not_null]
+      - name: pool_id
+        description: "Overhead pool identifier. FK to int_overhead_pool_monthly.pool_id."
+        tests: [not_null]
+      - name: period_month
+        description: "Calendar month of the order (DATE_TRUNC month of date_key). Must match a pool row."
+        tests: [not_null]
+      - name: base_metric
+        description: "Allocation base used for this row (inherited from the pool). Informational."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['net_revenue', 'order_count', 'gross_profit']
+      - name: allocated_amount
+        description: >
+          Pro-rata overhead share: pool_net × (order_base / tot_base).
+          NULL when tot_base = 0 (edge case: entire month with zero denominator).
+          Negative values are valid when gross_profit pool base is negative.
+      - name: is_overhead_estimated
+        description: >
+          FALSE for all current rows — data comes from closed/actual MISA periods.
+          Reserved for future provisional/trailing-rate allocation phase.
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_code, pool_id]
