@@ -73,7 +73,9 @@ for t in d.get('tables',[]):
 | field_id | Table | Column | Type | Dùng cho |
 |----------|-------|--------|------|----------|
 | 324 | `int_misa_sales_lines` | `posting_date` | Date | Finance, Channel P&L, Product |
-| 141 | `fact_orders` | `ordered_at` | DateTimeWithTZ | Orders, US CrossBorder |
+| 848 | `fact_orders` | `ordered_at` | DateTimeWithTZ | Orders, US CrossBorder |
+
+> ⚠️ **field_id có thể stale sau column rename.** `fact_orders.ordered_at` từng là `141` (tên cũ `order_timestamp`); sau v2 rename, Metabase re-sync thành field mới `848`. Field cũ inject tên cột cũ → `Binder Error: does not have a column named "..."`. **Luôn verify field_id bằng `/api/table/:id/query_metadata` (lọc `active:true` + đúng `name`) trước khi viết filter** — đừng tin field_id cũ trong tài liệu.
 
 ---
 
