@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hướng dẫn Phân loại Đơn hàng & Khách hàng — cho Nhân viên</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16203a; --muted:#5b6678; --line:#e6e9f0; --bg:#f5f7fb; --card:#ffffff;
+    --brand:#4f46e5; --brand-d:#3730a3; --brand-soft:#eef2ff;
+    --green:#15803d; --green-bg:#e9f9ee; --green-line:#bbe9c9;
+    --red:#c0271c; --red-bg:#fdecea; --red-line:#f6c9c4;
+    --amber:#b4530a; --amber-bg:#fff5e6; --amber-line:#f7dcae;
+    --blue:#1d4ed8; --blue-bg:#e9f0ff; --blue-line:#c3d6ff;
+    --shadow:0 1px 2px rgba(16,24,40,.04), 0 8px 24px rgba(16,24,40,.06);
+    --radius:16px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Be Vietnam Pro",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    color:var(--ink);background:var(--bg);line-height:1.65;font-size:16px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:248px 1fr;gap:40px}
+  /* ===== Hero ===== */
+  header.hero{grid-column:1/-1;background:linear-gradient(135deg,#4f46e5 0%,#6d5ef0 45%,#8b5cf6 100%);
+    color:#fff;border-radius:0 0 28px 28px;padding:52px 48px 60px;margin-bottom:-32px;box-shadow:var(--shadow)}
+  .hero .eyebrow{font-size:13px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;opacity:.85}
+  .hero h1{font-size:clamp(28px,4vw,42px);line-height:1.15;margin:10px 0 14px;font-weight:800;letter-spacing:-.01em}
+  .hero p{font-size:18px;max-width:760px;margin:0;opacity:.95;font-weight:400}
+  .hero .meta{margin-top:22px;display:flex;flex-wrap:wrap;gap:10px}
+  .hero .meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
+    padding:6px 13px;border-radius:999px;font-size:13px;font-weight:500;backdrop-filter:blur(4px)}
+  /* ===== Sidebar nav ===== */
+  nav.toc{position:sticky;top:24px;align-self:start;height:fit-content;padding-top:60px}
+  nav.toc .box{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;box-shadow:var(--shadow)}
+  nav.toc .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;margin:0 0 10px;padding-left:8px}
+  nav.toc a{display:flex;gap:10px;align-items:center;padding:9px 10px;border-radius:10px;color:var(--ink);
+    text-decoration:none;font-size:14.5px;font-weight:500;transition:.15s}
+  nav.toc a:hover{background:var(--brand-soft);color:var(--brand-d)}
+  nav.toc a .n{font-size:15px}
+  /* ===== Main ===== */
+  main{padding-top:60px;min-width:0}
+  section{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:30px 34px;margin-bottom:24px;box-shadow:var(--shadow);scroll-margin-top:20px}
+  section.flush{background:transparent;border:0;box-shadow:none;padding:6px 0 0}
+  h2{font-size:24px;font-weight:800;margin:0 0 6px;letter-spacing:-.01em;display:flex;align-items:center;gap:12px}
+  h2 .ico{flex:0 0 auto;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;
+    background:var(--brand-soft);font-size:20px}
+  h2 .step{font-size:13px;font-weight:700;color:var(--brand);background:var(--brand-soft);
+    padding:3px 10px;border-radius:999px;letter-spacing:.04em}
+  .lead{color:var(--muted);font-size:16.5px;margin:2px 0 20px}
+  h3{font-size:18px;font-weight:700;margin:26px 0 10px}
+  p{margin:0 0 14px}
+  strong{font-weight:700}
+  /* ===== Tables ===== */
+  .tbl{width:100%;border-collapse:separate;border-spacing:0;font-size:15px;margin:8px 0 6px;
+    border:1px solid var(--line);border-radius:13px;overflow:hidden}
+  .tbl th{background:#f3f4fb;text-align:left;font-weight:700;font-size:13.5px;color:#3b4559;
+    padding:12px 15px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.03em}
+  .tbl td{padding:12px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  .tbl tr:last-child td{border-bottom:0}
+  .tbl tbody tr:nth-child(even){background:#fafbfd}
+  .tbl td:first-child{font-weight:600}
+  .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  /* ===== Badges / chips ===== */
+  .b{display:inline-block;padding:2px 9px;border-radius:7px;font-size:12.5px;font-weight:700;
+    letter-spacing:.02em;white-space:nowrap;line-height:1.5}
+  .b.green{background:var(--green-bg);color:var(--green)}
+  .b.red{background:var(--red-bg);color:var(--red)}
+  .b.amber{background:var(--amber-bg);color:var(--amber)}
+  .b.blue{background:var(--blue-bg);color:var(--blue)}
+  .b.gray{background:#eef0f4;color:#55607a}
+  .b.brand{background:var(--brand-soft);color:var(--brand-d)}
+  .ok{color:var(--green);font-weight:700}
+  .no{color:var(--red);font-weight:700}
+  /* ===== Callouts ===== */
+  .call{border-radius:13px;padding:16px 18px 16px 16px;margin:18px 0;border:1px solid;display:flex;gap:13px}
+  .call .ci{font-size:20px;flex:0 0 auto;line-height:1.4}
+  .call .ct{min-width:0}
+  .call .ct b{display:block;margin-bottom:2px}
+  .call p:last-child{margin-bottom:0}
+  .call.warn{background:var(--amber-bg);border-color:var(--amber-line)}
+  .call.warn b{color:var(--amber)}
+  .call.danger{background:var(--red-bg);border-color:var(--red-line)}
+  .call.danger b{color:var(--red)}
+  .call.tip{background:var(--green-bg);border-color:var(--green-line)}
+  .call.tip b{color:var(--green)}
+  .call.info{background:var(--blue-bg);border-color:var(--blue-line)}
+  .call.info b{color:var(--blue)}
+  /* ===== Two-control hero cards ===== */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}
+  .ctrl{border:1.5px solid var(--brand-line,#d7dbf7);border-radius:15px;padding:20px;background:linear-gradient(180deg,#fbfbff,#f4f5ff)}
+  .ctrl .tag{display:inline-block;font-size:12px;font-weight:700;color:var(--brand);background:#fff;
+    border:1px solid var(--brand-soft);padding:3px 10px;border-radius:999px;margin-bottom:10px}
+  .ctrl h4{margin:0 0 6px;font-size:18px;font-weight:800}
+  .ctrl p{font-size:14.5px;color:var(--muted);margin:0}
+  .ctrl .big{font-size:15px;color:var(--ink);font-weight:600;margin-top:8px}
+  /* ===== TL;DR cards ===== */
+  .tldr{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  .tcard{border:1px solid var(--line);border-radius:13px;padding:16px 16px 16px 18px;background:#fcfcfe;position:relative}
+  .tcard::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:4px;border-radius:4px;background:var(--brand)}
+  .tcard b{display:block;margin-bottom:3px;font-size:15px}
+  .tcard p{margin:0;font-size:14.5px;color:var(--muted)}
+  /* ===== Channel category cards ===== */
+  .chans{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin:14px 0}
+  .chan{border:1px solid var(--line);border-radius:13px;padding:16px;background:#fcfcfe}
+  .chan h4{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:8px}
+  .chan ul{margin:0;padding-left:18px;font-size:14px;color:var(--muted)}
+  .chan li{margin-bottom:3px}
+  .chan.dt{border-color:var(--green-line);background:var(--green-bg)}
+  .chan.no{border-color:var(--red-line);background:var(--red-bg)}
+  /* ===== Examples ===== */
+  .ex{border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;
+    padding:16px 18px;margin:14px 0;background:#fcfcff}
+  .ex .q{font-weight:700;font-size:15.5px;margin-bottom:8px}
+  .ex ol{margin:6px 0;padding-left:20px}
+  .ex .arrow{color:var(--brand-d);font-weight:600}
+  /* ===== Misc ===== */
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0}
+  .vs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:13px;overflow:hidden;margin:14px 0}
+  .vs>div{padding:18px}
+  .vs .a{background:#fbfbff;border-right:1px solid var(--line)}
+  .vs h4{margin:0 0 8px;font-size:16px}
+  footer{grid-column:1/-1;text-align:center;color:var(--muted);font-size:13.5px;padding:30px 0 50px}
+  footer b{color:var(--ink)}
+  .hr{height:1px;background:var(--line);border:0;margin:22px 0}
+  /* ===== Responsive ===== */
+  @media(max-width:900px){
+    .wrap{grid-template-columns:1fr;gap:0;padding:0 16px}
+    nav.toc{display:none}
+    header.hero{padding:38px 24px 48px;border-radius:0 0 22px 22px}
+    main{padding-top:48px}
+    section{padding:22px 20px}
+    .two,.tldr,.chans,.grid2,.vs{grid-template-columns:1fr}
+    .vs .a{border-right:0;border-bottom:1px solid var(--line)}
+  }
+  @media print{
+    body{background:#fff}
+    header.hero{background:#4f46e5 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    nav.toc{display:none}.wrap{grid-template-columns:1fr;display:block}
+    section{box-shadow:none;break-inside:avoid;border:1px solid #ddd}
+    .call,.ctrl,.chan,.ex,.tcard{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="eyebrow">Hướng dẫn nội bộ · Sales &amp; Chăm sóc khách hàng</div>
+    <h1>Phân loại Đơn hàng &amp; Khách hàng đúng cách</h1>
+    <p>Bạn là người tạo đơn và chăm khách. Cách bạn nhập liệu quyết định độ chính xác của <strong>mọi báo cáo</strong> công ty. Tài liệu này giúp bạn chọn đúng ngay từ đầu — <strong>không cần biết kỹ thuật</strong>.</p>
+    <div class="meta">
+      <span>🎯 Dành cho NV tạo đơn &amp; CSKH</span>
+      <span>⏱️ Đọc cốt lõi trong 3 phút</span>
+      <span>🗓️ Cập nhật 2026-06-05</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <div class="box">
+      <p class="lbl">Mục lục</p>
+      <a href="#tldr"><span class="n">⚡</span> Nắm trong 3 phút</a>
+      <a href="#hai-o"><span class="n">🎛️</span> 2 ô bạn kiểm soát</a>
+      <a href="#don"><span class="n">📦</span> Phân loại đơn hàng</a>
+      <a href="#khach"><span class="n">👤</span> Phân loại khách hàng</a>
+      <a href="#auto"><span class="n">🤖</span> Cái hệ thống tự tính</a>
+      <a href="#bay"><span class="n">⚠️</span> Bẫy &amp; hiểu nhầm</a>
+      <a href="#vidu"><span class="n">💡</span> Ví dụ thực tế</a>
+      <a href="#cheat"><span class="n">📑</span> Bảng tra nhanh</a>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- TL;DR -->
+    <section id="tldr">
+      <h2><span class="ico">⚡</span> Nắm trong 3 phút</h2>
+      <p class="lead">Nếu chỉ đọc một mục, hãy đọc mục này — đủ để tránh các lỗi tốn tiền nhất.</p>
+      <div class="tldr">
+        <div class="tcard"><b>Bạn chỉ kiểm soát 2 ô</b><p>① <strong>Nguồn đơn hàng</strong> (khi tạo đơn) và ② <strong>Nhóm khách hàng</strong> (khi tạo khách). Mọi phân loại khác hệ thống tự tính.</p></div>
+        <div class="tcard"><b>Đừng để đơn rơi vào "Other"</b><p>Đơn ở Nguồn "Other"/"Unknown" bị <span class="no">loại khỏi mọi báo cáo doanh thu</span> — dù tiền có thật. Luôn chọn kênh cụ thể.</p></div>
+        <div class="tcard"><b>Khách sỉ phải gán "Bán buôn"</b><p>Để mặc định "Bán lẻ" cho khách sỉ → giá sỉ bị tính nhầm thành khuyến mãi → hỏng toàn bộ phân tích KM.</p></div>
+        <div class="tcard"><b>VIP/Gold KHÔNG phải ô để chọn</b><p>Đó là hạng giá trị <strong>tự động</strong> theo tổng chi tiêu. Set tay sẽ bị hệ thống ghi đè.</p></div>
+      </div>
+    </section>
+
+    <!-- 2 ô -->
+    <section id="hai-o">
+      <h2><span class="ico">🎛️</span> Hai ô bạn kiểm soát</h2>
+      <p class="lead">Toàn bộ việc phân loại nằm gọn trong 2 lựa chọn của bạn. Nhớ kỹ 2 ô này là đủ 80%.</p>
+      <div class="two">
+        <div class="ctrl">
+          <span class="tag">① Khi TẠO ĐƠN</span>
+          <h4>Nguồn đơn hàng</h4>
+          <p>Trả lời câu hỏi: <em>"Đơn này bán qua kênh nào?"</em></p>
+          <div class="big">→ Quyết định đơn có được <span class="ok">tính vào doanh thu</span> hay không.</div>
+        </div>
+        <div class="ctrl">
+          <span class="tag">② Khi TẠO KHÁCH</span>
+          <h4>Nhóm khách hàng</h4>
+          <p>Trả lời câu hỏi: <em>"Khách này là ai — lẻ, sỉ, đối tác?"</em></p>
+          <div class="big">→ Quyết định khách được phân loại <span class="b brand">đúng quan hệ mua bán</span>.</div>
+        </div>
+      </div>
+      <div class="call info"><div class="ci">💡</div><div class="ct"><b>Vì sao quan trọng?</b><p>"Số đẹp" trong báo cáo phụ thuộc vào lúc bạn gõ đơn/khách. <strong>Phân loại sai ở khâu nhập = số sai ở khâu báo cáo</strong> — không ai sửa lại được trừ khi sửa từ gốc trong Sapo.</p></div></div>
+    </section>
+
+    <!-- ĐƠN HÀNG -->
+    <section id="don">
+      <h2><span class="step">PHẦN 1</span> <span class="ico">📦</span> Phân loại ĐƠN HÀNG</h2>
+      <p class="lead">Mỗi đơn có một <strong>Nguồn đơn hàng</strong>. Hệ thống xếp nguồn đó vào 3 nhóm kênh — và chỉ 2 trong 3 nhóm được tính doanh thu.</p>
+
+      <h3>3 nhóm kênh — cái nào tính doanh thu?</h3>
+      <div class="chans">
+        <div class="chan dt"><h4>🛒 Online-Ecommerce <span class="b green">Tính DT</span></h4><ul><li>Sàn: Shopee, Lazada, Tiki, TikTok</li><li>Mạng xã hội: Facebook, Zalo, IG</li><li>Website</li></ul></div>
+        <div class="chan dt"><h4>🏬 Offline <span class="b green">Tính DT</span></h4><ul><li>Cửa hàng / POS</li><li>Bán sỉ B2B: Đại Lý, Chợ sỉ</li><li>Bán trực tiếp: CS, Telesale</li></ul></div>
+        <div class="chan no"><h4>🔒 Internal <span class="b red">KHÔNG tính</span></h4><ul><li>Test sản phẩm, Quà tặng</li><li>Ưu đãi nhân viên</li><li>US (giao hộ), "Other"</li></ul></div>
+      </div>
+      <div class="call info"><div class="ci">🧭</div><div class="ct"><b>Hay hiểu nhầm:</b><p>"Online" <strong>không chỉ là sàn TMDT</strong> — gồm cả Mạng xã hội (Facebook, Zalo) và Website. Và <strong>CS/Telesale là doanh thu thật</strong>, không phải nội bộ.</p></div></div>
+
+      <h3>Tạo đơn — chọn Nguồn nào cho đúng?</h3>
+      <div class="scroll">
+      <table class="tbl">
+        <thead><tr><th>Tình huống thực tế</th><th>Chọn Nguồn</th><th>Đừng chọn</th><th>Vì sao</th></tr></thead>
+        <tbody>
+          <tr><td>Khách mua trên Shopee / Lazada / Tiki / TikTok</td><td><span class="b green">Sàn tự đồng bộ</span></td><td><span class="b red">"Other"</span></td><td>Đơn sàn tự về, không cần gõ tay</td></tr>
+          <tr><td>Khách nhắn Zalo / Facebook / Instagram</td><td><span class="b green">Zalo / Facebook / IG</span></td><td>"Other", "Web"</td><td>Đúng kênh mạng xã hội</td></tr>
+          <tr><td>Khách đặt qua Website</td><td><span class="b green">Web / WebOrder</span></td><td>"Other"</td><td>—</td></tr>
+          <tr><td>Khách gọi điện / CSKH chốt đơn</td><td><span class="b green">CS</span> hoặc <span class="b green">Telesale</span></td><td>"Other", "Internal"</td><td>CS &amp; Telesale <strong>là bán thật</strong></td></tr>
+          <tr><td>Bán tại cửa hàng / showroom</td><td><span class="b green">POS - &lt;tên cửa hàng&gt;</span></td><td>"POS - Unknown Location"</td><td>Chọn đúng chi nhánh</td></tr>
+          <tr><td>Đại lý / khách sỉ lấy hàng</td><td><span class="b green">Đại Lý</span> / <span class="b green">Chợ sỉ</span></td><td>Zalo / Web / Facebook</td><td>Kênh B2B, giá sỉ — xem Phần 2</td></tr>
+          <tr><td>Hàng test / QA nội bộ</td><td><span class="b gray">Test Sản Phẩm</span></td><td>Kênh bán bất kỳ</td><td>Cố tình không tính DT (đúng)</td></tr>
+          <tr><td>Tặng quà / hàng KM 0đ</td><td><span class="b gray">Quà Tặng</span></td><td>Kênh bán bất kỳ</td><td>Không tính DT (đúng)</td></tr>
+          <tr><td>Đơn nội bộ / ưu đãi nhân viên</td><td><span class="b gray">Ưu đãi Nhân Viên</span></td><td>Kênh bán bất kỳ</td><td>Không tính DT ops (đúng)</td></tr>
+          <tr><td><strong>Không rõ đơn từ đâu</strong></td><td><span class="b blue">HỎI quản lý / Data</span></td><td><span class="b red">❌ "Other" / để trống</span></td><td>"Other" = mất đơn khỏi báo cáo</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="call danger"><div class="ci">⛔</div><div class="ct"><b>Quy tắc vàng</b><p>Nếu đơn là <strong>bán hàng thật cho khách</strong>, nó phải nằm ở một kênh <strong>cụ thể</strong>. Rơi vào <strong>"Other"</strong> hay <strong>"Unknown Location"</strong> nghĩa là hệ thống coi nó <strong>không phải doanh thu</strong> → biến mất khỏi báo cáo CEO, doanh thu kênh…</p></div></div>
+    </section>
+
+    <!-- KHÁCH HÀNG -->
+    <section id="khach">
+      <h2><span class="step">PHẦN 2</span> <span class="ico">👤</span> Phân loại KHÁCH HÀNG</h2>
+      <p class="lead">"Nhóm khách hàng" cho biết <strong>bản chất quan hệ</strong> với công ty — ảnh hưởng giá, chính sách, và cách báo cáo. Mỗi khách thuộc đúng 1 nhóm.</p>
+
+      <h3>Các loại khách &amp; chính sách giá</h3>
+      <div class="scroll">
+      <table class="tbl">
+        <thead><tr><th>Khách là ai</th><th>Hệ thống hiểu là</th><th>Chính sách giá</th><th>Ai gán</th></tr></thead>
+        <tbody>
+          <tr><td>Khách lẻ mua qua kênh B2C</td><td><span class="b green">RETAIL</span></td><td>Giá niêm yết</td><td>Mặc định</td></tr>
+          <tr><td>Khách sỉ, đại lý, mua số lượng lớn</td><td><span class="b amber">WHOLESALE</span></td><td>Giá sỉ (chiết khấu cố định ~40–50%)</td><td>Sales (duyệt)</td></tr>
+          <tr><td>CTV, đại lý nhỏ, đối tác, ký gửi</td><td><span class="b amber">PARTNER</span></td><td>Giá đối tác (theo thỏa thuận)</td><td>Sales</td></tr>
+          <tr><td>Nhân viên công ty</td><td><span class="b blue">STAFF</span></td><td>Giá ưu đãi nhân viên</td><td>HR</td></tr>
+          <tr><td>Influencer / người có ảnh hưởng</td><td><span class="b blue">KOL</span></td><td>Ưu đãi + hỗ trợ content</td><td>Marketing</td></tr>
+          <tr><td>Đơn US giao hộ — người nhận ở VN</td><td><span class="b gray">CROSSBORDER</span></td><td>Ngoài scope doanh thu</td><td>Data / Sales</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>Tạo khách — chọn Nhóm khách hàng nào?</h3>
+      <div class="scroll">
+      <table class="tbl">
+        <thead><tr><th>Khách là ai</th><th>Chọn Nhóm</th><th>Hệ thống hiểu</th></tr></thead>
+        <tbody>
+          <tr><td>Khách mua lẻ bình thường</td><td><strong>Bán lẻ</strong> <span class="b gray">mặc định</span></td><td><span class="b green">RETAIL</span></td></tr>
+          <tr><td>Khách mua sỉ / số lượng lớn / giá sỉ</td><td><strong>Bán buôn</strong></td><td><span class="b amber">WHOLESALE</span></td></tr>
+          <tr><td>Đối tác / CTV / đại lý nhỏ / ký gửi</td><td><strong>Đối tác (Partner)</strong></td><td><span class="b amber">PARTNER</span></td></tr>
+          <tr><td>Nhân viên mua nội bộ</td><td><strong>Nhân viên (Staff)</strong></td><td><span class="b blue">STAFF</span></td></tr>
+          <tr><td>KOL / Influencer</td><td><strong>KOL</strong></td><td><span class="b blue">KOL</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="call warn"><div class="ci">⚠️</div><div class="ct"><b>Mặc định là "Bán lẻ"</b><p>Nếu không gán, khách tự thành <strong>RETAIL</strong>. Đúng với khách lẻ thật, nhưng <strong>sai nghiêm trọng với khách sỉ</strong> — xem bẫy bên dưới.</p></div></div>
+    </section>
+
+    <!-- TỰ ĐỘNG -->
+    <section id="auto">
+      <h2><span class="ico">🤖</span> Cái hệ thống TỰ TÍNH — đừng set tay</h2>
+      <p class="lead">Những thứ sau hệ thống tự cập nhật theo lịch sử mua. Bạn <strong>không cần và không nên</strong> chọn tay — nếu thấy sai, báo Data team.</p>
+      <div class="grid2">
+        <div>
+          <h3 style="margin-top:6px">💎 Hạng giá trị (theo chi tiêu)</h3>
+          <table class="tbl">
+            <thead><tr><th>Hạng</th><th>Điều kiện</th></tr></thead>
+            <tbody>
+              <tr><td><span class="b brand">VIP</span></td><td>Chi tiêu ≥ 50tr <strong>HOẶC</strong> ≥ 20 đơn</td></tr>
+              <tr><td><span class="b brand">Gold</span></td><td>Chi tiêu ≥ 20tr</td></tr>
+              <tr><td><span class="b brand">Silver</span></td><td>Chi tiêu ≥ 5tr</td></tr>
+              <tr><td><span class="b gray">Bronze</span></td><td>Còn lại</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 style="margin-top:6px">🔄 Giai đoạn vòng đời (theo lần mua gần nhất)</h3>
+          <table class="tbl">
+            <thead><tr><th>Giai đoạn</th><th>Khi nào</th></tr></thead>
+            <tbody>
+              <tr><td><span class="b green">Mới</span></td><td>≤ 30 ngày &amp; ≤ 2 đơn</td></tr>
+              <tr><td><span class="b green">Đang hoạt động</span></td><td>Mua trong 90 ngày</td></tr>
+              <tr><td><span class="b amber">Có nguy cơ rời</span></td><td>Không mua 90–180 ngày</td></tr>
+              <tr><td><span class="b red">Đã rời</span></td><td>Không mua &gt; 180 ngày</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <h3>"Nhóm khách hàng" ≠ "Hạng giá trị" — đừng nhầm</h3>
+      <div class="vs">
+        <div class="a"><h4>👤 Nhóm khách hàng <span class="b brand">bạn chọn</span></h4><p style="margin:0;color:var(--muted)">Khách <strong>mua kiểu gì</strong> (lẻ/sỉ/đối tác). Chỉ đổi khi quan hệ đổi. <br>Giá trị: RETAIL, WHOLESALE, PARTNER, STAFF, KOL, CROSSBORDER.</p></div>
+        <div><h4>💎 Hạng giá trị <span class="b gray">tự tính</span></h4><p style="margin:0;color:var(--muted)">Khách <strong>chi nhiều hay ít</strong>. Tự đổi khi khách mua thêm.<br>Giá trị: VIP, Gold, Silver, Bronze.</p></div>
+      </div>
+      <div class="call tip"><div class="ci">✅</div><div class="ct"><b>Ví dụ phân biệt</b><p>Khách <strong>lẻ</strong> chi 60 triệu → <span class="b green">RETAIL</span> + <span class="b brand">VIP</span>. "VIP" nói khách giá trị cao — <strong>không</strong> biến họ thành khách sỉ.</p></div></div>
+    </section>
+
+    <!-- BẪY -->
+    <section id="bay">
+      <h2><span class="ico">⚠️</span> Bẫy tốn tiền &amp; hiểu nhầm thường gặp</h2>
+
+      <h3>⭐ Bẫy số 1: Khách sỉ bị để mặc định "Bán lẻ"</h3>
+      <p>Khách <strong>mua sỉ</strong> (số lượng lớn, giá sỉ giảm 40–70%) nhưng Nhóm để <strong>"Bán lẻ"</strong> → hệ thống xếp <span class="b green">RETAIL</span>. Khi đó <strong>giá sỉ bị hiểu nhầm thành khuyến mãi</strong> → mọi báo cáo "tỷ lệ giảm giá", "hiệu quả KM" trở nên vô nghĩa.</p>
+      <div class="vs">
+        <div class="a"><h4>"Giảm 50%" trên Shopee dịp sale</h4><p style="margin:0;color:var(--muted)">= <strong>Khuyến mãi</strong> (promotion). Đúng khi khách là <span class="b green">RETAIL</span>.</p></div>
+        <div><h4>"Giảm 50%" cho đại lý lấy sỉ</h4><p style="margin:0;color:var(--muted)">= <strong>Giá sỉ</strong> (chính sách giá). Đúng khi khách là <span class="b amber">WHOLESALE</span>.</p></div>
+      </div>
+      <div class="call danger"><div class="ci">🎯</div><div class="ct"><b>Cách làm đúng</b><p>Khách lấy hàng <strong>số lượng lớn / giá sỉ / đại lý</strong> → gán Nhóm <strong>"Bán buôn"</strong> (cần Sales duyệt). Đừng đoán "đơn giảm nhiều chắc là sỉ" — <strong>phải gán Nhóm cho khách</strong>, hệ thống không tự đoán.</p></div></div>
+
+      <h3>Các hiểu nhầm khác</h3>
+      <table class="tbl">
+        <thead><tr><th>Hiểu nhầm</th><th>Sự thật &amp; hậu quả</th></tr></thead>
+        <tbody>
+          <tr><td><strong>"Other / Unknown là kênh hợp lệ"</strong></td><td>Đơn vào đó <span class="no">bị loại khỏi mọi báo cáo doanh thu</span>. Đơn có thật, tiền có thật, nhưng sếp không thấy.</td></tr>
+          <tr><td><strong>"VIP / Gold là Nhóm khách"</strong></td><td>Đó là <strong>hạng giá trị tự động</strong> theo chi tiêu, không phải ô để chọn. Set tay sẽ bị ghi đè.</td></tr>
+          <tr><td><strong>"CS / Telesale là nội bộ"</strong></td><td>Sai — chúng là <strong>Bán trực tiếp, doanh thu thật</strong>. Chọn CS/Telesale cho đơn gọi điện là đúng.</td></tr>
+          <tr><td><strong>"Đơn US có doanh thu lớn"</strong></td><td>Kênh US là giao hàng hộ xuyên biên → <strong>doanh thu VN thật = 0đ</strong>, bị loại đúng.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- VÍ DỤ -->
+    <section id="vidu">
+      <h2><span class="ico">💡</span> Ví dụ thực tế</h2>
+      <div class="ex">
+        <div class="q">① "Đơn SON07311 có thật, sao không thấy trong báo cáo?"</div>
+        <p style="margin:0 0 6px"><strong>Nguyên nhân:</strong> Nguồn đơn = "Other" → nhóm Internal → bị loại khỏi mọi báo cáo bán hàng (dù ngày &amp; trạng thái đều đạt).</p>
+        <p style="margin:0"><span class="arrow">→ Cách sửa:</span> Mở đơn trong Sapo, đổi <strong>Nguồn</strong> sang đúng kênh đã bán (Zalo / Facebook / CS…). Đồng bộ xong đơn xuất hiện lại.</p>
+      </div>
+      <div class="ex">
+        <div class="q">② "Đại lý lấy 200 hộp, giảm 45% — gõ sao cho đúng?"</div>
+        <ol style="margin:0"><li><strong>Khách:</strong> gán Nhóm = "Bán buôn" (không để Bán lẻ).</li><li><strong>Đơn:</strong> chọn Nguồn = "Đại Lý" (không chọn Zalo/Web).</li></ol>
+        <p style="margin:6px 0 0"><span class="arrow">→</span> Hệ thống hiểu: doanh thu B2B, giảm 45% là <strong>giá sỉ</strong>. Báo cáo KM sạch, báo cáo sỉ đúng.</p>
+      </div>
+      <div class="ex">
+        <div class="q">③ "Tặng 10 hộp cho KOL quay clip"</div>
+        <p style="margin:0"><span class="arrow">→</span> Nguồn = "Quà Tặng" (hoặc Nhóm khách = KOL nếu là KOL mua). Hệ thống <strong>không</strong> tính vào doanh thu bán → tránh thổi phồng số.</p>
+      </div>
+    </section>
+
+    <!-- CHEAT -->
+    <section id="cheat">
+      <h2><span class="ico">📑</span> Bảng tra nhanh — chụp lại để dùng</h2>
+      <div class="scroll">
+      <table class="tbl">
+        <thead><tr><th>Bạn làm gì</th><th>Ô cần chọn</th><th>Chọn đúng</th><th>Hậu quả nếu sai</th></tr></thead>
+        <tbody>
+          <tr><td>Tạo đơn bán thật</td><td><strong>Nguồn đơn hàng</strong></td><td><span class="b green">Kênh cụ thể</span> (Shopee/Zalo/POS/CS/Đại Lý)</td><td>"Other" → mất đơn khỏi báo cáo</td></tr>
+          <tr><td>Tạo đơn nội bộ</td><td><strong>Nguồn đơn hàng</strong></td><td>Test SP / Quà Tặng / Ưu đãi NV</td><td>Chọn kênh bán → thổi phồng DT</td></tr>
+          <tr><td>Tạo khách lẻ</td><td><strong>Nhóm khách hàng</strong></td><td>Bán lẻ (mặc định)</td><td>—</td></tr>
+          <tr><td>Tạo khách sỉ</td><td><strong>Nhóm khách hàng</strong></td><td><span class="b amber">Bán buôn</span></td><td>Để Bán lẻ → phá phân tích KM</td></tr>
+          <tr><td>Hạng VIP / Gold</td><td><span class="b gray">không chọn</span></td><td>Để hệ thống tự tính</td><td>Set tay → bị ghi đè</td></tr>
+          <tr><td>Không rõ nguồn</td><td>—</td><td><span class="b blue">Hỏi quản lý / Data</span></td><td>"Other" → mất đơn</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="call info"><div class="ci">🧠</div><div class="ct"><b>Nhớ một câu</b><p>Bạn chỉ chọn 2 ô — <strong>Nguồn đơn</strong> và <strong>Nhóm khách</strong> — nhưng chọn sai là số trong báo cáo sai: đơn rơi vào "Other" thì mất, khách sỉ để "Bán lẻ" thì méo.</p></div></div>
+    </section>
+
+  </main>
+
+  <footer>
+    <p><b>Hướng dẫn Phân loại Đơn hàng &amp; Khách hàng</b> · Tài liệu nội bộ cho Sales &amp; CSKH<br>
+    Cập nhật 2026-06-05 · Bảo trì bởi Data team · Có thắc mắc về phân loại → liên hệ Data team</p>
+  </footer>
+
+</div>
+</body>
+</html>

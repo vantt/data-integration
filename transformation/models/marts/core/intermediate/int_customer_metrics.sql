@@ -102,6 +102,31 @@ channel_preference_cte AS (
     WHERE rn = 1
 ),
 
+-- Acquisition source: channel_name of the customer's FIRST order (earliest ordered_at).
+-- Sapo customer payload has no acquisition/source/UTM field, so we proxy "where acquired"
+-- by the specific channel through which the customer first transacted. Stored as the raw
+-- channel_name (kept specific — roll up to format/category via dim_channels at query time).
+-- Validated by a relationships test (-> dim_channels.channel_name), not a fixed enum.
+-- Ties broken by order_id.
+first_order_channel AS (
+    SELECT customer_key, channel_name AS acquisition_source
+    FROM (
+        SELECT
+            o.customer_key,
+            ch.channel_name,
+            ROW_NUMBER() OVER (
+                PARTITION BY o.customer_key
+                ORDER BY o.ordered_at ASC, o.order_id ASC
+            ) AS rn
+        FROM orders o
+        JOIN channels ch ON o.channel_key = ch.channel_key
+        {% if is_incremental() %}
+        INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
+        {% endif %}
+    ) ranked
+    WHERE rn = 1
+),
+
 -- Product affinity: brand with >60% revenue share
 brand_revenue AS (
     SELECT
@@ -263,6 +288,7 @@ SELECT
     COALESCE(cp.channel_preference, 'CHANNEL_OTHER') as channel_preference,
     COALESCE(pa.product_affinity, 'PRODUCT_MULTI') as product_affinity,
     COALESCE(pb.payment_behavior, 'PAYMENT_PREPAID') as payment_behavior,
+    foc.acquisition_source,                       -- channel_name of first order (NULL if no orders)
 
     -- P3 metrics
     ip.avg_days_between_orders,
@@ -278,6 +304,7 @@ SELECT
     current_timestamp as metric_calculated_at
 FROM aggregated a
 LEFT JOIN channel_preference_cte cp ON a.customer_key = cp.customer_key
+LEFT JOIN first_order_channel foc ON a.customer_key = foc.customer_key
 LEFT JOIN product_affinity_cte pa ON a.customer_key = pa.customer_key
 LEFT JOIN payment_behavior_cte pb ON a.customer_key = pb.customer_key
 LEFT JOIN avg_order_value_cte aov ON a.customer_key = aov.customer_key

@@ -21,9 +21,12 @@
 |---------------|----------|-------------------------|
 | **RETAIL** | Khách lẻ B2C | Default scope cho Marketing, Customer Ops |
 | **WHOLESALE** | Khách sỉ | B2B analysis, giá sỉ ≠ promotion |
-| **PARTNER** | CTV, đối tác | B2B analysis, chính sách riêng |
+| **PARTNER** | CTV, đối tác, ký gửi | B2B analysis, chính sách riêng |
 | **STAFF** | Nhân viên | Loại khỏi L2 analysis |
 | **KOL** | Influencer | Loại khỏi L2 analysis |
+| **CROSSBORDER** | Đơn US giao hàng hộ | Loại khỏi mọi sales scope — đơn nằm trên kênh `is_sales_channel=false` |
+
+**Lưu ý CROSSBORDER:** CROSSBORDER (đơn US giao hộ) bị loại khỏi mọi sales scope vì đơn nằm trên kênh `is_sales_channel=false`. Customer của Sapo = người mua (VN); người nhận không phải customer. CROSSBORDER không thuộc scope_sales, scope_retail, hay scope_b2b.
 
 ### Default Scope cho Customer Metrics
 

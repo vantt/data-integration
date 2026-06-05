@@ -56,6 +56,7 @@ joined_data AS (
         m.discount_order_rate,
         m.cancel_rate,
         m.predicted_next_purchase_date,
+        m.acquisition_source,
 
         -- [METRIC] Customer Status (RFM - Recency Component)
         -- Logic:
@@ -90,14 +91,19 @@ SELECT
     address1,
     country,
     
-    -- customer_type: Commercial relationship type (Manual in Sapo, TYPE_* prefix)
-    -- See docs/context/customer-segmentation.md for definitions
+    -- customer_type: Commercial relationship type (Manual in Sapo)
+    -- New scheme uses TYPE_* group codes (2026-04-19). Legacy groups whose code was
+    -- not yet re-tagged still carry old codes/names — match those too so the migration
+    -- backlog doesn't silently default to RETAIL. '%WHOLESALE%' catches both the new
+    -- TYPE_WHOLESALE code and the legacy "WHOLESALE"/BANBUON group (name="WHOLESALE").
+    -- See docs/context/customer-segmentation.md (§"Hướng dẫn triển khai trong Sapo").
     CASE
-        WHEN customer_group LIKE '%TYPE_WHOLESALE%' THEN 'WHOLESALE'
-        WHEN customer_group LIKE '%TYPE_PARTNER%' THEN 'PARTNER'
+        WHEN customer_group LIKE '%WHOLESALE%' THEN 'WHOLESALE'                                    -- TYPE_WHOLESALE + legacy BANBUON
+        WHEN customer_group LIKE '%TYPE_PARTNER%' OR customer_group LIKE '%KY_GUI%' THEN 'PARTNER'  -- + Ký Gửi (consignment/ký gửi)
         WHEN customer_group LIKE '%TYPE_STAFF%' THEN 'STAFF'
         WHEN customer_group LIKE '%TYPE_KOL%' THEN 'KOL'
-        ELSE 'RETAIL'  -- Default: TYPE_RETAIL or untagged
+        WHEN customer_group LIKE '%TYPE_CROSSBORDER%' OR customer_group LIKE '%CTN00014%' THEN 'CROSSBORDER'  -- US giao hàng hộ (người nhận VN)
+        ELSE 'RETAIL'  -- Default: TYPE_RETAIL/BANLE, Selly (end-consumers), untagged
     END as customer_type,
 
     -- value_group: Customer value tier based on lifetime spend (Auto)
@@ -152,8 +158,9 @@ SELECT
         ELSE 'GEO_OTHER'
     END as geo_region,
 
-    -- acquisition_source: Customer acquisition channel (Manual - pending Sapo implementation)
-    CAST(NULL AS VARCHAR) as acquisition_source,
+    -- acquisition_source: channel_name của ĐƠN ĐẦU TIÊN (từ int_customer_metrics).
+    -- Kênh cụ thể (vd 'Zalo'), NULL nếu khách chưa có đơn. Test: relationships -> dim_channels.channel_name.
+    acquisition_source,
 
     -- Demographics
     birth_date,

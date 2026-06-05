@@ -114,7 +114,7 @@ WHERE is_sales_channel = true
 
 **Loại trừ:**
 - Internal (Test SP, Quà Tặng, Ưu đãi NV)
-- CrossBorder Fulfillment (US fulfill)
+- CrossBorder Fulfillment / US (customer_type=CROSSBORDER) — bị loại ở tầng kênh (`is_sales_channel=false`), không nằm trong scope_sales/retail/b2b
 - STAFF orders (optional — xem quy tắc bên dưới)
 - KOL orders (optional — xem quy tắc bên dưới)
 
@@ -153,6 +153,8 @@ WHERE is_sales_channel = true
 - Credit/AR tracking
 - B2B margin analysis
 
+> **Lưu ý (ĐÃ XÁC NHẬN 2026-06-05):** Ký Gửi (KY_GUI) giờ = PARTNER → thuộc scope_b2b. `customer_type=CROSSBORDER` tồn tại cho người mua US nhưng đơn của họ đã bị loại ở tầng kênh (`is_sales_channel=false`), nên không nằm trong scope_sales/retail/b2b.
+
 ### 3.4 Xử lý STAFF và KOL
 
 | customer_type | Layer 1 (All) | Layer 2 (Retail) | Layer 2 (B2B) |
@@ -162,6 +164,7 @@ WHERE is_sales_channel = true
 | PARTNER | ✅ Bao gồm | ❌ Loại | ✅ Bao gồm |
 | **STAFF** | ✅ Bao gồm | ❌ Loại | ❌ Loại |
 | **KOL** | ✅ Bao gồm | ❌ Loại | ❌ Loại |
+| **CROSSBORDER** | ❌ Loại (tầng kênh) | ❌ Loại | ❌ Loại |
 
 **Lý do loại STAFF/KOL khỏi Layer 2:**
 - STAFF: Giá ưu đãi nhân viên ≠ giá retail ≠ giá sỉ

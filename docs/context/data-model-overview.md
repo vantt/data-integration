@@ -139,7 +139,7 @@ Chi tiết: [team-management.md](./team-management.md)
 
 | Nhóm | Chiều | Loại | Mô tả |
 |------|-------|------|-------|
-| **Commercial** | `customer_type` | Manual | RETAIL, WHOLESALE, PARTNER, STAFF, KOL |
+| **Commercial** | `customer_type` | Manual | RETAIL, WHOLESALE, PARTNER, STAFF, KOL, CROSSBORDER |
 | | `payment_behavior` | Auto | Hành vi thanh toán |
 | **Behavioral** | `value_group` | Auto | VALUE_VIP, VALUE_GOLD, ... (RFM) |
 | | `lifecycle_stage` | Auto | NEW, ACTIVE, AT_RISK, CHURNED |
@@ -161,7 +161,8 @@ customer_type = Bản chất quan hệ       value_group = Giá trị đóng gó
        │                                      │
        ▼                                      ▼
   RETAIL, WHOLESALE,                   VALUE_VIP, VALUE_GOLD,
-  PARTNER, STAFF, KOL                  VALUE_SILVER, VALUE_BRONZE
+  PARTNER, STAFF, KOL,                 VALUE_SILVER, VALUE_BRONZE
+  CROSSBORDER
 
 → Khách lẻ chi 50M+ = customer_type=RETAIL + value_group=VALUE_VIP
 → Đại lý mới = customer_type=WHOLESALE + value_group=VALUE_BRONZE

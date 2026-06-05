@@ -83,12 +83,12 @@ models:
       - name: customer_key
         tests: [unique, not_null]
       - name: customer_type
-        description: "Commercial relationship type (Manual from Sapo TYPE_* groups)"
+        description: "Commercial relationship type (Manual from Sapo groups). RETAIL/WHOLESALE/PARTNER/STAFF/KOL + CROSSBORDER (đơn US giao hàng hộ — người nhận VN)."
         data_type: varchar
         tests:
           - accepted_values:
               arguments:
-                values: ['RETAIL', 'WHOLESALE', 'PARTNER', 'STAFF', 'KOL']
+                values: ['RETAIL', 'WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER']
       - name: value_group
         description: "Customer value tier (Auto): VALUE_VIP (>=50M or >=20 orders), VALUE_GOLD (>=20M), VALUE_SILVER (>=5M), VALUE_BRONZE (else)"
         data_type: varchar
@@ -132,12 +132,13 @@ models:
               arguments:
                 values: ['GEO_HCMC', 'GEO_HANOI', 'GEO_MEKONG', 'GEO_CENTRAL', 'GEO_OTHER']
       - name: acquisition_source
-        description: "Customer acquisition channel (Manual): SOURCE_ORGANIC/ADS/REFERRAL/KOL/EVENT. NULL until Sapo implementation."
+        description: "Kênh giao dịch ĐẦU TIÊN của khách = channel_name của đơn sớm nhất (vd 'Zalo', 'Shopee - JPC SHOP'). Proxy cho 'khách đến từ đâu' vì Sapo không có field nguồn marketing. NULL nếu khách chưa có đơn. Roll-up lên channel_format/category qua dim_channels khi cần."
         data_type: varchar
         tests:
-          - accepted_values:
+          - relationships:
               arguments:
-                values: ['SOURCE_ORGANIC', 'SOURCE_ADS', 'SOURCE_REFERRAL', 'SOURCE_KOL', 'SOURCE_EVENT']
+                to: ref('dim_channels')
+                field: channel_name
               config:
                 where: "acquisition_source IS NOT NULL"
       - name: lifetime_value
