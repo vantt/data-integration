@@ -3627,3 +3627,23 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 4. CSS is browser-cached: after a rebuild, hard-refresh (Ctrl+Shift+R) or the old stylesheet masks the fix.
 
 **Reference:** `detailView/app/adapters/inbound/web/static/css/app.css` (`.wf-row`, `.waterfall`) · See also L107 (the change that added the column)
+
+---
+
+### L109 — A cost already embedded in an aggregate must NOT also appear as a sibling deduction (double-count)
+
+**Group:** SERVE
+
+**Symptom:** detailView Financial-tab P&L waterfall double-counted promo on screen: rows visibly summed to `channel_net_profit − promo` but the result row showed the real `channel_net_profit` — off by exactly `promo_goods_cost`. Data was correct; only the display double-counted. (Order 2603035YC1UJNR: net 1,177,290 − cogs 689,840 = gross 487,450; a separate `−Promo goods cost 60,185` row made the visible chain land at 152,927 vs the true 213,112.)
+
+**Root cause:** After the Phase-05 COGS repoint to `int_order_cogs_reconciled` (Sapo-MAC primary), promo SKU rows (line_revenue=0, but with cost) are INSIDE `cogs_goods_primary` → inside `fact_order_economics.cogs_amount`. So `gross_profit = net_revenue − cogs_amount` is ALREADY net of promo, and `channel_net_profit` does not deduct promo separately. The Phase-06 UI (built before the repoint's effect was understood) rendered `promo_goods_cost` as its own `−` waterfall step, deducting it a second time visually. `promo_goods_cost` is an ATTRIBUTION LABEL ("of which promo"), not an independent deduction.
+
+**Fix:** Render `promo_goods_cost` as a non-deducting annotation under the COGS row ("trong đó hàng tặng (promo): …", `wf-row--annotation`), not as a waterfall deduction step. The visible chain then reconciles: `net_revenue − cogs_amount = gross_profit → −fees → channel_net_profit`. Added two dbt guard tests (`assert_promo_account_not_in_keep_pool`, `assert_no_promo_in_overhead_costs`) to lock count-once at the data layer.
+
+**Rules:**
+1. Before showing a cost as its own deduction line, ask whether it is already inside a parent aggregate on the same waterfall (COGS, fees, allocated_overhead). If embedded, show it as a non-deducting "of which X" annotation — never a second sibling `−` step.
+2. A "_cost"/"_amount" column is not automatically a deduction. Confirm whether the headline result formula (here `channel_net_profit`) actually subtracts it; if not, the UI must not either.
+3. When a repoint changes what an aggregate CONTAINS (COGS now includes promo SKUs), re-audit every UI step built against the old composition — the sum can silently stop reconciling even when each row is individually correct. (Sibling of L107.)
+4. Verify a waterfall by arithmetic: assert the visible-rows chain == the displayed result value on a real order, not just that each row renders.
+
+**Reference:** `detailView/app/adapters/inbound/web/templates/partials/order/_financial.html` · `transformation/tests/assert_promo_account_not_in_keep_pool.sql`, `assert_no_promo_in_overhead_costs.sql` · See also L107 (mart semantics breaking UI), L106 (VAT-inclusive), and the Phase-05 repoint (`int_order_cogs_reconciled`)

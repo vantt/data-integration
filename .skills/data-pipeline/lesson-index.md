@@ -74,6 +74,7 @@ Lessons covering serving layer: Rolling Self-Refresh Views, DuckDB dual-file, GC
 | ID | Title | File |
 |----|-------|------|
 | L18 | DuckDB read_only mode KHÔNG acquire file lock | `references/lessons-learned.md#L18` |
+| L109 | Cost embedded in an aggregate must not also be a sibling deduction (waterfall double-count) | `references/lessons-learned.md#L109` |
 | dbt-Lesson-5 | Rolling Location cho Marts (CRITICAL) | `references/dbt-patterns.md` |
 
 **Full SERVE knowledge base:** `references/serving-layer.md` (all sections — canonical SERVE reference)
