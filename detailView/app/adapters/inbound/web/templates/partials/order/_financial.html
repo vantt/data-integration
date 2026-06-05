@@ -1,14 +1,21 @@
 {#
   Order > Financial tab panel.
   Waterfall: gross(incl VAT) → −discount → total collected → −VAT → net(ex VAT)
-             → −COGS → gross profit·margin → −platform fees → channel net·margin
-             → [promo goods cost] → channel net profit (decision tier)
+             → −COGS [+ promo annotation] → gross profit·margin
+             → −platform fees → channel net·margin → channel net profit (decision tier)
              → [overhead footer] → fully-loaded net profit.
   US CrossBorder: swap revenue block (us_revenue_excl/incl_vat).
   Cost breakdown appended as .group ledger (via _cost_ledger include).
   Source: fact_orders · fact_order_economics (+ fact_us_shipment_economics for US).
-  Phase-06 adds: cogs badge, comp bar (Zone 2), promo row, decision tier,
+  Phase-06 adds: cogs badge, comp bar (Zone 2), decision tier,
   fully-loaded footer (Zone 3), COGS recon (Zone 5, gated cogs_source=='both').
+
+  Promo goods cost NOTE: promo_goods_cost is an ATTRIBUTION LABEL, not a separate
+  deduction. The promo SKU cost is already embedded in cogs_amount (Sapo-MAC COGS
+  includes revenue=0 gift lines). Showing promo as a standalone waterfall deduction
+  DOUBLE-COUNTS it on screen. Instead it is shown as an informational sub-note under
+  the COGS row — "of which: promo goods" — without affecting the running total.
+  Formula: net_revenue − cogs_amount = gross_profit → (−fees) → channel_net_profit.
 #}
 {% from "macros.html" import waterfall_row, caveat, badge, panel_head %}
 {% set f = order.financial %}
@@ -215,6 +222,19 @@
            (badge("unverified","warn",dot=True) if f.cogs_source in (none, 'none') else ""),
            f.cogs_amount, neg=True,
            pct_val=((f.cogs_amount / f.net_revenue) if (f.cogs_amount is not none and f.net_revenue) else none)) }}
+        {# Promo attribution note — informational only, does NOT change running total.
+           promo_goods_cost is already embedded in cogs_amount; showing it here as
+           "of which: promo goods" avoids double-counting while preserving visibility. #}
+        {% if f.promo_goods_cost is not none and f.promo_goods_cost > 0 %}
+        <tr class="wf-row wf-row--annotation">
+          <td class="wf-op" aria-hidden="true"></td>
+          <td class="wf-label" colspan="3">
+            <span class="caption" title="Hàng tặng (promo): chi phí giá vốn của SKU tặng kèm — đã nằm trong COGS ở trên, không trừ thêm">
+              trong đó hàng tặng (promo): {{ f.promo_goods_cost | vnd }}
+            </span>
+          </td>
+        </tr>
+        {% endif %}
         {{ waterfall_row("=",
            "Gross profit",
            f.gross_profit, result=True,
@@ -223,14 +243,6 @@
            "Platform fees" ~ ((" <span class='caption' style='margin-left:6px'>" ~ order.channel.platform ~ "</span>") if order.channel.platform else ""),
            (f.shopee_platform_fees | abs) if f.shopee_platform_fees is not none else none, neg=True,
            pct_val=(((f.shopee_platform_fees | abs) / f.net_revenue) if (f.shopee_platform_fees is not none and f.net_revenue) else none)) }}
-
-        {# Promo goods cost row — only when > 0; stored POSITIVE, shown as cost #}
-        {% if f.promo_goods_cost is not none and f.promo_goods_cost > 0 %}
-          {{ waterfall_row("−",
-             "Promo goods cost <span class='wf-tag'>promo</span>" | safe,
-             f.promo_goods_cost, neg=True,
-             pct_val=((f.promo_goods_cost / f.net_revenue) if f.net_revenue else none)) }}
-        {% endif %}
 
         {# Channel net profit — decision tier. Frozen macro can't add wf-row--decision, so raw HTML. #}
         {%- set _cnp_neg = f.channel_net_profit is not none and f.channel_net_profit < 0 -%}
