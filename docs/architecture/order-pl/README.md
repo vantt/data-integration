@@ -17,7 +17,8 @@ net_revenue (Sapo VAT-inclusive: net = total − total_tax)
 | `order-pl-schema-design.md` | all | Existing per-order P&L schema (`fact_order_economics`, `fact_order_costs`); the base everything extends. |
 | `cogs-reconciliation-design.md` | 1 | COGS: Sapo-MAC primary vs MISA-632 reconciliation; MISA 632/642 mix; promo/gift split; gift-no-invoice; `std_misa_sales_lines`. Flags BUG-1 (642 lumped in COGS). |
 | `discount-classification.md` | 2 | Discount taxonomy (10 types) feeding the contribution tier. |
-| `overhead-cost-allocation-design.md` | 3 | Closure-based overhead allocation (TK642/635/641-common) → `fully_loaded_net_profit`; MISA monthly + GSheet config. |
+| `overhead-cost-allocation-design.md` | 3 | Closure-based overhead allocation (TK6422 + 6421-keep) → `fully_loaded_net_profit`; MISA monthly + GSheet config. §Quyết định Q1–Q5 (TT133). |
+| `overhead-account-ledger-ingestion-design.md` | 3 | Ingest MISA "Sổ chi tiết các tài khoản" (6421/6422) — folder/sensor/section-parser/grain(account×month)/upsert/classification gsheet/count-once. Feeds the overhead pool. |
 
 ## Cross-cutting (kept in parent `docs/architecture/`, NOT moved)
 - `std-layer-conventions.md` — std-gate rules (apply to all sources).
