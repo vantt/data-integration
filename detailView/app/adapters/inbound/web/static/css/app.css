@@ -828,7 +828,6 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
 
 /* Zone 1 — verdict add-ons */
 .verdict-zone { display: flex; flex-direction: column; gap: var(--sp-2); }
-.verdict-addons { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
 .fl-note {
   display: flex; align-items: flex-start; gap: var(--sp-2);
   padding: var(--sp-2) var(--sp-3);
@@ -844,12 +843,12 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
 .comp-bar__head { margin-bottom: var(--sp-2); }
 .comp-bar__title { letter-spacing: var(--tracking-eyebrow); }
 .comp-bar {
-  display: flex; height: 24px; border-radius: var(--radii-hairline); overflow: hidden;
+  display: flex; height: 38px; border-radius: var(--radii-hairline); overflow: hidden;
   border: 1px solid var(--border);
 }
 .comp-seg { display: flex; align-items: center; justify-content: center; min-width: 2px;
   transition: opacity var(--dur-fast) var(--ease-fast); }
-.comp-seg__pct { font-family: var(--font-mono); font-size: 10px; font-weight: var(--fw-medium);
+.comp-seg__pct { font-family: var(--font-mono); font-size: 11px; font-weight: var(--fw-medium);
   color: rgba(255,255,255,0.92); letter-spacing: 0.02em; }
 .comp-seg--cogs   { background: color-mix(in srgb, var(--amber-lo) 85%, var(--ink-300)); }
 .comp-seg--promo  { background: color-mix(in srgb, var(--coral-500) 65%, var(--ink-400)); }
@@ -885,23 +884,12 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
 .wf-row--decision .wf-amt.wf-amt--neg,
 .wf-row--decision .wf-amt--neg { color: var(--coral-500); }
 
-/* Fully-loaded footer (muted lines below waterfall) */
-.wf-footer-muted {
-  border: 1px dashed var(--border); border-radius: var(--radii-control);
-  padding: var(--sp-2) var(--sp-4); margin-top: var(--sp-2); background: transparent;
-}
-.wf-footer-row {
-  display: grid; grid-template-columns: 20px 1fr auto;
-  align-items: center; gap: var(--sp-3); padding: 6px 0;
-  font-size: 13px; color: var(--fg-muted);
-}
-.wf-footer-row + .wf-footer-row { border-top: 1px dashed var(--border); }
-.wf-footer__op { font-family: var(--font-mono); font-size: 13px; color: var(--fg-tertiary); text-align: center; }
-.wf-footer__label { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.wf-footer__amt { text-align: right; font-size: 14px; color: var(--fg-1); white-space: nowrap; }
-.wf-footer__pct { color: var(--fg-muted); margin-left: 4px; }
-.wf-footer-row--result .wf-footer__label { font-weight: var(--fw-medium); color: var(--fg-1); }
-.wf-footer-row--result .wf-footer__amt { font-weight: var(--fw-medium); }
+/* Fully-loaded reporting tier — muted rows inside the waterfall table */
+.wf-row--footer td { color: var(--fg-muted); background: transparent; }
+.wf-row--footer-first td { border-top: 1px dashed var(--border); }
+.wf-row--footer .wf-amt { color: var(--fg-1); }
+.wf-row--footer-result .wf-label,
+.wf-row--footer-result .wf-amt { font-weight: var(--fw-medium); color: var(--fg-1); }
 
 /* Cost group — NEW tag (Phase-06: PROMO_GOODS + OVERHEAD) */
 .group__new-tag {

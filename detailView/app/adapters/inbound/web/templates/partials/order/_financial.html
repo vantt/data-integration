@@ -153,19 +153,6 @@
           </div>
         </div>
 
-        {# COGS source badge row #}
-        <div class="verdict-addons">
-          {% if f.cogs_source == 'sapo_mac' %}
-            {{ badge("Sapo-MAC", "good", dot=True) }}
-          {% elif f.cogs_source == 'misa' %}
-            {{ badge("MISA", "neutral") }}
-          {% elif f.cogs_source == 'both' %}
-            {{ badge("Sapo + MISA", "good", dot=True) }}
-          {% else %}
-            {{ badge("No COGS", "warn", dot=True) }}
-          {% endif %}
-        </div>
-
         {# Fully-loaded footnote — only when overhead is allocated #}
         {% if f.allocated_overhead is not none and f.fully_loaded_net_profit is not none %}
         <div class="fl-note" title="Lãi ròng đầy đủ — Lãi đóng góp − chi phí vận hành. Để báo cáo.">
@@ -267,39 +254,36 @@
             {%- endif -%}
           </td>
         </tr>
-      </tbody></table>
 
-      {# Fully-loaded footer — overhead + fully-loaded net profit (gated) #}
-      {% if f.allocated_overhead is not none and f.allocated_overhead > 0 %}
-      <div class="wf-footer-muted">
-        <div class="wf-footer-row">
-          <span class="wf-footer__op">−</span>
-          <span class="wf-footer__label">
+        {# Fully-loaded reporting tier — in-table for column alignment; muted + dashed separator #}
+        {% if f.allocated_overhead is not none and f.allocated_overhead > 0 %}
+        <tr class="wf-row wf-row--footer wf-row--footer-first">
+          <td class="wf-op wf-op--sub" aria-hidden="true">−</td>
+          <td class="wf-label">
             Allocated overhead
             <span class="wf-tag">[allocated]</span>
             {% if f.is_overhead_estimated %}{{ badge("estimated", "warn") }}{% endif %}
-          </span>
-          <span class="wf-footer__amt mono">−{{ f.allocated_overhead | vnd }}</span>
-        </div>
-        <div class="wf-footer-row wf-footer-row--result">
-          <span class="wf-footer__op">=</span>
-          <span class="wf-footer__label">
+          </td>
+          <td class="wf-pct"></td>
+          <td class="wf-amt wf-amt--neg">−{{ f.allocated_overhead | vnd }}</td>
+        </tr>
+        <tr class="wf-row wf-row--footer wf-row--footer-result">
+          <td class="wf-op wf-op--eq" aria-hidden="true">=</td>
+          <td class="wf-label">
             Fully-loaded net profit
             <span class="wf-tag">[for reporting]</span>
-          </span>
-          <span class="wf-footer__amt mono">
-            {% if f.fully_loaded_net_profit is not none %}
+          </td>
+          <td class="wf-pct">{% if f.fully_loaded_margin_pct is not none %}{{ f.fully_loaded_margin_pct | pct }}{% endif %}</td>
+          <td class="wf-amt">
+            {%- if f.fully_loaded_net_profit is not none -%}
               {{ "+" if f.fully_loaded_net_profit >= 0 else "−" }}{{ f.fully_loaded_net_profit | abs | vnd }}
-              {% if f.fully_loaded_margin_pct is not none %}
-                <span class="wf-footer__pct">{{ f.fully_loaded_margin_pct | pct }}</span>
-              {% endif %}
-            {% else %}
+            {%- else -%}
               <span class="dash">—</span>
-            {% endif %}
-          </span>
-        </div>
-      </div>
-      {% endif %}
+            {%- endif -%}
+          </td>
+        </tr>
+        {% endif %}
+      </tbody></table>
 
       {# Caveat: no-COGS warning (replaces old has_cogs check) #}
       {% if f.cogs_source in (none, 'none') %}
@@ -329,18 +313,20 @@
     <details class="recon-panel">
       <summary class="recon-panel__head">
         <span class="recon-panel__chev">▸</span>
-        <span class="recon-panel__title">COGS Reconciliation</span>
+        <span class="recon-panel__title">Đối chiếu giá vốn (COGS)</span>
         <span class="recon-panel__tag">{{ badge("Sapo + MISA", "good") }}</span>
       </summary>
       <div class="recon-detail">
         <div class="recon-panel__preview">
-          <span>Comparing Sapo-MAC vs MISA COGS for this order.</span>
+          <span>Đơn này có giá vốn được xác nhận từ <b>cả hai nguồn</b> — Sapo-MAC và kế toán MISA.</span>
           <span class="recon-sep">·</span>
-          <span class="mono">COGS: {{ f.cogs_amount | vnd }}</span>
+          <span class="mono">Giá vốn dùng trong P&amp;L: {{ f.cogs_amount | vnd }}</span>
         </div>
         <p class="muted" style="font-size:13px;margin-top:var(--sp-3)">
-          Full per-source COGS breakdown available when <code>sapo_mac_cogs</code> / <code>misa_cogs_632</code>
-          columns are exposed from <code>fact_order_economics</code> (future mart phase).
+          <b>Đối chiếu</b> = so sánh giá vốn giữa hai nguồn để phát hiện chênh lệch. Hiện chỉ mới xác nhận được
+          <b>cả hai nguồn đều có dữ liệu</b> cho đơn này — chưa hiển thị được chênh lệch khớp/lệch là bao nhiêu.
+          Bảng so sánh chi tiết theo từng nguồn sẽ có khi cột <code>sapo_mac_cogs</code> / <code>misa_cogs_632</code>
+          được bổ sung vào <code>fact_order_economics</code> (giai đoạn mart tiếp theo).
         </p>
       </div>
     </details>

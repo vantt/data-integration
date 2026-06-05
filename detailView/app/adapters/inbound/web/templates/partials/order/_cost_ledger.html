@@ -12,12 +12,20 @@
 
 {{ panel_head("Cost breakdown", "fact_order_costs") }}
 
-{# Collect unique categories in order #}
-{% set categories = [] %}
+{# Fixed display order; unknown categories appended after #}
+{% set cat_order = ["COGS", "DISCOUNT", "PROMO_GOODS", "PLATFORM_FEE", "OVERHEAD"] %}
+{% set present = [] %}
 {% for row in rows %}
-  {% if row.cost_category not in categories %}
-    {% set _ = categories.append(row.cost_category) %}
+  {% if row.cost_category not in present %}
+    {% set _ = present.append(row.cost_category) %}
   {% endif %}
+{% endfor %}
+{% set ordered = [] %}
+{% for c in cat_order %}
+  {% if c in present %}{% set _ = ordered.append(c) %}{% endif %}
+{% endfor %}
+{% for c in present %}
+  {% if c not in cat_order %}{% set _ = ordered.append(c) %}{% endif %}
 {% endfor %}
 
 {% set cat_tone = {
@@ -30,7 +38,7 @@
   "OVERHEAD": "accent"
 } %}
 
-{% for cat in categories %}
+{% for cat in ordered %}
   {% set cat_rows = rows | selectattr("cost_category", "equalto", cat) | list %}
   {% set subtotal = namespace(val=0) %}
   {% for row in cat_rows %}
