@@ -37,12 +37,12 @@ utils = _import_from_file("file_drop_utils", PROJECT_ROOT / "ingestion" / "src" 
 # use the Docker-standard mount path to match the asset and sensor resolution.
 _DEFAULT_INPUT_DIR = os.environ.get(
     "MISA_INPUT_DIR",
-    str(PROJECT_ROOT / "app_data" / "input_source" / "misa-amis"),
+    str(PROJECT_ROOT / "app_data" / "input_source" / "misa-sales-ledger"),
 )
 DEFAULT_INPUT_DIR = (
     _DEFAULT_INPUT_DIR
     if os.path.isdir(_DEFAULT_INPUT_DIR)
-    else "/app/var/input_source/misa-amis"
+    else "/app/var/input_source/misa-sales-ledger"
 )
 
 

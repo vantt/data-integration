@@ -26,9 +26,12 @@ from dagster import (
 )
 
 # Env var if set, otherwise Docker default (/app/var/input_source/).
-# Local dev: set SHOPEE_INPUT_DIR / MISA_INPUT_DIR in .env.local.
+# Local dev: set SHOPEE_INPUT_DIR / MISA_INPUT_DIR / MISA_ACCOUNT_LEDGER_INPUT_DIR in .env.local.
 _SHOPEE_INPUT_DIR = os.environ.get("SHOPEE_INPUT_DIR", "/app/var/input_source/shopee")
-_MISA_INPUT_DIR = os.environ.get("MISA_INPUT_DIR", "/app/var/input_source/misa-amis")
+_MISA_INPUT_DIR = os.environ.get("MISA_INPUT_DIR", "/app/var/input_source/misa-sales-ledger")
+_MISA_ACCOUNT_LEDGER_INPUT_DIR = os.environ.get(
+    "MISA_ACCOUNT_LEDGER_INPUT_DIR", "/app/var/input_source/misa-account-ledger"
+)
 
 
 def _get_drop_zone_files(input_dir: str) -> dict[str, float]:
@@ -106,7 +109,7 @@ def ingest_filedrop_shopee_sensor(context: SensorEvaluationContext):
     minimum_interval_seconds=300,
     default_status=DefaultSensorStatus.RUNNING,
     description=(
-        "Watches app_data/input_source/misa-amis/ for new/modified .xlsx files. "
+        "Watches app_data/input_source/misa-sales-ledger/ for new/modified .xlsx files. "
         "Fires one ingest_filedrop_misa_job run per file."
     ),
 )
@@ -132,6 +135,42 @@ def ingest_filedrop_misa_sensor(context: SensorEvaluationContext):
 
     if not run_requests:
         return SkipReason("No new/modified MISA files")
+
+    context.update_cursor(json.dumps({"processed": list(new_dispatched)}))
+    return run_requests
+
+
+@sensor(
+    job_name="ingest_filedrop_misa_account_ledger_job",
+    minimum_interval_seconds=300,
+    default_status=DefaultSensorStatus.RUNNING,
+    description=(
+        "Watches app_data/input_source/misa-account-ledger/ for new/modified .xlsx files. "
+        "Fires one ingest_filedrop_misa_account_ledger_job run per file."
+    ),
+)
+def ingest_filedrop_misa_account_ledger_sensor(context: SensorEvaluationContext):
+    files = _get_drop_zone_files(_MISA_ACCOUNT_LEDGER_INPUT_DIR)
+    if not files:
+        return SkipReason("No .xlsx files in MISA account-ledger drop zone")
+
+    dispatched = _parse_cursor(context.cursor)
+    run_requests = []
+    new_dispatched = set(dispatched)
+
+    for fpath, mtime in sorted(files.items()):
+        key = _file_key(fpath, mtime)
+        if key in dispatched:
+            continue
+        run_requests.append(RunRequest(
+            run_key=f"misa-account-ledger-filedrop-{key}",
+            run_config={"ops": {"misa_amis__misa_account_ledger_file_drop_asset": {"config": {"file_path": fpath}}}},
+            tags={"source": "ingest_filedrop_misa_account_ledger_sensor", "drop_file": os.path.basename(fpath)},
+        ))
+        new_dispatched.add(key)
+
+    if not run_requests:
+        return SkipReason("No new/modified MISA account-ledger files")
 
     context.update_cursor(json.dumps({"processed": list(new_dispatched)}))
     return run_requests

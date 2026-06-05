@@ -115,6 +115,16 @@ models:
       - name: posting_date
         tests: [not_null]
 
+  - name: src_misa_account_ledger
+    description: "Deduped MISA account-ledger journal lines. Grain: 1 row per journal entry (account, voucher_no, posting_date, offset_account, debit, credit). Source: misa_raw.account_ledger parquet."
+    columns:
+      - name: posting_date
+        tests: [not_null]
+      - name: account
+        tests: [not_null]
+      - name: account_group
+        tests: [not_null]
+
   - name: stg_misa_sales_lines
     columns:
       - name: voucher_no

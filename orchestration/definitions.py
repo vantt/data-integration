@@ -35,7 +35,7 @@ from orchestration.ops.purge_runs import maintain_purge_runs_job
 from orchestration.sensors.failure_alerting import health_alert_failure_sensor
 from orchestration.sensors.sheets_modified_sensor import ingest_sheets_modified_sensor
 from orchestration.sensors.stuck_run_alerter import health_alert_stuckrun_sensor
-from orchestration.sensors.file_drop_sensors import ingest_filedrop_shopee_sensor, ingest_filedrop_misa_sensor
+from orchestration.sensors.file_drop_sensors import ingest_filedrop_shopee_sensor, ingest_filedrop_misa_sensor, ingest_filedrop_misa_account_ledger_sensor
 from orchestration.sensors.concurrency_pool_janitor import health_concurrency_pool_janitor
 from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_sensor
 
@@ -136,7 +136,7 @@ ingest_filedrop_shopee_job = define_asset_job(
     tags=SYNC_TAGS,
 )
 
-# 2.7 MISA file-drop sync job
+# 2.7 MISA sales-ledger file-drop sync job
 _misa_source = AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset)
 ingest_filedrop_misa_job = define_asset_job(
     name="ingest_filedrop_misa_job",
@@ -144,6 +144,20 @@ ingest_filedrop_misa_job = define_asset_job(
         _misa_source
         | _misa_source.downstream()
         | _fact_order_returns
+        | AssetSelection.assets(serving.sapo_serving_db)
+    ),
+    tags=SYNC_TAGS,
+)
+
+# 2.8 MISA account-ledger file-drop sync job
+# Ingests Sổ chi tiết các tài khoản (overhead 6421/6422) → dbt (account-ledger chain) → serving_db.
+# No _fact_order_returns dependency: account-ledger is an independent overhead pool source.
+_misa_account_ledger_source = AssetSelection.assets(misa_amis_assets.misa_account_ledger_file_drop_asset)
+ingest_filedrop_misa_account_ledger_job = define_asset_job(
+    name="ingest_filedrop_misa_account_ledger_job",
+    selection=(
+        _misa_account_ledger_source
+        | _misa_account_ledger_source.downstream()
         | AssetSelection.assets(serving.sapo_serving_db)
     ),
     tags=SYNC_TAGS,
@@ -162,6 +176,7 @@ _nightly_batch_selection = (
     AssetSelection.assets(sheets_assets.sheets_us_shipment_prices_asset) |
     AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
     AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
+    AssetSelection.assets(misa_amis_assets.misa_account_ledger_file_drop_asset) |
     all_dbt_assets |
     AssetSelection.assets(serving.sapo_serving_db) |
     AssetSelection.assets(serving.sapo_standalone_export) |
@@ -273,6 +288,7 @@ _INGESTION_JOBS = [
     "ingest_sheets_sync_job",
     "ingest_filedrop_shopee_job",
     "ingest_filedrop_misa_job",
+    "ingest_filedrop_misa_account_ledger_job",
     "transform_batch_nightly_job",
     "transform_batch_fullrefresh_job",
 ]
@@ -569,6 +585,7 @@ defs = Definitions(
         ingest_sheets_sync_job,
         ingest_filedrop_shopee_job,
         ingest_filedrop_misa_job,
+        ingest_filedrop_misa_account_ledger_job,
         # transform_*
         transform_batch_nightly_job,
         transform_batch_fullrefresh_job,
@@ -602,6 +619,7 @@ defs = Definitions(
         ingest_sheets_modified_sensor,
         ingest_filedrop_shopee_sensor,
         ingest_filedrop_misa_sensor,
+        ingest_filedrop_misa_account_ledger_sensor,
         # health_*
         health_alert_failure_sensor,
         health_alert_stuckrun_sensor,

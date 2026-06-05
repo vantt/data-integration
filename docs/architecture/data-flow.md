@@ -302,7 +302,7 @@ data_lake/shopee_raw/
 **Purpose:** Ingest MISA AMIS **Sổ chi tiết bán hàng** (Sales Detail Ledger) Excel exports containing per-line cost-of-goods-sold (giá vốn).
 
 ```
-app_data/input_source/misa-amis/*.xlsx
+app_data/input_source/misa-sales-ledger/*.xlsx
          │
          │  Dagster reactive sensor (file mtime change)
          ▼

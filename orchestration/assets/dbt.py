@@ -48,7 +48,10 @@ class SapoDbtTranslator(DagsterDbtTranslator):
                 # but cannot share the same asset key — dependency omitted by design.
 
             elif source_name == "misa_raw":
-                # Single source table — maps cleanly to the file-drop ingestion asset
+                # Two source tables under misa_raw — each maps to its own file-drop asset.
+                if name == "account_ledger":
+                    return AssetKey(["misa_amis", "misa_account_ledger_file_drop_asset"])
+                # Default: sales_lines (and any future misa_raw tables) → sales asset
                 return AssetKey(["misa_amis", "misa_sales_file_drop_asset"])
 
             elif source_name == "shopee_raw":

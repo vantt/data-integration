@@ -117,3 +117,37 @@ sources:
     tables:
       - name: sales_lines
         description: "MISA AMIS Sổ chi tiết bán hàng — 1 row per invoice line, includes COGS (giá vốn)"
+      - name: account_ledger
+        description: >
+          MISA AMIS Sổ chi tiết các tài khoản — 1 row per journal line for overhead accounts
+          (6421/6422). Section-based parser forward-fills account from section markers.
+          Grain: 1 row per journal entry line. Partition: year/month (hive).
+          Overhead pool source; 642-promo and traceable accounts dropped later via
+          classification gsheet (phase-04).
+        columns:
+          - name: posting_date
+            description: "Ngày hạch toán (journal posting date)"
+          - name: voucher_no
+            description: "Số chứng từ (voucher / document number)"
+          - name: invoice_date
+            description: "Ngày hoá đơn (invoice date, may be null)"
+          - name: invoice_no
+            description: "Số hoá đơn (invoice number, may be null)"
+          - name: description
+            description: "Diễn giải (transaction description)"
+          - name: offset_account
+            description: "TK đối ứng (counterpart account code). 911 = kết chuyển cuối kỳ."
+          - name: debit
+            description: "Phát sinh Nợ (debit amount, VND)"
+          - name: credit
+            description: "Phát sinh Có (credit amount, VND)"
+          - name: account
+            description: "Leaf account code forward-filled from section marker (e.g. 64211, 6422)"
+          - name: account_group
+            description: "Top-level group: '6421' or '6422' (derived from account prefix)"
+          - name: ingest_method
+            description: "Ingestion method tag (e.g. misa_account)"
+          - name: source_file
+            description: "Source Excel filename"
+          - name: ingested_at
+            description: "Ingestion timestamp (UTC)"

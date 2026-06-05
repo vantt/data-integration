@@ -154,6 +154,34 @@ models:
       - name: price_list_id
         tests: [not_null]
 
+  - name: std_misa_account_ledger
+    description: >
+      Monthly rollup of MISA overhead account-ledger lines. Grain: 1 row per (account, period_month).
+      Overhead pool source for 6421/6422; 642-promo and traceable accounts dropped later via
+      classification gsheet (phase-04). net_cost = debit − credit_excl_911 per design §5.
+    columns:
+      - name: account
+        description: "Leaf account code (e.g. 64211, 64214, 6422). Natural key dimension."
+        tests: [not_null]
+      - name: account_group
+        description: "Top-level group derived from account prefix: '6421' or '6422'."
+        tests: [not_null]
+      - name: period_month
+        description: "First day of the calendar month (DATE_TRUNC month of posting_date). Natural key dimension."
+        tests: [not_null]
+      - name: debit
+        description: "SUM(Nợ) — total overhead expense incurred in the period."
+      - name: credit_excl_911
+        description: "SUM(Có) excluding offset_account='911' (kết chuyển cuối kỳ). Genuine cost reversals only."
+      - name: net_cost
+        description: "Net overhead cost = debit − credit_excl_911. Primary consumption column for phase-04 pool allocation."
+      - name: line_count
+        description: "Count of raw journal lines contributing to this rollup. Used for audit and anomaly detection."
+      - name: source_system
+        description: "'misa' literal."
+      - name: source_version
+        description: "Report-format version tag; bump when parser or report structure changes."
+
   - name: std_misa_sales_lines
     description: "Faithful MISA sales-line std-gate. Grain: 1/(voucher_no, line_no). cogs_amount and gross_profit are mixed 632+642 totals, unfiltered — downstream int/fact apply the 632-only filter."
     columns:
