@@ -40,7 +40,7 @@ net_revenue (Sapo VAT-inclusive: net = total − total_tax)
 ## Coordination / concurrency (CRITICAL)
 - A concurrent work-stream (same git identity) is editing `detailView` (customer pages), and ran P1/P2 renames + the overhead design. **`fact_order_economics.sql` / `fact_order_costs.sql` are shared** — confirm not being edited before phases 02/05; avoid interleaved commits.
 - **Phase 06 (detailView) only after** the concurrent detailView work lands.
-- Overhead decisions ✅ RESOLVED (overhead doc §Quyết định Q1–Q5): Q1=export thủ công (+estimate tạm); Q2=pool 642-only net-promo (635 out, 641-common defer v2); Q3=2-pool ABC-lite (handling→order_count, admin→net_revenue); Q4=closure + provisional nhẹ (trailing rate, est→actual swap); Q5=base=fulfilled orders (cancel-pre-fulfill excluded, returns keep, RTO in). Phase-04 design-ready; còn cần 1 export Sổ cái TK642 thật để seed + xác nhận count-once.
+- Overhead decisions ✅ RESOLVED (overhead doc §Quyết định Q1–Q5): Q1=export thủ công (+estimate tạm); Q2=pool 6422-only net-promo (TT133 sổ: 642=6421 bán hàng+6422 G&A; 635 out, 6421-keep set defer ngay-sau); Q3=2-pool ABC-lite (handling→order_count, admin→net_revenue); Q4=closure + provisional nhẹ (trailing rate, est→actual swap); Q5=base=fulfilled orders (cancel-pre-fulfill excluded, returns keep, RTO in). Phase-04 design-ready; còn cần 1 export Sổ cái TK642 thật để seed + xác nhận count-once.
 
 ## Reports
 Plan reports → this dir; analysis basis: `plans/reports/analysis-260604-0001-inventory-v2-data-nature.md`.

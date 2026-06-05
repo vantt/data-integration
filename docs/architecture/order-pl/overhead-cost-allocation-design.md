@@ -212,22 +212,44 @@ Pool chỉ chứa chi phí **(a) thật, (b) chung/không trace được xuống
 | **641** | Chi phí bán hàng | (a) *traceable* = ship/phí sàn/phí thanh toán → **ĐÃ ở tier-2**; (b) *common* = lương sales cứng, marketing thương hiệu, showroom |
 | **635** | Chi phí tài chính | Chủ yếu **lãi vay**, lỗ tỷ giá |
 
+### ⚠️ CẬP NHẬT TT133 (2026-06-05) — sổ công ty dùng Thông tư 133
+Sổ công ty = **TT133** → **KHÔNG có TK641 riêng**; `TK642 = "Chi phí quản lý kinh doanh"` tách đúng 2 con:
+- **6421 = Chi phí bán hàng** (lương sales, marketing/quảng cáo, ship khách, phí sàn, hoa hồng, bao bì, showroom…)
+- **6422 = Chi phí quản lý DN / G&A** (lương admin, thuê VP, khấu hao admin, phần mềm, kế toán…)
+
+⇒ "642-only" ban đầu **mơ hồ** (gồm cả 6421 bán hàng, có phần đã ở tier-2). Quyết định dưới **sửa theo TT133**: pool sạch = **6422**; **6421** phải deep-dive. Phần "Phán quyết 641-common" bên dưới giờ áp cho **6421**.
+
 ### Phán quyết từng tài khoản
 - **TK642 → CÓ (lõi pool).** Nhưng phải là **642 tiền mặt G&A thật, đã LOẠI phần 642-promo** nằm trong sales-ledger (đã thành `promo_goods_cost` tier-2). Count-once cốt tử.
 - **TK635 → KHÔNG.** Lãi vay là **quyết định tài chính** (cấu trúc vốn), không phải vận hành. Operating profit đo *trước* lãi vay; nhét vào per-order sẽ bóp méo so sánh vận hành giữa 2 DN khác mức vay. `fully_loaded` là số hiệu quả vận hành, không phải định giá DN. *Nếu* sau này cần view cost-of-capital → làm **layer riêng có nhãn** (vd "cost of capital on inventory"), KHÔNG trộn vào G&A.
 - **TK641-common → CÓ về nguyên tắc, NHƯNG defer v1** vì rủi ro double-count: nếu sổ 641 MISA không tách sạch *traceable* (ship/sàn — đã ở tier-2) khỏi *common* (lương/quảng cáo) → dễ tính 2 lần phí ship/sàn.
 
-### 🎯 Quyết định v1
-> **Pool v1 = TK642 G&A tiền mặt (net 642-promo).** Sạch, không double-count, không tranh cãi.
-> **−635 (lãi vay): để NGOÀI** (financing cost; thêm layer cost-of-capital riêng chỉ khi sếp yêu cầu).
-> **+641-common: DEFER v2** (chờ làm rõ sub-account).
+### 🎯 Quyết định v1 (TT133)
+> **Pool sạch v1 = TK6422 (G&A thuần)**, base `net_revenue`. Không trace, không ở tier-2 → zero double-count → ship ngay khi có export.
+> **6421 (bán hàng) — KEEP set (đưa vào pool SAU deep-dive), LOẠI phần traceable:**
 
-### 📌 TODO (để mở v2 — làm rõ trước khi thêm 641-common)
-- [ ] Lấy danh mục sub-account TK641 từ MISA; phân loại từng sub-account: *traceable* (loại — đã ở tier-2) vs *common* (đưa vào pool).
-- [ ] Xác nhận không có khoản 641 nào bị tính 2 lần với phí sàn/ship tier-2 trước khi include.
-- [ ] (Tùy) đánh giá 635: phần nào là **tài trợ tồn kho** → nếu muốn, tách thành layer cost-of-capital riêng (KHÔNG vào G&A).
+| 6421 item | Xử lý | Pool / base |
+|---|---|---|
+| Phí sàn / ship khách / phí thanh toán / affiliate / chiết khấu | **LOẠI** (đã tier-2, count-once) | — |
+| **Bao bì / đóng gói chung** | KEEP | Handling → **`order_count`** |
+| **Lương NV bán hàng** | KEEP | Selling-common → `net_revenue` (hoặc order_count) |
+| **Showroom / mặt bằng bán hàng** | KEEP | `net_revenue`; hoặc gán riêng channel offline |
+| **Quảng cáo / marketing** | KEEP (tách nguồn ↓) | brand → `net_revenue`; ads-theo-sàn → **gán channel đó** |
 
-**Trạng thái:** CHỐT v1 = 642-only. Cột `account` trong `overhead_costs_monthly` vẫn nhận account khác để mở rộng — chỉ phạm vi *v1* giới hạn 642.
+> **−635 (lãi vay): để NGOÀI** (financing; layer cost-of-capital riêng chỉ khi cần).
+
+### ⚠️ Marketing — tách nguồn BẮT BUỘC (2 lý do)
+1. **Dedup vs `gsheet_marketing_spend`:** ad spend có thể vừa ở gsheet vừa book 6421 → đếm 2 lần. Đối chiếu, chỉ lấy phần KHÔNG trùng.
+2. **Ads-theo-sàn gán đúng kênh** (Shopee/Lazada/TikTok Ads → đơn của CHÍNH kênh đó, channel-weighted), KHÔNG rải đều; brand-chung → `net_revenue`.
+
+### 📌 TODO (cần Sổ cái 6421 chi tiết để mở keep-set)
+- [ ] Lấy Sổ cái/sub-account **TK6421** đủ chi tiết (diễn giải/đối tượng) → phân loại từng dòng theo bảng trên.
+- [ ] **Đối chiếu marketing**: `gsheet_marketing_spend` vs phần quảng cáo trong 6421 → xác định trùng, loại phần trùng.
+- [ ] Tách **ads-theo-sàn** vs **brand-chung** trong 6421.
+- [ ] Xác nhận **promo-goods (hàng KM)** dưới TT133 book vào 6421 hay 6422 → cho count-once 642-promo (`int_promo_642_monthly_total`).
+- [ ] (Tùy) 635 tài trợ tồn kho → layer cost-of-capital riêng (KHÔNG vào G&A).
+
+**Trạng thái:** CHỐT v1 = **6422-only** (pool sạch, ship ngay khi có export). **6421-keep set** = lộ trình ngay-sau (cần Sổ cái 6421 chi tiết). 635 ngoài. Cột `account` trong `overhead_costs_monthly` vẫn nhận account khác để mở rộng.
 
 ## Quyết định Q3 — Base phân bổ overhead (CHỐT v1, 2026-06-04)
 
@@ -241,24 +263,29 @@ Chia pool xuống đơn theo base nào: ① 1 pool theo `net_revenue` (đơn gi�
 - **② gross_profit: LOẠI** — hồi quy ngược-đời, phạt sản phẩm tốt nhất; là phân bổ "khả năng gánh" chứ không phải "nguyên nhân". Không khuyến nghị.
 - **③ ABC-lite:** match pool với cost-driver thật → lộ ra đơn nhỏ đắt đỏ; cần config + driver data (số đơn ✓, số món ✓ đều có).
 
-### 🎯 Quyết định v1: 2-pool ABC-lite (điểm ngọt giữa naive và full-ABC)
-| Pool | Chứa | Base (driver) |
+### 🎯 Quyết định v1: ABC-lite (TT133 pool map)
+| Pool | Chứa (TT133) | Base (driver) |
 |---|---|---|
-| **A — Handling/volume** | phần 642 scale theo xử lý: kho, đóng gói, CS | **`order_count`** (hoặc số món) |
-| **B — General/admin** | quản lý, VP, phần mềm, finance-admin | **`net_revenue`** |
+| **Admin (G&A)** | **6422** toàn bộ | **`net_revenue`** |
+| **Handling** | 6421: **bao bì/đóng gói** (+ CS nếu có) | **`order_count`** (hoặc số món) |
+| **Selling-common** | 6421: lương NV bán hàng, showroom, brand-marketing | **`net_revenue`** |
+| **Channel-ads** | 6421: ads-theo-sàn (Shopee/Lazada/TikTok Ads) | **gán channel đó** (channel-weighted) |
 
-- Bắt đúng bóp méo #1 (chi phí xử lý đơn nhỏ) với độ phức tạp tối thiểu.
-- **Schema `overhead_allocation_config` đã hỗ trợ sẵn** (`pool_id`, `base_metric` ∈ {net_revenue, gross_profit, order_count}).
-- **Tránh gross_profit base. Tránh full-ABC v1** (quá nhiều config cho 1 số report-only → YAGNI).
-- **v0 fallback:** nếu KHÔNG tách được pool 642 thành handling vs admin → tạm 1 pool theo `net_revenue`, **kèm cảnh báo rõ "under-cost đơn nhỏ"**; config schema cho phép tách 2-pool sau mà không làm lại.
+- **Thực tế triển khai theo 2 nhịp:**
+  - **v1 (ngay khi có export) = chỉ pool Admin (6422) theo `net_revenue`** ≈ Q3 "v0 single-pool". Pool Handling/ABC-lite **chưa kích hoạt** vì 6422 không có thành phần xử lý — handling nằm ở 6421 (bao bì).
+  - **v1-sau (cần Sổ cái 6421) = bật pool Handling** (bao bì→order_count) + Selling-common + Channel-ads. Đây mới là lúc ABC-lite 2-pool có ý nghĩa.
+- **Schema `overhead_allocation_config` đã hỗ trợ sẵn** (`pool_id`, `base_metric` ∈ {net_revenue, gross_profit, order_count}, `channel_weight`).
+- **Tránh gross_profit base. Tránh full-ABC** (quá nhiều config cho 1 số report-only → YAGNI).
+- **Cảnh báo:** v1 (6422-only) **under-state** fully_loaded (bỏ qua lương sales + ads + bao bì chưa có ở tier-2). Chấp nhận cho v1 (report-only, có cờ) — thà thiếu-mà-sạch hơn double-count; bù lại khi mở 6421-keep.
 
-### 📌 Câu quyết định độ phức tạp (cần làm rõ khi build phase-04)
-- [ ] Có tách được pool 642 thành "handling" (kho/đóng gói/CS) vs "admin" qua sub-account MISA không? Tách được → 2-pool; không → v0 single-revenue + cảnh báo.
+### 📌 Câu quyết định độ phức tạp (TT133)
+- [x] 6422 = admin thuần → pool Admin (net_revenue), không có handling → v1 = single admin pool.
+- [ ] Soi Sổ cái **6421**: tách bao bì (→handling/order_count) · lương sales/showroom/brand (→net_revenue) · ads-theo-sàn (→channel) · LOẠI traceable (ship/sàn/payment — đã tier-2).
 
 ### Liên kết Q2 ↔ Q3
-Hai câu dính nhau: base phải khớp **cost-driver** (nguyên nhân), giữ **count-once** thiêng liêng. Doanh thu là driver tốt cho admin nhưng **tệ** cho chi phí xử lý → đó là lý do v1 tách 2 sub-pool theo driver thay vì 1 pool revenue thuần.
+Base phải khớp **cost-driver** (nguyên nhân), giữ **count-once** thiêng liêng. Doanh thu là driver tốt cho admin nhưng **tệ** cho chi phí xử lý (bao bì) → handling theo `order_count`. Vì 6422 là admin thuần, ABC-lite 2-pool chỉ thực sự kích hoạt khi mở 6421-keep.
 
-**Trạng thái:** CHỐT v1 = 2-pool ABC-lite (handling→order_count, admin→net_revenue); gross_profit loại; full-ABC để sau.
+**Trạng thái:** CHỐT — v1 = pool Admin 6422 theo `net_revenue` (single-pool); v1-sau bật Handling (6421 bao bì→order_count) + Selling-common + Channel-ads; gross_profit loại; full-ABC để sau.
 
 ## Quyết định Q4 — Realtime hay Closure-only? (CHỐT v1 = B, 2026-06-04)
 
@@ -334,7 +361,7 @@ Std-gate đã xong (`std_misa_sales_lines` live, verified Dagster 2026-06-04). H
 | Cột | Kiểu | Ghi chú |
 |---|---|---|
 | `period_month` | DATE | ngày đầu tháng |
-| `account` | VARCHAR | **v1: chỉ TK642** (net 642-promo). 635 để ngoài; 641-chung defer v2 (xem Q2). Cột vẫn nhận account khác để mở rộng. |
+| `account` | VARCHAR | **v1: chỉ TK6422** (G&A thuần, net 642-promo — sổ TT133). 6421-keep set mở ngay-sau (cần Sổ cái 6421); 635 để ngoài (xem Q2). Cột vẫn nhận account khác để mở rộng. |
 | `amount` | BIGINT | VND, **net VAT** |
 | `source` | VARCHAR | **v1 = `'misa_export'`** (thủ công, xem Q1); `'misa_amis'` (API) = v2 |
 | `ingested_at` | TIMESTAMPTZ | |

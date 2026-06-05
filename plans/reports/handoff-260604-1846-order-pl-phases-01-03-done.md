@@ -16,7 +16,7 @@ Every code phase verified by a **real Dagster run, zero errors** (shopee/misa fi
 
 ## 🔒 Overhead decisions (CONTRACT for phase-04) — see design doc §Quyết định Q1–Q5
 - **Q1 source:** MISA **export thủ công** Sổ cái TK642 (`source='misa_export'`); API=v2; estimate tạm allowed when no data.
-- **Q2 pool scope:** **TK642 only** (net of 642-promo, count-once); −635 (lãi vay) **excluded**; +641-common **deferred v2** (TODO: map traceable vs common sub-accounts first).
+- **Q2 pool scope (⚠️ TT133 — UPDATED 2026-06-05):** company books use **Thông tư 133** → no separate TK641; `642 = 6421(selling) + 6422(G&A)`. Clean pool v1 = **TK6422 only** (net 642-promo); −635 excluded; **6421-keep set deferred ngay-sau** — KEEP bao bì(→handling/order_count), lương sales/showroom/brand(→net_revenue), ads-theo-sàn(→channel-weighted); DROP 6421 traceable (ship/sàn/payment/affiliate/discount — already tier-2). Needs Sổ cái TK6421 detail + marketing dedup vs `gsheet_marketing_spend`. See design §Quyết định Q2/Q3 (TT133).
 - **Q3 base:** **2-pool ABC-lite** — handling pool→`order_count`, admin pool→`net_revenue`. Reject gross_profit base. Full-ABC deferred. v0 fallback = single net_revenue pool w/ "under-costs small orders" caveat.
 - **Q4 timing:** **B = Closure-only + light provisional** — actual after MISA close; trailing-rate estimate for the open month flagged `is_overhead_estimated`, overwritten by actual on close (NO variance booking / restatement, ~1.2x not 2x).
 - **Q5 cancelled/returned:** base = **fulfilled orders**; cancel-pre-fulfill excluded; returns keep their allocation (reverse cost stays tier-2 direct); RTO/cancel-post-fulfill included. Don't bury churn cost in overhead → separate KPI.
@@ -28,7 +28,7 @@ Every code phase verified by a **real Dagster run, zero errors** (shopee/misa fi
 When the **MISA Sổ cái TK642 export** lands, do (per phase-04 file + Q1–Q5):
 1. **Ingest `overhead_costs_monthly`** (file-drop pattern like `gsheet_marketing_spend.py`; `source='misa_export'`; partition year/month; schema in design §Phase-01).
 2. **Count-once empirical check (THE critical step):** inspect whether the Sổ cái TK642 total INCLUDES the ~1.08B sales-ledger-642 promo (already in tier-2a `promo_goods_cost`). If YES → subtract `int_promo_642_monthly_total.sales_ledger_642_amount` from the pool. If the export's 642 is a distinct sub-account excluding promo → NO subtraction. **Do not apply the deduction blind.**
-3. **Ingest `overhead_allocation_config`** gsheet (pool_id, account_pattern, base_metric, effective_*) — set up 2 pools per Q3 (handling→order_count, admin→net_revenue) IF the 642 pool can be split into handling vs admin via sub-accounts; else v0 single net_revenue pool + caveat.
+3. **Ingest `overhead_allocation_config`** gsheet (pool_id, account_pattern, base_metric, channel_weight, effective_*). **v1 = single Admin pool = TK6422 → `net_revenue`** (6422 is admin-only, no handling component). Handling pool (6421 bao bì→`order_count`) + Selling-common + Channel-ads activate ngay-sau once Sổ cái TK6421 is classified.
 4. **`int_order_overhead_allocation`** (closure-based): base = fulfilled orders (Q5); allocate pool per pool/base; closure dbt test `SUM(allocated)==pool_net`. Provisional trailing-rate for open month, flag `is_overhead_estimated` (Q4-B).
 5. **Add `allocated_overhead` + `fully_loaded_net_profit`** to fact_order_economics + OVERHEAD rows to fact_order_costs (ADD only; keep channel_net_profit separate per CONTRACT §3).
 6. **Verify with a real Dagster run, zero errors** (hard requirement).
@@ -54,7 +54,7 @@ Then **Phase-05** (do ONCE, after 04): repoint fact_order_economics waterfall �
 ## ❗ Loose ends / open items
 - **Dangling working-tree mod (NOT mine):** `docs/analytics-handbook/blueprints/ceo_weekly_pulse.md` modified (date-window SQL logic, 82±). Likely concurrent stream or a restart's `bootstrap_reporting.py`. Left untouched — owning stream to resolve (don't blindly commit/revert).
 - Phase-04 open Qs (in phase-03/04 files): (a) expense-ledger-642 overlap (the empirical check above); (b) `int_promo_642_monthly_total` period uses MISA `posting_date` — confirm matches the Sổ cái fiscal period; (c) ~4 edge lines revenue=0 but MISA-632-booked (resolve in phase-05 repoint).
-- 641-common v2: map TK641 sub-accounts (traceable→already tier-2 vs common→pool) before including.
+- 6421 keep-set (TT133): need Sổ cái TK6421 detail → classify bao bì/lương-sales/showroom/marketing (KEEP) vs ship/sàn/payment/affiliate/discount (DROP — already tier-2); reconcile marketing vs `gsheet_marketing_spend` (dedup); split channel-ads (→channel) vs brand (→revenue); confirm whether promo-goods books to 6421 or 6422 (for count-once).
 
 ## Read to resume
 `plans/260604-1030-unified-order-pl-cogs-overhead/plan.md` → `phase-04-overhead-allocation.md`; `docs/architecture/order-pl/overhead-cost-allocation-design.md` (§Quyết định Q1–Q5 + §Phase-01 schema); this handoff.
