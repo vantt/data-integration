@@ -45,11 +45,11 @@ Mỗi dòng = 1 tài khoản con (leaf) trong Sổ chi tiết MISA + cách xử 
 | account | treatment | pool / base | ghi chú |
 |---|---|---|---|
 | 64211 | keep_handling | handling / order_count | bao bì (màng PE, carton) |
-| 64213 | keep_admin | admin / net_revenue | ⚠️ phân bổ chi phí trả trước — **xác nhận nội dung** |
-| 64214 | drop_promo_count_once | — | hàng tặng (đã ở tier-2a) |
+| 64213 | keep_admin | admin / net_revenue | khấu hao trả-trước (offset 2421/2422), G&A — ✅ chốt |
+| 64214 | drop_promo_count_once | — | hàng tặng (100% offset 156/kho, XK; đã ở tier-2a Sapo-MAC) — ✅ chốt |
 | 642172 | keep_marketing | marketing / net_revenue | quảng cáo FB (dedup gsheet) |
 | 642174 | drop_traceable | — | hoa hồng + phí xử lý GD (tier-2) |
-| 642175 | keep_marketing | marketing / net_revenue | ⚠️ **MIXED — review** (hỗ trợ QC vs phí sàn) |
+| 642175 | keep_selling | selling / net_revenue | bundled (loyalty KHTT 49% + ad co-op/WAON 42% + EDI 9%) — ✅ chốt keep_selling (không marketing: né mislabel + dedup thừa) |
 | 642176 | drop_traceable | — | phí vận chuyển (tier-2) |
 | 642177 | keep_admin | admin / net_revenue | duy trì TK quản trị |
 | 642178 | keep_admin | admin / net_revenue | hỗ trợ KD (Zalo Biz, in card) |
