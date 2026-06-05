@@ -1,8 +1,12 @@
 -- =================================================================================================
 -- SINGULAR TEST: OVERHEAD ALLOCATION CLOSURE
 -- =================================================================================================
--- Invariant: for every (pool_id, period_month), the sum of allocated_amount across all
--- fulfilled orders MUST equal the pool's pool_net.
+-- Invariant: for every (pool_id, period_month) in CLOSED months, the sum of allocated_amount
+-- across all fulfilled orders MUST equal the pool's pool_net.
+--
+-- CLOSED month = period_month < DATE_TRUNC('month', CURRENT_DATE).
+-- The current (unclosed) month uses a trailing-rate estimate (is_overhead_estimated=TRUE)
+-- and is deliberately excluded — estimated rows have no MISA pool to close against.
 --
 -- This is the closure guarantee — the allocation is a pure pro-rata redistribution:
 --   Σ (pool_net × order_base / tot_base)  =  pool_net × (Σ order_base / tot_base)
@@ -21,6 +25,8 @@ WITH pool_totals AS (
         period_month,
         pool_net
     FROM {{ ref('int_overhead_pool_monthly') }}
+    -- Scope to closed months only (current month has partial MISA data; estimate not closure-checked)
+    WHERE period_month < DATE_TRUNC('month', CURRENT_DATE)
 ),
 
 allocation_totals AS (
@@ -29,6 +35,8 @@ allocation_totals AS (
         period_month,
         SUM(allocated_amount) AS sum_allocated
     FROM {{ ref('int_order_overhead_allocation') }}
+    -- Only actual (non-estimated) rows participate in the closure assertion
+    WHERE is_overhead_estimated = FALSE
     GROUP BY pool_id, period_month
 ),
 

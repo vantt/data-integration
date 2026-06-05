@@ -19,22 +19,16 @@
 --
 -- Fulfilled-order rule (§Q5):
 --   fulfilled = first_shipped_at IS NOT NULL OR status = 'COMPLETED'.
---     - first_shipped_at NOT NULL → the order was shipped = consumed fulfillment ops
---       (incl. RTO / cancelled-after-ship → correctly stays in scope per Q5).
---     - status = 'COMPLETED' → belt-and-suspenders for completed orders.
---   Excludes cancelled-pre-ship + DRAFT (never left the warehouse → absorb no overhead).
 --
--- Allocation formula (per fulfilled order o, per pool p in the same period_month):
---   order_base       = the order's share of the pool base (net_revenue, or 1 for order_count)
---   tot_base         = sum of order_base across ALL fulfilled orders in the same period_month
---   allocated_amount = pool_net × (order_base / tot_base)
---   Closure: Σ allocated_amount per period == Σ pool_net per period (assert_overhead_allocation_closure).
+-- Two branches (P4-3 — OD-4):
+--   ACTUAL:    period_month < current calendar month (ICT) → pro-rata from MISA actual pool.
+--              Closure invariant holds. is_overhead_estimated = FALSE.
+--   ESTIMATED: period_month >= current calendar month (ICT) → trailing N=3 closed-month rate.
+--              Partial current-month MISA pool is DISCARDED (replaced by trailing estimate).
+--              is_overhead_estimated = TRUE.
 --
--- Edge cases:
---   - order_base = 0 (net_revenue=0 for a net_revenue pool) → allocated_amount = 0. Fine.
---   - tot_base = 0 (whole month has 0 net_revenue) → NULLIF guard returns NULL (not expected).
---   - is_overhead_estimated = FALSE: all current data is closed/actual MISA periods.
---     Provisional/trailing-rate estimation is a future phase.
+-- Current date uses CURRENT_DATE (DuckDB session TimeZone=Asia/Ho_Chi_Minh per profiles.yml),
+-- so DATE_TRUNC('month', CURRENT_DATE) is ICT-correct for month boundaries.
 -- =================================================================================================
 
 WITH orders AS (
@@ -47,11 +41,11 @@ WITH orders AS (
     FROM {{ ref('fact_orders') }}
 ),
 
--- Step 1: fulfilled orders + period_month derived from date_key
+-- Step 1: ALL fulfilled orders + period_month derived from date_key
 fulfilled_orders AS (
     SELECT
         order_code,
-        -- date_key is INTEGER YYYYMMDD; strptime parses it to DATE (plain CAST needs YYYY-MM-DD)
+        -- date_key is INTEGER YYYYMMDD; strptime parses it to DATE
         DATE_TRUNC('month', strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS period_month,
         net_revenue
     FROM orders
@@ -59,55 +53,161 @@ fulfilled_orders AS (
        OR status = 'COMPLETED'
 ),
 
--- Step 2: period base totals (over fulfilled orders only) — allocation denominators
-period_totals AS (
+-- ==========================================================================
+-- BRANCH A: ACTUAL (closed months only — period_month < current ICT month)
+-- ==========================================================================
+
+-- Step A1: fulfilled orders for closed months only
+actual_orders AS (
+    SELECT order_code, period_month, net_revenue
+    FROM fulfilled_orders
+    WHERE period_month < DATE_TRUNC('month', CURRENT_DATE)
+),
+
+-- Step A2: period base totals for actual months
+actual_period_totals AS (
     SELECT
         period_month,
-        SUM(net_revenue)    AS tot_net_revenue,
-        COUNT(*)            AS tot_order_count
-    FROM fulfilled_orders
+        SUM(net_revenue) AS tot_net_revenue,
+        COUNT(*)         AS tot_order_count
+    FROM actual_orders
     GROUP BY period_month
 ),
 
--- Step 3: fulfilled orders × pools active in the same period_month
-allocated AS (
+-- Step A3: actual allocation per (order, pool)
+actual_allocated AS (
     SELECT
         o.order_code,
         p.pool_id,
         o.period_month,
         p.base_metric,
-
-        -- Order's share of the base metric for this pool
         CASE p.base_metric
-            WHEN 'net_revenue'  THEN o.net_revenue
-            WHEN 'order_count'  THEN 1.0
-        END AS order_base,   -- gross_profit base not supported v1 (no pool uses it)
-
-        -- Period total for the same base metric (denominator)
+            WHEN 'net_revenue' THEN o.net_revenue
+            WHEN 'order_count' THEN 1.0
+        END AS order_base,
         CASE p.base_metric
-            WHEN 'net_revenue'  THEN pt.tot_net_revenue
-            WHEN 'order_count'  THEN pt.tot_order_count
+            WHEN 'net_revenue' THEN pt.tot_net_revenue
+            WHEN 'order_count' THEN pt.tot_order_count
         END AS tot_base,
-
         p.pool_net
-
-    FROM fulfilled_orders o
+    FROM actual_orders o
     INNER JOIN {{ ref('int_overhead_pool_monthly') }} p
         ON o.period_month = p.period_month
-    INNER JOIN period_totals pt
+    INNER JOIN actual_period_totals pt
         ON o.period_month = pt.period_month
+),
+
+-- ==========================================================================
+-- BRANCH B: ESTIMATED (current month onward — trailing N=3 rate, OD-2)
+-- ==========================================================================
+
+-- Step B1: trailing 3 closed months per pool (only months with pool data)
+-- QUALIFY applies ROW_NUMBER after the pool filter → gets up to 3 most recent per pool_id
+trailing_pool AS (
+    SELECT
+        pool_id,
+        base_metric,
+        period_month,
+        pool_net,
+        ROW_NUMBER() OVER (PARTITION BY pool_id ORDER BY period_month DESC) AS rn
+    FROM {{ ref('int_overhead_pool_monthly') }}
+    WHERE period_month < DATE_TRUNC('month', CURRENT_DATE)
+    QUALIFY rn <= 3
+),
+
+-- Step B2: aggregate pool totals over the trailing window per pool
+trailing_pool_totals AS (
+    SELECT
+        pool_id,
+        base_metric,
+        SUM(pool_net) AS sum_pool
+    FROM trailing_pool
+    GROUP BY pool_id, base_metric
+),
+
+-- Step B3: aggregate fulfilled-order base over the same trailing months per pool
+-- (only months that appear in the trailing window for that pool)
+trailing_base AS (
+    SELECT
+        tp.pool_id,
+        tp.base_metric,
+        SUM(CASE tp.base_metric
+            WHEN 'net_revenue' THEN fo.net_revenue
+            WHEN 'order_count' THEN 1.0
+        END) AS sum_base
+    FROM trailing_pool tp
+    JOIN fulfilled_orders fo
+        ON fo.period_month = tp.period_month
+    GROUP BY tp.pool_id, tp.base_metric
+),
+
+-- Step B4: trailing rate = sum_pool / sum_base (VND per NR unit, or VND per order)
+trailing_rates AS (
+    SELECT
+        pt.pool_id,
+        pt.base_metric,
+        pt.sum_pool / NULLIF(tb.sum_base, 0) AS trailing_rate
+    FROM trailing_pool_totals pt
+    JOIN trailing_base tb
+        ON pt.pool_id    = tb.pool_id
+       AND pt.base_metric = tb.base_metric
+    -- Exclude pools where trailing rate cannot be computed (no base data in window)
+    WHERE pt.sum_pool IS NOT NULL
+      AND tb.sum_base  IS NOT NULL
+      AND tb.sum_base  > 0
+),
+
+-- Step B5: current-month fulfilled orders (apply estimate to these)
+current_orders AS (
+    SELECT order_code, period_month, net_revenue
+    FROM fulfilled_orders
+    WHERE period_month >= DATE_TRUNC('month', CURRENT_DATE)
+),
+
+-- Step B6: estimated allocation — CROSS JOIN each current-month order with each pool rate
+estimated_allocated AS (
+    SELECT
+        o.order_code,
+        r.pool_id,
+        o.period_month,
+        r.base_metric,
+        CASE r.base_metric
+            WHEN 'net_revenue' THEN o.net_revenue
+            WHEN 'order_count' THEN 1.0
+        END AS order_base,
+        r.trailing_rate,
+        CASE r.base_metric
+            WHEN 'net_revenue' THEN r.trailing_rate * o.net_revenue
+            WHEN 'order_count' THEN r.trailing_rate * 1.0
+        END AS allocated_amount
+    FROM current_orders o
+    CROSS JOIN trailing_rates r
+    -- Only emit rows when a trailing rate exists; if zero pools have history → no rows (OD-2 fallback)
+    WHERE r.trailing_rate IS NOT NULL
 )
 
+-- ==========================================================================
+-- FINAL OUTPUT: UNION actual + estimated
+-- ==========================================================================
+
+-- ACTUAL branch
 SELECT
     order_code,
     pool_id,
     period_month,
     base_metric,
-
-    -- Pro-rata allocation: NULLIF guards divide-by-zero when tot_base = 0
     pool_net * order_base / NULLIF(tot_base, 0)     AS allocated_amount,
-
-    -- FALSE = actual closed-period data. Provisional/trailing-rate is a future phase.
     FALSE                                           AS is_overhead_estimated
+FROM actual_allocated
 
-FROM allocated
+UNION ALL
+
+-- ESTIMATED branch (trailing rate × per-order base)
+SELECT
+    order_code,
+    pool_id,
+    period_month,
+    base_metric,
+    CAST(allocated_amount AS DOUBLE)                AS allocated_amount,
+    TRUE                                            AS is_overhead_estimated
+FROM estimated_allocated
