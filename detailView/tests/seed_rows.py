@@ -76,26 +76,32 @@ def _seed_orders(con: duckdb.DuckDBPyConnection) -> None:
 
 
 def _seed_economics(con: duckdb.DuckDBPyConnection) -> None:
-    # order_id, order_code, cogs, has_cogs, gross_profit, margin, shopee fees(5),
+    # order_id, order_code, cogs, has_cogs, cogs_source, gross_profit, margin, shopee fees(5),
     # has_platform_fees, channel_net_profit, channel_net_margin, cod, carrier,
-    # return_amount, return_count, has_returns
+    # return_amount, return_count, has_returns,
+    # promo_goods_cost, allocated_overhead, is_overhead_estimated,
+    # fully_loaded_net_profit, fully_loaded_margin_pct
     rows = [
-        ("1001", "ORD-NORMAL", 400000.0, True, 600000, 0.6,
+        ("1001", "ORD-NORMAL", 400000.0, True, "both", 600000, 0.6,
          50000, 5000, 1000, 2000, 942000, True, 542000, 0.542, 1100000, "GHTK",
-         150000, 1, True),
-        ("1002", "ORD-US", None, False, 0, None,
+         150000, 1, True,
+         None, None, False, None, None),
+        ("1002", "ORD-US", None, False, None, 0, None,
          None, None, None, None, None, False, 0, None, None, None,
-         0, 0, False),
-        ("1003", "ORD-NOCOGS", None, False, 600000, 1.0,
+         0, 0, False,
+         None, None, False, None, None),
+        ("1003", "ORD-NOCOGS", None, False, "none", 600000, 1.0,
          None, None, None, None, None, False, 600000, 1.0, 660000, "JT",
-         0, 0, False),
+         0, 0, False,
+         None, None, False, None, None),
         # Minimal economics for the order_id-fallback fixture; no COGS, no returns.
-        ("9991", "CODE-ALPHA", None, False, 500000, 1.0,
+        ("9991", "CODE-ALPHA", None, False, "none", 500000, 1.0,
          None, None, None, None, None, False, 500000, 1.0, 550000, "JT",
-         0, 0, False),
+         0, 0, False,
+         None, None, False, None, None),
     ]
     con.executemany(
-        "INSERT INTO fact_order_economics VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "INSERT INTO fact_order_economics VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         rows,
     )
 

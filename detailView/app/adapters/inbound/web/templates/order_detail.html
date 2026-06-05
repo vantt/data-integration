@@ -112,7 +112,8 @@
 
       {# Verdict glance chip — moss=lãi, honey=lãi mỏng, coral=lỗ, mute=chưa xác định #}
       {% set f = order.financial %}
-      {% set _indeterminate = (f.cogs_amount is none or f.channel_net_profit is none) %}
+      {# margin_pct is NULL when net_revenue=0 (e.g. US CrossBorder orders) — domestic P&L indeterminate #}
+      {% set _indeterminate = (f.cogs_amount is none or f.channel_net_profit is none or f.channel_net_margin_pct is none) %}
       {% if _indeterminate %}{% set _vtone = "mute" %}{% set _vword = "Chưa xác định" %}
       {% elif f.channel_net_profit <= 0 %}{% set _vtone = "coral" %}{% set _vword = "Lỗ" %}
       {% else %}{% set _vtone = "moss" %}{% set _vword = "Lãi" %}{% endif %}

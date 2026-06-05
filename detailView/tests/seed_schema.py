@@ -27,12 +27,16 @@ _DDL = [
         ordered_at TIMESTAMPTZ, updated_at TIMESTAMPTZ )""",
     """CREATE TABLE fact_order_economics (
         order_id VARCHAR, order_code VARCHAR, cogs_amount DOUBLE, has_cogs BOOLEAN,
+        cogs_source VARCHAR,
         gross_profit DECIMAL(38,2), gross_margin_pct DOUBLE,
         shopee_platform_fees BIGINT, shopee_infra_fee BIGINT, shopee_voucher_xtra_fee BIGINT,
         shopee_taxes BIGINT, shopee_net_settlement BIGINT, has_platform_fees BOOLEAN,
         channel_net_profit DECIMAL(38,2), channel_net_margin_pct DOUBLE,
         cod_amount DECIMAL(18,2), carrier_id VARCHAR,
-        return_amount DECIMAL(38,2), return_count BIGINT, has_returns BOOLEAN )""",
+        return_amount DECIMAL(38,2), return_count BIGINT, has_returns BOOLEAN,
+        promo_goods_cost DECIMAL(18,2),
+        allocated_overhead DECIMAL(18,2), is_overhead_estimated BOOLEAN,
+        fully_loaded_net_profit DECIMAL(38,2), fully_loaded_margin_pct DOUBLE )""",
     """CREATE TABLE fact_order_costs (
         order_id VARCHAR, order_code VARCHAR, cost_type VARCHAR, cost_category VARCHAR,
         amount DECIMAL(18,2), discount_rate DOUBLE, discount_type VARCHAR,

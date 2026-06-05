@@ -552,7 +552,7 @@ models:
         description: "Time of payment completion"
 
   - name: fact_order_economics
-    description: "Per-order profitability: Sapo revenue + MISA COGS + Shopee platform fees. Grain: one row per order."
+    description: "Per-order profitability: Sapo revenue + COGS (Sapo-MAC primary / MISA TK632 fallback) + Shopee platform fees. Grain: one row per order."
     columns:
       - name: order_id
         tests: [unique, not_null]
@@ -578,9 +578,17 @@ models:
         description: "Doanh thu thuần (sau chiết khấu, trước thuế)"
         tests: [not_null]
       - name: cogs_amount
-        description: "Giá vốn hàng bán (từ MISA). NULL nếu chưa có dữ liệu MISA."
+        description: "Giá vốn hàng bán (primary: Sapo-MAC moving-avg cost; fallback: MISA TK632). NULL nếu không có dữ liệu COGS."
       - name: has_cogs
-        description: "true nếu đơn có dữ liệu COGS từ MISA"
+        description: "true nếu đơn có dữ liệu COGS (sapo_mac, misa, or both). Alias: cogs_source IS NOT NULL AND cogs_source != 'none'."
+      - name: cogs_source
+        description: "COGS data source: 'sapo_mac' (Sapo-MAC only) | 'misa' (MISA-632 only) | 'both' (both systems) | 'none' (no COGS). Drives recon panel in detailView."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['sapo_mac', 'misa', 'both', 'none']
+              config:
+                where: "cogs_source IS NOT NULL"
       - name: gross_profit
         description: "Lãi gộp = net_revenue - COGS. Nếu không có COGS thì = net_revenue."
       - name: gross_margin_pct
@@ -626,7 +634,7 @@ models:
       - name: amount
         description: "Always positive (ABS). Sign convention derived from cost_category."
       - name: source_system
-        description: "Origin system: misa | shopee | sapo"
+        description: "Origin: sapo_mac | sapo_mac+misa | misa | shopee | sapo | derived | estimated | none"
       - name: source_record
         description: "Traceability key: voucher_no for MISA, order_code for Shopee, discount reason for Sapo"
       - name: fee_source

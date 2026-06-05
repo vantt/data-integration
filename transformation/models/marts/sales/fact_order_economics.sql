@@ -4,9 +4,9 @@
     location="{{ get_rolling_location() }}"
 ) }}
 
--- Per-order profitability: Sapo revenue + MISA COGS + Shopee platform fees + fulfillment + returns.
+-- Per-order profitability: Sapo revenue + COGS (Sapo-MAC primary / MISA fallback) + Shopee platform fees + fulfillment + returns.
 -- Grain: one row per order (from fact_orders).
--- MISA lines aggregated to order level via voucher_no = order_code.
+-- Phase-05: COGS sourced from int_order_cogs_reconciled (Sapo-MAC moving-avg cost; MISA TK632 fallback).
 -- Shopee fees joined via order_code.
 -- Returns are reference columns only — not restated into channel_net_profit (recognized at return date).
 
@@ -25,18 +25,22 @@ WITH orders AS (
     FROM {{ ref('fact_orders') }}
 ),
 
--- Aggregate MISA invoice lines to order level
-misa_order AS (
+-- Phase-05: Aggregate COGS from int_order_cogs_reconciled (Sapo-MAC primary; MISA TK632 fallback)
+cogs_recon AS (
     SELECT
-        voucher_no AS order_code,
-        SUM(cogs_amount)              AS cogs_amount,
-        SUM(revenue_net_of_discount)  AS misa_revenue,
-        SUM(gross_profit)             AS misa_gross_profit,
-        COUNT(*)                      AS misa_line_count
-    FROM {{ ref('int_misa_sales_lines') }}
-    -- BUG-1: only TK632 = true COGS; exclude TK642 promo-goods (counted as promo cost, not COGS)
-    WHERE cogs_account LIKE '632%'
-    GROUP BY voucher_no
+        order_code,
+        -- Sapo-MAC primary; fall back to MISA when no Sapo-MAC data (preserves misa-only order coverage)
+        SUM(COALESCE(cogs_goods_sapo, cogs_goods_misa, 0)) AS cogs_amount,
+        -- Order-level source: 'both' if any SKU has both systems; else single-source or 'none'
+        CASE
+            WHEN BOOL_OR(cogs_goods_sapo IS NOT NULL) AND BOOL_OR(cogs_goods_misa IS NOT NULL) THEN 'both'
+            WHEN BOOL_OR(cogs_goods_sapo IS NOT NULL)                                          THEN 'sapo_mac'
+            WHEN BOOL_OR(cogs_goods_misa IS NOT NULL)                                          THEN 'misa'
+            ELSE 'none'
+        END AS cogs_source,
+        COUNT(*) AS cogs_sku_count
+    FROM {{ ref('int_order_cogs_reconciled') }}
+    GROUP BY order_code
 ),
 
 -- Shopee platform fees (already order-level)
@@ -101,10 +105,11 @@ SELECT
     o.vat_amount,
     o.total_collected,
 
-    -- COGS (from MISA)
-    m.cogs_amount,
-    m.misa_line_count,
-    m.cogs_amount IS NOT NULL AS has_cogs,
+    -- COGS (Phase-05: Sapo-MAC primary / MISA fallback via int_order_cogs_reconciled)
+    NULLIF(m.cogs_amount, 0)  AS cogs_amount,     -- 0 = no COGS data → expose as NULL
+    m.cogs_sku_count,
+    m.cogs_source IS NOT NULL AND m.cogs_source != 'none' AS has_cogs,
+    m.cogs_source,
 
     -- Promo goods cost (revenue=0 gift lines; marketing cost, NOT COGS — phase-03)
     pg.promo_goods_cost,
@@ -194,7 +199,7 @@ SELECT
     COALESCE(r.return_count, 0) > 0 AS has_returns
 
 FROM orders o
-LEFT JOIN misa_order m    ON o.order_code = m.order_code
+LEFT JOIN cogs_recon m    ON o.order_code = m.order_code
 LEFT JOIN shopee_fees sf  ON o.order_code = sf.order_code
 LEFT JOIN fulfillments ff ON o.order_id   = ff.order_id
 LEFT JOIN order_returns r ON o.order_code = r.order_code

@@ -5,8 +5,10 @@
 ) }}
 
 -- Long-format cost ledger. Grain: 1 row per (order_id, cost_type).
--- Sources: MISA (COGS), Shopee revenue sheet (platform fees + taxes + shipping),
+-- Sources: COGS (Sapo-MAC primary / MISA TK632 fallback via int_order_cogs_reconciled),
+--          Shopee revenue sheet (platform fees + taxes + shipping),
 --          Sapo discount_items (seller vouchers, bundle deals, manual discounts).
+-- Phase-05: COGS source changed from int_misa_sales_lines → int_order_cogs_reconciled.
 -- Amounts are ALWAYS positive (ABS). Sign convention is derived from cost_category.
 -- See docs/architecture/order-pl/order-pl-schema-design.md for taxonomy.
 
@@ -16,25 +18,30 @@ WITH order_meta AS (
 ),
 
 -- ============================================================
--- COGS — from MISA invoice lines (voucher_no = order_code)
+-- COGS — Phase-05: from int_order_cogs_reconciled (Sapo-MAC primary / MISA TK632 fallback)
 -- ============================================================
 cogs AS (
     SELECT
         om.order_id,
-        m.voucher_no                        AS order_code,
+        r.order_code,
         'cogs'                              AS cost_type,
         'COGS'                              AS cost_category,
-        ABS(SUM(m.cogs_amount))             AS amount,
-        'misa'                              AS source_system,
-        m.voucher_no                        AS source_record,
+        ABS(SUM(COALESCE(r.cogs_goods_sapo, r.cogs_goods_misa, 0))) AS amount,
+        -- Reflects actual data origin for traceability
+        CASE
+            WHEN BOOL_OR(r.cogs_goods_sapo IS NOT NULL) AND BOOL_OR(r.cogs_goods_misa IS NOT NULL) THEN 'sapo_mac+misa'
+            WHEN BOOL_OR(r.cogs_goods_sapo IS NOT NULL) THEN 'sapo_mac'
+            WHEN BOOL_OR(r.cogs_goods_misa IS NOT NULL) THEN 'misa'
+            ELSE 'none'
+        END                                 AS source_system,
+        r.order_code                        AS source_record,
         'actual'                            AS fee_source,
         MIN(om.date_key)                    AS date_key,
         MIN(om.channel_key)                 AS channel_key
-    FROM {{ ref('int_misa_sales_lines') }} m
-    JOIN order_meta om ON m.voucher_no = om.order_code
-    -- BUG-1: TK632 = true COGS only (exclude TK642 promo-goods)
-    WHERE m.cogs_amount IS NOT NULL AND m.cogs_account LIKE '632%'
-    GROUP BY om.order_id, m.voucher_no
+    FROM {{ ref('int_order_cogs_reconciled') }} r
+    JOIN order_meta om ON r.order_code = om.order_code
+    WHERE COALESCE(r.cogs_goods_sapo, r.cogs_goods_misa, 0) > 0
+    GROUP BY om.order_id, r.order_code
 ),
 
 -- ============================================================
