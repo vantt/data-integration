@@ -1,0 +1,12 @@
+dim_products: rows=685 chk=6214811178379298591294 file=dim_products_20260604052756.parquet
+dim_price_lists: rows=19 chk=108927278380530058118 file=dim_price_lists_20260604052756.parquet
+fact_order_returns: rows=10 chk=80358623535879289842 file=fact_order_returns_20260604052756.parquet
+fact_order_costs: rows=3695 chk=33546866398528794972678 file=fact_order_costs_20260604052756.parquet
+fact_orders: rows=3394 chk=31393439149197812373552 file=fact_orders_20260604052756.parquet
+fact_sales: ERROR Binder Error: Referenced column "gross_revenue" not found in FROM clause!
+Candidate bindings: "net_revenue", "ordered_at", "status_key", "product_key", "product_type_key"
+
+LINE 1: SELECT COUNT(*) AS n, SUM(hash(order_id, gross_revenue, net_revenue)) AS chk FROM read_parquet('app_...
+                                                 ^
+fact_order_economics: rows=3394 chk=31275788998999088036125 file=fact_order_economics_20260604052756.parquet
+mart_inventory_health: rows=2037 chk=18780081971746433959647 file=mart_inventory_health_20260604052756.parquet

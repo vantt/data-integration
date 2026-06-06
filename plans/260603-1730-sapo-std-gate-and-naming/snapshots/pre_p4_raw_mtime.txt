@@ -1,0 +1,6 @@
+
+LastWriteTime        FullName                                                                     
+-------------        --------                                                                     
+6/4/2026 12:22:46 PM D:\Vantt\app\data-integration\app_data\data_lake\sapo_raw\_dlt_pipeline_state
+
+

@@ -1,0 +1,7 @@
+D1 middle-ground verification — 2026-06-04
+==========================================
+_dlt_pipeline_state mtime: 6/4/2026 12:22:46 PM (MATCHES pre_p4_raw_mtime.txt baseline)
+external_location in sources.yml: sapo_raw/{name}/ingest_method=*/**/*.parquet (UNCHANGED - still points to physical sapo_raw/ folder)
+source alias renamed: sapo_raw -> sapo_v2_raw (dbt alias only)
+Physical folder: sapo_raw/ UNCHANGED (dlt pipeline NOT touched)
+Three consecutive Dagster runs after rename: RUN_SUCCESS PASS=389 WARN=0 ERROR=0 (realtime x2 + incremental x1)
