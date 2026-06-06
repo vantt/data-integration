@@ -12,14 +12,19 @@ models:
       document_code links to std_orders.order_code for SON… codes (41% of rows).
     columns:
       - name: inventory_movement_id
+        description: "Surrogate key for this record."
         tests: [unique, not_null]
       - name: issued_date_key
+        description: "Date dimension foreign key (ICT timezone)."
         tests: [not_null]
       - name: issued_at
+        description: "Timestamp when movement was recorded (ICT)."
         tests: [not_null]
       - name: variant_id
+        description: "Source system identifier."
         tests: [not_null]
       - name: location_id
+        description: "Source system identifier."
         tests: [not_null]
       - name: quantity_delta
         description: "Signed quantity: +IN (import) / −OUT (export). Zero rows excluded by WHERE clause."
@@ -59,10 +64,13 @@ models:
             combination_of_columns: [variant_id, location_id, valid_from_date]
     columns:
       - name: variant_id
+        description: "Source system identifier."
         tests: [not_null]
       - name: location_id
+        description: "Source system identifier."
         tests: [not_null]
       - name: sku
+        description: "Product SKU code."
         tests: [not_null]
       - name: valid_from_date
         description: "Movement-day this closing balance became effective (ICT date)."
