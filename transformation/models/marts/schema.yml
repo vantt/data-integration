@@ -9,8 +9,10 @@ models:
       for all US revenue reporting instead of fact_orders.net_revenue.
     columns:
       - name: order_id
+        description: "Source system order identifier."
         tests: [unique, not_null]
       - name: order_code
+        description: "Source system order code from Sapo."
         tests: [not_null]
       - name: total_us_revenue_excl_vat
         description: "Sum of (quantity × us_price_excl_vat) across all line items"
@@ -28,8 +30,10 @@ models:
       detailView app.
     columns:
       - name: fulfillment_id
+        description: "Surrogate key for this fulfillment record."
         tests: [unique, not_null]
       - name: order_id
+        description: "Source system order identifier."
         tests: [not_null]
       - name: order_code
         description: "Resolved from fact_orders via order_id (nullable if order absent from mart)"
@@ -112,6 +116,7 @@ models:
     description: "Customer dimension with 8 segmentation dimensions. See docs/context/customer-segmentation.md"
     columns:
       - name: customer_key
+        description: "Surrogate key for this customer record."
         tests: [unique, not_null]
       - name: customer_type
         description: "Commercial relationship type (Manual from Sapo groups). RETAIL/WHOLESALE/PARTNER/STAFF/KOL + CROSSBORDER (đơn US giao hàng hộ — người nhận VN)."
@@ -183,6 +188,7 @@ models:
     description: "Base customer dimension (SCD Type 1) without circular dependencies."
     columns:
       - name: customer_key
+        description: "Surrogate key for this customer record."
         tests: [unique, not_null]
       - name: birth_date
         description: "Date of Birth"
@@ -198,6 +204,7 @@ models:
     description: "Product dimension derived from sales."
     columns:
       - name: product_key
+        description: "Surrogate key for this product record."
         tests: [unique, not_null]
       - name: brand_name
         description: "Standardized product brand name"
@@ -210,10 +217,13 @@ models:
     description: "Sales channel dimension."
     columns:
       - name: channel_key
+        description: "Surrogate key for this channel record."
         tests: [unique, not_null]
       - name: channel_name
+        description: "Display name of the sales channel (e.g., 'Shopee VN', 'Zalo')."
         data_type: varchar
       - name: channel_code
+        description: "Short code identifying the channel."
         data_type: varchar
       - name: channel_category
         description: "Tier 1. Online-Ecommerce / Offline / Internal."
@@ -230,6 +240,7 @@ models:
               arguments:
                 values: ['Marketplace', 'Social', 'Web', 'Retail', 'B2B', 'Direct', 'System', 'CrossBorder Fulfillment', 'Other']
       - name: platform
+        description: "Technical platform or integration (e.g., 'Shopee', 'TikTok', 'POS')."
         data_type: varchar
       - name: channel_brand
         description: "Brand that owns this channel"
@@ -267,6 +278,7 @@ models:
     description: "Sales team dimension. See docs/context/team-management.md"
     columns:
       - name: team_key
+        description: "Surrogate key for this team record."
         tests: [unique, not_null]
       - name: team_code
         description: "Team code (PK from Google Sheet)"
@@ -400,14 +412,17 @@ models:
     description: "Transactional sales fact (line item grain)."
     columns:
       - name: order_id
+        description: "Source system order identifier."
         tests: [not_null]
       - name: product_key
+        description: "Foreign key to `dim_products`."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_products')
                 field: product_key
       - name: product_type_key
+        description: "Foreign key to `dim_product_types`."
         tests:
           - relationships:
               arguments:
@@ -435,48 +450,56 @@ models:
                 to: ref('dim_teams')
                 field: team_key
       - name: status_key
+        description: "Foreign key to `dim_order_status`."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_order_status')
                 field: status_key
       - name: customer_key
+        description: "Foreign key to `dim_customers`."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_customers')
                 field: customer_key
       - name: branch_location_key
+        description: "Foreign key to `dim_branch_location`."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_branch_location')
                 field: branch_location_key
       - name: channel_key
+        description: "Foreign key to `dim_channels`."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_channels')
                 field: channel_key
       - name: date_key
+        description: "Date dimension foreign key (ICT timezone)."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_date')
                 field: date_key
       - name: shipping_geography_key
+        description: "Geography dimension foreign key for shipping address."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_geography')
                 field: geography_key
       - name: billing_geography_key
+        description: "Geography dimension foreign key for billing address."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_geography')
                 field: geography_key
       - name: time_key
+        description: "Time-of-day dimension foreign key."
         tests:
           - relationships:
               arguments:
@@ -493,14 +516,17 @@ models:
     description: "Aggregated order fact."
     columns:
       - name: order_id
+        description: "Source system order identifier."
         tests: [unique, not_null]
       - name: customer_key
+        description: "Foreign key to `dim_customers`."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_customers')
                 field: customer_key
       - name: shipping_geography_key
+        description: "Geography dimension foreign key for shipping address."
         data_type: varchar
         tests:
           - relationships:
@@ -510,6 +536,7 @@ models:
               config:
                 severity: warn
       - name: billing_geography_key
+        description: "Geography dimension foreign key for billing address."
         data_type: varchar
         tests:
           - relationships:
@@ -519,6 +546,7 @@ models:
               config:
                 severity: warn
       - name: channel_key
+        description: "Foreign key to `dim_channels`."
         data_type: varchar
         tests:
           - relationships:
@@ -526,6 +554,7 @@ models:
                 to: ref('dim_channels')
                 field: channel_key
       - name: promotion_key
+        description: "Foreign key to `dim_promotions`."
         data_type: varchar
         tests:
           - relationships:
@@ -559,6 +588,7 @@ models:
                 to: ref('dim_teams')
                 field: team_key
       - name: status_key
+        description: "Foreign key to `dim_order_status`."
         data_type: varchar
         tests:
           - relationships:
@@ -566,6 +596,7 @@ models:
                 to: ref('dim_order_status')
                 field: status_key
       - name: branch_location_key
+        description: "Foreign key to `dim_branch_location`."
         data_type: varchar
         tests:
           - relationships:
@@ -573,6 +604,7 @@ models:
                 to: ref('dim_branch_location')
                 field: branch_location_key
       - name: date_key
+        description: "Date dimension foreign key (ICT timezone)."
         data_type: integer
         tests:
           - relationships:
@@ -580,6 +612,7 @@ models:
                 to: ref('dim_date')
                 field: date_key
       - name: time_key
+        description: "Time-of-day dimension foreign key."
         data_type: integer
         tests:
           - relationships:
@@ -615,10 +648,13 @@ models:
     description: "Transactional payment fact (one row per payment attempt/transaction)."
     columns:
       - name: payment_key
+        description: "Surrogate key for this payment record."
         tests: [unique, not_null]
       - name: order_id
+        description: "Source system order identifier."
         tests: [not_null]
       - name: payment_method_key
+        description: "Foreign key to `dim_payment_methods`."
         tests:
           - relationships:
               arguments:
@@ -637,16 +673,20 @@ models:
     description: "Per-order profitability: Sapo revenue + COGS (Sapo-MAC primary / MISA TK632 fallback) + Shopee platform fees. Grain: one row per order."
     columns:
       - name: order_id
+        description: "Source system order identifier."
         tests: [unique, not_null]
       - name: order_code
+        description: "Source system order code from Sapo."
         tests: [not_null]
       - name: channel_key
+        description: "Foreign key to `dim_channels`."
         tests:
           - relationships:
               arguments:
                 to: ref('dim_channels')
                 field: channel_key
       - name: date_key
+        description: "Date dimension foreign key (ICT timezone)."
         tests:
           - relationships:
               arguments:
@@ -706,12 +746,16 @@ models:
     description: "Long-format cost ledger. Grain: 1 row per (order_id, cost_type). Source of truth for granular costs feeding fact_order_economics."
     columns:
       - name: order_id
+        description: "Source system order identifier."
         tests: [not_null]
       - name: order_code
+        description: "Source system order code from Sapo."
         tests: [not_null]
       - name: cost_type
+        description: "Granular cost type (cogs, platform_payment, discount type, overhead_*)."
         tests: [not_null]
       - name: cost_category
+        description: "Broad cost bucket: COGS, PLATFORM_FEE, DISCOUNT, or OVERHEAD."
         tests: [not_null]
       - name: amount
         description: "Always positive (ABS). Sign convention derived from cost_category."
@@ -740,10 +784,13 @@ models:
     description: "Per-return fact: one row per Sapo return event. Returns recognized at return date — original order P&L is not restated."
     columns:
       - name: return_id
+        description: "Surrogate key for this return record."
         tests: [unique, not_null]
       - name: order_id
+        description: "Source system order identifier."
         tests: [not_null]
       - name: order_code
+        description: "Source system order code from Sapo."
         tests: [not_null]
       - name: returned_at
         description: "Thời điểm hoàn trả (issued_at hoặc created_at)"
@@ -770,6 +817,7 @@ models:
                 severity: warn
                 where: "channel_key IS NOT NULL"
       - name: date_key
+        description: "Date dimension foreign key (ICT timezone)."
         tests:
           - relationships:
               arguments:
@@ -880,14 +928,19 @@ models:
             combination_of_columns: [variant_id, location_id, snapshot_date]
     columns:
       - name: inventory_snapshot_key
+        description: "Surrogate key for this inventory snapshot record."
         tests: [unique, not_null]
       - name: variant_id
+        description: "SKU variant identifier from Sapo."
         tests: [not_null]
       - name: location_id
+        description: "Sapo location/warehouse numeric identifier."
         tests: [not_null]
       - name: snapshot_date
+        description: "Date of the nightly Sapo product batch run (3am ICT)."
         tests: [not_null]
       - name: sku
+        description: "SKU code of the variant (natural key)."
         tests: [not_null]
       - name: on_hand
         description: "Units physically on hand; can be negative for consignment locations"
@@ -910,12 +963,16 @@ models:
       is_slow_mover, is_dead_stock. Velocity sourced from last completed month per SKU.
     columns:
       - name: inventory_snapshot_key
+        description: "Foreign key to `fact_inventory_snapshot`."
         tests: [not_null]
       - name: variant_id
+        description: "SKU variant identifier from Sapo."
         tests: [not_null]
       - name: location_id
+        description: "Sapo location/warehouse numeric identifier."
         tests: [not_null]
       - name: snapshot_date
+        description: "Date of the nightly Sapo product batch run (3am ICT)."
         tests: [not_null]
       - name: is_oos
         description: "true when on_hand <= 0"
@@ -1015,10 +1072,13 @@ models:
             combination_of_columns: [variant_id, price_list_id, snapshot_date]
     columns:
       - name: variant_id
+        description: "SKU variant identifier from Sapo."
         tests: [not_null]
       - name: price_list_id
+        description: "Foreign key to `dim_price_lists`."
         tests: [not_null]
       - name: snapshot_date
+        description: "Date of the dbt run when this price snapshot was captured."
         tests: [not_null]
       - name: price_value
         description: "Channel price in VND. Always > 0 (zero-price rows excluded)."
