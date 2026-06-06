@@ -57,10 +57,10 @@
         <div class="kpi__label">Giá trị dự kiến</div>
         <div class="kpi__val">{{ action.value_at_stake | vnd }}</div>
       </div>
-      {% if action.avg_order_value is not none %}
+      {% if action.avg_order_spend is not none %}
       <div class="kpi">
         <div class="kpi__label">AOV trung bình</div>
-        <div class="kpi__val">{{ action.avg_order_value | vnd }}</div>
+        <div class="kpi__val">{{ action.avg_order_spend | vnd }}</div>
       </div>
       {% endif %}
     </div>

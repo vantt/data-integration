@@ -114,7 +114,7 @@ WHERE c.customer_type = 'RETAIL'
 - **Logic (SQL):**
   ```sql
   -- AOV * Purchase Frequency * Lifespan
-  (avg_order_value) * (purchase_freq_annual) * (lifespan_years)
+  (avg_order_spend) * (purchase_freq_annual) * (lifespan_years)
   ```
 - **Detailed Logic (dbt CTE):**
   ```sql
@@ -338,18 +338,18 @@ WHERE c.customer_type = 'RETAIL'
 
 P3 Behavioral Metrics provide deeper insight into customer purchasing patterns and price sensitivity, enabling dynamic segmentation for targeted retention and reactivation campaigns.
 
-##### 8.1 Average Order Value (avg_order_value)
+##### 8.1 Average Order Spend (avg_order_spend)
 
-- **Business Definition:** Average revenue per non-cancelled, non-draft order.
+- **Business Definition:** Average cash collected per non-cancelled, non-draft order — customer lens (VAT-inclusive).
 - **Logic (SQL):**
   ```sql
-  SUM(total_collected) / COUNT(DISTINCT order_id)
+  ROUND(SUM(total_collected) / NULLIF(COUNT(DISTINCT order_id), 0))::BIGINT
   WHERE status NOT IN ('CANCELLED', 'DRAFT')
   ```
 - **Unit:** BIGINT (VND)
 - **Grain:** Customer (one row per customer_key)
 - **Scope:** All qualifying orders (excludes cancelled/draft)
-- **Common Misunderstandings:** Includes only revenue-generating orders; cancelled orders with total_collected=0 are excluded.
+- **Common Misunderstandings:** Uses `total_collected` (VAT-inclusive cash paid), not `net_revenue`. For period-level trend dashboards use `aov` (net_revenue / order_count) instead.
 - **Pitfalls / Edge Cases:** NULL if customer has no non-cancelled orders; compare across same customer_type to avoid B2B distortion.
 
 ##### 8.2 Average Days Between Orders (avg_days_between_orders)

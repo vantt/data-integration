@@ -1590,7 +1590,7 @@ Retail customers whose `predicted_next_purchase_date` falls within the next 7 da
 SELECT
     COUNT(*) AS "Purchasing This Week",
     SUM(lifetime_value) AS "Total LTV",
-    ROUND(AVG(avg_order_value), 0) AS "Expected Avg Order Value"
+    ROUND(AVG(avg_order_spend), 0) AS "Expected Avg Order Value"
 FROM dim_customers
 WHERE customer_type = 'RETAIL'
   AND customer_id != 'Unknown'
@@ -1624,7 +1624,7 @@ Retail customers whose `predicted_next_purchase_date` falls within the next 30 d
 SELECT
     COUNT(*) AS "Purchasing This Month",
     SUM(lifetime_value) AS "Total LTV",
-    ROUND(AVG(avg_order_value), 0) AS "Expected Avg Order Value"
+    ROUND(AVG(avg_order_spend), 0) AS "Expected Avg Order Value"
 FROM dim_customers
 WHERE customer_type = 'RETAIL'
   AND customer_id != 'Unknown'
@@ -1663,7 +1663,7 @@ SELECT
     recency_days AS "Days Since",
     predicted_next_purchase_date AS "Was Expected",
     lifetime_value AS "LTV",
-    avg_order_value AS "Avg Order Value"
+    avg_order_spend AS "Avg Order Value"
 FROM dim_customers
 WHERE customer_type = 'RETAIL'
   AND customer_id != 'Unknown'

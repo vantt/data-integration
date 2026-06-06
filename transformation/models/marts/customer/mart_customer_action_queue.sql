@@ -22,7 +22,7 @@ WITH customers AS (
         discount_sensitivity,
         lifetime_value,
         order_count,
-        avg_order_value,
+        avg_order_spend,
         avg_days_between_orders,
         cancel_rate,
         recency_days,
@@ -73,7 +73,7 @@ SELECT
     discount_sensitivity,
     lifetime_value,
     order_count,
-    avg_order_value,
+    avg_order_spend,
     avg_days_between_orders,
     cancel_rate,
     recency_days,
@@ -105,10 +105,10 @@ SELECT
         ELSE NULL
     END AS action_rationale,
     CASE action_type
-        WHEN 'CALL_NOW'      THEN ROUND(COALESCE(avg_order_value, 0) * 2)::BIGINT
-        WHEN 'REORDER_NUDGE' THEN ROUND(COALESCE(avg_order_value, 0))::BIGINT
-        WHEN 'WIN_BACK'      THEN ROUND(COALESCE(avg_order_value, 0) * 3)::BIGINT
-        WHEN 'SECOND_ORDER'  THEN ROUND(COALESCE(avg_order_value, 0))::BIGINT
+        WHEN 'CALL_NOW'      THEN ROUND(COALESCE(avg_order_spend, 0) * 2)::BIGINT
+        WHEN 'REORDER_NUDGE' THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
+        WHEN 'WIN_BACK'      THEN ROUND(COALESCE(avg_order_spend, 0) * 3)::BIGINT
+        WHEN 'SECOND_ORDER'  THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
         ELSE NULL
     END AS value_at_stake,
     current_timestamp AS queue_generated_at

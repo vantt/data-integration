@@ -743,21 +743,21 @@ ORDER BY
 { "row": 36, "col": 0, "size_x": 9, "size_y": 8 }
 ```
 
-#### ❓ Question: Avg Order Value by Segment
+#### ❓ Question: Avg Order Spend by Segment
 
-Average order value (`avg_order_value`) per `value_group` for retail customers — benchmark spend by tier.
+Average order spend (`avg_order_spend`) per `value_group` for retail customers — benchmark spend by tier.
 
 ```sql
 SELECT
     value_group AS "Segment",
     COUNT(*) AS "Customers",
-    ROUND(AVG(avg_order_value), 0) AS "Avg Order Value",
-    ROUND(MIN(avg_order_value), 0) AS "Min AOV",
-    ROUND(MAX(avg_order_value), 0) AS "Max AOV"
+    ROUND(AVG(avg_order_spend), 0) AS "Avg Order Value",
+    ROUND(MIN(avg_order_spend), 0) AS "Min AOV",
+    ROUND(MAX(avg_order_spend), 0) AS "Max AOV"
 FROM dim_customers
 WHERE customer_type = 'RETAIL'
   AND customer_id != 'Unknown'
-  AND avg_order_value IS NOT NULL
+  AND avg_order_spend IS NOT NULL
 GROUP BY 1
 ORDER BY
     CASE value_group

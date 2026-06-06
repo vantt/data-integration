@@ -52,7 +52,7 @@ joined_data AS (
 
         -- P3 metrics from intermediate model
         m.avg_days_between_orders,
-        m.avg_order_value,
+        m.avg_order_spend,
         m.discount_order_rate,
         m.cancel_rate,
         m.predicted_next_purchase_date,
@@ -178,7 +178,7 @@ SELECT
     customer_status,
 
     -- P3 metrics
-    avg_order_value,
+    avg_order_spend,
     avg_days_between_orders,
     discount_order_rate,
     cancel_rate,

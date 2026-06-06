@@ -27,7 +27,7 @@ WITH customers AS (
         channel_preference,
         product_affinity,
         payment_behavior,
-        avg_order_value,
+        avg_order_spend,
         avg_days_between_orders,
         discount_order_rate,
         cancel_rate,
@@ -105,7 +105,7 @@ customer_snapshots AS (
         c.product_affinity,
 
         -- P3 behavioral metrics (current-value approximations, same pattern as value_group)
-        c.avg_order_value,
+        c.avg_order_spend,
         c.avg_days_between_orders,
         c.discount_order_rate,
         c.cancel_rate,
@@ -140,7 +140,7 @@ SELECT
     customer_type,
     channel_preference,
     product_affinity,
-    avg_order_value,
+    avg_order_spend,
     avg_days_between_orders,
     discount_order_rate,
     cancel_rate,

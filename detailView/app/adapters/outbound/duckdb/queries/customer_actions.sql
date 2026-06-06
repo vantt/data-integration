@@ -6,7 +6,7 @@ SELECT
     priority_rank,
     action_rationale,
     value_at_stake,
-    avg_order_value,
+    avg_order_spend,
     avg_days_between_orders,
     next_purchase_signal,
     discount_sensitivity,

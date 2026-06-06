@@ -98,7 +98,7 @@ def map_action(row: Row) -> CustomerAction:
         priority_rank=rc.as_int(row.get("priority_rank")) or 9,
         action_rationale=rc.as_str(row.get("action_rationale")),
         value_at_stake=rc.as_decimal(row.get("value_at_stake")),
-        avg_order_value=rc.as_decimal(row.get("avg_order_value")),
+        avg_order_spend=rc.as_decimal(row.get("avg_order_spend")),
         avg_days_between_orders=rc.as_int(row.get("avg_days_between_orders")),
         next_purchase_signal=rc.as_str(row.get("next_purchase_signal")),
         discount_sensitivity=rc.as_str(row.get("discount_sensitivity")),

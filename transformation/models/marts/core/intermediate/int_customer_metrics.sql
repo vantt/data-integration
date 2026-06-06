@@ -205,11 +205,11 @@ payment_behavior_cte AS (
     FROM payment_stats
 ),
 
--- Average order value using only revenue-generating orders (CANCELLED/DRAFT have total_collected=0)
-avg_order_value_cte AS (
+-- Average order spend (total_collected-based) for customer scoring — not dashboard AOV
+avg_order_spend_cte AS (
     SELECT
         o.customer_key,
-        ROUND(SUM(o.total_collected) / NULLIF(COUNT(DISTINCT o.order_id), 0))::BIGINT AS avg_order_value
+        ROUND(SUM(o.total_collected) / NULLIF(COUNT(DISTINCT o.order_id), 0))::BIGINT AS avg_order_spend
     FROM orders o
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
@@ -292,7 +292,7 @@ SELECT
 
     -- P3 metrics
     ip.avg_days_between_orders,
-    aov.avg_order_value,
+    abv.avg_order_spend,
     dr.discount_order_rate,                       -- NULL = no qualifying orders (not 0 = never discounted)
     COALESCE(cr.cancel_rate, 0.0) AS cancel_rate, -- 0 is correct when no cancellations on record
     CASE
@@ -307,7 +307,7 @@ LEFT JOIN channel_preference_cte cp ON a.customer_key = cp.customer_key
 LEFT JOIN first_order_channel foc ON a.customer_key = foc.customer_key
 LEFT JOIN product_affinity_cte pa ON a.customer_key = pa.customer_key
 LEFT JOIN payment_behavior_cte pb ON a.customer_key = pb.customer_key
-LEFT JOIN avg_order_value_cte aov ON a.customer_key = aov.customer_key
+LEFT JOIN avg_order_spend_cte abv ON a.customer_key = abv.customer_key
 LEFT JOIN inter_purchase_cte ip ON a.customer_key = ip.customer_key
 LEFT JOIN discount_rate_cte dr ON a.customer_key = dr.customer_key
 LEFT JOIN cancel_rate_cte cr ON a.customer_key = cr.customer_key

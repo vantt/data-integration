@@ -19,7 +19,7 @@ class CustomerAction:
     priority_rank: int
     action_rationale: str | None = None
     value_at_stake: Decimal | None = None
-    avg_order_value: Decimal | None = None
+    avg_order_spend: Decimal | None = None
     avg_days_between_orders: int | None = None
     next_purchase_signal: str | None = None
     discount_sensitivity: str | None = None
