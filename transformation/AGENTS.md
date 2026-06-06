@@ -70,6 +70,30 @@ When creating or Fixing a model, **ALWAYS** comparison against a working "Golden
 - **Unique Keys**: Every model must have at least `unique` and `not_null` tests on its primary key in `schema.yml`.
 - **Relationships**: Foreign keys in Marts must have `relationships` tests to Dimensions.
 
+## dbt-metabase Integration
+
+### Generating exposures.yml — STRICT RULE
+
+**NEVER run `dbt-metabase exposures` directly.** The tool hardcodes `DEFAULT_SCHEMA = "PUBLIC"` (PostgreSQL convention), which does not match this project's DuckDB schema (`main_marts`). Running it directly produces `exposures.yml` where every card has `depends_on: []` — lineage is empty and useless.
+
+**ALWAYS use the wrapper script:**
+
+```bash
+python tools/run-dbt-metabase-exposures.py
+```
+
+This script patches `dbtmetabase.manifest.DEFAULT_SCHEMA = "main_marts"` at runtime (in-process, no file modification), then runs the extraction. Result: `depends_on` is populated with the correct dbt node references.
+
+**Why the schema must be `main_marts`:**
+- dbt resolves schema as: target schema (`main`) + `+schema` override (`marts`) → `main_marts`
+- Metabase native SQL cards write bare table names: `FROM fact_orders` (no schema prefix)
+- dbt-metabase SQL parser defaults bare names to `DEFAULT_SCHEMA`
+- `main_marts` is available in `olap.duckdb` as alias views (created by `bootstrap_serving_views.py`)
+
+**Output:** `transformation/exposures.yml` — regenerate after adding/removing Metabase cards.
+
+---
+
 ## Troubleshooting Common Issues
 
 ### "Empty folder / View Dropped" in Serving Script

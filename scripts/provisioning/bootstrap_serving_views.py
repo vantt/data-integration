@@ -103,6 +103,13 @@ def bootstrap() -> None:
     try:
         con.sql("SET TimeZone = 'Asia/Ho_Chi_Minh'")
 
+        # Schema alias for dbt-metabase lineage: dbt manifest uses main_marts
+        # schema (target=main + dbt schema=marts → main_marts), but Metabase
+        # sees flat main.{table}. This alias schema lets dbt-metabase match
+        # main_marts.fact_orders (manifest) → main_marts.fact_orders (Metabase).
+        # Existing main.{table} views are untouched — no Metabase SQL breaks.
+        con.execute("CREATE SCHEMA IF NOT EXISTS main_marts")
+
         created = 0
         dropped = 0
         skipped = 0
@@ -125,6 +132,7 @@ def bootstrap() -> None:
                 # a broken reference to missing files.
                 try:
                     con.sql(f"DROP VIEW IF EXISTS {table_name}")
+                    con.execute(f"DROP VIEW IF EXISTS main_marts.{table_name}")
                     print(f"  {table_name}: DROPPED (empty folder)")
                     dropped += 1
                 except Exception as e:
@@ -134,6 +142,8 @@ def bootstrap() -> None:
             try:
                 con.sql(_build_rolling_view_sql(table_name))
                 print(f"  {table_name}: CREATED/REPLACED")
+                con.execute(f"CREATE OR REPLACE VIEW main_marts.{table_name} AS SELECT * FROM main.{table_name}")
+                print(f"  + main_marts alias: {table_name}")
                 created += 1
             except Exception as e:
                 print(f"  [!] Failed to create view {table_name}: {e}")
