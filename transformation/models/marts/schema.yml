@@ -362,7 +362,7 @@ models:
         tests:
           - relationships:
               arguments:
-                to: ref('dim_customers_base')
+                to: ref('dim_customers')
                 field: customer_key
       - name: branch_location_key
         tests:
@@ -416,7 +416,7 @@ models:
         tests:
           - relationships:
               arguments:
-                to: ref('dim_customers_base')
+                to: ref('dim_customers')
                 field: customer_key
       - name: shipping_geography_key
         data_type: varchar
