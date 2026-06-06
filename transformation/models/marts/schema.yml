@@ -46,7 +46,26 @@ models:
       US rates, carrier & acquisition NULL rates. Recomputed each pipeline run.
     columns:
       - name: dq_key
+        description: "Singleton row identifier; always 'global'."
         tests: [unique, not_null]
+      - name: as_of_ict
+        description: "Timestamp (ICT) when this snapshot was computed."
+      - name: total_orders
+        description: "Total order count in fact_order_economics at snapshot time."
+      - name: cogs_rate_pct
+        description: "Percentage of orders with COGS data (has_cogs = true)."
+      - name: platform_fees_rate_pct
+        description: "Percentage of orders with Shopee platform-fee data."
+      - name: fulfillment_coverage_pct
+        description: "Percentage of orders that have at least one fulfillment record."
+      - name: return_rate_pct
+        description: "Percentage of scope_sales orders that have a return event."
+      - name: us_share_pct
+        description: "Percentage of orders that are US cross-border shipments."
+      - name: carrier_null_rate_pct
+        description: "Percentage of fulfillment records with a NULL carrier_id."
+      - name: acq_source_null_rate_pct
+        description: "Percentage of customers with a NULL acquisition_source."
 
   # Dimensions
   - name: dim_channel_targets
@@ -57,25 +76,37 @@ models:
       metric_type: NET_REVENUE (VND), NET_MARGIN_PCT (%), ORDER_COUNT (count).
     columns:
       - name: channel_target_key
+        description: "Surrogate key for this channel-target record."
         tests: [unique, not_null]
       - name: channel_key
+        description: "Foreign key to dim_channels."
         tests: [not_null]
+      - name: channel_name
+        description: "Display name of the channel this target applies to."
       - name: period_month
+        description: "Month-start date (first day of the target month)."
         tests: [not_null]
       - name: metric_type
+        description: "Metric being targeted: NET_REVENUE (VND), NET_MARGIN_PCT (%), or ORDER_COUNT."
         tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ['NET_REVENUE', 'NET_MARGIN_PCT', 'ORDER_COUNT']
       - name: target_source
+        description: "Budget scenario: BUDGET (base plan), STRETCH (upside), or MIN_VIABLE (floor)."
         tests:
           - not_null
           - accepted_values:
               arguments:
                 values: ['BUDGET', 'STRETCH', 'MIN_VIABLE']
       - name: target_value
+        description: "Numeric target value in the unit of metric_type (VND, %, or count)."
         tests: [not_null]
+      - name: notes
+        description: "Optional free-text notes from the budget CSV."
+      - name: loaded_at
+        description: "Timestamp when this record was last loaded into the mart."
 
   - name: dim_customers
     description: "Customer dimension with 8 segmentation dimensions. See docs/context/customer-segmentation.md"
@@ -221,7 +252,16 @@ models:
     description: "Salesperson/Staff dimension."
     columns:
       - name: staff_key
+        description: "Surrogate key for the staff member."
         tests: [unique, not_null]
+      - name: staff_id
+        description: "Native Sapo account ID for the staff member."
+      - name: full_name
+        description: "Display name of the staff member."
+      - name: email
+        description: "Email address of the staff member."
+      - name: phone_number
+        description: "Phone number of the staff member."
 
   - name: dim_teams
     description: "Sales team dimension. See docs/context/team-management.md"
@@ -281,37 +321,79 @@ models:
     description: "Location/Warehouse dimension."
     columns:
       - name: branch_location_key
+        description: "Surrogate key for the branch or warehouse location."
         tests: [unique, not_null]
+      - name: branch_location_id
+        description: "Native Sapo numeric ID for the branch location."
+      - name: branch_location_name
+        description: "Display name of the branch or warehouse (e.g., 'HCM Kho chính')."
+      - name: branch_location_code
+        description: "Short code identifying the branch location."
 
   - name: dim_payment_methods
     description: "Payment method dimension."
     columns:
       - name: payment_method_key
+        description: "Surrogate key for the payment method."
         tests: [unique, not_null]
+      - name: payment_method_id
+        description: "Native Sapo numeric ID for the payment method."
+      - name: payment_method_name
+        description: "Display name of the payment method (e.g., 'Tiền mặt', 'Chuyển khoản')."
+      - name: payment_method_type
+        description: "Category or type of the payment method as returned by Sapo."
 
   - name: dim_order_status
     description: "Order status dimension (Static)."
     columns:
       - name: status_key
+        description: "Surrogate key for the order status."
         tests: [unique, not_null]
+      - name: status_code
+        description: "Order status code (OPEN, COMPLETED, CANCELLED, ARCHIVED, DRAFT)."
+      - name: description
+        description: "Human-readable label for the order status."
 
   - name: dim_product_types
     description: "Product type dimension."
     columns:
       - name: product_type_key
+        description: "Surrogate key for the product type."
         tests: [unique, not_null]
+      - name: product_type_name
+        description: "Normalized product type name; 'Unknown' when Sapo product_type is NULL."
+      - name: product_type
+        description: "Raw product type value from Sapo order items."
 
   - name: dim_promotions
     description: "Promotion dimension."
     columns:
       - name: promotion_key
+        description: "Surrogate key for the promotion (hashed from promotion_code)."
         tests: [unique, not_null]
+      - name: promotion_code
+        description: "Discount/voucher code applied to the order."
+      - name: discount_amount
+        description: "Discount value associated with this promotion code."
+      - name: promotion_type
+        description: "Type of the promotion as returned by Sapo (e.g., 'percentage', 'fixed_amount')."
 
   - name: dim_geography
     description: "Geography dimension."
     columns:
       - name: geography_key
+        description: "Surrogate key for the province/district/ward/country combination."
         tests: [unique, not_null]
+      - name: province
+        description: "Vietnamese province name (e.g., 'Hồ Chí Minh', 'Hà Nội')."
+      - name: district
+        description: "District within the province; sub-province granularity."
+      - name: ward
+        description: "Ward within the district; finest geographic granularity available."
+      - name: country
+        description: "Country name; defaults to 'Vietnam' when not provided by Sapo."
+      - name: last_seen_at
+        description: "Latest updated_at timestamp for this location across all source records."
 
   # Facts
   - name: fact_sales
@@ -708,40 +790,82 @@ models:
             combination_of_columns: [product_key, snapshot_month]
     columns:
       - name: product_key
+        description: "Foreign key to dim_products."
         tests:
           - not_null
           - relationships:
               arguments:
                 to: ref('dim_products')
                 field: product_key
+      - name: product_code
+        description: "Sapo SKU code for the product variant."
+      - name: product_name
+        description: "Display name of the product."
       - name: snapshot_month
+        description: "First day of the reporting month (month-start DATE)."
         tests: [not_null]
       - name: units_sold
+        description: "Total units sold in the month across all confirmed orders."
         tests: [not_null]
       - name: net_revenue
+        description: "VAT-exclusive net revenue for this SKU in the month."
         tests: [not_null]
       - name: order_count
+        description: "Count of distinct orders containing this SKU in the month."
         tests: [not_null]
+      - name: daily_velocity
+        description: "Average units sold per selling day (units_sold / days_with_sales)."
+      - name: cogs_amount
+        description: "Total COGS from MISA for this SKU in the month. NULL when no MISA invoice match."
+      - name: cogs_per_unit
+        description: "Average COGS per unit (cogs_amount / units_sold). NULL when no MISA data."
+      - name: gross_profit
+        description: "Gross profit = MISA net revenue − COGS. NULL when no MISA data."
+      - name: gross_margin_pct
+        description: "Gross margin % based on MISA revenue. NULL when no MISA data."
+      - name: cogs_per_unit_3m_avg
+        description: "Trailing 3-month average COGS per unit for trend comparison."
+      - name: cogs_variance_pct
+        description: "Percentage change in cogs_per_unit vs 3-month trailing average."
       - name: return_count
+        description: "Count of return events attributed to this SKU in the month."
         tests: [not_null]
       - name: return_quantity
+        description: "Total units returned for this SKU in the month."
         tests: [not_null]
       - name: refund_amount_allocated
+        description: "Refund value allocated to this SKU proportionally by line revenue."
         tests: [not_null]
+      - name: return_rate
+        description: "Return count / order_count for this SKU in the month."
+      - name: return_adjusted_gross_profit
+        description: "Gross profit minus full refund (worst-case; no COGS recovery assumed)."
+      - name: return_adjusted_margin_pct
+        description: "Gross margin % after deducting full refund amount (conservative lower bound)."
+      - name: days_since_last_sale
+        description: "Days from last observed sale to month-end within the snapshot window."
       - name: is_slow_mover
+        description: "True when no sale in the final 14 days of the month AND not a top-200 SKU by revenue."
         tests:
           - accepted_values:
               arguments:
                 values: [true, false]
               config:
                 where: "is_slow_mover IS NOT NULL"
+      - name: revenue_share_pct
+        description: "This SKU's net_revenue as a % of total revenue across all SKUs in the month."
       - name: margin_outlier
+        description: "True when COGS data exists and gross_margin_pct is below 10%."
         tests:
           - accepted_values:
               arguments:
                 values: [true, false]
               config:
                 where: "margin_outlier IS NOT NULL"
+      - name: top_channel_name
+        description: "Name of the channel that generated the highest revenue for this SKU in the month."
+      - name: top_channel_revenue_pct
+        description: "Percentage of this SKU's revenue that came from the top channel."
 
   - name: fact_inventory_snapshot
     description: >
@@ -850,20 +974,26 @@ models:
       Source: variant_prices embedded in product batch_sync parquet (more complete than src_sapo_price_lists).
     columns:
       - name: price_list_id
+        description: "Native Sapo numeric ID for the price list."
         tests: [unique, not_null]
       - name: code
+        description: "Short code for the price list (e.g., 'BANLE', 'GIANHAP', 'SHOPEE')."
         tests: [not_null]
       - name: name
+        description: "Full display name of the price list as configured in Sapo."
         tests: [not_null]
       - name: currency_iso
+        description: "Currency code for prices in this list; always 'VND'."
         tests: [not_null]
       - name: is_cost
+        description: "True only for the GIANHAP list — indicates import/cost prices, not selling prices."
         tests:
           - not_null
           - accepted_values:
               arguments:
                 values: [true, false]
       - name: is_default
+        description: "True for the BANLE list — the standard retail price list used by default."
         tests:
           - not_null
           - accepted_values:
