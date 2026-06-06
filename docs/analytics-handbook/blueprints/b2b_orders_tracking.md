@@ -24,7 +24,7 @@ Track B2B order lifecycle — payment collection, fulfillment status, outstandin
   "slug": "date_range",
   "type": "date/all-options",
   "default": "past1months",
-  "field_id": 141
+  "field_id": 848
 }
 ```
 

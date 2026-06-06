@@ -19,11 +19,11 @@ Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop
   "slug": "date_range",
   "type": "date/all-options",
   "default": "past30days",
-  "field_id": 141,
+  "field_id": 848,
   "field_id_map": {
     "int_misa_sales_lines": 324,
     "int_shopee_order_fees": 287,
-    "fact_orders": 141
+    "fact_orders": 848
   }
 }
 ```

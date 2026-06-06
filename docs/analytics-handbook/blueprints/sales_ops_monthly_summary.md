@@ -20,7 +20,7 @@ Redesigned dashboard with 3 tabs, integrated MoM comparisons, gauge for completi
   "slug": "date_range",
   "type": "date/all-options",
   "default": "past1months",
-  "field_id": 141
+  "field_id": 848
 }
 ```
 
@@ -1542,7 +1542,7 @@ Donut — transaction count by payment method.
 **Domain Reference**: [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution)
 
 ```sql
--- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
+-- filter_bounds: fact_orders (no alias, field_id=848) for filter injection (R1, R2)
 -- Payment filtered via payment_timestamp using bounds from fact_orders
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
@@ -1582,7 +1582,7 @@ Stacked area — monthly payment method distribution over 6 months.
 **Domain Reference**: [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution)
 
 ```sql
--- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
+-- filter_bounds: fact_orders (no alias, field_id=848) for filter injection (R1, R2)
 -- Payment filtered via payment_timestamp using bounds from fact_orders
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
@@ -1724,7 +1724,7 @@ FROM filter_bounds
 Table: channel breakdown with order count, revenue, gross margin %, and MoM delta in percentage points — sorted by gross margin % DESC.
 
 ```sql
--- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
+-- filter_bounds: fact_orders (no alias, field_id=848) for filter injection (R1, R2)
 -- Convert bounds → date_key integers for fact_order_economics (R4)
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
@@ -1812,7 +1812,7 @@ ORDER BY tm.margin_pct_tm DESC
 Scalar — count of completed orders where channel_net_profit < 0 (loss-making orders), with MoM comparison.
 
 ```sql
--- filter_bounds: fact_orders (no alias, field_id=141) for filter injection (R1, R2)
+-- filter_bounds: fact_orders (no alias, field_id=848) for filter injection (R1, R2)
 -- Convert bounds → date_key integers for fact_order_economics (R4, R7)
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end

@@ -66,7 +66,7 @@ customer_loyalty AS (
         ROUND(
             COUNT(DISTINCT CASE WHEN date(c.first_order_date) < current_date - INTERVAL '7 days' THEN o.customer_key END) * 100.0
             / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
-        ) as returning_rate
+        ) as repeat_buyer_rate
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
@@ -77,7 +77,7 @@ scores AS (
     SELECT
         CASE WHEN p.revenue = 0 THEN 0 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 5 THEN 25 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 0 THEN 20 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -10 THEN 15 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -25 THEN 8 ELSE 0 END as revenue_score,
         CASE WHEN p.orders = 0 THEN 0 WHEN (r.orders-p.orders)*100.0/p.orders >= 5 THEN 25 WHEN (r.orders-p.orders)*100.0/p.orders >= 0 THEN 20 WHEN (r.orders-p.orders)*100.0/p.orders >= -10 THEN 15 WHEN (r.orders-p.orders)*100.0/p.orders >= -25 THEN 8 ELSE 0 END as orders_score,
-        CASE WHEN cl.returning_rate >= 50 THEN 25 WHEN cl.returning_rate >= 35 THEN 20 WHEN cl.returning_rate >= 20 THEN 12 ELSE 5 END as loyalty_score,
+        CASE WHEN cl.repeat_buyer_rate >= 50 THEN 25 WHEN cl.repeat_buyer_rate >= 35 THEN 20 WHEN cl.repeat_buyer_rate >= 20 THEN 12 ELSE 5 END as loyalty_score,
         CASE WHEN p.aov = 0 THEN 12 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -5 AND 15 THEN 25 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -15 AND -5 THEN 15 WHEN (r.aov-p.aov)*100.0/p.aov > 15 THEN 20 ELSE 5 END as aov_score
     FROM recent r, previous p, customer_loyalty cl
 )
@@ -137,7 +137,7 @@ customer_loyalty AS (
         ROUND(
             COUNT(DISTINCT CASE WHEN date(c.first_order_date) < current_date - INTERVAL '7 days' THEN o.customer_key END) * 100.0
             / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
-        ) as returning_rate
+        ) as repeat_buyer_rate
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
@@ -148,11 +148,11 @@ raw_scores AS (
     SELECT
         CASE WHEN p.revenue = 0 THEN NULL ELSE ROUND((r.revenue - p.revenue) * 100.0 / p.revenue, 1) END as rev_wow,
         CASE WHEN p.orders = 0 THEN NULL ELSE ROUND((r.orders - p.orders) * 100.0 / p.orders, 1) END as ord_wow,
-        cl.returning_rate,
+        cl.repeat_buyer_rate,
         CASE WHEN p.aov = 0 THEN NULL ELSE ROUND((r.aov - p.aov) * 100.0 / p.aov, 1) END as aov_wow,
         CASE WHEN p.revenue = 0 THEN 0 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 5 THEN 25 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= 0 THEN 20 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -10 THEN 15 WHEN (r.revenue-p.revenue)*100.0/p.revenue >= -25 THEN 8 ELSE 0 END as rev_sc,
         CASE WHEN p.orders = 0 THEN 0 WHEN (r.orders-p.orders)*100.0/p.orders >= 5 THEN 25 WHEN (r.orders-p.orders)*100.0/p.orders >= 0 THEN 20 WHEN (r.orders-p.orders)*100.0/p.orders >= -10 THEN 15 WHEN (r.orders-p.orders)*100.0/p.orders >= -25 THEN 8 ELSE 0 END as ord_sc,
-        CASE WHEN cl.returning_rate >= 50 THEN 25 WHEN cl.returning_rate >= 35 THEN 20 WHEN cl.returning_rate >= 20 THEN 12 ELSE 5 END as loy_sc,
+        CASE WHEN cl.repeat_buyer_rate >= 50 THEN 25 WHEN cl.repeat_buyer_rate >= 35 THEN 20 WHEN cl.repeat_buyer_rate >= 20 THEN 12 ELSE 5 END as loy_sc,
         CASE WHEN p.aov = 0 THEN 12 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -5 AND 15 THEN 25 WHEN (r.aov-p.aov)*100.0/p.aov BETWEEN -15 AND -5 THEN 15 WHEN (r.aov-p.aov)*100.0/p.aov > 15 THEN 20 ELSE 5 END as aov_sc
     FROM recent r, previous p, customer_loyalty cl
 )
@@ -165,7 +165,7 @@ SELECT * FROM (
         CASE WHEN ord_sc >= 20 THEN 'OK' WHEN ord_sc >= 15 THEN 'Chú ý' ELSE 'Báo động' END
     FROM raw_scores
     UNION ALL
-    SELECT 3, 'Khách quay lại', returning_rate, loy_sc,
+    SELECT 3, 'Khách quay lại', repeat_buyer_rate, loy_sc,
         CASE WHEN loy_sc >= 20 THEN 'OK' WHEN loy_sc >= 12 THEN 'Chú ý' ELSE 'Báo động' END
     FROM raw_scores
     UNION ALL

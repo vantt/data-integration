@@ -22,7 +22,7 @@ Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completi
   "slug": "date_range",
   "type": "date/all-options",
   "default": "past7days",
-  "field_id": 141
+  "field_id": 848
 }
 ```
 
@@ -1282,7 +1282,7 @@ Weekly gross margin % per channel with WoW delta. Sort by margin DESC to surface
 
 ```sql
 WITH filter_bounds AS (
-    -- field_id=141 → fact_orders.ordered_at, KHÔNG alias fact_orders (R1, R2)
+    -- field_id=848 → fact_orders.ordered_at, KHÔNG alias fact_orders (R1, R2)
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
@@ -1391,7 +1391,7 @@ Count of orders where channel_net_profit is negative — this week vs last week.
 
 ```sql
 WITH filter_bounds AS (
-    -- field_id=141 → fact_orders.ordered_at, KHÔNG alias fact_orders (R1, R2)
+    -- field_id=848 → fact_orders.ordered_at, KHÔNG alias fact_orders (R1, R2)
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders

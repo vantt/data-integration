@@ -26,7 +26,7 @@ Daily monitoring for US CrossBorder fulfillment orders — export arrangements, 
   "slug": "date_range",
   "type": "date/all-options",
   "default": "thismonth",
-  "field_id": 141
+  "field_id": 848
 }
 ```
 

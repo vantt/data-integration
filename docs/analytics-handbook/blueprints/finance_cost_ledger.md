@@ -27,7 +27,7 @@ Dashboard phân tích cơ cấu chi phí theo order — COGS, phí sàn, thuế,
   "slug": "date_range",
   "type": "date/all-options",
   "default": "thismonth",
-  "field_id": 141
+  "field_id": 848
 }
 ```
 
