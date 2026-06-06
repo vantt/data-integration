@@ -98,6 +98,15 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # get_rolling_location() appends /rolling/ itself. Overwriting caused the macro
     # to need a fragile replace('/rolling','') hack.
 
+    # Regenerate manifest before build to prevent stale-manifest KeyError.
+    # Manifest is pre-parsed at container start; schema.yml changes create new test node
+    # IDs that don't exist in the startup manifest, causing dagster-dbt event streamer
+    # to hit manifest["nodes"][unique_id] → KeyError. Parsing here ensures the manifest
+    # on disk is always fresh relative to the current schema before dbt build runs.
+    # Note: context is intentionally omitted — dbt parse does not accept --select,
+    # and passing context causes dagster-dbt to append selection args, breaking the command.
+    dbt.cli(["parse"]).wait()
+
     # Run dbt with watchdog timeout to prevent infinite hang on DuckDB checkpoint stall
     invocation = dbt.cli(["build"], context=context)
 
