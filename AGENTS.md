@@ -37,7 +37,7 @@ Comprehensive documentation is available following a **progressive disclosure** 
 | **Transformation**   | `/transformation/docs/`   | MODELS, DEDUPLICATION, TESTING, MATERIALIZATION |
 | **Orchestration**    | `/orchestration/docs/`    | ASSETS, JOBS, SCHEDULES, RESOURCES              |
 | **Webhook Receiver** | `/webhook_receiver/docs/` | API, SECURITY                                   |
-| **Analytics**        | `/docs/analytics-handbook/` | domains/, playbooks/, blueprints/, guides/, designs/ |
+| **Analytics**        | `/docs/analytics-handbook/` | domains/, semantic/, playbooks/, blueprints/, guides/, designs/ |
 
 ### Analytics 2-Skill Architecture
 
@@ -318,6 +318,53 @@ dbt models may start before ingestion finishes in subset jobs. **Fix**: Manually
 
 ---
 
+## Semantic Layer Contract (Project-Wide)
+
+**Canonical source:** `docs/analytics-handbook/semantic/`
+
+Business concepts (segments, metrics, dimensions, business rules) are defined ONCE in the semantic layer and implemented downstream. All sub-projects that touch data or BI must be aware.
+
+### Influence flow
+
+```
+Domain (WHY)       docs/analytics-handbook/domains/
+    ↓ drives
+Semantic (WHAT)    docs/analytics-handbook/semantic/    ← single source of truth
+    ↓ constrains
+Transformation     transformation/models/marts/          ← implements as columns
+Rill               rill/metrics/*.yaml                   ← implements as measures
+Metabase           docs/analytics-handbook/blueprints/   ← consumes columns
+Detail View        detailView/                           ← consumes mart views
+```
+
+### Sub-project responsibilities
+
+| Sub-project | Responsibility |
+|---|---|
+| **transformation/** | Implement semantic columns in mart exactly per definition. Never rename/change semantic columns without updating `semantic/`. |
+| **docs/analytics-handbook/** | Maintain `semantic/` as canonical. Blueprints must use semantic columns, not re-derive logic. Declare `uses_concepts:` in blueprint frontmatter. |
+| **rill/** | Measures and filters must reference mart semantic columns (`scope_retail`, etc.), not re-derive raw conditions. |
+| **detailView/** | Query mart views only. Semantic columns available as-is — no re-derivation needed. |
+| **ingestion/** | No direct semantic concern. Outputs raw data; transformation owns semantic mapping. |
+
+### Key semantic files
+
+| File | Covers |
+|---|---|
+| `semantic/segments.md` | scope_retail, scope_b2b, scope_sales — filter rules |
+| `semantic/metrics.md` | net_revenue, gross_revenue, discount_rate, AOV |
+| `semantic/dimensions.md` | date_key (ICT), customer_type, channel_* |
+| `semantic/rules.md` | VAT treatment, cancellation, is_completed, COUNT(DISTINCT) |
+| `semantic/freshness.md` | Data SLA per mart table |
+
+### Non-negotiable rules
+
+1. **Do not re-derive** semantic concepts from raw conditions — use pre-computed mart columns
+2. **Do not rename** semantic columns without updating `semantic/` and notifying all consumers
+3. **New concept** → define in `semantic/` first, implement in mart, then use in BI
+
+---
+
 ## Analytics-as-Code (Literate Configuration)
 
 We treat Metabase configuration as code, defined in Markdown.
@@ -329,7 +376,8 @@ We treat Metabase configuration as code, defined in Markdown.
 ### Workflow
 
 1.  Define requirements via domain metrics in `docs/analytics-handbook/domains/`.
-2.  Create a playbook in `docs/analytics-handbook/playbooks/`.
-3.  Formalize into a Blueprint Markdown file in `docs/analytics-handbook/blueprints/`.
-4.  Deploy using the script.
-5.  Verify in Metabase UI.
+2.  Check/add semantic definitions in `docs/analytics-handbook/semantic/`.
+3.  Create a playbook in `docs/analytics-handbook/playbooks/`.
+4.  Formalize into a Blueprint Markdown file in `docs/analytics-handbook/blueprints/`.
+5.  Deploy using the script.
+6.  Verify in Metabase UI.

@@ -635,17 +635,73 @@ See full template: `.skills/analytics-design/templates/design_spec_template.md`
 
 ---
 
+## 📐 Semantic Layer
+
+### Thứ bậc ảnh hưởng
+
+```
+Domain (WHY)     domains/*.md          — bối cảnh kinh doanh, lý do đo lường
+    ↓ drives
+Semantic (WHAT)  semantic/*.md         — definition chuẩn, machine-readable
+    ↓ constrains
+Implementation   mart columns          — fact_orders.scope_retail
+                 Rill YAML             — rill/metrics/*.yaml
+                 Blueprint SQL         — blueprints/*.md
+```
+
+Domain **drives** semantic — semantic formalize domain decision, không tự quyết business rule. Khi semantic gặp ambiguity → đẩy ngược lên domain để clarify.
+
+### Semantic files
+
+| File | Nội dung |
+|---|---|
+| `semantic/segments.md` | scope_retail, scope_b2b, scope_sales |
+| `semantic/metrics.md` | net_revenue, gross_revenue, AOV, discount_rate |
+| `semantic/dimensions.md` | channel_name, customer_type, date_key |
+| `semantic/entities.md` | order, customer, product, channel |
+| `semantic/rules.md` | VAT treatment, cancellation, is_completed, date_key ICT |
+| `semantic/freshness.md` | data SLA per mart table |
+
+### Quy tắc bắt buộc khi viết Blueprint SQL
+
+1. **Đọc `semantic/` trước** — xác định concepts nào sẽ dùng
+2. **Dùng pre-computed columns** — không re-derive từ raw conditions:
+   ```sql
+   -- ✅
+   WHERE scope_retail
+   -- ❌
+   WHERE customer_type = 'RETAIL' AND is_sales_channel = true AND status NOT IN (...)
+   ```
+3. **Khai báo `uses_concepts:` trong frontmatter** của blueprint:
+   ```yaml
+   ---
+   uses_concepts: [scope_retail, net_revenue, discount_rate]
+   ---
+   ```
+4. **Metric mới** → thêm vào `semantic/metrics.md` trước, implement mart column, rồi mới viết blueprint
+
+### Quy tắc bắt buộc khi thêm Semantic concept mới
+
+1. Domain team xác nhận business rule
+2. Thêm definition vào `semantic/*.md`
+3. Implement column trong dbt mart
+4. Update Rill YAML nếu Rill cần dùng
+5. Blueprint dùng column — không viết lại rule trong SQL
+
+---
+
 ## 📋 Artifact Ownership
 
 | Directory | Owned by | Skill knowledge |
 |-----------|----------|-----------------|
 | `domains/` | Analytics Design | `.skills/analytics-design/*` |
+| `semantic/` | Analytics Design | `semantic/README.md` |
 | `playbooks/` | Analytics Design | `.skills/analytics-design/*` |
 | `guides/` | Analytics Design | `.skills/analytics-design/*` |
 | `designs/` | Analytics Design | `.skills/analytics-design/*` |
 | `blueprints/` | Metabase Automation | `.skills/metabase-automation/*` |
 
-**Creation order**: domain → playbook → [guide] → design spec → blueprint → deploy
+**Creation order**: domain → semantic → playbook → [guide] → design spec → blueprint → deploy
 
 ---
 
@@ -655,7 +711,10 @@ When user requests: _"Add a Customer LTV chart to the Executive Dashboard."_
 
 1.  **Search Domains:** Does `Customer LTV` exist in any `domains/*.md`?
     - _If No:_ Create it in `domains/customer.md` with SQL logic.
-2.  **Update Playbook:** Open `playbooks/executive_dashboard.md`.
+2.  **Check Semantic:** Does `Customer LTV` have a definition in `semantic/metrics.md`?
+    - _If No:_ Add definition + formula. Implement mart column if needed.
+    - _If Yes:_ Note the canonical formula and required scope.
+3.  **Update Playbook:** Open `playbooks/executive_dashboard.md`.
     - Add a row to the Visualization table.
     - **CRITICAL:** Insert the link: `[Customer LTV](../domains/customer.md#customer-ltv)`.
 3.  **Update Design Spec:** Open `designs/executive_dashboard.md` (if exists).
