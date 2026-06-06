@@ -1,0 +1,67 @@
+version: 2
+
+# Manual exposures for Rill dashboards.
+# Rill has no API for dbt-metabase to scrape, so dependencies are declared here.
+# Each exposure maps a Rill explore → its metrics_view → the enriched SQL model
+# → the dbt mart tables it joins at query time.
+#
+# Rill explore chain:
+#   dashboard (explore) → metrics_view → enriched SQL model → src_* parquet models → dbt marts
+
+exposures:
+  - name: rill_orders_core
+    type: dashboard
+    maturity: high
+    url: http://rill.lan.fwg.vn/orders_core
+    description: >
+      Orders Core explore — order-level revenue, fulfilment, logistics, and customer
+      segmentation metrics. Backed by the orders_enriched Rill SQL model which joins
+      fact_orders with all core dimension tables.
+    depends_on:
+      - ref('fact_orders')
+      - ref('dim_channels')
+      - ref('dim_branch_location')
+      - ref('dim_geography')
+      - ref('dim_customers')
+      - ref('dim_staff')
+    owner:
+      name: Analytics Team
+      email: tetnu26@gmail.com
+
+  - name: rill_sales_items_core
+    type: dashboard
+    maturity: high
+    url: http://rill.lan.fwg.vn/sales_items_core
+    description: >
+      Sales Items Core explore — SKU/variant-level sales volume, item revenue, and
+      discount analysis. Backed by the sales_items_enriched Rill SQL model which joins
+      fact_sales with product, channel, location, customer, staff, and order-status dims.
+    depends_on:
+      - ref('fact_sales')
+      - ref('dim_products')
+      - ref('dim_channels')
+      - ref('dim_branch_location')
+      - ref('dim_geography')
+      - ref('dim_customers')
+      - ref('dim_staff')
+      - ref('dim_order_status')
+    owner:
+      name: Analytics Team
+      email: tetnu26@gmail.com
+
+  - name: rill_marketing_spend_core
+    type: dashboard
+    maturity: high
+    url: http://rill.lan.fwg.vn/marketing_spend_core
+    description: >
+      Marketing Spend Core explore — paid channel spend, clicks, impressions, CTR, CPC,
+      and CPM metrics by channel and campaign. Backed by the marketing_spend_enriched
+      Rill SQL model which joins fact_marketing_spend with dim_channels and
+      dim_branch_location.
+    depends_on:
+      - ref('fact_marketing_spend')
+      - ref('dim_channels')
+      - ref('dim_branch_location')
+    owner:
+      name: Analytics Team
+      email: tetnu26@gmail.com
