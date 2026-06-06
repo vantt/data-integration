@@ -25,6 +25,23 @@ Phase 0-6 (Analytics Design)  →  Design Spec  →  Phase 7-10 (Metabase Automa
 
 ## 2. Semantic Layer Strategy (Data Modeling)
 
+**Two separate semantic layers — both must be consulted:**
+
+### 2a. Domain Semantic Contract (source of truth for SQL)
+
+Read `docs/analytics-handbook/semantic/` before writing any SQL:
+
+| File | What to use it for |
+|---|---|
+| `segments.md` | Which scope column to use (`scope_sales`, `scope_retail`, `scope_b2b`) — **never re-derive inline** |
+| `metrics.md` | Canonical metric formulas (`net_revenue`, `gross_profit`, `aov`, etc.) |
+| `dimensions.md` | Standard dimension names and values |
+| `rules.md` | Cross-cutting rules (VAT, COGS sourcing, promo goods cost) |
+
+**Key rule:** Use pre-computed scope columns (`WHERE scope_retail`), not inline re-derivation (`customer_type = 'RETAIL' AND is_sales_channel = true AND status NOT IN (...)`).
+
+### 2b. Metabase Semantic Layer (BI tool)
+
 Use `Model` → `Metric` → `Question` hierarchy in Metabase:
 
 1.  **Models** (`dataset: true`): Trusted datasets for core entities (e.g., `Official Orders`).
@@ -36,11 +53,12 @@ Use `Model` → `Metric` → `Question` hierarchy in Metabase:
 When receiving a request to create/update a blueprint:
 
 1.  **Verify Design Spec exists** — Check `docs/analytics-handbook/designs/`. If missing, run Phase 0-6 first (or use `/design-dashboard`).
-2.  **Check Semantic Layer** — Does a `Model` already exist for this data? If no, **Create Model First**.
-3.  **Translate** — Map standard vocab → Metabase display types using `METABASE_VIZ_CATALOG.md`.
-4.  **Configure** — Generate `metabase-viz` JSON with full settings (colors, axes, formatting).
-5.  **Assemble** — Write blueprint with SQL + viz + pos blocks.
-6.  **Deploy** — Use `deploy_from_markdown.js`.
+2.  **Determine scope** — Read `docs/analytics-handbook/semantic/segments.md`. Identify `primary_scope` for this dashboard (scope_sales / scope_retail / scope_b2b / filter_us / none). See scope assignment matrix in `semantic/README.md`.
+3.  **Check Metabase Model** — Does a `Model` already exist for this data? If no, **Create Model First**.
+4.  **Translate** — Map standard vocab → Metabase display types using `METABASE_VIZ_CATALOG.md`.
+5.  **Configure** — Generate `metabase-viz` JSON with full settings (colors, axes, formatting).
+6.  **Assemble** — Write blueprint with YAML frontmatter + `## Segmentation Scope` section + SQL + viz + pos blocks. See `semantic/README.md → Blueprint Integration Standard` for required format.
+7.  **Deploy** — Use `deploy_from_markdown.js`.
 
 ### Pre-deploy Check (Phase 10)
 

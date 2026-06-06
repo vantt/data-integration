@@ -43,11 +43,34 @@ const purposeCap = cap(purpose);
 
 let template;
 
+// Frontmatter + Segmentation Scope section are required by the blueprint integration standard.
+// See: docs/analytics-handbook/semantic/README.md → "Blueprint Integration Standard"
+// Scope options: scope_sales | scope_retail | scope_b2b | filter_us | none
+// Layer options: L1 | L1.5 | L2 | L3 | Internal
+const frontmatter = `---
+primary_scope: TODO  # scope_sales | scope_retail | scope_b2b | filter_us | none
+scope_indicator: "[TODO]"  # [All] | [Retail] | [B2B] | [Cross] | [US] | [Internal]
+layer: TODO  # L1 | L1.5 | L2 | L3 | Internal
+uses_concepts: []  # e.g. [scope_retail, net_revenue, aov, discount_rate]
+---`;
+
+const scopeSection = `## Segmentation Scope
+
+> **Scope:** \`TODO\` · Layer TODO · Suffix \`[TODO]\`
+> **Why:** TODO — explain why this scope and not another.
+> **Ref:** [segments.md](../semantic/segments.md)
+
+All SQL in this blueprint: \`WHERE TODO\`. Do not re-derive inline.
+`;
+
 if (withTabs) {
-    template = `# ${domainCap} ${purposeCap} Blueprint
+    template = `${frontmatter}
+
+# ${domainCap} ${purposeCap} Blueprint
 
 **Playbook**: [${domainCap} ${purposeCap}](../playbooks/${domain}_${purpose}.md)
 
+${scopeSection}
 ## 📂 Collection: ${domainCap} Analytics
 
 ### 🖥️ Dashboard: ${domainCap} ${purposeCap}
@@ -62,6 +85,7 @@ if (withTabs) {
 
 \`\`\`sql
 SELECT count(*) as "Total" FROM fact_${domain}
+WHERE scope_TODO  -- replace with correct scope column
 \`\`\`
 
 \`\`\`json metabase-viz
@@ -79,7 +103,9 @@ SELECT count(*) as "Total" FROM fact_${domain}
 #### ❓ Question: Detail Table
 
 \`\`\`sql
-SELECT * FROM fact_${domain} LIMIT 100
+SELECT * FROM fact_${domain}
+WHERE scope_TODO  -- replace with correct scope column
+LIMIT 100
 \`\`\`
 
 \`\`\`json metabase-viz
@@ -91,10 +117,13 @@ SELECT * FROM fact_${domain} LIMIT 100
 \`\`\`
 `;
 } else {
-    template = `# ${domainCap} ${purposeCap} Blueprint
+    template = `${frontmatter}
+
+# ${domainCap} ${purposeCap} Blueprint
 
 **Playbook**: [${domainCap} ${purposeCap}](../playbooks/${domain}_${purpose}.md)
 
+${scopeSection}
 ## 📂 Collection: ${domainCap} Analytics
 
 ### 🖥️ Dashboard: ${domainCap} ${purposeCap}
@@ -105,6 +134,7 @@ SELECT * FROM fact_${domain} LIMIT 100
 
 \`\`\`sql
 SELECT count(*) as "Total" FROM fact_${domain}
+WHERE scope_TODO  -- replace with correct scope column
 \`\`\`
 
 \`\`\`json metabase-viz

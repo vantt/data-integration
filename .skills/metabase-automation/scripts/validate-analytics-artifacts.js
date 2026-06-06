@@ -96,7 +96,38 @@ function validateBlueprint(filePath) {
   const name = path.basename(filePath);
   const issues = [];
 
-  // Manual text comments (should have been migrated)
+  // --- Semantic contract compliance ---
+  // See: docs/analytics-handbook/semantic/README.md → Blueprint Integration Standard
+  if (!content.startsWith("---")) {
+    issues.push({ severity: "error", msg: "Missing YAML frontmatter — add primary_scope, scope_indicator, layer, uses_concepts" });
+  } else {
+    if (!/primary_scope:/i.test(content)) {
+      issues.push({ severity: "error", msg: "Frontmatter missing 'primary_scope' (scope_sales|scope_retail|scope_b2b|filter_us|none)" });
+    } else if (/primary_scope:\s*TODO/i.test(content)) {
+      issues.push({ severity: "error", msg: "Frontmatter 'primary_scope' not filled in (still TODO)" });
+    }
+    if (!/uses_concepts:/i.test(content)) {
+      issues.push({ severity: "warn", msg: "Frontmatter missing 'uses_concepts' — list semantic concepts this blueprint uses" });
+    }
+  }
+  if (!/##\s+Segmentation Scope/i.test(content)) {
+    issues.push({ severity: "error", msg: "Missing '## Segmentation Scope' section — document which scope and why" });
+  } else if (/Scope.*TODO/i.test(content.match(/## Segmentation Scope[\s\S]{0,300}/)?.[0] || "")) {
+    issues.push({ severity: "warn", msg: "'## Segmentation Scope' section not filled in (still TODO)" });
+  }
+
+  // Warn on SQL scope anti-patterns (re-deriving what pre-computed columns already express)
+  if (/status\s+NOT\s+IN\s*\(\s*['"]CANCELLED['"]/i.test(content)) {
+    issues.push({ severity: "warn", msg: "SQL re-derives cancellation filter inline — use pre-computed scope column (WHERE scope_sales / scope_retail / scope_b2b)" });
+  }
+  if (/customer_type\s*=\s*['"]RETAIL['"]/i.test(content)) {
+    issues.push({ severity: "warn", msg: "SQL uses raw customer_type='RETAIL' — use pre-computed WHERE scope_retail instead" });
+  }
+  if (/customer_type\s+IN\s*\([^)]*WHOLESALE/i.test(content)) {
+    issues.push({ severity: "warn", msg: "SQL uses raw customer_type IN (WHOLESALE,...) — use pre-computed WHERE scope_b2b instead" });
+  }
+
+  // --- Legacy artifact checks ---
   if (/Text annotations to add manually/i.test(content)) {
     issues.push({ severity: "error", msg: "Contains 'Text annotations to add manually' — migrate to #### 📝 Text: blocks" });
   }
@@ -104,25 +135,23 @@ function validateBlueprint(filePath) {
     issues.push({ severity: "error", msg: "Contains 'add manually after deploy' comment — use real text card blocks" });
   }
 
-  // Check for text cards
+  // --- Structure checks (skip for text-only/onboarding dashboards: layer L0 or primary_scope none) ---
+  const isTextOnly = /layer:\s*(L0|Internal)/i.test(content) && !/```sql/i.test(content);
   const hasTextCards = /####\s+(?:📝\s+)?Text:/i.test(content);
   const hasTabs = /###\s+(?:📑\s+)?Tab:/i.test(content);
-
   if (hasTabs && !hasTextCards) {
     issues.push({ severity: "warn", msg: "Has tabs but no text card annotations — consider adding section headings" });
   }
-
-  // Check required structure
   if (!/###\s+(?:🖥️\s*)?Dashboard:/i.test(content)) {
     issues.push({ severity: "error", msg: "Missing Dashboard header" });
   }
-  if (!/####\s+(?:❓\s+)?Question:/i.test(content)) {
-    issues.push({ severity: "error", msg: "No questions found in blueprint" });
-  }
-
-  // Check for SQL blocks
-  if (!/```sql/i.test(content)) {
-    issues.push({ severity: "error", msg: "No SQL blocks found" });
+  if (!isTextOnly) {
+    if (!/####\s+(?:❓\s+)?Question:/i.test(content)) {
+      issues.push({ severity: "error", msg: "No questions found in blueprint" });
+    }
+    if (!/```sql/i.test(content)) {
+      issues.push({ severity: "error", msg: "No SQL blocks found" });
+    }
   }
 
   return { name, type: "blueprint", issues };
