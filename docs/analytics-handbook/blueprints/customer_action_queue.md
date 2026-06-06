@@ -1,9 +1,23 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts:
+  - scope_retail
+---
+
 # 📘 Blueprint: Customer Action Queue [Retail]
 
 > **Target Collection:** `Marketing & Customers`
 > **Design Spec:** `designs/customer_action_queue.md`
 > **Role:** Customer Success, Sales
 > **Archetype:** Operational Dispatch Board (single view)
+
+## Segmentation Scope
+
+Customer action queue tracks **retail customers only** — all action items (CALL_NOW, REORDER_NUDGE, WIN_BACK, SECOND_ORDER, HIGH_CANCEL_RISK) are generated for the retail customer base. Base table `mart_customer_action_queue` is pre-filtered to scope_retail customers and actionable signals. Wholesale or cross-segment queues are managed separately.
+
+**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail)
 
 ## 📂 Collection: Marketing & Customers
 

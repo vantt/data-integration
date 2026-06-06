@@ -1,3 +1,10 @@
+---
+primary_scope: filter_us
+scope_indicator: "[US]"
+layer: L2
+uses_concepts: [filter_us, net_revenue, orders_count]
+---
+
 # US CrossBorder Operations Blueprint [US]
 
 **Scope**: scope_us (`channel_name = 'US'` / `channel_format = 'CrossBorder Fulfillment'`)
@@ -6,6 +13,14 @@
 > **NEW (2026-04-19):** Dashboard rieng cho don US CrossBorder Fulfillment.
 > Tach biet hoan toan khoi bao cao Sales vi day la don export/arrangement, khong phai sales thuong.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
+
+## Segmentation Scope
+
+> **Scope:** `filter_us` (channel_name = 'US') · Layer 2 (Operations) · Suffix `[US]`
+> **Why:** US CrossBorder tracks internal export orders to the US entity (100% discount, not retail/B2B sales). These orders are excluded from all other revenue dashboards (`is_sales_channel = false`).
+> **Ref:** [segments.md#filter_us](../semantic/segments.md#filter_us)
+
+All SQL: `WHERE channel_name = 'US'` (join `dim_channels`). Do not use `customer_type = 'CROSSBORDER'` — use the channel filter.
 
 Daily monitoring for US CrossBorder fulfillment orders — export arrangements, order tracking, fulfillment status. Special operations for international orders.
 

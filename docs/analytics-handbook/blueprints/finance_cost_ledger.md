@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, filter_has_cogs, cogs_amount, gross_profit]
+---
+
 # Blueprint: Cost Ledger Analyzer [All]
 
 **Playbook**: [Cost Ledger Analyzer](../playbooks/finance_cost_ledger.md)
@@ -8,9 +15,17 @@
 > **Archetype:** Operational Cockpit
 > **Description:** Audience: CFO/Accounting. Scope: All sales channels. Câu hỏi: Tiền đi đâu? Breakdown costs by channel + cost type.
 
-## 📂 Collection: Finance
-
 Dashboard phân tích cơ cấu chi phí theo order — COGS, phí sàn, thuế, vận chuyển, chiết khấu. Giúp CFO và Kế toán trả lời "Tiền của tôi đi đâu?" theo kênh và loại chi phí.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Cost ledger analyzes COGS across all orders regardless of customer segment. `has_cogs = true` is required — orders without COGS would show zero cost, distorting margin.
+> **Ref:** [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+Use `WHERE scope_sales AND has_cogs` — do not re-derive via subquery on `is_sales_channel`.
+
+## 📂 Collection: Finance
 
 ---
 

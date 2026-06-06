@@ -1,4 +1,19 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, net_revenue, discount_amount]
+---
+
 # Order Detail Blueprint [Retail]
+
+## Segmentation Scope
+
+> **Scope:** `scope_retail` · Layer 2 (Retail Daily Monitoring) · Suffix `[Retail]`
+> **Why:** Order detail view is a single-order drill-down for retail order management and customer service. B2B order details are handled separately.
+> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+
+Base filter: `WHERE scope_retail`. Individual order lookup via `order_code` parameter.
 
 **Design Spec**: [Order Detail View](../designs/order_detail_view.md)
 

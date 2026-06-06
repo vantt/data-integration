@@ -1,3 +1,10 @@
+---
+primary_scope:
+scope_indicator: "[Internal]"
+layer: Internal
+uses_concepts: []
+---
+
 # 📘 Blueprint: Ingestion Health Monitor [Internal]
 
 **Design Spec**: [ingestion_health.md](../designs/ingestion_health.md)
@@ -7,6 +14,10 @@
 > **Role:** Data Engineer / Ops
 > **Archetype:** Operational Cockpit
 > **Database:** `Ingestion Health` (DuckDB — `/app/data_lake/monitoring/ingestion_health.duckdb`)
+
+## Segmentation Scope
+
+N/A — infrastructure monitoring. Scope/segmentation concepts do not apply. Dashboard monitors ingestion pipeline health (SLA status, recon drift, volume trends, failure logs) at the source level, independent of business customer segment definitions.
 
 Monitoring wall for ingestion pipeline: per-source SLA status tiles, recon drift alerts, 30-day volume trends, and failure log. Answers "did data move today, is volume sane, is anything drifting?" in < 10 seconds.
 

@@ -1,9 +1,29 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[Cross]"
+layer: L3
+uses_concepts:
+  - scope_sales
+  - scope_retail
+  - net_revenue
+  - orders_count
+  - aov
+  - retention_rate
+  - customer_acquisition
+---
+
 # 📘 Blueprint: Customer Intelligence Monthly [Cross]
 
 > **Target Collection:** `Marketing & Customers`
 > **Design Spec:** `designs/customer_intelligence_monthly.md`
 > **Role:** CEO, Marketing Manager, Sales Ops
 > **Archetype:** Operational Cockpit (3 tabs)
+
+## Segmentation Scope
+
+Cross-segment analytics dashboard — explicitly includes **both retail and wholesale** customer segments for head-to-head comparison. Uses scope_sales (all paying channels) without retail-only filtering. Monthly deep-dive on customer health scorecard, value concentration, segment dynamics, and purchase behavior across all business units. Tabs show Customer Health, Segment Dynamics, and Acquisition Quality with explicit breakdowns by customer_type. For retail-only operational dashboards, reference `customer_operational_dashboard.md` or `customer_retention_dashboard.md`.
+
+**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_sales) and [Cross-Segment Analysis](../guides/report_segmentation.md#cross-segment)
 
 ## 📂 Collection: Marketing & Customers
 

@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, net_revenue, gross_revenue]
+---
+
 # Order Revenue Explorer Blueprint
 
 **Layer**: Audit / Reconciliation
@@ -6,6 +13,14 @@
 > **Database:** Sapo
 
 Bảng đơn hàng + KPI dùng CHUNG một tập order (mọi status, không loại CANCELLED/Voided) trong cùng date-range + channel filter → KPI cộng đúng những gì hiển thị trong bảng.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` · Layer 1.5 (Finance / Audit) · Suffix `[All]`
+> **Why:** Revenue explorer is an audit tool covering all valid sales orders. Users can optionally filter further by segment via dashboard filters.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+
+Base SQL: `WHERE scope_sales`. Segment drill-down via dashboard filter, not hardcoded SQL.
 
 ## 📂 Collection: Order Management
 

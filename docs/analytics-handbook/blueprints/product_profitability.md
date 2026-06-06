@@ -1,8 +1,23 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, cogs_amount]
+---
+
 # Product Profitability Blueprint [All]
 
 **Design Spec**: [Product Profitability](../designs/product_profitability.md)
 
 Ranking san pham theo lai gop va margin — top/bottom products, chi tiet theo kenh. Dung int_misa_sales_lines (COGS per product line).
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Product profitability covers all customer segments to give a true product margin view. SKU margin analysis requires `has_cogs = true`.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+All margin queries: `WHERE scope_sales AND has_cogs`.
 
 ## 📂 Collection: Executive
 

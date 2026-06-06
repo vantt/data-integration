@@ -1,3 +1,10 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, customer_acquisition]
+---
+
 # 📘 Blueprint: Marketing Weekly Tracker [Retail]
 
 **Playbook**: [Marketing Weekly Tracker](../playbooks/marketing_weekly_tracker.md)
@@ -12,6 +19,14 @@
 > **SCOPE (2026-04-19):** Dashboard này focus vào **retail customers** (`customer_type = 'RETAIL'`).
 > Marketing activities target B2C customers, không bao gồm B2B (WHOLESALE, PARTNER).
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
+
+## Segmentation Scope
+
+> **Scope:** `scope_retail` · Layer 2 (Marketing & Customers) · Suffix `[Retail]`
+> **Why:** Marketing targets retail customers. B2B customers come via direct relationships, not marketing campaigns. Marketing ROI and acquisition metrics are only meaningful for retail segment.
+> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+
+All SQL: `WHERE scope_retail`. Do not re-derive.
 
 ## 📂 Collection: Marketing & Customers
 

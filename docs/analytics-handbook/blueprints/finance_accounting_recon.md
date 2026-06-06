@@ -1,3 +1,10 @@
+---
+primary_scope: none
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [net_revenue]
+---
+
 # Blueprint: Accounting Reconciliation Cockpit [Internal]
 
 > **Target Collection:** `Finance`
@@ -16,6 +23,14 @@ All questions use `fact_order_economics` flags as proxy:
 - True recon ledger: build dbt `recon_*` models when MISA/Shopee ingestion is stable.
 
 ---
+
+## Segmentation Scope
+
+> **Scope:** N/A — this is a reconciliation dashboard comparing Sapo order totals against MISA accounting entries. It operates at the accounting record level, not filtered by customer segment.
+> **Note:** Revenue figures come from `int_misa_sales_lines` (MISA source), not `fact_orders`. No `scope_sales` filter applies here.
+> **Ref:** [rules.md#COGSSourcing](../semantic/rules.md)
+
+Do not apply order-level scope filters to MISA reconciliation queries.
 
 ## 📂 Collection: Finance
 

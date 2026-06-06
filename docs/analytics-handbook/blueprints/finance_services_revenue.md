@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, net_revenue, service_fee_revenue]
+---
+
 # 📘 Blueprint: Finance Services Revenue [All]
 
 **Playbook**: [Finance Services Revenue](../playbooks/finance_services_revenue.md)
@@ -10,7 +17,6 @@
 ---
 
 ```yaml
----
 dashboard_name: Finance Services Revenue [All]
 collection: Finance
 database: Sapo
@@ -19,10 +25,17 @@ audience: CFO, Finance Manager
 cadence: Monthly
 status: ACTIVE
 requires_flag: is_service_line in int_misa_sales_lines
----
 ```
 
 > **Database:** Sapo
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Service revenue (Shopee fee, shipping fee, etc.) spans all sales channels. No COGS filter needed — service fees are top-line revenue items.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+
+All SQL: `WHERE scope_sales`.
 
 ## 📂 Collection: Finance
 

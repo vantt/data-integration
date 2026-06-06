@@ -1,6 +1,25 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts:
+  - scope_retail
+  - net_revenue
+  - orders_count
+  - aov
+  - marketing_spend
+  - roas
+---
+
 # Marketing ROI [Retail] Blueprint
 
 **Design Spec**: [Marketing ROI](../designs/marketing_roi.md)
+
+## Segmentation Scope
+
+This dashboard isolates **retail-only marketing performance** using the `scope_retail` filter (customer_type = 'RETAIL'). ROAS calculations join marketing spend against completed orders from sales channels only. Marketing spend metrics pulled from `fact_marketing_spend`, revenue metrics from `fact_orders` filtered by channel and customer type. For wholesale or cross-channel ROI analysis, reference `customer_intelligence_monthly.md`.
+
+**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail)
 
 ROAS per channel — tong spend vs revenue, xu huong, chi tiet per kenh. Dung fact_marketing_spend + fact_orders.
 

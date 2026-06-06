@@ -1,8 +1,23 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[Cross]"
+layer: L3
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, channel_net_profit, cogs_amount]
+---
+
 # Channel Profitability Monthly [Cross] Blueprint
 
 **Design Spec**: [Channel Profitability Monthly](../designs/channel_profitability_monthly.md)
 
 Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COGS, xu huong theo thang, phan tich san pham. Dung cho MBR review hang thang.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` with channel breakdown · Layer 3 (Analytics) · Suffix `[Cross]`
+> **Why:** Channel profitability compares performance across all sales channels (online, social, direct, wholesale). Requires all segments to properly attribute channel-level revenue and margin.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+Revenue: `WHERE scope_sales`. Margin: `WHERE scope_sales AND has_cogs`. Channel breakdown via `channel_name` or `channel_category`.
 
 ## 📂 Collection: Executive
 

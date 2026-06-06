@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, return_rate]
+---
+
 # Return Impact Analysis [All] Blueprint
 
 > **Database:** Sapo
@@ -11,6 +18,14 @@
 > **Mart source:** `fact_order_returns` (2026-05-27)
 
 Dashboard theo doi muc do phoi nhiem refund, ty le hoan hang theo kenh, phan tich ly do hoan va xu huong theo ngay. Danh cho CEO/CFO trong cac cuoc hop tai chinh hang thang.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Return impact on P&L covers all customer segments. Returns table: `fact_order_returns`. Margin impact requires `has_cogs = true`.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+Return count: `WHERE scope_sales`. Return P&L: join `fact_order_returns` + `WHERE has_cogs`.
 
 ## 📂 Collection: Finance
 

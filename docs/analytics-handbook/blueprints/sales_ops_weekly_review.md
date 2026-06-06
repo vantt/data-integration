@@ -1,4 +1,24 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, discount_rate]
+---
+
 # Sales Ops Weekly Review [Retail] Blueprint (Redesign)
+
+## Segmentation Scope
+
+> **Scope:** Per-tab split · Layer 2 (Operations) · Suffix `[Retail]` (primary tab) + `[B2B]` (B2B tab)
+>
+> | Tab | Scope | SQL |
+> |---|---|---|
+> | Retail review | `scope_retail` | `WHERE scope_retail` |
+> | B2B review | `scope_b2b` | `WHERE scope_b2b` |
+>
+> **Ref:** [segments.md](../semantic/segments.md)
+
+Each tab applies its own scope. Do not blend segments in a single aggregation.
 
 **Design Spec**: [Sales Ops Weekly Review (Redesign)](../designs/sales_ops_weekly_review.md)
 **Playbook**: [Sales Ops Weekly Review](../playbooks/sales_ops_weekly_review.md)

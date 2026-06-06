@@ -6,6 +6,10 @@ description: "Daily inventory snapshots: OOS, slow-mover, days-of-supply, capita
 audience: Inventory Manager, Ops Manager
 cadence: Daily
 status: ACTIVE
+primary_scope: none
+scope_indicator: "[Internal]"
+layer: L2
+uses_concepts: [inventory_quantity, inventory_value]
 ---
 
 # Product Inventory Health [All] Blueprint
@@ -15,6 +19,13 @@ status: ACTIVE
 Dashboard kiểm tra tồn kho hàng ngày — OOS alerts, slow-mover exposure, stock value theo location. 3 tabs: Current Stock / Slow-Mover & Dead Stock / Inventory Trend.
 
 > **Database:** Sapo
+
+## Segmentation Scope
+
+> **Scope:** N/A — inventory dashboard. Queries `fact_inventory_snapshots` or equivalent inventory mart, not `fact_orders`. No order-level scope filter applies.
+> **Ref:** [freshness.md](../semantic/freshness.md) for inventory mart SLA.
+
+Inventory queries do not use `scope_sales`, `scope_retail`, or any order filter.
 
 ## 📂 Collection: Operations > Logistics
 

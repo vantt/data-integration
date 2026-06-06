@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, filter_has_cogs, cogs_amount, gross_profit, net_revenue]
+---
+
 # Blueprint: Product Cost-to-Margin Heatmap [Cross]
 
 **Playbook**: [Product Cost-to-Margin Heatmap](../playbooks/finance_product_cost_margin.md)
@@ -9,9 +16,17 @@
 > **Archetype:** Diagnostic / Variance Alert
 > **Description:** Audience: Merchandising/Finance. Scope: Cross-segment SKU level. Câu hỏi: SKU nào margin tốt + COGS variance bất thường?
 
-## 📂 Collection: Finance
-
 Dashboard phân tích margin và chi phí theo từng SKU — xác định sản phẩm có margin tốt, phát hiện bất thường COGS so với trung bình 3 tháng.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Product cost margin must cover all segments (retail + B2B) to give a true SKU-level profitability view. `has_cogs = true` required for valid margin calculation.
+> **Ref:** [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+All margin queries: `WHERE scope_sales AND has_cogs`.
+
+## 📂 Collection: Finance
 
 ---
 

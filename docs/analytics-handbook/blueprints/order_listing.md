@@ -1,4 +1,19 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, net_revenue, orders_count]
+---
+
 # Blueprint: Order Listing [Retail]
+
+## Segmentation Scope
+
+> **Scope:** `scope_retail` · Layer 2 (Retail Daily Monitoring) · Suffix `[Retail]`
+> **Why:** Order listing is a retail operations tool for daily order processing review. B2B orders are tracked separately in B2B Operations dashboards.
+> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+
+All SQL: `WHERE scope_retail`.
 
 **Design Spec**: [Order Listing](../designs/order_listing.md)
 **Playbook**: [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)

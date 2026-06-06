@@ -1,3 +1,16 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts:
+  - scope_retail
+  - net_revenue
+  - orders_count
+  - aov
+  - retention_rate
+  - customer_acquisition
+---
+
 # Customer Operational Dashboard Blueprint [Retail]
 
 **Design Spec**: [Customer Operational Dashboard (Redesign)](../designs/customer_operational_dashboard.md)
@@ -5,10 +18,13 @@
 **Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
 **Layer**: L2 - Marketing & Customers
 
-> **SCOPE (2026-04-19):** Dashboard này focus vào **retail customers** (`customer_type = 'RETAIL'`).
-> Customer ops metrics (MAU, Retention, Churn, At Risk) áp dụng cho B2C customers.
-> B2B customer management có logic khác (contract-based, credit terms).
-> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
+## Segmentation Scope
+
+Operational metrics on this dashboard (MAU, acquisition, retention rate, at-risk/churn counts, segment composition) apply exclusively to **retail customers** (customer_type = 'RETAIL'). B2B customer management operates under different logic (contract-based, credit terms) and is not included. All metrics (Active Rate, Status Distribution, Revenue by Lifecycle) are computed against the retail-only customer base. To analyze cross-segment or wholesale-specific metrics, reference `customer_intelligence_monthly.md`.
+
+> **Scope History**: Updated 2026-04-19 to clarify retail-only scope and reference B2B exclusion.
+
+**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail)
 
 Redesigned dashboard with 3 tabs, integrated MoM comparisons, donuts for composition, gauge for active rate, conditional formatting on watchlists, combo chart for acquisition. Daily operational cockpit for Customer Success / Sales Ops. **Focus: Retail customers only.**
 

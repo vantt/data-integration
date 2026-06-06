@@ -1,8 +1,23 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[Cross]"
+layer: L3
+uses_concepts: [scope_sales, net_revenue, orders_count, aov]
+---
+
 # Product Performance [Cross] Blueprint
 
 **Design Spec**: [Product Performance](../designs/product_performance.md)
 
 Dashboard theo doi hieu suat san pham — doanh thu, so luong, xu huong, phan tich loai SP, top/bottom products. MoM comparison (last 30 days vs previous 30 days).
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` with segment breakdown · Layer 3 (Analytics) · Suffix `[Cross]`
+> **Why:** Product performance analytics covers all customer segments to understand which products sell to retail vs B2B. Segment labels (`customer_type`) must be shown explicitly when comparing.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+
+Base: `WHERE scope_sales`. Add `customer_type` dimension for retail vs B2B product comparison. For pure retail product analysis, use `scope_retail` + see Product Performance [Retail] if created.
 
 ## 📂 Collection: Analytics
 

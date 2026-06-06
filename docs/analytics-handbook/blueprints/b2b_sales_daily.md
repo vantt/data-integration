@@ -1,4 +1,19 @@
+---
+primary_scope: scope_b2b
+scope_indicator: "[B2B]"
+layer: L2
+uses_concepts: [scope_b2b, net_revenue, orders_count, aov]
+---
+
 # B2B Daily Sales Blueprint [B2B]
+
+## Segmentation Scope
+
+> **Scope:** `scope_b2b` · Layer 2 (B2B Operations) · Suffix `[B2B]`
+> **Why:** B2B daily monitoring covers WHOLESALE and PARTNER orders only. AOV ~2.5M VND; discount = fixed wholesale pricing, not promotion.
+> **Ref:** [segments.md#scope_b2b](../semantic/segments.md#scope_b2b)
+
+All SQL: `WHERE scope_b2b`. Do not re-derive as `customer_type IN ('WHOLESALE', 'PARTNER') AND is_sales_channel = true AND status NOT IN (...)`.
 
 **Scope**: scope_b2b (`customer_type IN ('WHOLESALE', 'PARTNER')` + `is_sales_channel = true`)
 **Layer**: L2 - B2B Operations

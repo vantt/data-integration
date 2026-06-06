@@ -1,4 +1,19 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L2
+uses_concepts: [scope_sales, net_revenue, fulfillment_status]
+---
+
 # Logistics Operations Center Blueprint [All]
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` · Layer 2 (Logistics) · Suffix `[All]`
+> **Why:** Logistics operations covers fulfillment status for all orders regardless of customer segment — shipping performance applies equally to retail and B2B shipments.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+
+All SQL: `WHERE scope_sales`. Segment breakdown optional as a dimension.
 
 **Design Spec**: [Logistics Operations Center](../designs/logistics_operations.md)
 

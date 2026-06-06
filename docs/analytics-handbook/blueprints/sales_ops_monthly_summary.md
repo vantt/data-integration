@@ -1,4 +1,24 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov]
+---
+
 # Sales Ops Monthly Summary [Retail] Blueprint (Redesign)
+
+## Segmentation Scope
+
+> **Scope:** Per-tab split · Layer 2 (Operations) · Suffix `[Retail]` (primary tab) + `[B2B]` (B2B tab)
+>
+> | Tab | Scope | SQL |
+> |---|---|---|
+> | Retail summary | `scope_retail` | `WHERE scope_retail` |
+> | B2B summary | `scope_b2b` | `WHERE scope_b2b` |
+>
+> **Ref:** [segments.md](../semantic/segments.md)
+
+Do not mix `scope_retail` and `scope_b2b` in a single query — AOV and discount are incomparable across segments.
 
 **Design Spec**: [Sales Ops Monthly Summary (Redesign)](../designs/sales_ops_monthly_summary.md)
 **Playbook**: [Sales Ops Monthly Summary](../playbooks/sales_ops_monthly_summary.md)

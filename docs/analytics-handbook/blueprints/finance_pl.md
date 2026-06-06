@@ -1,8 +1,23 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, cogs_amount]
+---
+
 # Finance P&L [All] Blueprint
 
 **Design Spec**: [Finance P&L Dashboard](../designs/finance_pl.md)
 
 Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop, va chi phi nen tang Shopee. 3 tabs: tong quan P&L, loi nhuan theo kenh, kinh te Shopee. MoM comparison (last 30 days vs previous 30 days).
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Full P&L view across all sales channels. Revenue queries: `WHERE scope_sales`. Margin/profit queries additionally filter `has_cogs = true` (coverage ~65% of completed orders).
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+Revenue SQL: `WHERE scope_sales`. P&L SQL: `WHERE scope_sales AND has_cogs`. Do not re-derive `is_sales_channel` or `status NOT IN (...)` inline.
 
 ## 📂 Collection: Executive
 

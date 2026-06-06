@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, channel_net_profit]
+---
+
 # Blueprint: Channel P&L Deep Dive [Cross]
 
 **Playbook**: [Channel P&L Deep Dive](../playbooks/finance_channel_pl.md)
@@ -13,6 +20,14 @@
 > **Target source:** `dim_channel_targets` seed CSV (manually maintained; `dbt seed --select dim_channel_targets` to refresh)
 
 Dashboard phân tích lợi nhuận theo kênh bán hàng — waterfall từ doanh thu gộp đến lợi nhuận ròng sau phí platform, bảng điểm kênh, heatmap margin theo tháng, bảng biến động so kỳ trước, và cảnh báo loss-leader. Dành cho Finance Director và Sales Director trong MBR hàng tháng.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Channel-level P&L requires all business lines (retail + B2B) to compare channel profitability fairly. Margin queries additionally filter `has_cogs = true`.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+Revenue SQL: `WHERE scope_sales`. Margin SQL: `WHERE scope_sales AND has_cogs`. Channel breakdown via `channel_name` or `channel_category`.
 
 ## 📂 Collection: Finance
 

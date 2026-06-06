@@ -1,4 +1,19 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, net_revenue, discount_rate, discount_amount, aov]
+---
+
 # 📘 Blueprint: Sales Promotion & Discount Analysis [Retail]
+
+## Segmentation Scope
+
+> **Scope:** `scope_retail` · Layer 2 (Retail Operations) · Suffix `[Retail]`
+> **Why:** **Promotion analysis MUST use scope_retail.** B2B discount = fixed wholesale price (40–50%), not a promotion. Mixing B2B and retail makes discount rate ~35% vs actual retail 15% — completely misleading.
+> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+
+**Mandatory:** All SQL: `WHERE scope_retail`. Never analyze promotions on `scope_sales`.
 
 **Design Spec**: [Sales Promotion & Discount Analysis](../designs/sales_promotion_analysis.md)
 **Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`) — **BẮT BUỘC**

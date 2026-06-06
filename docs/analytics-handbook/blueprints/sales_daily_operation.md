@@ -1,4 +1,19 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, net_revenue, orders_count, aov]
+---
+
 # Daily Sales Performance Blueprint [Retail]
+
+## Segmentation Scope
+
+> **Scope:** `scope_retail` · Layer 2 (Retail Operations) · Suffix `[Retail]`
+> **Why:** Daily sales ops tracks retail performance. B2B orders have fundamentally different AOV (~2.5M vs 450K VND) and no promotion mechanics — mixing distorts all daily KPIs.
+> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+
+All SQL: `WHERE scope_retail`. Do not re-derive as `customer_type = 'RETAIL' AND is_sales_channel = true AND status NOT IN (...)`.
 
 **Design Spec**: [Daily Sales Dashboard (Redesign)](../designs/sales_daily_operation.md)
 **Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)

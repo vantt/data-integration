@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1
+uses_concepts: [scope_sales, net_revenue, orders_count, aov, gross_profit, filter_has_cogs]
+---
+
 # 📘 Blueprint: CEO Monthly Scorecard [All]
 
 **Scope**: scope_sales (`is_sales_channel = true`)
@@ -8,6 +15,14 @@
 > **UPDATED (2026-04-19):** Thêm scope indicator [All] và chuyển sang filter `is_sales_channel = true`.
 > Dashboard này aggregate tất cả customer types (RETAIL + B2B) nhưng loại bỏ Internal channels.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` · Layer 1 (Executive) · Suffix `[All]`
+> **Why:** Monthly scorecard provides the CEO-level full business view. Revenue: `WHERE scope_sales`. P&L metrics additionally require `has_cogs = true`.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+
+Revenue/order SQL: `WHERE scope_sales`. P&L SQL: `WHERE scope_sales AND has_cogs`.
 
 > **Target Collection:** `Executive`
 > **Role:** CEO, Board

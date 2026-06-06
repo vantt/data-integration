@@ -1,8 +1,23 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[Cross]"
+layer: L3
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, service_fee_revenue, shopee_service_fee]
+---
+
 # Shopee Channel Economics [Cross] Blueprint
 
 **Design Spec**: [Shopee Channel Economics](../designs/shopee_channel_economics.md)
 
 Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich co cau phi, xu huong MoM, va chi tiet don hang/san pham bi mat margin nhieu nhat.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` filtered to Shopee channel · Layer 3 (Analytics) · Suffix `[Cross]`
+> **Why:** Shopee channel economics analyzes all orders placed via Shopee platform regardless of customer type. Both retail and B2B customers may use Shopee. Channel filter: `channel_name ILIKE '%Shopee%'` or equivalent.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [rules.md#ShopeeServiceFee](../semantic/rules.md)
+
+Base: `WHERE scope_sales AND <shopee_channel_filter>`. Margin: additionally `AND has_cogs`.
 
 ## 📂 Collection: Analytics
 

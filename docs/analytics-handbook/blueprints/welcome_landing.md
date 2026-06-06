@@ -1,8 +1,19 @@
+---
+primary_scope:
+scope_indicator: ""
+layer: L0
+uses_concepts: []
+---
+
 # 📘 Blueprint: Welcome to ChợPulse BI
 
 > **Target Collection:** `📍 Start Here`
 > **Role:** All users (onboarding)
 > **Archetype:** Onboarding landing (1 text card, no tabs, no SQL)
+
+## Segmentation Scope
+
+N/A — onboarding landing page. Scope and segmentation concepts do not apply. Dashboard guides new users to the right collection based on their role and explains scope suffix naming conventions for all downstream dashboards.
 
 System landing page that guides new users to the right collection based on their role + explains scope suffix convention (Rule 6).
 

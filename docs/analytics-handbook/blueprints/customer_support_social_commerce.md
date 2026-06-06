@@ -1,8 +1,23 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts:
+  - scope_retail
+  - filter_social
+  - net_revenue
+  - orders_count
+---
+
 # Social Commerce Operations [Retail] Blueprint
 
 **Design Spec**: [Social Commerce Operations](../designs/customer_support_social_commerce.md)
 
-Single-view Operational Cockpit for CS Team Leader — real-time social commerce monitoring with DoD comparisons. Zero interactive filters. Covers Facebook, Zalo, Instagram channels (`channel_format = 'Social'`).
+## Segmentation Scope
+
+Single-view Operational Cockpit for CS Team Leader — real-time social commerce monitoring with DoD comparisons. Zero interactive filters. Covers **retail customers** via social channels only (Facebook, Zalo, Instagram; channel_format = 'Social'). Uses both `scope_retail` (customer_type = 'RETAIL') AND `filter_social` (channel_format = 'Social') filters to isolate retail-driven social commerce revenue and orders. For cross-channel or wholesale social analysis, reference `customer_intelligence_monthly.md`.
+
+**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail) and [Channel Segmentation](../guides/report_segmentation.md#filter_social)
 
 ## 📂 Collection: Operations > Daily Monitoring
 

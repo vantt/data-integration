@@ -1,4 +1,19 @@
+---
+primary_scope: scope_b2b
+scope_indicator: "[B2B]"
+layer: L2
+uses_concepts: [scope_b2b, net_revenue, orders_count]
+---
+
 # B2B Orders Tracking Blueprint [B2B]
+
+## Segmentation Scope
+
+> **Scope:** `scope_b2b` · Layer 2 (B2B Operations) · Suffix `[B2B]`
+> **Why:** B2B order tracking monitors WHOLESALE and PARTNER orders — payment status, order age, key accounts. Retail orders are excluded.
+> **Ref:** [segments.md#scope_b2b](../semantic/segments.md#scope_b2b)
+
+All SQL: `WHERE scope_b2b`.
 
 **Scope**: scope_b2b (`customer_type IN ('WHOLESALE', 'PARTNER')` + `is_sales_channel = true`)
 **Layer**: L2 - B2B Operations

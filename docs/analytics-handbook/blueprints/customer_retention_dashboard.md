@@ -1,9 +1,23 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts:
+  - scope_retail
+---
+
 # 📘 Blueprint: Customer Retention & Lifecycle [Retail]
 
 > **Target Collection:** `Marketing & Customers`
 > **Design Spec:** `designs/customer_retention_lifecycle.md`
 > **Role:** Marketing Manager, Customer Success, CEO
 > **Archetype:** Operational Cockpit (3 tabs)
+
+## Segmentation Scope
+
+Retention analytics — repeat purchase rate, churn rate, cohort retention, lifecycle status — track repeat-purchase behavior **for retail customers only** (customer_type = 'RETAIL'). Wholesale customers have different contract and credit-based renewal logic and are excluded. Cohort heatmap, reactivation signals, and all KPIs are computed on the retail-only subset.
+
+**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail)
 
 ## 📂 Collection: Marketing & Customers
 

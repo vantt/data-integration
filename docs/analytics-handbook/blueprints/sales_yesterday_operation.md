@@ -1,4 +1,19 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate]
+---
+
 # Yesterday's Sales Performance Blueprint [Retail]
+
+## Segmentation Scope
+
+> **Scope:** `scope_retail` · Layer 2 (Retail Operations) · Suffix `[Retail]`
+> **Why:** Yesterday's sales review is a retail operations dashboard. Discount rate and AOV comparisons are only meaningful within a single customer segment.
+> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+
+All SQL: `WHERE scope_retail`.
 
 **Design Spec**: [Yesterday's Sales Dashboard (Redesign)](../designs/sales_yesterday_operation.md)
 **Playbook**: [Yesterday's Sales Operations](../playbooks/sales_yesterday_operation.md)

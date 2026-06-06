@@ -1,4 +1,19 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1
+uses_concepts: [scope_sales, net_revenue, orders_count, aov]
+---
+
 # 📘 Blueprint: Sales Monthly Business Review [All]
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` · Layer 1 (Executive) · Suffix `[All]`
+> **Why:** Monthly business review is an executive-level dashboard covering the full company performance across all customer segments. Segment-specific breakdowns are shown as sub-dimensions, not separate filters.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+
+All SQL: `WHERE scope_sales`. For segment comparison charts, add `customer_type` as a dimension.
 
 **Design Spec**: [Sales Monthly Business Review](../designs/sales_monthly_review.md)
 

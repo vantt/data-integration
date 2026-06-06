@@ -1,3 +1,10 @@
+---
+primary_scope: scope_retail
+scope_indicator: "[Retail]"
+layer: L2
+uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, customer_acquisition, retention_rate]
+---
+
 # 📘 Blueprint: Marketing Monthly Analysis [Retail]
 
 **Playbook**: [Marketing Monthly Analysis](../playbooks/marketing_monthly_analysis.md)
@@ -6,6 +13,14 @@
 > **Target Collection:** `Marketing & Customers`
 > **Role:** Marketing Manager, Brand Manager, CMO
 > **Archetype:** Operational Cockpit (4 tabs)
+
+## Segmentation Scope
+
+> **Scope:** `scope_retail` · Layer 2 (Marketing & Customers) · Suffix `[Retail]`
+> **Why:** Monthly marketing deep-dive — channel strategy, customer acquisition, cohort retention, campaign ROI. All metrics require retail segment: B2B has no promo mechanics, acquisition is relationship-based.
+> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+
+All SQL: `WHERE scope_retail`. Do not use `customer_type = 'RETAIL'` alone — use the pre-computed `scope_retail` column which also enforces `is_sales_channel` and status filters.
 
 ## 📂 Collection: Marketing & Customers
 

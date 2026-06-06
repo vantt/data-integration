@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1
+uses_concepts: [scope_sales, net_revenue, orders_count, aov, gross_profit]
+---
+
 # CEO Weekly Pulse Blueprint [All]
 
 **Scope**: scope_sales (`is_sales_channel = true`)
@@ -8,6 +15,14 @@
 > **UPDATED (2026-04-19):** Thêm scope indicator [All] và chuyển sang filter `is_sales_channel = true`.
 > Dashboard này aggregate tất cả customer types (RETAIL + B2B) nhưng loại bỏ Internal channels.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` · Layer 1 (Executive) · Suffix `[All]`
+> **Why:** CEO weekly pulse shows the full company performance across all customer segments (retail + B2B + staff/KOL). This is the L1 executive view — not segmented by customer type.
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+
+All SQL: `WHERE scope_sales`. Do not re-derive as `is_sales_channel = true AND status NOT IN (...)`.
 
 Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang & Canh bao. Features WoW comparisons on all KPIs, progress-toward-goal for MTD target, donut + grouped bar for channels, gauge for health metrics, and conditional formatting. 5-minute Monday morning CEO check-in.
 

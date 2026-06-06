@@ -1,3 +1,10 @@
+---
+primary_scope: scope_sales
+scope_indicator: "[All]"
+layer: L1.5
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, cogs_amount]
+---
+
 # Order Profitability [All] Blueprint
 
 **Dashboard ID**: 35
@@ -6,6 +13,14 @@
 **Related**: [Order Profitability](order_profitability.md) — scoped to `is_sales_channel = true`, executive standard view
 
 P&L per order — gross margin, channel net profit, cost structure, order detail. Bao gom tat ca kenh ke ca non-sales. Dung `fact_order_economics`.
+
+## Segmentation Scope
+
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Why:** Full-scope profitability across all customer types. Revenue metrics: `WHERE scope_sales`. Gross profit metrics: `WHERE scope_sales AND has_cogs` (~65% coverage).
+> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+
+Revenue: `WHERE scope_sales`. Margin: `WHERE scope_sales AND has_cogs`.
 
 ## 📂 Collection: Executive
 
