@@ -102,7 +102,7 @@ measures:
   - name: avg_order_value
     display_name: Average Order Value
     description: "domains/sales.md#5-aov-average-order-value — Net revenue / orders"
-    expression: sum(net_revenue) / nullif(count(*), 0)
+    expression: sum(net_revenue) / nullif(count(distinct order_id), 0)
   # Status metrics
   - name: completed_orders
     display_name: Completed Orders
