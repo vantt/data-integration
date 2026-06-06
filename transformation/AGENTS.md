@@ -12,7 +12,7 @@ All models in `models/marts/` MUST explicitly define their export location to su
 
 - **Pattern**: `location="{{ get_rolling_location() }}"`
 - **Location**: Inside the `{{ config(...) }}` block of the `.sql` file.
-- **Why**: The global `dbt_project.yml` sets `materialized: external`, but the specific *path* logic resides in the macro. Without this explicit config, dbt may default to internal paths, causing the Serving Script (`generate_serving_db.py`) to miss the file.
+- **Why**: The global `dbt_project.yml` sets `materialized: external`, but the specific *path* logic resides in the macro. Without this explicit config, dbt may default to internal paths, causing the Serving Script (`bootstrap_serving_views.py`) to miss the file.
 
 **❌ BAD (Missing Location):**
 ```sql
@@ -30,6 +30,8 @@ SELECT ...
 ) }}
 SELECT ...
 ```
+
+**Schema Alignment Note:** Mart models have `+schema: marts` in dbt_project.yml, making them appear in the dbt manifest as `main_marts.fact_orders`. The serving DB (`olap.duckdb`) creates views in the `main` schema by default. To enable dbt-metabase lineage integration, `bootstrap_serving_views.py` will create dual views: `main.{table_name}` (for backward compatibility with Metabase cards) and `main_marts.{table_name}` (alias for dbt-metabase schema matching). This allows the tool to auto-populate `depends_on` references without requiring SQL card migrations. See `docs/ARCHITECTURE_DETAIL.md` section 6 for full details.
 
 ### 2. Golden Sample Heuristic
 
@@ -99,6 +101,52 @@ When creating or Fixing a model, **ALWAYS** comparison against a working "Golden
 
  4.  **Handling Exact Duplicates**:
      - Use `QUALIFY ROW_NUMBER() ... = 1` on flat extracted data (no payload). Safe because biz dedup runs AFTER JSON extraction.
+
+---
+
+## Semantic Layer Contract
+
+Mart models là **implementation** của semantic concepts được định nghĩa trong `docs/analytics-handbook/semantic/`. Transformation layer phải đảm bảo semantic contract không bị vi phạm.
+
+### Nguyên tắc
+
+Semantic concepts được define ở `docs/analytics-handbook/semantic/` — dbt mart implement chúng thành columns. Khi sửa mart, phải đọc semantic definition trước để hiểu đúng business rule.
+
+```
+docs/analytics-handbook/semantic/segments.md   → fact_orders.scope_retail, scope_b2b, scope_sales
+docs/analytics-handbook/semantic/metrics.md    → fact_orders.net_revenue, gross_revenue, vat_amount
+docs/analytics-handbook/semantic/rules.md      → cancellation convention, VAT treatment, is_completed
+docs/analytics-handbook/semantic/dimensions.md → fact_orders.customer_type, date_key, channel_*
+```
+
+### Quy tắc khi làm mart
+
+**Khi thêm/sửa semantic column (scope flags, metric columns):**
+1. Đọc definition trong `docs/analytics-handbook/semantic/` trước
+2. Implement đúng rule — không tự diễn giải
+3. Nếu rule không rõ → hỏi, không đoán
+4. Sau khi sửa → update `semantic/*.md` nếu definition thay đổi
+
+**Khi thêm column mới mà BI cần dùng:**
+1. Thêm definition vào `docs/analytics-handbook/semantic/` trước (đặt đúng file: segments/metrics/dimensions/rules)
+2. Implement column trong mart
+3. Báo cho analytics team biết column mới sẵn sàng
+
+**Không được:**
+- Tự rename semantic column mà không update `docs/analytics-handbook/semantic/`
+- Thay đổi business rule của scope flag (scope_retail, scope_b2b, scope_sales) mà không update semantic docs
+- Xóa column đang là semantic concept mà không có migration plan
+
+### Semantic columns quan trọng — không sửa logic mà không có approval
+
+| Column | File | Rule |
+|---|---|---|
+| `scope_sales` | `semantic/segments.md` | is_sales_channel AND NOT cancelled/voided |
+| `scope_retail` | `semantic/segments.md` | scope_sales AND customer_type='RETAIL' |
+| `scope_b2b` | `semantic/segments.md` | scope_sales AND customer_type IN (WHOLESALE, PARTNER) |
+| `net_revenue` | `semantic/metrics.md` | total_collected − vat_amount |
+| `date_key` | `semantic/dimensions.md` | ICT timezone, NOT UTC |
+| `is_completed` | `semantic/rules.md` | fulfilled AND paid |
 
 ---
 **Note**: These rules supplement the global `AGENTS.md`. In case of conflict regarding *dbt specifics*, this file takes precedence.

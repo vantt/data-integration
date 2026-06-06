@@ -188,3 +188,52 @@ Instead of re-processing the entire dataset every run (Full Refresh), we switch 
   2.  Delete existing records in `sapo_warehouse.duckdb` that match the keys of new records.
   3.  Insert the new records.
   4.  _Note_: This achieves an "Upsert" effect efficiently without needing explicit `MERGE` SQL support.
+
+## 6. Serving Layer Architecture
+
+### Overview
+
+The serving layer implements a **3-tier data flow** from warehouse to analytics:
+
+1. **dbt Warehouse** (`sapo_warehouse.duckdb`) — Mart models execute with schema `main_marts`, export as Parquet files
+2. **Rolling Snapshots** (`/app/data_lake/export/marts/rolling/{table}/`) — Timestamped files; older files GC'd after each run
+3. **Serving Database** (`/app/data_lake/serving/olap.duckdb`) — Metabase connects read-only; views created by `bootstrap_serving_views.py`
+
+### Rolling Self-Refresh Views
+
+Mart models materialize as Parquet files with `location="{{ get_rolling_location() }}"` macro, which names files with ISO-8601 timestamps:
+```
+rolling/dim_customers/dim_customers_20260407140000.parquet  ← latest
+rolling/dim_customers/dim_customers_20260407130000.parquet  ← older (GC'd)
+```
+
+Each dbt run creates a new file without overwriting. This enables **zero-downtime updates**: in-flight Metabase queries read old files while new queries immediately pick up the latest.
+
+Views in `olap.duckdb` use `read_parquet(glob, filename=true)` + `max(filename)` to always resolve to the newest file:
+```sql
+CREATE OR REPLACE VIEW dim_customers AS
+WITH latest AS (SELECT max(filename) FROM read_parquet('rolling/dim_customers/*.parquet', filename=true))
+SELECT * EXCLUDE (filename)
+FROM read_parquet('rolling/dim_customers/*.parquet', filename=true)
+WHERE filename = (SELECT ... FROM latest)
+```
+
+No manual `CREATE OR REPLACE VIEW` needed when new parquets arrive.
+
+### Schema Alignment: Dual-View Pattern for dbt-metabase Integration
+
+**Current schema structure:**
+- Warehouse: Mart models use `+schema: marts` in dbt_project.yml → dbt manifest calls them `main_marts.fact_orders`
+- Serving: `bootstrap_serving_views.py` creates views as `CREATE OR REPLACE VIEW {table_name}` → Metabase sees `main.fact_orders`
+
+This mismatch prevents `dbt-metabase` (v1.7.5) from auto-populating `depends_on` references, because the tool matches Metabase table names (`main.fact_orders`) against dbt manifest qualified names (`main_marts.fact_orders`).
+
+**Planned enhancement:**
+After creating `main.{table_name}` views (for backward compatibility), additionally create `main_marts.{table_name}` alias views. This allows:
+- Metabase cards continue querying `main.fact_orders` (no SQL changes needed)
+- dbt-metabase finds `main_marts.fact_orders` in both Metabase schema list AND dbt manifest
+- `depends_on` auto-populates → enables full lineage: card → exposure → mart model → tests → sources
+
+**Implementation:** Modify `bootstrap_serving_views.py` to run `_build_rolling_view_sql()` twice per table, once for `main` schema and once for `main_marts` schema, after creating the main view.
+
+**Operational note:** When schema alias is added, re-run `bootstrap_serving_views.py` once to populate both views in all existing marts.
