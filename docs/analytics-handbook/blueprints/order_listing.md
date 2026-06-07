@@ -29,8 +29,7 @@ Dashboard đối soát đơn hàng — xác minh tính đúng đắn và đầy 
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Chu kỳ: Theo filter được chọn (không cố định)'
-  AS "Chu kỳ báo cáo"
+SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -555,7 +554,7 @@ ORDER BY o.ordered_at DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT '📅 Hôm qua: ' || strftime((current_date - INTERVAL '1 day')::DATE, '%d/%m/%Y') AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -1080,7 +1079,7 @@ ORDER BY o.ordered_at DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 30 ngày gần nhất: ' || strftime((current_date - INTERVAL '30 days')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT '📅 Ngày: ' || strftime({{date}}::date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
