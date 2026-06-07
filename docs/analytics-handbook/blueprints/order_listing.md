@@ -1,29 +1,24 @@
 ---
-primary_scope: scope_retail
-scope_indicator: "[Retail]"
+primary_scope: none
 layer: L2
-uses_concepts: [scope_retail, scope_sales, net_revenue, orders_count]
+uses_concepts: [net_revenue, orders_count]
 ---
 
-# Blueprint: Order Listing [Retail]
+# Blueprint: Order Listing [All]
 
 ## Semantic Contract
 
 > **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
-> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
-> **Why:** Order listing is a retail operations tool for daily order processing review. B2B orders are tracked separately in B2B Operations dashboards.
->
-> **Concepts used:**
-> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count)
+> **Scope:** N/A — công cụ đối soát với Sapo, liệt kê toàn bộ đơn hàng không loại trừ (kể cả CANCELLED, B2B, tất cả kênh).
 
-All SQL: `WHERE scope_retail`.
+All SQL: no scope filter.
 ## 📂 Collection: Operations > Daily Monitoring
 
 Dashboard đối soát đơn hàng — xác minh tính đúng đắn và đầy đủ của dữ liệu BI so với Sapo.
 
 ---
 
-### 🖥️ Dashboard: Order Listing [Retail]
+### 🖥️ Dashboard: Order Listing [All]
 
 **Description**: Công cụ đối soát đơn hàng — Reconciliation Checklist + Data Freshness + KPI DoD + phân bổ (donut/bar) + cảnh báo bất thường + chi tiết đơn. 3 tabs (Today / Yesterday / By Date) đồng bộ hoàn toàn — chỉ khác date predicate.
 
@@ -127,15 +122,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
 SELECT c.val as "Net Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -164,15 +155,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
 SELECT c.val as "Total Collected", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -201,15 +188,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
 SELECT c.val as "Gross Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -238,15 +221,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
 SELECT c.val as "Total Discount", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -400,9 +379,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.ordered_at) = current_date
-  AND o.scope_sales
-GROUP BY 1
+WHERE date(o.ordered_at) = current_dateGROUP BY 1
 ORDER BY 3 DESC
 ```
 
@@ -670,15 +647,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
 SELECT c.val as "Net Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -707,15 +680,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
 SELECT c.val as "Total Collected", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -744,15 +713,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
 SELECT c.val as "Gross Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -781,15 +746,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
-      AND scope_sales
-),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
 SELECT c.val as "Total Discount", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -943,9 +904,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_sales
-GROUP BY 1
+WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'GROUP BY 1
 ORDER BY 3 DESC
 ```
 
@@ -1233,15 +1192,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}
-      AND scope_sales
-),
+    WHERE date(ordered_at) = {{date}}),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
 SELECT c.val as "Net Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1270,15 +1225,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}
-      AND scope_sales
-),
+    WHERE date(ordered_at) = {{date}}),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
 SELECT c.val as "Total Collected", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1307,15 +1258,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}
-      AND scope_sales
-),
+    WHERE date(ordered_at) = {{date}}),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
 SELECT c.val as "Gross Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1344,15 +1291,11 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}
-      AND scope_sales
-),
+    WHERE date(ordered_at) = {{date}}),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
-      AND scope_sales
-)
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
 SELECT c.val as "Total Discount", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1506,9 +1449,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.ordered_at) = {{date}}
-  AND o.scope_sales
-GROUP BY 1
+WHERE date(o.ordered_at) = {{date}}GROUP BY 1
 ORDER BY 3 DESC
 ```
 
