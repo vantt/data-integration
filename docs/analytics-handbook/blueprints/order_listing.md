@@ -108,7 +108,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -137,6 +146,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -172,6 +189,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Total Collected": {
         "number_style": "currency",
@@ -207,6 +232,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Gross Revenue": {
         "number_style": "currency",
@@ -242,6 +275,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Total Discount": {
         "number_style": "currency",
@@ -278,7 +319,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -306,7 +356,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -387,7 +446,8 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.ordered_at) = current_dateGROUP BY 1
+WHERE date(o.ordered_at) = current_date
+GROUP BY 1
 ORDER BY 3 DESC
 ```
 
@@ -641,7 +701,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -670,6 +739,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -705,6 +782,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Total Collected": {
         "number_style": "currency",
@@ -740,6 +825,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Gross Revenue": {
         "number_style": "currency",
@@ -775,6 +868,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Total Discount": {
         "number_style": "currency",
@@ -811,7 +912,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -839,7 +949,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -920,7 +1039,8 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'GROUP BY 1
+WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
+GROUP BY 1
 ORDER BY 3 DESC
 ```
 
@@ -1194,7 +1314,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -1223,6 +1352,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Net Revenue": {
         "number_style": "currency",
@@ -1258,6 +1395,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Total Collected": {
         "number_style": "currency",
@@ -1293,6 +1438,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Gross Revenue": {
         "number_style": "currency",
@@ -1328,6 +1481,14 @@ FROM current_period c, previous_period p
 {
   "display": "scalar",
   "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ],
     "column_settings": {
       "Total Discount": {
         "number_style": "currency",
@@ -1364,7 +1525,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -1392,7 +1562,16 @@ FROM current_period c, previous_period p
 ```json metabase-viz
 {
   "display": "scalar",
-  "visualization_settings": {}
+  "visualization_settings": {
+    "scalar.comparisons": [
+      {
+        "id": "prev_period",
+        "type": "anotherColumn",
+        "column": "Previous",
+        "label": "vs. hôm trước"
+      }
+    ]
+  }
 }
 ```
 
@@ -1473,7 +1652,8 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Revenue"
 FROM fact_orders o
 LEFT JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE date(o.ordered_at) = {{date}}GROUP BY 1
+WHERE date(o.ordered_at) = {{date}}
+GROUP BY 1
 ORDER BY 3 DESC
 ```
 
