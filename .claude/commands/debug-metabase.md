@@ -1,50 +1,70 @@
 # Debug Metabase Dashboard
 
-Chạy debug script để lấy SQL thực tế + kết quả của từng card trong dashboard, sau đó phân tích và giải thích bằng tiếng Việt dễ hiểu.
+Debug số liệu sai trên Metabase dashboard bằng cách kiểm tra từng card, phát hiện vấn đề, và giải thích bằng tiếng Việt.
 
-## Steps
+## Flow
 
-1. **Chạy debug script** với dashboard URL (summary mode trước):
-   ```bash
-   METABASE_URL="http://127.0.0.1:3001" METABASE_API_KEY="$(grep METABASE_API_KEY .env.docker | cut -d= -f2- | tr -d '\"')" \
-     node scripts/debug/metabase-dashboard-debugger.js "$ARGUMENTS"
-   ```
-   Nếu thấy card nào 0 rows hoặc số lạ, deep-dive thêm:
-   ```bash
-   METABASE_URL="http://127.0.0.1:3001" METABASE_API_KEY="$(grep METABASE_API_KEY .env.docker | cut -d= -f2- | tr -d '\"')" \
-     node scripts/debug/metabase-dashboard-debugger.js "$ARGUMENTS" --card <card_id>
-   ```
+### Bước 1 — Chạy summary để lấy danh sách cards
 
-2. **Đọc output** và phân tích:
-   - Với mỗi card: so sánh SQL template vs SQL thực tế sau substitute
-   - Kiểm tra parameter mappings — card nào nhận filter, card nào không
-   - Phát hiện cards trả về 0 rows hoặc số liệu bất thường
-   - Giải thích tác động của từng filter lên kết quả
+```bash
+METABASE_URL="http://127.0.0.1:3001" METABASE_API_KEY="$(grep METABASE_API_KEY .env.docker | cut -d= -f2- | tr -d '\"')" \
+  node scripts/debug/metabase-dashboard-debugger.js "$ARGUMENTS"
+```
 
-3. **Báo cáo** bằng ngôn ngữ đơn giản, tập trung vào:
-   - Filter nào đang được áp dụng và nó loại trừ dữ liệu nào
-   - Card nào có vấn đề và tại sao
-   - Gợi ý kiểm tra thêm nếu cần (ví dụ: chạy SQL trực tiếp với điều kiện khác)
+Đọc output, tổng hợp danh sách cards với:
+- `card_id`, tên card, tab
+- Row count (0 rows = ⚠️, error = ❌, có data = ✓)
+- Ghi chú vấn đề sơ bộ (ví dụ: "0 rows khi có filter scope")
 
-## Phân tích cần làm
+### Bước 2 — Hỏi user muốn debug card nào
 
-Khi đọc output của script, hãy chú ý:
+Sau khi đọc summary output, dùng **`AskUserQuestion`** để hỏi user:
+- Liệt kê tất cả cards với emoji trạng thái (⚠️/❌/✓) và tên
+- Cho phép chọn nhiều cards (multiSelect: true)
+- Nếu có card nào rõ ràng có vấn đề (0 rows hoặc error), đánh dấu "(đáng ngờ)" trong tên
+
+**Format câu hỏi:**
+```
+question: "Card nào bạn muốn debug chi tiết?"
+header: "Chọn card"
+multiSelect: true
+options: [mỗi card là một option, label = "card_id: tên card", description = "Tab: X | Rows: Y | [ghi chú vấn đề nếu có]"]
+```
+
+### Bước 3 — Deep-dive từng card được chọn
+
+Với mỗi card_id user chọn, chạy:
+
+```bash
+METABASE_URL="http://127.0.0.1:3001" METABASE_API_KEY="$(grep METABASE_API_KEY .env.docker | cut -d= -f2- | tr -d '\"')" \
+  node scripts/debug/metabase-dashboard-debugger.js "$ARGUMENTS" --card <card_id>
+```
+
+### Bước 4 — Phân tích và giải thích
+
+Với mỗi card đã deep-dive, phân tích:
 
 **Filter analysis:**
 - `scope` filter → loại trừ channel nào? SQL dùng `channel_code =` hay `channel_brand =` hay `market =`?
 - `date` filter → date range là gì? SQL dùng `date_key BETWEEN` hay `ordered_at >=`? ICT hay UTC?
 - `category` filter → map vào column nào trong fact table?
+- Card có parameter mapping không? Nếu không → card show ALL data, không bị ảnh hưởng bởi dashboard filter
 
 **Data quality signals:**
-- Card trả về 0 rows → filter quá hẹp? hay thiếu data?
-- Card không có parameter mapping → không bị ảnh hưởng bởi dashboard filter (có thể là bug)
-- `(không có filter)` trên một parameter → card đang show ALL data thay vì filtered
+- 0 rows → filter quá hẹp? hay thiếu data gốc?
+- `(không có filter)` trên một parameter → card bỏ qua filter này
+- SQL template dùng `{{variable}}` nhưng không có mapping → biến không được thay thế
 
 **Common issues trong stack này:**
 - `date_key` là ICT date integer (YYYYMMDD), không phải timestamp → filter sai nếu dùng timestamp
 - `status IN ('CANCELLED','VOIDED')` phải được exclude trong revenue cards
 - `scope` có thể map vào `channel_code`, `channel_brand`, hoặc `market` — check SQL template
-- Shopee orders: `net_revenue` từ fact_orders có thể = 0, revenue thực ở fact_us_shipment_economics
+- US orders: `net_revenue` từ fact_orders có thể = 0, revenue thực ở `fact_us_shipment_economics`
+
+**Báo cáo mỗi card:**
+- Tóm tắt 1-2 câu: card đang làm gì, filter nào đang áp dụng
+- Vấn đề phát hiện (nếu có) và nguyên nhân
+- Gợi ý fix hoặc kiểm tra thêm
 
 ## User Arguments
 
