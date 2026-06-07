@@ -28,9 +28,12 @@
 const path = require('path');
 const fs   = require('fs');
 
-const MetabaseCore = require(
+const MetabaseCore   = require(
   path.join(__dirname, '../../.skills/metabase-automation/lib/metabase_core')
 );
+const DashboardCache = require(path.join(__dirname, 'lib/dashboard-cache'));
+
+const CACHE_DIR = path.join(__dirname, '../../.cache/metabase');
 
 // ---------------------------------------------------------------------------
 // Config
@@ -60,10 +63,11 @@ function parseArgs() {
     process.exit(1);
   }
   const rawUrl   = args[0];
-  const cardIdx  = args.indexOf('--card');
+  const cardIdx   = args.indexOf('--card');
   const targetCard = cardIdx !== -1 ? parseInt(args[cardIdx + 1], 10) : null;
-  const allMode  = args.includes('--all');
-  return { rawUrl, targetCard, allMode };
+  const allMode   = args.includes('--all');
+  const noCache   = args.includes('--no-cache');
+  return { rawUrl, targetCard, allMode, noCache };
 }
 
 // ---------------------------------------------------------------------------
@@ -195,8 +199,8 @@ async function executeCard(core, dashboardId, dashcard, queryParams) {
 
 async function main() {
   loadEnv();
-  const { rawUrl, targetCard, allMode } = parseArgs();
-  const { dashboardId, filterParams }   = parseDashboardUrl(rawUrl);
+  const { rawUrl, targetCard, allMode, noCache } = parseArgs();
+  const { dashboardId, filterParams }            = parseDashboardUrl(rawUrl);
 
   const metabaseUrl = (process.env.METABASE_URL || 'http://127.0.0.1:3001').replace(/\/$/, '');
   const apiKey      = process.env.METABASE_API_KEY || process.env.METABASE_SESSION_ID;
@@ -204,14 +208,24 @@ async function main() {
 
   if (!apiKey) { console.error('❌  Set METABASE_API_KEY or METABASE_SESSION_ID'); process.exit(1); }
 
-  const core = new MetabaseCore(metabaseUrl, apiKey, { authHeader });
+  const core  = new MetabaseCore(metabaseUrl, apiKey, { authHeader });
+  const cache = new DashboardCache(CACHE_DIR);
 
-  // ── Fetch dashboard ──────────────────────────────────────────────────────
+  // ── Fetch dashboard (cache-aware) ────────────────────────────────────────
   console.log(`${SEP}\nMETABASE DASHBOARD DEBUGGER\nURL: ${rawUrl}\n${SEP}`);
 
   let dashboard;
-  try { dashboard = await core.request(`/api/dashboard/${dashboardId}`); }
-  catch (err) { console.error(`❌  Dashboard ${dashboardId} not found: ${err.message}`); process.exit(1); }
+  const cached = !noCache && cache.get(dashboardId);
+  if (cached) {
+    dashboard = cached;
+    console.log(`[cache] Dashboard ${dashboardId} loaded from cache (age: ${cache.age(dashboardId)}). Use --no-cache to refresh.`);
+  } else {
+    if (noCache) cache.invalidate(dashboardId);
+    try { dashboard = await core.request(`/api/dashboard/${dashboardId}`); }
+    catch (err) { console.error(`❌  Dashboard ${dashboardId} not found: ${err.message}`); process.exit(1); }
+    cache.set(dashboardId, dashboard);
+    console.log(`[api] Dashboard ${dashboardId} fetched and cached.`);
+  }
 
   const dashParams = dashboard.parameters || [];
   const dashcards  = (dashboard.dashcards || dashboard.ordered_cards || []);
