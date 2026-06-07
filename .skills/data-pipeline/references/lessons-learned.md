@@ -3759,3 +3759,24 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 3. `scope_sales` ≠ "exclude cancelled": `scope_sales = is_sales_channel AND status NOT IN (CANCELLED, Voided)`. On all-channel dashboards use the explicit status filter only.
 
 **Reference:** `docs/analytics-handbook/blueprints/order_listing.md` — Net Revenue / Total Collected / Gross Revenue / Total Discount SQL · `transformation/models/marts/sales/fact_orders.sql` (revenue field definitions)
+
+### L116 — Orders by Channel SQL: missing newline before GROUP BY causes parse error
+
+**Group:** TRUST
+
+**Symptom:** The "Orders by Channel" bar chart on Order Listing [All] (cards 826/838/850) showed a SQL parse error in Metabase: `"Parser Error: syntax error at or near "BY""`. The chart was completely broken on all 3 tabs.
+
+**Root cause:** Blueprint SQL was authored with the WHERE clause and GROUP BY concatenated without a newline:
+```sql
+WHERE date(o.ordered_at) = current_dateGROUP BY 1
+```
+DuckDB tokenizer saw `current_dateGROUP` as an unknown identifier and then could not parse `BY 1` alone.
+
+**Fix:** Add newline between WHERE predicate and GROUP BY. All 3 tabs had the same bug (Today, Yesterday, By Date variants).
+
+**Rules:**
+1. SQL GROUP BY, ORDER BY, HAVING, LIMIT — always start on a new line. Never concatenate to the end of a WHERE line.
+2. After blueprint edits with find-replace, spot-check the rendered SQL for missing whitespace at clause boundaries.
+3. Run `/api/card/<id>/query` via the Metabase API to confirm queries execute before considering a deployment done.
+
+**Reference:** `docs/analytics-handbook/blueprints/order_listing.md` — "Orders by Channel" SQL, Today/Yesterday/By Date tabs
