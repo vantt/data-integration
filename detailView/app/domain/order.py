@@ -159,6 +159,20 @@ class CostRow:
 
 
 @dataclass
+class CogsItem:
+    """Per-SKU COGS line from int_order_cogs_reconciled. Grain: (order_code, sku)."""
+    sku: str | None = None
+    variant_id: int | None = None
+    cogs_goods_sapo: Decimal | None = None   # Sapo-MAC primary
+    cogs_goods_misa: Decimal | None = None   # MISA TK632 cross-check (None if absent)
+    cogs_goods_primary: Decimal | None = None  # value used in P&L
+    cogs_source: str | None = None           # sapo_mac | both | misa | none
+    qty_sapo: float | None = None
+    is_promo: bool = False                   # gift line (line_revenue = 0)
+    is_gift_no_invoice: bool | None = None   # Sapo has cost, MISA has no entry at all
+
+
+@dataclass
 class Payment:
     payment_method_name: str | None = None
     payment_method_type: str | None = None
@@ -228,6 +242,7 @@ class OrderDetail:
     financial: OrderFinancial = field(default_factory=OrderFinancial)
     line_items: list[LineItem] = field(default_factory=list)
     cost_ledger: list[CostRow] = field(default_factory=list)
+    cogs_items: list[CogsItem] = field(default_factory=list)
     payments: list[Payment] = field(default_factory=list)
     returns: list[ReturnEvent] = field(default_factory=list)
     shipments: list[Shipment] = field(default_factory=list)

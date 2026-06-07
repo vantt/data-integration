@@ -65,6 +65,8 @@ class DuckDbOrderRepository:
             return_rows = _safe_fetch(conn, "order_returns", [canonical_code])
             # Shipments join on order_code (fact_fulfillments has no order_id FK).
             shipment_rows = _safe_fetch(conn, "order_shipments", [canonical_code])
+            # Per-SKU COGS from int_order_cogs_reconciled (keyed by order_code, not order_id).
+            cogs_item_rows = _safe_fetch(conn, "order_cogs_items", [canonical_code])
             # Customer outreach action — optional, only fetched when customer_key is present.
             cust_action_rows = (
                 _safe_fetch(conn, "order_customer_action", [customer_key])
@@ -83,6 +85,7 @@ class DuckDbOrderRepository:
             financial=om.map_financial(header_row),
             line_items=[om.map_line_item(r) for r in line_rows],
             cost_ledger=[om.map_cost_row(r) for r in cost_rows],
+            cogs_items=[om.map_cogs_item(r) for r in cogs_item_rows],
             payments=[om.map_payment(r) for r in payment_rows],
             returns=[om.map_return_event(r) for r in return_rows],
             shipments=[om.map_shipment(r) for r in shipment_rows],

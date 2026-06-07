@@ -10,6 +10,7 @@ from typing import Any
 
 from app.domain.order import (
     ChannelInfo,
+    CogsItem,
     CostRow,
     CustomerRef,
     LineItem,
@@ -155,6 +156,20 @@ def map_cost_row(row: Row) -> CostRow:
         source_system=rc.as_str(row.get("source_system")),
         source_record=rc.as_str(row.get("source_record")),
         fee_source=rc.as_str(row.get("fee_source")),
+    )
+
+
+def map_cogs_item(row: Row) -> CogsItem:
+    return CogsItem(
+        sku=rc.as_str(row.get("sku")),
+        variant_id=rc.as_int(row.get("variant_id")),
+        cogs_goods_sapo=rc.as_decimal(row.get("cogs_goods_sapo")),
+        cogs_goods_misa=rc.as_decimal(row.get("cogs_goods_misa")),
+        cogs_goods_primary=rc.as_decimal(row.get("cogs_goods_primary")),
+        cogs_source=rc.as_str(row.get("cogs_source")),
+        qty_sapo=rc.as_float(row.get("qty_sapo")),
+        is_promo=rc.as_bool(row.get("is_promo")) or False,
+        is_gift_no_invoice=rc.as_bool(row.get("is_gift_no_invoice")),
     )
 
 

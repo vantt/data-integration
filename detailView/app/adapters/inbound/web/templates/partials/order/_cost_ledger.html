@@ -1,9 +1,12 @@
 {#
   Order > Financial > Cost breakdown (grouped ledger).
-  Rows grouped by cost_category: COGS / PLATFORM_FEE / TAX / SHIPPING / DISCOUNT.
+  Rows grouped by cost_category: COGS+PROMO_GOODS (merged, no total) / PLATFORM_FEE / TAX / SHIPPING / DISCOUNT.
   Per row: cost_type, amount, source_system, source_record, fee_source (actual/estimated).
   Source: fact_order_costs.
   Rendered inside _financial.html — not a standalone tab panel.
+  NOTE: COGS and PROMO_GOODS are merged into one line-items section — no subtotal shown because
+  promo_goods_cost is already embedded in cogs_amount (Sapo-MAC includes gift lines at revenue=0).
+  Showing a combined total would double-count.
 #}
 {% from "macros.html" import badge, panel_head %}
 {% set rows = order.cost_ledger %}
@@ -11,22 +14,6 @@
 {% if rows %}
 
 {{ panel_head("Cost breakdown", "fact_order_costs") }}
-
-{# Fixed display order; unknown categories appended after #}
-{% set cat_order = ["COGS", "DISCOUNT", "PROMO_GOODS", "PLATFORM_FEE", "OVERHEAD"] %}
-{% set present = [] %}
-{% for row in rows %}
-  {% if row.cost_category not in present %}
-    {% set _ = present.append(row.cost_category) %}
-  {% endif %}
-{% endfor %}
-{% set ordered = [] %}
-{% for c in cat_order %}
-  {% if c in present %}{% set _ = ordered.append(c) %}{% endif %}
-{% endfor %}
-{% for c in present %}
-  {% if c not in cat_order %}{% set _ = ordered.append(c) %}{% endif %}
-{% endfor %}
 
 {% set cat_tone = {
   "COGS": "good",
@@ -37,6 +24,90 @@
   "PROMO_GOODS": "accent",
   "OVERHEAD": "accent"
 } %}
+
+{# ── COGS per-SKU section — from int_order_cogs_reconciled ── #}
+{# Each row = one SKU. Promo/gift lines flagged inline. Total shown in header. #}
+{# PROMO_GOODS rows from fact_order_costs are suppressed — cost is visible here. #}
+{% set cogs_items = order.cogs_items %}
+{% if cogs_items %}
+  {% set cogs_total = namespace(val=0) %}
+  {% for item in cogs_items %}
+    {% if item.cogs_goods_primary is not none %}
+      {% set cogs_total.val = cogs_total.val + item.cogs_goods_primary %}
+    {% endif %}
+  {% endfor %}
+<div class="group" data-open="true">
+  <div class="group__head">
+    <div class="group__cat">
+      <span class="group__chev">▾</span>
+      {{ badge("COGS", "good") }}
+      <span class="wf-tag" style="margin-left:6px">per SKU · Sapo-MAC</span>
+    </div>
+    <span class="group__total">{{ cogs_total.val | vnd }}</span>
+  </div>
+  <div class="group__body tbl-wrap" style="border-radius:0;border:0;border-top:1px solid var(--border)">
+    <table class="tbl tbl--ledger">
+      <colgroup>
+        <col class="col-type" />
+        <col class="col-source" />
+        <col class="col-record" />
+        <col class="col-feesrc" />
+        <col class="col-amount" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Source</th>
+          <th>Variant ID</th>
+          <th>Fee src</th>
+          <th class="num-h">Amount (Sapo)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in cogs_items %}
+        <tr>
+          <td class="cell-strong mono" style="font-size:12px">
+            {{ item.sku or "—" }}
+            {% if item.is_promo %}{{ badge("gift", "accent") }}{% endif %}
+          </td>
+          <td class="muted">
+            {% if item.cogs_source == "both" %}{{ badge("Sapo+MISA", "good") }}
+            {% elif item.cogs_source == "sapo_mac" %}{{ badge("Sapo-MAC", "neutral") }}
+            {% elif item.cogs_source == "misa" %}{{ badge("MISA", "warn") }}
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td class="mono muted" style="font-size:11px">{{ item.variant_id or "—" }}</td>
+          <td>{{ badge("actual", "good") }}</td>
+          <td class="num" style="white-space: normal">
+            {{ item.cogs_goods_primary | vnd }}
+            {% if item.cogs_goods_misa is not none %}
+              <div class="caption" style="margin-top:2px">MISA: {{ item.cogs_goods_misa | vnd }}</div>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+{# ── All other cost categories ── #}
+{# COGS rendered per-SKU above; PROMO_GOODS suppressed (embedded in COGS per-SKU) #}
+{% set cat_order = ["DISCOUNT", "PLATFORM_FEE", "OVERHEAD"] %}
+{% set present = [] %}
+{% for row in rows %}
+  {% if row.cost_category not in present and row.cost_category not in ("COGS", "PROMO_GOODS") %}
+    {% set _ = present.append(row.cost_category) %}
+  {% endif %}
+{% endfor %}
+{% set ordered = [] %}
+{% for c in cat_order %}
+  {% if c in present %}{% set _ = ordered.append(c) %}{% endif %}
+{% endfor %}
+{% for c in present %}
+  {% if c not in cat_order %}{% set _ = ordered.append(c) %}{% endif %}
+{% endfor %}
 
 {% for cat in ordered %}
   {% set cat_rows = rows | selectattr("cost_category", "equalto", cat) | list %}
@@ -50,9 +121,6 @@
       <div class="group__cat">
         <span class="group__chev">▾</span>
         {{ badge(cat or "UNKNOWN", cat_tone.get(cat, "neutral")) }}
-        {% if cat in ("PROMO_GOODS", "OVERHEAD") %}
-          <span class="group__new-tag">NEW</span>
-        {% endif %}
         {% if cat == "OVERHEAD" %}
           <span class="wf-tag" style="margin-left:6px">(allocated)</span>
         {% endif %}
@@ -103,7 +171,7 @@
 
 <div class="note-line">
   <span class="caveat__mark">ⓘ</span>
-  <span>Each row is traceable to its source system + record. Fee source marks actual vs estimated.</span>
+  <span>Each row is traceable to its source system + record. Fee source marks actual vs estimated. Promo goods cost (hàng tặng) đã nhúng trong COGS — không cộng thêm lần 2.</span>
 </div>
 
 {% else %}
