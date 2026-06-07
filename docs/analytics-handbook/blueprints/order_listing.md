@@ -11,7 +11,8 @@ uses_concepts: [net_revenue, orders_count]
 > **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
 > **Scope:** N/A — công cụ đối soát với Sapo, liệt kê toàn bộ đơn hàng không loại trừ (kể cả CANCELLED, B2B, tất cả kênh).
 
-All SQL: no scope filter.
+- **Total Orders / Cancelled Orders / Order Detail List / distribution cards**: no status filter — counts ALL orders including CANCELLED for reconciliation against Sapo Admin.
+- **Revenue KPIs (Net Revenue, Total Collected, Gross Revenue, Total Discount)**: explicit `AND status NOT IN ('CANCELLED', 'Voided')` — Sapo keeps original amounts on cancelled orders, so revenue must be filtered by status. Cannot use `scope_sales` (that also filters is_sales_channel).
 ## 📂 Collection: Operations > Daily Monitoring
 
 Dashboard đối soát đơn hàng — xác minh tính đúng đắn và đầy đủ của dữ liệu BI so với Sapo.
@@ -121,11 +122,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date),
+    WHERE date(ordered_at) = current_date
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Net Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -154,11 +157,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date),
+    WHERE date(ordered_at) = current_date
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Total Collected", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -187,11 +192,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date),
+    WHERE date(ordered_at) = current_date
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Gross Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -220,11 +227,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date),
+    WHERE date(ordered_at) = current_date
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day')
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Total Discount", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -646,11 +655,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Net Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -679,11 +690,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Total Collected", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -712,11 +725,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Gross Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -745,11 +760,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '1 day'),
+    WHERE date(ordered_at) = current_date - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = current_date - INTERVAL '2 days')
+    WHERE date(ordered_at) = current_date - INTERVAL '2 days'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Total Discount", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1191,11 +1208,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}),
+    WHERE date(ordered_at) = {{date}}
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Net Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1224,11 +1243,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}),
+    WHERE date(ordered_at) = {{date}}
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Total Collected", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1257,11 +1278,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}),
+    WHERE date(ordered_at) = {{date}}
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Gross Revenue", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
@@ -1290,11 +1313,13 @@ FROM current_period c, previous_period p
 WITH current_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}}),
+    WHERE date(ordered_at) = {{date}}
+      AND status NOT IN ('CANCELLED', 'Voided')),
 previous_period AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day')
+    WHERE date(ordered_at) = {{date}} - INTERVAL '1 day'
+      AND status NOT IN ('CANCELLED', 'Voided'))
 SELECT c.val as "Total Discount", p.val as "Previous"
 FROM current_period c, previous_period p
 ```
