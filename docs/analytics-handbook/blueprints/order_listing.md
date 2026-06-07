@@ -7,21 +7,16 @@ uses_concepts: [scope_retail, net_revenue, orders_count]
 
 # Blueprint: Order Listing [Retail]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_retail` · Layer 2 (Retail Daily Monitoring) · Suffix `[Retail]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 > **Why:** Order listing is a retail operations tool for daily order processing review. B2B orders are tracked separately in B2B Operations dashboards.
-> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count)
 
 All SQL: `WHERE scope_retail`.
-
-**Design Spec**: [Order Listing](../designs/order_listing.md)
-**Playbook**: [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)
-
-> **Target Collection:** `Operations` > `Daily Monitoring`
-> **Role:** Sales Ops, Store Manager, Data Team
-> **Archetype:** Operational Cockpit
-
 ## 📂 Collection: Operations > Daily Monitoring
 
 Dashboard đối soát đơn hàng — xác minh tính đúng đắn và đầy đủ của dữ liệu BI so với Sapo.

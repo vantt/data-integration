@@ -14,14 +14,16 @@ uses_concepts: [scope_sales, net_revenue, gross_revenue]
 
 Bảng đơn hàng + KPI dùng CHUNG một tập order (mọi status, không loại CANCELLED/Voided) trong cùng date-range + channel filter → KPI cộng đúng những gì hiển thị trong bảng.
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` · Layer 1.5 (Finance / Audit) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` · Layer L1.5 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
 > **Why:** Revenue explorer is an audit tool covering all valid sales orders. Users can optionally filter further by segment via dashboard filters.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_revenue`](../semantic/metrics.md#gross_revenue)
 
 Base SQL: `WHERE scope_sales`. Segment drill-down via dashboard filter, not hardcoded SQL.
-
 ## 📂 Collection: Order Management
 
 ### Dashboard: Order Revenue Explorer

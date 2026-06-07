@@ -7,22 +7,16 @@ uses_concepts: [scope_sales, net_revenue, orders_count, aov]
 
 # 📘 Blueprint: Sales Monthly Business Review [All]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` · Layer 1 (Executive) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` · Layer L1 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
 > **Why:** Monthly business review is an executive-level dashboard covering the full company performance across all customer segments. Segment-specific breakdowns are shown as sub-dimensions, not separate filters.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
 
 All SQL: `WHERE scope_sales`. For segment comparison charts, add `customer_type` as a dimension.
-
-**Design Spec**: [Sales Monthly Business Review](../designs/sales_monthly_review.md)
-
-> **Target Collection:** `Executive`
-> **Role:** Sales Director, CFO, Regional Managers
-> **Archetype:** Executive Pulse (4 tabs)
-
-Monthly Business Review dashboard — 4 tabs: Tong quan (KPIs + target progress + 12-month trend), Hieu suat tai chinh (branch target achievement + variance), Dong luc tang truong (channels + segments), Suc khoe van hanh (discounts + returns + products). All KPIs have MoM comparison.
-
 ## 📂 Collection: Executive
 
 Strategic dashboards for leadership — company performance, targets, and high-level KPIs.

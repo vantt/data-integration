@@ -15,12 +15,10 @@ uses_concepts: []
 > **Archetype:** Operational Cockpit
 > **Database:** `Ingestion Health` (DuckDB — `/app/data_lake/monitoring/ingestion_health.duckdb`)
 
-## Segmentation Scope
+## Semantic Contract
 
-N/A — infrastructure monitoring. Scope/segmentation concepts do not apply. Dashboard monitors ingestion pipeline health (SLA status, recon drift, volume trends, failure logs) at the source level, independent of business customer segment definitions.
-
-Monitoring wall for ingestion pipeline: per-source SLA status tiles, recon drift alerts, 30-day volume trends, and failure log. Answers "did data move today, is volume sane, is anything drifting?" in < 10 seconds.
-
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** N/A — infrastructure monitoring. Scope/segmentation concepts do not apply. Dashboard monitors ingestion pipeline health (SLA status, recon drift, volume trends, failure logs) at the source level, independent of business customer segment definitions.
 ## 📂 Collection: Operations > Daily Monitoring
 
 ### 🖥️ Dashboard: Ingestion Health Monitor [Internal]

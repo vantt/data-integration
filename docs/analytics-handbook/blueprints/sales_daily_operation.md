@@ -7,25 +7,16 @@ uses_concepts: [scope_retail, net_revenue, orders_count, aov]
 
 # Daily Sales Performance Blueprint [Retail]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_retail` · Layer 2 (Retail Operations) · Suffix `[Retail]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 > **Why:** Daily sales ops tracks retail performance. B2B orders have fundamentally different AOV (~2.5M vs 450K VND) and no promotion mechanics — mixing distorts all daily KPIs.
-> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
 
 All SQL: `WHERE scope_retail`. Do not re-derive as `customer_type = 'RETAIL' AND is_sales_channel = true AND status NOT IN (...)`.
-
-**Design Spec**: [Daily Sales Dashboard (Redesign)](../designs/sales_daily_operation.md)
-**Playbook**: [Daily Sales Operations](../playbooks/sales_daily_operation.md)
-**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
-**Layer**: L2 - Retail Operations
-
-> **⚠️ SCOPE CHANGE (2026-04-19):** Dashboard này chỉ hiển thị **retail sales orders** (`customer_type = 'RETAIL'` + `is_sales_channel = true`).
-> Excludes: B2B orders, US CrossBorder, System, Internal orders.
-> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
-
-Redesigned dashboard with integrated DoD comparisons, gauge health score, section headings, and improved viz choices. Real-time monitoring — data for today, compared with yesterday. **Chỉ bao gồm retail customers.**
-
 ## 📂 Collection: Operations > Daily Monitoring
 
 ### Dashboard: Daily Sales [Retail]

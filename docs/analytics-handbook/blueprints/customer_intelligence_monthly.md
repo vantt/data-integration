@@ -19,12 +19,13 @@ uses_concepts:
 > **Role:** CEO, Marketing Manager, Sales Ops
 > **Archetype:** Operational Cockpit (3 tabs)
 
-## Segmentation Scope
+## Semantic Contract
 
-Cross-segment analytics dashboard — explicitly includes **both retail and wholesale** customer segments for head-to-head comparison. Uses scope_sales (all paying channels) without retail-only filtering. Monthly deep-dive on customer health scorecard, value concentration, segment dynamics, and purchase behavior across all business units. Tabs show Customer Health, Segment Dynamics, and Acquisition Quality with explicit breakdowns by customer_type. For retail-only operational dashboards, reference `customer_operational_dashboard.md` or `customer_retention_dashboard.md`.
-
-**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_sales) and [Cross-Segment Analysis](../guides/report_segmentation.md#cross-segment)
-
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` · Layer L3 `[Cross]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`retention_rate`](../semantic/metrics.md#retention_rate) · [`customer_acquisition`](../semantic/metrics.md#customer_acquisition)
 ## 📂 Collection: Marketing & Customers
 
 Channel performance, customer acquisition, retention, segmentation, and campaign analysis.

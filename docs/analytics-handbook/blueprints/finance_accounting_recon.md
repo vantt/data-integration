@@ -24,11 +24,13 @@ All questions use `fact_order_economics` flags as proxy:
 
 ---
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** N/A — this is a reconciliation dashboard comparing Sapo order totals against MISA accounting entries. It operates at the accounting record level, not filtered by customer segment.
-> **Note:** Revenue figures come from `int_misa_sales_lines` (MISA source), not `fact_orders`. No `scope_sales` filter applies here.
-> **Ref:** [rules.md#COGSSourcing](../semantic/rules.md)
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** N/A — MISA reconciliation; no order-level scope filter applies.
+>
+> **Concepts used:**
+> [`net_revenue`](../semantic/metrics.md#net_revenue)
 
 Do not apply order-level scope filters to MISA reconciliation queries.
 

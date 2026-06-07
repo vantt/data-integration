@@ -11,14 +11,14 @@ uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, service
 
 Kiem tra chi phi ban hang Shopee — ty le tien thuc nhan sau phi san, phan tich co cau phi, xu huong MoM, va chi tiet don hang/san pham bi mat margin nhieu nhat.
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` filtered to Shopee channel · Layer 3 (Analytics) · Suffix `[Cross]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L3 `[Cross]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Shopee channel economics analyzes all orders placed via Shopee platform regardless of customer type. Both retail and B2B customers may use Shopee. Channel filter: `channel_name ILIKE '%Shopee%'` or equivalent.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [rules.md#ShopeeServiceFee](../semantic/rules.md)
-
-Base: `WHERE scope_sales AND <shopee_channel_filter>`. Margin: additionally `AND has_cogs`.
-
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`service_fee_revenue`](../semantic/metrics.md#service_fee_revenue) · [`shopee_service_fee`](../semantic/metrics.md#shopee_service_fee)
 ## 📂 Collection: Analytics
 
 ### Dashboard: Shopee Channel Economics [Cross]

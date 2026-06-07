@@ -7,23 +7,16 @@ uses_concepts: [scope_b2b, net_revenue, orders_count]
 
 # B2B Orders Tracking Blueprint [B2B]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_b2b` · Layer 2 (B2B Operations) · Suffix `[B2B]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_b2b` · Layer L2 `[B2B]` · [`segments.md#scope_b2b`](../semantic/segments.md#scope_b2b)
 > **Why:** B2B order tracking monitors WHOLESALE and PARTNER orders — payment status, order age, key accounts. Retail orders are excluded.
-> **Ref:** [segments.md#scope_b2b](../semantic/segments.md#scope_b2b)
+>
+> **Concepts used:**
+> [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count)
 
 All SQL: `WHERE scope_b2b`.
-
-**Scope**: scope_b2b (`customer_type IN ('WHOLESALE', 'PARTNER')` + `is_sales_channel = true`)
-**Layer**: L2 - B2B Operations
-
-> **NEW (2026-04-19):** Order tracking cho B2B business line.
-> Focus: payment status, fulfillment, outstanding receivables.
-> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
-
-Track B2B order lifecycle — payment collection, fulfillment status, outstanding amounts. Key for accounts receivable management.
-
 ## 📂 Collection: Operations > B2B Operations
 
 > **Database:** Sapo

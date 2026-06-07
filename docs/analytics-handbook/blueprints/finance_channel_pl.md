@@ -21,14 +21,16 @@ uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, channel
 
 Dashboard phân tích lợi nhuận theo kênh bán hàng — waterfall từ doanh thu gộp đến lợi nhuận ròng sau phí platform, bảng điểm kênh, heatmap margin theo tháng, bảng biến động so kỳ trước, và cảnh báo loss-leader. Dành cho Finance Director và Sales Director trong MBR hàng tháng.
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L1.5 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Channel-level P&L requires all business lines (retail + B2B) to compare channel profitability fairly. Margin queries additionally filter `has_cogs = true`.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`channel_net_profit`](../semantic/metrics.md#channel_net_profit)
 
 Revenue SQL: `WHERE scope_sales`. Margin SQL: `WHERE scope_sales AND has_cogs`. Channel breakdown via `channel_name` or `channel_category`.
-
 ## 📂 Collection: Finance
 
 ### 🖥️ Dashboard: Channel P&L Deep Dive [Cross]

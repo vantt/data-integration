@@ -11,14 +11,16 @@ uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, channel
 
 Dashboard bien loi nhuan gop theo kenh ban hang — gross margin, doanh thu, COGS, xu huong theo thang, phan tich san pham. Dung cho MBR review hang thang.
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` with channel breakdown · Layer 3 (Analytics) · Suffix `[Cross]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L3 `[Cross]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Channel profitability compares performance across all sales channels (online, social, direct, wholesale). Requires all segments to properly attribute channel-level revenue and margin.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`channel_net_profit`](../semantic/metrics.md#channel_net_profit) · [`cogs_amount`](../semantic/metrics.md#cogs_amount)
 
 Revenue: `WHERE scope_sales`. Margin: `WHERE scope_sales AND has_cogs`. Channel breakdown via `channel_name` or `channel_category`.
-
 ## 📂 Collection: Executive
 
 ### Dashboard: Channel Profitability Monthly [Cross]

@@ -9,6 +9,27 @@ const fs = require("fs");
  * Usage: node deploy_from_markdown.js <path-to-docs.md> [--dry-run]
  */
 
+// Parse YAML frontmatter from blueprint (lines between first --- delimiters)
+function parseFrontmatter(content) {
+  if (!content.startsWith('---')) return {};
+  const end = content.indexOf('\n---', 3);
+  if (end === -1) return {};
+  const yaml = content.slice(4, end).trim();
+  const result = {};
+  for (const line of yaml.split('\n')) {
+    const match = line.match(/^(\w+):\s*(.+)/);
+    if (!match) continue;
+    const [, key, val] = match;
+    // Parse array syntax: [a, b, c]
+    if (val.trim().startsWith('[')) {
+      result[key] = val.trim().slice(1, -1).split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+      result[key] = val.trim().replace(/^["']|["']$/g, '');
+    }
+  }
+  return result;
+}
+
 /**
  * Flatten a viz block from the blueprint into Metabase's expected format.
  * Blueprints may nest settings under "visualization_settings" for readability,
@@ -111,6 +132,53 @@ async function main() {
   }
 
   console.log(`📖 Parsing blueprint: ${path.basename(absPath)}`);
+  const content = fs.readFileSync(absPath, 'utf8');
+
+  // Parse frontmatter and log scope metadata
+  const frontmatter = parseFrontmatter(content);
+  if (frontmatter.primary_scope) {
+    console.log(`📋 Scope: ${frontmatter.primary_scope} ${frontmatter.scope_indicator || ''}`);
+  }
+
+  // Pre-deploy validation gate — runs before any Metabase API calls
+  const validateBlueprintForDeploy = (fileContent) => {
+    const issues = [];
+    if (!fileContent.startsWith('---')) {
+      issues.push({ severity: 'error', msg: 'Missing YAML frontmatter' });
+    } else {
+      if (!/primary_scope:/i.test(fileContent)) issues.push({ severity: 'error', msg: "Frontmatter missing 'primary_scope'" });
+    }
+    if (!/##\s+Semantic Contract/i.test(fileContent)) {
+      issues.push({ severity: 'warn', msg: "Missing '## Semantic Contract' section (or older '## Segmentation Scope')" });
+    }
+    // SQL scope anti-patterns — warn only during migration period
+    if (/status\s+NOT\s+IN\s*\(\s*['"]CANCELLED['"]/i.test(fileContent))
+      issues.push({ severity: 'warn', msg: 'SQL re-derives cancellation filter — use pre-computed scope column' });
+    if (/customer_type\s*=\s*['"]RETAIL['"]/i.test(fileContent))
+      issues.push({ severity: 'warn', msg: "SQL uses raw customer_type='RETAIL' — use WHERE scope_retail" });
+    if (/customer_type\s+IN\s*\([^)]*WHOLESALE/i.test(fileContent))
+      issues.push({ severity: 'warn', msg: 'SQL uses raw customer_type IN (WHOLESALE,...) — use WHERE scope_b2b' });
+    return issues;
+  };
+
+  const deployIssues = validateBlueprintForDeploy(content);
+  const deployErrors = deployIssues.filter(i => i.severity === 'error');
+  const deployWarnings = deployIssues.filter(i => i.severity === 'warn');
+
+  if (deployWarnings.length > 0) {
+    console.log('\n⚠️  Pre-deploy warnings:');
+    deployWarnings.forEach(i => console.log(`   ⚠️  ${i.msg}`));
+  }
+  if (deployErrors.length > 0) {
+    console.error('\n❌ Pre-deploy validation failed:');
+    deployErrors.forEach(i => console.error(`   ❌ ${i.msg}`));
+    console.error('\nFix errors before deploying. Run: node validate-analytics-artifacts.js --blueprints-only');
+    process.exit(1);
+  }
+  if (deployWarnings.length > 0) {
+    console.log('   (warnings are non-blocking during SQL migration period)\n');
+  }
+
   const config = parseMarkdownConfig(absPath);
 
   // 2. Auth (Shared with deploy_from_config)

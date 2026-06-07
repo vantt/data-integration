@@ -13,12 +13,13 @@ uses_concepts:
 > **Role:** Marketing Manager, Customer Success, CEO
 > **Archetype:** Operational Cockpit (3 tabs)
 
-## Segmentation Scope
+## Semantic Contract
 
-Retention analytics — repeat purchase rate, churn rate, cohort retention, lifecycle status — track repeat-purchase behavior **for retail customers only** (customer_type = 'RETAIL'). Wholesale customers have different contract and credit-based renewal logic and are excluded. Cohort heatmap, reactivation signals, and all KPIs are computed on the retail-only subset.
-
-**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail)
-
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail)
 ## 📂 Collection: Marketing & Customers
 
 Channel performance, customer acquisition, retention, segmentation, and campaign analysis.

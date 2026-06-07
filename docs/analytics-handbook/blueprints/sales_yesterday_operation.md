@@ -7,25 +7,16 @@ uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate]
 
 # Yesterday's Sales Performance Blueprint [Retail]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_retail` · Layer 2 (Retail Operations) · Suffix `[Retail]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 > **Why:** Yesterday's sales review is a retail operations dashboard. Discount rate and AOV comparisons are only meaningful within a single customer segment.
-> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate)
 
 All SQL: `WHERE scope_retail`.
-
-**Design Spec**: [Yesterday's Sales Dashboard (Redesign)](../designs/sales_yesterday_operation.md)
-**Playbook**: [Yesterday's Sales Operations](../playbooks/sales_yesterday_operation.md)
-**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
-**Layer**: L2 - Retail Operations
-
-> **⚠️ SCOPE CHANGE (2026-04-19):** Dashboard này chỉ hiển thị **retail orders** (`customer_type = 'RETAIL'`).
-> B2B orders (WHOLESALE, PARTNER) được track trong **B2B Daily Sales [B2B]**.
-> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
-
-Redesigned dashboard with integrated DoD comparisons, gauge health score, section headings, and improved viz choices. **Chỉ bao gồm retail customers.** See Design Spec for rationale.
-
 ## 📂 Collection: Operations > Daily Monitoring
 
 ### Dashboard: Yesterday's Sales [Retail]

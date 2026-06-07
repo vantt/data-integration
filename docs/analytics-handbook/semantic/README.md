@@ -73,9 +73,9 @@ expression hoặc filter SQL
 
 ## Blueprint Integration Standard (mandatory)
 
-Mỗi blueprint **phải** khai báo scope ở đầu file theo 2 cách sau:
+Mỗi blueprint **phải** có 2 thành phần:
 
-### 1. YAML Frontmatter (machine-readable)
+### 1. YAML Frontmatter (machine-readable, dòng 1 của file)
 
 ```yaml
 ---
@@ -86,18 +86,53 @@ uses_concepts: [scope_retail, net_revenue, discount_rate, aov]
 ---
 ```
 
-### 2. `## Segmentation Scope` Section (human-readable)
+Được parse bởi `deploy_from_markdown.js` để validate scope compliance trước khi deploy.
 
-Ngay sau title, trước Collection section:
+### 2. `## Semantic Contract` Section (LLM + human readable)
+
+Ngay sau title, trước Collection section. Mục đích: **context đầy đủ cho LLM khi đọc/viết SQL trong blueprint này** — không cần đọc thêm file nào khác để biết dùng concept gì.
 
 ```markdown
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_retail` · Layer 2 (Retail Operations) · Suffix `[Retail]`
-> **Why:** Retail-specific metrics (AOV, discount, promo effectiveness). B2B discount = fixed wholesale price, not promotion.
-> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer 2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
+> **Why:** Retail-specific metrics (AOV, discount, promo). B2B discount = fixed wholesale price — mixing distorts all KPIs.
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate)
 
-All SQL in this blueprint: `WHERE scope_retail`. Do not re-derive as `customer_type = 'RETAIL' AND is_sales_channel = true AND status NOT IN (...)`.
+All SQL: `WHERE scope_retail`. Do not re-derive as `customer_type = 'RETAIL' AND is_sales_channel = true AND status NOT IN (...)`.
+```
+
+#### Concept → file mapping (cho LLM tự resolve link)
+
+| Concept prefix / name | File |
+|---|---|
+| `scope_*`, `filter_*` | [`segments.md`](segments.md) |
+| `net_revenue`, `gross_revenue`, `total_collected`, `gross_profit`, `aov`, `discount_rate`, `orders_count`, `cogs_amount`, `return_rate`, `channel_net_profit`, và các metric khác | [`metrics.md`](metrics.md) |
+| `channel_name`, `channel_category`, `channel_format`, `customer_type`, `platform`, `order_status`, `fulfillment_status`, và các dimension khác | [`dimensions.md`](dimensions.md) |
+| `Order`, `Customer`, `Channel`, `Product`, `OrderEconomics`, và các entity khác | [`entities.md`](entities.md) |
+| VAT, COGS sourcing, promo goods, Shopee fee, overhead alloc | [`rules.md`](rules.md) |
+| Freshness SLA per mart | [`freshness.md`](freshness.md) |
+
+### Multi-scope dashboards (tab-level split)
+
+```markdown
+## Semantic Contract
+
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md)
+> **Scope:** Per-tab split · Layer 2
+>
+> | Tab | Scope | SQL |
+> |---|---|---|
+> | [Retail] | `scope_retail` | `WHERE scope_retail` |
+> | [B2B] | `scope_b2b` | `WHERE scope_b2b` |
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue)
+
+Do not mix scopes within a single query.
 ```
 
 ### Scope assignment matrix
@@ -113,20 +148,6 @@ All SQL in this blueprint: `WHERE scope_retail`. Do not re-derive as `customer_t
 | Cross-segment analytics | `scope_sales` | `[Cross]` | With explicit customer_type breakdown |
 | US CrossBorder | `filter_us` | `[US]` | channel_name='US' ad-hoc filter |
 | Infrastructure / ingestion | `none` | `[Internal]` | No order scope |
-
-### Multi-scope dashboards (tab-level split)
-
-Khi dashboard có nhiều tab với scope khác nhau, khai báo từng tab:
-
-```markdown
-## Segmentation Scope
-
-> **Per-tab scope split:**
-> - Tab [Retail]: `WHERE scope_retail`
-> - Tab [B2B]: `WHERE scope_b2b`
->
-> Do not mix scopes within a single query.
-```
 
 ---
 

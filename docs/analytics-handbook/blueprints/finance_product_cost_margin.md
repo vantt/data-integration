@@ -18,14 +18,16 @@ uses_concepts: [scope_sales, filter_has_cogs, cogs_amount, gross_profit, net_rev
 
 Dashboard phân tích margin và chi phí theo từng SKU — xác định sản phẩm có margin tốt, phát hiện bất thường COGS so với trung bình 3 tháng.
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L1.5 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Product cost margin must cover all segments (retail + B2B) to give a true SKU-level profitability view. `has_cogs = true` required for valid margin calculation.
-> **Ref:** [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`cogs_amount`](../semantic/metrics.md#cogs_amount) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`net_revenue`](../semantic/metrics.md#net_revenue)
 
 All margin queries: `WHERE scope_sales AND has_cogs`.
-
 ## 📂 Collection: Finance
 
 ---

@@ -11,14 +11,16 @@ uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, cogs_am
 
 Ranking san pham theo lai gop va margin — top/bottom products, chi tiet theo kenh. Dung int_misa_sales_lines (COGS per product line).
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L1.5 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Product profitability covers all customer segments to give a true product margin view. SKU margin analysis requires `has_cogs = true`.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`cogs_amount`](../semantic/metrics.md#cogs_amount)
 
 All margin queries: `WHERE scope_sales AND has_cogs`.
-
 ## 📂 Collection: Executive
 
 ### Dashboard: Product Profitability [All]

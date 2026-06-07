@@ -11,12 +11,10 @@ uses_concepts: []
 > **Role:** All users (onboarding)
 > **Archetype:** Onboarding landing (1 text card, no tabs, no SQL)
 
-## Segmentation Scope
+## Semantic Contract
 
-N/A — onboarding landing page. Scope and segmentation concepts do not apply. Dashboard guides new users to the right collection based on their role and explains scope suffix naming conventions for all downstream dashboards.
-
-System landing page that guides new users to the right collection based on their role + explains scope suffix convention (Rule 6).
-
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** N/A — onboarding landing page. Scope and segmentation concepts do not apply. Dashboard guides new users to the right collection based on their role and explains scope suffix naming conventions for all downstream dashboards.
 ## 📂 Collection: 📍 Start Here
 
 ---

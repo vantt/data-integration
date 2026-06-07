@@ -7,24 +7,13 @@ uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, discoun
 
 # Sales Ops Weekly Review [Retail] Blueprint (Redesign)
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** Per-tab split · Layer 2 (Operations) · Suffix `[Retail]` (primary tab) + `[B2B]` (B2B tab)
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 >
-> | Tab | Scope | SQL |
-> |---|---|---|
-> | Retail review | `scope_retail` | `WHERE scope_retail` |
-> | B2B review | `scope_b2b` | `WHERE scope_b2b` |
->
-> **Ref:** [segments.md](../semantic/segments.md)
-
-Each tab applies its own scope. Do not blend segments in a single aggregation.
-
-**Design Spec**: [Sales Ops Weekly Review (Redesign)](../designs/sales_ops_weekly_review.md)
-**Playbook**: [Sales Ops Weekly Review](../playbooks/sales_ops_weekly_review.md)
-
-Redesigned dashboard with 3 tabs, integrated WoW comparisons, gauge for completion rate, combo-chart for daily trends, heatmap for peak hours, and conditional formatting throughout. Weekly operational review for Sales Ops / CS Lead.
-
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate)
 ## 📂 Collection: Operations > Periodic Reviews
 
 ### Dashboard: Sales Ops Weekly Review [Retail]

@@ -20,10 +20,13 @@ Dashboard kiểm tra tồn kho hàng ngày — OOS alerts, slow-mover exposure, 
 
 > **Database:** Sapo
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** N/A — inventory dashboard. Queries `fact_inventory_snapshots` or equivalent inventory mart, not `fact_orders`. No order-level scope filter applies.
-> **Ref:** [freshness.md](../semantic/freshness.md) for inventory mart SLA.
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** N/A — Inventory mart (`fact_inventory_snapshots`); no order-level scope filter.
+>
+> **Concepts used:**
+> [`inventory_quantity`](../semantic/metrics.md#inventory_quantity) · [`inventory_value`](../semantic/metrics.md#inventory_value)
 
 Inventory queries do not use `scope_sales`, `scope_retail`, or any order filter.
 

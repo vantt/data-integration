@@ -14,14 +14,16 @@ uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, cus
 > **Role:** Marketing Manager, Brand Manager, CMO
 > **Archetype:** Operational Cockpit (4 tabs)
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_retail` · Layer 2 (Marketing & Customers) · Suffix `[Retail]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 > **Why:** Monthly marketing deep-dive — channel strategy, customer acquisition, cohort retention, campaign ROI. All metrics require retail segment: B2B has no promo mechanics, acquisition is relationship-based.
-> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`customer_acquisition`](../semantic/metrics.md#customer_acquisition) · [`retention_rate`](../semantic/metrics.md#retention_rate)
 
 All SQL: `WHERE scope_retail`. Do not use `customer_type = 'RETAIL'` alone — use the pre-computed `scope_retail` column which also enforces `is_sales_channel` and status filters.
-
 ## 📂 Collection: Marketing & Customers
 
 Channel performance, customer acquisition, retention, segmentation, and campaign analysis.

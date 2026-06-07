@@ -7,18 +7,16 @@ uses_concepts: [scope_sales, net_revenue, fulfillment_status]
 
 # Logistics Operations Center Blueprint [All]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` · Layer 2 (Logistics) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` · Layer L2 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
 > **Why:** Logistics operations covers fulfillment status for all orders regardless of customer segment — shipping performance applies equally to retail and B2B shipments.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`fulfillment_status`](../semantic/dimensions.md#fulfillment_status)
 
 All SQL: `WHERE scope_sales`. Segment breakdown optional as a dimension.
-
-**Design Spec**: [Logistics Operations Center](../designs/logistics_operations.md)
-
-Operational cockpit for monitoring order fulfillment pipeline — fulfillment rate gauge, processing speed KPIs with DoD trends, stuck order escalation, staff performance. Real-time monitoring across 3 tabs.
-
 ## 📂 Collection: Operations > Daily Monitoring
 
 ### Dashboard: Logistics Operations Center [All]

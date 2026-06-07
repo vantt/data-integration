@@ -15,14 +15,13 @@ uses_concepts:
 
 **Design Spec**: [Marketing ROI](../designs/marketing_roi.md)
 
-## Segmentation Scope
+## Semantic Contract
 
-This dashboard isolates **retail-only marketing performance** using the `scope_retail` filter (customer_type = 'RETAIL'). ROAS calculations join marketing spend against completed orders from sales channels only. Marketing spend metrics pulled from `fact_marketing_spend`, revenue metrics from `fact_orders` filtered by channel and customer type. For wholesale or cross-channel ROI analysis, reference `customer_intelligence_monthly.md`.
-
-**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail)
-
-ROAS per channel — tong spend vs revenue, xu huong, chi tiet per kenh. Dung fact_marketing_spend + fact_orders.
-
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`marketing_spend`](../semantic/metrics.md#marketing_spend) · [`roas`](../semantic/metrics.md#roas)
 ## 📂 Collection: Marketing & Customers
 
 ### Dashboard: Marketing ROI [Retail]

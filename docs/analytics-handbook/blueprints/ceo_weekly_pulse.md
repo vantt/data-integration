@@ -16,16 +16,16 @@ uses_concepts: [scope_sales, net_revenue, orders_count, aov, gross_profit]
 > Dashboard này aggregate tất cả customer types (RETAIL + B2B) nhưng loại bỏ Internal channels.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` · Layer 1 (Executive) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` · Layer L1 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
 > **Why:** CEO weekly pulse shows the full company performance across all customer segments (retail + B2B + staff/KOL). This is the L1 executive view — not segmented by customer type.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`gross_profit`](../semantic/metrics.md#gross_profit)
 
 All SQL: `WHERE scope_sales`. Do not re-derive as `is_sales_channel = true AND status NOT IN (...)`.
-
-Redesigned dashboard with 3 tabs: Doanh thu & Target, Kenh ban hang, Khach hang & Canh bao. Features WoW comparisons on all KPIs, progress-toward-goal for MTD target, donut + grouped bar for channels, gauge for health metrics, and conditional formatting. 5-minute Monday morning CEO check-in.
-
 ## Collection: Executive
 
 ### Dashboard: CEO Weekly Pulse [All]

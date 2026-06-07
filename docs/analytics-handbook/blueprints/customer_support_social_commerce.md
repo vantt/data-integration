@@ -13,12 +13,13 @@ uses_concepts:
 
 **Design Spec**: [Social Commerce Operations](../designs/customer_support_social_commerce.md)
 
-## Segmentation Scope
+## Semantic Contract
 
-Single-view Operational Cockpit for CS Team Leader — real-time social commerce monitoring with DoD comparisons. Zero interactive filters. Covers **retail customers** via social channels only (Facebook, Zalo, Instagram; channel_format = 'Social'). Uses both `scope_retail` (customer_type = 'RETAIL') AND `filter_social` (channel_format = 'Social') filters to isolate retail-driven social commerce revenue and orders. For cross-channel or wholesale social analysis, reference `customer_intelligence_monthly.md`.
-
-**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail) and [Channel Segmentation](../guides/report_segmentation.md#filter_social)
-
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`filter_social`](../semantic/segments.md#filter_social) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count)
 ## 📂 Collection: Operations > Daily Monitoring
 
 ### Dashboard: Social Commerce Operations [Retail]

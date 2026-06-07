@@ -16,20 +16,16 @@ uses_concepts: [scope_sales, net_revenue, orders_count, aov, gross_profit, filte
 > Dashboard này aggregate tất cả customer types (RETAIL + B2B) nhưng loại bỏ Internal channels.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` · Layer 1 (Executive) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L1 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Monthly scorecard provides the CEO-level full business view. Revenue: `WHERE scope_sales`. P&L metrics additionally require `has_cogs = true`.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 
 Revenue/order SQL: `WHERE scope_sales`. P&L SQL: `WHERE scope_sales AND has_cogs`.
-
-> **Target Collection:** `Executive`
-> **Role:** CEO, Board
-> **Archetype:** Executive Pulse (3 tabs)
-
-Comprehensive monthly performance scorecard — 3 tabs: Hiệu suất tháng (KPIs + targets + trends), Kênh & Khách hàng (channels + segments), Sản phẩm & Vận hành (products + efficiency). All KPIs have MoM comparison.
-
 ## 📂 Collection: Executive
 
 Strategic dashboards for leadership — company performance, targets, and high-level KPIs.

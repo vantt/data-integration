@@ -29,14 +29,16 @@ requires_flag: is_service_line in int_misa_sales_lines
 
 > **Database:** Sapo
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` · Layer L1.5 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
 > **Why:** Service revenue (Shopee fee, shipping fee, etc.) spans all sales channels. No COGS filter needed — service fees are top-line revenue items.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`service_fee_revenue`](../semantic/metrics.md#service_fee_revenue)
 
 All SQL: `WHERE scope_sales`.
-
 ## 📂 Collection: Finance
 
 Theo dõi doanh thu dịch vụ (DV* + CPBH) riêng biệt khỏi P&L hàng hóa — phục vụ CFO trong buổi MBR hàng tháng.

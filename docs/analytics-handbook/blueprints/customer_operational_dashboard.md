@@ -18,16 +18,13 @@ uses_concepts:
 **Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
 **Layer**: L2 - Marketing & Customers
 
-## Segmentation Scope
+## Semantic Contract
 
-Operational metrics on this dashboard (MAU, acquisition, retention rate, at-risk/churn counts, segment composition) apply exclusively to **retail customers** (customer_type = 'RETAIL'). B2B customer management operates under different logic (contract-based, credit terms) and is not included. All metrics (Active Rate, Status Distribution, Revenue by Lifecycle) are computed against the retail-only customer base. To analyze cross-segment or wholesale-specific metrics, reference `customer_intelligence_monthly.md`.
-
-> **Scope History**: Updated 2026-04-19 to clarify retail-only scope and reference B2B exclusion.
-
-**Reference**: [Report Segmentation Guide](../guides/report_segmentation.md#scope_retail)
-
-Redesigned dashboard with 3 tabs, integrated MoM comparisons, donuts for composition, gauge for active rate, conditional formatting on watchlists, combo chart for acquisition. Daily operational cockpit for Customer Success / Sales Ops. **Focus: Retail customers only.**
-
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`retention_rate`](../semantic/metrics.md#retention_rate) · [`customer_acquisition`](../semantic/metrics.md#customer_acquisition)
 ## 📂 Collection: Marketing & Customers
 
 > **Database:** Sapo

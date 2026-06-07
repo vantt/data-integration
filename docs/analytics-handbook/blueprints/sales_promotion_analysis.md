@@ -7,33 +7,14 @@ uses_concepts: [scope_retail, net_revenue, discount_rate, discount_amount, aov]
 
 # 📘 Blueprint: Sales Promotion & Discount Analysis [Retail]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_retail` · Layer 2 (Retail Operations) · Suffix `[Retail]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 > **Why:** **Promotion analysis MUST use scope_retail.** B2B discount = fixed wholesale price (40–50%), not a promotion. Mixing B2B and retail makes discount rate ~35% vs actual retail 15% — completely misleading.
-> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
-
-**Mandatory:** All SQL: `WHERE scope_retail`. Never analyze promotions on `scope_sales`.
-
-**Design Spec**: [Sales Promotion & Discount Analysis](../designs/sales_promotion_analysis.md)
-**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`) — **BẮT BUỘC**
-**Layer**: L2 - Retail Operations
-
-> **Target Collection:** `Operations > Retail Operations`
-> **Role:** Marketing Manager, Sales Ops, Finance
-> **Archetype:** Exploratory Tool (5 tabs)
-
-> **⚠️ CRITICAL SCOPE (2026-04-19):** Dashboard này **BẮT BUỘC** filter `customer_type = 'RETAIL'`.
 >
-> **Lý do:** Discount của B2B (WHOLESALE, PARTNER) là **giá sỉ cố định** (40-50%), KHÔNG phải promotion.
-> Nếu không filter, kết quả phân tích sẽ sai lệch nghiêm trọng:
-> - Discount Rate cao bất thường (trộn lẫn giá sỉ)
-> - Promotion ROI không đáng tin
->
-> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
-
-Ad-hoc analysis — evaluate campaign ROI, discount spending, promo effectiveness, abuse detection. **Chỉ bao gồm retail orders.** 5 tabs: Tong quan chiet khau (Discount Overview), Hieu suat khuyen mai (Promotion Performance), Phan tich kenh & chi tiet (Channel Impact & Detail), Discount ROI (ROI + Cannibalization), Phat hien lam dung & Bat thuong (Abuse Detection). MoM = last 30 days vs previous 30 days.
-
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`discount_amount`](../semantic/metrics.md#discount_amount) · [`aov`](../semantic/metrics.md#aov)
 ## 📂 Collection: Marketing & Customers
 
 Promotion analysis, discount tracking for retail customers only.

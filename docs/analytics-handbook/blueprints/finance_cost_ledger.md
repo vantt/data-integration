@@ -17,14 +17,14 @@ uses_concepts: [scope_sales, filter_has_cogs, cogs_amount, gross_profit]
 
 Dashboard phân tích cơ cấu chi phí theo order — COGS, phí sàn, thuế, vận chuyển, chiết khấu. Giúp CFO và Kế toán trả lời "Tiền của tôi đi đâu?" theo kênh và loại chi phí.
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L1.5 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Cost ledger analyzes COGS across all orders regardless of customer segment. `has_cogs = true` is required — orders without COGS would show zero cost, distorting margin.
-> **Ref:** [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
-
-Use `WHERE scope_sales AND has_cogs` — do not re-derive via subquery on `is_sales_channel`.
-
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`cogs_amount`](../semantic/metrics.md#cogs_amount) · [`gross_profit`](../semantic/metrics.md#gross_profit)
 ## 📂 Collection: Finance
 
 ---

@@ -11,14 +11,16 @@ uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, cogs_am
 
 Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop, va chi phi nen tang Shopee. 3 tabs: tong quan P&L, loi nhuan theo kenh, kinh te Shopee. MoM comparison (last 30 days vs previous 30 days).
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` + `filter_has_cogs` · Layer 1.5 (Finance) · Suffix `[All]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` + `filter_has_cogs` · Layer L1.5 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales) · [`segments.md#filter_has_cogs`](../semantic/segments.md#filter_has_cogs)
 > **Why:** Full P&L view across all sales channels. Revenue queries: `WHERE scope_sales`. Margin/profit queries additionally filter `has_cogs = true` (coverage ~65% of completed orders).
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales) · [segments.md#filter_has_cogs](../semantic/segments.md#filter_has_cogs)
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`cogs_amount`](../semantic/metrics.md#cogs_amount)
 
 Revenue SQL: `WHERE scope_sales`. P&L SQL: `WHERE scope_sales AND has_cogs`. Do not re-derive `is_sales_channel` or `status NOT IN (...)` inline.
-
 ## 📂 Collection: Executive
 
 ### 🖥️ Dashboard: Finance P&L [All]

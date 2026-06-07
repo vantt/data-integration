@@ -11,14 +11,14 @@ uses_concepts: [scope_sales, net_revenue, orders_count, aov]
 
 Dashboard theo doi hieu suat san pham — doanh thu, so luong, xu huong, phan tich loai SP, top/bottom products. MoM comparison (last 30 days vs previous 30 days).
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_sales` with segment breakdown · Layer 3 (Analytics) · Suffix `[Cross]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_sales` · Layer L3 `[Cross]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
 > **Why:** Product performance analytics covers all customer segments to understand which products sell to retail vs B2B. Segment labels (`customer_type`) must be shown explicitly when comparing.
-> **Ref:** [segments.md#scope_sales](../semantic/segments.md#scope_sales)
-
-Base: `WHERE scope_sales`. Add `customer_type` dimension for retail vs B2B product comparison. For pure retail product analysis, use `scope_retail` + see Product Performance [Retail] if created.
-
+>
+> **Concepts used:**
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
 ## 📂 Collection: Analytics
 
 ### Dashboard: Product Performance [Cross]

@@ -7,23 +7,16 @@ uses_concepts: [scope_b2b, net_revenue, orders_count, aov]
 
 # B2B Daily Sales Blueprint [B2B]
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_b2b` · Layer 2 (B2B Operations) · Suffix `[B2B]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_b2b` · Layer L2 `[B2B]` · [`segments.md#scope_b2b`](../semantic/segments.md#scope_b2b)
 > **Why:** B2B daily monitoring covers WHOLESALE and PARTNER orders only. AOV ~2.5M VND; discount = fixed wholesale pricing, not promotion.
-> **Ref:** [segments.md#scope_b2b](../semantic/segments.md#scope_b2b)
+>
+> **Concepts used:**
+> [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
 
 All SQL: `WHERE scope_b2b`. Do not re-derive as `customer_type IN ('WHOLESALE', 'PARTNER') AND is_sales_channel = true AND status NOT IN (...)`.
-
-**Scope**: scope_b2b (`customer_type IN ('WHOLESALE', 'PARTNER')` + `is_sales_channel = true`)
-**Layer**: L2 - B2B Operations
-
-> **NEW (2026-04-19):** Dashboard mới cho B2B business line.
-> Tách biệt khỏi retail operations để tránh trộn lẫn dữ liệu.
-> Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
-
-Daily monitoring for wholesale and partner orders — revenue, order volume, key accounts, payment status. Focus on B2B-specific metrics.
-
 ## 📂 Collection: Operations > B2B Operations
 
 > **Database:** Sapo

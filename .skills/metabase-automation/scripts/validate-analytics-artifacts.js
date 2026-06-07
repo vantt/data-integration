@@ -110,10 +110,30 @@ function validateBlueprint(filePath) {
       issues.push({ severity: "warn", msg: "Frontmatter missing 'uses_concepts' — list semantic concepts this blueprint uses" });
     }
   }
-  if (!/##\s+Segmentation Scope/i.test(content)) {
-    issues.push({ severity: "error", msg: "Missing '## Segmentation Scope' section — document which scope and why" });
-  } else if (/Scope.*TODO/i.test(content.match(/## Segmentation Scope[\s\S]{0,300}/)?.[0] || "")) {
-    issues.push({ severity: "warn", msg: "'## Segmentation Scope' section not filled in (still TODO)" });
+  // Accept both new name (## Semantic Contract) and old name (## Segmentation Scope) during migration
+  const hasSemanticContract = /##\s+Semantic Contract/i.test(content);
+  const hasOldScopeSection = /##\s+Segmentation Scope/i.test(content);
+
+  if (!hasSemanticContract && !hasOldScopeSection) {
+    issues.push({ severity: "error", msg: "Missing '## Semantic Contract' section — add semantic layer overview + scope + concept links" });
+  } else if (hasOldScopeSection && !hasSemanticContract) {
+    issues.push({ severity: "warn", msg: "Has legacy '## Segmentation Scope' — migrate to '## Semantic Contract' format (add semantic/README.md link + concept links)" });
+  } else if (hasSemanticContract) {
+    // Check for semantic/README.md overview link
+    const contractBlock = content.match(/## Semantic Contract[\s\S]{0,600}/)?.[0] || '';
+    if (!/semantic\/README\.md/i.test(contractBlock)) {
+      issues.push({ severity: "warn", msg: "'## Semantic Contract' missing link to semantic/README.md overview" });
+    }
+    // Check for at least one concept link into semantic/
+    // Skip for N/A scope blueprints (infra/onboarding with no analytics concepts)
+    const isNAScope = /\*\*Scope:\*\*\s*N\/A/i.test(contractBlock);
+    if (!isNAScope && !/\]\(\.\.\/semantic\/(segments|metrics|dimensions|entities|rules)\.md/i.test(contractBlock)) {
+      issues.push({ severity: "warn", msg: "'## Semantic Contract' missing concept links (e.g. [scope_retail](../semantic/segments.md#scope_retail))" });
+    }
+    // Check for TODO placeholders not filled in
+    if (/Scope.*TODO|WHERE TODO|TODO_concept/i.test(contractBlock)) {
+      issues.push({ severity: "warn", msg: "'## Semantic Contract' has unfilled TODO placeholders" });
+    }
   }
 
   // Warn on SQL scope anti-patterns (re-deriving what pre-computed columns already express)

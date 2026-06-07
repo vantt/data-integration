@@ -20,14 +20,16 @@ uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, cus
 > Marketing activities target B2C customers, không bao gồm B2B (WHOLESALE, PARTNER).
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
-## Segmentation Scope
+## Semantic Contract
 
-> **Scope:** `scope_retail` · Layer 2 (Marketing & Customers) · Suffix `[Retail]`
+> **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
+> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 > **Why:** Marketing targets retail customers. B2B customers come via direct relationships, not marketing campaigns. Marketing ROI and acquisition metrics are only meaningful for retail segment.
-> **Ref:** [segments.md#scope_retail](../semantic/segments.md#scope_retail)
+>
+> **Concepts used:**
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`customer_acquisition`](../semantic/metrics.md#customer_acquisition)
 
 All SQL: `WHERE scope_retail`. Do not re-derive.
-
 ## 📂 Collection: Marketing & Customers
 
 Channel performance, customer acquisition, retention, segmentation, and campaign analysis for **retail customers**.
