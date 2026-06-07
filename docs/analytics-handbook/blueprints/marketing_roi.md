@@ -655,7 +655,7 @@ ORDER BY "ROAS" DESC NULLS LAST
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_marketing_spend + fact_order_economics · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL'
+**Source:** fact_marketing_spend + fact_order_economics · **Cadence:** rolling-30d · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

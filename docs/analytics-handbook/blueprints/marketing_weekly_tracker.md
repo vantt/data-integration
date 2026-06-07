@@ -9,14 +9,14 @@ uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, cus
 
 **Playbook**: [Marketing Weekly Tracker](../playbooks/marketing_weekly_tracker.md)
 **Design Spec**: [Marketing Weekly Tracker (Redesign)](../designs/marketing_weekly_tracker.md)
-**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
+**Scope**: scope_retail (pre-computed boolean: retail customer type + is_sales_channel = true)
 **Layer**: L2 - Marketing & Customers
 
 > **Target Collection:** `Marketing & Customers`
 > **Role:** Marketing Manager, Brand Manager
 > **Archetype:** Operational Cockpit
 
-> **SCOPE (2026-04-19):** Dashboard này focus vào **retail customers** (`customer_type = 'RETAIL'`).
+> **SCOPE (2026-04-19):** Dashboard này focus vào **retail customers** (`scope_retail`).
 > Marketing activities target B2C customers, không bao gồm B2B (WHOLESALE, PARTNER).
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)
 
@@ -94,8 +94,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
       [[AND c.channel_category = {{channel_category}}]]
@@ -106,8 +105,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND c.channel_category = {{channel_category}}]]
@@ -149,8 +147,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_category = 'Online-Ecommerce'
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -161,8 +158,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_category = 'Online-Ecommerce'
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -204,8 +200,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_category = 'Offline'
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -216,8 +211,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_category = 'Offline'
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -259,8 +253,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
       [[AND c.channel_brand = {{channel_brand}}]]
@@ -272,8 +265,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND c.channel_brand = {{channel_brand}}]]
@@ -319,8 +311,7 @@ WITH filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -378,8 +369,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= current_date - INTERVAL '14 days'
   AND o.ordered_at < date_trunc('week', current_date)
   [[AND c.channel_brand = {{channel_brand}}]]
@@ -419,8 +409,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
   [[AND c.channel_category = {{channel_category}}]]
@@ -471,8 +460,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
   [[AND c.channel_category = {{channel_category}}]]
@@ -510,8 +498,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
   [[AND c.channel_category = {{channel_category}}]]
@@ -562,8 +549,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
       [[AND c.channel_category = {{channel_category}}]]
@@ -578,8 +564,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND c.channel_category = {{channel_category}}]]
@@ -679,10 +664,8 @@ WITH this_week AS (
             SUM(oe.gross_profit) / NULLIF(SUM(oe.net_revenue), 0) * 100, 1
         )                                                                          AS margin_pct
     FROM fact_order_economics oe
-    JOIN dim_customers        c  ON oe.customer_key = c.customer_key
     JOIN dim_channels         dc ON oe.channel_key  = dc.channel_key
-    WHERE oe.status NOT IN ('CANCELLED', 'Voided')
-      AND c.customer_type = 'RETAIL'
+    WHERE oe.scope_retail
       AND oe.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND oe.ordered_at <  date_trunc('week', current_date)
     GROUP BY dc.channel_name
@@ -694,10 +677,8 @@ last_week AS (
             SUM(oe.gross_profit) / NULLIF(SUM(oe.net_revenue), 0) * 100, 1
         )                                                                          AS margin_pct
     FROM fact_order_economics oe
-    JOIN dim_customers        c  ON oe.customer_key = c.customer_key
     JOIN dim_channels         dc ON oe.channel_key  = dc.channel_key
-    WHERE oe.status NOT IN ('CANCELLED', 'Voided')
-      AND c.customer_type = 'RETAIL'
+    WHERE oe.scope_retail
       AND oe.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND oe.ordered_at <  date_trunc('week', current_date) - INTERVAL '7 days'
     GROUP BY dc.channel_name
@@ -755,7 +736,7 @@ ORDER BY tw.rev DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -772,8 +753,7 @@ WITH filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -833,14 +813,14 @@ FROM prev_calc
 WITH this_week AS (
     SELECT COUNT(DISTINCT customer_key) as value
     FROM dim_customers
-    WHERE customer_type = 'RETAIL'
+    WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
       AND date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND date(first_order_date) < date_trunc('week', current_date)
 ),
 last_week AS (
     SELECT COUNT(DISTINCT customer_key) as value
     FROM dim_customers
-    WHERE customer_type = 'RETAIL'
+    WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
       AND date(first_order_date) >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND date(first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -868,8 +848,7 @@ WITH this_week AS (
     SELECT COUNT(DISTINCT o.customer_key) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
       AND date(cust.first_order_date) < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -878,8 +857,7 @@ last_week AS (
     SELECT COUNT(DISTINCT o.customer_key) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       AND date(cust.first_order_date) < date_trunc('week', current_date) - INTERVAL '14 days'
@@ -908,8 +886,7 @@ WITH this_week AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
       AND date(cust.first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -919,8 +896,7 @@ last_week AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       AND date(cust.first_order_date) >= date_trunc('week', current_date) - INTERVAL '14 days'
@@ -963,8 +939,7 @@ WITH this_week AS (
               / NULLIF(SUM(o.net_revenue), 0), 1) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -976,8 +951,7 @@ last_week AS (
               / NULLIF(SUM(o.net_revenue), 0), 1) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1028,8 +1002,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND date(cust.first_order_date) >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND date(cust.first_order_date) < date_trunc('week', current_date)
   AND date(cust.first_order_date) = date(o.ordered_at)
@@ -1070,8 +1043,7 @@ SELECT
              THEN o.net_revenue ELSE 0 END) as "Returning"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
   [[AND EXISTS (SELECT 1 FROM dim_channels c WHERE c.channel_key = o.channel_key AND c.channel_category = {{channel_category}})]]
@@ -1124,7 +1096,7 @@ WITH daily_new AS (
         date(first_order_date) as "Date",
         COUNT(DISTINCT customer_key) as "New Customers"
     FROM dim_customers
-    WHERE customer_type = 'RETAIL'
+    WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
       AND date(first_order_date) >= current_date - INTERVAL '14 days'
       AND date(first_order_date) < date_trunc('week', current_date)
     GROUP BY 1
@@ -1136,8 +1108,7 @@ daily_aov AS (
              ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id)) END as "New Customer AOV"
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND date(cust.first_order_date) = date(o.ordered_at)
       AND o.ordered_at >= current_date - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1186,8 +1157,7 @@ SELECT
     COUNT(DISTINCT o.customer_key) as "Customers"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
 GROUP BY 1
@@ -1214,7 +1184,7 @@ GROUP BY 1
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1231,8 +1201,7 @@ WITH filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -1293,8 +1262,7 @@ SELECT
     ROUND(SUM(COALESCE(o.discount_amount, 0)) * 100.0 / NULLIF(SUM(o.gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
 ```
@@ -1324,8 +1292,7 @@ WITH this_week AS (
                  / NULLIF(COUNT(DISTINCT o.order_id), 0), 1) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -1334,8 +1301,7 @@ last_week AS (
                  / NULLIF(COUNT(DISTINCT o.order_id), 0), 1) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1370,8 +1336,7 @@ WITH this_week AS (
     SELECT ROUND(AVG(CASE WHEN o.discount_amount > 0 THEN o.discount_amount END)) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -1379,8 +1344,7 @@ last_week AS (
     SELECT ROUND(AVG(CASE WHEN o.discount_amount > 0 THEN o.discount_amount END)) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1417,8 +1381,7 @@ WITH this_week AS (
     SELECT COALESCE(SUM(o.discount_amount), 0) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -1426,8 +1389,7 @@ last_week AS (
     SELECT COALESCE(SUM(o.discount_amount), 0) as value
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1477,8 +1439,7 @@ SELECT
     COUNT(DISTINCT o.order_id) as "Orders"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
 GROUP BY 1
@@ -1515,8 +1476,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND p.promotion_code IS NOT NULL
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
@@ -1573,8 +1533,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1584,8 +1543,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1624,8 +1582,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1635,8 +1592,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1667,8 +1623,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1679,8 +1634,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
-      AND cust.customer_type = 'RETAIL'
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1725,8 +1679,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
-  AND cust.customer_type = 'RETAIL'
+WHERE o.scope_retail
   AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
@@ -1766,8 +1719,7 @@ SELECT
     SUM(s.net_revenue) as "Revenue"
 FROM fact_sales s
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN dim_customers cust ON s.customer_key = cust.customer_key
-WHERE cust.customer_type = 'RETAIL'
+WHERE s.scope_retail
   AND date(s.ordered_at) >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND date(s.ordered_at) < date_trunc('week', current_date)
 GROUP BY 1, 2
@@ -1802,7 +1754,7 @@ LIMIT 10
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

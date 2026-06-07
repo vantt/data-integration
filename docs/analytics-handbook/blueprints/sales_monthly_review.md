@@ -16,7 +16,7 @@ uses_concepts: [scope_sales, net_revenue, orders_count, aov]
 > **Concepts used:**
 > [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
 
-All SQL: `WHERE scope_sales`. For segment comparison charts, add `customer_type` as a dimension.
+All SQL: `WHERE scope_sales`. Do not inline-derive the cancellation and channel conditions — use the pre-computed column. For segment comparison charts, add `customer_type` as a dimension.
 ## 📂 Collection: Executive
 
 Strategic dashboards for leadership — company performance, targets, and high-level KPIs.
@@ -69,14 +69,14 @@ WITH
 this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
 prev_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -115,8 +115,7 @@ WITH
 mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -159,14 +158,14 @@ WITH
 this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
 prev_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -205,14 +204,14 @@ WITH
 this_month AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
 prev_month AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -244,7 +243,7 @@ this_month AS (
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -253,7 +252,7 @@ prev_month AS (
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -292,14 +291,14 @@ WITH
 this_month AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
 prev_month AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -338,14 +337,14 @@ WITH
 this_month AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
 prev_month AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -384,8 +383,7 @@ WITH
 mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -440,7 +438,7 @@ this_month AS (
     SELECT COUNT(DISTINCT fo.customer_key) as val
     FROM fact_orders fo
     JOIN dim_customers dc ON fo.customer_key = dc.customer_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
       AND dc.first_order_date >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -450,7 +448,7 @@ prev_month AS (
     SELECT COUNT(DISTINCT fo.customer_key) as val
     FROM fact_orders fo
     JOIN dim_customers dc ON fo.customer_key = dc.customer_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND fo.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       AND dc.first_order_date >= date_trunc('month', current_date) - INTERVAL '2 months'
@@ -483,7 +481,7 @@ this_month AS (
     SELECT COUNT(DISTINCT fo.customer_key) as val
     FROM fact_orders fo
     JOIN dim_customers dc ON fo.customer_key = dc.customer_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
       AND dc.first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
@@ -492,7 +490,7 @@ prev_month AS (
     SELECT COUNT(DISTINCT fo.customer_key) as val
     FROM fact_orders fo
     JOIN dim_customers dc ON fo.customer_key = dc.customer_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND fo.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       AND dc.first_order_date < date_trunc('month', current_date) - INTERVAL '2 months'
@@ -569,7 +567,7 @@ WITH monthly_actuals AS (
         date_trunc('month', ordered_at)::date as month_start,
         SUM(net_revenue) as net_revenue
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
       AND ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -622,7 +620,7 @@ WITH monthly_actuals AS (
         date_trunc('month', ordered_at)::date as month_start,
         SUM(net_revenue) as net_revenue
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
       AND ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -672,7 +670,7 @@ ORDER BY 1
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** scope_sales (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -712,8 +710,7 @@ WITH
 mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -759,14 +756,14 @@ WITH
 this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
 prev_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -805,8 +802,7 @@ WITH
 mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -862,7 +858,7 @@ WITH branch_actuals AS (
         SUM(fo.net_revenue) as actual_revenue
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -932,7 +928,7 @@ WITH branch_variance AS (
         ) as target_revenue
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY bl.branch_location_name, bl.branch_location_key
@@ -987,7 +983,7 @@ this_month AS (
         SUM(fo.net_revenue) as revenue
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -998,7 +994,7 @@ prev_month AS (
         SUM(fo.net_revenue) as revenue
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND fo.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
@@ -1099,7 +1095,7 @@ ORDER BY tm.revenue DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** scope_sales (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1141,7 +1137,7 @@ SELECT
     SUM(fo.net_revenue) as "Net Revenue"
 FROM fact_orders fo
 JOIN dim_channels dc ON fo.channel_key = dc.channel_key
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+WHERE fo.scope_sales
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1183,7 +1179,7 @@ this_month AS (
         SUM(fo.net_revenue) as revenue
     FROM fact_orders fo
     JOIN dim_channels dc ON fo.channel_key = dc.channel_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -1194,7 +1190,7 @@ prev_month AS (
         SUM(fo.net_revenue) as revenue
     FROM fact_orders fo
     JOIN dim_channels dc ON fo.channel_key = dc.channel_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND fo.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
@@ -1247,7 +1243,7 @@ SELECT
     SUM(fo.net_revenue) as "Net Revenue"
 FROM fact_orders fo
 JOIN dim_channels dc ON fo.channel_key = dc.channel_key
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+WHERE fo.scope_sales
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1, 2
@@ -1281,7 +1277,7 @@ SELECT
     SUM(fo.net_revenue) as "Net Revenue"
 FROM fact_orders fo
 JOIN dim_channels dc ON fo.channel_key = dc.channel_key
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+WHERE fo.scope_sales
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1332,7 +1328,7 @@ WITH value_groups AS (
         END as segment
     FROM fact_orders fo
     JOIN dim_customers dc ON fo.customer_key = dc.customer_key
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_sales
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
 )
@@ -1341,7 +1337,7 @@ SELECT
     SUM(fo.net_revenue) as "Net Revenue"
 FROM fact_orders fo
 JOIN value_groups cs ON fo.customer_key = cs.customer_key
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+WHERE fo.scope_sales
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1380,7 +1376,7 @@ SELECT
     SUM(fo.net_revenue) as "Net Revenue"
 FROM fact_orders fo
 JOIN dim_customers dc ON fo.customer_key = dc.customer_key
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
+WHERE fo.scope_sales
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1413,7 +1409,7 @@ ORDER BY 1
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** scope_sales (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1454,7 +1450,7 @@ SELECT
     CASE WHEN SUM(gross_revenue) = 0 THEN 0
          ELSE ROUND(SUM(discount_amount) * 100.0 / SUM(gross_revenue), 1) END as "Discount Rate %"
 FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
+WHERE scope_sales
   AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND ordered_at < date_trunc('month', current_date)
 ```
@@ -1485,14 +1481,14 @@ WITH
 this_month AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
 prev_month AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -1534,7 +1530,7 @@ this_month AS (
              ELSE ROUND(COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) * 100.0
                         / COUNT(DISTINCT order_id), 1) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -1544,7 +1540,7 @@ prev_month AS (
              ELSE ROUND(COUNT(DISTINCT CASE WHEN discount_amount > 0 THEN order_id END) * 100.0
                         / COUNT(DISTINCT order_id), 1) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -1583,7 +1579,7 @@ this_month AS (
              ELSE ROUND(COUNT(DISTINCT CASE WHEN fulfillment_status = 'RETURNED' THEN order_id END) * 100.0
                         / COUNT(DISTINCT order_id), 1) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -1593,7 +1589,7 @@ prev_month AS (
              ELSE ROUND(COUNT(DISTINCT CASE WHEN fulfillment_status = 'RETURNED' THEN order_id END) * 100.0
                         / COUNT(DISTINCT order_id), 1) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -1642,7 +1638,7 @@ WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fs.ordered_at < date_trunc('month', current_date)
   AND fs.order_id IN (
       SELECT order_id FROM fact_orders
-      WHERE status NOT IN ('CANCELLED', 'Voided')
+      WHERE scope_sales
   )
 GROUP BY 1
 ORDER BY "Revenue" DESC
@@ -1729,7 +1725,7 @@ WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fs.ordered_at < date_trunc('month', current_date)
   AND fs.order_id IN (
       SELECT order_id FROM fact_orders
-      WHERE status NOT IN ('CANCELLED', 'Voided')
+      WHERE scope_sales
   )
 GROUP BY 1
 ORDER BY "Revenue" DESC
@@ -1775,7 +1771,7 @@ this_month AS (
       AND fs.ordered_at < date_trunc('month', current_date)
       AND fs.order_id IN (
           SELECT order_id FROM fact_orders
-          WHERE status NOT IN ('CANCELLED', 'Voided')
+          WHERE scope_sales
       )
     GROUP BY 1
 ),
@@ -1789,7 +1785,7 @@ prev_month AS (
       AND fs.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       AND fs.order_id IN (
           SELECT order_id FROM fact_orders
-          WHERE status NOT IN ('CANCELLED', 'Voided')
+          WHERE scope_sales
       )
     GROUP BY 1
 ),
@@ -1870,7 +1866,7 @@ LIMIT 20
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** scope_sales (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1912,8 +1908,7 @@ this_month AS (
     SELECT COALESCE(SUM(e.channel_net_profit), 0) AS val
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    WHERE e.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel
+    WHERE e.scope_sales
       AND e.has_cogs
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
@@ -1922,8 +1917,7 @@ prev_month AS (
     SELECT COALESCE(SUM(e.channel_net_profit), 0) AS val
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    WHERE e.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel
+    WHERE e.scope_sales
       AND e.has_cogs
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
@@ -1965,8 +1959,7 @@ this_month AS (
         ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS val
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    WHERE e.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel
+    WHERE e.scope_sales
       AND e.has_cogs
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
@@ -1976,8 +1969,7 @@ prev_month AS (
         ROUND(SUM(e.gross_profit) * 100.0 / NULLIF(SUM(e.net_revenue), 0), 1) AS val
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    WHERE e.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel
+    WHERE e.scope_sales
       AND e.has_cogs
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
@@ -2026,8 +2018,7 @@ SELECT
     ) AS "Gross Margin %"
 FROM fact_order_economics e
 JOIN dim_channels c ON e.channel_key = c.channel_key
-WHERE e.status NOT IN ('CANCELLED', 'Voided')
-  AND c.is_sales_channel
+WHERE e.scope_sales
   AND e.has_cogs
   AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '12 months', '%Y%m%d') AS INTEGER)
   AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
@@ -2078,8 +2069,7 @@ SELECT
     COUNT(DISTINCT e.order_id)                                               AS "So don"
 FROM fact_order_economics e
 JOIN dim_channels c ON e.channel_key = c.channel_key
-WHERE e.status NOT IN ('CANCELLED', 'Voided')
-  AND c.is_sales_channel
+WHERE e.scope_sales
   AND e.has_cogs
   AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
   AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
@@ -2131,7 +2121,7 @@ LIMIT 10
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided
+**Source:** fact_orders + fact_order_economics · **Cadence:** monthly · **Scope:** scope_sales (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

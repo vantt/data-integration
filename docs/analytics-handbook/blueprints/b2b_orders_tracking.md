@@ -47,7 +47,7 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
@@ -84,17 +84,15 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Cong no"
 FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -128,16 +126,13 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT COUNT(DISTINCT o.order_id) as "Don chua thanh toan"
 FROM fact_orders o, filter_bounds
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -159,16 +154,13 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT COUNT(DISTINCT o.order_id) as "Thanh toan mot phan"
 FROM fact_orders o, filter_bounds
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.payment_status = 'PARTIAL'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -190,17 +182,14 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
     ROUND(AVG(DATEDIFF('day', date(o.ordered_at), current_date)), 1) as "Ngay trung binh"
 FROM fact_orders o, filter_bounds
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -232,7 +221,7 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
@@ -245,11 +234,8 @@ SELECT
     COUNT(DISTINCT o.order_id) as "So don",
     SUM(o.net_revenue) as "Cong no"
 FROM fact_orders o, filter_bounds
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY 1
@@ -288,7 +274,7 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
@@ -297,10 +283,8 @@ SELECT
     SUM(o.net_revenue) as "Cong no"
 FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.customer_type
@@ -348,7 +332,7 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
@@ -359,10 +343,8 @@ SELECT
     MIN(date(o.ordered_at)) as "Don cu nhat"
 FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.full_name, c.customer_type
@@ -396,7 +378,7 @@ LIMIT 10
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** customer_type IN ('WHOLESALE','PARTNER') · **Caveats:** AR aging window
+**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** `scope_b2b` · **Caveats:** AR aging window
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -412,7 +394,7 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
@@ -449,16 +431,13 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT COUNT(DISTINCT o.order_id) as "Cho giao hang"
 FROM fact_orders o, filter_bounds
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.fulfillment_status IN ('PENDING', 'PROCESSING')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -480,16 +459,13 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT COUNT(DISTINCT o.order_id) as "Dang giao"
 FROM fact_orders o, filter_bounds
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.fulfillment_status = 'SHIPPED'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -511,17 +487,14 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT COUNT(DISTINCT o.order_id) as "Giao hom nay"
 FROM fact_orders o, filter_bounds
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.fulfillment_status = 'DELIVERED'
   AND date(o.updated_at) = current_date
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -553,7 +526,7 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_b2b
       [[AND {{date_range}}]]
 )
 SELECT
@@ -567,10 +540,8 @@ SELECT
     DATEDIFF('day', date(o.ordered_at), current_date) as "So ngay"
 FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_b2b
   AND o.fulfillment_status IN ('PENDING', 'PROCESSING', 'SHIPPED')
-  AND o.status NOT IN ('CANCELLED', 'Voided')
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ORDER BY o.ordered_at ASC
@@ -609,7 +580,7 @@ ORDER BY o.ordered_at ASC
 
 #### 📝 Text: Source & Freshness
 
-Source: fact_orders · Updated real-time · **Scope: B2B only (customer_type IN ('WHOLESALE', 'PARTNER'))**
+Source: fact_orders · Updated real-time · **Scope: `scope_b2b`**
 
 ```json metabase-pos
 { "row": 17, "col": 0, "size_x": 18, "size_y": 1 }
@@ -617,5 +588,5 @@ Source: fact_orders · Updated real-time · **Scope: B2B only (customer_type IN 
 
 ---
 
-> **Scope Note:** Tất cả queries trong blueprint này filter `customer_type IN ('WHOLESALE', 'PARTNER')`. Retail orders được track trong **Orders Tracking [Retail]** blueprint.
+> **Scope Note:** Tất cả queries trong blueprint này filter `scope_b2b`. Retail orders được track trong **Orders Tracking [Retail]** blueprint.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)

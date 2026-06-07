@@ -78,6 +78,26 @@ discount_order_summary AS (
         MAX_BY(discount_type, amount)   AS primary_discount_type
     FROM discount_classified
     GROUP BY order_code
+),
+
+channel_scope AS (
+    SELECT channel_key, is_sales_channel
+    FROM {{ ref('dim_channels') }}
+),
+
+-- Use dim_customers_base (not dim_customers) to avoid cycle: dim_customers → int_customer_metrics → fact_orders
+customer_type_info AS (
+    SELECT
+        customer_key,
+        CASE
+            WHEN customer_group LIKE '%WHOLESALE%' THEN 'WHOLESALE'
+            WHEN customer_group LIKE '%TYPE_PARTNER%' OR customer_group LIKE '%KY_GUI%' THEN 'PARTNER'
+            WHEN customer_group LIKE '%TYPE_STAFF%' THEN 'STAFF'
+            WHEN customer_group LIKE '%TYPE_KOL%' THEN 'KOL'
+            WHEN customer_group LIKE '%TYPE_CROSSBORDER%' OR customer_group LIKE '%CTN00014%' THEN 'CROSSBORDER'
+            ELSE 'RETAIL'
+        END AS customer_type
+    FROM {{ ref('dim_customers_base') }}
 )
 
 SELECT
@@ -155,7 +175,17 @@ SELECT
     dos.primary_discount_type,
 
     created_at as ordered_at,
-    updated_at
+    updated_at,
+
+    -- Segment scope (pre-computed; see docs/analytics-handbook/semantic/segments.md)
+    COALESCE(ch.is_sales_channel, false)
+        AND orders.status NOT IN ('CANCELLED', 'Voided')               AS scope_sales,
+    COALESCE(ch.is_sales_channel, false)
+        AND orders.status NOT IN ('CANCELLED', 'Voided')
+        AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL'           AS scope_retail,
+    COALESCE(ch.is_sales_channel, false)
+        AND orders.status NOT IN ('CANCELLED', 'Voided')
+        AND COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') AS scope_b2b
 
 FROM orders
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = vc.customer_key
@@ -170,3 +200,12 @@ LEFT JOIN team_members tm ON lower(dseller.email) = tm.staff_email
     AND (tm.effective_to IS NULL OR cast(orders.created_at as date) <= tm.effective_to)
 LEFT JOIN teams t ON tm.team_code = t.team_code
 LEFT JOIN discount_order_summary dos ON orders.order_code = dos.order_code
+LEFT JOIN channel_scope ch ON (
+    CASE
+        WHEN sd.is_generic_source = true THEN
+            {{ dbt_utils.generate_surrogate_key(['cast(source_id as string)', "coalesce(vl.location_id, 'Unknown')"]) }}
+        ELSE
+            {{ dbt_utils.generate_surrogate_key(['cast(source_id as string)', "'Unknown'"]) }}
+    END
+) = ch.channel_key
+LEFT JOIN customer_type_info cu2 ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = cu2.customer_key

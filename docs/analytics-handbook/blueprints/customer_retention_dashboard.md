@@ -485,7 +485,7 @@ WITH monthly_buyers AS (
         customer_key,
         COUNT(DISTINCT order_id) as orders_in_month
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND ordered_at < date_trunc('month', current_date)
     GROUP BY 1, 2
@@ -586,7 +586,7 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** customer_type='RETAIL' · **Caveats:** Cohort rolling
+**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** scope_retail · **Caveats:** Cohort rolling
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -667,7 +667,7 @@ m1_retention AS (
       AND c.first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
       AND c.customer_id != 'Unknown'
       AND date_diff('month', c.first_order_date, o.ordered_at) = 1
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.scope_sales
     GROUP BY 1
 )
 SELECT
@@ -714,7 +714,7 @@ m1_retention AS (
       AND c.first_order_date < date_trunc('month', current_date) - INTERVAL '1 month'
       AND c.customer_id != 'Unknown'
       AND date_diff('month', c.first_order_date, o.ordered_at) = 1
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.scope_sales
     GROUP BY 1
 )
 SELECT
@@ -788,7 +788,7 @@ SELECT
     ) as "Returning Revenue %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
@@ -833,7 +833,7 @@ retention_activity AS (
     WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
       AND o.ordered_at >= c.first_order_date
       AND c.customer_id != 'Unknown'
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.scope_sales
     GROUP BY 1, 2
 )
 SELECT
@@ -889,7 +889,7 @@ SELECT
     SUM(o.net_revenue) as revenue
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
@@ -934,7 +934,7 @@ SELECT
     SUM(o.net_revenue) as revenue
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
@@ -978,7 +978,7 @@ SELECT
     COUNT(DISTINCT c.customer_id) as customers
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
@@ -1009,7 +1009,7 @@ ORDER BY 1, 2
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** customer_type='RETAIL' · **Caveats:** Cohort rolling
+**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** scope_retail · **Caveats:** Cohort rolling
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1079,7 +1079,7 @@ WITH purchase_gaps AS (
         ) as days_between
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.customer_id != 'Unknown'
       [[AND c.value_group = {{segment}}]]
 ),
@@ -1097,7 +1097,7 @@ prev_gaps AS (
         ) as days_between
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.customer_id != 'Unknown'
       AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       [[AND c.value_group = {{segment}}]]
@@ -1142,11 +1142,11 @@ WITH reactivated_current AS (
     JOIN (
         SELECT customer_key, MAX(ordered_at) as prev_order
         FROM fact_orders
-        WHERE status NOT IN ('CANCELLED', 'Voided')
+        WHERE scope_sales
           AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
         GROUP BY 1
     ) prev ON o.customer_key = prev.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND o.ordered_at < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
@@ -1160,11 +1160,11 @@ reactivated_prev AS (
     JOIN (
         SELECT customer_key, MAX(ordered_at) as prev_order
         FROM fact_orders
-        WHERE status NOT IN ('CANCELLED', 'Voided')
+        WHERE scope_sales
           AND ordered_at < date_trunc('month', current_date) - INTERVAL '2 months'
         GROUP BY 1
     ) prev ON o.customer_key = prev.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND o.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
       AND c.customer_id != 'Unknown'
@@ -1327,7 +1327,7 @@ WITH purchase_gaps AS (
         ) as days_between
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.customer_id != 'Unknown'
       [[AND c.value_group = {{segment}}]]
 )
@@ -1388,10 +1388,10 @@ WITH reactivated AS (
             ordered_at,
             LAG(ordered_at) OVER (PARTITION BY customer_key ORDER BY ordered_at) as prev_order
         FROM fact_orders
-        WHERE status NOT IN ('CANCELLED', 'Voided')
+        WHERE scope_sales
     ) gaps ON o.customer_key = gaps.customer_key
         AND o.ordered_at = gaps.ordered_at
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND gaps.prev_order IS NOT NULL
       AND date_diff('day', CAST(gaps.prev_order AS DATE), CAST(o.ordered_at AS DATE)) > 30
       AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
@@ -1509,7 +1509,7 @@ SELECT
     ROUND(AVG(lifetime_value), 0) AS "Avg LTV",
     ROUND(AVG(recency_days), 0) AS "Avg Days Since Last Order"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   AND next_purchase_signal = 'OVERDUE'
   [[AND value_group = {{segment}}]]
@@ -1544,7 +1544,7 @@ SELECT
     COUNT(*) AS "Customers",
     SUM(lifetime_value) AS "Total LTV"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   [[AND value_group = {{segment}}]]
 GROUP BY 1, 2
@@ -1607,7 +1607,7 @@ SELECT
     SUM(lifetime_value) AS "Total LTV",
     ROUND(AVG(avg_order_spend), 0) AS "Expected Avg Order Value"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   AND predicted_next_purchase_date IS NOT NULL
   AND predicted_next_purchase_date BETWEEN current_date AND current_date + INTERVAL '7 days'
@@ -1641,7 +1641,7 @@ SELECT
     SUM(lifetime_value) AS "Total LTV",
     ROUND(AVG(avg_order_spend), 0) AS "Expected Avg Order Value"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   AND predicted_next_purchase_date IS NOT NULL
   AND predicted_next_purchase_date BETWEEN current_date AND current_date + INTERVAL '30 days'
@@ -1680,7 +1680,7 @@ SELECT
     lifetime_value AS "LTV",
     avg_order_spend AS "Avg Order Value"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   AND next_purchase_signal = 'OVERDUE'
   [[AND value_group = {{segment}}]]
@@ -1726,7 +1726,7 @@ LIMIT 50
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** customer_type='RETAIL' · **Caveats:** Cohort rolling
+**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** scope_retail · **Caveats:** Cohort rolling
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

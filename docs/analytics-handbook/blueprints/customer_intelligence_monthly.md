@@ -531,7 +531,7 @@ ORDER BY
 
 #### 📝 Text: Source & Freshness
 
-**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -859,7 +859,7 @@ SELECT
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -905,7 +905,7 @@ SELECT
     SUM(o.net_revenue) as "Revenue"
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -1014,7 +1014,7 @@ ORDER BY 3 DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1066,7 +1066,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -1123,7 +1123,7 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE cust.value_group = 'VALUE_VIP'
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1162,7 +1162,7 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE date_trunc('month', o.ordered_at) = date_trunc('month', cust.first_order_date)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_sales
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -1215,7 +1215,7 @@ WITH first_orders AS (
     WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND c.first_order_date < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.scope_sales
 ),
 repeat_30d AS (
     SELECT DISTINCT
@@ -1225,7 +1225,7 @@ repeat_30d AS (
     JOIN fact_orders o2 ON fo.customer_key = o2.customer_key
         AND o2.ordered_at > (SELECT MIN(first_order_date) FROM dim_customers WHERE customer_key = fo.customer_key)
         AND o2.ordered_at <= (SELECT MIN(first_order_date) + INTERVAL '30 days' FROM dim_customers WHERE customer_key = fo.customer_key)
-        AND o2.status NOT IN ('CANCELLED', 'Voided')
+        AND o2.scope_sales
 )
 SELECT
     fo.cohort_month as "Month",
@@ -1367,10 +1367,10 @@ SELECT
     COALESCE(discount_sensitivity, 'Unknown / Insufficient data') AS "Discount Sensitivity",
     COUNT(*) AS "Customers",
     ROUND(COUNT(*) * 100.0 / NULLIF(
-        (SELECT COUNT(*) FROM dim_customers WHERE customer_type = 'RETAIL' AND customer_id != 'Unknown'), 0
+        (SELECT COUNT(*) FROM dim_customers WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER') AND customer_id != 'Unknown'), 0
     ), 1) AS "% of Base"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
 GROUP BY 1
 ORDER BY
@@ -1414,7 +1414,7 @@ SELECT
     COALESCE(discount_sensitivity, 'Unknown') AS "Discount Sensitivity",
     COUNT(*) AS "Customers"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY
@@ -1468,7 +1468,7 @@ SELECT
     ROUND(MIN(avg_days_between_orders), 0) AS "Min Days",
     ROUND(MAX(avg_days_between_orders), 0) AS "Max Days"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   AND avg_days_between_orders IS NOT NULL
 GROUP BY 1
@@ -1513,7 +1513,7 @@ ORDER BY
 
 #### 📝 Text: Source & Freshness
 
-**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** customer_type='RETAIL'
+**Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

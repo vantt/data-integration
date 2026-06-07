@@ -16,7 +16,7 @@ uses_concepts: [scope_b2b, net_revenue, orders_count, aov]
 > **Concepts used:**
 > [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
 
-All SQL: `WHERE scope_b2b`. Do not re-derive as `customer_type IN ('WHOLESALE', 'PARTNER') AND is_sales_channel = true AND status NOT IN (...)`.
+All SQL: `WHERE scope_b2b`. Do not re-derive the scope inline — `scope_b2b` already encodes customer segment, channel, and cancellation filters.
 ## 📂 Collection: Operations > B2B Operations
 
 > **Database:** Sapo
@@ -46,12 +46,9 @@ SELECT
     COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date THEN o.net_revenue END), 0) as "Net Revenue",
     COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Hom qua"
 FROM fact_orders o
-JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_b2b
 ```
 
 ```json metabase-viz
@@ -83,12 +80,9 @@ SELECT
     COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date THEN o.order_id END) as "Total Orders",
     COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Hom qua"
 FROM fact_orders o
-JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_b2b
 ```
 
 ```json metabase-viz
@@ -119,12 +113,9 @@ SELECT
             / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
          ) END as "Hom qua"
 FROM fact_orders o
-JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_b2b
 ```
 
 ```json metabase-viz
@@ -154,11 +145,8 @@ Number of B2B customers ordering today.
 ```sql
 SELECT COUNT(DISTINCT o.customer_key) as "Khach B2B"
 FROM fact_orders o
-JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_b2b
 ```
 
 ```json metabase-viz
@@ -208,9 +196,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_b2b
 GROUP BY c.customer_type
 ORDER BY 3 DESC
 ```
@@ -248,11 +234,8 @@ SELECT
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
-JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_b2b
 GROUP BY ch.channel_name
 ORDER BY 2 DESC
 ```
@@ -303,9 +286,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
+  AND o.scope_b2b
 GROUP BY c.full_name, c.customer_type
 ORDER BY 4 DESC
 LIMIT 10
@@ -337,7 +318,7 @@ LIMIT 10
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** daily · **Scope:** customer_type IN ('WHOLESALE','PARTNER')
+**Source:** fact_orders + dim_customers · **Cadence:** daily · **Scope:** `scope_b2b`
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -388,8 +369,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE date(o.ordered_at) = current_date
-  AND c.customer_type IN ('WHOLESALE', 'PARTNER')
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_b2b
 ORDER BY o.ordered_at DESC
 ```
 
@@ -432,7 +412,7 @@ ORDER BY o.ordered_at DESC
 
 #### 📝 Text: Source & Freshness
 
-Source: fact_orders · Updated real-time · **Scope: B2B only (customer_type IN ('WHOLESALE', 'PARTNER'))**
+Source: fact_orders · Updated real-time · **Scope: `scope_b2b`**
 
 ```json metabase-pos
 { "row": 15, "col": 0, "size_x": 18, "size_y": 1 }
@@ -440,5 +420,5 @@ Source: fact_orders · Updated real-time · **Scope: B2B only (customer_type IN 
 
 ---
 
-> **Scope Note:** Tất cả queries trong blueprint này filter `customer_type IN ('WHOLESALE', 'PARTNER')`. Retail orders được track trong **Daily Sales [Retail]** blueprint.
+> **Scope Note:** Tất cả queries trong blueprint này filter `scope_b2b`. Retail orders được track trong **Daily Sales [Retail]** blueprint.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)

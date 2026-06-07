@@ -140,7 +140,7 @@ returns_period AS (
 orders_period AS (
     SELECT COUNT(DISTINCT o.order_code) AS total_orders
     FROM fact_orders o, filter_bounds
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND o.ordered_at::DATE >= filter_bounds.p_start
       AND o.ordered_at::DATE <= filter_bounds.p_end
 )
@@ -212,7 +212,7 @@ WITH lag_data AS (
         date_diff('day', DATE(fact_orders.ordered_at), fact_order_returns.return_date) AS lag_days
     FROM fact_order_returns
     JOIN fact_orders ON fact_order_returns.order_code = fact_orders.order_code
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fact_orders.scope_sales
       [[AND {{return_date}}]]
       AND date_diff('day', DATE(fact_orders.ordered_at), fact_order_returns.return_date) >= 0
 ),
@@ -387,7 +387,7 @@ ord AS (
         o.channel_key,
         COUNT(DISTINCT o.order_code) AS total_orders
     FROM fact_orders o
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
     GROUP BY 1
 )
 SELECT
@@ -466,7 +466,7 @@ ord AS (
         o.channel_key,
         COUNT(DISTINCT o.order_code)   AS total_orders
     FROM fact_orders o
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
     GROUP BY 1
 )
 SELECT
@@ -810,7 +810,7 @@ WITH cohort AS (
         COUNT(DISTINCT r.order_code)                  AS returned_orders
     FROM fact_order_returns r
     JOIN fact_orders o ON r.order_code = o.order_code
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND r.return_date >= (current_date - INTERVAL '12 months')
     GROUP BY 1, 2
 ),
@@ -819,7 +819,7 @@ order_totals AS (
         date_trunc('month', ordered_at) AS order_month,
         COUNT(DISTINCT order_code)           AS total_orders
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= (current_date - INTERVAL '12 months')
     GROUP BY 1
 )
@@ -1028,7 +1028,7 @@ sold_per_sku AS (
     CROSS JOIN filter_bounds
     WHERE fo.ordered_at::DATE >= filter_bounds.p_start
       AND fo.ordered_at::DATE <= filter_bounds.p_end
-      AND fo.status NOT IN ('CANCELLED', 'Voided')
+      AND fo.scope_sales
     GROUP BY 1
 ),
 portfolio_avg AS (
@@ -1044,7 +1044,7 @@ portfolio_avg AS (
         CROSS JOIN filter_bounds
         WHERE fo.ordered_at::DATE >= filter_bounds.p_start
           AND fo.ordered_at::DATE <= filter_bounds.p_end
-          AND fo.status NOT IN ('CANCELLED', 'Voided')
+          AND fo.scope_sales
     ) fo2
     WHERE r.return_date >= filter_bounds.p_start
       AND r.return_date <= filter_bounds.p_end
@@ -1208,7 +1208,7 @@ sold_cnt AS (
     CROSS JOIN filter_bounds
     WHERE fo.ordered_at::DATE >= filter_bounds.p_start
       AND fo.ordered_at::DATE <= filter_bounds.p_end
-      AND fo.status NOT IN ('CANCELLED', 'Voided')
+      AND fo.scope_sales
     GROUP BY 1
 )
 SELECT

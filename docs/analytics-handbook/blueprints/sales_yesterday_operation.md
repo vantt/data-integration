@@ -52,8 +52,7 @@ recent AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 ),
 previous AS (
     SELECT
@@ -64,8 +63,7 @@ previous AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '14 days' AND current_date - INTERVAL '8 days'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 ),
 customer_loyalty AS (
     SELECT
@@ -76,8 +74,7 @@ customer_loyalty AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 ),
 scores AS (
     SELECT
@@ -123,8 +120,7 @@ recent AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 ),
 previous AS (
     SELECT
@@ -135,8 +131,7 @@ previous AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '14 days' AND current_date - INTERVAL '8 days'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 ),
 customer_loyalty AS (
     SELECT
@@ -147,8 +142,7 @@ customer_loyalty AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 ),
 raw_scores AS (
     SELECT
@@ -258,8 +252,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
   AND date(o.ordered_at) < current_date
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -294,8 +287,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
   AND date(o.ordered_at) < current_date
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -330,8 +322,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
   AND date(o.ordered_at) < current_date
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -365,8 +356,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
   AND date(o.ordered_at) < current_date
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -407,8 +397,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND date(c.first_order_date) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -427,8 +416,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND date(c.first_order_date) < current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -447,8 +435,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.fulfillment_status = 'RETURNED'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -468,8 +455,7 @@ SELECT COALESCE(SUM(o.total_collected), 0) as "Total Collected"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -503,8 +489,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -525,8 +510,7 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -561,8 +545,7 @@ WITH yesterday_sales AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
     GROUP BY 1
 ),
 day_before_sales AS (
@@ -572,8 +555,7 @@ day_before_sales AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
     GROUP BY 1
 )
 SELECT
@@ -617,8 +599,7 @@ yesterday_hourly AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
     GROUP BY 1
 ),
 day_before_hourly AS (
@@ -628,8 +609,7 @@ day_before_hourly AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
     GROUP BY 1
 )
 SELECT
@@ -664,7 +644,7 @@ ORDER BY 1
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** yesterday · **Scope:** customer_type='RETAIL' · **Caveats:** Yesterday only
+**Source:** fact_orders + dim_customers · **Cadence:** yesterday · **Scope:** scope_retail (pre-computed) · **Caveats:** Yesterday only
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -724,8 +704,7 @@ FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -766,8 +745,7 @@ FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -801,8 +779,7 @@ WITH yesterday AS (
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
     GROUP BY 1
 ),
 day_before AS (
@@ -814,8 +791,7 @@ day_before AS (
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
     GROUP BY 1
 )
 SELECT
@@ -889,8 +865,7 @@ FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -927,7 +902,7 @@ ORDER BY 3 DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** yesterday · **Scope:** customer_type='RETAIL' · **Caveats:** Yesterday only
+**Source:** fact_orders + dim_customers · **Cadence:** yesterday · **Scope:** scope_retail (pre-computed) · **Caveats:** Yesterday only
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -980,8 +955,7 @@ JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -1023,8 +997,7 @@ JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -1058,8 +1031,7 @@ JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1103,8 +1075,7 @@ JOIN dim_products p ON s.product_key = p.product_key
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1, 2
 ORDER BY 4 DESC
 LIMIT 20
@@ -1141,7 +1112,7 @@ LIMIT 20
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** yesterday · **Scope:** customer_type='RETAIL' · **Caveats:** Yesterday only
+**Source:** fact_orders + dim_customers · **Cadence:** yesterday · **Scope:** scope_retail (pre-computed) · **Caveats:** Yesterday only
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1192,8 +1163,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz
@@ -1207,10 +1177,11 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 #### Question: At Risk Customers
 
 ```sql
+-- dim_customers has no scope column; filter directly on customer_type dimension
 SELECT COUNT(*) as "At Risk Customers"
 FROM dim_customers
 WHERE customer_status = 'At Risk'
-  AND customer_type = 'RETAIL'
+  AND customer_type IN ('RETAIL')
 ```
 
 ```json metabase-viz
@@ -1236,8 +1207,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ```
 
@@ -1278,8 +1248,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1316,8 +1285,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1350,8 +1318,7 @@ JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
 JOIN fact_orders o ON p.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(p.payment_timestamp) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1386,8 +1353,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 ```
 
 ```json metabase-viz

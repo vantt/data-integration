@@ -21,7 +21,10 @@ WITH orders AS (
         discount_amount,
         net_revenue,
         vat_amount,
-        total_collected
+        total_collected,
+        scope_sales,
+        scope_retail,
+        scope_b2b
     FROM {{ ref('fact_orders') }}
 ),
 
@@ -104,6 +107,11 @@ SELECT
     o.net_revenue,
     o.vat_amount,
     o.total_collected,
+
+    -- Segment scope (inherited from fact_orders; see docs/analytics-handbook/semantic/segments.md)
+    o.scope_sales,
+    o.scope_retail,
+    o.scope_b2b,
 
     -- COGS (Phase-05: Sapo-MAC primary / MISA fallback via int_order_cogs_reconciled)
     NULLIF(m.cogs_amount, 0)  AS cogs_amount,     -- 0 = no COGS data → expose as NULL

@@ -65,7 +65,7 @@ Revenue SQL: `WHERE scope_sales`. P&L SQL: `WHERE scope_sales AND has_cogs`. Do 
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       [[AND {{date_range}}]]
       [[AND {{channel}}]]
 ),
@@ -130,20 +130,20 @@ WITH
 filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       [[AND {{date_range}}]]
       [[AND {{channel}}]]
 ),
 this_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders, filter_bounds
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND ordered_at <  filter_bounds.p_start
       [[AND {{channel}}]]
@@ -152,7 +152,7 @@ prev_period AS (
 prev_year AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '13 months'
       AND ordered_at <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
@@ -360,7 +360,7 @@ WITH revenue_monthly AS (
         SUM(net_revenue)                     AS "Doanh thu thuan",
         NULL::DOUBLE                         AS "Gia von"
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
     GROUP BY 1
 ),
@@ -441,28 +441,28 @@ FROM (
         ('Doanh thu gop',
             (SELECT COALESCE(SUM(gross_revenue), 0)
              FROM fact_orders
-             WHERE status NOT IN ('CANCELLED', 'Voided')
+             WHERE scope_sales
                [[AND {{date_range}}]]
             )
         ),
         ('Chiet khau',
             (SELECT COALESCE(-SUM(ABS(discount_amount)), 0)
              FROM fact_orders
-             WHERE status NOT IN ('CANCELLED', 'Voided')
+             WHERE scope_sales
                [[AND {{date_range}}]]
             )
         ),
         ('Thue VAT',
             (SELECT COALESCE(-SUM(ABS(vat_amount)), 0)
              FROM fact_orders
-             WHERE status NOT IN ('CANCELLED', 'Voided')
+             WHERE scope_sales
                [[AND {{date_range}}]]
             )
         ),
         ('Doanh thu thuan',
             (SELECT COALESCE(SUM(net_revenue), 0)
              FROM fact_orders
-             WHERE status NOT IN ('CANCELLED', 'Voided')
+             WHERE scope_sales
                [[AND {{date_range}}]]
             )
         )

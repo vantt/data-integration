@@ -18,7 +18,7 @@ uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, discoun
 
 ### Dashboard: Sales Ops Weekly Review [Retail]
 
-**Description**: Audience: Sales Ops Lead. Scope: Retail (customer_type='RETAIL'). Weekly operational review — order processing health, channel workload, team performance, payment status, weekly margin. 4 tabs: Tong quan, Kenh & Chi nhanh, Doi ngu & Thanh toan, Margin.
+**Description**: Audience: Sales Ops Lead. Scope: Retail (scope_retail). Weekly operational review — order processing health, channel workload, team performance, payment status, weekly margin. 4 tabs: Tong quan, Kenh & Chi nhanh, Doi ngu & Thanh toan, Margin.
 
 > **Database:** Sapo
 
@@ -145,7 +145,7 @@ WITH
 this_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -153,7 +153,7 @@ this_week AS (
 last_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -195,7 +195,7 @@ this_week AS (
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -205,7 +205,7 @@ last_week AS (
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE scope_sales
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -428,9 +428,9 @@ Combo chart: daily order bars (this week blue, last week grey) + AOV line.
 SELECT
     date(ordered_at) as "Ngay",
     COUNT(DISTINCT order_id) as "Don hang",
-    CASE WHEN COUNT(DISTINCT CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN order_id END) = 0 THEN 0
-         ELSE SUM(CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN net_revenue ELSE 0 END)
-              / COUNT(DISTINCT CASE WHEN status NOT IN ('CANCELLED', 'Voided') THEN order_id END) END as "AOV"
+    CASE WHEN COUNT(DISTINCT CASE WHEN scope_sales THEN order_id END) = 0 THEN 0
+         ELSE SUM(CASE WHEN scope_sales THEN net_revenue ELSE 0 END)
+              / COUNT(DISTINCT CASE WHEN scope_sales THEN order_id END) END as "AOV"
 FROM fact_orders
 WHERE ordered_at >= current_date - INTERVAL '14 days'
   AND ordered_at < date_trunc('week', current_date)
@@ -521,7 +521,7 @@ ORDER BY 2, 3
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** scope_retail (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -626,7 +626,7 @@ SELECT
     COALESCE(SUM(o.net_revenue), 0) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -664,7 +664,7 @@ this_week AS (
     SELECT
         c.channel_name as channel,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -676,7 +676,7 @@ last_week AS (
     SELECT
         c.channel_name as channel,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
@@ -780,7 +780,7 @@ this_week AS (
     SELECT
         bl.branch_location_name as branch,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
     WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -792,7 +792,7 @@ last_week AS (
     SELECT
         bl.branch_location_name as branch,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.status NOT IN ('CANCELLED', 'Voided') THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
     WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
@@ -851,7 +851,7 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** scope_retail (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -922,7 +922,7 @@ this_week AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as val
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -932,7 +932,7 @@ last_week AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as val
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -974,7 +974,7 @@ this_week AS (
     SELECT COUNT(DISTINCT o.order_id) as val
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -984,7 +984,7 @@ last_week AS (
     SELECT COUNT(DISTINCT o.order_id) as val
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1019,7 +1019,7 @@ this_week AS (
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as val
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1031,7 +1031,7 @@ last_week AS (
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as val
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.status NOT IN ('CANCELLED', 'Voided')
+    WHERE o.scope_sales
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1075,7 +1075,7 @@ SELECT
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
   AND st.staff_key IS NOT NULL
@@ -1116,7 +1116,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
-WHERE o.status NOT IN ('CANCELLED', 'Voided')
+WHERE o.scope_sales
   AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
@@ -1240,7 +1240,7 @@ ORDER BY s.orders DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** scope_retail (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1307,10 +1307,8 @@ this_week AS (
     FROM fact_order_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
     JOIN filter_bounds ON TRUE
-    WHERE cu.customer_type = 'RETAIL'
-      AND e.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_retail
       AND fo.ordered_at >= filter_bounds.p_start
       AND fo.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
     GROUP BY 1
@@ -1323,10 +1321,8 @@ last_week AS (
     FROM fact_order_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id
     JOIN dim_channels c ON e.channel_key = c.channel_key
-    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
     JOIN filter_bounds ON TRUE
-    WHERE cu.customer_type = 'RETAIL'
-      AND e.status NOT IN ('CANCELLED', 'Voided')
+    WHERE fo.scope_retail
       AND fo.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND fo.ordered_at <  filter_bounds.p_start
     GROUP BY 1
@@ -1411,9 +1407,8 @@ this_week AS (
     SELECT COUNT(DISTINCT e.order_id) AS val
     FROM fact_order_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id
-    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
     JOIN filter_bounds ON TRUE
-    WHERE cu.customer_type = 'RETAIL'
+    WHERE fo.scope_retail
       AND e.channel_net_profit < 0
       AND fo.ordered_at >= filter_bounds.p_start
       AND fo.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1422,9 +1417,8 @@ last_week AS (
     SELECT COUNT(DISTINCT e.order_id) AS val
     FROM fact_order_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id
-    JOIN dim_customers cu ON fo.customer_key = cu.customer_key
     JOIN filter_bounds ON TRUE
-    WHERE cu.customer_type = 'RETAIL'
+    WHERE fo.scope_retail
       AND e.channel_net_profit < 0
       AND fo.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND fo.ordered_at <  filter_bounds.p_start
@@ -1448,7 +1442,7 @@ FROM this_week tw, last_week lw
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** customer_type='RETAIL'
+**Source:** fact_orders + fact_order_economics · **Cadence:** weekly · **Scope:** scope_retail (pre-computed)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

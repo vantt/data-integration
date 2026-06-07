@@ -15,7 +15,7 @@ uses_concepts:
 
 **Design Spec**: [Customer Operational Dashboard (Redesign)](../designs/customer_operational_dashboard.md)
 **Playbook**: [Customer Operational Dashboard](../playbooks/customer_operational_dashboard.md)
-**Scope**: scope_retail (`customer_type = 'RETAIL'` + `is_sales_channel = true`)
+**Scope**: scope_retail (pre-computed boolean: retail customer type + is_sales_channel = true)
 **Layer**: L2 - Marketing & Customers
 
 ## Semantic Contract
@@ -91,9 +91,7 @@ current_mau AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.ordered_at >= current_date - INTERVAL '30 days'
-      AND o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 ),
 prev_mau AS (
     SELECT COUNT(DISTINCT o.customer_key) as val
@@ -101,9 +99,7 @@ prev_mau AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
-      AND o.status NOT IN ('CANCELLED', 'Voided')
-      AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND o.scope_retail
 )
 SELECT cm.val as "MAU", pm.val as "30 ngay truoc"
 FROM current_mau cm, prev_mau pm
@@ -316,7 +312,7 @@ WITH monthly_customers AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
       AND o.ordered_at < date_trunc('month', current_date)
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.scope_sales
       AND c.customer_id != 'Unknown'
 )
 SELECT
@@ -357,9 +353,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
-  AND o.status NOT IN ('CANCELLED', 'Voided')
-  AND c.customer_type = 'RETAIL'
-  AND o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+  AND o.scope_retail
 GROUP BY 1
 ORDER BY 1
 ```
@@ -385,7 +379,7 @@ ORDER BY 1
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** MAU window
+**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** scope_retail · **Caveats:** MAU window
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -491,7 +485,7 @@ WITH first_orders AS (
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE cust.created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cust.created_at < date_trunc('month', current_date)
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.scope_sales
       AND cust.customer_id != 'Unknown'
 )
 SELECT
@@ -534,7 +528,7 @@ WITH first_orders AS (
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE cust.created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cust.created_at < date_trunc('month', current_date)
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.scope_sales
       AND cust.customer_id != 'Unknown'
 )
 SELECT
@@ -633,7 +627,7 @@ LIMIT 15
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** MAU window
+**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** scope_retail · **Caveats:** MAU window
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -707,7 +701,7 @@ SELECT
     value_group AS "Segment",
     COUNT(*) AS "Customers"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY
@@ -768,7 +762,7 @@ SELECT
     ROUND(MIN(avg_order_spend), 0) AS "Min AOV",
     ROUND(MAX(avg_order_spend), 0) AS "Max AOV"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   AND avg_order_spend IS NOT NULL
 GROUP BY 1
@@ -818,7 +812,7 @@ SELECT
     value_group AS "Segment",
     COUNT(*) AS "Customers"
 FROM dim_customers
-WHERE customer_type = 'RETAIL'
+WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
   AND customer_id != 'Unknown'
   AND cancel_rate IS NOT NULL
 GROUP BY 1, 2
@@ -1070,7 +1064,7 @@ LIMIT 50
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** customer_type='RETAIL' · **Caveats:** MAU window
+**Source:** fact_orders + dim_customers · **Cadence:** rolling-30d · **Scope:** scope_retail · **Caveats:** MAU window
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos

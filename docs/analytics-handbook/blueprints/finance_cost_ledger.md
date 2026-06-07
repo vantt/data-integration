@@ -55,9 +55,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 ),
 period_adj AS (
@@ -112,19 +110,15 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 ),
 this_period AS (
     SELECT COALESCE(SUM(fc.amount), 0) AS val
     FROM fact_order_costs fc
     JOIN fact_orders fo ON fc.order_id = fo.order_id
-    JOIN dim_channels ch ON fc.channel_key = ch.channel_key
     CROSS JOIN filter_bounds
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-      AND ch.is_sales_channel = true
+    WHERE fo.scope_sales
       AND fo.ordered_at::DATE >= filter_bounds.p_start
       AND fo.ordered_at::DATE <= filter_bounds.p_end
 ),
@@ -132,10 +126,8 @@ prev_period AS (
     SELECT COALESCE(SUM(fc.amount), 0) AS val
     FROM fact_order_costs fc
     JOIN fact_orders fo ON fc.order_id = fo.order_id
-    JOIN dim_channels ch ON fc.channel_key = ch.channel_key
     CROSS JOIN filter_bounds
-    WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-      AND ch.is_sales_channel = true
+    WHERE fo.scope_sales
       AND fo.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND fo.ordered_at::DATE <  filter_bounds.p_start
 )
@@ -178,9 +170,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -191,10 +181,8 @@ SELECT
     ) AS "COGS %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
-JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND ch.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -230,9 +218,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -243,10 +229,8 @@ SELECT
     ) AS "Phi san %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
-JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND ch.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -282,9 +266,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels c ON fact_order_costs.channel_key = c.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND c.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -295,10 +277,8 @@ SELECT
     ) AS "Chiet khau %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
-JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND ch.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -334,9 +314,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND ch.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -352,10 +330,8 @@ SELECT
     COALESCE(SUM(fc.amount), 0)                                      AS "So tien"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
-JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND ch.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY 1, 2
@@ -407,9 +383,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND ch.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -421,10 +395,8 @@ SELECT
     ) AS "Ty le phi san %"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
-JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND ch.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY 1
@@ -470,9 +442,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND ch.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -487,8 +457,7 @@ FROM fact_order_costs fc
 JOIN dim_channels c ON fc.channel_key = c.channel_key
 JOIN fact_orders fo ON fc.order_id = fo.order_id
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND c.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.channel_name
@@ -543,9 +512,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND ch.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -560,10 +527,8 @@ SELECT
     COALESCE(SUM(fc.amount), 0) AS "So tien"
 FROM fact_order_costs fc
 JOIN fact_orders fo ON fc.order_id = fo.order_id
-JOIN dim_channels ch ON fc.channel_key = ch.channel_key
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND ch.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY fc.cost_category
@@ -611,9 +576,7 @@ WITH filter_bounds AS (
     SELECT MIN(fact_orders.ordered_at::DATE) AS p_start, MAX(fact_orders.ordered_at::DATE) AS p_end
     FROM fact_order_costs
     JOIN fact_orders ON fact_order_costs.order_id = fact_orders.order_id
-    JOIN dim_channels ch ON fact_order_costs.channel_key = ch.channel_key
-    WHERE fact_orders.status NOT IN ('CANCELLED', 'Voided')
-      AND ch.is_sales_channel = true
+    WHERE fact_orders.scope_sales
       [[AND {{date_range}}]]
 )
 SELECT
@@ -631,8 +594,7 @@ FROM fact_order_costs fc
 JOIN dim_channels c ON fc.channel_key = c.channel_key
 JOIN fact_orders fo ON fc.order_id = fo.order_id
 CROSS JOIN filter_bounds
-WHERE fo.status NOT IN ('CANCELLED', 'Voided')
-  AND c.is_sales_channel = true
+WHERE fo.scope_sales
   AND fo.ordered_at::DATE >= filter_bounds.p_start
   AND fo.ordered_at::DATE <= filter_bounds.p_end
   AND c.channel_name IN (
@@ -641,7 +603,7 @@ WHERE fo.status NOT IN ('CANCELLED', 'Voided')
       JOIN dim_channels c2 ON fc2.channel_key = c2.channel_key
       JOIN fact_orders fo2 ON fc2.order_id = fo2.order_id
       CROSS JOIN filter_bounds
-      WHERE fo2.status NOT IN ('CANCELLED', 'Voided') AND c2.is_sales_channel = true
+      WHERE fo2.scope_sales
         AND fo2.ordered_at::DATE >= filter_bounds.p_start
         AND fo2.ordered_at::DATE <= filter_bounds.p_end
       GROUP BY c2.channel_name
