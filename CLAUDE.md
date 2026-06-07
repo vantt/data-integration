@@ -4,7 +4,7 @@ This file provides Claude Code with project-specific context. For full project d
 
 ## Skills & Workflows
 
-Shared skills live in `tools/` and are available as slash commands via `.claude/commands/`.
+Shared skills live in `.skills/` and are available as slash commands via `.claude/commands/`. Each command is a thin wrapper — logic lives in the skill's `SKILL.md`.
 
 ### Analytics Design (Tool-Agnostic)
 
@@ -23,6 +23,12 @@ Shared skills live in `tools/` and are available as slash commands via `.claude/
 | `/setup-metabase-mcp` | Configure the Metabase MCP server |
 | `/purge-dagster-runs` | Clean up old Dagster run history |
 
+### Metabase Debugging
+
+| Command | Purpose |
+| --- | --- |
+| `/debug-metabase <dashboard_url>` | Debug metric discrepancies — summary → pick card → deep-dive SQL + filters |
+
 ### Key References
 
 - **Analytics Design Skill**: `.skills/analytics-design/SKILL.md`
@@ -33,6 +39,7 @@ Shared skills live in `tools/` and are available as slash commands via `.claude/
 - **Blueprint Template**: `.skills/metabase-automation/templates/blueprint_template.md`
 - **Existing Blueprints**: `docs/analytics-handbook/blueprints/`
 - **Design Specs**: `docs/analytics-handbook/designs/`
+- **Debug Metabase Skill**: `.skills/debug-metabase/SKILL.md`
 
 ### Deployment Commands
 
