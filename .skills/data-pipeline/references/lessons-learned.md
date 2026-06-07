@@ -3703,3 +3703,42 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 3. `scope_sales` is an analytics filter (measures real revenue); it is NOT appropriate for operational completeness checks.
 
 **Reference:** `docs/analytics-handbook/blueprints/order_listing.md` · `docs/analytics-handbook/semantic/segments.md#scope_sales`
+
+### L113 — Deploy script false-positive "filter not mapped" warning caused operators to break Today tab
+
+**Group:** SERVE
+
+**Symptom:** Dashboard "Today" tab rendered blank — all 12 cards returned no data. "Yesterday" tab worked fine. "By Date" tab worked when a date was selected.
+
+**Root cause:** Today tab cards use `current_date` (hardcoded) instead of `{{date}}` template variable. The deploy script emitted `⚠️ '...': filter(s) not mapped (no matching {{template_tag}}): date` for every Today tab card on every deployment. An operator read this as "Today tab is broken — the date filter isn't wired", and manually added `{{date}}` to Today tab card SQL. But `{{date}}` requires a `parameter_mappings` entry (wired by deploy script only for By Date tab cards), so Today tab cards ended up with an unresolved variable → blank render.
+
+**Fix:**
+1. Replaced `{{date}}` → `current_date` in all 12 Today tab cards via Metabase API.
+2. Fixed deploy script: warning now fires only when SQL *contains* a `{{var}}` placeholder that couldn't be wired. Cards with no `{{var}}` (hardcoded predicates) are silently skipped — absence of template tag is intentional, not a misconfiguration.
+
+**Rules:**
+1. Multi-tab dashboards with "Today" / "Yesterday" tabs should use hardcoded `current_date` / `current_date - INTERVAL '1 day'` — never `{{date}}` — on those tabs. Only the "By Date" / picker tab should use `{{date}}`.
+2. A deploy warning about unmapped filters is only meaningful when the SQL *has* `{{var}}` placeholders. Never add `{{var}}` to suppress a warning unless you also wire a `parameter_mappings` entry.
+3. After any Metabase manual edit, re-run the deploy script to restore blueprint-defined state.
+
+**Reference:** `.skills/metabase-automation/scripts/deploy_from_markdown.js` · `docs/analytics-handbook/blueprints/order_listing.md`
+
+### L114 — Multi-tab cycle-indicator cards must have tab-specific SQL — copy-paste leaves wrong dates
+
+**Group:** SERVE
+
+**Symptom:** Dashboard "Chu kỳ báo cáo" (cycle indicator) showed wrong periods: Today tab showed "Theo filter được chọn (không cố định)", Yesterday and By Date tabs both showed "30 ngày gần nhất: …" — none matched the actual tab's time scope.
+
+**Root cause:** When the dashboard was authored, the cycle-indicator SQL was copy-pasted from another dashboard (rolling-30d style) and never updated per tab. Each tab has a distinct time predicate but the same generic/wrong indicator string.
+
+**Fix:** Updated each tab's cycle-indicator SQL:
+- Today: `'📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y')`
+- Yesterday: `'📅 Hôm qua: ' || strftime((current_date - INTERVAL '1 day')::DATE, '%d/%m/%Y')`
+- By Date: `'📅 Ngày: ' || strftime({{date}}::date, '%d/%m/%Y')`  ← uses `{{date}}` + wired parameter_mappings
+
+**Rules:**
+1. Each tab in a multi-tab dashboard needs its own cycle-indicator SQL that reflects the tab's actual time window. Never copy the same SQL across Today / Yesterday / By Date tabs.
+2. The "By Date" cycle-indicator must use `{{date}}` (wired to the dashboard filter) so it displays the currently selected date dynamically.
+3. When authoring a new tab: write the cycle-indicator SQL last, after confirming the tab's date predicate, to avoid copy-paste drift.
+
+**Reference:** `docs/analytics-handbook/blueprints/order_listing.md` — "Chu kỳ báo cáo" questions, all three tabs
