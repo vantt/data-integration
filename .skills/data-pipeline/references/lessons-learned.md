@@ -3742,3 +3742,20 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 3. When authoring a new tab: write the cycle-indicator SQL last, after confirming the tab's date predicate, to avoid copy-paste drift.
 
 **Reference:** `docs/analytics-handbook/blueprints/order_listing.md` — "Chu kỳ báo cáo" questions, all three tabs
+
+### L115 — Sapo never zeroes cancelled order amounts — revenue KPIs must filter by status
+
+**Group:** TRUST
+
+**Symptom:** Reconciliation dashboard showed non-zero Net Revenue, Total Collected, Gross Revenue for a day with only 3 CANCELLED orders. Expected 0 since no money was collected.
+
+**Root cause:** Sapo stores the original order amounts (`total_amount`, `total_discount_amount`, `total_tax`) on cancelled orders — they are NOT zeroed on cancellation. `fact_orders` inherits these values directly: `total_collected = total_amount`, `net_revenue = total_amount - vat_amount`, `gross_revenue = total_amount + total_discount_amount`. Without a status filter, revenue SUM includes cancelled order face values.
+
+**Fix:** Add `AND status NOT IN ('CANCELLED', 'Voided')` to the WHERE clause of all revenue-aggregate KPI cards (Net Revenue, Total Collected, Gross Revenue, Total Discount). Cannot substitute `scope_sales` — that also filters `is_sales_channel`, breaking all-channel reconciliation.
+
+**Rules:**
+1. Any `SUM(revenue_metric)` query must explicitly exclude CANCELLED and Voided unless the intent is to show face-value totals (e.g., order management reports).
+2. `COUNT(DISTINCT order_id)` for "Total Orders" reconciliation intentionally counts CANCELLED — do NOT add a status filter there.
+3. `scope_sales` ≠ "exclude cancelled": `scope_sales = is_sales_channel AND status NOT IN (CANCELLED, Voided)`. On all-channel dashboards use the explicit status filter only.
+
+**Reference:** `docs/analytics-handbook/blueprints/order_listing.md` — Net Revenue / Total Collected / Gross Revenue / Total Discount SQL · `transformation/models/marts/sales/fact_orders.sql` (revenue field definitions)
