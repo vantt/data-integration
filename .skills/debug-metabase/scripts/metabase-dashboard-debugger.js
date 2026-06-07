@@ -7,16 +7,17 @@
  * structured debug report designed to be fed to a Claude skill for analysis.
  *
  * Usage:
- *   node scripts/debug/metabase-dashboard-debugger.js "<dashboard_url>" [--card <card_id>]
+ *   node .skills/debug-metabase/scripts/metabase-dashboard-debugger.js "<dashboard_url>" [--card <card_id>]
  *
  * Modes:
  *   (no flag)           Summary: list all cards with row counts — pick which to deep-dive
  *   --card <card_id>    Deep-dive: full SQL + results for one specific card
  *   --all               Full report for every card (verbose, large output)
+ *   --no-cache          Force re-fetch dashboard metadata from API
  *
  * Examples:
- *   node scripts/debug/metabase-dashboard-debugger.js "http://bi.lan.fwg.vn/dashboard/43?scope=SHOPEE_VN"
- *   node scripts/debug/metabase-dashboard-debugger.js "http://bi.lan.fwg.vn/dashboard/43?scope=SHOPEE_VN" --card 1246
+ *   node .skills/debug-metabase/scripts/metabase-dashboard-debugger.js "http://bi.lan.fwg.vn/dashboard/43?scope=SHOPEE_VN"
+ *   node .skills/debug-metabase/scripts/metabase-dashboard-debugger.js "http://bi.lan.fwg.vn/dashboard/43?scope=SHOPEE_VN" --card 1246
  *
  * Env vars (same as other metabase scripts):
  *   METABASE_URL      e.g. http://127.0.0.1:3001
@@ -29,11 +30,11 @@ const path = require('path');
 const fs   = require('fs');
 
 const MetabaseCore   = require(
-  path.join(__dirname, '../../.skills/metabase-automation/lib/metabase_core')
+  path.join(__dirname, '../../metabase-automation/lib/metabase_core')
 );
-const DashboardCache = require(path.join(__dirname, 'lib/dashboard-cache'));
+const DashboardCache = require(path.join(__dirname, '../lib/dashboard-cache'));
 
-const CACHE_DIR = path.join(__dirname, '../../.cache/metabase');
+const CACHE_DIR = path.join(__dirname, '../../../.cache/metabase');
 
 // ---------------------------------------------------------------------------
 // Config
