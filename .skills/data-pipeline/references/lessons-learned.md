@@ -3684,3 +3684,22 @@ Downstream (`fact_order_economics` gross_profit/margins, `int_customer_metrics`�
 2. Use `dim_sku_alias` (or an equivalent crosswalk) as the canonical key for cross-system SKU joins; don't join raw vendor codes.
 
 **Reference:** `transformation/models/intermediate/cogs/int_order_cogs_reconciled.sql` · `dim_sku_alias` · `docs/architecture/order-pl/promo-count-once-reconciliation.md`
+
+---
+
+### L112 — Reconciliation dashboards must use `primary_scope: none` — batch scope migrations silently break them
+
+**Group:** TRUST
+
+**Symptom:** `order_listing` dashboard showed fewer orders than Sapo Admin for the same date — CANCELLED orders and non-sales-channel orders were missing from the count and revenue breakdown. The reconciliation checklist explicitly says "bao gồm cả CANCELLED" but the SQL was filtering them out.
+
+**Root cause:** During batch T6 SQL migration (scope standardisation), `AND scope_sales` was applied uniformly to all financial KPI queries. `order_listing` was also tagged `primary_scope: scope_retail` in its frontmatter — but its purpose is full-fidelity Sapo reconciliation, not analytics. `scope_sales` excludes CANCELLED orders and non-sales channels, so order counts and revenue differed from what Sapo shows.
+
+**Fix:** Set `primary_scope: none` and remove all `AND scope_sales` / `AND o.scope_sales` filters. Title changed `[Retail]` → `[All]`. Re-deployed dashboard 26.
+
+**Rules:**
+1. Reconciliation/audit dashboards (`order_listing`, `ingestion_health`, anything titled "đối soát" / "reconciliation") must have `primary_scope: none` — they need raw, unfiltered row counts to match the source system.
+2. Before applying a batch scope migration, grep for "reconcil", "đối soát", "audit" in dashboard titles/descriptions and exempt those blueprints explicitly.
+3. `scope_sales` is an analytics filter (measures real revenue); it is NOT appropriate for operational completeness checks.
+
+**Reference:** `docs/analytics-handbook/blueprints/order_listing.md` · `docs/analytics-handbook/semantic/segments.md#scope_sales`
