@@ -480,10 +480,15 @@ async function main() {
         if (mappings.length > 0) {
           cardConfig.parameter_mappings = mappings;
         }
-        // Warn about unmatched filters for this question
-        const unmapped = dashParams.filter(p => !mappings.find(m => m.parameter_id === (p.id || p.slug)));
-        if (unmapped.length > 0) {
-          console.warn(`   ⚠️ '${q.name}': ${unmapped.length} filter(s) not mapped (no matching {{template_tag}}): ${unmapped.map(p => p.slug).join(', ')}`);
+        // Only warn when the SQL has a {{var}} placeholder that couldn't be wired — that's a real
+        // misconfiguration. Cards without any {{var}} use hardcoded predicates (e.g. current_date
+        // on a "Today" tab) which is intentional — no warning needed.
+        const sqlHasAnyVar = /\{\{\w+\}\}/.test(q.sql);
+        if (sqlHasAnyVar) {
+          const unmapped = dashParams.filter(p => !mappings.find(m => m.parameter_id === (p.id || p.slug)));
+          if (unmapped.length > 0) {
+            console.warn(`   ⚠️ '${q.name}': dashboard filter(s) not matched to any {{template_tag}} in SQL: ${unmapped.map(p => p.slug).join(', ')}`);
+          }
         }
       }
 
