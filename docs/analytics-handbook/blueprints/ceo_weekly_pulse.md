@@ -268,7 +268,7 @@ FROM this_week tw, last_week lw
 
 ---
 
-#### Question: MTD Revenue vs Target
+#### Question: MTD GMV vs Target
 
 **Domain Reference**: [Target Achievement Rate](../domains/sales.md#15-target-achievement-rate) — Progress bar showing GMV actual vs monthly GMV target in VND.
 
@@ -429,7 +429,7 @@ SELECT
 FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
-WHERE o.channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+WHERE o.scope_sales
   AND o.ordered_at >= date_trunc('week', current_date)
   AND o.ordered_at < current_date + INTERVAL '1 day'
 ORDER BY o.ordered_at DESC
@@ -468,7 +468,7 @@ ORDER BY o.ordered_at DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD Revenue vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
+**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -741,7 +741,7 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD Revenue vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
+**Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -963,7 +963,7 @@ this_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
     WHERE NOT is_active_order
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND scope_sales
       AND ordered_at >= date_trunc('week', current_date)
       AND ordered_at < current_date + INTERVAL '1 day'
 ),
@@ -971,7 +971,7 @@ last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
     WHERE NOT is_active_order
-      AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
+      AND scope_sales
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
 )
@@ -1218,7 +1218,7 @@ FROM (
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD Revenue vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
+**Source:** fact_orders + dim_customers + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
