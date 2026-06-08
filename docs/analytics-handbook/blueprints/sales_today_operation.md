@@ -34,7 +34,12 @@ All SQL: `WHERE scope_retail`. Do not inline-derive customer type, channel, and 
 # Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Review kết quả real-time — doanh thu, đơn hàng, AOV so với hôm qua
@@ -42,7 +47,12 @@ All SQL: `WHERE scope_retail`. Do not inline-derive customer type, channel, and 
 # Review kết quả real-time — doanh thu, đơn hàng, AOV so với hôm qua
 
 ```json metabase-pos
-{ "row": 8, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 9,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
@@ -50,7 +60,12 @@ All SQL: `WHERE scope_retail`. Do not inline-derive customer type, channel, and 
 # Theo dõi chỉ số hỗ trợ — khách hàng, hoàn trả, thu tiền, chiết khấu
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 16,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Phân tích doanh thu theo giờ — peak hours và so sánh real-time
@@ -58,7 +73,12 @@ All SQL: `WHERE scope_retail`. Do not inline-derive customer type, channel, and 
 # Phân tích doanh thu theo giờ — peak hours và so sánh real-time
 
 ```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 20,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### Question: Health Score
@@ -129,7 +149,12 @@ FROM scores
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 5 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### Question: Health Breakdown
@@ -240,7 +265,12 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 12, "size_y": 5 }
+{
+  "row": 3,
+  "col": 6,
+  "size_x": 12,
+  "size_y": 6
+}
 ```
 
 ---
@@ -278,7 +308,12 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 6, "size_y": 3 }
+{
+  "row": 10,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -295,7 +330,12 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### Question: Gross Revenue
@@ -331,7 +371,12 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 10, "col":6, "size_x":4, "size_y":3}
+{
+  "row": 10,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Orders
@@ -357,7 +402,12 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 10, "col":10, "size_x":4, "size_y":3}
+{
+  "row": 17,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: AOV
@@ -401,7 +451,12 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{"row": 10, "col":14, "size_x":4, "size_y":3}
+{
+  "row": 13,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -424,7 +479,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":3, "size_y":3}
+{
+  "row": 17,
+  "col": 12,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: Returning Customers
@@ -445,7 +505,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 14, "col":3, "size_x":3, "size_y":3}
+{
+  "row": 17,
+  "col": 15,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: Returns
@@ -464,7 +529,66 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 14, "col":6, "size_x":3, "size_y":3}
+{
+  "row": 17,
+  "col": 9,
+  "size_x": 3,
+  "size_y": 3
+}
+```
+
+#### Question: Cancelled Orders
+
+Count of cancelled retail orders today.
+
+```sql
+SELECT COUNT(DISTINCT o.order_id) as "Cancelled Orders"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.ordered_at) = current_date
+  AND o.scope_retail
+  AND NOT o.is_active_order
+```
+
+```json metabase-viz
+{ "display": "scalar" }
+```
+
+```json metabase-pos
+{"row": 17, "col": 6, "size_x": 3, "size_y": 3}
+```
+
+#### Question: Total Discounts
+
+Total discount amount applied to retail orders today.
+
+```sql
+SELECT COALESCE(SUM(o.discount_amount), 0) as "Total Discounts"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE date(o.ordered_at) = current_date
+  AND o.scope_retail
+  AND o.is_active_order
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "column_settings": {
+      "Total Discounts": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{"row": 17, "col": 12, "size_x": 6, "size_y": 3}
 ```
 
 #### Question: Total Collected
@@ -497,7 +621,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 14, "col":9, "size_x":3, "size_y":3}
+{
+  "row": 10,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Discount Rate
@@ -520,7 +649,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 14, "col":12, "size_x":3, "size_y":3}
+{
+  "row": 13,
+  "col": 12,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: Items per Order
@@ -541,7 +675,12 @@ WHERE date(s.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 14, "col":15, "size_x":3, "size_y":3}
+{
+  "row": 13,
+  "col": 15,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 ---
@@ -598,7 +737,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 18, "col":0, "size_x":12, "size_y":6}
+{
+  "row": 21,
+  "col": 0,
+  "size_x": 12,
+  "size_y": 6
+}
 ```
 
 #### Question: Cumulative Revenue
@@ -655,7 +799,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 18, "col":12, "size_x":6, "size_y":6}
+{
+  "row": 21,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### 📝 Text: Source & Freshness
@@ -682,7 +831,12 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Xác định kênh bán hàng hiệu quả — ranking doanh thu và volume
@@ -945,7 +1099,12 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Xác định sản phẩm bán chạy nhất — doanh thu và số lượng
@@ -1156,7 +1315,12 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Đánh giá chân dung khách hàng — new vs returning, segment
