@@ -1338,7 +1338,12 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Đánh giá chân dung khách hàng — new vs returning, segment
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Kiểm tra phân bổ thanh toán và mức độ chiết khấu
@@ -1346,7 +1351,12 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 # Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 12,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### Question: Returning Customer Rate
@@ -1368,7 +1378,12 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: At Risk Customers
@@ -1386,7 +1401,12 @@ WHERE customer_status = 'At Risk'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
+{
+  "row": 3,
+  "col": 3,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: New vs Returning Customers
@@ -1429,7 +1449,12 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 12, "size_y": 3 }
+{
+  "row": 3,
+  "col": 6,
+  "size_x": 12,
+  "size_y": 3
+}
 ```
 
 #### Question: Revenue by Customer Segment
@@ -1472,7 +1497,12 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Status
@@ -1500,7 +1530,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
+{
+  "row": 13,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### Question: Payment Method Distribution
@@ -1533,7 +1568,12 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
+{
+  "row": 13,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### Question: Discount Impact
@@ -1574,7 +1614,12 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 3 }
+{
+  "row": 19,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 4
+}
 ```
 
 #### 📝 Text: Source & Freshness
