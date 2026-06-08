@@ -15,7 +15,7 @@ all_orders
             ├── scope_b2b     (+ customer_type IN WHOLESALE, PARTNER)
             └── [STAFF, KOL]  — included in scope_sales but no named Layer 2 scope
 
-is_active_order  (status != 'CANCELLED') — cross-cutting, áp dụng độc lập với scope
+is_active_order  (status NOT IN ('CANCELLED', 'DRAFT')) — cross-cutting, áp dụng độc lập với scope
     → kết hợp với scope_* khi tính revenue, không dùng khi đếm tổng đơn
 ```
 
@@ -185,25 +185,25 @@ WHERE scope_b2b AND customer_type != 'CROSSBORDER'  -- redundant, CROSSBORDER kh
 > **Type:** Segment | **Domain:** [Sales](../domains/sales.md) | **Status:** `active`
 > **Since:** 2026-06-08
 
-**Definition:** Đơn hàng chưa bị huỷ — status gate cho revenue calculations.
+**Definition:** Đơn hàng đã confirmed và chưa bị huỷ — status gate cho revenue calculations.
 
 **Rule:**
 ```sql
 -- fact_orders.is_active_order (pre-computed boolean column)
-status != 'CANCELLED'
+status NOT IN ('CANCELLED', 'DRAFT')
 ```
 
-**Intent:** Cross-cutting gate — dùng kết hợp với scope_* khi tính revenue/doanh thu. Không dùng khi đếm tổng số đơn (đơn cancelled vẫn là đơn thực, cần đếm để tính tỷ lệ huỷ).
+**Intent:** Cross-cutting gate — dùng kết hợp với scope_* khi tính revenue/doanh thu. Không dùng khi đếm tổng số đơn (cancelled/draft vẫn cần đếm để tính tỷ lệ huỷ, conversion). DRAFT excluded vì chưa committed — không phải đơn thật về mặt business.
 
 **Use in SQL:**
 - Revenue metrics: `WHERE scope_retail AND is_active_order`
-- Order counts (all): `WHERE scope_retail`
-- Cancelled count: `WHERE scope_retail AND NOT is_active_order`
+- Order counts (all, incl. cancelled+draft): `WHERE scope_retail`
+- Cancelled count: `WHERE scope_retail AND status = 'CANCELLED'`
 
 #### 🎯 When to Use
 - `SUM(net_revenue)`, `SUM(gross_revenue)`, `SUM(total_collected)`, `AVG(...)` → bắt buộc thêm `AND is_active_order`
-- `COUNT(*)`, `COUNT(DISTINCT order_id)` không kèm revenue → **KHÔNG** thêm (đếm tất cả đơn kể cả cancelled)
-- Card cancelled orders → `WHERE scope_retail AND NOT is_active_order`
+- `COUNT(*)`, `COUNT(DISTINCT order_id)` không kèm revenue → **KHÔNG** thêm (đếm tất cả đơn kể cả cancelled/draft)
+- Card cancelled orders → `WHERE scope_retail AND status = 'CANCELLED'`
 
 #### ❌ Anti-patterns
 ```sql

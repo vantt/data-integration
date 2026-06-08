@@ -184,8 +184,8 @@ SELECT
         AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL'                  AS scope_retail,
     COALESCE(ch.is_sales_channel, false)
         AND COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') AS scope_b2b,
-    -- Status gate: use with scope_* for revenue metrics; omit for order counts (includes cancelled)
-    orders.status != 'CANCELLED'                                               AS is_active_order
+    -- Status gate: use with scope_* for revenue metrics; omit for order counts (includes cancelled/draft)
+    orders.status NOT IN ('CANCELLED', 'DRAFT')                                AS is_active_order
 
 FROM orders
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = vc.customer_key

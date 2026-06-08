@@ -49,7 +49,7 @@ customer_orders AS (
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
     {% endif %}
-    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+    WHERE o.is_active_order
 ),
 
 -- RFM aggregations (existing)
@@ -124,7 +124,7 @@ first_order_channel AS (
         {% if is_incremental() %}
         INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
         {% endif %}
-        WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+        WHERE o.is_active_order
     ) ranked
     WHERE rn = 1
 ),
@@ -216,7 +216,7 @@ avg_order_spend_cte AS (
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
     {% endif %}
-    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+    WHERE o.is_active_order
     GROUP BY o.customer_key
 ),
 
@@ -233,7 +233,7 @@ order_sequence AS (
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
     {% endif %}
-    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+    WHERE o.is_active_order
 ),
 
 inter_purchase_cte AS (
@@ -259,7 +259,7 @@ discount_rate_cte AS (
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
     {% endif %}
-    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+    WHERE o.is_active_order
     GROUP BY o.customer_key
 ),
 
