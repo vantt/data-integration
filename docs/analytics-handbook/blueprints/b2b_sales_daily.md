@@ -2,7 +2,7 @@
 primary_scope: scope_b2b
 scope_indicator: "[B2B]"
 layer: L2
-uses_concepts: [scope_b2b, net_revenue, orders_count, aov]
+uses_concepts: [scope_b2b, net_revenue, orders_count, aov, is_active_order]
 ---
 
 # B2B Daily Sales Blueprint [B2B]
@@ -49,6 +49,7 @@ FROM fact_orders o
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
   AND o.scope_b2b
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -116,6 +117,7 @@ FROM fact_orders o
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
   AND o.scope_b2b
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -197,6 +199,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
   AND o.scope_b2b
+  AND o.is_active_order
 GROUP BY c.customer_type
 ORDER BY 3 DESC
 ```
@@ -236,6 +239,7 @@ FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE date(o.ordered_at) = current_date
   AND o.scope_b2b
+  AND o.is_active_order
 GROUP BY ch.channel_name
 ORDER BY 2 DESC
 ```
@@ -287,6 +291,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
   AND o.scope_b2b
+  AND o.is_active_order
 GROUP BY c.full_name, c.customer_type
 ORDER BY 4 DESC
 LIMIT 10

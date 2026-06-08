@@ -146,6 +146,7 @@ this_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -154,6 +155,7 @@ last_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -196,6 +198,7 @@ this_week AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -206,6 +209,7 @@ last_week AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -348,7 +352,7 @@ Formatted table showing cancelled orders and returns with WoW change flags.
 WITH
 this_week AS (
     SELECT
-        COUNT(DISTINCT CASE WHEN status = 'CANCELLED' THEN order_id END) as cancelled,
+        COUNT(DISTINCT CASE WHEN NOT is_active_order THEN order_id END) as cancelled,
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
     FROM fact_orders
     WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
@@ -357,7 +361,7 @@ this_week AS (
 ),
 last_week AS (
     SELECT
-        COUNT(DISTINCT CASE WHEN status = 'CANCELLED' THEN order_id END) as cancelled,
+        COUNT(DISTINCT CASE WHEN NOT is_active_order THEN order_id END) as cancelled,
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
     FROM fact_orders
     WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
@@ -627,6 +631,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -667,7 +672,8 @@ this_week AS (
         COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE o.is_active_order
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
@@ -679,7 +685,8 @@ last_week AS (
         COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+    WHERE o.is_active_order
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
@@ -783,7 +790,8 @@ this_week AS (
         COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+    WHERE o.is_active_order
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
@@ -795,7 +803,8 @@ last_week AS (
         COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
     JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-    WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
+    WHERE o.is_active_order
+      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
@@ -923,6 +932,7 @@ this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -933,6 +943,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1020,6 +1031,7 @@ this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1032,6 +1044,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1076,6 +1089,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
   AND st.staff_key IS NOT NULL
@@ -1117,6 +1131,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
@@ -1309,6 +1324,7 @@ this_week AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     JOIN filter_bounds ON TRUE
     WHERE fo.scope_retail
+      AND fo.is_active_order
       AND fo.ordered_at >= filter_bounds.p_start
       AND fo.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
     GROUP BY 1
@@ -1323,6 +1339,7 @@ last_week AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     JOIN filter_bounds ON TRUE
     WHERE fo.scope_retail
+      AND fo.is_active_order
       AND fo.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND fo.ordered_at <  filter_bounds.p_start
     GROUP BY 1

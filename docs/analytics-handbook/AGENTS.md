@@ -267,7 +267,8 @@ SELECT ... FROM ...
 ```sql
 SELECT ...
 FROM fact_orders
-WHERE status NOT IN ('CANCELLED', 'Voided')
+WHERE scope_retail
+  AND is_active_order    -- revenue metric: exclude cancelled
   AND ordered_at >= ...
 ```
 
@@ -345,8 +346,14 @@ All SQL in blueprints targets **DuckDB** (via Metabase Native Query). Follow the
 ### Filtering
 
 ```sql
--- ALWAYS exclude cancelled/voided orders for revenue metrics
-WHERE status NOT IN ('CANCELLED', 'Voided')
+-- Revenue metrics: scope flag + is_active_order (excludes cancelled)
+WHERE scope_retail AND is_active_order
+
+-- Order counts (all orders including cancelled): scope flag only
+WHERE scope_retail
+
+-- Cancelled orders only:
+WHERE scope_retail AND NOT is_active_order
 
 -- Date ranges: use date_trunc + INTERVAL, never hardcoded dates
 AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
@@ -452,9 +459,10 @@ Rill metrics include scope flags for the 3-layer architecture:
 
 | Scope | Filter | Layer |
 |-------|--------|-------|
-| `scope_sales` | `is_sales_channel AND not cancelled` | Executive [All] |
+| `scope_sales` | `is_sales_channel` | Executive [All] |
 | `scope_retail` | `scope_sales AND customer_type='RETAIL'` | Retail [Retail] |
 | `scope_b2b` | `scope_sales AND customer_type IN (WHOLESALE, PARTNER)` | B2B [B2B] |
+| `is_active_order` | `status != 'CANCELLED'` — revenue gate, cross-cutting | All layers |
 
 Pre-filtered measures are available: `sales_revenue`, `retail_revenue`, `b2b_revenue`.
 

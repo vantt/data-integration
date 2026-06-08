@@ -4,6 +4,7 @@ scope_indicator: "[Retail]"
 layer: L2
 uses_concepts:
   - scope_retail
+  - is_active_order
 ---
 
 # 📘 Blueprint: Customer Retention & Lifecycle [Retail]
@@ -789,6 +790,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
@@ -890,6 +892,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
@@ -935,6 +938,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND c.customer_id != 'Unknown'
@@ -1392,6 +1396,7 @@ WITH reactivated AS (
     ) gaps ON o.customer_key = gaps.customer_key
         AND o.ordered_at = gaps.ordered_at
     WHERE o.scope_sales
+      AND o.is_active_order
       AND gaps.prev_order IS NOT NULL
       AND date_diff('day', CAST(gaps.prev_order AS DATE), CAST(o.ordered_at AS DATE)) > 30
       AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'

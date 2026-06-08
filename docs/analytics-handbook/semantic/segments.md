@@ -10,10 +10,13 @@ Các named subset của data — pre-computed thành boolean columns trong mart,
 
 ```
 all_orders
-    └── scope_sales  (is_sales_channel=true AND not cancelled/voided)
+    └── scope_sales  (is_sales_channel=true)
             ├── scope_retail  (+ customer_type=RETAIL)
             ├── scope_b2b     (+ customer_type IN WHOLESALE, PARTNER)
             └── [STAFF, KOL]  — included in scope_sales but no named Layer 2 scope
+
+is_active_order  (status != 'CANCELLED') — cross-cutting, áp dụng độc lập với scope
+    → kết hợp với scope_* khi tính revenue, không dùng khi đếm tổng đơn
 ```
 
 > **CROSSBORDER** excluded at channel level (`is_sales_channel=false`), not at `customer_type` level — never appears in any scope.
@@ -30,18 +33,17 @@ all_orders
 > **Type:** Segment | **Domain:** [Sales](../domains/sales.md) | **Status:** `active`
 > **Since:** 2026-04-19
 
-**Definition:** Tất cả đơn hàng từ kênh bán hàng hợp lệ, loại trừ cancelled/voided.
+**Definition:** Tất cả đơn hàng từ kênh bán hàng hợp lệ (pure channel classification, không phụ thuộc status).
 
 **Rule:**
 ```sql
 -- fact_orders.scope_sales (pre-computed boolean column)
 is_sales_channel = true
-AND status NOT IN ('CANCELLED', 'Voided')
 ```
 
-**Intent:** Layer 1 Executive [All] — full picture doanh thu, không phân biệt loại khách. Bao gồm Retail, B2B, STAFF, KOL. Dùng cho CEO Weekly Pulse, Order Profitability, mọi [All] dashboard.
+**Intent:** Layer 1 Executive [All] — full picture tất cả đơn từ sales channel, không phân biệt loại khách hay status. Bao gồm Retail, B2B, STAFF, KOL, kể cả cancelled. Dùng cho CEO Weekly Pulse, mọi [All] dashboard. **Để tính revenue: `WHERE scope_sales AND is_active_order`.**
 
-**Use in SQL:** `WHERE scope_sales` — không viết lại `is_sales_channel = true AND status NOT IN (...)`.
+**Use in SQL:** `WHERE scope_sales` (đếm tất cả đơn) | `WHERE scope_sales AND is_active_order` (revenue metrics).
 
 #### 🎯 When to Use
 Use khi cần toàn bộ doanh thu không phân khúc. Nếu cần phân tích AOV, discount, hay retention → dùng [scope_retail](segments.md#scope_retail) hoặc [scope_b2b](segments.md#scope_b2b) thay thế.
@@ -49,7 +51,7 @@ Use khi cần toàn bộ doanh thu không phân khúc. Nếu cần phân tích A
 #### ⚠️ Conflicts
 | Source | Definition | When it appears | Note |
 |---|---|---|---|
-| Legacy SQL | `is_sales_channel=true` only, không loại cancelled | Code cũ trước 2026-04 | Thiếu status filter — overcounts |
+| Pre-refactor code | `scope_sales` embedded `status != 'CANCELLED'` | Code trước 2026-06-08 | scope_sales không còn loại cancelled; dùng `AND is_active_order` thay thế |
 
 #### 🔗 Similar (not synonym)
 | Concept | File | Key difference | Use instead when |
@@ -60,10 +62,13 @@ Use khi cần toàn bộ doanh thu không phân khúc. Nếu cần phân tích A
 #### ❌ Anti-patterns
 ```sql
 -- ❌ Re-deriving thủ công thay vì dùng pre-computed column
-WHERE is_sales_channel = true AND status NOT IN ('CANCELLED', 'Voided')
+WHERE is_sales_channel = true
+
+-- ❌ Dùng scope_sales cho revenue mà không có is_active_order — bao gồm cancelled
+SELECT SUM(net_revenue) FROM fact_orders WHERE scope_sales
 
 -- ❌ Mix scope_sales với discount/AOV analysis — kết quả vô nghĩa vì pha retail+B2B
-SELECT AVG(revenue) FROM fact_orders WHERE scope_sales  -- ~650K VND, meaningless blend
+SELECT AVG(revenue) FROM fact_orders WHERE scope_sales AND is_active_order  -- ~650K VND, meaningless blend
 ```
 
 #### 📊 Data Quality
@@ -92,7 +97,7 @@ scope_sales = true
 AND customer_type = 'RETAIL'
 ```
 
-**Intent:** Layer 2 Retail [Retail] — loại B2B, internal, CROSSBORDER, draft/cancelled. Chuẩn cho promotion analysis, discount rate, AOV retail. AOV ~450K VND.
+**Intent:** Layer 2 Retail [Retail] — loại B2B, internal, CROSSBORDER. Chuẩn cho promotion analysis, discount rate, AOV retail. AOV ~450K VND. Kết hợp với `is_active_order` khi tính revenue: `WHERE scope_retail AND is_active_order`.
 
 **Use in SQL:** `WHERE scope_retail` — không re-derive `customer_type = 'RETAIL' AND is_sales_channel = true`.
 
@@ -102,7 +107,7 @@ Bắt buộc cho mọi metric có ngữ cảnh retail: [discount_rate](metrics.m
 #### ⚠️ Conflicts
 | Source | Definition | When it appears | Note |
 |---|---|---|---|
-| Naive filter | `customer_type='RETAIL'` only | Code không dùng pre-computed | Thiếu `is_sales_channel` + status filter |
+| Naive filter | `customer_type='RETAIL'` only | Code không dùng pre-computed | Thiếu `is_sales_channel` filter |
 
 #### 🔗 Similar (not synonym)
 | Concept | File | Key difference | Use instead when |
@@ -175,15 +180,59 @@ WHERE scope_b2b AND customer_type != 'CROSSBORDER'  -- redundant, CROSSBORDER kh
 
 ---
 
+## is_active_order
+
+> **Type:** Segment | **Domain:** [Sales](../domains/sales.md) | **Status:** `active`
+> **Since:** 2026-06-08
+
+**Definition:** Đơn hàng chưa bị huỷ — status gate cho revenue calculations.
+
+**Rule:**
+```sql
+-- fact_orders.is_active_order (pre-computed boolean column)
+status != 'CANCELLED'
+```
+
+**Intent:** Cross-cutting gate — dùng kết hợp với scope_* khi tính revenue/doanh thu. Không dùng khi đếm tổng số đơn (đơn cancelled vẫn là đơn thực, cần đếm để tính tỷ lệ huỷ).
+
+**Use in SQL:**
+- Revenue metrics: `WHERE scope_retail AND is_active_order`
+- Order counts (all): `WHERE scope_retail`
+- Cancelled count: `WHERE scope_retail AND NOT is_active_order`
+
+#### 🎯 When to Use
+- `SUM(net_revenue)`, `SUM(gross_revenue)`, `SUM(total_collected)`, `AVG(...)` → bắt buộc thêm `AND is_active_order`
+- `COUNT(*)`, `COUNT(DISTINCT order_id)` không kèm revenue → **KHÔNG** thêm (đếm tất cả đơn kể cả cancelled)
+- Card cancelled orders → `WHERE scope_retail AND NOT is_active_order`
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ Embed status vào scope_* definition (scope_* không còn loại cancelled)
+WHERE is_sales_channel = true AND status != 'CANCELLED'
+
+-- ❌ Dùng raw status thay vì is_active_order
+WHERE scope_retail AND status != 'CANCELLED'
+
+-- ❌ Bỏ sót is_active_order khi tính revenue
+SELECT SUM(net_revenue) FROM fact_orders WHERE scope_retail  -- bao gồm cancelled revenue
+```
+
+#### 🏷️ Used In
+- Mọi revenue card (Net Revenue, Gross Revenue, Total Collected, AOV, Discount Amount)
+- Available in: `fact_orders`, `fact_order_economics`
+
+---
+
 ## Scope Matrix
 
 | Scope | customer_type included | is_sales_channel | status |
 |---|---|---|---|
-| scope_sales | ANY (RETAIL, WHOLESALE, PARTNER, STAFF, KOL) | ✅ true | NOT CANCELLED/Voided |
-| scope_retail | RETAIL only | ✅ true (via scope_sales) | NOT CANCELLED/Voided |
-| scope_b2b | WHOLESALE, PARTNER | ✅ true (via scope_sales) | NOT CANCELLED/Voided |
+| scope_sales | ANY (RETAIL, WHOLESALE, PARTNER, STAFF, KOL) | ✅ true | any — use `AND is_active_order` for revenue |
+| scope_retail | RETAIL only | ✅ true (via scope_sales) | any — use `AND is_active_order` for revenue |
+| scope_b2b | WHOLESALE, PARTNER | ✅ true (via scope_sales) | any — use `AND is_active_order` for revenue |
+| is_active_order | — (cross-cutting gate) | — | NOT CANCELLED |
 | *(no scope)* | CROSSBORDER | ❌ false | — |
-| *(no named L2)* | STAFF, KOL | ✅ true (in scope_sales) | NOT CANCELLED/Voided |
+| *(no named L2)* | STAFF, KOL | ✅ true (in scope_sales) | any |
 
 ---
 

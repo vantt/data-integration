@@ -165,9 +165,10 @@ docs/analytics-handbook/semantic/dimensions.md → fact_orders.customer_type, da
 
 | Column | File | Rule |
 |---|---|---|
-| `scope_sales` | `semantic/segments.md` | is_sales_channel AND NOT cancelled/voided |
+| `scope_sales` | `semantic/segments.md` | is_sales_channel (pure channel, no status gate) |
 | `scope_retail` | `semantic/segments.md` | scope_sales AND customer_type='RETAIL' |
 | `scope_b2b` | `semantic/segments.md` | scope_sales AND customer_type IN (WHOLESALE, PARTNER) |
+| `is_active_order` | `semantic/segments.md` | status != 'CANCELLED' — revenue gate, combine with scope_* |
 | `net_revenue` | `semantic/metrics.md` | total_collected − vat_amount |
 | `date_key` | `semantic/dimensions.md` | ICT timezone, NOT UTC |
 | `is_completed` | `semantic/rules.md` | fulfilled AND paid |

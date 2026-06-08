@@ -2,7 +2,7 @@
 primary_scope: scope_sales
 scope_indicator: "[All]"
 layer: L1
-uses_concepts: [scope_sales, filter_has_cogs, net_revenue, orders_count, aov, gross_profit]
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, orders_count, aov, gross_profit, is_active_order]
 ---
 
 # CEO Weekly Pulse Blueprint [All]
@@ -23,7 +23,7 @@ uses_concepts: [scope_sales, filter_has_cogs, net_revenue, orders_count, aov, gr
 > **Why:** CEO weekly pulse shows the full company performance across all customer segments (retail + B2B + staff/KOL). This is the L1 executive view — not segmented by customer type.
 >
 > **Concepts used:**
-> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`gross_profit`](../semantic/metrics.md#gross_profit)
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`is_active_order`](../semantic/metrics.md#is_active_order)
 
 All SQL: `WHERE scope_sales`. Do not re-derive as `is_sales_channel = true AND status NOT IN (...)`.
 ## Collection: Executive
@@ -91,6 +91,7 @@ this_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date)
       AND ordered_at < current_date + INTERVAL '1 day'
 ),
@@ -98,6 +99,7 @@ last_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
 )
@@ -137,6 +139,7 @@ this_week AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date)
       AND ordered_at < current_date + INTERVAL '1 day'
 ),
@@ -144,6 +147,7 @@ last_week AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
 )
@@ -222,6 +226,7 @@ this_week AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date)
       AND ordered_at < current_date + INTERVAL '1 day'
 ),
@@ -231,6 +236,7 @@ last_week AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
 )
@@ -273,6 +279,7 @@ WITH mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as mtd_gmv
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date)
       AND ordered_at < current_date
 ),
@@ -314,6 +321,7 @@ WITH mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as mtd_gmv
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date)
       AND ordered_at < current_date
 ),
@@ -366,6 +374,7 @@ SELECT
     SUM(net_revenue) as revenue
 FROM fact_orders
 WHERE scope_sales
+  AND is_active_order
   AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND ordered_at < current_date + INTERVAL '1 day'
 GROUP BY 1
@@ -517,6 +526,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('week', current_date)
   AND o.ordered_at < current_date + INTERVAL '1 day'
 GROUP BY 1
@@ -560,6 +570,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date)
       AND o.ordered_at < current_date + INTERVAL '1 day'
     GROUP BY 1
@@ -571,6 +582,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
     GROUP BY 1
@@ -618,6 +630,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('week', current_date)
   AND o.ordered_at < current_date + INTERVAL '1 day'
 GROUP BY 1
@@ -656,6 +669,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date)
       AND o.ordered_at < current_date + INTERVAL '1 day'
     GROUP BY 1
@@ -668,6 +682,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key
     WHERE o.scope_sales
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
     GROUP BY 1
@@ -829,6 +844,7 @@ SELECT
 FROM fact_orders o
 LEFT JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('week', current_date)
   AND o.ordered_at < current_date + INTERVAL '1 day'
 ```
@@ -946,7 +962,7 @@ WITH
 this_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE status = 'CANCELLED'
+    WHERE NOT is_active_order
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND ordered_at >= date_trunc('week', current_date)
       AND ordered_at < current_date + INTERVAL '1 day'
@@ -954,7 +970,7 @@ this_week AS (
 last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
     FROM fact_orders
-    WHERE status = 'CANCELLED'
+    WHERE NOT is_active_order
       AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
       AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND ordered_at < date_trunc('week', current_date)
@@ -1022,6 +1038,7 @@ SELECT
     ROUND(SUM(COALESCE(discount_amount, 0)) * 100.0 / NULLIF(SUM(gross_revenue), 0), 1) as "Discount Rate %"
 FROM fact_orders
 WHERE scope_sales
+  AND is_active_order
   AND ordered_at >= date_trunc('week', current_date)
   AND ordered_at < current_date + INTERVAL '1 day'
 ```
@@ -1071,6 +1088,7 @@ this_week AS (
     JOIN fact_orders o ON e.order_id = o.order_id
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date)
       AND o.ordered_at < current_date + INTERVAL '1 day'
 ),
@@ -1080,6 +1098,7 @@ last_week AS (
     JOIN fact_orders o ON e.order_id = o.order_id
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 )
@@ -1125,6 +1144,7 @@ this_week AS (
     JOIN fact_orders o ON e.order_id = o.order_id
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date)
       AND o.ordered_at < current_date + INTERVAL '1 day'
 ),
@@ -1138,6 +1158,7 @@ last_week AS (
     JOIN fact_orders o ON e.order_id = o.order_id
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 )

@@ -59,27 +59,34 @@ P&L inflated by 8–10% when using `total_collected` instead of `net_revenue` fo
 > **Type:** Rule | **Domain:** [Sales](../domains/sales.md) | **Status:** `active`
 > **Applies To:** scope_sales, scope_retail, scope_b2b, status | **Since:** 2024-01-01
 
-**Rule:** Exclude `CANCELLED` orders — use `status != 'CANCELLED'` or the pre-computed scope flags.
+**Rule:** Exclude `CANCELLED` orders for revenue metrics — use `is_active_order` (pre-computed gate). Do NOT embed status exclusion in scope_* definitions; scope_* is pure channel/segment classification.
 
 **SQL:**
 ```sql
--- ✅ Correct pattern — explicit single-value exclusion
-WHERE status != 'CANCELLED'
+-- ✅ Correct — revenue metric: scope + status gate
+WHERE scope_retail AND is_active_order
 
--- ✅ Correct pattern — preferred: pre-computed flag handles the exclusion
-WHERE scope_sales   -- already excludes CANCELLED
+-- ✅ Correct — count all orders including cancelled
+WHERE scope_retail
 
--- ❌ Wrong pattern — technically correct but scope_sales is more readable and future-proof
-WHERE is_cancelled = false
+-- ✅ Correct — count cancelled orders only
+WHERE scope_retail AND NOT is_active_order
+
+-- ❌ Wrong — embedding status in scope derivation (scope_* no longer includes this)
+WHERE is_sales_channel = true AND status != 'CANCELLED'
+
+-- ❌ Wrong — scope_* alone for revenue (scope_sales includes cancelled after refactor)
+WHERE scope_sales   -- missing AND is_active_order for revenue
 ```
 
-**Intent:** Sapo's `status` field uses `CANCELLED` for cancelled orders. Sapo payment statuses are `paid`, `unpaid`, `partial`, and `refunded` — there is no `Voided` status in the API.
+**Intent:** Sapo's `status` field uses `CANCELLED` for cancelled orders. `is_active_order` is a pre-computed boolean column in `fact_orders` and `fact_order_economics`. Scope flags classify channel/segment; `is_active_order` gates on execution status — two orthogonal concerns.
 
 **Applies To:**
-- [scope_sales](segments.md#scope_sales) — pre-computed flag implementing this rule
-- [scope_retail](segments.md#scope_retail) — inherits scope_sales cancellation exclusion
-- [scope_b2b](segments.md#scope_b2b) — inherits scope_sales cancellation exclusion
-- [status](dimensions.md#status) — raw dimension; avoid raw comparisons in favor of scope flags
+- [is_active_order](segments.md#is_active_order) — pre-computed gate implementing this rule
+- [scope_sales](segments.md#scope_sales) — pure channel classification, no status filter
+- [scope_retail](segments.md#scope_retail) — pure channel + retail segment, no status filter
+- [scope_b2b](segments.md#scope_b2b) — pure channel + B2B segment, no status filter
+- [status](dimensions.md#status) — raw dimension; use `is_active_order` not raw comparisons
 
 #### ⚠️ Conflicts
 *None.*

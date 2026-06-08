@@ -9,6 +9,7 @@ uses_concepts:
   - aov
   - retention_rate
   - customer_acquisition
+  - is_active_order
 ---
 
 # Customer Operational Dashboard Blueprint [Retail]
@@ -529,6 +530,7 @@ WITH first_orders AS (
     WHERE cust.created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND cust.created_at < date_trunc('month', current_date)
       AND o.scope_sales
+      AND o.is_active_order
       AND cust.customer_id != 'Unknown'
 )
 SELECT

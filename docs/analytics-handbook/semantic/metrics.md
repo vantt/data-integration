@@ -1527,7 +1527,7 @@ WHERE c.first_order_date < CURRENT_DATE  -- wrong: should be < window_start
 ```
 
 #### 🏷️ Used In
-- `health_score` — Customer Loyalty component (see sales_daily_operation.md, sales_yesterday_operation.md)
+- `health_score` — Customer Loyalty component (see sales_today_operation.md, sales_yesterday_operation.md)
 
 ---
 

@@ -2,7 +2,7 @@
 primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
-uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate]
+uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, is_active_order]
 ---
 
 # Yesterday's Sales Performance Blueprint [Retail]
@@ -58,6 +58,7 @@ recent AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
       AND o.scope_retail
+      AND o.is_active_order
 ),
 previous AS (
     SELECT
@@ -69,6 +70,7 @@ previous AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '14 days' AND current_date - INTERVAL '8 days'
       AND o.scope_retail
+      AND o.is_active_order
 ),
 customer_loyalty AS (
     SELECT
@@ -80,6 +82,7 @@ customer_loyalty AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
       AND o.scope_retail
+      AND o.is_active_order
 ),
 scores AS (
     SELECT
@@ -131,6 +134,7 @@ recent AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
       AND o.scope_retail
+      AND o.is_active_order
 ),
 previous AS (
     SELECT
@@ -142,6 +146,7 @@ previous AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '14 days' AND current_date - INTERVAL '8 days'
       AND o.scope_retail
+      AND o.is_active_order
 ),
 customer_loyalty AS (
     SELECT
@@ -153,6 +158,7 @@ customer_loyalty AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '7 days' AND current_date - INTERVAL '1 day'
       AND o.scope_retail
+      AND o.is_active_order
 ),
 raw_scores AS (
     SELECT
@@ -278,6 +284,7 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
   AND date(o.ordered_at) < current_date
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -318,6 +325,7 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
   AND date(o.ordered_at) < current_date
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -378,15 +386,15 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
 
 #### Question: Cancelled Orders
 
-Count of cancelled retail orders yesterday. Uses `c.customer_type = 'RETAIL'` (scope_retail pre-excludes CANCELLED status so cannot be used here).
+Count of cancelled retail orders yesterday.
 
 ```sql
 SELECT COUNT(DISTINCT o.order_id) as "Cancelled Orders"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.status = 'CANCELLED'
-  AND c.customer_type = 'RETAIL'
+  AND o.scope_retail
+  AND NOT o.is_active_order
 ```
 
 ```json metabase-viz
@@ -423,6 +431,7 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
   AND date(o.ordered_at) < current_date
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -460,6 +469,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -584,6 +594,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -623,6 +634,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -694,6 +706,7 @@ WITH yesterday_sales AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
       AND o.scope_retail
+      AND o.is_active_order
     GROUP BY 1
 ),
 day_before_sales AS (
@@ -704,6 +717,7 @@ day_before_sales AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
       AND o.scope_retail
+      AND o.is_active_order
     GROUP BY 1
 )
 SELECT
@@ -753,6 +767,7 @@ yesterday_hourly AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
       AND o.scope_retail
+      AND o.is_active_order
     GROUP BY 1
 ),
 day_before_hourly AS (
@@ -763,6 +778,7 @@ day_before_hourly AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
       AND o.scope_retail
+      AND o.is_active_order
     GROUP BY 1
 )
 SELECT
@@ -868,6 +884,7 @@ JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -909,6 +926,7 @@ JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -943,6 +961,7 @@ WITH yesterday AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
       AND o.scope_retail
+      AND o.is_active_order
     GROUP BY 1
 ),
 day_before AS (
@@ -955,6 +974,7 @@ day_before AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
       AND o.scope_retail
+      AND o.is_active_order
     GROUP BY 1
 )
 SELECT
@@ -1029,6 +1049,7 @@ JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1124,6 +1145,7 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -1200,6 +1222,7 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1244,6 +1267,7 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1, 2
 ORDER BY 4 DESC
 LIMIT 20
@@ -1381,6 +1405,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1
 ```
 
@@ -1422,6 +1447,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1527,6 +1553,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz

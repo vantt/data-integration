@@ -10,6 +10,7 @@ uses_concepts:
   - aov
   - retention_rate
   - customer_acquisition
+  - is_active_order
 ---
 
 # 📘 Blueprint: Customer Intelligence Monthly [Cross]
@@ -860,6 +861,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -906,6 +908,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -1067,6 +1070,7 @@ FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -1124,6 +1128,7 @@ JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE cust.value_group = 'VALUE_VIP'
   AND o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1163,6 +1168,7 @@ JOIN dim_customers cust ON o.customer_key = cust.customer_key
 JOIN dim_products p ON s.product_key = p.product_key
 WHERE date_trunc('month', o.ordered_at) = date_trunc('month', cust.first_order_date)
   AND o.scope_sales
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '3 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND cust.customer_id != 'Unknown'
@@ -1216,6 +1222,7 @@ WITH first_orders AS (
       AND c.first_order_date < date_trunc('month', current_date)
       AND c.customer_id != 'Unknown'
       AND o.scope_sales
+      AND o.is_active_order
 ),
 repeat_30d AS (
     SELECT DISTINCT
@@ -1226,6 +1233,7 @@ repeat_30d AS (
         AND o2.ordered_at > (SELECT MIN(first_order_date) FROM dim_customers WHERE customer_key = fo.customer_key)
         AND o2.ordered_at <= (SELECT MIN(first_order_date) + INTERVAL '30 days' FROM dim_customers WHERE customer_key = fo.customer_key)
         AND o2.scope_sales
+        AND o2.is_active_order
 )
 SELECT
     fo.cohort_month as "Month",

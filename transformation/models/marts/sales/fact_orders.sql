@@ -177,15 +177,15 @@ SELECT
     created_at as ordered_at,
     updated_at,
 
-    -- Segment scope (pre-computed; see docs/analytics-handbook/semantic/segments.md)
+    -- Segment scope: pure channel+customer classification, status-independent
+    -- (see docs/analytics-handbook/semantic/segments.md)
+    COALESCE(ch.is_sales_channel, false)                                       AS scope_sales,
     COALESCE(ch.is_sales_channel, false)
-        AND orders.status != 'CANCELLED'               AS scope_sales,
+        AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL'                  AS scope_retail,
     COALESCE(ch.is_sales_channel, false)
-        AND orders.status != 'CANCELLED'
-        AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL'           AS scope_retail,
-    COALESCE(ch.is_sales_channel, false)
-        AND orders.status != 'CANCELLED'
-        AND COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') AS scope_b2b
+        AND COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') AS scope_b2b,
+    -- Status gate: use with scope_* for revenue metrics; omit for order counts (includes cancelled)
+    orders.status != 'CANCELLED'                                               AS is_active_order
 
 FROM orders
 LEFT JOIN valid_customers vc ON {{ dbt_utils.generate_surrogate_key(["coalesce(cast(orders.customer_id as varchar), 'Unknown')"]) }} = vc.customer_key

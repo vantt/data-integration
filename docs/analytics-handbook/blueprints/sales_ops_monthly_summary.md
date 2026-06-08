@@ -2,7 +2,7 @@
 primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
-uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov]
+uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, is_active_order]
 ---
 
 # Sales Ops Monthly Summary [Retail] Blueprint (Redesign)
@@ -13,7 +13,7 @@ uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov]
 > **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 >
 > **Concepts used:**
-> [`scope_retail`](../semantic/segments.md#scope_retail) · [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`is_active_order`](../semantic/metrics.md#is_active_order)
 ## 📂 Collection: Operations > Periodic Reviews
 
 ### Dashboard: Sales Ops Monthly Summary [Retail]
@@ -180,6 +180,7 @@ this_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders, filter_bounds
     WHERE scope_retail
+      AND is_active_order
       AND ordered_at >= filter_bounds.p_start
       AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND {{date_range}}]]
@@ -189,6 +190,7 @@ prev_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders, filter_bounds
     WHERE scope_retail
+      AND is_active_order
       AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -237,6 +239,7 @@ this_period AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END AS val
     FROM fact_orders, filter_bounds
     WHERE scope_retail
+      AND is_active_order
       AND ordered_at >= filter_bounds.p_start
       AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND {{date_range}}]]
@@ -248,6 +251,7 @@ prev_period AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END AS val
     FROM fact_orders, filter_bounds
     WHERE scope_retail
+      AND is_active_order
       AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -764,6 +768,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= filter_bounds.p_start
   AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -888,7 +893,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.scope_retail
-  AND o.status = 'CANCELLED'
+  AND NOT o.is_active_order
   AND o.ordered_at >= filter_bounds.p_start
   AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -930,7 +935,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.scope_retail
-  AND o.status = 'CANCELLED'
+  AND NOT o.is_active_order
   AND o.ordered_at >= filter_bounds.p_start
   AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
@@ -1145,6 +1150,7 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= filter_bounds.p_start
       AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1155,6 +1161,7 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND o.ordered_at <   filter_bounds.p_start
@@ -1258,6 +1265,7 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= filter_bounds.p_start
       AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1270,6 +1278,7 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND o.ordered_at <   filter_bounds.p_start
@@ -1323,6 +1332,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
 WHERE o.scope_retail
+  AND o.is_active_order
   AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.ordered_at >= filter_bounds.p_start
   AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1367,6 +1377,7 @@ total_rev AS (
     FROM fact_orders o2
     JOIN dim_channels c2 ON o2.channel_key = c2.channel_key, filter_bounds
     WHERE o2.scope_retail
+      AND o2.is_active_order
       AND c2.channel_format IN ('Facebook', 'Zalo')
       AND o2.ordered_at >= filter_bounds.p_start
       AND o2.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1382,6 +1393,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
 WHERE o.scope_retail
+  AND o.is_active_order
   AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.ordered_at >= filter_bounds.p_start
   AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1428,6 +1440,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
 WHERE o.scope_retail
+  AND o.is_active_order
   AND st.staff_key IS NOT NULL
   AND o.ordered_at >= filter_bounds.p_start
   AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1478,6 +1491,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
 WHERE o.scope_retail
+  AND o.is_active_order
   AND st.staff_key IS NOT NULL
   AND o.ordered_at >= filter_bounds.p_start
   AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
@@ -1615,6 +1629,7 @@ WITH total_orders AS (
     SELECT COUNT(DISTINCT order_id) AS total
     FROM fact_orders
     WHERE scope_retail
+      AND is_active_order
       [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
@@ -1625,6 +1640,7 @@ SELECT
     ROUND(COUNT(DISTINCT order_id) * 100.0 / NULLIF((SELECT total FROM total_orders), 0), 1) AS "% of Total"
 FROM fact_orders
 WHERE scope_retail
+  AND is_active_order
   [[AND {{date_range}}]]
   [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
@@ -1732,6 +1748,7 @@ this_period AS (
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key, filter_bounds
     WHERE e.scope_sales
+      AND e.is_active_order
       AND e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
       AND e.date_key <= CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
     GROUP BY c.channel_name
@@ -1746,6 +1763,7 @@ prev_period AS (
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key, filter_bounds
     WHERE e.scope_sales
+      AND e.is_active_order
       AND e.date_key >= CAST(strftime((filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)::DATE, '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
     GROUP BY c.channel_name

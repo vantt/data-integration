@@ -2,7 +2,7 @@
 primary_scope: scope_sales
 scope_indicator: "[All]"
 layer: L1.5
-uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, channel_net_profit]
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, channel_net_profit, is_active_order]
 ---
 
 # Blueprint: Channel P&L Deep Dive [Cross]
@@ -138,7 +138,7 @@ FROM (
         ('Doanh thu gop',
             (SELECT SUM(gross_revenue)
              FROM fact_order_economics
-             WHERE has_cogs AND scope_sales
+             WHERE has_cogs AND scope_sales AND is_active_order
                [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
                [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
@@ -146,7 +146,7 @@ FROM (
         ('Chiet khau',
             (SELECT -SUM(ABS(discount_amount))
              FROM fact_order_economics
-             WHERE has_cogs AND scope_sales
+             WHERE has_cogs AND scope_sales AND is_active_order
                [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
                [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
@@ -154,7 +154,7 @@ FROM (
         ('Doanh thu thuan',
             (SELECT SUM(net_revenue)
              FROM fact_order_economics
-             WHERE has_cogs AND scope_sales
+             WHERE has_cogs AND scope_sales AND is_active_order
                [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
                [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
@@ -162,7 +162,7 @@ FROM (
         ('Gia von COGS',
             (SELECT -SUM(COALESCE(cogs_amount, 0))
              FROM fact_order_economics
-             WHERE has_cogs AND scope_sales
+             WHERE has_cogs AND scope_sales AND is_active_order
                [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
                [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
@@ -175,7 +175,7 @@ FROM (
                + COALESCE(shopee_taxes,            0)
              )
              FROM fact_order_economics
-             WHERE has_cogs AND scope_sales
+             WHERE has_cogs AND scope_sales AND is_active_order
                [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
                [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
@@ -183,7 +183,7 @@ FROM (
         ('Loi nhuan rong',
             (SELECT SUM(channel_net_profit)
              FROM fact_order_economics
-             WHERE has_cogs AND scope_sales
+             WHERE has_cogs AND scope_sales AND is_active_order
                [[AND date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
                [[AND channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
             )
@@ -327,6 +327,7 @@ actuals AS (
     JOIN dim_channels c USING (channel_key)
     WHERE e.has_cogs
       AND e.scope_sales
+      AND e.is_active_order
       [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
       [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
     GROUP BY c.channel_key, c.channel_name
@@ -525,6 +526,7 @@ FROM fact_order_economics e
 JOIN dim_channels c USING (channel_key), filter_bounds
 WHERE e.has_cogs
   AND e.scope_sales
+  AND e.is_active_order
   AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= filter_bounds.p_start
   AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <= filter_bounds.p_end
   [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
@@ -666,6 +668,7 @@ cur AS (
     FROM fact_order_economics e, filter_bounds
     WHERE e.has_cogs
       AND e.scope_sales
+      AND e.is_active_order
       AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= filter_bounds.p_start
       AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <= filter_bounds.p_end
       [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
@@ -679,6 +682,7 @@ prior AS (
     FROM fact_order_economics e, filter_bounds
     WHERE e.has_cogs
       AND e.scope_sales
+      AND e.is_active_order
       AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <  filter_bounds.p_start
       [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
@@ -787,6 +791,7 @@ actuals AS (
     JOIN dim_channels c USING (channel_key), filter_bounds
     WHERE e.has_cogs
       AND e.scope_sales
+      AND e.is_active_order
       AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE >= filter_bounds.p_start
       AND strptime(CAST(e.date_key AS VARCHAR), '%Y%m%d')::DATE <= filter_bounds.p_end
       [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
@@ -980,6 +985,7 @@ FROM (
     FROM fact_order_economics e
     WHERE e.has_cogs
       AND e.scope_sales
+      AND e.is_active_order
       [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
     GROUP BY e.channel_key
     HAVING SUM(e.channel_net_profit) < 0
@@ -1031,6 +1037,7 @@ FROM fact_order_economics e
 JOIN dim_channels c USING (channel_key)
 WHERE e.has_cogs
   AND e.scope_sales
+  AND e.is_active_order
   [[AND e.date_key IN (SELECT date_key FROM dim_date WHERE {{date_range}})]]
   [[AND e.channel_key IN (SELECT channel_key FROM dim_channels WHERE {{channel}})]]
 GROUP BY c.channel_name

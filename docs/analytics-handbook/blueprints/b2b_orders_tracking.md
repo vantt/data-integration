@@ -2,7 +2,7 @@
 primary_scope: scope_b2b
 scope_indicator: "[B2B]"
 layer: L2
-uses_concepts: [scope_b2b, net_revenue, orders_count]
+uses_concepts: [scope_b2b, net_revenue, orders_count, is_active_order]
 ---
 
 # B2B Orders Tracking Blueprint [B2B]
@@ -93,6 +93,7 @@ FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
+  AND o.is_active_order
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 ```
@@ -236,6 +237,7 @@ SELECT
 FROM fact_orders o, filter_bounds
 WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
+  AND o.is_active_order
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY 1
@@ -285,6 +287,7 @@ FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
+  AND o.is_active_order
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.customer_type
@@ -345,6 +348,7 @@ FROM fact_orders o, filter_bounds
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_b2b
   AND o.payment_status IN ('UNPAID', 'PARTIAL')
+  AND o.is_active_order
   AND o.ordered_at::DATE >= filter_bounds.p_start
   AND o.ordered_at::DATE <= filter_bounds.p_end
 GROUP BY c.full_name, c.customer_type

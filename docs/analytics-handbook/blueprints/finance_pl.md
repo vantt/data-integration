@@ -2,7 +2,7 @@
 primary_scope: scope_sales
 scope_indicator: "[All]"
 layer: L1.5
-uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, cogs_amount]
+uses_concepts: [scope_sales, filter_has_cogs, net_revenue, gross_profit, cogs_amount, is_active_order]
 ---
 
 # Finance P&L [All] Blueprint
@@ -138,12 +138,14 @@ this_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       [[AND {{date_range}}]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders, filter_bounds
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND ordered_at <  filter_bounds.p_start
       [[AND {{channel}}]]
@@ -153,6 +155,7 @@ prev_year AS (
     SELECT COALESCE(SUM(net_revenue), 0) AS val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '13 months'
       AND ordered_at <  date_trunc('month', current_date) - INTERVAL '12 months'
 )
@@ -361,6 +364,7 @@ WITH revenue_monthly AS (
         NULL::DOUBLE                         AS "Gia von"
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
     GROUP BY 1
 ),
@@ -442,6 +446,7 @@ FROM (
             (SELECT COALESCE(SUM(gross_revenue), 0)
              FROM fact_orders
              WHERE scope_sales
+               AND is_active_order
                [[AND {{date_range}}]]
             )
         ),
@@ -449,6 +454,7 @@ FROM (
             (SELECT COALESCE(-SUM(ABS(discount_amount)), 0)
              FROM fact_orders
              WHERE scope_sales
+               AND is_active_order
                [[AND {{date_range}}]]
             )
         ),
@@ -456,6 +462,7 @@ FROM (
             (SELECT COALESCE(-SUM(ABS(vat_amount)), 0)
              FROM fact_orders
              WHERE scope_sales
+               AND is_active_order
                [[AND {{date_range}}]]
             )
         ),
@@ -463,6 +470,7 @@ FROM (
             (SELECT COALESCE(SUM(net_revenue), 0)
              FROM fact_orders
              WHERE scope_sales
+               AND is_active_order
                [[AND {{date_range}}]]
             )
         )

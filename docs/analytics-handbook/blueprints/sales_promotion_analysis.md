@@ -2,7 +2,7 @@
 primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
-uses_concepts: [scope_retail, net_revenue, discount_rate, discount_amount, aov]
+uses_concepts: [scope_retail, net_revenue, discount_rate, discount_amount, aov, is_active_order]
 ---
 
 # 📘 Blueprint: Sales Promotion & Discount Analysis [Retail]
@@ -14,7 +14,7 @@ uses_concepts: [scope_retail, net_revenue, discount_rate, discount_amount, aov]
 > **Why:** **Promotion analysis MUST use scope_retail.** B2B discount = fixed wholesale price (40–50%), not a promotion. Mixing B2B and retail makes discount rate ~35% vs actual retail 15% — completely misleading.
 >
 > **Concepts used:**
-> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`discount_amount`](../semantic/metrics.md#discount_amount) · [`aov`](../semantic/metrics.md#aov)
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`discount_amount`](../semantic/metrics.md#discount_amount) · [`aov`](../semantic/metrics.md#aov) · [`is_active_order`](../semantic/metrics.md#is_active_order)
 ## 📂 Collection: Marketing & Customers
 
 Promotion analysis, discount tracking for retail customers only.
@@ -72,6 +72,7 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
 ),
@@ -80,6 +81,7 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
 )
@@ -122,6 +124,7 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
 ),
@@ -132,6 +135,7 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
 )
@@ -269,6 +273,7 @@ WITH base AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
 )
@@ -361,6 +366,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
 GROUP BY 1, 2
@@ -468,6 +474,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
   AND o.discount_amount > 0

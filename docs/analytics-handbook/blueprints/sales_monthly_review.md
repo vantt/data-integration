@@ -2,7 +2,7 @@
 primary_scope: scope_sales
 scope_indicator: "[All]"
 layer: L1
-uses_concepts: [scope_sales, net_revenue, orders_count, aov]
+uses_concepts: [scope_sales, net_revenue, orders_count, aov, is_active_order]
 ---
 
 # 📘 Blueprint: Sales Monthly Business Review [All]
@@ -70,6 +70,7 @@ this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -77,6 +78,7 @@ prev_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -116,6 +118,7 @@ mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -159,6 +162,7 @@ this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -166,6 +170,7 @@ prev_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -244,6 +249,7 @@ this_month AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -253,6 +259,7 @@ prev_month AS (
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -292,6 +299,7 @@ this_month AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -299,6 +307,7 @@ prev_month AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -338,6 +347,7 @@ this_month AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -345,6 +355,7 @@ prev_month AS (
     SELECT COALESCE(SUM(total_collected), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -384,6 +395,7 @@ mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -568,6 +580,7 @@ WITH monthly_actuals AS (
         SUM(net_revenue) as net_revenue
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
       AND ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -621,6 +634,7 @@ WITH monthly_actuals AS (
         SUM(net_revenue) as net_revenue
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
       AND ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -711,6 +725,7 @@ mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -757,6 +772,7 @@ this_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -764,6 +780,7 @@ prev_month AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -803,6 +820,7 @@ mtd_actual AS (
     SELECT COALESCE(SUM(gross_revenue), 0) as actual_gmv
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -859,6 +877,7 @@ WITH branch_actuals AS (
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
     WHERE fo.scope_sales
+      AND fo.is_active_order
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -929,6 +948,7 @@ WITH branch_variance AS (
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
     WHERE fo.scope_sales
+      AND fo.is_active_order
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY bl.branch_location_name, bl.branch_location_key
@@ -984,6 +1004,7 @@ this_month AS (
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
     WHERE fo.scope_sales
+      AND fo.is_active_order
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -995,6 +1016,7 @@ prev_month AS (
     FROM fact_orders fo
     JOIN dim_branch_location bl ON fo.branch_location_key = bl.branch_location_key
     WHERE fo.scope_sales
+      AND fo.is_active_order
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND fo.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
@@ -1138,6 +1160,7 @@ SELECT
 FROM fact_orders fo
 JOIN dim_channels dc ON fo.channel_key = dc.channel_key
 WHERE fo.scope_sales
+  AND fo.is_active_order
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1180,6 +1203,7 @@ this_month AS (
     FROM fact_orders fo
     JOIN dim_channels dc ON fo.channel_key = dc.channel_key
     WHERE fo.scope_sales
+      AND fo.is_active_order
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
@@ -1191,6 +1215,7 @@ prev_month AS (
     FROM fact_orders fo
     JOIN dim_channels dc ON fo.channel_key = dc.channel_key
     WHERE fo.scope_sales
+      AND fo.is_active_order
       AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND fo.ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
     GROUP BY 1
@@ -1244,6 +1269,7 @@ SELECT
 FROM fact_orders fo
 JOIN dim_channels dc ON fo.channel_key = dc.channel_key
 WHERE fo.scope_sales
+  AND fo.is_active_order
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1, 2
@@ -1278,6 +1304,7 @@ SELECT
 FROM fact_orders fo
 JOIN dim_channels dc ON fo.channel_key = dc.channel_key
 WHERE fo.scope_sales
+  AND fo.is_active_order
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1329,6 +1356,7 @@ WITH value_groups AS (
     FROM fact_orders fo
     JOIN dim_customers dc ON fo.customer_key = dc.customer_key
     WHERE fo.scope_sales
+      AND fo.is_active_order
       AND fo.ordered_at < date_trunc('month', current_date)
     GROUP BY 1
 )
@@ -1338,6 +1366,7 @@ SELECT
 FROM fact_orders fo
 JOIN value_groups cs ON fo.customer_key = cs.customer_key
 WHERE fo.scope_sales
+  AND fo.is_active_order
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1377,6 +1406,7 @@ SELECT
 FROM fact_orders fo
 JOIN dim_customers dc ON fo.customer_key = dc.customer_key
 WHERE fo.scope_sales
+  AND fo.is_active_order
   AND fo.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fo.ordered_at < date_trunc('month', current_date)
 GROUP BY 1
@@ -1451,6 +1481,7 @@ SELECT
          ELSE ROUND(SUM(discount_amount) * 100.0 / SUM(gross_revenue), 1) END as "Discount Rate %"
 FROM fact_orders
 WHERE scope_sales
+  AND is_active_order
   AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND ordered_at < date_trunc('month', current_date)
 ```
@@ -1482,6 +1513,7 @@ this_month AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
       AND ordered_at < date_trunc('month', current_date)
 ),
@@ -1489,6 +1521,7 @@ prev_month AS (
     SELECT COALESCE(SUM(discount_amount), 0) as val
     FROM fact_orders
     WHERE scope_sales
+      AND is_active_order
       AND ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
       AND ordered_at < date_trunc('month', current_date) - INTERVAL '1 month'
 )
@@ -1639,6 +1672,7 @@ WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fs.order_id IN (
       SELECT order_id FROM fact_orders
       WHERE scope_sales
+        AND is_active_order
   )
 GROUP BY 1
 ORDER BY "Revenue" DESC
@@ -1726,6 +1760,7 @@ WHERE fs.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
   AND fs.order_id IN (
       SELECT order_id FROM fact_orders
       WHERE scope_sales
+        AND is_active_order
   )
 GROUP BY 1
 ORDER BY "Revenue" DESC
@@ -1772,6 +1807,7 @@ this_month AS (
       AND fs.order_id IN (
           SELECT order_id FROM fact_orders
           WHERE scope_sales
+            AND is_active_order
       )
     GROUP BY 1
 ),
@@ -1786,6 +1822,7 @@ prev_month AS (
       AND fs.order_id IN (
           SELECT order_id FROM fact_orders
           WHERE scope_sales
+            AND is_active_order
       )
     GROUP BY 1
 ),
@@ -1910,6 +1947,7 @@ this_month AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 ),
@@ -1919,6 +1957,7 @@ prev_month AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
 )
@@ -1961,6 +2000,7 @@ this_month AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 ),
@@ -1971,6 +2011,7 @@ prev_month AS (
     JOIN dim_channels c ON e.channel_key = c.channel_key
     WHERE e.scope_sales
       AND e.has_cogs
+      AND e.is_active_order
       AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '2 months', '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
 )
@@ -2020,6 +2061,7 @@ FROM fact_order_economics e
 JOIN dim_channels c ON e.channel_key = c.channel_key
 WHERE e.scope_sales
   AND e.has_cogs
+  AND e.is_active_order
   AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '12 months', '%Y%m%d') AS INTEGER)
   AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 GROUP BY 1
@@ -2071,6 +2113,7 @@ FROM fact_order_economics e
 JOIN dim_channels c ON e.channel_key = c.channel_key
 WHERE e.scope_sales
   AND e.has_cogs
+  AND e.is_active_order
   AND e.date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '1 month', '%Y%m%d') AS INTEGER)
   AND e.date_key <  CAST(strftime(date_trunc('month', current_date), '%Y%m%d') AS INTEGER)
 GROUP BY c.channel_name
