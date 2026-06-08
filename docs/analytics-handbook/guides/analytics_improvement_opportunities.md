@@ -242,7 +242,7 @@ This perspective is operationally important because it detects anomalies while t
 Important reports:
 
 - [Daily Sales Operations](../playbooks/sales_daily_operation.md)
-- [Yesterday's Sales Operations](../playbooks/sales_yesterday_operation.md)
+- [Daily Sales Operations](../playbooks/sales_daily_retail.md)
 - [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)
 - [Order Listing](../blueprints/order_listing.md)
 - [Order Detail](../blueprints/order_detail.md)

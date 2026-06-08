@@ -291,7 +291,7 @@ WHERE customer_type = 'RETAIL'
 ├── US CrossBorder Daily [US]         (root, không sub)
 ├── 📁 Daily Monitoring               [Retail]
 │   ├── Daily Sales [Retail]
-│   ├── Yesterday's Sales [Retail]
+│   ├── Daily Sales [Retail]
 │   ├── Order Listing [Retail]
 │   ├── Order Detail [Retail]
 │   └── Social Commerce Operations [Retail]
@@ -405,8 +405,8 @@ GROUP BY cu.customer_type
 
 | Blueprint | Action (executed) | Final Indicator | Status |
 |-------------------|--------|---------------|---|
-| sales_today_operation | Expanded to scope_sales (Retail + B2B) | [All] | ✅ |
-| sales_yesterday_operation | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
+| sales_today_operation | scope_retail | [Retail] | ✅ |
+| sales_daily_retail | scope_retail | [Retail] | ✅ |
 | sales_promotion_analysis | Added `customer_type = 'RETAIL'` + moved → Marketing & Customers | [Retail] | ✅ |
 | marketing_weekly_tracker | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
 | customer_operational_dashboard | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |

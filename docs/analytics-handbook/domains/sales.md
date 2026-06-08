@@ -199,7 +199,7 @@ WHERE c.customer_type = 'RETAIL'
 | Dashboard Name | Scope | Audience | Purpose |
 |:---|:---|:---|:---|
 | **Daily Sales [Retail]** | scope_retail | Ops / Sales Reps | Real-time monitoring — 4 tabs: Overview, Channels, Products, Customers |
-| **Yesterday's Sales [Retail]** | scope_retail | Ops / Store Managers | Finalized yesterday review |
+| **Daily Sales [Retail]** | scope_retail | Ops / Store Managers | Finalized day review (date picker) |
 | **Today's Orders [Retail]** | scope_retail | Ops / Sales Reps | Order-level list for reconciliation |
 | **Yesterday's Orders [Retail]** | scope_retail | Ops / Store Managers | Finalized order-level list |
 | **Promotion Analysis [Retail]** | scope_retail | Marketing / Sales Ops | Promotion ROI, discount analysis — **BẮT BUỘC scope_retail** |
@@ -241,7 +241,7 @@ WHERE c.customer_type = 'RETAIL'
 | Playbook                                                           | Description                                                                           |
 | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
 | **[Sales Monthly Review](../playbooks/sales_monthly_review.md)**   | Guide for conducting the Monthly Business Review (MBR) using the Executive Dashboard. |
-| **[Yesterday's Sales Ops](../playbooks/sales_yesterday_operation.md)** | Review finalized yesterday's performance with day-over-day comparisons.           |
+| **[Daily Sales Ops](../playbooks/sales_daily_retail.md)** | Review finalized daily performance with day-over-day comparisons (date picker).       |
 | **[Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)** | Order-level listing for BI vs Sapo reconciliation (Today & Yesterday).    |
 | **[Promotion Analysis](../playbooks/sales_promotion_analysis.md)** | Deep dive methodologies for validating campaign ROI and discount strategies.          |
 | **[Customer Support Domain](../domains/customer_support.md)**      | For "Social Commerce" and Inbound Sales specific metrics.                             |

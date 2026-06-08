@@ -82,7 +82,7 @@ This playbook is **ONLY VALID** with `scope_retail = true` because:
 - **Domain:** [Sales Domain](../../domains/sales.md)
 - **Metabase Playbooks:**
   - [Daily Sales Operation](../sales_daily_operation.md)
-  - [Yesterday's Sales](../sales_yesterday_operation.md)
+  - [Daily Sales](../sales_daily_retail.md)
   - [Promotion Analysis](../sales_promotion_analysis.md)
 - **Blueprint:** [orders_retail_ops.yaml](../../blueprints/rill/orders_retail_ops.yaml)
 

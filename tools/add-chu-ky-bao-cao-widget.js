@@ -116,8 +116,8 @@ const BLUEPRINT_MAP = {
   32: 'shopee_channel_economics.md',
   27: 'customer_support_social_commerce.md',
   51: 'us_crossborder_operations.md',
-  42: 'sales_yesterday_operation.md',
-   5: 'sales_yesterday_operation.md',
+  42: 'sales_daily_retail.md',
+   5: 'sales_daily_retail.md',
   40: 'ingestion_health.md',
    1: null,  // E-commerce Insights — legacy, no blueprint
 };

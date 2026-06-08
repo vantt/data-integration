@@ -5,7 +5,7 @@ layer: L2
 uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, is_active_order]
 ---
 
-# Yesterday's Sales Performance Blueprint [Retail]
+# Daily Sales Blueprint [Retail]
 
 ## Semantic Contract
 
@@ -19,7 +19,7 @@ uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, is_
 All SQL: `WHERE scope_retail`.
 ## 📂 Collection: Operations > Daily Monitoring
 
-### Dashboard: Yesterday's Sales [Retail]
+### Dashboard: Daily Sales [Retail]
 
 **Description**: Finalized review of yesterday's **retail** sales performance — Health Score gauge, KPIs with integrated DoD trends, hourly patterns, channel/product/customer breakdowns across 4 tabs.
 
