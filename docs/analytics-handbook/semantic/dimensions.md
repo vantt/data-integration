@@ -426,7 +426,7 @@ Use for repurchase-cycle segmentation. NULL means the customer has only one orde
 > **Type:** Dimension | **Column:** `dim_customers.cancel_rate` | **Status:** `active`
 > **Values:** DOUBLE (0.0–1.0) | **Source:** `dim_customers`
 
-**Definition:** Fraction of the customer's orders that were cancelled or voided. DRAFT orders excluded from denominator.
+**Definition:** Fraction of the customer's orders that were cancelled. DRAFT orders excluded from denominator.
 
 **Use in SQL:** `WHERE cancel_rate > 0.3` or `GROUP BY CASE WHEN cancel_rate > 0.3 THEN 'high' END`
 
@@ -689,14 +689,14 @@ Use for branch-level performance reporting and inventory attribution.
 ### status
 
 > **Type:** Dimension | **Column:** `fact_orders.status` | **Status:** `active`
-> **Values:** `COMPLETED`, `CANCELLED`, `Voided`, `DRAFT`, `PROCESSING`, `OPEN`, `ARCHIVED` | **Source:** `fact_orders`
+> **Values:** `OPEN`, `COMPLETED`, `CANCELLED`, `ARCHIVED`, `DRAFT` | **Source:** `fact_orders`
 
-**Definition:** Raw order lifecycle status from Sapo.
+**Definition:** Order lifecycle status mapped from Sapo. Only `CANCELLED` exists for cancelled orders — Sapo has no 'Voided' order status (voided is a payment-level concept that always co-occurs with cancellation).
 
-**Use in SQL:** `WHERE status NOT IN ('CANCELLED', 'Voided')` or `GROUP BY status`
+**Use in SQL:** `WHERE status != 'CANCELLED'` or `GROUP BY status`
 
 #### 🎯 When to Use
-Use only when you need the raw Sapo status. Prefer boolean flags (`is_completed`, `is_cancelled`) for consistent definitions across queries.
+Use only when you need the raw status value. Prefer `scope_sales` / `scope_retail` / `scope_b2b` pre-computed flags for KPI queries — they already apply the correct cancellation filter.
 
 #### ⚠️ Conflicts
 | Source | Column | Definition difference | Note |
@@ -707,17 +707,17 @@ Use only when you need the raw Sapo status. Prefer boolean flags (`is_completed`
 | Dimension | Key difference | Use instead when |
 |---|---|---|
 | is_completed | Boolean: fulfillment AND payment both done | Identifying financially complete orders |
-| is_cancelled | Boolean: cancelled OR voided | Filtering out cancelled orders |
+| is_cancelled | Boolean: status = 'CANCELLED' | Filtering out cancelled orders |
 | payment_status | Payment leg only | Collection/reconciliation analysis |
 | fulfillment_status | Fulfillment leg only | Logistics/delivery analysis |
 
 #### ❌ Anti-patterns
 ```sql
--- WRONG: misses 'Voided' orders
-WHERE status != 'CANCELLED'
-
--- CORRECT: exclude all cancelled/voided
+-- WRONG: 'Voided' does not exist in Sapo order status
 WHERE status NOT IN ('CANCELLED', 'Voided')
+
+-- CORRECT
+WHERE status != 'CANCELLED'
 
 -- WRONG: status = 'COMPLETED' ≠ financially complete
 WHERE status = 'COMPLETED'
@@ -731,19 +731,26 @@ WHERE is_completed = true
 ### payment_status
 
 > **Type:** Dimension | **Column:** `fact_orders.payment_status` | **Status:** `active`
-> **Values:** `paid`, `pending`, `VOIDED`, `refunded` | **Source:** `fact_orders`
+> **Values:** `PAID`, `UNPAID`, `PARTIALLY_PAID`, `REFUNDED`, `PENDING` | **Source:** `fact_orders`
 
-**Definition:** Payment leg status of the order. 'VOIDED' is the payment-context synonym for cancelled.
+**Definition:** Payment leg status of the order, mapped from Sapo's `payment_status` field. `UNPAID` is the default when no payment has been collected (including COD orders in transit).
 
-**Use in SQL:** `WHERE payment_status = 'paid'` or `GROUP BY payment_status`
+**Source mapping (Sapo → std_orders):**
+| Sapo value | Mapped value |
+|---|---|
+| `paid` | `PAID` |
+| `partial` | `PARTIALLY_PAID` |
+| `refunded` | `REFUNDED` |
+| `pending` | `PENDING` |
+| *(anything else)* | `UNPAID` |
+
+**Use in SQL:** `WHERE payment_status = 'PAID'` or `GROUP BY payment_status`
 
 #### 🎯 When to Use
-Use for cash collection analysis and reconciliation. For financial completeness, use `is_completed` which combines payment + fulfillment.
+Use for cash collection analysis and reconciliation. For financial completeness, use `is_completed` which requires both payment + fulfillment.
 
 #### ⚠️ Conflicts
-| Source | Column | Definition difference | Note |
-|---|---|---|---|
-| fact_orders | status | 'VOIDED' in payment_status maps to 'Voided' in status | Not always identical values |
+*None.*
 
 #### 🔗 Similar (not synonym)
 | Dimension | Key difference | Use instead when |
@@ -752,7 +759,13 @@ Use for cash collection analysis and reconciliation. For financial completeness,
 | fulfillment_status | Logistics leg, not payment | Shipping/delivery analysis |
 
 #### ❌ Anti-patterns
-*None.*
+```sql
+-- WRONG: lowercase Sapo raw values — always use the mapped uppercase constants
+WHERE payment_status = 'paid'
+
+-- CORRECT
+WHERE payment_status = 'PAID'
+```
 
 ---
 
@@ -827,12 +840,12 @@ WHERE is_completed = true
 > **Type:** Dimension | **Column:** `fact_orders.is_cancelled` | **Status:** `active`
 > **Values:** `true`, `false` | **Source:** `fact_orders`
 
-**Definition:** True when `status IN ('CANCELLED', 'Voided')`. Covers both Sapo status values.
+**Definition:** True when `status = 'CANCELLED'`. Sapo has no 'Voided' order status — `CANCELLED` is the only cancellation value.
 
 **Use in SQL:** `WHERE is_cancelled = false` or `WHERE NOT is_cancelled`
 
 #### 🎯 When to Use
-Use instead of `status != 'CANCELLED'` to avoid missing 'Voided' orders.
+Cleaner alternative to `status != 'CANCELLED'` — prefer this for readability and to future-proof against any status enum changes.
 
 #### ⚠️ Conflicts
 *None.*
@@ -840,16 +853,10 @@ Use instead of `status != 'CANCELLED'` to avoid missing 'Voided' orders.
 #### 🔗 Similar (not synonym)
 | Dimension | Key difference | Use instead when |
 |---|---|---|
-| status | Raw status — does not auto-group Voided with CANCELLED | You need the raw Sapo status value |
+| status | Raw status string | You need the exact Sapo status value |
 
 #### ❌ Anti-patterns
-```sql
--- WRONG: misses 'Voided'
-WHERE status != 'CANCELLED'
-
--- CORRECT
-WHERE is_cancelled = false
-```
+*None.*
 
 ---
 
@@ -883,7 +890,7 @@ Shorthand for fully fulfilled orders. Use `fulfillment_status` directly when you
 > **Type:** Dimension | **Column:** `fact_orders.is_open` | **Status:** `active`
 > **Values:** `true`, `false` | **Source:** `fact_orders`
 
-**Definition:** True when order is in an active, unresolved state (not completed, cancelled, or voided).
+**Definition:** True when order is in an active, unresolved state (not completed or cancelled).
 
 **Use in SQL:** `WHERE is_open = true`
 
