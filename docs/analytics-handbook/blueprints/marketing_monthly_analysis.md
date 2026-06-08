@@ -3,6 +3,8 @@ primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
 uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, customer_acquisition, retention_rate, is_active_order]
+issues:
+  - "[warn] Card: Brand Performance Summary, Top 15 Products — dùng fact_sales không có scope filter; có thể bao gồm B2B orders, làm méo product ranking theo retail"
 ---
 
 # 📘 Blueprint: Marketing Monthly Analysis [Retail]

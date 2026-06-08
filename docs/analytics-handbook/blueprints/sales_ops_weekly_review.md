@@ -3,6 +3,8 @@ primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
 uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, discount_rate, is_active_order]
+issues:
+  - "[warn] Card: Channel/Branch Performance Table — order count trong bảng exclude cancelled (is_active_order CTE side effect); nếu muốn đếm tất cả đơn thì cần tách CTE riêng"
 ---
 
 # Sales Ops Weekly Review [Retail] Blueprint (Redesign)

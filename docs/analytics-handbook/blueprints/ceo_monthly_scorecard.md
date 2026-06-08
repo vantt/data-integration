@@ -3,6 +3,8 @@ primary_scope: scope_sales
 scope_indicator: "[All]"
 layer: L1
 uses_concepts: [scope_sales, net_revenue, gross_revenue, orders_count, aov, gross_profit, channel_net_profit, discount_amount, discount_rate, filter_has_cogs, is_active_order]
+issues:
+  - "[todo] Cards: Return Count, Revenue Waterfall Returns, Cost Structure, Top Products, Revenue by Brand — dùng 'channel_key IN (SELECT ... WHERE is_sales_channel)' subquery thay vì scope_sales; cần migrate để nhất quán"
 ---
 
 # 📘 Blueprint: CEO Monthly Scorecard [All]

@@ -3,6 +3,9 @@ primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
 uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, is_active_order]
+issues:
+  - "[warn] Card: Payment Status Summary — is_active_order loại cancelled khỏi payment breakdown, có thể làm thiếu đơn trong recon; xác nhận intent với business"
+  - "[warn] Card: Channel/Branch Performance Table — order count trong bảng hiện tại đã exclude cancelled (side effect của is_active_order trên revenue CTE); nếu cần tổng đơn kể cả cancelled thì phải tách CTE"
 ---
 
 # Sales Ops Monthly Summary [Retail] Blueprint (Redesign)

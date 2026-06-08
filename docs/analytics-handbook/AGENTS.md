@@ -680,12 +680,16 @@ Domain **drives** semantic — semantic formalize domain decision, không tự q
    -- ❌
    WHERE customer_type = 'RETAIL' AND is_sales_channel = true AND status NOT IN (...)
    ```
-3. **Khai báo `uses_concepts:` trong frontmatter** của blueprint:
+3. **Khai báo `uses_concepts:` và `issues:` trong frontmatter** của blueprint:
    ```yaml
    ---
    uses_concepts: [scope_retail, net_revenue, discount_rate]
+   issues:                    # optional — problems found during build/review
+     - "[warn] Card: AOV — includes B2B if scope not filtered correctly"
+     - "[todo] Card: New Customers — verify cancelled-order customers should count"
    ---
    ```
+   `issues` là metadata thuần (không parse bởi deploy script). Dùng tags `[error]`/`[warn]`/`[info]`/`[todo]`. Xem format đầy đủ tại `semantic/README.md → Blueprint Integration Standard`.
 4. **Metric mới** → thêm vào `semantic/metrics.md` trước, implement mart column, rồi mới viết blueprint
 
 ### Quy tắc bắt buộc khi thêm Semantic concept mới

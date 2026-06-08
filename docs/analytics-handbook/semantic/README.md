@@ -83,10 +83,24 @@ primary_scope: scope_retail          # scope_sales | scope_retail | scope_b2b | 
 scope_indicator: "[Retail]"          # [All] | [Retail] | [B2B] | [Cross] | [US] | [Internal]
 layer: L2                            # L1 | L1.5 | L2 | L3 | Internal
 uses_concepts: [scope_retail, net_revenue, discount_rate, aov]
+issues:                              # optional — known issues / todos discovered during build or review
+  - "[warn] Card: <card_name> — <description>"
+  - "[todo] Card: <card_name> — <description>"
 ---
 ```
 
-Được parse bởi `deploy_from_markdown.js` để validate scope compliance trước khi deploy.
+`primary_scope`, `scope_indicator`, `layer`, `uses_concepts` được parse bởi `deploy_from_markdown.js`. Trường `issues` là metadata thuần — không ảnh hưởng deploy, chỉ dùng cho LLM và người review.
+
+**`issues` severity tags:**
+
+| Tag | Ý nghĩa |
+|---|---|
+| `[error]` | Logic sai, sinh ra số sai — phải fix trước khi dùng data |
+| `[warn]` | Semantic ambiguity — cần xác nhận intent với business |
+| `[info]` | Known limitation, chấp nhận được — ghi nhận để người đọc biết |
+| `[todo]` | Cải tiến đã lên kế hoạch — không urgent, không blocking |
+
+**Format mỗi issue:** `"[severity] Card: <tên card hoặc 'Dashboard-level'> — <mô tả ngắn gọn>"`
 
 ### 2. `## Semantic Contract` Section (LLM + human readable)
 

@@ -3,6 +3,8 @@ primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
 uses_concepts: [scope_retail, net_revenue, discount_rate, discount_amount, aov, is_active_order]
+issues:
+  - "[warn] Abuse detection cards (Suspicious Customers/Codes/Staff) — is_active_order loại cancelled orders; khách đặt đơn được discount rồi huỷ sẽ không bị detect; xem xét dùng scope_retail only (bỏ is_active_order) cho abuse detection"
 ---
 
 # 📘 Blueprint: Sales Promotion & Discount Analysis [Retail]
