@@ -132,63 +132,85 @@ function parseExistingBlueprint(filePath) {
   const lines = content.split("\n");
 
   const result = {
-    header: [],      // lines before the first #### Question or Text
-    questions: {},   // name -> { prose: string[] } (lines between header and ```sql)
-    textCards: {},   // name -> { prose: string[] } (text card body lines)
+    header: [],      // lines before first #### Filter / Question / Text
+    filters: {},     // name -> { raw: string[] } — full block content, preserves field_id etc.
+    questions: {},   // name -> { prose: string[], originalHeader: string }
+    textCards: {},   // name -> { prose: string[], originalHeader: string }
     tabHeaders: {},  // tab name -> lines for the tab header section
   };
 
-  let section = "header"; // 'header' | 'question-prose' | 'text-prose' | 'code-block' | 'between'
-  let currentQuestion = null;
-  let currentTextCard = null;
-  let currentTab = null;
-  let inCodeBlock = false;
-  let headerDone = false;
+  let section = "header";
+  let currentQuestion   = null;
+  let currentTextCard   = null;
+  let currentFilter     = null;
+  let inCodeBlock       = false;
+  let inFilterSection   = false;
+  let headerDone        = false;
 
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Track code blocks to avoid false matches inside SQL/JSON
-    if (trimmed.startsWith("```")) {
-      if (inCodeBlock) {
-        inCodeBlock = false;
-        continue;
+    // --- Filter section: collect raw lines without skipping code blocks ---
+    if (inFilterSection) {
+      // End filter section when we reach a new #### heading or --- (outside code block)
+      if (!inCodeBlock && (trimmed.match(/^####/) || trimmed === "---")) {
+        inFilterSection = false;
+        currentFilter   = null;
+        // Fall through to process this line normally
       } else {
-        inCodeBlock = true;
+        if (currentFilter) result.filters[currentFilter].raw.push(line);
+        if (trimmed.startsWith("```")) inCodeBlock = !inCodeBlock; // track for end-detection
         continue;
       }
+    }
+
+    // Track code blocks to avoid false matches inside SQL/JSON
+    if (trimmed.startsWith("```")) {
+      if (inCodeBlock) { inCodeBlock = false; continue; }
+      else             { inCodeBlock = true;  continue; }
     }
     if (inCodeBlock) continue;
 
     // Tab header
     const tabMatch = trimmed.match(/^###\s+📑\s+Tab:\s*(.+)/);
     if (tabMatch) {
-      currentTab = tabMatch[1].trim();
       currentQuestion = null;
       currentTextCard = null;
       continue;
     }
 
-    // Text card header
+    // Filter header — collect raw block, exclude from prose header
+    const fMatch = trimmed.match(/^####\s+Filter:\s*(.+)/);
+    if (fMatch) {
+      headerDone      = true;
+      currentFilter   = fMatch[1].trim();
+      inFilterSection = true;
+      currentQuestion = null;
+      currentTextCard = null;
+      result.filters[currentFilter] = { raw: [] };
+      continue;
+    }
+
+    // Text card header — store original header line to preserve emoji/format
     const tMatch = trimmed.match(/^####\s+(?:📝\s+)?Text:\s*(.+)/);
     if (tMatch) {
       headerDone = true;
       const name = tMatch[1].trim();
       currentTextCard = name;
       currentQuestion = null;
-      result.textCards[name] = { prose: [] };
+      result.textCards[name] = { prose: [], originalHeader: line };
       section = "text-prose";
       continue;
     }
 
-    // Question header
+    // Question header — store original header line to preserve emoji/format
     const qMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
     if (qMatch) {
       headerDone = true;
       const name = qMatch[1].trim();
       currentQuestion = name;
       currentTextCard = null;
-      result.questions[name] = { prose: [] };
+      result.questions[name] = { prose: [], originalHeader: line };
       section = "question-prose";
       continue;
     }
@@ -342,7 +364,7 @@ function generateMerged(dash, tabGroups, cardCache, existing, params) {
     lines.push("");
   }
 
-  renderParams(lines, params);
+  renderParamsMerged(lines, params, existing.filters);
   renderTabGroups(lines, tabGroups, cardCache, existing.questions, existing.textCards);
 
   return lines.join("\n");
@@ -367,6 +389,31 @@ function renderParams(lines, params) {
   }
 }
 
+/**
+ * Render filter params for merge mode.
+ * Uses existing raw block when available (preserves field_id, field_id_map, etc.).
+ * Falls back to fresh render for params not yet in the blueprint.
+ * Eliminates the duplication caused by both existing.header and renderParams writing filters.
+ */
+function renderParamsMerged(lines, params, existingFilters) {
+  if (!params.length) return;
+  for (const p of params) {
+    const existing = existingFilters && existingFilters[p.name];
+    lines.push(`#### Filter: ${p.name}`);
+    lines.push("");
+    if (existing && existing.raw.length > 0) {
+      lines.push(...existing.raw);
+    } else {
+      lines.push(jsonBlock("metabase-filter", {
+        name: p.name, slug: p.slug, type: p.type, default: p.default || null,
+      }));
+      lines.push("");
+    }
+  }
+  lines.push("---");
+  lines.push("");
+}
+
 function renderTabGroups(lines, tabGroups, cardCache, existingQuestions, existingTextCards) {
   for (const group of tabGroups) {
     if (group.name) {
@@ -389,10 +436,10 @@ function renderTabGroups(lines, tabGroups, cardCache, existingQuestions, existin
           lines.push("");
         }
         lastRow = pos.row;
-        lines.push(`#### 📝 Text: ${name}`);
-        lines.push("");
-        // Prose: use existing if available (preserve manual edits), otherwise from Metabase
+        // Preserve original header format (with or without emoji) when merging
         const existingTC = existingTextCards && existingTextCards[name];
+        lines.push(existingTC && existingTC.originalHeader ? existingTC.originalHeader : `#### 📝 Text: ${name}`);
+        lines.push("");
         if (existingTC && existingTC.prose.length > 0) {
           const prose = [...existingTC.prose];
           while (prose.length > 0 && prose[prose.length - 1].trim() === "") prose.pop();
@@ -425,12 +472,10 @@ function renderTabGroups(lines, tabGroups, cardCache, existingQuestions, existin
       }
       lastRow = pos.row;
 
-      // Question header
-      lines.push(`#### ❓ Question: ${card.name}`);
-      lines.push("");
-
-      // Prose: use existing if available, otherwise use card description
+      // Preserve original header format (with or without emoji) when merging
       const existingProse = existingQuestions && existingQuestions[card.name];
+      lines.push(existingProse && existingProse.originalHeader ? existingProse.originalHeader : `#### ❓ Question: ${card.name}`);
+      lines.push("");
       if (existingProse && existingProse.prose.length > 0) {
         // Filter out empty trailing lines
         const prose = [...existingProse.prose];
