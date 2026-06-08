@@ -8,10 +8,16 @@
  *           (output file already exists)
  *
  * Usage:
- *   node capture_dashboard.js <dashboard_id> [output_file.md] [--positions-only]
- *   node capture_dashboard.js 11                                        # prints to stdout (fresh)
- *   node capture_dashboard.js 11 blueprints/ceo_weekly.md               # merge if exists, fresh if not
- *   node capture_dashboard.js 11 blueprints/ceo_weekly.md --positions-only  # ONLY update metabase-pos blocks
+ *   node capture_dashboard.js <dashboard_id_or_url> [output_file.md] [--positions-only] [--tab <tab_id>]
+ *
+ * First arg accepts either a numeric ID or a full dashboard URL — tab ID is auto-extracted
+ * from the URL's ?tab= param (numeric prefix only) and can be overridden with --tab.
+ *
+ *   node capture_dashboard.js 11                                              # fresh to stdout
+ *   node capture_dashboard.js 11 blueprints/ceo_weekly.md                    # merge or fresh
+ *   node capture_dashboard.js 11 blueprints/ceo_weekly.md --positions-only   # positions only, all tabs
+ *   node capture_dashboard.js "http://bi.lan/dashboard/42?tab=123" bp.md --positions-only  # tab 123 only
+ *   node capture_dashboard.js 42 bp.md --positions-only --tab 123            # same, explicit flag
  *
  * Environment:
  *   METABASE_URL     - Base URL (default: http://127.0.0.1:3000/)
@@ -40,9 +46,34 @@ if (args.length < 1) {
   process.exit(1);
 }
 
-const DASHBOARD_ID    = parseInt(args[0]);
-const OUTPUT_FILE     = args.find((a, i) => i > 0 && !a.startsWith('--')) || null;
-const POSITIONS_ONLY  = args.includes('--positions-only');
+// Parse first arg: accept full URL or plain numeric ID
+function parseDashboardArg(raw) {
+  let dashboardId = null, urlTabId = null;
+  if (/^https?:\/\//.test(raw)) {
+    let url;
+    try { url = new URL(raw); } catch { url = new URL(raw, 'http://localhost'); }
+    const m = url.pathname.match(/\/dashboard\/(\d+)/);
+    if (m) dashboardId = parseInt(m[1], 10);
+    const tabParam = url.searchParams.get('tab');
+    if (tabParam) urlTabId = parseInt(tabParam, 10) || null;
+  } else {
+    dashboardId = parseInt(raw, 10);
+  }
+  return { dashboardId, urlTabId };
+}
+
+const { dashboardId: DASHBOARD_ID, urlTabId: URL_TAB_ID } = parseDashboardArg(args[0]);
+if (!DASHBOARD_ID) {
+  console.error('❌ Could not extract dashboard ID from first argument.');
+  process.exit(1);
+}
+
+const OUTPUT_FILE    = args.find((a, i) => i > 0 && !a.startsWith('--')) || null;
+const POSITIONS_ONLY = args.includes('--positions-only');
+
+// --tab <id> overrides tab ID from URL
+const tabFlagIdx = args.indexOf('--tab');
+const TAB_ID = tabFlagIdx !== -1 ? (parseInt(args[tabFlagIdx + 1], 10) || null) : URL_TAB_ID;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -578,8 +609,22 @@ function renderTabGroups(lines, tabGroups, cardCache, existingQuestions, existin
         console.error('❌ --positions-only requires an existing output file.');
         process.exit(1);
       }
-      console.error(`📍 Positions-only mode: patching metabase-pos blocks, all else untouched`);
-      const positionMap = buildPositionMap(tabGroups, cardCache);
+
+      // Filter to specific tab if --tab / URL ?tab= was provided
+      let targetGroups = tabGroups;
+      if (TAB_ID) {
+        const matchedTab = tabs.find(t => t.id === TAB_ID);
+        if (!matchedTab) {
+          console.error(`❌ Tab ID ${TAB_ID} not found. Available: ${tabs.map(t => `${t.id}(${t.name})`).join(', ')}`);
+          process.exit(1);
+        }
+        targetGroups = tabGroups.filter(g => g.name === matchedTab.name);
+        console.error(`📍 Positions-only mode: tab "${matchedTab.name}" (ID: ${TAB_ID}) only`);
+      } else {
+        console.error(`📍 Positions-only mode: all tabs`);
+      }
+
+      const positionMap = buildPositionMap(targetGroups, cardCache);
       console.error(`   Live positions loaded for ${Object.keys(positionMap).length} card(s)`);
       const { content, updated, skipped } = patchPositionsOnly(OUTPUT_FILE, positionMap);
       fs.writeFileSync(OUTPUT_FILE, content, 'utf8');
