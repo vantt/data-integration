@@ -59,29 +59,26 @@ P&L inflated by 8–10% when using `total_collected` instead of `net_revenue` fo
 > **Type:** Rule | **Domain:** [Sales](../domains/sales.md) | **Status:** `active`
 > **Applies To:** scope_sales, scope_retail, scope_b2b, status | **Since:** 2024-01-01
 
-**Rule:** "Cancelled" includes both `CANCELLED` and `Voided` statuses — always exclude both via `NOT IN` or use the pre-computed scope flags.
+**Rule:** Exclude `CANCELLED` orders — use `status != 'CANCELLED'` or the pre-computed scope flags.
 
 **SQL:**
 ```sql
--- ✅ Correct pattern — explicit two-value exclusion
-WHERE status NOT IN ('CANCELLED', 'Voided')
-
--- ✅ Correct pattern — preferred: pre-computed flag handles both values
-WHERE scope_sales   -- already excludes CANCELLED + Voided
-
--- ❌ Wrong pattern — misses all 'Voided' orders silently
+-- ✅ Correct pattern — explicit single-value exclusion
 WHERE status != 'CANCELLED'
+
+-- ✅ Correct pattern — preferred: pre-computed flag handles the exclusion
+WHERE scope_sales   -- already excludes CANCELLED
 
 -- ❌ Wrong pattern — technically correct but scope_sales is more readable and future-proof
 WHERE is_cancelled = false
 ```
 
-**Intent:** Sapo uses two distinct status values for cancelled orders: `CANCELLED` (customer-initiated) and `Voided` (operator-voided). A single `!=` check misses the second, silently undercounting exclusions.
+**Intent:** Sapo's `status` field uses `CANCELLED` for cancelled orders. Sapo payment statuses are `paid`, `unpaid`, `partial`, and `refunded` — there is no `Voided` status in the API.
 
 **Applies To:**
 - [scope_sales](segments.md#scope_sales) — pre-computed flag implementing this rule
-- [scope_retail](segments.md#scope_retail) — inherits scope_sales cancellation logic
-- [scope_b2b](segments.md#scope_b2b) — inherits scope_sales cancellation logic
+- [scope_retail](segments.md#scope_retail) — inherits scope_sales cancellation exclusion
+- [scope_b2b](segments.md#scope_b2b) — inherits scope_sales cancellation exclusion
 - [status](dimensions.md#status) — raw dimension; avoid raw comparisons in favor of scope flags
 
 #### ⚠️ Conflicts
@@ -94,12 +91,11 @@ WHERE is_cancelled = false
 | [Scope Required for Promotion/Discount](#scope-required-for-promotiondiscount) | scope_retail implements both cancellation and B2B exclusion |
 
 #### ❌ Common Violations
-- `WHERE status != 'CANCELLED'` — the most common error; voided orders remain in totals
-- Using raw status filter in a new query instead of reusing scope flags
+- Using raw `status` filter in a new query instead of reusing scope flags
 - `WHERE status = 'COMPLETED'` for revenue — misses all non-cancelled, non-completed active orders
 
 #### 📊 Impact if Violated
-Missing `Voided` undercounts exclusions by 2–5% of total order volume depending on voided rate. For high-ops-error periods (promo seasons), voided rate can spike to 8–10%.
+Not excluding `CANCELLED` orders includes cancelled order volume in revenue and count metrics.
 
 ---
 
@@ -137,7 +133,7 @@ WHERE fulfillment_status = 'fulfilled' AND payment_status = 'paid'
 #### 🔗 Related Rules
 | Rule | Relationship |
 |---|---|
-| [Cancellation Convention](#cancellation-convention) | is_completed implicitly excludes cancelled orders; scope_sales adds explicit voided exclusion |
+| [Cancellation Convention](#cancellation-convention) | is_completed implicitly excludes cancelled orders; scope_sales adds explicit CANCELLED exclusion |
 | [Returns Not Restated in P&L](#returns-not-restated-in-pl) | Completed orders can still generate returns; completion ≠ final financial state |
 
 #### ❌ Common Violations
