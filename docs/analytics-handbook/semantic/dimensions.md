@@ -486,6 +486,40 @@ Customer scoring, segmentation, and CRM action prioritization. For period-level 
 --    Underestimates actual cash by ~8-10% VAT — use avg_order_spend instead
 ```
 
+### first_order_date
+
+> **Type:** Dimension | **Column:** `dim_customers.first_order_date` | **Status:** `stable`
+> **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** Timestamp of a customer's first **active** order — i.e. the earliest `ordered_at` where `status NOT IN ('CANCELLED', 'DRAFT')`.
+
+**Computed in:** `transformation/models/marts/core/intermediate/int_customer_metrics.sql`, `customer_orders` CTE.
+
+**Use in SQL:** Compare to `fact_orders.ordered_at` to classify new vs returning customers in a period.
+
+```sql
+-- New customers in period: first valid purchase falls within filter window
+WHERE date(c.first_order_date) = date(o.ordered_at)
+  AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
+```
+
+#### ⚠️ Critical caveat
+`first_order_date` **excludes** cancelled and draft orders. A customer who placed a cancelled order before their first successful purchase will have `first_order_date` = their first *successful* order date, not the cancelled attempt.
+
+Without this guarantee, "new customer" queries would misclassify customers whose first interaction was a cancelled order as "returning" on their actual first purchase.
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ Assuming first_order_date = absolute first order attempt
+--    It's first ACTIVE order — cancelled attempts are excluded
+
+-- ❌ Using first_order_date without is_active_order on the outer query
+--    Both layers must be consistent: dim_customers definition AND query filter
+WHERE date(c.first_order_date) = date(o.ordered_at)
+--    Missing: AND o.is_active_order  ← would count cancelled "new customer" orders
+```
+
 ---
 
 ## Time Dimensions

@@ -27,6 +27,20 @@ All SQL: `WHERE scope_retail`.
 
 ---
 
+#### Filter: Ngày báo cáo
+
+```json metabase-filter
+{
+  "slug": "ordered_at",
+  "name": "Ngày báo cáo",
+  "type": "date/all-options",
+  "default": "past1days",
+  "field_id": 848
+}
+```
+
+---
+
 ### 📑 Tab: Tổng quan
 
 #### 📝 Text: Đánh giá sức khỏe kinh doanh — điểm tổng hợp từ Revenue, Orders, Loyalty, AOV
@@ -252,10 +266,11 @@ SELECT * FROM (
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT
-  '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') ||
-  '  ·  So sánh: ' || strftime(current_date - 8, '%d/%m/%Y') || ' (D-8, WoW)'
-  AS "Chu kỳ báo cáo"
+SELECT '📅 Ngày báo cáo: ' ||
+    strftime(
+        (SELECT MIN(ordered_at)::DATE FROM fact_orders WHERE {{ordered_at}} AND scope_retail),
+        '%d/%m/%Y'
+    ) AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -273,18 +288,15 @@ SELECT
 
 #### Question: Net Revenue
 
-**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison.
+**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric.
 
 ```sql
-SELECT
-    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END), 0) as "Net Revenue",
-    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '2 days' THEN o.net_revenue END), 0) as "Hôm kia"
+SELECT COALESCE(SUM(o.net_revenue), 0) as "Net Revenue"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
-  AND date(o.ordered_at) < current_date
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -314,18 +326,15 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
 
 #### Question: Gross Revenue
 
-**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI with DoD.
+**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI.
 
 ```sql
-SELECT
-    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.gross_revenue END), 0) as "Gross Revenue",
-    COALESCE(SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '2 days' THEN o.gross_revenue END), 0) as "Hôm kia"
+SELECT COALESCE(SUM(o.gross_revenue), 0) as "Gross Revenue"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
-  AND date(o.ordered_at) < current_date
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -355,17 +364,14 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
 
 #### Question: Total Orders
 
-Supporting KPI with DoD comparison.
+Supporting KPI.
 
 ```sql
-SELECT
-    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) as "Total Orders",
-    COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '2 days' THEN o.order_id END) as "Hôm kia"
+SELECT COUNT(DISTINCT o.order_id) as "Total Orders"
 FROM fact_orders o
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
-  AND date(o.ordered_at) < current_date
-  AND o.scope_retail
+WHERE o.scope_retail
+  AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -386,15 +392,15 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
 
 #### Question: Cancelled Orders
 
-Count of cancelled retail orders yesterday.
+Count of cancelled retail orders on selected date.
 
 ```sql
 SELECT COUNT(DISTINCT o.order_id) as "Cancelled Orders"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND NOT o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -412,26 +418,17 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 
 #### Question: AOV
 
-Supporting KPI with DoD comparison.
+Supporting KPI.
 
 ```sql
 SELECT
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END) = 0 THEN 0
-         ELSE ROUND(
-            SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '1 day' THEN o.order_id END), 0
-         ) END as "AOV",
-    CASE WHEN COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '2 days' THEN o.order_id END) = 0 THEN 0
-         ELSE ROUND(
-            SUM(CASE WHEN date(o.ordered_at) = current_date - INTERVAL '2 days' THEN o.net_revenue END)
-            / COUNT(DISTINCT CASE WHEN date(o.ordered_at) = current_date - INTERVAL '2 days' THEN o.order_id END), 0
-         ) END as "Hôm kia"
+    CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
+         ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
-  AND date(o.ordered_at) < current_date
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -461,15 +458,15 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '2 days'
 
 #### Question: Total Discounts
 
-Total discount amount applied to retail orders yesterday.
+Total discount amount applied to retail orders on selected date.
 
 ```sql
 SELECT COALESCE(SUM(o.discount_amount), 0) as "Total Discounts"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -518,9 +515,10 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 SELECT COUNT(DISTINCT o.customer_key) as "New Customers"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND date(c.first_order_date) = current_date - INTERVAL '1 day'
+WHERE date(c.first_order_date) = date(o.ordered_at)
   AND o.scope_retail
+  AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -542,9 +540,10 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 SELECT COUNT(DISTINCT o.customer_key) as "Returning Customers"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND date(c.first_order_date) < current_date - INTERVAL '1 day'
+WHERE date(c.first_order_date) < date(o.ordered_at)
   AND o.scope_retail
+  AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -566,9 +565,9 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 SELECT COUNT(DISTINCT o.order_id) as "Returns"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.fulfillment_status = 'RETURNED'
+WHERE o.fulfillment_status = 'RETURNED'
   AND o.scope_retail
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -592,9 +591,9 @@ WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
 SELECT COALESCE(SUM(o.total_collected), 0) as "Total Collected"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -632,9 +631,9 @@ SELECT
     ) as "Discount Rate %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -657,10 +656,9 @@ SELECT ROUND(
     SUM(s.quantity)::FLOAT / NULLIF(COUNT(DISTINCT s.order_id), 0), 1
 ) as "Items/Order"
 FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+JOIN (
+    SELECT order_id FROM fact_orders WHERE {{ordered_at}} AND scope_retail AND is_active_order
+) o ON s.order_id = o.order_id
 ```
 
 ```json metabase-viz
@@ -698,13 +696,17 @@ Compare yesterday's hourly performance with the day before.
 **Domain Reference**: [Hourly Sales Trend](../domains/sales.md#6-hourly-sales-trend)
 
 ```sql
-WITH yesterday_sales AS (
+WITH filter_date AS (
+    SELECT MIN(date(ordered_at)) AS report_date
+    FROM fact_orders WHERE {{ordered_at}} AND scope_retail
+),
+yesterday_sales AS (
     SELECT
         EXTRACT(HOUR FROM o.ordered_at) as hour_of_day,
         SUM(o.net_revenue) as sales_yesterday
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
+    WHERE date(o.ordered_at) = (SELECT report_date FROM filter_date)
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY 1
@@ -715,7 +717,7 @@ day_before_sales AS (
         SUM(o.net_revenue) as sales_day_before
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
+    WHERE date(o.ordered_at) = (SELECT report_date FROM filter_date) - INTERVAL '1 day'
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY 1
@@ -756,7 +758,11 @@ ORDER BY 1
 Running total comparison — yesterday vs day before.
 
 ```sql
-WITH hours AS (
+WITH filter_date AS (
+    SELECT MIN(date(ordered_at)) AS report_date
+    FROM fact_orders WHERE {{ordered_at}} AND scope_retail
+),
+hours AS (
     SELECT UNNEST(GENERATE_SERIES(0, 23)) as hour_of_day
 ),
 yesterday_hourly AS (
@@ -765,7 +771,7 @@ yesterday_hourly AS (
         SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
+    WHERE date(o.ordered_at) = (SELECT report_date FROM filter_date)
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY 1
@@ -776,7 +782,7 @@ day_before_hourly AS (
         SUM(o.net_revenue) as revenue
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
+    WHERE date(o.ordered_at) = (SELECT report_date FROM filter_date) - INTERVAL '1 day'
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY 1
@@ -831,7 +837,11 @@ ORDER BY 1
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hôm kia: ' || strftime(current_date - 2, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT '📅 Ngày báo cáo: ' ||
+    strftime(
+        (SELECT MIN(ordered_at)::DATE FROM fact_orders WHERE {{ordered_at}} AND scope_retail),
+        '%d/%m/%Y'
+    ) AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -882,9 +892,9 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -924,9 +934,9 @@ SELECT
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -951,7 +961,11 @@ ORDER BY 2 DESC
 DoD comparison by channel with conditional formatting on change %.
 
 ```sql
-WITH yesterday AS (
+WITH filter_date AS (
+    SELECT MIN(date(ordered_at)) AS report_date
+    FROM fact_orders WHERE {{ordered_at}} AND scope_retail
+),
+yesterday AS (
     SELECT
         ch.channel_name,
         COUNT(DISTINCT o.order_id) as orders,
@@ -959,7 +973,7 @@ WITH yesterday AS (
     FROM fact_orders o
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
+    WHERE date(o.ordered_at) = (SELECT report_date FROM filter_date)
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY 1
@@ -972,7 +986,7 @@ day_before AS (
     FROM fact_orders o
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
-    WHERE date(o.ordered_at) = current_date - INTERVAL '2 days'
+    WHERE date(o.ordered_at) = (SELECT report_date FROM filter_date) - INTERVAL '1 day'
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY 1
@@ -1047,9 +1061,9 @@ SELECT
 FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1099,7 +1113,11 @@ ORDER BY 3 DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hôm kia: ' || strftime(current_date - 2, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT '📅 Ngày báo cáo: ' ||
+    strftime(
+        (SELECT MIN(ordered_at)::DATE FROM fact_orders WHERE {{ordered_at}} AND scope_retail),
+        '%d/%m/%Y'
+    ) AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -1138,14 +1156,12 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 ```sql
 SELECT
     p.product_name as "Sản phẩm",
-    SUM(s.net_revenue) as "Doanh thu"
+    ROUND(SUM(s.net_revenue), 0) as "Doanh thu"
 FROM fact_sales s
+JOIN (
+    SELECT order_id FROM fact_orders WHERE {{ordered_at}} AND scope_retail AND is_active_order
+) o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN fact_orders o ON s.order_id = o.order_id
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
-  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -1183,11 +1199,10 @@ SELECT
     p.product_name as "Sản phẩm",
     SUM(s.quantity) as "Số lượng"
 FROM fact_sales s
+JOIN (
+    SELECT order_id FROM fact_orders WHERE {{ordered_at}} AND scope_retail AND is_active_order
+) o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN fact_orders o ON s.order_id = o.order_id
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -1215,14 +1230,12 @@ Horizontal bar replacing pie chart — no slice limit.
 ```sql
 SELECT
     COALESCE(p.product_type, 'Unknown') as "Loại SP",
-    SUM(s.net_revenue) as "Doanh thu"
+    ROUND(SUM(s.net_revenue), 0) as "Doanh thu"
 FROM fact_sales s
+JOIN (
+    SELECT order_id FROM fact_orders WHERE {{ordered_at}} AND scope_retail AND is_active_order
+) o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN fact_orders o ON s.order_id = o.order_id
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
-  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1259,15 +1272,13 @@ SELECT
     p.product_name as "Sản phẩm",
     COALESCE(p.product_type, 'Unknown') as "Loại",
     SUM(s.quantity) as "SL",
-    SUM(s.net_revenue) as "Doanh thu",
+    ROUND(SUM(s.net_revenue), 0) as "Doanh thu",
     ROUND(SUM(s.net_revenue) / NULLIF(SUM(s.quantity), 0), 0) as "Giá TB"
 FROM fact_sales s
+JOIN (
+    SELECT order_id FROM fact_orders WHERE {{ordered_at}} AND scope_retail AND is_active_order
+) o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
-JOIN fact_orders o ON s.order_id = o.order_id
-JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(s.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
-  AND o.is_active_order
 GROUP BY 1, 2
 ORDER BY 4 DESC
 LIMIT 20
@@ -1317,7 +1328,11 @@ LIMIT 20
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hôm kia: ' || strftime(current_date - 2, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT '📅 Ngày báo cáo: ' ||
+    strftime(
+        (SELECT MIN(ordered_at)::DATE FROM fact_orders WHERE {{ordered_at}} AND scope_retail),
+        '%d/%m/%Y'
+    ) AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -1364,13 +1379,14 @@ SELECT '📅 Hôm qua: ' || strftime(current_date - 1, '%d/%m/%Y') || '  ·  Hô
 ```sql
 SELECT
     ROUND(
-        COUNT(DISTINCT CASE WHEN date(c.first_order_date) < current_date - INTERVAL '1 day' THEN o.customer_key END) * 100.0
+        COUNT(DISTINCT CASE WHEN date(c.first_order_date) < date(o.ordered_at) THEN o.customer_key END) * 100.0
         / NULLIF(COUNT(DISTINCT o.customer_key), 0), 1
     ) as "Returning Rate %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
+  AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz
@@ -1416,16 +1432,16 @@ WHERE customer_status = 'At Risk'
 ```sql
 SELECT
     CASE
-        WHEN date(c.first_order_date) = current_date - INTERVAL '1 day' THEN 'Khách mới'
+        WHEN date(c.first_order_date) = date(o.ordered_at) THEN 'Khách mới'
         ELSE 'Khách quay lại'
     END as "Loại KH",
     COUNT(DISTINCT o.order_id) as "Đơn hàng",
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 GROUP BY 1
 ```
 
@@ -1470,9 +1486,9 @@ SELECT
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1513,8 +1529,8 @@ SELECT
     COUNT(DISTINCT o.order_id) as "Đơn hàng"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1551,8 +1567,8 @@ FROM fact_payments p
 JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
 JOIN fact_orders o ON p.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(p.payment_timestamp) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
+  AND p.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1591,9 +1607,9 @@ SELECT
         THEN o.discount_amount * 100.0 / NULLIF(o.gross_revenue, 0) END), 1) as "TB CK %"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-  AND o.scope_retail
+WHERE o.scope_retail
   AND o.is_active_order
+  AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
 ```json metabase-viz

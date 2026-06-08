@@ -49,6 +49,7 @@ customer_orders AS (
     {% if is_incremental() %}
     INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
     {% endif %}
+    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
 ),
 
 -- RFM aggregations (existing)
@@ -123,6 +124,7 @@ first_order_channel AS (
         {% if is_incremental() %}
         INNER JOIN changed_customers cc ON o.customer_key = cc.customer_key
         {% endif %}
+        WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
     ) ranked
     WHERE rn = 1
 ),
