@@ -98,10 +98,24 @@ Khi tìm được blueprint file:
 
 Với mỗi card đã deep-dive, báo cáo theo cấu trúc:
 
-#### 0. Blueprint reference
-- Tên blueprint file tìm được (hoặc "không có blueprint")
-- Section trong blueprint tương ứng với card này
-- Nếu có: `primary_scope` + `uses_concepts` từ frontmatter
+#### 0. Giới thiệu card (từ blueprint)
+
+Đọc section tương ứng trong blueprint trước khi phân tích live data. Trình bày:
+
+- **Tên card + blueprint file** (hoặc "không có blueprint")
+- **Mục đích**: Domain Reference description — card này đo lường / hiển thị gì?
+- **Scope đã khai báo**: `primary_scope` + `uses_concepts` từ frontmatter của blueprint
+- **Filter dự kiến**: WHERE conditions trong blueprint SQL (scope, date window, exclusions)
+- **Viz type dự kiến**: `display` từ blueprint metabase-viz block
+
+Ví dụ format:
+> **Net Revenue** · `ceo_weekly_pulse.md`
+> - Mục đích: Hero metric — tổng net revenue tuần này (Mon-to-date) kèm WoW comparison
+> - Scope: `scope_sales AND is_active_order` · concepts: `net_revenue`, `is_active_order`
+> - Filter: ordered_at trong tuần hiện tại; exclude CANCELLED qua `is_active_order`
+> - Viz: scalar (primary value + WoW column)
+
+Nếu không có blueprint: ghi "Không có blueprint — phân tích từ live SQL." và bỏ qua phần này.
 
 #### 1. Filters đang có hiệu lực
 Liệt kê từng parameter mapping:
