@@ -996,21 +996,27 @@ FROM this_week tw, last_week lw
 
 Return count with WoW comparison. Flag RED if > 2x previous week.
 
+> **Source:** `fact_order_returns` — `fulfillment_status = 'RETURNED'` trên `fact_orders` không được Sapo populate; returns được track riêng trong bảng `fact_order_returns`.
+
 ```sql
 WITH
 this_week AS (
-    SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
-    FROM fact_orders
-    WHERE scope_sales
-      AND ordered_at >= date_trunc('week', current_date)
-      AND ordered_at < current_date + INTERVAL '1 day'
+    SELECT COUNT(DISTINCT r.return_id) as val
+    FROM fact_order_returns r
+    JOIN dim_channels c ON r.channel_key = c.channel_key
+    WHERE c.is_sales_channel
+      AND r.return_status = 'returned'
+      AND r.returned_at >= date_trunc('week', current_date)
+      AND r.returned_at < current_date + INTERVAL '1 day'
 ),
 last_week AS (
-    SELECT COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as val
-    FROM fact_orders
-    WHERE scope_sales
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+    SELECT COUNT(DISTINCT r.return_id) as val
+    FROM fact_order_returns r
+    JOIN dim_channels c ON r.channel_key = c.channel_key
+    WHERE c.is_sales_channel
+      AND r.return_status = 'returned'
+      AND r.returned_at >= date_trunc('week', current_date) - INTERVAL '7 days'
+      AND r.returned_at < date_trunc('week', current_date)
 )
 SELECT
     tw.val as "Returns",
@@ -1198,6 +1204,7 @@ FROM (
     JOIN fact_orders o ON e.order_id = o.order_id
     WHERE e.scope_sales
       AND e.has_cogs
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date)
       AND o.ordered_at < current_date + INTERVAL '1 day'
     GROUP BY e.channel_key
