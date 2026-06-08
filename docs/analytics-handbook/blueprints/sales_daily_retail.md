@@ -370,7 +370,6 @@ Supporting KPI.
 SELECT COUNT(DISTINCT o.order_id) as "Total Orders"
 FROM fact_orders o
 WHERE o.scope_retail
-  AND o.is_active_order
   AND o.order_id IN (SELECT order_id FROM fact_orders WHERE {{ordered_at}})
 ```
 
