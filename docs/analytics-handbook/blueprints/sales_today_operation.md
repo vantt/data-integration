@@ -923,7 +923,7 @@ Online vs Offline vs Internal breakdown.
 SELECT
     ch.channel_category as "Loại kênh",
     SUM(o.net_revenue) as "Doanh thu",
-    COUNT(DISTINCT o.order_id) as "Đơn hàng"
+    COUNT(DISTINCT o.order_id) as "Đơn hợp lệ"
 FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
@@ -939,7 +939,7 @@ ORDER BY 2 DESC
   "display": "bar",
   "visualization_settings": {
     "graph.dimensions": ["Loại kênh"],
-    "graph.metrics": ["Doanh thu", "Đơn hàng"],
+    "graph.metrics": ["Doanh thu", "Đơn hợp lệ"],
     "graph.colors": ["#509EE3", "#A989C5"]
   }
 }
@@ -1045,7 +1045,7 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 ```sql
 SELECT
     bl.branch_location_name as "Chi nhánh",
-    COUNT(DISTINCT o.order_id) as "Đơn hàng",
+    COUNT(DISTINCT o.order_id) as "Đơn hợp lệ",
     COALESCE(SUM(o.net_revenue), 0) as "Doanh thu",
     CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
@@ -1339,7 +1339,12 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Đánh giá chân dung khách hàng — new vs returning, segment
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Kiểm tra phân bổ thanh toán và mức độ chiết khấu
@@ -1347,7 +1352,12 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 # Kiểm tra phân bổ thanh toán và mức độ chiết khấu
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 12,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### Question: Returning Customer Rate
@@ -1369,7 +1379,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: At Risk Customers
@@ -1385,7 +1400,12 @@ WHERE customer_status = 'At Risk'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
+{
+  "row": 3,
+  "col": 3,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: New vs Returning Customers
@@ -1428,7 +1448,12 @@ GROUP BY 1
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 12, "size_y": 3 }
+{
+  "row": 3,
+  "col": 6,
+  "size_x": 12,
+  "size_y": 3
+}
 ```
 
 #### Question: Revenue by Customer Segment
@@ -1471,7 +1496,12 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Status
@@ -1499,7 +1529,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 9, "size_y": 6 }
+{
+  "row": 13,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### Question: Payment Method Distribution
@@ -1532,7 +1567,12 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 13, "col": 9, "size_x": 9, "size_y": 6 }
+{
+  "row": 13,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### Question: Discount Impact
@@ -1573,7 +1613,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{ "row": 19, "col": 0, "size_x": 18, "size_y": 3 }
+{
+  "row": 19,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 4
+}
 ```
 
 #### 📝 Text: Source & Freshness
