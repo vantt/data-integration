@@ -1170,9 +1170,9 @@ Use for warehouse operations monitoring. Drop below 85% signals capacity or proc
 
 #### ❌ Anti-patterns
 ```sql
--- ❌ status != 'CANCELLED' — misses 'Voided' status
-WHERE status != 'CANCELLED'
--- ✅ WHERE status NOT IN ('CANCELLED', 'Voided', 'DRAFT')
+-- ❌ Re-derives status manually instead of using is_active_order
+WHERE status NOT IN ('CANCELLED', 'DRAFT')
+-- ✅ AND is_active_order  (pre-computed gate: status != 'CANCELLED')
 ```
 
 #### 🏷️ Used In
@@ -1542,7 +1542,7 @@ WHERE c.first_order_date < CURRENT_DATE  -- wrong: should be < window_start
 
 **Formula:**
 ```sql
-SUM(total_collected) WHERE status NOT IN ('CANCELLED', 'Voided', 'DRAFT')
+SUM(total_collected) WHERE is_active_order
 ```
 
 **Column:** `dim_customers.lifetime_value`
@@ -1566,7 +1566,7 @@ Use for customer segmentation and VIP identification. Phase 1 is historical accu
 ```sql
 -- ❌ Including cancelled orders — overstates lifetime value
 SELECT SUM(total_collected) FROM fact_orders
-WHERE customer_key = :id  -- missing: AND status NOT IN ('CANCELLED','Voided','DRAFT')
+WHERE customer_key = :id  -- missing: AND is_active_order
 ```
 
 #### 📊 Data Quality
@@ -1688,7 +1688,7 @@ SUM(quantity)
 
 **Intent:** Measures product volume output. Denominator for `avg_selling_price`.
 
-**Use in SQL:** `SUM(quantity) FROM fact_sales WHERE status NOT IN ('CANCELLED','Voided','DRAFT')`
+**Use in SQL:** `SUM(quantity) FROM fact_sales WHERE is_active_order`
 
 #### 🎯 When to Use
 Use for inventory planning, velocity calculations, and product ranking.
@@ -1734,6 +1734,8 @@ SUM(quantity) / NULLIF(COUNT(DISTINCT order_id), 0)
 
 #### 🎯 When to Use
 Use to track whether promotions or merchandising changes are driving multi-item purchase behavior.
+
+**Note:** For operational monitoring of fulfilled orders (e.g., Today Sales dashboard), add `AND o.is_active_order` to exclude cancelled order lines. Use without the filter only when measuring customer intent across all order attempts.
 
 #### ⚠️ Conflicts
 *None identified.*

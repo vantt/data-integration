@@ -555,7 +555,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 17, "col": 6, "size_x": 3, "size_y": 3}
+{
+  "row": 17,
+  "col": 6,
+  "size_x": 3,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Discounts
@@ -588,7 +593,12 @@ WHERE date(o.ordered_at) = current_date
 ```
 
 ```json metabase-pos
-{"row": 17, "col": 12, "size_x": 6, "size_y": 3}
+{
+  "row": 13,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Collected
@@ -668,6 +678,7 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date
   AND o.scope_retail
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
