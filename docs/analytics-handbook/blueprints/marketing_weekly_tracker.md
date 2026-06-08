@@ -2,7 +2,7 @@
 primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
-uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, customer_acquisition]
+uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, customer_acquisition, is_active_order]
 ---
 
 # 📘 Blueprint: Marketing Weekly Tracker [Retail]
@@ -27,7 +27,7 @@ uses_concepts: [scope_retail, net_revenue, orders_count, aov, discount_rate, cus
 > **Why:** Marketing targets retail customers. B2B customers come via direct relationships, not marketing campaigns. Marketing ROI and acquisition metrics are only meaningful for retail segment.
 >
 > **Concepts used:**
-> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`customer_acquisition`](../semantic/metrics.md#customer_acquisition)
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`customer_acquisition`](../semantic/metrics.md#customer_acquisition) · [`is_active_order`](../semantic/metrics.md#is_active_order)
 
 All SQL: `WHERE scope_retail`. Do not re-derive.
 ## 📂 Collection: Marketing & Customers
@@ -957,6 +957,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -969,6 +970,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1061,6 +1063,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
   [[AND EXISTS (SELECT 1 FROM dim_channels c WHERE c.channel_key = o.channel_key AND c.channel_category = {{channel_category}})]]
@@ -1126,6 +1129,7 @@ daily_aov AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND date(cust.first_order_date) = date(o.ordered_at)
       AND o.ordered_at >= current_date - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1280,6 +1284,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
 ```
@@ -1310,6 +1315,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -1319,6 +1325,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1354,6 +1361,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -1362,6 +1370,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1399,6 +1408,7 @@ WITH this_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
 ),
@@ -1407,6 +1417,7 @@ last_week AS (
     FROM fact_orders o
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
 )
@@ -1494,6 +1505,7 @@ FROM fact_orders o
 JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND p.promotion_code IS NOT NULL
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)
@@ -1551,6 +1563,7 @@ WITH this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1561,6 +1574,7 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1641,6 +1655,7 @@ WITH this_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
       AND o.ordered_at < date_trunc('week', current_date)
@@ -1652,6 +1667,7 @@ last_week AS (
     JOIN dim_channels c ON o.channel_key = c.channel_key
     JOIN dim_customers cust ON o.customer_key = cust.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
       AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
       AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
@@ -1697,6 +1713,7 @@ FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
 JOIN dim_customers cust ON o.customer_key = cust.customer_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND c.channel_format IN ('Facebook', 'Zalo')
   AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
   AND o.ordered_at < date_trunc('week', current_date)

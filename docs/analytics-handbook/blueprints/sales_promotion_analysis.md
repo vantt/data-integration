@@ -523,6 +523,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '6 months'
   AND o.ordered_at < current_date
 GROUP BY 1
@@ -607,6 +608,7 @@ this_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.discount_amount > 0
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
@@ -616,6 +618,7 @@ prev_period AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.discount_amount > 0
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
@@ -728,6 +731,7 @@ this_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.discount_amount > 0
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
@@ -741,6 +745,7 @@ prev_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.discount_amount > 0
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
@@ -792,6 +797,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.discount_amount > 0
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
@@ -886,6 +892,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.discount_amount > 0
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
@@ -1056,6 +1063,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
 GROUP BY 1
@@ -1109,6 +1117,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
 GROUP BY 1
@@ -1161,6 +1170,7 @@ this_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
     GROUP BY 1
@@ -1173,6 +1183,7 @@ prev_period AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
     GROUP BY 1
@@ -1267,6 +1278,7 @@ JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 LEFT JOIN dim_channels ch ON o.channel_key = ch.channel_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
   AND o.gross_revenue > 0
@@ -1396,6 +1408,7 @@ period_scope AS (
     JOIN dim_customers c ON o.customer_key = c.customer_key
     LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
 ),
@@ -1411,6 +1424,7 @@ channel_baseline AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
     GROUP BY o.channel_key
@@ -1534,6 +1548,7 @@ monthly_baseline AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.ordered_at >= current_date - INTERVAL '6 months'
       AND o.ordered_at < current_date
     GROUP BY 1, 2
@@ -1548,6 +1563,7 @@ monthly_promo AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE o.scope_retail
+      AND o.is_active_order
       AND o.discount_amount > 0
       AND o.ordered_at >= current_date - INTERVAL '6 months'
       AND o.ordered_at < current_date
@@ -1753,6 +1769,7 @@ suspicious_customers AS (
         JOIN dim_customers c ON o.customer_key = c.customer_key
         LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
         WHERE o.scope_retail
+          AND o.is_active_order
           AND o.ordered_at >= current_date - INTERVAL '30 days'
           AND o.ordered_at < current_date
           AND o.discount_amount > 0
@@ -1773,6 +1790,7 @@ suspicious_codes AS (
         JOIN dim_customers c ON o.customer_key = c.customer_key
         LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
         WHERE o.scope_retail
+          AND o.is_active_order
           AND o.ordered_at >= current_date - INTERVAL '30 days'
           AND o.ordered_at < current_date
           AND o.discount_amount > 0
@@ -1792,6 +1810,7 @@ suspicious_staff AS (
         FROM fact_orders o
         JOIN dim_customers c ON o.customer_key = c.customer_key
         WHERE o.scope_retail
+          AND o.is_active_order
           AND o.ordered_at >= current_date - INTERVAL '30 days'
           AND o.ordered_at < current_date
           AND o.seller_staff_key IS NOT NULL
@@ -1875,6 +1894,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
   AND o.discount_amount > 0
@@ -1935,6 +1955,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
   AND o.discount_amount > 0
@@ -2013,6 +2034,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
   AND o.seller_staff_key IS NOT NULL
@@ -2081,6 +2103,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 LEFT JOIN dim_staff s ON o.seller_staff_key = s.staff_key
 WHERE o.scope_retail
+  AND o.is_active_order
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
   AND o.seller_staff_key IS NOT NULL

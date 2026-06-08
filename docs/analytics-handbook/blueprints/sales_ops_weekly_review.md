@@ -2,7 +2,7 @@
 primary_scope: scope_retail
 scope_indicator: "[Retail]"
 layer: L2
-uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, discount_rate]
+uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, discount_rate, is_active_order]
 ---
 
 # Sales Ops Weekly Review [Retail] Blueprint (Redesign)
@@ -13,7 +13,7 @@ uses_concepts: [scope_retail, scope_b2b, net_revenue, orders_count, aov, discoun
 > **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
 >
 > **Concepts used:**
-> [`scope_retail`](../semantic/segments.md#scope_retail) · [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate)
+> [`scope_retail`](../semantic/segments.md#scope_retail) · [`scope_b2b`](../semantic/segments.md#scope_b2b) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`discount_rate`](../semantic/metrics.md#discount_rate) · [`is_active_order`](../semantic/metrics.md#is_active_order)
 ## 📂 Collection: Operations > Periodic Reviews
 
 ### Dashboard: Sales Ops Weekly Review [Retail]
