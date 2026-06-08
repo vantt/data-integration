@@ -113,11 +113,11 @@ sales_base AS (
       AND fs.net_revenue > 0
 ),
 
--- Order-level status filter: exclude cancelled/voided orders
+-- Order-level status filter: exclude cancelled orders
 valid_orders AS (
     SELECT order_id
     FROM {{ ref('fact_orders') }}
-    WHERE status NOT IN ('CANCELLED', 'Voided')
+    WHERE status != 'CANCELLED'
 ),
 
 sales_filtered AS (

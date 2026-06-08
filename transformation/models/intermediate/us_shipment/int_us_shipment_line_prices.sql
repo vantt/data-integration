@@ -23,7 +23,7 @@ WITH us_orders AS (
     FROM {{ ref('fact_orders') }} o
     JOIN {{ ref('dim_channels') }} ch ON o.channel_key = ch.channel_key
     WHERE ch.channel_name = 'US'
-      AND o.status NOT IN ('CANCELLED', 'Voided')
+      AND o.status != 'CANCELLED'
 ),
 
 order_items AS (
