@@ -62,6 +62,6 @@ Rill auto-reloads on file changes (dev mode).
 | Rill Blueprint | Playbook | Metabase Blueprint |
 |----------------|----------|-------------------|
 | orders_executive | [playbook](../playbooks/rill/orders_executive.md) | ceo_weekly_pulse.md |
-| orders_retail_ops | [playbook](../playbooks/rill/orders_retail_ops.md) | sales_daily_operation.md |
+| orders_retail_ops | [playbook](../playbooks/rill/orders_retail_ops.md) | sales_today_operation.md |
 | orders_b2b_ops | [playbook](../playbooks/rill/orders_b2b_ops.md) | b2b_orders_tracking.md |
 

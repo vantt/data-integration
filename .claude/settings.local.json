@@ -27,7 +27,7 @@
       "Bash(set -a)",
       "Bash(source .env.local)",
       "Bash(set +a)",
-      "Bash(node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/sales_daily_operation.md)",
+      "Bash(node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/sales_today_operation.md)",
       "Bash(node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/orders_today.md)",
       "Bash(node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/orders_yesterday.md)",
       "Bash(node -e \":*)",

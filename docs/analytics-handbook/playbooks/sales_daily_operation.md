@@ -5,7 +5,7 @@
 - **Audience:** Store Managers, Sales Team
 - **Goal:** Real-time monitoring of today's sales performance and operational anomalies.
 - **Collection:** `Operations > Daily Monitoring`
-- **Blueprint:** [Technical Spec](../blueprints/sales_daily_operation.md)
+- **Blueprint:** [Technical Spec](../blueprints/sales_today_operation.md)
 - **Dashboard:** [Dashboard ID 2](/dashboard/2)
 
 ## Structure

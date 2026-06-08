@@ -38,7 +38,12 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Reconciliation Checklist
@@ -75,7 +80,12 @@ FROM fact_orders
 ```
 
 ```json metabase-pos
-{"row": 2, "col":15, "size_x":3, "size_y":2}
+{
+  "row": 2,
+  "col": 15,
+  "size_x": 3,
+  "size_y": 2
+}
 ```
 
 ---
@@ -122,7 +132,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row": 5, "col":0, "size_x":6, "size_y":4}
+{
+  "row": 8,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Net Revenue
@@ -165,7 +180,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row": 5, "col":6, "size_x":4, "size_y":4}
+{
+  "row": 5,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Collected
@@ -208,7 +228,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row": 5, "col":10, "size_x":4, "size_y":4}
+{
+  "row": 5,
+  "col": 10,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Gross Revenue
@@ -251,7 +276,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row": 5, "col":14, "size_x":4, "size_y":4}
+{
+  "row": 5,
+  "col": 6,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Discount
@@ -294,7 +324,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row": 9, "col":0, "size_x":6, "size_y":4}
+{
+  "row": 5,
+  "col": 14,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Cancelled Orders
@@ -333,7 +368,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row": 9, "col":6, "size_x":6, "size_y":4}
+{
+  "row": 8,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Returns
@@ -370,7 +410,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{"row": 9, "col":12, "size_x":6, "size_y":4}
+{
+  "row": 8,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -407,7 +452,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":6, "size_y":6}
+{
+  "row": 12,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Payment Status
@@ -434,7 +484,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 14, "col":6, "size_x":6, "size_y":6}
+{
+  "row": 12,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Channel
@@ -467,7 +522,12 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{"row": 14, "col":12, "size_x":6, "size_y":6}
+{
+  "row": 12,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 ---
@@ -534,7 +594,12 @@ ORDER BY o.discount_amount DESC
 ```
 
 ```json metabase-pos
-{"row": 21, "col":0, "size_x":18, "size_y":5}
+{
+  "row": 19,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 5
+}
 ```
 
 ---
@@ -601,7 +666,12 @@ ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-pos
-{"row": 27, "col":0, "size_x":18, "size_y":10}
+{
+  "row": 25,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 10
+}
 ```
 
 
@@ -631,7 +701,12 @@ SELECT '📅 Hôm qua: ' || strftime((current_date - INTERVAL '1 day')::DATE, '%
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Reconciliation Checklist
@@ -668,7 +743,12 @@ FROM fact_orders
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 15, "size_x": 3, "size_y": 2 }
+{
+  "row": 2,
+  "col": 15,
+  "size_x": 3,
+  "size_y": 2
+}
 ```
 
 ---
@@ -715,7 +795,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 6, "size_y": 4 }
+{
+  "row": 8,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Net Revenue
@@ -758,7 +843,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 6, "size_x": 4, "size_y": 4 }
+{
+  "row": 5,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Collected
@@ -801,7 +891,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 10, "size_x": 4, "size_y": 4 }
+{
+  "row": 5,
+  "col": 10,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Gross Revenue
@@ -844,7 +939,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 14, "size_x": 4, "size_y": 4 }
+{
+  "row": 5,
+  "col": 6,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Discount
@@ -887,7 +987,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 6, "size_y": 4 }
+{
+  "row": 5,
+  "col": 14,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Cancelled Orders
@@ -926,7 +1031,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 6, "size_x": 6, "size_y": 4 }
+{
+  "row": 8,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Returns
@@ -963,7 +1073,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 12, "size_x": 6, "size_y": 4 }
+{
+  "row": 8,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -1000,7 +1115,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 6, "size_y": 6 }
+{
+  "row": 12,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Payment Status
@@ -1027,7 +1147,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 6, "size_x": 6, "size_y": 6 }
+{
+  "row": 12,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Channel
@@ -1060,7 +1185,12 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
+{
+  "row": 12,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 ---
@@ -1127,7 +1257,12 @@ ORDER BY o.discount_amount DESC
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 18, "size_y": 5 }
+{
+  "row": 19,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 5
+}
 ```
 
 ---
@@ -1194,7 +1329,12 @@ ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-pos
-{ "row": 28, "col": 0, "size_x": 18, "size_y": 10 }
+{
+  "row": 25,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 10
+}
 ```
 
 
@@ -1224,7 +1364,12 @@ SELECT '📅 Ngày: ' || strftime({{date}}::date, '%d/%m/%Y') AS "Chu kỳ báo 
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### Filter: Date
@@ -1281,7 +1426,12 @@ FROM fact_orders
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 15, "size_x": 3, "size_y": 2 }
+{
+  "row": 2,
+  "col": 15,
+  "size_x": 3,
+  "size_y": 2
+}
 ```
 
 ---
@@ -1328,7 +1478,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 6, "size_y": 4 }
+{
+  "row": 8,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Net Revenue
@@ -1371,7 +1526,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 6, "size_x": 4, "size_y": 4 }
+{
+  "row": 5,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Collected
@@ -1414,7 +1574,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 10, "size_x": 4, "size_y": 4 }
+{
+  "row": 5,
+  "col": 10,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Gross Revenue
@@ -1457,7 +1622,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 14, "size_x": 4, "size_y": 4 }
+{
+  "row": 5,
+  "col": 6,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Total Discount
@@ -1500,7 +1670,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 6, "size_y": 4 }
+{
+  "row": 5,
+  "col": 14,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### Question: Cancelled Orders
@@ -1539,7 +1714,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 6, "size_x": 6, "size_y": 4 }
+{
+  "row": 8,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### Question: Returns
@@ -1576,7 +1756,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 12, "size_x": 6, "size_y": 4 }
+{
+  "row": 8,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -1613,7 +1798,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 0, "size_x": 6, "size_y": 6 }
+{
+  "row": 12,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Payment Status
@@ -1640,7 +1830,12 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 6, "size_x": 6, "size_y": 6 }
+{
+  "row": 12,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### Question: Orders by Channel
@@ -1673,7 +1868,12 @@ ORDER BY 3 DESC
 ```
 
 ```json metabase-pos
-{ "row": 15, "col": 12, "size_x": 6, "size_y": 6 }
+{
+  "row": 12,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 ---
@@ -1740,7 +1940,12 @@ ORDER BY o.discount_amount DESC
 ```
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 18, "size_y": 5 }
+{
+  "row": 19,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 5
+}
 ```
 
 ---
@@ -1807,7 +2012,12 @@ ORDER BY o.ordered_at DESC
 ```
 
 ```json metabase-pos
-{ "row": 28, "col": 0, "size_x": 18, "size_y": 10 }
+{
+  "row": 25,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 10
+}
 ```
 
 #### 📝 Text: Source & Freshness

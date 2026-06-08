@@ -1,27 +1,27 @@
 ---
-primary_scope: scope_retail
-scope_indicator: "[Retail]"
+primary_scope: scope_sales
+scope_indicator: "[All]"
 layer: L2
-uses_concepts: [scope_retail, net_revenue, orders_count, aov]
+uses_concepts: [scope_sales, net_revenue, orders_count, aov, is_active_order]
 ---
 
-# Daily Sales Performance Blueprint [Retail]
+# Today Sales Blueprint [All]
 
 ## Semantic Contract
 
 > **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
-> **Scope:** `scope_retail` · Layer L2 `[Retail]` · [`segments.md#scope_retail`](../semantic/segments.md#scope_retail)
-> **Why:** Daily sales ops tracks retail performance. B2B orders have fundamentally different AOV (~2.5M vs 450K VND) and no promotion mechanics — mixing distorts all daily KPIs.
+> **Scope:** `scope_sales` · Layer L2 `[All]` · [`segments.md#scope_sales`](../semantic/segments.md#scope_sales)
+> **Why:** Operations dashboard tracks full sales performance across all customer types (Retail + B2B). Loại bỏ Internal channels (`is_sales_channel = true`).
 >
 > **Concepts used:**
-> [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
+> [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov)
 
-All SQL: `WHERE scope_retail`. Do not inline-derive customer type, channel, and status conditions — use the pre-computed column.
+All SQL: `WHERE scope_sales`. Do not re-derive as `is_sales_channel = true AND status NOT IN (...)`.
 ## 📂 Collection: Operations > Daily Monitoring
 
-### Dashboard: Daily Sales [Retail]
+### Dashboard: Today Sales [All]
 
-**Description**: Real-time monitoring of today's **retail** sales — Health Score gauge, KPIs with integrated DoD trends, hourly patterns, channel/product/customer breakdowns across 4 tabs.
+**Description**: Real-time monitoring of today's sales across all customer types — Health Score gauge, KPIs with integrated DoD trends, hourly patterns, channel/product/customer breakdowns across 4 tabs.
 
 > **Database:** Sapo
 
@@ -63,7 +63,7 @@ All SQL: `WHERE scope_retail`. Do not inline-derive customer type, channel, and 
 
 #### Question: Health Score
 
-Điểm sức khỏe kinh doanh (0-100) dựa trên 4 chỉ số: Revenue Momentum, Order Momentum, Customer Loyalty, AOV Stability. So sánh 7 ngày gần nhất (kể cả hôm nay) vs 7 ngày trước đó. **Scope: Retail only.**
+Điểm sức khỏe kinh doanh (0-100) dựa trên 4 chỉ số: Revenue Momentum, Order Momentum, Customer Loyalty, AOV Stability. So sánh 7 ngày gần nhất (kể cả hôm nay) vs 7 ngày trước đó. **Scope: All (Retail + B2B).**
 
 ```sql
 WITH
@@ -76,7 +76,8 @@ recent AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
 ),
 previous AS (
     SELECT
@@ -87,7 +88,8 @@ previous AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
 ),
 customer_loyalty AS (
     SELECT
@@ -98,7 +100,8 @@ customer_loyalty AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
 ),
 scores AS (
     SELECT
@@ -144,7 +147,8 @@ recent AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
 ),
 previous AS (
     SELECT
@@ -155,7 +159,8 @@ previous AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '13 days' AND current_date - INTERVAL '7 days'
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
 ),
 customer_loyalty AS (
     SELECT
@@ -166,7 +171,8 @@ customer_loyalty AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) BETWEEN current_date - INTERVAL '6 days' AND current_date
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
 ),
 raw_scores AS (
     SELECT
@@ -241,7 +247,7 @@ SELECT * FROM (
 
 #### Question: Net Revenue
 
-**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison vs yesterday. **Scope: Retail only.**
+**Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Hero metric with DoD comparison vs yesterday. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -251,7 +257,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -293,7 +300,7 @@ SELECT
 
 #### Question: Gross Revenue
 
-**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI with DoD. **Scope: Retail only.**
+**Domain Reference**: [Gross Revenue (GMV)](../domains/sales.md#1-gross-revenue-gmv) — Supporting KPI with DoD. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -303,7 +310,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -328,7 +336,7 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
 
 #### Question: Total Orders
 
-Supporting KPI with DoD comparison. **Scope: Retail only.**
+Supporting KPI with DoD comparison. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -338,7 +346,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
-  AND o.scope_retail
+  AND o.scope_sales
 ```
 
 ```json metabase-viz
@@ -354,7 +362,7 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
 
 #### Question: AOV
 
-Supporting KPI with DoD comparison. **Scope: Retail only.**
+Supporting KPI with DoD comparison. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -372,7 +380,8 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
   AND date(o.ordered_at) <= current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -399,7 +408,7 @@ WHERE date(o.ordered_at) >= current_date - INTERVAL '1 day'
 
 #### Question: New Customers
 
-**Scope: Retail only.**
+**Scope: All (Retail + B2B).**
 
 ```sql
 SELECT COUNT(DISTINCT o.customer_key) as "New Customers"
@@ -407,7 +416,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
   AND date(c.first_order_date) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
 ```
 
 ```json metabase-viz
@@ -420,7 +429,7 @@ WHERE date(o.ordered_at) = current_date
 
 #### Question: Returning Customers
 
-**Scope: Retail only.**
+**Scope: All (Retail + B2B).**
 
 ```sql
 SELECT COUNT(DISTINCT o.customer_key) as "Returning Customers"
@@ -428,7 +437,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
   AND date(c.first_order_date) < current_date
-  AND o.scope_retail
+  AND o.scope_sales
 ```
 
 ```json metabase-viz
@@ -447,7 +456,7 @@ FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
   AND o.fulfillment_status = 'RETURNED'
-  AND o.scope_retail
+  AND o.scope_sales
 ```
 
 ```json metabase-viz
@@ -467,7 +476,8 @@ SELECT COALESCE(SUM(o.total_collected), 0) as "Total Collected"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -501,7 +511,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -522,7 +533,7 @@ FROM fact_sales s
 JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
 ```
 
 ```json metabase-viz
@@ -549,7 +560,8 @@ WITH current_sales AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
     GROUP BY 1
 ),
 previous_sales AS (
@@ -559,7 +571,8 @@ previous_sales AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
     GROUP BY 1
 )
 SELECT
@@ -603,7 +616,8 @@ today_hourly AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
     GROUP BY 1
 ),
 yesterday_hourly AS (
@@ -613,7 +627,8 @@ yesterday_hourly AS (
     FROM fact_orders o
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
     GROUP BY 1
 )
 SELECT
@@ -645,7 +660,7 @@ ORDER BY 1
 
 #### 📝 Text: Source & Freshness
 
-Source: `fact_orders` (order-level) + `fact_sales` (line-item, Items/Order) · Real-time · **Scope: scope_retail (pre-computed)** · KPIs & Hourly: hôm nay vs hôm qua · Health Score: D-6 → hôm nay so với D-13 → D-7 · Bao gồm tất cả trạng thái đơn
+Source: `fact_orders` (order-level) + `fact_sales` (line-item, Items/Order) · Real-time · **Scope: scope_sales (pre-computed)** · KPIs & Hourly: hôm nay vs hôm qua · Health Score: D-6 → hôm nay so với D-13 → D-7 · Bao gồm tất cả trạng thái đơn
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
@@ -696,7 +711,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 
 #### Question: Revenue by Channel
 
-**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel) — Horizontal bar for ranking. **Scope: Retail only.**
+**Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel) — Horizontal bar for ranking. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -706,7 +721,8 @@ FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -747,7 +763,8 @@ FROM fact_orders o
 JOIN dim_channels ch ON o.channel_key = ch.channel_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -781,7 +798,8 @@ WITH today AS (
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
     GROUP BY 1
 ),
 yesterday AS (
@@ -793,7 +811,8 @@ yesterday AS (
     JOIN dim_channels ch ON o.channel_key = ch.channel_key
     JOIN dim_customers c ON o.customer_key = c.customer_key
     WHERE date(o.ordered_at) = current_date - INTERVAL '1 day'
-      AND o.scope_retail
+      AND o.scope_sales
+      AND o.is_active_order
     GROUP BY 1
 )
 SELECT
@@ -856,7 +875,7 @@ ORDER BY COALESCE(t.revenue, 0) DESC
 
 #### Question: Sales by Branch
 
-**Scope: Retail only.**
+**Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -869,7 +888,8 @@ FROM fact_orders o
 JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -903,7 +923,7 @@ ORDER BY 3 DESC
 
 #### 📝 Text: Source & Freshness
 
-Source: `fact_orders` · Real-time · **Scope: scope_retail (pre-computed)** · Ranking kênh: hôm nay · DoD table (Channel Performance): hôm nay vs hôm qua · Bao gồm tất cả trạng thái đơn
+Source: `fact_orders` · Real-time · **Scope: scope_sales (pre-computed)** · Ranking kênh: hôm nay · DoD table (Channel Performance): hôm nay vs hôm qua · Bao gồm tất cả trạng thái đơn
 
 ```json metabase-pos
 { "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
@@ -946,7 +966,7 @@ SELECT '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') || '  ·  Hôm qu
 
 #### Question: Top 10 Products by Revenue
 
-**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products) — Horizontal bar for visual ranking. **Scope: Retail only.**
+**Domain Reference**: [Top Selling Products](../domains/sales.md#9-top-selling-products) — Horizontal bar for visual ranking. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -957,7 +977,8 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -988,7 +1009,7 @@ LIMIT 10
 
 #### Question: Top 10 Products by Quantity
 
-Horizontal bar for quantity ranking. **Scope: Retail only.**
+Horizontal bar for quantity ranking. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -999,7 +1020,7 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
 GROUP BY 1
 ORDER BY 2 DESC
 LIMIT 10
@@ -1022,7 +1043,7 @@ LIMIT 10
 
 #### Question: Revenue by Product Type
 
-Horizontal bar replacing pie chart. **Scope: Retail only.**
+Horizontal bar replacing pie chart. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -1033,7 +1054,8 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1063,7 +1085,7 @@ ORDER BY 2 DESC
 
 #### Question: Product Performance Table
 
-Full detail with Qty, Revenue, Avg Price. **Scope: Retail only.**
+Full detail with Qty, Revenue, Avg Price. **Scope: All (Retail + B2B).**
 
 ```sql
 SELECT
@@ -1077,7 +1099,8 @@ JOIN fact_orders o ON s.order_id = o.order_id
 JOIN dim_products p ON s.product_key = p.product_key
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(s.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1, 2
 ORDER BY 4 DESC
 LIMIT 20
@@ -1111,7 +1134,7 @@ LIMIT 20
 
 #### 📝 Text: Source & Freshness
 
-Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: scope_retail (pre-computed)** · Khung thời gian: hôm nay (by ordered_at, không phải ordered_at)
+Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: scope_sales (pre-computed)** · Khung thời gian: hôm nay (by ordered_at, không phải ordered_at)
 
 ```json metabase-pos
 { "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1163,7 +1186,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
 ```
 
 ```json metabase-viz
@@ -1205,7 +1228,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1
 ```
 
@@ -1246,7 +1270,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1283,7 +1308,7 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1316,7 +1341,7 @@ JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
 JOIN fact_orders o ON p.order_id = o.order_id
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(p.payment_timestamp) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1337,7 +1362,7 @@ ORDER BY 3 DESC
 
 #### Question: Discount Impact
 
-**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact) — **⚠️ BẮT BUỘC scope_retail để tránh trộn lẫn với giá sỉ.**
+**Domain Reference**: [Discount Impact](../domains/sales.md#13-discount-impact) — **Scope: All (Retail + B2B). Lưu ý: B2B orders có discount_amount từ giá sỉ, không phải promotion.**
 
 ```sql
 SELECT
@@ -1351,7 +1376,8 @@ SELECT
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
 WHERE date(o.ordered_at) = current_date
-  AND o.scope_retail
+  AND o.scope_sales
+  AND o.is_active_order
 ```
 
 ```json metabase-viz
@@ -1377,7 +1403,7 @@ WHERE date(o.ordered_at) = current_date
 
 #### 📝 Text: Source & Freshness
 
-Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_customers` (At Risk = RFM snapshot, không theo ngày) · Real-time · **Scope: scope_retail (pre-computed)** · Hôm nay (by ordered_at) · Bao gồm tất cả trạng thái đơn
+Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_customers` (At Risk = RFM snapshot, không theo ngày) · Real-time · **Scope: scope_sales (pre-computed)** · Hôm nay (by ordered_at) · Bao gồm tất cả trạng thái đơn
 
 ```json metabase-pos
 { "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
@@ -1385,5 +1411,5 @@ Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_cust
 
 ---
 
-> **Scope Note:** Tất cả queries trong blueprint này filter `scope_retail` (Retail customers, sales channels only). B2B orders (WHOLESALE, PARTNER) được track trong **B2B Daily Sales [B2B]** blueprint.
+> **Scope Note:** Tất cả queries trong blueprint này filter `scope_sales` (Retail + B2B, loại Internal channels). Để xem riêng từng business line: **Today Sales [Retail]** dùng `scope_retail`, **B2B Daily Sales [B2B]** dùng `scope_b2b`.
 > Xem: [Report Segmentation Guide](../guides/report_segmentation.md)

@@ -102,9 +102,9 @@ fact_orders (ALL)
 **Mục đích:** Tổng quan toàn bộ doanh thu bán hàng thực.
 
 ```sql
--- Base filter cho tất cả Layer 1 dashboards
+-- Base filter cho tất cả Layer 1 dashboards (channel classification only)
 WHERE is_sales_channel = true
-  AND status NOT IN ('CANCELLED', 'Voided')
+-- For revenue metrics, thêm: AND is_active_order
 ```
 
 **Bao gồm:**
@@ -123,10 +123,10 @@ WHERE is_sales_channel = true
 **Mục đích:** Phân tích thuần túy cho business line bán lẻ.
 
 ```sql
--- Base filter cho tất cả Layer 2 Retail dashboards
+-- Base filter cho tất cả Layer 2 Retail dashboards (channel + segment, no status gate)
 WHERE is_sales_channel = true
-  AND status NOT IN ('CANCELLED', 'Voided')
   AND customer_type = 'RETAIL'
+-- For revenue metrics, thêm: AND is_active_order
 ```
 
 **Bắt buộc dùng khi:**
@@ -141,10 +141,10 @@ WHERE is_sales_channel = true
 **Mục đích:** Phân tích cho business line bán sỉ/đối tác.
 
 ```sql
--- Base filter cho tất cả Layer 2 B2B dashboards
+-- Base filter cho tất cả Layer 2 B2B dashboards (channel + segment, no status gate)
 WHERE is_sales_channel = true
-  AND status NOT IN ('CANCELLED', 'Voided')
   AND customer_type IN ('WHOLESALE', 'PARTNER')
+-- For revenue metrics, thêm: AND is_active_order
 ```
 
 **Bắt buộc dùng khi:**
@@ -405,7 +405,7 @@ GROUP BY cu.customer_type
 
 | Blueprint | Action (executed) | Final Indicator | Status |
 |-------------------|--------|---------------|---|
-| sales_daily_operation | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
+| sales_today_operation | Expanded to scope_sales (Retail + B2B) | [All] | ✅ |
 | sales_yesterday_operation | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |
 | sales_promotion_analysis | Added `customer_type = 'RETAIL'` + moved → Marketing & Customers | [Retail] | ✅ |
 | marketing_weekly_tracker | Added `customer_type = 'RETAIL'` | [Retail] | ✅ |

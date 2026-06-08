@@ -174,6 +174,6 @@ AOV ổn định:       20/25   WoW: +8%        OK
 ## Tham chiếu kỹ thuật
 
 - **Source tables:** `fact_orders`, `dim_customers`
-- **Blueprints:** [`sales_daily_operation.md`](../blueprints/sales_daily_operation.md), [`sales_yesterday_operation.md`](../blueprints/sales_yesterday_operation.md)
+- **Blueprints:** [`sales_today_operation.md`](../blueprints/sales_today_operation.md), [`sales_yesterday_operation.md`](../blueprints/sales_yesterday_operation.md)
 - **SQL logic:** Xem card "Health Score" và "Health Breakdown" trong blueprint
 - **Scoring formula:** 4 components × 25 points = 100 max. Thresholds calibrated cho retail SMB Vietnam.
