@@ -86,7 +86,7 @@ extracted AS (
 
         -- Statuses
         json_extract_string(payload, '$.status') as order_status,
-        json_extract_string(payload, '$.financial_status') as financial_status,
+        json_extract_string(payload, '$.payment_status') as financial_status,
         json_extract_string(payload, '$.fulfillment_status') as fulfillment_status,
         json_extract_string(payload, '$.packed_status') as packed_status,
         json_extract_string(payload, '$.received_status') as received_status,

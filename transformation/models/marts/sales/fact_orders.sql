@@ -179,12 +179,12 @@ SELECT
 
     -- Segment scope (pre-computed; see docs/analytics-handbook/semantic/segments.md)
     COALESCE(ch.is_sales_channel, false)
-        AND orders.status NOT IN ('CANCELLED', 'Voided')               AS scope_sales,
+        AND orders.status != 'CANCELLED'               AS scope_sales,
     COALESCE(ch.is_sales_channel, false)
-        AND orders.status NOT IN ('CANCELLED', 'Voided')
+        AND orders.status != 'CANCELLED'
         AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL'           AS scope_retail,
     COALESCE(ch.is_sales_channel, false)
-        AND orders.status NOT IN ('CANCELLED', 'Voided')
+        AND orders.status != 'CANCELLED'
         AND COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') AS scope_b2b
 
 FROM orders

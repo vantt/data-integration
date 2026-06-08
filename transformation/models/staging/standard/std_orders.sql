@@ -62,13 +62,12 @@ SELECT
         ELSE 'OPEN'
     END as status,
     
-    CASE 
+    CASE
         WHEN financial_status = 'paid' THEN 'PAID'
-        WHEN financial_status = 'partially_paid' THEN 'PARTIALLY_PAID'
+        WHEN financial_status = 'partial' THEN 'PARTIALLY_PAID'
         WHEN financial_status = 'refunded' THEN 'REFUNDED'
-        WHEN financial_status = 'voided' THEN 'VOIDED'
         WHEN financial_status = 'pending' THEN 'PENDING'
-        ELSE 'UNPAID' 
+        ELSE 'UNPAID'
     END as payment_status,
     
     CASE 
