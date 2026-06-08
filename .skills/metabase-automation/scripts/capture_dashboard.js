@@ -8,9 +8,10 @@
  *           (output file already exists)
  *
  * Usage:
- *   node capture_dashboard.js <dashboard_id> [output_file.md]
- *   node capture_dashboard.js 11                              # prints to stdout (fresh)
- *   node capture_dashboard.js 11 blueprints/ceo_weekly.md     # merge if exists, fresh if not
+ *   node capture_dashboard.js <dashboard_id> [output_file.md] [--positions-only]
+ *   node capture_dashboard.js 11                                        # prints to stdout (fresh)
+ *   node capture_dashboard.js 11 blueprints/ceo_weekly.md               # merge if exists, fresh if not
+ *   node capture_dashboard.js 11 blueprints/ceo_weekly.md --positions-only  # ONLY update metabase-pos blocks
  *
  * Environment:
  *   METABASE_URL     - Base URL (default: http://127.0.0.1:3000/)
@@ -39,8 +40,9 @@ if (args.length < 1) {
   process.exit(1);
 }
 
-const DASHBOARD_ID = parseInt(args[0]);
-const OUTPUT_FILE = args[1] || null;
+const DASHBOARD_ID    = parseInt(args[0]);
+const OUTPUT_FILE     = args.find((a, i) => i > 0 && !a.startsWith('--')) || null;
+const POSITIONS_ONLY  = args.includes('--positions-only');
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -204,6 +206,93 @@ function parseExistingBlueprint(filePath) {
   }
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// Positions-only patch: replace metabase-pos blocks in-place, touch nothing else
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a map of card name → {row, col, size_x, size_y} from live dashboard.
+ * For text cards, key is derived via deriveNameFromText().
+ */
+function buildPositionMap(tabGroups, cardCache) {
+  const map = {};
+  for (const group of tabGroups) {
+    for (const dc of group.cards) {
+      const pos = buildPosition(dc);
+      if (dc.card_id === null) {
+        const text = (dc.visualization_settings || {}).text || '';
+        if (text.trim()) map[deriveNameFromText(text)] = pos;
+      } else {
+        const card = cardCache[dc.card_id];
+        if (card) map[card.name] = pos;
+      }
+    }
+  }
+  return map;
+}
+
+/**
+ * Patch only metabase-pos blocks in an existing blueprint file.
+ * Locates each Question/Text header, tracks the card name, then replaces the
+ * JSON content of the following metabase-pos block with the live position.
+ * All other content (SQL, viz, prose, frontmatter, Semantic Contract) is untouched.
+ */
+function patchPositionsOnly(filePath, positionMap) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  const lines   = content.split('\n');
+  const out     = [];
+
+  let currentCardName = null;
+  let inPosBlock      = false;
+  let posBlockBuffer  = []; // old JSON lines buffered for fallback
+  let updated = 0, skipped = 0;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Track current card name from Question or Text header
+    const qMatch = trimmed.match(/^####\s+(?:❓\s+)?Question:\s*(.+)/);
+    const tMatch = trimmed.match(/^####\s+(?:📝\s+)?Text:\s*(.+)/);
+    if (qMatch) currentCardName = qMatch[1].trim();
+    if (tMatch) currentCardName = tMatch[1].trim();
+
+    // Enter pos block
+    if (trimmed === '```json metabase-pos') {
+      inPosBlock     = true;
+      posBlockBuffer = [];
+      out.push(line);
+      continue;
+    }
+
+    // Inside pos block
+    if (inPosBlock) {
+      if (trimmed === '```') {
+        // Closing fence — inject new position or fall back to buffered original
+        inPosBlock = false;
+        const pos = currentCardName ? positionMap[currentCardName] : null;
+        if (pos) {
+          out.push(...JSON.stringify(pos, null, 2).split('\n'));
+          updated++;
+        } else {
+          out.push(...posBlockBuffer); // restore original unchanged
+          if (currentCardName) {
+            console.error(`  ⚠️  No live position for "${currentCardName}" — keeping original`);
+            skipped++;
+          }
+        }
+        out.push(line); // closing ```
+      } else {
+        posBlockBuffer.push(line); // buffer old JSON content
+      }
+      continue;
+    }
+
+    out.push(line);
+  }
+
+  return { content: out.join('\n'), updated, skipped };
 }
 
 // ---------------------------------------------------------------------------
@@ -436,8 +525,24 @@ function renderTabGroups(lines, tabGroups, cardCache, existingQuestions, existin
       tabGroups.push({ name: null, cards: sorted });
     }
 
-    // Decide mode: merge or fresh
+    // Decide mode
     let markdown;
+
+    if (POSITIONS_ONLY) {
+      if (!OUTPUT_FILE || !fs.existsSync(OUTPUT_FILE)) {
+        console.error('❌ --positions-only requires an existing output file.');
+        process.exit(1);
+      }
+      console.error(`📍 Positions-only mode: patching metabase-pos blocks, all else untouched`);
+      const positionMap = buildPositionMap(tabGroups, cardCache);
+      console.error(`   Live positions loaded for ${Object.keys(positionMap).length} card(s)`);
+      const { content, updated, skipped } = patchPositionsOnly(OUTPUT_FILE, positionMap);
+      fs.writeFileSync(OUTPUT_FILE, content, 'utf8');
+      console.error(`✅ ${updated} position(s) updated, ${skipped} skipped (no live match)`);
+      console.error(`\n🚀 Capture Complete.`);
+      return;
+    }
+
     if (OUTPUT_FILE && fs.existsSync(OUTPUT_FILE)) {
       console.error(`📝 Merge mode: existing file found, preserving prose/metadata`);
       const existing = parseExistingBlueprint(OUTPUT_FILE);
