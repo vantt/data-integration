@@ -191,5 +191,8 @@ SELECT
 FROM joined_data
 
 {% if is_incremental() %}
-WHERE last_modified_at >= (SELECT MAX(last_modified_at) FROM {{ this }})
+-- Use source_updated_at (not last_modified_at) as watermark.
+-- metric_calculated_at = current_timestamp on every run, which pushes the watermark
+-- past new customers whose source updated_at predates the current run → they get silently skipped.
+WHERE source_updated_at >= (SELECT MAX(updated_at) FROM {{ this }})
 {% endif %}
