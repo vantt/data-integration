@@ -308,14 +308,14 @@ grep -h "^## 📂 Collection:" docs/analytics-handbook/blueprints/*.md \
 
 ## Todo List
 
-- [ ] Step 1: Write new `collection_registry.yml`
-- [ ] Step 2a: Edit `collection_organization.md` §3 + §6
-- [ ] Step 2b: Edit `report_segmentation.md` §6 + §9
-- [ ] Step 2c: Edit `AGENTS.md` Collection Governance section
+- [x] Step 1: Write new `collection_registry.yml` (6-collection structure)
+- [x] Step 2a: Edit `collection_organization.md` §3 + §6
+- [x] Step 2b: Edit `report_segmentation.md` §6 + §9
+- [x] Step 2c: Edit `AGENTS.md` Collection Governance section
 - [ ] Step 2d: Edit ADR-009 add Amendments
-- [ ] Step 3a: Normalize 30 blueprint headers (sed for `## Collection:`)
-- [ ] Step 3b: Fix 13 blueprint collection paths (per move table)
-- [ ] Step 3c: Add `> **Target Collection:**` line to ~20 blueprints missing it
+- [x] Step 3a: Normalize blueprint headers
+- [x] Step 3b: Fix blueprint collection paths (commit c7f8f14)
+- [x] Step 3c: Add `> **Target Collection:**` lines to blueprints
 - [ ] Step 4: Run drift verification — must return 0
 
 ## Success Criteria

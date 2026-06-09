@@ -1,7 +1,7 @@
 ---
 title: "Chẩn đoán 'bán ế' & Playbook khai thác dữ liệu cho Marketing / CSKH / Sales"
 status: living
-last_modified: 2026-06-04
+last_modified: 2026-06-09
 audience: [CEO, Marketing, Customer Care, Sales, Data]
 domain_refs: [domains/customer.md, designs/customer_retention_lifecycle.md]
 related: [guides/analytics_improvement_opportunities.md, mart_customer_action_queue, mart_customer_status_snapshot_monthly]
@@ -15,6 +15,151 @@ related: [guides/analytics_improvement_opportunities.md, mart_customer_action_qu
 
 > **Lưu ý kỹ thuật:** `fact_orders` là view trỏ path Docker, không resolve trên Windows.
 > Truy vấn chạy trực tiếp trên parquet: `app_data/data_lake/export/marts/rolling/`.
+
+---
+
+## 0. Khung phân tích: Product Journey × Customer Journey
+
+> **Cập nhật 2026-06-09.** Góc nhìn bổ sung để giải thích tại sao data-driven action queue chưa đủ.
+
+### 0.1 Vấn đề tầng gốc
+
+72% khách chỉ mua 1 lần — plan ban đầu giả định họ **quên** và cần nudge. Nhưng còn 3 nguyên nhân khác có trọng số cao hơn với supplement:
+
+1. **Không thấy kết quả** → không có lý do reorder thật sự
+2. **Dùng sai cách** → kết quả kém → bỏ
+3. **Không có mối quan hệ với brand** → khi hết, mua chỗ khác (hoặc không mua tiếp)
+
+Gọi điện / voucher không chữa được nguyên nhân 1 và 2.
+
+### 0.2 Product Journey — Fine Japan (collagen/supplement)
+
+```
+Mua
+ └→ Tuần 1–2: dùng nhưng chưa thấy gì      ← DANGER ZONE (hay bỏ ở đây)
+ └→ Tuần 3–4: tín hiệu bắt đầu (da bớt khô, móng chắc hơn...)
+ └→ Tuần 6–8: kết quả rõ ràng nhất
+ └→ Hết hàng (ngày ~45–60)                  ← Điểm reorder tự nhiên
+```
+
+*Câu hỏi cần xác nhận với team sản phẩm: timeline kết quả thực tế theo từng dòng (Fine Japan Collagen vs FG Care)?*
+
+### 0.3 Customer Journey hiện tại vs cần có
+
+| Điểm thời gian | Hiện tại | Cần có |
+|---|---|---|
+| Mua | Xác nhận đơn | Xác nhận đơn |
+| Day 3 | *(im lặng)* | "Nhận hàng chưa? Đây là cách dùng đúng nhất" |
+| Day 7 | *(im lặng)* | *(tùy ngưỡng — có thể bỏ nếu Day 3 đã đủ)* |
+| Day 21 | *(im lặng)* | "3 tuần rồi — cơ thể đang thay đổi từ bên trong..." + hỏi feedback |
+| Day 45 | *(im lặng)* | "Sắp hết — đừng để đứt quãng lúc kết quả đỉnh nhất" + reorder link |
+| Day 60+ | Vào action_queue (OVERDUE/WIN_BACK) | Đã có lý do reorder thật → tỷ lệ chuyển đổi cao hơn |
+
+**Hệ quả:** action_queue (Luồng 1–4) vẫn cần, nhưng hiệu quả của nó phụ thuộc vào việc khách có trải qua đủ product journey không. Khách đã dùng đúng và thấy kết quả → conversion từ OVERDUE/WIN_BACK sẽ cao hơn nhiều.
+
+### 0.4 Ưu tiên triển khai theo góc nhìn này
+
+```
+1. 3-touchpoint sequence (Day 3/21/45)   ← fix leak MỚI, không cần data work
+2. Revamp script → product-experience first
+3. Audit hộp CrossBorder (US gift recipient)
+4. Action queue (call-list hiện tại)     ← vẫn làm, hiệu quả sẽ cao hơn sau #1
+5. Data infra P1–P3                      ← scale sau khi biết message nào hoạt động
+```
+
+> **Lưu ý:** thứ tự trên tối ưu cho B2C retention. Nếu mục tiêu là **dòng tiền NGAY**, xem mục 0.5
+> (nhóm A đề xuất đốt lửa B2B/supply trước). Hai thứ tự không loại trừ nhau — khác nhau ở **đốt gì trước**.
+
+---
+
+## 0.5 Góc nhìn bổ sung — first-principles (cập nhật 2026-06-09)
+
+> Section 0 giải quyết tầng **product × customer journey** (tại sao khách lẻ không reorder).
+> Section này bổ sung các lens **first-principles** mà phân tích trước chưa có — vài lens **thách thức
+> chính lựa chọn "tập trung B2C"**. Mục đích: mở thêm hướng action để tháo bế tắc, không thay thế plan.
+
+### Nhóm A — Thách thức "BÁN CÁI GÌ / CHO AI TRƯỚC" (đòn bẩy cao nhất, chiến lược)
+
+**A1. Đám cháy thật vs đám cháy chọn — B2B trước, B2C sau.**
+First principle: doanh thu sụp 95% là do **5–10 khách sỉ** ngừng mua (B2B T1 42đơn/278tr → T5 2đơn/2tr),
+không phải 995 khách lẻ one-time. Nhưng plan đổ toàn lực B2C — ván retention **2 quý mới ra tiền**.
+Mismatch thời gian: B2C retention không trả hóa đơn tháng sau; reactivate **1 khách sỉ ≈ 100+ đơn lẻ**.
+→ **Action:** trước call-list lẻ, gọi đích danh từng khách `discount_type=negotiated_deep` đã ngừng;
+hỏi gốc: *bỏ vì giá / OOS / công nợ chạm trần / đối thủ?* Cuộc gọi đáng giá nhất tuần này.
+*Không phủ nhận B2C — B2C đúng về cấu trúc dài hạn; A1 chỉ đảo thứ tự đốt lửa cho dòng tiền ngắn hạn.*
+
+**A2. Cầu đi đâu rồi? — di cư kênh, không phải mất khách.**
+First principle: khách không "biến mất", họ **mua chỗ khác**; không thể reactivate vào kênh họ đã rời.
+2025–2026 ở VN, mua supplement dịch mạnh sang **TikTok Shop / livestream**. Core sụp + Shopee đơn nhỏ
+tăng có thể là tín hiệu cầu dịch sang nơi rẻ/tiện hơn, không phải ngừng dùng.
+→ **Action:** 1 ngày recon — Fine Japan đang bán ở đâu trên TikTok Shop? Giá nào? Ai bán? Đối thủ
+livestream nào? Nếu cầu đã dịch → win-back về kênh nhà thua nếu không trả lời được "tại sao mua của
+mình chứ không phải livestream rẻ hơn".
+
+**A3. Cái gì vỡ ở phía CUNG? — blind spot lớn nhất.**
+First principle: doanh thu = f(cầu, **cung**, quan hệ). Toàn bộ phân tích đang ở phía cầu/khách.
+"Ế" đột ngột 2025 thường có nguyên nhân cung/vận hành: **OOS hero-SKU**, tăng giá, mất 1 sales chủ
+chốt, mất quyền phân phối, đối tác sỉ đổi nguồn, công nợ đọng.
+→ **Action:** hỏi chính chủ/sales lead (không hỏi data): ***"Chính xác chuyện gì xảy ra Q1–Q2 2025
+khiến B2B rơi?"*** Câu trả lời có thể là 1 sự kiện cụ thể mà không model retention nào thấy được.
+
+### Nhóm B — Reframe "BÁN NHƯ THẾ NÀO" (cơ chế, áp dụng ngay)
+
+**B4. JTBD — bán "kết quả/sự kiện", không bán "collagen".**
+First principle: không ai mua collagen vì collagen; họ "thuê" nó cho một **job cảm xúc/sự kiện**
+(trẻ lại trước cưới/Tết, hết lo lão hóa, da đẹp để tự tin). Plan mô tả sản phẩm theo timeline sinh lý
+(đúng cho reorder), nhưng **trigger MUA là cảm xúc/sự kiện**.
+→ **Action:** phân khúc lại theo "job": mua cho mình (self-care, chu kỳ đều) vs mua **làm quà**
+(mẹ, Tết — đúng pattern US-gift). Message khác hẳn. Acquisition bắt **mùa sự kiện** (Tết, hè, mùa cưới),
+không chỉ nhịp sinh lý cho reorder.
+
+**B5. Đây là business subscription trá hình.**
+First principle: hàng tái mua mỗi 45–60 ngày = **mô hình subscription**. Tài sản thật không phải "số đơn"
+mà là **số khách đang trong chu kỳ replenish**. Đang bán từng đơn rời rạc thay vì bán **quan hệ bổ sung định kỳ**.
+→ **Action:** "Subscribe & Save" — đăng ký giao định kỳ 45 ngày, giảm 10% + freeship. Biến reorder từ
+*quyết định lặp lại* (dễ rớt) thành *mặc định* (phải chủ động hủy) — đòn bẩy M1-repeat mạnh hơn voucher
+win-back. Metric Bắc Đẩu đổi thành **"active replenishers"**.
+
+**B6. Trust/Chính hãng là con hào — đặc biệt với US-gift.**
+First principle: supplement VN ngập hàng giả; lý do #1 khách không mua lại / mua chỗ rẻ = **sợ giả**.
+Reframe luồng US-gift (mục 6): không phải "tệp chưa trả tiền" mà là **tài sản TRUST** — "người nhà gửi
+từ Mỹ" = bảo chứng thật 100%.
+→ **Action:** pitch US-gift xoay quanh trust transfer: *"Anh/chị đang dùng hàng người nhà gửi — chính
+hãng. Bên em là **cùng nguồn chính hãng đó tại VN**, khỏi chờ gửi từ Mỹ."* Với toàn brand: "chống giả"
+thành positioning chính (tem, QR truy xuất) — có thể là một nguyên nhân core collapse mà data không thấy.
+
+**B7. Flywheel giới thiệu tại khoảnh khắc KẾT QUẢ — cơ chế đang thiếu hoàn toàn.**
+First principle: collagen cho kết quả **nhìn thấy + mang tính xã hội** (da đẹp → người ta hỏi). Khách hài
+lòng ở **tuần 6–8 là kênh acquisition rẻ nhất** (CAC ≈ 0). Plan có Touch 3 (Day 45) chỉ để reorder —
+bỏ lỡ cú "xin giới thiệu/UGC" đúng lúc khách thấy kết quả.
+→ **Action:** thêm **Touch "kết quả"** (~tuần 6–8): xin review/ảnh before-after + mã giới thiệu
+("giới thiệu bạn, cả hai được X"). Vá xô thủng từ **đầu vào**, không chỉ giữ nước. (Bổ sung vào sequence mục 5.7.)
+
+### Nhóm C — Meta
+
+**C8. Một mũi nhọn (KISS chống dàn trải).**
+First principle: doanh nghiệp ế thường **dàn quá mỏng** (4 kênh, nhiều SKU, 5 luồng, P0–P4) trong khi
+nhân lực CSKH giới hạn (câu hỏi mở #4).
+→ **Action:** chọn **1 wedge** thắng trước rồi mới mở: *1 segment × 1 hero-SKU × 1 message × 2 tuần*.
+Có 1 win thật → nhân rộng. Đừng chạy song song 5 luồng với đội mỏng.
+
+### 0.5.1 Sắp xếp nếu mục tiêu là "hết bế tắc dòng tiền NHANH"
+
+| Khi nào | Đòn bẩy | Lens |
+|---|---|---|
+| Tuần này | Gọi 5–10 khách **B2B đã ngừng** + hỏi "2025 vỡ vì gì" | A1, A3 |
+| Tuần này | 1 ngày recon: cầu dịch đi đâu (TikTok Shop/đối thủ) | A2 |
+| Song song | 3-touchpoint + thêm **Touch giới thiệu** + thử Subscribe&Save | B5, B7 |
+| Sau đó | B2C call-list lẻ + infra P1–P3 (theo plan hiện tại) | — |
+
+**Khác biệt cốt lõi với thứ tự ở 0.4:** nhóm A cho rằng đám cháy là **B2B + có thể supply/competitive**,
+trả tiền ngay; còn B2C retention là ván 2 quý. Không bỏ B2C — chỉ **đảo thứ tự đốt lửa**.
+
+### 0.5.2 Câu hỏi quyết định (bổ sung mục 9)
+
+- **"Ế" đau nhất là dòng tiền tháng này hay tăng trưởng bền vững?** → quyết B2B-first (A1) vs B2C-first (0.4).
+- **Đã biết chuyện gì xảy ra với nhóm sỉ 2025 chưa?** (A3 — có thể chủ đã biết, đỡ phải đoán).
+- **Đội CSKH chạy được bao nhiêu cuộc/ngày?** → quyết C8 (một mũi vs nhiều luồng).
 
 ---
 
@@ -276,7 +421,7 @@ Kênh nhà giữ chân tốt hơn Shopee **2–3×**.
 > Tệp đích: **1.082 khách lẻ có SĐT đã từng mua** (lưu ý 76% là người nhận quà US — xem mục 6
 > để tách luồng). Số liệu thật 2026-06-04.
 
-### 5.1 Bốn nguyên tắc bất biến
+### 5.1 Năm nguyên tắc bất biến
 
 1. **Timing theo chu kỳ cá nhân, không blast đồng loạt.** Dùng `predicted_next_purchase_date` /
    `avg_days_between_orders` → nhắc khi họ sắp hết hàng.
@@ -284,6 +429,9 @@ Kênh nhà giữ chân tốt hơn Shopee **2–3×**.
 3. **Offer theo độ nhạy giảm giá** (`discount_sensitivity`). FULL_PRICE/ON_TRACK → đừng tặng voucher
    (họ mua đủ giá), tặng quà/sample/ưu tiên. Chỉ dùng voucher cho win-back/nhạy KM.
 4. **Luôn hỏi "vì sao ngừng".** Mỗi cuộc win-back ghi lý do → xây bản đồ nguyên nhân bỏ để chữa gốc.
+5. **Mở bằng product experience, không phải voucher.** Câu hỏi đầu tiên luôn là "lần trước dùng
+   có thấy gì không?" — nếu không thấy hiệu quả, voucher không cứu được; nếu thấy, không cần voucher
+   mạnh. Biết trả lời này trước → chọn offer đúng hơn và ghi nhận dữ liệu chất lượng sản phẩm.
 
 ### 5.2 Năm luồng hành động
 
@@ -295,10 +443,14 @@ Kênh nhà giữ chân tốt hơn Shopee **2–3×**.
 
 **Luồng 2 — WIN_BACK: khách giá trị đã churned** · *35 khách · ~911tr* · **Owner: CSKH + Sales lead**
 - Trigger: `value_group∈(VIP,GOLD,SILVER)` & churned. Gọi/Zalo cá nhân, kèm micro-survey "vì sao ngừng".
+- **Script Zalo (product-experience first):**
+  *"Chào anh/chị [tên], lần trước dùng [Fine Japan / FG Care] anh/chị có thấy gì không ạ?
+  Bên em hỏi vì nhiều khách thấy rõ nhất từ tuần 4–6, muốn xem mình có dùng đúng cách chưa."*
+  → Nếu **thấy hiệu quả**: *"Vậy thì tiếc quá — em gửi ưu đãi quay lại [X%] cho [SKU] tới hết [ngày] nhé."*
+  → Nếu **không thấy gì**: tư vấn cách dùng đúng (liều, thời điểm) → offer thử lại với cam kết rõ hơn.
+  → Nếu **lý do khác** (giá, tìm chỗ khác, hết nhu cầu): ghi lại, không ép.
 - Offer: voucher comeback có thời hạn (7–10 ngày) + freeship; ưu tiên SKU theo `product_affinity`.
-- Script Zalo: *"Chào anh/chị [tên], [shop] thấy lâu rồi chưa phục vụ mình. Em gửi ưu đãi quay lại
-  [X%] cho [Fine Japan ...] tới hết [ngày]. Tiện em hỏi: lần trước mình ngưng mua vì lý do gì ạ?"*
-- KPI: ≥50% tiếp cận có phản hồi; ≥15% mua lại trong 30 ngày; thu ≥20 lý-do-bỏ.
+- KPI: ≥50% tiếp cận có phản hồi; ≥15% mua lại trong 30 ngày; thu ≥20 lý-do-bỏ + **ghi "có thấy hiệu quả"**.
 
 **Luồng 3 — REORDER_NUDGE: OVERDUE** · *31 khách action-queue (166 toàn tệp) · ~344tr* · **Owner: CSKH**
 - Trigger: `next_purchase_signal='OVERDUE'`. Nhắc theo chu kỳ cá nhân.
@@ -308,9 +460,16 @@ Kênh nhà giữ chân tốt hơn Shopee **2–3×**.
 
 **Luồng 4 — SECOND_ORDER: one-timer mới** · *16 nóng (15–45 ngày) + 25 (46–90) · ~2tr* · **Owner: CSKH**
 - Trigger: `total_orders_count=1` & recency 15–45 ngày. Cú hích chuyển 1-lần → 2-lần.
-- Offer: ưu đãi đơn #2 nhỏ + hướng dẫn dùng đúng (tăng cảm nhận hiệu quả → lý do tái mua thật).
-- KPI: tỷ lệ one-timer→repeat tăng. Pool nhỏ vì acquisition chủ yếu Shopee không liên hệ được →
-  ưu tiên song song nước đi "bắt liên hệ Shopee" để nuôi pool này.
+- **Lưu ý product journey:** Đây là nhóm đang ở tuần 2–6 — đúng giai đoạn Danger Zone (chưa thấy gì)
+  hoặc bắt đầu thấy. Touchpoint này quan trọng hơn về giáo dục sản phẩm, không chỉ về discount.
+- Script: *"Anh/chị dùng [sản phẩm] được [X tuần] rồi, cơ thể đang hấp thụ và thay đổi từ bên trong.
+  Nhiều khách thấy rõ nhất từ tuần 4–6 nếu dùng đều. Em hỏi thăm anh/chị có dùng đúng cách chưa?"*
+  → Kèm hướng dẫn dùng đúng + ưu đãi đơn #2 nhỏ.
+- KPI: tỷ lệ one-timer→repeat tăng; ghi nhận "dùng đúng cách" Y/N. Pool nhỏ vì acquisition chủ yếu
+  Shopee không liên hệ được → ưu tiên song song nước đi "bắt liên hệ Shopee" để nuôi pool này.
+
+> **Luồng này sẽ được thay phần lớn bởi 3-touchpoint sequence (mục 5.7) khi đã triển khai —**
+> sequence chạy tự động cho khách mới, Luồng 4 chỉ là backup cho khách lọt qua.
 
 **Luồng 5 — BULK win-back nguội** · *~700+ one-timer/churned cũ* · **Owner: Marketing**
 - Kênh: Zalo OA broadcast/SMS, theo đợt. Low-touch, chi phí thấp.
@@ -349,6 +508,30 @@ Kênh nhà giữ chân tốt hơn Shopee **2–3×**.
 - [ ] CSKH Zalo 31 REORDER + 16 SECOND_ORDER nóng.
 - [ ] Ghi outcome + lý-do-bỏ vào Sheet; review T7.
 
+### 5.7 3-Touchpoint Onboarding Sequence (khách mới — ưu tiên cao nhất)
+
+> **Đây là action có đòn bẩy cao nhất** — fix tỷ lệ M1 repeat trên khách mới mà không cần data engineering.
+> Cần thiết kế xong và chạy tay trong tuần này; automation vào P4.
+
+| Điểm chạm | Thời điểm | Nội dung | Kênh | Mục tiêu |
+|---|---|---|---|---|
+| **Touch 1** | Day 3 sau mua | Xác nhận nhận hàng + cách dùng đúng (liều, thời điểm, uống với gì) | Zalo/SMS | Đảm bảo dùng đúng từ đầu |
+| **Touch 2** | Day 21 | "3 tuần rồi — đây là giai đoạn cơ thể đang thay đổi từ bên trong. Anh/chị thấy gì chưa?" + tip tiếp tục | Zalo | Giữ họ qua Danger Zone; thu feedback |
+| **Touch 3** | Day 45 | "Sắp hết rồi — 6 tuần liên tục là lúc kết quả rõ nhất, đừng để đứt quãng" + link reorder dễ | Zalo | Convert sang đơn #2 đúng lúc hết hàng |
+
+**Nội dung Touch 1 mẫu:**
+> *"Chào anh/chị [tên], [Fine Japan / tên sản phẩm] đã đến chưa ạ? Để thấy kết quả tốt nhất:
+> uống [X viên/gói] mỗi sáng sau bữa ăn, dùng đều ít nhất 4–6 tuần. Tuần đầu chưa thấy gì là bình thường —
+> cơ thể đang hấp thụ từ bên trong. Có gì cần hỗ trợ anh/chị nhắn em nha!"*
+
+**Nội dung Touch 3 mẫu:**
+> *"Anh/chị [tên] ơi, [Fine Japan] dùng đã gần 6 tuần rồi — đây là lúc nhiều khách thấy rõ nhất.
+> Để không bị đứt quãng, em giữ hàng cho anh/chị nhé? [Link đặt lại — freeship đơn này]"*
+
+**Tracking:** ghi vào Sheet: delivery confirmed (Day 3), feedback at Day 21 (thấy gì?), ordered again Y/N at Day 45.
+
+**Owner:** CSKH. Automation vào P4 (Dagster job + Zalo OA API).
+
 ---
 
 ## 6. Đơn US — mỏ người nhận tại Việt Nam
@@ -378,11 +561,20 @@ Luồng **người MUA ở Mỹ, người NHẬN ở VN**. Trong data, `customer
 
 ### 6.3 Thông điệp tiếp cận
 
-> *"Anh/chị vừa nhận [Fine Japan] do người nhà gửi từ Mỹ. Bên em là nhà phân phối chính hãng tại
-> VN — cần dùng tiếp thì đặt trực tiếp, giao tận nơi, giá nội địa, khỏi chờ gửi từ Mỹ."*
+**Bước 0 (trước khi outbound call): Audit hộp hàng CrossBorder**
+Kiểm tra: hộp có card, QR, hướng dẫn dùng không? Nếu không → người nhận dùng sản phẩm mà không có
+hành trình → conversion thấp là hợp lý, không phải do thiếu outbound calling.
+**Nếu không có gì trong hộp → đây là fix ưu tiên trước khi test 51 khách nóng.**
 
-Góc bonus: (1) re-gift/giới thiệu cho người quen; (2) kéo người mua ở Mỹ đặt trực tiếp từ VN
-(rẻ hơn cross-border) — phụ, thứ yếu.
+**Script outbound (product-experience first):**
+> *"Chào anh/chị [tên], anh/chị vừa nhận [Fine Japan] do người nhà gửi từ Mỹ đúng không ạ?
+> Bên em là nhà phân phối chính hãng tại VN. Em hỏi thăm: anh/chị dùng có thấy gì chưa ạ?"*
+→ Nếu **thấy hiệu quả / thích**: *"Vậy thì đặt trực tiếp bên em tiện hơn nhiều — giao tận nơi,
+   giá nội địa, khỏi chờ gửi từ Mỹ. Tuần này em có ưu đãi [X] cho lần đầu đặt nội địa."*
+→ Nếu **chưa thấy gì / chưa dùng đủ**: tư vấn cách dùng đúng → tạo lý do thật để reorder khi thấy kết quả.
+→ Nếu **không biết đây là Fine Japan / nhận mà không hay**: ghi lại, không ép, đây là nhóm yield thấp.
+
+Góc bonus: (1) re-gift/giới thiệu cho người quen; (2) kéo người mua ở Mỹ đặt trực tiếp từ VN — phụ, thứ yếu.
 
 ### 6.4 Rủi ro và cảnh báo (TEST chưa kiểm chứng)
 
@@ -478,6 +670,16 @@ lỗi sản phẩm/kỳ vọng, sửa gốc để giảm hủy & tăng mua lại
 | ACTIVE point-in-time (cuối tháng) | ~98 | tăng đều | theo dõi liên tục |
 | Reactivation rate win-back | — | ≥ 15%/30 ngày | per campaign |
 | US gift → nội địa conversion | 0 (test chưa có) | ≥ 10% → mở rộng | sau P4 test |
+
+**KPI leading (product journey health — đo trước khi thấy reorder):**
+
+| KPI | Ý nghĩa | Đo thế nào |
+|---|---|---|
+| Day-7 engagement rate | % khách mới phản hồi Touch 1 hoặc Touch 2 | Ghi vào Sheet tracking |
+| "Thấy hiệu quả" rate | % WIN_BACK/SECOND_ORDER call trả lời "có thấy hiệu quả" | Cột trong Sheet outcome |
+| Dùng đúng cách Y/N | % khách được tư vấn lại sau khi nói "không thấy gì" | Cột trong Sheet |
+
+Nếu Day-7 engagement thấp → product journey chưa hoạt động → call-list về sau sẽ không đủ.
 
 **Đo đúng:** luôn tách kênh lõi vs marketplace; dùng completed-only; waterfall point-in-time
 (không dùng `mart_customer_status_snapshot_monthly` cho xu hướng).

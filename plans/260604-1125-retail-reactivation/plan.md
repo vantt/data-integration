@@ -1,6 +1,7 @@
 ---
 title: "Retail Reactivation — Lộ trình triển khai"
 created: 2026-06-04
+updated: 2026-06-09
 status: active
 doc_ref: ./sales-slowdown-diagnosis-and-action-playbook.md
 ---
@@ -10,6 +11,47 @@ doc_ref: ./sales-slowdown-diagnosis-and-action-playbook.md
 > Nguồn phân tích: [`sales-slowdown-diagnosis-and-action-playbook.md`](./sales-slowdown-diagnosis-and-action-playbook.md)
 > Bối cảnh: 1.082 khách lẻ có SĐT; 71.8% one-time; ~1.76 tỷ VND cơ hội trong `mart_customer_action_queue`.
 > 76% tệp liên hệ được là người nhận quà US — cần luồng thông điệp riêng.
+
+---
+
+## Góc nhìn gốc rễ (cập nhật 2026-06-09)
+
+Plan ban đầu tấn công đúng nhưng ở tầng **triệu chứng** (call-list, win-back). Tầng gốc là:
+
+> **Product Journey và Customer Journey chưa giao nhau** — khách mua rồi rơi vào im lặng trong khi sản phẩm cần 4–6 tuần liên tục để thấy kết quả. Không có engagement trong giai đoạn này = không có lý do reorder thật sự.
+
+**Product journey Fine Japan (collagen/supplement):**
+```
+Mua → Dùng tuần 1–2 (chưa thấy gì) ← DANGER ZONE: hay bỏ ở đây
+    → Tuần 3–4 (tín hiệu bắt đầu)
+    → Tuần 6–8 (kết quả rõ)
+    → Hết hàng → Quyết định reorder
+```
+
+**Customer journey hiện tại:** `Mua → [im lặng] → Hết hàng → [không trigger] → CHURN`
+
+**Hệ quả cho plan:**
+1. 3-touchpoint sequence (Day 3/21/45) phải là **hành động đầu tiên**, trước call-list — nó fix leak trên khách MỚI mà không cần data engineering.
+2. Script call-list phải mở bằng **product experience**, không phải voucher — nếu khách không thấy hiệu quả, voucher không cứu được.
+3. 76% tệp US là người đã **dùng sản phẩm** nhưng không có hành trình — audit hộp hàng CrossBorder trước khi outbound call.
+4. Build P1–P3 (data infra) sau khi biết message nào hoạt động, không trước.
+
+---
+
+## Góc nhìn bổ sung first-principles (cập nhật 2026-06-09)
+
+> Chi tiết: mục **0.5** trong [`playbook`](./sales-slowdown-diagnosis-and-action-playbook.md). Tóm tắt hệ quả cho lộ trình:
+
+Plan hiện tại (P0→P4) tối ưu cho **B2C retention** — ván 2 quý. Các lens bổ sung mở thêm hướng **tháo bế tắc dòng tiền NGAY**:
+
+- **A1 — B2B trước:** doanh thu sụp 95% là do 5–10 khách sỉ ngừng mua, không phải 995 khách lẻ. Reactivate 1 sỉ ≈ 100+ đơn lẻ → cuộc gọi `negotiated_deep` đã ngừng là đòn bẩy cao nhất tuần này.
+- **A3 — root cause phía cung:** hỏi chủ/sales "Q1–Q2 2025 vỡ vì gì?" (OOS / mất đại lý / công nợ / đối thủ) — có thể là 1 sự kiện cụ thể data không thấy.
+- **A2 — cầu dịch đi đâu:** recon TikTok Shop/livestream trước khi win-back về kênh nhà.
+- **B5 — Subscribe & Save:** biến reorder thành mặc định (đòn bẩy M1-repeat > voucher). Bổ sung vào P4.
+- **B7 — Touch "kết quả" (tuần 6–8):** xin review/ảnh + mã giới thiệu → vá xô thủng từ đầu vào. Bổ sung vào sequence 3-touchpoint (P0/P4).
+- **C8 — một mũi nhọn:** với đội CSKH mỏng, chọn 1 segment × 1 SKU × 1 message × 2 tuần thay vì chạy song song 5 luồng.
+
+**Đảo thứ tự đề xuất (nếu ưu tiên dòng tiền ngắn hạn):** P0' = gọi B2B đã ngừng + recon competitive + hỏi root cause supply → *rồi* mới P0 B2C call-list. Không bỏ B2C; chỉ đổi cái đốt trước. Quyết định phụ thuộc câu hỏi: *"ế" = dòng tiền tháng này hay tăng trưởng bền vững?* (xem mục 0.5.2 playbook).
 
 ---
 
@@ -31,23 +73,44 @@ doc_ref: ./sales-slowdown-diagnosis-and-action-playbook.md
 
 **Dependencies:** không có.
 
-**KPI:** worklist xuất được trong ngày; báo cáo kênh lõi có; OOS hero-SKU có.
+**KPI:** worklist xuất được trong ngày; báo cáo kênh lõi có; OOS hero-SKU có; 3-touchpoint sequence thiết kế xong; audit hộp CrossBorder có kết quả.
 
 ### Todo
+
+#### Ưu tiên 1 — Fix leak trên khách mới (thực hiện trước)
+
+- [ ] **Audit hộp hàng CrossBorder:** mở 1 hộp thực tế — có card, QR, hướng dẫn dùng không?
+      Ghi lại kết quả → quyết định có cần insert vào hộp không.
+      **Owner: Ops/Sales lead. Thời gian: 30 phút.**
+- [ ] **Thiết kế 3-touchpoint onboarding sequence** cho khách mua lần đầu (kênh owned):
+      - Day 3: xác nhận nhận hàng + "Cách dùng Fine Japan đúng để thấy kết quả tốt nhất"
+      - Day 21: "3 tuần rồi — đây là lúc cơ thể thật sự bắt đầu thay đổi" + hỏi feedback nhẹ
+      - Day 45: "Sắp hết — 6 tuần liên tục là giai đoạn kết quả rõ nhất, đừng để đứt quãng" + reorder link
+      Soạn nội dung 3 tin nhắn (Zalo). Chưa cần automation — gửi tay từ danh sách khách mới tuần này.
+      **Owner: CSKH + Marketing. Thời gian: 1 ngày.**
+
+#### Ưu tiên 2 — Revamp call-list scripts (chạy song song)
 
 - [ ] Export ~120 khách high-touch (Luồng 1–4 từ `mart_customer_action_queue`, lọc `phone IS NOT NULL`)
       ra Google Sheet hoặc CSV bên ngoài git.
       **CẢNH BÁO PII: file chứa tên/SĐT khách — KHÔNG commit vào git.**
+- [ ] Soạn 4 script Zalo/call mẫu (Luồng 1–4) — **mở bằng product experience, không phải voucher:**
+      Câu mở đầu bắt buộc: *"Lần trước dùng [sản phẩm] anh/chị có thấy gì không?"*
+      → Nếu thấy hiệu quả: reactivate tự nhiên, offer tiện lợi/ưu đãi nhỏ.
+      → Nếu không thấy gì: consultation → giải thích dùng đúng → convert lần 2 với lý do thật.
+      Offer matrix 3 mức voucher (mục 5.4 trong guide) dùng cho trường hợp chưa thấy hiệu quả / win-back.
+- [ ] Sales lead gọi **6 CALL_NOW** (VIP/Gold At-Risk) trong tuần — dùng script product-experience.
+- [ ] CSKH Zalo/gọi **31 REORDER_NUDGE** + **16 SECOND_ORDER** nóng (15–45 ngày, có SĐT).
+- [ ] Ghi outcome vào Sheet: đặt lại Y/N + **lý do ngừng** + **có thấy hiệu quả không** → review cuối tuần.
+
+#### Ưu tiên 3 — Báo cáo kênh (data)
+
 - [ ] Báo cáo doanh thu **tách kênh lõi vs marketplace** (B2B+Social+Web vs Shopee+CrossBorder),
-      chỉ `status='COMPLETED'`, theo tháng 2026. Xem đúng "nhu cầu lõi" thật.
+      chỉ `status='COMPLETED'`, theo tháng 2026.
 - [ ] Báo cáo OOS / low-stock hero-SKU: ghép `mart_sku_economics_monthly.revenue_share_pct` với
       `mart_inventory_health.is_oos` → danh sách "phải nhập gấp" cho Sales.
-- [ ] Sales lead gọi **6 CALL_NOW** (VIP/Gold At-Risk) trong tuần.
-- [ ] CSKH Zalo/gọi **31 REORDER_NUDGE** + **16 SECOND_ORDER** nóng (15–45 ngày, có SĐT).
-- [ ] Soạn 4 script Zalo mẫu (Luồng 1–4) + 3 mức voucher (offer matrix mục 5.4 trong guide).
-- [ ] Ghi outcome (đặt lại Y/N, lý do bỏ) vào Sheet sau mỗi cuộc gọi; review cuối tuần.
 
-**Owner:** Data (export) · Sales lead (Luồng 1–2) · CSKH (Luồng 3–4)
+**Owner:** Ops (audit hộp) · CSKH+Marketing (sequence, scripts) · Data (export, báo cáo) · Sales lead (Luồng 1–2)
 
 ---
 

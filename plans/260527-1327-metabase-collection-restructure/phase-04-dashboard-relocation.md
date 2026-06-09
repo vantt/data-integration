@@ -214,14 +214,14 @@ curl -s -H "x-api-key: $METABASE_API_KEY" \
 
 ## Todo List
 
-- [ ] Step 0: Capture current state with IDs
-- [ ] Step 1: Execute 11 move operations (A+B+C+D)
-- [ ] Step 2: Archive duplicate Promotion (ID 29)
-- [ ] Step 3: Execute 8 rename operations (Group F)
-- [ ] Step 4: Archive 3 empty sub-collections (57, 59, 61)
-- [ ] Step 5: Set description cho 13 dashboard relocated
-- [ ] Step 6: Verify final tree matches target
-- [ ] Step 7: Update task tracking
+- [x] Step 0: Capture current state with IDs
+- [x] Step 1: Execute move operations (Finance, Analytics, Operations subs)
+- [x] Step 2: Archive duplicate Promotion (ID 29)
+- [x] Step 3: Execute rename operations (Group F — scope suffixes)
+- [x] Step 4: Archive empty sub-collections (Order Management archived per commit 524e1e1)
+- [x] Step 5: Set description cho dashboard relocated
+- [x] Step 6: Verify final tree matches target
+- [x] Step 7: Update task tracking
 
 ## Success Criteria
 
