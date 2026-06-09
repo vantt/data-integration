@@ -13,7 +13,7 @@
 ## Overview
 
 **Priority:** P1 (blocked by phases 01 + 03)
-**Status:** TODO
+**Status:** CORE DONE — P4-3 provisional (live-month uses actual data; budgeted-rate branch not exercised) | P4-5 VERIFIED 2026-06-09 (count-once separation clean; zero overlap)
 **Scope:**
 1. New dbt model `int_order_overhead_allocation` — closure-based allocation of TK642 (net-of-promo) + optional TK635/641-common pool(s) onto every completed order in the period.
 2. Extend `fact_order_economics` with 4 new columns: `allocated_overhead`, `fully_loaded_net_profit`, `fully_loaded_margin_pct`, `is_overhead_estimated`.
@@ -229,18 +229,20 @@ All `residual` values must be ≤ 1.
 
 ## Todo
 
-- [ ] Resolve open questions (Q1–Q5) with stakeholder before coding
-- [ ] Verify phase 01 + 03 complete and Dagster-green
-- [ ] Confirm concurrent detailView stream has merged (or coordinate timing)
-- [ ] Run data assertion: confirm no overlap between `overhead_costs_monthly` 642 and sales-ledger 642
-- [ ] Create `int_order_overhead_allocation.sql` with 10-CTE structure
-- [ ] Write `schema.yml` entries for new model
-- [ ] Write closure dbt test `tests/assert_overhead_closure.sql`
-- [ ] `dbt compile` passes
-- [ ] `dbt test --select int_order_overhead_allocation` passes (closure test green)
-- [ ] Dagster run SUCCESS (int_order_overhead_allocation builds)
-- [ ] Spot-check closure: all residuals ≤ 1 VND
-- [ ] Hand off column specs to phase 05 (fact_order_economics/costs edits)
+- [x] Resolve open questions (Q1–Q5) with stakeholder before coding
+- [x] Verify phase 01 + 03 complete and Dagster-green
+- [x] Confirm concurrent detailView stream has merged (or coordinate timing)
+- [x] Run data assertion: confirm no overlap between `overhead_costs_monthly` 642 and sales-ledger 642
+- [x] Create `int_order_overhead_allocation.sql` with 10-CTE structure
+- [x] Write `schema.yml` entries for new model
+- [x] Write closure dbt test `tests/assert_overhead_closure.sql`
+- [x] `dbt compile` passes
+- [x] `dbt test --select int_order_overhead_allocation` passes (closure test green)
+- [x] Dagster run SUCCESS (int_order_overhead_allocation builds)
+- [x] Spot-check closure: all residuals ≤ 1 VND
+- [x] Hand off column specs to phase 05 (fact_order_economics/costs edits)
+- [ ] P4-3: exercise budgeted-rate provisional branch (live-month uses actual data currently; test with simulated open month)
+- [x] P4-5: reconcile 64214 sub-account vs sales-ledger-642 to confirm count-once exclusion is tight — VERIFIED 2026-06-09: zero voucher_no overlap across all 642x accounts (1,817 sales-ledger vs 1,894 account-ledger; intersection=0); 64214 classified `drop_promo_count_once` in live gsheet, confirmed excluded from all pools
 
 ---
 

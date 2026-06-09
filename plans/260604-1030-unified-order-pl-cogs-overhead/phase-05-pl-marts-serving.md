@@ -17,7 +17,7 @@
 ## Overview
 
 **Priority:** P1 (blocked by phases 02, 03, 04)
-**Status:** TODO
+**Status:** CORE DONE — all dbt models, serving, Dagster verified; Metabase P&L waterfall blueprint not authored yet (R8 pending)
 **Scope:**
 1. Rewrite/extend `fact_order_economics` — wire in reconciled COGS (`int_order_cogs_reconciled`), `promo_goods_cost`, `allocated_overhead`, and the three new fully-loaded columns. Keep `channel_net_profit` untouched.
 2. Extend `fact_order_costs` — add PROMO_GOODS and OVERHEAD cost_category rows via new CTEs; fix BUG-1 (cogs CTE currently has no TK632 filter, lumping 1.08B promo-642 into COGS).
@@ -455,23 +455,23 @@ Launch `transform_batch_nightly_job` via Dagster UI. Confirm SUCCESS end-to-end.
 
 ## Todo
 
-- [ ] Verify phases 02, 03, 04 are Dagster-green before starting
-- [ ] Confirm concurrent detailView stream merged; no open PRs on fact_ files
-- [ ] Record baseline checksums (count, sum cogs, sum channel_net_profit)
-- [ ] Fix `fact_order_costs.sql` cogs CTE (step 1)
-- [ ] Add PROMO_GOODS CTE to `fact_order_costs.sql` (step 2)
-- [ ] Add OVERHEAD CTE to `fact_order_costs.sql` (step 3)
-- [ ] Add PROMO_GOODS + OVERHEAD to UNION ALL (step 4)
-- [ ] Rewrite CTEs in `fact_order_economics.sql` (step 5a–d)
-- [ ] Update `schema.yml` (step 6)
-- [ ] `dbt compile` passes (step 7)
-- [ ] `dbt run` passes (step 7)
-- [ ] `dbt test` passes incl. closure test (step 8)
-- [ ] BUG-1 impact verified: cogs_amount drops ~1.08B (step 9)
-- [ ] `refresh_rolling.py` runs clean; `bootstrap_serving_views.py` if drift (step 10)
-- [ ] New columns queryable in serving layer (step 11)
-- [ ] Metabase P&L waterfall dashboard updated (step 12)
-- [ ] Full Dagster nightly run SUCCESS (step 13)
+- [x] Verify phases 02, 03, 04 are Dagster-green before starting
+- [x] Confirm concurrent detailView stream merged; no open PRs on fact_ files
+- [x] Record baseline checksums (count, sum cogs, sum channel_net_profit)
+- [x] Fix `fact_order_costs.sql` cogs CTE (step 1)
+- [x] Add PROMO_GOODS CTE to `fact_order_costs.sql` (step 2)
+- [x] Add OVERHEAD CTE to `fact_order_costs.sql` (step 3)
+- [x] Add PROMO_GOODS + OVERHEAD to UNION ALL (step 4)
+- [x] Rewrite CTEs in `fact_order_economics.sql` (step 5a–d)
+- [x] Update `schema.yml` (step 6)
+- [x] `dbt compile` passes (step 7)
+- [x] `dbt run` passes (step 7)
+- [x] `dbt test` passes incl. closure test (step 8)
+- [x] BUG-1 impact verified: cogs_amount drops ~1.08B (step 9)
+- [x] `refresh_rolling.py` runs clean; `bootstrap_serving_views.py` if drift (step 10)
+- [x] New columns queryable in serving layer (step 11)
+- [ ] Metabase P&L waterfall dashboard updated (step 12) — blueprint not yet authored in docs/analytics-handbook/blueprints/
+- [x] Full Dagster nightly run SUCCESS (step 13)
 
 ---
 

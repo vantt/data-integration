@@ -734,6 +734,16 @@ models:
         description: "Lãi ròng kênh = net_revenue - COGS - all Shopee fees"
       - name: channel_net_margin_pct
         description: "Biên lãi ròng kênh = channel_net_profit / net_revenue"
+      - name: allocated_overhead
+        description: "Tier-3 G&A overhead allocated to this order proportionally by gross_profit share (from int_order_overhead_allocation). NULL when no overhead pool exists for the period."
+      - name: is_overhead_estimated
+        description: "TRUE if the overhead pool used a budgeted rate (MISA month not yet closed); FALSE when actual MISA data was available."
+      - name: fully_loaded_net_profit
+        description: "Lãi ròng đầy đủ = channel_net_profit - promo_goods_cost - allocated_overhead. NULL when allocated_overhead is NULL (overhead pool not yet available for the period)."
+      - name: fully_loaded_margin_pct
+        description: "Biên lãi ròng đầy đủ = fully_loaded_net_profit / net_revenue. NULL when net_revenue = 0 or allocated_overhead is NULL."
+      - name: promo_goods_cost
+        description: "Chi phí hàng khuyến mãi/quà tặng (revenue=0 lines) định giá theo Sapo-MAC. Marketing cost — KHÔNG phải COGS; không trừ vào gross_profit nhưng trừ vào fully_loaded_net_profit."
       - name: cod_amount
         description: "Giá trị COD thu hộ từ người mua (từ đơn giao hàng đầu tiên)"
       - name: carrier_id
