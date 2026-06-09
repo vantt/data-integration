@@ -1,6 +1,6 @@
 # PRD — `detailView`: Order & Customer Insight App
 
-**Owner:** Data Platform | **Date:** 2026-05-29 | **Status:** Draft for approval
+**Owner:** Data Platform | **Date:** 2026-05-29 | **Status:** DONE — implemented and archived 2026-06-09
 
 ---
 

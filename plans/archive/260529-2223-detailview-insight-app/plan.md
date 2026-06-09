@@ -1,6 +1,6 @@
 # Plan — `detailView` Order & Customer Insight App
 
-**Created:** 2026-05-29 22:23 | **Branch:** main | **Status:** AWAITING APPROVAL (build gated)
+**Created:** 2026-05-29 22:23 | **Branch:** main | **Status:** DONE (archived 2026-06-09)
 
 ## Goal
 Lightweight read-only web app surfacing the COMPLETE insight the OLAP warehouse holds
@@ -25,15 +25,15 @@ warehouse already computes economics, RFM, segmentation that source apps can't s
 ## Phases
 - **A — Discover** ✅ DONE — 3 schema/integration reports in `plans/reports/researcher-0{1,2,3}-*`.
 - **B — Design** ✅ THIS PACKAGE — [PRD.md](./PRD.md) + [UI_SPECS.md](./UI_SPECS.md).
-- **C — Build** ⛔ AWAITING APPROVAL:
-  - C1. Scaffold `detailView/` hexagonal skeleton + domain models + ports.
-  - C2. DuckDB outbound adapter (connection + order/customer repositories + SQL).
-  - C3. Application services (get order/customer detail, search, lazy tab loaders).
-  - C4. FastAPI inbound web adapter: pages + HTMX tab partials + search; optional JSON API.
-  - C5. Frontend skeleton: floating header, 2/1 two-column layout, tab shells (unstyled).
-  - C6. Docker: `Dockerfile.detailview` + compose service + `:ro` mount + Caddy labels.
-  - C7. Monorepo registration: README, docs/README, AGENTS.md, docs/architecture/overview, .env.docker.
-  - C8. Smoke test (real DB), basic unit tests on domain/services.
+- **C — Build** ✅ DONE:
+  - C1. ✅ Scaffold `detailView/` hexagonal skeleton + domain models + ports. (domain/, ports.py, shared.py, composition.py, config.py)
+  - C2. ✅ DuckDB outbound adapter (connection + order/customer repositories + SQL). (adapters/outbound/duckdb/ + queries/*.sql)
+  - C3. ✅ Application services (get order/customer detail, search, lazy tab loaders). (application/services.py)
+  - C4. ✅ FastAPI inbound web adapter: pages + HTMX tab partials + search; optional JSON API. (adapters/inbound/web/routes.py + resolver_routes.py + /api/* in main.py)
+  - C5. ✅ Frontend skeleton: floating header, 2/1 two-column layout, tab shells. (templates/ + static/css/ + htmx vendored)
+  - C6. ✅ Docker: `Dockerfile.detailview` + compose service (`detail_view`, port 3005:8000) + `:ro` mount + Caddy labels (`detailview.lan.fwg.vn`).
+  - C7. ✅ Monorepo registration: README.md, docs/README.md, AGENTS.md, docs/architecture/overview.md, .env.docker.example.
+  - C8. ✅ Smoke test (test_live_smoke.py) + unit tests on domain/services/architecture (test_architecture.py, test_order_repository.py, test_customer_repository.py, test_search_adapter.py, etc.).
 
 ## Data caveats the UI MUST honor (from research)
 - US orders: `fact_orders.net_revenue=0` → use `fact_us_shipment_economics` (flag "US CrossBorder").
