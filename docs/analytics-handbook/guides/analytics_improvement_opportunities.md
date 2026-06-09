@@ -854,29 +854,7 @@ Recommended next step: ingest conversation metadata first. Full message content 
 
 ### Marketing Attribution and Campaign Detail
 
-Opportunity: connect spend to customer quality, not just revenue.
-
-What this unlocks:
-
-- CAC by channel/campaign.
-- Contribution ROAS.
-- Payback period.
-- First-order quality.
-- Cohort retention by acquisition source.
-- Budget reallocation recommendations.
-
-Data needed:
-
-- Campaign/adset/ad spend.
-- Clicks, impressions.
-- Channel mapping to order source.
-- UTM or voucher attribution.
-- First-order source on customer.
-- Marketing spend by date/channel/campaign.
-
-System readiness: ✅ **Partially done** (2026-06-09). `fact_marketing_spend` confirmed in production. Attribution quality and campaign-level joins still need validation before CAC and payback metrics are reliable.
-
-Recommended next step: validate channel mapping and introduce campaign-level keys before building CAC and payback metrics.
+System readiness: ✅ **Partially done** (2026-06-09). `fact_marketing_spend` in production but contains only seed data. Implementation plan: [`plans/260609-1107-marketing-spend-misa-pipeline/plan.md`](../../plans/260609-1107-marketing-spend-misa-pipeline/plan.md) — MISA `account_ledger` (642172/642175) as baseline, Google Sheet as optional campaign-level override.
 
 ### B2B Credit Terms
 
@@ -983,7 +961,7 @@ This phase unlocks currently impossible analysis.
 - ✅ **Inventory data ready** — `fact_inventory_snapshot` + `mart_inventory_health` exist. Build OOS, days of supply, dead stock, and clearance candidate dashboards.
 - ❌ Add shipment/carrier events for delivery SLA and carrier performance. `fact_shipments` does not exist.
 - ❌ Add social conversation metadata for response-time and conversion funnel. Not started.
-- ✅ **`fact_marketing_spend` exists** — validate attribution quality and add campaign-level keys before CAC/payback metrics.
+- ✅ **Marketing spend pipeline** — see [`plans/260609-1107-marketing-spend-misa-pipeline/plan.md`](../../plans/260609-1107-marketing-spend-misa-pipeline/plan.md).
 - ✅ **`fact_targets` in production** — standardize grain (currently only GMV at monthly level) and add pace curves.
 - ✅ **`fact_order_returns` exists** — build return reason ranking and product quality dashboards.
 - ⚠️ Add B2B credit terms — `fact_payments` exists but payment terms and due dates per invoice are still missing.
