@@ -52,7 +52,7 @@ issues:
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
--- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
+-- Monthly cycle indicator: calendar month context with prev month + YoY
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
@@ -61,10 +61,14 @@ WITH filter_bounds AS (
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tháng ' || CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER)
+    || '  ·  Cùng kỳ: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (p_start - INTERVAL '12 months')::DATE) AS INTEGER)
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
@@ -98,15 +102,7 @@ FROM filter_bounds
 # Kiem tra chat luong don hang — trang thai, thoi gian xu ly, huy/tra
 
 ```json metabase-pos
-{"row": 6, "col":0, "size_x":18, "size_y":1}
-```
-
-#### 📝 Text: Theo doi xu huong 6 thang — cancellation va return rate vs target
-
-# Theo doi xu huong 6 thang — cancellation va return rate vs target
-
-```json metabase-pos
-{"row": 13, "col":0, "size_x":18, "size_y":1}
+{"row": 8, "col":0, "size_x":18, "size_y":1}
 ```
 
 #### Question: Total Orders
@@ -164,7 +160,7 @@ FROM this_period tm, prev_period pp, prior_year py
 ```
 
 ```json metabase-pos
-{"row": 3, "col":0, "size_x":18, "size_y":3}
+{"row": 5, "col":0, "size_x":6, "size_y":3}
 ```
 
 #### Question: Net Revenue
@@ -197,11 +193,23 @@ prev_period AS (
       AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+prior_year AS (
+    SELECT COALESCE(SUM(net_revenue), 0) AS val
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
+      AND is_active_order
+      AND ordered_at >= (filter_bounds.p_start - INTERVAL '12 months')
+      AND ordered_at <  (filter_bounds.p_end   - INTERVAL '12 months' + INTERVAL '1 day')
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
     tm.val AS "Net Revenue",
-    pp.val AS "Thang truoc"
-FROM this_period tm, prev_period pp
+    pp.val AS "Tháng trước",
+    py.val AS "Cùng kỳ năm trước",
+    ROUND((tm.val - pp.val) * 100.0 / NULLIF(pp.val, 0), 1) AS "MoM %",
+    ROUND((tm.val - py.val) * 100.0 / NULLIF(py.val, 0), 1) AS "YoY %"
+FROM this_period tm, prev_period pp, prior_year py
 ```
 
 ```json metabase-viz
@@ -221,7 +229,7 @@ FROM this_period tm, prev_period pp
 ```
 
 ```json metabase-pos
-{"row": 3, "col":6, "size_x":4, "size_y":3}
+{"row": 5, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### Question: AOV
@@ -258,11 +266,25 @@ prev_period AS (
       AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND ordered_at <   filter_bounds.p_start
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
+prior_year AS (
+    SELECT
+        CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
+             ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END AS val
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
+      AND is_active_order
+      AND ordered_at >= (filter_bounds.p_start - INTERVAL '12 months')
+      AND ordered_at <  (filter_bounds.p_end   - INTERVAL '12 months' + INTERVAL '1 day')
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
     tm.val AS "AOV",
-    pp.val AS "Thang truoc"
-FROM this_period tm, prev_period pp
+    pp.val AS "Tháng trước",
+    py.val AS "Cùng kỳ năm trước",
+    ROUND((tm.val - pp.val) * 100.0 / NULLIF(pp.val, 0), 1) AS "MoM %",
+    ROUND((tm.val - py.val) * 100.0 / NULLIF(py.val, 0), 1) AS "YoY %"
+FROM this_period tm, prev_period pp, prior_year py
 ```
 
 ```json metabase-viz
@@ -282,7 +304,7 @@ FROM this_period tm, prev_period pp
 ```
 
 ```json metabase-pos
-{"row": 3, "col":10, "size_x":4, "size_y":3}
+{"row": 5, "col":12, "size_x":3, "size_y":3}
 ```
 
 #### Question: Completion Rate
@@ -315,7 +337,7 @@ WHERE scope_retail
 ```
 
 ```json metabase-pos
-{"row": 3, "col":14, "size_x":4, "size_y":3}
+{"row": 5, "col":15, "size_x":3, "size_y":3}
 ```
 
 ---
@@ -353,7 +375,7 @@ ORDER BY 2 DESC
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":6, "size_y":6}
+{"row": 9, "col":0, "size_x":6, "size_y":6}
 ```
 
 #### Question: Avg Time to Complete
@@ -426,7 +448,7 @@ FROM this_period tm, prev_period pp, prior_year py
 ```
 
 ```json metabase-pos
-{"row": 6, "col":0, "size_x":18, "size_y":4}
+{"row": 9, "col":6, "size_x":6, "size_y":3}
 ```
 
 #### Question: Cancelled & Returns Summary
@@ -500,10 +522,112 @@ SELECT * FROM (
 ```
 
 ```json metabase-pos
-{"row": 7, "col":12, "size_x":6, "size_y":6}
+{"row": 9, "col":12, "size_x":6, "size_y":6}
+```
+
+#### Question: Fulfilment Status Breakdown
+
+Order count by fulfillment status for the period — shows DELIVERED, RETURNED, IN_PROGRESS breakdown.
+
+```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    fulfillment_status AS "Fulfilment Status",
+    COUNT(DISTINCT order_id) AS "Orders"
+FROM fact_orders, filter_bounds
+WHERE scope_retail
+  AND ordered_at >= filter_bounds.p_start
+  AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  AND fulfillment_status IS NOT NULL
+  [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Fulfilment Status"],
+    "graph.metrics": ["Orders"],
+    "graph.colors": ["#509EE3"]
+  }
+}
+```
+
+```json metabase-pos
+{"row": 12, "col":6, "size_x":6, "size_y":3}
 ```
 
 ---
+
+#### 📝 Text: Xu huong don hang trong ky — weekly volume & AOV pattern
+
+# Xu huong don hang trong ky — weekly volume & AOV pattern
+
+```json metabase-pos
+{"row": 15, "col":0, "size_x":18, "size_y":1}
+```
+
+#### Question: Weekly Orders & AOV Trend
+
+Weekly order volume and AOV trend within the filtered period.
+
+```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    date_trunc('week', ordered_at)::DATE AS "Tuan",
+    COUNT(DISTINCT order_id) AS "Don hang",
+    CASE WHEN COUNT(DISTINCT CASE WHEN is_active_order THEN order_id END) = 0 THEN 0
+         ELSE SUM(CASE WHEN is_active_order THEN net_revenue ELSE 0 END)
+              / COUNT(DISTINCT CASE WHEN is_active_order THEN order_id END) END AS "AOV"
+FROM fact_orders, filter_bounds
+WHERE scope_retail
+  AND ordered_at >= filter_bounds.p_start
+  AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+GROUP BY 1
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "combo",
+  "visualization_settings": {
+    "graph.dimensions": ["Tuan"],
+    "graph.metrics": ["Don hang", "AOV"],
+    "series_settings": {
+      "Don hang": { "display": "bar", "color": "#509EE3" },
+      "AOV": { "display": "line", "line.style": "dashed", "color": "#F9D45C" }
+    },
+    "graph.y_axis.auto_split": true
+  }
+}
+```
+
+```json metabase-pos
+{"row": 16, "col":0, "size_x":18, "size_y":6}
+```
+
+#### 📝 Text: Xu huong 6 thang — cancellation & return rate vs target
+
+# Xu huong 6 thang — cancellation & return rate vs target
+
+```json metabase-pos
+{"row": 22, "col":0, "size_x":18, "size_y":1}
+```
 
 #### Question: Cancellation Rate Trend (6M)
 
@@ -539,7 +663,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 14, "col":0, "size_x":9, "size_y":6}
+{"row": 23, "col":0, "size_x":9, "size_y":6}
 ```
 
 #### Question: Return Rate Trend (6M)
@@ -578,7 +702,7 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 14, "col":9, "size_x":9, "size_y":6}
+{"row": 23, "col":9, "size_x":9, "size_y":6}
 ```
 
 #### Question: Top 10 Returned Products
@@ -633,7 +757,7 @@ LIMIT 10
 ```
 
 ```json metabase-pos
-{"row": 20, "col":0, "size_x":18, "size_y":6}
+{"row": 29, "col":0, "size_x":18, "size_y":6}
 ```
 
 ---
@@ -654,7 +778,7 @@ LIMIT 10
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
--- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
+-- Monthly cycle indicator: calendar month context with prev month + YoY
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
@@ -663,10 +787,14 @@ WITH filter_bounds AS (
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tháng ' || CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER)
+    || '  ·  Cùng kỳ: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (p_start - INTERVAL '12 months')::DATE) AS INTEGER)
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
@@ -1085,7 +1213,7 @@ ORDER BY 3 DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
--- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
+-- Monthly cycle indicator: calendar month context with prev month + YoY
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
@@ -1094,10 +1222,14 @@ WITH filter_bounds AS (
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tháng ' || CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER)
+    || '  ·  Cùng kỳ: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (p_start - INTERVAL '12 months')::DATE) AS INTEGER)
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
@@ -1692,7 +1824,7 @@ ORDER BY 2 DESC
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
--- Pattern A canonical (L97: no period_adj; L98: ::INTEGER cast for DATE-DATE arithmetic)
+-- Monthly cycle indicator: calendar month context with prev month + YoY
 WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
@@ -1701,10 +1833,14 @@ WITH filter_bounds AS (
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tháng ' || CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (date_trunc('month', p_start) - INTERVAL '1 day')::DATE) AS INTEGER)
+    || '  ·  Cùng kỳ: Tháng ' ||
+    CAST(EXTRACT(MONTH FROM p_start) AS INTEGER) || '/' ||
+    CAST(EXTRACT(YEAR FROM (p_start - INTERVAL '12 months')::DATE) AS INTEGER)
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
