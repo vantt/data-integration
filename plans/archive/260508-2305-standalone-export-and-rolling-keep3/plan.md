@@ -26,10 +26,10 @@
 
 | # | Title | Status | Detail |
 |---|---|---|---|
-| 1 | Standalone export script + Dagster asset | Pending | [phase-01-standalone-export.md](phase-01-standalone-export.md) |
-| 2 | Fileserver service (Caddy via label) | Pending | [phase-02-fileserver.md](phase-02-fileserver.md) |
-| 3 | Rolling KEEP=3 | Pending | [phase-03-rolling-keep3.md](phase-03-rolling-keep3.md) |
-| 4 | Docs update | Pending | [phase-04-docs.md](phase-04-docs.md) |
+| 1 | Standalone export script + Dagster asset | DONE | [phase-01-standalone-export.md](phase-01-standalone-export.md) |
+| 2 | Fileserver service (Caddy via label) | DONE | [phase-02-fileserver.md](phase-02-fileserver.md) |
+| 3 | Rolling KEEP=3 | DONE | [phase-03-rolling-keep3.md](phase-03-rolling-keep3.md) |
+| 4 | Docs update | DONE | [phase-04-docs.md](phase-04-docs.md) |
 
 ## Dependencies
 

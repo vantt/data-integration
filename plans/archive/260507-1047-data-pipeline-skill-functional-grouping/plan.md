@@ -1,6 +1,6 @@
 ---
 name: Data-Pipeline Skill — Functional Grouping Reorganization
-status: approved
+status: done
 created: 2026-05-07
 approved: 2026-05-07
 owner: Vantt
@@ -156,11 +156,11 @@ Skill này có cơ chế **tự cài đặt** + **kỷ luật ghi lesson** đán
 | # | Phase | File | Mục tiêu |
 |---|-------|------|----------|
 | 1 | Content mapping (DONE) | `phase-01-content-mapping.md` | Document mapping của 76 lessons + 14 dagster + 14 dbt + 15 templates → 5 groups |
-| 2 | Scaffolding | `phase-02-scaffolding.md` | Tạo folders mới, viết ARCHITECTURE.md, viết INDEX placeholders |
-| 3 | Viết playbooks | `phase-03-write-playbooks.md` | 5 group playbooks + cross-cutting.md + lesson-index.md (đầy đủ nội dung) |
-| 4 | Migrate files | `phase-04-migrate-files.md` | git mv references/ + templates/{group}/ |
-| 5 | Update entry points | `phase-05-update-entry-points.md` | SKILL.md, checklist.md, hook, template docstrings, reconcile stale copy |
-| 6 | Validate | `phase-06-validate.md` | Inventory diff before/after, broken-link scan, smoke test |
+| 2 | Scaffolding (DONE) | `phase-02-scaffolding.md` | Tạo folders mới, viết ARCHITECTURE.md, viết INDEX placeholders |
+| 3 | Viết playbooks (DONE) | `phase-03-write-playbooks.md` | 5 group playbooks + cross-cutting.md + lesson-index.md (đầy đủ nội dung) |
+| 4 | Migrate files (DONE) | `phase-04-migrate-files.md` | git mv references/ + templates/{group}/ |
+| 5 | Update entry points (DONE) | `phase-05-update-entry-points.md` | SKILL.md, checklist.md, hook path updated, stale copy deleted |
+| 6 | Validate (DONE) | `phase-06-validate.md` | Structure verified 2026-06-09 — matches AFTER target exactly |
 
 ## Critical path
 

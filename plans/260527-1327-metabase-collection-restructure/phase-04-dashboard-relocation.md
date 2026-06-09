@@ -1,6 +1,6 @@
 # Phase 04: Dashboard Relocation
 
-> **Status:** Pending
+> **Status:** DONE — verified live Metabase 2026-06-09
 > **Owner:** Data Team
 > **Estimated:** 1h (API ops + verify)
 > **Depends:** Phase 02 + Phase 03

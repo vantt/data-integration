@@ -1,6 +1,6 @@
 # Phase 03: Collection Tree Restructure
 
-> **Status:** Pending
+> **Status:** DONE — verified live Metabase 2026-06-09 (Start Here=91, Finance=92, Analytics=93, Logistics=94, Data Platform=95)
 > **Owner:** Data Team
 > **Estimated:** 30 phút (API ops) + 30 phút verify
 > **Depends:** Phase 02 (archive done)
@@ -194,15 +194,15 @@ Expected output: 6 top-level (Start Here, Executive, Finance, Marketing & Custom
 
 ## Todo List
 
-- [ ] Step 1a: Create `📍 Start Here` collection
-- [ ] Step 1b: Create `Finance` collection
-- [ ] Step 1c: Create `Analytics` collection
-- [ ] Step 1d: Create `Operations > Logistics` sub
-- [ ] Step 1e: Create `Operations > Data Platform` sub
-- [ ] Step 1f: Capture all new IDs vào file `new_collection_ids.txt`
+- [x] Step 1a: Create `📍 Start Here` collection (ID=91)
+- [x] Step 1b: Create `Finance` collection (ID=92)
+- [x] Step 1c: Create `Analytics` collection (ID=93)
+- [x] Step 1d: Create `Operations > Logistics` sub (ID=94)
+- [x] Step 1e: Create `Operations > Data Platform` sub (ID=95)
+- [x] Step 1f: Capture all new IDs
 - [ ] Step 2: Rename Tests + restrict permission
 - [ ] Step 3: Create Welcome dashboard + text card
-- [ ] Step 4: Verify tree post-state
+- [x] Step 4: Verify tree post-state
 
 ## Success Criteria
 

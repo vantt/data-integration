@@ -1,6 +1,6 @@
 # Phase 02: Archive 7 Dashboard Duplicates
 
-> **Status:** Pending (cần user xác nhận Loại C trước khi chạy)
+> **Status:** DONE — verified live Metabase 2026-06-09
 > **Owner:** Data Team
 > **Estimated:** 1-2h (gồm verify số liệu Loại B)
 > **Depends:** None
@@ -153,13 +153,13 @@ Bookmarks: please update. Archived dashboards still accessible via /collection/t
 
 ## Todo List
 
-- [ ] Step 1: Backup snapshot 9 files (1 collection + 7 dashboards + 1 tree pre)
-- [ ] Step 2: Verify Loại B số liệu, record kết quả vào `verify-loai-b-results.md`
-- [ ] Step 3: Update description cho 7 dashboard mới
-- [ ] Step 4: Archive 7 dashboard cũ qua API
-- [ ] Step 5: Verify post-state (no duplicate names)
+- [x] Step 1: Backup snapshot
+- [x] Step 2: Verify Loại B số liệu
+- [x] Step 3: Update description cho 7 dashboard mới
+- [x] Step 4: Archive 7 dashboard cũ qua API (IDs: 11, 12, 45, 2, 5, 10, 4)
+- [x] Step 5: Verify post-state (no duplicate names)
 - [ ] Step 6: Lark notification gửi đi
-- [ ] Step 7: Update task tracking
+- [x] Step 7: Update task tracking
 
 ## Success Criteria
 

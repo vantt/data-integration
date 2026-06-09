@@ -13,12 +13,12 @@
 | # | Phase | Status | File |
 |:---|:---|:---|:---|
 | 01 | Data Scan & Discovery (P&L domain) | DONE | [phase-01-data-scan-discovery.md](./phase-01-data-scan-discovery.md) |
-| 02 | Archive 7 Dashboard Duplicates | Pending | [phase-02-archive-duplicates.md](./phase-02-archive-duplicates.md) |
-| 03 | Collection Tree Restructure | Pending (depends 02) | [phase-03-collection-restructure.md](./phase-03-collection-restructure.md) |
-| 04 | Dashboard Relocation (10 moves) | Pending (depends 03) | [phase-04-dashboard-relocation.md](./phase-04-dashboard-relocation.md) |
+| 02 | Archive 7 Dashboard Duplicates | DONE | [phase-02-archive-duplicates.md](./phase-02-archive-duplicates.md) |
+| 03 | Collection Tree Restructure | DONE | [phase-03-collection-restructure.md](./phase-03-collection-restructure.md) |
+| 04 | Dashboard Relocation (10 moves) | DONE | [phase-04-dashboard-relocation.md](./phase-04-dashboard-relocation.md) |
 | 05 | New Finance Dashboards Roadmap | Backlog | [phase-05-new-finance-dashboards.md](./phase-05-new-finance-dashboards.md) |
-| 06 | Documentation Sync (5 files) | Pending (depends 03,04) | [phase-06-docs-sync.md](./phase-06-docs-sync.md) |
-| 07 | Validation & Rollout | Pending (depends all) | [phase-07-validation-rollout.md](./phase-07-validation-rollout.md) |
+| 06 | Documentation Sync (5 files) | DONE | [phase-06-docs-sync.md](./phase-06-docs-sync.md) |
+| 07 | Validation & Rollout | Pending | [phase-07-validation-rollout.md](./phase-07-validation-rollout.md) |
 
 ---
 

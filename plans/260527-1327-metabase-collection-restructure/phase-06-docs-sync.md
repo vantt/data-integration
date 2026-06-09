@@ -1,6 +1,6 @@
 # Phase 06: Documentation Sync
 
-> **Status:** Pending
+> **Status:** DONE — collection_registry.yml updated, blueprint paths synced (commits c7f8f14, 70f6928)
 > **Owner:** Data Team + docs-manager
 > **Estimated:** 1-2h
 > **Depends:** Phase 03 + 04 (live state đã đúng)
