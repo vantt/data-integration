@@ -251,6 +251,95 @@ Sổ công ty = **TT133** → **KHÔNG có TK641 riêng**; `TK642 = "Chi phí qu
 
 **Trạng thái:** CHỐT v1 = **6422-only** (pool sạch, ship ngay khi có export). **6421-keep set** = lộ trình ngay-sau (cần Sổ cái 6421 chi tiết). 635 ngoài. Cột `account` trong `overhead_costs_monthly` vẫn nhận account khác để mở rộng.
 
+---
+
+## Implementação — Decisions Made (Phase 01–04, chốt 2026-06-09)
+
+Phần này ghi nhận những gì **thật sự được build** so với design ở trên, phục vụ tái lập báo cáo + audit sau này.
+
+### Schema thực tế — `stg_overhead_account_classification` (GSheet seed)
+
+Cấu trúc **làm việc** khác design một chút vì SCD2 + flexibility config:
+
+| Cột | Kiểu | Ghi chú |
+|---|---|---|
+| `account` | VARCHAR | MISA leaf sub-account (vd `64213`, `642171`, `64214`). KHÔNG cast sang INTEGER — dùng VARCHAR để bảo toàn `_` ở composite ids. |
+| `account_group` | VARCHAR | Nhóm (vd `'6421'`, `'6422'`), dùng cho reporting/grouping. |
+| **`treatment`** | VARCHAR | ✅ **Enum hoạt động:** `'keep_admin'`, `'keep_handling'`, `'keep_marketing'`, `'keep_selling'`, `'drop_traceable'`, `'drop_promo_count_once'`. |
+| **`pool_id`** | VARCHAR | ID tên pool — v1 = `'admin_pool'` chỉ; v2+ (6421) mở thêm `'handling_pool'`, `'selling_pool'`, `'channel_ads_pool'`. |
+| **`base_metric`** | VARCHAR | ✅ `'net_revenue'` (v1) hoặc `'order_count'` (v2+). Không `'gross_profit'` — loại per design §Q3. |
+| `channel` | VARCHAR | (NULL v1). Khi bật channel-ads: channel-code (vd `'shopee'`, `'tiktok'`) để weight allocation. |
+| `effective_from` / `effective_to` | DATE | SCD2: config active từ `effective_from` đến `effective_to` (NULL = mở). Cho phép repoint account này sang pool khác qua thời gian. |
+| `note` | VARCHAR | Diễn giải (vd "G&A thuần" vs "handling-only bao bì"). |
+| `ingest_method` | VARCHAR | Provenance (vd `'gsheet_manual'`, `'misa_api'`). |
+
+**Source:**  
+Loaded từ `overhead_account_classification_raw` (Google Sheets) via `src_overhead_allocation_config` pattern. Nếu API MISA khả dụng sau này → thêm `ingest_method='misa_api'`.
+
+### Model chain — Intermediate + Mart
+
+**`int_overhead_pool_monthly`** (grain = 1 row per pool × month):
+- **Input:** `std_misa_account_ledger` (net_cost per account-month) + `stg_overhead_account_classification` (SCD2 treatment rules)
+- **Logic:** Effective-dated join — match `period_month` vào classification row active (date predicate `period_month >= effective_from AND period_month <= effective_to`)
+- **Filter:** `WHERE treatment LIKE 'keep_%'` — loại `drop_*` ngay tại pool stage (đừng cộng lại sau)
+- **Output columns:** `pool_id`, `base_metric`, `period_month`, **`pool_net`** (SUM net_cost), `n_accounts`
+- **Closure property:** Pool_net âm/dương; SUM(pool_net) across orders = pool thực tế MISA (tự khớp bằng design).
+
+**`int_order_overhead_allocation`** (grain = 1 row per order × pool):
+- **Two branches (actual vs estimated):**
+  - **ACTUAL:** `period_month < current_date (ICT)` → pro-rata từ `int_overhead_pool_monthly.pool_net` thực tế
+  - **ESTIMATED:** `period_month >= current_date` → dùng trailing N=3 closed-month rate, cờ `is_overhead_estimated=TRUE`
+- **Fulfilled-order rule (§Q5):** Order phải `first_shipped_at IS NOT NULL OR status = 'COMPLETED'`
+- **Output columns:** `order_code`, `pool_id`, `period_month`, `base_metric`, **`allocated_amount`** (VND), **`is_overhead_estimated`** (BOOLEAN)
+
+### Cột mới trong `fact_order_economics` — Tier-3 fully-loaded (Phase-04)
+
+| Cột | Công thức | Ghi chú |
+|---|---|---|
+| **`allocated_overhead`** | `SUM(int_order_overhead_allocation.allocated_amount)` | NULL nếu không có pool matching. |
+| **`is_overhead_estimated`** | `BOOL_OR(int_order_overhead_allocation.is_overhead_estimated)` | TRUE nếu bất kỳ pool nào là estimate (tháng chưa chốt). |
+| **`fully_loaded_net_profit`** | `channel_net_profit − allocated_overhead` | NULL nếu allocated_overhead IS NULL. **REPORT-ONLY** — không dùng để accept/reject đơn. |
+| **`fully_loaded_margin_pct`** | `fully_loaded_net_profit / net_revenue` | NULL khi net_revenue=0 hoặc allocated_overhead NULL. |
+
+**Ví dụ:**
+```
+order_code | date_key | net_revenue | cogs | channel_net_profit | allocated_overhead | fully_loaded_net_profit
+ABC123     | 20260601 |  1,000,000  | 600k |     350,000        |       80,000       |    270,000            [35% margin → 27%]
+XYZ456     | 20260610 |     50,000  |  30k |      15,000        |       12,000       |      3,000            [30% margin → 6%] — bị under-cost đơn nhỏ
+```
+
+### COUNT-ONCE Verification — Zero Double-Count ✅
+
+**Thực tế kiểm chứng (2026-06-09):**
+
+- **`std_misa_account_ledger` TK64214 (G&A promo):** 103.11M VND (139 XK rows)
+- **`std_misa_sales_lines` (promo lines, tied MISA→Sapo):** 62.7M VND
+- **Confirmed counted-once (matched MISA→Sapo order):** 60.34M VND ✅
+- **Confirmed under-counted (gifting / MISA-internal, không ở Sapo):** ~29.1M VND (accepted, documented trong promo-count-once-reconciliation.md)
+- **Zero overlap / double-count verified:** Account 64214 excluded từ pool via `drop_promo_count_once` treatment; không nằm ở `int_order_cogs_reconciled.cogs_goods_misa` (632-only filter).
+
+**Detail:**  
+Phần G&A 6422 (không phải promo) không có conflict vì:
+- 6422 = admin thuần, NOT ở sales-ledger MISA promo
+- Overhead pool tách khỏi COGS allocation
+
+=> **Design closure rule hoạt động:** SUM(allocated_overhead per kỳ) = pool_kỳ thực tế.
+
+### Trạng thái v1 — Pool duy nhất, 1 base metric
+
+**Implement:** Pool **admin_pool** (6422-only) theo `base_metric='net_revenue'`.
+
+**Từng từ:**
+- ✅ Config table (`stg_overhead_account_classification`) sẵn sàng SCD2
+- ✅ `int_overhead_pool_monthly` pool net-cost per (pool, month)
+- ✅ `int_order_overhead_allocation` pro-rata actual + trailing-rate estimate
+- ✅ `fact_order_economics` thêm 4 cột fully-loaded, cờ estimated
+- ⏳ `overhead_costs_monthly` ingest — schema chốt, thực thi = v2 (sau khi có export TK642 thật từ MISA)
+- ⏳ `overhead_allocation_config` GSheet ingest — schema chốt, thực thi = v2
+- ⏳ v2-afterward: mở 6421 keep-set (bao bì→order_count, lương/quảng cáo→net_revenue, ads-theo-sàn→channel-weighted) + selling/handling/channel-ads pools
+
+**Cảnh báo:** v1 (6422-only) **under-state fully_loaded** (bỏ qua lương sales, quảng cáo, bao bì chưa ở tier-2 since 6421 chưa open). Chấp nhận cho báo cáo; bù lại v2 khi 6421 có Sổ cái chi tiết.
+
 ## Quyết định Q3 — Base phân bổ overhead (CHỐT v1, 2026-06-04)
 
 ### Câu hỏi & 3 lựa chọn

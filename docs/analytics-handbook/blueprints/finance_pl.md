@@ -1219,3 +1219,208 @@ FROM (
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
 ```
+
+### 📑 Tab: Fully Loaded P&L
+
+#### ❓ Question: 3-Tier Profit Trend
+
+Grouped bar — xu huong 3 cap loi nhuan theo thang: Gross Profit, Channel Net Profit, Fully Loaded Net Profit. 13-month fixed window de xem xu huong toan canh.
+
+```sql
+SELECT
+    date_trunc('month', strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS "Thang",
+    SUM(gross_profit)                 AS "Loi nhuan gop",
+    SUM(channel_net_profit)           AS "Loi nhuan kenh",
+    SUM(fully_loaded_net_profit)      AS "Loi nhuan thuc"
+FROM fact_order_economics
+WHERE scope_sales
+  AND has_cogs
+  AND is_active_order
+  AND date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '12 months', '%Y%m%d') AS INTEGER)
+GROUP BY 1
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "graph.dimensions": ["Thang"],
+    "graph.metrics": ["Loi nhuan gop", "Loi nhuan kenh", "Loi nhuan thuc"],
+    "series_settings": {
+      "Loi nhuan gop":  { "color": "#509EE3" },
+      "Loi nhuan kenh": { "color": "#88BDE6" },
+      "Loi nhuan thuc": { "color": "#84BB4C" }
+    },
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "VND",
+    "column_settings": {
+      "Loi nhuan gop": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Loi nhuan kenh": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "Loi nhuan thuc": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 0, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### ❓ Question: Margin % Trend
+
+Multi-line — xu huong bien lai % theo thang: Gross Margin, Channel Net Margin, Fully Loaded Margin. 13-month fixed window. Tinh theo weighted average (SUM profit / SUM net_revenue).
+
+```sql
+SELECT
+    date_trunc('month', strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS "Thang",
+    ROUND(SUM(gross_profit)            * 100.0 / NULLIF(SUM(net_revenue), 0), 1) AS "Gross Margin %",
+    ROUND(SUM(channel_net_profit)      * 100.0 / NULLIF(SUM(net_revenue), 0), 1) AS "Channel Net Margin %",
+    ROUND(SUM(fully_loaded_net_profit) * 100.0 / NULLIF(SUM(net_revenue), 0), 1) AS "Fully Loaded Margin %"
+FROM fact_order_economics
+WHERE scope_sales
+  AND has_cogs
+  AND is_active_order
+  AND date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '12 months', '%Y%m%d') AS INTEGER)
+GROUP BY 1
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "line",
+  "visualization_settings": {
+    "graph.dimensions": ["Thang"],
+    "graph.metrics": ["Gross Margin %", "Channel Net Margin %", "Fully Loaded Margin %"],
+    "series_settings": {
+      "Gross Margin %":        { "color": "#509EE3" },
+      "Channel Net Margin %":  { "color": "#88BDE6" },
+      "Fully Loaded Margin %": { "color": "#84BB4C" }
+    },
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "%",
+    "column_settings": {
+      "Gross Margin %":        { "number_style": "percent", "scale": 0.01, "decimals": 1 },
+      "Channel Net Margin %":  { "number_style": "percent", "scale": 0.01, "decimals": 1 },
+      "Fully Loaded Margin %": { "number_style": "percent", "scale": 0.01, "decimals": 1 }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 6, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### ❓ Question: Cost Breakdown by Category
+
+Stacked bar — co cau chi phi theo thang va loai: COGS, PROMO_GOODS, PLATFORM_FEE, OVERHEAD, DISCOUNT, TAX. 13-month fixed window.
+
+```sql
+SELECT
+    date_trunc('month', strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS "Thang",
+    cost_category                                                              AS "Loai chi phi",
+    SUM(amount)                                                                AS "Chi phi"
+FROM fact_order_costs
+WHERE cost_category IN ('COGS', 'PROMO_GOODS', 'PLATFORM_FEE', 'OVERHEAD', 'DISCOUNT', 'TAX')
+  AND date_key >= CAST(strftime(date_trunc('month', current_date) - INTERVAL '12 months', '%Y%m%d') AS INTEGER)
+GROUP BY 1, 2
+ORDER BY 1, 2
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["Thang", "Loai chi phi"],
+    "graph.metrics": ["Chi phi"],
+    "graph.colors": ["#509EE3", "#88BDE6", "#A989C5", "#F2A86F", "#F9D45C", "#EF8C8C"],
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "VND",
+    "column_settings": {
+      "Chi phi": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 12, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### ❓ Question: Overhead Estimated Flag Summary
+
+Table — kiem tra overhead uoc tinh vs thuc te theo thang. Cho phep analyst xem thang nao dung uoc tinh thay vi so lieu thuc.
+
+```sql
+SELECT
+    date_trunc('month', strptime(CAST(date_key AS VARCHAR), '%Y%m%d')::DATE) AS "Ky",
+    is_overhead_estimated                                                      AS "La uoc tinh",
+    COUNT(*)                                                                   AS "So don",
+    SUM(allocated_overhead)                                                    AS "Tong overhead"
+FROM fact_order_economics
+WHERE allocated_overhead IS NOT NULL
+GROUP BY 1, 2
+ORDER BY 1 DESC
+LIMIT 24
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "column_settings": {
+      "Tong overhead": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "table.column_formatting": [
+      {
+        "columns": ["La uoc tinh"],
+        "type": "single",
+        "operator": "=",
+        "value": true,
+        "color": "#F9D45C",
+        "highlight_row": true
+      }
+    ]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 18, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+#### 📝 Text: Source & Freshness
+
+**Source:** fact_order_economics + fact_order_costs · **Cadence:** monthly · **Scope:** scope_sales + has_cogs · **Caveats:** allocated_overhead may be estimated for recent months (see flag table)
+<!-- text-id:source-freshness -->
+
+```json metabase-pos
+{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+```
