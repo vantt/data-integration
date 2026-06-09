@@ -57,14 +57,16 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE 1=1
+    WHERE scope_retail
       [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tuần ' || CAST(EXTRACT(WEEK FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: ' ||
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m')
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
@@ -106,20 +108,28 @@ FROM filter_bounds
 **Domain Reference**: [Total Orders](../domains/sales.md#4-total-orders) — Hero metric with WoW comparison.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT COUNT(DISTINCT order_id) as val
-    FROM fact_orders
-    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+      [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT COUNT(DISTINCT order_id) as val
-    FROM fact_orders
-    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <  filter_bounds.p_start
 )
 SELECT
     tw.val as "Total Orders",
@@ -143,24 +153,30 @@ FROM this_week tw, last_week lw
 **Domain Reference**: [Net Revenue](../domains/sales.md#2-net-revenue) — Supporting KPI with WoW.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
-    FROM fact_orders
-    WHERE scope_sales
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
       AND is_active_order
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+      [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT COALESCE(SUM(net_revenue), 0) as val
-    FROM fact_orders
-    WHERE scope_sales
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
       AND is_active_order
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <  filter_bounds.p_start
 )
 SELECT
     tw.val as "Net Revenue",
@@ -193,28 +209,34 @@ FROM this_week tw, last_week lw
 **Domain Reference**: [AOV](../domains/sales.md#5-aov-average-order-value) — Supporting KPI with WoW.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
-    FROM fact_orders
-    WHERE scope_sales
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
       AND is_active_order
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+      [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT
         CASE WHEN COUNT(DISTINCT order_id) = 0 THEN 0
              ELSE SUM(net_revenue) / COUNT(DISTINCT order_id) END as val
-    FROM fact_orders
-    WHERE scope_sales
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
       AND is_active_order
-      AND ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <  filter_bounds.p_start
 )
 SELECT
     tw.val as "AOV",
@@ -247,15 +269,24 @@ FROM this_week tw, last_week lw
 Gauge showing order completion rate with 3 zones: green (>=90%), yellow (80-89%), red (<80%).
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     ROUND(
         COUNT(DISTINCT CASE WHEN status = 'COMPLETED' THEN order_id END) * 100.0
         / NULLIF(COUNT(DISTINCT order_id), 0), 1
     ) as "Completed %"
-FROM fact_orders
-WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND ordered_at < date_trunc('week', current_date)
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+FROM fact_orders, filter_bounds
+WHERE scope_retail
+  AND ordered_at >= filter_bounds.p_start
+  AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND {{date_range}}]]
+  [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ```
 
 ```json metabase-viz
@@ -282,13 +313,22 @@ WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
 Donut chart showing breakdown of order statuses.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     status as "Status",
     COUNT(DISTINCT order_id) as "Orders"
-FROM fact_orders
-WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND ordered_at < date_trunc('week', current_date)
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+FROM fact_orders, filter_bounds
+WHERE scope_retail
+  AND ordered_at >= filter_bounds.p_start
+  AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND {{date_range}}]]
+  [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -319,14 +359,23 @@ ORDER BY 2 DESC
 Horizontal bar ranking fulfilment statuses by volume.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     fulfillment_status as "Fulfilment Status",
     COUNT(DISTINCT order_id) as "Orders"
-FROM fact_orders
-WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND ordered_at < date_trunc('week', current_date)
+FROM fact_orders, filter_bounds
+WHERE scope_retail
+  AND ordered_at >= filter_bounds.p_start
+  AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   AND fulfillment_status IS NOT NULL
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+  [[AND {{date_range}}]]
+  [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -351,24 +400,32 @@ ORDER BY 2 DESC
 Formatted table showing cancelled orders and returns with WoW change flags.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT
         COUNT(DISTINCT CASE WHEN NOT is_active_order THEN order_id END) as cancelled,
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
-    FROM fact_orders
-    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+      [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT
         COUNT(DISTINCT CASE WHEN NOT is_active_order THEN order_id END) as cancelled,
         COUNT(CASE WHEN fulfillment_status = 'RETURNED' THEN 1 END) as returns
-    FROM fact_orders
-    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
+      AND ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND ordered_at <  filter_bounds.p_start
 )
 SELECT * FROM (
     SELECT 1 as sort, 'Don huy' as "Chi so", tw.cancelled as "Tuan nay", lw.cancelled as "Tuan truoc",
@@ -428,19 +485,28 @@ SELECT * FROM (
 
 #### Question: Daily Orders (14 Days)
 
-Combo chart: daily order bars (this week blue, last week grey) + AOV line.
+Combo chart: daily order bars + AOV line within the selected date range.
 
 ```sql
-SELECT
-    date(ordered_at) as "Ngay",
-    COUNT(DISTINCT order_id) as "Don hang",
-    CASE WHEN COUNT(DISTINCT CASE WHEN scope_sales THEN order_id END) = 0 THEN 0
-         ELSE SUM(CASE WHEN scope_sales THEN net_revenue ELSE 0 END)
-              / COUNT(DISTINCT CASE WHEN scope_sales THEN order_id END) END as "AOV"
-FROM fact_orders
-WHERE ordered_at >= current_date - INTERVAL '14 days'
-  AND ordered_at < date_trunc('week', current_date)
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
+SELECT
+    ordered_at::DATE as "Ngay",
+    COUNT(DISTINCT order_id) as "Don hang",
+    CASE WHEN COUNT(DISTINCT CASE WHEN scope_retail AND is_active_order THEN order_id END) = 0 THEN 0
+         ELSE SUM(CASE WHEN scope_retail AND is_active_order THEN net_revenue ELSE 0 END)
+              / COUNT(DISTINCT CASE WHEN scope_retail AND is_active_order THEN order_id END) END as "AOV"
+FROM fact_orders, filter_bounds
+WHERE scope_retail
+  AND ordered_at >= filter_bounds.p_start
+  AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND {{date_range}}]]
+  [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 1
 ```
@@ -472,6 +538,13 @@ ORDER BY 1
 Order intensity by hour x day of week — pivot table with conditional formatting as heatmap fallback.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     CASE EXTRACT(DOW FROM ordered_at)
         WHEN 0 THEN 'CN'
@@ -483,12 +556,14 @@ SELECT
         WHEN 6 THEN 'T7'
     END as "Thu",
     EXTRACT(DOW FROM ordered_at) as dow_sort,
-    LPAD(CAST(EXTRACT(HOUR FROM ordered_at) AS VARCHAR), 2, '0') || 'h' as "Gio",
+    LPAD(CAST(EXTRACT(HOUR FROM ordered_at AT TIME ZONE 'Asia/Ho_Chi_Minh') AS VARCHAR), 2, '0') || 'h' as "Gio",
     COUNT(DISTINCT order_id) as "Don"
-FROM fact_orders
-WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND ordered_at < date_trunc('week', current_date)
-      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+FROM fact_orders, filter_bounds
+WHERE scope_retail
+  AND ordered_at >= filter_bounds.p_start
+  AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND {{date_range}}]]
+  [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1, 2, 3
 ORDER BY 2, 3
 ```
@@ -544,14 +619,16 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE 1=1
+    WHERE scope_retail
       [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tuần ' || CAST(EXTRACT(WEEK FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: ' ||
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m')
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
@@ -595,14 +672,22 @@ Horizontal bar ranking channels by order volume.
 **Domain Reference**: [Sales by Channel](../domains/sales.md#8-sales-by-channel)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     c.channel_name as "Kenh",
     COUNT(DISTINCT o.order_id) as "Don hang"
 FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+WHERE o.scope_retail
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -627,16 +712,23 @@ ORDER BY 2 DESC
 Horizontal bar ranking channels by revenue.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     c.channel_name as "Kenh",
     COALESCE(SUM(o.net_revenue), 0) as "Doanh thu"
 FROM fact_orders o
-JOIN dim_channels c ON o.channel_key = c.channel_key
-WHERE o.scope_sales
+JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+WHERE o.scope_retail
   AND o.is_active_order
-  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -666,17 +758,24 @@ ORDER BY 2 DESC
 Formatted table with WoW comparison — highlights channels with >30% change.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT
         c.channel_name as channel,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_retail THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.is_active_order
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
+      AND o.is_active_order
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 ),
@@ -684,13 +783,13 @@ last_week AS (
     SELECT
         c.channel_name as channel,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_retail THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.is_active_order
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
+      AND o.is_active_order
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <  filter_bounds.p_start
     GROUP BY 1
 )
 SELECT
@@ -752,14 +851,22 @@ ORDER BY COALESCE(tw.orders, 0) DESC
 Horizontal bar ranking branches by order volume.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     bl.branch_location_name as "Chi nhanh",
     COUNT(DISTINCT o.order_id) as "Don hang"
 FROM fact_orders o
-JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-WHERE o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key, filter_bounds
+WHERE o.scope_retail
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+  [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -784,17 +891,24 @@ ORDER BY 2 DESC
 Branch performance with WoW change.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT
         bl.branch_location_name as branch,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_retail THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
-    JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-    WHERE o.is_active_order
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+    JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key, filter_bounds
+    WHERE o.scope_retail
+      AND o.is_active_order
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 ),
@@ -802,13 +916,13 @@ last_week AS (
     SELECT
         bl.branch_location_name as branch,
         COUNT(DISTINCT o.order_id) as orders,
-        COALESCE(SUM(CASE WHEN o.scope_sales THEN o.net_revenue END), 0) as revenue
+        COALESCE(SUM(CASE WHEN o.scope_retail THEN o.net_revenue END), 0) as revenue
     FROM fact_orders o
-    JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key
-    WHERE o.is_active_order
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+    JOIN dim_branch_location bl ON o.branch_location_key = bl.branch_location_key, filter_bounds
+    WHERE o.scope_retail
+      AND o.is_active_order
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <  filter_bounds.p_start
     GROUP BY 1
 )
 SELECT
@@ -879,14 +993,16 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE 1=1
+    WHERE scope_retail
       [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tuần ' || CAST(EXTRACT(WEEK FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: ' ||
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m')
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
@@ -928,28 +1044,33 @@ FROM filter_bounds
 **Domain Reference**: [Social Sales Volume](../domains/customer_support.md#1-social-sales-volume) — Social channel revenue with WoW.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as val
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.scope_sales
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
       AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT COALESCE(SUM(o.net_revenue), 0) as val
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.scope_sales
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
       AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <  filter_bounds.p_start
 )
 SELECT
     tw.val as "Social Revenue",
@@ -982,26 +1103,31 @@ FROM this_week tw, last_week lw
 **Domain Reference**: [Social Order Count](../domains/customer_support.md#2-social-order-count) — Social order count with WoW.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT COUNT(DISTINCT o.order_id) as val
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.scope_sales
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
     SELECT COUNT(DISTINCT o.order_id) as val
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.scope_sales
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <  filter_bounds.p_start
 )
 SELECT
     tw.val as "Social Orders",
@@ -1025,18 +1151,24 @@ FROM this_week tw, last_week lw
 Social channel AOV with WoW comparison.
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 this_week AS (
     SELECT
         CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as val
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.scope_sales
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
       AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND o.ordered_at < date_trunc('week', current_date)
+      AND o.ordered_at >= filter_bounds.p_start
+      AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
       [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 ),
 last_week AS (
@@ -1044,13 +1176,12 @@ last_week AS (
         CASE WHEN COUNT(DISTINCT o.order_id) = 0 THEN 0
              ELSE SUM(o.net_revenue) / COUNT(DISTINCT o.order_id) END as val
     FROM fact_orders o
-    JOIN dim_channels c ON o.channel_key = c.channel_key
-    WHERE o.scope_sales
+    JOIN dim_channels c ON o.channel_key = c.channel_key, filter_bounds
+    WHERE o.scope_retail
       AND o.is_active_order
       AND c.channel_format IN ('Facebook', 'Zalo')
-      AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND o.ordered_at < date_trunc('week', current_date) - INTERVAL '7 days'
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+      AND o.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
+      AND o.ordered_at <  filter_bounds.p_start
 )
 SELECT
     tw.val as "Social AOV",
@@ -1085,17 +1216,24 @@ FROM this_week tw, last_week lw
 Horizontal bar ranking staff by revenue across all channels.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     st.full_name as "Nhan vien",
     SUM(o.net_revenue) as "Doanh thu"
 FROM fact_orders o
-JOIN dim_staff st ON o.seller_staff_key = st.staff_key
-WHERE o.scope_sales
+JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
+WHERE o.scope_retail
   AND o.is_active_order
-  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   AND st.staff_key IS NOT NULL
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+  [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1123,6 +1261,13 @@ ORDER BY 2 DESC
 Staff leaderboard for social commerce — formatted table with top performers highlighted.
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+)
 SELECT
     st.full_name as "Nhan vien",
     COUNT(DISTINCT o.order_id) as "Don hang",
@@ -1131,14 +1276,14 @@ SELECT
          ELSE ROUND(SUM(o.net_revenue) / COUNT(DISTINCT o.order_id), 0) END as "AOV"
 FROM fact_orders o
 JOIN dim_channels c ON o.channel_key = c.channel_key
-JOIN dim_staff st ON o.seller_staff_key = st.staff_key
-WHERE o.scope_sales
+JOIN dim_staff st ON o.seller_staff_key = st.staff_key, filter_bounds
+WHERE o.scope_retail
   AND o.is_active_order
   AND c.channel_format IN ('Facebook', 'Zalo')
-  AND o.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND o.ordered_at < date_trunc('week', current_date)
+  AND o.ordered_at >= filter_bounds.p_start
+  AND o.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
   AND st.staff_key IS NOT NULL
-      [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+  [[AND o.branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 GROUP BY 1
 ORDER BY 3 DESC
 ```
@@ -1169,13 +1314,20 @@ Donut chart showing payment method breakdown by transaction count.
 **Domain Reference**: [Payment Method Distribution](../domains/sales.md#11-payment-method-distribution)
 
 ```sql
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+)
 SELECT
     pm.payment_method_name as "Phuong thuc",
     COUNT(*) as "Giao dich"
 FROM fact_payments p
 JOIN dim_payment_methods pm ON p.payment_method_key = pm.payment_method_key
-WHERE date(p.payment_timestamp) >= date_trunc('week', current_date) - INTERVAL '7 days'
-  AND date(p.payment_timestamp) < date_trunc('week', current_date)
+JOIN filter_bounds ON TRUE
+WHERE p.payment_timestamp >= filter_bounds.p_start
+  AND p.payment_timestamp <  filter_bounds.p_end + INTERVAL '1 day'
 GROUP BY 1
 ORDER BY 2 DESC
 ```
@@ -1202,15 +1354,23 @@ Formatted table with pending payment threshold alert (>5% = red flag).
 **Domain Reference**: [Payment Status](../domains/sales.md#12-payment-status)
 
 ```sql
-WITH
+WITH filter_bounds AS (
+    SELECT MIN(ordered_at)::DATE AS p_start, MAX(ordered_at)::DATE AS p_end
+    FROM fact_orders
+    WHERE scope_retail
+      [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
+),
 summary AS (
     SELECT
         payment_status as status,
         COUNT(DISTINCT order_id) as orders,
         SUM(net_revenue) as amount
-    FROM fact_orders
-    WHERE ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND ordered_at < date_trunc('week', current_date)
+    FROM fact_orders, filter_bounds
+    WHERE scope_retail
+      AND ordered_at >= filter_bounds.p_start
+      AND ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
+      [[AND {{date_range}}]]
       [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
     GROUP BY 1
 ),
@@ -1274,14 +1434,16 @@ WITH filter_bounds AS (
     SELECT MIN(ordered_at)::DATE AS p_start,
            MAX(ordered_at)::DATE AS p_end
     FROM fact_orders
-    WHERE 1=1
+    WHERE scope_retail
       [[AND {{date_range}}]]
+      [[AND branch_location_key IN (SELECT branch_location_key FROM dim_branch_location WHERE branch_location_name = {{branch}})]]
 )
 SELECT
-    '📅 Kỳ này: ' || strftime(p_start, '%d/%m/%Y') || ' – ' || strftime(p_end, '%d/%m/%Y') ||
-    '  ·  Kỳ trước: ' ||
-    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m/%Y') ||
-    ' – ' || strftime((p_start - 1)::DATE, '%d/%m/%Y')
+    '📅 Tuần ' || CAST(EXTRACT(WEEK FROM p_start) AS INTEGER) || '/' || CAST(EXTRACT(YEAR FROM p_start) AS INTEGER) ||
+    ' (' || strftime(p_start, '%d/%m') || ' → ' || strftime(p_end, '%d/%m') || ')'
+    || '  ·  Kỳ trước: ' ||
+    strftime((p_start - (p_end - p_start)::INTEGER - 1)::DATE, '%d/%m') ||
+    ' – ' || strftime((p_start - 1)::DATE, '%d/%m')
     AS "Chu kỳ báo cáo"
 FROM filter_bounds
 ```
@@ -1467,4 +1629,3 @@ FROM this_week tw, last_week lw
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
 ```
-
