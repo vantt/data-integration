@@ -1,7 +1,7 @@
 # Plan: Rolling Parquet GC — Move Cleanup into dbt Asset
 
 > Created: 2026-06-09
-> Status: Backlog
+> Status: Done
 > Priority: Medium (correctness issue for direct parquet reads; serving DB unaffected)
 
 ## Problem
@@ -61,11 +61,11 @@ Cons: Doesn't prevent accumulation between runs; just limits max accumulation.
 
 ## Implementation steps
 
-- [ ] Read `orchestration/assets/dbt.py` to find where dbt run completes
-- [ ] Add post-run GC call (subprocess to `refresh_rolling.py`) at end of `sapo_dbt_assets`
+- [x] Read `orchestration/assets/dbt.py` to find where dbt run completes
+- [x] Add post-run GC call (subprocess to `refresh_rolling.py`) at end of `sapo_dbt_assets` — `_gc_rolling_parquet(context)` in `finally` block (2026-06-09)
 - [ ] Verify: trigger `sapo_dbt_assets` manually without serving_asset → confirm files stay ≤3
 - [ ] Add Option C: Dagster schedule or sensor calling `refresh_rolling.py` every 2h as backstop
-- [ ] Update `transformation/AGENTS.md` — mark issue resolved, keep manual fix docs
+- [x] Update `transformation/AGENTS.md` — troubleshooting entry added (2026-06-09)
 
 ## Verification
 

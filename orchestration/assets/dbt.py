@@ -1,6 +1,8 @@
 from dagster import AssetExecutionContext, AssetKey
 from dagster_dbt import DbtCliResource, dbt_assets, DbtProject, DagsterDbtTranslator
 import os
+import subprocess
+import sys
 import threading
 from typing import Any, Mapping
 
@@ -11,6 +13,9 @@ DBT_TIMEOUT_SEC = int(os.environ.get("DBT_TIMEOUT_SEC", "900"))
 # Define the dbt project path
 DBT_PROJECT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "transformation")
 DBT_PROFILES_DIR = DBT_PROJECT_DIR # profiles.yml is in the same dir
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+REFRESH_ROLLING_SCRIPT = os.path.join(PROJECT_ROOT, "scripts", "provisioning", "refresh_rolling.py")
 
 # Define the dbt project resource
 dbt_project = DbtProject(
@@ -60,6 +65,30 @@ class SapoDbtTranslator(DagsterDbtTranslator):
                 return AssetKey(["shopee", name])
 
         return super().get_asset_key(dbt_resource_props)
+
+def _gc_rolling_parquet(context: AssetExecutionContext) -> None:
+    # serving_asset also calls refresh_rolling.py but only when triggered by the
+    # scheduled pipeline. Running GC here guarantees cleanup on every dbt
+    # materialization, including manual and selective runs.
+    if not os.path.exists(REFRESH_ROLLING_SCRIPT):
+        context.log.warning(f"refresh_rolling.py not found at {REFRESH_ROLLING_SCRIPT} — skipping GC")
+        return
+    try:
+        result = subprocess.run(
+            [sys.executable, REFRESH_ROLLING_SCRIPT],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.stdout:
+            context.log.info(f"rolling-gc: {result.stdout.strip()}")
+        if result.returncode != 0:
+            context.log.warning(f"rolling-gc exited {result.returncode}: {result.stderr.strip()}")
+    except subprocess.TimeoutExpired:
+        context.log.warning("rolling-gc timed out after 60s — skipped")
+    except Exception as e:
+        context.log.warning(f"rolling-gc error: {e}")
+
 
 @dbt_assets(
     manifest=dbt_project.manifest_path,
@@ -133,3 +162,4 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
                 invocation.process.kill()
         except Exception:
             pass
+        _gc_rolling_parquet(context)
