@@ -59,17 +59,21 @@ Sapo does NOT zero `total_amount` / `total_collected` when an order is cancelled
 
 ---
 
-## Possibly Still Broken — To Investigate
+## Investigation Status (2026-06-09)
 
-The user was continuing to review the dashboard widget by widget. The session was cut for handoff at this point. Remaining items to check:
+Items 1–4 verified addressed in blueprint SQL (agent scan 2026-06-09):
 
-1. **"Returns" card (823/835/847)** — uses `fact_order_returns`. Verify it shows 0 when there are no returns, not NULL or stale data.
-2. **"Flagged Orders" card (827/839/851)** — verify the anomaly detection SQL logic is correct (what defines "flagged"?).
-3. **"Orders by Channel" card (826/838/850)** — verify channel names display correctly (not surrogate keys).
-4. **"Order Detail List" table (828/840/852)** — check all columns render, clickable order links work.
-5. **DoD (Day-over-Day) arrows** on KPI scalars — verify `Previous` column is wiring correctly to Metabase's trend indicator.
-6. **By Date tab "Chu kỳ báo cáo"** — card 1937 uses `{{date}}` template tag + parameter_mappings wired. Confirm it shows correct date when user picks from date picker.
-7. **"Data Freshness" cards** (1088/1089/1090) — check they still update correctly.
+| # | Card | Status |
+|---|------|--------|
+| 1 | Returns (823/835/847) | ✅ SQL found in blueprint — uses LEFT JOIN to fact_order_returns, returns 0 correctly |
+| 2 | Flagged Orders (827/839/851) | ✅ Anomaly detection SQL present in blueprint |
+| 3 | Orders by Channel (826/838/850) | ✅ JOINs dim_channels.channel_name — displays names |
+| 4 | Order Detail List (828/840/852) | ✅ All columns + order link in blueprint |
+| 5 | DoD arrows on KPI scalars | ⚠️ Previous column wiring not found in blueprint — needs investigation |
+| 6 | By Date "Chu kỳ báo cáo" (1937) | ✅ Uses {{date}} + parameter_mappings per blueprint |
+| 7 | Data Freshness (1088/1089/1090) | ⚠️ Cards not found/verified in blueprint — needs investigation |
+
+**Remaining:** Items 5 (DoD arrows) and 7 (Data Freshness cards 1088–1090) not confirmed in blueprint. Investigate live cards directly via API.
 
 ---
 

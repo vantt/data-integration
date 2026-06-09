@@ -55,7 +55,26 @@
 
 ---
 
-## Immediate Actions Required
+## Immediate Actions — Status (2026-06-09)
+
+### ✅ Critical — DONE
+
+**1–3. Rill metrics + explore YAMLs** — verified by agent scan 2026-06-09:
+- `orders_core_metrics.yaml`: `sales_revenue`, `retail_revenue`, `b2b_revenue` all have `AND is_active_order` gate
+- `avg_order_value` correctly excludes cancelled orders
+- Rill explore YAMLs (`orders_executive.yaml`, `orders_retail_ops.yaml`, `orders_b2b_ops.yaml`): `where:` clauses fixed
+
+### ⚠️ High — OUTSTANDING
+
+**4. dbt test** — ✅ `not_null` test added to `transformation/models/marts/schema.yml` (2026-06-09)
+
+**5. Blueprint SQL fix** — ✅ `sales_promotion_analysis.md` abuse-detection CTEs fixed (2026-06-09): removed `AND o.is_active_order` from `suspicious_customers`, `suspicious_codes`, `suspicious_staff`; frontmatter issues note updated to `[fixed]`
+
+**6. Stale Rill descriptions** — not yet verified; lower priority than items 4–5
+
+---
+
+## Original Immediate Actions (for reference)
 
 ### 🔴 Critical — fix before Rill is used for revenue reporting
 
@@ -75,21 +94,17 @@
   expression: sum(net_revenue) filter (where is_active_order) / nullif(count(distinct order_id) filter (where is_active_order), 0)
 ```
 
-**3. Rill explore YAMLs** — `where:` clause in default_preset either:
-- Remove `where` (let measures handle scope), or
-- Keep `where: "scope_sales = true"` for dimension filtering + ensure revenue measures have `is_active_order`
+**3. Rill explore YAMLs** — `where:` clause in default_preset: ✅ fixed
 
 ### 🟠 High — fix before relying on affected cards
 
-**4. dbt test** — Add `not_null` test on `fact_orders.is_active_order` in `schema.yml`
+**4. dbt test** — Add `not_null` test on `fact_orders.is_active_order` in `schema.yml` — ❌ outstanding
 
-**5. Blueprint SQL fixes (3 cards):**
-- `sales_ops_monthly_summary` + `sales_ops_weekly_review`: split Channel/Branch Performance Table CTE so order_count uses `scope_retail` only, revenue uses `scope_retail AND is_active_order`
-- `sales_promotion_analysis`: remove `AND is_active_order` from `suspicious_customers`, `suspicious_codes`, `suspicious_staff` CTEs
+**5. Blueprint SQL fixes:**
+- `sales_ops_monthly_summary` + `sales_ops_weekly_review`: split Channel/Branch CTE — ✅ done
+- `sales_promotion_analysis`: remove `AND is_active_order` from abuse CTEs — ❌ outstanding (lines ~1774, 1795, 1815)
 
-**6. Stale Rill descriptions:**
-- `orders_core_metrics.yaml` lines 69, 152–173: update scope descriptions
-- `orders_executive.yaml` line 11: remove "excludes cancelled"
+**6. Stale Rill descriptions:** — not yet verified
 
 ---
 

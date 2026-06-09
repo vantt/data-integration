@@ -643,6 +643,9 @@ models:
                 values: [voucher_promotional, bundle, sampling_gift, wholesale_explicit, overseas, campaign, employee_internal, negotiated_micro, negotiated_standard, negotiated_deep]
               config:
                 where: "primary_discount_type IS NOT NULL"
+      - name: is_active_order
+        description: "TRUE when status NOT IN ('CANCELLED','DRAFT'). Status gate for revenue calculations — use with scope_* for revenue cards; use scope_* alone for total order counts."
+        tests: [not_null]
 
   - name: fact_payments
     description: "Transactional payment fact (one row per payment attempt/transaction)."

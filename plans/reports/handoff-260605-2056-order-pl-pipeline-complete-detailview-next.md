@@ -21,12 +21,17 @@ net_revenue − COGS = gross_profit − promo_goods_cost − platform/discount =
 
 **Classification (live gsheet → nightly):** 64211→keep_handling/handling/order_count · 64213→keep_admin · 64214→drop_promo_count_once (hàng tặng, count-once w/ promo) · 642172→keep_marketing · 642174/642176→drop_traceable (ship/sàn = tier-2) · 642175→keep_selling/selling · 642177/642178/6422→keep_admin. (admin/marketing/selling base=net_revenue; handling base=order_count.)
 
-## ⏭ NEXT
-### Phase-06 — detailView Financial tab (the queued user request)
-Update detailView route order → Financial tab to show the NEW P&L. **READ `detailView/docs/design` (new design) carefully + keep the good parts of the OLD design.** Existing design prompt + mockup: `plans/260604-1030-unified-order-pl-cogs-overhead/design-prompt-financial-tab.md` + `mockups/financial-tab-current-vs-proposed.html`.
-- New fact fields now available to render: `allocated_overhead`, `fully_loaded_net_profit`, `fully_loaded_margin_pct`, `is_overhead_estimated`, `promo_goods_cost`; OVERHEAD cost-ledger rows (`cost_category='OVERHEAD'`, cost_type `overhead_admin/handling/marketing/selling`). `cogs_source` is in `int_order_cogs_reconciled` but NOT yet surfaced on the fact (see phase-05 below).
-- detailView code is **baked into the image** (templates/static NOT volume-mounted) → edits need `docker compose up -d --build detail_view` to persist. detailView reads the serving `olap.duckdb` views (already have the new columns — bootstrapped).
-- Concurrent stream also edits detailView (customer pages) → coordinate / `git pull --rebase`.
+## ✅ Phase-06 — detailView Financial tab — COMPLETE
+Commits 18af69c (2026-06-06) + dffdde4 (2026-06-07). All 5 zones implemented:
+1. Verdict bar (margin verdict + source badge)
+2. Composition bar (revenue breakdown)
+3. P&L waterfall (gross_revenue → net_revenue → COGS → gross_profit → channel_net_profit → fully_loaded_net_profit)
+4. Cost breakdown ledger (platform fees, overhead allocations, promo_goods_cost)
+5. COGS reconciliation (Sapo-MAC vs MISA-632 comparison)
+
+New financial fields confirmed live in `detailView/app/domain/order.py`: `promo_goods_cost`, `cogs_source`, `allocated_overhead`, `is_overhead_estimated`, `fully_loaded_net_profit`, `fully_loaded_margin_pct`.
+
+## ⏭ NEXT — Pipeline refinements (optional, not blocking phase-06)
 
 ### Pipeline refinements (optional, not blocking phase-06)
 - **P4-3 provisional estimate** (Q4-B): trailing-rate for the CURRENT unclosed month + flip `is_overhead_estimated`. Only matters live; all current data is actual.

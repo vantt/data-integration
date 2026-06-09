@@ -4,7 +4,7 @@ scope_indicator: "[Retail]"
 layer: L2
 uses_concepts: [scope_retail, net_revenue, discount_rate, discount_amount, aov, is_active_order]
 issues:
-  - "[warn] Abuse detection cards (Suspicious Customers/Codes/Staff) — is_active_order loại cancelled orders; khách đặt đơn được discount rồi huỷ sẽ không bị detect; xem xét dùng scope_retail only (bỏ is_active_order) cho abuse detection"
+  - "[fixed 2026-06-09] Abuse detection CTEs (suspicious_customers/codes/staff) — removed is_active_order; detection now covers cancelled-after-discount orders"
 ---
 
 # 📘 Blueprint: Sales Promotion & Discount Analysis [Retail]
@@ -1771,7 +1771,6 @@ suspicious_customers AS (
         JOIN dim_customers c ON o.customer_key = c.customer_key
         LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
         WHERE o.scope_retail
-          AND o.is_active_order
           AND o.ordered_at >= current_date - INTERVAL '30 days'
           AND o.ordered_at < current_date
           AND o.discount_amount > 0
@@ -1792,7 +1791,6 @@ suspicious_codes AS (
         JOIN dim_customers c ON o.customer_key = c.customer_key
         LEFT JOIN dim_promotions p ON o.promotion_key = p.promotion_key
         WHERE o.scope_retail
-          AND o.is_active_order
           AND o.ordered_at >= current_date - INTERVAL '30 days'
           AND o.ordered_at < current_date
           AND o.discount_amount > 0
@@ -1812,7 +1810,6 @@ suspicious_staff AS (
         FROM fact_orders o
         JOIN dim_customers c ON o.customer_key = c.customer_key
         WHERE o.scope_retail
-          AND o.is_active_order
           AND o.ordered_at >= current_date - INTERVAL '30 days'
           AND o.ordered_at < current_date
           AND o.seller_staff_key IS NOT NULL
