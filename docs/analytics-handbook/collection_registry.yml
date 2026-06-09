@@ -120,7 +120,6 @@ collections:
         dashboards:
           - "Today Sales [Retail]"
           - "Daily Sales [Retail]"
-          - "Yesterday's Sales [Retail]"
           - "Order Listing [All]"
           - "Social Commerce Operations [Retail]"
 
