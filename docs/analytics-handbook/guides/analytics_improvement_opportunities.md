@@ -848,7 +848,7 @@ Data needed:
 - Linked order ID.
 - Message volume.
 
-System readiness: not ready. Current support domain states FRT and AHT data are missing.
+System readiness: ❌ **Not ready** (2026-06-09). No conversation data source connected. FRT and AHT data are missing.
 
 Recommended next step: ingest conversation metadata first. Full message content is not required for the first useful version.
 
@@ -874,7 +874,7 @@ Data needed:
 - First-order source on customer.
 - Marketing spend by date/channel/campaign.
 
-System readiness: partially ready. `fact_marketing_spend` appears in the Marketing ROI blueprint, but attribution quality and campaign-level joins need validation.
+System readiness: ✅ **Partially done** (2026-06-09). `fact_marketing_spend` confirmed in production. Attribution quality and campaign-level joins still need validation before CAC and payback metrics are reliable.
 
 Recommended next step: validate channel mapping and introduce campaign-level keys before building CAC and payback metrics.
 
