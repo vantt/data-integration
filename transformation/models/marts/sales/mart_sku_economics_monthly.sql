@@ -16,14 +16,15 @@
 --
 -- CAVEATS (read before querying):
 --
--- 1. COGS coverage gap (~35%): Only Sapo orders that have a matching MISA invoice
---    are represented in the COGS / gross_profit / margin columns. Orders without
---    a MISA match yield NULL cogs_amount; these rows still appear in the mart
---    (with NULL margin columns) to preserve full revenue coverage.
+-- 1. COGS source priority: MISA invoice COGS is preferred (cogs_source='misa').
+--    For SKUs without MISA coverage (bundles, untracked SKUs), Sapo MAC COGS from
+--    fact_inventory_movements is used as fallback (cogs_source='sapo_mac').
+--    Use the cogs_source column to distinguish which system supplied the COGS figure.
+--    SKUs with no MISA match AND no inventory movements yield NULL (cogs_source=NULL).
 --
 -- 2. MISA join key: int_misa_sales_lines uses product_code (= SKU barcode / Sapo SKU).
 --    Joined via dim_products.sku. Product_code mismatches between MISA and Sapo
---    (naming drift, bundles) will produce NULL cogs even when an invoice exists.
+--    (naming drift, bundles) will produce NULL MISA cogs; sapo_mac fallback applies.
 --
 -- 3. return_adjusted_margin_pct assumes WORST CASE: full refund_amount_allocated
 --    is subtracted from gross_profit, implying no COGS recovery from returned goods.
@@ -233,6 +234,27 @@ misa_cogs AS (
 ),
 
 -- ----------------------------------------------------------------------------
+-- CTE 3c: Sapo MAC COGS fallback — covers bundles + SKUs not tracked in MISA
+-- Source: fact_inventory_movements, trans_type=301 (sale_order_fulfillment OUT legs only)
+-- Joined to products CTE (already resolved dim_products) via sku → product_key.
+-- Aggregated to (product_key, snapshot_month) to match misa_cogs grain.
+-- Used only when mc.cogs_amount IS NULL in final CTE.
+-- ----------------------------------------------------------------------------
+sapo_mac_cogs AS (
+    SELECT
+        p.product_key,
+        DATE_TRUNC('month', fim.issued_date_key)::date              AS snapshot_month,
+        SUM(fim.cogs_amount)                                        AS sapo_mac_cogs_amount
+    FROM {{ ref('fact_inventory_movements') }} fim
+    INNER JOIN products p ON fim.sku = p.product_code
+    WHERE fim.movement_direction = 'OUT'
+      AND fim.trans_type = 301
+      AND fim.issued_date_key >= DATE_TRUNC('month', current_date) - INTERVAL '24 months'
+      AND fim.issued_date_key <  DATE_TRUNC('month', current_date)
+    GROUP BY p.product_key, DATE_TRUNC('month', fim.issued_date_key)::date
+),
+
+-- ----------------------------------------------------------------------------
 -- CTE 4: COGS per-unit trailing 3-month average (for variance metric)
 -- Requires window over MISA data; computed from misa_cogs CTE
 -- ----------------------------------------------------------------------------
@@ -343,15 +365,26 @@ final AS (
             4
         )                                                       AS daily_velocity,
 
-        -- ── COGS & Margin (from MISA; NULL when no MISA invoice match) ───────
-        mc.cogs_amount,
+        -- ── COGS & Margin (MISA preferred; sapo_mac fallback for bundles/untracked SKUs) ─
+        COALESCE(mc.cogs_amount, smac.sapo_mac_cogs_amount)     AS cogs_amount,
+        CASE
+            WHEN mc.cogs_amount              IS NOT NULL THEN 'misa'
+            WHEN smac.sapo_mac_cogs_amount   IS NOT NULL THEN 'sapo_mac'
+            ELSE NULL
+        END                                                     AS cogs_source,
         ROUND(
-            mc.cogs_amount::double / NULLIF(sa.units_sold, 0),
+            COALESCE(mc.cogs_amount, smac.sapo_mac_cogs_amount)::double
+            / NULLIF(sa.units_sold, 0),
             4
         )                                                       AS cogs_per_unit,
-        mc.gross_profit,
+        COALESCE(mc.gross_profit, sa.net_revenue - smac.sapo_mac_cogs_amount)
+                                                                AS gross_profit,
         ROUND(
-            mc.gross_profit * 100.0 / NULLIF(mc.misa_revenue_net, 0),
+            COALESCE(
+                mc.gross_profit * 100.0 / NULLIF(mc.misa_revenue_net, 0),
+                (sa.net_revenue - smac.sapo_mac_cogs_amount) * 100.0
+                    / NULLIF(sa.net_revenue, 0)
+            ),
             4
         )                                                       AS gross_margin_pct,
 
@@ -386,18 +419,27 @@ final AS (
         )                                                       AS return_rate,
 
         -- ── Return-Adjusted Margin (WORST CASE — see caveat #3) ──────────────
+        -- Uses COALESCE gross_profit (misa preferred, sapo_mac fallback).
+        -- Revenue base: misa_revenue_net for misa rows, sa.net_revenue for sapo_mac rows.
         CASE
-            WHEN mc.gross_profit IS NOT NULL
-            THEN mc.gross_profit - COALESCE(ra.refund_amount_allocated, 0)
+            WHEN COALESCE(mc.gross_profit, sa.net_revenue - smac.sapo_mac_cogs_amount) IS NOT NULL
+            THEN COALESCE(mc.gross_profit, sa.net_revenue - smac.sapo_mac_cogs_amount)
+                 - COALESCE(ra.refund_amount_allocated, 0)
             ELSE NULL
         END                                                     AS return_adjusted_gross_profit,
         CASE
-            WHEN mc.gross_profit IS NOT NULL
-                AND mc.misa_revenue_net > 0
+            WHEN mc.gross_profit IS NOT NULL AND mc.misa_revenue_net > 0
             THEN ROUND(
                 (mc.gross_profit - COALESCE(ra.refund_amount_allocated, 0))
                 * 100.0
                 / NULLIF(mc.misa_revenue_net, 0),
+                4
+            )
+            WHEN smac.sapo_mac_cogs_amount IS NOT NULL AND sa.net_revenue > 0
+            THEN ROUND(
+                (sa.net_revenue - smac.sapo_mac_cogs_amount - COALESCE(ra.refund_amount_allocated, 0))
+                * 100.0
+                / NULLIF(sa.net_revenue, 0),
                 4
             )
             ELSE NULL
@@ -425,10 +467,14 @@ final AS (
             / NULLIF(mt.total_month_revenue, 0),
             4
         )                                                       AS revenue_share_pct,
-        (
-            mc.cogs_amount IS NOT NULL
-            AND mc.gross_profit * 100.0 / NULLIF(mc.misa_revenue_net, 0) < 10
-        )                                                       AS margin_outlier,
+        CASE
+            WHEN mc.cogs_amount IS NOT NULL
+            THEN mc.gross_profit * 100.0 / NULLIF(mc.misa_revenue_net, 0) < 10
+            WHEN smac.sapo_mac_cogs_amount IS NOT NULL
+            THEN (sa.net_revenue - smac.sapo_mac_cogs_amount) * 100.0
+                 / NULLIF(sa.net_revenue, 0) < 10
+            ELSE FALSE
+        END                                                     AS margin_outlier,
 
         -- ── Channel Concentration ─────────────────────────────────────────────
         tc.top_channel_name,
@@ -438,6 +484,8 @@ final AS (
     INNER JOIN products p          ON sa.product_key = p.product_key
     LEFT  JOIN misa_cogs mc        ON sa.product_key = mc.product_key
                                   AND sa.snapshot_month = mc.snapshot_month
+    LEFT  JOIN sapo_mac_cogs smac  ON sa.product_key = smac.product_key
+                                  AND sa.snapshot_month = smac.snapshot_month
     LEFT  JOIN cogs_trailing ct    ON sa.product_key = ct.product_key
                                   AND sa.snapshot_month = ct.snapshot_month
     LEFT  JOIN returns_agg ra      ON sa.product_key = ra.product_key
@@ -462,6 +510,7 @@ SELECT
 
     -- COGS & Margin
     cogs_amount,
+    cogs_source,
     cogs_per_unit,
     gross_profit,
     gross_margin_pct,
