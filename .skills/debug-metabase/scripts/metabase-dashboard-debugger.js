@@ -98,6 +98,9 @@ function buildQueryParameters(dashParams, filterParams) {
   for (const [slug, value] of Object.entries(filterParams)) {
     const param = dashParams.find(p => p.slug === slug || p.name === slug);
     if (!param) { unmatched.push(slug); continue; }
+    // Skip empty-string values — Metabase treats "" as "no selection" and skips [[...]] optional clauses.
+    // Passing "" explicitly renders the clause and filters for literal empty string → 0 rows.
+    if (value === '') continue;
     matched.push({ id: param.id, type: param.type, value, slug: param.slug, name: param.name });
   }
   return { matched, unmatched };
