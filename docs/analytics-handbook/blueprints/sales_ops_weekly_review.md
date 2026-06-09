@@ -32,7 +32,7 @@ issues:
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past7days",
+  "default": "past1weeks",
   "field_id": 848
 }
 ```
