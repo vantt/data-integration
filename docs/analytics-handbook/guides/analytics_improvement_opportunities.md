@@ -1,6 +1,6 @@
 # Analytics Improvement Opportunities
 
-> Last reviewed: 2026-05-28
+> Last reviewed: 2026-06-09
 > Scope: `docs/analytics-handbook/playbooks/`, `docs/analytics-handbook/blueprints/`, and related domain definitions.
 
 This document reviews the current analytics handbook from a business-action perspective. It is not a new dashboard specification. It is a map of where the current reporting system creates the most business leverage, where reports are already strong, where they still stop too early, and what additional data would unlock the next level of insight.
@@ -712,7 +712,7 @@ Data needed:
 - Account category mapping: revenue, COGS, OpEx, tax, interest, depreciation.
 - Optional cost center, department, channel, branch.
 
-System readiness: not ready. The finance domain marks GL-based metrics as planned.
+System readiness: ❌ **Not ready** (2026-06-09). `fact_gl_entries` does not exist. Finance domain marks GL-based metrics as planned.
 
 Recommended next step: define the GL extract contract and account mapping before building dashboards.
 
@@ -737,7 +737,7 @@ Data needed:
 - Payment due dates.
 - Bank transaction data or accounting cash ledger.
 
-System readiness: partially ready. `fact_payments` exists, but the handbook notes that inflow/outflow classification is missing.
+System readiness: ✅ **Partially done** (2026-06-09). `fact_payments` confirmed in production. Inflow/outflow classification and account balance snapshots still missing.
 
 Recommended next step: enrich `fact_payments` with transaction type and account mapping, then add account balance snapshots.
 
@@ -766,7 +766,7 @@ Data needed:
 - Stock adjustment.
 - Optional purchase order and inbound shipment data.
 
-System readiness: not ready. `fact_inventory` is marked planned.
+System readiness: ✅ **Done** (2026-06-09). `fact_inventory_snapshot` and `mart_inventory_health` confirmed in production. OOS, days of supply, dead stock, and clearance candidate dashboards are now unblocked.
 
 Recommended next step: start with daily inventory snapshot by SKU and branch. That is enough to unlock OOS, days of supply, and dead stock.
 
@@ -794,7 +794,7 @@ Data needed:
 - Carrier status events.
 - Return-to-sender events.
 
-System readiness: partially ready for internal processing, not ready for delivery. The current system has `first_shipped_at` but lacks carrier and delivery timestamps.
+System readiness: ❌ **Not ready** (2026-06-09). `fact_shipments` does not exist. Internal `first_shipped_at` available on `fact_orders` but no carrier or delivery timestamp data.
 
 Recommended next step: ingest shipment tracking events and normalize carrier names.
 
@@ -819,7 +819,7 @@ Data needed:
 - Return timestamp.
 - Optional CS notes.
 
-System readiness: partially ready. Return count is estimable from order status, but accurate return reason and partial return data are missing.
+System readiness: ✅ **Partially done** (2026-06-09). `fact_order_returns` confirmed in production with `return_reason`, `return_status`, `refund_status`, `returned_at`, `channel_key` (10 rows, Jan–May 2026). Return reason ranking and product quality dashboards are now unblocked.
 
 Recommended next step: define a returns model separate from orders if the source supports it.
 

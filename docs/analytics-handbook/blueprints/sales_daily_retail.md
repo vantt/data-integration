@@ -33,8 +33,8 @@ All SQL: `WHERE scope_retail`.
 {
   "slug": "ordered_at",
   "name": "Ngày báo cáo",
-  "type": "date/all-options",
-  "default": "past1days",
+  "type": "date/single",
+  "default": "today",
   "field_id": 848
 }
 ```
