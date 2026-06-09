@@ -313,13 +313,11 @@ async function main() {
 
     const dashRemote = await client.dashboard.ensure(dashboard.name, dashboard.description || null, colId, dashParams);
 
-    // If filters exist and dashboard was pre-existing, update parameters via PUT
-    if (dashParams.length > 0) {
-      console.log(`🔍 Syncing ${dashParams.length} filter(s): ${dashParams.map(p => p.name).join(', ')}`);
-      await client.core.request(`/api/dashboard/${dashRemote.id}`, 'PUT', {
-        parameters: dashParams
-      });
-    }
+    // Always sync parameters — even empty array clears existing filters when blueprint has none
+    console.log(`🔍 Syncing ${dashParams.length} filter(s)${dashParams.length > 0 ? ': ' + dashParams.map(p => p.name).join(', ') : ' (clearing all)'}`);
+    await client.core.request(`/api/dashboard/${dashRemote.id}`, 'PUT', {
+      parameters: dashParams
+    });
 
     // Fetch existing dashboard cards to scope updates by dashboard (not just collection)
     const dashDetail = await client.core.request(`/api/dashboard/${dashRemote.id}`);
