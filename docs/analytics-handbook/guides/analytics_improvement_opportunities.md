@@ -923,7 +923,7 @@ Data needed:
 - Promotion calendar.
 - Optional campaign calendar.
 
-System readiness: partially ready. `fact_targets` exists in several playbooks, but target granularity should be validated.
+System readiness: ✅ **Done** (2026-06-09). `fact_targets` confirmed in production (2 rows × 300M/month for `metric_code = 'gmv'`). Used live in CEO Weekly Pulse MTD card. Standardize grain and add pace curves as next step.
 
 Recommended next step: standardize target grain and add expected pace curves.
 
@@ -947,7 +947,7 @@ Data needed:
 - SLA configuration.
 - Reconciliation drift records.
 
-System readiness: mostly ready. Ingestion Health already defines the core observability concepts.
+System readiness: ✅ **Mostly ready** (2026-06-09). Ingestion Health defines core observability concepts. Surface lightweight trust summary inside business dashboards to complete this.
 
 Recommended next step: expose a lightweight trust summary inside business dashboards.
 
@@ -979,12 +979,14 @@ This phase creates better insight from existing models.
 
 This phase unlocks currently impossible analysis.
 
-- Add `fact_gl_entries` for full P&L and OpEx.
-- Add inventory snapshots for OOS, days of supply, and dead stock.
-- Add shipment/carrier events for delivery SLA and carrier performance.
-- Add social conversation metadata for response-time and conversion funnel.
-- Add campaign-level attribution for CAC, payback, and contribution ROAS.
-- Add B2B credit terms for overdue and credit exposure.
+- ❌ Add `fact_gl_entries` for full P&L and OpEx. Not started.
+- ✅ **Inventory data ready** — `fact_inventory_snapshot` + `mart_inventory_health` exist. Build OOS, days of supply, dead stock, and clearance candidate dashboards.
+- ❌ Add shipment/carrier events for delivery SLA and carrier performance. `fact_shipments` does not exist.
+- ❌ Add social conversation metadata for response-time and conversion funnel. Not started.
+- ✅ **`fact_marketing_spend` exists** — validate attribution quality and add campaign-level keys before CAC/payback metrics.
+- ✅ **`fact_targets` in production** — standardize grain (currently only GMV at monthly level) and add pace curves.
+- ✅ **`fact_order_returns` exists** — build return reason ranking and product quality dashboards.
+- ⚠️ Add B2B credit terms — `fact_payments` exists but payment terms and due dates per invoice are still missing.
 
 ## 5. Filename Recommendation
 
