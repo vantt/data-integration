@@ -63,11 +63,16 @@ Cons: Doesn't prevent accumulation between runs; just limits max accumulation.
 
 - [x] Read `orchestration/assets/dbt.py` to find where dbt run completes
 - [x] Add post-run GC call (subprocess to `refresh_rolling.py`) at end of `sapo_dbt_assets` — `_gc_rolling_parquet(context)` in `finally` block (2026-06-09)
-- [ ] Verify: trigger `sapo_dbt_assets` manually without serving_asset → confirm files stay ≤3
-- [ ] Add Option C: Dagster schedule or sensor calling `refresh_rolling.py` every 2h as backstop
+- [x] Verify: triggered `transform_batch_nightly_job` manually — run 2164a0c6 SUCCESS, GC output metrics confirmed
+- [ ] Add Option C: Dagster schedule or sensor calling `refresh_rolling.py` every 2h as backstop (deferred — Option A sufficient for now)
 - [x] Update `transformation/AGENTS.md` — troubleshooting entry added (2026-06-09)
 
 ## Verification
+
+**Manual run 2164a0c6 (transform_batch_nightly_job) — GC output metrics:**
+- Refresh done: tables=55 keep=3 deleted=28 skipped=0
+- All 47 populated tables ≤3 files post-run
+- GC fires in finally block even on failed runs
 
 ```bash
 # Before fix: count files per table

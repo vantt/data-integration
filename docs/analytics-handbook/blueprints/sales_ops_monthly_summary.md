@@ -31,7 +31,7 @@ issues:
 {
   "slug": "date_range",
   "type": "date/all-options",
-  "default": "past1months",
+  "default": "thismonth",
   "field_id": 848
 }
 ```
