@@ -4,6 +4,7 @@
 > **Cập nhật:** 2026-05-27 (restructure: 6 top-level + Finance + Analytics + sub Logistics/Data Platform)
 > **Bảo trì:** Data Team
 > **Tham chiếu kỹ thuật:** [`collection_registry.yml`](../collection_registry.yml)
+> **Lịch sử quyết định:** [`decisions/009-collection-by-audience.md`](../../decisions/009-collection-by-audience.md)
 > **Xem thêm:** [Report Segmentation Guide](./report_segmentation.md) — Phân lớp báo cáo theo scope
 > **Migration:** [plans/260527-1327-metabase-collection-restructure/](../../../plans/260527-1327-metabase-collection-restructure/)
 
@@ -86,20 +87,7 @@ Tần suất (daily/weekly/monthly) là thuộc tính của dashboard, không ph
 └──────────┘ └────────┘ └───────┘ └────────┘ └─────────┘ └─────────┘
 ```
 
-| Collection | Layer | Câu hỏi chính | Ai mở? | Scope | Dashboards count |
-|:---|:---|:---|:---|:---|:---|
-| **📍 Start Here** | — | "Where do I go?" | All users | [All] | 1 (Welcome) |
-| **Executive** | L1 | "Công ty đang thế nào?" | CEO, Founders, Board | scope_sales [All] | 3 |
-| **Finance** | L1.5 | "Tiền đi đâu?" | CFO, FP&A, Accounting | scope_sales [All] | 3 (+5 roadmap) |
-| **Marketing & Customers** | L2-Retail | "Kênh/Khách retail?" | Marketing, CS | scope_retail [Retail] | 6 |
-| **Operations** | L2 | "Hôm nay làm gì?" | Ops team | (sub-collections) | 6 subs |
-| ↳ US CrossBorder (NEW) | L2-US | "Export/arrangement?" | US Ops | scope_us [US] | 1 |
-| ↳ Daily Monitoring | L2 | "Bây giờ ra sao?" | Store Managers | scope_retail [Retail] | 5 |
-| ↳ Periodic Reviews | L2 | "Tuần/Tháng?" | Sales Ops Lead | scope_retail [Retail] | 2 |
-| ↳ B2B Operations | L2-B2B | "Khách sỉ?" | B2B AM | scope_b2b [B2B] | 2 |
-| ↳ Logistics (NEW) | L2 | "Giao hàng?" | Logistics Manager | scope_sales [All] | 1 |
-| ↳ Data Platform (NEW) | Internal | "Pipeline?" | Data Engineering | — | 1 |
-| **Analytics** | L3 | "So sánh segment?" | Analysts, Leadership | scope_sales + breakdown [Cross] | 4 |
+Danh sách đầy đủ audience, dashboard, và lookup table → xem [`collection_registry.yml`](../collection_registry.yml).
 
 ---
 
@@ -160,9 +148,6 @@ Dashboard mới cần tạo
        ├── Dành cho review tuần/tháng (retail ops)?
        │       → Operations > Periodic Reviews [Retail] — Layer 2
        │
-       ├── Dành cho phân tích promotion/discount?
-       │       → Operations > Retail Operations [Retail] — BẮT BUỘC scope_retail
-       │
        ├── Dành cho so sánh cross-segment / research?
        │       → Analytics [Cross] — Layer 3
        │
@@ -183,7 +168,7 @@ Dashboard mới cần tạo
 
 ## 6. Khi nào cần thay đổi cấu trúc?
 
-Cấu trúc hiện tại (4 top-level + sub-collections) phù hợp với team nhỏ-vừa (~10-20 người dùng Metabase). Cần điều chỉnh khi:
+Cấu trúc hiện tại (6 top-level + sub-collections) phù hợp với team nhỏ-vừa (~10-20 người dùng Metabase). Cần điều chỉnh khi:
 
 | Tín hiệu | Hành động |
 |:---|:---|
