@@ -3780,3 +3780,32 @@ DuckDB tokenizer saw `current_dateGROUP` as an unknown identifier and then could
 3. Run `/api/card/<id>/query` via the Metabase API to confirm queries execute before considering a deployment done.
 
 **Reference:** `docs/analytics-handbook/blueprints/order_listing.md` — "Orders by Channel" SQL, Today/Yesterday/By Date tabs
+
+---
+
+### L117 — Metabase `start-of-week` defaults to Sunday — weekly dashboards show Sun-Sat instead of Mon-Sun
+
+**Group:** SERVE
+
+**Symptom:** The weekly review dashboard (dashboard 8) with `past1weeks` filter returned a Sun-Sat window (e.g. 2026-05-25 Mon → actually starting Sun May 25) instead of the expected T2-CN (Mon-Sun) calendar week. The cycle indicator showed the wrong week boundaries, and stakeholders comparing to the calendar saw misaligned numbers.
+
+**Root cause:** Metabase `start-of-week` admin setting defaults to `null`, which resolves to `"sunday"`. All week-based filter shortcuts (`thisweek`, `past1weeks`, `last7days`-week-aligned) use Sunday as the week boundary. The original dashboard also used `past7days` (rolling 7 days, not calendar-week-aligned) which further obscured the issue.
+
+**Fix:**
+1. Set Metabase `start-of-week` to `"monday"` via API:
+   ```bash
+   curl -s -X PUT "$METABASE_URL/api/setting/start-of-week" \
+     -H "x-api-key: $METABASE_API_KEY" \
+     -H "Content-Type: application/json" \
+     -d '{"value":"monday"}'
+   ```
+2. Change dashboard default filter from `past7days` (rolling) to `past1weeks` (previous complete calendar week).
+3. Verify cycle indicator SQL uses `MIN(ordered_at)::DATE` / `MAX(ordered_at)::DATE` from `filter_bounds` — not hardcoded `EXTRACT(WEEK FROM current_date)`.
+
+**Rules:**
+1. After any Metabase instance setup, immediately set `start-of-week = monday` (VN business weeks are T2-CN).
+2. For weekly period dashboards, use `past1weeks` not `past7days`. `past7days` is rolling and never aligns to a calendar week boundary.
+3. The `start-of-week` setting is instance-wide — changing it affects ALL dashboards. Verify no dashboard was intentionally Sun-Sat before changing.
+4. If the cycle indicator is showing unexpected week numbers, check `start-of-week` first before debugging SQL.
+
+**Reference:** `docs/analytics-handbook/blueprints/sales_ops_weekly_review.md` — default filter `past1weeks`, Chu kỳ báo cáo SQL
