@@ -96,6 +96,14 @@ This script patches `dbtmetabase.manifest.DEFAULT_SCHEMA = "main_marts"` at runt
 
 ## Troubleshooting Common Issues
 
+### Rolling Parquet Files Accumulating (Direct Reads Return Inflated Data)
+
+- **Symptom**: `read_parquet('rolling/fact_orders/*.parquet')` returns N× duplicate rows. `ls` shows >3 files per table (e.g., 12 files instead of 3).
+- **Root cause**: `refresh_rolling.py` (GC logic, `ROLLING_KEEP_VERSIONS=3`) is called by the Dagster `serving_asset`, which depends on `sapo_dbt_assets`. When `sapo_dbt_assets` is materialized manually or selectively without triggering the downstream `serving_asset`, new parquet files are written but old ones are never deleted.
+- **Serving DB unaffected**: `olap.duckdb` views point to `MAX(filename)` (latest file) — not a glob. Metabase reads are always correct. Only direct `read_parquet('/*.parquet')` glob queries are affected.
+- **Manual fix**: `docker exec data_platform python3 /app/scripts/provisioning/refresh_rolling.py` — runs GC immediately, safe to run at any time.
+- **Permanent fix**: See `plans/260609-1213-rolling-parquet-cleanup/` — move GC into dbt asset post-execution so it runs on every materialization.
+
 ### "Empty folder / View Dropped" in Serving Script
 
 - **Symptom**: `generate_serving_db.py` reports `[!] Empty folder: dim_xyz` and drops the view, even after dbt run success.
