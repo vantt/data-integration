@@ -93,6 +93,7 @@ collections:
       - "Marketing Weekly Tracker [Retail]"
       - "Marketing Monthly Analysis [Retail]"
       - "Marketing ROI [Retail]"
+      - "Customer Action Queue [Retail]"
       - "Customer Operational [Retail]"
       - "Customer Retention & Lifecycle [Retail]"
       - "Promotion Analysis [Retail]"
@@ -117,9 +118,10 @@ collections:
         description: "Real-time và yesterday's retail dashboards. Multiple times/day."
         audience: [Store Managers]
         dashboards:
+          - "Today Sales [Retail]"
           - "Daily Sales [Retail]"
           - "Yesterday's Sales [Retail]"
-          - "Order Listing [Retail]"
+          - "Order Listing [All]"
           - "Social Commerce Operations [Retail]"
 
       - name: Periodic Reviews
@@ -162,6 +164,7 @@ collections:
       - "Channel Profitability Monthly [Cross]"
       - "Product Performance [Cross]"
       - "Shopee Channel Economics [Cross]"
+      - "Order Revenue Explorer"  # audit/drill-down tool — no scope suffix (cross-all)
 
 
 # =============================================================================

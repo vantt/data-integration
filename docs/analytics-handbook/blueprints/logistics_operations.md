@@ -17,7 +17,7 @@ uses_concepts: [scope_sales, net_revenue, fulfillment_status]
 > [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`fulfillment_status`](../semantic/dimensions.md#fulfillment_status)
 
 All SQL: `WHERE scope_sales`. Segment breakdown optional as a dimension.
-## 📂 Collection: Operations > Daily Monitoring
+## 📂 Collection: Operations > Logistics
 
 ### Dashboard: Logistics Operations Center [All]
 

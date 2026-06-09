@@ -10,7 +10,7 @@ uses_concepts: []
 **Design Spec**: [ingestion_health.md](../designs/ingestion_health.md)
 **Playbook**: [ingestion_health.md](../playbooks/ingestion_health.md)
 
-> **Target Collection:** `Operations > Daily Monitoring`
+> **Target Collection:** `Operations > Data Platform`
 > **Role:** Data Engineer / Ops
 > **Archetype:** Operational Cockpit
 > **Database:** `Ingestion Health` (DuckDB — `/app/data_lake/monitoring/ingestion_health.duckdb`)
@@ -19,7 +19,7 @@ uses_concepts: []
 
 > **Semantic layer:** [`semantic/README.md`](../semantic/README.md) — segments, metrics, dimensions, rules, freshness.
 > **Scope:** N/A — infrastructure monitoring. Scope/segmentation concepts do not apply. Dashboard monitors ingestion pipeline health (SLA status, recon drift, volume trends, failure logs) at the source level, independent of business customer segment definitions.
-## 📂 Collection: Operations > Daily Monitoring
+## 📂 Collection: Operations > Data Platform
 
 ### 🖥️ Dashboard: Ingestion Health Monitor [Internal]
 

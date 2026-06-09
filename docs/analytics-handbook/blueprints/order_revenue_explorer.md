@@ -24,7 +24,7 @@ Bảng đơn hàng + KPI dùng CHUNG một tập order (mọi status, không lo�
 > [`scope_sales`](../semantic/segments.md#scope_sales) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_revenue`](../semantic/metrics.md#gross_revenue)
 
 Base SQL: `WHERE scope_sales`. Segment drill-down via dashboard filter, not hardcoded SQL.
-## 📂 Collection: Order Management
+## 📂 Collection: Analytics
 
 ### Dashboard: Order Revenue Explorer
 

@@ -27,7 +27,7 @@ uses_concepts:
 >
 > **Concepts used:**
 > [`scope_sales`](../semantic/segments.md#scope_sales) · [`scope_retail`](../semantic/segments.md#scope_retail) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`retention_rate`](../semantic/metrics.md#retention_rate) · [`customer_acquisition`](../semantic/metrics.md#customer_acquisition)
-## 📂 Collection: Marketing & Customers
+## 📂 Collection: Analytics
 
 Channel performance, customer acquisition, retention, segmentation, and campaign analysis.
 

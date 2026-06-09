@@ -21,7 +21,7 @@ Dashboard P&L tai chinh toan cong ty — doanh thu thuan, gia von, loi nhuan gop
 > [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`cogs_amount`](../semantic/metrics.md#cogs_amount)
 
 Revenue SQL: `WHERE scope_sales`. P&L SQL: `WHERE scope_sales AND has_cogs`. Do not re-derive `is_sales_channel` or `status NOT IN (...)` inline.
-## 📂 Collection: Executive
+## 📂 Collection: Finance
 
 ### 🖥️ Dashboard: Finance P&L [All]
 

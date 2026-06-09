@@ -26,7 +26,7 @@ uses_concepts: [scope_sales, filter_has_cogs, net_revenue, orders_count, aov, gr
 > [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`orders_count`](../semantic/metrics.md#orders_count) · [`aov`](../semantic/metrics.md#aov) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`is_active_order`](../semantic/metrics.md#is_active_order)
 
 All SQL: `WHERE scope_sales`. Do not re-derive as `is_sales_channel = true AND status NOT IN (...)`.
-## Collection: Executive
+## 📂 Collection: Executive
 
 ### Dashboard: CEO Weekly Pulse [All]
 

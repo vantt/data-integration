@@ -24,7 +24,7 @@ P&L per order — gross margin, channel net profit, cost structure, order detail
 > [`scope_sales`](../semantic/segments.md#scope_sales) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`net_revenue`](../semantic/metrics.md#net_revenue) · [`gross_profit`](../semantic/metrics.md#gross_profit) · [`cogs_amount`](../semantic/metrics.md#cogs_amount)
 
 Revenue: `WHERE scope_sales`. Margin: `WHERE scope_sales AND has_cogs`.
-## 📂 Collection: Executive
+## 📂 Collection: Finance
 
 ### Dashboard: Order Profitability [All]
 
