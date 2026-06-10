@@ -3809,3 +3809,46 @@ DuckDB tokenizer saw `current_dateGROUP` as an unknown identifier and then could
 4. If the cycle indicator is showing unexpected week numbers, check `start-of-week` first before debugging SQL.
 
 **Reference:** `docs/analytics-handbook/blueprints/sales_ops_weekly_review.md` — default filter `past1weeks`, Chu kỳ báo cáo SQL
+
+### L118 — Packsize COGS overcounted ×N when MISA records in the pack unit, not the base unit
+
+**Group:** MODEL
+
+**Symptom:** `mart_sku_economics_monthly` showed 5 Fine Japan "hộp 10" (H010) SKUs with realized margin −78% to −322% (net_revenue − cogs_amount deeply negative), implying selling far below cost (~809M 2026 revenue, COGS overcounted ~1.7B). `gross_margin_pct` still looked healthy (~65%), masking the error. A downstream assessment wrongly concluded "H010 sold below cost / 440M loss."
+
+**Root cause:** `dim_sku_alias.misa_qty_multiplier` (= `packsize_quantity`, e.g. 10) assumes MISA records COGS in BASE units (chai/bottle). For these SKUs MISA actually records in PACK units (Hộp/box) — the per-bottle "Chai" lines are all `is_promo_line=true` and get filtered out by the model, so `cogs_per_misa_unit` is already cost-per-box. Multiplying by 10 again inflated COGS ×10. `gross_margin_pct` hid it because `misa_revenue_net` is also ×10 in both numerator and denominator (the ratio survives).
+
+**Fix:**
+1. Audit (one-off): for each `misa_join_key` with multiplier>1, check whether non-promo `int_misa_sales_lines` are in pack or base unit (compare MISA rev/unit to Sapo pack price). Bug was localized — 5 SKUs; the other ~71 packsize SKUs were correct, so do NOT touch AUTO_PACKSIZE logic.
+2. `seed_sku_alias_manual.csv`: set `misa_qty_multiplier=1` for the affected pack SKUs (MANUAL_OVERRIDE wins over AUTO_PACKSIZE). Keep `units_per_pack=10` (physical descriptor; mart only uses the multiplier).
+3. Added `realized_gross_profit` / `realized_margin_pct` (Sapo `net_revenue` basis) so commercial margin is explicit and distinct from MISA-book `gross_margin_pct`.
+
+**Rules:**
+1. `misa_qty_multiplier` must be 1 when MISA already records in the pack unit; >1 only when MISA records in base units. Verify per SKU before trusting AUTO_PACKSIZE (`= packsize_quantity`).
+2. Never trust `gross_margin_pct` alone for a pack SKU — it cancels the multiplier and hides COGS errors. Cross-check `cogs_amount` vs `net_revenue` (`realized_margin_pct`).
+3. A realized margin worse than ~−50% is almost always a COGS unit/multiplier artifact, not real below-cost selling — diagnose root cause before "fixing" the metric (don't enshrine the bad number).
+4. Two margin columns now exist: `gross_margin_pct` = MISA-book; `realized_margin_pct` = commercial (Sapo price). Use `realized_*` for pricing/dashboards.
+
+**Reference:** `transformation/seeds/seed_sku_alias_manual.csv` ; `transformation/models/marts/sales/mart_sku_economics_monthly.sql` (CAVEAT #7) ; `plans/260604-1125-retail-reactivation/02-understand/product-performance-assessment.md` §3c
+
+### L119 — bootstrap_serving_views blocked by Metabase read-only lock — must stop Metabase first
+
+**Group:** SERVE
+
+**Symptom:** `bootstrap_serving_views.py` failed: `IO Error: Could not set lock on file "olap.duckdb": Conflicting lock is held in PID 0` while Metabase was up — despite the script docstring claiming read_only readers coexist with the writer ("verified 2026-04-08, no stop needed").
+
+**Root cause:** the current DuckDB version makes Metabase's `read_only=true` connection hold a shared lock that conflicts with the script's exclusive WRITE lock. The "PID 0" holder is cross-namespace: the metabase container's `java` process holds an fd on `olap.duckdb`. No `data_platform` / `detail_view` / `rill` process held it. The 2026-04-08 "readers coexist" assumption no longer holds after the DuckDB/Metabase version bump.
+
+**Fix:**
+1. `docker compose stop metabase`
+2. `docker compose exec -T data_platform python scripts/provisioning/bootstrap_serving_views.py`
+3. `docker compose start metabase`
+4. Verify: read_only connect to `olap.duckdb`, check `information_schema.columns` for the new column(s).
+
+**Rules:**
+1. Stop Metabase before running `bootstrap_serving_views.py` — the writer needs an exclusive lock and a read_only reader still blocks it in the current DuckDB version. (Updated the script docstring accordingly.)
+2. "Conflicting lock in PID 0" = holder is in another mount namespace. Find it via other containers' `/proc/*/fd` (grep `olap.duckdb`); do NOT force-unlock (corruption/lock-storm risk).
+3. Serving views are `SELECT *` over the rolling parquet glob → corrected DATA flows to Metabase automatically; only NEW or renamed COLUMNS need a bootstrap (CREATE OR REPLACE re-binds the `*`).
+4. Don't trust a script docstring over observed lock behaviour after a version bump — verify empirically.
+
+**Reference:** `scripts/provisioning/bootstrap_serving_views.py` docstring ; lesson L18
