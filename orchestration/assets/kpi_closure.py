@@ -113,7 +113,11 @@ def _fetch_sapo_revenue(window_start: datetime, window_end: datetime) -> Optiona
 
 
 def _fetch_warehouse_revenue(date_key: int) -> Optional[float]:
-    """Fetch SUM(net_revenue) from fact_orders for the given date_key."""
+    """Fetch SUM(total_collected) from fact_orders for the given date_key.
+
+    Uses total_collected (= $.total, VAT-inclusive) to match the raw-parquet
+    source query so the KPI drift reflects true pipeline gaps, not VAT deduction.
+    """
     if not os.path.exists(_SERVING_DB_PATH):
         logger.warning("kpi_closure: serving DB not found at %s", _SERVING_DB_PATH)
         return None
@@ -121,11 +125,12 @@ def _fetch_warehouse_revenue(date_key: int) -> Optional[float]:
     conn = None
     try:
         conn = duckdb.connect(_SERVING_DB_PATH, read_only=True)
-        # Exclude cancelled/voided orders
+        # Exclude cancelled/voided orders; use total_collected (= $.total, VAT-inclusive)
+        # to match the raw-parquet source query which sums $.total directly.
         exclude_list = ", ".join(f"'{s}'" for s in _EXCLUDE_STATUSES)
         row = conn.execute(
             f"""
-            SELECT COALESCE(SUM(net_revenue), 0)
+            SELECT COALESCE(SUM(total_collected), 0)
             FROM fact_orders
             WHERE date_key = ?
               AND LOWER(status) NOT IN ({exclude_list})
