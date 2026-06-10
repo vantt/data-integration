@@ -1,6 +1,14 @@
 version: 2
 
 models:
+  # Order Transitions (history_log)
+  - name: fact_order_transitions
+    description: >
+      One row per meaningful order state transition from history_log snapshots.
+      Grain: (order_id, snapshot_seq). transition_type classifies each event:
+      created, cancelled, completed, shipped, payment_received, or updated.
+      days_since_prev_event is NULL for the first snapshot (creation).
+
   # US Shipment
   - name: fact_us_shipment_economics
     description: >
@@ -884,6 +892,10 @@ models:
         description: "Gross profit = MISA net revenue − COGS. NULL when no MISA data."
       - name: gross_margin_pct
         description: "Gross margin % based on MISA revenue. NULL when no MISA data."
+      - name: realized_gross_profit
+        description: "Commercial gross profit = Sapo net_revenue − cogs_amount. Preferred over gross_profit for pricing/dashboards (CAVEAT #7 in SQL)."
+      - name: realized_margin_pct
+        description: "Commercial margin % = (net_revenue − cogs_amount) / net_revenue. Uses actual Sapo selling price. Prefer over gross_margin_pct for pricing decisions. COGS correctness depends on misa_qty_multiplier in seed_sku_alias_manual (H010 SKUs fixed 2026-06-10)."
       - name: cogs_per_unit_3m_avg
         description: "Trailing 3-month average COGS per unit for trend comparison."
       - name: cogs_variance_pct

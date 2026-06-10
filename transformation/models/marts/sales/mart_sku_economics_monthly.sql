@@ -44,6 +44,14 @@
 -- 6. Channel concentration: only the single top channel by revenue is surfaced.
 --    Full channel breakdown is JSON-heavy and deferred to blueprint-level queries.
 --
+-- 7. TWO margin metrics, DIFFERENT denominators — do not confuse:
+--    - gross_margin_pct    = MISA-book margin (gross_profit / misa_revenue_net).
+--    - realized_margin_pct = commercial margin (net_revenue - cogs_amount) / net_revenue,
+--      on the ACTUAL Sapo selling price. Prefer realized_margin_pct for pricing/dashboards.
+--    Pack-variant COGS depends on a correct misa_qty_multiplier (dim_sku_alias /
+--    seed_sku_alias_manual): it must be 1 when MISA already records in the pack unit,
+--    else COGS is overcounted x packsize (H010 SKUs fixed in seed, audited 2026-06-10).
+--
 -- Refresh: dbt build --select +mart_sku_economics_monthly
 -- =============================================================================
 
@@ -388,6 +396,18 @@ final AS (
             4
         )                                                       AS gross_margin_pct,
 
+        -- ── Realized margin (Sapo net_revenue basis = true commercial margin) ─
+        -- gross_margin_pct above is MISA-book (gross_profit / misa_revenue_net).
+        -- realized_* uses ACTUAL Sapo net_revenue + COALESCE'd cogs_amount → the
+        -- margin truly earned on the sale. Prefer for pricing/dashboards (CAVEAT #7).
+        sa.net_revenue - COALESCE(mc.cogs_amount, smac.sapo_mac_cogs_amount)
+                                                                AS realized_gross_profit,
+        ROUND(
+            (sa.net_revenue - COALESCE(mc.cogs_amount, smac.sapo_mac_cogs_amount)) * 100.0
+            / NULLIF(sa.net_revenue, 0),
+            4
+        )                                                       AS realized_margin_pct,
+
         -- ── COGS Variance (vs 3-month trailing average) ──────────────────────
         ROUND(
             ct.cogs_3m_sum::double / NULLIF(ct.qty_3m_sum, 0),
@@ -514,6 +534,8 @@ SELECT
     cogs_per_unit,
     gross_profit,
     gross_margin_pct,
+    realized_gross_profit,
+    realized_margin_pct,
 
     -- COGS Variance
     cogs_per_unit_3m_avg,
