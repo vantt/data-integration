@@ -437,11 +437,12 @@ def history_log(
                                 "source_system": "sapo",
                                 "source": "history_log",
                                 "event_timestamp": item_occur_at,
-                                "processing_timestamp": datetime.utcnow().isoformat(),
+                                "processing_timestamp": datetime.utcnow().isoformat() + "Z",
                                 "original_event_id": str(item.get("id")),
-                                # Store other log details if needed
                                 "actor_name": item.get("actorName"),
-                                "description": item.get("description")
+                                "description": item.get("description"),
+                                "root_type": item.get("rootType"),
+                                "root_id": str(item.get("rootId")) if item.get("rootId") else None,
                             }
                         }
                         

@@ -28,6 +28,12 @@ models:
       - name: location_name
         description: "Denormalized from dim_branch_location; 'Unknown' when location_id not in registry"
 
+  - name: int_order_snapshots_ranked
+    description: >
+      All history_log snapshots per order ranked by event_timestamp, with LAG columns
+      exposing previous status/payment_status/fulfillment_status. Grain: one row per
+      (order_id, event_timestamp). Used exclusively by fact_order_transitions.
+
   - name: int_return_sku_lines
     description: >
       Returns × SKU approximation (Case B). Grain: (return_id, product_key).
