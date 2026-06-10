@@ -49,6 +49,16 @@ models:
         description: "Carrier tracking number"
       - name: status
         description: "DELIVERED / SHIPPING / PACKED / CANCELLED / FAILED / PENDING"
+      - name: shipment_status
+        description: "Raw carrier shipment status from Sapo ($.shipment.status)"
+      - name: shipped_at
+        description: "Timestamp when fulfillment was handed to carrier (TIMESTAMPTZ)"
+      - name: delivered_at
+        description: "Timestamp of carrier delivery confirmation (TIMESTAMPTZ); NULL if not yet delivered"
+      - name: days_to_deliver
+        description: "Calendar days from shipped_at to delivered_at; NULL if not delivered"
+      - name: is_delivered
+        description: "TRUE when status = DELIVERED"
 
   # Observability
   - name: mart_data_quality
