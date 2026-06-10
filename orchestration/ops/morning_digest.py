@@ -29,16 +29,21 @@ logger = logging.getLogger("orchestration.morning_digest")
 # Known asset registry: (short_name, asset_key, recon_asset_key | None)
 # ---------------------------------------------------------------------------
 KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
-    ("sapo_webhook",   "sapo/sapo_webhook_consumer_asset",   None),
-    ("sapo_history",   "sapo/sapo_history_log_asset",        None),
-    ("sapo_orders",    "sapo/sapo_orders_batch_asset",       "recon/sapo_orders_daily"),
-    ("sapo_customers", "sapo/sapo_customers_batch_asset",    "recon/sapo_customers_daily"),
-    ("sapo_products",  "sapo/sapo_products_batch_asset",     None),
-    ("sapo_accounts",  "sapo/sapo_accounts_batch_asset",     None),
-    ("shopee",         "shopee/shopee_income_file_drop_asset","recon/shopee_daily"),
-    ("misa",           "misa_amis/misa_sales_file_drop_asset","recon/misa_daily"),
-    ("sheet_targets",  "sheets/sheets_targets_asset",        None),
-    ("sheet_spend",    "sheets/sheets_marketing_spend_asset", None),
+    ("sapo_webhook",   "sapo/sapo_webhook_consumer_asset",                    None),
+    ("sapo_history",   "sapo/sapo_history_log_asset",                         None),
+    ("sapo_orders",    "sapo/sapo_orders_batch_asset",                        "recon/sapo_orders_daily"),
+    ("sapo_customers", "sapo/sapo_customers_batch_asset",                     "recon/sapo_customers_daily"),
+    ("sapo_products",  "sapo/sapo_products_batch_asset",                      None),
+    ("sapo_accounts",  "sapo/sapo_accounts_batch_asset",                      None),
+    ("sapo_inventory", "sapo/sapo_inventory_transactions_v2_asset",           None),
+    ("shopee",         "shopee/shopee_income_file_drop_asset",                "recon/shopee_daily"),
+    ("misa",           "misa_amis/misa_sales_file_drop_asset",                "recon/misa_daily"),
+    ("misa_acct",      "misa_amis/misa_account_ledger_file_drop_asset",       None),
+    ("sheet_targets",  "sheets/sheets_targets_asset",                         None),
+    ("sheet_spend",    "sheets/sheets_marketing_spend_asset",                 None),
+    ("sheet_team",     "sheets/sheets_team_config_asset",                     None),
+    ("sheet_us_prices","sheets/sheets_us_shipment_prices_asset",              None),
+    ("sheet_overhead", "sheets/sheets_overhead_classification_asset",         None),
 ]
 
 # ---------------------------------------------------------------------------
@@ -50,16 +55,21 @@ KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
 # unit_label is the noun used for rows (đơn / khách / sản phẩm / dòng …)
 # ---------------------------------------------------------------------------
 ASSET_DISPLAY: dict[str, tuple[str, str, str]] = {
-    "sapo_webhook":   ("Sapo webhook (realtime events)", "cursor",    "events"),
-    "sapo_history":   ("Sapo lịch sử (audit log)",       "cursor",    "dòng"),
-    "sapo_orders":    ("Sapo đơn hàng (batch)",          "batch",     "đơn"),
-    "sapo_customers": ("Sapo khách hàng",                "batch",     "khách"),
-    "sapo_products":  ("Sapo sản phẩm",                  "batch",     "sản phẩm"),
-    "sapo_accounts":  ("Sapo tài khoản",                 "batch",     "tài khoản"),
-    "shopee":         ("Shopee — file thu nhập",         "file_drop", "dòng"),
-    "misa":           ("MISA — file bán hàng",           "file_drop", "dòng"),
-    "sheet_targets":  ("Google Sheet — Mục tiêu",        "file_drop", "dòng"),
-    "sheet_spend":    ("Google Sheet — Chi marketing",   "file_drop", "dòng"),
+    "sapo_webhook":   ("Sapo webhook (realtime events)",          "cursor",    "events"),
+    "sapo_history":   ("Sapo lịch sử (audit log)",                "cursor",    "dòng"),
+    "sapo_orders":    ("Sapo đơn hàng (batch)",                   "batch",     "đơn"),
+    "sapo_customers": ("Sapo khách hàng",                         "batch",     "khách"),
+    "sapo_products":  ("Sapo sản phẩm",                           "batch",     "sản phẩm"),
+    "sapo_accounts":  ("Sapo tài khoản",                          "batch",     "tài khoản"),
+    "sapo_inventory": ("Sapo tồn kho (batch)",                    "batch",     "giao dịch"),
+    "shopee":         ("Shopee — file thu nhập",                  "file_drop", "dòng"),
+    "misa":           ("MISA — file bán hàng",                    "file_drop", "dòng"),
+    "misa_acct":      ("MISA — sổ chi tiết tài khoản",            "file_drop", "dòng"),
+    "sheet_targets":  ("Google Sheet — Mục tiêu",                 "file_drop", "dòng"),
+    "sheet_spend":    ("Google Sheet — Chi marketing",            "file_drop", "dòng"),
+    "sheet_team":     ("Google Sheet — Cấu hình nhóm",            "file_drop", "dòng"),
+    "sheet_us_prices":("Google Sheet — Giá vận chuyển US",        "file_drop", "dòng"),
+    "sheet_overhead": ("Google Sheet — Phân loại overhead",       "file_drop", "dòng"),
 }
 
 # ---------------------------------------------------------------------------
