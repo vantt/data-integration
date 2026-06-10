@@ -818,12 +818,40 @@ ORDER BY 1
 }
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 Source: `fact_orders` (order-level) + `fact_sales` (line-item, Items/Order) · Real-time · **Scope: scope_retail (pre-computed)** · KPIs & Hourly: hôm nay vs hôm qua · Health Score: D-6 → hôm nay so với D-13 → D-7 · Bao gồm tất cả trạng thái đơn
+<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 25, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---
@@ -1086,12 +1114,40 @@ ORDER BY 3 DESC
 { "row": 17, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 22, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 Source: `fact_orders` · Real-time · **Scope: scope_retail (pre-computed)** · Ranking kênh: hôm nay · DoD table (Channel Performance): hôm nay vs hôm qua · Bao gồm tất cả trạng thái đơn
+<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---
@@ -1302,12 +1358,40 @@ LIMIT 20
 { "row": 10, "col": 9, "size_x": 9, "size_y": 8 }
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 17, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 Source: `fact_sales` (granularity: line-item / SOL) join `fact_orders` (scope) · Real-time · **Scope: scope_retail (pre-computed)** · Khung thời gian: hôm nay (by ordered_at, không phải ordered_at)
+<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 18, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 19, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---
@@ -1621,12 +1705,40 @@ WHERE date(o.ordered_at) = current_date
 }
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 Source: `fact_orders` + `fact_payments` (PTTT, by payment_timestamp) + `dim_customers` (At Risk = RFM snapshot, không theo ngày) · Real-time · **Scope: scope_retail (pre-computed)** · Hôm nay (by ordered_at) · Bao gồm tất cả trạng thái đơn
+<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ---

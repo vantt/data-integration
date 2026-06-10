@@ -512,13 +512,41 @@ FROM (
 {"row": 97, "col": 0, "size_x": 18, "size_y": 2}
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    || '  ·  Shopee payout cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', (SELECT MAX(payout_released_at) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 98, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + int_misa_sales_lines · **Cadence:** monthly · **Scope:** is_sales_channel=true · **Caveats:** MISA COGS coverage ~65%
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 100, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ### 📑 Tab: Channel Profitability
@@ -752,13 +780,41 @@ ORDER BY 1, 2
 
 ---
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    || '  ·  Shopee payout cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', (SELECT MAX(payout_released_at) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 98, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + int_misa_sales_lines · **Cadence:** monthly · **Scope:** is_sales_channel=true · **Caveats:** MISA COGS coverage ~65%
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 100, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ### 📑 Tab: Shopee Economics
@@ -1211,13 +1267,41 @@ FROM (
 { "row": 12, "col": 9, "size_x": 9, "size_y": 6 }
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    || '  ·  Shopee payout cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', (SELECT MAX(payout_released_at) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 98, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + int_misa_sales_lines · **Cadence:** monthly · **Scope:** is_sales_channel=true · **Caveats:** MISA COGS coverage ~65%
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 100, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ### 📑 Tab: Fully Loaded P&L
@@ -1416,11 +1500,39 @@ LIMIT 24
 { "row": 18, "col": 0, "size_x": 18, "size_y": 6 }
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    || '  ·  Shopee payout cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', (SELECT MAX(payout_released_at) FROM int_shopee_order_fees WHERE payout_released_at IS NOT NULL)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 98, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_order_economics + fact_order_costs · **Cadence:** monthly · **Scope:** scope_sales + has_cogs · **Caveats:** allocated_overhead may be estimated for recent months (see flag table)
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 100, "col": 0, "size_x": 18, "size_y": 1 }
 ```

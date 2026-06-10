@@ -653,12 +653,39 @@ ORDER BY "ROAS" DESC NULLS LAST
 {"row": 37, "col":0, "size_x":18, "size_y":8}
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 98, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_marketing_spend + fact_order_economics · **Cadence:** rolling-30d · **Scope:** scope_retail
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 100, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 

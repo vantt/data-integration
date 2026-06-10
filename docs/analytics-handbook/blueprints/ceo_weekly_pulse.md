@@ -466,13 +466,40 @@ ORDER BY o.ordered_at DESC
 ---
 
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 98, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 100, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ### Tab: Kenh ban hang
@@ -739,13 +766,40 @@ ORDER BY COALESCE(tw.revenue, 0) DESC
 ---
 
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 98, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 100, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 ### Tab: Khach hang & Canh bao
@@ -1223,11 +1277,38 @@ FROM (
 { "row": 19, "col": 12, "size_x": 6, "size_y": 3 }
 ```
 
+#### ❓ Question: Độ tươi dữ liệu
+
+```sql
+SELECT
+    CASE WHEN MAX(o.ordered_at) < now() - INTERVAL '24 hours'
+         THEN '⚠️ DỮ LIỆU CÓ THỂ CŨ — '
+         ELSE ''
+    END
+    || '🕐 Đơn cuối: ' || strftime(timezone('Asia/Ho_Chi_Minh', MAX(o.ordered_at)), '%d/%m %H:%M')
+    || '  ·  COGS 30d: ' || ROUND(100.0 * SUM(CASE WHEN COALESCE(e.has_cogs, FALSE) THEN 1 ELSE 0 END) / NULLIF(COUNT(*), 0), 1) || '%'
+    || '  ·  MISA cuối: ' || COALESCE(strftime(timezone('Asia/Ho_Chi_Minh', MAX(CASE WHEN e.cogs_source IN ('misa', 'both') THEN o.ordered_at END)), '%d/%m'), 'chưa có')
+    AS "Độ tươi dữ liệu"
+FROM fact_orders o
+LEFT JOIN fact_order_economics e ON o.order_id = e.order_id
+WHERE o.scope_sales AND o.is_active_order
+    AND o.ordered_at >= current_date - INTERVAL '30 days'
+```
+
+```json metabase-viz
+{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+```
+
+```json metabase-pos
+{ "row": 21, "col": 0, "size_x": 18, "size_y": 2 }
+```
+<!-- text-id:trust-block -->
+
 #### 📝 Text: Source & Freshness
 
 **Source:** fact_orders + dim_customers + fact_order_economics · **Cadence:** Tuần này (Mon-to-date) vs WoW (tuần trước Mon-Sun) · **Scope:** is_sales_channel=true, exclude CANCELLED/Voided · **Caveats:** has_cogs ~65% coverage (MISA window) · **Exception:** MTD GMV vs Target + Pace Index dùng cửa sổ tháng (monthly), không theo tuần.
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 22, "col": 0, "size_x": 18, "size_y": 1 }
+{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
 ```

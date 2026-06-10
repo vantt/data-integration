@@ -1,5 +1,51 @@
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const https = require('https');
+
+// Reusable agents — HTTPS uses rejectUnauthorized:false for local self-signed certs
+const httpAgent  = new http.Agent({ keepAlive: true });
+const httpsAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true });
+
+/** Minimal fetch-like wrapper using native http/https modules */
+function nodeFetch(url, { method = 'GET', headers = {}, body } = {}) {
+    return new Promise((resolve, reject) => {
+        const parsed = new URL(url);
+        const isHttps = parsed.protocol === 'https:';
+        const agent = isHttps ? httpsAgent : httpAgent;
+        const reqBody = body ? Buffer.from(body, 'utf-8') : null;
+        const reqHeaders = { ...headers };
+        if (reqBody) reqHeaders['Content-Length'] = reqBody.length;
+
+        const opts = {
+            hostname: parsed.hostname,
+            port: parsed.port || (isHttps ? 443 : 80),
+            path: parsed.pathname + parsed.search,
+            method,
+            headers: reqHeaders,
+            agent
+        };
+
+        const lib = isHttps ? https : http;
+        const req = lib.request(opts, (res) => {
+            const chunks = [];
+            res.on('data', c => chunks.push(c));
+            res.on('end', () => {
+                const text = Buffer.concat(chunks).toString('utf-8');
+                resolve({
+                    status: res.statusCode,
+                    ok: res.statusCode >= 200 && res.statusCode < 300,
+                    headers: { get: (k) => res.headers[k.toLowerCase()] },
+                    json: () => Promise.resolve(JSON.parse(text)),
+                    text: () => Promise.resolve(text)
+                });
+            });
+        });
+        req.on('error', reject);
+        if (reqBody) req.write(reqBody);
+        req.end();
+    });
+}
 
 class MetabaseCore {
     /**
@@ -13,7 +59,7 @@ class MetabaseCore {
             throw new Error("Metabase URL and API Key/Token are required.");
         }
         this.url = url.replace(/\/$/, ''); // Remove trailing slash
-        
+
         const authHeader = options.authHeader || 'x-api-key';
         this.headers = {
             [authHeader]: apiKeyOrToken,
@@ -38,7 +84,7 @@ class MetabaseCore {
         }
 
         try {
-            const res = await fetch(`${this.url}${endpoint}`, options);
+            const res = await nodeFetch(`${this.url}${endpoint}`, options);
             
             // Handle 204 No Content
             if (res.status === 204) return true;
