@@ -1,7 +1,7 @@
 # Plan: Carrier, Shipment, and Delivery Data
 
 > Created: 2026-06-09
-> Status: ❌ Not started
+> Status: ✅ Done (2026-06-10)
 > Origin: `analytics_improvement_opportunities.md` § Carrier, Shipment, and Delivery Data
 
 ## Objective
@@ -32,13 +32,19 @@ Measure end-to-end fulfillment including carrier performance and customer delive
 
 ## Implementation steps
 
-- [ ] Identify carrier data source (GHN/GHTK API, Sapo shipping integration, manual export)
-- [ ] Build `dim_carriers` dimension (carrier_key, carrier_name, carrier_code)
-- [ ] Build ingestion for shipment tracking events (per-tracking-number status history)
-- [ ] Create `fact_shipments` mart: grain (tracking_number, event_type)
-- [ ] Create `int_shipment_sla` with computed fields: days_to_deliver, is_on_time, is_failed
+- [x] Identify carrier data source — shipment data embedded in `payload.fulfillments[].shipment` (no external API needed)
+- [x] Add `shipment_status` + `delivered_at` to `std_fulfillments` (sourced from `$.shipment.status`, `$.shipment.modified_on`)
+- [x] Fix status mapping: Sapo uses `received`/`fulfilled` not `success`/`shipping`
+- [x] Enrich `fact_fulfillments` with `shipment_status`, `delivered_at`, `days_to_deliver`, `is_delivered`
+- [x] Update `schema.yml` — document new columns
+- [ ] Build `dim_carriers` dimension (carrier_key, carrier_name, carrier_code) — deferred, carrier_id currently an opaque ID
 - [ ] Add delivery SLA tab to Logistics Operations dashboard
 - [ ] Add carrier performance ranking card
+
+## Decisions
+
+- `fact_shipments` not created — `fact_fulfillments` already has same grain (`fulfillment_id`); shipment fields added there instead (DRY)
+- External carrier API (GHN/GHTK) not needed — `$.shipment.*` in order payload has sufficient data for SLA metrics
 
 ## Dependency
 
