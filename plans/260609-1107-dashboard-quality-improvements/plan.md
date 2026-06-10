@@ -67,43 +67,39 @@ Several dashboards use unregistered paths.
 ## Issue 4: Playbook / blueprint filename misalignment
 
 **Playbooks without same-name blueprint:**
-- [ ] `customer_retention`
-- [ ] `finance_cashflow`
-- [ ] `logistics_shipping`
-- [ ] `order_detail_view`
-- [ ] `orders_list_reconciliation`
+- [x] `customer_retention` → renamed to `customer_retention_dashboard.md` 2026-06-10
+- [ ] `finance_cashflow` → deferred (blocked: fact_payments not built)
+- [ ] `logistics_shipping` → deferred (blocked: fact_shipments not built)
+- [ ] `order_detail_view` → no blueprint exists yet, aspirational
+- [x] `orders_list_reconciliation` → renamed to `order_listing.md` 2026-06-10
 - [x] `product_inventory` ← blueprint exists as `product_inventory.md`
 
 **Blueprints without same-name playbook:**
-- [ ] `b2b_orders_tracking`
-- [ ] `b2b_sales_daily`
-- [ ] `customer_retention_dashboard`
-- [ ] `marketing_roi`
-- [ ] `order_detail`
-- [ ] `order_listing`
-- [ ] `order_profitability`
-- [ ] `order_profitability_all`
-- [ ] `product_profitability`
-- [ ] `rill/sales_items_product`
-- [ ] `us_crossborder_operations`
+- [x] `b2b_orders_tracking` → playbook created 2026-06-10
+- [x] `b2b_sales_daily` → playbook created 2026-06-10
+- [x] `customer_retention_dashboard` → resolved via rename of `customer_retention.md`
+- [x] `marketing_roi` → both already exist
+- [ ] `order_detail` → blueprint does not exist yet, aspirational
+- [x] `order_listing` → resolved via rename of `orders_list_reconciliation.md`
+- [ ] `order_profitability` → blueprint does not exist yet, aspirational
+- [x] `order_profitability_all` → playbook created 2026-06-10
+- [x] `product_profitability` → playbook created 2026-06-10
+- [ ] `rill/sales_items_product` → YAML format, out of scope for MD playbooks
+- [x] `us_crossborder_operations` → playbook created 2026-06-10
 
 ---
 
 ## Issue 5: Scope not visible enough
 
-- [ ] Add scope badge to every dashboard title: `[All]` / `[Retail]` / `[B2B]` / `[US]`
-- [ ] Add scope statement to first text card of each dashboard
-- [ ] Never mix retail discount/promotion metrics with B2B pricing in the same card
+- [x] Add scope badge to every dashboard title: `[All]` / `[Retail]` / `[B2B]` / `[US]` — all blueprints verified 2026-06-10
+- [x] Add scope statement to first text card of each dashboard — done per blueprint text cards
+- [x] Never mix retail discount/promotion metrics with B2B pricing in the same card — enforced by design
 
 ---
 
 ## Issue 6: Trust indicators missing from business dashboards
 
-Covered in detail in `plans/260609-1107-data-observability-business-dashboards/`.
-
-- [ ] Add compact trust block (last update, COGS coverage, source warning) to key dashboards
-- [ ] For profitability: always show COGS coverage % and Shopee payout lag
-- [ ] For daily ops: always show order freshness
+→ Moved to `plans/260609-1107-data-observability-business-dashboards/`
 
 ---
 
@@ -123,8 +119,8 @@ Covered in detail in `plans/260609-1107-data-observability-business-dashboards/`
 - [ ] Add fully-loaded margin path once overhead allocation (`int_order_overhead_allocation`) is stable
 
 ### Executive steering
-- [ ] Target Gap Bridge in CEO Monthly Scorecard → see `plans/260609-1107-targets-forecasting-pace/`
-- [ ] "Top 5 Decisions This Week" table in CEO Weekly Pulse
+
+→ Moved to `plans/260609-1107-targets-forecasting-pace/`
 
 ### Marketing & promotion
 - [ ] Contribution ROAS card (revenue − discount − COGS − platform fees − spend)
@@ -146,4 +142,4 @@ Covered in detail in `plans/260609-1107-data-observability-business-dashboards/`
 ### Logistics
 - [ ] Add SLA by channel/order type to Logistics Operations dashboard
 - [ ] Customer impact estimate for stuck orders (customer value, order amount, days delayed)
-- [ ] Carrier/delivery SLA tab → see `plans/260609-1107-carrier-shipment-data/`
+- ~~Carrier/delivery SLA tab~~ → Moved to `plans/260609-1107-carrier-shipment-data/`
