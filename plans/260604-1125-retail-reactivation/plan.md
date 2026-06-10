@@ -1,258 +1,101 @@
 ---
-title: "Retail Reactivation — Lộ trình triển khai"
+title: "Retail Reactivation — Hub & Path"
 created: 2026-06-04
 updated: 2026-06-09
 status: active
-doc_ref: ./sales-slowdown-diagnosis-and-action-playbook.md
+structure: pipeline-6-stage
+source: ./reference/sales-slowdown-diagnosis-and-action-playbook.md
 ---
 
-# Retail Reactivation — Lộ trình triển khai
+# Retail Reactivation — Hub & Path
 
-> Nguồn phân tích: [`sales-slowdown-diagnosis-and-action-playbook.md`](./sales-slowdown-diagnosis-and-action-playbook.md)
-> Bối cảnh: 1.082 khách lẻ có SĐT; 71.8% one-time; ~1.76 tỷ VND cơ hội trong `mart_customer_action_queue`.
-> 76% tệp liên hệ được là người nhận quà US — cần luồng thông điệp riêng.
+> **Câu hỏi gốc:** "Bán ế — khai thác data nào để gợi ý hành động cho Marketing / CSKH / Sales?"
+> Tài liệu tổ chức thành **PIPELINE 6 stage** = một path xuyên suốt để từng bước: brainstorm góc nhìn →
+> khám phá/điều tra → đánh giá → tìm hướng action → lập kế hoạch → thực thi → (học, lặp lại).
 
 ---
 
-## Góc nhìn gốc rễ (cập nhật 2026-06-09)
+> **🎯 Trọng tâm (2026-06-09): BÁN LẺ/B2C.** Đòn bẩy lớn nhất nằm NGOÀI hệ thống — data nói CÁI GÌ không nói TẠI SAO. Việc #1: [VOC phỏng vấn khách](./02-understand/voc-customer-interviews.md).
 
-Plan ban đầu tấn công đúng nhưng ở tầng **triệu chứng** (call-list, win-back). Tầng gốc là:
+## Bối cảnh số (1 phút) — vì sao "ế"
 
-> **Product Journey và Customer Journey chưa giao nhau** — khách mua rồi rơi vào im lặng trong khi sản phẩm cần 4–6 tuần liên tục để thấy kết quả. Không có engagement trong giai đoạn này = không có lý do reorder thật sự.
+- **"Sụp cấp tính" phần lớn là ẢO GIÁC ĐO LƯỜNG** (cập nhật 2026-06-09): điều tra cho thấy B2B **KHÔNG sụp** —
+  cầu 2026 = **2–3× mức 2025**; "T1 278→T5 2tr" là artifact completed-only + lag hoàn tất COD ~46–78 ngày + 491tr đang chờ thu.
+  → Nghi phạm "ế" thật = **cashflow** (hàng đã giao chờ thu COD) hoặc **margin**, KHÔNG phải mất cầu. [b2b](./02-understand/b2b-collapse-root-cause.md) · [cashflow](./02-understand/cashflow-collection-ar.md)
+- **Vấn đề mạn tính (THẬT, bền):** **71.8% khách lẻ mua 1 lần**, M1 repeat **3–17%** (lành mạnh 30–50%).
+- **Tài sản ẩn:** ~824 người nhận quà US (76% tệp liên hệ được) đã dùng sản phẩm, chưa từng tự mua.
 
-**Product journey Fine Japan (collagen/supplement):**
+→ Chi tiết số thật: [`02-understand/`](./02-understand/README.md) · Provenance: [`reference/`](./reference/sales-slowdown-diagnosis-and-action-playbook.md)
+
+> **Reframe sản phẩm (2026-06-10):** hero SKU = đồ sức khỏe người lớn tuổi (cordyceps/khớp/tim mạch), KHÔNG phải collagen làm đẹp. Retention theo SẢN PHẨM: Cordyceps dính (25%), Fucoidan bẫy volume (11%), Gaba/Chondroitin gateway vàng. 🔴 bug margin H010 bán dưới giá vốn (~440M). [chi tiết](./02-understand/product-performance-assessment.md).
+
+---
+
+## THE PATH — 6 stage (số thứ tự = luồng đi)
+
 ```
-Mua → Dùng tuần 1–2 (chưa thấy gì) ← DANGER ZONE: hay bỏ ở đây
-    → Tuần 3–4 (tín hiệu bắt đầu)
-    → Tuần 6–8 (kết quả rõ)
-    → Hết hàng → Quyết định reorder
+        ┌──────────────────────── vòng lặp học (kết quả → finding mới) ────────────────────────┐
+        ↓                                                                                       │
+┌───────────────┐   ┌──────────────┐   ┌─────────────┐   ┌────────────────┐   ┌──────────────┐   ┌────────────┐
+│01-perspectives│ → │02-understand │ → │03-evaluate  │ → │04-opportunities│ → │05-action-    │ → │06-execute  │
+│ góc nhìn/lens │   │ khám phá +   │   │ đánh giá +  │   │ hướng action   │   │ plans        │   │ thực thi + │
+│ (brainstorm)  │   │ điều tra     │   │ quyết định  │   │ (backlog mở)   │   │ (đã cam kết) │   │ đo lường   │
+└───────────────┘   └──────────────┘   └─────────────┘   └────────────────┘   └──────────────┘   └────────────┘
+   diverge ◄─────────────────────────────────────────────────────────────────────────► converge → act → learn
 ```
 
-**Customer journey hiện tại:** `Mua → [im lặng] → Hết hàng → [không trigger] → CHURN`
-
-**Hệ quả cho plan:**
-1. 3-touchpoint sequence (Day 3/21/45) phải là **hành động đầu tiên**, trước call-list — nó fix leak trên khách MỚI mà không cần data engineering.
-2. Script call-list phải mở bằng **product experience**, không phải voucher — nếu khách không thấy hiệu quả, voucher không cứu được.
-3. 76% tệp US là người đã **dùng sản phẩm** nhưng không có hành trình — audit hộp hàng CrossBorder trước khi outbound call.
-4. Build P1–P3 (data infra) sau khi biết message nào hoạt động, không trước.
+**Cách một ý tưởng chảy qua path:** một *lens* (01) sinh ra *câu hỏi điều tra* (02) hoặc *cơ hội* (04);
+điều tra cho ra *finding* (02); *đánh giá* finding + chấm điểm cơ hội (03) → *promote* cơ hội thành *plan* (05);
+*thực thi* + đo (06); kết quả thành *finding mới* → quay lại 02. Path không phải đường thẳng — nó là vòng học.
 
 ---
 
-## Góc nhìn bổ sung first-principles (cập nhật 2026-06-09)
+## Cách đi path này (workflow cùng nhau)
 
-> Chi tiết: mục **0.5** trong [`playbook`](./sales-slowdown-diagnosis-and-action-playbook.md). Tóm tắt hệ quả cho lộ trình:
+| Bạn muốn… | Vào stage | Làm gì |
+|---|---|---|
+| Thêm 1 góc nhìn mới | **01** | tạo file lens mới; ghi nó dẫn tới điều tra (02) / cơ hội (04) nào |
+| Tìm hiểu / điều tra 1 nghi vấn | **02** | mở file điều tra (status `open`); có kết luận → `resolved` |
+| Ưu tiên / chốt 1 quyết định | **03** | chấm điểm bằng `evaluation-framework`; ghi `decision-log`; quyết định mở ở `open-decisions` |
+| Brainstorm nhiều hướng action | **04** | thêm opportunity card (`_TEMPLATE-opportunity.md`) — không gian mở rộng chính |
+| Cam kết 1 kế hoạch | **05** | promote opportunity đã chấm điểm thành plan có owner/KPI |
+| Chạy & theo dõi | **06** | ghi `execution-log`; cập nhật `kpi`; feed kết quả ngược 02 |
 
-Plan hiện tại (P0→P4) tối ưu cho **B2C retention** — ván 2 quý. Các lens bổ sung mở thêm hướng **tháo bế tắc dòng tiền NGAY**:
-
-- **A1 — B2B trước:** doanh thu sụp 95% là do 5–10 khách sỉ ngừng mua, không phải 995 khách lẻ. Reactivate 1 sỉ ≈ 100+ đơn lẻ → cuộc gọi `negotiated_deep` đã ngừng là đòn bẩy cao nhất tuần này.
-- **A3 — root cause phía cung:** hỏi chủ/sales "Q1–Q2 2025 vỡ vì gì?" (OOS / mất đại lý / công nợ / đối thủ) — có thể là 1 sự kiện cụ thể data không thấy.
-- **A2 — cầu dịch đi đâu:** recon TikTok Shop/livestream trước khi win-back về kênh nhà.
-- **B5 — Subscribe & Save:** biến reorder thành mặc định (đòn bẩy M1-repeat > voucher). Bổ sung vào P4.
-- **B7 — Touch "kết quả" (tuần 6–8):** xin review/ảnh + mã giới thiệu → vá xô thủng từ đầu vào. Bổ sung vào sequence 3-touchpoint (P0/P4).
-- **C8 — một mũi nhọn:** với đội CSKH mỏng, chọn 1 segment × 1 SKU × 1 message × 2 tuần thay vì chạy song song 5 luồng.
-
-**Đảo thứ tự đề xuất (nếu ưu tiên dòng tiền ngắn hạn):** P0' = gọi B2B đã ngừng + recon competitive + hỏi root cause supply → *rồi* mới P0 B2C call-list. Không bỏ B2C; chỉ đổi cái đốt trước. Quyết định phụ thuộc câu hỏi: *"ế" = dòng tiền tháng này hay tăng trưởng bền vững?* (xem mục 0.5.2 playbook).
+> Quy ước: mỗi file có `status` (resolved/open/idea/evaluating/promoted/committed/tracking) để biết nó đang ở đâu trong path.
 
 ---
 
-## Tổng quan phase
+## Trạng thái hiện tại theo stage
 
-| Phase | Tên | Thời hạn | Status |
+| Stage | Folder | Item chính | Status |
 |---|---|---|---|
-| P0 | Quick wins (0-build) | Tuần này | pending |
-| P1 | Data plumbing | 1–2 tuần | pending |
-| P2 | Model retention đúng | 2–4 tuần | pending |
-| P3 | Dashboard Retention Health | 3–5 tuần | pending |
-| P4 | Chương trình vận hành | ongoing | pending |
+| 01 Góc nhìn | [`01-perspectives/`](./01-perspectives/README.md) | product×customer journey · lens A/B/C · retail-lenses L1–L6 | living |
+| 02 Hiểu vấn đề | [`02-understand/`](./02-understand/README.md) | channel-illusion · retention-leak · segments · b2b-root-cause(✅ resolved: B2B không sụp) · demand-migration · cashflow-AR(🟠 blocked: data gap) · open-questions(🔴) · voc-interviews⭐(🔴 open) · unboxing-audit(🔴 open) · product-performance-assessment(✅ resolved: data đủ, KHÔNG cần pipeline; reframe portfolio sức khỏe người lớn tuổi) | 5 resolved · 5 open |
+| 03 Đánh giá | [`03-evaluate/`](./03-evaluate/README.md) | sequencing · open-decisions · evaluation-framework · decision-log | 🟢 #1 chốt retail |
+| 04 Hướng action | [`04-opportunities/`](./04-opportunities/README.md) | retention-mechanisms (4 play) · data-backlog (~21 cơ hội) · retail-offline-plays (7 card) | idea |
+| 05 Kế hoạch | [`05-action-plans/`](./05-action-plans/README.md) | b2c-phases P0–P4 · action-flows · us-gift | committed/pending |
+| 06 Thực thi | [`06-execute/`](./06-execute/README.md) | kpi · execution-log | tracking (chưa chạy) |
+| — | [`reference/`](./reference/sales-slowdown-diagnosis-and-action-playbook.md) | playbook gốc (archive) | read-only |
 
 ---
 
-## P0 — Quick Wins (0-build, tuần này)
+## Quyết định gốc đang chặn → [`03-evaluate/open-decisions.md`](./03-evaluate/open-decisions.md)
 
-**Mục tiêu:** Bắt đầu hành động ngay với data đã có, không cần build thêm gì.
+> **Cập nhật 2026-06-09:** điều tra B2B RESOLVED — B2B KHÔNG sụp (artifact đo lường). Câu #2 trả lời xong; trọng tâm dời về B2C retention + cashflow ([cashflow-collection-ar](./02-understand/cashflow-collection-ar.md)).
+>
+> **Cashflow (2026-06-09):** ~2.7 tỷ AR B2B (84% >90 ngày, 77% vào CUZN00015+CUZN03970) — nhưng `fact_payments` rỗng nên CHƯA chắc nợ thật hay data gap. **Hành động #1: hỏi chủ/kế toán về nợ thật 2 VIP + fix pipeline thanh toán** trước khi làm gì khác.
 
-**Dependencies:** không có.
+Path đang **kẹt ở stage 03** — 3 câu cần chủ chốt trước khi cam kết plan:
+1. ✅ **ĐÃ CHỐT 2026-06-09: focus = bán lẻ.** ~~"Ế" = dòng tiền tháng này hay tăng trưởng bền vững?~~ → B2B-first gác lại; toàn path ưu tiên retail ([sequencing](./03-evaluate/sequencing.md)).
+2. **Đã biết nhóm sỉ 2025 vỡ vì gì chưa?** → mở khóa [b2b-collapse-root-cause](./02-understand/b2b-collapse-root-cause.md).
+3. **Đội CSKH chạy bao nhiêu cuộc/ngày?** → một-mũi-nhọn vs 5 luồng song song.
 
-**KPI:** worklist xuất được trong ngày; báo cáo kênh lõi có; OOS hero-SKU có; 3-touchpoint sequence thiết kế xong; audit hộp CrossBorder có kết quả.
-
-### Todo
-
-#### Ưu tiên 1 — Fix leak trên khách mới (thực hiện trước)
-
-- [ ] **Audit hộp hàng CrossBorder:** mở 1 hộp thực tế — có card, QR, hướng dẫn dùng không?
-      Ghi lại kết quả → quyết định có cần insert vào hộp không.
-      **Owner: Ops/Sales lead. Thời gian: 30 phút.**
-- [ ] **Thiết kế 3-touchpoint onboarding sequence** cho khách mua lần đầu (kênh owned):
-      - Day 3: xác nhận nhận hàng + "Cách dùng Fine Japan đúng để thấy kết quả tốt nhất"
-      - Day 21: "3 tuần rồi — đây là lúc cơ thể thật sự bắt đầu thay đổi" + hỏi feedback nhẹ
-      - Day 45: "Sắp hết — 6 tuần liên tục là giai đoạn kết quả rõ nhất, đừng để đứt quãng" + reorder link
-      Soạn nội dung 3 tin nhắn (Zalo). Chưa cần automation — gửi tay từ danh sách khách mới tuần này.
-      **Owner: CSKH + Marketing. Thời gian: 1 ngày.**
-
-#### Ưu tiên 2 — Revamp call-list scripts (chạy song song)
-
-- [ ] Export ~120 khách high-touch (Luồng 1–4 từ `mart_customer_action_queue`, lọc `phone IS NOT NULL`)
-      ra Google Sheet hoặc CSV bên ngoài git.
-      **CẢNH BÁO PII: file chứa tên/SĐT khách — KHÔNG commit vào git.**
-- [ ] Soạn 4 script Zalo/call mẫu (Luồng 1–4) — **mở bằng product experience, không phải voucher:**
-      Câu mở đầu bắt buộc: *"Lần trước dùng [sản phẩm] anh/chị có thấy gì không?"*
-      → Nếu thấy hiệu quả: reactivate tự nhiên, offer tiện lợi/ưu đãi nhỏ.
-      → Nếu không thấy gì: consultation → giải thích dùng đúng → convert lần 2 với lý do thật.
-      Offer matrix 3 mức voucher (mục 5.4 trong guide) dùng cho trường hợp chưa thấy hiệu quả / win-back.
-- [ ] Sales lead gọi **6 CALL_NOW** (VIP/Gold At-Risk) trong tuần — dùng script product-experience.
-- [ ] CSKH Zalo/gọi **31 REORDER_NUDGE** + **16 SECOND_ORDER** nóng (15–45 ngày, có SĐT).
-- [ ] Ghi outcome vào Sheet: đặt lại Y/N + **lý do ngừng** + **có thấy hiệu quả không** → review cuối tuần.
-
-#### Ưu tiên 3 — Báo cáo kênh (data)
-
-- [ ] Báo cáo doanh thu **tách kênh lõi vs marketplace** (B2B+Social+Web vs Shopee+CrossBorder),
-      chỉ `status='COMPLETED'`, theo tháng 2026.
-- [ ] Báo cáo OOS / low-stock hero-SKU: ghép `mart_sku_economics_monthly.revenue_share_pct` với
-      `mart_inventory_health.is_oos` → danh sách "phải nhập gấp" cho Sales.
-
-**Owner:** Ops (audit hộp) · CSKH+Marketing (sequence, scripts) · Data (export, báo cáo) · Sales lead (Luồng 1–2)
+Điều tra còn mở đáng làm **tuần này**: [demand-migration](./02-understand/demand-migration-recon.md) (cầu dịch sang TikTok Shop?) và [cashflow-AR](./02-understand/cashflow-collection-ar.md) (nghi phạm thật của "ế"). (b2b-root-cause đã ✅ resolved.)
 
 ---
 
-## P1 — Data Plumbing
+## Lưu ý xuyên suốt
 
-**Mục tiêu:** Thêm các cột/cờ cần thiết để action_queue chạy đúng và tách luồng US.
-
-**Dependencies:** P0 done (biết worklist thiếu gì).
-
-**KPI:** `is_contactable` & `is_us_gift_recipient` có trong `dim_customers`; worklist tuần tự động export.
-
-### Todo
-
-#### dim_customers
-- [ ] Thêm cột `is_contactable` (boolean): `phone IS NOT NULL AND phone ~ '^(0|\+84)[0-9]{8,9}$'`
-      → dùng làm filter mặc định cho mọi action_queue query.
-- [ ] Thêm cột `is_us_gift_recipient` (boolean): `customer_key IN (SELECT DISTINCT customer_key FROM fact_orders WHERE channel_format = 'CrossBorder')`
-      → tách luồng thông điệp US riêng.
-
-#### mart_customer_action_queue
-- [ ] Thêm filter `is_contactable = true` vào điều kiện mặc định của mart.
-- [ ] Thêm cột `last_product_affinity_sku` (SKU/brand hay mua nhất) để cá nhân hóa script.
-- [ ] Thêm action type `REORDER_PREEMPT` cho khách có `next_purchase_signal = 'DUE_SOON'`
-      (nhắc trước khi hết hàng, không chờ OVERDUE).
-- [ ] Thêm cột `is_us_gift_recipient` vào mart để filter/tách luồng US.
-
-#### Dagster automation
-- [ ] Tạo job/sensor tự động export worklist tuần (Luồng 1–4, is_contactable=true)
-      ra file CSV vào thư mục không-git (hoặc Google Sheet qua API).
-      Chạy mỗi thứ Hai sáng.
-
-**Owner:** Data
-
----
-
-## P2 — Model Retention Đúng
-
-**Mục tiêu:** Thay thế model snapshot sai bằng waterfall point-in-time; thêm first_order_channel.
-
-**Dependencies:** P1 done (dim_customers cập nhật).
-
-**KPI:** `mart_retention_waterfall_monthly` cho số khớp với SQL chẩn đoán ở mục 3.2 của guide;
-schema.yml có cảnh báo trên `mart_customer_status_snapshot_monthly`.
-
-### Todo
-
-#### mart_retention_waterfall_monthly (model mới)
-- [ ] Build model dbt, grain `(snapshot_month, status)`.
-      Logic: point-in-time từ `fact_orders` — tại cuối mỗi tháng, dùng lần mua gần nhất ≤ cuối tháng đó.
-      Tham khảo SQL mẫu ở mục 3.2 của guide.
-- [ ] Thêm biến thể cột: `value_group`, `product_affinity`, `channel_preference`
-      để bóc tách churn theo phân khúc.
-- [ ] Viết test dbt: so sánh số tháng 2025-05 (`ACTIVE=7`) và 2025-06 (`ACTIVE=8`) với kết quả SQL thủ công.
-
-#### Deprecation model cũ
-- [ ] Thêm cảnh báo vào `schema.yml` của `mart_customer_status_snapshot_monthly`:
-      mô tả rõ cột `status` phản ánh trạng thái hiện tại (không phải point-in-time), không dùng cho
-      biểu đồ xu hướng retention.
-
-#### first_order_channel
-- [ ] Thêm cột `first_order_channel` vào `dim_customers` hoặc `mart_customer_retention_cohort`:
-      suy từ `fact_orders` bằng `arg_min(channel_format, order_timestamp)` per customer.
-      Dùng cho cohort-theo-nguồn và bảng retention theo kênh (mục 4.3 của guide).
-
-**Owner:** Data
-
----
-
-## P3 — Dashboard Retention Health (Metabase)
-
-**Mục tiêu:** Dashboard thay thế biểu đồ dùng model cũ; bộ lọc đúng để không bị đánh lừa số.
-
-**Dependencies:** P2 done (`mart_retention_waterfall_monthly` ready).
-
-**KPI:** Dashboard live trên Metabase; các số khớp với bảng point-in-time mục 2.4 của guide.
-
-### Todo
-
-- [ ] Card 1: Đường ACTIVE / AT_RISK / CHURNED point-in-time (14 tháng gần nhất).
-      Nguồn: `mart_retention_waterfall_monthly`.
-- [ ] Card 2: Heatmap cohort retention M0–M6.
-      Nguồn: `mart_retention_waterfall_monthly` hoặc cohort query từ `fact_orders`.
-- [ ] Card 3: Thẻ số — one-time-rate & M1-repeat-rate (hiện tại + so kỳ trước).
-- [ ] Card 4: Đường new-vs-returning buyers/tháng.
-- [ ] Bộ lọc: kênh lõi vs marketplace; `status = 'COMPLETED'` only.
-      (Không filter = số tổng bị Shopee + CrossBorder-0đ che — xem mục 2.2.)
-- [ ] Thêm text card cảnh báo: "Model snapshot cũ không dùng cho trend retention — xem guide."
-
-**Owner:** Data · Marketing (review dashboard)
-
----
-
-## P4 — Chương trình Vận Hành
-
-**Mục tiêu:** Các sáng kiến có thể lặp lại theo tuần/tháng; mở rộng tệp liên hệ được.
-
-**Dependencies:** P1 done (automation export); P0 có kết quả thực tế để học.
-
-**KPI:** Xem mục 8 của guide (one-time rate, M1 repeat, reactivation rate, US conversion).
-
-### Todo
-
-#### Kéo liên hệ Shopee về kênh nhà (ưu tiên cao nhất về cấu trúc)
-- [ ] Thiết kế thẻ cảm ơn + QR → Zalo OA/website, kẹp trong mỗi đơn Shopee.
-- [ ] Thiết kế ưu đãi cho đơn trực tiếp lần sau (incentive migrate kênh).
-- [ ] KPI: % đơn Shopee có thẻ; số khách Shopee đăng ký Zalo OA; tỷ lệ migrate.
-
-#### Test US gift-recipient (51 khách nóng 0–90 ngày)
-- [ ] Lọc 51 khách `is_us_gift_recipient=true` & recency ≤ 90 ngày từ worklist P1.
-- [ ] Soạn script riêng (thông điệp mục 6.3 của guide — KHÔNG dùng script win-back thông thường).
-- [ ] Chạy test: gọi/Zalo, ghi phản hồi & chuyển đổi.
-- [ ] Nếu ≥10% mua nội địa → mở rộng 180 khách ấm (91–365 ngày) → rồi bulk 589 nguội.
-
-#### Second-order onboarding hệ thống
-- [ ] Thiết kế luồng tự động: ngày 15–45 sau đơn #1 → Zalo nhắc + ưu đãi đơn #2.
-- [ ] Kèm hướng dẫn dùng đúng (tăng cảm nhận hiệu quả → lý do tái mua thật).
-
-#### Market-basket model (nâng AOV)
-- [ ] Build model frequently-bought-together từ `fact_sales` (đúng grain dòng-đơn).
-- [ ] Ứng dụng: bundle suggestion + cross-sell script cho CSKH.
-- [ ] KPI: AOV/đơn lẻ tăng (hiện Shopee 932K, owned ~2–4M).
-
-**Owner:** Marketing (thẻ QR, Zalo OA) · CSKH (test US, second-order) · Data (model market-basket)
-
----
-
-## Phụ thuộc tổng thể
-
-```
-P0 (quick wins, ngay)
-  └─→ P1 (data plumbing, 1–2 tuần)
-        └─→ P2 (models, 2–4 tuần)
-              └─→ P3 (dashboard, 3–5 tuần)
-P0 (kết quả thực tế) ──→ P4 (vận hành, song song từ P1+)
-```
-
-## Rủi ro & lưu ý
-
-- **PII:** worklist export (tên/SĐT) chỉ lưu ngoài git (Google Sheet / thư mục local không-tracked).
-- **DuckDB:** `fact_orders` là view không resolve trên Windows — query trực tiếp parquet
-  `app_data/data_lake/export/marts/rolling/`.
-- **Model snapshot cũ:** không xóa, chỉ thêm cảnh báo — vẫn dùng cho thuộc tính khách (LTV, value_group).
-- **US test:** 51 khách nóng là experiment — không scale trước khi có kết quả conversion thực tế.
-- **Holdout:** mỗi luồng action phải giữ 10–20% không tác động để đo incremental (tránh nhận công
-  đơn tự đến).
+- **PII:** worklist export (tên/SĐT) chỉ lưu ngoài git.
+- **DuckDB/Windows:** `fact_orders` là view không resolve trên Windows — query trực tiếp parquet `app_data/data_lake/export/marts/rolling/`.
+- **Đo đúng:** luôn tách kênh lõi vs marketplace, completed-only, waterfall point-in-time (không dùng `mart_customer_status_snapshot_monthly` cho trend) — xem [06-execute/kpi.md](./06-execute/kpi.md).
