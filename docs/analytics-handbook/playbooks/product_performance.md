@@ -4,7 +4,7 @@
 
 - **Audience:** Merchandising, Management
 - **Goal:** Monitor sales velocity and revenue contribution by product.
-- **Collection:** `Product Analytics`
+- **Collection:** `Analytics`
 - **Design Spec:** [designs/product_performance.md](../designs/product_performance.md)
 
 ## Data Lineage

@@ -4,7 +4,7 @@
 
 - **Audience:** CEO, Marketing Manager, Sales Ops
 - **Goal:** Monthly deep-dive into customer health, value concentration, segment dynamics, purchase behavior, and acquisition quality.
-- **Collection:** `Marketing & Customers`
+- **Collection:** `Analytics`
 - **Cadence:** Monthly review (first week of each month), 15-20 min working session
 - **Design Spec:** [Customer Intelligence Monthly](../designs/customer_intelligence_monthly.md)
 

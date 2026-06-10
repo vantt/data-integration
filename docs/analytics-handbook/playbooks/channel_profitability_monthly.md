@@ -4,7 +4,7 @@
 
 - **Audience:** CEO, Finance, Sales Director
 - **Goal:** So sánh biên lợi nhuận gộp giữa các kênh bán hàng (DAILY, ECOM, CS, KHAC) dựa trên dữ liệu MISA. Xác định kênh nào tạo margin cao nhất và kênh nào đang ăn mòn lợi nhuận.
-- **Collection:** `Executive`
+- **Collection:** `Analytics`
 - **Design Spec:** [designs/channel_profitability_monthly.md](../designs/channel_profitability_monthly.md)
 
 ## Data Lineage

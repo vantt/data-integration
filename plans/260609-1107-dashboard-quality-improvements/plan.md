@@ -1,7 +1,7 @@
 # Plan: Dashboard Quality Improvements
 
 > Created: 2026-06-09
-> Status: Backlog
+> Status: In Progress
 > Origin: `analytics_improvement_opportunities.md` §§ 1–2 (Perspectives + Current Issues)
 
 ## Objective
@@ -56,11 +56,11 @@ Define one drill-down path: Company → Channel → COGS/Discount/Fees → Produ
 `collection_registry.yml` defines: `Executive`, `Marketing & Customers`, `Operations`.
 Several dashboards use unregistered paths.
 
-- [ ] Audit all dashboard collection paths vs `collection_registry.yml`
-- [ ] Decide: register B2B and CrossBorder as sub-collections, or move into existing three
-- [ ] Move Product Analytics under `Executive` or `Operations > Periodic Reviews`
-- [ ] Move Customer Support under `Operations`
-- [ ] Keep collection paths identical between playbook and blueprint
+- [x] Audit all dashboard collection paths vs `collection_registry.yml`
+- [x] Decide: register B2B and CrossBorder as sub-collections, or move into existing three
+- [x] Move Product Analytics under `Executive` or `Operations > Periodic Reviews` → resolved as `Analytics`
+- [x] Move Customer Support under `Operations` → resolved as `Operations > Daily Monitoring`
+- [x] Keep collection paths identical between playbook and blueprint — fixed 10 playbooks 2026-06-10
 
 ---
 
@@ -72,7 +72,7 @@ Several dashboards use unregistered paths.
 - [ ] `logistics_shipping`
 - [ ] `order_detail_view`
 - [ ] `orders_list_reconciliation`
-- [ ] `product_inventory` ← blueprint exists as `product_inventory.md` ✅
+- [x] `product_inventory` ← blueprint exists as `product_inventory.md`
 
 **Blueprints without same-name playbook:**
 - [ ] `b2b_orders_tracking`

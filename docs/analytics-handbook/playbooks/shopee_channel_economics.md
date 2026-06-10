@@ -4,7 +4,7 @@
 
 - **Audience:** Sales Ops, CS Lead, Finance
 - **Goal:** Giám sát chi phí bán hàng trên Shopee — phí sàn, phí vận chuyển, thuế, và tỷ lệ tiền thực nhận (settlement margin). Giúp tối ưu hóa lợi nhuận kênh Shopee.
-- **Collection:** `Operations > Periodic Reviews`
+- **Collection:** `Analytics`
 - **Design Spec:** [designs/shopee_channel_economics.md](../designs/shopee_channel_economics.md)
 
 ## Data Lineage

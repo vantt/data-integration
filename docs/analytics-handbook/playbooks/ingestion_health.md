@@ -7,7 +7,7 @@
 - **Audience:** Data engineer / ops (single operator). Checked once per day, more often when alerts fire.
 - **Goal:** Answer in < 10 seconds — "did every source move data today, is volume sane, and is anything drifting?" This is **trust engineering**: produce *felt confidence* that the pipeline is working, not deep analysis.
 - **Archetype:** Operational Cockpit — daily management, action-oriented.
-- **Metabase Collection:** `Operations > Daily Monitoring`
+- **Metabase Collection:** `Operations > Data Platform`
 
 ## Reading Flow
 
