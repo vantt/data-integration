@@ -5,21 +5,22 @@ Run manually when:
   - Schema drift detected (refresh_rolling.py logged [!] SCHEMA_DRIFT)
   - Empty folders appeared and their views need dropping
 
-METABASE COEXISTENCE (verified empirically 2026-04-08, see lessons-learned.md L18):
+METABASE LOCK (re-verified 2026-06-10 — STOP METABASE FIRST):
 
-Provided Metabase is configured with duckdb `read_only=true` in its JDBC URL,
-Metabase does NOT hold any file lock on olap.duckdb — DuckDB's read_only mode
-only mmaps the file. This script can run while Metabase is up:
+Metabase MUST be stopped before running this script. Even with duckdb
+`read_only=true` in its JDBC URL, Metabase's open read connection holds a
+DuckDB lock that BLOCKS this writer ("Conflicting lock is held in PID 0").
+Sequence:
 
-    docker compose exec data_platform python scripts/provisioning/bootstrap_serving_views.py
+    docker compose stop metabase
+    docker compose exec -T data_platform python scripts/provisioning/bootstrap_serving_views.py
+    docker compose start metabase
 
-No restart required. Writer + reader coexist on the same DuckDB file.
-
-(Historical note: earlier versions of this docstring warned that Metabase must
-be stopped first. That was based on a misdiagnosis of the 2026-04-08 serving
-hang, which turned out to be a subprocess pipe deadlock, not lock contention.)
-
-See plans/260408-1611-fix-serving-db-hang-metabase-lock/plan.md Phase 2.
+(History: a 2026-04-08 note claimed read_only readers coexist with the writer
+so no stop was needed. That no longer holds with the current DuckDB version —
+the read connection now takes a shared lock that conflicts with the exclusive
+write lock; observed empirically 2026-06-10. See lessons-learned.md L18 and
+plans/260408-1611-fix-serving-db-hang-metabase-lock/plan.md Phase 2.)
 """
 from __future__ import annotations
 
