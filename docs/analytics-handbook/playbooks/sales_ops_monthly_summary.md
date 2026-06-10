@@ -8,7 +8,7 @@
 - **Archetype:** Operational Cockpit (4 tabs)
 - **Collection:** `Operations` > `Periodic Reviews`
 - **Design Spec:** [Sales Ops Monthly Summary (Redesign)](../designs/sales_ops_monthly_summary.md)
-- **Related:** [Sales Ops Weekly Review](./sales_ops_weekly_review.md), [Social Commerce Operations](./customer_support_social_commerce.md), [Orders Reconciliation](./orders_list_reconciliation.md)
+- **Related:** [Sales Ops Weekly Review](./sales_ops_weekly_review.md), [Social Commerce Operations](./customer_support_social_commerce.md), [Order Listing](./order_listing.md)
 
 ## Key Questions
 

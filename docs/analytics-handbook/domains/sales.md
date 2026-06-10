@@ -242,7 +242,7 @@ WHERE c.customer_type = 'RETAIL'
 | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------ |
 | **[Sales Monthly Review](../playbooks/sales_monthly_review.md)**   | Guide for conducting the Monthly Business Review (MBR) using the Executive Dashboard. |
 | **[Daily Sales Ops](../playbooks/sales_daily_retail.md)** | Review finalized daily performance with day-over-day comparisons (date picker).       |
-| **[Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)** | Order-level listing for BI vs Sapo reconciliation (Today & Yesterday).    |
+| **[Order Listing](../playbooks/order_listing.md)** | Order-level listing for BI vs Sapo reconciliation (Today & Yesterday).    |
 | **[Promotion Analysis](../playbooks/sales_promotion_analysis.md)** | Deep dive methodologies for validating campaign ROI and discount strategies.          |
 | **[Customer Support Domain](../domains/customer_support.md)**      | For "Social Commerce" and Inbound Sales specific metrics.                             |
 | **[CEO Weekly Pulse](../playbooks/ceo_weekly_pulse.md)**           | CEO's Monday morning 5-minute weekly check-in dashboard.                              |
@@ -301,7 +301,7 @@ WHERE c.customer_type = 'RETAIL'
 | `payment_method_name` | `stg_sapo_orders` | Cash, Card, Transfer, etc. |
 | `location_name` | `stg_sapo_orders` | Store/branch that processed the order |
 
-- **Playbook:** [Orders List Reconciliation](../playbooks/orders_list_reconciliation.md)
+- **Playbook:** [Order Listing](../playbooks/order_listing.md)
 
 - **Business Logic:** Calculate at the grain and scope documented for this context or metric-level dbt source; apply valid-status filters before aggregation to avoid canceled orders, duplicate records, or join-grain inflation.
 - **Formula:** Planned / defined by the source model when implemented.

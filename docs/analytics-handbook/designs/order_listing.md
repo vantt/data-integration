@@ -4,7 +4,7 @@ archetype: Operational Cockpit
 status: final
 last_modified: 2026-04-09
 domain_refs: [domains/sales.md]
-playbook_ref: playbooks/orders_list_reconciliation.md
+playbook_ref: playbooks/order_listing.md
 ---
 
 ## Design Spec: Order Listing
