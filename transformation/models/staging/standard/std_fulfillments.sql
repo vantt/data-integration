@@ -17,27 +17,30 @@ SELECT
     order_id,
     fulfillment_code,
     
-    -- Status
+    -- Status (Sapo fulfillment status values: received/fulfilled/packed/cancelled)
     CASE
-        WHEN status = 'success' THEN 'DELIVERED' -- Map Sapo success to DELIVERED
-        WHEN status = 'shipping' THEN 'SHIPPING'
-        WHEN status = 'packed' THEN 'PACKED'
+        WHEN status = 'received'  THEN 'DELIVERED'
+        WHEN status = 'fulfilled' THEN 'SHIPPING'
+        WHEN status = 'packed'    THEN 'PACKED'
         WHEN status = 'cancelled' THEN 'CANCELLED'
-        WHEN status = 'error' THEN 'FAILED'
+        WHEN status = 'error'     THEN 'FAILED'
         ELSE 'PENDING'
     END as status,
-    
+    shipment_status,
+
     -- Tracking
     tracking_code,
     carrier_id,
     shipping_service,
     cod_amount,
-    
+
     -- Timestamps
     try_cast(created_on as TIMESTAMPTZ) as created_at,
     try_cast(shipped_on as TIMESTAMPTZ) as shipped_at,
-    -- delivered_at could be mapped from modified_on if status is success
-    
+    CASE WHEN status = 'received'
+         THEN try_cast(modified_on as TIMESTAMPTZ)
+    END as delivered_at,
+
     source_timestamp as extracted_at,
 
     -- Source lineage (P0 gate discriminator; v3 union sets 'v3')

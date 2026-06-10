@@ -27,9 +27,15 @@ SELECT
     f.carrier_id,
     f.shipping_service,
     f.status,
+    f.shipment_status,
     f.cod_amount,
     f.created_at,
-    f.shipped_at
+    f.shipped_at,
+    f.delivered_at,
+    CASE WHEN f.delivered_at IS NOT NULL AND f.shipped_at IS NOT NULL
+         THEN DATEDIFF('day', f.shipped_at, f.delivered_at)
+    END AS days_to_deliver,
+    f.status = 'DELIVERED' AS is_delivered
 FROM fulfillments f
 LEFT JOIN order_codes oc
     ON CAST(f.order_id AS VARCHAR) = CAST(oc.order_id AS VARCHAR)
