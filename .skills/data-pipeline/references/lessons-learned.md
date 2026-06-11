@@ -3852,3 +3852,27 @@ DuckDB tokenizer saw `current_dateGROUP` as an unknown identifier and then could
 4. Don't trust a script docstring over observed lock behaviour after a version bump — verify empirically.
 
 **Reference:** `scripts/provisioning/bootstrap_serving_views.py` docstring ; lesson L18
+
+### L120 — DuckDB Binder Error: ORDER BY references raw column not in GROUP BY
+
+**Group:** SERVE
+
+**Symptom:** Metabase card returns 400 error: `Binder Error: column "X" must appear in the GROUP BY clause or must be part of an aggregate function` — card shows blank/error in dashboard despite blueprint SQL looking correct at a glance.
+
+**Root cause:** DuckDB's strict SQL standard compliance rejects an `ORDER BY` clause that references a raw column (`next_purchase_signal`, `cancel_rate`) when the `GROUP BY` only contains the *derived expression* built on that column (via `COALESCE(...)` or `CASE WHEN ...`). `GROUP BY 1, 2` resolves to the SELECT expressions — not the underlying raw column — so the raw column in `ORDER BY` is unbound.
+
+Two patterns that trigger this:
+1. `SELECT COALESCE(col, 'fallback') AS x … GROUP BY 1 ORDER BY CASE col WHEN ...` — `col` alone is unbound; must use `CASE COALESCE(col, 'fallback') WHEN …`
+2. `SELECT CASE WHEN col >= N THEN label END … GROUP BY 1 ORDER BY CASE WHEN col >= N THEN sort_int END` — `col` is unbound; must wrap in `MIN(CASE WHEN col >= N THEN sort_int END)` (valid because each band is a mutually exclusive range, so MIN = the single possible value).
+
+**Fix:**
+- Pattern 1: replace `CASE raw_col` with `CASE <same-coalesce-expression-as-select>` in ORDER BY.
+- Pattern 2: wrap the range-based CASE in `MIN(...)` aggregate in ORDER BY so DuckDB sees it as an aggregate, not a bare column reference.
+
+**Rules:**
+1. In DuckDB, any column in `ORDER BY` must either be in `GROUP BY` directly, or wrapped in an aggregate function.
+2. `GROUP BY 1, 2` (positional) groups by the SELECT *expressions* — not the raw underlying columns. Do not reference raw columns in `ORDER BY` without re-wrapping or aggregating them.
+3. For sort-key CASE expressions derived from a grouped column: if the bands are mutually exclusive (one value per group row), `MIN()` is the correct aggregate wrapper — semantics unchanged, DuckDB satisfied.
+4. When blueprint SQL silently inherits this bug, fix the blueprint first and redeploy — never patch Metabase cards directly.
+
+**Reference:** cards 2156 (Next Purchase Signal Breakdown) and 2158 (High Cancel Rate Customers) in dashboard 48 (Customer Operational [Retail])
