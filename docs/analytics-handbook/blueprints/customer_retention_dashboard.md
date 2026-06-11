@@ -186,9 +186,9 @@ FROM current_period c, previous_period p
 { "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
-#### ❓ Question: Avg Customer Lifespan
+#### ❓ Question: Avg Order Value
 
-Average days between first and last order for repeat customers, with MoM comparison.
+Average revenue per order for repeat customers (LTV ÷ orders), with MoM comparison.
 
 ```sql
 -- Snapshot-driven MoM: avg days_since_last_order for customers active (not churned)
@@ -214,7 +214,7 @@ previous_period AS (
       [[AND s.value_group = {{segment}}]]
 )
 SELECT
-    c.value AS "Avg Lifespan (days)",
+    c.value AS "Avg Order Value",
     p.value AS "Prev Month"
 FROM current_period c, previous_period p
 ```
@@ -224,8 +224,11 @@ FROM current_period c, previous_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Avg Lifespan (days)": {
-        "suffix": " days"
+      "Avg Order Value": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
       }
     }
   }
@@ -482,13 +485,16 @@ Monthly trend of repeat purchase rate among buyers each month.
 ```sql
 WITH monthly_buyers AS (
     SELECT
-        date_trunc('month', ordered_at)::date as month,
-        customer_key,
-        COUNT(DISTINCT order_id) as orders_in_month
-    FROM fact_orders
-    WHERE scope_sales
-      AND ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
-      AND ordered_at < date_trunc('month', current_date)
+        date_trunc('month', o.ordered_at)::date as month,
+        o.customer_key,
+        COUNT(DISTINCT o.order_id) as orders_in_month
+    FROM fact_orders o
+    JOIN dim_customers c ON o.customer_key = c.customer_key
+    WHERE o.scope_sales
+      AND o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+      AND o.ordered_at < date_trunc('month', current_date)
+      AND c.customer_id != 'Unknown'
+      [[AND c.value_group = {{segment}}]]
     GROUP BY 1, 2
 )
 SELECT
@@ -813,55 +819,74 @@ WHERE o.scope_sales
 
 #### ❓ Question: Cohort Retention Heatmap
 
-Percentage of customers returning in subsequent months after first purchase (12-month lookback).
+Percentage of customers returning in subsequent months after first purchase (12-month lookback). Pre-pivoted in SQL — native SQL cards don't support display:pivot.
 
 ```sql
-WITH cohort_sizes AS (
+WITH cohort_first_orders AS (
+    -- First scope_sales order per customer — ensures M0 is always 100%
     SELECT
-        date_trunc('month', first_order_date) as cohort_month,
-        COUNT(DISTINCT customer_id) as original_size
-    FROM dim_customers
-    WHERE first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
-      AND customer_id != 'Unknown'
+        customer_key,
+        date_trunc('month', MIN(ordered_at))::date AS cohort_month
+    FROM fact_orders
+    WHERE scope_sales
+      AND customer_key IS NOT NULL
+    GROUP BY 1
+),
+cohort_sizes AS (
+    SELECT
+        cohort_month,
+        COUNT(DISTINCT customer_key) AS original_size
+    FROM cohort_first_orders
+    WHERE cohort_month >= (date_trunc('month', current_date) - INTERVAL '12 months')::date
     GROUP BY 1
 ),
 retention_activity AS (
     SELECT
-        date_trunc('month', c.first_order_date) as cohort_month,
-        date_diff('month', c.first_order_date, o.ordered_at) as month_number,
-        COUNT(DISTINCT c.customer_id) as active_customers
-    FROM dim_customers c
-    JOIN fact_orders o ON c.customer_key = o.customer_key
-    WHERE c.first_order_date >= date_trunc('month', current_date) - INTERVAL '12 months'
-      AND o.ordered_at >= c.first_order_date
-      AND c.customer_id != 'Unknown'
+        co.cohort_month,
+        date_diff('month', co.cohort_month, date_trunc('month', o.ordered_at)::date) AS month_number,
+        COUNT(DISTINCT co.customer_key) AS active_customers
+    FROM cohort_first_orders co
+    JOIN fact_orders o ON co.customer_key = o.customer_key
+    WHERE co.cohort_month >= (date_trunc('month', current_date) - INTERVAL '12 months')::date
       AND o.scope_sales
+      AND date_trunc('month', o.ordered_at)::date >= co.cohort_month
     GROUP BY 1, 2
+),
+retention_pct AS (
+    SELECT
+        strftime(r.cohort_month, '%Y-%m') AS cohort,
+        r.month_number,
+        ROUND(CAST(r.active_customers AS FLOAT) / s.original_size * 100, 1) AS ret_pct
+    FROM retention_activity r
+    JOIN cohort_sizes s ON r.cohort_month = s.cohort_month
+    WHERE r.month_number BETWEEN 0 AND 11
 )
 SELECT
-    strftime(r.cohort_month, '%Y-%m') as "Cohort",
-    r.month_number as "Month #",
-    s.original_size as "Cohort Size",
-    r.active_customers as "Active",
-    ROUND(CAST(r.active_customers AS FLOAT) / s.original_size * 100, 1) as "Retention %"
-FROM retention_activity r
-JOIN cohort_sizes s ON r.cohort_month = s.cohort_month
-WHERE r.month_number BETWEEN 0 AND 12
-ORDER BY 1, 2
+    cohort                                              AS "Cohort",
+    MAX(CASE WHEN month_number = 0  THEN ret_pct END)  AS "M0",
+    MAX(CASE WHEN month_number = 1  THEN ret_pct END)  AS "M1",
+    MAX(CASE WHEN month_number = 2  THEN ret_pct END)  AS "M2",
+    MAX(CASE WHEN month_number = 3  THEN ret_pct END)  AS "M3",
+    MAX(CASE WHEN month_number = 4  THEN ret_pct END)  AS "M4",
+    MAX(CASE WHEN month_number = 5  THEN ret_pct END)  AS "M5",
+    MAX(CASE WHEN month_number = 6  THEN ret_pct END)  AS "M6",
+    MAX(CASE WHEN month_number = 7  THEN ret_pct END)  AS "M7",
+    MAX(CASE WHEN month_number = 8  THEN ret_pct END)  AS "M8",
+    MAX(CASE WHEN month_number = 9  THEN ret_pct END)  AS "M9",
+    MAX(CASE WHEN month_number = 10 THEN ret_pct END)  AS "M10",
+    MAX(CASE WHEN month_number = 11 THEN ret_pct END)  AS "M11"
+FROM retention_pct
+GROUP BY 1
+ORDER BY 1
 ```
 
 ```json metabase-viz
 {
-  "display": "pivot",
+  "display": "table",
   "visualization_settings": {
-    "pivot_table.column_split": {
-      "rows": ["Cohort"],
-      "columns": ["Month #"],
-      "values": ["Retention %"]
-    },
     "table.column_formatting": [
       {
-        "columns": ["Retention %"],
+        "columns": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11"],
         "type": "range",
         "colors": ["#EF8C8C", "#F9D45C", "#84BB4C"],
         "min_type": "custom",
@@ -1277,6 +1302,13 @@ FROM current_period c, previous_period p
 How many orders do customers typically place? Understand one-time vs repeat behavior.
 
 ```sql
+WITH total AS (
+    SELECT COUNT(*) AS cnt
+    FROM dim_customers
+    WHERE order_count > 0
+      AND customer_id != 'Unknown'
+      [[AND value_group = {{segment}}]]
+)
 SELECT
     CASE
         WHEN order_count = 1 THEN '1 order'
@@ -1288,9 +1320,7 @@ SELECT
     END as "Order Count",
     COUNT(*) as "Customers",
     ROUND(
-        COUNT(*) * 100.0 / NULLIF(
-            (SELECT COUNT(*) FROM dim_customers WHERE order_count > 0 AND customer_id != 'Unknown'), 0
-        ), 1
+        COUNT(*) * 100.0 / NULLIF((SELECT cnt FROM total), 0), 1
     ) as "% of Total"
 FROM dim_customers
 WHERE order_count > 0
@@ -1554,7 +1584,7 @@ WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER
   [[AND value_group = {{segment}}]]
 GROUP BY 1, 2
 ORDER BY
-    CASE next_purchase_signal
+    CASE "Signal"
         WHEN 'OVERDUE'  THEN 1
         WHEN 'DUE_SOON' THEN 2
         WHEN 'ON_TRACK' THEN 3

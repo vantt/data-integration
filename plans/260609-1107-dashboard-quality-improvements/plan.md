@@ -69,8 +69,8 @@ Several dashboards use unregistered paths.
 **Playbooks without same-name blueprint:**
 - [x] `customer_retention` → renamed to `customer_retention_dashboard.md` 2026-06-10
 - [ ] `finance_cashflow` → deferred (blocked: fact_payments not built)
-- [ ] `logistics_shipping` → deferred (blocked: fact_shipments not built)
-- [ ] `order_detail_view` → no blueprint exists yet, aspirational
+- [x] `logistics_shipping` → blueprint created 2026-06-11 using `fact_fulfillments`
+- [x] `order_detail_view` → removed 2026-06-11: handled by dedicated detailView app, no dashboard needed
 - [x] `orders_list_reconciliation` → renamed to `order_listing.md` 2026-06-10
 - [x] `product_inventory` ← blueprint exists as `product_inventory.md`
 
@@ -79,12 +79,19 @@ Several dashboards use unregistered paths.
 - [x] `b2b_sales_daily` → playbook created 2026-06-10
 - [x] `customer_retention_dashboard` → resolved via rename of `customer_retention.md`
 - [x] `marketing_roi` → both already exist
-- [ ] `order_detail` → blueprint does not exist yet, aspirational
+- [x] `order_detail` → no blueprint needed; replaced by detailView app
 - [x] `order_listing` → resolved via rename of `orders_list_reconciliation.md`
 - [ ] `order_profitability` → blueprint does not exist yet, aspirational
 - [x] `order_profitability_all` → playbook created 2026-06-10
 - [x] `product_profitability` → playbook created 2026-06-10
 - [ ] `rill/sales_items_product` → YAML format, out of scope for MD playbooks
+
+**Clarification (2026-06-11):** `sales_today_operation` and `sales_daily_operation` are TWO intentional separate dashboards — `today` shows live today-only report; `daily` shows report by selectable date filter. Not a mismatch.
+
+**Blueprints without playbook (discovered 2026-06-11, not yet tracked):**
+- [x] `customer_action_queue.md` → playbook created 2026-06-11
+- [x] `order_revenue_explorer.md` → playbook created 2026-06-11
+- [x] `welcome_landing.md` → onboarding landing page, no playbook needed
 - [x] `us_crossborder_operations` → playbook created 2026-06-10
 
 ---

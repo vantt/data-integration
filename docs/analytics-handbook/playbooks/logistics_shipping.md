@@ -1,7 +1,7 @@
 # Playbook: Shipping & Returns
 
-> **Status:** DEFERRED — pending data foundation (xem audit report 260528-0834)
-> **Blocker:** `fact_shipments` + `dim_carriers` not yet built. Dashboard blocked until carrier data pipeline is implemented.
+> **Status:** UNBLOCKED — shipment data available via `fact_fulfillments` (tracking columns added 2026-06-09)
+> **Note:** `fact_shipments` + `dim_carriers` not built as standalone, but shipment/carrier fields are embedded in `fact_fulfillments`.
 
 ## Overview
 
@@ -11,8 +11,8 @@
 
 ## Data Lineage
 
-- **Core Model:** `fact_shipments` (Planned)
-- **Dimensions:** `dim_carriers` (Planned)
+- **Core Model:** `fact_fulfillments` (shipment tracking columns embedded)
+- **Dimensions:** carrier/provider fields in `fact_fulfillments`
 
 ## Filters
 

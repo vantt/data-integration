@@ -9,23 +9,37 @@ const fs = require("fs");
  * Usage: node deploy_from_markdown.js <path-to-docs.md> [--dry-run]
  */
 
-// Parse YAML frontmatter from blueprint (lines between first --- delimiters)
+// Parse YAML frontmatter from blueprint (lines between first --- delimiters).
+// Supports inline arrays [a, b, c] and multi-line arrays (- item per line).
 function parseFrontmatter(content) {
   if (!content.startsWith('---')) return {};
   const end = content.indexOf('\n---', 3);
   if (end === -1) return {};
   const yaml = content.slice(4, end).trim();
   const result = {};
+  let currentKey = null;
   for (const line of yaml.split('\n')) {
-    const match = line.match(/^(\w+):\s*(.+)/);
-    if (!match) continue;
-    const [, key, val] = match;
-    // Parse array syntax: [a, b, c]
-    if (val.trim().startsWith('[')) {
-      result[key] = val.trim().slice(1, -1).split(',').map(s => s.trim()).filter(Boolean);
-    } else {
-      result[key] = val.trim().replace(/^["']|["']$/g, '');
+    // Multi-line array item: "  - value"
+    if (currentKey && line.match(/^\s+-\s+/)) {
+      const val = line.replace(/^\s+-\s+/, '').replace(/^["']|["']$/g, '').trim();
+      if (!Array.isArray(result[currentKey])) result[currentKey] = [];
+      result[currentKey].push(val);
+      continue;
     }
+    const match = line.match(/^(\w+):\s*(.*)$/);
+    if (!match) { currentKey = null; continue; }
+    const [, key, val] = match;
+    currentKey = key;
+    if (val.trim().startsWith('[')) {
+      // Inline array: [a, b, c]
+      result[key] = val.trim().slice(1, -1).split(',').map(s => s.trim()).filter(Boolean);
+      currentKey = null;
+    } else if (val.trim()) {
+      // Scalar
+      result[key] = val.trim().replace(/^["']|["']$/g, '');
+      currentKey = null;
+    }
+    // else: empty value = multi-line array follows, keep currentKey
   }
   return result;
 }
@@ -215,6 +229,28 @@ async function main() {
   }
 
   // 3. Execution
+
+  // Aliases — auto-archive old dashboard names declared in frontmatter.
+  // Blueprint usage:
+  //   aliases: [Old Name]         ← inline
+  //   aliases:                    ← multi-line
+  //     - Old Name
+  //     - Another Old Name
+  // Any live (non-archived) dashboard matching an alias name is archived before deploy.
+  if (!dryRun && frontmatter.aliases) {
+    const aliases = Array.isArray(frontmatter.aliases) ? frontmatter.aliases : [frontmatter.aliases];
+    for (const oldName of aliases) {
+      const search = await client.core.request(`/api/search?q=${encodeURIComponent(oldName)}&models=dashboard`);
+      const matches = (search.data || []).filter(d => d.name === oldName && !d.archived);
+      for (const old of matches) {
+        console.log(`📦 Archiving alias "${oldName}" (ID: ${old.id}) — replaced by new blueprint`);
+        await client.core.request(`/api/dashboard/${old.id}`, 'PUT', { archived: true });
+      }
+      if (matches.length === 0) {
+        console.log(`ℹ️  Alias "${oldName}" not found in live Metabase (already archived or never existed)`);
+      }
+    }
+  }
 
   // Resolve target database: blueprint > env var > fallback
   const dbName = config.database || process.env.METABASE_DB_NAME || "Sapo";
