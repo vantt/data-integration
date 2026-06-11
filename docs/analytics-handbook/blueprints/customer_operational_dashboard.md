@@ -707,7 +707,7 @@ WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER
   AND customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY
-    CASE next_purchase_signal
+    CASE COALESCE(next_purchase_signal, 'N/A (1-time buyer)')
         WHEN 'OVERDUE'   THEN 1
         WHEN 'DUE_SOON'  THEN 2
         WHEN 'ON_TRACK'  THEN 3
@@ -819,12 +819,12 @@ WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER
   AND cancel_rate IS NOT NULL
 GROUP BY 1, 2
 ORDER BY
-    CASE
+    MIN(CASE
         WHEN cancel_rate >= 0.5  THEN 1
         WHEN cancel_rate >= 0.3  THEN 2
         WHEN cancel_rate >= 0.1  THEN 3
         ELSE 4
-    END,
+    END),
     CASE value_group
         WHEN 'VALUE_VIP'    THEN 1
         WHEN 'VALUE_GOLD'   THEN 2
