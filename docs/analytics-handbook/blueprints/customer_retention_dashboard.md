@@ -342,10 +342,10 @@ ORDER BY
 
 ```sql
 SELECT
-  '📅 30 ngày gần nhất: ' ||
-  strftime(current_date - 29, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
-  '  ·  So sánh: ' ||
-  strftime(current_date - 59, '%d/%m/%Y') || ' – ' || strftime(current_date - 30, '%d/%m/%Y')
+  '📅 Tháng hiện tại: ' ||
+  strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  So sánh: tháng ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%m/%Y')
   AS "Chu kỳ báo cáo"
 ```
 
@@ -606,7 +606,12 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT
+  '📅 Cohort 12 tháng: ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '12 months')::DATE, '%m/%Y') || ' – ' ||
+  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%m/%Y') ||
+  '  ·  (tháng ' || strftime(date_trunc('month', current_date)::DATE, '%m/%Y') || ' đang tích lũy)'
+  AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
@@ -1051,7 +1056,11 @@ ORDER BY 1, 2
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
-SELECT '📅 Cohort tháng: ' || strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') AS "Chu kỳ báo cáo"
+SELECT
+  '📅 Reactivation 6 tháng: ' ||
+  strftime((current_date - INTERVAL '6 months')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Dự báo: tuần ' || strftime(current_date, '%W/%Y') || ' & tháng ' || strftime(current_date, '%m/%Y')
+  AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
