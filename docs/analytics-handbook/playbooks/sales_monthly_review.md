@@ -4,6 +4,7 @@
 
 - **Audience:** Sales Director, CFO, Regional Managers
 - **Goal:** Comprehensive review of last month's performance, variance analysis against targets, and strategic planning.
+- **Tool:** metabase
 - **Collection:** `Executive`
 - **Related Playbook:** [CEO Weekly Pulse](./ceo_weekly_pulse.md)
 

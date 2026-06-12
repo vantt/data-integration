@@ -4,10 +4,11 @@
 
 - **Audience:** CEO, CMO, Marketing Manager
 - **Goal:** Monthly strategic review — customer value, segments, behavior, acquisition.
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers › 👥 Customer`
 - **Cadence:** Monthly (first week of each month)
 - **Scope:** `[Cross]` — includes B2B (WHOLESALE, PARTNER); excludes STAFF, KOL, CROSSBORDER
-- **Blueprint:** [`../blueprints/customer_intelligence.md`](../blueprints/customer_intelligence.md)
+- **Blueprint:** [`../blueprints/metabase/customer_intelligence.md`](../blueprints/metabase/customer_intelligence.md)
 
 ## Data Lineage
 

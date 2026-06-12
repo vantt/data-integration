@@ -4,8 +4,9 @@
 
 - **Audience:** CFO, Accounting Manager
 - **Goal:** Trả lời "Tiền của tôi đi đâu?" — phân tích cơ cấu chi phí (COGS, phí sàn, thuế, vận chuyển, chiết khấu) theo kênh bán hàng và theo thời gian.
+- **Tool:** metabase
 - **Metabase Collection:** `Finance`
-- **Blueprint:** [finance_cost_ledger.md](../blueprints/finance_cost_ledger.md)
+- **Blueprint:** [finance_cost_ledger.md](../blueprints/metabase/finance_cost_ledger.md)
 - **Scope:** All sales channels (`is_sales_channel = true`, loại trừ `status IN ('CANCELLED','Voided')`)
 
 ## Filters

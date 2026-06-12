@@ -4,6 +4,7 @@
 
 - **Audience:** CFO, Finance Managers, CEO
 - **Goal:** Monthly Profit & Loss analysis: doanh thu (Sapo) vs giá vốn (MISA) vs chi phí sàn (Shopee). Drill-down theo kênh, sản phẩm, thời gian.
+- **Tool:** metabase
 - **Collection:** `Finance`
 - **Design Spec:** [designs/finance_pl.md](../designs/finance_pl.md) *(to be created)*
 

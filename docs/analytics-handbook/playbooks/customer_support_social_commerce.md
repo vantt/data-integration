@@ -4,6 +4,7 @@
 
 - **Audience:** Customer Support Team Leader
 - **Goal:** Monitor and improve the "Chat-to-Order" conversion rate from Facebook & Zalo.
+- **Tool:** metabase
 - **Collection:** `Operations > Daily Monitoring`
 
 ## Key Questions

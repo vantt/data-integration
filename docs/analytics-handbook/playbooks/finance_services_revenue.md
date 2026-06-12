@@ -9,7 +9,7 @@
 - **Audience:** CFO (primary), Finance Manager, CEO (secondary)
 - **Goal:** Theo dõi 2.4B VND/năm doanh thu dịch vụ (DV* + CPBH) riêng biệt khỏi doanh thu hàng hóa — đảm bảo CFO nắm cơ cấu doanh thu đầy đủ trong buổi MBR hàng tháng.
 - **Metabase Collection:** `Finance`
-- **Blueprint:** [blueprints/finance_services_revenue.md](../blueprints/finance_services_revenue.md)
+- **Blueprint:** [blueprints/finance_services_revenue.md](../blueprints/metabase/finance_services_revenue.md)
 - **Cadence:** Monthly review (đọc trong 5-7 phút đầu buổi MBR)
 
 ## Data Lineage
@@ -125,7 +125,8 @@ MISA AMIS → [ingestion: filedrop] → raw_misa_sales_lines
 
 ## Implementation Notes
 
-- **Blueprint:** Đầy đủ SQL + viz config tại [blueprints/finance_services_revenue.md](../blueprints/finance_services_revenue.md)
+- **Blueprint:** Đầy đủ SQL + viz config tại [blueprints/finance_services_revenue.md](../blueprints/metabase/finance_services_revenue.md)
 - **Deploy:** `node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/finance_services_revenue.md`
 - **Prerequisite:** P0 agent phải implement + deploy `is_service_line` flag trước khi deploy blueprint
+- **Tool:** metabase
 - **Collection:** Nằm trong `Finance` collection (cùng với Finance P&L Dashboard)

@@ -4,8 +4,9 @@
 
 - **Audience:** Finance Director, Sales Director
 - **Goal:** Identify which channels are loss-leaders after deducting platform fees, monitor margin trends, and quantify the financial exposure from unprofitable channels.
+- **Tool:** metabase
 - **Collection:** `Finance`
-- **Blueprint:** [blueprints/finance_channel_pl.md](../blueprints/finance_channel_pl.md)
+- **Blueprint:** [blueprints/finance_channel_pl.md](../blueprints/metabase/finance_channel_pl.md)
 
 ## Data Lineage
 

@@ -6,8 +6,9 @@
 - **Goal:** Monthly deep dive into channel effectiveness, customer segments, promotion analysis, and strategic recommendations for next month.
 - **Cadence:** 3rd–5th of each month, reviewing the closed month.
 - **Archetype:** Operational Cockpit (multi-view, 4 tabs)
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers`
-- **Related:** [Promotion Analysis](./sales_promotion_analysis.md), [Customer Retention & Cohorts](../blueprints/customer_retention_cohorts.md)
+- **Related:** [Promotion Analysis](./sales_promotion_analysis.md), [Customer Retention & Cohorts](../blueprints/metabase/customer_retention_cohorts.md)
 - **Design Spec:** [Marketing Monthly Analysis Design](../designs/marketing_monthly_analysis.md)
 
 ## Key Questions

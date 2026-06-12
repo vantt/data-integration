@@ -6,6 +6,7 @@
 - **Goal:** Comprehensive monthly performance review — answer "How did we do this month?" and "What should we change next month?"
 - **Cadence:** 1st–3rd of each month, reviewing the closed month.
 - **Archetype:** Executive Pulse (multi-view — 3 tabs)
+- **Tool:** metabase
 - **Collection:** `Executive`
 - **Design Spec:** [CEO Monthly Scorecard](../designs/ceo_monthly_scorecard.md)
 - **Related:** [Monthly Business Review Process](./sales_monthly_review.md)

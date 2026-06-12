@@ -6,6 +6,7 @@
 - **Goal:** Track weekly channel performance, customer acquisition efficiency, and active campaign health.
 - **Cadence:** Every Monday, reviewing previous Mon-Sun.
 - **Archetype:** Operational Cockpit
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers`
 
 ## Key Questions

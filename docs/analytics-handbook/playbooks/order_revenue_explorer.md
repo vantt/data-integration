@@ -4,8 +4,9 @@
 
 - **Audience:** Analyst, Finance
 - **Goal:** Audit tool — drill into gross/net/collected revenue at order level to verify numbers from other dashboards.
+- **Tool:** metabase
 - **Collection:** `Analytics`
-- **Blueprint:** [`blueprints/order_revenue_explorer.md`](../blueprints/order_revenue_explorer.md)
+- **Blueprint:** [`blueprints/order_revenue_explorer.md`](../blueprints/metabase/order_revenue_explorer.md)
 
 ## Data Lineage
 

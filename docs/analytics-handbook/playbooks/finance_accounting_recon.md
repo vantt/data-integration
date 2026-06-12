@@ -4,8 +4,9 @@
 
 - **Audience:** Accounting Manager, CFO
 - **Goal:** Monitor daily reconciliation status between Sapo (order system), MISA (accounting/invoicing), and Shopee (settlement fees). Detect unmatched orders, track drift trends, and surface exceptions for manual follow-up.
+- **Tool:** metabase
 - **Collection:** `Finance`
-- **Blueprint:** [blueprints/finance_accounting_recon.md](../blueprints/finance_accounting_recon.md)
+- **Blueprint:** [blueprints/finance_accounting_recon.md](../blueprints/metabase/finance_accounting_recon.md)
 
 ## Data Lineage
 

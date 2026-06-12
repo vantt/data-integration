@@ -4,10 +4,11 @@
 
 - **Audience:** US Operations, Sales Ops Lead
 - **Goal:** Theo dõi hàng ngày các đơn hàng US CrossBorder Fulfillment — doanh thu, trạng thái đơn, fulfillment pipeline, và cảnh báo SKU thiếu giá.
+- **Tool:** metabase
 - **Collection:** `Operations > US CrossBorder`
 - **Cadence:** Daily (default: this month)
 - **Archetype:** Operational Monitor
-- **Blueprint:** [blueprints/us_crossborder_operations.md](../blueprints/us_crossborder_operations.md)
+- **Blueprint:** [blueprints/us_crossborder_operations.md](../blueprints/metabase/us_crossborder_operations.md)
 
 ## Key Questions
 

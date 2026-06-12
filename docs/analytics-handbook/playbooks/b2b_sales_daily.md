@@ -4,9 +4,10 @@
 
 - **Audience:** B2B Account Manager
 - **Goal:** Daily monitoring of B2B sales performance (WHOLESALE, PARTNER) — doanh thu hôm nay, AOV, top accounts, phân bổ theo loại khách và kênh.
+- **Tool:** metabase
 - **Collection:** `Operations > B2B Operations`
 - **Cadence:** Daily (today vs yesterday)
-- **Blueprint:** [blueprints/b2b_sales_daily.md](../blueprints/b2b_sales_daily.md)
+- **Blueprint:** [blueprints/b2b_sales_daily.md](../blueprints/metabase/b2b_sales_daily.md)
 
 ## Key Questions
 

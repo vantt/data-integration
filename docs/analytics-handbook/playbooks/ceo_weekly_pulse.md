@@ -6,6 +6,7 @@
 - **Goal:** 5-minute weekly check-in — answer "Are we on track this week?" across Revenue, Channels, and Customer Health.
 - **Cadence:** Every Monday morning, reviewing the previous Mon–Sun.
 - **Archetype:** Operational Cockpit
+- **Tool:** metabase
 - **Collection:** `Executive`
 - **Design Spec:** [CEO Weekly Pulse (Redesign)](../designs/ceo_weekly_pulse.md)
 

@@ -4,10 +4,11 @@
 
 - **Audience:** Marketing Manager, Customer Success
 - **Goal:** Answer "are retail customers coming back?" — track repeat rate, churn, and lifecycle health; analyze cohort retention patterns; measure reactivation effectiveness.
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers › 👥 Customer`
 - **Cadence:** Weekly review; full cohort analysis monthly
 - **Scope:** scope_retail (`customer_type = 'RETAIL'`) — WHOLESALE/PARTNER/STAFF excluded
-- **Blueprint:** [`../blueprints/customer_retention_cohorts.md`](../blueprints/customer_retention_cohorts.md)
+- **Blueprint:** [`../blueprints/metabase/customer_retention_cohorts.md`](../blueprints/metabase/customer_retention_cohorts.md)
 
 > **Note:** This board is analytics-only. Operational call lists and at-risk watchlists live in the **Daily Action Queue** board — do not duplicate actionable queues here.
 

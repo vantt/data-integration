@@ -4,8 +4,9 @@
 
 - **Audience:** CEO, CFO, Sales Ops Lead
 - **Goal:** Track refund liability exposure, detect channels with abnormal return rates, understand return reason breakdown, and monitor daily return volume trends.
+- **Tool:** metabase
 - **Collection:** `Finance`
-- **Blueprint:** [blueprints/finance_return_impact.md](../blueprints/finance_return_impact.md)
+- **Blueprint:** [blueprints/finance_return_impact.md](../blueprints/metabase/finance_return_impact.md)
 
 ## Data Lineage
 

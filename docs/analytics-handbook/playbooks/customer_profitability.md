@@ -4,9 +4,10 @@
 
 - **Audience:** CMO, Finance-Marketing
 - **Goal:** Identify which channels and customer segments are contribution-margin positive; gate retail activation decisions on margin health, not just revenue.
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers › 👥 Customer`
 - **Cadence:** Monthly review (90-day rolling window for orders; all-time snapshot for customer attributes)
-- **Blueprint:** [`../blueprints/customer_profitability.md`](../blueprints/customer_profitability.md)
+- **Blueprint:** [`../blueprints/metabase/customer_profitability.md`](../blueprints/metabase/customer_profitability.md)
 
 ## Data Lineage
 

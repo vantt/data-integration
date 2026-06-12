@@ -7,6 +7,7 @@
 
 - **Audience:** Warehouse Manager, CS
 - **Goal:** Monitor carrier performance and return reasons.
+- **Tool:** metabase
 - **Collection:** `Operations > Logistics`
 
 ## Data Lineage

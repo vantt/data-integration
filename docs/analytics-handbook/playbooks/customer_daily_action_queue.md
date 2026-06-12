@@ -4,9 +4,10 @@
 
 - **Audience:** Customer Success, Sales
 - **Goal:** Who to contact TODAY — daily outreach dispatch ranked by urgency and CLV
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers › 👥 Customer`
 - **Cadence:** Daily (refreshes overnight)
-- **Blueprint:** [`../blueprints/customer_daily_action_queue.md`](../blueprints/customer_daily_action_queue.md)
+- **Blueprint:** [`../blueprints/metabase/customer_daily_action_queue.md`](../blueprints/metabase/customer_daily_action_queue.md)
 
 ## Data Lineage
 

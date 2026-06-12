@@ -4,6 +4,7 @@
 
 - **Audience:** Operations Manager
 - **Goal:** Real-time monitoring of order processing pipeline — fulfillment status, processing speed, bottleneck identification.
+- **Tool:** metabase
 - **Collection:** `Operations > Logistics`
 - **Design Spec:** [designs/logistics_operations.md](../designs/logistics_operations.md)
 

@@ -9,7 +9,7 @@ description: Analyst brain — NGHĨ, ĐỊNH NGHĨA, và THIẾT KẾ analytics
 > Đây là "analyst brain" — sở hữu và tạo ra toàn bộ analytics artifacts trừ blueprints.
 > Blueprints thuộc về `.skills/metabase-automation/` (engineer brain).
 
-> **🚧 Forthcoming (Phase 0+ underway, 2026-05-28)**: Design Spec format đang được nâng cấp lên v2 — thêm Widget Details section (SQL hoặc metric_ref + config YAML), `spec_version` field, `WIDGET_CONFIG_SCHEMA.md`, và JSON Schema cho IDE validation. Endgame: semantic-layer (metric_ref by name, không hardcode SQL). Plan & decisions: `plans/260528-1325-tool-agnostic-design-spec/`. **Current Phase 0-6 workflow chưa thay đổi** — v1 specs vẫn được parser support.
+> **Multi-tool architecture**: Blueprint path dùng subfolder theo tool — `blueprints/metabase/` cho Metabase, `blueprints/evidence/` cho Evidence.dev (khi có). Mỗi playbook khai báo `**Tool:**` field để xác định tool target. Mapping: 1 playbook → 1 blueprint → 1 tool. Plan `260528-1325-tool-agnostic-design-spec` đã defer — architecture hiện tại là Workflow C (no design-spec intermediate layer).
 
 ## Overview
 
@@ -77,7 +77,7 @@ Khi tạo design spec file mới, template phải giữ nguyên block định ng
 | Playbook | `docs/analytics-handbook/playbooks/` | Analytics Design (Phase 1) | Tạo mới cho mỗi dashboard; cập nhật khi đổi audience/purpose |
 | Guide | `docs/analytics-handbook/guides/` | Analytics Design (Phase 2) | Chỉ khi có concept phức tạp cần giải thích riêng |
 | Design Spec | `docs/analytics-handbook/designs/` | Analytics Design (Phase 3-6) | Tạo mới cho mỗi dashboard design |
-| Blueprint | `docs/analytics-handbook/blueprints/` | **Metabase Automation** (Phase 7-10) | Không thuộc skill này |
+| Blueprint | `docs/analytics-handbook/blueprints/{tool}/` | **Metabase/Evidence Automation** (Phase 7-10) | Không thuộc skill này. `{tool}` = `metabase` hoặc `evidence` |
 
 **Thứ tự tạo artifact (bắt buộc)**:
 ```
@@ -110,8 +110,10 @@ Mỗi artifact downstream **tham chiếu** artifact upstream:
 1. Kiểm tra playbook đã tồn tại? → Quét `docs/analytics-handbook/playbooks/`
 2. Nếu đã có → Đọc, cập nhật nếu audience/purpose thay đổi
 3. Nếu chưa có → Tạo mới theo `templates/playbook_template.md`, giữ nguyên block định nghĩa Playbook ngay dưới H1 title.
-4. **Action Triggers table là BẮT BUỘC.** Mỗi metric chính phải có ít nhất 1 threshold + owner + action.
-5. **Reading Flow là BẮT BUỘC.** Mô tả đường đi từ hero card → investigation → escalation.
+4. **Tool field BẮT BUỘC**: Thêm `**Tool:** metabase` (hoặc `evidence`) vào block `## Overview`. Tool xác định blueprint format và subfolder deploy path (`blueprints/{tool}/`). Default = `metabase` nếu ops/interactive; `evidence` nếu report/shareable/executive.
+5. **Blueprint field**: Cập nhật path theo subfolder mới — `../blueprints/{tool}/{name}.md`.
+6. **Action Triggers table là BẮT BUỘC.** Mỗi metric chính phải có ít nhất 1 threshold + owner + action.
+7. **Reading Flow là BẮT BUỘC.** Mô tả đường đi từ hero card → investigation → escalation.
 
 **Output**: `docs/analytics-handbook/playbooks/<name>.md`
 
@@ -196,6 +198,37 @@ Sửa trực tiếp blueprint (Phase 9 only) → Deploy → Đánh dấu design 
 | Phase 5 | Không tìm được viz type phù hợp | Dùng `data-table` làm safe fallback. Ghi note "needs better viz". |
 | Phase 6 | KPI không có comparison khả thi | Chấp nhận `single-value` không trend. Ghi note. |
 
+## Tool Selection (Phase 1 — khi tạo playbook)
+
+**Reference**: `docs/analytics-handbook/guides/tool-selection-guide.md` — đọc khi cần reasoning đầy đủ.
+
+**3 tools deployed**: `metabase` (bi.lan.fwg.vn), `rill` (rill.lan.fwg.vn), `evidence` (planned).
+
+**Chọn `rill` khi**: User cần tự do explore ad-hoc, không biết câu hỏi trước, metrics đã định nghĩa nhưng layout chưa xác định. Rill dùng YAML blueprint (`blueprints/rill/`) và playbook structure riêng (`playbooks/rill/`).
+
+**Default**: `metabase`. Chỉ chọn `evidence` khi đáp ứng đủ tất cả điều kiện sau:
+
+```
+✅ Không cần cross-filter (click chart → filter chart khác)
+✅ Không cần email alert / subscription
+✅ Cadence weekly hoặc monthly (không phải daily ops)
+✅ Mart parquet nguồn < 250MB
+✅ Format chính là report / document (không phải operational tool)
+```
+
+**Archetype → Tool nhanh**:
+- Operational Cockpit → `metabase`
+- Executive Pulse (weekly/monthly) → `evidence`
+- Exploratory Tool / Metrics Explorer (ad-hoc) → `rill`
+- Report Document (shareable) → `evidence`
+- Reconciliation / Data Quality Monitor → `metabase`
+
+**Evidence + Data Loader** (khi mart > 250MB nhưng muốn dùng Evidence): pre-aggregate server-side tại build time → output parquet < 50MB → bake vào static site. Xem `tool-selection-guide.md` §Evidence Data Loaders.
+
+---
+
 ## Tool Feasibility Exception
 
-Trong Phase 5, nếu cần kiểm tra "BI tool có hỗ trợ viz type này không?", agent có thể scan cột **Metabase Support** trong bảng vocabulary (`VISUALIZATION_VOCABULARY.md`) mà **KHÔNG cần** đọc full `METABASE_VIZ_CATALOG.md`.
+Trong Phase 5, nếu cần kiểm tra "BI tool có hỗ trợ viz type này không?":
+- **Metabase**: scan cột **Metabase Support** trong `VISUALIZATION_VOCABULARY.md` — KHÔNG cần đọc full `METABASE_VIZ_CATALOG.md`.
+- **Evidence.dev**: dùng ECharts-based components (LineChart, BarChart, ScatterPlot, FunnelChart, Heatmap, DataTable, BigValue). Tất cả standard viz types đều supported. Không có gauge hay progress-toward-goal native.

@@ -6,6 +6,7 @@
 - **Goal:** Weekly operational review — order processing health, channel workload, team performance, payment status, weekly margin. 4 tabs: Tong quan, Kenh & Chi nhanh, Doi ngu & Thanh toan, Margin.
 - **Cadence:** Every Monday, reviewing previous Mon-Sun.
 - **Archetype:** Operational Cockpit (3 tabs)
+- **Tool:** metabase
 - **Collection:** `Operations` > `Periodic Reviews`
 - **Design Spec:** [Sales Ops Weekly Review (Redesign)](../designs/sales_ops_weekly_review.md)
 - **Related:** [Daily Sales Operations](./sales_daily_operation.md), [Social Commerce Operations](./customer_support_social_commerce.md), [Sales Ops Monthly Summary](./sales_ops_monthly_summary.md)

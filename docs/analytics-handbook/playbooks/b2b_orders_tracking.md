@@ -4,9 +4,10 @@
 
 - **Audience:** B2B Account Manager
 - **Goal:** Monitor payment status and fulfillment progress for WHOLESALE and PARTNER orders — công nợ, tuổi nợ, giao hàng pending.
+- **Tool:** metabase
 - **Collection:** `Operations > B2B Operations`
 - **Cadence:** Rolling 30 days (default), adjustable via date filter
-- **Blueprint:** [blueprints/b2b_orders_tracking.md](../blueprints/b2b_orders_tracking.md)
+- **Blueprint:** [blueprints/b2b_orders_tracking.md](../blueprints/metabase/b2b_orders_tracking.md)
 
 ## Key Questions
 

@@ -6,6 +6,7 @@
 - **Goal:** Monthly operational summary — order processing efficiency, quality analysis, social commerce results, channel & branch health, staff productivity, and payment reconciliation for the closed month.
 - **Cadence:** 2nd-3rd of each month, reviewing the closed month.
 - **Archetype:** Operational Cockpit (4 tabs)
+- **Tool:** metabase
 - **Collection:** `Operations` > `Periodic Reviews`
 - **Design Spec:** [Sales Ops Monthly Summary (Redesign)](../designs/sales_ops_monthly_summary.md)
 - **Related:** [Sales Ops Weekly Review](./sales_ops_weekly_review.md), [Social Commerce Operations](./customer_support_social_commerce.md), [Order Listing](./order_listing.md)

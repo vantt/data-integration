@@ -222,8 +222,10 @@ node .skills/metabase-automation/scripts/create_blueprint.js <domain> <purpose>
 **2. Deploy a Blueprint**
 
 ```bash
-node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/my_metrics.md
+node .skills/metabase-automation/scripts/deploy_from_markdown.js docs/analytics-handbook/blueprints/metabase/my_dashboard.md
 ```
+
+> **Blueprint path**: Blueprints Metabase nằm tại `docs/analytics-handbook/blueprints/metabase/`. Mỗi tool có subfolder riêng — `blueprints/metabase/` cho Metabase, `blueprints/evidence/` cho Evidence.dev. Xem `**Tool:**` field trong playbook tương ứng để xác định tool target.
 
 ## 🛠️ API Details
 

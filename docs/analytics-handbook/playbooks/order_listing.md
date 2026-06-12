@@ -6,9 +6,10 @@
 - **Goal:** Verify BI order data matches Sapo source — detect missing orders, amount mismatches, and anomalies. KPIs with DoD trends, status/payment breakdowns, channel distribution, flagged alerts, and full detail table.
 - **Cadence:** Daily morning/evening, 10-15 min
 - **Archetype:** Operational Cockpit
+- **Tool:** metabase
 - **Collection:** `Operations` > `Daily Monitoring`
 - **Design Spec:** [Order Listing](../designs/order_listing.md)
-- **Blueprint:** [Order Listing](../blueprints/order_listing.md)
+- **Blueprint:** [Order Listing](../blueprints/metabase/order_listing.md)
 
 ## Key Questions
 

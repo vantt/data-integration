@@ -4,10 +4,11 @@
 
 - **Audience:** CFO, Finance, Sales Ops
 - **Goal:** Phân tích P&L từng đơn hàng — gross margin, lãi ròng kênh, phân bổ chi phí. Bao gồm tất cả kênh (kể cả non-sales). Phát hiện đơn lỗ, đơn bất thường.
+- **Tool:** metabase
 - **Collection:** `Finance`
 - **Cadence:** Custom (date filter driven)
 - **Archetype:** Profitability Explorer
-- **Blueprint:** [blueprints/order_profitability_all.md](../blueprints/order_profitability_all.md)
+- **Blueprint:** [blueprints/order_profitability_all.md](../blueprints/metabase/order_profitability_all.md)
 
 ## Key Questions
 

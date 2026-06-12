@@ -6,8 +6,9 @@
 - **Goal:** Evaluate real marketing effectiveness — not just revenue ROAS but profitable ROAS (gross profit per dollar of spend) by channel, over rolling 30-day windows.
 - **Cadence:** Weekly or on-demand. Default window = last 30 days vs prior 30 days.
 - **Archetype:** Operational Cockpit
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers`
-- **Blueprint:** [marketing_roi.md](../blueprints/marketing_roi.md)
+- **Blueprint:** [marketing_roi.md](../blueprints/metabase/marketing_roi.md)
 - **Related:** [Marketing Monthly Analysis](./marketing_monthly_analysis.md), [Marketing Weekly Tracker](./marketing_weekly_tracker.md)
 
 ## Key Questions

@@ -10,7 +10,9 @@
 - **Goal:** [Dashboard trả lời câu hỏi gì — 1 dòng]
 - **Cadence:** [Frequency + timing, e.g., "Weekly, Monday morning"]
 - **Archetype:** [Executive Pulse / Operational Cockpit / Exploratory Tool]
+- **Tool:** [metabase | rill | evidence] ← ops/fixed layout → metabase; ad-hoc explore → rill; report/shareable/executive → evidence
 - **Collection:** `[Collection Path]`
+- **Blueprint:** [`name`](../blueprints/[tool]/name.md)
 - **Design Spec:** [`design`](../designs/design.md)
 - **Domain References:** [`domain`](../domains/domain.md)
 

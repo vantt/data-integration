@@ -4,6 +4,7 @@
 
 - **Audience:** Marketing Manager, Sales Ops, Finance
 - **Goal:** Evaluate the effectiveness of promotions, manage discount spending, and analyze payment costs.
+- **Tool:** metabase
 - **Collection:** `Marketing & Customers`
 - **Data Source:** `fact_orders`, `promotion_redemptions`, `payment_methods`
 
