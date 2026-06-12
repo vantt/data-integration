@@ -1351,12 +1351,65 @@ Use as denominator for per-customer rates (arpu, retention). Apply `scope_retail
 | `retention_rate` | [metrics.md](#retention_rate) | % retained across periods | cohort health analysis |
 | `churn_rate` | [metrics.md](#churn_rate) | % lost | identifying loss risk |
 | `repeat_buyer_rate` | [metrics.md](#repeat_buyer_rate) | repeat buyer % of orders | loyalty signal within a period |
+| `mau_repeat` | [metrics.md](#mau_repeat) | MAU filtered to ≥2 lifetime orders | measuring engaged core vs total active |
 
 #### ❌ Anti-patterns
 ```sql
 -- ❌ No scope filter — B2B high-value accounts distort active count
 SELECT COUNT(DISTINCT customer_key) FROM fact_orders
 WHERE ordered_at >= CURRENT_DATE - 30  -- missing AND scope_retail
+```
+
+#### 🏷️ Used In
+*Not tracked yet.*
+
+---
+
+## mau_repeat
+
+> **Type:** Metric | **Domain:** [Customer](../domains/customer.md) | **Unit:** count
+> **Status:** `active` | **Scope:** scope_retail (required) | **Grain:** per rolling 30-day window | **Since:** 2021-01-01
+
+**Definition:** Unique customers with ≥ 2 lifetime orders who placed at least one order in the past 30 days. (Repeat-buyer MAU)
+
+**Real question:** "Trong MAU, có bao nhiêu khách đã mua nhiều hơn 1 lần (đã chứng minh quay lại)?"
+**Time anchor:** `ordered_at` — 30-day rolling window back from current_date
+**Order count source:** `dim_customers.order_count` (= lifetime order frequency, active orders only)
+
+**Formula:**
+```sql
+COUNT(DISTINCT o.customer_key)
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.ordered_at >= CURRENT_DATE - INTERVAL '30 days'
+  AND o.scope_retail
+  AND c.order_count >= 2
+```
+
+**Intent:** Filters out one-time buyers from MAU to expose the "engaged core" — customers who have proven they return. Used as a quality signal alongside `mau`: if `mau` grows but `mau_repeat` stays flat, growth is driven by first-time buyers, not retention.
+
+**Use in SQL:** Join `fact_orders` + `dim_customers`, filter `order_count >= 2` and 30-day window.
+
+#### 🎯 When to Use
+Use when MAU alone is insufficient — e.g., when one-time buyers inflate active count and mask real engagement health. Plot alongside `mau` on a trend to see the gap widen or narrow over time.
+
+#### ⚠️ Conflicts
+`order_count` in `dim_customers` is a **lifetime** count, not period-scoped — a customer with 2 total orders counts even if the 2nd was 2 years ago. This is intentional: the signal is "has demonstrated willingness to return", not "bought twice recently".
+
+#### 🔗 Similar (not synonym)
+| Concept | File | Key difference | Use instead when |
+|---|---|---|---|
+| `mau` | [metrics.md](#mau) | includes one-time buyers | sizing total active base |
+| `repeat_buyer_rate` | [metrics.md](#repeat_buyer_rate) | ratio within a period, not count | comparing loyalty % across periods |
+| `retention_rate` | [metrics.md](#retention_rate) | cohort-based, cross-period | measuring period-over-period return |
+
+#### ❌ Anti-patterns
+```sql
+-- ❌ Counting repeat orders in last 30 days instead of repeat customers
+WHERE order_count_in_period >= 2  -- wrong grain — mau_repeat uses lifetime order_count, not period count
+
+-- ❌ Using frequency from fact_orders aggregate instead of dim_customers.order_count
+-- dim_customers.order_count is pre-computed and consistent with other customer metrics
 ```
 
 #### 🏷️ Used In
