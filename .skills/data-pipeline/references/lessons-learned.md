@@ -3927,3 +3927,56 @@ Two patterns that trigger this:
 3. A board named "rolling-30d / [cadence]" should hardcode its window — an interactive date picker adds fragility for little value.
 
 **Reference:** `docs/analytics-handbook/blueprints/product_performance_velocity.md` ; fact_orders.ordered_at field_id=848
+
+### L124 — `refresh="drop_pipeline_state"` trong dlt xóa toàn bộ parquet của table, không chỉ state
+
+**Group:** INGEST
+
+**Symptom:** Sau khi chạy re-ingest với `--reset-cursor`, directory `ingest_method=history_log/` và `ingest_method=text/` rỗng hoàn toàn. Log dlt có dòng: `"Client for filesystem will drop tables {'order'}"` và `"Table order has seen data for the first time"`. Tất cả parquet của 3 partition (`batch_sync`, `history_log`, `text`) bị xóa.
+
+**Root cause:** `refresh="drop_pipeline_state"` trong dlt filesystem destination KHÔNG chỉ xóa state — nó trigger **DROP TABLE** trên toàn bộ directory `order/`, bao gồm cả các partition `ingest_method=history_log/` và `ingest_method=text/` không liên quan đến pipeline đang chạy. Sau khi DROP TABLE, schema bị clear → dlt ghi lại từ đầu ("Table order has seen data for the first time") → chỉ còn 1 parquet file mới từ batch này.
+
+Root cause sâu hơn: `refresh="drop_pipeline_state"` trong dlt v0.5+ cũng clear schema hash. Khi schema hash mismatch (do schema version tăng), dlt coi table là "mới" → trigger `_init_dataset_and_update_schema` → gọi `drop_table('order')` trước khi load.
+
+**Fix đúng cho `--reset-cursor`:**
+```python
+# KHÔNG dùng refresh="drop_pipeline_state" — DELETE toàn bộ table data
+# ĐÚNG: xóa thủ công destination state JSONL files trước khi tạo pipeline object
+
+# 1. Clear local state dir
+shutil.rmtree(os.path.join(get_dlt_pipelines_dir(), pipeline_name))
+
+# 2. Xóa destination state files (pattern: _dlt_pipeline_state/{name}__*.jsonl)
+data_lake = os.environ.get("DESTINATION__FILESYSTEM__BUCKET_URL", "").replace("file://", "")
+for sf in glob.glob(os.path.join(data_lake, "_dlt_pipeline_state", f"{pipeline_name}__*.jsonl")):
+    os.remove(sf)
+
+# 3. source_args["full_refresh"] = True  ← tắt cursor filter ở source layer
+# KHÔNG truyền refresh= gì vào pipeline.run()
+```
+
+**Rules:**
+1. `refresh="drop_pipeline_state"` trong dlt filesystem destination = DROP TABLE trên toàn bộ directory table. Đây là destructive operation, không chỉ xóa state.
+2. Khi table có nhiều `ingest_method` partition (batch_sync / history_log / text), DROP TABLE xóa TẤT CẢ — kể cả data từ pipeline khác (`sapo_history_log_pipeline`) và data không thể re-fetch (text).
+3. Để reset cursor an toàn: xóa thủ công `_dlt_pipeline_state/{pipeline_name}__*.jsonl` ở destination + xóa local state dir. KHÔNG dùng `refresh=`.
+4. State dlt được lưu ở CẢ HAI nơi: local `{pipelines_dir}/{name}/` VÀ destination `_dlt_pipeline_state/`. Chỉ xóa local là KHÔNG ĐỦ — dlt restore từ destination khi khởi tạo pipeline.
+5. Dấu hiệu nhận biết: log `"start_value: 2026-XX-XX..."` sau khi đã xóa local state = dlt đã restore từ destination.
+
+**Reference:** `ingestion/src/utils/pipeline_runner.py` (comment block trong `--reset-cursor` handler) ; commit `cbba8bb` (correct fix) ; commit `08ae296` (wrong fix, superceded)
+
+### L125 — mart_sku_economics_monthly.gross_margin_pct is UNCORRECTED (no H010 fix); use realized_margin_pct
+
+**Group:** TRUST
+
+**Symptom:** Product margin cards show ~2× too-low margin for the 5 H010 packsize SKU (Hyaluron & Collagen Plus shows 35.6% vs true 59.8%; Cordyceps Plus 65.6% vs 72.2%).
+
+**Root cause:** The H010 packsize COGS-overcount fix (L118, seed `misa_qty_multiplier=1`) is applied ONLY to the corrected columns `realized_gross_profit` / `realized_margin_pct` in `mart_sku_economics_monthly`. The mart's `gross_margin_pct` / `gross_profit` columns AND the upstream `int_misa_sales_lines.gross_profit` remain UNCORRECTED (10× COGS for the 5 H010 SKU). BI cards that compute `SUM(gross_profit)/SUM(revenue)` from int_misa_sales_lines — or read `gross_margin_pct` — understate those SKU.
+
+**Fix:** For any SKU margin/profit metric, use `realized_margin_pct` / `realized_gross_profit` (+ `net_revenue`) from `mart_sku_economics_monthly`. Never re-derive margin from `int_misa_sales_lines` and never use the mart's `gross_margin_pct`.
+
+**Rules:**
+1. Canonical SKU margin = `realized_margin_pct`. `gross_margin_pct` is pre-H010-fix — do not surface it.
+2. No corrected COGS exists at channel/voucher grain (int_misa & fact_order_economics use uncorrected `sapo_mac`); channel-level SKU margin can only be approximated via the mart's `top_channel_name`.
+3. Same anti-pattern as [[L122]] (reuse pre-computed mart column, don't re-derive) — applied to margin specifically.
+
+**Reference:** `mart_sku_economics_monthly` (realized_margin_pct vs gross_margin_pct) ; L118 (H010 packsize fix) ; `docs/analytics-handbook/blueprints/product_profitability_cost.md`
