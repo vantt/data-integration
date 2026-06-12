@@ -412,8 +412,8 @@ def _has_active_run(context, job_name: str) -> str | None:
     return runs[0].run_id if runs else None
 
 @schedule(...)
-def ingest_sapo_realtime_schedule(context):
-    active = _has_active_run(context, "ingest_sapo_realtime_job")
+def pipeline_sapov2_realtime_schedule(context):
+    active = _has_active_run(context, "pipeline_sapov2_realtime_job")
     if active:
         return SkipReason(f"previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -1071,7 +1071,7 @@ health_checks_asset_job = define_asset_job(
 ```python
 def _has_active_ingestion(context) -> str | None:
     for job_name in [
-        "ingest_sapo_realtime_job", "ingest_sapo_incremental_job",
+        "pipeline_sapov2_realtime_job", "pipeline_sapov2_incremental_job",
         "pipeline_batch_nightly_job", "ingest_sheets_sync_job",
     ]:
         runs = context.instance.get_runs(
@@ -1180,7 +1180,7 @@ GROUP BY 1
 
 ### L45 — dbt subprocess timeout watchdog — prevent infinite hang
 
-**Symptom:** `ingest_sapo_realtime_job` stuck 14+ min with 14 min inactive. Multiple runs stuck in single day. Jobs auto-terminated by stuck alerter but pattern keeps recurring.
+**Symptom:** `pipeline_sapov2_realtime_job` stuck 14+ min with 14 min inactive. Multiple runs stuck in single day. Jobs auto-terminated by stuck alerter but pattern keeps recurring.
 
 **Root cause:** `dbt.cli(["build"]).stream()` at `orchestration/assets/dbt.py:136` had **no timeout**. When dbt subprocess enters DuckDB WAL checkpoint hang (I/O pressure from concurrent backup or Metabase reads), the `stream()` generator blocks indefinitely — stdout stalls, Dagster blocks waiting for next line.
 
@@ -1899,7 +1899,7 @@ QUALIFY ROW_NUMBER() OVER (PARTITION BY staff_email, team_code, effective_from O
 
 ### L60 — `finally: watchdog.cancel()` orphans dbt subprocess khi run bị kill ngoài
 
-**Symptom:** `ingest_sapo_realtime_job` stuck **liên tục** (Runtime: 10 min, Inactive: 9 min, auto-terminated). Pattern lặp lại mỗi 3-13 phút mà không dừng dù đã có watchdog timer và stuck_run_alerter.
+**Symptom:** `pipeline_sapov2_realtime_job` stuck **liên tục** (Runtime: 10 min, Inactive: 9 min, auto-terminated). Pattern lặp lại mỗi 3-13 phút mà không dừng dù đã có watchdog timer và stuck_run_alerter.
 
 **Root cause:** Chuỗi nguyên nhân đa tầng:
 
@@ -1945,7 +1945,7 @@ finally:
 
 ### L61 — QUEUE_STUCK_THRESHOLD phải sizing dựa vào topology schedule thực tế
 
-**Symptom:** `ingest_sapo_incremental_job` stuck NOT_STARTED 120 min (đúng bằng QUEUE_STUCK_THRESHOLD=2h). Runs liên tục bị miss, dữ liệu stale.
+**Symptom:** `pipeline_sapov2_incremental_job` stuck NOT_STARTED 120 min (đúng bằng QUEUE_STUCK_THRESHOLD=2h). Runs liên tục bị miss, dữ liệu stale.
 
 **Root cause:** Hai vấn đề kết hợp:
 1. Zombie dbt processes (L60) tích lũy → CPU + file descriptor pressure → `QueuedRunCoordinator` daemon bị slow/freeze → không poll queue để dequeue incremental run
@@ -1987,7 +1987,7 @@ QUEUE_STUCK_THRESHOLD = timedelta(minutes=90)
 2. **Kiểm tra schedule skip hour** — xem từng schedule để hiểu actual dependency. "Incremental skip hour 3" là thông tin quan trọng nhưng không hiển thị rõ ràng trong UI.
 3. **L60 fix phòng ngừa zombie** → L61 fix giảm detection latency. Cả hai cần nhau: L60 ngăn zombie tích lũy, L61 đảm bảo nếu zombie vẫn xảy ra thì bị phát hiện nhanh hơn.
 
-**Reference:** `orchestration/sensors/stuck_run_alerter.py` → `QUEUE_STUCK_THRESHOLD`; `orchestration/definitions.py` → `ingest_sapo_incremental_schedule` cron.
+**Reference:** `orchestration/sensors/stuck_run_alerter.py` → `QUEUE_STUCK_THRESHOLD`; `orchestration/definitions.py` → `pipeline_sapov2_incremental_schedule` cron.
 
 ---
 
@@ -2122,7 +2122,7 @@ Ngoài ra thêm log trước các silent phases:
 
 ### L64 — Ingestion NOT_STARTED 90 min: schedule tạo run khi dbt_rw slot bị chiếm bởi nightly batch
 
-**Symptom:** `ingest_sapo_realtime_job` và `ingest_sapo_incremental_job` lặp lại NOT_STARTED ~90 min rồi bị auto-canceled ("daemon never dequeued"). Xảy ra sau khi L63 fix làm purge chạy thành công lần đầu → backup trigger lần đầu.
+**Symptom:** `pipeline_sapov2_realtime_job` và `pipeline_sapov2_incremental_job` lặp lại NOT_STARTED ~90 min rồi bị auto-canceled ("daemon never dequeued"). Xảy ra sau khi L63 fix làm purge chạy thành công lần đầu → backup trigger lần đầu.
 
 **Root cause:** Nightly batch (`pipeline_batch_nightly_job`, 60-90+ min) chiếm `dbt_rw=1` concurrency slot. Khi nightly đang chạy:
 
@@ -2168,7 +2168,7 @@ Lý do dùng `_RUNNING_STATUSES` (QUEUED/STARTING/STARTED) thay vì `_ACTIVE_STA
 3. **QUEUE_STUCK_THRESHOLD = 90 min là catch-all, không phải expected behavior** — nếu nó trigger thường xuyên = có pattern tạo NOT_STARTED runs không cần thiết.
 4. **Backup snapshot không nên chạy khi DuckDB đang được ghi** — cp của live WAL = torn state risk.
 
-**Reference:** `orchestration/definitions.py` → `_long_dbt_rw_holder()`, `ingest_sapo_realtime_schedule`, `ingest_sapo_incremental_schedule`, `trigger_backup_after_purge`; `orchestration/sensors/stuck_run_alerter.py` → `QUEUE_STUCK_THRESHOLD`.
+**Reference:** `orchestration/definitions.py` → `_long_dbt_rw_holder()`, `pipeline_sapov2_realtime_schedule`, `pipeline_sapov2_incremental_schedule`, `trigger_backup_after_purge`; `orchestration/sensors/stuck_run_alerter.py` → `QUEUE_STUCK_THRESHOLD`.
 
 ---
 
@@ -2362,7 +2362,7 @@ return RunRequest(run_key=None)  # no dedup against prior failures
 
 ### L72 — Defender exclusion must cover ENTIRE `data_lake`, not just `monitoring/` subdirectory
 
-**Symptom:** `ingest_sapo_realtime_job` keeps getting stuck (Runtime: 25 min, Inactive: 24 min, auto-killed by stuck_run_alerter). Occurs intermittently — some runs succeed, others hang. `sapo_warehouse.duckdb` accessible between runs but dbt step goes silent immediately.
+**Symptom:** `pipeline_sapov2_realtime_job` keeps getting stuck (Runtime: 25 min, Inactive: 24 min, auto-killed by stuck_run_alerter). Occurs intermittently — some runs succeed, others hang. `sapo_warehouse.duckdb` accessible between runs but dbt step goes silent immediately.
 
 **Root cause:** The L70 fix added Defender exclusion only for `app_data\data_lake\monitoring` (the monitoring DB path). `dllhost.exe` could still scan `sapo_warehouse.duckdb` (the dbt working DB at `app_data\data_lake\sapo_warehouse.duckdb`). When dllhost.exe holds a lock on `sapo_warehouse.duckdb`, the next dbt subprocess enters D-state (uninterruptible I/O sleep waiting for the file lock). In D-state, even `SIGKILL` is deferred — the watchdog fires but the subprocess doesn't die. No dbt output → 24 min of inactivity → stuck_run_alerter kills the Dagster run via DB state update, but zombie subprocess may persist and block the next run.
 
@@ -2442,7 +2442,7 @@ Backup coverage unchanged: backup script runs inside container and sees named vo
 
 ### L74 — Dagster jobs get stuck when `maintain_purge_runs_job` holds SQLite exclusive lock during VACUUM
 
-**Symptom:** `ingest_sapo_realtime_job` and other short jobs complete all their work but are auto-killed as "stuck" (Inactive 9/10 min). Compute logs show `sqlite3.OperationalError: database is locked` in the step that writes Dagster completion events. Separately, `maintain_purge_runs_job` itself is killed after 15 min runtime / 5 min inactive.
+**Symptom:** `pipeline_sapov2_realtime_job` and other short jobs complete all their work but are auto-killed as "stuck" (Inactive 9/10 min). Compute logs show `sqlite3.OperationalError: database is locked` in the step that writes Dagster completion events. Separately, `maintain_purge_runs_job` itself is killed after 15 min runtime / 5 min inactive.
 
 **Root cause:** Two compounding issues in `maintain_purge_runs_job`:
 1. **VACUUM on compact index.db**: SQLite VACUUM holds an exclusive lock for its entire duration. `index.db` was 860 MB but 0% fragmented (no free pages) — VACUUM ran for minutes, gained nothing, and blocked every other Dagster process writing to `index.db` during that window.
@@ -2517,7 +2517,7 @@ def my_op(context):
 
 ### L77 — Single-shot cross-DB DELETE on index.db holds exclusive lock for ~81s, causing zombie NOT_STARTED runs
 
-**Symptom:** `ingest_sapo_realtime_job` and `ingest_sapo_incremental_job` appear as NOT_STARTED for 90 min then get auto-canceled. `maintain_purge_runs_job` runs normally but `SchedulerDaemon` logs `sqlite3.OperationalError: database is locked` at `store_event()` during the purge window. `QueuedRunCoordinator` goes silent for ~95 min after the lock clears.
+**Symptom:** `pipeline_sapov2_realtime_job` and `pipeline_sapov2_incremental_job` appear as NOT_STARTED for 90 min then get auto-canceled. `maintain_purge_runs_job` runs normally but `SchedulerDaemon` logs `sqlite3.OperationalError: database is locked` at `store_event()` during the purge window. `QueuedRunCoordinator` goes silent for ~95 min after the lock clears.
 
 **Root cause:** `_cleanup_orphan_asset_check_executions` ran a single `DELETE FROM asset_check_executions WHERE run_id NOT IN (SELECT run_id FROM runsdb.runs)` with `runs.db` ATTACHed to `index.db`. With 68,604 rows to delete, SQLite held an **exclusive write lock on `index.db` for ~81 seconds**. During this window, `SchedulerDaemon`'s `create_run()` wrote the run record to `runs.db` but failed on the `store_event()` write to `index.db` → half-baked NOT_STARTED run (record exists, no events). `QueuedRunCoordinator` then entered a long backoff (~95 min) after hitting the same locked DB.
 
@@ -3086,7 +3086,7 @@ AND channel_key IN (SELECT channel_key FROM dim_channels WHERE is_sales_channel)
 
 **Group:** OPS
 
-**Symptom:** `ingest_sapo_realtime_job` failed after a `definitions.py` change. Run lasted 0 seconds, `stepStats` empty, Dagster event log: `"Could not load job definition."` / `"This run has been marked as failed from outside the execution context."` The code change looked syntactically valid; no import error was raised at import time.
+**Symptom:** `pipeline_sapov2_realtime_job` failed after a `definitions.py` change. Run lasted 0 seconds, `stepStats` empty, Dagster event log: `"Could not load job definition."` / `"This run has been marked as failed from outside the execution context."` The code change looked syntactically valid; no import error was raised at import time.
 
 **Root cause:** `AssetSelection.key()` (singular) does not exist in Dagster 1.13.2. The method only raised `AttributeError` at runtime when the worker process tried to instantiate the job, not at module import time. The code location _appeared_ loaded (Dagster UI showed `LOADED`) because the error occurs during job execution setup, not during `definitions.py` import.
 

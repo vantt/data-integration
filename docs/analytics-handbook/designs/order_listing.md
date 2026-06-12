@@ -121,11 +121,11 @@ Row widths sum to full-width = 18 columns. Section row letters advance alphabeti
 |------|--------|-----------|-------------------|
 | **Data Freshness** | Stale data | Age > 2h | STOP reconciliation — data may be mid-ingest. Check Dagster realtime job status before continuing. |
 | **Data Freshness** | Very stale | Age > 6h | Escalate to Data Team immediately — pipeline likely broken |
-| **Total Orders** | Count mismatch with Sapo | `BI count != Sapo admin count` | (1) Verify Sapo filter = all statuses, same date. (2) If still off: check Dagster `ingest_sapo_realtime_job` for failures. (3) If multi-day gap: run `pipeline_batch_nightly_job` manually. |
+| **Total Orders** | Count mismatch with Sapo | `BI count != Sapo admin count` | (1) Verify Sapo filter = all statuses, same date. (2) If still off: check Dagster `pipeline_sapov2_realtime_job` for failures. (3) If multi-day gap: run `pipeline_batch_nightly_job` manually. |
 | **Net Revenue** | Revenue gap | > 5% vs Sapo | Review `status NOT IN ('CANCELLED', 'Voided')` filter. Check discount logic in `fact_orders.net_revenue` computation. |
 | **Cancelled Orders** | Spike | DoD > +50% | Cross-check channels with high cancel — may be operational (stock-out, fraud block) or ingestion (stuck-pending flips). |
 | **Returns** | Spike | DoD > +50% | Check products driving returns; contact logistics if physical issue. |
-| **Orders by Channel** | Missing channel | Channel count < expected | Likely ingestion gap for that channel — check `sapo_webhook_consumer_asset` logs. |
+| **Orders by Channel** | Missing channel | Channel count < expected | Likely ingestion gap for that channel — check `ingest_sapov2_webhook_consumer_asset` logs. |
 | **Flagged Orders** | Any rows | Rows > 0 | Open each flagged row → search order code on Sapo → classify as data-bug, real-anomaly, or user-error. Report data bugs to Data Team. |
 | **Orders by Status** | Unusual distribution | Any status > 30% unexpected | Confirm system state, check pipeline processing timeline. |
 

@@ -18,7 +18,7 @@ RILL_TIMEOUT_SEC = int(os.environ.get("RILL_PUBLISH_TIMEOUT_SEC", "900"))
     group_name="reporting_layer",
     description="Publishes curated Parquet assets for the local Rill project.",
 )
-def sapo_rill_publish(context: AssetExecutionContext):
+def build_rill_publish(context: AssetExecutionContext):
     context.log.info("Publishing curated Rill assets...")
     context.log.info(f"   Script: {SCRIPT_PATH}")
     context.log.info(f"   Python: {PYTHON_EXE}")

@@ -143,7 +143,7 @@ def build_serving_db(context: AssetExecutionContext):
         "DuckDB file (sapo_export_<ts>.duckdb) for offline and AI analysis use."
     ),
 )
-def sapo_standalone_export(context: AssetExecutionContext):
+def build_standalone_export(context: AssetExecutionContext):
     output_lines = _run_provisioning_script(
         context, STANDALONE_SCRIPT, "build_standalone_export"
     )

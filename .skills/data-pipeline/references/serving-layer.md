@@ -223,8 +223,8 @@ docker compose start metabase
 **Asset chain (nightly job):**
 ```
 ingest_sapov2_orders_batch_asset
-sapo_customers_batch_asset
-sapo_accounts_batch_asset
+ingest_sapov2_customers_batch_asset
+ingest_sapov2_accounts_batch_asset
          │
          ▼
 sapo_dbt_assets (build all models + export rolling parquets)

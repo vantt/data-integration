@@ -110,11 +110,11 @@ SELECT
 SELECT
     COALESCE(ROUND(date_diff('hour',
         (SELECT MAX(run_ended_at) FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_customers_batch_asset' AND status IN ('success', 'partial')),
+         WHERE asset_key = 'sapo/ingest_sapov2_customers_batch_asset' AND status IN ('success', 'partial')),
         now()), 1), 9999) AS "Giờ từ lần chạy OK",
     COALESCE(
         (SELECT rows_written FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_customers_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
+         WHERE asset_key = 'sapo/ingest_sapov2_customers_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
         0) AS "Rows Written"
 ```
 
@@ -157,11 +157,11 @@ SELECT
 SELECT
     COALESCE(ROUND(date_diff('hour',
         (SELECT MAX(run_ended_at) FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_products_batch_asset' AND status IN ('success', 'partial')),
+         WHERE asset_key = 'sapo/ingest_sapov2_products_batch_asset' AND status IN ('success', 'partial')),
         now()), 1), 9999) AS "Giờ từ lần chạy OK",
     COALESCE(
         (SELECT rows_written FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_products_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
+         WHERE asset_key = 'sapo/ingest_sapov2_products_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
         0) AS "Rows Written"
 ```
 
@@ -204,11 +204,11 @@ SELECT
 SELECT
     COALESCE(ROUND(date_diff('hour',
         (SELECT MAX(run_ended_at) FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_accounts_batch_asset' AND status IN ('success', 'partial')),
+         WHERE asset_key = 'sapo/ingest_sapov2_accounts_batch_asset' AND status IN ('success', 'partial')),
         now()), 1), 9999) AS "Giờ từ lần chạy OK",
     COALESCE(
         (SELECT rows_written FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_accounts_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
+         WHERE asset_key = 'sapo/ingest_sapov2_accounts_batch_asset' ORDER BY run_started_at DESC LIMIT 1),
         0) AS "Rows Written"
 ```
 
@@ -253,11 +253,11 @@ Hero card — highest frequency realtime asset (12h SLA).
 SELECT
     COALESCE(ROUND(date_diff('hour',
         (SELECT MAX(run_ended_at) FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_webhook_consumer_asset' AND status IN ('success', 'partial')),
+         WHERE asset_key = 'sapo/ingest_sapov2_webhook_consumer_asset' AND status IN ('success', 'partial')),
         now()), 1), 9999) AS "Giờ từ lần chạy OK",
     COALESCE(
         (SELECT rows_written FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_webhook_consumer_asset' ORDER BY run_started_at DESC LIMIT 1),
+         WHERE asset_key = 'sapo/ingest_sapov2_webhook_consumer_asset' ORDER BY run_started_at DESC LIMIT 1),
         0) AS "Rows Written"
 ```
 
@@ -300,11 +300,11 @@ SELECT
 SELECT
     COALESCE(ROUND(date_diff('hour',
         (SELECT MAX(run_ended_at) FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_history_log_asset' AND status IN ('success', 'partial')),
+         WHERE asset_key = 'sapo/ingest_sapov2_history_log_asset' AND status IN ('success', 'partial')),
         now()), 1), 9999) AS "Giờ từ lần chạy OK",
     COALESCE(
         (SELECT rows_written FROM ingestion_runs
-         WHERE asset_key = 'sapo/sapo_history_log_asset' ORDER BY run_started_at DESC LIMIT 1),
+         WHERE asset_key = 'sapo/ingest_sapov2_history_log_asset' ORDER BY run_started_at DESC LIMIT 1),
         0) AS "Rows Written"
 ```
 
@@ -852,15 +852,15 @@ SELECT '📅 7 ngày gần nhất: ' || strftime((current_date - INTERVAL '7 day
 SELECT
     date_trunc('day', run_started_at) AS "Ngày",
     SUM(CASE WHEN asset_key = 'sapo/ingest_sapov2_orders_batch_asset'    THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Orders",
-    SUM(CASE WHEN asset_key = 'sapo/sapo_customers_batch_asset' THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Customers",
-    SUM(CASE WHEN asset_key = 'sapo/sapo_products_batch_asset'  THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Products",
-    SUM(CASE WHEN asset_key = 'sapo/sapo_accounts_batch_asset'  THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Accounts"
+    SUM(CASE WHEN asset_key = 'sapo/ingest_sapov2_customers_batch_asset' THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Customers",
+    SUM(CASE WHEN asset_key = 'sapo/ingest_sapov2_products_batch_asset'  THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Products",
+    SUM(CASE WHEN asset_key = 'sapo/ingest_sapov2_accounts_batch_asset'  THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Accounts"
 FROM ingestion_runs
 WHERE asset_key IN (
     'sapo/ingest_sapov2_orders_batch_asset',
-    'sapo/sapo_customers_batch_asset',
-    'sapo/sapo_products_batch_asset',
-    'sapo/sapo_accounts_batch_asset'
+    'sapo/ingest_sapov2_customers_batch_asset',
+    'sapo/ingest_sapov2_products_batch_asset',
+    'sapo/ingest_sapov2_accounts_batch_asset'
   )
   AND status IN ('success', 'partial')
   AND run_started_at >= now() - INTERVAL '30 days'
@@ -892,12 +892,12 @@ ORDER BY 1
 ```sql
 SELECT
     date_trunc('day', run_started_at) AS "Ngày",
-    SUM(CASE WHEN asset_key = 'sapo/sapo_webhook_consumer_asset' THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Webhook",
-    SUM(CASE WHEN asset_key = 'sapo/sapo_history_log_asset'      THEN COALESCE(rows_written, 0) ELSE 0 END) AS "History Log"
+    SUM(CASE WHEN asset_key = 'sapo/ingest_sapov2_webhook_consumer_asset' THEN COALESCE(rows_written, 0) ELSE 0 END) AS "Webhook",
+    SUM(CASE WHEN asset_key = 'sapo/ingest_sapov2_history_log_asset'      THEN COALESCE(rows_written, 0) ELSE 0 END) AS "History Log"
 FROM ingestion_runs
 WHERE asset_key IN (
-    'sapo/sapo_webhook_consumer_asset',
-    'sapo/sapo_history_log_asset'
+    'sapo/ingest_sapov2_webhook_consumer_asset',
+    'sapo/ingest_sapov2_history_log_asset'
   )
   AND status IN ('success', 'partial')
   AND run_started_at >= now() - INTERVAL '30 days'

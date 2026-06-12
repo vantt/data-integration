@@ -38,13 +38,13 @@ class SapoDbtTranslator(DagsterDbtTranslator):
                 if name == "order":
                     return AssetKey(["sapo", "ingest_sapov2_orders_batch_asset"])
                 elif name == "customer":
-                    return AssetKey(["sapo", "sapo_customers_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapov2_customers_batch_asset"])
                 elif name == "account":
-                    return AssetKey(["sapo", "sapo_accounts_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapov2_accounts_batch_asset"])
                 elif name == "product":
-                    return AssetKey(["sapo", "sapo_products_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapov2_products_batch_asset"])
                 elif name == "inventory_transaction_v2":
-                    return AssetKey(["sapo", "sapo_inventory_transactions_v2_asset"])
+                    return AssetKey(["sapo", "ingest_sapov2_inventory_transactions_asset"])
                 elif name == "targets_raw":
                     return AssetKey(["sheets", "sheets_targets_asset"])
                 elif name == "marketing_spend_raw":

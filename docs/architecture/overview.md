@@ -252,8 +252,8 @@ The Data Integration Pipeline is a modern data lakehouse built to sync and analy
 
 | Job | Schedule | Assets |
 |-----|----------|--------|
-| `ingest_sapo_realtime_job` | Every 1 min | Webhook + dbt |
-| `ingest_sapo_incremental_job` | Every 10 min | History log + dbt |
+| `pipeline_sapov2_realtime_job` | Every 1 min | Webhook + dbt |
+| `pipeline_sapov2_incremental_job` | Every 10 min | History log + dbt |
 | `pipeline_batch_nightly_job` | 04:00 AM | Batch + dbt + serving |
 
 **Asset Groups:**

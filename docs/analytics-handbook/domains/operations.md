@@ -1,4 +1,4 @@
-# Operations Domain
+﻿# Operations Domain
 
 > **Domain Document định nghĩa cách một nhóm nghiệp vụ được hiểu và đo lường trong hệ thống analytics.**
 > Tài liệu này xác định phạm vi domain, các câu hỏi phân tích nền tảng, các metric liên quan, cùng định nghĩa nghiệp vụ và logic tính toán chuẩn cho từng metric.
@@ -49,8 +49,8 @@
   GROUP BY asset_key
   ```
 - **SLA Reference:** `orchestration/config/ingestion_sla.yaml`
-  - `sapo/sapo_webhook_consumer_asset`: 12h
-  - `sapo/sapo_history_log_asset`: 12h
+  - `sapo/ingest_sapov2_webhook_consumer_asset`: 12h
+  - `sapo/ingest_sapov2_history_log_asset`: 12h
   - `sapo/sapo_*_batch_asset` (4 assets): 28h
   - `shopee/shopee_income_file_drop_asset`: 48h
   - `sheets/sheets_*_asset` (2 assets): 48h
@@ -98,7 +98,7 @@
          last_ok,
          date_diff('hour', last_ok, now()) AS hours_stale,
          CASE
-             WHEN asset_key IN ('sapo/sapo_webhook_consumer_asset', 'sapo/sapo_history_log_asset')
+             WHEN asset_key IN ('sapo/ingest_sapov2_webhook_consumer_asset', 'sapo/ingest_sapov2_history_log_asset')
                   AND date_diff('hour', last_ok, now()) <= 12  THEN 'healthy'
              WHEN asset_key LIKE 'sapo/%batch%'
                   AND date_diff('hour', last_ok, now()) <= 28  THEN 'healthy'

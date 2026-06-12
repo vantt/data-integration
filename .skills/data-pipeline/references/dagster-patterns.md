@@ -8,7 +8,7 @@ Lessons quan trọng khi orchestrate pipeline dlt + dbt trong Dagster. Đây là
 
 **Problem:** Trong job chạy nhiều loại ingestion + dbt cùng lúc, dbt có thể start **trước khi** một số ingestion asset xong → dbt đọc stale data.
 
-**Root cause:** dbt models declare source qua `{{ source('sapo_raw', 'order') }}`. `SapoDbtTranslator.get_asset_key()` map source đó tới `ingest_sapov2_orders_batch_asset`. Nhưng nếu job chỉ chứa `sapo_history_log_asset` (không có batch asset), Dagster thấy source không có dependency trong scope job → dbt start ngay lập tức song song với history_log.
+**Root cause:** dbt models declare source qua `{{ source('sapo_raw', 'order') }}`. `SapoDbtTranslator.get_asset_key()` map source đó tới `ingest_sapov2_orders_batch_asset`. Nhưng nếu job chỉ chứa `ingest_sapov2_history_log_asset` (không có batch asset), Dagster thấy source không có dependency trong scope job → dbt start ngay lập tức song song với history_log.
 
 **Fix:** Override `get_upstream_asset_keys()` để **inject explicit upstream keys** cho tất cả staging/src models.
 
@@ -21,11 +21,11 @@ class SapoDbtTranslator(DagsterDbtTranslator):
 
         if name in ["stg_sapo_orders", "stg_sapo_customers", "src_sapo_orders", ...]:
             # Force dbt to wait for ALL ingestion methods trong cùng job
-            upstream_keys.add(AssetKey(["sapo", "sapo_history_log_asset"]))
-            upstream_keys.add(AssetKey(["sapo", "sapo_webhook_consumer_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "ingest_sapov2_history_log_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "ingest_sapov2_webhook_consumer_asset"]))
             upstream_keys.add(AssetKey(["sapo", "ingest_sapov2_orders_batch_asset"]))
-            upstream_keys.add(AssetKey(["sapo", "sapo_customers_batch_asset"]))
-            upstream_keys.add(AssetKey(["sapo", "sapo_accounts_batch_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "ingest_sapov2_customers_batch_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "ingest_sapov2_accounts_batch_asset"]))
 
         return upstream_keys
 ```
@@ -64,11 +64,11 @@ Kết quả: **không bao giờ** có 2 job trigger cùng một giây.
 Mỗi schedule check active runs của **higher-priority jobs** trước khi proceed:
 
 ```python
-def ingest_sapo_realtime_schedule(context):
+def pipeline_sapov2_realtime_schedule(context):
     priority_jobs = [
         "ingest_sheets_sync_job",
         "pipeline_batch_nightly_job",
-        "ingest_sapo_incremental_job",
+        "pipeline_sapov2_incremental_job",
     ]
     for job_name in priority_jobs:
         active = context.instance.get_runs(filters=RunsFilter(
@@ -205,8 +205,8 @@ def _has_active_run(context, job_name: str) -> str | None:
     return runs[0].run_id if runs else None
 
 @schedule(...)
-def ingest_sapo_realtime_schedule(context):
-    active = _has_active_run(context, "ingest_sapo_realtime_job")
+def pipeline_sapov2_realtime_schedule(context):
+    active = _has_active_run(context, "pipeline_sapov2_realtime_job")
     if active:
         return SkipReason(f"previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -576,7 +576,7 @@ health_checks_asset_job = define_asset_job(
 
 ```python
 def _has_active_ingestion(context) -> str | None:
-    for job_name in ["ingest_sapo_realtime_job", "pipeline_batch_nightly_job", ...]:
+    for job_name in ["pipeline_sapov2_realtime_job", "pipeline_batch_nightly_job", ...]:
         runs = context.instance.get_runs(filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES), limit=1)
         if runs:
             return runs[0].run_id

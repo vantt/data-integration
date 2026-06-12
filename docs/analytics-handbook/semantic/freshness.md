@@ -1,4 +1,4 @@
-# Freshness & SLA
+﻿# Freshness & SLA
 
 Reference document for per-mart data SLA, ingestion asset thresholds, dependency chains, and stale detection procedures.
 
@@ -41,8 +41,8 @@ Asset-level SLAs from the operations domain. Status thresholds apply to `ingesti
 
 | Asset Key | SLA | Status Token Thresholds |
 |---|---|---|
-| `sapo/sapo_webhook_consumer_asset` | 12h | healthy < 12h / warning ≥ 9h / stale ≥ 12h |
-| `sapo/sapo_history_log_asset` | 12h | healthy < 12h / warning ≥ 9h / stale ≥ 12h |
+| `sapo/ingest_sapov2_webhook_consumer_asset` | 12h | healthy < 12h / warning ≥ 9h / stale ≥ 12h |
+| `sapo/ingest_sapov2_history_log_asset` | 12h | healthy < 12h / warning ≥ 9h / stale ≥ 12h |
 | `sapo/sapo_*_batch_asset` (4 assets) | 28h | healthy < 28h / warning ≥ 21h / stale ≥ 28h |
 | `shopee/shopee_income_file_drop_asset` | 48h | healthy < 48h / warning ≥ 36h / stale ≥ 48h |
 | `sheets/sheets_*_asset` (2 assets) | 48h | healthy < 48h / warning ≥ 36h / stale ≥ 48h |
@@ -92,7 +92,7 @@ Run these checks in order. Do not investigate metric definitions until data fres
 SELECT asset_key, status, run_ended_at,
        EXTRACT(EPOCH FROM (NOW() - run_ended_at)) / 3600 AS hours_ago
 FROM ingestion_runs
-WHERE asset_key = 'sapo/sapo_webhook_consumer_asset'  -- replace with relevant asset
+WHERE asset_key = 'sapo/ingest_sapov2_webhook_consumer_asset'  -- replace with relevant asset
 ORDER BY run_ended_at DESC
 LIMIT 5;
 

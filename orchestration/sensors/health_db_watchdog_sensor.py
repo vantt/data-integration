@@ -1,4 +1,4 @@
-"""Health DB watchdog sensor — detects silent recorder failures.
+﻿"""Health DB watchdog sensor — detects silent recorder failures.
 
 Fires every 10 minutes. Sends a Lark alert when:
   1. ingestion_health.db cannot be opened in write mode (filesystem error).
@@ -23,7 +23,7 @@ from orchestration.notifications.lark_client import send_lark_card
 
 logger = logging.getLogger("orchestration.health_db_watchdog")
 
-# sapo_webhook_consumer_asset fires every 3 min and always records (success|skipped).
+# ingest_sapov2_webhook_consumer_asset fires every 3 min and always records (success|skipped).
 # A gap > 2 hours means record_run() is consistently failing.
 STALE_THRESHOLD_H = 2
 ALERT_COOLDOWN_H = 4  # alert at most once per 4 hours when stuck

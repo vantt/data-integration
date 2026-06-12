@@ -9,18 +9,18 @@ defaults:
   cursor_empty_streak: 3
 
 assets:
-  sapo/sapo_webhook_consumer_asset:
+  sapo/ingest_sapov2_webhook_consumer_asset:
     freshness_hours: 12        # realtime; 3min schedule but tolerate 12h
     business_hours_only: false
-  sapo/sapo_history_log_asset:
+  sapo/ingest_sapov2_history_log_asset:
     freshness_hours: 12
   sapo/ingest_sapov2_orders_batch_asset:
     freshness_hours: 28
-  sapo/sapo_customers_batch_asset:
+  sapo/ingest_sapov2_customers_batch_asset:
     freshness_hours: 28
-  sapo/sapo_accounts_batch_asset:
+  sapo/ingest_sapov2_accounts_batch_asset:
     freshness_hours: 28
-  sapo/sapo_products_batch_asset:
+  sapo/ingest_sapov2_products_batch_asset:
     freshness_hours: 28
   shopee/shopee_income_file_drop_asset:
     freshness_hours: 48

@@ -6,23 +6,23 @@
 
 | Schedule                         | Cron           | Timezone         | Job                          |
 | -------------------------------- | -------------- | ---------------- | ---------------------------- |
-| `ingest_sapo_realtime_schedule`  | `*/1 * * * *`  | Asia/Ho_Chi_Minh | ingest_sapo_realtime_job     |
-| `ingest_sapo_incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | ingest_sapo_incremental_job  |
+| `pipeline_sapov2_realtime_schedule`  | `*/1 * * * *`  | Asia/Ho_Chi_Minh | pipeline_sapov2_realtime_job     |
+| `pipeline_sapov2_incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | pipeline_sapov2_incremental_job  |
 | `pipeline_batch_nightly_schedule` | `0 4 * * *`    | Asia/Ho_Chi_Minh | pipeline_batch_nightly_job  |
 
 ---
 
 ## Schedule Definitions
 
-### ingest_sapo_realtime_schedule
+### pipeline_sapov2_realtime_schedule
 
 **Purpose:** Process webhook events every minute.
 
 ```python
 from dagster import ScheduleDefinition
 
-ingest_sapo_realtime_schedule = ScheduleDefinition(
-    job=ingest_sapo_realtime_job,
+pipeline_sapov2_realtime_schedule = ScheduleDefinition(
+    job=pipeline_sapov2_realtime_job,
     cron_schedule="*/1 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING
@@ -35,13 +35,13 @@ ingest_sapo_realtime_schedule = ScheduleDefinition(
 
 ---
 
-### ingest_sapo_incremental_schedule
+### pipeline_sapov2_incremental_schedule
 
 **Purpose:** Gap filling via history log every 10 minutes.
 
 ```python
-ingest_sapo_incremental_schedule = ScheduleDefinition(
-    job=ingest_sapo_incremental_job,
+pipeline_sapov2_incremental_schedule = ScheduleDefinition(
+    job=pipeline_sapov2_incremental_job,
     cron_schedule="*/10 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING
@@ -158,8 +158,8 @@ dagster schedule list
 
 # Output:
 # Schedule Name                       State     Cron Schedule
-# ingest_sapo_realtime_schedule       RUNNING   */1 * * * *
-# ingest_sapo_incremental_schedule    RUNNING   */10 * * * *
+# pipeline_sapov2_realtime_schedule       RUNNING   */1 * * * *
+# pipeline_sapov2_incremental_schedule    RUNNING   */10 * * * *
 # pipeline_batch_nightly_schedule    RUNNING   0 4 * * *
 ```
 
@@ -230,7 +230,7 @@ Instead of fixed schedules, trigger based on events:
 ```python
 from dagster import sensor, RunRequest
 
-@sensor(job=ingest_sapo_incremental_job, minimum_interval_seconds=60)
+@sensor(job=pipeline_sapov2_incremental_job, minimum_interval_seconds=60)
 def new_data_sensor(context):
     if check_for_new_webhooks():
         yield RunRequest(run_key=f"webhook_{timestamp}")

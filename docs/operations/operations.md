@@ -57,8 +57,8 @@ dagster job list --running
 
 | Job | Schedule | Timezone | Description |
 |-----|----------|----------|-------------|
-| `ingest_sapo_realtime_job` | */1 * * * * | Asia/Ho_Chi_Minh | Webhook processing |
-| `ingest_sapo_incremental_job` | */10 * * * * | Asia/Ho_Chi_Minh | History log gap filling |
+| `pipeline_sapov2_realtime_job` | */1 * * * * | Asia/Ho_Chi_Minh | Webhook processing |
+| `pipeline_sapov2_incremental_job` | */10 * * * * | Asia/Ho_Chi_Minh | History log gap filling |
 | `pipeline_batch_nightly_job` | 0 4 * * * | Asia/Ho_Chi_Minh | Full batch + refresh |
 | `ingest_sheets_sync_job` | Manual | - | Google Sheets targets |
 
@@ -67,8 +67,8 @@ dagster job list --running
 ```
 pipeline_batch_nightly_job (04:00 AM)
 ├── ingest_sapov2_orders_batch_asset
-├── sapo_customers_batch_asset
-├── sapo_accounts_batch_asset
+├── ingest_sapov2_customers_batch_asset
+├── ingest_sapov2_accounts_batch_asset
 ├── dbt_otp_assets (staging)
 ├── dbt_olap_assets (marts)
 └── serving_generation_asset
@@ -95,8 +95,8 @@ python transformation/scripts/run_dbt.py run --select +tag:mart
 # 2. Toggle schedule on/off
 
 # Or via CLI:
-dagster schedule stop ingest_sapo_realtime_schedule
-dagster schedule start ingest_sapo_realtime_schedule
+dagster schedule stop pipeline_sapov2_realtime_schedule
+dagster schedule start pipeline_sapov2_realtime_schedule
 ```
 
 ---
@@ -240,7 +240,7 @@ curl -H "Authorization: Bearer $CF_TOKEN" \
 **Resolution:**
 ```bash
 # Restart webhook consumer
-dagster job execute -j ingest_sapo_realtime_job
+dagster job execute -j pipeline_sapov2_realtime_job
 
 # If D1 is full, increase poll limit
 python ingestion/run_webhook_consumer.py --batch-size 5000

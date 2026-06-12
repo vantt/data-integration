@@ -20,10 +20,10 @@ Ingestion assets that extract data from Sapo or Google Sheets.
 | Asset                         | Description                           | Schedule |
 | ----------------------------- | ------------------------------------- | -------- |
 | `ingest_sapov2_orders_batch_asset`     | Daily batch sync for Orders           | Nightly  |
-| `sapo_customers_batch_asset`  | Daily batch sync for Customers        | Nightly  |
-| `sapo_accounts_batch_asset`   | Daily batch sync for Accounts (Staff) | Nightly  |
-| `sapo_history_log_asset`      | Incremental poll of History Logs      | 10 min   |
-| `sapo_webhook_consumer_asset` | High-frequency webhook polling        | 1 min    |
+| `ingest_sapov2_customers_batch_asset`  | Daily batch sync for Customers        | Nightly  |
+| `ingest_sapov2_accounts_batch_asset`   | Daily batch sync for Accounts (Staff) | Nightly  |
+| `ingest_sapov2_history_log_asset`      | Incremental poll of History Logs      | 10 min   |
+| `ingest_sapov2_webhook_consumer_asset` | High-frequency webhook polling        | 1 min    |
 
 ### sheets_ingestion
 
@@ -67,14 +67,14 @@ Daily batch sync that captures `modified_on` updates for Orders.
 - **Group**: `sapo_ingestion`
 - **Schedule**: Nightly (04:00 AM)
 
-#### sapo_webhook_consumer_asset
+#### ingest_sapov2_webhook_consumer_asset
 
 Polls Cloudflare D1 for real-time webhook events.
 
 - **Group**: `sapo_ingestion`
 - **Schedule**: Realtime (Every minute)
 
-#### sapo_history_log_asset
+#### ingest_sapov2_history_log_asset
 
 Polls Sapo History Log API to fill gaps from missed webhooks.
 
@@ -124,8 +124,8 @@ Orchestrates the creation of the user-facing DuckDB database (`olap.duckdb`).
 graph TD
     %% Ingestion
     Batch[ingest_sapov2_orders_batch_asset]
-    Webhook[sapo_webhook_consumer_asset]
-    History[sapo_history_log_asset]
+    Webhook[ingest_sapov2_webhook_consumer_asset]
+    History[ingest_sapov2_history_log_asset]
 
     %% Staging (The Convergence Point)
     Staging[stg_sapo_orders]

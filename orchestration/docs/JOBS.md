@@ -14,8 +14,8 @@ Jobs are collections of assets that execute together. Each job has:
 
 | Job                               | Schedule        | Assets                        | Purpose                  |
 | --------------------------------- | --------------- | ----------------------------- | ------------------------ |
-| `ingest_sapo_realtime_job`       | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates        |
-| `ingest_sapo_incremental_job`    | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling              |
+| `pipeline_sapov2_realtime_job`       | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates        |
+| `pipeline_sapov2_incremental_job`    | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling              |
 | `pipeline_batch_nightly_job`    | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation      |
 | `ingest_sheets_sync_job`         | Manual          | Targets + Marketing Spend     | Google Sheets (Raw Only) |
 
@@ -23,13 +23,13 @@ Jobs are collections of assets that execute together. Each job has:
 
 ## Job Definitions
 
-### ingest_sapo_realtime_job
+### pipeline_sapov2_realtime_job
 
 **Purpose:** Process webhook events and update operational tables.
 
 ```python
-ingest_sapo_realtime_job = define_asset_job(
-    name="ingest_sapo_realtime_job",
+pipeline_sapov2_realtime_job = define_asset_job(
+    name="pipeline_sapov2_realtime_job",
     selection=[
         "sapo_webhook_consumer",
         *dbt_assets_tagged("otp")
@@ -51,7 +51,7 @@ ingest_sapo_realtime_job = define_asset_job(
 ```mermaid
 graph TD
     %% Assets
-    Webhook[sapo_webhook_consumer_asset]
+    Webhook[ingest_sapov2_webhook_consumer_asset]
     Staging["dbt Staging Models<br/>(stg_sapo_orders, etc.)"]
     OTP["dbt OTP Models"]
 
@@ -67,13 +67,13 @@ graph TD
 
 ---
 
-### ingest_sapo_incremental_job
+### pipeline_sapov2_incremental_job
 
 **Purpose:** Gap filling via history log and incremental dbt updates.
 
 ```python
-ingest_sapo_incremental_job = define_asset_job(
-    name="ingest_sapo_incremental_job",
+pipeline_sapov2_incremental_job = define_asset_job(
+    name="pipeline_sapov2_incremental_job",
     selection=[
         "sapo_history_log",
         *dbt_assets_tagged("otp")
@@ -124,8 +124,8 @@ graph TD
     %% Ingestion Layer (Batch)
     subgraph Ingestion ["Ingestion Layer"]
         Orders[ingest_sapov2_orders_batch_asset]
-        Customers[sapo_customers_batch_asset]
-        Accounts[sapo_accounts_batch_asset]
+        Customers[ingest_sapov2_customers_batch_asset]
+        Accounts[ingest_sapov2_accounts_batch_asset]
     end
 
     %% Transformation Layer (dbt)

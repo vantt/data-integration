@@ -9,8 +9,8 @@ Thay thế trước khi dùng:
 Thêm vào: orchestration/assets/{SOURCE}_assets.py
 
 Job Selection Guide:
-  ingest_sapo_realtime_job          → webhook consumer (mỗi 3 phút)
-  ingest_sapo_incremental_job       → history log, event polling (mỗi 10 phút)
+  pipeline_sapov2_realtime_job          → webhook consumer (mỗi 3 phút)
+  pipeline_sapov2_incremental_job       → history log, event polling (mỗi 10 phút)
   pipeline_batch_nightly_job       → batch sync: orders, customers, accounts (04:00 AM)
   pipeline_batch_fullrefresh_job   → manual one-time full reload (tag "full_refresh=true" baked in)
 

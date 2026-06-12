@@ -135,8 +135,8 @@ Tạo nếu consolidate multiple sources:
   - Thêm vào `load_assets_from_modules([..., {source}_assets])`
   - Chọn job phù hợp:
     - `pipeline_batch_nightly_job` → batch sync (chạy 04:00 AM)
-    - `ingest_sapo_incremental_job` → history log, event polling (mỗi 10 phút)
-    - `ingest_sapo_realtime_job` → webhook consumer (mỗi 3 phút)
+    - `pipeline_sapov2_incremental_job` → history log, event polling (mỗi 10 phút)
+    - `pipeline_sapov2_realtime_job` → webhook consumer (mỗi 3 phút)
 - [ ] Nếu asset write DuckDB: thêm `op_tags={"dagster/concurrency_key": "duckdb_lock"}`
 - [ ] Verify asset DAG: `{source}_ingestion_asset → dbt_assets → serving_db_asset`
 

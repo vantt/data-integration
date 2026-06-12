@@ -1,4 +1,4 @@
-# Troubleshooting Guide
+﻿# Troubleshooting Guide
 
 > Diagnostic commands, common issues, and recovery procedures
 
@@ -270,7 +270,7 @@ dagster-daemon status
 dagster-daemon run &
 
 # Or force manual execution
-dagster schedule kick ingest_sapo_realtime_schedule
+dagster schedule kick pipeline_sapov2_realtime_schedule
 ```
 
 ---

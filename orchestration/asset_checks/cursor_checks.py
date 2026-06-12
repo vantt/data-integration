@@ -23,11 +23,11 @@ from orchestration.asset_checks.sla_loader import get_sla
 # Assets eligible for cursor-stall detection (Sapo incremental/batch only)
 CURSOR_CHECK_ASSET_KEYS: frozenset[str] = frozenset(
     {
-        "sapo/sapo_webhook_consumer_asset",
-        "sapo/sapo_history_log_asset",
+        "sapo/ingest_sapov2_webhook_consumer_asset",
+        "sapo/ingest_sapov2_history_log_asset",
         "sapo/ingest_sapov2_orders_batch_asset",
-        "sapo/sapo_customers_batch_asset",
-        "sapo/sapo_products_batch_asset",
+        "sapo/ingest_sapov2_customers_batch_asset",
+        "sapo/ingest_sapov2_products_batch_asset",
     }
 )
 

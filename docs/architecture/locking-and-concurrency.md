@@ -114,14 +114,14 @@
           value: "dbt_rw"
           limit: 1
   ```
-- `SYNC_TAGS = {"concurrency_group": "dbt_rw"}` (`definitions.py:68`) is applied to all four asset jobs: `ingest_sapo_realtime_job`, `ingest_sapo_incremental_job`, `ingest_sheets_sync_job`, `pipeline_batch_nightly_job`.
+- `SYNC_TAGS = {"concurrency_group": "dbt_rw"}` (`definitions.py:68`) is applied to all four asset jobs: `pipeline_sapov2_realtime_job`, `pipeline_sapov2_incremental_job`, `ingest_sheets_sync_job`, `pipeline_batch_nightly_job`.
 - **Scope limit (critical)**: `tag_concurrency_limits` gates **dequeue**, not **queue admission**. Queue can grow unbounded unless schedules self-skip. This is the Lesson L19 foot-gun.
 
 ### Dagster schedule-level
 
 - `definitions.py:124-177`: `_has_active_run(context, job_name)` queries the instance for runs in `[QUEUED, NOT_STARTED, STARTING, STARTED]` for the **same job name** and skips the tick if any exist.
-- Applied to all 3 schedules: `ingest_sapo_realtime_schedule` (`:146`), `ingest_sapo_incremental_schedule` (`:161`), `pipeline_batch_nightly_schedule` (`:173`). ✅
-- `ingest_sapo_incremental_schedule` cron `*/10 0-3,5-23 * * *` excludes the 4 AM hour to avoid piling up ticks while nightly holds the `dbt_rw` slot. Thoughtful.
+- Applied to all 3 schedules: `pipeline_sapov2_realtime_schedule` (`:146`), `pipeline_sapov2_incremental_schedule` (`:161`), `pipeline_batch_nightly_schedule` (`:173`). ✅
+- `pipeline_sapov2_incremental_schedule` cron `*/10 0-3,5-23 * * *` excludes the 4 AM hour to avoid piling up ticks while nightly holds the `dbt_rw` slot. Thoughtful.
 - Note: `ingest_sheets_sync_job` has no schedule. Trigger paths: (1) manual via Dagster UI / CLI, (2) `ingest_sheets_modified_sensor` (content-hash polling every 5 min, auto-fires on real sheet edits — see commit 2026-04-09), (3) nightly reconciliation (includes sheet assets in its selection). Coordinator tag still protects it from colliding with active sync runs.
 
 ### Dagster op-level
@@ -275,8 +275,8 @@ Tests run inside `data_platform` container during this audit (2026-04-08 23:35+0
 | Find dlt pipelines state dir | ✅ `/var/dlt/pipelines/<pipeline_name>/` — each pipeline isolated |
 | Grep for `subprocess.run(..., capture_output=True, ...)` | Only 1 hit: `templates/dagster-serving-asset-template.py:66` (LANDMINE) |
 | Grep for `subprocess.run` without timeout | 1 hit: `transformation/scripts/run_dbt.py:109` — standalone-only, inherited stdio |
-| Verify `concurrency_group: dbt_rw` applied to all sync jobs | ✅ `SYNC_TAGS` applied to `ingest_sapo_realtime_job`, `ingest_sapo_incremental_job`, `ingest_sheets_sync_job`, `pipeline_batch_nightly_job` |
-| Verify `_has_active_run` check in all schedules | ✅ in `ingest_sapo_realtime_schedule`, `ingest_sapo_incremental_schedule`, `pipeline_batch_nightly_schedule` (no schedule for ingest_sheets_sync_job) |
+| Verify `concurrency_group: dbt_rw` applied to all sync jobs | ✅ `SYNC_TAGS` applied to `pipeline_sapov2_realtime_job`, `pipeline_sapov2_incremental_job`, `ingest_sheets_sync_job`, `pipeline_batch_nightly_job` |
+| Verify `_has_active_run` check in all schedules | ✅ in `pipeline_sapov2_realtime_schedule`, `pipeline_sapov2_incremental_schedule`, `pipeline_batch_nightly_schedule` (no schedule for ingest_sheets_sync_job) |
 
 ### Follow-up verification 2026-04-09 11:10+07
 

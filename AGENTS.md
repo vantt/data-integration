@@ -263,11 +263,11 @@ Three distinct DuckDB files separate **Write**, **Read**, and **Export**:
 
 1.  **Warehouse DB** (`data_lake/sapo_warehouse.duckdb`): dbt writes here. Uses Docker paths.
 2.  **Serving DB** (`data_lake/serving/olap.duckdb`): Metabase reads here. Contains rolling self-refresh views pointing to latest Parquet exports.
-3.  **Standalone Export DB** (`data_lake/serving/standalone/sapo_export_*.duckdb`): Self-contained snapshot (no parquet dependency). Built nightly by `sapo_standalone_export` asset. Exposed read-only at `https://files.etl.lan.fwg.vn/` via `data_fileserver` (Caddy). Use for offline analysis, AI tools, or external distribution.
+3.  **Standalone Export DB** (`data_lake/serving/standalone/sapo_export_*.duckdb`): Self-contained snapshot (no parquet dependency). Built nightly by `build_standalone_export` asset. Exposed read-only at `https://files.etl.lan.fwg.vn/` via `data_fileserver` (Caddy). Use for offline analysis, AI tools, or external distribution.
 
 **Critical Rule**: Fixing `dbt` only updates warehouse DB. You **MUST** run `generate_serving_db.py` to propagate changes to serving DB. Ensure `PORTABLE_ROOT` matches the Docker mount path.
 
-**Standalone export is downstream of serving DB** — run order: dbt → `build_serving_db` → `sapo_standalone_export`.
+**Standalone export is downstream of serving DB** — run order: dbt → `build_serving_db` → `build_standalone_export`.
 
 ### Dagster Concurrency & DuckDB Locking (CRITICAL)
 

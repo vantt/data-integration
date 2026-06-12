@@ -569,7 +569,7 @@ WHERE _snapshot_ts = (
 
 ### Standalone Export Branch
 
-Dagster asset `sapo_standalone_export` (downstream of `build_serving_db`) materializes all views
+Dagster asset `build_standalone_export` (downstream of `build_serving_db`) materializes all views
 in `olap.duckdb` into a self-contained DuckDB file — no parquet path dependency.
 
 ```

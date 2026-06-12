@@ -116,7 +116,7 @@ def health_db(tmp_path, monkeypatch):
                (asset_key, run_id, run_started_at, status, rows_written)
                VALUES (?, ?, ?, 'success', ?)""",
             [
-                "sapo/sapo_customers_batch_asset",
+                "sapo/ingest_sapov2_customers_batch_asset",
                 str(uuid.uuid4()),
                 (anchor - timedelta(days=days_ago)).strftime("%Y-%m-%d %H:%M:%S.%f"),
                 200,
@@ -127,14 +127,14 @@ def health_db(tmp_path, monkeypatch):
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
            VALUES (?, ?, ?, 'success', ?)""",
-        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), anchor.strftime("%Y-%m-%d %H:%M:%S.%f"), 0],
+        ["sapo/ingest_sapov2_customers_batch_asset", str(uuid.uuid4()), anchor.strftime("%Y-%m-%d %H:%M:%S.%f"), 0],
     )
     # Recent heartbeat so SLA doesn't override the "yellow from ratio" check.
     conn.execute(
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
            VALUES (?, ?, ?, 'skipped', 0)""",
-        ["sapo/sapo_customers_batch_asset", str(uuid.uuid4()), recent.strftime("%Y-%m-%d %H:%M:%S.%f")],
+        ["sapo/ingest_sapov2_customers_batch_asset", str(uuid.uuid4()), recent.strftime("%Y-%m-%d %H:%M:%S.%f")],
     )
 
     # Asset 3: misa — recon drift > 5% (ERROR). Recon still uses rolling 24h
@@ -383,7 +383,7 @@ def test_compose_card_summary_header_present():
     from orchestration.ops.morning_digest import compose_card_fields
     healthy = _make_known()
     warn = _make_known(short_name="sapo_customers",
-                       asset_key="sapo/sapo_customers_batch_asset",
+                       asset_key="sapo/ingest_sapov2_customers_batch_asset",
                        drift_pct=3.0)
     warn.status = classify(warn)
     fields, _ = compose_card_fields([healthy, warn])
@@ -415,7 +415,7 @@ def _make_with_runs(short_name: str, asset_key: str, **kwargs) -> DigestRow:
 def test_format_cursor_zero_rows_emphasises_run_count():
     """Cursor asset with 0 rows should NOT look like a problem — it's normal."""
     from orchestration.ops.morning_digest import compose_card_fields
-    row = _make_with_runs("sapo_webhook", "sapo/sapo_webhook_consumer_asset",
+    row = _make_with_runs("sapo_webhook", "sapo/ingest_sapov2_webhook_consumer_asset",
                           rows_24h=0, runs_24h=347, last_status="skipped")
     fields, _ = compose_card_fields([row])
     val = fields[_label_for("sapo_webhook")]
@@ -426,7 +426,7 @@ def test_format_cursor_zero_rows_emphasises_run_count():
 
 def test_format_cursor_with_rows_shows_count():
     from orchestration.ops.morning_digest import compose_card_fields
-    row = _make_with_runs("sapo_history", "sapo/sapo_history_log_asset",
+    row = _make_with_runs("sapo_history", "sapo/ingest_sapov2_history_log_asset",
                           rows_24h=1234, runs_24h=88, last_status="success")
     fields, _ = compose_card_fields([row])
     val = fields[_label_for("sapo_history")]
