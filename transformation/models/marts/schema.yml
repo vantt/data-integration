@@ -1218,3 +1218,24 @@ models:
                 values: ['RESTOCK_NOW', 'CLEAR_DEADSTOCK', 'REVIEW_MARGIN', 'PROMOTE', 'DELIST']
       - name: priority_rank
         tests: [not_null]
+
+  - name: int_customer_entry_attributes
+    description: "One row per retail customer — entry-point attributes derived from their first order. Source for mart_cohort_retention cohort axis assignment."
+    columns:
+      - name: customer_key
+        tests:
+          - unique
+          - not_null
+
+  - name: mart_cohort_retention
+    description: "Long-format multi-dimensional cohort retention table. One row per (cohort_dimension × cohort_value × window_type × period_n). Scope: retail only. Min cohort_size = 10."
+    columns:
+      - name: cohort_dimension
+        tests:
+          - not_null
+      - name: cohort_value
+        tests:
+          - not_null
+      - name: cohort_size
+        tests:
+          - not_null

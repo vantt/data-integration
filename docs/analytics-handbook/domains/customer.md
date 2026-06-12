@@ -6,7 +6,7 @@
 
 > **Owner:** Marketing / Customer Success
 > **Update Frequency:** Daily / Monthly
-> **Cập nhật:** 2026-05-31
+> **Cập nhật:** 2026-06-12
 > **Xem thêm:** [Customer Segmentation](../../context/customer-segmentation.md), [Report Segmentation Guide](../guides/report_segmentation.md)
 
 ---
@@ -210,6 +210,7 @@ WHERE c.customer_type = 'RETAIL'
 > **Recommended Scope:** scope_retail (`customer_type = 'RETAIL'`)
 
 - **Business Definition:** Percentage of users who return in a subsequent period. **B2B retention có logic khác (contract-based), nên tách riêng.**
+- **See also:** [Cohort Framework](#context-cohort-framework) — cohort theo `first_order_month` (logic SQL dưới đây) chỉ là **1 axis**; khung đa chiều mở rộng sang entry_product / channel / basket / value + composite.
 - **Logic (SQL):**
   ```sql
   -- Cohort Analysis Logic - Retail Only
@@ -254,6 +255,106 @@ WHERE c.customer_type = 'RETAIL'
 - **Unit:** %
 - **Common Misunderstandings:** Do not use this metric outside the documented scope; do not compare it with a similarly named metric from another domain when business definition or grain differs.
 - **Pitfalls / Edge Cases:** Check null handling, canceled/returned statuses, duplicate keys, and joins that can multiply measures before publishing reports.
+
+## Context: Cohort Framework
+
+> **Description:** Khung cohort đa chiều — đo retention/value của khách theo **cách họ vào tệp**, không chỉ theo tháng mua đầu.
+> **Default Scope:** scope_retail (`customer_type = 'RETAIL'`).
+> **dbt Source:** `int_customer_entry_attributes` (entry-key, 1 dòng/khách) + `mart_cohort_retention` (long-format, parameterized) — **Planned (P2)**.
+> **Grain:** `mart_cohort_retention` = 1 dòng / (cohort_dimension × cohort_value × window_type × period_n).
+> **Status:** Design CHỐT 2026-06-12 (spec v1). Mart chưa build — đừng dùng làm reporting source tới khi P2 verify.
+
+### Mental model (đọc trước)
+
+Một **cohort** = (CÁCH GOM khách tại điểm vào — *entry key / axis*) × (METRIC theo dõi theo thời gian — *M+n*).
+Cohort "first-order month" hiện có (dashboard #105) chỉ là **1 axis trong nhiều axis**. Khung này mở cả 2 trục: nhiều cách gom (axis) + nhiều metric.
+
+- **Entry point** = đơn hàng ĐẦU TIÊN của khách (first order). Mọi entry-key (product/category/channel/basket/value) đều chốt tại đơn đầu, KHÔNG đổi về sau.
+- **Cohort_size** = số khách trong nhóm, **cố định tại điểm vào** (mẫu số). Retention M+n = active_M+n / cohort_size. Cohort_size KHÔNG phải số active mỗi kỳ.
+- **Min cohort size = 10:** nhóm <10 khách bị **ẩn** (cardinality vỡ vụn — chỉ ~1.515 khách lẻ có sale).
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Cohort Framework | Tệp khách vào bằng cách nào thì giữ chân/đẻ ra value tốt nhất? | Cohort Retention %, Revenue Retention, Repeat Rate (per axis) | `fact_orders`, `fact_sales`, `dim_customers` (entry-key derivable) | `int_customer_entry_attributes`, `mart_cohort_retention` (P2) |
+
+### Analytical Questions
+
+#### Q1. Cohort Framework Readiness
+
+- **Question:** Tệp khách vào bằng cách nào (sản phẩm/kênh/giỏ/giá trị đầu) thì giữ chân và sinh value tốt nhất?
+- **Definition:** Xác định axis nào tách được nhóm "vào rồi ở lại" khỏi nhóm "one-timer", để dồn acquisition/retention vào đúng entry path.
+- **Nature:** retention + acquisition-quality, strategic/actionable.
+- **Why It Matters:** 71.8% khách lẻ chỉ mua 1 lần, M+1 chỉ 3–17% (xem retention-leak §2.3). Cohort 1 chiều (acquisition month) chỉ cho thấy *có* xô thủng; cohort đa chiều chỉ ra *entry path nào* xô thủng nặng → can thiệp đúng chỗ.
+- **Tradeoffs / Caveats:** Composite axis dễ vỡ cardinality → áp min-size=10, chỉ 2 composite duyệt trước. Relative vs calendar window đo 2 thứ khác nhau, không trộn.
+- **Insight / Action Enabled:** Entry path retention cao → ưu tiên acquisition vào path đó; path retention thấp → fix onboarding/2nd-order hoặc ngừng đổ tiền acquisition vào đó.
+- **Related Metrics:** Cohort Retention %, Revenue Retention, Repeat Rate (theo từng axis).
+
+### Cohort Axes (entry key — cách gom v1)
+
+Mỗi axis = `cohort_dimension`; giá trị nhóm = `cohort_value`. Tất cả chốt tại đơn đầu.
+
+| cohort_dimension | cohort_value (ví dụ) | Định nghĩa entry-key | Nguồn |
+|---|---|---|---|
+| `first_order_month` | `2026-01` | Tháng mua đầu (DATE_TRUNC month của first_order_date) — **đã có**, port qua | `dim_customers.first_order_date` |
+| `entry_product` | `Cordyceps 60v` | SKU của dòng đầu tiên trên đơn đầu | `fact_sales` (order-line grain) |
+| `entry_category` | `Đông trùng` | Category của entry product | `fact_sales` × `dim_products.category` |
+| `acquisition_channel` | `Shopee` | Kênh của đơn đầu | `fact_orders.channel_key` |
+| `basket_size` | `1` / `≥2` | Số SKU phân biệt trên đơn đầu, band hoá 1 vs ≥2 | `fact_sales` (COUNT DISTINCT product per first order) |
+| `entry_value_band` | `Bronze` / `Silver` / … | Band giá trị đơn đầu (first-order AOV band) | `fact_orders` (first order total) |
+
+**Composite (v1 = 2 combo DUYỆT TRƯỚC, min size ≥10):**
+
+| cohort_dimension | Ý nghĩa | Câu hỏi |
+|---|---|---|
+| `entry_product × acquisition_channel` | gateway SKU × kênh | Vào bằng X qua Shopee vs qua Web → retention/LTV khác nhau? |
+| `basket_size × entry_value_band` | đơn đầu nhiều SKU × giá trị | Đơn đầu ≥2 SKU + giá trị cao → repeat rate cao hơn? |
+
+> ⚠️ **Composite mới** ngoài 2 combo trên = **ĐỀ XUẤT**, phải duyệt trước khi thêm (tránh vỡ cardinality). KHÔNG sinh composite ad-hoc trong Metabase.
+
+### Window Types (CẢ HAI)
+
+| window_type | Trục thời gian | Dùng để |
+|---|---|---|
+| `relative` (primary) | `period_n` = M0, M1, M2… (tuổi cohort tính từ đơn đầu) | Cohort triangle — so sánh chéo cohort theo "tháng thứ n sau khi vào" |
+| `calendar` | `period_n` = tháng lịch thực (wall-clock) | Xem mùa vụ / sự kiện ảnh hưởng cùng lúc lên mọi cohort |
+
+### Metrics (theo dõi theo period_n)
+
+| Metric | Định nghĩa | Logic | v |
+|---|---|---|---|
+| `retention_pct` | % khách cohort active ở period_n | `active_at_n / cohort_size * 100` | **v1** |
+| `revenue_retention` | doanh thu period_n / doanh thu M0 của cohort | `rev_at_n / rev_at_M0` | **v1** |
+| `repeat_rate` | % khách cohort có ≥2 đơn tính tới period_n | `customers_with_2plus_orders / cohort_size` | **v1** |
+| `realized_margin` (per cohort) | margin theo cohort — **dùng `realized_margin_pct`, KHÔNG `gross_margin_pct`** (L125) | từ `mart_sku_economics_monthly` | v2 (ĐỀ XUẤT) |
+| basket-expansion / cross-category | SKU/đơn tăng theo time; adoption dòng khác | từ `fact_sales` | v2 (ĐỀ XUẤT) |
+
+### Architecture (long-format — Planned P2)
+
+`mart_cohort_retention` = **1 bảng cho mọi axis** (long-format): build từ `int_customer_entry_attributes` (1 dòng/khách, mọi entry-key) + **1 CTE `activity` tính 1 lần** + UNION ALL mỗi axis (chỉ đổi `cohort_value`). Metabase filter `cohort_dimension` + `window_type` → ra ma trận tương ứng. **KHÔNG re-derive** metric đã pre-computed (L122).
+
+```
+mart_cohort_retention columns:
+  cohort_dimension   -- axis name (first_order_month | entry_product | … | composite)
+  cohort_value       -- nhóm cụ thể
+  window_type        -- 'relative' | 'calendar'
+  period_n           -- M0/M1/M2… (relative) hoặc tháng lịch (calendar)
+  cohort_size        -- mẫu số, cố định tại entry (chỉ ghi nhóm ≥10)
+  active             -- số khách active ở period_n
+  retention_pct, revenue_retention, repeat_rate
+```
+
+### Common Misunderstandings
+
+| Hiểu sai | Đúng | Hậu quả nếu nhầm |
+|---|---|---|
+| `cohort_size` = số khách active mỗi kỳ | `cohort_size` cố định tại điểm vào (mẫu số); `active` mới biến thiên | Retention% sai (chia nhầm mẫu số) |
+| Sum `cohort_size` các nhóm hiển thị = tổng khách | Nhóm <10 bị ẩn → tổng visible < tổng base thật | Báo cáo thiếu khách, % sai lệch |
+| `entry_product` = product_affinity | entry_product = SKU **đơn đầu**; `dim_customers.product_affinity` = SKU mua **nhiều nhất** | Gom nhầm nhóm, sai insight gateway |
+| Relative M+n trộn được với calendar month | 2 window_type đo 2 thứ khác; lọc 1 trong 2, không cộng chéo | Cohort triangle vô nghĩa |
+| Margin cohort dùng `gross_margin_pct` | Dùng `realized_margin_pct` (L125 — gross_* chưa fix H010) | Margin ~2× thấp ở SKU H010 |
+| Composite axis thêm tuỳ ý trong BI | Chỉ 2 composite duyệt trước; min-size=10 | Cardinality vỡ, mỗi cell vài khách → noise |
 
 ## Context: Segmentation
 
