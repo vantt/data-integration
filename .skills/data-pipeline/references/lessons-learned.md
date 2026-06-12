@@ -3893,3 +3893,20 @@ Two patterns that trigger this:
 3. `--full-refresh --force` is reserved for deliberate destructive reload only — never pass it from Dagster run tags.
 
 **Reference:** `orchestration/assets/sapo_assets.py` lines 54, 105, 155, 206 ; `ingestion/src/utils/pipeline_runner.py` guardrail block
+
+### L122 — BI card re-deriving a pre-computed mart metric → fragile (empty on no-filter); reuse the column
+
+**Group:** SERVE
+
+**Symptom:** Metabase card "COGS Variance Alert Table" (#108) returns 0 rows / looks broken — even though COGS variance data exists. Debugger shows it executes (columns present) but 0 rows regardless of threshold.
+
+**Root cause:** The card RE-DERIVED COGS variance inside the SQL by comparing a "current window" vs a "prior window" computed from `int_misa_sales_lines` via a `filter_bounds` CTE. With NO date filter applied (default), `filter_bounds` = full data range (MIN..MAX), so the "prior window" (before MIN date) is EMPTY → `JOIN avg_3m USING(product_code)` yields 0 rows ALWAYS. Compounded: a hard `WHERE variance > 10%` filter — current COGS is stable (<1% after the H010 packsize fix), so even a correct alert table would be empty.
+
+**Fix:** Use the PRE-COMPUTED `cogs_variance_pct` column already on `mart_sku_economics_monthly` (latest month) instead of re-deriving. Show TOP movers `ORDER BY ABS(cogs_variance_pct) DESC LIMIT N` (no hard threshold) so the table is never empty — when COGS is stable it still surfaces the largest movers. Card now returns 15 rows.
+
+**Rules:**
+1. If a mart already computes a metric (here `cogs_variance_pct`, `cogs_per_unit_3m_avg`), BI cards must reuse the column — do NOT re-derive with ad-hoc window CTEs (fragile + diverges from the canonical definition).
+2. "Prior/trailing window" CTEs that key off the filtered range break when the filter is absent (prior window collapses to empty). Avoid in BI SQL; push such logic into the mart.
+3. Alert/threshold tables go empty in healthy states and read as "broken" — prefer "top-N movers" (always populated) over a hard threshold filter, or add a graceful empty-state.
+
+**Reference:** `docs/analytics-handbook/blueprints/product_profitability_cost.md` (COGS Variance Alert Table card) ; `mart_sku_economics_monthly.cogs_variance_pct`
