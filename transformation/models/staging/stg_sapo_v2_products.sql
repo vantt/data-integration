@@ -53,4 +53,4 @@ SELECT
     -- Metadata
     event_timestamp as source_timestamp
 
-FROM {{ ref('src_sapo_products_v2') }}
+FROM {{ ref('src_sapo_v2_products') }}

@@ -13,4 +13,4 @@ SELECT
     TRY_CAST(received_on AS TIMESTAMPTZ)      AS received_at,
     TRY_CAST(created_on  AS TIMESTAMPTZ)      AS created_at,
     TRY_CAST(modified_on AS TIMESTAMPTZ)      AS modified_at
-FROM {{ ref('src_sapo_order_returns_v2') }}
+FROM {{ ref('src_sapo_v2_order_returns') }}

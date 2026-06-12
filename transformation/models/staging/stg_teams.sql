@@ -4,7 +4,7 @@
 ) }}
 
 WITH raw_teams AS (
-    SELECT * FROM {{ source('sapo_v2_raw', 'teams_raw') }}
+    SELECT * FROM {{ source('gsheet_raw', 'teams_raw') }}
 ),
 
 cleaned AS (

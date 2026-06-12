@@ -6,7 +6,7 @@
 -- =================================================================================================
 -- STD: INVENTORY MOVEMENTS - v2.0
 -- =================================================================================================
--- Source:  src_sapo_inventory_transactions_v2 (table, ~32,957 deduped rows)
+-- Source:  src_sapo_v2_inventory_transactions (table, ~32,957 deduped rows)
 -- Grain:   1 row per inventory_movement_id (= entity_id content hash)
 -- PK:      inventory_movement_id (surrogate = entity_id)
 -- Natural key: (log_root_id, variant_id, location_id, issued_at_utc, onhand) — 0 collisions.
@@ -24,7 +24,7 @@
 -- =================================================================================================
 
 WITH source_data AS (
-    SELECT * FROM {{ ref('src_sapo_inventory_transactions_v2') }}
+    SELECT * FROM {{ ref('src_sapo_v2_inventory_transactions') }}
 )
 
 SELECT

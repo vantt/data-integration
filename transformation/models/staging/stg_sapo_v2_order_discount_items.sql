@@ -12,7 +12,7 @@ WITH raw AS (
         order_code,
         TRY_CAST(created_on AS TIMESTAMPTZ) AS created_at,
         discount_items_json
-    FROM {{ ref('src_sapo_orders_v2') }}
+    FROM {{ ref('src_sapo_v2_orders') }}
     WHERE json_array_length(discount_items_json) > 0
 ),
 

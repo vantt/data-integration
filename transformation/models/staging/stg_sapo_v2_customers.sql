@@ -13,7 +13,7 @@
 -- =================================================================================================
 
 WITH source_data AS (
-    SELECT * FROM {{ ref('src_sapo_customers_v2') }}
+    SELECT * FROM {{ ref('src_sapo_v2_customers') }}
 )
 
 SELECT

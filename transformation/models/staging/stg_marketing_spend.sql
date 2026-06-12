@@ -5,7 +5,7 @@
 
 WITH raw_data AS (
     SELECT * 
-    FROM {{ source('sapo_v2_raw', 'marketing_spend_raw') }}
+    FROM {{ source('gsheet_raw', 'marketing_spend_raw') }}
 )
 
 SELECT

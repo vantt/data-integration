@@ -4,7 +4,7 @@
 ) }}
 
 WITH raw_targets AS (
-    SELECT * FROM {{ source('sapo_v2_raw', 'targets_raw') }}
+    SELECT * FROM {{ source('gsheet_raw', 'targets_raw') }}
 ),
 
 sanitized AS (

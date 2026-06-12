@@ -18,7 +18,7 @@ WITH source AS (
         sku,
         variant_prices_json,
         source_timestamp
-    FROM {{ ref('stg_sapo_variants_v2') }}
+    FROM {{ ref('stg_sapo_v2_variants') }}
 ),
 
 unnested AS (

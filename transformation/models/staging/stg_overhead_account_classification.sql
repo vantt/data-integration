@@ -11,7 +11,7 @@
 -- effective_to NULL = open-ended (currently active row).
 
 WITH raw AS (
-    SELECT * FROM {{ source('sapo_v2_raw', 'overhead_account_classification_raw') }}
+    SELECT * FROM {{ source('gsheet_raw', 'overhead_account_classification_raw') }}
 ),
 
 cleaned AS (

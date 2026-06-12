@@ -42,7 +42,7 @@ WITH transitions AS (
             )
         END AS days_since_prev_event
     FROM {{ ref('int_order_snapshots_ranked') }} t
-    LEFT JOIN {{ ref('stg_sapo_orders_v2') }} o ON t.order_id = o.order_id
+    LEFT JOIN {{ ref('stg_sapo_v2_orders') }} o ON t.order_id = o.order_id
 )
 SELECT *
 FROM transitions

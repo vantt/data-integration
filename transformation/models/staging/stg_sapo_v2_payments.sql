@@ -11,7 +11,7 @@
 -- =================================================================================================
 
 WITH raw_source AS (
-    SELECT * FROM {{ ref('src_sapo_orders_v2') }}
+    SELECT * FROM {{ ref('src_sapo_v2_orders') }}
 ),
 
 unnested_payments AS (

@@ -17,7 +17,7 @@ WITH raw_tags AS (
         order_id,
         TRIM(REPLACE(tag.value::VARCHAR, '"', '')) as tag_value
     -- T0.4 DECISION (2026-06-03): reads src_sapo_orders directly for $.tags. Deferred to v3 work (option a) — when v3 arrives, expose tags via std_orders or add a v3 path. Gated by Q1-Q5.
-    FROM {{ ref('src_sapo_orders_v2') }},
+    FROM {{ ref('src_sapo_v2_orders') }},
     LATERAL UNNEST(
         CASE
             WHEN tags IS NOT NULL AND tags NOT IN ('', '[]')
