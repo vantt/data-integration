@@ -139,16 +139,14 @@ ORDER BY cohort_value
 
 #### ❓ Question: Cohort Value Summary
 
-Revenue retention (vs M0) + repeat rate per cohort. M0–M6 pivoted. Repeat Rate = % of cohort who ever placed a 2nd order. window_type hardcoded to 'relative' (same reason as Retention Matrix — calendar YYYY-MM period_n invalidates CASE WHEN pivot).
+Repeat rate + M1 retention + revenue decay M1–M6 per cohort. Sorted by Repeat Rate % DESC. Repeat Rate = % ever placed ≥2 orders (cumulative). M0 Rev dropped (always 100 — no info). Repeat Buyers dropped (redundant with Rate %). window_type hardcoded to 'relative'.
 
 ```sql
 SELECT
     cohort_value                                                               AS "Cohort",
     MAX(cohort_size)                                                           AS "Size",
-    MAX(repeat_customers)                                                      AS "Repeat Buyers",
     ROUND(MAX(repeat_customers) * 100.0 / NULLIF(MAX(cohort_size), 0), 1)     AS "Repeat Rate %",
     MAX(CASE WHEN period_n = '1'  THEN ROUND(retention_pct, 1) END)           AS "M1 Ret %",
-    MAX(CASE WHEN period_n = '0'  THEN ROUND(revenue_retention * 100, 1) END) AS "M0 Rev",
     MAX(CASE WHEN period_n = '1'  THEN ROUND(revenue_retention * 100, 1) END) AS "M1 Rev",
     MAX(CASE WHEN period_n = '2'  THEN ROUND(revenue_retention * 100, 1) END) AS "M2 Rev",
     MAX(CASE WHEN period_n = '3'  THEN ROUND(revenue_retention * 100, 1) END) AS "M3 Rev",
@@ -178,7 +176,7 @@ ORDER BY "Repeat Rate %" DESC NULLS LAST
         "max_value": 60
       },
       {
-        "columns": ["M0 Rev", "M1 Rev", "M2 Rev", "M3 Rev", "M4 Rev", "M5 Rev", "M6 Rev"],
+        "columns": ["M1 Rev", "M2 Rev", "M3 Rev", "M4 Rev", "M5 Rev", "M6 Rev"],
         "type": "range",
         "colors": ["#EF8C8C", "#F9D45C", "#84BB4C"],
         "min_type": "custom",
