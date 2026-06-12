@@ -185,16 +185,16 @@ _nightly_batch_selection = (
     AssetSelection.assets(rill.sapo_rill_publish)
 )
 
-transform_batch_nightly_job = define_asset_job(
-    name="transform_batch_nightly_job",
+pipeline_batch_nightly_job = define_asset_job(
+    name="pipeline_batch_nightly_job",
     selection=_nightly_batch_selection,
     tags={**SYNC_TAGS, "inventory_window": "day"},
 )
 
 # 3b. Full Refresh Job — manual trigger only, resets all batch cursors
 # Launch from Dagster UI when data gaps are suspected.
-transform_batch_fullrefresh_job = define_asset_job(
-    name="transform_batch_fullrefresh_job",
+pipeline_batch_fullrefresh_job = define_asset_job(
+    name="pipeline_batch_fullrefresh_job",
     selection=_nightly_batch_selection,
     tags={**SYNC_TAGS, "full_refresh": "true", "inventory_window": "day"},
 )
@@ -257,7 +257,7 @@ def _has_active_run(context, job_name: str) -> str | None:
 # dequeued (dbt_rw=1 occupied), blocks subsequent ticks via _has_active_run,
 # and eventually hits the 90-min QUEUE_STUCK_THRESHOLD and gets auto-canceled.
 # Better to skip the tick and retry next tick (3-10 min later).
-_LONG_DPT_RW_JOBS = ["transform_batch_nightly_job", "transform_batch_fullrefresh_job"]
+_LONG_DPT_RW_JOBS = ["pipeline_batch_nightly_job", "pipeline_batch_fullrefresh_job"]
 
 # Statuses that mean a job is ACTUALLY running (holds the dbt_rw slot).
 # Exclude NOT_STARTED — a NOT_STARTED batch job hasn't acquired the slot yet
@@ -291,8 +291,8 @@ _INGESTION_JOBS = [
     "ingest_filedrop_shopee_job",
     "ingest_filedrop_misa_job",
     "ingest_filedrop_misa_account_ledger_job",
-    "transform_batch_nightly_job",
-    "transform_batch_fullrefresh_job",
+    "pipeline_batch_nightly_job",
+    "pipeline_batch_fullrefresh_job",
 ]
 
 
@@ -376,12 +376,12 @@ def ingest_sapo_hourly_schedule(context):
 
 
 @schedule(
-    job=transform_batch_nightly_job,
+    job=pipeline_batch_nightly_job,
     cron_schedule="0 3 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def transform_batch_nightly_schedule(context):
-    active = _has_active_run(context, "transform_batch_nightly_job")
+def pipeline_batch_nightly_schedule(context):
+    active = _has_active_run(context, "pipeline_batch_nightly_job")
     if active:
         return SkipReason(f"nightly: previous run still active ({active[:8]})")
     return RunRequest(run_key=None)
@@ -588,9 +588,9 @@ defs = Definitions(
         ingest_filedrop_shopee_job,
         ingest_filedrop_misa_job,
         ingest_filedrop_misa_account_ledger_job,
-        # transform_*
-        transform_batch_nightly_job,
-        transform_batch_fullrefresh_job,
+        # pipeline_batch_*
+        pipeline_batch_nightly_job,
+        pipeline_batch_fullrefresh_job,
         # health_*
         health_recon_daily_job,
         health_kpi_closure_job,
@@ -606,7 +606,7 @@ defs = Definitions(
         ingest_sapo_incremental_schedule,
         ingest_sapo_hourly_schedule,
         # transform_*
-        transform_batch_nightly_schedule,
+        pipeline_batch_nightly_schedule,
         # health_*
         health_recon_daily_schedule,
         health_kpi_closure_schedule,
