@@ -75,6 +75,9 @@ def run_pipeline(
     # 3b. Handle --reset-cursor — clears incremental cursor, re-fetches from beginning.
     # SAFE: write_disposition="append" means dlt only adds new parquet files.
     # Old parquet files (history_log, text, prior batch_sync) are untouched.
+    # Uses refresh="drop_pipeline_state" to clear the destination-stored cursor too —
+    # clearing only the local state dir is insufficient because dlt restores state FROM
+    # the destination on startup, which would re-apply the old start_value filter.
     refresh_mode = None
     if args.reset_cursor:
         import shutil
@@ -85,8 +88,9 @@ def run_pipeline(
             print(f"[Pipeline Runner] --reset-cursor: cleared local state dir ({state_dir})")
         else:
             print(f"[Pipeline Runner] --reset-cursor: no local state dir found, starting fresh.")
+        refresh_mode = "drop_pipeline_state"  # drops destination state without deleting parquet
         source_args["full_refresh"] = True  # tells source to ignore cursor (last_value = None)
-        print(f"[Pipeline Runner] --reset-cursor: cursor reset. Will append from beginning, NO parquet deletion.")
+        print(f"[Pipeline Runner] --reset-cursor: will use refresh='drop_pipeline_state' to clear destination cursor. NO parquet deletion.")
 
     # 3c. Handle --full-refresh --force — destructive drop + full reload.
     # Strategy: use refresh="drop_sources" to drop destination-side state AND parquet files,
