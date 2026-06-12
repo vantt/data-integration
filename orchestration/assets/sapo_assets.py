@@ -1,4 +1,4 @@
-"""Dagster assets for Sapo ingestion via DLT batch runners.
+﻿"""Dagster assets for Sapo ingestion via DLT batch runners.
 
 Writes to ingestion_health via orchestration.ops.ingestion_health on every run.
 """
@@ -41,14 +41,14 @@ def _build_metadata(loaded_packages: list, rows_written) -> dict:
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def sapo_orders_batch_asset(context):
+def ingest_sapov2_orders_batch_asset(context):
     """Daily batch sync for Sapo Orders.
 
     Captures 'modified_on' updates.
     When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/sapo_orders_batch_asset"
+    asset_key_str = "sapo/ingest_sapov2_orders_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
     argv = ["--reset-cursor"] if is_full_refresh else []

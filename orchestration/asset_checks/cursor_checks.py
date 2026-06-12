@@ -1,4 +1,4 @@
-"""Factory for cursor-stall @asset_check functions (Sapo assets only).
+﻿"""Factory for cursor-stall @asset_check functions (Sapo assets only).
 
 Detects the "silent dropout" pattern: cursor advances (dlt thinks it's
 progressing) but rows_written=0 for N consecutive runs. This is the primary
@@ -25,7 +25,7 @@ CURSOR_CHECK_ASSET_KEYS: frozenset[str] = frozenset(
     {
         "sapo/sapo_webhook_consumer_asset",
         "sapo/sapo_history_log_asset",
-        "sapo/sapo_orders_batch_asset",
+        "sapo/ingest_sapov2_orders_batch_asset",
         "sapo/sapo_customers_batch_asset",
         "sapo/sapo_products_batch_asset",
     }

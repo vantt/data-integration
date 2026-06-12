@@ -286,7 +286,7 @@ Tests run inside `data_platform` container during this audit (2026-04-08 23:35+0
 | `ls /app/data_lake/export/marts/rolling/<table>/` post-GC | ✅ each dir has exactly 1 file (latest timestamp) — no accumulation |
 | `ls /var/dlt/pipelines/` | ✅ only `sapo_history_log_pipeline`, `sapo_webhook_consumer` (post-09:55 restart) |
 | Container boot time via `stat /proc/1` | 2026-04-09 09:55:31 +0700 |
-| Last nightly run with `sapo_orders_batch_asset` | ✅ `73b8ee34-2e0f-469f-8fdd-609b5b6783b2`, 2026-04-09 04:00:15–04:09:30, STEP_SUCCESS |
+| Last nightly run with `ingest_sapov2_orders_batch_asset` | ✅ `73b8ee34-2e0f-469f-8fdd-609b5b6783b2`, 2026-04-09 04:00:15–04:09:30, STEP_SUCCESS |
 | Destination-side dlt state presence | ✅ `sapo_{orders,customers,accounts}_batch__*.jsonl` in `/app/data_lake/sapo_raw/_dlt_pipeline_state/` — incremental cursors persistent across container restart |
 | Anomaly spotted | `/app/data_lake/export/marts/rolling/dim_time.parquet` — stray top-level file from pre-refactor layout (mtime Feb 3). Harmless: GC only scans subdirs. Candidate for cleanup. |
 

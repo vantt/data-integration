@@ -1,4 +1,4 @@
-# Asset Documentation
+﻿# Asset Documentation
 
 > Dagster asset definitions and groups
 
@@ -19,7 +19,7 @@ Ingestion assets that extract data from Sapo or Google Sheets.
 
 | Asset                         | Description                           | Schedule |
 | ----------------------------- | ------------------------------------- | -------- |
-| `sapo_orders_batch_asset`     | Daily batch sync for Orders           | Nightly  |
+| `ingest_sapov2_orders_batch_asset`     | Daily batch sync for Orders           | Nightly  |
 | `sapo_customers_batch_asset`  | Daily batch sync for Customers        | Nightly  |
 | `sapo_accounts_batch_asset`   | Daily batch sync for Accounts (Staff) | Nightly  |
 | `sapo_history_log_asset`      | Incremental poll of History Logs      | 10 min   |
@@ -60,7 +60,7 @@ Serving layer assets for BI.
 
 ### Ingestion Assets
 
-#### sapo_orders_batch_asset
+#### ingest_sapov2_orders_batch_asset
 
 Daily batch sync that captures `modified_on` updates for Orders.
 
@@ -102,7 +102,7 @@ Syncs Marketing Spend data from Google Sheets.
 Loaded dynamically from the dbt project.
 
 - **Translations**:
-  - `source('sapo_raw', 'order')` -> `sapo_orders_batch_asset`
+  - `source('sapo_raw', 'order')` -> `ingest_sapov2_orders_batch_asset`
   - **Explicit Injection**: Staging models also depend on `history_log` and `webhook` to ensure data consistency.
 
 ---
@@ -123,7 +123,7 @@ Orchestrates the creation of the user-facing DuckDB database (`olap.duckdb`).
 ```mermaid
 graph TD
     %% Ingestion
-    Batch[sapo_orders_batch_asset]
+    Batch[ingest_sapov2_orders_batch_asset]
     Webhook[sapo_webhook_consumer_asset]
     History[sapo_history_log_asset]
 
@@ -164,5 +164,5 @@ graph TD
 
 ```bash
 # Materialize specific asset
-dagster asset materialize -a sapo_orders_batch_asset
+dagster asset materialize -a ingest_sapov2_orders_batch_asset
 ```

@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 import shutil
 
@@ -166,7 +166,7 @@ ingest_filedrop_misa_account_ledger_job = define_asset_job(
 
 # 3. Nightly Reconciliation Job (Batch — incremental from last cursor)
 _nightly_batch_selection = (
-    AssetSelection.assets(sapo_assets.sapo_orders_batch_asset) |
+    AssetSelection.assets(sapo_assets.ingest_sapov2_orders_batch_asset) |
     AssetSelection.assets(sapo_assets.sapo_customers_batch_asset) |
     AssetSelection.assets(sapo_assets.sapo_accounts_batch_asset) |
     AssetSelection.assets(sapo_assets.sapo_products_batch_asset) |

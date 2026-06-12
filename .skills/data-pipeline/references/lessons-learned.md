@@ -799,7 +799,7 @@ pipeline_batch_fullrefresh_job = define_asset_job(
 
 ```python
 @asset(...)
-def sapo_orders_batch_asset(context):
+def ingest_sapov2_orders_batch_asset(context):
     full_refresh = context.run.tags.get("full_refresh") == "true"
     argv = ["--full-refresh"] if full_refresh else []
     run_orders_batch.run(argv=argv)

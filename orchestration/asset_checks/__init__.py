@@ -1,4 +1,4 @@
-"""Asset checks registry for ingestion health monitoring.
+﻿"""Asset checks registry for ingestion health monitoring.
 
 Iterates ingestion_sla.yaml and builds check lists for every registered asset.
 `ALL_CHECKS` is imported by orchestration/definitions.py.
@@ -36,7 +36,7 @@ def _build_asset_def_map() -> dict[str, Any]:
     return {
         "sapo/sapo_webhook_consumer_asset": sapo_assets.sapo_webhook_consumer_asset,
         "sapo/sapo_history_log_asset": sapo_assets.sapo_history_log_asset,
-        "sapo/sapo_orders_batch_asset": sapo_assets.sapo_orders_batch_asset,
+        "sapo/ingest_sapov2_orders_batch_asset": sapo_assets.ingest_sapov2_orders_batch_asset,
         "sapo/sapo_customers_batch_asset": sapo_assets.sapo_customers_batch_asset,
         "sapo/sapo_accounts_batch_asset": sapo_assets.sapo_accounts_batch_asset,
         "sapo/sapo_products_batch_asset": sapo_assets.sapo_products_batch_asset,

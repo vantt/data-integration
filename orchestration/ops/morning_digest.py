@@ -1,4 +1,4 @@
-"""Morning Lark digest for ingestion health.
+﻿"""Morning Lark digest for ingestion health.
 
 Runs at 06:00 Asia/Ho_Chi_Minh daily. Reads ingestion_health.db,
 composes one Lark card summarising yesterday's ingestion volume (ICT
@@ -31,7 +31,7 @@ logger = logging.getLogger("orchestration.morning_digest")
 KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
     ("sapo_webhook",   "sapo/sapo_webhook_consumer_asset",                    None),
     ("sapo_history",   "sapo/sapo_history_log_asset",                         None),
-    ("sapo_orders",    "sapo/sapo_orders_batch_asset",                        "recon/sapo_orders_daily"),
+    ("sapo_orders",    "sapo/ingest_sapov2_orders_batch_asset",                        "recon/sapo_orders_daily"),
     ("sapo_customers", "sapo/sapo_customers_batch_asset",                     "recon/sapo_customers_daily"),
     ("sapo_products",  "sapo/sapo_products_batch_asset",                      None),
     ("sapo_accounts",  "sapo/sapo_accounts_batch_asset",                      None),

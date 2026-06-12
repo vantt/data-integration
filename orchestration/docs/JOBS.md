@@ -123,7 +123,7 @@ pipeline_batch_nightly_job = define_asset_job(
 graph TD
     %% Ingestion Layer (Batch)
     subgraph Ingestion ["Ingestion Layer"]
-        Orders[sapo_orders_batch_asset]
+        Orders[ingest_sapov2_orders_batch_asset]
         Customers[sapo_customers_batch_asset]
         Accounts[sapo_accounts_batch_asset]
     end

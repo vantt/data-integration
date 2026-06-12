@@ -1,4 +1,4 @@
-# TRUST Playbook — Độ tin cậy dữ liệu
+﻿# TRUST Playbook — Độ tin cậy dữ liệu
 
 ## Trách nhiệm
 
@@ -173,7 +173,7 @@ Idempotent — re-run safe. Dùng `--dry-run` để preview trước.
 
 ```sql
 CREATE TABLE IF NOT EXISTS ingestion_runs (
-    asset_key       VARCHAR NOT NULL,   -- "sapo/sapo_orders_batch_asset"
+    asset_key       VARCHAR NOT NULL,   -- "sapo/ingest_sapov2_orders_batch_asset"
     run_id          VARCHAR NOT NULL,   -- Dagster run UUID (shared across assets in same job)
     run_started_at  TIMESTAMPTZ NOT NULL,
     run_ended_at    TIMESTAMPTZ,

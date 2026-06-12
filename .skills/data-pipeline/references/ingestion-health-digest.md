@@ -1,4 +1,4 @@
-# Ingestion Health Digest — Pattern Reference
+﻿# Ingestion Health Digest — Pattern Reference
 
 Reusable pattern for **observability over a multi-asset ingestion platform**: persist one row per asset run, compose a daily "morning digest" card (green/yellow/red per source), deliver via chat. Surfaces stale pipelines, source drift, zero-row streaks, and revenue mismatches BEFORE stakeholders notice missing data.
 
@@ -13,7 +13,7 @@ Trigger this pattern when **all** of the following hold for the target project:
 - Pipeline has ≥ 3 independent data assets on different cadences (batch + cursor + file-drop).
 - Freshness matters — a silently-failed ingest becomes a downstream data quality incident within 24 hours.
 - A stakeholder (ops / analyst / lead) already asks "did X run last night?" in chat. Automate the answer.
-- The orchestrator (Dagster, Airflow, Prefect…) does not already provide a source-level daily digest. Its built-in dashboards track JOB status, not **business-source** status ("Sapo orders" vs "run 42 of sapo_orders_batch_asset").
+- The orchestrator (Dagster, Airflow, Prefect…) does not already provide a source-level daily digest. Its built-in dashboards track JOB status, not **business-source** status ("Sapo orders" vs "run 42 of ingest_sapov2_orders_batch_asset").
 
 Skip if: fewer than 3 assets, or stakeholders read a live dashboard (Metabase, Grafana) daily and that's sufficient.
 
@@ -60,7 +60,7 @@ Skip if: fewer than 3 assets, or stakeholders read a live dashboard (Metabase, G
 
 ```sql
 CREATE TABLE IF NOT EXISTS ingestion_runs (
-    asset_key       VARCHAR NOT NULL,       -- "sapo/sapo_orders_batch_asset"
+    asset_key       VARCHAR NOT NULL,       -- "sapo/ingest_sapov2_orders_batch_asset"
     run_id          VARCHAR NOT NULL,       -- Dagster/Airflow run UUID
     run_started_at  TIMESTAMPTZ NOT NULL,   -- UTC-native, display in biz TZ later
     run_ended_at    TIMESTAMPTZ,

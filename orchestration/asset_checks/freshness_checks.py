@@ -1,4 +1,4 @@
-"""Factory for freshness @asset_check functions.
+﻿"""Factory for freshness @asset_check functions.
 
 One check per ingestion asset: last success must be within SLA window.
 Severity = ERROR when exceeded (not WARN) — staleness is a hard signal.
@@ -29,7 +29,7 @@ def make_freshness_check(
     Args:
         asset_def: The Dagster asset object (passed to @asset_check(asset=...)).
         asset_key_str: Slash-separated key string matching ingestion_sla.yaml,
-                       e.g. "sapo/sapo_orders_batch_asset".
+                       e.g. "sapo/ingest_sapov2_orders_batch_asset".
     """
     sla = get_sla(asset_key_str)
     sla_hours: float = sla.get("freshness_hours", 24)

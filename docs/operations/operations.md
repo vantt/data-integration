@@ -66,7 +66,7 @@ dagster job list --running
 
 ```
 pipeline_batch_nightly_job (04:00 AM)
-├── sapo_orders_batch_asset
+├── ingest_sapov2_orders_batch_asset
 ├── sapo_customers_batch_asset
 ├── sapo_accounts_batch_asset
 ├── dbt_otp_assets (staging)
@@ -81,7 +81,7 @@ pipeline_batch_nightly_job (04:00 AM)
 dagster job execute -j pipeline_batch_nightly_job
 
 # Run specific asset
-dagster asset materialize -a sapo_orders_batch_asset
+dagster asset materialize -a ingest_sapov2_orders_batch_asset
 
 # Run dbt manually
 python transformation/scripts/run_dbt.py run --select +tag:mart

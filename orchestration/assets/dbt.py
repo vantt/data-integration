@@ -1,4 +1,4 @@
-from dagster import AssetExecutionContext, AssetKey
+﻿from dagster import AssetExecutionContext, AssetKey
 from dagster_dbt import DbtCliResource, dbt_assets, DbtProject, DagsterDbtTranslator
 import os
 import subprocess
@@ -36,7 +36,7 @@ class SapoDbtTranslator(DagsterDbtTranslator):
         if resource_type == "source":
             if source_name == "sapo_raw":
                 if name == "order":
-                    return AssetKey(["sapo", "sapo_orders_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapov2_orders_batch_asset"])
                 elif name == "customer":
                     return AssetKey(["sapo", "sapo_customers_batch_asset"])
                 elif name == "account":

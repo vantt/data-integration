@@ -8,7 +8,7 @@ Lessons quan trọng khi orchestrate pipeline dlt + dbt trong Dagster. Đây là
 
 **Problem:** Trong job chạy nhiều loại ingestion + dbt cùng lúc, dbt có thể start **trước khi** một số ingestion asset xong → dbt đọc stale data.
 
-**Root cause:** dbt models declare source qua `{{ source('sapo_raw', 'order') }}`. `SapoDbtTranslator.get_asset_key()` map source đó tới `sapo_orders_batch_asset`. Nhưng nếu job chỉ chứa `sapo_history_log_asset` (không có batch asset), Dagster thấy source không có dependency trong scope job → dbt start ngay lập tức song song với history_log.
+**Root cause:** dbt models declare source qua `{{ source('sapo_raw', 'order') }}`. `SapoDbtTranslator.get_asset_key()` map source đó tới `ingest_sapov2_orders_batch_asset`. Nhưng nếu job chỉ chứa `sapo_history_log_asset` (không có batch asset), Dagster thấy source không có dependency trong scope job → dbt start ngay lập tức song song với history_log.
 
 **Fix:** Override `get_upstream_asset_keys()` để **inject explicit upstream keys** cho tất cả staging/src models.
 
@@ -23,7 +23,7 @@ class SapoDbtTranslator(DagsterDbtTranslator):
             # Force dbt to wait for ALL ingestion methods trong cùng job
             upstream_keys.add(AssetKey(["sapo", "sapo_history_log_asset"]))
             upstream_keys.add(AssetKey(["sapo", "sapo_webhook_consumer_asset"]))
-            upstream_keys.add(AssetKey(["sapo", "sapo_orders_batch_asset"]))
+            upstream_keys.add(AssetKey(["sapo", "ingest_sapov2_orders_batch_asset"]))
             upstream_keys.add(AssetKey(["sapo", "sapo_customers_batch_asset"]))
             upstream_keys.add(AssetKey(["sapo", "sapo_accounts_batch_asset"]))
 
@@ -390,7 +390,7 @@ pipeline_batch_fullrefresh_job = define_asset_job(
 
 ```python
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def sapo_orders_batch_asset(context):
+def ingest_sapov2_orders_batch_asset(context):
     full_refresh = context.run.tags.get("full_refresh") == "true"
     argv = ["--full-refresh"] if full_refresh else []
 

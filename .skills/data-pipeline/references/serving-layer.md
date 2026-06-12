@@ -1,4 +1,4 @@
-# Serving Layer Mechanism
+﻿# Serving Layer Mechanism
 
 Cơ chế serving DB cho DuckDB: **rolling snapshots + Rolling Self-Refresh Views + zero-downtime swap**.
 
@@ -222,7 +222,7 @@ docker compose start metabase
 
 **Asset chain (nightly job):**
 ```
-sapo_orders_batch_asset
+ingest_sapov2_orders_batch_asset
 sapo_customers_batch_asset
 sapo_accounts_batch_asset
          │

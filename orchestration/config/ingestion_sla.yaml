@@ -1,4 +1,4 @@
-# SLA configuration for ingestion asset checks.
+﻿# SLA configuration for ingestion asset checks.
 # Editing this file is the ONLY action needed to tighten or loosen any SLA.
 # Restart the Dagster webserver after changes.
 
@@ -14,7 +14,7 @@ assets:
     business_hours_only: false
   sapo/sapo_history_log_asset:
     freshness_hours: 12
-  sapo/sapo_orders_batch_asset:
+  sapo/ingest_sapov2_orders_batch_asset:
     freshness_hours: 28
   sapo/sapo_customers_batch_asset:
     freshness_hours: 28

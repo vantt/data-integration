@@ -1,4 +1,4 @@
-"""Smoke tests for Phase 4 morning digest.
+﻿"""Smoke tests for Phase 4 morning digest.
 
 Seeds a temporary ingestion_health.db with synthetic data and verifies:
 - classify() correctly assigns green/yellow/red/gray per boundary conditions
@@ -95,7 +95,7 @@ def health_db(tmp_path, monkeypatch):
                (asset_key, run_id, run_started_at, status, rows_written)
                VALUES (?, ?, ?, 'success', ?)""",
             [
-                "sapo/sapo_orders_batch_asset",
+                "sapo/ingest_sapov2_orders_batch_asset",
                 str(uuid.uuid4()),
                 (anchor - timedelta(days=days_ago)).strftime("%Y-%m-%d %H:%M:%S.%f"),
                 11_000 + days_ago * 100,
@@ -106,7 +106,7 @@ def health_db(tmp_path, monkeypatch):
         """INSERT INTO ingestion_runs
            (asset_key, run_id, run_started_at, status, rows_written)
            VALUES (?, ?, ?, 'skipped', 0)""",
-        ["sapo/sapo_orders_batch_asset", str(uuid.uuid4()), recent.strftime("%Y-%m-%d %H:%M:%S.%f")],
+        ["sapo/ingest_sapov2_orders_batch_asset", str(uuid.uuid4()), recent.strftime("%Y-%m-%d %H:%M:%S.%f")],
     )
 
     # Asset 2: sapo_customers — yesterday=0, median~200 → ratio 0 → yellow.
@@ -336,7 +336,7 @@ def _label_for(short_name: str) -> str:
 
 def _make_known(**kwargs) -> DigestRow:
     """DigestRow that uses a real KNOWN_ASSETS short_name so ASSET_DISPLAY resolves."""
-    base = dict(short_name="sapo_orders", asset_key="sapo/sapo_orders_batch_asset",
+    base = dict(short_name="sapo_orders", asset_key="sapo/ingest_sapov2_orders_batch_asset",
                 status="green", rows_24h=1000, median_7d=1000, pct_vs_median=None,
                 fresh_age_min=30, drift_pct=None, note=None, zero_streak=0)
     base.update(kwargs)
@@ -438,7 +438,7 @@ def test_format_cursor_with_rows_shows_count():
 def test_format_batch_zero_rows_says_no_new():
     """Batch with 0 rows should say 'không có ... mới' (not 'Batch hôm qua: 0')."""
     from orchestration.ops.morning_digest import compose_card_fields
-    row = _make_with_runs("sapo_orders", "sapo/sapo_orders_batch_asset",
+    row = _make_with_runs("sapo_orders", "sapo/ingest_sapov2_orders_batch_asset",
                           rows_24h=0, runs_24h=1, last_status="skipped")
     fields, _ = compose_card_fields([row])
     val = fields[_label_for("sapo_orders")]
@@ -468,7 +468,7 @@ def test_format_file_drop_with_new_data():
 def test_format_small_drift_annotation_under_5_pct():
     """Drift between 0 and 5% should annotate, not override main message."""
     from orchestration.ops.morning_digest import compose_card_fields
-    row = _make_with_runs("sapo_orders", "sapo/sapo_orders_batch_asset",
+    row = _make_with_runs("sapo_orders", "sapo/ingest_sapov2_orders_batch_asset",
                           rows_24h=0, runs_24h=1, last_status="skipped",
                           drift_pct=-1.0)
     row.status = classify(row)  # drift -1.0 stays green (boundary > 1.0 is yellow)
@@ -481,7 +481,7 @@ def test_format_small_drift_annotation_under_5_pct():
 def test_compose_card_field_order_summary_first():
     """Summary header MUST be the first field — Lark renders dict in insertion order."""
     from orchestration.ops.morning_digest import compose_card_fields, KpiData
-    row = _make_with_runs("sapo_orders", "sapo/sapo_orders_batch_asset")
+    row = _make_with_runs("sapo_orders", "sapo/ingest_sapov2_orders_batch_asset")
     kpi = KpiData(source_revenue=1000.0, warehouse_revenue=1000.0,
                   drift_pct=0.0, date_key=20260420, status="success")
     fields, _ = compose_card_fields([row], kpi)
