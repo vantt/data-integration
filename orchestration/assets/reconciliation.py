@@ -34,9 +34,12 @@ logger = logging.getLogger(__name__)
 # Reconciliation window: trailing 7 days of ingestion runs
 _WINDOW_DAYS = 7
 
-# Raw DuckDB path (MISA/Shopee parquet-backed tables live here via dlt)
+# Raw parquet paths — read directly from data lake, no intermediate DuckDB file
 _DATA_LAKE = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
-_RAW_DB_PATH = os.path.join(_DATA_LAKE, "raw", "raw.duckdb")
+_SAPO_ORDER_PATH = os.path.join(_DATA_LAKE, "sapo_v2_raw", "order")
+_SAPO_CUSTOMER_PATH = os.path.join(_DATA_LAKE, "sapo_v2_raw", "customer")
+_SHOPEE_ORDER_REVENUE_PATH = os.path.join(_DATA_LAKE, "shopee_raw", "order_revenue")
+_MISA_SALES_LINES_PATH = os.path.join(_DATA_LAKE, "misa_raw", "sales_lines")
 
 # asset_key strings used by Phase 1 ingestion assets in health DB
 _SHOPEE_ASSET_KEY = "shopee/shopee_income_file_drop_asset"
@@ -151,33 +154,27 @@ def _file_drop_source_count(ingestion_asset_key: str, window_start: datetime) ->
         return None
 
 
-def _raw_table_dest_count(table_ref: str, window_start: datetime) -> Optional[int]:
-    """Count rows in a raw DuckDB table loaded since window_start.
-
-    Uses _dlt_load_time (a standard dlt-injected column) for time filtering.
-    Falls back to full count if _dlt_load_time column is absent.
-    """
+def _parquet_dest_count(parquet_path: str, window_start: datetime, label: str) -> Optional[int]:
+    """Count parquet rows with ingested_at >= window_start."""
+    if not os.path.exists(parquet_path):
+        logger.warning("%s: path not found at %s", label, parquet_path)
+        return None
+    conn = None
     try:
-        conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
-        # Check if _dlt_load_time exists (dlt standard)
-        cols = [
-            r[0]
-            for r in conn.execute(
-                f"SELECT column_name FROM information_schema.columns WHERE table_name = SPLIT_PART('{table_ref}', '.', 2)"
-            ).fetchall()
-        ]
-        if "_dlt_load_time" in cols:
-            row = conn.execute(
-                f"SELECT COUNT(*) FROM {table_ref} WHERE _dlt_load_time >= ?",
-                [window_start],
-            ).fetchone()
-        else:
-            row = conn.execute(f"SELECT COUNT(*) FROM {table_ref}").fetchone()
-        conn.close()
+        conn = duckdb.connect()
+        glob = parquet_path.replace("\\", "/") + "/ingest_method=*/**/*.parquet"
+        row = conn.execute(
+            f"SELECT COUNT(*) FROM read_parquet('{glob}', union_by_name=true, hive_partitioning=true)"
+            " WHERE TRY_CAST(ingested_at AS TIMESTAMPTZ) >= ?",
+            [window_start],
+        ).fetchone()
         return int(row[0]) if row else 0
     except Exception as exc:
-        logger.warning("_raw_table_dest_count: failed for %s — %s", table_ref, exc)
+        logger.warning("%s: parquet query failed — %s", label, exc)
         return None
+    finally:
+        if conn:
+            conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -189,7 +186,7 @@ def recon_shopee_daily(context):
     """Reconcile Shopee income file-drop: health DB rows_written vs raw table count.
 
     source_count = sum of rows_written in ingestion_health for shopee asset (last 7d)
-    dest_count   = COUNT(*) from raw shopee table (last 7d via _dlt_load_time)
+    dest_count   = COUNT(*) from shopee_raw/order_revenue parquet (last 7d via ingested_at)
     """
     started = datetime.now(timezone.utc)
     run_id = _make_run_id()
@@ -198,8 +195,8 @@ def recon_shopee_daily(context):
 
     context.log.info("recon_shopee_daily: querying health DB source count...")
     source_count = _file_drop_source_count(_SHOPEE_ASSET_KEY, window_start)
-    context.log.info("recon_shopee_daily: querying raw DuckDB dest count...")
-    dest_count = _raw_table_dest_count("raw__shopee.order_revenue", window_start) or 0
+    context.log.info("recon_shopee_daily: querying shopee parquet dest count...")
+    dest_count = _parquet_dest_count(_SHOPEE_ORDER_REVENUE_PATH, window_start, "recon_shopee_daily") or 0
     drift_pct = _compute_drift(source_count, dest_count)
 
     context.log.info(
@@ -236,7 +233,7 @@ def recon_misa_daily(context):
     """Reconcile MISA AMIS sales file-drop: health DB rows_written vs raw table count.
 
     source_count = sum of rows_written in ingestion_health for misa asset (last 7d)
-    dest_count   = COUNT(*) from raw misa table (last 7d via _dlt_load_time)
+    dest_count   = COUNT(*) from misa_raw/sales_lines parquet (last 7d via ingested_at)
     """
     started = datetime.now(timezone.utc)
     run_id = _make_run_id()
@@ -245,8 +242,8 @@ def recon_misa_daily(context):
 
     context.log.info("recon_misa_daily: querying health DB source count...")
     source_count = _file_drop_source_count(_MISA_ASSET_KEY, window_start)
-    context.log.info("recon_misa_daily: querying raw DuckDB dest count...")
-    dest_count = _raw_table_dest_count("raw__misa_amis.sales_lines", window_start) or 0
+    context.log.info("recon_misa_daily: querying misa parquet dest count...")
+    dest_count = _parquet_dest_count(_MISA_SALES_LINES_PATH, window_start, "recon_misa_daily") or 0
     drift_pct = _compute_drift(source_count, dest_count)
 
     context.log.info(
@@ -283,47 +280,57 @@ def recon_misa_daily(context):
 # ---------------------------------------------------------------------------
 
 def _sapo_dest_count_orders(window_start: datetime, window_end: datetime) -> Optional[int]:
-    """Count sapo orders in raw DB modified within [window_start, window_end)."""
+    """Count distinct sapo orders in parquet with modified_on in [window_start, window_end)."""
+    if not os.path.exists(_SAPO_ORDER_PATH):
+        logger.warning("_sapo_dest_count_orders: order dir not found at %s", _SAPO_ORDER_PATH)
+        return None
+    conn = None
     try:
-        conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
+        conn = duckdb.connect()
+        parquet_glob = _SAPO_ORDER_PATH.replace("\\", "/") + "/ingest_method=*/**/*.parquet"
         row = conn.execute(
-            """
+            f"""
             SELECT COUNT(DISTINCT entity_id)
-            FROM raw__sapo.order
-            WHERE TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ)
-                  >= ? AND
-                  TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ)
-                  < ?
+            FROM read_parquet('{parquet_glob}', union_by_name=true, hive_partitioning=true)
+            WHERE TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ) >= ?
+              AND TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ) < ?
             """,
             [window_start, window_end],
         ).fetchone()
-        conn.close()
         return int(row[0]) if row else 0
     except Exception as exc:
-        logger.error("_sapo_dest_count_orders: raw DB query failed — %s", exc)
+        logger.error("_sapo_dest_count_orders: parquet query failed — %s", exc)
         return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def _sapo_dest_count_customers(window_start: datetime, window_end: datetime) -> Optional[int]:
-    """Count sapo customers created within [window_start, window_end)."""
+    """Count distinct sapo customers in parquet with created_on in [window_start, window_end)."""
+    if not os.path.exists(_SAPO_CUSTOMER_PATH):
+        logger.warning("_sapo_dest_count_customers: customer dir not found at %s", _SAPO_CUSTOMER_PATH)
+        return None
+    conn = None
     try:
-        conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
+        conn = duckdb.connect()
+        parquet_glob = _SAPO_CUSTOMER_PATH.replace("\\", "/") + "/ingest_method=*/**/*.parquet"
         row = conn.execute(
-            """
+            f"""
             SELECT COUNT(DISTINCT entity_id)
-            FROM raw__sapo.customer
-            WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
-                  >= ? AND
-                  TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
-                  < ?
+            FROM read_parquet('{parquet_glob}', union_by_name=true, hive_partitioning=true)
+            WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) >= ?
+              AND TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) < ?
             """,
             [window_start, window_end],
         ).fetchone()
-        conn.close()
         return int(row[0]) if row else 0
     except Exception as exc:
-        logger.error("_sapo_dest_count_customers: raw DB query failed — %s", exc)
+        logger.error("_sapo_dest_count_customers: parquet query failed — %s", exc)
         return None
+    finally:
+        if conn:
+            conn.close()
 
 
 @asset(group_name="reconciliation", key_prefix=["recon"])
@@ -331,7 +338,7 @@ def recon_sapo_orders_daily(context):
     """Reconcile Sapo orders: API metadata.total vs raw DB count (yesterday window).
 
     source_count = Sapo API metadata.total for modified_on in [yesterday, today) ICT
-    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.order for same ICT window
+    dest_count   = COUNT(DISTINCT entity_id) in sapo_v2_raw/order parquet for same ICT window
 
     Live API call gated behind RECON_LIVE_API=1. When disabled, source_count=None
     and drift_pct=None — recon row is still written for Phase 4 visibility.
@@ -394,7 +401,7 @@ def recon_sapo_customers_daily(context):
     """Reconcile Sapo customers: API metadata.total vs raw DB count (yesterday window).
 
     source_count = Sapo API metadata.total for created_on in [yesterday, today) ICT
-    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.customer for same ICT window
+    dest_count   = COUNT(DISTINCT entity_id) in sapo_v2_raw/customer parquet for same ICT window
 
     NOTE: Sapo customers API filters on created_on only (no reliable modified_on).
     Live API call gated behind RECON_LIVE_API=1.
