@@ -1,4 +1,4 @@
-from dagster import asset, Output, MetadataValue, AssetExecutionContext
+﻿from dagster import asset, Output, MetadataValue, AssetExecutionContext
 import os
 import re
 import sys
@@ -104,7 +104,7 @@ def _run_provisioning_script(
     group_name="serving_layer",
     description="Generates the Serving Layer (DuckDB OLAP) from DBT Marts."
 )
-def sapo_serving_db(context: AssetExecutionContext):
+def build_serving_db(context: AssetExecutionContext):
     output_lines = _run_provisioning_script(context, SCRIPT_PATH, "refresh_rolling")
 
     # Detect severity-tagged warnings in streamed output.
@@ -136,7 +136,7 @@ def sapo_serving_db(context: AssetExecutionContext):
 
 
 @asset(
-    deps=[sapo_serving_db],
+    deps=[build_serving_db],
     group_name="serving_layer",
     description=(
         "Materializes all views in olap.duckdb into a self-contained standalone "

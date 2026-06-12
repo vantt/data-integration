@@ -94,7 +94,7 @@
 | Asset không tạo parquet | `os.chdir(DLT_DIR)` thiếu | dlt resolve `.dlt/` từ CWD — phải `chdir` vào `ingestion/` |
 | Credentials không load | `load_dlt_configuration()` chưa gọi | Gọi đầu asset trước `os.chdir()`; `.env.local` phải ở project root |
 | Serving asset chạy trước dbt xong | Thiếu `deps` | Thêm `deps=[sapo_dbt_assets]` trong `@asset` |
-| Asset `sapo_serving_db` fail silently | Script báo warning nhưng exit 0 | Kiểm tra logs output — script check `"error"` và `"[!]"` markers |
+| Asset `build_serving_db` fail silently | Script báo warning nhưng exit 0 | Kiểm tra logs output — script check `"error"` và `"[!]"` markers |
 | **Job exit quá chậm / timeout** | dlt hoặc dbt telemetry threads giữ process sống | Set `DLT_TELEMETRY_DISABLED=true` + `DBT_SEND_ANONYMOUS_USAGE_STATS=false` ở docker-compose hoặc shell wrapper (không đặt trong Python code) |
 | **dbt start trước khi ingestion xong** (stale data) | Job chứa nhiều ingestion methods, dbt source chỉ map tới 1 upstream | Inject explicit upstream keys trong `DagsterDbtTranslator.get_upstream_asset_keys()` — xem `dagster-patterns.md` Lesson 1 |
 | 2 schedule cùng trigger gây deadlock | Start-time race — cả hai check "other running?" cùng lúc | Offset cron minute marks (e.g., realtime: `1,4,7...`; incremental: `*/10 0-3,5-23`) — xem `dagster-patterns.md` Lesson 2 |

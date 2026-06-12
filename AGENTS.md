@@ -1,4 +1,4 @@
-# Global Agent Rules, Context & Configuration
+﻿# Global Agent Rules, Context & Configuration
 
 **IMPORTANT:** _MUST READ_ and _MUST COMPLY_ with all _INSTRUCTIONS_ in project based on the context.
 
@@ -267,7 +267,7 @@ Three distinct DuckDB files separate **Write**, **Read**, and **Export**:
 
 **Critical Rule**: Fixing `dbt` only updates warehouse DB. You **MUST** run `generate_serving_db.py` to propagate changes to serving DB. Ensure `PORTABLE_ROOT` matches the Docker mount path.
 
-**Standalone export is downstream of serving DB** — run order: dbt → `sapo_serving_db` → `sapo_standalone_export`.
+**Standalone export is downstream of serving DB** — run order: dbt → `build_serving_db` → `sapo_standalone_export`.
 
 ### Dagster Concurrency & DuckDB Locking (CRITICAL)
 

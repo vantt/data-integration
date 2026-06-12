@@ -184,7 +184,7 @@ rolling/fact_orders/
 ```python
 # orchestration/assets/serving.py
 @asset(deps=[sapo_dbt_assets], group_name="serving_layer")
-def sapo_serving_db(context: AssetExecutionContext):
+def build_serving_db(context: AssetExecutionContext):
     # Streaming subprocess — see lessons-learned.md L17
     proc = subprocess.Popen(
         [PYTHON_EXE, "scripts/provisioning/refresh_rolling.py"],
@@ -230,7 +230,7 @@ sapo_accounts_batch_asset
 sapo_dbt_assets (build all models + export rolling parquets)
          │
          ▼
-sapo_serving_db (refresh_rolling.py — GC + drift detect)
+build_serving_db (refresh_rolling.py — GC + drift detect)
          │
          ▼
 [Metabase refreshes dashboards]

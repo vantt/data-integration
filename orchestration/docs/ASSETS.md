@@ -52,7 +52,7 @@ Serving layer assets for BI.
 
 | Asset             | Description                    | Dependencies  |
 | ----------------- | ------------------------------ | ------------- |
-| `sapo_serving_db` | Generates DuckDB OLAP database | All dbt Marts |
+| `build_serving_db` | Generates DuckDB OLAP database | All dbt Marts |
 
 ---
 
@@ -109,7 +109,7 @@ Loaded dynamically from the dbt project.
 
 ### Serving Assets
 
-#### sapo_serving_db
+#### build_serving_db
 
 Orchestrates the creation of the user-facing DuckDB database (`olap.duckdb`).
 
@@ -132,7 +132,7 @@ graph TD
 
     %% Downstream
     Fact[fact_orders]
-    Serving[sapo_serving_db]
+    Serving[build_serving_db]
 
     %% Flows
     Batch --> Staging

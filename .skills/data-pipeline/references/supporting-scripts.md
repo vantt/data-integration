@@ -1,4 +1,4 @@
-# Supporting Scripts
+﻿# Supporting Scripts
 
 Các script hỗ trợ cho data pipeline — không thuộc core ingestion/transform nhưng cần thiết để vận hành.
 
@@ -19,7 +19,7 @@ Các script hỗ trợ cho data pipeline — không thuộc core ingestion/trans
 - Xóa file parquet cũ, giữ lại file mới nhất trong mỗi `rolling/{model}/`
 
 **Gọi khi:**
-- Sau khi dbt build complete (Dagster asset `sapo_serving_db` với `deps=[sapo_dbt_assets]`)
+- Sau khi dbt build complete (Dagster asset `build_serving_db` với `deps=[sapo_dbt_assets]`)
 - Thủ công sau khi debug dbt mart model
 
 **Usage:**
@@ -184,7 +184,7 @@ Backup scripts cho data lake & DuckDB files.
 ```python
 # orchestration/assets/serving.py
 @asset(deps=[sapo_dbt_assets], group_name="serving_layer")
-def sapo_serving_db(context):
+def build_serving_db(context):
     subprocess.run(
         [PYTHON_EXE, "scripts/provisioning/generate_serving_db.py"],
         cwd=PROJECT_ROOT,

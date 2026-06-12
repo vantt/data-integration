@@ -154,7 +154,7 @@ Tạo nếu consolidate multiple sources:
   ```
 - [ ] Chạy serving asset:
   ```bash
-  dagster asset materialize --select sapo_serving_db
+  dagster asset materialize --select build_serving_db
   ```
 - [ ] Query Metabase (hoặc direct DuckDB):
   ```sql

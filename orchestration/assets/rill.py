@@ -1,10 +1,10 @@
-import os
+﻿import os
 import subprocess
 import sys
 
 from dagster import AssetExecutionContext, MetadataValue, Output, asset
 
-from .serving import sapo_serving_db
+from .serving import build_serving_db
 
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../"))
@@ -14,7 +14,7 @@ RILL_TIMEOUT_SEC = int(os.environ.get("RILL_PUBLISH_TIMEOUT_SEC", "900"))
 
 
 @asset(
-    deps=[sapo_serving_db],
+    deps=[build_serving_db],
     group_name="reporting_layer",
     description="Publishes curated Parquet assets for the local Rill project.",
 )

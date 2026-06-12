@@ -1,4 +1,4 @@
-"""Build a self-contained standalone export DuckDB from olap.duckdb views.
+﻿"""Build a self-contained standalone export DuckDB from olap.duckdb views.
 
 Materializes every VIEW in `serving/olap.duckdb` (schema `main`) into BASE
 TABLEs inside a new `sapo_export_<timestamp>.duckdb`.  The resulting file is
@@ -119,7 +119,7 @@ def build_standalone_export() -> None:
     if not os.path.exists(OLAP_DB):
         raise FileNotFoundError(
             f"olap.duckdb not found at {OLAP_DB}. "
-            "Ensure sapo_serving_db asset has run successfully first."
+            "Ensure build_serving_db asset has run successfully first."
         )
 
     tz = ZoneInfo("Asia/Ho_Chi_Minh")

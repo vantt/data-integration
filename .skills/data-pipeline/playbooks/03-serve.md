@@ -133,7 +133,7 @@ See `.env.docker.example` for annotated example.
 **Use cases:** offline analysis, AI tools, data distribution without pipeline access.
 
 **Dagster asset:** `sapo_standalone_export` in `orchestration/assets/serving.py`
-— downstream of `sapo_serving_db`, wired into `pipeline_batch_nightly_job`.
+— downstream of `build_serving_db`, wired into `pipeline_batch_nightly_job`.
 
 **Script:** `scripts/provisioning/build_standalone_export.py`
 

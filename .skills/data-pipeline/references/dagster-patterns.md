@@ -312,7 +312,7 @@ def sheets_modified_sensor(context):
 _sources = AssetSelection.assets(sheets_targets_asset) | AssetSelection.assets(sheets_marketing_spend_asset)
 ingest_sheets_sync_job = define_asset_job(
     name="ingest_sheets_sync_job",
-    selection=_sources | _sources.downstream() | AssetSelection.assets(serving.sapo_serving_db),
+    selection=_sources | _sources.downstream() | AssetSelection.assets(serving.build_serving_db),
     tags={"concurrency_group": "dbt_rw"},
 )
 ```

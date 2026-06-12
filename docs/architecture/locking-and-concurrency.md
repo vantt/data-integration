@@ -139,7 +139,7 @@
   - `run_dagster.ps1:51`: same command for Windows-native dev.
 - Empirical right now: `slot=1 active=0 pending=0` (healthy).
 - **Leak**: verified today that cancel/kill does not free this slot. Helper: `scripts/maintenance/unstick_concurrency_pools.py` (already in repo). Must be run manually after any cancel batch or container restart.
-- **Only `sapo_dbt_assets` has this op tag** — dlt ingest assets don't need it because they write parquet files (not DuckDB). `sapo_serving_db` also doesn't need it (only runs a subprocess that touches files). Correct scoping.
+- **Only `sapo_dbt_assets` has this op tag** — dlt ingest assets don't need it because they write parquet files (not DuckDB). `build_serving_db` also doesn't need it (only runs a subprocess that touches files). Correct scoping.
 
 ### Application-level (dlt pipeline state)
 
@@ -304,4 +304,4 @@ Tests run inside `data_platform` container during this audit (2026-04-08 23:35+0
    - **Manual** (UI Launchpad or `dagster job launch -j ingest_sheets_sync_job`)
    - **`ingest_sheets_modified_sensor`** (new — content-hash polls CSV export URLs every 5 min, fires RunRequest on real byte change; cold-start records baseline without firing; fetch errors preserve prior hash to avoid false positives)
    - **Nightly reconciliation** (includes sheet assets in its selection)
-   Job selection was also expanded (commit 2026-04-09) to cascade downstream: `_sources | _sources.downstream() | sapo_serving_db` = 7 assets total (2 raw + 2 staging + 2 marts + 1 serving_db). Surgical rebuild, not full dbt graph. Pattern packaged into `.skills/data-pipeline/` Lesson 7 + L21/L22/L23.
+   Job selection was also expanded (commit 2026-04-09) to cascade downstream: `_sources | _sources.downstream() | build_serving_db` = 7 assets total (2 raw + 2 staging + 2 marts + 1 serving_db). Surgical rebuild, not full dbt graph. Pattern packaged into `.skills/data-pipeline/` Lesson 7 + L21/L22/L23.

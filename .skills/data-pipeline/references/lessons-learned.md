@@ -543,7 +543,7 @@ ingest_sheets_sync_job = define_asset_job(
     selection=(
         _sheets_sources
         | _sheets_sources.downstream()           # staging + marts phụ thuộc
-        | AssetSelection.assets(serving.sapo_serving_db)  # refresh parquet rolling
+        | AssetSelection.assets(serving.build_serving_db)  # refresh parquet rolling
     ),
     tags={"concurrency_group": "dbt_rw"},  # serialize với các dbt write khác
 )

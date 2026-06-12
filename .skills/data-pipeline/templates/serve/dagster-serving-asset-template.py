@@ -1,9 +1,9 @@
-"""
+﻿"""
 Dagster Serving Asset Template
 
 Wrap supporting script (generate_serving_db.py, hoặc custom script) thành Dagster asset.
 
-Đặt trong: orchestration/assets/serving.py (đã có sẵn sapo_serving_db)
+Đặt trong: orchestration/assets/serving.py (đã có sẵn build_serving_db)
 Hoặc tạo asset mới cho custom serving script.
 
 Pattern:

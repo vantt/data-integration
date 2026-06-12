@@ -1,4 +1,4 @@
-# Resource Documentation
+﻿# Resource Documentation
 
 > Dagster resource definitions and configurations
 
@@ -56,7 +56,7 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
 
 While not strictly defined as Dagster "Resources", other integrations are handled directly within assets:
 
-- **DuckDB**: Accessed via `subprocess` calls to provisioning scripts or direct connection within dlt pipelines (`sapo_serving_db`).
+- **DuckDB**: Accessed via `subprocess` calls to provisioning scripts or direct connection within dlt pipelines (`build_serving_db`).
 - **Sapo API**: Configured via `load_dlt_configuration()` helper which loads `.env.local` and `.dlt/secrets.toml` directly into `os.environ`.
 - **Google Sheets**: Accessed via `dlt` sources with credentials from `secrets.toml`.
 

@@ -79,14 +79,14 @@ SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 # 1. Realtime Job (Webhook)
 ingest_sapo_realtime_job = define_asset_job(
     name="ingest_sapo_realtime_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
+    selection=AssetSelection.assets(sapo_assets.sapo_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
     tags=SYNC_TAGS,
 )
 
 # 2. Incremental Job (History Log)
 ingest_sapo_incremental_job = define_asset_job(
     name="ingest_sapo_incremental_job",
-    selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.sapo_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
+    selection=AssetSelection.assets(sapo_assets.sapo_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.sapo_rill_publish),
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
@@ -111,7 +111,7 @@ ingest_sheets_sync_job = define_asset_job(
     selection=(
         _sheets_sources
         | _sheets_sources.downstream()
-        | AssetSelection.assets(serving.sapo_serving_db)
+        | AssetSelection.assets(serving.build_serving_db)
         | AssetSelection.assets(rill.sapo_rill_publish)
     ),
     tags=SYNC_TAGS,
@@ -132,7 +132,7 @@ ingest_filedrop_shopee_job = define_asset_job(
         _shopee_source
         | _shopee_source.downstream()
         | _fact_order_returns
-        | AssetSelection.assets(serving.sapo_serving_db)
+        | AssetSelection.assets(serving.build_serving_db)
     ),
     tags=SYNC_TAGS,
 )
@@ -145,7 +145,7 @@ ingest_filedrop_misa_job = define_asset_job(
         _misa_source
         | _misa_source.downstream()
         | _fact_order_returns
-        | AssetSelection.assets(serving.sapo_serving_db)
+        | AssetSelection.assets(serving.build_serving_db)
     ),
     tags=SYNC_TAGS,
 )
@@ -159,7 +159,7 @@ ingest_filedrop_misa_account_ledger_job = define_asset_job(
     selection=(
         _misa_account_ledger_source
         | _misa_account_ledger_source.downstream()
-        | AssetSelection.assets(serving.sapo_serving_db)
+        | AssetSelection.assets(serving.build_serving_db)
     ),
     tags=SYNC_TAGS,
 )
@@ -180,7 +180,7 @@ _nightly_batch_selection = (
     AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
     AssetSelection.assets(misa_amis_assets.misa_account_ledger_file_drop_asset) |
     all_dbt_assets |
-    AssetSelection.assets(serving.sapo_serving_db) |
+    AssetSelection.assets(serving.build_serving_db) |
     AssetSelection.assets(serving.sapo_standalone_export) |
     AssetSelection.assets(rill.sapo_rill_publish)
 )
