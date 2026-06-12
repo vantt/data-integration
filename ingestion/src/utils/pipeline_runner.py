@@ -97,7 +97,6 @@ def run_pipeline(
         # 2. Delete destination-stored state JSONL files for this pipeline.
         #    Pattern: {data_lake}/_dlt_pipeline_state/{pipeline_name}__*.jsonl
         #    This prevents dlt from restoring the old cursor on startup.
-        from dlt.common.configuration.specs import FilesystemConfiguration
         data_lake_root = os.environ.get("DESTINATION__FILESYSTEM__BUCKET_URL", "")
         if data_lake_root:
             state_pattern = os.path.join(data_lake_root.replace("file://", ""), "_dlt_pipeline_state", f"{pipeline_name}__*.jsonl")
