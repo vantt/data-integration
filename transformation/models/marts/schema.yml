@@ -201,6 +201,16 @@ models:
         description: "Days since last order. Formula: CURRENT_DATE - MAX(order_date)"
       - name: customer_status
         description: "DEPRECATED: Use lifecycle_stage. Legacy RFM Status: Active/At Risk/Churned"
+      - name: lifetime_gross_profit
+        description: "Lifetime gross profit from has_cogs active orders (VND). 0 if no margin data. Source: int_customer_economics."
+      - name: lifetime_contribution_margin
+        description: "Lifetime contribution margin = SUM(channel_net_profit) over has_cogs active orders (gross_profit − direct channel fees; EXCLUDES overhead). VND, 0 if no margin data. Use this — not fully-loaded — for customer-level margin: overhead is 98% revenue-weighted and penalizes large orders."
+      - name: avg_order_contribution_margin_pct
+        description: "Avg per-order contribution margin % (channel_net_profit / net_revenue). NULL for customers with no active orders."
+      - name: margin_cogs_coverage_pct
+        description: "Share of active orders with COGS data. Caveat metric for margin reliability. NULL for customers with no active orders."
+      - name: is_margin_negative
+        description: "TRUE if lifetime_contribution_margin < 0. FALSE if no margin data (safe default). Gate for activation: avoid high-touch outreach to margin-negative customers."
 
   - name: dim_customers_base
     description: "Base customer dimension (SCD Type 1) without circular dependencies."
@@ -1138,3 +1148,28 @@ models:
           - accepted_values:
               arguments:
                 values: [true, false]
+
+  - name: mart_retention_waterfall_monthly
+    description: >
+      Point-in-time retention waterfall (retail scope). Grain: (snapshot_month, status).
+      Computes ACTIVE/AT_RISK/CHURNED from fact_orders as-of each month-end — NOT from
+      dim_customers.last_order_date — so historical churn events are not masked by survivorship.
+      Use this (not mart_customer_status_snapshot_monthly) for any retention trend chart.
+    columns:
+      - name: snapshot_month
+        description: "Last calendar day of the closed month (DATE)."
+        tests:
+          - not_null
+      - name: status
+        description: "Customer status bucket as-of month-end."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['ACTIVE', 'AT_RISK', 'CHURNED']
+      - name: customer_count
+        description: "Customers in this status bucket this month."
+        tests:
+          - not_null
+      - name: base_count
+        description: "Total cumulative retail customers visible as-of this month-end (sum of all status buckets)."

@@ -5,8 +5,13 @@
 
 -- Monthly snapshot of customer status as-of each month-end.
 -- One row per (customer_key, snapshot_month).
--- Enables correct MoM retention math without the first_order_date filter bug.
 -- Rolling 24-month window (sufficient for YoY analysis).
+--
+-- WARNING — survivorship bias: the `status` column derives from dim_customers.last_order_date
+-- (the CURRENT last order), so any customer still active today is stamped ACTIVE retroactively,
+-- inflating ACTIVE at historical troughs and masking past churn. For retention TREND charts use
+-- mart_retention_waterfall_monthly (true point-in-time from fact_orders) instead. This model is
+-- retained for per-customer attribute lookups, not trend aggregation.
 --
 -- Status logic (as-of month-end):
 --   ACTIVE : last_order_date >= month_end - 30 days

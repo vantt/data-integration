@@ -15,6 +15,10 @@ metrics AS (
     SELECT * FROM {{ ref('int_customer_metrics') }}
 ),
 
+economics AS (
+    SELECT * FROM {{ ref('int_customer_economics') }}
+),
+
 joined_data AS (
     SELECT
         c.customer_key,
@@ -70,11 +74,19 @@ joined_data AS (
             ELSE 'New/Unknown'
         END as customer_status,
 
+        -- Economics from int_customer_economics (contribution margin; no overhead)
+        e.lifetime_gross_profit,
+        e.lifetime_contribution_margin,
+        e.avg_order_contribution_margin_pct,
+        e.margin_cogs_coverage_pct,
+        e.is_margin_negative,
+
         -- Calculate a combined updated timestamp for incremental loading
         GREATEST(c.updated_at, COALESCE(m.metric_calculated_at, c.updated_at)) as last_modified_at
-        
+
     FROM customers c
     LEFT JOIN metrics m ON c.customer_key = m.customer_key
+    LEFT JOIN economics e ON c.customer_key = e.customer_key
 )
 
 SELECT
@@ -176,6 +188,13 @@ SELECT
     recency_days,
     lifespan_days,
     customer_status,
+
+    -- Contribution margin economics (channel_net_profit basis; excludes overhead)
+    COALESCE(lifetime_gross_profit, 0)              AS lifetime_gross_profit,
+    COALESCE(lifetime_contribution_margin, 0)       AS lifetime_contribution_margin,
+    avg_order_contribution_margin_pct,              -- NULL when no active orders
+    margin_cogs_coverage_pct,                       -- NULL when no active orders
+    COALESCE(is_margin_negative, FALSE)             AS is_margin_negative,
 
     -- P3 metrics
     avg_order_spend,

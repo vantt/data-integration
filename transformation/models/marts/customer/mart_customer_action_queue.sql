@@ -30,7 +30,11 @@ WITH customers AS (
         predicted_next_purchase_date,
         channel_preference,
         product_affinity,
-        payment_behavior
+        payment_behavior,
+        lifetime_contribution_margin,
+        is_margin_negative,
+        -- Contactable = has a usable phone (no Zalo OA fallback exists). Drives CS/Sales reachability.
+        (phone IS NOT NULL AND phone <> '') AS is_contactable
     FROM {{ ref('dim_customers') }}
     WHERE customer_type = 'RETAIL'
       AND customer_id != 'Unknown'
@@ -40,16 +44,20 @@ WITH customers AS (
 classified AS (
     SELECT
         *,
+        -- High-value tiers (VIP/GOLD/SILVER). BRONZE excluded by design: low/negative
+        -- contribution margin — not worth high-touch outreach (see is_margin_negative gate).
         CASE
-            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD') AND customer_status = 'At Risk'
+            -- Đang nguội (At Risk) → gọi tay ngay
+            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND customer_status = 'At Risk'
                 THEN 'CALL_NOW'
-            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD') AND next_purchase_signal = 'OVERDUE'
+            -- Quá hạn nhịp mua → nhắc tái mua
+            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND next_purchase_signal = 'OVERDUE'
                 THEN 'REORDER_NUDGE'
-            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD') AND customer_status = 'Churned'
-                THEN 'WIN_BACK'
-            WHEN value_group = 'VALUE_SILVER' AND next_purchase_signal = 'OVERDUE'
-                THEN 'REORDER_NUDGE'
-            WHEN value_group = 'VALUE_SILVER' AND customer_status = 'Churned'
+            -- Sắp tới hạn nhịp mua → nhắc TRƯỚC khi khách quên (giữ on-track)
+            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND next_purchase_signal = 'DUE_SOON'
+                THEN 'REORDER_PREEMPT'
+            -- Đã churn → cần offer win-back
+            WHEN value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER') AND customer_status = 'Churned'
                 THEN 'WIN_BACK'
             WHEN order_count = 1 AND recency_days BETWEEN 15 AND 45
                 THEN 'SECOND_ORDER'
@@ -82,13 +90,17 @@ SELECT
     channel_preference,
     product_affinity,
     payment_behavior,
+    is_contactable,
+    lifetime_contribution_margin,
+    is_margin_negative,
     action_type,
     CASE action_type
         WHEN 'CALL_NOW'         THEN 1
         WHEN 'REORDER_NUDGE'    THEN 2
-        WHEN 'WIN_BACK'         THEN 3
-        WHEN 'SECOND_ORDER'     THEN 4
-        WHEN 'HIGH_CANCEL_RISK' THEN 5
+        WHEN 'REORDER_PREEMPT'  THEN 3
+        WHEN 'WIN_BACK'         THEN 4
+        WHEN 'SECOND_ORDER'     THEN 5
+        WHEN 'HIGH_CANCEL_RISK' THEN 6
         ELSE 9
     END AS priority_rank,
     CASE action_type
@@ -96,6 +108,8 @@ SELECT
             THEN 'VIP/Gold chưa mua ' || recency_days || ' ngày — gọi điện ngay'
         WHEN 'REORDER_NUDGE'
             THEN 'Quá hạn tái mua ' || (recency_days - COALESCE(avg_days_between_orders, recency_days)) || ' ngày — nhắn nhở'
+        WHEN 'REORDER_PREEMPT'
+            THEN 'Sắp tới hạn mua (~' || COALESCE(avg_days_between_orders, recency_days) || ' ngày/lần) — nhắc trước khi quên'
         WHEN 'WIN_BACK'
             THEN 'Mất ' || recency_days || ' ngày — cần offer win-back'
         WHEN 'SECOND_ORDER'
@@ -107,6 +121,7 @@ SELECT
     CASE action_type
         WHEN 'CALL_NOW'      THEN ROUND(COALESCE(avg_order_spend, 0) * 2)::BIGINT
         WHEN 'REORDER_NUDGE' THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
+        WHEN 'REORDER_PREEMPT' THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
         WHEN 'WIN_BACK'      THEN ROUND(COALESCE(avg_order_spend, 0) * 3)::BIGINT
         WHEN 'SECOND_ORDER'  THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
         ELSE NULL
