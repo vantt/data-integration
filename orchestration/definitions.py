@@ -210,7 +210,7 @@ pipeline_sapo_v2_hourly_job = define_asset_job(
     selection=(
         AssetSelection.assets(sapo_assets.ingest_sapo_v2_inventory_transactions_asset)
         | AssetSelection.keys(
-            AssetKey(["staging", "src_sapo_inventory_transactions_v2"]),
+            AssetKey(["staging", "src_sapo_v2_inventory_transactions"]),
             AssetKey(["staging", "std_inventory_movements"]),
             AssetKey(["marts", "fact_inventory_movements"]),
             AssetKey(["marts", "fact_inventory_balance"]),
