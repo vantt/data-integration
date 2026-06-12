@@ -34,17 +34,17 @@ class SapoDbtTranslator(DagsterDbtTranslator):
         name = dbt_resource_props.get("name")
 
         if resource_type == "source":
-            if source_name == "sapo_raw":
+            if source_name == "sapo_v2_raw":
                 if name == "order":
-                    return AssetKey(["sapo", "ingest_sapov2_orders_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapo_v2_orders_batch_asset"])
                 elif name == "customer":
-                    return AssetKey(["sapo", "ingest_sapov2_customers_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapo_v2_customers_batch_asset"])
                 elif name == "account":
-                    return AssetKey(["sapo", "ingest_sapov2_accounts_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapo_v2_accounts_batch_asset"])
                 elif name == "product":
-                    return AssetKey(["sapo", "ingest_sapov2_products_batch_asset"])
+                    return AssetKey(["sapo", "ingest_sapo_v2_products_batch_asset"])
                 elif name == "inventory_transaction_v2":
-                    return AssetKey(["sapo", "ingest_sapov2_inventory_transactions_asset"])
+                    return AssetKey(["sapo", "ingest_sapo_v2_inventory_transactions_asset"])
                 elif name == "targets_raw":
                     return AssetKey(["sheets", "sheets_targets_asset"])
                 elif name == "marketing_spend_raw":

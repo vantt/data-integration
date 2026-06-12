@@ -29,7 +29,7 @@ def make_freshness_check(
     Args:
         asset_def: The Dagster asset object (passed to @asset_check(asset=...)).
         asset_key_str: Slash-separated key string matching ingestion_sla.yaml,
-                       e.g. "sapo/ingest_sapov2_orders_batch_asset".
+                       e.g. "sapo/ingest_sapo_v2_orders_batch_asset".
     """
     sla = get_sla(asset_key_str)
     sla_hours: float = sla.get("freshness_hours", 24)

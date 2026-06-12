@@ -29,13 +29,13 @@ logger = logging.getLogger("orchestration.morning_digest")
 # Known asset registry: (short_name, asset_key, recon_asset_key | None)
 # ---------------------------------------------------------------------------
 KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
-    ("sapo_webhook",   "sapo/ingest_sapov2_webhook_consumer_asset",                    None),
-    ("sapo_history",   "sapo/ingest_sapov2_history_log_asset",                         None),
-    ("sapo_orders",    "sapo/ingest_sapov2_orders_batch_asset",                        "recon/sapo_orders_daily"),
-    ("sapo_customers", "sapo/ingest_sapov2_customers_batch_asset",                     "recon/sapo_customers_daily"),
-    ("sapo_products",  "sapo/ingest_sapov2_products_batch_asset",                      None),
-    ("sapo_accounts",  "sapo/ingest_sapov2_accounts_batch_asset",                      None),
-    ("sapo_inventory", "sapo/ingest_sapov2_inventory_transactions_asset",           None),
+    ("sapo_webhook",   "sapo/ingest_sapo_v2_webhook_consumer_asset",                    None),
+    ("sapo_history",   "sapo/ingest_sapo_v2_history_log_asset",                         None),
+    ("sapo_orders",    "sapo/ingest_sapo_v2_orders_batch_asset",                        "recon/sapo_orders_daily"),
+    ("sapo_customers", "sapo/ingest_sapo_v2_customers_batch_asset",                     "recon/sapo_customers_daily"),
+    ("sapo_products",  "sapo/ingest_sapo_v2_products_batch_asset",                      None),
+    ("sapo_accounts",  "sapo/ingest_sapo_v2_accounts_batch_asset",                      None),
+    ("sapo_inventory", "sapo/ingest_sapo_v2_inventory_transactions_asset",           None),
     ("shopee",         "shopee/shopee_income_file_drop_asset",                "recon/shopee_daily"),
     ("misa",           "misa_amis/misa_sales_file_drop_asset",                "recon/misa_daily"),
     ("misa_acct",      "misa_amis/misa_account_ledger_file_drop_asset",       None),

@@ -41,14 +41,14 @@ def _build_metadata(loaded_packages: list, rows_written) -> dict:
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def ingest_sapov2_orders_batch_asset(context):
+def ingest_sapo_v2_orders_batch_asset(context):
     """Daily batch sync for Sapo Orders.
 
     Captures 'modified_on' updates.
     When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/ingest_sapov2_orders_batch_asset"
+    asset_key_str = "sapo/ingest_sapo_v2_orders_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
     argv = ["--reset-cursor"] if is_full_refresh else []
@@ -93,13 +93,13 @@ def ingest_sapov2_orders_batch_asset(context):
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def ingest_sapov2_customers_batch_asset(context):
+def ingest_sapo_v2_customers_batch_asset(context):
     """Daily batch sync for Sapo Customers.
 
     When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/ingest_sapov2_customers_batch_asset"
+    asset_key_str = "sapo/ingest_sapo_v2_customers_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
     argv = ["--reset-cursor"] if is_full_refresh else []
@@ -143,13 +143,13 @@ def ingest_sapov2_customers_batch_asset(context):
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def ingest_sapov2_accounts_batch_asset(context):
+def ingest_sapo_v2_accounts_batch_asset(context):
     """Daily batch sync for Sapo Accounts (Staff).
 
     When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/ingest_sapov2_accounts_batch_asset"
+    asset_key_str = "sapo/ingest_sapo_v2_accounts_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
     argv = ["--reset-cursor"] if is_full_refresh else []
@@ -193,14 +193,14 @@ def ingest_sapov2_accounts_batch_asset(context):
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def ingest_sapov2_products_batch_asset(context):
+def ingest_sapo_v2_products_batch_asset(context):
     """Daily batch sync for Sapo Products.
 
     Captures 'modified_on' updates.
     When triggered by nightly reconciliation (tag full_refresh=true), resets cursor to scan all.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/ingest_sapov2_products_batch_asset"
+    asset_key_str = "sapo/ingest_sapo_v2_products_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
     argv = ["--reset-cursor"] if is_full_refresh else []
@@ -244,12 +244,12 @@ def ingest_sapov2_products_batch_asset(context):
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def ingest_sapov2_history_log_asset(context):
+def ingest_sapo_v2_history_log_asset(context):
     """Incremental poll of Sapo History Logs. Runs every 10 minutes to capture events.
 
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/ingest_sapov2_history_log_asset"
+    asset_key_str = "sapo/ingest_sapo_v2_history_log_asset"
     started = datetime.now(timezone.utc)
     context.log.info("Starting History Log Poll...")
     load_dlt_configuration(context.log.info)
@@ -291,14 +291,14 @@ def ingest_sapov2_history_log_asset(context):
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def ingest_sapov2_inventory_transactions_asset(context):
+def ingest_sapo_v2_inventory_transactions_asset(context):
     """Hourly batch sync for Sapo Inventory Transactions V2.
 
     Window is controlled by the 'inventory_window' run tag (default: 'hour').
     Nightly/fullrefresh jobs set inventory_window='day' to scan the full ICT day.
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/ingest_sapov2_inventory_transactions_asset"
+    asset_key_str = "sapo/ingest_sapo_v2_inventory_transactions_asset"
     started = datetime.now(timezone.utc)
     window = context.run.tags.get("inventory_window", "hour")
     argv = ["--window", window]
@@ -343,12 +343,12 @@ def ingest_sapov2_inventory_transactions_asset(context):
 
 
 @asset(group_name="sapo_ingestion", key_prefix=["sapo"])
-def ingest_sapov2_webhook_consumer_asset(context):
+def ingest_sapo_v2_webhook_consumer_asset(context):
     """High-frequency poll of Cloudflare D1 Webhooks. Runs every minute.
 
     Writes to ingestion_health via orchestration.ops.ingestion_health.
     """
-    asset_key_str = "sapo/ingest_sapov2_webhook_consumer_asset"
+    asset_key_str = "sapo/ingest_sapo_v2_webhook_consumer_asset"
     started = datetime.now(timezone.utc)
     context.log.info("Starting Webhook Consumer One-Off Run...")
     load_dlt_configuration(context.log.info)

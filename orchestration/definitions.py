@@ -77,16 +77,16 @@ all_dbt_assets = AssetSelection.assets(dbt.sapo_dbt_assets)
 SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 
 # 1. Realtime Job (Webhook)
-pipeline_sapov2_realtime_job = define_asset_job(
-    name="pipeline_sapov2_realtime_job",
-    selection=AssetSelection.assets(sapo_assets.ingest_sapov2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish),
+pipeline_sapo_v2_realtime_job = define_asset_job(
+    name="pipeline_sapo_v2_realtime_job",
+    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish),
     tags=SYNC_TAGS,
 )
 
 # 2. Incremental Job (History Log)
-pipeline_sapov2_incremental_job = define_asset_job(
-    name="pipeline_sapov2_incremental_job",
-    selection=AssetSelection.assets(sapo_assets.ingest_sapov2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish),
+pipeline_sapo_v2_incremental_job = define_asset_job(
+    name="pipeline_sapo_v2_incremental_job",
+    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish),
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
@@ -166,11 +166,11 @@ ingest_filedrop_misa_account_ledger_job = define_asset_job(
 
 # 3. Nightly Reconciliation Job (Batch — incremental from last cursor)
 _nightly_batch_selection = (
-    AssetSelection.assets(sapo_assets.ingest_sapov2_orders_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapov2_customers_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapov2_accounts_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapov2_products_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapov2_inventory_transactions_asset) |
+    AssetSelection.assets(sapo_assets.ingest_sapo_v2_orders_batch_asset) |
+    AssetSelection.assets(sapo_assets.ingest_sapo_v2_customers_batch_asset) |
+    AssetSelection.assets(sapo_assets.ingest_sapo_v2_accounts_batch_asset) |
+    AssetSelection.assets(sapo_assets.ingest_sapo_v2_products_batch_asset) |
+    AssetSelection.assets(sapo_assets.ingest_sapo_v2_inventory_transactions_asset) |
     AssetSelection.assets(sheets_assets.sheets_targets_asset) |
     AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
     AssetSelection.assets(sheets_assets.sheets_team_config_asset) |
@@ -205,10 +205,10 @@ pipeline_batch_fullrefresh_job = define_asset_job(
 # (fact_inventory_onhand_daily, ~1.9M rows, DAILY grain) is intentionally left to
 # the nightly job. Self-refresh serving views auto-pick the latest mart parquet,
 # so no serving asset is needed here. Add future hourly assets to this selection.
-pipeline_sapov2_hourly_job = define_asset_job(
-    name="pipeline_sapov2_hourly_job",
+pipeline_sapo_v2_hourly_job = define_asset_job(
+    name="pipeline_sapo_v2_hourly_job",
     selection=(
-        AssetSelection.assets(sapo_assets.ingest_sapov2_inventory_transactions_asset)
+        AssetSelection.assets(sapo_assets.ingest_sapo_v2_inventory_transactions_asset)
         | AssetSelection.keys(
             AssetKey(["staging", "src_sapo_inventory_transactions_v2"]),
             AssetKey(["staging", "std_inventory_movements"]),
@@ -284,9 +284,9 @@ def _long_dbt_rw_holder(context) -> str | None:
 # Jobs that use duckdb_lock (write to DuckDB). Health checks should yield to these.
 # IMPORTANT: Update this list when adding new ingestion/transform jobs!
 _INGESTION_JOBS = [
-    "pipeline_sapov2_realtime_job",
-    "pipeline_sapov2_incremental_job",
-    "pipeline_sapov2_hourly_job",
+    "pipeline_sapo_v2_realtime_job",
+    "pipeline_sapo_v2_incremental_job",
+    "pipeline_sapo_v2_hourly_job",
     "ingest_sheets_sync_job",
     "ingest_filedrop_shopee_job",
     "ingest_filedrop_misa_job",
@@ -309,12 +309,12 @@ def _has_active_ingestion(context) -> str | None:
 
 
 @schedule(
-    job=pipeline_sapov2_realtime_job,
+    job=pipeline_sapo_v2_realtime_job,
     cron_schedule="*/3 * * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def pipeline_sapov2_realtime_schedule(context):
-    active = _has_active_run(context, "pipeline_sapov2_realtime_job")
+def pipeline_sapo_v2_realtime_schedule(context):
+    active = _has_active_run(context, "pipeline_sapo_v2_realtime_job")
     if active:
         return SkipReason(f"realtime: previous run still active ({active[:8]})")
     # Yield to long-running batch jobs: a new run can't start (dbt_rw=1 occupied)
@@ -332,7 +332,7 @@ def pipeline_sapov2_realtime_schedule(context):
 
 
 @schedule(
-    job=pipeline_sapov2_incremental_job,
+    job=pipeline_sapo_v2_incremental_job,
     # Skip 3 AM hour entirely — nightly batch runs then and holds the
     # dbt_rw slot for ~30-60 minutes. Excluding this hour prevents incremental
     # ticks from piling up while nightly is running.
@@ -343,8 +343,8 @@ def pipeline_sapov2_realtime_schedule(context):
     cron_schedule="*/10 0-2,4-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def pipeline_sapov2_incremental_schedule(context):
-    active = _has_active_run(context, "pipeline_sapov2_incremental_job")
+def pipeline_sapo_v2_incremental_schedule(context):
+    active = _has_active_run(context, "pipeline_sapo_v2_incremental_job")
     if active:
         return SkipReason(f"incremental: previous run still active ({active[:8]})")
     holder = _long_dbt_rw_holder(context)
@@ -356,15 +356,15 @@ def pipeline_sapov2_incremental_schedule(context):
 
 
 @schedule(
-    job=pipeline_sapov2_hourly_job,
+    job=pipeline_sapo_v2_hourly_job,
     # Run at :25 each hour, skip 3 AM (nightly batch holds dbt_rw ~30-60 min).
     # Minute :25 avoids collision with realtime (*/3) and incremental (*/10).
     # If nightly overruns past 4 AM, _long_dbt_rw_holder() skips the tick.
     cron_schedule="25 0-2,4-23 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
-def pipeline_sapov2_hourly_schedule(context):
-    active = _has_active_run(context, "pipeline_sapov2_hourly_job")
+def pipeline_sapo_v2_hourly_schedule(context):
+    active = _has_active_run(context, "pipeline_sapo_v2_hourly_job")
     if active:
         return SkipReason(f"hourly: previous run still active ({active[:8]})")
     holder = _long_dbt_rw_holder(context)
@@ -581,9 +581,9 @@ defs = Definitions(
     asset_checks=[*ALL_CHECKS, *RECON_CHECKS, *KPI_CHECKS],
     jobs=[
         # ingest_*
-        pipeline_sapov2_realtime_job,
-        pipeline_sapov2_incremental_job,
-        pipeline_sapov2_hourly_job,
+        pipeline_sapo_v2_realtime_job,
+        pipeline_sapo_v2_incremental_job,
+        pipeline_sapo_v2_hourly_job,
         ingest_sheets_sync_job,
         ingest_filedrop_shopee_job,
         ingest_filedrop_misa_job,
@@ -602,9 +602,9 @@ defs = Definitions(
     ],
     schedules=[
         # ingest_*
-        pipeline_sapov2_realtime_schedule,
-        pipeline_sapov2_incremental_schedule,
-        pipeline_sapov2_hourly_schedule,
+        pipeline_sapo_v2_realtime_schedule,
+        pipeline_sapo_v2_incremental_schedule,
+        pipeline_sapo_v2_hourly_schedule,
         # transform_*
         pipeline_batch_nightly_schedule,
         # health_*
