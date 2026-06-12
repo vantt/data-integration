@@ -102,7 +102,7 @@ def ingest_sapov2_customers_batch_asset(context):
     asset_key_str = "sapo/ingest_sapov2_customers_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
-    argv = ["--full-refresh"] if is_full_refresh else []
+    argv = ["--reset-cursor"] if is_full_refresh else []
     context.log.info(f"Starting Sapo Customers Batch Sync... (full_refresh={is_full_refresh})")
     load_dlt_configuration(context.log.info)
     cwd = os.getcwd()
@@ -152,7 +152,7 @@ def ingest_sapov2_accounts_batch_asset(context):
     asset_key_str = "sapo/ingest_sapov2_accounts_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
-    argv = ["--full-refresh"] if is_full_refresh else []
+    argv = ["--reset-cursor"] if is_full_refresh else []
     context.log.info(f"Starting Sapo Accounts Batch Sync... (full_refresh={is_full_refresh})")
     load_dlt_configuration(context.log.info)
     cwd = os.getcwd()
@@ -203,7 +203,7 @@ def ingest_sapov2_products_batch_asset(context):
     asset_key_str = "sapo/ingest_sapov2_products_batch_asset"
     started = datetime.now(timezone.utc)
     is_full_refresh = context.run.tags.get("full_refresh") == "true"
-    argv = ["--full-refresh"] if is_full_refresh else []
+    argv = ["--reset-cursor"] if is_full_refresh else []
     context.log.info(f"Starting Sapo Products Batch Sync... (full_refresh={is_full_refresh})")
     load_dlt_configuration(context.log.info)
     cwd = os.getcwd()
