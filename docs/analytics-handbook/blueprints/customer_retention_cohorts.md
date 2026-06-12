@@ -52,7 +52,12 @@ Retention analytics — are customers coming back? Cohort, waterfall, lifecycle,
 # Monitor retention health — repeat rate, churn, and lifecycle status
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Assess lifecycle distribution — where are customers concentrating?
@@ -60,7 +65,12 @@ Retention analytics — are customers coming back? Cohort, waterfall, lifecycle,
 # Assess lifecycle distribution — where are customers concentrating?
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Track retention and churn trends — are we improving toward target?
@@ -68,7 +78,12 @@ Retention analytics — are customers coming back? Cohort, waterfall, lifecycle,
 # Track retention and churn trends — are we improving toward target?
 
 ```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 13,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### 📝 Text: Review retention scorecard — flag segments with weak retention
@@ -76,7 +91,12 @@ Retention analytics — are customers coming back? Cohort, waterfall, lifecycle,
 # Review retention scorecard — flag segments with weak retention
 
 ```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 20,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### ❓ Question: Repeat Purchase Rate
@@ -131,7 +151,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Churn Rate
@@ -184,7 +209,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 6,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Avg Order Value
@@ -237,7 +267,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 10,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Active Customer Rate
@@ -290,7 +325,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 14,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 ---
@@ -336,7 +376,12 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 6, "size_y": 6 }
+{
+  "row": 7,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### ❓ Question: Chu kỳ báo cáo
@@ -355,7 +400,12 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### ❓ Question: Revenue by Lifecycle Status
@@ -397,7 +447,12 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 8, "col":6, "size_x":6, "size_y":6}
+{
+  "row": 8,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### ❓ Question: Segment x Status Matrix
@@ -434,7 +489,12 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 8, "col":12, "size_x":6, "size_y":6}
+{
+  "row": 8,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 ---
@@ -471,7 +531,12 @@ ORDER BY 1, 2
 ```
 
 ```json metabase-pos
-{"row": 15, "col":0, "size_x":9, "size_y":6}
+{
+  "row": 15,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### ❓ Question: Repeat Purchase Rate Trend (6M)
@@ -518,7 +583,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 15, "col":9, "size_x":9, "size_y":6}
+{
+  "row": 15,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 ---
@@ -581,7 +651,12 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 ```
 
 ```json metabase-pos
-{"row": 22, "col":0, "size_x":18, "size_y":6}
+{
+  "row": 22,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
 ```
 
 ---
@@ -619,7 +694,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 28, "col": 0, "size_x": 18, "size_y": 6 }
+{
+  "row": 28,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
 ```
 
 ---
@@ -652,7 +732,12 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Analyze cohort retention — which cohorts stick, which churn early?
@@ -1101,7 +1186,12 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Analyze purchase behavior — timing signals and reactivation effectiveness
