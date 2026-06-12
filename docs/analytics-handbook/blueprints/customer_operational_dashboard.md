@@ -342,17 +342,18 @@ ORDER BY 1
 {"row": 14, "col":0, "size_x":9, "size_y":6}
 ```
 
-#### ❓ Question: Monthly Active Customers Trend (6M)
+#### ❓ Question: MAU vs Repeat-Buyer MAU (12M)
 
-Line chart — MAU trend over 6 months showing momentum.
+Dual-line chart — MAU total vs repeat-buyer MAU (≥2 lifetime orders) over 12 months. Gap between lines = one-time buyer volume; narrowing gap = improving engagement quality.
 
 ```sql
 SELECT
-    date_trunc('month', o.ordered_at)::date as "Month",
-    COUNT(DISTINCT o.customer_key) as "Active Customers"
+    date_trunc('month', o.ordered_at)::date AS "Month",
+    COUNT(DISTINCT o.customer_key) AS "MAU",
+    COUNT(DISTINCT CASE WHEN c.order_count >= 2 THEN o.customer_key END) AS "MAU Repeat"
 FROM fact_orders o
 JOIN dim_customers c ON o.customer_key = c.customer_key
-WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '6 months'
+WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
   AND o.ordered_at < date_trunc('month', current_date)
   AND o.scope_retail
 GROUP BY 1
@@ -364,9 +365,10 @@ ORDER BY 1
   "display": "line",
   "visualization_settings": {
     "graph.dimensions": ["Month"],
-    "graph.metrics": ["Active Customers"],
-    "graph.colors": ["#509EE3"],
-    "graph.y_axis.title_text": "Customers"
+    "graph.metrics": ["MAU", "MAU Repeat"],
+    "graph.colors": ["#509EE3", "#7172AD"],
+    "graph.y_axis.title_text": "Customers",
+    "graph.x_axis.title_text": "Month"
   }
 }
 ```
