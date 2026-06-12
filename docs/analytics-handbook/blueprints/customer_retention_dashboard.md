@@ -438,38 +438,33 @@ ORDER BY
 
 ---
 
-#### ❓ Question: Churn Rate Trend (6M)
+#### ❓ Question: Retention Waterfall Trend (6M)
 
-Monthly churn rate with goal line — target below 40%.
+Point-in-time lifecycle status counts per month — ACTIVE / AT_RISK / CHURNED from survivorship-free waterfall model.
 
 ```sql
--- Snapshot-driven trend: % CHURNED as-of each month-end for the past 6 months.
--- Stable trend line — no more pivoting on last_order_date + 90 DAY.
+-- Point-in-time trend from mart_retention_waterfall_monthly (grain: snapshot_month x status).
+-- Replaces survivorship-biased mart_customer_status_snapshot_monthly for this trend view.
 SELECT
     snapshot_month AS month,
-    COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) AS churned_customers,
-    ROUND(
-        COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
-    ) AS "Churn Rate %"
-FROM mart_customer_status_snapshot_monthly
-WHERE snapshot_month >= (date_trunc('month', current_date) - INTERVAL '6 months' - INTERVAL '1 day')::date
-  AND snapshot_month <  date_trunc('month', current_date)::date
-  [[AND value_group = {{segment}}]]
-GROUP BY 1
-ORDER BY 1
+    status AS "Status",
+    customer_count AS "Customers"
+FROM mart_retention_waterfall_monthly
+WHERE snapshot_month >= (date_trunc('month', current_date) - INTERVAL '6 months')::date
+ORDER BY 1, 2
 ```
 
 ```json metabase-viz
 {
-  "display": "line",
+  "display": "area",
   "visualization_settings": {
     "graph.dimensions": ["month"],
-    "graph.metrics": ["Churn Rate %"],
-    "graph.colors": ["#EF8C8C"],
-    "graph.goal_value": 40,
-    "graph.show_goal": true,
-    "graph.goal_label": "Target < 40%",
-    "graph.y_axis.title_text": "Churn Rate %"
+    "graph.metrics": ["Customers"],
+    "graph.group_by": ["Status"],
+    "stackable.stack_type": "stacked",
+    "graph.colors": ["#509EE3", "#F9D45C", "#EF8C8C"],
+    "graph.x_axis.title_text": "",
+    "graph.y_axis.title_text": "Customers"
   }
 }
 ```

@@ -52,6 +52,27 @@ Channel performance, customer acquisition, retention, segmentation, and campaign
 }
 ```
 
+#### Filter: Contactable
+
+```json metabase-filter
+{
+  "slug": "is_contactable",
+  "type": "string/=",
+  "field_id": 1661,
+  "default": "true"
+}
+```
+
+#### Filter: Next Purchase Signal
+
+```json metabase-filter
+{
+  "slug": "next_purchase_signal",
+  "type": "string/=",
+  "field_id": 760
+}
+```
+
 ---
 
 #### ❓ Question: Chu ky bao cao
@@ -94,7 +115,7 @@ FROM mart_customer_action_queue
 
 #### ❓ Question: CALL_NOW — Goi ngay
 
-VIP/Gold khách at-risk — ưu tiên cao nhất, gọi ngay.
+VIP/Gold/Silver khách at-risk — ưu tiên cao nhất, gọi ngay.
 
 ```sql
 SELECT COUNT(*) AS "📞 Gọi ngay"
@@ -107,13 +128,13 @@ WHERE action_type = 'CALL_NOW'
 {
   "display": "scalar",
   "visualization_settings": {
-    "card.description": "VIP/Gold đang At Risk"
+    "card.description": "VIP/Gold/Silver At Risk"
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
 ```
 
 ---
@@ -139,7 +160,7 @@ WHERE action_type = 'REORDER_NUDGE'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 4, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
 ```
 
 ---
@@ -165,7 +186,33 @@ WHERE action_type = 'WIN_BACK'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 8, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 6, "size_x": 3, "size_y": 3 }
+```
+
+---
+
+#### ❓ Question: REORDER_PREEMPT — Nhac truoc
+
+Khách sắp đến hạn tái mua — nhắc trước khi trễ.
+
+```sql
+SELECT COUNT(*) AS "⏰ Nhắc trước"
+FROM mart_customer_action_queue
+WHERE action_type = 'REORDER_PREEMPT'
+[[AND {{value_group}}]]
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "card.description": "DUE_SOON — sắp đến hạn tái mua"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 3, "col": 9, "size_x": 3, "size_y": 3 }
 ```
 
 ---
@@ -241,9 +288,10 @@ SELECT
     CASE action_type
         WHEN 'CALL_NOW'         THEN '1. Gọi ngay 📞'
         WHEN 'REORDER_NUDGE'    THEN '2. Tái mua 🔄'
-        WHEN 'WIN_BACK'         THEN '3. Win-back 🔙'
-        WHEN 'SECOND_ORDER'     THEN '4. Đơn 2 🆕'
-        WHEN 'HIGH_CANCEL_RISK' THEN '5. Rủi ro huỷ ⚠️'
+        WHEN 'REORDER_PREEMPT'  THEN '3. Nhắc trước ⏰'
+        WHEN 'WIN_BACK'         THEN '4. Win-back 🔙'
+        WHEN 'SECOND_ORDER'     THEN '5. Đơn 2 🆕'
+        WHEN 'HIGH_CANCEL_RISK' THEN '6. Rủi ro huỷ ⚠️'
     END AS "Loại hành động",
     SUM(value_at_stake) AS "Giá trị (VND)"
 FROM mart_customer_action_queue
@@ -290,9 +338,10 @@ SELECT
     CASE action_type
         WHEN 'CALL_NOW'         THEN '1. Gọi ngay 📞'
         WHEN 'REORDER_NUDGE'    THEN '2. Tái mua 🔄'
-        WHEN 'WIN_BACK'         THEN '3. Win-back 🔙'
-        WHEN 'SECOND_ORDER'     THEN '4. Đơn 2 🆕'
-        WHEN 'HIGH_CANCEL_RISK' THEN '5. Rủi ro huỷ ⚠️'
+        WHEN 'REORDER_PREEMPT'  THEN '3. Nhắc trước ⏰'
+        WHEN 'WIN_BACK'         THEN '4. Win-back 🔙'
+        WHEN 'SECOND_ORDER'     THEN '5. Đơn 2 🆕'
+        WHEN 'HIGH_CANCEL_RISK' THEN '6. Rủi ro huỷ ⚠️'
     END AS "Loại hành động",
     COUNT(*) AS "Số khách"
 FROM mart_customer_action_queue
@@ -343,16 +392,20 @@ SELECT
     CASE action_type
         WHEN 'CALL_NOW'         THEN '📞 Gọi ngay'
         WHEN 'REORDER_NUDGE'    THEN '🔄 Tái mua'
+        WHEN 'REORDER_PREEMPT'  THEN '⏰ Nhắc trước'
         WHEN 'WIN_BACK'         THEN '🔙 Win-back'
         WHEN 'SECOND_ORDER'     THEN '🆕 Đơn 2'
         WHEN 'HIGH_CANCEL_RISK' THEN '⚠️ Rủi ro huỷ'
     END                            AS "Hành động",
     full_name                      AS "Tên khách",
     phone                          AS "SĐT",
+    is_contactable                 AS "Liên lạc được",
     value_group                    AS "Nhóm",
     action_rationale               AS "Lý do",
     value_at_stake                 AS "Giá trị",
     lifetime_value                 AS "CLV",
+    lifetime_contribution_margin   AS "Biên đóng góp",
+    is_margin_negative             AS "Âm biên",
     recency_days                   AS "Ngày vắng",
     last_order_date                AS "Đơn cuối",
     predicted_next_purchase_date   AS "Dự kiến mua lại"
@@ -360,6 +413,8 @@ FROM mart_customer_action_queue
 WHERE 1=1
 [[AND {{action_type}}]]
 [[AND {{value_group}}]]
+[[AND {{is_contactable}}]]
+[[AND {{next_purchase_signal}}]]
 ORDER BY priority_rank, lifetime_value DESC
 LIMIT 500
 ```
@@ -375,10 +430,13 @@ LIMIT 500
       { "name": "Hành động",            "enabled": true },
       { "name": "Tên khách",            "enabled": true },
       { "name": "SĐT",                 "enabled": true },
+      { "name": "Liên lạc được",        "enabled": true },
       { "name": "Nhóm",                "enabled": true },
       { "name": "Lý do",               "enabled": true },
       { "name": "Giá trị",             "enabled": true },
       { "name": "CLV",                 "enabled": true },
+      { "name": "Biên đóng góp",        "enabled": false },
+      { "name": "Âm biên",             "enabled": true },
       { "name": "Ngày vắng",           "enabled": true },
       { "name": "Đơn cuối",            "enabled": true },
       { "name": "Dự kiến mua lại",     "enabled": true }
@@ -404,6 +462,13 @@ LIMIT 500
         "currency_style": "symbol",
         "decimals": 0,
         "compact": true
+      },
+      "Biên đóng góp": {
+        "number_style": "currency",
+        "currency": "VND",
+        "currency_style": "symbol",
+        "decimals": 0,
+        "compact": true
       }
     },
     "table.column_formatting": [
@@ -422,6 +487,14 @@ LIMIT 500
         "value": 60,
         "color": "#EF8C8C",
         "highlight_row": false
+      },
+      {
+        "columns": ["Âm biên"],
+        "type": "single",
+        "operator": "=",
+        "value": true,
+        "color": "#EF8C8C",
+        "highlight_row": false
       }
     ]
   }
@@ -436,7 +509,7 @@ LIMIT 500
 
 #### 📝 Text: Source and Freshness
 
-Source: mart_customer_action_queue · Daily snapshot · **Scope: RETAIL, action_type IS NOT NULL** · Ranked by priority_rank → lifetime_value DESC · Max 500 rows displayed
+Source: mart_customer_action_queue · Daily snapshot · **Scope: RETAIL, action_type IS NOT NULL** · Ranked by priority_rank → lifetime_value DESC · Max 500 rows displayed · Filter "Liên lạc được = true" mặc định — bỏ chọn để xem cả khách không liên lạc được · "Âm biên" = biên đóng góp âm, cân nhắc bỏ khỏi high-touch
 
 ```json metabase-pos
 { "row": 24, "col": 0, "size_x": 18, "size_y": 1 }
