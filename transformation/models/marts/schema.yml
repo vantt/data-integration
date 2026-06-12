@@ -1173,3 +1173,48 @@ models:
           - not_null
       - name: base_count
         description: "Total cumulative retail customers visible as-of this month-end (sum of all status buckets)."
+
+  - name: mart_product_health
+    description: >
+      Current product-health state, 1 row per product. Synthesis of velocity × margin × inventory ×
+      lifecycle (analog of dim_customers for products). health_class (STAR/WORKHORSE/QUESTION/DOG) is
+      computed only over has_margin_data SKUs (~42 with COGS); velocity/inventory/lifecycle signals
+      cover all products. See domains/product.md → Product Health Classification.
+    columns:
+      - name: product_key
+        description: "Surrogate product key."
+        tests: [not_null, unique]
+      - name: abc_class
+        description: "Revenue-contribution class (A/B/C) from cumulative net_revenue share."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['A', 'B', 'C']
+      - name: health_class
+        description: "BCG-style velocity×margin class. NULL when no margin data."
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['STAR', 'WORKHORSE', 'QUESTION', 'DOG', 'BALANCED']
+      - name: lifecycle_stage
+        description: "NEW/GROWING/MATURE/DECLINING/DORMANT."
+      - name: velocity_momentum
+        description: "ACCELERATING/STABLE/DECELERATING (NULL if <3 months history)."
+      - name: has_margin_data
+        description: "TRUE when SKU has COGS-based margin (~42 SKU); FALSE → health_class NULL."
+
+  - name: mart_product_action_queue
+    description: "Operational merchandising action queue — 1 row per product needing action (RESTOCK_NOW/CLEAR_DEADSTOCK/REVIEW_MARGIN/PROMOTE/DELIST)."
+    columns:
+      - name: product_key
+        description: "Surrogate product key."
+        tests: [not_null, unique]
+      - name: action_type
+        description: "Merchandising action."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['RESTOCK_NOW', 'CLEAR_DEADSTOCK', 'REVIEW_MARGIN', 'PROMOTE', 'DELIST']
+      - name: priority_rank
+        tests: [not_null]
