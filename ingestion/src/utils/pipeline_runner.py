@@ -37,38 +37,74 @@ def run_pipeline(
     
     # 1. Parse CLI arguments
     parser = argparse.ArgumentParser(description=f"Run {pipeline_name} pipeline.")
-    parser.add_argument("--full-refresh", action="store_true", help="Drop the pipeline state and load fresh.")
+    parser.add_argument("--full-refresh", action="store_true", help="[DESTRUCTIVE] Drop all destination parquet files and reload. Requires --force.")
+    parser.add_argument("--force", action="store_true", help="Required with --full-refresh to confirm destructive drop.")
+    parser.add_argument("--reset-cursor", action="store_true", help="Reset incremental cursor and re-fetch from Sapo. SAFE: appends to existing parquet, never deletes.")
     parser.add_argument("--limit", type=int, default=None, help="Limit the number of resources/pages (if supported by source).")
     parser.add_argument("--dev", action="store_true", help="Run in dev mode (appends _dev to dataset).")
-    
+
     # Allow unknown args to pass through if needed, or strict parsing
     args, unknown = parser.parse_known_args(argv)
-    
+
     # 2. Setup Environment
     final_dataset_name = dataset_name + "_dev" if args.dev else dataset_name
     setup_dlt_env(final_dataset_name)
-    
-    # 3. Handle Full Refresh — reset dlt pipeline STATE before initialization.
-    # Strategy: use refresh="drop_sources" in pipeline.run() to drop both destination-side state
-    # (incremental cursors stored in _dlt_pipeline_state) AND local state dir. This is necessary
-    # because dlt restores state FROM the destination on startup, so clearing only local state
-    # is insufficient — the cursor would be restored from _dlt_pipeline_state in the data lake.
-    # Also clear local state dir to avoid stale schema cache that might lock file format.
-    # NOTE: dlt stores local state in get_dlt_pipelines_dir() (default: /var/dlt/pipelines),
-    # NOT in .dlt/pipelines/ (which is the config directory, not the runtime state dir).
+
+    # 3a. GUARDRAIL: --full-refresh without --force is blocked.
+    # --full-refresh calls refresh="drop_sources" which deletes ALL parquet files in the table
+    # (including history_log and text partitions that cannot be re-fetched from Sapo API).
+    # Always require --force as explicit confirmation of this destructive intent.
+    if args.full_refresh and not args.force:
+        print()
+        print("=" * 70)
+        print("  BLOCKED: --full-refresh requires --force to proceed.")
+        print()
+        print("  --full-refresh will DELETE all parquet files for this pipeline,")
+        print("  including history_log and text partitions that CANNOT be")
+        print("  re-fetched from the Sapo API once deleted.")
+        print()
+        print("  To safely re-ingest without data loss, use instead:")
+        print(f"    --reset-cursor   (clears cursor only, appends to existing parquet)")
+        print()
+        print("  To confirm destructive drop (you know what you're doing):")
+        print(f"    --full-refresh --force")
+        print("=" * 70)
+        print()
+        sys.exit(1)
+
+    # 3b. Handle --reset-cursor — clears incremental cursor, re-fetches from beginning.
+    # SAFE: write_disposition="append" means dlt only adds new parquet files.
+    # Old parquet files (history_log, text, prior batch_sync) are untouched.
     refresh_mode = None
-    if args.full_refresh:
+    if args.reset_cursor:
         import shutil
         from dlt.common.pipeline import get_dlt_pipelines_dir
         state_dir = os.path.join(get_dlt_pipelines_dir(), pipeline_name)
         if os.path.exists(state_dir):
             shutil.rmtree(state_dir)
-            print(f"[Pipeline Runner] --full-refresh: cleared local state dir ({state_dir})")
+            print(f"[Pipeline Runner] --reset-cursor: cleared local state dir ({state_dir})")
         else:
-            print(f"[Pipeline Runner] --full-refresh: no local state dir at {state_dir}, proceeding fresh.")
+            print(f"[Pipeline Runner] --reset-cursor: no local state dir found, starting fresh.")
+        source_args["full_refresh"] = True  # tells source to ignore cursor (last_value = None)
+        print(f"[Pipeline Runner] --reset-cursor: cursor reset. Will append from beginning, NO parquet deletion.")
+
+    # 3c. Handle --full-refresh --force — destructive drop + full reload.
+    # Strategy: use refresh="drop_sources" to drop destination-side state AND parquet files,
+    # then clear local state dir to avoid stale schema cache.
+    # NOTE: dlt restores state FROM the destination on startup, so clearing only local state
+    # is insufficient — the cursor would be restored from _dlt_pipeline_state in the data lake.
+    if args.full_refresh and args.force:
+        import shutil
+        from dlt.common.pipeline import get_dlt_pipelines_dir
+        state_dir = os.path.join(get_dlt_pipelines_dir(), pipeline_name)
+        if os.path.exists(state_dir):
+            shutil.rmtree(state_dir)
+            print(f"[Pipeline Runner] --full-refresh --force: cleared local state dir ({state_dir})")
+        else:
+            print(f"[Pipeline Runner] --full-refresh --force: no local state dir at {state_dir}, proceeding fresh.")
         refresh_mode = "drop_sources"
         source_args["full_refresh"] = True
-        print(f"[Pipeline Runner] --full-refresh: will use refresh='drop_sources' to reset destination state")
+        print(f"[Pipeline Runner] --full-refresh --force: will use refresh='drop_sources' to drop destination parquet + state")
 
     # 4. Initialize Pipeline (creates fresh state if dir was deleted by full-refresh)
     pipeline = dlt.pipeline(
