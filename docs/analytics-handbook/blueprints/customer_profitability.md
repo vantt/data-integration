@@ -8,17 +8,17 @@ uses_concepts:
   - filter_has_cogs
   - channel_net_profit
   - discount_sensitivity
-  - next_purchase_signal
-design_spec: designs/retail_activation_cockpit.md
 database: "Sapo"
 ---
 
-# 📘 Blueprint: Retail Activation Cockpit [Retail]
+# 📘 Blueprint: Monthly · Customer Profitability [Retail]
 
-> **Target Collection:** `Marketing & Customers`
-> **Design Spec:** `designs/retail_activation_cockpit.md`
-> **Role:** Marketing Manager, CSKH Ops
-> **Archetype:** Operational Cockpit (3 tabs)
+> **Database:** `Sapo`
+> **Collection ID:** 99
+> **Role:** CMO, Finance-Marketing
+> **Archetype:** Strategic Review (monthly cadence, 2 tabs)
+
+Monthly deep-dive into customer profitability and margin-gated channel analysis. Audience: CMO/Finance-Marketing. Story: which channels/segments are profitable, discount-dependency margin impact, Shopee = lowest margin + worst retention → migrate to owned.
 
 ## Semantic Contract
 
@@ -27,301 +27,16 @@ database: "Sapo"
 >
 > **Concepts used:**
 > [`scope_retail`](../semantic/segments.md#scope_retail) · [`is_active_order`](../semantic/segments.md#is_active_order) · [`filter_has_cogs`](../semantic/segments.md#filter_has_cogs) · [`channel_net_profit`](../semantic/metrics.md) · [`discount_sensitivity`](../domains/customer.md)
+>
+> **Margin framing:** contribution margin (channel_net_margin_pct / channel_net_profit) as primary — NOT fully_loaded (overhead is revenue-weighted, an artifact at this grain).
 
-## 📂 Collection: Marketing & Customers
-
----
-
-### 🖥️ Dashboard: Retail Activation Cockpit [Retail]
-
-**Description**: Marries contribution margin × activation signals × retention-by-channel for Marketing/CSKH. Three tabs: this-week call list, channel retention × margin story, discount-dependency restructure signal.
+## 📂 Collection: Marketing & Customers > 👥 Customer
 
 ---
 
-#### Filter: Action Type
+### 🖥️ Dashboard: Monthly · Customer Profitability [Retail]
 
-```json metabase-filter
-{
-  "slug": "action_type",
-  "type": "string/=",
-  "field_id": 773
-}
-```
-
-#### Filter: Value Group
-
-```json metabase-filter
-{
-  "slug": "value_group",
-  "type": "string/=",
-  "field_id": 758
-}
-```
-
-#### Filter: Contactable (has phone — no Zalo OA fallback)
-
-```json metabase-filter
-{
-  "slug": "is_contactable",
-  "type": "string/=",
-  "field_id": 1661,
-  "default": "true"
-}
-```
-
----
-
-### 📑 Tab: Activation Now
-
-#### ❓ Question: Chu kỳ báo cáo
-
-```sql
-SELECT
-  '📅 Hôm nay: ' || strftime(current_date, '%d/%m/%Y') ||
-  '  ·  Queue cập nhật: ' || strftime(MAX(queue_generated_at AT TIME ZONE 'Asia/Ho_Chi_Minh'), '%d/%m/%Y %H:%M')
-  AS "Chu kỳ báo cáo"
-FROM mart_customer_action_queue
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
-```
-
-```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
-```
-
-#### 📝 Text: Priority call list — contact OVERDUE and DUE_SOON customers this week
-
-# Priority call list — contact OVERDUE and DUE_SOON customers this week
-
-```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### ❓ Question: Contactable — OVERDUE / DUE_SOON
-
-Retail customers with phone, past their expected repurchase window.
-
-```sql
-SELECT COUNT(*) AS "Contactable Due/Overdue"
-FROM mart_customer_action_queue
-WHERE is_contactable = true
-  AND next_purchase_signal IN ('OVERDUE', 'DUE_SOON')
-  [[AND {{action_type}}]]
-  [[AND {{value_group}}]]
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "Contactable Due/Overdue": {}
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
-```
-
-#### ❓ Question: LTV at Stake (Contactable)
-
-Total lifetime value of contactable OVERDUE/DUE_SOON customers.
-
-```sql
-SELECT SUM(lifetime_value) AS "LTV at Stake"
-FROM mart_customer_action_queue
-WHERE is_contactable = true
-  AND next_purchase_signal IN ('OVERDUE', 'DUE_SOON')
-  [[AND {{action_type}}]]
-  [[AND {{value_group}}]]
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "LTV at Stake": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 6, "size_y": 3 }
-```
-
-#### ❓ Question: Value at Stake (Contactable)
-
-Total reactivation value in the contactable queue.
-
-```sql
-SELECT SUM(value_at_stake) AS "Value at Stake"
-FROM mart_customer_action_queue
-WHERE is_contactable = true
-  [[AND {{action_type}}]]
-  [[AND {{value_group}}]]
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "Value at Stake": {
-        "number_style": "currency",
-        "currency": "VND",
-        "decimals": 0,
-        "compact": true
-      }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 12, "size_x": 6, "size_y": 3 }
-```
-
-#### 📝 Text: Action queue — contactable customers only (has phone)
-
-# Action queue — contactable customers only (has phone)
-
-```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### ❓ Question: Action Queue — Contactable
-
-Priority call list with margin flag. Margin-negative customers highlighted in red — focus recovery efforts on profitable segments.
-
-```sql
-SELECT
-  priority_rank                             AS "Priority",
-  full_name                                 AS "Khách hàng",
-  phone                                     AS "SĐT",
-  value_group                               AS "Tier",
-  action_type                               AS "Hành động",
-  next_purchase_signal                      AS "Tín hiệu",
-  value_at_stake                            AS "Giá trị",
-  lifetime_contribution_margin              AS "Contribution Margin",
-  is_margin_negative                        AS "Margin âm?",
-  product_affinity                          AS "Sản phẩm ưa thích",
-  predicted_next_purchase_date::DATE        AS "Ngày dự kiến mua"
-FROM mart_customer_action_queue
-WHERE 1=1
-  [[AND {{is_contactable}}]]
-  [[AND {{action_type}}]]
-  [[AND {{value_group}}]]
-ORDER BY priority_rank
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.column_formatting": [
-      {
-        "columns": ["Contribution Margin"],
-        "type": "single",
-        "operator": "<",
-        "value": 0,
-        "color": "#EF8C8C",
-        "highlight_row": true
-      },
-      {
-        "columns": ["Giá trị"],
-        "type": "range",
-        "colors": ["#FFFFFF", "#509EE3"],
-        "min_type": "all",
-        "max_type": "all",
-        "highlight_row": false
-      }
-    ],
-    "column_settings": {
-      "Giá trị": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Contribution Margin": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 9 }
-```
-
-#### 📝 Text: High-value reactivation mine — SILVER/GOLD/VIP At-Risk and Churned
-
-# High-value reactivation mine — SILVER/GOLD/VIP At-Risk and Churned
-
-```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### ❓ Question: Reactivation Mine — SILVER / GOLD / VIP
-
-High-touch reactivation targets (not Bronze — Bronze is net-negative). Includes all, not just contactable.
-
-```sql
-SELECT
-  value_group                               AS "Tier",
-  customer_status                           AS "Status",
-  COUNT(*)                                  AS "Khách hàng",
-  COUNT(CASE WHEN is_contactable THEN 1 END) AS "Có SĐT",
-  SUM(lifetime_value)                       AS "Total LTV",
-  ROUND(AVG(lifetime_contribution_margin) / 1000.0, 0) AS "Avg Contrib. (K)"
-FROM mart_customer_action_queue
-WHERE value_group IN ('VALUE_VIP', 'VALUE_GOLD', 'VALUE_SILVER')
-  AND customer_status IN ('At Risk', 'Churned')
-GROUP BY 1, 2
-ORDER BY
-  CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 3 END,
-  CASE customer_status WHEN 'Churned' THEN 1 ELSE 2 END
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.column_formatting": [
-      {
-        "columns": ["Có SĐT"],
-        "type": "range",
-        "colors": ["#EF8C8C", "#84BB4C"],
-        "min_type": "all",
-        "max_type": "all",
-        "highlight_row": false
-      }
-    ],
-    "column_settings": {
-      "Total LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Avg Contrib. (K)": { "suffix": "K VND" }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 6 }
-```
-
-#### 📝 Text: Source & Freshness
-
-**Source:** mart_customer_action_queue · **Scope:** scope_retail · **Cadence:** daily · ⚠️ Only 44% of queue is contactable (has phone) — SECOND_ORDER type has lowest contactability (18%).
-<!-- text-id:source-freshness -->
-
-```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 2 }
-```
+**Description**: Monthly contribution-margin and discount-dependency analysis for CMO/Finance-Marketing. Two tabs: channel retention × margin story (Shopee lowest margin + worst retention → migrate to owned), discount-dependency restructure signal (98.5% PROMO_DEPENDENT, margin impact).
 
 ---
 
@@ -343,9 +58,9 @@ SELECT
 { "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
 ```
 
-#### 📝 Text: Channel net margin % — Shopee channels are margin-negative; owned channels profitable
+#### 📝 Text: Channel net margin % — Shopee channels are margin-lowest; owned channels profitable
 
-# Channel net margin % — Shopee channels are margin-negative; owned channels profitable
+# Channel net margin % — Shopee channels are margin-lowest; owned channels profitable
 
 ```json metabase-pos
 { "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
@@ -353,7 +68,7 @@ SELECT
 
 #### ❓ Question: Channel Net Margin % by Channel
 
-Channel net margin (after platform fees/overhead) last 90 days. Shopee negative = platform fees exceed gross profit.
+Channel net margin (after platform fees) last 90 days. Use contribution margin — not fully-loaded overhead which distorts channel comparison at order grain.
 
 ```sql
 SELECT
@@ -458,7 +173,7 @@ ORDER BY 3
 
 #### ❓ Question: Channel × Repeat Rate × Contribution Margin
 
-Side-by-side: repeat rate + channel net margin + order share. The Shopee = low-retention + negative-margin contrast in one table.
+Side-by-side: repeat rate + channel net margin + order share. The Shopee = low-retention + low-margin contrast in one table.
 
 ```sql
 WITH orders_total AS (
@@ -563,8 +278,8 @@ ORDER BY cs.order_count DESC
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_order_economics + fact_orders + dim_channels · **Scope:** scope_retail AND has_cogs AND is_active_order · **Window:** 90 days rolling · ⚠️ channel_net_margin only available for orders with has_cogs (~65% coverage); fully_loaded_margin penalizes large orders (overhead allocation) — channel_net_margin preferred for channel comparison.
-<!-- text-id:source-freshness -->
+**Source:** fact_order_economics + fact_orders + dim_channels · **Scope:** scope_retail AND has_cogs AND is_active_order · **Window:** 90 days rolling · **Cadence:** monthly review · ⚠️ channel_net_margin only available for orders with has_cogs (~65% coverage); fully_loaded_margin penalizes large orders (overhead allocation artifact at order grain) — channel_net_margin preferred for channel comparison.
+<!-- text-id:source-freshness-channel -->
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 2 }
@@ -697,7 +412,7 @@ ORDER BY
 
 #### ❓ Question: PROMO_DEPENDENT — Discount % of Gross Revenue
 
-Share of gross revenue consumed by discounts for PROMO_DEPENDENT customers. Verified ~55% in analysis.
+Share of gross revenue consumed by discounts for PROMO_DEPENDENT customers.
 
 ```sql
 WITH promo_dep AS (
@@ -864,8 +579,8 @@ ORDER BY
 
 #### 📝 Text: Source & Freshness
 
-**Source:** dim_customers + fact_orders · **Scope:** scope_retail (customer_type='RETAIL') · **Cadence:** daily snapshot · ⚠️ discount_sensitivity NULL for ~78% of base (single-purchase customers with insufficient order history). PROMO_MIXED has only 1 customer in current data — guidance to target PROMO_MIXED for highest ROI is moot; redesign offer structure instead.
-<!-- text-id:source-freshness -->
+**Source:** dim_customers + fact_orders · **Scope:** scope_retail (customer_type='RETAIL') · **Cadence:** monthly snapshot · ⚠️ discount_sensitivity NULL for ~78% of base (single-purchase customers with insufficient order history). PROMO_MIXED has only 1 customer in current data — use for structural insight only, not individual targeting.
+<!-- text-id:source-freshness-discount -->
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 2 }

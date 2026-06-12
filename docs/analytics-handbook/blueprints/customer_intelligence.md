@@ -1589,6 +1589,105 @@ LIMIT 15
 
 ---
 
+#### 📝 Text: Identify acquisition channels — where do new customers come from?
+
+# Identify acquisition channels — where do new customers come from?
+
+```json metabase-pos
+{ "row": 53, "col": 0, "size_x": 18, "size_y": 1 }
+```
+
+#### ❓ Question: New Customers by Channel
+
+Horizontal bar — ranking channels by new customer volume (last month).
+
+```sql
+WITH first_orders AS (
+    SELECT
+        o.customer_key,
+        o.channel_key,
+        ROW_NUMBER() OVER (PARTITION BY o.customer_key ORDER BY o.ordered_at) as rn
+    FROM fact_orders o
+    JOIN dim_customers cust ON o.customer_key = cust.customer_key
+    WHERE cust.created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND cust.created_at < date_trunc('month', current_date)
+      AND o.scope_sales
+      AND cust.customer_id != 'Unknown'
+)
+SELECT
+    COALESCE(c.channel_name, 'Unknown') as "Channel",
+    COUNT(*) as "New Customers"
+FROM first_orders fo
+JOIN dim_channels c ON fo.channel_key = c.channel_key
+WHERE fo.rn = 1
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Channel"],
+    "graph.metrics": ["New Customers"],
+    "graph.colors": ["#509EE3"]
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 54, "col": 0, "size_x": 9, "size_y": 6 }
+```
+
+#### ❓ Question: First-Order Revenue by Channel
+
+Horizontal bar — ranking channels by first-order revenue (last month).
+
+```sql
+WITH first_orders AS (
+    SELECT
+        o.customer_key,
+        o.channel_key,
+        o.net_revenue,
+        ROW_NUMBER() OVER (PARTITION BY o.customer_key ORDER BY o.ordered_at) as rn
+    FROM fact_orders o
+    JOIN dim_customers cust ON o.customer_key = cust.customer_key
+    WHERE cust.created_at >= date_trunc('month', current_date) - INTERVAL '1 month'
+      AND cust.created_at < date_trunc('month', current_date)
+      AND o.scope_sales
+      AND o.is_active_order
+      AND cust.customer_id != 'Unknown'
+)
+SELECT
+    COALESCE(c.channel_name, 'Unknown') as "Channel",
+    SUM(fo.net_revenue) as "First-Order Revenue"
+FROM first_orders fo
+JOIN dim_channels c ON fo.channel_key = c.channel_key
+WHERE fo.rn = 1
+GROUP BY 1
+ORDER BY 2 DESC
+```
+
+```json metabase-viz
+{
+  "display": "row",
+  "visualization_settings": {
+    "graph.dimensions": ["Channel"],
+    "graph.metrics": ["First-Order Revenue"],
+    "graph.colors": ["#88BDE6"],
+    "column_settings": {
+      "First-Order Revenue": { "number_style": "currency", "currency": "VND", "compact": true }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 54, "col": 9, "size_x": 9, "size_y": 6 }
+```
+
+---
+
 #### 📝 Text: Source & Freshness
 
 **Source:** dim_customers + fact_orders · **Cadence:** monthly · **Scope:** scope_sales [Cross]

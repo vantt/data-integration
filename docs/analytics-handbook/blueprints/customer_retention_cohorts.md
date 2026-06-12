@@ -7,12 +7,13 @@ uses_concepts:
   - is_active_order
 ---
 
-# 📘 Blueprint: Customer Retention & Lifecycle [Retail]
+# 📘 Blueprint: Weekly · Customer Retention & Cohorts [Retail]
 
-> **Target Collection:** `Marketing & Customers`
+> **Target Collection:** `Marketing & Customers > 👥 Customer`
 > **Design Spec:** `designs/customer_retention_lifecycle.md`
 > **Role:** Marketing Manager, Customer Success, CEO
-> **Archetype:** Operational Cockpit (3 tabs)
+> **Archetype:** Analytical (3 tabs) — weekly cadence
+> **Database:** Sapo
 
 ## Semantic Contract
 
@@ -21,15 +22,15 @@ uses_concepts:
 >
 > **Concepts used:**
 > [`scope_retail`](../semantic/segments.md#scope_retail)
-## 📂 Collection: Marketing & Customers
+## 📂 Collection: Marketing & Customers > 👥 Customer
 
-Channel performance, customer acquisition, retention, segmentation, and campaign analysis.
+Retention analytics — are customers coming back? Cohort, waterfall, lifecycle, and purchase frequency.
 
 ---
 
-### 🖥️ Dashboard: Customer Retention & Lifecycle [Retail]
+### 🖥️ Dashboard: Weekly · Customer Retention & Cohorts [Retail]
 
-**Description**: Strategic retention analytics — repeat purchase rates, churn trends, cohort retention heatmap, revenue layer cake, purchase frequency distribution, reactivation tracking, and at-risk watchlist. 3 tabs: Suc khoe Retention, Phan tich Cohort, Hanh vi & Reactivation.
+**Description**: Weekly retention analytics — repeat purchase rates, churn trends, cohort retention heatmap, revenue layer cake, purchase frequency distribution, and reactivation tracking. 3 tabs: Suc khoe Retention, Phan tich Cohort, Hanh vi & Reactivation.
 
 ---
 
@@ -586,9 +587,46 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 ---
 
 
+#### ❓ Question: MAU vs Repeat-Buyer MAU (12M)
+
+Dual-line chart — MAU total vs repeat-buyer MAU (≥2 lifetime orders) over 12 months. Gap between lines = one-time buyer volume; narrowing gap = improving engagement quality.
+
+```sql
+SELECT
+    date_trunc('month', o.ordered_at)::date AS "Month",
+    COUNT(DISTINCT o.customer_key) AS "MAU",
+    COUNT(DISTINCT CASE WHEN c.order_count >= 2 THEN o.customer_key END) AS "MAU Repeat"
+FROM fact_orders o
+JOIN dim_customers c ON o.customer_key = c.customer_key
+WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '12 months'
+  AND o.ordered_at < date_trunc('month', current_date)
+  AND o.scope_retail
+GROUP BY 1
+ORDER BY 1
+```
+
+```json metabase-viz
+{
+  "display": "line",
+  "visualization_settings": {
+    "graph.dimensions": ["Month"],
+    "graph.metrics": ["MAU", "MAU Repeat"],
+    "graph.colors": ["#509EE3", "#7172AD"],
+    "graph.y_axis.title_text": "Customers",
+    "graph.x_axis.title_text": "Month"
+  }
+}
+```
+
+```json metabase-pos
+{ "row": 28, "col": 0, "size_x": 18, "size_y": 6 }
+```
+
+---
+
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** scope_retail · **Caveats:** Cohort rolling
+**Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1038,7 +1076,7 @@ ORDER BY 1, 2
 
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** scope_retail · **Caveats:** Cohort rolling
+**Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
@@ -1088,14 +1126,6 @@ SELECT
 
 ```json metabase-pos
 { "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### 📝 Text: Prioritize at-risk outreach — high-value customers needing action NOW
-
-# Prioritize at-risk outreach — high-value customers needing action NOW
-
-```json metabase-pos
-{ "row": 20, "col": 0, "size_x": 18, "size_y": 1 }
 ```
 
 #### ❓ Question: Avg Days Between Purchases
@@ -1221,31 +1251,6 @@ FROM reactivated_current c, reactivated_prev p
 { "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
 ```
 
-#### ❓ Question: At-Risk Customers Count
-
-Count of customers in At Risk status (31-90 days since last purchase).
-
-```sql
-SELECT
-    COUNT(*) as "At Risk"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND customer_status = 'At Risk'
-  AND order_count > 0
-  [[AND value_group = {{segment}}]]
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {}
-}
-```
-
-```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
-```
-
 #### ❓ Question: One-Time Buyer Rate
 
 Percentage of customers with exactly 1 order — conversion opportunity. Lower is better.
@@ -1296,7 +1301,7 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
+{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
 ```
 
 ---
@@ -1472,303 +1477,11 @@ ORDER BY 1
 
 ---
 
-#### ❓ Question: At-Risk Customer Watchlist
-
-High-value At Risk customers needing outreach — sorted by LTV descending.
-
-```sql
-SELECT
-    full_name as "Customer",
-    phone as "Phone",
-    value_group as "Segment",
-    last_order_date as "Last Order",
-    recency_days as "Days Since",
-    lifetime_value as "Lifetime Value",
-    order_count as "Orders"
-FROM dim_customers
-WHERE customer_id != 'Unknown'
-  AND customer_status = 'At Risk'
-  AND order_count > 0
-  [[AND value_group = {{segment}}]]
-ORDER BY lifetime_value DESC
-LIMIT 50
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.column_formatting": [
-      {
-        "columns": ["Lifetime Value"],
-        "type": "range",
-        "colors": ["#FFFFFF", "#7172AD"],
-        "min_type": "min",
-        "max_type": "max"
-      },
-      {
-        "columns": ["Days Since"],
-        "type": "range",
-        "colors": ["#F9D45C", "#EF8C8C"],
-        "min_type": "custom",
-        "min_value": 31,
-        "max_type": "custom",
-        "max_value": 90
-      }
-    ],
-    "column_settings": {
-      "Lifetime Value": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 21, "col": 0, "size_x": 18, "size_y": 8 }
-```
-
----
-
-#### 📝 Text: P3 Predictive signals — overdue customers and upcoming purchase forecast
-
-# P3 Predictive signals — overdue customers and upcoming purchase forecast
-
-```json metabase-pos
-{ "row": 29, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### ❓ Question: OVERDUE Customers — Count and Value at Risk
-
-Retail customers whose predicted next purchase date has already passed (`next_purchase_signal = 'OVERDUE'`). High value at risk requires immediate outreach.
-
-```sql
-SELECT
-    COUNT(*) AS "OVERDUE Customers",
-    SUM(lifetime_value) AS "Total LTV at Risk",
-    ROUND(AVG(lifetime_value), 0) AS "Avg LTV",
-    ROUND(AVG(recency_days), 0) AS "Avg Days Since Last Order"
-FROM dim_customers
-WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
-  AND customer_id != 'Unknown'
-  AND next_purchase_signal = 'OVERDUE'
-  [[AND value_group = {{segment}}]]
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "OVERDUE Customers": {},
-      "Total LTV at Risk": { "number_style": "currency", "currency": "VND", "compact": true },
-      "Avg LTV":           { "number_style": "currency", "currency": "VND", "compact": true },
-      "Avg Days Since Last Order": { "suffix": " days" }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 30, "col": 0, "size_x": 9, "size_y": 3 }
-```
-
-#### ❓ Question: Next Purchase Signal by Segment
-
-Count of retail customers by `next_purchase_signal` within each value tier — prioritize OVERDUE segments for reactivation.
-
-```sql
-SELECT
-    COALESCE(next_purchase_signal, 'N/A (1-time buyer)') AS "Signal",
-    value_group AS "Segment",
-    COUNT(*) AS "Customers",
-    SUM(lifetime_value) AS "Total LTV"
-FROM dim_customers
-WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
-  AND customer_id != 'Unknown'
-  [[AND value_group = {{segment}}]]
-GROUP BY 1, 2
-ORDER BY
-    CASE "Signal"
-        WHEN 'OVERDUE'  THEN 1
-        WHEN 'DUE_SOON' THEN 2
-        WHEN 'ON_TRACK' THEN 3
-        ELSE 4
-    END,
-    CASE value_group
-        WHEN 'VALUE_VIP'    THEN 1
-        WHEN 'VALUE_GOLD'   THEN 2
-        WHEN 'VALUE_SILVER' THEN 3
-        ELSE 4
-    END
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false,
-    "column_settings": {
-      "Total LTV": { "number_style": "currency", "currency": "VND", "compact": true }
-    },
-    "table.column_formatting": [
-      {
-        "columns": ["Signal"],
-        "type": "single",
-        "operator": "=",
-        "value": "OVERDUE",
-        "color": "#EF8C8C",
-        "highlight_row": true
-      },
-      {
-        "columns": ["Signal"],
-        "type": "single",
-        "operator": "=",
-        "value": "DUE_SOON",
-        "color": "#F9D45C",
-        "highlight_row": false
-      }
-    ]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 30, "col": 9, "size_x": 9, "size_y": 8 }
-```
-
-#### ❓ Question: Upcoming Predicted Purchases — This Week
-
-Retail customers whose `predicted_next_purchase_date` falls within the next 7 days — proactive engagement window.
-
-```sql
-SELECT
-    COUNT(*) AS "Purchasing This Week",
-    SUM(lifetime_value) AS "Total LTV",
-    ROUND(AVG(avg_order_spend), 0) AS "Expected Avg Order Value"
-FROM dim_customers
-WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
-  AND customer_id != 'Unknown'
-  AND predicted_next_purchase_date IS NOT NULL
-  AND predicted_next_purchase_date BETWEEN current_date AND current_date + INTERVAL '7 days'
-  [[AND value_group = {{segment}}]]
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "Purchasing This Week":      {},
-      "Total LTV":                 { "number_style": "currency", "currency": "VND", "compact": true },
-      "Expected Avg Order Value":  { "number_style": "currency", "currency": "VND", "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 33, "col": 0, "size_x": 9, "size_y": 3 }
-```
-
-#### ❓ Question: Upcoming Predicted Purchases — This Month
-
-Retail customers whose `predicted_next_purchase_date` falls within the next 30 days — pipeline visibility for the month.
-
-```sql
-SELECT
-    COUNT(*) AS "Purchasing This Month",
-    SUM(lifetime_value) AS "Total LTV",
-    ROUND(AVG(avg_order_spend), 0) AS "Expected Avg Order Value"
-FROM dim_customers
-WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
-  AND customer_id != 'Unknown'
-  AND predicted_next_purchase_date IS NOT NULL
-  AND predicted_next_purchase_date BETWEEN current_date AND current_date + INTERVAL '30 days'
-  [[AND value_group = {{segment}}]]
-```
-
-```json metabase-viz
-{
-  "display": "scalar",
-  "visualization_settings": {
-    "column_settings": {
-      "Purchasing This Month":     {},
-      "Total LTV":                 { "number_style": "currency", "currency": "VND", "compact": true },
-      "Expected Avg Order Value":  { "number_style": "currency", "currency": "VND", "compact": true }
-    }
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 36, "col": 0, "size_x": 9, "size_y": 3 }
-```
-
-#### ❓ Question: OVERDUE Customer Watchlist
-
-OVERDUE customers sorted by LTV — immediate win-back priority list.
-
-```sql
-SELECT
-    full_name AS "Customer",
-    phone AS "Phone",
-    value_group AS "Segment",
-    last_order_date AS "Last Order",
-    recency_days AS "Days Since",
-    predicted_next_purchase_date AS "Was Expected",
-    lifetime_value AS "LTV",
-    avg_order_spend AS "Avg Order Value"
-FROM dim_customers
-WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER')
-  AND customer_id != 'Unknown'
-  AND next_purchase_signal = 'OVERDUE'
-  [[AND value_group = {{segment}}]]
-ORDER BY lifetime_value DESC
-LIMIT 50
-```
-
-```json metabase-viz
-{
-  "display": "table",
-  "visualization_settings": {
-    "table.pivot": false,
-    "column_settings": {
-      "LTV":             { "number_style": "currency", "currency": "VND", "compact": true },
-      "Avg Order Value": { "number_style": "currency", "currency": "VND", "compact": true }
-    },
-    "table.column_formatting": [
-      {
-        "columns": ["Days Since"],
-        "type": "range",
-        "colors": ["#F9D45C", "#EF8C8C"],
-        "min_type": "custom",
-        "min_value": 30,
-        "max_type": "custom",
-        "max_value": 120
-      },
-      {
-        "columns": ["LTV"],
-        "type": "single",
-        "operator": ">=",
-        "value": 5000000,
-        "color": "#7172AD",
-        "highlight_row": true
-      }
-    ]
-  }
-}
-```
-
-```json metabase-pos
-{ "row": 39, "col": 0, "size_x": 18, "size_y": 8 }
-```
-
 #### 📝 Text: Source & Freshness
 
-**Source:** fact_orders + dim_customers · **Cadence:** monthly-cohort · **Scope:** scope_retail · **Caveats:** Cohort rolling
+**Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
 <!-- text-id:source-freshness -->
 
 ```json metabase-pos
 { "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
 ```
-

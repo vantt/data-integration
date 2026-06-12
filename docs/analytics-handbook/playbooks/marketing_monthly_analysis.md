@@ -7,7 +7,7 @@
 - **Cadence:** 3rd–5th of each month, reviewing the closed month.
 - **Archetype:** Operational Cockpit (multi-view, 4 tabs)
 - **Collection:** `Marketing & Customers`
-- **Related:** [Promotion Analysis](./sales_promotion_analysis.md), [Customer Retention](./customer_retention_dashboard.md)
+- **Related:** [Promotion Analysis](./sales_promotion_analysis.md), [Customer Retention & Cohorts](../blueprints/customer_retention_cohorts.md)
 - **Design Spec:** [Marketing Monthly Analysis Design](../designs/marketing_monthly_analysis.md)
 
 ## Key Questions

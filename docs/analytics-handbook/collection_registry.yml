@@ -93,10 +93,18 @@ collections:
       - "Marketing Weekly Tracker [Retail]"
       - "Marketing Monthly Analysis [Retail]"
       - "Marketing ROI [Retail]"
-      - "Customer Action Queue [Retail]"
-      - "Customer Operational [Retail]"
-      - "Customer Retention & Lifecycle [Retail]"
       - "Promotion Analysis [Retail]"
+    children:
+      # NEW 2026-06-12 — consolidated 5 overlapping customer boards → 4 by job-to-be-done.
+      # Old boards (Customer Action Queue/Operational/Retention&Lifecycle/Intelligence/Retail Activation Cockpit) archived.
+      - name: "👥 Customer"
+        description: "Khách lẻ — 4 board theo VIỆC: Daily Action Queue (gọi ai hôm nay) · Weekly Retention & Cohorts · Monthly Intelligence (value/segment) · Monthly Profitability (margin)."
+        audience: [Customer Success, Marketing Manager, CMO]
+        dashboards:
+          - "Daily · Customer Action Queue [Retail]"
+          - "Weekly · Customer Retention & Cohorts [Retail]"
+          - "Monthly · Customer Intelligence [Cross]"
+          - "Monthly · Customer Profitability [Retail]"
 
   # ---------------------------------------------------------------------------
   # OPERATIONS — "Hôm nay cần làm gì?"
@@ -159,7 +167,7 @@ collections:
     audience: [Analyst, Leadership]
     color: "#6366F1"  # Indigo — research/depth
     dashboards:
-      - "Customer Intelligence Monthly [Cross]"
+      # Customer Intelligence moved → Marketing & Customers › 👥 Customer (2026-06-12 consolidation)
       - "Channel Profitability Monthly [Cross]"
       - "Product Performance [Cross]"
       - "Shopee Channel Economics [Cross]"
