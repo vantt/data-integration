@@ -609,8 +609,8 @@ LIMIT 200
 {
   "display": "scatter",
   "visualization_settings": {
-    "graph.dimensions": ["Doanh thu", "Gross Margin %"],
-    "graph.metrics": ["So don"],
+    "graph.dimensions": ["Doanh thu"],
+    "graph.metrics": ["Gross Margin %"],
     "scatter.bubble": "So don",
     "graph.x_axis.title_text": "Doanh thu (VND)",
     "graph.y_axis.title_text": "Gross Margin %",
