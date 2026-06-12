@@ -27,7 +27,7 @@ def run_pipeline(
     
     Args:
         pipeline_name: Name of the dlt pipeline.
-        dataset_name: Target dataset name (default 'sapo_raw').
+        dataset_name: Target dataset name (default 'sapo_v2_raw').
         source_factory: The dlt source function (e.g., sapo_orders_source).
         source_args: Arguments to pass to the source function.
         loader_file_format: Format for output files (default 'parquet').

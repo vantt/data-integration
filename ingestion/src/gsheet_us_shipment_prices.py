@@ -1,7 +1,7 @@
 """Ingestion script for US Shipment Prices from Google Sheets.
 
 Reads the US Shipment Price List tab (gid=304875363) and writes to:
-  sapo_raw/us_shipment_prices_raw/
+  gsheet_raw/us_shipment_prices_raw/
 
 The price list defines actual deal prices per SKU for US CrossBorder orders.
 Sapo records US shipment prices as 0 (special deal); this sheet is the source of truth.

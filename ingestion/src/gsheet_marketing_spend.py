@@ -181,7 +181,7 @@ def fetch_and_save_marketing_spend():
         df['source_id'] = df['source_id'].where(df['source_id'].notna())
         df['ingest_method'] = 'google_sheet'
         
-        # Target Path: sapo_raw/marketing_spend_raw
+        # Target Path: gsheet_raw/marketing_spend_raw
         grouped = df.groupby(['year', 'month'])
         
         for (year, month), group in grouped:

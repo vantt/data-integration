@@ -1,7 +1,7 @@
 """Ingestion script for Overhead Account Classification from Google Sheets.
 
 Reads the overhead account classification tab (gid=0) and writes to:
-  sapo_raw/overhead_account_classification_raw/
+  gsheet_raw/overhead_account_classification_raw/
 
 The classification sheet is the source of truth for how each MISA overhead
 sub-account (6421/6422 family) is treated in the P&L:

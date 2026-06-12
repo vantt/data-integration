@@ -5,8 +5,8 @@ Reads 2 tabs from the Team Config spreadsheet:
 - team_members: Staff membership with SCD2 (effective_from/to)
 
 Writes to:
-- sapo_raw/teams_raw/
-- sapo_raw/team_members_raw/
+- gsheet_raw/teams_raw/
+- gsheet_raw/team_members_raw/
 
 Environment:
 - DBT_DATA_LAKE_PATH: Path to data lake (required; can be set via .env.local for local dev)

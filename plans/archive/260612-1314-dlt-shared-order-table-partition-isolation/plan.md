@@ -1,6 +1,6 @@
 # Plan: Sapo V2 Rename
 
-**Status:** PENDING  
+**Status:** DONE — all C1–C4 completed 2026-06-12. Gate: fact_orders 15,462 unchanged.  
 **Priority:** High  
 **Trigger:** Sapo V3 ingestion incoming — rename everything upstream of std_* to `sapo_v2_*` convention to make room. (Partition isolation dropped — risk accepted, manual-only trigger.)
 

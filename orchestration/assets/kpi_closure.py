@@ -35,7 +35,7 @@ _KPI_ENABLED = os.environ.get("KPI_CLOSURE_ENABLED", "").strip() == "1"
 
 # DB paths — must match reconciliation.py / bootstrap_serving_views.py
 _DATA_LAKE = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
-_SAPO_ORDER_PATH = os.path.join(_DATA_LAKE, "sapo_raw", "order")
+_SAPO_ORDER_PATH = os.path.join(_DATA_LAKE, "sapo_v2_raw", "order")
 _SERVING_DB_PATH = os.path.join(_DATA_LAKE, "serving", "olap.duckdb")
 
 # Statuses to exclude from revenue calculation
@@ -67,7 +67,7 @@ def _yesterday_window_ict() -> tuple[datetime, datetime, int]:
 
 
 def _fetch_sapo_revenue(window_start: datetime, window_end: datetime) -> Optional[float]:
-    """Fetch sum of order revenue from sapo_raw/order parquet files for orders created in [window_start, window_end).
+    """Fetch sum of order revenue from sapo_v2_raw/order parquet files for orders created in [window_start, window_end).
 
     Reads raw parquet (not live Sapo API) so the comparison isolates transformation errors.
     The Sapo orders API ignores created_on filtering and returns all historical orders.
