@@ -3910,3 +3910,20 @@ Two patterns that trigger this:
 3. Alert/threshold tables go empty in healthy states and read as "broken" — prefer "top-N movers" (always populated) over a hard threshold filter, or add a graceful empty-state.
 
 **Reference:** `docs/analytics-handbook/blueprints/product_profitability_cost.md` (COGS Variance Alert Table card) ; `mart_sku_economics_monthly.cogs_variance_pct`
+
+### L123 — Metabase date/field filter (field_id) breaks inside aliased/joined native SQL → 500
+
+**Group:** SERVE
+
+**Symptom:** Multiple cards on a dashboard return HTTP 500 on load when a `date/all-options` filter (default `past30days`) is applied. Two stages: (a) without field_id → "Text 'past30days' could not be parsed"; (b) after adding field_id → "Binder Error: Referenced table main.fact_orders not found! Candidate tables: o".
+
+**Root cause:** A `{{date_range}}` field filter (date/all-options with relative values) requires a `field_id` binding to resolve relative dates — without it, the raw value `past30days` is substituted as a literal and fails to parse. WITH a field_id (fact_orders.ordered_at = 848), Metabase generates a fully-qualified `"main"."fact_orders"."ordered_at"` reference — but the card SQL aliases the table (`FROM fact_orders o ... [[AND {{date_range}}]]`), so the generated qualified name doesn't match alias `o`. Field filters do NOT work inside native SQL that aliases or joins the underlying table.
+
+**Fix:** For cards with aliased/joined FROM clauses, do NOT use a date field filter. Either (a) hardcode the intended relative window in SQL (`AND o.ordered_at >= current_date - INTERVAL '30 days'`) and drop the dashboard date filter — best for fixed-cadence boards (rolling-30d), or (b) if interactivity is required, the card's FROM must reference the bare table (no alias) so the field-filter's qualified column resolves.
+
+**Rules:**
+1. `date/all-options` filters need a `field_id` in the blueprint (see [[feedback_metabase_field_filter_required]]) — but field_id alone is insufficient when the SQL aliases the table.
+2. Field filters (`{{x}}` dimension) only resolve cleanly in simple single-table native SQL without alias. With CTEs/joins/aliases, prefer a hardcoded window or a non-field (raw) param.
+3. A board named "rolling-30d / [cadence]" should hardcode its window — an interactive date picker adds fragility for little value.
+
+**Reference:** `docs/analytics-handbook/blueprints/product_performance_velocity.md` ; fact_orders.ordered_at field_id=848
