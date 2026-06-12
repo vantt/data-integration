@@ -369,3 +369,304 @@ sapo_v2_raw/
 - **Q1** (A3 rename src/sapo modules): Yes — rename for consistency.
 - **Q2** (data lake folder): **Option B** — rename `sapo_raw/` → `sapo_v2_raw/`, split gsheet data to `gsheet_raw/`. Single rename op; update `dataset_name` in runner scripts.
 - **Q3** (`_delta_log/` during B migration): Yes — move alongside each partition.
+
+---
+
+## Chunked Execution
+
+> Replaces the inline migration steps above. This is the actual execution roadmap.
+
+### Design principles
+- Each chunk is **atomic** — a partial chunk leaves the system in a broken state
+- Each chunk ends with a **real Dagster run** before proceeding to the next
+- Data-moving chunks use **copy-verify-delete**, never direct move
+- Irreplaceable data (`order_text`, `order_history_log`) gets an explicit count gate
+
+### Pre-flight: discovered bug
+`orchestration/assets/dbt.py:37` checks `source_name == "sapo_raw"` but `sources.yml` already has `name: sapo_v2_raw`. The Dagster→dbt lineage (dependency edges from ingestion assets to dbt models) is **currently broken**. Fixed in C1 below.
+
+### Cursor strategy (C2)
+dlt state files are named `{pipeline_name}__{timestamp}__{hash}.jsonl`. The hash encodes pipeline identity — renaming the prefix **will not work** (dlt won't recognize the file). Strategy:
+- Delete old state files after runner renames
+- First run uses `--reset-cursor` (re-fetches from Sapo beginning)
+- **Safe** because `src_sapo_orders_v2.sql` has 2-level dedup (tech dedup by `entity_id` + biz dedup by `order_id/modified_on`) — confirmed at lines 57–194. Other src models follow the same pattern.
+
+---
+
+### C1 — Dagster convention fix + lineage bug fix
+**Scope:** A0 (partial)  
+**Data risk:** Zero  
+**Atomicity reason:** Dagster loads all assets as a unit — any broken attribute reference (e.g., `sapo_assets.ingest_sapov2_orders_batch_asset` no longer exists) crashes Dagster startup.
+
+**Files changed (all internal edits, no renames):**
+
+| File | Change |
+|---|---|
+| `orchestration/assets/sapo_assets.py` | 7 function names + 7 asset_key_str strings: `ingest_sapov2_*` → `ingest_sapo_v2_*` |
+| `orchestration/definitions.py` | 3 job vars + 3 schedule vars: `pipeline_sapov2_*` → `pipeline_sapo_v2_*`; all `.assets(sapo_assets.ingest_sapov2_*)` refs updated |
+| `orchestration/assets/dbt.py` | **Bug fix**: `source_name == "sapo_raw"` → `"sapo_v2_raw"`; AssetKey values: `ingest_sapov2_*` → `ingest_sapo_v2_*` |
+| `orchestration/asset_checks/__init__.py` | 6 string keys |
+| `orchestration/asset_checks/cursor_checks.py` | 5 string keys |
+| `orchestration/asset_checks/freshness_checks.py` | docstring example |
+| `orchestration/asset_checks/__tests__/test_check_factories_smoke.py` | test data strings + attribute refs |
+| `orchestration/ops/morning_digest.py` | 7 asset_key strings |
+| `orchestration/ops/__tests__/test_morning_digest_smoke.py` | test data strings |
+| `orchestration/config/ingestion_sla.yaml` | 6 YAML keys |
+| `orchestration/sensors/health_db_watchdog_sensor.py` | comment string |
+
+**What does NOT change in C1:** runner script files, dlt pipeline_name strings, dbt model names, physical parquet files, dlt state files.
+
+**Execution:**
+1. Apply all edits above in one commit
+2. `docker compose restart data_platform`
+3. Check Dagster UI: assets appear under new `sapo_v2_*` names; jobs exist
+
+**Verification (gate before C2):**
+- Dagster UI: all 7 `ingest_sapo_v2_*` assets visible in asset catalog
+- Dagster UI: asset lineage shows dbt source nodes linked to ingestion assets (proves dbt.py bug fixed)
+- Jobs: `pipeline_sapo_v2_realtime_job`, `_incremental_job`, `_hourly_job` present
+- `pytest orchestration/` — all tests green
+
+**Rollback:** `git revert` + `docker compose restart data_platform`
+
+---
+
+### C2 — Ingestion runner renames
+**Scope:** A1, A2, A3  
+**Data risk:** Low (cursor reset → one re-fetch, dedup handles duplicates)  
+**Atomicity reason:** Renaming `run_orders_batch.py` without updating the `import run_orders_batch` in `sapo_assets.py` = `ImportError` at Dagster startup. The file rename and the import update are the same atomic step.
+
+**Files changed:**
+
+| Old file | New file | Change inside |
+|---|---|---|
+| `run_orders_batch.py` | `run_sapo_v2_orders_batch.py` | `pipeline_name="sapo_orders_batch"` → `"sapo_v2_orders_batch"` |
+| `run_history_log.py` | `run_sapo_v2_history_log.py` | `pipeline_name="sapo_history_log_pipeline"` → `"sapo_v2_history_log"` |
+| `run_webhook_consumer.py` | `run_sapo_v2_webhook_consumer.py` | `pipeline_name="sapo_webhook_consumer"` → `"sapo_v2_webhook_consumer"` |
+| `run_customers_batch.py` | `run_sapo_v2_customers_batch.py` | `pipeline_name="sapo_customers_batch"` → `"sapo_v2_customers_batch"` |
+| `run_accounts_batch.py` | `run_sapo_v2_accounts_batch.py` | `pipeline_name="sapo_accounts_batch"` → `"sapo_v2_accounts_batch"` |
+| `run_products_batch.py` | `run_sapo_v2_products_batch.py` | `pipeline_name="sapo_products_batch"` → `"sapo_v2_products_batch"` |
+| `run_inventory_transactions_v2_batch.py` | `run_sapo_v2_inventory_transactions_batch.py` | `pipeline_name="sapo_inventory_transactions_v2_batch"` → `"sapo_v2_inventory_transactions_batch"` |
+| `src/sapo/inventory_transactions_v2.py` | `src/sapo/sapo_v2_inventory_transactions.py` | function `sapo_inventory_transactions_v2_source` → `sapo_v2_inventory_transactions_source` |
+| `src/sapo/_inventory_v2_window.py` | `src/sapo/_sapo_v2_inventory_window.py` | — |
+| `orchestration/assets/sapo_assets.py` | (edit) | 7 import lines updated to new module names; .run() call sites updated |
+
+**Cursor state cleanup (run before Dagster restart):**
+```powershell
+# Delete old state files — new pipelines will start fresh and --reset-cursor handles re-fetch
+$stateDir = "app_data\data_lake\sapo_raw\_dlt_pipeline_state"
+$oldPrefixes = @("sapo_orders_batch__", "sapo_history_log_pipeline__", "sapo_webhook_consumer__",
+                  "sapo_customers_batch__", "sapo_accounts_batch__", "sapo_products_batch__",
+                  "sapo_inventory_transactions_v2_batch__")
+foreach ($prefix in $oldPrefixes) {
+    Get-ChildItem $stateDir -Filter "${prefix}*.jsonl" | Remove-Item
+    Write-Host "Deleted $prefix state files"
+}
+```
+
+**Execution:**
+1. Rename files + edit imports (one commit)
+2. Run cursor cleanup PowerShell above
+3. `docker compose restart data_platform`
+4. Manually trigger `ingest_sapo_v2_orders_batch_asset` with tag `full_refresh=true` (triggers `--reset-cursor`)
+
+**Verification (gate before C3):**
+- Dagster run completes without ImportError
+- Logs confirm pipeline ran: `[Pipeline Runner] Initialized pipeline: sapo_v2_orders_batch`
+- Row count: `SELECT COUNT(DISTINCT order_id) FROM fact_orders` — must be ≥ 15,459 (pre-rename baseline)
+- No duplicates: `SELECT order_id, COUNT(*) FROM fact_orders GROUP BY 1 HAVING COUNT(*) > 1` — must return 0 rows
+
+**Rollback:**
+- `git revert` C2 commit (restores old file names)
+- Restore deleted state files from `backup/` (keep a copy before deleting)
+- `docker compose restart data_platform`
+
+**Data preservation note:** Parquet files in `sapo_raw/` are **never touched** in this chunk. Only state JSONL files are deleted. Worst case from cursor reset: extra parquet files appended → dedup in src model handles it.
+
+---
+
+### C3 — dbt full rename + gsheet source split
+**Scope:** A4, A5, A6, A7, A8, A9, dbt.py gsheet split  
+**Data risk:** Zero (all changes are view definitions over unchanged parquet files)  
+**Atomicity reason:** Any broken `ref()` → `dbt compile` fails. All src/stg/std must be consistent in one commit. sources.yml source name and all `source(...)` call sites must match.
+
+**Key insight:** `sources.yml` source name `sapo_v2_raw` stays `sapo_v2_raw` — it's already correct. Only the gsheet tables are split out and physical paths update in C4 (not C3).
+
+**Files changed:**
+
+| Layer | Files | Change |
+|---|---|---|
+| `sources.yml` | 1 | Add `gsheet_raw` source (pointing to current `sapo_raw/` path for now — path updates in C4); move 6 gsheet table entries to it |
+| `stg_targets.sql`, `stg_marketing_spend.sql`, `stg_teams.sql`, `stg_team_members.sql`, `stg_us_shipment_prices.sql`, `stg_overhead_account_classification.sql` | 6 | `source('sapo_v2_raw', ...)` → `source('gsheet_raw', ...)` |
+| src models (A5) | 11 renamed | `src_sapo_*_v2.sql` → `src_sapo_v2_*.sql` |
+| stg models (A6) | 12 renamed + ref() updated | `stg_sapo_*_v2.sql` → `stg_sapo_v2_*.sql` |
+| std models (A7) | 12 edited (no rename) | ref() args updated |
+| non-std models (A8) | 2 edited (no rename) | ref() args updated |
+| `staging/schema.yml` (A9) | 1 | 23 model name entries updated |
+| `orchestration/assets/dbt.py` | 1 | Add `gsheet_raw` source block; remove `targets_raw`/`marketing_spend_raw` from `sapo_v2_raw` block |
+
+**Execution:**
+1. Apply all changes in one commit
+2. `docker compose restart data_platform` (Dagster reloads dbt manifest)
+3. Inside `data_platform` container: `dbt compile`
+4. `dbt run --select src_sapo_v2_orders+ --full-refresh`
+
+**Verification (gate before C4):**
+- `dbt compile` exits 0 with 0 errors
+- `dbt run --select src_sapo_v2_orders+` passes
+- `SELECT COUNT(DISTINCT order_id) FROM fact_orders` — must equal C2 baseline
+- Dagster UI: dbt lineage shows `src_sapo_v2_orders` → `stg_sapo_v2_orders` → `std_orders` → downstream
+
+**Rollback:** `git revert` C3 commit + `docker compose restart data_platform`
+
+---
+
+### C4 — Data lake folder rename
+**Scope:** A10  
+**Data risk:** Medium — physical folder rename. Mitigated by copy-before-delete.  
+**Atomicity reason:** `dataset_name` in runner scripts, `external_location` in sources.yml, and the physical folder must all switch at once. A pipeline writing to `sapo_v2_raw/` while dbt still reads from `sapo_raw/` = empty source tables.
+
+**Pre-conditions before starting C4:**
+- C1–C3 verified and stable for ≥1 full Dagster cycle (24h)
+- Baseline row counts recorded: `SELECT COUNT(*) FROM fact_orders`, `fact_customers`, `fact_products` → save to file
+- Verify gsheet ingestion runners: check if any `run_*.py` writes to `dataset_name="sapo_raw"` for gsheet data — update those to `"gsheet_raw"` in this chunk too
+- Current state file count: note exact file count in `sapo_raw/_dlt_pipeline_state/`
+
+**Execution (must be sequential, service pause required):**
+
+```
+Step 1: Pause services
+  - Set all Dagster schedules to OFF (do not stop container)
+  - Confirm no active runs: Dagster UI → Runs → filter "In Progress" = 0
+
+Step 2: Copy sapo_raw → sapo_v2_raw  [~5-20 min depending on size]
+  robocopy app_data\data_lake\sapo_raw app_data\data_lake\sapo_v2_raw /E /COPYALL /LOG:robocopy_c4.log
+  
+Step 3: Count verification
+  PowerShell: (Get-ChildItem sapo_raw -Recurse -File).Count
+  PowerShell: (Get-ChildItem sapo_v2_raw -Recurse -File).Count
+  → Must be equal before proceeding
+
+Step 4: Create gsheet_raw + move gsheet dirs from sapo_v2_raw
+  mkdir app_data\data_lake\gsheet_raw
+  Move-Item sapo_v2_raw\targets_raw             gsheet_raw\
+  Move-Item sapo_v2_raw\marketing_spend_raw     gsheet_raw\
+  Move-Item sapo_v2_raw\teams_raw               gsheet_raw\
+  Move-Item sapo_v2_raw\team_members_raw        gsheet_raw\
+  Move-Item sapo_v2_raw\us_shipment_prices_raw  gsheet_raw\
+  Move-Item sapo_v2_raw\overhead_account_classification_raw  gsheet_raw\
+
+Step 5: Code update (one commit)
+  - All 7 Sapo runner scripts: dataset_name="sapo_raw" → "sapo_v2_raw"
+  - Gsheet runner scripts (if any): dataset_name → "gsheet_raw"
+  - sources.yml: update external_location base path sapo_raw/ → sapo_v2_raw/
+                 update gsheet_raw source external_location to gsheet_raw/
+  
+Step 6: Restart + compile
+  docker compose restart data_platform
+  dbt compile  [inside container]
+  dbt run --full-refresh  [all models]
+  bootstrap_serving_views.py  [stop Metabase first]
+
+Step 7: Verification (gate before delete)
+  SELECT COUNT(DISTINCT order_id) FROM fact_orders  → must equal C3 baseline
+  SELECT COUNT(DISTINCT customer_id) FROM dim_customers  → must equal baseline
+  SELECT COUNT(*) FROM stg_targets  → must equal baseline (gsheet path correct)
+  Trigger one manual Dagster run → confirm writes to sapo_v2_raw/
+
+Step 8: Delete original sapo_raw (only after Step 7 passes)
+  Move-Item app_data\data_lake\sapo_raw  app_data\data_lake\backup\sapo_raw_pre_c4
+  [keep in backup/ for 48h before final delete]
+```
+
+**Rollback (if Step 7 fails):**
+- `sapo_v2_raw/` still exists — revert code (git revert)
+- Restore `dataset_name="sapo_raw"` in runners
+- Restart Dagster → pipelines point to original sapo_raw/ again
+- `sapo_raw/` was never deleted → no data loss
+
+---
+
+### C5 — Partition isolation (Initiative B)
+**Scope:** Initiative B  
+**Data risk:** High — `order_text` is **irreplaceable** (2021-2025 history log, never re-ingested)  
+**Atomicity reason:** Moving a partition dir without updating the dlt resource name = next run tries to write to old table name → dlt creates empty table → 0 rows in dbt source. Move code + data together per partition.
+
+**Pre-conditions before starting C5:**
+- C4 verified and stable for ≥1 full Dagster cycle
+- Record baseline counts per partition:
+  ```powershell
+  (Get-ChildItem sapo_v2_raw\order\ingest_method=batch_sync -Recurse -Filter "*.parquet").Count
+  (Get-ChildItem sapo_v2_raw\order\ingest_method=history_log -Recurse -Filter "*.parquet").Count
+  (Get-ChildItem sapo_v2_raw\order\ingest_method=text -Recurse -Filter "*.parquet").Count
+  (Get-ChildItem sapo_v2_raw\order\ingest_method=webhook -Recurse -Filter "*.parquet").Count
+  ```
+
+**Execution (one partition at a time, verify between each):**
+
+```
+Step 1: Stop order-related Dagster jobs (pause schedules)
+
+Step 2: order_text — copy-verify-delete  [CRITICAL: irreplaceable]
+  robocopy sapo_v2_raw\order\ingest_method=text sapo_v2_raw\order_text\ingest_method=text /E /COPYALL
+  Verify: file count matches pre-C5 baseline for text partition
+  Move _delta_log from order/ to order_text/ (copy subset if shared)
+  → Only delete source AFTER verify passes
+
+Step 3: order_history_log — copy-verify-delete
+  robocopy sapo_v2_raw\order\ingest_method=history_log sapo_v2_raw\order_history_log\ingest_method=history_log /E /COPYALL
+  Verify: file count matches baseline
+  Delete source
+
+Step 4: order_webhook — copy-verify-delete  [can be re-ingested if lost]
+  robocopy sapo_v2_raw\order\ingest_method=webhook sapo_v2_raw\order_webhook\ingest_method=webhook /E /COPYALL
+  Verify + delete
+
+Step 5: order_batch — copy-verify-delete  [can be re-ingested if lost]
+  robocopy sapo_v2_raw\order\ingest_method=batch_sync sapo_v2_raw\order_batch\ingest_method=batch_sync /E /COPYALL
+  Verify + delete
+
+Step 6: Code update (one commit — all 4 resource renames + dbt glob)
+  src/sapo/orders.py: resource "order" → "order_batch"
+  src/sapo/history_log.py: resource "order" → "order_history_log"
+  src/sapo/webhook_consumer.py: table_name 'order' → 'order_webhook'
+  src_sapo_v2_orders.sql: glob updated to cover order_batch/, order_history_log/, order_webhook/, order_text/
+  sources.yml: update source table entries
+
+Step 7: Delete old dlt state files for order pipelines
+  (resource name change = new table schema = old state invalid)
+  Delete: sapo_v2_orders_batch__*.jsonl, sapo_v2_history_log__*.jsonl, sapo_v2_webhook_consumer__*.jsonl
+
+Step 8: Restart + rebuild
+  docker compose restart data_platform
+  dbt compile
+  dbt run --select src_sapo_v2_orders+ --full-refresh
+  bootstrap_serving_views.py
+
+Step 9: Re-enable schedules + trigger full refresh run
+```
+
+**Verification (gate — C5 complete):**
+- `SELECT COUNT(DISTINCT order_id) FROM fact_orders` = C4 baseline
+- Each partition dir exists with correct file count
+- `sapo_v2_raw/order/` dir is empty (all partitions moved) — can be deleted
+- Dagster runs complete for orders, history_log, webhook pipelines
+- New parquet files appear in `order_batch/`, `order_history_log/`, `order_webhook/` respectively
+
+**Rollback:**
+- All 4 partition copies are still in `sapo_v2_raw/order/` (not deleted until verified)
+- Revert code commit
+- Restart Dagster → reads from old `order/` locations
+- Delete the new `order_batch/` etc. dirs
+
+---
+
+### Chunk summary
+
+| Chunk | Scope | Data moves | Downtime needed | Verify with |
+|-------|-------|-----------|-----------------|-------------|
+| C1 | A0 (Dagster strings + dbt.py bug fix) | None | 1× restart | Dagster UI + pytest |
+| C2 | A1+A2+A3 (runners + cursor) | None (state files deleted) | 1× restart | 1 manual Dagster run |
+| C3 | A4–A9 (dbt rename + gsheet split) | None | 1× restart | dbt compile + dbt run |
+| C4 | A10 (data lake folder rename) | robocopy copy + move | Schedule pause | Row count baseline match |
+| C5 | Initiative B (partition isolation) | Sequential robocopy | Schedule pause | Per-partition count + full run |
