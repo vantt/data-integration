@@ -3876,3 +3876,20 @@ Two patterns that trigger this:
 4. When blueprint SQL silently inherits this bug, fix the blueprint first and redeploy — never patch Metabase cards directly.
 
 **Reference:** cards 2156 (Next Purchase Signal Breakdown) and 2158 (High Cancel Rate Customers) in dashboard 48 (Customer Operational [Retail])
+
+### L121 — Guardrail added to shared utility must be applied to ALL callers, not just the one in focus
+
+**Group:** INGEST
+
+**Symptom:** `pipeline_batch_fullrefresh_job` would have failed mid-run — orders asset runs fine (fixed to `--reset-cursor`) but customers/accounts/products assets exit 1 with `BLOCKED: --full-refresh requires --force`.
+
+**Root cause:** When adding the `--full-refresh` guardrail to `pipeline_runner.py`, only the asset that motivated the change (`ingest_sapov2_orders_batch_asset`) was updated to use `--reset-cursor`. Three other batch assets in the same file still passed `["--full-refresh"]` when triggered by the `full_refresh=true` run tag — caught before the job actually ran.
+
+**Fix:** Replace all remaining `argv = ["--full-refresh"] if is_full_refresh else []` with `--reset-cursor` in `sapo_assets.py`. All 4 batch assets now consistently use `--reset-cursor` when triggered via the fullrefresh job tag.
+
+**Rules:**
+1. When adding a guardrail or changing a flag's semantics in a shared utility, grep all callers in the same session before closing the task.
+2. `--reset-cursor` is the safe default for all batch assets triggered by `full_refresh=true` — resets cursor and appends without deleting existing parquet.
+3. `--full-refresh --force` is reserved for deliberate destructive reload only — never pass it from Dagster run tags.
+
+**Reference:** `orchestration/assets/sapo_assets.py` lines 54, 105, 155, 206 ; `ingestion/src/utils/pipeline_runner.py` guardrail block
