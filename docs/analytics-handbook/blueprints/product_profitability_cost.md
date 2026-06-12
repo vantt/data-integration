@@ -964,63 +964,21 @@ COGS spike alert — SKU COGS tháng này vs trung bình 3 tháng > 10%
 
 #### ❓ Question: COGS Variance Alert Table
 
-SKU có COGS/unit lệch > 10% so với avg 3 tháng — sorted by absolute variance desc.
+Top SKU theo độ lệch COGS/đơn vị so với trung bình 3 tháng (cogs_variance_pct). Hiển thị top movers — không lọc cứng theo ngưỡng nên bảng luôn có dữ liệu; khi COGS ổn định (hiện tại đều <1%) vẫn thấy SKU biến động nhất.
 
 ```sql
-WITH filter_bounds AS (
-    SELECT MIN(posting_date)::DATE AS p_start, MAX(posting_date)::DATE AS p_end
-    FROM int_misa_sales_lines
-    WHERE NOT is_promo_line
-      AND quantity > 0
-      [[AND {{date_range}}]]
-      [[AND {{channel}}]]
-),
-current_cogs AS (
-    SELECT
-        product_code,
-        product_name,
-        SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_current,
-        COUNT(DISTINCT voucher_no)                   AS don_count
-    FROM int_misa_sales_lines, filter_bounds
-    WHERE NOT is_promo_line
-      AND quantity > 0
-      AND posting_date >= filter_bounds.p_start
-      AND posting_date <= filter_bounds.p_end
-      [[AND {{channel}}]]
-    GROUP BY product_code, product_name
-),
-avg_3m AS (
-    SELECT
-        product_code,
-        SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_3m_avg
-    FROM int_misa_sales_lines, filter_bounds
-    WHERE NOT is_promo_line
-      AND quantity > 0
-      AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
-      AND posting_date <  filter_bounds.p_start
-      [[AND {{channel}}]]
-    GROUP BY product_code
-)
+-- Pre-computed cogs_variance_pct from mart_sku_economics_monthly (latest month). DRY + robust:
+-- avoids the empty-prior-window bug of re-deriving variance, and never returns 0 rows.
 SELECT
-    c.product_name                                                              AS "SKU",
-    ROUND(c.cogs_per_unit_current, 0)                                          AS "COGS thang nay",
-    ROUND(a.cogs_per_unit_3m_avg, 0)                                           AS "COGS avg 3M",
-    ROUND(
-        (c.cogs_per_unit_current - a.cogs_per_unit_3m_avg)
-        * 100.0 / NULLIF(a.cogs_per_unit_3m_avg, 0),
-        1
-    )                                                                           AS "Variance %",
-    c.don_count                                                                 AS "So don"
-FROM current_cogs c
-JOIN avg_3m a USING (product_code)
-WHERE ABS(
-    (c.cogs_per_unit_current - a.cogs_per_unit_3m_avg)
-    / NULLIF(a.cogs_per_unit_3m_avg, 0)
-) > 0.10
-ORDER BY ABS(
-    (c.cogs_per_unit_current - a.cogs_per_unit_3m_avg)
-    / NULLIF(COALESCE(a.cogs_per_unit_3m_avg, 1), 0)
-) DESC
+    product_name                   AS "SKU",
+    ROUND(cogs_per_unit, 0)        AS "COGS thang nay",
+    ROUND(cogs_per_unit_3m_avg, 0) AS "COGS avg 3M",
+    ROUND(cogs_variance_pct, 1)    AS "Variance %",
+    order_count                    AS "So don"
+FROM mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+  AND cogs_variance_pct IS NOT NULL
+ORDER BY ABS(cogs_variance_pct) DESC
 LIMIT 30
 ```
 
