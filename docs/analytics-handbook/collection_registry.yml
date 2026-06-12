@@ -72,11 +72,11 @@ collections:
     dashboards:
       - "Finance P&L [All]"
       - "Order Profitability [All]"
-      - "Product Profitability [All]"
+      # Product Profitability [All] + Product Cost-to-Margin Heatmap → retired 2026-06-12,
+      # merged into Merchandising & Product › Product Profitability & Cost (#108).
       # Phase 05 — all deployed 2026-05-27 (plans/260527-1327-metabase-collection-restructure):
       - "Cost Ledger Analyzer [All]"              # dashboard ID 74
       - "Return Impact Analysis [All]"            # dashboard ID 75
-      - "Product Cost-to-Margin Heatmap [Cross]"  # dashboard ID 76
       - "Channel P&L Deep Dive [Cross]"           # dashboard ID 77
       - "Accounting Reconciliation Cockpit [Internal]"  # dashboard ID 78
       - "Finance Services Revenue [All]"           # NEW 2026-05-28 (DVCCNS US HR + DV*/CPBH services, 2.4B VND/năm)
@@ -150,7 +150,7 @@ collections:
         audience: [Logistics Manager, Inventory Manager, Ops Manager]
         dashboards:
           - "Logistics Operations Center [All]"
-          - "Product Inventory Health [All]"  # unblocked 2026-05-28 (fact_inventory_snapshot + mart_inventory_health)
+          # Product Inventory Health → retired 2026-06-12, → Merchandising & Product › Product Inventory & Stock Health (#110)
 
       - name: Data Platform  # NEW 2026-05-27 (moved out of Daily Monitoring — audience mismatch)
         description: "Pipeline health, ingestion monitoring."
@@ -168,10 +168,24 @@ collections:
     color: "#6366F1"  # Indigo — research/depth
     dashboards:
       # Customer Intelligence moved → Marketing & Customers › 👥 Customer (2026-06-12 consolidation)
+      # Product Performance → retired 2026-06-12, → Merchandising & Product › Product Performance & Velocity (#109)
       - "Channel Profitability Monthly [Cross]"
-      - "Product Performance [Cross]"
       - "Shopee Channel Economics [Cross]"
       - "Order Revenue Explorer"  # audit/drill-down tool — no scope suffix (cross-all)
+
+  # ---------------------------------------------------------------------------
+  # MERCHANDISING & PRODUCT — "Sản phẩm nào khỏe/cần xử lý?" (NEW 2026-06-12)
+  # Merchandising / Product / Inventory — product health consolidation
+  # ---------------------------------------------------------------------------
+  - name: Merchandising & Product
+    description: "Product/SKU health, performance, profitability, inventory. Consolidates the scattered Product Performance (Analytics) + Product Profitability/Cost (Finance) + Product Inventory (Logistics) into one job-based home."
+    audience: [Merchandising Manager, Product Manager, Inventory Manager]
+    color: "#0EA5E9"  # Sky — product
+    dashboards:
+      - "Product Health Overview [Cross]"            # ID 107 — STAR/WORKHORSE/QUESTION/DOG + action queue
+      - "Product Performance & Velocity [Cross]"     # ID 109 — velocity/revenue/trend
+      - "Product Profitability & Cost [Cross]"       # ID 108 — realized margin + COGS variance (merged old #36+#76)
+      - "Product Inventory & Stock Health [All]"     # ID 110 — OOS/dead-stock/days-of-supply
 
 
 # =============================================================================

@@ -1679,7 +1679,7 @@
 | **Finance P&L Dashboard** | CFO, Finance | Monthly P&L: revenue vs COGS vs margin | [Playbook](../playbooks/finance_pl.md) |
 | **Channel Profitability Monthly** | CEO, Finance, Sales Director | Cross-channel margin comparison | [Playbook](../playbooks/channel_profitability_monthly.md) |
 | **Shopee Channel Economics** | Sales Ops, CS Lead | Shopee fee structure & settlement analysis | [Playbook](../playbooks/shopee_channel_economics.md) |
-| **Product Performance** | Merchandising | Product margin using MISA COGS | [Playbook](../playbooks/product_performance.md) |
+| **Product Performance** | Merchandising | Product margin using MISA COGS | [Playbook](../blueprints/product_performance_velocity.md) |
 | **Order Profitability** | CEO, Finance, Sales Ops | Per-order P&L: revenue - COGS - platform fees | [Playbook](../playbooks/order_profitability.md) |
 | **Cost Ledger Analyzer** | CFO, Accounting | Cost breakdown by type (COGS / fees / vouchers) | *Phase 05 — see [phase-05](../../../plans/260527-1327-metabase-collection-restructure/phase-05-new-finance-dashboards.md)* |
 | **Return Impact Analysis** | CEO, CFO, Sales Ops | Refund liability + return rate trends | *Phase 05* |

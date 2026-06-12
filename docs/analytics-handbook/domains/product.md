@@ -169,7 +169,7 @@
 
 | Dashboard | Audience | Purpose | Link |
 |:---|:---|:---|:---|
-| **Product Performance** | Merchandising | Sales velocity, category analysis, margin (MISA COGS) | [Playbook](../playbooks/product_performance.md) |
+| **Product Performance** | Merchandising | Sales velocity, category analysis, margin (MISA COGS) | [Playbook](../blueprints/product_performance_velocity.md) |
 | **Channel Profitability Monthly** | CEO, Finance | Product margin drill-down by channel | [Playbook](../playbooks/channel_profitability_monthly.md) |
 
 ## Context: SKU Economics Snapshot
@@ -181,7 +181,7 @@
 
 Single source of truth for SKU-level economics. Replaces ad-hoc joins of
 `int_misa_sales_lines` + `fact_sales` + `int_return_sku_lines` scattered across
-`product_performance`, `product_profitability`, and `finance_product_cost_margin` dashboards.
+`product_performance_velocity`, `product_profitability_cost`, `product_inventory_stock_health`, and `product_health_overview` dashboards (collection: Merchandising & Product).
 
 ### Columns
 
