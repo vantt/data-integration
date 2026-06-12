@@ -1,8 +1,8 @@
-# Plan: Sapo V2 Rename + Partition Isolation
+# Plan: Sapo V2 Rename
 
 **Status:** PENDING  
 **Priority:** High  
-**Trigger:** (1) Incident 2026-06-12 — `drop_pipeline_state` wiped shared order/ dir. (2) Forward-path: Sapo V3 ingestion incoming — rename everything upstream of std_* to `sapo_v2_*` convention to make room.
+**Trigger:** Sapo V3 ingestion incoming — rename everything upstream of std_* to `sapo_v2_*` convention to make room. (Partition isolation dropped — risk accepted, manual-only trigger.)
 
 ---
 
@@ -18,14 +18,9 @@
 
 ---
 
-## Two Initiatives (same plan, sequential)
+## Initiative A — sapo_v2_* Rename (only initiative)
 
-| # | Initiative | Scope | Risk |
-|---|---|---|---|
-| A | **sapo_v2_* rename** | Fix Dagster `sapov2_*` → `sapo_v2_*`, rename ingestion scripts, dlt pipeline names, src/stg dbt models, sources.yml, schema.yml, sapo_assets imports, definitions.py | Medium — dbt full-refresh needed |
-| B | **Partition isolation** | dlt resource names → separate table names per pipeline, data lake dir rename, dbt glob update | Medium — data lake migration |
-
-**Order:** A first (rename), then B (isolation). A is pure rename — no data moves. B moves data.
+**Partition isolation (Initiative B) — dropped.** Risk analysis confirmed: `--full-refresh --force` is manual-only, never triggered by automation. Dagster nightly uses `--reset-cursor` (safe). Existing warning guard sufficient. dlt hard constraint also makes method-first layout impossible.
 
 ---
 
@@ -303,54 +298,6 @@ Update all 13 `- name: stg_sapo_*_v2` and `src_sapo_*_v2` entries to new names.
 
 ---
 
-## Initiative B — Partition Isolation
-
-*(Execute after Initiative A is fully merged and verified)*
-
-### Problem recap
-
-4 pipelines write to shared `sapo_v2_raw/order/` directory. dlt DROP TABLE on any pipeline wipes all 4 partitions.
-
-### Solution: Separate table names per pipeline
-
-```
-sapo_v2_raw/
-├── order_batch/          ← sapo_v2_orders_batch (was: batch_sync partition)
-├── order_history_log/    ← sapo_v2_history_log
-├── order_webhook/        ← sapo_v2_webhook_consumer
-└── order_text/           ← historical, read-only, never re-ingested
-```
-
-### B — Files to change
-
-| File | Change |
-|---|---|
-| `ingestion/src/sapo/orders.py` | dlt resource name: `"order"` → `"order_batch"` |
-| `ingestion/src/sapo/history_log.py` | resource name: `"order"` → `"order_history_log"` |
-| `ingestion/src/sapo/webhook_consumer.py` | `table_name = 'order'` → `'order_webhook'` |
-| `transformation/models/staging/src_sapo_v2_orders.sql` | glob: `order/ingest_method=*` → `order_*/ingest_method=*` (or separate globs) |
-| `transformation/models/sources.yml` | source table `order` → `order_batch`; add `order_history_log`, `order_webhook`, `order_text` |
-
-### B — Migration steps
-
-1. Stop all Dagster order-ingestion jobs
-2. Rename data lake directories:
-   ```
-   sapo_v2_raw/order/ingest_method=batch_sync   → sapo_v2_raw/order_batch/ingest_method=batch_sync
-   sapo_v2_raw/order/ingest_method=history_log  → sapo_v2_raw/order_history_log/ingest_method=history_log
-   sapo_v2_raw/order/ingest_method=webhook      → sapo_v2_raw/order_webhook/ingest_method=webhook
-   sapo_v2_raw/order/ingest_method=text         → sapo_v2_raw/order_text/ingest_method=text
-   ```
-   Move `_delta_log/` alongside each partition (Q3: yes).
-3. Update dlt resource names in source code
-4. Delete dlt state files for affected pipelines (schema mismatch after rename)
-5. Update dbt glob in `src_sapo_v2_orders.sql` + sources.yml
-6. `dbt run --select src_sapo_v2_orders+ --full-refresh`
-7. `bootstrap_serving_views.py` (stop Metabase first)
-8. Verify row counts match pre-B baseline
-
----
-
 ## Risk Assessment
 
 | Rủi ro | Khả năng | Impact | Mitigation |
@@ -359,7 +306,6 @@ sapo_v2_raw/
 | dlt state not reset → wrong cursor on new pipeline_name | High | High | Delete all old state files before first run after A1 |
 | dbt broken ref() after partial rename | High | High | `dbt compile` before `dbt run` — fails fast |
 | Manifest cache: Dagster loads old model names | Medium | Medium | Restart data_platform container after Initiative A |
-| `order_text` overwritten during B migration | Low | Critical | Move (not copy) — verify count before/after |
 | gsheet parquet files misrouted after folder split | Medium | Medium | Pause gsheet ingestion during A10 |
 
 ---
@@ -368,8 +314,6 @@ sapo_v2_raw/
 
 - **Q1** (A3 rename src/sapo modules): Yes — rename for consistency.
 - **Q2** (data lake folder): **Option B** — rename `sapo_raw/` → `sapo_v2_raw/`, split gsheet data to `gsheet_raw/`. Single rename op; update `dataset_name` in runner scripts.
-- **Q3** (`_delta_log/` during B migration): Yes — move alongside each partition.
-
 ---
 
 ## Chunked Execution
@@ -587,80 +531,6 @@ Step 8: Delete original sapo_raw (only after Step 7 passes)
 
 ---
 
-### C5 — Partition isolation (Initiative B)
-**Scope:** Initiative B  
-**Data risk:** High — `order_text` is **irreplaceable** (2021-2025 history log, never re-ingested)  
-**Atomicity reason:** Moving a partition dir without updating the dlt resource name = next run tries to write to old table name → dlt creates empty table → 0 rows in dbt source. Move code + data together per partition.
-
-**Pre-conditions before starting C5:**
-- C4 verified and stable for ≥1 full Dagster cycle
-- Record baseline counts per partition:
-  ```powershell
-  (Get-ChildItem sapo_v2_raw\order\ingest_method=batch_sync -Recurse -Filter "*.parquet").Count
-  (Get-ChildItem sapo_v2_raw\order\ingest_method=history_log -Recurse -Filter "*.parquet").Count
-  (Get-ChildItem sapo_v2_raw\order\ingest_method=text -Recurse -Filter "*.parquet").Count
-  (Get-ChildItem sapo_v2_raw\order\ingest_method=webhook -Recurse -Filter "*.parquet").Count
-  ```
-
-**Execution (one partition at a time, verify between each):**
-
-```
-Step 1: Stop order-related Dagster jobs (pause schedules)
-
-Step 2: order_text — copy-verify-delete  [CRITICAL: irreplaceable]
-  robocopy sapo_v2_raw\order\ingest_method=text sapo_v2_raw\order_text\ingest_method=text /E /COPYALL
-  Verify: file count matches pre-C5 baseline for text partition
-  Move _delta_log from order/ to order_text/ (copy subset if shared)
-  → Only delete source AFTER verify passes
-
-Step 3: order_history_log — copy-verify-delete
-  robocopy sapo_v2_raw\order\ingest_method=history_log sapo_v2_raw\order_history_log\ingest_method=history_log /E /COPYALL
-  Verify: file count matches baseline
-  Delete source
-
-Step 4: order_webhook — copy-verify-delete  [can be re-ingested if lost]
-  robocopy sapo_v2_raw\order\ingest_method=webhook sapo_v2_raw\order_webhook\ingest_method=webhook /E /COPYALL
-  Verify + delete
-
-Step 5: order_batch — copy-verify-delete  [can be re-ingested if lost]
-  robocopy sapo_v2_raw\order\ingest_method=batch_sync sapo_v2_raw\order_batch\ingest_method=batch_sync /E /COPYALL
-  Verify + delete
-
-Step 6: Code update (one commit — all 4 resource renames + dbt glob)
-  src/sapo/orders.py: resource "order" → "order_batch"
-  src/sapo/history_log.py: resource "order" → "order_history_log"
-  src/sapo/webhook_consumer.py: table_name 'order' → 'order_webhook'
-  src_sapo_v2_orders.sql: glob updated to cover order_batch/, order_history_log/, order_webhook/, order_text/
-  sources.yml: update source table entries
-
-Step 7: Delete old dlt state files for order pipelines
-  (resource name change = new table schema = old state invalid)
-  Delete: sapo_v2_orders_batch__*.jsonl, sapo_v2_history_log__*.jsonl, sapo_v2_webhook_consumer__*.jsonl
-
-Step 8: Restart + rebuild
-  docker compose restart data_platform
-  dbt compile
-  dbt run --select src_sapo_v2_orders+ --full-refresh
-  bootstrap_serving_views.py
-
-Step 9: Re-enable schedules + trigger full refresh run
-```
-
-**Verification (gate — C5 complete):**
-- `SELECT COUNT(DISTINCT order_id) FROM fact_orders` = C4 baseline
-- Each partition dir exists with correct file count
-- `sapo_v2_raw/order/` dir is empty (all partitions moved) — can be deleted
-- Dagster runs complete for orders, history_log, webhook pipelines
-- New parquet files appear in `order_batch/`, `order_history_log/`, `order_webhook/` respectively
-
-**Rollback:**
-- All 4 partition copies are still in `sapo_v2_raw/order/` (not deleted until verified)
-- Revert code commit
-- Restart Dagster → reads from old `order/` locations
-- Delete the new `order_batch/` etc. dirs
-
----
-
 ### Chunk summary
 
 | Chunk | Scope | Data moves | Downtime needed | Verify with |
@@ -669,4 +539,3 @@ Step 9: Re-enable schedules + trigger full refresh run
 | C2 | A1+A2+A3 (runners + cursor) | None (state files deleted) | 1× restart | 1 manual Dagster run |
 | C3 | A4–A9 (dbt rename + gsheet split) | None | 1× restart | dbt compile + dbt run |
 | C4 | A10 (data lake folder rename) | robocopy copy + move | Schedule pause | Row count baseline match |
-| C5 | Initiative B (partition isolation) | Sequential robocopy | Schedule pause | Per-partition count + full run |
