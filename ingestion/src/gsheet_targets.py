@@ -226,7 +226,7 @@ def fetch_and_save_targets():
 
         for (year, month), group in grouped:
             output_dir = os.path.join(
-                DATA_LAKE_PATH, "sapo_raw", "targets_raw",
+                DATA_LAKE_PATH, "gsheet_raw", "targets_raw",
                 "ingest_method=google_sheet",
                 f"year={year}",
                 f"month={month}"

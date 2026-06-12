@@ -185,7 +185,7 @@ def fetch_and_save_marketing_spend():
         grouped = df.groupby(['year', 'month'])
         
         for (year, month), group in grouped:
-            output_dir = os.path.join(DATA_LAKE_PATH, "sapo_raw", "marketing_spend_raw", 
+            output_dir = os.path.join(DATA_LAKE_PATH, "gsheet_raw", "marketing_spend_raw",
                                       f"ingest_method=google_sheet", 
                                       f"year={year}", 
                                       f"month={month}")

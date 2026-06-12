@@ -66,7 +66,7 @@ def run(argv=None):
 
     return run_pipeline(
         pipeline_name="sapo_v2_inventory_transactions_batch",
-        dataset_name="sapo_raw",
+        dataset_name="sapo_v2_raw",
         source_factory=sapo_v2_inventory_transactions_source,
         source_args=source_args,
         argv=argv,

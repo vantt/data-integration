@@ -22,7 +22,7 @@ def run(argv=None):
 
     return run_pipeline(
         pipeline_name="sapo_v2_accounts_batch",
-        dataset_name="sapo_raw",
+        dataset_name="sapo_v2_raw",
         source_factory=sapo_accounts_source,
         source_args=source_args,
         argv=argv

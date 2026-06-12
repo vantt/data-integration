@@ -176,7 +176,7 @@ def _save_to_parquet(df: pd.DataFrame):
     """Overwrite snapshot parquet. Classification is a full snapshot on every run."""
     snapshot_dir = os.path.join(
         DATA_LAKE_PATH,
-        "sapo_raw",
+        "gsheet_raw",
         "overhead_account_classification_raw",
         "ingest_method=google_sheet",
         "snapshot",

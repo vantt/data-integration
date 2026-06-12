@@ -235,7 +235,7 @@ def _save_to_parquet(df, table_name):
     df["ingest_method"] = "google_sheet"
 
     base_dir = os.path.join(
-        DATA_LAKE_PATH, "sapo_raw", table_name, "ingest_method=google_sheet"
+        DATA_LAKE_PATH, "gsheet_raw", table_name, "ingest_method=google_sheet"
     )
 
     # Remove legacy year=*/month=* partition subdirs (accumulated from old design)

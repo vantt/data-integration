@@ -25,7 +25,7 @@ def run(argv=None):
 
     return run_pipeline(
         pipeline_name="sapo_v2_history_log",
-        dataset_name="sapo_raw",
+        dataset_name="sapo_v2_raw",
         source_factory=sapo_history_log_source,
         source_args=source_args,
         argv=argv

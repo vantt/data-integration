@@ -7,9 +7,8 @@ sources:
     # Tự động map tên bảng vào đường dẫn: external_location: Quy định cách DuckDB đọc file.
     # ingest_method=*/**/*.parquet nghĩa là đọc đệ quy tất cả file parquet trong các thư mục partition hợp lệ,
     # qua đó bỏ qua các thư mục log nội bộ như _delta_log.
-    # D1 middle-ground: dbt source alias renamed to sapo_v2_raw; physical folder stays sapo_raw/ (dlt pipeline unchanged).
     meta:
-      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/sapo_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/sapo_v2_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
 
     tables:
       # Bảng 1: Orders
@@ -79,10 +78,8 @@ sources:
 
   - name: gsheet_raw
     schema: main
-    # Physical location stays in sapo_raw/ until C4 (data lake folder rename).
-    # In C4, external_location base path will change to gsheet_raw/{name}/...
     meta:
-      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/sapo_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/gsheet_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
     tables:
       - name: targets_raw
         description: "Target goals ingested from Google Sheets"

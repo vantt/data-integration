@@ -30,7 +30,7 @@ def run(argv=None):
         print("❌ Error: WORKER_URL is missing. Please set it in .env or .dlt/secrets.toml")
         return
 
-    dataset_name = "sapo_raw" + ("_dev" if args.dev else "")
+    dataset_name = "sapo_v2_raw" + ("_dev" if args.dev else "")
     setup_dlt_env(dataset_name)
 
     # 3. Pipeline Init

@@ -4,7 +4,7 @@ import argparse
 import dlt
 from typing import Callable, Optional
 
-def setup_dlt_env(dataset_name: str = "sapo_raw"):
+def setup_dlt_env(dataset_name: str = "sapo_v2_raw"):
     """
     Sets up the standard environment variables for file-based dlt pipelines.
     """

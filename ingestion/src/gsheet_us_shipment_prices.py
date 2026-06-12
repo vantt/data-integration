@@ -157,7 +157,7 @@ def _print_validation_report(issues: list, total: int, valid: int):
 def _save_to_parquet(df: pd.DataFrame):
     """Overwrite snapshot parquet. Sheet maintains history; each run = fresh snapshot."""
     base_dir = os.path.join(
-        DATA_LAKE_PATH, "sapo_raw", "us_shipment_prices_raw", "ingest_method=google_sheet"
+        DATA_LAKE_PATH, "gsheet_raw", "us_shipment_prices_raw", "ingest_method=google_sheet"
     )
 
     # Remove legacy partition subdirs if any
