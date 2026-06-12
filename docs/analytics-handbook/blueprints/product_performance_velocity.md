@@ -28,16 +28,6 @@ Dashboard theo doi hieu suat + velocity san pham — doanh thu, so luong, xu huo
 
 ---
 
-#### Filter: Date Range
-
-```json metabase-filter
-{
-  "slug": "date_range",
-  "type": "date/all-options",
-  "default": "past30days"
-}
-```
-
 #### Filter: Loai san pham
 
 ```json metabase-filter
@@ -59,7 +49,8 @@ WITH filter_bounds AS (
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
 ),
 period_adj AS (
     SELECT
@@ -121,14 +112,16 @@ filter_bounds AS (
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
 ),
 this_period AS (
     SELECT COALESCE(SUM(s.net_revenue), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
@@ -177,14 +170,16 @@ filter_bounds AS (
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
 ),
 this_period AS (
     SELECT COALESCE(SUM(s.quantity), 0) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
@@ -224,14 +219,16 @@ filter_bounds AS (
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
 ),
 this_period AS (
     SELECT COUNT(DISTINCT s.product_key) as val
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
@@ -271,7 +268,8 @@ filter_bounds AS (
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
 ),
 this_period AS (
     SELECT
@@ -281,7 +279,8 @@ this_period AS (
     FROM fact_sales s
     JOIN fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
       [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
@@ -558,7 +557,8 @@ WITH filter_bounds AS (
     FROM fact_orders o
     JOIN fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
-      [[AND {{date_range}}]]
+      AND o.ordered_at >= current_date - INTERVAL '30 days'
+      AND o.ordered_at < current_date
 ),
 period_adj AS (
     SELECT
