@@ -24,7 +24,10 @@
 --     Embedded source is more reliable.
 -- =================================================================================================
 
-SELECT DISTINCT
+-- Deduplicate by price_list_id using the most recently updated variant's embedded metadata.
+-- Sapo renames propagate to variants incrementally, so older variants may still carry the old
+-- price_list_code; QUALIFY keeps the latest code per price_list_id to avoid uniqueness failures.
+SELECT
     price_list_id::BIGINT                                          AS price_list_id,
     price_list_code                                                AS code,
     price_list_name                                                AS name,
@@ -33,4 +36,5 @@ SELECT DISTINCT
     (price_list_code = 'BANLE')::BOOLEAN                          AS is_default
 FROM {{ ref('std_variant_prices') }}
 WHERE price_list_id IS NOT NULL
+QUALIFY ROW_NUMBER() OVER (PARTITION BY price_list_id ORDER BY source_timestamp DESC) = 1
 ORDER BY is_cost DESC, is_default DESC, code
