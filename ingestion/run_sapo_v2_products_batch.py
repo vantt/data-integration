@@ -18,7 +18,7 @@ def run(argv=None):
     }
 
     return run_pipeline(
-        pipeline_name="sapo_products_batch",
+        pipeline_name="sapo_v2_products_batch",
         dataset_name="sapo_raw",
         source_factory=sapo_products_source,
         source_args=source_args,

@@ -15,13 +15,13 @@ if DLT_DIR not in sys.path:
     sys.path.append(DLT_DIR)
 
 try:
-    import run_orders_batch
-    import run_history_log
-    import run_webhook_consumer
-    import run_customers_batch
-    import run_accounts_batch
-    import run_products_batch
-    import run_inventory_transactions_v2_batch
+    import run_sapo_v2_orders_batch
+    import run_sapo_v2_history_log
+    import run_sapo_v2_webhook_consumer
+    import run_sapo_v2_customers_batch
+    import run_sapo_v2_accounts_batch
+    import run_sapo_v2_products_batch
+    import run_sapo_v2_inventory_transactions_batch
 except ImportError as e:
     raise ImportError(f"Could not import dlt scripts from {DLT_DIR}. Error: {e}")
 
@@ -62,7 +62,7 @@ def ingest_sapo_v2_orders_batch_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_orders_batch.run(argv=argv)
+            load_info = run_sapo_v2_orders_batch.run(argv=argv)
         finally:
             os.chdir(cwd)
 
@@ -112,7 +112,7 @@ def ingest_sapo_v2_customers_batch_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_customers_batch.run(argv=argv)
+            load_info = run_sapo_v2_customers_batch.run(argv=argv)
         finally:
             os.chdir(cwd)
 
@@ -162,7 +162,7 @@ def ingest_sapo_v2_accounts_batch_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_accounts_batch.run(argv=argv)
+            load_info = run_sapo_v2_accounts_batch.run(argv=argv)
         finally:
             os.chdir(cwd)
 
@@ -213,7 +213,7 @@ def ingest_sapo_v2_products_batch_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_products_batch.run(argv=argv)
+            load_info = run_sapo_v2_products_batch.run(argv=argv)
         finally:
             os.chdir(cwd)
 
@@ -260,7 +260,7 @@ def ingest_sapo_v2_history_log_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_history_log.run(argv=[])
+            load_info = run_sapo_v2_history_log.run(argv=[])
         finally:
             os.chdir(cwd)
 
@@ -312,7 +312,7 @@ def ingest_sapo_v2_inventory_transactions_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_inventory_transactions_v2_batch.run(argv=argv)
+            load_info = run_sapo_v2_inventory_transactions_batch.run(argv=argv)
         finally:
             os.chdir(cwd)
 
@@ -360,7 +360,7 @@ def ingest_sapo_v2_webhook_consumer_asset(context):
     try:
         try:
             os.chdir(DLT_DIR)
-            load_info = run_webhook_consumer.run(argv=["--once"])
+            load_info = run_sapo_v2_webhook_consumer.run(argv=["--once"])
         finally:
             os.chdir(cwd)
 

@@ -35,7 +35,7 @@ def run(argv=None):
 
     # 3. Pipeline Init
     pipeline = dlt.pipeline(
-        pipeline_name="sapo_webhook_consumer",
+        pipeline_name="sapo_v2_webhook_consumer",
         destination="filesystem",
         dataset_name=dataset_name
     )

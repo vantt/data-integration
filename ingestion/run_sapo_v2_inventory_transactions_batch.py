@@ -16,7 +16,7 @@ import argparse
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from sapo.inventory_transactions_v2 import sapo_inventory_transactions_v2_source
+from sapo.sapo_v2_inventory_transactions import sapo_v2_inventory_transactions_source
 from utils.pipeline_runner import run_pipeline
 
 
@@ -65,9 +65,9 @@ def run(argv=None):
     }
 
     return run_pipeline(
-        pipeline_name="sapo_inventory_transactions_v2_batch",
+        pipeline_name="sapo_v2_inventory_transactions_batch",
         dataset_name="sapo_raw",
-        source_factory=sapo_inventory_transactions_v2_source,
+        source_factory=sapo_v2_inventory_transactions_source,
         source_args=source_args,
         argv=argv,
     )

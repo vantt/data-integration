@@ -40,14 +40,14 @@ from tenacity import (
 )
 
 try:
-    from ._inventory_v2_window import (
+    from ._sapo_v2_inventory_window import (
         compute_hour_window,
         compute_day_window,
         month_windows,
     )
     from .client import get_sapo_client
 except ImportError:
-    from sapo._inventory_v2_window import (
+    from sapo._sapo_v2_inventory_window import (
         compute_hour_window,
         compute_day_window,
         month_windows,
@@ -62,7 +62,7 @@ _AJAX_HEADERS = {
 
 
 @dlt.source
-def sapo_inventory_transactions_v2_source(
+def sapo_v2_inventory_transactions_source(
     window_mode: str = "hour",
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
