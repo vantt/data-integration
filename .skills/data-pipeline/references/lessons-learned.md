@@ -3980,3 +3980,19 @@ for sf in glob.glob(os.path.join(data_lake, "_dlt_pipeline_state", f"{pipeline_n
 3. Same anti-pattern as [[L122]] (reuse pre-computed mart column, don't re-derive) — applied to margin specifically.
 
 **Reference:** `mart_sku_economics_monthly` (realized_margin_pct vs gross_margin_pct) ; L118 (H010 packsize fix) ; `docs/analytics-handbook/blueprints/product_profitability_cost.md`
+
+### L126 — Metabase bubble scatter config: X in graph.dimensions, Y in graph.metrics, size in scatter.bubble
+
+**Group:** SERVE
+
+**Symptom:** A "scatter" card (SKU Margin vs Revenue) rendered with a confusing extra RIGHT y-axis — "Số đơn" (order count) plotted as a second axis series instead of being the bubble size. Bottom=revenue, left=margin, right=order-count (unwanted).
+
+**Root cause:** Blueprint viz had `graph.dimensions: ["Doanh thu", "Gross Margin %"]` (TWO fields) + `graph.metrics: ["So don"]`. Metabase scatter treats the first dimension as X and any extra dimension + the metric as plotted series on dual axes → margin and order-count became left/right axes; the intended bubble encoding was lost.
+
+**Fix:** For a bubble scatter, put exactly ONE field in each slot: `graph.dimensions: ["<X>"]`, `graph.metrics: ["<Y>"]`, `scatter.bubble: "<size>"`. Here: dimensions=["Doanh thu"], metrics=["Gross Margin %"], scatter.bubble="So don". No phantom right axis.
+
+**Rules:**
+1. Bubble scatter viz = 1 X dimension + 1 Y metric + 1 bubble field. Never put both axes in `graph.dimensions`.
+2. A scatter showing a left AND right y-axis is almost always this misconfiguration — check graph.dimensions has a single entry.
+
+**Reference:** `docs/analytics-handbook/blueprints/product_profitability_cost.md` (SKU Margin vs Revenue Scatter card)
