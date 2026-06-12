@@ -95,7 +95,7 @@ SELECT
     MAX(CASE WHEN period_n = '10' THEN ROUND(retention_pct, 1) END)  AS "M10",
     MAX(CASE WHEN period_n = '11' THEN ROUND(retention_pct, 1) END)  AS "M11",
     MAX(CASE WHEN period_n = '12' THEN ROUND(retention_pct, 1) END)  AS "M12"
-FROM mart_cohort_retention
+FROM main_marts.mart_cohort_retention
 WHERE 1=1
   [[AND {{cohort_dimension}}]]
   [[AND {{window_type}}]]
@@ -166,7 +166,7 @@ SELECT
     MAX(CASE WHEN period_n = '4'  THEN ROUND(revenue_retention * 100, 1) END) AS "M4 Rev",
     MAX(CASE WHEN period_n = '5'  THEN ROUND(revenue_retention * 100, 1) END) AS "M5 Rev",
     MAX(CASE WHEN period_n = '6'  THEN ROUND(revenue_retention * 100, 1) END) AS "M6 Rev"
-FROM mart_cohort_retention
+FROM main_marts.mart_cohort_retention
 WHERE 1=1
   [[AND {{cohort_dimension}}]]
   [[AND {{window_type}}]]
@@ -243,7 +243,7 @@ SELECT
     ROUND(revenue_retention * 100, 1)     AS "Rev Retention %",
     repeat_customers                      AS "Repeat Buyers",
     ROUND(repeat_rate, 1)                 AS "Repeat Rate %"
-FROM mart_cohort_retention
+FROM main_marts.mart_cohort_retention
 WHERE 1=1
   [[AND {{cohort_dimension}}]]
   [[AND {{window_type}}]]
