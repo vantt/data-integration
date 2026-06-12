@@ -2,7 +2,7 @@
 title: "KPI Đo lường — Stage 6 Execute"
 stage: 6
 status: tracking
-source: reference/sales-slowdown-diagnosis-and-action-playbook.md §8 + §5.5
+source: archive/2026-06-04-original-sales-slowdown-playbook.md §8 + §5.5
 ---
 
 # KPI Đo lường

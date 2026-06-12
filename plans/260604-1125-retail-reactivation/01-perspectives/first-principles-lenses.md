@@ -2,7 +2,7 @@
 title: "First-Principles Lenses"
 stage: 1
 status: living
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 ## 0.5 Góc nhìn bổ sung — first-principles (cập nhật 2026-06-09)

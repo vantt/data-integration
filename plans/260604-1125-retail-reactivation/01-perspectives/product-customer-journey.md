@@ -2,7 +2,7 @@
 title: "Product Journey × Customer Journey"
 stage: 1
 status: living
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 > ⚠️ **HIỆU CHỈNH 2026-06-10:** đây KHÔNG phải brand collagen làm đẹp — hero SKU là thực phẩm sức khỏe cho người lớn tuổi/bệnh nền (cordyceps/khớp/tim mạch/miễn dịch). Khung "da đẹp tuần 4–6" chỉ đúng cho dòng collagen tầm giữa. Bằng chứng kết quả phải theo công dụng (năng lượng/xét nghiệm/tái khám), không phải selfie da. Reorder 21–85 ngày TÙY sản phẩm, không phải 45–60 đồng loạt. Nguồn: [product-performance-assessment](../02-understand/product-performance-assessment.md).

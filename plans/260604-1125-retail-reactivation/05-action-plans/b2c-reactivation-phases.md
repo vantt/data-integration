@@ -2,12 +2,12 @@
 title: "B2C Reactivation — Lộ trình triển khai P0–P4"
 stage: 5
 status: committed
-source: "../reference/sales-slowdown-diagnosis-and-action-playbook.md"
+source: "../archive/2026-06-04-original-sales-slowdown-playbook.md"
 ---
 
 # B2C Reactivation — Lộ trình triển khai P0–P4
 
-> Nguồn phân tích: [`../reference/sales-slowdown-diagnosis-and-action-playbook.md`](../reference/sales-slowdown-diagnosis-and-action-playbook.md)
+> Nguồn phân tích: [`../archive/2026-06-04-original-sales-slowdown-playbook.md`](../archive/2026-06-04-original-sales-slowdown-playbook.md)
 > Bối cảnh: 1.082 khách lẻ có SĐT; 71.8% one-time; ~1.76 tỷ VND cơ hội trong `mart_customer_action_queue`.
 > 76% tệp liên hệ được là người nhận quà US — cần luồng thông điệp riêng.
 

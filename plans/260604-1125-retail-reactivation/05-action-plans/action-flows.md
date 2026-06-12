@@ -2,13 +2,13 @@
 title: "Action Flows — Luồng hành động, lịch vận hành"
 stage: 5
 status: committed
-source: "../reference/sales-slowdown-diagnosis-and-action-playbook.md — §5"
+source: "../archive/2026-06-04-original-sales-slowdown-playbook.md — §5"
 ---
 
 # Action Flows — Luồng hành động, lịch vận hành
 
-> Trích nguyên văn §5 từ [`../reference/sales-slowdown-diagnosis-and-action-playbook.md`](../reference/sales-slowdown-diagnosis-and-action-playbook.md).
-> Perspectives bổ sung: xem [`../perspectives/`](../perspectives/).
+> Trích nguyên văn §5 từ [`../archive/2026-06-04-original-sales-slowdown-playbook.md`](../archive/2026-06-04-original-sales-slowdown-playbook.md).
+> Perspectives bổ sung: xem [`../01-perspectives/`](../01-perspectives/).
 
 ---
 

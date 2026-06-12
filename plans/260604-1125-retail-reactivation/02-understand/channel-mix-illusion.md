@@ -2,7 +2,7 @@
 title: "Ảo giác kênh — doanh thu lõi/B2B đang sụp, bị marketplace che"
 stage: 2
 status: resolved
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 # Ảo giác kênh — cơn đau cấp tính

@@ -1,6 +1,6 @@
 ---
 title: "Chẩn đoán 'bán ế' & Playbook khai thác dữ liệu cho Marketing / CSKH / Sales"
-status: living
+status: archived
 last_modified: 2026-06-09
 audience: [CEO, Marketing, Customer Care, Sales, Data]
 domain_refs: [domains/customer.md, designs/customer_retention_lifecycle.md]
@@ -8,6 +8,8 @@ related: [guides/analytics_improvement_opportunities.md, mart_customer_action_qu
 ---
 
 # Chẩn đoán "bán ế" & Playbook khai thác dữ liệu
+
+> **Archive notice:** Bản nguồn lịch sử/provenance only. Không dùng file này như tài liệu vận hành hiện tại; đọc luồng hiện hành từ [../plan.md](../plan.md).
 
 > **Mục đích.** Trả lời: "Bán ế — khai thác data nào để gợi ý hành động cho Marketing/CSKH/Sales?"
 > Tài liệu dựa trên **số thật** truy vấn từ warehouse 2026-06-04
@@ -379,7 +381,8 @@ FROM pit GROUP BY me ORDER BY me;
 > Brand chủ lực **Fine Japan (739 khách)** — collagen/supplement là hàng tiêu dùng tái mua tự nhiên.
 > Đòn bẩy mạnh nhất: nhắc **đúng lúc hết hàng** theo chu kỳ cá nhân (`avg_days_between_orders`).
 
-### 4.2 Tín hiệu mua tiếp (`next_purchase_signal`)
+### 4.2 Tín hiệu mua tiếp (
+ext_purchase_signal`)
 
 Bảng `mart_customer_action_queue` đã có cột này; kết hợp `predicted_next_purchase_date` để hẹn giờ
 tiếp cận cá nhân, không blast đại trà.
@@ -453,7 +456,8 @@ Kênh nhà giữ chân tốt hơn Shopee **2–3×**.
 - KPI: ≥50% tiếp cận có phản hồi; ≥15% mua lại trong 30 ngày; thu ≥20 lý-do-bỏ + **ghi "có thấy hiệu quả"**.
 
 **Luồng 3 — REORDER_NUDGE: OVERDUE** · *31 khách action-queue (166 toàn tệp) · ~344tr* · **Owner: CSKH**
-- Trigger: `next_purchase_signal='OVERDUE'`. Nhắc theo chu kỳ cá nhân.
+- Trigger: 
+ext_purchase_signal='OVERDUE'`. Nhắc theo chu kỳ cá nhân.
 - Script: *"Anh/chị [tên] ơi, [sản phẩm] mình hay dùng chắc sắp hết rồi. Em giữ hàng + giao nhanh
   giúp mình nhé?"* (nhắc tiện lợi, không cần giảm giá).
 - KPI: M1 reorder ≥25%.
@@ -597,7 +601,8 @@ Góc bonus: (1) re-gift/giới thiệu cho người quen; (2) kéo người mua 
 ## 7. Bản đồ khai thác dữ liệu theo đội
 
 Bối cảnh: brand hàng tiêu dùng lặp lại ⇒ nhịp mua lại là vàng. Cỗ máy
-`avg_days_between_orders` + `next_purchase_signal` + `predicted_next_purchase_date` đang bị dùng thiếu.
+`avg_days_between_orders` + 
+ext_purchase_signal` + `predicted_next_purchase_date` đang bị dùng thiếu.
 
 ### 7.1 Đã có data — triển khai trong vài ngày
 
@@ -613,7 +618,8 @@ Bối cảnh: brand hàng tiêu dùng lặp lại ⇒ nhịp mua lại là vàng
 
 → **~1.76 tỷ VND cơ hội đã nhận diện & xếp ưu tiên, đang nằm im trong bảng không ai mở.**
 
-Bổ sung nhanh: `next_purchase_signal = OVERDUE` có **210 khách = 3.549 tr.đ LTV** đang tuột.
+Bổ sung nhanh: 
+ext_purchase_signal = OVERDUE` có **210 khách = 3.549 tr.đ LTV** đang tuột.
 Nâng cấp: thêm action `REORDER_PREEMPT` cho nhóm `DUE_SOON` (nhắc trước khi khách quên — chỉ 14
 khách hiện ở DUE_SOON vì cỗ máy chưa được vận hành để giữ họ "on track").
 
@@ -692,7 +698,8 @@ Nếu Day-7 engagement thấp → product journey chưa hoạt động → call-
    hay đơn COD hủy? Cần xác minh trước khi coi là tệp reactivation.
 2. "Ế" mà chủ cảm nhận là **doanh thu/biên lợi nhuận** hay **số đơn**? Data cho thấy lượng 2026
    tốt — cần xác nhận góc nhìn để chọn đúng KPI.
-3. Nhóm wholesale ẩn (`negotiated_deep`) chiếm bao nhiêu % doanh thu 2023–2025? (cần chạy thêm).
+3. Nhóm wholesale ẩn (
+egotiated_deep`) chiếm bao nhiêu % doanh thu 2023–2025? (cần chạy thêm).
 4. Có ngân sách/nhân sự CSKH để **chạy call-list hằng ngày** không? Nếu không, ưu tiên tự động hóa
    nhắc qua Zalo/SMS theo `predicted_next_purchase_date`.
 5. **Người nhận quà US** (mục 6): họ có biết sản phẩm mình nhận là Fine Japan / nhà phân phối tại
@@ -703,4 +710,4 @@ Nếu Day-7 engagement thấp → product journey chưa hoạt động → call-
 ---
 
 *Kế hoạch triển khai chi tiết (phase P0–P4, todo, owner, KPI):*
-[`plan.md`](./plan.md)
+[`plan.md`](../plan.md)

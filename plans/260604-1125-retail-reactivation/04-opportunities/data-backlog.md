@@ -2,7 +2,7 @@
 title: "Data Backlog — Cơ hội khai thác dữ liệu"
 stage: 4
 status: idea
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 # Data Backlog — Cơ hội khai thác dữ liệu

@@ -2,7 +2,7 @@
 title: "Điều tra: Nguyên nhân gốc sụp đổ B2B"
 stage: 2
 status: resolved
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 lens: A3
 related_lens: ../01-perspectives/first-principles-lenses.md
 resolved_at: 2026-06-09

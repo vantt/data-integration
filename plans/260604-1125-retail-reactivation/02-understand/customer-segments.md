@@ -2,7 +2,7 @@
 title: "Phân khúc khách lẻ — tệp 1.082 & tài sản ẩn US gift"
 stage: 2
 status: resolved
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 # Phân khúc khách lẻ — tệp 1.082 & tài sản ẩn US gift

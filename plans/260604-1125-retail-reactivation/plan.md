@@ -4,10 +4,12 @@ created: 2026-06-04
 updated: 2026-06-09
 status: active
 structure: pipeline-6-stage
-source: ./reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ./archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 # Retail Reactivation — Hub & Path
+
+> Nếu mới vào bộ tài liệu, bắt đầu từ [`00-start-here.md`](./00-start-here.md). File này là hub chi tiết của path 6 stage.
 
 > **Câu hỏi gốc:** "Bán ế — khai thác data nào để gợi ý hành động cho Marketing / CSKH / Sales?"
 > Tài liệu tổ chức thành **PIPELINE 6 stage** = một path xuyên suốt để từng bước: brainstorm góc nhìn →
@@ -25,7 +27,7 @@ source: ./reference/sales-slowdown-diagnosis-and-action-playbook.md
 - **Vấn đề mạn tính (THẬT, bền):** **71.8% khách lẻ mua 1 lần**, M1 repeat **3–17%** (lành mạnh 30–50%).
 - **Tài sản ẩn:** ~824 người nhận quà US (76% tệp liên hệ được) đã dùng sản phẩm, chưa từng tự mua.
 
-→ Chi tiết số thật: [`02-understand/`](./02-understand/README.md) · Provenance: [`reference/`](./reference/sales-slowdown-diagnosis-and-action-playbook.md)
+→ Chi tiết số thật: [`02-understand/`](./02-understand/README.md) · Provenance: [`archive/`](./archive/2026-06-04-original-sales-slowdown-playbook.md)
 
 > **Reframe sản phẩm (2026-06-10):** hero SKU = đồ sức khỏe người lớn tuổi (cordyceps/khớp/tim mạch), KHÔNG phải collagen làm đẹp. Retention theo SẢN PHẨM: Cordyceps dính (25%), Fucoidan bẫy volume (11%), Gaba/Chondroitin gateway vàng. 🔴 bug margin H010 bán dưới giá vốn (~440M). [chi tiết](./02-understand/product-performance-assessment.md).
 
@@ -75,7 +77,7 @@ source: ./reference/sales-slowdown-diagnosis-and-action-playbook.md
 | 04 Hướng action | [`04-opportunities/`](./04-opportunities/README.md) | retention-mechanisms (4 play) · data-backlog (~21 cơ hội) · retail-offline-plays (7 card) | idea |
 | 05 Kế hoạch | [`05-action-plans/`](./05-action-plans/README.md) | b2c-phases P0–P4 · action-flows · us-gift | committed/pending |
 | 06 Thực thi | [`06-execute/`](./06-execute/README.md) | kpi · execution-log | tracking (chưa chạy) |
-| — | [`reference/`](./reference/sales-slowdown-diagnosis-and-action-playbook.md) | playbook gốc (archive) | read-only |
+| — | [`archive/`](./archive/2026-06-04-original-sales-slowdown-playbook.md) | playbook gốc (provenance only) | archived |
 
 ---
 

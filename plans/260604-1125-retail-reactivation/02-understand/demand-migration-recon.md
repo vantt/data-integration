@@ -2,9 +2,9 @@
 title: "Điều tra: Cầu dịch đi đâu — recon kênh thay thế"
 stage: 2
 status: open
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 lens: A2
-related_lens: ../perspectives/first-principles-lenses.md
+related_lens: ../01-perspectives/first-principles-lenses.md
 ---
 
 # Điều tra: Cầu dịch đi đâu — recon kênh thay thế

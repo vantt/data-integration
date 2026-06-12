@@ -2,7 +2,7 @@
 title: "Điều tra: Audit trải nghiệm unboxing & follow-up sau mua"
 stage: 2
 status: open
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 lens: L1
 ---
 

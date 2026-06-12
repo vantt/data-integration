@@ -45,7 +45,7 @@ Tạo file mới theo template dưới, `status: open`; khi có kết luận →
 title: "Điều tra: <tên giả thuyết>"
 stage: 2
 status: open
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 ## Giả thuyết

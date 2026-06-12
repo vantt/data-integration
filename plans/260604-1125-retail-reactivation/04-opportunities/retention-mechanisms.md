@@ -2,14 +2,14 @@
 title: "Cơ chế bán hàng — Retention Mechanisms"
 stage: 4
 status: idea
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 # Cơ chế bán hàng — Retention Mechanisms
 
 > Các cơ chế solution-level chắt từ nhóm lens B (first-principles).
 > Trạng thái mặc định: **idea** (chưa triển khai).
-> Lens nguồn: [first-principles-lenses.md](../perspectives/first-principles-lenses.md)
+> Lens nguồn: [first-principles-lenses.md](../01-perspectives/first-principles-lenses.md)
 
 ---
 
@@ -28,7 +28,7 @@ Không ai mua collagen vì collagen — họ "thuê" nó cho một job cảm xú
 
 **Trạng thái:** idea
 
-**Lens nguồn:** B4 — [first-principles-lenses.md](../perspectives/first-principles-lenses.md)
+**Lens nguồn:** B4 — [first-principles-lenses.md](../01-perspectives/first-principles-lenses.md)
 
 ---
 
@@ -48,7 +48,7 @@ Hàng tái mua mỗi 45–60 ngày = mô hình subscription trá hình. Tài s�
 
 **Trạng thái:** idea
 
-**Lens nguồn:** B5 — [first-principles-lenses.md](../perspectives/first-principles-lenses.md)
+**Lens nguồn:** B5 — [first-principles-lenses.md](../01-perspectives/first-principles-lenses.md)
 
 ---
 
@@ -68,7 +68,7 @@ Supplement VN ngập hàng giả; lý do #1 khách không mua lại / mua chỗ 
 
 **Trạng thái:** idea
 
-**Lens nguồn:** B6 — [first-principles-lenses.md](../perspectives/first-principles-lenses.md)
+**Lens nguồn:** B6 — [first-principles-lenses.md](../01-perspectives/first-principles-lenses.md)
 
 ---
 
@@ -88,4 +88,4 @@ Collagen cho kết quả nhìn thấy + mang tính xã hội (da đẹp → ngư
 
 **Trạng thái:** idea
 
-**Lens nguồn:** B7 — [first-principles-lenses.md](../perspectives/first-principles-lenses.md)
+**Lens nguồn:** B7 — [first-principles-lenses.md](../01-perspectives/first-principles-lenses.md)

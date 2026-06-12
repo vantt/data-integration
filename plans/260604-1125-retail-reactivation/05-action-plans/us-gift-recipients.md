@@ -2,14 +2,14 @@
 title: "US Gift Recipients — Luồng người nhận quà từ Mỹ tại Việt Nam"
 stage: 5
 status: pending
-source: "../reference/sales-slowdown-diagnosis-and-action-playbook.md — §6"
+source: "../archive/2026-06-04-original-sales-slowdown-playbook.md — §6"
 ---
 
 # US Gift Recipients — Luồng người nhận quà từ Mỹ tại Việt Nam
 
-> Trích nguyên văn §6 từ [`../reference/sales-slowdown-diagnosis-and-action-playbook.md`](../reference/sales-slowdown-diagnosis-and-action-playbook.md).
+> Trích nguyên văn §6 từ [`../archive/2026-06-04-original-sales-slowdown-playbook.md`](../archive/2026-06-04-original-sales-slowdown-playbook.md).
 > Lộ trình triển khai (P4 test): xem [`b2c-reactivation-phases.md`](./b2c-reactivation-phases.md).
-> Perspectives trust/JTBD: xem [`../perspectives/`](../perspectives/).
+> Perspectives trust/JTBD: xem [`../01-perspectives/`](../01-perspectives/).
 
 ---
 

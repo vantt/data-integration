@@ -2,7 +2,7 @@
 title: "Xô thủng retention — bệnh mạn tính"
 stage: 2
 status: resolved
-source: ../reference/sales-slowdown-diagnosis-and-action-playbook.md
+source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 # Xô thủng retention — bệnh mạn tính
