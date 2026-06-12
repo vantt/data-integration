@@ -34,9 +34,11 @@ logger = logging.getLogger(__name__)
 # Reconciliation window: trailing 7 days of ingestion runs
 _WINDOW_DAYS = 7
 
-# Raw DuckDB path (MISA/Shopee parquet-backed tables live here via dlt)
+# Raw parquet paths — read directly from data lake, no intermediate DuckDB file
 _DATA_LAKE = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
-_RAW_DB_PATH = os.path.join(_DATA_LAKE, "raw", "raw.duckdb")
+_RAW_DB_PATH = os.path.join(_DATA_LAKE, "raw", "raw.duckdb")  # used by Shopee recon only
+_SAPO_ORDER_PATH = os.path.join(_DATA_LAKE, "sapo_v2_raw", "order")
+_SAPO_CUSTOMER_PATH = os.path.join(_DATA_LAKE, "sapo_v2_raw", "customer")
 
 # asset_key strings used by Phase 1 ingestion assets in health DB
 _SHOPEE_ASSET_KEY = "shopee/shopee_income_file_drop_asset"
@@ -283,47 +285,57 @@ def recon_misa_daily(context):
 # ---------------------------------------------------------------------------
 
 def _sapo_dest_count_orders(window_start: datetime, window_end: datetime) -> Optional[int]:
-    """Count sapo orders in raw DB modified within [window_start, window_end)."""
+    """Count distinct sapo orders in parquet with modified_on in [window_start, window_end)."""
+    if not os.path.exists(_SAPO_ORDER_PATH):
+        logger.warning("_sapo_dest_count_orders: order dir not found at %s", _SAPO_ORDER_PATH)
+        return None
+    conn = None
     try:
-        conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
+        conn = duckdb.connect()
+        parquet_glob = _SAPO_ORDER_PATH.replace("\\", "/") + "/ingest_method=*/**/*.parquet"
         row = conn.execute(
-            """
+            f"""
             SELECT COUNT(DISTINCT entity_id)
-            FROM raw__sapo.order
-            WHERE TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ)
-                  >= ? AND
-                  TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ)
-                  < ?
+            FROM read_parquet('{parquet_glob}', union_by_name=true, hive_partitioning=true)
+            WHERE TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ) >= ?
+              AND TRY_CAST(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ) < ?
             """,
             [window_start, window_end],
         ).fetchone()
-        conn.close()
         return int(row[0]) if row else 0
     except Exception as exc:
-        logger.error("_sapo_dest_count_orders: raw DB query failed — %s", exc)
+        logger.error("_sapo_dest_count_orders: parquet query failed — %s", exc)
         return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def _sapo_dest_count_customers(window_start: datetime, window_end: datetime) -> Optional[int]:
-    """Count sapo customers created within [window_start, window_end)."""
+    """Count distinct sapo customers in parquet with created_on in [window_start, window_end)."""
+    if not os.path.exists(_SAPO_CUSTOMER_PATH):
+        logger.warning("_sapo_dest_count_customers: customer dir not found at %s", _SAPO_CUSTOMER_PATH)
+        return None
+    conn = None
     try:
-        conn = duckdb.connect(_RAW_DB_PATH, read_only=True)
+        conn = duckdb.connect()
+        parquet_glob = _SAPO_CUSTOMER_PATH.replace("\\", "/") + "/ingest_method=*/**/*.parquet"
         row = conn.execute(
-            """
+            f"""
             SELECT COUNT(DISTINCT entity_id)
-            FROM raw__sapo.customer
-            WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
-                  >= ? AND
-                  TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ)
-                  < ?
+            FROM read_parquet('{parquet_glob}', union_by_name=true, hive_partitioning=true)
+            WHERE TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) >= ?
+              AND TRY_CAST(json_extract_string(payload, '$.created_on') AS TIMESTAMPTZ) < ?
             """,
             [window_start, window_end],
         ).fetchone()
-        conn.close()
         return int(row[0]) if row else 0
     except Exception as exc:
-        logger.error("_sapo_dest_count_customers: raw DB query failed — %s", exc)
+        logger.error("_sapo_dest_count_customers: parquet query failed — %s", exc)
         return None
+    finally:
+        if conn:
+            conn.close()
 
 
 @asset(group_name="reconciliation", key_prefix=["recon"])
@@ -331,7 +343,7 @@ def recon_sapo_orders_daily(context):
     """Reconcile Sapo orders: API metadata.total vs raw DB count (yesterday window).
 
     source_count = Sapo API metadata.total for modified_on in [yesterday, today) ICT
-    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.order for same ICT window
+    dest_count   = COUNT(DISTINCT entity_id) in sapo_v2_raw/order parquet for same ICT window
 
     Live API call gated behind RECON_LIVE_API=1. When disabled, source_count=None
     and drift_pct=None — recon row is still written for Phase 4 visibility.
@@ -394,7 +406,7 @@ def recon_sapo_customers_daily(context):
     """Reconcile Sapo customers: API metadata.total vs raw DB count (yesterday window).
 
     source_count = Sapo API metadata.total for created_on in [yesterday, today) ICT
-    dest_count   = COUNT(DISTINCT entity_id) in raw__sapo.customer for same ICT window
+    dest_count   = COUNT(DISTINCT entity_id) in sapo_v2_raw/customer parquet for same ICT window
 
     NOTE: Sapo customers API filters on created_on only (no reliable modified_on).
     Live API call gated behind RECON_LIVE_API=1.
