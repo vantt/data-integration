@@ -615,7 +615,7 @@ WHERE customer_type = 'RETAIL'
   AND customer_id != 'Unknown'
 GROUP BY 1
 ORDER BY
-  CASE discount_sensitivity
+  CASE COALESCE(discount_sensitivity, 'Chưa đủ dữ liệu')
     WHEN 'PROMO_DEPENDENT' THEN 1
     WHEN 'PROMO_MIXED'     THEN 2
     WHEN 'FULL_PRICE'      THEN 3
@@ -660,7 +660,7 @@ WHERE customer_type = 'RETAIL'
   AND customer_id != 'Unknown'
 GROUP BY 1
 ORDER BY
-  CASE discount_sensitivity
+  CASE COALESCE(discount_sensitivity, 'Chưa đủ dữ liệu')
     WHEN 'PROMO_DEPENDENT' THEN 1
     WHEN 'PROMO_MIXED'     THEN 2
     WHEN 'FULL_PRICE'      THEN 3
@@ -805,7 +805,7 @@ WHERE customer_type = 'RETAIL'
   AND customer_id != 'Unknown'
 GROUP BY 1, 2
 ORDER BY
-  CASE discount_sensitivity
+  CASE COALESCE(discount_sensitivity, 'Chưa đủ dữ liệu')
     WHEN 'PROMO_DEPENDENT' THEN 1
     WHEN 'PROMO_MIXED'     THEN 2
     WHEN 'FULL_PRICE'      THEN 3
