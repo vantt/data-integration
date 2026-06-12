@@ -1,4 +1,4 @@
-# Checklist: Thêm Data Source Mới (Pattern A, End-to-End)
+﻿# Checklist: Thêm Data Source Mới (Pattern A, End-to-End)
 
 > Mỗi phase mapped vào 1 functional group. Đọc playbook tương ứng (`playbooks/0X-{group}.md`) song song với checklist này.
 
@@ -134,7 +134,7 @@ Tạo nếu consolidate multiple sources:
 - [ ] Đăng ký asset trong `orchestration/definitions.py`:
   - Thêm vào `load_assets_from_modules([..., {source}_assets])`
   - Chọn job phù hợp:
-    - `transform_batch_nightly_job` → batch sync (chạy 04:00 AM)
+    - `pipeline_batch_nightly_job` → batch sync (chạy 04:00 AM)
     - `ingest_sapo_incremental_job` → history log, event polling (mỗi 10 phút)
     - `ingest_sapo_realtime_job` → webhook consumer (mỗi 3 phút)
 - [ ] Nếu asset write DuckDB: thêm `op_tags={"dagster/concurrency_key": "duckdb_lock"}`

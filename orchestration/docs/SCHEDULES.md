@@ -1,4 +1,4 @@
-# Schedule Documentation
+﻿# Schedule Documentation
 
 > Dagster schedule definitions and timezone configuration
 
@@ -8,7 +8,7 @@
 | -------------------------------- | -------------- | ---------------- | ---------------------------- |
 | `ingest_sapo_realtime_schedule`  | `*/1 * * * *`  | Asia/Ho_Chi_Minh | ingest_sapo_realtime_job     |
 | `ingest_sapo_incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | ingest_sapo_incremental_job  |
-| `transform_batch_nightly_schedule` | `0 4 * * *`    | Asia/Ho_Chi_Minh | transform_batch_nightly_job  |
+| `pipeline_batch_nightly_schedule` | `0 4 * * *`    | Asia/Ho_Chi_Minh | pipeline_batch_nightly_job  |
 
 ---
 
@@ -54,13 +54,13 @@ ingest_sapo_incremental_schedule = ScheduleDefinition(
 
 ---
 
-### transform_batch_nightly_schedule
+### pipeline_batch_nightly_schedule
 
 **Purpose:** Full reconciliation and mart refresh.
 
 ```python
-transform_batch_nightly_schedule = ScheduleDefinition(
-    job=transform_batch_nightly_job,
+pipeline_batch_nightly_schedule = ScheduleDefinition(
+    job=pipeline_batch_nightly_job,
     cron_schedule="0 4 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
     default_status=DefaultScheduleStatus.RUNNING
@@ -138,10 +138,10 @@ ScheduleDefinition(
 
 ```bash
 # Start schedule
-dagster schedule start transform_batch_nightly_schedule
+dagster schedule start pipeline_batch_nightly_schedule
 
 # Stop schedule
-dagster schedule stop transform_batch_nightly_schedule
+dagster schedule stop pipeline_batch_nightly_schedule
 
 # List all schedules
 dagster schedule list
@@ -160,14 +160,14 @@ dagster schedule list
 # Schedule Name                       State     Cron Schedule
 # ingest_sapo_realtime_schedule       RUNNING   */1 * * * *
 # ingest_sapo_incremental_schedule    RUNNING   */10 * * * *
-# transform_batch_nightly_schedule    RUNNING   0 4 * * *
+# pipeline_batch_nightly_schedule    RUNNING   0 4 * * *
 ```
 
 ### Force Run
 
 ```bash
 # Trigger schedule immediately
-dagster schedule tick transform_batch_nightly_schedule
+dagster schedule tick pipeline_batch_nightly_schedule
 ```
 
 ---
@@ -303,7 +303,7 @@ If server was down, missed runs are NOT automatically backfilled. To catch up:
 
 ```bash
 # Manual run
-dagster job execute -j transform_batch_nightly_job
+dagster job execute -j pipeline_batch_nightly_job
 
 # Or use sensors for catch-up logic
 ```

@@ -335,3 +335,69 @@ Single source of truth for SKU-level economics. Replaces ad-hoc joins of
 
 - **Business Definition:** Units_Sold / (Start_Stock + Received) for a period.
 - **Blocker:** No intra-period stock movement tracking (only point-in-time snapshots available).
+
+## Context: Product Health Classification
+
+> **Description:** Tổng hợp velocity × margin × inventory × lifecycle thành phân loại sức khỏe SP có thể hành động — analog của customer health (value_group/lifecycle). Synthesis layer trên các primitive đã tính ở Product Performance + Inventory Health.
+> **dbt Source:** `mart_product_health` (current, 1 row/product) ← `mart_sku_economics_monthly` + `mart_inventory_health` + `int_product_velocity_trend` + `int_product_discount_dependency` + `dim_products`
+> **Owner:** Merchandising / Product
+> **Update Frequency:** Daily
+
+### Context Overview
+
+| Category | Foundational Analytical Questions | Related Metrics | Data Ready | Needs Added |
+|----------|-----------------------------------|-----------------|------------|-------------|
+| Product Health | SP nào khỏe / cần xử lý — và làm gì? | 13. ABC Class, 14. Health Classification, 15. Lifecycle Stage, 16. Velocity Momentum, 17. OOS Risk, 18. Discount Dependency | `mart_inventory_health`, `mart_sku_economics_monthly` (primitives) | `mart_product_health`, `mart_product_action_queue` (synthesis — build) |
+
+### Analytical Questions
+
+#### Q1. Product Health Readiness
+- **Question:** Sản phẩm nào đang khỏe (bán chạy + lãi + đủ hàng), sản phẩm nào yếu/cần xử lý (chết vốn, hết hàng, margin xói mòn)?
+- **Nature:** merchandising health, value × velocity × stock.
+- **Insight / Action Enabled:** STAR → giữ hàng; QUESTION → đẩy bán; DOG/DEAD → thanh lý/delist; OOS_RISK → nhập gấp; margin xói mòn → review giá vốn.
+
+### Metrics
+
+#### 13. ABC Class
+- **Business Definition:** Phân loại đóng góp doanh thu theo Pareto. A = top SKU chiếm ~80% doanh thu lũy kế, B = ~15% kế, C = ~5% cuối.
+- **Logic:** sort SKU theo net_revenue desc → cumulative revenue_share → A (≤80%), B (≤95%), C (còn lại).
+- **Scope:** mọi SKU có doanh thu. Tính được theo category (cumulative trong nhóm) hoặc toàn tệp.
+
+#### 14. Health Classification (centerpiece)
+- **Business Definition:** Phân loại BCG-style theo velocity × margin (analog customer value_group). Chỉ SKU `has_margin_data=true` (~42 SKU có COGS).
+- **Logic (NTILE toàn tệp, 1-5):** `vel_score = NTILE(5) OVER (ORDER BY velocity_90d)`, `margin_score = NTILE(5) OVER (ORDER BY realized_margin_pct)`.
+  | Class | Điều kiện | Hành động |
+  |---|---|---|
+  | ⭐ STAR | vel≥4 & margin≥4 | bán chạy + lãi cao → giữ hàng, bảo vệ |
+  | 🐎 WORKHORSE | vel≥4 & margin≤2 | volume driver, margin mỏng → watch giá vốn |
+  | ❓ QUESTION | vel≤2 & margin≥4 | lãi cao nhưng bán chậm → đẩy/expose |
+  | 🐕 DOG | vel≤2 & margin≤2 | bán chậm + margin thấp → cân nhắc delist |
+  | BALANCED | còn lại | bình thường |
+- **Overlay (ưu tiên hơn class):** 🚨 OOS_RISK (xem #17) · 🐌 DEAD (is_dead_stock) · 📉 nếu momentum=DECELERATING.
+- **Caveats:** chỉ ~42/685 SKU có margin; SKU thiếu COGS → health_class=NULL, dùng signal velocity/inventory thay thế. Window velocity = 90d (30d quá nhiễu cho supplement).
+
+#### 15. Lifecycle Stage
+- **Business Definition:** Vị trí vòng đời SP: NEW (bán <90 ngày), GROWING (momentum tăng), MATURE (velocity cao ổn định), DECLINING (momentum giảm), DORMANT (days_since_last_sale cao).
+- **Logic:** kết hợp first_sale_date, velocity_momentum (#16), days_since_last_sale.
+
+#### 16. Velocity Momentum
+- **Business Definition:** Xu hướng tốc độ bán: ACCELERATING / STABLE / DECELERATING.
+- **Logic:** velocity 30d gần nhất so với trung bình 90d. >+15% → ACCELERATING; <−15% → DECELERATING; else STABLE. Dùng 24-tháng history `mart_sku_economics_monthly`.
+
+#### 17. OOS Risk
+- **Business Definition:** SP bán chạy nhưng sắp/đã hết hàng — ưu tiên nhập.
+- **Logic:** `(is_oos OR is_low_stock OR days_of_supply < 14)` AND velocity cao (vel_score≥3 hoặc ABC=A). Reuse cờ từ `mart_inventory_health`.
+
+#### 18. Discount Dependency
+- **Business Definition:** Mức phụ thuộc khuyến mãi của SP (analog customer discount_sensitivity). Share doanh thu/đơn của SP bán có discount.
+- **Logic:** `SUM(discount_amount)/SUM(gross) per product` từ `fact_sales`. PROMO_HEAVY (>0.4) / PROMO_LIGHT / FULL_PRICE.
+- **Caveats:** nối với margin — SP margin tốt nhưng PROMO_HEAVY = lãi ảo.
+
+### Action Queue (operational — `mart_product_action_queue`)
+| action_type | Điều kiện | Ai |
+|---|---|---|
+| RESTOCK_NOW | OOS_RISK (STAR/A-class sắp hết) | Inventory |
+| CLEAR_DEADSTOCK | is_dead_stock + dead_stock_value_at_risk cao | Merchandising |
+| REVIEW_MARGIN | margin_outlier hoặc cogs_variance cao hoặc WORKHORSE margin giảm | Merchandising/Finance |
+| PROMOTE | QUESTION (margin cao, velocity thấp) | Marketing/Merch |
+| DELIST | DOG + DEAD + value thấp + DORMANT | Merchandising |

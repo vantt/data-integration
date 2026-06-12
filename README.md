@@ -1,4 +1,4 @@
-# Data Integration Pipeline
+﻿# Data Integration Pipeline
 
 > Modern data lakehouse for Sapo e-commerce using dlt, dbt, Dagster & DuckDB
 
@@ -189,7 +189,7 @@ python transformation/scripts/run_dbt.py --select +tag:otp   # OTP layer only
 
 # Orchestration
 dagster dev                                   # Start Dagster UI
-dagster job execute -j transform_batch_nightly_job
+dagster job execute -j pipeline_batch_nightly_job
 
 # Serving
 python scripts/provisioning/generate_serving_db.py

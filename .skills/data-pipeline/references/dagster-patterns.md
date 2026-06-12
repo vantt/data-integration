@@ -1,4 +1,4 @@
-# Dagster Orchestration Patterns
+﻿# Dagster Orchestration Patterns
 
 Lessons quan trọng khi orchestrate pipeline dlt + dbt trong Dagster. Đây là phần **dễ sai nhất** vì không có warning từ Dagster.
 
@@ -67,7 +67,7 @@ Mỗi schedule check active runs của **higher-priority jobs** trước khi pro
 def ingest_sapo_realtime_schedule(context):
     priority_jobs = [
         "ingest_sheets_sync_job",
-        "transform_batch_nightly_job",
+        "pipeline_batch_nightly_job",
         "ingest_sapo_incremental_job",
     ]
     for job_name in priority_jobs:
@@ -368,16 +368,16 @@ for rec in records:
 
 ```python
 # Nightly — incremental (default behavior)
-transform_batch_nightly_job = define_asset_job(
-    name="transform_batch_nightly_job",
+pipeline_batch_nightly_job = define_asset_job(
+    name="pipeline_batch_nightly_job",
     selection=nightly_selection,
     tags={"concurrency_group": "dbt_rw"},
     # KHÔNG tag full_refresh — assets chạy incremental
 )
 
 # Manual full-refresh — one-click launch từ Dagster UI
-transform_batch_fullrefresh_job = define_asset_job(
-    name="transform_batch_fullrefresh_job",
+pipeline_batch_fullrefresh_job = define_asset_job(
+    name="pipeline_batch_fullrefresh_job",
     selection=nightly_selection,  # cùng assets
     tags={
         "concurrency_group": "dbt_rw",
@@ -576,7 +576,7 @@ health_checks_asset_job = define_asset_job(
 
 ```python
 def _has_active_ingestion(context) -> str | None:
-    for job_name in ["ingest_sapo_realtime_job", "transform_batch_nightly_job", ...]:
+    for job_name in ["ingest_sapo_realtime_job", "pipeline_batch_nightly_job", ...]:
         runs = context.instance.get_runs(filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES), limit=1)
         if runs:
             return runs[0].run_id
@@ -787,7 +787,7 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 - [ ] **Sensor** targeting specific job → job phải có trong `Definitions(jobs=[...])` — không auto-discover từ schedules
 - [ ] **Sensor** đụng run timing → dùng `get_run_records()`, KHÔNG `get_runs()` (`DagsterRun` không có `start_time`) — xem Lesson 8
 - [ ] **Sau mỗi edit sensor/definitions.py** → `reloadRepositoryLocation` via GraphQL + verify log daemon không có sensor error
-- [ ] **Full-refresh** = `transform_batch_fullrefresh_job` (manual, tag baked in), KHÔNG tag nightly schedule — xem Lesson 9
+- [ ] **Full-refresh** = `pipeline_batch_fullrefresh_job` (manual, tag baked in), KHÔNG tag nightly schedule — xem Lesson 9
 - [ ] Batch source functions wire `full_refresh` param từ entry-point → source → resource (nếu thiếu: silently ignored)
 - [ ] Job cascade "source → downstream" → dùng `_sources | _sources.downstream()`, không dùng full `all_dbt_assets`
 - [ ] **Auto-recovery sensors** trong `Definitions(sensors=[...])`: `health_alert_stuckrun_sensor` + `health_concurrency_pool_janitor` — xem Lesson 10
@@ -831,6 +831,6 @@ Khi add job/asset mới vào Dagster, kiểm tra:
 | `orchestration/sensors/stuck_run_alerter.py` | `health_alert_stuckrun_sensor` — Activity-based auto-terminator — xem Lesson 10 |
 | `orchestration/sensors/concurrency_pool_janitor.py` | `health_concurrency_pool_janitor` — Auto-free leaked slots — xem Lesson 10 |
 | `.skills/data-pipeline/templates/dagster-reactive-sensor-template.py` | Copy-paste starter cho reactive sensor mới |
-| `orchestration/definitions.py` | `transform_batch_nightly_job` + `transform_batch_fullrefresh_job` definitions — xem Lesson 9 |
+| `orchestration/definitions.py` | `pipeline_batch_nightly_job` + `pipeline_batch_fullrefresh_job` definitions — xem Lesson 9 |
 | `docker-compose.yml` | Telemetry env vars (line 20-21) + auto-unstick on boot (line 33) |
 | `run_dagster.ps1` | Windows local telemetry vars (line 10-11) |

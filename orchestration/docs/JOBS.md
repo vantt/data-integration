@@ -1,4 +1,4 @@
-# Job Documentation
+﻿# Job Documentation
 
 > Dagster job definitions and configurations
 
@@ -16,7 +16,7 @@ Jobs are collections of assets that execute together. Each job has:
 | --------------------------------- | --------------- | ----------------------------- | ------------------------ |
 | `ingest_sapo_realtime_job`       | _/1 _ \* \* \*  | Webhooks + dbt OTP            | Real-time updates        |
 | `ingest_sapo_incremental_job`    | _/10 _ \* \* \* | History log + dbt OTP         | Gap filling              |
-| `transform_batch_nightly_job`    | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation      |
+| `pipeline_batch_nightly_job`    | 0 4 \* \* \*    | All ingestion + dbt + serving | Full reconciliation      |
 | `ingest_sheets_sync_job`         | Manual          | Targets + Marketing Spend     | Google Sheets (Raw Only) |
 
 ---
@@ -91,13 +91,13 @@ ingest_sapo_incremental_job = define_asset_job(
 
 ---
 
-### transform_batch_nightly_job
+### pipeline_batch_nightly_job
 
 **Purpose:** Full daily reconciliation and mart refresh.
 
 ```python
-transform_batch_nightly_job = define_asset_job(
-    name="transform_batch_nightly_job",
+pipeline_batch_nightly_job = define_asset_job(
+    name="pipeline_batch_nightly_job",
     selection=[
         "sapo_orders_batch",
         "sapo_customers_batch",
@@ -197,8 +197,8 @@ def custom_backfill_job(): ...
 ### Tags
 
 ```python
-transform_batch_nightly_job = define_asset_job(
-    name="transform_batch_nightly_job",
+pipeline_batch_nightly_job = define_asset_job(
+    name="pipeline_batch_nightly_job",
     selection=[...],
     tags={
         "team": "data-eng",
@@ -213,8 +213,8 @@ transform_batch_nightly_job = define_asset_job(
 ```python
 from dagster import multiprocess_executor
 
-transform_batch_nightly_job = define_asset_job(
-    name="transform_batch_nightly_job",
+pipeline_batch_nightly_job = define_asset_job(
+    name="pipeline_batch_nightly_job",
     selection=[...],
     executor_def=multiprocess_executor.configured({
         "max_concurrent": 4
@@ -238,14 +238,14 @@ transform_batch_nightly_job = define_asset_job(
 
 ```bash
 # Run with defaults
-dagster job execute -j transform_batch_nightly_job
+dagster job execute -j pipeline_batch_nightly_job
 
 # Run with config
-dagster job execute -j transform_batch_nightly_job \
+dagster job execute -j pipeline_batch_nightly_job \
   --config-json '{"ops": {"sapo_orders_batch": {"config": {"backfill_days": 30}}}}'
 
 # Run in background
-dagster job launch -j transform_batch_nightly_job
+dagster job launch -j pipeline_batch_nightly_job
 ```
 
 ### Via Code
@@ -254,7 +254,7 @@ dagster job launch -j transform_batch_nightly_job
 from dagster import execute_job
 
 result = execute_job(
-    transform_batch_nightly_job,
+    pipeline_batch_nightly_job,
     run_config={...}
 )
 ```
@@ -266,7 +266,7 @@ result = execute_job(
 Jobs can depend on other jobs completing:
 
 ```python
-@sensor(job=transform_batch_nightly_job)
+@sensor(job=pipeline_batch_nightly_job)
 def after_ingestion_sensor(context):
     # Check if ingestion completed
     if ingestion_complete():

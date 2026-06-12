@@ -1,4 +1,4 @@
-# Troubleshooting — Data Pipeline (dlt + dbt + Serving + Dagster)
+﻿# Troubleshooting — Data Pipeline (dlt + dbt + Serving + Dagster)
 
 ## dlt — Auth / Session
 
@@ -132,7 +132,7 @@
 | Cards query sai database sau deploy | `METABASE_DB_NAME` env var khác với blueprint target DB | Blueprint `> **Database:** \`Name\`` override env var (parser reads blockquote). Verify: check card `dataset_query.database` ID |
 | Scalar card hiển thị blank (không phải NULL) | SQL cross-join CTE trả 0 rows khi asset chưa run | Đổi sang scalar subquery + COALESCE fallback. Xem L37 |
 | Drift card hiển thị blank hoặc không trigger alert | Sai asset_key prefix (`recon/recon_*` vs `recon/*`) hoặc fallback value nằm ngoài conditional format range | Verify asset_key match với `reconciliation.py`. Dùng sentinel 999 (trigger red `> 1`) thay vì -1 |
-| **Nightly reconciliation finish ngay lập tức với 0 records mới** | Batch source `full_refresh` param không được wire xuống resource — cursor luôn up-to-date, early-stop fires ngay | Wire `full_refresh` xuyên suốt entry-point → source → resource. Dùng `transform_batch_fullrefresh_job` để one-time reload. Xem L32 |
+| **Nightly reconciliation finish ngay lập tức với 0 records mới** | Batch source `full_refresh` param không được wire xuống resource — cursor luôn up-to-date, early-stop fires ngay | Wire `full_refresh` xuyên suốt entry-point → source → resource. Dùng `pipeline_batch_fullrefresh_job` để one-time reload. Xem L32 |
 
 ## Rate Limiting
 

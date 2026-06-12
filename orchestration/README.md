@@ -1,4 +1,4 @@
-# Orchestration Layer
+﻿# Orchestration Layer
 
 Pipeline scheduling and coordination using [Dagster](https://dagster.io/).
 
@@ -23,7 +23,7 @@ dagster dev
 dagster definitions validate
 
 # Execute a job manually
-dagster job execute -j transform_batch_nightly_job
+dagster job execute -j pipeline_batch_nightly_job
 ```
 
 → See [System Architecture](../docs/architecture/overview.md) for how orchestration fits into the full pipeline.

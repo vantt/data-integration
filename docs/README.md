@@ -1,4 +1,4 @@
-# Documentation Index
+﻿# Documentation Index
 
 > Comprehensive documentation for the Data Integration Pipeline
 
@@ -176,7 +176,7 @@ python scripts/provisioning/generate_serving_db.py
 |-----|----------|-------------|
 | `ingest_sapo_realtime_job` | Every 1 min | Webhook processing |
 | `ingest_sapo_incremental_job` | Every 10 min | History log gap filling |
-| `transform_batch_nightly_job` | 04:00 AM | Full batch reconciliation |
+| `pipeline_batch_nightly_job` | 04:00 AM | Full batch reconciliation |
 
 ---
 

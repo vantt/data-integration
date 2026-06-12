@@ -1,4 +1,4 @@
-# Project Changelog
+﻿# Project Changelog
 
 > Record of significant changes, features, and fixes
 
@@ -86,7 +86,7 @@
 
 **Jobs Updated:**
 - `ingest_sheets_sync_job` — includes team_config asset
-- `transform_batch_nightly_job` — includes team_config asset
+- `pipeline_batch_nightly_job` — includes team_config asset
 
 **Env Var:** `SOURCES__SPREADSHEET_URL__TEAM_CONFIG`
 

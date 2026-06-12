@@ -1,4 +1,4 @@
-# Lessons Learned — DLT Ingestion
+﻿# Lessons Learned — DLT Ingestion
 
 ## Cấu hình DLT (quan trọng)
 
@@ -777,16 +777,16 @@ QUALIFY ROW_NUMBER() OVER (
 
 ```python
 # Job 1: Nightly — incremental từ cursor cuối cùng
-transform_batch_nightly_job = define_asset_job(
-    name="transform_batch_nightly_job",
+pipeline_batch_nightly_job = define_asset_job(
+    name="pipeline_batch_nightly_job",
     selection=...,
     # KHÔNG có full_refresh tag — chạy incremental bình thường
     tags={"concurrency_group": "dbt_rw"},
 )
 
 # Job 2: Manual full-refresh — launch thủ công khi cần reload lại toàn bộ
-transform_batch_fullrefresh_job = define_asset_job(
-    name="transform_batch_fullrefresh_job",
+pipeline_batch_fullrefresh_job = define_asset_job(
+    name="pipeline_batch_fullrefresh_job",
     selection=...,
     tags={
         "concurrency_group": "dbt_rw",
@@ -817,7 +817,7 @@ nightly run sau đó:
 
 Cả hai job dùng cùng `pipeline_name` → share cùng dlt state file → cursor liên tục giữa full-refresh và incremental.
 
-**Khi nào dùng `transform_batch_fullrefresh_job`:**
+**Khi nào dùng `pipeline_batch_fullrefresh_job`:**
 - Lần đầu bootstrap data
 - Phát hiện data bị thiếu / corrupt
 - Sau khi thêm field mới vào source cần backfill
@@ -1072,7 +1072,7 @@ health_checks_asset_job = define_asset_job(
 def _has_active_ingestion(context) -> str | None:
     for job_name in [
         "ingest_sapo_realtime_job", "ingest_sapo_incremental_job",
-        "transform_batch_nightly_job", "ingest_sheets_sync_job",
+        "pipeline_batch_nightly_job", "ingest_sheets_sync_job",
     ]:
         runs = context.instance.get_runs(
             filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES), limit=1
@@ -1577,7 +1577,7 @@ for rec in queue_records:
 ```
 
 **Threshold choice — why 2 hours, not 30 min:**
-- Nightly batch (`transform_batch_nightly_job`) holds `dbt_rw=1` for ~30-60 min. Realtime ticks queued behind it sit in `NOT_STARTED` legitimately.
+- Nightly batch (`pipeline_batch_nightly_job`) holds `dbt_rw=1` for ~30-60 min. Realtime ticks queued behind it sit in `NOT_STARTED` legitimately.
 - 2h gives wide safety margin while preventing days-long zombie accumulation.
 - Different from Pass 1's `INACTIVITY_THRESHOLD=5min` because Pass 2 detects "daemon never picked it up", not "process stalled".
 
@@ -1610,7 +1610,7 @@ Lessons L49-L52 + the existing L47 (backup acquires `duckdb_lock`) crystallize a
 | `maintain_purge_runs_schedule` | `0 1 * * *` ICT | Quietest window; finishes before 03:00 nightly |
 | `trigger_backup_after_purge` (sensor) | purge SUCCESS | Hard ordering — backup runs after purge, not cron-guessed |
 | `maintain_backup_fallback_schedule` | `0 6 * * *` ICT | Fallback if purge fails; `run_key=date` deduplicates with sensor |
-| `transform_batch_nightly_schedule` | `0 3 * * *` ICT | Default nightly batch |
+| `pipeline_batch_nightly_schedule` | `0 3 * * *` ICT | Default nightly batch |
 | `health_report_digest_schedule` | `0 6 * * *` ICT | After all overnight jobs complete; read-only different DB |
 
 ---
@@ -2124,7 +2124,7 @@ Ngoài ra thêm log trước các silent phases:
 
 **Symptom:** `ingest_sapo_realtime_job` và `ingest_sapo_incremental_job` lặp lại NOT_STARTED ~90 min rồi bị auto-canceled ("daemon never dequeued"). Xảy ra sau khi L63 fix làm purge chạy thành công lần đầu → backup trigger lần đầu.
 
-**Root cause:** Nightly batch (`transform_batch_nightly_job`, 60-90+ min) chiếm `dbt_rw=1` concurrency slot. Khi nightly đang chạy:
+**Root cause:** Nightly batch (`pipeline_batch_nightly_job`, 60-90+ min) chiếm `dbt_rw=1` concurrency slot. Khi nightly đang chạy:
 
 1. Realtime tick ở ~03:03 ICT: không có active realtime run → tạo `NOT_STARTED` run mới
 2. Coordinator: `dbt_rw=1` bị nightly chiếm → không dequeue realtime → run ở `NOT_STARTED`
@@ -2140,7 +2140,7 @@ Ngoài ra thêm log trước các silent phases:
 
 ```python
 # Định nghĩa trong definitions.py:
-_LONG_DPT_RW_JOBS = ["transform_batch_nightly_job", "transform_batch_fullrefresh_job"]
+_LONG_DPT_RW_JOBS = ["pipeline_batch_nightly_job", "pipeline_batch_fullrefresh_job"]
 _RUNNING_STATUSES = [DagsterRunStatus.QUEUED, DagsterRunStatus.STARTING, DagsterRunStatus.STARTED]
 
 def _long_dbt_rw_holder(context) -> str | None:

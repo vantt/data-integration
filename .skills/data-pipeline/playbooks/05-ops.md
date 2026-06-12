@@ -1,4 +1,4 @@
-# OPS Playbook — Vận hành & Orchestration
+﻿# OPS Playbook — Vận hành & Orchestration
 
 ## Trách nhiệm
 
@@ -15,7 +15,7 @@ OPS quản lý toàn bộ lifecycle của Dagster jobs, sensors, schedules, và 
 - [ ] Ingestion job tổng hợp: inject upstream keys qua `DagsterDbtTranslator.get_upstream_asset_keys()` (Lesson 1 dagster, Critical Rule 10). Thiếu = dbt start trước ingestion xong
 - [ ] Schedule offset tránh start-time race: realtime `*/3`-offset, incremental `*/10`, lệch nhau (Lesson 2 dagster). Hai job trigger cùng giây → cả hai check "active?" = race condition
 - [ ] Self-overlap skip: `_has_active_run()` trong mỗi schedule function (Lesson 5 dagster). Schedule tạo RunRequest kể cả khi đang chạy dở
-- [ ] Yield-to-batch: realtime/incremental skip khi `transform_batch_nightly_job` đang chạy (yield logic trong Lesson 2 dagster)
+- [ ] Yield-to-batch: realtime/incremental skip khi `pipeline_batch_nightly_job` đang chạy (yield logic trong Lesson 2 dagster)
 - [ ] Telemetry disabled tại process level: `DLT_TELEMETRY_DISABLED=true`, `DBT_SEND_ANONYMOUS_USAGE_STATS=false` (Lesson 4 dagster) — tránh zombie thread giữ process alive
 - [ ] dbt subprocess timeout watchdog `DBT_TIMEOUT_SEC=900` trong `@dbt_assets` function (L45) — hard kill sau 15 min
 - [ ] `finally` block kill dbt subprocess sau `watchdog.cancel()` — external Dagster cancellation disarms watchdog nhưng không kill dbt → zombie cascade (L60)
@@ -65,7 +65,7 @@ Post-mortem 2026-04-28: disk D: 100% full → SQLite I/O error → Dagster API s
 | `maintain_purge_runs_schedule` | `0 1 * * *` ICT | Quietest window; finishes before 03:00 nightly |
 | `trigger_backup_after_purge` (sensor) | purge SUCCESS | Hard ordering — backup after purge, not cron-guessed |
 | `maintain_backup_fallback_schedule` | `0 6 * * *` ICT | Fallback if purge fails; `run_key=date` deduplicates with sensor |
-| `transform_batch_nightly_schedule` | `0 3 * * *` ICT | Default nightly batch |
+| `pipeline_batch_nightly_schedule` | `0 3 * * *` ICT | Default nightly batch |
 | `health_report_digest_schedule` | `0 6 * * *` ICT | After all overnight jobs; read-only different DB |
 
 Full schedule topology 01:00 → 03:00 → 04:30 → 04:45 → 06:00:

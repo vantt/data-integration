@@ -1,4 +1,4 @@
----
+﻿---
 name: data-pipeline
 description: End-to-end data pipeline work across ingestion, modeling, serving, trust, and operations in the data-integration2 project.
 ---
@@ -260,5 +260,5 @@ Env vars set in container via docker-compose `environment:` section or `.env.doc
 13. `[MODEL]` **Dedup ORDER BY: `modified_on DESC` trước** (entity timestamp = source of truth), sau đó ingest_method priority. KHÔNG dùng `event_timestamp` làm primary sort cho dedup — event_timestamp là timestamp của log system, không phải entity. Xem L28.
 14. `[MODEL]` **Incremental filter: dùng `_dlt_load_id`** không phải `event_timestamp` — catches late-arriving data từ full-refresh hoặc history_log backfill mà event_timestamp filter sẽ bỏ sót. Xem L29.
 15. `[MODEL]` **Incremental schema migration phải self-heal** — khi thêm column mới vào src_ model: (a) `on_schema_change='append_new_columns'`, (b) `adapter.get_columns_in_relation(this)` check column tồn tại, (c) guard UNION ALL, (d) cursor CTE thay vì aggregate trong WHERE subquery. DuckDB + `read_parquet()` reject MAX() in WHERE subquery. Xem L31.
-16. `[OPS+MODEL]` **Nightly reconciliation = incremental, KHÔNG phải full refresh.** Dùng `transform_batch_fullrefresh_job` (manual, tag baked in) cho one-time reload. Không bao giờ auto-tag `full_refresh=true` trên scheduled jobs. Batch source functions phải wire `full_refresh` param từ entry-point → source → resource — nếu không flag bị silently ignored. Xem L32.
+16. `[OPS+MODEL]` **Nightly reconciliation = incremental, KHÔNG phải full refresh.** Dùng `pipeline_batch_fullrefresh_job` (manual, tag baked in) cho one-time reload. Không bao giờ auto-tag `full_refresh=true` trên scheduled jobs. Batch source functions phải wire `full_refresh` param từ entry-point → source → resource — nếu không flag bị silently ignored. Xem L32.
 17. `[INGEST]` **`--full-refresh` phải reset dlt pipeline state dir** (`.dlt/pipelines/{name}/`), không chỉ set flag. `dlt.sources.incremental` có 2 lớp filter: manual check (code) + internal transform (state file). Chỉ set `last_value=None` mà không xóa state = dlt silently drop items. KHÔNG dùng `pipeline.drop()` (gọi `destination.drop_storage()`). Xem L33.

@@ -1,4 +1,4 @@
-# Data Flow Documentation
+﻿# Data Flow Documentation
 
 > End-to-end data flow through the 7-hop pipeline
 
@@ -590,7 +590,7 @@ https://files.etl.lan.fwg.vn/   (via Caddy reverse-proxy, TLS)
 **Use cases:** offline analysis, AI tools, distribution to stakeholders without pipeline access.
 **Lock safety:** `olap.duckdb` opened `READ_ONLY` → safe to run alongside Metabase.
 **Retention:** `GC_KEEP=3` timestamped files. Stale `.tmp` files swept on each run.
-**Schedule:** nightly via `transform_batch_nightly_job` (after `sapo_serving_db`).
+**Schedule:** nightly via `pipeline_batch_nightly_job` (after `sapo_serving_db`).
 
 ---
 

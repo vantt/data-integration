@@ -1,4 +1,4 @@
-# Operations Manual
+﻿# Operations Manual
 
 > Daily operations, monitoring, and maintenance guide
 
@@ -59,13 +59,13 @@ dagster job list --running
 |-----|----------|----------|-------------|
 | `ingest_sapo_realtime_job` | */1 * * * * | Asia/Ho_Chi_Minh | Webhook processing |
 | `ingest_sapo_incremental_job` | */10 * * * * | Asia/Ho_Chi_Minh | History log gap filling |
-| `transform_batch_nightly_job` | 0 4 * * * | Asia/Ho_Chi_Minh | Full batch + refresh |
+| `pipeline_batch_nightly_job` | 0 4 * * * | Asia/Ho_Chi_Minh | Full batch + refresh |
 | `ingest_sheets_sync_job` | Manual | - | Google Sheets targets |
 
 ### Schedule Dependencies
 
 ```
-transform_batch_nightly_job (04:00 AM)
+pipeline_batch_nightly_job (04:00 AM)
 ├── sapo_orders_batch_asset
 ├── sapo_customers_batch_asset
 ├── sapo_accounts_batch_asset
@@ -78,7 +78,7 @@ transform_batch_nightly_job (04:00 AM)
 
 ```bash
 # Run specific job
-dagster job execute -j transform_batch_nightly_job
+dagster job execute -j pipeline_batch_nightly_job
 
 # Run specific asset
 dagster asset materialize -a sapo_orders_batch_asset
@@ -389,7 +389,7 @@ python scripts/provisioning/generate_serving_db.py
 
 # Restart components
 docker restart metabase
-dagster job execute -j transform_batch_nightly_job
+dagster job execute -j pipeline_batch_nightly_job
 
 # View logs
 tail -f transformation/logs/dbt.log

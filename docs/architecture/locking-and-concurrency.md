@@ -1,4 +1,4 @@
-# Locking & Concurrency Architecture
+﻿# Locking & Concurrency Architecture
 
 > Audit date: 2026-04-08
 > Status refresh: 2026-04-09 (post-hardening sweep — see §Status Refresh)
@@ -114,13 +114,13 @@
           value: "dbt_rw"
           limit: 1
   ```
-- `SYNC_TAGS = {"concurrency_group": "dbt_rw"}` (`definitions.py:68`) is applied to all four asset jobs: `ingest_sapo_realtime_job`, `ingest_sapo_incremental_job`, `ingest_sheets_sync_job`, `transform_batch_nightly_job`.
+- `SYNC_TAGS = {"concurrency_group": "dbt_rw"}` (`definitions.py:68`) is applied to all four asset jobs: `ingest_sapo_realtime_job`, `ingest_sapo_incremental_job`, `ingest_sheets_sync_job`, `pipeline_batch_nightly_job`.
 - **Scope limit (critical)**: `tag_concurrency_limits` gates **dequeue**, not **queue admission**. Queue can grow unbounded unless schedules self-skip. This is the Lesson L19 foot-gun.
 
 ### Dagster schedule-level
 
 - `definitions.py:124-177`: `_has_active_run(context, job_name)` queries the instance for runs in `[QUEUED, NOT_STARTED, STARTING, STARTED]` for the **same job name** and skips the tick if any exist.
-- Applied to all 3 schedules: `ingest_sapo_realtime_schedule` (`:146`), `ingest_sapo_incremental_schedule` (`:161`), `transform_batch_nightly_schedule` (`:173`). ✅
+- Applied to all 3 schedules: `ingest_sapo_realtime_schedule` (`:146`), `ingest_sapo_incremental_schedule` (`:161`), `pipeline_batch_nightly_schedule` (`:173`). ✅
 - `ingest_sapo_incremental_schedule` cron `*/10 0-3,5-23 * * *` excludes the 4 AM hour to avoid piling up ticks while nightly holds the `dbt_rw` slot. Thoughtful.
 - Note: `ingest_sheets_sync_job` has no schedule. Trigger paths: (1) manual via Dagster UI / CLI, (2) `ingest_sheets_modified_sensor` (content-hash polling every 5 min, auto-fires on real sheet edits — see commit 2026-04-09), (3) nightly reconciliation (includes sheet assets in its selection). Coordinator tag still protects it from colliding with active sync runs.
 
@@ -181,7 +181,7 @@
 1. ~~**Dagster asset-level pool slot leak on cancel**~~ → **RESOLVED 2026-04-09** (commit b2659fb). `unstick_concurrency_pools.py` now runs on every container boot via `docker-compose.yml` command: `... && python scripts/maintenance/unstick_concurrency_pools.py || true && dagster dev ...`. First boot verified: `Pool 'duckdb_lock': slot=1 active=0 pending=0 / Total slots freed: 0`. Leak still exists in Dagster upstream, but blast radius bounded to "one container restart = auto-healed".
 2. ~~**`run_dbt.py` has no timeout**~~ → **RESOLVED 2026-04-09** (commit 2aa55d8). `timeout=3600` + `TimeoutExpired` handler added.
 3. **Incremental schedule `4 AM hour exclusion` is a magic skip window**. If nightly is ever delayed past 5 AM, the incremental job resumes and can enqueue while nightly is still running. Self-overlap on nightly's OWN job prevents double-nightly, and coordinator tag serializes dbt_rw across jobs — so it is correct but subtle.
-   - **Status 2026-04-09**: documented in `transform_batch_nightly_schedule` docstring (commit 2aa55d8). ✅
+   - **Status 2026-04-09**: documented in `pipeline_batch_nightly_schedule` docstring (commit 2aa55d8). ✅
 4. ~~**Read-time lock assumption** in `_read_cookie_file()`~~ → **DOCUMENTED 2026-04-09** (commit 2aa55d8). INVARIANT comment added forbidding future edit-in-place writer paths.
 5. **Retry loops mask lock contention**: `pipeline_runner.py:80-100` retries 3× on any exception. If a real lock bug appears, it will be swallowed into retry noise. (Still open — observational.)
 
@@ -241,7 +241,7 @@ _All items in this section from the 2026-04-08 audit have been resolved on 2026-
 
 4. ~~Add `timeout=3600` to `transformation/scripts/run_dbt.py`~~ → **DONE 2026-04-09 (commit 2aa55d8).**
 5. **Add a unit test** that imports `definitions.py` and asserts every schedule's function references `_has_active_run` (guard against future regressions). **Still open.**
-6. ~~Document the 4 AM incremental-skip window~~ → **DONE 2026-04-09 (commit 2aa55d8, `transform_batch_nightly_schedule` docstring).**
+6. ~~Document the 4 AM incremental-skip window~~ → **DONE 2026-04-09 (commit 2aa55d8, `pipeline_batch_nightly_schedule` docstring).**
 7. ~~Add invariant comment in `SharedCookieManager._read_cookie_file`~~ → **DONE 2026-04-09 (commit 2aa55d8).**
 8. **Sensor-based auto-unstick** — inspect `duckdb_lock` pool every N minutes and free slots whose owning run is terminal. Would replace boot-time helper with runtime healing. **Still open** — current boot-time workaround is good enough; only worth it if cancels happen frequently between restarts.
 
@@ -275,8 +275,8 @@ Tests run inside `data_platform` container during this audit (2026-04-08 23:35+0
 | Find dlt pipelines state dir | ✅ `/var/dlt/pipelines/<pipeline_name>/` — each pipeline isolated |
 | Grep for `subprocess.run(..., capture_output=True, ...)` | Only 1 hit: `templates/dagster-serving-asset-template.py:66` (LANDMINE) |
 | Grep for `subprocess.run` without timeout | 1 hit: `transformation/scripts/run_dbt.py:109` — standalone-only, inherited stdio |
-| Verify `concurrency_group: dbt_rw` applied to all sync jobs | ✅ `SYNC_TAGS` applied to `ingest_sapo_realtime_job`, `ingest_sapo_incremental_job`, `ingest_sheets_sync_job`, `transform_batch_nightly_job` |
-| Verify `_has_active_run` check in all schedules | ✅ in `ingest_sapo_realtime_schedule`, `ingest_sapo_incremental_schedule`, `transform_batch_nightly_schedule` (no schedule for ingest_sheets_sync_job) |
+| Verify `concurrency_group: dbt_rw` applied to all sync jobs | ✅ `SYNC_TAGS` applied to `ingest_sapo_realtime_job`, `ingest_sapo_incremental_job`, `ingest_sheets_sync_job`, `pipeline_batch_nightly_job` |
+| Verify `_has_active_run` check in all schedules | ✅ in `ingest_sapo_realtime_schedule`, `ingest_sapo_incremental_schedule`, `pipeline_batch_nightly_schedule` (no schedule for ingest_sheets_sync_job) |
 
 ### Follow-up verification 2026-04-09 11:10+07
 
@@ -297,7 +297,7 @@ Tests run inside `data_platform` container during this audit (2026-04-08 23:35+0
 3. **dbt `prepare_if_dev()` manifest lock** — what exactly caused the "manifest.concurrent-update-lock" errors during code reload? Is it the same Dagster code-server reload race, and does newer dagster-dbt fix it? Worth checking on upgrade.
 4. ~~**Why do `sapo_orders_batch / customers / accounts` have no dlt state dirs** in `/var/dlt/pipelines/` right now?~~ **RESOLVED 2026-04-09.** Three-part answer:
    1. **`/var/dlt/pipelines/` is ephemeral** — not bind-mounted in `docker-compose.yml`. Every container restart wipes it. Container boot time today: 2026-04-09 09:55:31 (`stat /proc/1`).
-   2. **Batch pipelines only run at 04:00 nightly** (`transform_batch_nightly_job`, cron `0 4 * * *`). Last successful run: 2026-04-09 04:00:15–04:09:30 (verified in dagster compute logs, run `73b8ee34`). That state was wiped by the 09:55 container restart. Next re-creation: 2026-04-10 04:00. Meanwhile only `sapo_history_log_pipeline` (every 10 min) and `sapo_webhook_consumer` (every 3 min) have recreated their state dirs post-restart.
+   2. **Batch pipelines only run at 04:00 nightly** (`pipeline_batch_nightly_job`, cron `0 4 * * *`). Last successful run: 2026-04-09 04:00:15–04:09:30 (verified in dagster compute logs, run `73b8ee34`). That state was wiped by the 09:55 container restart. Next re-creation: 2026-04-10 04:00. Meanwhile only `sapo_history_log_pipeline` (every 10 min) and `sapo_webhook_consumer` (every 3 min) have recreated their state dirs post-restart.
    3. **True pipeline state is NOT in `/var/dlt/`** — it lives in the destination, at `/app/data_lake/sapo_raw/_dlt_pipeline_state/` (bind-mounted, persistent). dlt's `restore_from_destination=True` default re-reads this on every `pipeline.run()` init. Verified presence of `sapo_orders_batch__*.jsonl`, `sapo_customers_batch__*.jsonl`, `sapo_accounts_batch__*.jsonl` files in this dir. So incremental cursors survive container restarts even though `/var/dlt/` does not.
    - **Implication**: `/var/dlt/` is a scratch dir only. No action needed. If we ever wanted faster restart warm-up, we could add a volume mount — but it would be pure optimization, not correctness.
 5. ~~**`ingest_sheets_sync_job` with no schedule**~~ **RESOLVED 2026-04-09.** Intentional — by design it's reactive, not scheduled. Three trigger paths now exist:

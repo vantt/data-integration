@@ -1,4 +1,4 @@
-# Orchestration Layer Documentation
+﻿# Orchestration Layer Documentation
 
 > Job scheduling and coordination using Dagster
 
@@ -66,8 +66,8 @@ def sapo_orders_batch():
 Jobs are collections of assets that run together:
 
 ```python
-transform_batch_nightly_job = define_asset_job(
-    name="transform_batch_nightly_job",
+pipeline_batch_nightly_job = define_asset_job(
+    name="pipeline_batch_nightly_job",
     selection=["sapo_orders_batch", "sapo_customers_batch", "dbt_*", "serving_*"]
 )
 ```
@@ -77,8 +77,8 @@ transform_batch_nightly_job = define_asset_job(
 Schedules trigger jobs at specified times:
 
 ```python
-@schedule(cron_schedule="0 4 * * *", job=transform_batch_nightly_job)
-def transform_batch_nightly_schedule():
+@schedule(cron_schedule="0 4 * * *", job=pipeline_batch_nightly_job)
+def pipeline_batch_nightly_schedule():
     return RunRequest()
 ```
 
@@ -111,7 +111,7 @@ dagster dev
 dagster definitions validate
 
 # Run job manually
-dagster job execute -j transform_batch_nightly_job
+dagster job execute -j pipeline_batch_nightly_job
 
 # Materialize specific asset
 dagster asset materialize -a sapo_orders_batch
@@ -120,8 +120,8 @@ dagster asset materialize -a sapo_orders_batch
 dagster schedule list
 
 # Start/stop schedule
-dagster schedule start transform_batch_nightly_schedule
-dagster schedule stop transform_batch_nightly_schedule
+dagster schedule start pipeline_batch_nightly_schedule
+dagster schedule stop pipeline_batch_nightly_schedule
 ```
 
 ## Configuration
