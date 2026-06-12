@@ -1,18 +1,4 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node \"$HOME/.claude/hooks/data-pipeline-lesson-reminder.cjs\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
     "allow": [
       "Bash(git -C \"D:\\\\_1.FWG_PARA\\\\1.Projects\\\\dev\\\\dataware_house\\\\data-integration2\" status --short)",
@@ -65,7 +51,22 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(mv .claude/skills/domain-knowledge-doc .claude/skills/doc-domain-knowledge)",
-      "Bash(mv .claude/skills/workflow-documentation .claude/skills/doc-workflow)"
+      "Bash(mv .claude/skills/workflow-documentation .claude/skills/doc-workflow)",
+      "Bash(Get-ChildItem *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$HOME/.claude/hooks/data-pipeline-lesson-reminder.cjs\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
