@@ -48,9 +48,9 @@ DRY: inventory health + velocity/margin/returns ĐÃ tính sẵn. Build lớp sy
 | **P0** | Plan + pipeline-design + cleanup-inventory | 🔵 plan+pipeline done; cleanup ⬜ |
 | **P1** | Domain doc: context "Product Health Classification" (metric 13-18 + action queue) | ✅ done |
 | **P2** | Pipeline: int×2 + mart_product_health + action_queue → Dagster RUN_SUCCESS, tests PASS | ✅ done; **spine broadened** (latest_econ ∪ inventory per-product-latest on_hand>0) → 119 SP, 86 dead-stock, CLEAR_DEADSTOCK fire (more-insight win) |
-| **P3** | Collection + build 4 board MỚI vào sub-collection (nested header pattern) | ⬜ |
-| **P4** | Validate (user kiểm tra) | 🔒 chờ user |
-| **P5** | Retire/dọn board cũ (#30/#36/#76/#94) + overlap, update registry | 🔒 chờ user duyệt |
+| **P3** | Collection `Merchandising & Product` (top-level, id 100) + 4 board MỚI | ✅ #107 Overview · #109 Performance&Velocity · #108 Profitability&Cost (gộp #36+#76) · #110 Inventory&Stock; index set |
+| **P4** | Validate (user kiểm tra 4 board) | 🔵 **CHỜ USER** |
+| **P5** | Retire board cũ (#30/#36/#76/#94) + registry/files | 🔒 chờ user duyệt "OK retire" |
 
 ## Decisions chốt (2026-06-12)
 1. **Collection: top-level `Merchandising & Product`** (không dưới Marketing — sai audience).
