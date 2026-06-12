@@ -4027,3 +4027,25 @@ Apply to all mart tables in olap.duckdb blueprints that use field filters.
 3. After deploying a blueprint, test with a filter value applied — not just the no-filter state.
 
 **Reference:** `docs/analytics-handbook/blueprints/cohort_explorer.md` (Cohort Retention Matrix / Cohort Value Summary / Cohort Data Table)
+
+---
+
+### L128 — Pre-pivoted CASE WHEN cards silently show all-NULL rows when window produces non-integer period_n
+
+**Group:** SERVE
+
+**Symptom:** Cohort heatmap cards (Retention Matrix, Value Summary) show the correct number of rows but all metric columns (M0–M12) are NULL when `window_type=calendar` filter is applied. With `window_type=relative` or no filter the cards display correctly.
+
+**Root cause:** The pivot SQL uses `MAX(CASE WHEN period_n = '0' THEN ... END) AS "M0"` etc. for integers 0–12. For `window_type='relative'`, `period_n` is stored as `'0'`, `'1'`... so CASE WHEN matches. For `window_type='calendar'`, `period_n` is `'2023-03'`, `'2024-01'`... — no integer matches → all CASE WHEN branches are FALSE → every metric column returns NULL. The `GROUP BY cohort_value` still produces one row per cohort (with all-NULL metrics), so the result looks like "data present but empty" rather than "0 rows".
+
+Pre-pivoted cards are window-type-aware by design: they only make sense for the window whose `period_n` format they pivot on.
+
+**Fix:** Hardcode `AND window_type = 'relative'` in the SQL of any pre-pivoted card (instead of `[[AND {{window_type}}]]`). Remove the `window_type` parameter mapping from those dashcards so the dashboard filter does not inject a conflicting condition. Provide a separate long-format table card (no pivot) that keeps the dynamic `[[AND {{window_type}}]]` filter for calendar drill-down.
+
+**Rules:**
+1. Any card using `CASE WHEN period_n = '<integer>'` is implicitly scoped to `window_type='relative'` — make it explicit in SQL.
+2. "Rows exist but all metrics are NULL" from a pivot card = wrong period_n format for the active window filter.
+3. The `window_type` dashboard filter should only be wired to cards that handle both formats (long-format table). Pivot/heatmap cards must be decoupled from it.
+4. When designing multi-window cohort dashboards: pivot cards = relative only; time-series/long-format cards = both.
+
+**Reference:** `docs/analytics-handbook/blueprints/cohort_explorer.md` (Cohort Value Summary / Cohort Retention Matrix — hardcoded relative; Cohort Data Table — dynamic)
