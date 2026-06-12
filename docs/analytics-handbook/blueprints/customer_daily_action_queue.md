@@ -103,7 +103,12 @@ FROM mart_customer_action_queue
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 ---
@@ -139,7 +144,12 @@ WHERE action_type = 'CALL_NOW'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 3, "size_y": 3 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -165,7 +175,12 @@ WHERE action_type = 'REORDER_NUDGE'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 3, "size_x": 3, "size_y": 3 }
+{
+  "row": 3,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -191,7 +206,12 @@ WHERE action_type = 'REORDER_PREEMPT'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 3, "size_y": 3 }
+{
+  "row": 3,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -217,7 +237,12 @@ WHERE action_type = 'WIN_BACK'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 9, "size_x": 3, "size_y": 3 }
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -243,7 +268,12 @@ WHERE action_type = 'SECOND_ORDER'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 12, "size_x": 3, "size_y": 3 }
+{
+  "row": 6,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -269,7 +299,12 @@ WHERE action_type = 'HIGH_CANCEL_RISK'
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 15, "size_x": 3, "size_y": 3 }
+{
+  "row": 6,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -305,7 +340,12 @@ WHERE is_contactable = true
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 6, "size_y": 3 }
+{
+  "row": 10,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -340,7 +380,12 @@ WHERE is_contactable = true
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 6, "size_x": 6, "size_y": 3 }
+{
+  "row": 10,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -374,7 +419,12 @@ WHERE is_contactable = true
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 12, "size_x": 6, "size_y": 3 }
+{
+  "row": 10,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -511,7 +561,12 @@ LIMIT 500
 ```
 
 ```json metabase-pos
-{ "row": 11, "col": 0, "size_x": 18, "size_y": 10 }
+{
+  "row": 14,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 10
+}
 ```
 
 ---
@@ -581,7 +636,12 @@ ORDER BY MIN(priority_rank)
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 9, "size_y": 6 }
+{
+  "row": 25,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 ---
@@ -622,7 +682,12 @@ ORDER BY MIN(priority_rank)
 ```
 
 ```json metabase-pos
-{ "row": 23, "col": 9, "size_x": 9, "size_y": 6 }
+{
+  "row": 25,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 ---
@@ -668,7 +733,12 @@ WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER
 ```
 
 ```json metabase-pos
-{ "row": 30, "col": 0, "size_x": 9, "size_y": 3 }
+{
+  "row": 32,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 3
+}
 ```
 
 ---
@@ -704,7 +774,12 @@ WHERE customer_type NOT IN ('WHOLESALE', 'PARTNER', 'STAFF', 'KOL', 'CROSSBORDER
 ```
 
 ```json metabase-pos
-{ "row": 30, "col": 9, "size_x": 9, "size_y": 3 }
+{
+  "row": 32,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 3
+}
 ```
 
 ---

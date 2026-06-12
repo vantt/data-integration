@@ -60,7 +60,12 @@ SELECT
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Boi canh mua vu + YoY Caveat
@@ -76,7 +81,12 @@ SELECT
 # Monitor customer base health — growth, activity, and retention pulse check
 
 ```json metabase-pos
-{ "row": 5, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 5,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### ❓ Question: Total Customers
@@ -114,7 +124,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 6, "size_y": 3 }
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Active Customers (30d)
@@ -154,7 +169,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 6, "size_x": 4, "size_y": 3 }
+{
+  "row": 6,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: New Customers (Last Month)
@@ -200,7 +220,12 @@ FROM current_period c, previous_period p, prior_year py
 ```
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 3 }
+{
+  "row": 9,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: One-Time Buyer Rate
@@ -249,7 +274,12 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 6, "col": 14, "size_x": 4, "size_y": 3 }
+{
+  "row": 6,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 ---
@@ -259,7 +289,12 @@ FROM current_period c, previous_period p
 # Assess customer status distribution — identify at-risk concentration
 
 ```json metabase-pos
-{ "row": 12, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 12,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### ❓ Question: Customer Status Distribution
@@ -301,7 +336,12 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 13, "col":0, "size_x":6, "size_y":6}
+{
+  "row": 13,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### ❓ Question: Customer Segment Distribution
@@ -343,7 +383,12 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 13, "col":6, "size_x":6, "size_y":6}
+{
+  "row": 13,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 #### ❓ Question: Revenue from Top 20% Customers
@@ -379,7 +424,12 @@ FROM ranked
 ```
 
 ```json metabase-pos
-{"row": 13, "col":12, "size_x":6, "size_y":6}
+{
+  "row": 13,
+  "col": 12,
+  "size_x": 6,
+  "size_y": 6
+}
 ```
 
 ---
@@ -389,7 +439,12 @@ FROM ranked
 # Track growth dynamics — is acquisition outpacing churn?
 
 ```json metabase-pos
-{"row": 19, "col":0, "size_x":18, "size_y":1}
+{
+  "row": 19,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### ❓ Question: Monthly Acquisition vs Churn (6M)
@@ -445,7 +500,12 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{"row": 20, "col":0, "size_x":18, "size_y":6}
+{
+  "row": 20,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
 ```
 
 ---
@@ -455,7 +515,12 @@ ORDER BY 1
 # Review segment health scorecard — flag segments with high churn or low activity
 
 ```json metabase-pos
-{"row": 26, "col":0, "size_x":18, "size_y":1}
+{
+  "row": 26,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### ❓ Question: Customer Health Scorecard
@@ -523,7 +588,12 @@ ORDER BY
 ```
 
 ```json metabase-pos
-{"row": 27, "col":0, "size_x":18, "size_y":5}
+{
+  "row": 27,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 5
+}
 ```
 
 ---
@@ -550,7 +620,12 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Analyze customer value — where is revenue concentrated?
@@ -1033,7 +1108,12 @@ SELECT '📅 Tháng này: ' || strftime(date_trunc('month', current_date)::DATE,
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
 #### 📝 Text: Analyze purchase behavior — channel and product preferences by segment
