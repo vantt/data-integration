@@ -75,22 +75,43 @@ def run_pipeline(
     # 3b. Handle --reset-cursor — clears incremental cursor, re-fetches from beginning.
     # SAFE: write_disposition="append" means dlt only adds new parquet files.
     # Old parquet files (history_log, text, prior batch_sync) are untouched.
-    # Uses refresh="drop_pipeline_state" to clear the destination-stored cursor too —
-    # clearing only the local state dir is insufficient because dlt restores state FROM
-    # the destination on startup, which would re-apply the old start_value filter.
+    #
+    # IMPLEMENTATION NOTE: Do NOT use refresh="drop_pipeline_state" — that mode also
+    # triggers a DROP TABLE which deletes ALL parquet files in the table directory,
+    # including other ingest_method partitions (history_log, text) that must be preserved.
+    #
+    # Instead, manually delete the destination-stored state JSONL files for this pipeline
+    # before creating the pipeline object. This clears the cursor without touching data.
     refresh_mode = None
     if args.reset_cursor:
         import shutil
+        import glob as _glob
         from dlt.common.pipeline import get_dlt_pipelines_dir
+        # 1. Clear local state dir
         state_dir = os.path.join(get_dlt_pipelines_dir(), pipeline_name)
         if os.path.exists(state_dir):
             shutil.rmtree(state_dir)
             print(f"[Pipeline Runner] --reset-cursor: cleared local state dir ({state_dir})")
         else:
-            print(f"[Pipeline Runner] --reset-cursor: no local state dir found, starting fresh.")
-        refresh_mode = "drop_pipeline_state"  # drops destination state without deleting parquet
+            print(f"[Pipeline Runner] --reset-cursor: no local state dir found.")
+        # 2. Delete destination-stored state JSONL files for this pipeline.
+        #    Pattern: {data_lake}/_dlt_pipeline_state/{pipeline_name}__*.jsonl
+        #    This prevents dlt from restoring the old cursor on startup.
+        from dlt.common.configuration.specs import FilesystemConfiguration
+        data_lake_root = os.environ.get("DESTINATION__FILESYSTEM__BUCKET_URL", "")
+        if data_lake_root:
+            state_pattern = os.path.join(data_lake_root.replace("file://", ""), "_dlt_pipeline_state", f"{pipeline_name}__*.jsonl")
+            state_files = _glob.glob(state_pattern)
+            for sf in state_files:
+                os.remove(sf)
+            if state_files:
+                print(f"[Pipeline Runner] --reset-cursor: deleted {len(state_files)} destination state file(s) for {pipeline_name}")
+            else:
+                print(f"[Pipeline Runner] --reset-cursor: no destination state files found for {pipeline_name}")
+        else:
+            print(f"[Pipeline Runner] --reset-cursor: DESTINATION__FILESYSTEM__BUCKET_URL not set, skipping destination state cleanup")
         source_args["full_refresh"] = True  # tells source to ignore cursor (last_value = None)
-        print(f"[Pipeline Runner] --reset-cursor: will use refresh='drop_pipeline_state' to clear destination cursor. NO parquet deletion.")
+        print(f"[Pipeline Runner] --reset-cursor: cursor cleared. Will append from beginning, parquet untouched.")
 
     # 3c. Handle --full-refresh --force — destructive drop + full reload.
     # Strategy: use refresh="drop_sources" to drop destination-side state AND parquet files,
