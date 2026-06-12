@@ -3996,3 +3996,34 @@ for sf in glob.glob(os.path.join(data_lake, "_dlt_pipeline_state", f"{pipeline_n
 2. A scatter showing a left AND right y-axis is almost always this misconfiguration — check graph.dimensions has a single entry.
 
 **Reference:** `docs/analytics-handbook/blueprints/product_profitability_cost.md` (SKU Margin vs Revenue Scatter card)
+
+---
+
+### L127 — Metabase field filter on DuckDB: unqualified FROM clause → Binder Error when filter active
+
+**Group:** SERVE
+
+**Symptom:** Dashboard cards show data normally with no filters applied, but return a blank/error when any field filter (`string/=` with `field_id`) is activated. Error in Metabase logs: `Binder Error: Referenced table "main_marts.mart_cohort_retention" not found! Candidate tables: "main.mart_cohort_retention"`. Vietnamese shorthand: *"không dùng filter thì show, có filter thì không ok"*.
+
+**Root cause:** When a Metabase field filter is applied to a native SQL card, Metabase injects a schema-qualified WHERE condition using the table's registered schema: `AND ("main_marts"."mart_cohort_retention"."cohort_dimension" = 'entry_product')`. DuckDB then resolves this 3-part reference as `schema=main_marts, table=mart_cohort_retention` and looks for that exact table alias in the FROM clause. If the FROM clause uses the unqualified name `FROM mart_cohort_retention`, DuckDB resolves it to `main.mart_cohort_retention` (default search path), which does NOT match `main_marts.mart_cohort_retention` in the WHERE — hence Binder Error.
+
+olap.duckdb has two schemas: `main` (primary view) and `main_marts` (alias, where all other mart views live). Metabase syncs field metadata from `main_marts` because all other marts are registered there → field_id carries `main_marts` schema → field filter generates `main_marts`-qualified column reference.
+
+**Fix:** In every native SQL card that uses a field filter (`field_id` in blueprint filter definition), use the **schema-qualified table name** in the FROM clause to match what Metabase will inject in the WHERE:
+
+```sql
+-- WRONG (breaks when filter active)
+FROM mart_cohort_retention
+
+-- CORRECT
+FROM main_marts.mart_cohort_retention
+```
+
+Apply to all mart tables in olap.duckdb blueprints that use field filters.
+
+**Rules:**
+1. Any blueprint card with `"field_id"` in its filter definition → FROM clause must use `main_marts.<table>`.
+2. "Works without filter, fails with filter" = schema mismatch between FROM (unqualified → `main`) and WHERE (field filter → `main_marts`).
+3. After deploying a blueprint, test with a filter value applied — not just the no-filter state.
+
+**Reference:** `docs/analytics-handbook/blueprints/cohort_explorer.md` (Cohort Retention Matrix / Cohort Value Summary / Cohort Data Table)
