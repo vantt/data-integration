@@ -47,17 +47,6 @@ Multi-dimensional cohort analytics — compare retention, revenue, and repeat ra
 
 ---
 
-#### Filter: Window Type
-
-```json metabase-filter
-{
-  "slug": "window_type",
-  "type": "string/=",
-  "field_id": 1795
-}
-```
-
----
 
 #### 📝 Text: Select cohort dimension — compare retention and revenue by entry path (product / channel / basket / value band)
 
