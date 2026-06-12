@@ -4049,3 +4049,22 @@ Pre-pivoted cards are window-type-aware by design: they only make sense for the 
 4. When designing multi-window cohort dashboards: pivot cards = relative only; time-series/long-format cards = both.
 
 **Reference:** `docs/analytics-handbook/blueprints/cohort_explorer.md` (Cohort Value Summary / Cohort Retention Matrix — hardcoded relative; Cohort Data Table — dynamic)
+
+---
+
+### L129 — Dashboard filter that only changes a secondary card feels broken to users
+
+**Group:** SERVE
+
+**Symptom:** After fixing pivot cards to hardcode `window_type='relative'`, the `window_type` dashboard filter still existed but only affected the Data Table card at the bottom. Users reported: "chọn calendar thì hiển thị đâu khác gì relative" (selecting calendar looks identical to relative). Filter appeared broken even though technically correct.
+
+**Root cause:** A dashboard filter that doesn't visibly change the dominant/primary cards creates a broken UX signal. Users interact primarily with the top-of-page pivot/heatmap cards — if those don't respond to the filter, the filter feels non-functional regardless of whether it changes a secondary table below the fold.
+
+**Fix:** Remove filters that only affect secondary or below-the-fold cards. Either: (a) wire the filter to ALL prominent cards (fix the cards to handle the filter), or (b) remove the filter from the dashboard entirely and let the secondary card show all values (users can sort within the table). Don't leave orphan filters.
+
+**Rules:**
+1. Every dashboard filter must visibly change at least one prominent (above-the-fold, full-width) card.
+2. A filter wired to only a secondary table/detail card = remove it.
+3. Test filter behaviour from a user's perspective: change the filter → does anything obviously change in the first 2 cards the user sees?
+
+**Reference:** `docs/analytics-handbook/blueprints/cohort_explorer.md` (`window_type` filter removed; Data Table now shows both windows unsorted)
