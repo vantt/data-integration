@@ -76,7 +76,7 @@ Multi-dimensional cohort analytics — compare retention, revenue, and repeat ra
 
 #### ❓ Question: Cohort Retention Matrix
 
-Retention % by cohort × period M0–M12. Pre-pivoted for relative window. Green = high retention, red = low. Select `cohort_dimension` filter to switch axis; `window_type=relative` (default) shows the triangle; `window_type=calendar` will show empty (use the Data Table below instead).
+Retention % by cohort × period M0–M12. Pre-pivoted for relative window only (period_n=0..12 integers). window_type hardcoded to 'relative' — calendar window uses YYYY-MM period_n which makes the CASE WHEN pivot meaningless. Use the Data Table below for calendar window.
 
 ```sql
 SELECT
@@ -98,7 +98,7 @@ SELECT
 FROM main_marts.mart_cohort_retention
 WHERE 1=1
   [[AND {{cohort_dimension}}]]
-  [[AND {{window_type}}]]
+  AND window_type = 'relative'
 GROUP BY cohort_value
 ORDER BY cohort_value
 ```
@@ -150,7 +150,7 @@ ORDER BY cohort_value
 
 #### ❓ Question: Cohort Value Summary
 
-Revenue retention (vs M0) + repeat rate per cohort. M0–M6 pivoted. Repeat Rate = % of cohort who ever placed a 2nd order.
+Revenue retention (vs M0) + repeat rate per cohort. M0–M6 pivoted. Repeat Rate = % of cohort who ever placed a 2nd order. window_type hardcoded to 'relative' (same reason as Retention Matrix — calendar YYYY-MM period_n invalidates CASE WHEN pivot).
 
 ```sql
 SELECT
@@ -169,7 +169,7 @@ SELECT
 FROM main_marts.mart_cohort_retention
 WHERE 1=1
   [[AND {{cohort_dimension}}]]
-  [[AND {{window_type}}]]
+  AND window_type = 'relative'
 GROUP BY cohort_value
 ORDER BY "Repeat Rate %" DESC NULLS LAST
 ```
