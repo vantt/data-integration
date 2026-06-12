@@ -13,7 +13,7 @@
 | P3 | Boards: "Cohort Explorer" table (Marketing & Customers › 👥 Customer) | ✅ DONE (2026-06-12) |
 | P4 | Validate (real Dagster run + verify olap.duckdb) | ✅ DONE (2026-06-12) |
 | P4b | Board: "Cohort Calendar Trend" multi-line wall-clock view (dashboard #112) | ✅ DONE (2026-06-12) |
-| P5 | Retire/gộp board cũ (gate user) | ⬜ TODO |
+| P5 | Retire/gộp board cũ (gate user) | ✅ DONE (2026-06-12) |
 
 ## Spec v1 (từ §5)
 - **Mart:** `mart_cohort_retention` long-format — `cohort_dimension, cohort_value, window_type, period_n, cohort_size, active, retention_pct, revenue_retention, repeat_rate`. 1 bảng mọi axis; UNION ALL per axis; KHÔNG re-derive (L122).
@@ -48,4 +48,7 @@ L122 (no re-derive pre-computed) · L125 (realized_margin_pct) · L123 (date fie
 
 ## P4b Log — Cohort Calendar Trend
 - 2026-06-12: ✅ Blueprint `docs/analytics-handbook/blueprints/cohort_calendar_trend.md` + deploy. Dashboard #112 "Cohort Calendar Trend [Retail]" in 👥 Customer collection (id=99). 2 multi-line cards: (1) Retention % by Calendar Month (card 2386), (2) Revenue by Calendar Month (card 2387). Filter: cohort_dimension (field_id=1793, default=first_order_month). Correctness verified: cohort 2023-01 at 2023-01 = 100%, subsequent months drop to 2–13% (consistent with relative window M+1 rates). Upper-triangular structure confirmed (758 rows, 62 cohorts × calendar months 2021-05→2026-06).
-- **Next:** P5 — Retire/gộp board cũ (gate user).
+- **Next:** P5 — Retire/gộp board cũ.
+
+## P5 Log — Retire old cohort cards
+- 2026-06-12: ✅ Removed dashcards #3528 (Cohort Retention Heatmap) + #3529 (Revenue by Cohort Layer Cake) from dashboard #105 "Weekly · Customer Retention & Cohorts [Retail]". Both superseded by #111 Cohort Explorer + #112 Cohort Calendar Trend. #105 retained with remaining 40 cards (lifecycle, retention waterfall, purchase frequency, reactivation).
