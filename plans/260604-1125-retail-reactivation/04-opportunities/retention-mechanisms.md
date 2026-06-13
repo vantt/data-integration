@@ -41,10 +41,13 @@ Cung cấp tùy chọn "đăng ký giao định kỳ 45 ngày, giảm 10% + free
 Hàng tái mua mỗi 45–60 ngày = mô hình subscription trá hình. Tài sản thật không phải "số đơn" mà là số khách đang trong chu kỳ replenish. Đang bán từng đơn rời rạc → mỗi lần hết là "quyết định mới" → dễ rớt sang chỗ khác hoặc quên. Đòn bẩy M1-repeat mạnh hơn voucher win-back.
 
 **Cách triển khai**
-- Thiết kế flow "Subscribe & Save" trên kênh nhà (Web/Zalo OA): khách chọn chu kỳ 45 ngày, giảm 10% + freeship.
+- Thiết kế flow "Subscribe & Save" trên kênh nhà (Web/Zalo OA): khách chọn chu kỳ ~~45 ngày~~, giảm 10% + freeship.
+- **Calibrate fresh-scan 2026-06-13:** chu kỳ tái mua thật median 63 ngày, **cụm lớn nhất ~30 ngày**, kế ~45 ngày → cho chọn **30 hoặc 45 ngày** (không mặc định 45). Nhắc trước khi hết hộp (gửi ngày ~20-23 của chu kỳ 30).
+- **Prerequisite:** Zalo OA verified (kênh #1 VN, open 60-90%) — làm trước. **Flexibility (skip/pause) > discount sâu**: option pause cứu ~25% would-be-churn; skip kéo dài lifetime +135% (benchmark DTC).
 - Thêm cột `is_subscriber` + `subscription_status` vào `dim_customers` để theo dõi.
 - KPI mới: đếm `active_replenishers` (khách có subscription active) hàng tháng.
 - Ưu tiên pitch cho nhóm OVERDUE/AT_RISK trước — đang hết nhưng chưa đặt lại.
+- Lưu ý buyer≠user: nếu con mua cho bố/mẹ → subscription nhắn con, nội dung về "nhắc bố/mẹ uống đúng".
 
 **Trạng thái:** idea
 

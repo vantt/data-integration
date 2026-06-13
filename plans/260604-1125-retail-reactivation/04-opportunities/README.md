@@ -16,6 +16,17 @@ status: living
 
 | Opportunity | Nguồn (lens/finding) | Loại | Status |
 |---|---|---|---|
+| **⭐O1 Lái acquisition sang SKU gateway** (+450tr LTV) | L7 — fresh-scan 2026-06-13 | Data/GTM — gốc rễ | idea |
+| **⭐O2 Bắt liên hệ Shopee → Zalo OA** [cấu trúc #1] | L2 — fresh-scan 2026-06-13 | GTM/Data | idea |
+| **⭐O3 Lập Zalo OA verified** [hạ tầng nền] | H — fresh-scan 2026-06-13 | Hạ tầng — làm trước | idea |
+| **O4 Calibrate timing chu kỳ 30/45 ngày** | F — fresh-scan 2026-06-13 | Data — dùng ngay | idea |
+| **O5 Census mép cứu-được (116 khách/1.17 tỷ)** | F — fresh-scan 2026-06-13 | Data — dùng ngay | idea |
+| **O6 Pocket địa lý (ĐBSCL/Tây Nguyên/Đà Nẵng)** | D — fresh-scan 2026-06-13 | Retail/offline | idea |
+| **O7 Kênh nhà thuốc chuỗi (Long Châu/An Khang)** | G — fresh-scan 2026-06-13 | GTM play | idea |
+| **O8 Hợp nhất giá + dẹp xung đột 2 site nhà** | §I audit kênh nhà 2026-06-13 | GTM — làm ngay | idea |
+| **O9 Nạp đủ catalog vào kênh nhà (web/Zalo)** | §I audit kênh nhà 2026-06-13 | GTM/Data | idea |
+| **O10 Gift bundle kênh nhà (Tết/8-3/T11)** | §I + L5 | GTM play | idea |
+| **O11 Timeline/liệu trình + tem QR trang SP** | §I — giải Q17 | Messaging/Trust | idea |
 | **① Bộ "bằng chứng kết quả"** [khuyến nghị mũi nhọn] | L1 — retail-offline-plays | Retail/offline play | idea |
 | **② Vỉ 30 ngày + neo thói quen** | L3 — retail-offline-plays | Retail/offline play | idea |
 | **③ Kênh spa/clinic/dược + micro-KOL** [khuyến nghị mũi nhọn] | L2, L4 — retail-offline-plays | Retail/offline play | idea |
