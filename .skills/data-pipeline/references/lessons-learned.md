@@ -4068,3 +4068,28 @@ Pre-pivoted cards are window-type-aware by design: they only make sense for the 
 3. Test filter behaviour from a user's perspective: change the filter → does anything obviously change in the first 2 cards the user sees?
 
 **Reference:** `docs/analytics-handbook/blueprints/cohort_explorer.md` (`window_type` filter removed; Data Table now shows both windows unsorted)
+
+---
+
+### L130 — Evidence.dev: bare `<` in markdown text is parsed as Svelte tag → "Expected valid tag name"
+
+**Group:** SERVE
+
+**Symptom:** Evidence dev server logs `(invalid-tag-name) Expected valid tag name: Line NNN, column MMM` for a page that renders fine in plain Markdown. The error line in the log refers to the compiled Svelte/Vite output — not the `.md` source line — making it hard to locate.
+
+**Root cause:** Evidence compiles pages via mdsvex (Markdown → Svelte). Any literal `<` outside a SQL code-fence block is treated as an HTML/Svelte tag opening. Threshold annotations like `<40%`, `<10%`, `<0.8` trigger `Expected valid tag name` because `40`, `10`, `0` are not valid HTML tag names. Inside ` ```sql ``` ` fences the `<` is safe (not parsed by Svelte).
+
+**Fix:** Escape every bare `<` in prose/blockquote lines with `&lt;`:
+- `<40% = Low retention` → `&lt;40% = Low retention`
+- `<10% Normal` → `&lt;10% Normal`
+- `<0.8 = Behind` → `&lt;0.8 = Behind`
+
+`>` (greater-than) in prose does not need escaping.
+
+**Rules:**
+1. Any `<` not followed by a valid HTML/Svelte tag name or `/` must be `&lt;` in Evidence `.md` files.
+2. SQL code-fences are exempt — the Svelte compiler ignores their content.
+3. `docker compose restart` preserves the container's writable layer (`.evidence/template/` is NOT cleared). Always use `docker compose up -d --force-recreate` to pick up page content edits after a failed compile.
+4. On Windows + Docker WSL2, inotify events for volume-mounted pages may not propagate → hot-reload may not trigger. If editing pages and nothing updates, `--force-recreate`.
+
+**Reference:** `evidence/pages/ceo-weekly-pulse/` (customers.md line 73/160, index.md line 89 — fixed 2026-06-13)
