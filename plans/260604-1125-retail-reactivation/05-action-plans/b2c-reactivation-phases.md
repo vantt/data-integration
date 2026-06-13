@@ -78,7 +78,7 @@ source: "../archive/2026-06-04-original-sales-slowdown-playbook.md"
 
 **Dependencies:** P0 done (biết worklist thiếu gì).
 
-**KPI:** `is_contactable` & `is_us_gift_recipient` có trong `dim_customers`; worklist tuần tự động export.
+**KPI:** `is_contactable` & `is_us_gift_recipient` có trong `dim_customers`.
 
 ### Todo
 
@@ -90,15 +90,15 @@ source: "../archive/2026-06-04-original-sales-slowdown-playbook.md"
 
 #### mart_customer_action_queue
 - [ ] Thêm filter `is_contactable = true` vào điều kiện mặc định của mart.
-- [ ] Thêm cột `last_product_affinity_sku` (SKU/brand hay mua nhất) để cá nhân hóa script.
-- [ ] Thêm action type `REORDER_PREEMPT` cho khách có `next_purchase_signal = 'DUE_SOON'`
-      (nhắc trước khi hết hàng, không chờ OVERDUE).
+- [x] **SKU affinity (2026-06-13):** thêm `last_purchased_product/_sku`, `top_affinity_product/_sku`,
+      `second_affinity_product` (mức SKU, loại quà 0đ) — thay item `last_product_affinity_sku` cũ.
+      Spec: [../../260613-0551-customer-product-affinity-sku/plan.md](../../260613-0551-customer-product-affinity-sku/plan.md). Đã deploy + verify (95.5% phủ).
+- [x] **`REORDER_PREEMPT` (đã có sẵn):** action type cho `next_purchase_signal = 'DUE_SOON'` đang chạy live.
 - [ ] Thêm cột `is_us_gift_recipient` vào mart để filter/tách luồng US.
 
-#### Dagster automation
-- [ ] Tạo job/sensor tự động export worklist tuần (Luồng 1–4, is_contactable=true)
-      ra file CSV vào thư mục không-git (hoặc Google Sheet qua API).
-      Chạy mỗi thứ Hai sáng.
+#### ~~Dagster automation~~ — BỎ (2026-06-13)
+- [x] ~~Tạo job/sensor tự động export worklist tuần~~ → **KHÔNG cần:** đã có dashboard
+      cho CSKH/Sales đọc worklist trực tiếp; không cần export CSV/Sheet định kỳ.
 
 **Owner:** Data
 
@@ -109,6 +109,11 @@ source: "../archive/2026-06-04-original-sales-slowdown-playbook.md"
 **Mục tiêu:** Thay thế model snapshot sai bằng waterfall point-in-time; thêm first_order_channel.
 
 **Dependencies:** P1 done (dim_customers cập nhật).
+
+> **Cập nhật 2026-06-13 — PHẦN LỚN ĐÃ CÓ:** `mart_retention_waterfall_monthly.sql` và `mart_cohort_retention.sql`
+> **đã tồn tại** (dashboard 105/111/112 đang dùng). `first_order_channel` cũng đã có dạng `dim_customers.acquisition_source`
+> (CTE `first_order_channel` trong int_customer_metrics). Còn lại: (a) verify số waterfall khớp SQL tay; (b) thêm cảnh báo
+> deprecation cho model snapshot (hiện chỉ có comment trong .sql, chưa có ở schema.yml).
 
 **KPI:** `mart_retention_waterfall_monthly` cho số khớp với SQL chẩn đoán ở mục 3.2 của guide;
 schema.yml có cảnh báo trên `mart_customer_status_snapshot_monthly`.
@@ -142,6 +147,8 @@ schema.yml có cảnh báo trên `mart_customer_status_snapshot_monthly`.
 **Mục tiêu:** Dashboard thay thế biểu đồ dùng model cũ; bộ lọc đúng để không bị đánh lừa số.
 
 **Dependencies:** P2 done (`mart_retention_waterfall_monthly` ready).
+
+> **Cập nhật 2026-06-13:** dashboard retention/cohort **ĐÃ TỒN TẠI** — [105 Weekly Retention & Cohorts](https://bi.lan.fwg.vn/dashboard/105) · [111 Cohort Explorer](https://bi.lan.fwg.vn/dashboard/111) · [112 Cohort Calendar Trend](https://bi.lan.fwg.vn/dashboard/112). Việc còn lại KHÔNG phải build mới mà là **verify các card này dùng đúng point-in-time (P2 waterfall)**, không phải model snapshot sai. Action queue: [103](https://bi.lan.fwg.vn/dashboard/103).
 
 **KPI:** Dashboard live trên Metabase; các số khớp với bảng point-in-time mục 2.4 của guide.
 

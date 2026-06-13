@@ -1,7 +1,7 @@
 ---
 title: "Retail Reactivation — Hub & Path"
 created: 2026-06-04
-updated: 2026-06-09
+updated: 2026-06-13
 status: active
 structure: pipeline-6-stage
 source: ./archive/2026-06-04-original-sales-slowdown-playbook.md
@@ -75,9 +75,28 @@ source: ./archive/2026-06-04-original-sales-slowdown-playbook.md
 | 02 Hiểu vấn đề | [`02-understand/`](./02-understand/README.md) | channel-illusion · retention-leak · segments · b2b-root-cause(✅ resolved: B2B không sụp) · demand-migration · cashflow-AR(🟠 blocked: data gap) · open-questions(🔴) · voc-interviews⭐(🔴 open) · unboxing-audit(🔴 open) · product-performance-assessment(✅ resolved: data đủ, KHÔNG cần pipeline; reframe portfolio sức khỏe người lớn tuổi) | 5 resolved · 5 open |
 | 03 Đánh giá | [`03-evaluate/`](./03-evaluate/README.md) | sequencing · open-decisions · evaluation-framework · decision-log | 🟢 #1 chốt retail |
 | 04 Hướng action | [`04-opportunities/`](./04-opportunities/README.md) | retention-mechanisms (4 play) · data-backlog (~21 cơ hội) · retail-offline-plays (7 card) | idea |
-| 05 Kế hoạch | [`05-action-plans/`](./05-action-plans/README.md) | b2c-phases P0–P4 · action-flows · us-gift | committed/pending |
-| 06 Thực thi | [`06-execute/`](./06-execute/README.md) | kpi · execution-log | tracking (chưa chạy) |
+| 05 Kế hoạch | [`05-action-plans/`](./05-action-plans/README.md) | b2c-phases P0–P4 · action-flows · us-gift | committed/pending · **P1 SKU-affinity ✅ shipped 2026-06-13** ([spec](../260613-0551-customer-product-affinity-sku/plan.md)) |
+| 06 Thực thi | [`06-execute/`](./06-execute/README.md) | kpi · execution-log | tracking (chưa chạy outreach) · **dashboard sẵn có → xem bảng dưới** |
 | — | [`archive/`](./archive/2026-06-04-original-sales-slowdown-playbook.md) | playbook gốc (provenance only) | archived |
+
+---
+
+## Dashboard Metabase sẵn có (theo mục đích)
+
+> Base: `https://bi.lan.fwg.vn/dashboard/<id>`. **Đã verify SQL-level 2026-06-13** (3 report ở [`plans/reports/`](../reports/) — `metabase-verify-*-260613-0627`).
+> Cột **Khớp?** = mức dashboard phục vụ đúng mục đích plan. Nhiều mục "đã có"; vài mục có **gap thật** cần xử lý.
+
+| Mục đích (theo plan) | Dashboard | Khớp? — gap |
+|---|---|---|
+| **Action queue / reorder** | [103](https://bi.lan.fwg.vn/dashboard/103) | ✅ MATCH · ✅ **B1 done 2026-06-13**: card 2175 đã thêm 3 cột SKU-affinity (SP cuối/hay mua/#2) |
+| Hồ sơ / phân khúc khách | [106](https://bi.lan.fwg.vn/dashboard/106) · [104](https://bi.lan.fwg.vn/dashboard/104) | ✅ MATCH |
+| **B2C retention / cohort** (≈P3) | [111](https://bi.lan.fwg.vn/dashboard/111) · [112](https://bi.lan.fwg.vn/dashboard/112) · [105](https://bi.lan.fwg.vn/dashboard/105) | 111/112 ✅ point-in-time · ✅ **B2 done 2026-06-13**: 105 3 card scalar migrate khỏi snapshot (Churn/Active→waterfall, Repeat→fact_orders PIT) + dọn layout tab 1. ✅ value_group filter (dropdown) đã nối waterfall card sau khi thêm segment cols + Metabase sync. Còn: tab 2/3 chưa audit layout |
+| **Cashflow / công nợ AR** | [78](https://bi.lan.fwg.vn/dashboard/78) · [34](https://bi.lan.fwg.vn/dashboard/34) · [74](https://bi.lan.fwg.vn/dashboard/74) | 🔴 **KHÔNG phục vụ AR**: 78=recon đối soát, 34=P&L accrual, 74=cost ledger — KHÔNG cái nào đo công nợ/COD-collection. Chặn bởi `fact_payments` rỗng. Nhánh cashflow/AR vẫn **blocked** |
+| **B2B doanh thu lõi** | [49](https://bi.lan.fwg.vn/dashboard/49) · [50](https://bi.lan.fwg.vn/dashboard/50) | ✅ MATCH (scope_b2b; 50 có outstanding payment) |
+| **Kênh lõi vs marketplace** | [33](https://bi.lan.fwg.vn/dashboard/33) · [77](https://bi.lan.fwg.vn/dashboard/77) · [32](https://bi.lan.fwg.vn/dashboard/32) | ✅ **B3 done 2026-06-13 (cả 2 dùng Sapo)**: 77 + 33 đều có tab "Core vs Marketplace" từ `fact_order_economics`+`dim_channels` (Core 24.9B GM38% / MKT 6.0B GM46%). Đã **roll back hoàn toàn MISA-channel** (bỏ `int_misa.is_marketplace` + tab MISA) vì MISA 95% UNKNOWN — MISA chỉ dùng cho COGS/overhead, KHÔNG dùng cho kênh. Caveat: tab Sapo của 33 chưa nối date-filter (date_key INTEGER) → all-time; period-filter dùng 77 |
+| **Product performance** | [107](https://bi.lan.fwg.vn/dashboard/107) · [109](https://bi.lan.fwg.vn/dashboard/109) · [108](https://bi.lan.fwg.vn/dashboard/108) | ✅ MATCH (STAR/DOG, velocity, SKU margin) |
+| OOS / tồn hero-SKU | [110](https://bi.lan.fwg.vn/dashboard/110) | ✅ MATCH (`is_oos` + `oos_risk` high-velocity low-stock) |
+| **US gift recipients** | [51](https://bi.lan.fwg.vn/dashboard/51) | 🟠 PARTIAL: là **US-channel performance**, KHÔNG segment theo người-nhận-quà. Cần view riêng nếu muốn target recipient |
 
 ---
 
