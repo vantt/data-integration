@@ -49,9 +49,10 @@ source: "../archive/2026-06-04-original-sales-slowdown-playbook.md"
 
 #### Ưu tiên 2 — Revamp call-list scripts (chạy song song)
 
-- [ ] Export ~120 khách high-touch (Luồng 1–4 từ `mart_customer_action_queue`, lọc `phone IS NOT NULL`)
-      ra Google Sheet hoặc CSV bên ngoài git.
-      **CẢNH BÁO PII: file chứa tên/SĐT khách — KHÔNG commit vào git.**
+- [x] ~~Export ~120 khách high-touch ra CSV/Sheet~~ → **KHÔNG cần (2026-06-13):** worklist đọc trực tiếp
+      từ **[dashboard 103 — Daily · Customer Action Queue](https://bi.lan.fwg.vn/dashboard/103)**
+      (đã có cột SP cuối/hay mua để cá nhân hóa script). CSKH/Sales lọc Luồng 1–4 ngay trên dashboard.
+      PII không rời hệ thống → không còn rủi ro file CSV ngoài git.
 - [ ] Soạn 4 script Zalo/call mẫu (Luồng 1–4) — **mở bằng product experience, không phải voucher:**
       Câu mở đầu bắt buộc: *"Lần trước dùng [sản phẩm] anh/chị có thấy gì không?"*
       → Nếu thấy hiệu quả: reactivate tự nhiên, offer tiện lợi/ưu đãi nhỏ.
