@@ -106,6 +106,18 @@ Result available as `{query_name}` — array of row objects.
 | Bar chart (horizontal) | `<BarChart swapXY=true>` | |
 | Bar chart (stacked) | `<BarChart type="stacked">` | Use `series=` for category column |
 | Table | `<DataTable>` | `rows=25` for pagination |
+| Tabs | `<Tabs id="x"> <Tab label="..."> ... </Tab> </Tabs>` | Auto-imported; state saved in URL params |
+| Grid | `<Grid cols={N} gapSize="sm\|md\|lg">` | Auto-imported; `cols=1..6`, responsive |
+
+**Auto-imported components** (no import needed): `BigValue`, `AreaChart`, `LineChart`, `BarChart`, `DataTable`, `Value`, `Tabs`, `Tab`, `Grid`.
+
+**NOT auto-imported**: `ContentBox` — do NOT use. Replace card containers with styled `<div>`:
+```html
+<div style="border:1px solid #e5e7eb; border-radius:0.5rem; padding:1rem;">
+  <p style="font-weight:600; margin-bottom:0.5rem;">Card Title</p>
+  <!-- content -->
+</div>
+```
 
 ### BigValue WoW pattern
 
@@ -134,6 +146,20 @@ SELECT tw.val AS metric, lw.val AS metric_lw FROM tw, lw
 
 ### Navigation between tabs
 
+Prefer `<Tabs>` + `<Tab>` for in-page tabs (state in URL params, no page reload):
+
+```markdown
+<Tabs id="pulse">
+  <Tab label="📊 Revenue">
+    <!-- content -->
+  </Tab>
+  <Tab label="🛒 Channels">
+    <!-- content -->
+  </Tab>
+</Tabs>
+```
+
+For multi-page navigation (separate `.md` files):
 ```markdown
 <a href="/dashboard-slug">Tab 1</a> · <a href="/dashboard-slug/tab2">Tab 2</a>
 ```
