@@ -77,7 +77,7 @@ Khi tạo design spec file mới, template phải giữ nguyên block định ng
 | Playbook | `docs/analytics-handbook/playbooks/` | Analytics Design (Phase 1) | Tạo mới cho mỗi dashboard; cập nhật khi đổi audience/purpose |
 | Guide | `docs/analytics-handbook/guides/` | Analytics Design (Phase 2) | Chỉ khi có concept phức tạp cần giải thích riêng |
 | Design Spec | `docs/analytics-handbook/designs/` | Analytics Design (Phase 3-6) | Tạo mới cho mỗi dashboard design |
-| Blueprint | `docs/analytics-handbook/blueprints/{tool}/` | **Metabase/Evidence Automation** (Phase 7-10) | Không thuộc skill này. `{tool}` = `metabase` hoặc `evidence` |
+| Blueprint | `docs/analytics-handbook/blueprints/{tool}/` | **Metabase/Evidence Automation** (Phase 7-10) | Không thuộc skill này. `{tool}` = `metabase`, `evidence`, hoặc `rill` |
 
 **Thứ tự tạo artifact (bắt buộc)**:
 ```
@@ -231,4 +231,4 @@ Sửa trực tiếp blueprint (Phase 9 only) → Deploy → Đánh dấu design 
 
 Trong Phase 5, nếu cần kiểm tra "BI tool có hỗ trợ viz type này không?":
 - **Metabase**: scan cột **Metabase Support** trong `VISUALIZATION_VOCABULARY.md` — KHÔNG cần đọc full `METABASE_VIZ_CATALOG.md`.
-- **Evidence.dev**: dùng ECharts-based components (LineChart, BarChart, ScatterPlot, FunnelChart, Heatmap, DataTable, BigValue). Tất cả standard viz types đều supported. Không có gauge hay progress-toward-goal native.
+- **Evidence.dev**: dùng ECharts-based components (AreaChart, LineChart, BarChart, ScatterPlot, FunnelChart, Heatmap, DataTable, BigValue). Tất cả standard viz types đều supported. Không có gauge hay progress-toward-goal native. Xem `.skills/evidence-automation/SKILL.md` cho full syntax + deploy.

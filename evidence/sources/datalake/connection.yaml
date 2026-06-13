@@ -1,0 +1,4 @@
+name: datalake
+type: duckdb
+options:
+  filename: data_lake/serving/olap.duckdb

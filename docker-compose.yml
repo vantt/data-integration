@@ -87,6 +87,26 @@ services:
       caddy: rill.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 9009}}"
 
+  evidence:
+    build:
+      context: .
+      dockerfile: Dockerfile.evidence
+    container_name: evidence
+    restart: unless-stopped
+    ports:
+      - "3006:3000"
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - caddy_net
+    volumes:
+      - ./evidence/pages:/app/pages
+      - ./evidence/sources:/app/sources
+      - ./app_data/data_lake:/app/sources/datalake/data_lake:ro
+    labels:
+      caddy: evidence.lan.fwg.vn
+      caddy.reverse_proxy: "{{upstreams 3000}}"
+
   fileserver:
     image: caddy:alpine
     container_name: data_fileserver

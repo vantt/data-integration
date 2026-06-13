@@ -1,0 +1,16 @@
+FROM node:20-slim
+WORKDIR /app
+
+# Install Evidence CLI + plugins at image build time
+# Package files come from evidence/ build context — pages/ and sources/ are volume-mounted at runtime
+COPY evidence/package*.json ./
+COPY evidence/evidence.config.yaml ./
+RUN npm install --include=dev
+
+# Placeholders replaced by volume mounts at runtime
+RUN mkdir -p pages sources
+
+EXPOSE 3000
+# Sources must run before dev server to generate manifest + DuckDB cache
+# On restart: re-queries DuckDB for fresh data, then starts dev server
+CMD ["sh", "-c", "npm run sources && npm run start"]
