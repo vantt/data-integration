@@ -1,0 +1,27 @@
+{
+  "name": "ui-spec-tools",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Compiler pipeline for ui-spec: extract, validate, build",
+  "scripts": {
+    "validate": "node validate.mjs",
+    "build": "node build.mjs",
+    "check": "node validate.mjs && node build.mjs",
+    "rename": "node rename.mjs",
+    "interpret": "node interpret.mjs",
+    "interpret:wf": "node interpret-wireframe.mjs",
+    "verify:wf": "node wireframe/verify-runtime.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "cytoscape": "^3.34.0",
+    "cytoscape-dagre": "^4.0.0",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
+    "markdown-it": "^14.1.0"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

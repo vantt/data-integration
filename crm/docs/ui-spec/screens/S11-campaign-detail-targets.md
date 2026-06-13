@@ -1,0 +1,112 @@
+---
+id: S11
+type: screen
+name: "Campaign Detail / Targets"
+platforms: [desktop]
+hosts: []
+status: active
+design_ref: ""
+rules: [R1, R3, R6, R11]
+regions: [topbar, summary_bar, target_list, conversion_stats]
+---
+
+# S11 — Campaign Detail / Targets
+
+## Purpose
+
+Chi tiết một campaign: summary stats trên đầu (total targets, sent, responded, converted,
+conversion rate, attributed revenue), danh sách target `crm_campaign_target` với status lifecycle
+`queued → sent → responded → converted/skipped`. NV được gán thấy danh sách khách cần liên hệ,
+có thể ghi converted_order_code thủ công hoặc hệ thống tự khớp.
+
+Conversion tracker: order_code mới trong `wh_order_hdr` sau `campaign.scheduled_at` ICT → SSE
+`campaign.target.converted` → UI cập nhật stats realtime.
+
+## Layout
+
+```
+┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
+│               │  TOPBAR: [← Chiến dịch]  Win-back Q3  [Sửa] [Kích hoạt]    │
+│               ├──────────────────────────────────────────────────────────────┤
+│               │  SUMMARY BAR                                                 │
+│               │  Targets: 87 | Sent: 43 | Converted: 13 | Rate: 14.9%       │
+│               │  Revenue attributed: 28.500.000đ                             │
+│               ├──────────────────────────────────────────────────────────────┤
+│               │  TARGET LIST  [Filter: status ▼] [Assignee ▼]               │
+│               │  ┌──────────────────────────────────────────────────────── │
+│               │  │ Khách         Status      Assignee   Order code           │
+│               │  ├────────────────────────────────────────────────────────  │
+│               │  │ Nguyễn V. A   converted   NV A       ORD-20060901        │
+│               │  │ Trần T. B     queued       NV B       —                   │
+│               │  │ Lê Văn C      sent         NV A       —                   │
+│               │  └──────────────────────────────────────────────────────── │
+└───────────────┴──────────────────────────────────────────────────────────────┘
+```
+
+## States
+
+- ST-CAMPAIGN-NO-TARGETS: Segment có 0 member → warning
+- ST-CAMPAIGN-CONVERTING: Conversion job running → spinner stats
+- ST-LOADING: Target list loading
+
+## Interactions
+
+```yaml crm-contract
+interactions:
+  - id: A-S11-001
+    element: btn_back
+    region: topbar
+    trigger: click
+    action: navigate
+    target: S10
+  - id: A-S11-002
+    element: target_row_customer
+    region: target_list
+    trigger: click
+    action: navigate
+    target: S03
+    payload: { party_id: "$target.party_id" }
+  - id: A-S11-003
+    element: btn_mark_converted
+    region: target_list
+    trigger: click
+    action: open_overlay
+    target: M12
+    payload: { target_id: "$target.id" }
+  - id: A-S11-004
+    element: btn_mark_skipped
+    region: target_list
+    trigger: click
+    action: mutate
+    effects: [target.status.set_skipped]
+  - id: A-S11-005
+    element: filter_status
+    region: target_list
+    trigger: change
+    action: mutate
+    effects: [target_list.reload]
+  - id: A-S11-006
+    element: filter_assignee
+    region: target_list
+    trigger: change
+    action: mutate
+    effects: [target_list.reload]
+  - id: A-S11-007
+    element: btn_edit_campaign
+    region: topbar
+    trigger: click
+    action: open_overlay
+    target: M07
+    payload: { campaign_id: "$campaign.id" }
+  - id: A-S11-LSN01
+    listens_to: campaign.target.converted
+    action: mutate
+    effects: [summary_bar.stats.reload, target_list.update_row]
+  - id: A-S11-LSN02
+    listens_to: filter_bar.changed
+    action: mutate
+    effects: [target_list.reload_with_filters]
+  - id: A-S11-LSN03
+    listens_to: filter_bar.cleared
+    action: mutate
+    effects: [target_list.reload]
