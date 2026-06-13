@@ -100,6 +100,7 @@ services:
     networks:
       - caddy_net
     volumes:
+      - ./evidence/evidence.config.yaml:/app/evidence.config.yaml
       - ./evidence/pages:/app/pages
       - ./evidence/sources:/app/sources
       - ./evidence/scripts:/app/scripts
