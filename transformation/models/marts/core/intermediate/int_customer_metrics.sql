@@ -129,6 +129,127 @@ first_order_channel AS (
     WHERE rn = 1
 ),
 
+-- SKU-level affinity: last purchased SKU + top/second affinity SKU per customer.
+-- Filters: is_active_order (exclude cancelled), net_revenue > 0 (exclude 0đ gift/swag lines —
+-- 43.9% of lines are gifts/swag; this single filter removes both real products given free
+-- and non-product swag like branded umbrellas), product_name IS NOT NULL.
+-- Note: brand_revenue below intentionally omits is_active_order (pre-existing behaviour,
+-- out of scope here). These new CTEs filter correctly.
+sku_affinity_base AS (
+    SELECT
+        s.customer_key,
+        s.product_key,
+        p.product_name,
+        p.variant_name,
+        p.sku,
+        s.order_id,
+        s.quantity,
+        s.net_revenue,
+        o.ordered_at
+    FROM sales s
+    JOIN products p  ON s.product_key = p.product_key
+    JOIN orders  o   ON s.order_id    = o.order_id
+    {% if is_incremental() %}
+    INNER JOIN changed_customers cc ON s.customer_key = cc.customer_key
+    {% endif %}
+    WHERE o.is_active_order
+      AND s.net_revenue > 0
+      AND p.product_name IS NOT NULL
+),
+
+-- Aggregate to (customer, product) level first, then rank.
+-- Priority: 1) order frequency DESC, 2) total quantity DESC, 3) most-recent order DESC,
+-- 4) total revenue DESC, 5) product_key ASC (deterministic tie-break).
+sku_affinity_agg AS (
+    SELECT
+        customer_key,
+        product_key,
+        -- Display name: use variant_name when it differs from product_name (adds meaningful
+        -- packaging/variant info). Otherwise product_name alone is cleaner.
+        CASE
+            WHEN variant_name IS NOT NULL AND variant_name != product_name
+                THEN variant_name
+            ELSE product_name
+        END AS display_name,
+        sku,
+        COUNT(DISTINCT order_id) AS order_freq,
+        SUM(quantity)            AS total_qty,
+        MAX(ordered_at)          AS last_ordered_at,
+        SUM(net_revenue)         AS total_revenue
+    FROM sku_affinity_base
+    GROUP BY customer_key, product_key, product_name, variant_name, sku
+),
+
+sku_affinity_ranked AS (
+    SELECT
+        customer_key,
+        display_name,
+        sku,
+        ROW_NUMBER() OVER (
+            PARTITION BY customer_key
+            ORDER BY
+                order_freq     DESC,
+                total_qty      DESC,
+                last_ordered_at DESC,
+                total_revenue  DESC,
+                product_key    ASC
+        ) AS rn
+    FROM sku_affinity_agg
+),
+
+top_affinity_cte AS (
+    SELECT
+        customer_key,
+        display_name AS top_affinity_product,
+        sku          AS top_affinity_sku
+    FROM sku_affinity_ranked WHERE rn = 1
+),
+
+second_affinity_cte AS (
+    SELECT
+        customer_key,
+        display_name AS second_affinity_product
+    FROM sku_affinity_ranked WHERE rn = 2
+),
+
+-- Most recent paid order per customer, then pick the SKU with highest quantity within it.
+-- Tie-break within order: net_revenue DESC, then product_key ASC (deterministic).
+last_purchase_order AS (
+    SELECT
+        customer_key,
+        MAX(ordered_at) AS last_paid_ordered_at
+    FROM sku_affinity_base
+    GROUP BY customer_key
+),
+
+last_purchase_sku_ranked AS (
+    SELECT
+        b.customer_key,
+        b.product_key,
+        CASE
+            WHEN b.variant_name IS NOT NULL AND b.variant_name != b.product_name
+                THEN b.variant_name
+            ELSE b.product_name
+        END AS display_name,
+        b.sku,
+        ROW_NUMBER() OVER (
+            PARTITION BY b.customer_key
+            ORDER BY b.quantity DESC, b.net_revenue DESC, b.product_key ASC
+        ) AS rn
+    FROM sku_affinity_base b
+    INNER JOIN last_purchase_order lpo
+        ON b.customer_key = lpo.customer_key
+       AND b.ordered_at   = lpo.last_paid_ordered_at
+),
+
+last_purchase_cte AS (
+    SELECT
+        customer_key,
+        display_name AS last_purchased_product,
+        sku          AS last_purchased_sku
+    FROM last_purchase_sku_ranked WHERE rn = 1
+),
+
 -- Product affinity: brand with >60% revenue share
 brand_revenue AS (
     SELECT
@@ -303,6 +424,13 @@ SELECT
         ELSE NULL
     END AS predicted_next_purchase_date,
 
+    -- SKU-level product affinity (NULL for customers who only ever received gifts/swag)
+    lp.last_purchased_product,
+    lp.last_purchased_sku,
+    ta.top_affinity_product,
+    ta.top_affinity_sku,
+    sa.second_affinity_product,
+
     current_timestamp as metric_calculated_at
 FROM aggregated a
 LEFT JOIN channel_preference_cte cp ON a.customer_key = cp.customer_key
@@ -313,3 +441,6 @@ LEFT JOIN avg_order_spend_cte abv ON a.customer_key = abv.customer_key
 LEFT JOIN inter_purchase_cte ip ON a.customer_key = ip.customer_key
 LEFT JOIN discount_rate_cte dr ON a.customer_key = dr.customer_key
 LEFT JOIN cancel_rate_cte cr ON a.customer_key = cr.customer_key
+LEFT JOIN last_purchase_cte lp ON a.customer_key = lp.customer_key
+LEFT JOIN top_affinity_cte ta ON a.customer_key = ta.customer_key
+LEFT JOIN second_affinity_cte sa ON a.customer_key = sa.customer_key

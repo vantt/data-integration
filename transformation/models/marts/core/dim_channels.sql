@@ -137,6 +137,11 @@ SELECT
     -- Real sales channel flag: excludes internal/system and non-sales fulfillment.
     channel_format NOT IN ('System', 'CrossBorder Fulfillment', 'Other') as is_sales_channel,
 
+    -- Marketplace platforms vs owned/core channels.
+    -- Marketplace + CrossBorder Fulfillment = third-party platform orders (Shopee, Lazada, etc.).
+    -- B2B / Social / Web / Retail / Direct = brand-owned or direct-relationship channels.
+    channel_format IN ('Marketplace', 'CrossBorder Fulfillment') as is_marketplace,
+
     -- Lineage Links
     source_id,
     location_id,
@@ -159,6 +164,7 @@ SELECT
     'Domestic' as market,
     'channel' as source_type,
     false as is_sales_channel,
+    false as is_marketplace,
     cast(null as string) as source_id,
     cast(null as string) as location_id,
     true as is_active

@@ -62,6 +62,13 @@ joined_data AS (
         m.predicted_next_purchase_date,
         m.acquisition_source,
 
+        -- SKU-level product affinity (NULL = customer never purchased a paid line item)
+        m.last_purchased_product,
+        m.last_purchased_sku,
+        m.top_affinity_product,
+        m.top_affinity_sku,
+        m.second_affinity_product,
+
         -- [METRIC] Customer Status (RFM - Recency Component)
         -- Logic:
         -- - Active: Bought within the last 30 days.
@@ -140,6 +147,15 @@ SELECT
     -- product_affinity: Primary brand preference (Auto from sales history)
     product_affinity,
 
+    -- SKU-level product affinity (NULL = customer never purchased a paid line item).
+    -- last_purchased_*: SKU from most-recent active order (highest-quantity line wins multi-SKU tie).
+    -- top/second_affinity_*: ranked by reorder frequency then quantity; second is NULL for 1-SKU customers.
+    last_purchased_product,
+    last_purchased_sku,
+    top_affinity_product,
+    top_affinity_sku,
+    second_affinity_product,
+
     -- payment_behavior: Payment pattern (Auto from payment history)
     payment_behavior,
 
@@ -188,6 +204,16 @@ SELECT
     recency_days,
     lifespan_days,
     customer_status,
+
+    -- Contactable = has a usable phone number. No Zalo OA fallback; phone is the only
+    -- reachable channel for CS/Sales outreach. Mirrors mart_customer_action_queue logic.
+    (phone IS NOT NULL AND phone <> '') AS is_contactable,
+
+    -- US gift-fulfilment recipients: CROSSBORDER customers are VN recipients whose packages
+    -- are shipped from the US on behalf of overseas buyers. Group-code detection mirrors the
+    -- customer_type CASE above (TYPE_CROSSBORDER or legacy CTN00014 group).
+    -- Flag exposes the segment for filtering without requiring a self-join on customer_type.
+    (customer_group LIKE '%TYPE_CROSSBORDER%' OR customer_group LIKE '%CTN00014%') AS is_us_gift_recipient,
 
     -- Contribution margin economics (channel_net_profit basis; excludes overhead)
     COALESCE(lifetime_gross_profit, 0)              AS lifetime_gross_profit,
