@@ -4079,17 +4079,18 @@ Pre-pivoted cards are window-type-aware by design: they only make sense for the 
 
 **Root cause:** Evidence compiles pages via mdsvex (Markdown → Svelte). Any literal `<` outside a SQL code-fence block is treated as an HTML/Svelte tag opening. Threshold annotations like `<40%`, `<10%`, `<0.8` trigger `Expected valid tag name` because `40`, `10`, `0` are not valid HTML tag names. Inside ` ```sql ``` ` fences the `<` is safe (not parsed by Svelte).
 
-**Fix:** Escape every bare `<` in prose/blockquote lines with `&lt;`:
-- `<40% = Low retention` → `&lt;40% = Low retention`
-- `<10% Normal` → `&lt;10% Normal`
-- `<0.8 = Behind` → `&lt;0.8 = Behind`
+**Fix:** Use Svelte inline expression syntax `{'<'}` — mdsvex decodes `&lt;` back to `<` before Svelte parses it, so `&lt;` does NOT help:
+- `<40% = Low retention` → `{'<'}40% = Low retention`
+- `<10% Normal` → `{'<'}10% Normal`
+- `<0.8 = Behind` → `{'<'}0.8 = Behind`
 
 `>` (greater-than) in prose does not need escaping.
 
 **Rules:**
-1. Any `<` not followed by a valid HTML/Svelte tag name or `/` must be `&lt;` in Evidence `.md` files.
+1. Any `<` not followed by a valid HTML/Svelte tag name must use `{'<'}` (not `&lt;` — mdsvex decodes entities before Svelte compile).
 2. SQL code-fences are exempt — the Svelte compiler ignores their content.
-3. `docker compose restart` preserves the container's writable layer (`.evidence/template/` is NOT cleared). Always use `docker compose up -d --force-recreate` to pick up page content edits after a failed compile.
-4. On Windows + Docker WSL2, inotify events for volume-mounted pages may not propagate → hot-reload may not trigger. If editing pages and nothing updates, `--force-recreate`.
+3. `docker compose restart` preserves the container's writable layer (`.evidence/template/` is NOT cleared). Always use `docker compose up -d --force-recreate` to pick up page content edits.
+4. On Windows + Docker WSL2, inotify events for volume-mounted pages may not propagate → hot-reload unreliable; `--force-recreate` is the reliable path.
+5. DuckDB connector scans ALL tables in the database by default — add `schemas: [main_marts]` to `connection.yaml` to limit to serving layer only (prevents crawling hundreds of raw tables at startup).
 
 **Reference:** `evidence/pages/ceo-weekly-pulse/` (customers.md line 73/160, index.md line 89 — fixed 2026-06-13)
