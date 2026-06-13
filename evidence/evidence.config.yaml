@@ -3,3 +3,13 @@ plugins:
     "@evidence-dev/core-components": {}
   datasources:
     "@evidence-dev/duckdb": {}
+theme:
+  colorPalette:
+    - '#6366f1'  # indigo  — primary series
+    - '#06b6d4'  # cyan
+    - '#10b981'  # emerald
+    - '#f59e0b'  # amber
+    - '#ec4899'  # pink
+    - '#8b5cf6'  # violet
+    - '#14b8a6'  # teal
+    - '#f97316'  # orange
