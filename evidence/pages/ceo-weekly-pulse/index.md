@@ -42,10 +42,10 @@ SELECT tw.*, lw.*
 FROM this_week tw, last_week lw
 ```
 
-<BigValue data={revenue_kpi} value="net_revenue"   comparison="net_revenue_lw"   comparisonTitle="Tuần trước" title="Net Revenue (₫)"   fmt="0,0" />
-<BigValue data={revenue_kpi} value="gross_revenue" comparison="gross_revenue_lw" comparisonTitle="Tuần trước" title="Gross Revenue (₫)" fmt="0,0" />
+<BigValue data={revenue_kpi} value="net_revenue"   comparison="net_revenue_lw"   comparisonTitle="Tuần trước" title="Net Revenue (₫)"   fmt="#,##0" />
+<BigValue data={revenue_kpi} value="gross_revenue" comparison="gross_revenue_lw" comparisonTitle="Tuần trước" title="Gross Revenue (₫)" fmt="#,##0" />
 <BigValue data={revenue_kpi} value="total_orders"  comparison="total_orders_lw"  comparisonTitle="Tuần trước" title="Đơn hàng" />
-<BigValue data={revenue_kpi} value="aov"           comparison="aov_lw"           comparisonTitle="Tuần trước" title="AOV (₫)"            fmt="0,0" />
+<BigValue data={revenue_kpi} value="aov"           comparison="aov_lw"           comparisonTitle="Tuần trước" title="AOV (₫)"            fmt="#,##0" />
 
 ---
 
@@ -82,11 +82,11 @@ SELECT
 FROM mtd_actual a, monthly_target t
 ```
 
-<BigValue data={mtd_progress} value="mtd_gmv"     title="MTD GMV (₫)"   fmt="0,0" />
+<BigValue data={mtd_progress} value="mtd_gmv"     title="MTD GMV (₫)"   fmt="#,##0" />
 <BigValue data={mtd_progress} value="target_pct"  title="% of Target"   fmt="0.0" />
 <BigValue data={mtd_progress} value="pace_index"  title="Pace Index"    fmt="0.00" />
 
-> **Pace Index:** >1.0 = Ahead · 0.8–1.0 = On Track · &lt;0.8 = Behind
+> **Pace Index:** >1.0 = Ahead · 0.8–1.0 = On Track · {'<'}0.8 = Behind
 
 ---
 
@@ -150,6 +150,6 @@ WHERE scope_sales AND is_active_order
   AND ordered_at >= current_date - INTERVAL '1 day'
 ```
 
-> <Value data={data_freshness} value="freshness_msg" />
+> <Value data={data_freshness} column="freshness_msg" />
 
 **Source:** `fact_orders` · **Scope:** `is_sales_channel=true`, exclude CANCELLED/DRAFT · **MTD Target:** `fact_targets` (metric_code='gmv')

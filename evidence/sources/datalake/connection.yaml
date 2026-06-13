@@ -1,4 +1,6 @@
-name: datalake
+name: main_marts
 type: duckdb
 options:
-  filename: data_lake/serving/olap.duckdb
+  # copied from /app/var/data_lake/serving/olap.duckdb at container start (274KB catalog file, views reference parquet)
+  # cp into sources/ so Evidence copies it to .evidence/template/sources/datalake/ for the build step
+  filename: olap-serving.duckdb

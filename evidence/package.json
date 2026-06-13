@@ -7,7 +7,7 @@
     "sources": "evidence sources",
     "dev": "evidence dev",
     "build": "evidence build",
-    "preview": "evidence preview --host 0.0.0.0 --port 3000",
+    "preview": "npx serve build -l 3000",
     "start": "evidence dev --host 0.0.0.0 --port 3000"
   },
   "devDependencies": {

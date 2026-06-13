@@ -70,7 +70,7 @@ FROM new_tw ntw, new_lw nlw, returning_tw rtw, returning_lw rlw, returning_rev r
 <BigValue data={customer_kpi} value="returning_customers" comparison="returning_customers_lw"  comparisonTitle="Tuần trước" title="Khách hàng quay lại" />
 <BigValue data={customer_kpi} value="returning_rev_pct"   title="Returning Revenue %" fmt="0.0" />
 
-> **Returning Revenue %:** >60% = Healthy · 40–60% = Warning · &lt;40% = Low retention
+> **Returning Revenue %:** >60% = Healthy · 40–60% = Warning · {'<'}40% = Low retention
 
 ---
 
@@ -157,7 +157,7 @@ FROM cancelled_tw ctw, cancelled_lw clw, returns_tw rtw, returns_lw rlw, discoun
 <BigValue data={ops_alerts} value="returns"          comparison="returns_lw"          comparisonTitle="Tuần trước" title="Trả hàng"       upIsGood=false />
 <BigValue data={ops_alerts} value="discount_rate_pct" title="Discount Rate %" fmt="0.0" />
 
-> **Discount Rate:** &lt;10% Normal · 10–15% High · >15% Alert
+> **Discount Rate:** {'<'}10% Normal · 10–15% High · >15% Alert
 
 ---
 
@@ -202,7 +202,7 @@ SELECT tw.*, lw.*, lc.kenh_lo
 FROM this_week tw, last_week lw, loss_channels lc
 ```
 
-<BigValue data={profitability} value="net_profit"       comparison="net_profit_lw"       comparisonTitle="Tuần trước" title="Net Profit (₫)"  fmt="0,0" />
+<BigValue data={profitability} value="net_profit"       comparison="net_profit_lw"       comparisonTitle="Tuần trước" title="Net Profit (₫)"  fmt="#,##0" />
 <BigValue data={profitability} value="gross_margin_pct" comparison="gross_margin_pct_lw"  comparisonTitle="Tuần trước" title="Gross Margin %"  fmt="0.0" />
 <BigValue data={profitability} value="kenh_lo"          title="Kênh đang lỗ" upIsGood=false />
 

@@ -2,15 +2,15 @@ FROM node:20-slim
 WORKDIR /app
 
 # Install Evidence CLI + plugins at image build time
-# Package files come from evidence/ build context — pages/ and sources/ are volume-mounted at runtime
+# pages/, sources/, and scripts/ are volume-mounted at runtime
 COPY evidence/package*.json ./
 COPY evidence/evidence.config.yaml ./
 RUN npm install --include=dev
 
 # Placeholders replaced by volume mounts at runtime
-RUN mkdir -p pages sources
+RUN mkdir -p pages sources scripts
 
 EXPOSE 3000
-# Sources must run before dev server to generate manifest + DuckDB cache
-# On restart: re-queries DuckDB for fresh data, then starts dev server
-CMD ["sh", "-c", "npm run sources && npm run start"]
+# 1. Symlink olap.duckdb into sources/datalake/ so Evidence copies it to template (absolute target resolves in-container)
+# 2. Run Evidence sources; 3. Build static site; 4. Serve
+CMD ["sh", "-c", "cp /app/var/data_lake/serving/olap.duckdb /app/sources/datalake/olap-serving.duckdb && npm run sources && npm run build && npm run preview"]
