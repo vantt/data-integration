@@ -1,6 +1,6 @@
 # Phase 05 — Activity Log + Tasks + Conversation/Chat Tracking
 
-**Context:** [plan.md](plan.md) · Report: `plans/reports/schema-scan-260613-1133-engagement-chat-ads-channel-domain-report.md`
+**Context:** [plan.md](plan.md) · Report: `../reports/schema-scan-260613-1133-engagement-chat-ads-channel-domain-report.md`
 
 ## Overview
 - **Priority:** P1

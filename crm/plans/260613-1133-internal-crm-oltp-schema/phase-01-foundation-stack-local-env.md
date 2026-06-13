@@ -1,6 +1,6 @@
 # Phase 01 — Nền tảng, Stack & Local Environment
 
-**Context:** [plan.md](plan.md) · Report: `plans/reports/schema-scan-260613-1133-raw-serving-semantic-integration-report.md`
+**Context:** [plan.md](plan.md) · Report: `../reports/schema-scan-260613-1133-raw-serving-semantic-integration-report.md`
 
 ## Overview
 - **Priority:** P0 (chặn mọi phase khác)

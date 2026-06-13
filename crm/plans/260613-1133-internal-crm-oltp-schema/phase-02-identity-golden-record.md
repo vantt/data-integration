@@ -1,6 +1,6 @@
 # Phase 02 — Identity Resolution & Golden Record (Dedup)
 
-**Context:** [plan.md](plan.md) · Report: `plans/reports/schema-scan-260613-1133-customer-identity-domain-report.md`
+**Context:** [plan.md](plan.md) · Report: `../reports/schema-scan-260613-1133-customer-identity-domain-report.md`
 
 ## Overview
 - **Priority:** P0 (lõi v1; chặn 03/05/06 vì mọi thứ gắn `party_id`)

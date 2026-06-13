@@ -1,6 +1,6 @@
 # Phase 07 — Sapo 2-Chiều Write-Back (GATED)
 
-**Context:** [plan.md](plan.md) · Report: `plans/reports/schema-scan-260613-1133-raw-serving-semantic-integration-report.md`
+**Context:** [plan.md](plan.md) · Report: `../reports/schema-scan-260613-1133-raw-serving-semantic-integration-report.md`
 
 ## Overview
 - **Priority:** P2 — **hoãn sau v1** (user xác nhận làm sau)
