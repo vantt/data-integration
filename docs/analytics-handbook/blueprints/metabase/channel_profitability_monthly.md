@@ -33,6 +33,9 @@ Revenue: `WHERE scope_sales`. Margin: `WHERE scope_sales AND has_cogs`. Channel 
 
 #### Filter: Period
 
+
+
+
 ```json metabase-filter
 {
   "slug": "date_range",
@@ -43,6 +46,9 @@ Revenue: `WHERE scope_sales`. Margin: `WHERE scope_sales AND has_cogs`. Channel 
 ```
 
 #### Filter: Channel
+
+
+
 
 ```json metabase-filter
 {
@@ -56,13 +62,22 @@ Revenue: `WHERE scope_sales`. Margin: `WHERE scope_sales AND has_cogs`. Channel 
 
 ### 📑 Tab: Channel Overview
 
-#### 📝 Text: Luu y — US CrossBorder bi loai tru
+#### 📝 Text: > **US CrossBorder không có trong báo cáo này.** Kênh này không có dữ liệu MISA (đơn xuất khẩu/sắp xếp, không phải bán lẻ nội địa). Doanh thu US thực tế xem tại dashboard **US CrossBorder Operations**.
+
+
 
 > **US CrossBorder không có trong báo cáo này.** Kênh này không có dữ liệu MISA (đơn xuất khẩu/sắp xếp, không phải bán lẻ nội địa). Doanh thu US thực tế xem tại dashboard **US CrossBorder Operations**.
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
+
+---
 
 #### ❓ Question: Chu kỳ báo cáo
 
@@ -117,30 +132,61 @@ FROM prev_calc
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "dashcard.background": false
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
-#### 📝 Text: Boi canh mua vu + Caveat Blueprint
+---
+
+#### 📝 Text: **Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu); 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** ⚠ Caveat: Blueprint này là candidate for deprecation (audit 2026-05) — overlap với finance_channel_pl. YoY added as quick value trong khi pending consolidation. MISA COGS coverage ~65%.
+
+
 
 **Bối cảnh mùa vụ VN Retail** — ưu tiên YoY khi xem tháng có seasonal event: Tết (Jan cuối/Feb đầu); 9/9 · 10/10 · **11/11** · 12/12 Shopee Mega Sale; Black Friday cuối Nov. Nếu tháng có seasonal event → **ưu tiên YoY %, không trust MoM % standalone.** ⚠ Caveat: Blueprint này là candidate for deprecation (audit 2026-05) — overlap với finance_channel_pl. YoY added as quick value trong khi pending consolidation. MISA COGS coverage ~65%.
 
 ```json metabase-pos
-{"row": 4, "col":0, "size_x":18, "size_y":2}
+{
+  "row": 4,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
-#### 📝 Text: Tab Overview Heading
+---
+
+#### 📝 Text: Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
+
+
 
 ## Bien loi nhuan gop theo kenh — kenh nao hieu qua nhat?
 
 ```json metabase-pos
-{"row": 6, "col":0, "size_x":18, "size_y":1}
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### Question: Gross Margin %
+
+
+
 
 Hero gauge — bien loi nhuan gop tong hop, so sanh voi nguong 40%.
 
@@ -161,19 +207,42 @@ WHERE NOT is_promo_line
   "display": "gauge",
   "visualization_settings": {
     "gauge.segments": [
-      { "min": 0,  "max": 25, "color": "#EF8C8C", "label": "Thap" },
-      { "min": 25, "max": 40, "color": "#F9D45C", "label": "Trung binh" },
-      { "min": 40, "max": 100, "color": "#84BB4C", "label": "Tot" }
+      {
+        "min": 0,
+        "max": 25,
+        "color": "#EF8C8C",
+        "label": "Thap"
+      },
+      {
+        "min": 25,
+        "max": 40,
+        "color": "#F9D45C",
+        "label": "Trung binh"
+      },
+      {
+        "min": 40,
+        "max": 100,
+        "color": "#84BB4C",
+        "label": "Tot"
+      }
     ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 7, "col":0, "size_x":6, "size_y":4}
+{
+  "row": 7,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 4
+}
 ```
 
 #### Question: Total Revenue
+
+
+
 
 Supporting KPI — tong doanh thu ky nay vs ky truoc + cung ky nam truoc.
 
@@ -225,7 +294,7 @@ FROM this_period t, prev_period p, prev_year py
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Doanh thu": {
+      "[\"name\",\"Doanh thu\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -237,10 +306,18 @@ FROM this_period t, prev_period p, prev_year py
 ```
 
 ```json metabase-pos
-{"row": 7, "col":6, "size_x":6, "size_y":4}
+{
+  "row": 7,
+  "col": 6,
+  "size_x": 6,
+  "size_y": 4
+}
 ```
 
 #### Question: Total COGS
+
+
+
 
 Supporting KPI — tong gia von ky nay vs ky truoc.
 
@@ -279,7 +356,7 @@ FROM this_period t, prev_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Gia von": {
+      "[\"name\",\"Gia von\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -291,10 +368,18 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row": 7, "col":12, "size_x":3, "size_y":4}
+{
+  "row": 7,
+  "col": 12,
+  "size_x": 3,
+  "size_y": 4
+}
 ```
 
 #### Question: Total Gross Profit
+
+
+
 
 Supporting KPI — tong lai gop ky nay vs ky truoc.
 
@@ -333,7 +418,7 @@ FROM this_period t, prev_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Lai gop": {
+      "[\"name\",\"Lai gop\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -345,18 +430,35 @@ FROM this_period t, prev_period p
 ```
 
 ```json metabase-pos
-{"row": 7, "col":15, "size_x":3, "size_y":4}
+{
+  "row": 7,
+  "col": 15,
+  "size_x": 3,
+  "size_y": 4
+}
 ```
 
-#### 📝 Text: Channel Comparison Heading
+---
+
+#### 📝 Text: So sanh hieu qua giua cac kenh ban hang
+
+
 
 ## So sanh hieu qua giua cac kenh ban hang
 
 ```json metabase-pos
-{"row": 11, "col":0, "size_x":18, "size_y":1}
+{
+  "row": 11,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### Question: Margin by Channel
+
+
+
 
 Horizontal bar — ranking kenh theo gross margin %, highlight vuot nguong va canh bao.
 
@@ -379,14 +481,19 @@ ORDER BY "Gross Margin %" DESC
 {
   "display": "row",
   "visualization_settings": {
-    "graph.dimensions": ["Kenh"],
-    "graph.metrics": ["Gross Margin %"],
-    "graph.colors": ["#509EE3"],
+    "graph.dimensions": [
+      "Kenh"
+    ],
+    "graph.colors": [
+      "#509EE3"
+    ],
     "graph.x_axis.title_text": "Gross Margin (%)",
     "graph.y_axis.title_text": "",
     "table.column_formatting": [
       {
-        "columns": ["Gross Margin %"],
+        "columns": [
+          "Gross Margin %"
+        ],
         "type": "single",
         "operator": ">=",
         "value": 40,
@@ -394,7 +501,9 @@ ORDER BY "Gross Margin %" DESC
         "highlight_row": false
       },
       {
-        "columns": ["Gross Margin %"],
+        "columns": [
+          "Gross Margin %"
+        ],
         "type": "single",
         "operator": "<",
         "value": 25,
@@ -403,21 +512,32 @@ ORDER BY "Gross Margin %" DESC
       }
     ],
     "column_settings": {
-      "Gross Margin %": {
+      "[\"name\",\"Gross Margin %\"]": {
         "number_style": "percent",
         "decimals": 1,
         "scale": 0.01
       }
-    }
+    },
+    "graph.metrics": [
+      "Gross Margin %"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 12, "col":0, "size_x":9, "size_y":6}
+{
+  "row": 12,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### Question: Revenue vs COGS by Channel
+
+
+
 
 Grouped bar — doanh thu va gia von tung kenh, so sanh scale.
 
@@ -438,45 +558,65 @@ ORDER BY "Doanh thu" DESC
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["Kenh"],
-    "graph.metrics": ["Doanh thu", "Gia von"],
-    "graph.colors": ["#509EE3", "#EF8C8C"],
+    "graph.dimensions": [
+      "Kenh"
+    ],
+    "graph.colors": [
+      "#509EE3",
+      "#EF8C8C"
+    ],
     "stackable.stack_type": null,
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "VND",
     "column_settings": {
-      "Doanh thu": {
+      "[\"name\",\"Doanh thu\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
         "compact": true
       },
-      "Gia von": {
+      "[\"name\",\"Gia von\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "graph.metrics": [
+      "Doanh thu",
+      "Gia von"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{"row": 12, "col":9, "size_x":9, "size_y":6}
+{
+  "row": 12,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 ---
 
+#### 📝 Text: **Source:** fact_order_economics + dim_channels · **Cadence:** monthly · **Scope:** is_sales_channel + has_cogs · **Caveats:** MISA coverage gap
 
-#### 📝 Text: Source & Freshness
+
 
 **Source:** fact_order_economics + dim_channels · **Cadence:** monthly · **Scope:** is_sales_channel + has_cogs · **Caveats:** MISA coverage gap
-<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 99,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
+
+---
 
 ### 📑 Tab: Trends & Product Detail
 
@@ -513,22 +653,44 @@ FROM filter_bounds
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "dashcard.background": false
+  }
+}
 ```
 
 ```json metabase-pos
-{ "row": 0, "col": 0, "size_x": 18, "size_y": 2 }
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
 ```
 
-#### 📝 Text: Trends Heading
+---
+
+#### 📝 Text: Xu huong margin theo kenh — kenh nao dang cai thien?
+
+
 
 ## Xu huong margin theo kenh — kenh nao dang cai thien?
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### Question: Margin Trend by Channel
+
+
+
 
 Multi-line chart — bien dong gross margin % tung kenh theo thang.
 
@@ -552,27 +714,45 @@ ORDER BY "Thang" ASC, "Kenh" ASC
 {
   "display": "line",
   "visualization_settings": {
-    "graph.dimensions": ["Thang", "Kenh"],
-    "graph.metrics": ["Gross Margin %"],
-    "graph.colors": ["#509EE3", "#88BDE6", "#A989C5", "#F2A86F"],
+    "graph.dimensions": [
+      "Thang",
+      "Kenh"
+    ],
+    "graph.colors": [
+      "#509EE3",
+      "#88BDE6",
+      "#A989C5",
+      "#F2A86F"
+    ],
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "Gross Margin (%)",
     "column_settings": {
-      "Gross Margin %": {
+      "[\"name\",\"Gross Margin %\"]": {
         "number_style": "percent",
         "decimals": 1,
         "scale": 0.01
       }
-    }
+    },
+    "graph.metrics": [
+      "Gross Margin %"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 9, "size_y": 6 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### Question: Revenue Mix Trend
+
+
+
 
 Stacked bar time — ty trong doanh thu tung kenh thay doi theo thang.
 
@@ -594,36 +774,63 @@ ORDER BY "Thang" ASC, "Kenh" ASC
   "display": "bar",
   "visualization_settings": {
     "stackable.stack_type": "stacked",
-    "graph.dimensions": ["Thang", "Kenh"],
-    "graph.metrics": ["Doanh thu"],
-    "graph.colors": ["#509EE3", "#88BDE6", "#A989C5", "#F2A86F"],
+    "graph.dimensions": [
+      "Thang",
+      "Kenh"
+    ],
+    "graph.colors": [
+      "#509EE3",
+      "#88BDE6",
+      "#A989C5",
+      "#F2A86F"
+    ],
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "Doanh thu (VND)",
     "column_settings": {
-      "Doanh thu": {
+      "[\"name\",\"Doanh thu\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "graph.metrics": [
+      "Doanh thu"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 9, "size_x": 9, "size_y": 6 }
+{
+  "row": 3,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
-#### 📝 Text: Product Detail Heading
+---
+
+#### 📝 Text: San pham anh huong loi nhuan — san pham nao tao lai, san pham nao keo xuong?
+
+
 
 ## San pham anh huong loi nhuan — san pham nao tao lai, san pham nao keo xuong?
 
 ```json metabase-pos
-{ "row": 9, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 9,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### Question: Top Products by Profit
+
+
+
 
 Horizontal bar — top 15 san pham dong gop lai gop nhieu nhat.
 
@@ -644,28 +851,42 @@ LIMIT 15
 {
   "display": "row",
   "visualization_settings": {
-    "graph.dimensions": ["San pham"],
-    "graph.metrics": ["Lai gop"],
-    "graph.colors": ["#509EE3"],
+    "graph.dimensions": [
+      "San pham"
+    ],
+    "graph.colors": [
+      "#509EE3"
+    ],
     "graph.x_axis.title_text": "Lai gop (VND)",
     "graph.y_axis.title_text": "",
     "column_settings": {
-      "Lai gop": {
+      "[\"name\",\"Lai gop\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
         "compact": true
       }
-    }
+    },
+    "graph.metrics": [
+      "Lai gop"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 0, "size_x": 9, "size_y": 9 }
+{
+  "row": 10,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 9
+}
 ```
 
 #### Question: Low-Margin Products
+
+
+
 
 Table with conditional formatting — san pham margin < 25%, can review gia/nguon cung. Do thi <15% do, >40% xanh.
 
@@ -697,7 +918,9 @@ ORDER BY "Gross Margin %" ASC
     "table.cell_height": "compact",
     "table.column_formatting": [
       {
-        "columns": ["Gross Margin %"],
+        "columns": [
+          "Gross Margin %"
+        ],
         "type": "single",
         "operator": "<",
         "value": 15,
@@ -705,7 +928,9 @@ ORDER BY "Gross Margin %" ASC
         "highlight_row": true
       },
       {
-        "columns": ["Gross Margin %"],
+        "columns": [
+          "Gross Margin %"
+        ],
         "type": "single",
         "operator": ">=",
         "value": 40,
@@ -714,19 +939,19 @@ ORDER BY "Gross Margin %" ASC
       }
     ],
     "column_settings": {
-      "Doanh thu": {
+      "[\"name\",\"Doanh thu\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
         "compact": true
       },
-      "Lai gop": {
+      "[\"name\",\"Lai gop\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
         "compact": true
       },
-      "Gross Margin %": {
+      "[\"name\",\"Gross Margin %\"]": {
         "number_style": "percent",
         "decimals": 1,
         "scale": 0.01
@@ -737,15 +962,279 @@ ORDER BY "Gross Margin %" ASC
 ```
 
 ```json metabase-pos
-{ "row": 10, "col": 9, "size_x": 9, "size_y": 9 }
+{
+  "row": 10,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 9
+}
 ```
 
-#### 📝 Text: Source & Freshness
+---
+
+#### 📝 Text: **Source:** fact_order_economics + dim_channels · **Cadence:** monthly · **Scope:** is_sales_channel + has_cogs · **Caveats:** MISA coverage gap
+
+
 
 **Source:** fact_order_economics + dim_channels · **Cadence:** monthly · **Scope:** is_sales_channel + has_cogs · **Caveats:** MISA coverage gap
-<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 99,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
+---
+
+### 📑 Tab: Channel Profitability (Sapo)
+
+#### 📝 Text: Kenh ban hang tin cay (Sapo) — Core vs Marketplace
+
+**Nguồn: Sapo order data** (`fact_order_economics JOIN dim_channels`) — phân loại kênh đáng tin cậy (Core vs Marketplace dựa trên `is_marketplace`). Tab này thay thế tab MISA channel cũ (MISA ~95% UNKNOWN). Dữ liệu all-time (bộ lọc kỳ trên dashboard không áp dụng vào tab này vì cột date_key là INTEGER, không phải DATE — dùng Dashboard 77 nếu cần lọc theo kỳ cho Sapo channel data).
+
+```json metabase-pos
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 3
+}
+```
+
+---
+
+#### ❓ Question: Core vs Marketplace Summary
+
+```sql
+SELECT
+    CASE WHEN dc.is_marketplace THEN 'Marketplace' ELSE 'Core' END  AS "Channel Type",
+    SUM(foe.net_revenue)                                             AS "Net Revenue",
+    SUM(foe.gross_profit)                                            AS "Gross Profit",
+    ROUND(SUM(foe.gross_profit) * 100.0 / NULLIF(SUM(foe.net_revenue), 0), 1)              AS "Gross Margin %",
+    ROUND(SUM(foe.channel_net_profit) * 100.0 / NULLIF(SUM(foe.net_revenue), 0), 1)        AS "Channel Net Margin %",
+    ROUND(SUM(foe.fully_loaded_net_profit) * 100.0 / NULLIF(SUM(foe.net_revenue), 0), 1)   AS "Fully Loaded Margin %",
+    COUNT(DISTINCT foe.order_id)                                     AS "Don hang"
+FROM main_marts.fact_order_economics foe
+JOIN main_marts.dim_channels dc USING (channel_key)
+WHERE foe.has_cogs
+  AND foe.scope_sales
+  AND foe.is_active_order
+GROUP BY 1
+ORDER BY "Net Revenue" DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.cell_height": "compact",
+    "table.column_formatting": [
+      {
+        "columns": ["Gross Margin %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 40,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Gross Margin %"],
+        "type": "single",
+        "operator": "<",
+        "value": 25,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "[\"name\",\"Net Revenue\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "[\"name\",\"Gross Profit\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "[\"name\",\"Gross Margin %\"]": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      },
+      "[\"name\",\"Channel Net Margin %\"]": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      },
+      "[\"name\",\"Fully Loaded Margin %\"]": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 4
+}
+```
+
+---
+
+#### ❓ Question: Per-Channel Profitability Table
+
+```sql
+SELECT
+    dc.channel_name                                                                  AS "Kenh",
+    CASE WHEN dc.is_marketplace THEN 'Marketplace' ELSE 'Core' END                  AS "Channel Type",
+    SUM(foe.net_revenue)                                                             AS "Net Revenue",
+    SUM(foe.gross_profit)                                                            AS "Gross Profit",
+    ROUND(SUM(foe.gross_profit) * 100.0 / NULLIF(SUM(foe.net_revenue), 0), 1)       AS "Gross Margin %",
+    ROUND(SUM(foe.channel_net_profit) * 100.0 / NULLIF(SUM(foe.net_revenue), 0), 1) AS "Channel Net Margin %",
+    COUNT(DISTINCT foe.order_id)                                                     AS "Don hang"
+FROM main_marts.fact_order_economics foe
+JOIN main_marts.dim_channels dc USING (channel_key)
+WHERE foe.has_cogs
+  AND foe.scope_sales
+  AND foe.is_active_order
+GROUP BY dc.channel_name, dc.is_marketplace
+ORDER BY "Net Revenue" DESC
+```
+
+```json metabase-viz
+{
+  "display": "table",
+  "visualization_settings": {
+    "table.cell_height": "compact",
+    "table.column_formatting": [
+      {
+        "columns": ["Gross Margin %"],
+        "type": "single",
+        "operator": ">=",
+        "value": 40,
+        "color": "#84BB4C",
+        "highlight_row": false
+      },
+      {
+        "columns": ["Gross Margin %"],
+        "type": "single",
+        "operator": "<",
+        "value": 25,
+        "color": "#EF8C8C",
+        "highlight_row": false
+      }
+    ],
+    "column_settings": {
+      "[\"name\",\"Net Revenue\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "[\"name\",\"Gross Profit\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "[\"name\",\"Gross Margin %\"]": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      },
+      "[\"name\",\"Channel Net Margin %\"]": {
+        "number_style": "percent",
+        "scale": 0.01,
+        "decimals": 1
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{
+  "row": 7,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 8
+}
+```
+
+---
+
+#### ❓ Question: Monthly Revenue Trend — Core vs Marketplace
+
+```sql
+SELECT
+    CAST((foe.date_key // 100) AS VARCHAR)                                          AS "Thang",
+    CASE WHEN dc.is_marketplace THEN 'Marketplace' ELSE 'Core' END                  AS "Channel Type",
+    SUM(foe.net_revenue)                                                             AS "Net Revenue"
+FROM main_marts.fact_order_economics foe
+JOIN main_marts.dim_channels dc USING (channel_key)
+WHERE foe.has_cogs
+  AND foe.scope_sales
+  AND foe.is_active_order
+GROUP BY foe.date_key // 100, dc.is_marketplace
+ORDER BY "Thang" ASC
+```
+
+```json metabase-viz
+{
+  "display": "bar",
+  "visualization_settings": {
+    "stackable.stack_type": "stacked",
+    "graph.dimensions": ["Thang", "Channel Type"],
+    "graph.metrics": ["Net Revenue"],
+    "graph.colors": ["#509EE3", "#F2A86F"],
+    "graph.x_axis.title_text": "Thang (YYYYMM)",
+    "graph.y_axis.title_text": "Net Revenue (VND)",
+    "column_settings": {
+      "[\"name\",\"Net Revenue\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    }
+  }
+}
+```
+
+```json metabase-pos
+{
+  "row": 15,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
+```
+
+---
+
+#### 📝 Text: **Source:** fact_order_economics + dim_channels (Sapo) · **Scope:** has_cogs AND scope_sales AND is_active_order · **Channel split:** is_marketplace (reliable) · **Date filter:** not wired (date_key is INTEGER); use Dashboard 77 for period-filtered Sapo channel analysis.
+
+**Source:** `fact_order_economics JOIN dim_channels` (Sapo) · **Scope:** `has_cogs AND scope_sales AND is_active_order` · **Channel split:** `is_marketplace` — reliable Sapo-based classification. MISA channel (other tabs) ~95% UNKNOWN — không dùng để so sánh channel.
+
+```json metabase-pos
+{
+  "row": 99,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
+---
