@@ -4,8 +4,8 @@
 
 ## Overview
 - **Priority:** P0 (chặn mọi phase khác)
-- **Status:** ⬜ Not started
-- Dựng nền: Postgres 16, repo Go app (**hexagonal**), migration SQL-first, docker-compose local. **Auth hoãn** (tin-cậy-LAN như `detailView`); chỉ tạo `app_user` để gán owner/assignee. Quy mô **~10 user** → pool nhỏ.
+- **Status:** ✅ DONE — build+vet xanh, /healthz 200 (crm_db+cache_attached), migrate up/down, hexagonal purity verified, code-review fixed. Toolchain: Go 1.26.4 + sqlc 1.31.1 + migrate (modernc), no-CGO.
+- Dựng nền: **SQLite WAL** (modernc, no-CGO), repo Go app (**hexagonal**), migration SQL-first (embed + golang-migrate iofs), **không container DB**. **Auth hoãn** (tin-cậy-LAN như `detailView`); chỉ tạo `crm_app_user` để gán owner/assignee. Quy mô **~10 user** → pool nhỏ (MaxOpen/Idle=1).
 
 ## Key Insights
 - Stack chốt: Go (single binary, deploy dễ) + Python pipeline (đồng bộ ingestion) + **SQLite WAL** nhúng (`modernc.org/sqlite`, no CGO).

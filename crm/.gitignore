@@ -1,7 +1,7 @@
 /data/*.db
 /data/*.db-wal
 /data/*.db-shm
-/app/bin/
+/bin/
 *.exe
 __pycache__/
 .venv/
