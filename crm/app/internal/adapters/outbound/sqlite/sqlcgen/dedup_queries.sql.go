@@ -11,7 +11,6 @@ import (
 )
 
 const dedupCandidateExists = `-- name: DedupCandidateExists :one
--- Only a 'pending' candidate blocks re-detection; merged/rejected pairs can be re-scanned.
 SELECT COUNT(*) FROM crm_dedup_candidate
 WHERE status = 'pending'
   AND (
@@ -28,6 +27,7 @@ type DedupCandidateExistsParams struct {
 	PartyB_2 string `json:"party_b_2"`
 }
 
+// Only a 'pending' candidate blocks re-detection; merged/rejected pairs can be re-scanned.
 func (q *Queries) DedupCandidateExists(ctx context.Context, arg DedupCandidateExistsParams) (int64, error) {
 	row := q.db.QueryRowContext(ctx, dedupCandidateExists,
 		arg.PartyA,
@@ -83,7 +83,7 @@ func (q *Queries) GetMergeLog(ctx context.Context, mergeID string) (CrmPartyMerg
 		&i.MergedBy,
 		&i.Snapshot,
 		&i.MergedAt,
-		&i.UndonAt,
+		&i.UndoneAt,
 	)
 	return i, err
 }

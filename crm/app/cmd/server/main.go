@@ -44,6 +44,13 @@ func main() {
 	dedupRepo := sqlite.NewDedupRepo(db)
 	mergeService := application.NewMergeService(partyRepo, dedupRepo)
 
+	// Customer 360 repos + service.
+	profileRepo := sqlite.NewProfileRepo(db)
+	customFieldRepo := sqlite.NewCustomFieldRepo(db)
+	tagRepo := sqlite.NewTagRepo(db)
+	noteRepo := sqlite.NewNoteRepo(db)
+	profileSvc := application.NewProfileService(profileRepo, customFieldRepo, tagRepo, noteRepo)
+
 	// Chi router.
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
@@ -54,6 +61,10 @@ func main() {
 	// Dedup endpoints.
 	dedupHandler := inboundhttp.NewDedupHandler(dedupRepo, mergeService)
 	dedupHandler.RegisterRoutes(r)
+
+	// Customer 360 endpoints.
+	c360Handler := inboundhttp.NewCustomer360Handler(profileSvc, profileSvc, profileSvc, profileSvc, profileSvc, partyRepo)
+	c360Handler.RegisterRoutes(r)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),

@@ -19,6 +19,32 @@ type CrmAppUser struct {
 	UpdatedAt string        `json:"updated_at"`
 }
 
+type CrmCustomFieldDef struct {
+	FieldID    string         `json:"field_id"`
+	EntityType string         `json:"entity_type"`
+	FieldKey   string         `json:"field_key"`
+	Label      string         `json:"label"`
+	DataType   string         `json:"data_type"`
+	Options    sql.NullString `json:"options"`
+	IsRequired int64          `json:"is_required"`
+	IsActive   int64          `json:"is_active"`
+	SortOrder  int64          `json:"sort_order"`
+}
+
+type CrmCustomerProfile struct {
+	PartyID           string         `json:"party_id"`
+	OwnerUserID       sql.NullString `json:"owner_user_id"`
+	LifecycleStage    sql.NullString `json:"lifecycle_stage"`
+	AcquisitionSource sql.NullString `json:"acquisition_source"`
+	Birthday          sql.NullString `json:"birthday"`
+	Address           sql.NullString `json:"address"`
+	Preferences       sql.NullString `json:"preferences"`
+	Custom            string         `json:"custom"`
+	ConsentContact    int64          `json:"consent_contact"`
+	CreatedAt         string         `json:"created_at"`
+	UpdatedAt         string         `json:"updated_at"`
+}
+
 type CrmDedupCandidate struct {
 	CandidateID string         `json:"candidate_id"`
 	PartyA      string         `json:"party_a"`
@@ -29,6 +55,14 @@ type CrmDedupCandidate struct {
 	ReviewedBy  sql.NullString `json:"reviewed_by"`
 	ReviewedAt  sql.NullString `json:"reviewed_at"`
 	CreatedAt   string         `json:"created_at"`
+}
+
+type CrmNote struct {
+	NoteID       string         `json:"note_id"`
+	PartyID      string         `json:"party_id"`
+	Body         string         `json:"body"`
+	AuthorUserID sql.NullString `json:"author_user_id"`
+	CreatedAt    string         `json:"created_at"`
 }
 
 type CrmParty struct {
@@ -42,6 +76,28 @@ type CrmParty struct {
 	MergedInto   sql.NullString `json:"merged_into"`
 	CreatedAt    string         `json:"created_at"`
 	UpdatedAt    string         `json:"updated_at"`
+}
+
+type CrmParty360 struct {
+	PartyID           string         `json:"party_id"`
+	PartyType         string         `json:"party_type"`
+	DisplayName       sql.NullString `json:"display_name"`
+	PrimaryPhone      sql.NullString `json:"primary_phone"`
+	PrimaryEmail      sql.NullString `json:"primary_email"`
+	Status            string         `json:"status"`
+	IsMerged          int64          `json:"is_merged"`
+	PartyCreatedAt    string         `json:"party_created_at"`
+	PartyUpdatedAt    string         `json:"party_updated_at"`
+	OwnerUserID       sql.NullString `json:"owner_user_id"`
+	LifecycleStage    sql.NullString `json:"lifecycle_stage"`
+	AcquisitionSource sql.NullString `json:"acquisition_source"`
+	Birthday          sql.NullString `json:"birthday"`
+	Address           sql.NullString `json:"address"`
+	Preferences       sql.NullString `json:"preferences"`
+	Custom            sql.NullString `json:"custom"`
+	ConsentContact    sql.NullInt64  `json:"consent_contact"`
+	ProfileUpdatedAt  sql.NullString `json:"profile_updated_at"`
+	TagsJson          interface{}    `json:"tags_json"`
 }
 
 type CrmPartyFt struct {
@@ -69,5 +125,19 @@ type CrmPartyMergeLog struct {
 	MergedBy         sql.NullString `json:"merged_by"`
 	Snapshot         sql.NullString `json:"snapshot"`
 	MergedAt         string         `json:"merged_at"`
-	UndonAt          sql.NullString `json:"undone_at"` // set when UndoMerge applied
+	UndoneAt         sql.NullString `json:"undone_at"`
+}
+
+type CrmPartyTag struct {
+	PartyID  string         `json:"party_id"`
+	TagID    string         `json:"tag_id"`
+	TaggedBy sql.NullString `json:"tagged_by"`
+	TaggedAt string         `json:"tagged_at"`
+}
+
+type CrmTag struct {
+	TagID    string         `json:"tag_id"`
+	Name     string         `json:"name"`
+	Category sql.NullString `json:"category"`
+	Color    sql.NullString `json:"color"`
 }

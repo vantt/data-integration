@@ -172,7 +172,7 @@ func (r *DedupRepo) UndoMerge(ctx context.Context, mergeID string) error {
 	}
 
 	// Double-undo guard: reject if undone_at is already set.
-	if log.UndonAt.Valid {
+	if log.UndoneAt.Valid {
 		return fmt.Errorf("merge %q already undone", mergeID)
 	}
 

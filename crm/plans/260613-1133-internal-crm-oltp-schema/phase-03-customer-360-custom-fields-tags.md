@@ -4,7 +4,7 @@
 
 ## Overview
 - **Priority:** P1
-- **Status:** ⬜
+- **Status:** ✅ DONE — migration 0003 (profile/custom_field_def/tag/note), domain custom-field validator (type/required/options, date via time.Parse), ProfileService (merge custom JSON + validate merged map), tags/notes, `crm_party_360` view (crm-only — cache join hoãn Phase 04), 7 endpoint, 32 test PASS, code-review fixed (H1 PUT data-loss, H2 required-field). Auth hoãn.
 - Lớp **làm giàu & chuẩn hoá** thông tin khách mà Sapo không có: profile mở rộng, custom fields tuỳ biến, tags, notes. Kết hợp với insight cache (Phase 04) thành view `party_360`.
 
 ## Key Insights
