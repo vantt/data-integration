@@ -36,6 +36,9 @@ Retention analytics — are customers coming back? Cohort, waterfall, lifecycle,
 
 #### Filter: Segment
 
+
+
+
 ```json metabase-filter
 {
   "slug": "segment",
@@ -43,11 +46,57 @@ Retention analytics — are customers coming back? Cohort, waterfall, lifecycle,
 }
 ```
 
+#### Filter: Phân khúc giá trị
+
+
+CategoryDrop field filter for waterfall cards (Churn Rate, Active Rate, Waterfall Trend). Values: VALUE_VIP / VALUE_GOLD / VALUE_SILVER / VALUE_BRONZE. field_id=1822 on mart_retention_waterfall_monthly (schema main_marts, db_id=2).
+
+```json metabase-filter
+{
+  "slug": "value_group",
+  "type": "string/=",
+  "field_id": 1822
+}
+```
+
 ---
 
 ### 📑 Tab: Suc khoe Retention
 
+#### ❓ Question: Chu kỳ báo cáo
+
+```sql
+SELECT
+  '📅 Reactivation 6 tháng: ' ||
+  strftime((current_date - INTERVAL '6 months')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Dự báo: tuần ' || strftime(current_date, '%W/%Y') || ' & tháng ' || strftime(current_date, '%m/%Y')
+  AS "Chu kỳ báo cáo"
+```
+
+```json metabase-viz
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "dashcard.background": false
+  }
+}
+```
+
+```json metabase-pos
+{
+  "row": 0,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 2
+}
+```
+
+---
+
 #### 📝 Text: Monitor retention health — repeat rate, churn, and lifecycle status
+
+
+
 
 # Monitor retention health — repeat rate, churn, and lifecycle status
 
@@ -60,75 +109,58 @@ Retention analytics — are customers coming back? Cohort, waterfall, lifecycle,
 }
 ```
 
-#### 📝 Text: Assess lifecycle distribution — where are customers concentrating?
-
-# Assess lifecycle distribution — where are customers concentrating?
-
-```json metabase-pos
-{
-  "row": 6,
-  "col": 0,
-  "size_x": 18,
-  "size_y": 1
-}
-```
-
-#### 📝 Text: Track retention and churn trends — are we improving toward target?
-
-# Track retention and churn trends — are we improving toward target?
-
-```json metabase-pos
-{
-  "row": 13,
-  "col": 0,
-  "size_x": 18,
-  "size_y": 1
-}
-```
-
-#### 📝 Text: Review retention scorecard — flag segments with weak retention
-
-# Review retention scorecard — flag segments with weak retention
-
-```json metabase-pos
-{
-  "row": 20,
-  "col": 0,
-  "size_x": 18,
-  "size_y": 1
-}
-```
-
 #### ❓ Question: Repeat Purchase Rate
+
+
+
 
 Hero metric — percentage of customers who have made more than one purchase, with MoM comparison.
 
 ```sql
--- Snapshot-driven MoM: compares state at end of this month vs end of last month.
--- current_month_end = last day of previous calendar month (most recent closed month)
--- prev_month_end    = last day of the month before that
+-- Point-in-time MoM from fact_orders: counts customers with >=2 orders as-of each month-end.
+-- Avoids survivorship bias in mart_customer_status_snapshot_monthly (orders_to_date = current value).
+-- current_month_end = last day of previous calendar month (most recent closed month).
+-- prev_month_end    = last day of the month before that.
+-- base = all retail customers (non-cancelled, non-draft, customer_type=RETAIL, customer_id != Unknown)
+--        who had at least one order on or before the snapshot date.
 WITH month_ends AS (
     SELECT
         (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
         (date_trunc('month', current_date) - INTERVAL '1 month' - INTERVAL '1 day')::date AS prev_month_end
 ),
+valid_orders AS (
+    SELECT o.customer_key, o.ordered_at::date AS order_date
+    FROM fact_orders o
+    JOIN dim_customers c USING (customer_key)
+    WHERE o.status NOT IN ('CANCELLED', 'DRAFT')
+      AND c.customer_type = 'RETAIL'
+      AND c.customer_id <> 'Unknown'
+),
 current_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN orders_to_date > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+            COUNT(DISTINCT CASE WHEN order_cnt > 1 THEN customer_key END) * 100.0
+            / NULLIF(COUNT(DISTINCT customer_key), 0), 1
         ) AS value
-    FROM mart_customer_status_snapshot_monthly s, month_ends m
-    WHERE s.snapshot_month = m.current_month_end
-      [[AND s.value_group = {{segment}}]]
+    FROM (
+        SELECT customer_key, COUNT(*) AS order_cnt
+        FROM valid_orders, month_ends m
+        WHERE order_date <= m.current_month_end
+        GROUP BY customer_key
+    ) pit
 ),
 previous_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN orders_to_date > 1 THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+            COUNT(DISTINCT CASE WHEN order_cnt > 1 THEN customer_key END) * 100.0
+            / NULLIF(COUNT(DISTINCT customer_key), 0), 1
         ) AS value
-    FROM mart_customer_status_snapshot_monthly s, month_ends m
-    WHERE s.snapshot_month = m.prev_month_end
-      [[AND s.value_group = {{segment}}]]
+    FROM (
+        SELECT customer_key, COUNT(*) AS order_cnt
+        FROM valid_orders, month_ends m
+        WHERE order_date <= m.prev_month_end
+        GROUP BY customer_key
+    ) pit
 )
 SELECT
     c.value AS "Repeat Rate %",
@@ -141,7 +173,7 @@ FROM current_period c, previous_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Repeat Rate %": {
+      "[\"name\",\"Repeat Rate %\"]": {
         "suffix": "%",
         "decimals": 1
       }
@@ -154,17 +186,25 @@ FROM current_period c, previous_period p
 {
   "row": 3,
   "col": 0,
-  "size_x": 6,
+  "size_x": 5,
   "size_y": 3
 }
 ```
 
 #### ❓ Question: Churn Rate
 
+
+
+
 Percentage of customers churned (90+ days inactive), with MoM comparison. Lower is better.
+Optional value_group filter — when set, numerator and denominator are both restricted to that segment so the rate stays correct within the segment.
 
 ```sql
--- Snapshot-driven MoM: status = 'CHURNED' as-of each month-end snapshot.
+-- Point-in-time MoM from mart_retention_waterfall_monthly.
+-- Grain-agnostic: SUM(customer_count) aggregates across segment dims.
+-- value_group filter applied to BOTH current and previous periods so
+-- numerator (CHURNED count) and denominator (total) stay consistent within the segment.
+-- No filter → all segments summed → same result as before.
 WITH month_ends AS (
     SELECT
         (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
@@ -173,20 +213,22 @@ WITH month_ends AS (
 current_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+            SUM(CASE WHEN status = 'CHURNED' THEN customer_count ELSE 0 END) * 100.0
+            / NULLIF(SUM(customer_count), 0), 1
         ) AS value
-    FROM mart_customer_status_snapshot_monthly s, month_ends m
-    WHERE s.snapshot_month = m.current_month_end
-      [[AND s.value_group = {{segment}}]]
+    FROM main_marts.mart_retention_waterfall_monthly w, month_ends m
+    WHERE w.snapshot_month = m.current_month_end
+      [[AND {{value_group}}]]
 ),
 previous_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN status = 'CHURNED' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+            SUM(CASE WHEN status = 'CHURNED' THEN customer_count ELSE 0 END) * 100.0
+            / NULLIF(SUM(customer_count), 0), 1
         ) AS value
-    FROM mart_customer_status_snapshot_monthly s, month_ends m
-    WHERE s.snapshot_month = m.prev_month_end
-      [[AND s.value_group = {{segment}}]]
+    FROM main_marts.mart_retention_waterfall_monthly w, month_ends m
+    WHERE w.snapshot_month = m.prev_month_end
+      [[AND {{value_group}}]]
 )
 SELECT
     c.value AS "Churn Rate %",
@@ -199,7 +241,7 @@ FROM current_period c, previous_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Churn Rate %": {
+      "[\"name\",\"Churn Rate %\"]": {
         "suffix": "%",
         "decimals": 1
       }
@@ -211,13 +253,16 @@ FROM current_period c, previous_period p
 ```json metabase-pos
 {
   "row": 3,
-  "col": 6,
+  "col": 5,
   "size_x": 4,
   "size_y": 3
 }
 ```
 
 #### ❓ Question: Avg Order Value
+
+
+
 
 Average revenue per order for repeat customers (LTV ÷ orders), with MoM comparison.
 
@@ -255,7 +300,7 @@ FROM current_period c, previous_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Avg Order Value": {
+      "[\"name\",\"Avg Order Value\"]": {
         "number_style": "currency",
         "currency": "VND",
         "decimals": 0,
@@ -269,18 +314,26 @@ FROM current_period c, previous_period p
 ```json metabase-pos
 {
   "row": 3,
-  "col": 10,
-  "size_x": 4,
+  "col": 9,
+  "size_x": 5,
   "size_y": 3
 }
 ```
 
 #### ❓ Question: Active Customer Rate
 
+
+
+
 Percentage of paying customers active in last 30 days, with MoM comparison.
+Optional value_group filter — when set, numerator and denominator are both restricted to that segment so the rate stays correct within the segment.
 
 ```sql
--- Snapshot-driven MoM: status = 'ACTIVE' as-of each month-end snapshot.
+-- Point-in-time MoM from mart_retention_waterfall_monthly.
+-- Grain-agnostic: SUM(customer_count) aggregates across segment dims.
+-- value_group filter applied to BOTH current and previous periods so
+-- numerator (ACTIVE count) and denominator (total) stay consistent within the segment.
+-- No filter → all segments summed → same result as before.
 WITH month_ends AS (
     SELECT
         (date_trunc('month', current_date) - INTERVAL '1 day')::date AS current_month_end,
@@ -289,20 +342,22 @@ WITH month_ends AS (
 current_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+            SUM(CASE WHEN status = 'ACTIVE' THEN customer_count ELSE 0 END) * 100.0
+            / NULLIF(SUM(customer_count), 0), 1
         ) AS value
-    FROM mart_customer_status_snapshot_monthly s, month_ends m
-    WHERE s.snapshot_month = m.current_month_end
-      [[AND s.value_group = {{segment}}]]
+    FROM main_marts.mart_retention_waterfall_monthly w, month_ends m
+    WHERE w.snapshot_month = m.current_month_end
+      [[AND {{value_group}}]]
 ),
 previous_period AS (
     SELECT
         ROUND(
-            COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0), 1
+            SUM(CASE WHEN status = 'ACTIVE' THEN customer_count ELSE 0 END) * 100.0
+            / NULLIF(SUM(customer_count), 0), 1
         ) AS value
-    FROM mart_customer_status_snapshot_monthly s, month_ends m
-    WHERE s.snapshot_month = m.prev_month_end
-      [[AND s.value_group = {{segment}}]]
+    FROM main_marts.mart_retention_waterfall_monthly w, month_ends m
+    WHERE w.snapshot_month = m.prev_month_end
+      [[AND {{value_group}}]]
 )
 SELECT
     c.value AS "Active Rate %",
@@ -315,7 +370,7 @@ FROM current_period c, previous_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Active Rate %": {
+      "[\"name\",\"Active Rate %\"]": {
         "suffix": "%",
         "decimals": 1
       }
@@ -335,7 +390,27 @@ FROM current_period c, previous_period p
 
 ---
 
+#### 📝 Text: Assess lifecycle distribution — where are customers concentrating?
+
+
+
+
+# Assess lifecycle distribution — where are customers concentrating?
+
+```json metabase-pos
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: Customer Lifecycle Distribution
+
+
+
+<!-- Layout: all 3 lifecycle cards start at row 7 for a uniform row -->
 
 Donut chart showing Active / At Risk / Churned distribution.
 
@@ -361,7 +436,9 @@ ORDER BY
 {
   "display": "pie",
   "visualization_settings": {
-    "pie.dimension": ["Status"],
+    "pie.dimension": [
+      "Status"
+    ],
     "pie.metric": "Customers",
     "pie.colors": {
       "Active": "#509EE3",
@@ -384,31 +461,10 @@ ORDER BY
 }
 ```
 
-#### ❓ Question: Chu kỳ báo cáo
-
-```sql
-SELECT
-  '📅 Tháng hiện tại: ' ||
-  strftime(date_trunc('month', current_date)::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
-  '  ·  So sánh: tháng ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%m/%Y')
-  AS "Chu kỳ báo cáo"
-```
-
-```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
-```
-
-```json metabase-pos
-{
-  "row": 0,
-  "col": 0,
-  "size_x": 18,
-  "size_y": 2
-}
-```
-
 #### ❓ Question: Revenue by Lifecycle Status
+
+
+
 
 Total lifetime value concentrated in each lifecycle status.
 
@@ -434,21 +490,34 @@ ORDER BY
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["Status"],
-    "graph.metrics": ["Total LTV"],
-    "graph.colors": ["#509EE3", "#F9D45C", "#EF8C8C"],
+    "graph.dimensions": [
+      "Status"
+    ],
+    "graph.colors": [
+      "#509EE3",
+      "#F9D45C",
+      "#EF8C8C"
+    ],
     "graph.x_axis.title_text": "",
     "graph.y_axis.title_text": "Lifetime Value (VND)",
     "column_settings": {
-      "Total LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "[\"name\",\"Total LTV\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "graph.metrics": [
+      "Total LTV"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
 {
-  "row": 8,
+  "row": 7,
   "col": 6,
   "size_x": 6,
   "size_y": 6
@@ -456,6 +525,9 @@ ORDER BY
 ```
 
 #### ❓ Question: Segment x Status Matrix
+
+
+
 
 Stacked bar showing lifecycle status distribution within each customer segment.
 
@@ -479,18 +551,28 @@ ORDER BY
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["Segment"],
-    "graph.metrics": ["Customers"],
-    "graph.group_by": ["Status"],
+    "graph.dimensions": [
+      "Segment"
+    ],
+    "graph.group_by": [
+      "Status"
+    ],
     "stackable.stack_type": "stacked",
-    "graph.colors": ["#509EE3", "#F9D45C", "#EF8C8C"]
+    "graph.colors": [
+      "#509EE3",
+      "#F9D45C",
+      "#EF8C8C"
+    ],
+    "graph.metrics": [
+      "Customers"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
 {
-  "row": 8,
+  "row": 7,
   "col": 12,
   "size_x": 6,
   "size_y": 6
@@ -499,19 +581,42 @@ ORDER BY
 
 ---
 
+#### 📝 Text: Track retention and churn trends — are we improving toward target?
+
+
+
+
+# Track retention and churn trends — are we improving toward target?
+
+```json metabase-pos
+{
+  "row": 13,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: Retention Waterfall Trend (6M)
 
+
+
+
 Point-in-time lifecycle status counts per month — ACTIVE / AT_RISK / CHURNED from survivorship-free waterfall model.
+Optional value_group filter restricts all statuses to that segment — omitting it aggregates all segments (unchanged behavior).
 
 ```sql
--- Point-in-time trend from mart_retention_waterfall_monthly (grain: snapshot_month x status).
--- Replaces survivorship-biased mart_customer_status_snapshot_monthly for this trend view.
+-- Point-in-time trend from mart_retention_waterfall_monthly.
+-- Grain-agnostic: SUM + GROUP BY snapshot_month, status collapses segment dims.
+-- value_group filter is optional — omitting it gives all-segment totals (same as before).
 SELECT
     snapshot_month AS month,
     status AS "Status",
-    customer_count AS "Customers"
-FROM mart_retention_waterfall_monthly
+    SUM(customer_count) AS "Customers"
+FROM main_marts.mart_retention_waterfall_monthly
 WHERE snapshot_month >= (date_trunc('month', current_date) - INTERVAL '6 months')::date
+  [[AND {{value_group}}]]
+GROUP BY snapshot_month, status
 ORDER BY 1, 2
 ```
 
@@ -519,20 +624,30 @@ ORDER BY 1, 2
 {
   "display": "area",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["Customers"],
-    "graph.group_by": ["Status"],
+    "graph.dimensions": [
+      "month"
+    ],
+    "graph.group_by": [
+      "Status"
+    ],
     "stackable.stack_type": "stacked",
-    "graph.colors": ["#509EE3", "#F9D45C", "#EF8C8C"],
+    "graph.colors": [
+      "#509EE3",
+      "#F9D45C",
+      "#EF8C8C"
+    ],
     "graph.x_axis.title_text": "",
-    "graph.y_axis.title_text": "Customers"
+    "graph.y_axis.title_text": "Customers",
+    "graph.metrics": [
+      "Customers"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
 {
-  "row": 15,
+  "row": 14,
   "col": 0,
   "size_x": 9,
   "size_y": 6
@@ -540,6 +655,9 @@ ORDER BY 1, 2
 ```
 
 #### ❓ Question: Repeat Purchase Rate Trend (6M)
+
+
+
 
 Monthly trend of repeat purchase rate among buyers each month.
 
@@ -574,17 +692,23 @@ ORDER BY 1
 {
   "display": "line",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["Repeat %"],
-    "graph.colors": ["#84BB4C"],
-    "graph.y_axis.title_text": "Repeat %"
+    "graph.dimensions": [
+      "month"
+    ],
+    "graph.colors": [
+      "#84BB4C"
+    ],
+    "graph.y_axis.title_text": "Repeat %",
+    "graph.metrics": [
+      "Repeat %"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
 {
-  "row": 15,
+  "row": 14,
   "col": 9,
   "size_x": 9,
   "size_y": 6
@@ -593,7 +717,26 @@ ORDER BY 1
 
 ---
 
+#### 📝 Text: Review retention scorecard — flag segments with weak retention
+
+
+
+
+# Review retention scorecard — flag segments with weak retention
+
+```json metabase-pos
+{
+  "row": 20,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: Retention Health Scorecard
+
+
+
 
 Per-segment retention vitals with conditional formatting.
 
@@ -621,18 +764,30 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
   "visualization_settings": {
     "table.column_formatting": [
       {
-        "columns": ["Active %"],
+        "columns": [
+          "Active %"
+        ],
         "type": "range",
-        "colors": ["#EF8C8C", "#F9D45C", "#84BB4C"],
+        "colors": [
+          "#EF8C8C",
+          "#F9D45C",
+          "#84BB4C"
+        ],
         "min_type": "custom",
         "min_value": 0,
         "max_type": "custom",
         "max_value": 100
       },
       {
-        "columns": ["Churned %"],
+        "columns": [
+          "Churned %"
+        ],
         "type": "range",
-        "colors": ["#84BB4C", "#F9D45C", "#EF8C8C"],
+        "colors": [
+          "#84BB4C",
+          "#F9D45C",
+          "#EF8C8C"
+        ],
         "min_type": "custom",
         "min_value": 0,
         "max_type": "custom",
@@ -640,11 +795,24 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
       }
     ],
     "column_settings": {
-      "Avg LTV": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true },
-      "Active %": { "suffix": "%" },
-      "At Risk %": { "suffix": "%" },
-      "Churned %": { "suffix": "%" },
-      "Repeat Rate %": { "suffix": "%" }
+      "[\"name\",\"Avg LTV\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      },
+      "[\"name\",\"Active %\"]": {
+        "suffix": "%"
+      },
+      "[\"name\",\"At Risk %\"]": {
+        "suffix": "%"
+      },
+      "[\"name\",\"Churned %\"]": {
+        "suffix": "%"
+      },
+      "[\"name\",\"Repeat Rate %\"]": {
+        "suffix": "%"
+      }
     }
   }
 }
@@ -652,7 +820,7 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 
 ```json metabase-pos
 {
-  "row": 22,
+  "row": 21,
   "col": 0,
   "size_x": 18,
   "size_y": 6
@@ -661,8 +829,10 @@ ORDER BY CASE value_group WHEN 'VALUE_VIP' THEN 1 WHEN 'VALUE_GOLD' THEN 2 ELSE 
 
 ---
 
-
 #### ❓ Question: MAU vs Repeat-Buyer MAU (12M)
+
+
+
 
 Dual-line chart — MAU total vs repeat-buyer MAU (≥2 lifetime orders) over 12 months. Gap between lines = one-time buyer volume; narrowing gap = improving engagement quality.
 
@@ -684,11 +854,19 @@ ORDER BY 1
 {
   "display": "line",
   "visualization_settings": {
-    "graph.dimensions": ["Month"],
-    "graph.metrics": ["MAU", "MAU Repeat"],
-    "graph.colors": ["#509EE3", "#7172AD"],
+    "graph.dimensions": [
+      "Month"
+    ],
+    "graph.colors": [
+      "#509EE3",
+      "#7172AD"
+    ],
     "graph.y_axis.title_text": "Customers",
-    "graph.x_axis.title_text": "Month"
+    "graph.x_axis.title_text": "Month",
+    "graph.metrics": [
+      "MAU",
+      "MAU Repeat"
+    ]
   }
 }
 ```
@@ -704,31 +882,42 @@ ORDER BY 1
 
 ---
 
-#### 📝 Text: Source & Freshness
+#### 📝 Text: **Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
+
+
 
 **Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
-<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 99,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
-### 📑 Tab: Phan tich Cohort
+---
 
+### 📑 Tab: Phan tich Cohort
 
 #### ❓ Question: Chu kỳ báo cáo
 
 ```sql
 SELECT
-  '📅 Cohort 12 tháng: ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '12 months')::DATE, '%m/%Y') || ' – ' ||
-  strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%m/%Y') ||
-  '  ·  (tháng ' || strftime(date_trunc('month', current_date)::DATE, '%m/%Y') || ' đang tích lũy)'
+  '📅 Reactivation 6 tháng: ' ||
+  strftime((current_date - INTERVAL '6 months')::DATE, '%d/%m/%Y') || ' – ' || strftime(current_date, '%d/%m/%Y') ||
+  '  ·  Dự báo: tuần ' || strftime(current_date, '%W/%Y') || ' & tháng ' || strftime(current_date, '%m/%Y')
   AS "Chu kỳ báo cáo"
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "dashcard.background": false
+  }
+}
 ```
 
 ```json metabase-pos
@@ -740,39 +929,28 @@ SELECT
 }
 ```
 
+---
+
 #### 📝 Text: Analyze cohort retention — which cohorts stick, which churn early?
+
+
+
 
 # Analyze cohort retention — which cohorts stick, which churn early?
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### 📝 Text: Examine cohort retention matrix — identify drop-off patterns
-
-# Examine cohort retention matrix — identify drop-off patterns
-
-```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### 📝 Text: Track revenue by cohort — are recent cohorts contributing enough?
-
-# Track revenue by cohort — are recent cohorts contributing enough?
-
-```json metabase-pos
-{ "row": 16, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### 📝 Text: Compare new vs returning — revenue dependency and growth quality
-
-# Compare new vs returning — revenue dependency and growth quality
-
-```json metabase-pos
-{ "row": 23, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### ❓ Question: Avg Month-1 Retention
+
+
+
 
 Average M1 retention rate across recent cohorts — early lifecycle health indicator.
 
@@ -810,16 +988,29 @@ LEFT JOIN m1_retention r ON s.cohort_month = r.cohort_month
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Avg M1 Retention %": { "suffix": "%", "decimals": 1 } }
+    "column_settings": {
+      "[\"name\",\"Avg M1 Retention %\"]": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Best Cohort (M1 Retention)
+
+
+
 
 Which acquisition month had the highest Month-1 retention rate.
 
@@ -860,16 +1051,28 @@ LIMIT 1
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "M1 %": { "suffix": "%" } }
+    "column_settings": {
+      "[\"name\",\"M1 %\"]": {
+        "suffix": "%"
+      }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 6,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Avg Orders per Customer
+
+
+
 
 Average number of orders among paying customers, with MoM comparison.
 
@@ -895,16 +1098,23 @@ FROM current_period c, previous_period p
 
 ```json metabase-viz
 {
-  "display": "scalar",
-  "visualization_settings": {}
+  "display": "scalar"
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 10,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Returning Revenue Ratio
+
+
+
 
 Percentage of total revenue coming from returning customers.
 
@@ -929,18 +1139,47 @@ WHERE o.scope_sales
 {
   "display": "scalar",
   "visualization_settings": {
-    "column_settings": { "Returning Revenue %": { "suffix": "%", "decimals": 1 } }
+    "column_settings": {
+      "[\"name\",\"Returning Revenue %\"]": {
+        "suffix": "%",
+        "decimals": 1
+      }
+    }
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 14, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 14,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 ---
 
+#### 📝 Text: Examine cohort retention matrix — identify drop-off patterns
+
+
+
+
+# Examine cohort retention matrix — identify drop-off patterns
+
+```json metabase-pos
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: Cohort Retention Heatmap
+
+
+
 
 Percentage of customers returning in subsequent months after first purchase (12-month lookback). Pre-pivoted in SQL — native SQL cards don't support display:pivot.
 
@@ -1009,9 +1248,26 @@ ORDER BY 1
   "visualization_settings": {
     "table.column_formatting": [
       {
-        "columns": ["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11"],
+        "columns": [
+          "M0",
+          "M1",
+          "M2",
+          "M3",
+          "M4",
+          "M5",
+          "M6",
+          "M7",
+          "M8",
+          "M9",
+          "M10",
+          "M11"
+        ],
         "type": "range",
-        "colors": ["#EF8C8C", "#F9D45C", "#84BB4C"],
+        "colors": [
+          "#EF8C8C",
+          "#F9D45C",
+          "#84BB4C"
+        ],
         "min_type": "custom",
         "min_value": 0,
         "max_type": "custom",
@@ -1023,12 +1279,36 @@ ORDER BY 1
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 18, "size_y": 9 }
+{
+  "row": 7,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 9
+}
 ```
 
 ---
 
+#### 📝 Text: Track revenue by cohort — are recent cohorts contributing enough?
+
+
+
+
+# Track revenue by cohort — are recent cohorts contributing enough?
+
+```json metabase-pos
+{
+  "row": 16,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: Revenue by Cohort (Layer Cake)
+
+
+
 
 Total revenue by acquisition cohort over time — shows legacy vs new contribution.
 
@@ -1052,25 +1332,60 @@ ORDER BY 1, 2
 {
   "display": "area",
   "visualization_settings": {
-    "graph.dimensions": ["revenue_month"],
-    "graph.metrics": ["revenue"],
-    "graph.group_by": ["cohort"],
+    "graph.dimensions": [
+      "revenue_month"
+    ],
+    "graph.group_by": [
+      "cohort"
+    ],
     "stackable.stack_type": "stacked",
     "graph.y_axis.title_text": "Revenue (VND)",
     "column_settings": {
-      "revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "[\"name\",\"revenue\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "graph.metrics": [
+      "revenue"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 17, "col": 0, "size_x": 18, "size_y": 6 }
+{
+  "row": 17,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
 ```
 
 ---
 
+#### 📝 Text: Compare new vs returning — revenue dependency and growth quality
+
+
+
+
+# Compare new vs returning — revenue dependency and growth quality
+
+```json metabase-pos
+{
+  "row": 23,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: New vs Returning Revenue (6M)
+
+
+
 
 Monthly revenue split by new customers (first order month) vs returning customers.
 
@@ -1098,24 +1413,46 @@ ORDER BY 1, 2
 {
   "display": "area",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["revenue"],
-    "graph.group_by": ["customer_type"],
+    "graph.dimensions": [
+      "month"
+    ],
+    "graph.group_by": [
+      "customer_type"
+    ],
     "stackable.stack_type": "stacked",
-    "graph.colors": ["#509EE3", "#84BB4C"],
+    "graph.colors": [
+      "#509EE3",
+      "#84BB4C"
+    ],
     "graph.y_axis.title_text": "Revenue (VND)",
     "column_settings": {
-      "revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "[\"name\",\"revenue\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "graph.metrics": [
+      "revenue"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 24, "col": 0, "size_x": 9, "size_y": 6 }
+{
+  "row": 24,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### ❓ Question: New vs Returning Customers (6M)
+
+
+
 
 Monthly count of new vs returning purchasers.
 
@@ -1142,34 +1479,54 @@ ORDER BY 1, 2
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["customers"],
-    "graph.group_by": ["customer_type"],
+    "graph.dimensions": [
+      "month"
+    ],
+    "graph.group_by": [
+      "customer_type"
+    ],
     "stackable.stack_type": "stacked",
-    "graph.colors": ["#509EE3", "#84BB4C"],
-    "graph.y_axis.title_text": "Customers"
+    "graph.colors": [
+      "#509EE3",
+      "#84BB4C"
+    ],
+    "graph.y_axis.title_text": "Customers",
+    "graph.metrics": [
+      "customers"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 24, "col": 9, "size_x": 9, "size_y": 6 }
+{
+  "row": 24,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 ---
 
+#### 📝 Text: **Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
 
-#### 📝 Text: Source & Freshness
+
 
 **Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
-<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 99,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
-### 📑 Tab: Hanh vi & Reactivation
+---
 
+### 📑 Tab: Hanh vi & Reactivation
 
 #### ❓ Question: Chu kỳ báo cáo
 
@@ -1182,7 +1539,12 @@ SELECT
 ```
 
 ```json metabase-viz
-{ "display": "scalar", "visualization_settings": { "card.title": "", "dashcard.background": false } }
+{
+  "display": "scalar",
+  "visualization_settings": {
+    "dashcard.background": false
+  }
+}
 ```
 
 ```json metabase-pos
@@ -1194,31 +1556,28 @@ SELECT
 }
 ```
 
+---
+
 #### 📝 Text: Analyze purchase behavior — timing signals and reactivation effectiveness
+
+
+
 
 # Analyze purchase behavior — timing signals and reactivation effectiveness
 
 ```json metabase-pos
-{ "row": 2, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### 📝 Text: Examine purchase frequency — distribution shape and conversion opportunity
-
-# Examine purchase frequency — distribution shape and conversion opportunity
-
-```json metabase-pos
-{ "row": 6, "col": 0, "size_x": 18, "size_y": 1 }
-```
-
-#### 📝 Text: Track reactivation performance — is win-back ROI improving?
-
-# Track reactivation performance — is win-back ROI improving?
-
-```json metabase-pos
-{ "row": 13, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 2,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
 
 #### ❓ Question: Avg Days Between Purchases
+
+
+
 
 Hero metric — average inter-purchase gap for repeat customers, with MoM comparison.
 
@@ -1271,7 +1630,7 @@ FROM current_val c, prev_val p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "Avg Gap (days)": {
+      "[\"name\",\"Avg Gap (days)\"]": {
         "suffix": " days"
       }
     }
@@ -1280,10 +1639,18 @@ FROM current_val c, prev_val p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 0, "size_x": 6, "size_y": 3 }
+{
+  "row": 3,
+  "col": 0,
+  "size_x": 6,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: Reactivated Customers (Last Month)
+
+
+
 
 Customers who returned after 30+ days gap, with MoM comparison.
 
@@ -1332,16 +1699,23 @@ FROM reactivated_current c, reactivated_prev p
 
 ```json metabase-viz
 {
-  "display": "scalar",
-  "visualization_settings": {}
+  "display": "scalar"
 }
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 6, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 6,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 #### ❓ Question: One-Time Buyer Rate
+
+
+
 
 Percentage of customers with exactly 1 order — conversion opportunity. Lower is better.
 
@@ -1381,7 +1755,7 @@ FROM current_period c, previous_period p
   "display": "scalar",
   "visualization_settings": {
     "column_settings": {
-      "One-Time %": {
+      "[\"name\",\"One-Time %\"]": {
         "suffix": "%",
         "decimals": 1
       }
@@ -1391,12 +1765,36 @@ FROM current_period c, previous_period p
 ```
 
 ```json metabase-pos
-{ "row": 3, "col": 10, "size_x": 4, "size_y": 3 }
+{
+  "row": 3,
+  "col": 10,
+  "size_x": 4,
+  "size_y": 3
+}
 ```
 
 ---
 
+#### 📝 Text: Examine purchase frequency — distribution shape and conversion opportunity
+
+
+
+
+# Examine purchase frequency — distribution shape and conversion opportunity
+
+```json metabase-pos
+{
+  "row": 6,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: Purchase Frequency Distribution
+
+
+
 
 How many orders do customers typically place? Understand one-time vs repeat behavior.
 
@@ -1433,20 +1831,34 @@ ORDER BY MIN(order_count)
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["Order Count"],
-    "graph.metrics": ["Customers"],
-    "graph.colors": ["#509EE3"],
+    "graph.dimensions": [
+      "Order Count"
+    ],
+    "graph.colors": [
+      "#509EE3"
+    ],
     "graph.x_axis.title_text": "Order Frequency",
-    "graph.y_axis.title_text": "Customers"
+    "graph.y_axis.title_text": "Customers",
+    "graph.metrics": [
+      "Customers"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 0, "size_x": 9, "size_y": 6 }
+{
+  "row": 7,
+  "col": 0,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 #### ❓ Question: Days Between Purchases Distribution
+
+
+
 
 For repeat customers, how long between purchases? Helps set reactivation timing.
 
@@ -1488,22 +1900,52 @@ ORDER BY MIN(days_between)
 {
   "display": "bar",
   "visualization_settings": {
-    "graph.dimensions": ["Gap"],
-    "graph.metrics": ["Occurrences"],
-    "graph.colors": ["#88BDE6"],
+    "graph.dimensions": [
+      "Gap"
+    ],
+    "graph.colors": [
+      "#88BDE6"
+    ],
     "graph.x_axis.title_text": "Days Between Purchases",
-    "graph.y_axis.title_text": "Occurrences"
+    "graph.y_axis.title_text": "Occurrences",
+    "graph.metrics": [
+      "Occurrences"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 7, "col": 9, "size_x": 9, "size_y": 6 }
+{
+  "row": 7,
+  "col": 9,
+  "size_x": 9,
+  "size_y": 6
+}
 ```
 
 ---
 
+#### 📝 Text: Track reactivation performance — is win-back ROI improving?
+
+
+
+
+# Track reactivation performance — is win-back ROI improving?
+
+```json metabase-pos
+{
+  "row": 13,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
+```
+
 #### ❓ Question: Reactivation Trend (6M)
+
+
+
 
 Monthly count of reactivated customers (returned after 30+ day gap) with revenue contribution.
 
@@ -1547,31 +1989,60 @@ ORDER BY 1
 {
   "display": "combo",
   "visualization_settings": {
-    "graph.dimensions": ["month"],
-    "graph.metrics": ["Reactivated Customers", "Reactivation Revenue"],
+    "graph.dimensions": [
+      "month"
+    ],
     "series_settings": {
-      "Reactivated Customers": { "display": "bar", "color": "#84BB4C" },
-      "Reactivation Revenue": { "display": "line", "color": "#7172AD" }
+      "Reactivated Customers": {
+        "display": "bar",
+        "color": "#84BB4C"
+      },
+      "Reactivation Revenue": {
+        "display": "line",
+        "color": "#7172AD"
+      }
     },
     "graph.y_axis.title_text": "Customers",
     "column_settings": {
-      "Reactivation Revenue": { "number_style": "currency", "currency": "VND", "decimals": 0, "compact": true }
-    }
+      "[\"name\",\"Reactivation Revenue\"]": {
+        "number_style": "currency",
+        "currency": "VND",
+        "decimals": 0,
+        "compact": true
+      }
+    },
+    "graph.metrics": [
+      "Reactivated Customers",
+      "Reactivation Revenue"
+    ]
   }
 }
 ```
 
 ```json metabase-pos
-{ "row": 14, "col": 0, "size_x": 18, "size_y": 6 }
+{
+  "row": 14,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 6
+}
 ```
 
 ---
 
-#### 📝 Text: Source & Freshness
+#### 📝 Text: **Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
+
+
 
 **Source:** fact_orders + dim_customers · **Cadence:** weekly · **Scope:** scope_retail · **Caveats:** Cohort rolling
-<!-- text-id:source-freshness -->
 
 ```json metabase-pos
-{ "row": 99, "col": 0, "size_x": 18, "size_y": 1 }
+{
+  "row": 99,
+  "col": 0,
+  "size_x": 18,
+  "size_y": 1
+}
 ```
+
+---

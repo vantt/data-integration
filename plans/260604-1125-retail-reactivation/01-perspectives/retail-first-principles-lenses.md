@@ -29,6 +29,8 @@ source: "session ultrathink 2026-06-09"
 
 **Hệ quả / action:** Ngừng tối ưu CAC thấp nhất → chuyển sang tối ưu CAC-trọng-số-theo-repeat-rate. Đo LTV theo kênh, không đo GMV theo kênh.
 
+**Số cứng fresh-scan 2026-06-13:** Shopee = 70% khách lẻ nhưng repeat 19%, **chỉ 32.6% liên-hệ-được (67% vô danh = doanh thu chết)**, LTV 1.76tr. Zalo LTV **5.3×** Shopee (9.36tr), 98% liên-hệ-được. ⇒ lever cao nhất KHÔNG phải "tăng retention Shopee" (67% không cứu được) mà **bắt liên hệ Shopee tại điểm bán → Zalo OA**. Tiki = ngõ cụt thuần (1.8% liên-hệ-được). [nguồn](../02-understand/fresh-scan-260613-data-market.md#c-chênh-lệch-chất-lượng-kênh--định-lượng-và-đòn-bẩy-đảo-ngược)
+
 → dẫn tới: [retail-offline-plays](../04-opportunities/retail-offline-plays.md) (card ③)
 
 ---
@@ -57,9 +59,12 @@ source: "session ultrathink 2026-06-09"
 
 **First principle:** Luồng US-gift (824 người mua) = bằng chứng rõ rằng có cầu quà biếu đủ lớn. Supplement cao cấp → quà Tết, 8-3, 20-10, biếu bố mẹ. Cầu này có chu kỳ mạnh nhưng hiện chưa được thiết kế bán.
 
-**Hệ quả / action:** Tạo gift bundle + định vị quà biếu cho ít nhất 2 dịp lớn/năm (Tết + tháng 10). Đo tỷ lệ người mua quà vs. tự dùng.
+**Hệ quả / action:** Tạo gift bundle + định vị quà biếu cho ~~ít nhất 2 dịp lớn/năm (Tết + tháng 10)~~. Đo tỷ lệ người mua quà vs. tự dùng.
+
+**🔻 SỬA fresh-scan 2026-06-13:** lịch quà cũ "Tết + tháng 10" SAI theo data — **T10 (20-10) KHÔNG spike**. Đỉnh lẻ thật mọi năm: **T3 (8-3) #1, T6 #2, T11 #3, T1 trước-Tết** mạnh. T8 spike = B2B restocking, không phải gifting. → lịch quà đúng = **Tết (T1) + 8-3 (T3) + T11**. [nguồn](../02-understand/fresh-scan-260613-data-market.md#e-mùa-vụ--settle-tranh-luận-quà-biếu-bằng-data)
 
 **Củng cố mạnh:** hero SKU = đồ sức khỏe người lớn tuổi → quà biếu bố mẹ là kênh lớn, khớp luồng US-gift.
+**Bổ sung fresh-scan:** người MUA = con 25-45 tuổi (hiếu thảo), KHÔNG phải người dùng cuối → message quà nhắm con, về kết quả của bố/mẹ. (buyer≠user)
 
 → dẫn tới: [retail-offline-plays](../04-opportunities/retail-offline-plays.md) (card ⑤)
 
@@ -71,6 +76,20 @@ source: "session ultrathink 2026-06-09"
 
 **Hệ quả / action:** Định vị rõ "không phải hàng giá rẻ" → thoát khỏi mặt trận so sánh giá trên sàn. Không chạy flash sale cạnh tranh với TikTok.
 
+**🔻 Cập nhật fresh-scan 2026-06-13:** "cầu dịch sang TikTok" chỉ đúng NỬA — TikTok Shop dẫn đầu TPCN nhưng phần migrate = **collagen/NMN anti-aging Gen-Z**, KHÔNG phải đông trùng/khớp/tim mạch người già (hero SKU). ⇒ hạ báo động demand-migration cho hero SKU; vấn đề thật = brand **chưa có official TikTok store** + đua giá Shopee thua seller không-ủy-quyền. Đòn bẩy "chính hãng" chỉ phát huy ở kênh verify được (D2C/nhà thuốc/Mall).
+
 → dẫn tới: [demand-migration-recon](../02-understand/demand-migration-recon.md)
 
 → Retention theo sản phẩm rất khác nhau (Cordyceps 25% vs Fucoidan 11%) — xem [product-performance-assessment](../02-understand/product-performance-assessment.md).
+
+---
+
+## L7 — Sản phẩm-CỔNG-VÀO quyết định khách có quay lại (fresh-scan 2026-06-13)
+
+**First principle:** "72% mua một lần" phần lớn KHÔNG phải lỗi retention — mà là **mix sản phẩm đầu vào**. Khách vào bằng SP ngõ-cụt thì dù nhắc cách mấy cũng không dính; khách vào bằng SP gateway thì tự quay lại. Sửa cửa vào rẻ hơn xây cỗ-máy-giữ.
+
+**Bằng chứng:** UV Care Plus (kem chống nắng) = entry SKU LỚN NHẤT (400 khách) nhưng repeat **10%**, LTV 380K. Kids Calcium + Metabo Green Tea cũng 12-14%. Ngược lại Cordyceps/Fucoidan/Collagen entry → repeat 29-37%, LTV 3-15tr. ~900 khách vào qua SP ngõ-cụt kéo tụt one-time-rate toàn brand.
+
+**Hệ quả / action:** Lái ngân sách acquisition khỏi UV Care/Kids/Metabo sang cordyceps/collagen/fucoidan (gateway). Ước thô **+450tr LTV**. Đông trùng nước + Reishi = gateway ẩn (repeat 31-50%) đang undermarketed, đáng đẩy.
+
+→ dẫn tới: [fresh-scan §B](../02-understand/fresh-scan-260613-data-market.md#b-đòn-bẩy-mới-lớn-nhất--sản-phẩm-cổng-vào-entry-sku--retention) · cơ hội mới ở [data-backlog](../04-opportunities/data-backlog.md)

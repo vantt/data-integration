@@ -51,6 +51,10 @@ SELECT
     cogs_account,
 
     -- Channel & salesperson
+    -- NOTE: MISA channel is ~95% UNKNOWN (raw channel_code blank on most invoice lines) and does
+    -- NOT join to Sapo dim_channels — never use it for channel analysis. Reliable channel +
+    -- profitability lives in fact_order_economics (Sapo channel_key → dim_channels). MISA's value
+    -- here is COGS/margin and overhead, not channel.
     channel_code,
     channel_name,
     channel_group,

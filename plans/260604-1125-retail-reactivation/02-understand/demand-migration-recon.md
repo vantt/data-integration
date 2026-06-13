@@ -1,7 +1,7 @@
 ---
 title: "Điều tra: Cầu dịch đi đâu — recon kênh thay thế"
 stage: 2
-status: open
+status: mostly-resolved
 source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 lens: A2
 related_lens: ../01-perspectives/first-principles-lenses.md
@@ -74,4 +74,16 @@ Nếu đúng → win-back về kênh nhà sẽ thất bại nếu không trả l
 
 ## Kết luận
 
-*(Để trống — chưa thực hiện recon. Cập nhật sau 1 ngày tìm hiểu TikTok Shop + so giá.)*
+**Cập nhật fresh-scan 2026-06-13 (research thị trường) — giả thuyết "cầu dịch sang TikTok" CHỈ ĐÚNG NỬA:**
+
+- TikTok Shop **đã dẫn đầu** TPCN TMĐT VN (thị phần 23%→39-42% trong 1 năm), vượt Shopee — xác nhận có dịch chuyển kênh.
+- **NHƯNG phần migrate = collagen/NMN anti-aging cho Gen-Z** (top TikTok T3/2025: Exosome Collagen, NMN). Hero SKU của brand (đông trùng/khớp/tim mạch người già) **KHÔNG** nằm top TikTok → hero SKU ÍT bị TikTok đe dọa.
+- Trên sàn giá-rẻ, **seller không-ủy-quyền THẮNG official store** (Metric Q1-2025) → đua giá Shopee = thua chắc.
+- Brand **chưa có official TikTok store** = khoảng trắng (vừa rủi ro hàng nhái, vừa cơ hội awareness qua content giáo dục).
+- Đòn bẩy "chính hãng chống giả" chỉ phát huy ở kênh verify được: **D2C web / nhà thuốc chuỗi / Shopee-TikTok Mall** — không phát huy trên Shopee thường.
+
+→ **Hành động đổi hướng:** thay vì lo "win-back thua livestream giá rẻ", tập trung (a) official presence TikTok cho awareness, (b) nhà thuốc chuỗi cho kênh niềm tin người già, (c) định vị chính hãng ở kênh verify. Recon thủ công TikTok Shop (giá seller, đại lý nhái) vẫn nên làm để xác nhận giá thực địa.
+
+> Còn mở: giá Fine Japan trên TikTok/Shopee theo seller (cần recon tay); Fine Japan có trên Long Châu/An Khang không (Q14).
+
+**Status:** 🟢 phần lớn RESOLVED (định hướng rõ) — còn recon giá thực địa.

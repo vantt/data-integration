@@ -76,7 +76,7 @@ source: "../archive/2026-06-04-original-sales-slowdown-playbook.md — §5"
 
 | Thứ | Việc | Ai |
 |---|---|---|
-| T2 | Export worklist tuần (Luồng 1–4, lọc có SĐT) từ `mart_customer_action_queue` → Google Sheet | Data/CSKH |
+| T2 | Mở worklist tuần trên [dashboard 103 — Daily · Customer Action Queue](https://bi.lan.fwg.vn/dashboard/103), lọc Luồng 1–4 + có SĐT (không export — đọc trực tiếp) | CSKH |
 | T2–T4 | Gọi Luồng 1 (CALL_NOW) + Luồng 2 (WIN_BACK cao giá trị) | Sales lead |
 | T3–T6 | Zalo Luồng 2 (còn lại) + Luồng 3 (REORDER) + Luồng 4 (SECOND_ORDER) | CSKH |
 | T5 | 1 đợt Bulk (Luồng 5) theo brand/mùa | Marketing |

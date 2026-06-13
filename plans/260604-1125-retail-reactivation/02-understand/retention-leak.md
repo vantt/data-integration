@@ -34,6 +34,11 @@ lớn nhất đang bị bỏ phí.
 **Toàn tệp:** trong **1.386** khách lẻ từng mua, **995 (71.8%) chỉ mua đúng 1 lần**; chỉ 28.2%
 từng mua lần 2.
 
+> **⭐ Reframe fresh-scan 2026-06-13 — one-time phần lớn do MIX SẢN PHẨM-CỔNG-VÀO, không chỉ do thiếu nhắc.**
+> Entry SKU lớn nhất = UV Care/Kids/Metabo (repeat 10-14%, ngõ cụt) kéo tụt toàn brand; cordyceps/collagen/fucoidan
+> entry → 29-37%. Cohort 2025-2026 còn bị **right-censored** (chưa đủ thời gian repeat) nên repeat thật của cohort mới
+> có thể cao hơn bảng 2.3. → sửa cửa-vào trước khi xây thêm reminder. [fresh-scan §B](./fresh-scan-260613-data-market.md#b-đòn-bẩy-mới-lớn-nhất--sản-phẩm-cổng-vào-entry-sku--retention)
+
 ---
 
 ## 2.4 Retention waterfall point-in-time — và cảnh báo model đang sai

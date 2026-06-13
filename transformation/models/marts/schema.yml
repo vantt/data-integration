@@ -286,6 +286,9 @@ models:
       - name: is_sales_channel
         description: "true = real sales channel (not System/Internal)"
         data_type: boolean
+      - name: is_marketplace
+        description: "true = third-party marketplace platform (Marketplace or CrossBorder Fulfillment format); false = brand-owned/core channels (B2B/Social/Web/Retail/Direct)."
+        data_type: boolean
 
   - name: dim_staff
     description: "Salesperson/Staff dimension."
@@ -1151,10 +1154,14 @@ models:
 
   - name: mart_retention_waterfall_monthly
     description: >
-      Point-in-time retention waterfall (retail scope). Grain: (snapshot_month, status).
+      Point-in-time retention waterfall (retail scope).
+      Grain: (snapshot_month, status, value_group, product_affinity, channel_preference).
       Computes ACTIVE/AT_RISK/CHURNED from fact_orders as-of each month-end — NOT from
       dim_customers.last_order_date — so historical churn events are not masked by survivorship.
+      Segment dimensions (value_group, product_affinity, channel_preference) use current
+      dim_customers values (slowly-changing; acceptable for segment slicing).
       Use this (not mart_customer_status_snapshot_monthly) for any retention trend chart.
+      To get unfiltered monthly totals, aggregate customer_count across all segment rows.
     columns:
       - name: snapshot_month
         description: "Last calendar day of the closed month (DATE)."
@@ -1167,12 +1174,66 @@ models:
           - accepted_values:
               arguments:
                 values: ['ACTIVE', 'AT_RISK', 'CHURNED']
+      - name: value_group
+        description: "Current customer value tier (VALUE_VIP/GOLD/SILVER/BRONZE) from dim_customers."
+        tests:
+          - not_null
+      - name: product_affinity
+        description: "Current brand preference segment from dim_customers."
+        tests:
+          - not_null
+      - name: channel_preference
+        description: "Current channel preference segment from dim_customers."
+        tests:
+          - not_null
       - name: customer_count
-        description: "Customers in this status bucket this month."
+        description: "Customers in this (status, value_group, product_affinity, channel_preference) bucket this month."
         tests:
           - not_null
       - name: base_count
-        description: "Total cumulative retail customers visible as-of this month-end (sum of all status buckets)."
+        description: >
+          Total retail customers visible at this month-end across ALL statuses and segments.
+          Use this as the monthly total denominator. For segment-level denominators (e.g. ACTIVE
+          this month), derive via a window over the filtered set in the consuming query.
+
+  - name: mart_customer_status_snapshot_monthly
+    description: >
+      Per-customer monthly status snapshot. Grain: (customer_key, snapshot_month).
+      Rolling 24-month window. Useful for customer-attribute lookups, LTV slicing, and
+      value_group analysis at a point in time.
+
+      WARNING — survivorship bias: the `status` column is derived from
+      dim_customers.last_order_date (the CURRENT last order), NOT from fact_orders
+      as-of month-end. Any customer still active today is stamped ACTIVE retroactively
+      at all past months, inflating historical ACTIVE counts and masking churn events
+      that have since recovered. This bias can make the 2025 near-death churn event
+      invisible in trend charts.
+
+      DO NOT use this model for retention trend charts, churn rate KPIs, or any
+      period-over-period retention analysis — use mart_retention_waterfall_monthly
+      (true point-in-time from fact_orders) for those.
+
+      Still valid for: per-customer attribute queries, LTV/value_group distribution
+      at a snapshot month, customer cohort enrichment, and any use-case where
+      survivorship bias does not affect the metric (e.g. "what was this customer's
+      value_group 6 months ago" when the customer is still present today).
+    columns:
+      - name: customer_key
+        description: "Foreign key to dim_customers."
+        tests: [not_null]
+      - name: snapshot_month
+        description: "Last calendar day of the closed month (DATE)."
+        tests: [not_null]
+      - name: status
+        description: >
+          SURVIVORSHIP-BIASED — derived from current dim_customers.last_order_date,
+          not point-in-time fact_orders. ACTIVE/AT_RISK/CHURNED labels are
+          retroactively inflated for customers who later became active. Use
+          mart_retention_waterfall_monthly for any trend or rate KPI.
+      - name: value_group
+        description: "Current-value approximation of value_group as-of snapshot month."
+      - name: is_new
+        description: "TRUE when customer's first order fell within this snapshot month."
 
   - name: mart_product_health
     description: >

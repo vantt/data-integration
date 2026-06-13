@@ -522,6 +522,106 @@ WHERE date(c.first_order_date) = date(o.ordered_at)
 
 ---
 
+### last_purchased_product
+
+> **Type:** Dimension | **Column:** `dim_customers.last_purchased_product` | **Status:** `active`
+> **Values:** VARCHAR or `NULL` | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** Display name of the SKU from the customer's most-recent **paid** order (where `net_revenue > 0`). For multi-SKU orders, the line with the highest quantity wins; ties broken by `net_revenue DESC` then `product_key ASC`. Display name = `variant_name` when it differs from `product_name` (e.g. adds "- Hộp"/"- Chai" packaging info); otherwise `product_name`.
+
+Companion column: `last_purchased_sku` — the SKU code of the same line item, for Sales to place orders or cross-reference inventory.
+
+**Use in SQL:** `SELECT last_purchased_product, last_purchased_sku FROM dim_customers WHERE customer_key = :k`
+
+```sql
+-- Personalize reorder script: "Lần trước anh/chị mua [last_purchased_product]…"
+SELECT customer_name, last_purchased_product, last_purchased_sku
+FROM dim_customers
+WHERE last_purchased_product IS NOT NULL
+  AND customer_type = 'RETAIL'
+```
+
+#### ⚠️ NULL caveat
+NULL = customer has **never made a paid purchase** — all interactions were 0đ gift/swag lines (e.g. CrossBorder US gift recipients). This is correct: they belong to a gift-conversion play, not a reorder script.
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| top_affinity_product | SKU bought across MOST distinct orders (repurchase frequency) | Identifying the habitual reorder item |
+| product_affinity | **Brand-level** (PRODUCT_FINE_JAPAN, etc.) based on revenue share | Brand portfolio analysis, coarser signal |
+
+#### ❌ Anti-patterns
+```sql
+-- WRONG: treating NULL as "unknown product" and substituting a default
+COALESCE(last_purchased_product, 'N/A')  -- hides the gift-only customer signal
+-- CORRECT: filter NULL out of reorder scripts, route those customers to gift-conversion play
+WHERE last_purchased_product IS NOT NULL
+```
+
+---
+
+### top_affinity_product
+
+> **Type:** Dimension | **Column:** `dim_customers.top_affinity_product` | **Status:** `active`
+> **Values:** VARCHAR or `NULL` | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** Display name of the SKU the customer has bought across the **most distinct orders** (repurchase frequency — the primary signal for habitual reorder). Ranking key per `(customer, product)`: `COUNT(DISTINCT order_id) DESC → SUM(quantity) DESC → MAX(ordered_at) DESC → SUM(net_revenue) DESC → product_key ASC`. Only paid lines (`net_revenue > 0`) on non-cancelled orders (`is_active_order`) with a non-NULL `product_name` qualify.
+
+Companion column: `top_affinity_sku` — the SKU code for Sales to place orders or check inventory.
+
+**Use in SQL:** `SELECT top_affinity_product, top_affinity_sku FROM dim_customers WHERE customer_key = :k`
+
+```sql
+-- Cross-sell: customers whose top affinity differs from last purchased
+SELECT customer_name, last_purchased_product, top_affinity_product
+FROM dim_customers
+WHERE top_affinity_product IS NOT NULL
+  AND top_affinity_product != last_purchased_product
+```
+
+#### ⚠️ NULL caveat
+NULL = customer has never made a paid purchase (same condition as `last_purchased_product`). For one-time buyers, `top_affinity_product` equals `last_purchased_product`.
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| last_purchased_product | Recency-based (most recent paid order) | Reorder outreach: what they bought last |
+| second_affinity_product | Frequency rank #2 | Cross-sell to a complementary SKU |
+| product_affinity | Brand-level affinity (4 values) | Brand mix or brand migration analysis |
+
+#### ❌ Anti-patterns
+*None.*
+
+---
+
+### second_affinity_product
+
+> **Type:** Dimension | **Column:** `dim_customers.second_affinity_product` | **Status:** `active`
+> **Values:** VARCHAR or `NULL` | **Source:** `int_customer_metrics` → `dim_customers`
+
+**Definition:** Display name of the SKU ranked #2 by repurchase frequency (same ranking key as `top_affinity_product`). Designed for **cross-sell scripts**: "Ngoài [top_affinity_product], nhiều khách cũng hay dùng [second_affinity_product]." No companion SKU column — name is sufficient for script suggestions; look up the code in `dim_products` if needed.
+
+**Use in SQL:** `SELECT top_affinity_product, second_affinity_product FROM dim_customers WHERE second_affinity_product IS NOT NULL`
+
+#### ⚠️ NULL caveat
+NULL when the customer has bought only **one distinct paid SKU** across their entire history (or has never made a paid purchase). NULL is expected and correct — do not cross-sell a second product to someone who has only tried one.
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| top_affinity_product | Rank #1 by frequency | Reorder nudge for the primary item |
+| last_purchased_product | Most recent, not most frequent | "What they bought last" outreach |
+
+#### ❌ Anti-patterns
+```sql
+-- WRONG: assuming NULL means "no preference data available" and substituting top_affinity
+COALESCE(second_affinity_product, top_affinity_product)
+-- CORRECT: NULL = only 1 distinct paid SKU — no meaningful cross-sell target
+WHERE second_affinity_product IS NOT NULL
+```
+
+---
+
 ## Time Dimensions
 
 ### date_key

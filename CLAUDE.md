@@ -23,6 +23,18 @@ Shared skills live in `.skills/` and are available as slash commands via `.claud
 | `/setup-metabase-mcp` | Configure the Metabase MCP server |
 | `/purge-dagster-runs` | Clean up old Dagster run history |
 
+### Evidence Automation (Implementation)
+
+| Command | Purpose |
+| --- | --- |
+| `/deploy-evidence-page` | Generate Evidence.dev page(s) from a playbook and rebuild container |
+
+- **Evidence Skill**: `.skills/evidence-automation/SKILL.md`
+- **Evidence Pages**: `evidence/pages/`
+- **Evidence Source Config**: `evidence/sources/datalake/connection.yaml`
+- **Deploy**: `docker compose restart evidence` (rebuilds static site on each restart)
+- **URL**: http://evidence.lan.fwg.vn (port 3006 locally)
+
 ### Metabase Debugging
 
 | Command | Purpose |

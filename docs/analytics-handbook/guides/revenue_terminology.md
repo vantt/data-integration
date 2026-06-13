@@ -266,3 +266,28 @@ gross_revenue    = total_amount + total_discount_amount
 | `assignee_*`                             | Normalize thành `seller_staff_key` (người chốt/giao đơn — primary)        |
 | `account_*`, `user_name`                 | Normalize thành `creator_staff_key` (người tạo đơn — operational/fallback) |
 | `issued_on`, `finalized_on`              | Ít dùng trong báo cáo, giữ `created_at` và `completed_at` |
+
+---
+
+## 7. Dòng `net_revenue = 0` nghĩa là gì
+
+`net_revenue` ở cấp dòng đơn (`fact_sales`) bằng 0 khi và chỉ khi `line_amount = 0` trong Sapo — tức **giá bán bị giảm 100%**. **43.9% tổng số dòng đơn** rơi vào đây, gồm hai loại:
+
+| Loại | Ví dụ | Bản chất |
+|---|---|---|
+| **A. SP thật được tặng kèm** | Cordyceps Plus, Metabo Green Tea, Fine Collagen | Khách không trả tiền → không phản ánh sở thích mua |
+| **B. Swag / giấy tờ không bán** | Dù in logo công ty FG & Fine Japan, "Công Văn Giấy Tờ", Bát tre, Túi vải logo | Không bao giờ bán → noise thuần túy |
+
+Cả hai loại bị loại bởi **một điều kiện duy nhất** `net_revenue > 0`.
+
+### Ảnh hưởng đến các tín hiệu phân tích
+
+| Tín hiệu | Có loại dòng 0đ không? | Lý do |
+|---|---|---|
+| `product_affinity` (brand-level) | Có (gián tiếp) | Rank theo `SUM(net_revenue)` share → dòng 0đ đóng góp 0 |
+| `top_affinity_product` / `second_affinity_product` | Có (tường minh `net_revenue > 0`) | Tần suất tái mua chỉ tính đơn **trả tiền** |
+| `last_purchased_product` | Có (tường minh `net_revenue > 0`) | "Đơn mua gần nhất" = đơn paid gần nhất, không phải đơn nhận quà gần nhất |
+
+### NULL = khách chỉ nhận quà (all-0đ)
+
+Khách có toàn bộ dòng `net_revenue = 0` (ví dụ: người nhận quà CrossBorder/US) sẽ có `last_purchased_product`, `top_affinity_product`, `second_affinity_product` = NULL. Đây là **đúng** — họ chưa từng mua, thuộc play gifting/conversion riêng, không nên chạy script reorder.

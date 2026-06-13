@@ -1,7 +1,7 @@
 ---
 title: "Retail Reactivation — Hub & Path"
 created: 2026-06-04
-updated: 2026-06-09
+updated: 2026-06-13
 status: active
 structure: pipeline-6-stage
 source: ./archive/2026-06-04-original-sales-slowdown-playbook.md
@@ -18,6 +18,8 @@ source: ./archive/2026-06-04-original-sales-slowdown-playbook.md
 ---
 
 > **🎯 Trọng tâm (2026-06-09): BÁN LẺ/B2C.** Đòn bẩy lớn nhất nằm NGOÀI hệ thống — data nói CÁI GÌ không nói TẠI SAO. Việc #1: [VOC phỏng vấn khách](./02-understand/voc-customer-interviews.md).
+>
+> **⭐ REFRAME chiến lược (2026-06-13): "Cỗ máy vs Cối xay".** Bạn đang chạy 2 doanh nghiệp ngược nhau; số cái tốt bị cái dở làm nhiễu → tưởng "ế". "Ế" thật = cashflow + xói mòn base, KHÔNG mất cầu. → [tổng hợp chiến lược + 6 nước đi](./01-perspectives/strategic-synthesis-260613-engine-vs-treadmill.md).
 
 ## Bối cảnh số (1 phút) — vì sao "ế"
 
@@ -25,7 +27,10 @@ source: ./archive/2026-06-04-original-sales-slowdown-playbook.md
   cầu 2026 = **2–3× mức 2025**; "T1 278→T5 2tr" là artifact completed-only + lag hoàn tất COD ~46–78 ngày + 491tr đang chờ thu.
   → Nghi phạm "ế" thật = **cashflow** (hàng đã giao chờ thu COD) hoặc **margin**, KHÔNG phải mất cầu. [b2b](./02-understand/b2b-collapse-root-cause.md) · [cashflow](./02-understand/cashflow-collection-ar.md)
 - **Vấn đề mạn tính (THẬT, bền):** **71.8% khách lẻ mua 1 lần**, M1 repeat **3–17%** (lành mạnh 30–50%).
+  → **fresh-scan 2026-06-13:** phần lớn one-time KHÔNG phải thiếu cỗ-máy-nhắc mà là **mix sản phẩm-cổng-vào sai** —
+  SKU thu hút khách MỚI nhiều nhất = UV Care/Kids/Metabo (repeat 10-14%, ngõ cụt); cordyceps/collagen/fucoidan repeat 29-37%.
 - **Tài sản ẩn:** ~824 người nhận quà US (76% tệp liên hệ được) đã dùng sản phẩm, chưa từng tự mua.
+- **⭐ fresh-scan 2026-06-13 (6-agent: 4 data + 2 research):** "ế" = (1) **base đơn lẻ co −55%** từ đỉnh 2024 nhưng AOV +57% (ít người mua hơn, mua to hơn) + (2) **cashflow** (64-77% doanh thu T5-T6 UNPAID, AR ~3.9 tỷ). Doanh thu order-date gần phẳng; Jun 2026 **+85% vs Jun 2025**. → [fresh-scan đầy đủ + 4 mâu thuẫn cần chốt](./02-understand/fresh-scan-260613-data-market.md)
 
 → Chi tiết số thật: [`02-understand/`](./02-understand/README.md) · Provenance: [`archive/`](./archive/2026-06-04-original-sales-slowdown-playbook.md)
 
@@ -71,13 +76,32 @@ source: ./archive/2026-06-04-original-sales-slowdown-playbook.md
 
 | Stage | Folder | Item chính | Status |
 |---|---|---|---|
-| 01 Góc nhìn | [`01-perspectives/`](./01-perspectives/README.md) | product×customer journey · lens A/B/C · retail-lenses L1–L6 | living |
-| 02 Hiểu vấn đề | [`02-understand/`](./02-understand/README.md) | channel-illusion · retention-leak · segments · b2b-root-cause(✅ resolved: B2B không sụp) · demand-migration · cashflow-AR(🟠 blocked: data gap) · open-questions(🔴) · voc-interviews⭐(🔴 open) · unboxing-audit(🔴 open) · product-performance-assessment(✅ resolved: data đủ, KHÔNG cần pipeline; reframe portfolio sức khỏe người lớn tuổi) | 5 resolved · 5 open |
-| 03 Đánh giá | [`03-evaluate/`](./03-evaluate/README.md) | sequencing · open-decisions · evaluation-framework · decision-log | 🟢 #1 chốt retail |
+| 01 Góc nhìn | [`01-perspectives/`](./01-perspectives/README.md) | product×customer journey · lens A/B/C · retail-lenses L1–L7 · ⭐[strategic-synthesis (engine-vs-treadmill)](./01-perspectives/strategic-synthesis-260613-engine-vs-treadmill.md) | living |
+| 02 Hiểu vấn đề | [`02-understand/`](./02-understand/README.md) | channel-illusion · retention-leak · segments · b2b-root-cause(✅ resolved: B2B không sụp) · demand-migration · cashflow-AR(🟠 blocked: data gap) · open-questions(🔴) · voc-interviews⭐(🔴 open) · unboxing-audit(🔴 open) · product-performance-assessment(✅ resolved: reframe portfolio sức khỏe người lớn tuổi) · ⭐fresh-scan-260613(✅ resolved: entry-SKU lever + base-erosion + 4 mâu thuẫn) | 6 resolved · 5 open |
+| 03 Đánh giá | [`03-evaluate/`](./03-evaluate/README.md) | sequencing · open-decisions · evaluation-framework · decision-log · ⭐[action-priority-260613 (xếp impact×potential)](./03-evaluate/action-priority-260613.md) | 🟢 #1 chốt retail · backlog xếp hạng |
 | 04 Hướng action | [`04-opportunities/`](./04-opportunities/README.md) | retention-mechanisms (4 play) · data-backlog (~21 cơ hội) · retail-offline-plays (7 card) | idea |
-| 05 Kế hoạch | [`05-action-plans/`](./05-action-plans/README.md) | b2c-phases P0–P4 · action-flows · us-gift | committed/pending |
-| 06 Thực thi | [`06-execute/`](./06-execute/README.md) | kpi · execution-log | tracking (chưa chạy) |
+| 05 Kế hoạch | [`05-action-plans/`](./05-action-plans/README.md) | b2c-phases P0–P4 · action-flows · us-gift | committed/pending · **P1 SKU-affinity ✅ shipped 2026-06-13** ([spec](../260613-0551-customer-product-affinity-sku/plan.md)) |
+| 06 Thực thi | [`06-execute/`](./06-execute/README.md) | kpi · execution-log | tracking (chưa chạy outreach) · **dashboard sẵn có → xem bảng dưới** |
 | — | [`archive/`](./archive/2026-06-04-original-sales-slowdown-playbook.md) | playbook gốc (provenance only) | archived |
+
+---
+
+## Dashboard Metabase sẵn có (theo mục đích)
+
+> Base: `https://bi.lan.fwg.vn/dashboard/<id>`. **Đã verify SQL-level 2026-06-13** (3 report ở [`plans/reports/`](../reports/) — `metabase-verify-*-260613-0627`).
+> Cột **Khớp?** = mức dashboard phục vụ đúng mục đích plan. Nhiều mục "đã có"; vài mục có **gap thật** cần xử lý.
+
+| Mục đích (theo plan) | Dashboard | Khớp? — gap |
+|---|---|---|
+| **Action queue / reorder** | [103](https://bi.lan.fwg.vn/dashboard/103) | ✅ MATCH · ✅ **B1 done 2026-06-13**: card 2175 đã thêm 3 cột SKU-affinity (SP cuối/hay mua/#2) |
+| Hồ sơ / phân khúc khách | [106](https://bi.lan.fwg.vn/dashboard/106) · [104](https://bi.lan.fwg.vn/dashboard/104) | ✅ MATCH |
+| **B2C retention / cohort** (≈P3) | [111](https://bi.lan.fwg.vn/dashboard/111) · [112](https://bi.lan.fwg.vn/dashboard/112) · [105](https://bi.lan.fwg.vn/dashboard/105) | 111/112 ✅ point-in-time · ✅ **B2 done 2026-06-13**: 105 3 card scalar migrate khỏi snapshot (Churn/Active→waterfall, Repeat→fact_orders PIT) + dọn layout tab 1. ✅ value_group filter (dropdown) đã nối waterfall card sau khi thêm segment cols + Metabase sync. Còn: tab 2/3 chưa audit layout |
+| **Cashflow / công nợ AR** | [78](https://bi.lan.fwg.vn/dashboard/78) · [34](https://bi.lan.fwg.vn/dashboard/34) · [74](https://bi.lan.fwg.vn/dashboard/74) | 🔴 **KHÔNG phục vụ AR**: 78=recon đối soát, 34=P&L accrual, 74=cost ledger — KHÔNG cái nào đo công nợ/COD-collection. Chặn bởi `fact_payments` rỗng. Nhánh cashflow/AR vẫn **blocked** |
+| **B2B doanh thu lõi** | [49](https://bi.lan.fwg.vn/dashboard/49) · [50](https://bi.lan.fwg.vn/dashboard/50) | ✅ MATCH (scope_b2b; 50 có outstanding payment) |
+| **Kênh lõi vs marketplace** | [33](https://bi.lan.fwg.vn/dashboard/33) · [77](https://bi.lan.fwg.vn/dashboard/77) · [32](https://bi.lan.fwg.vn/dashboard/32) | ✅ **B3 done 2026-06-13 (cả 2 dùng Sapo)**: 77 + 33 đều có tab "Core vs Marketplace" từ `fact_order_economics`+`dim_channels` (Core 24.9B GM38% / MKT 6.0B GM46%). Đã **roll back hoàn toàn MISA-channel** (bỏ `int_misa.is_marketplace` + tab MISA) vì MISA 95% UNKNOWN — MISA chỉ dùng cho COGS/overhead, KHÔNG dùng cho kênh. Caveat: tab Sapo của 33 chưa nối date-filter (date_key INTEGER) → all-time; period-filter dùng 77 |
+| **Product performance** | [107](https://bi.lan.fwg.vn/dashboard/107) · [109](https://bi.lan.fwg.vn/dashboard/109) · [108](https://bi.lan.fwg.vn/dashboard/108) | ✅ MATCH (STAR/DOG, velocity, SKU margin) |
+| OOS / tồn hero-SKU | [110](https://bi.lan.fwg.vn/dashboard/110) | ✅ MATCH (`is_oos` + `oos_risk` high-velocity low-stock) |
+| **US gift recipients** | [51](https://bi.lan.fwg.vn/dashboard/51) | 🟠 PARTIAL: là **US-channel performance**, KHÔNG segment theo người-nhận-quà. Cần view riêng nếu muốn target recipient |
 
 ---
 

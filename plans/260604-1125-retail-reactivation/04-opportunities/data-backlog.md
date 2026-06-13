@@ -14,6 +14,43 @@ source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
 
 ---
 
+## ⭐ Nhóm 0 — fresh-scan 2026-06-13 (cơ hội mới, ưu tiên cao)
+
+> Nguồn: [../02-understand/fresh-scan-260613-data-market.md](../02-understand/fresh-scan-260613-data-market.md).
+
+**O1 — Lái acquisition khỏi SKU ngõ-cụt sang SKU gateway [đòn bẩy gốc rễ].**
+Entry SKU lớn nhất = UV Care Plus (400 khách, repeat 10%, LTV 380K) + Kids Calcium + Metabo Green Tea (~900 khách, 10-14%).
+Gateway = Cordyceps/Fucoidan/Collagen (29-37%, LTV 3-15tr) + Đông trùng nước/Reishi (gateway ẩn, 31-50%, undermarketed).
+→ Dời ngân sách quảng cáo + ưu tiên listing/bundle sang nhóm gateway. Ước **+450tr LTV**. Trước khi cắt UV Care: kiểm cross-sell path (Q13 — loss-leader có chủ đích?).
+
+**O2 — Bắt liên hệ Shopee tại điểm bán → Zalo OA [đòn bẩy cấu trúc cao nhất].**
+Shopee = 70% khách lẻ nhưng 67% vô danh (chỉ 32.6% liên-hệ-được) = doanh thu chết, không reactivate được.
+→ Thẻ cảm ơn + QR → Zalo OA kẹp mỗi đơn Shopee/CrossBorder. KPI: % đơn có thẻ, số đăng ký Zalo OA. (đã có ở P4 — nâng lên ưu tiên cấu trúc #1).
+
+**O3 — Lập Zalo OA verified [hạ tầng nền — làm TRƯỚC mọi automation].**
+Kênh retention #1 VN (open 60-90% vs email 15-25%). Không có OA thì onboarding/nhắc/win-back đều vô nghĩa. Prerequisite cho O2, P3, P4.
+
+**O4 — Calibrate timing theo chu kỳ thật.** Chu kỳ tái mua median 63 ngày, **cụm lớn nhất ~30 ngày**, kế ~45 ngày.
+→ Subscribe&Save có nhịp **30 ngày** (không chỉ 45); nhắc tái mua gửi **ngày ~20-23**; gửi tin **Thứ 2/Thứ 5 ~9h sáng**.
+
+**O5 — Census mép cứu-được tuần này.** 15 khách contactable ngừng mua 31-90 ngày = 80tr LTV (cửa sổ đang đóng). Action queue refresh 2026-06-13 = **116 khách / 1.17 tỷ**. → gọi ngay (đã đưa vào P0).
+
+**O6 — Pocket địa lý chưa khai thác [offline].** HCM 51.7% doanh thu (rủi ro tập trung). Tỉnh nhỏ repeat cao bất ngờ, 0 offline: Bà Rịa-Vũng Tàu 33%, Tây Nguyên (Đắk Lắk/Gia Lai 26-32%), cụm ĐBSCL (An Giang/Vĩnh Long/Bến Tre 25-27%), Đà Nẵng 25%. → thử event/POS hub ở Cần Thơ/Đà Nẵng. Hà Nội repeat dị thường 12.7% — drill kênh.
+
+**O7 — Thử kênh nhà thuốc chuỗi (Long Châu/An Khang).** Kênh niềm tin #1 cho TPCN người già; brand có thể đang vắng mặt (Q14). Đối thủ Orihiro có showroom vật lý.
+
+> **Bổ sung từ audit kênh nhà (crawl 2 site D2C — fresh-scan §I):**
+
+**O8 — Hợp nhất giá + dẹp xung đột kênh nhà [làm ngay, gần như free].** 2 site của mình (finejapanvietnam + jpcshop) lệch giá tới 38% cùng SKU + tự cắt giá nhau. → 1 bảng giá chuẩn, phân vai 2 site rõ (đừng để cạnh tranh nội bộ).
+
+**O9 — Nạp đủ catalog vào kênh nhà.** Site D2C chỉ 8-15 SKU mono-brand trong khi bán hàng trăm SKU đa-brand trên sàn → kênh LTV cao nhất bị bỏ đói. Đưa full catalog (đặc biệt nhóm gateway) lên web/Zalo OA để giữ khách ở kênh nhà thay vì đẩy về sàn.
+
+**O10 — Gift bundle cho kênh nhà [khớp O6/L5].** Cả 2 site KHÔNG có gift set/hộp quà/liệu trình. Xây bundle quà biếu bố mẹ cho Tết + 8-3 + T11.
+
+**O11 — Thêm timeline/liệu trình + bằng chứng vào trang sản phẩm [giải Q17].** SP khớp/xương (repeat 15%) claim "điều trị" nhưng không nói "thấy hiệu quả sau X tuần, dùng đủ liệu trình Y". Thêm kỳ vọng thực tế + testimonial cùng độ tuổi + tem QR chống giả → giảm churn do vỡ kỳ vọng.
+
+---
+
 ## Nhóm 1 — Đã có data, dùng ngay
 
 > Nguồn: §7.1. Không cần build — data đã sẵn trong `mart_customer_action_queue`.
@@ -42,6 +79,9 @@ lỗi sản phẩm/kỳ vọng, sửa gốc để giảm hủy & tăng mua lại
   thấp khi 72% rò. Dồn lực vào second-order conversion.
 - Rò lãi discount: chỉ 2 khách `FULL_PRICE`, 15% `PROMO_DEPENDENT` — phụ thuộc KM cao. Tách nhóm
   trung thành để không giảm giá người sẵn sàng trả đủ.
+  > **🔻 Chốt fresh-scan 2026-06-13:** data CHƯA thấy "discount phá loyalty" (nhóm discount sâu repeat ≥ full-price,
+  > nhưng sample nhỏ + lẫn B2B/bulk → cần A/B test). Rò lãi THẬT = **45 khách >25% discount nhận 504tr discount trên
+  > 410tr revenue (âm gross)**. → đổi trọng tâm: chặn âm-gross deep-discount, không phải sợ "phụ thuộc KM".
 - Ghép `mart_inventory_health.is_dead_stock`/`is_slow_mover` với `product_affinity` → campaign
   clearance đúng nhóm mê brand.
 - Dùng `avg_days_between_orders` hẹn giờ gửi tin theo chu kỳ cá nhân.
