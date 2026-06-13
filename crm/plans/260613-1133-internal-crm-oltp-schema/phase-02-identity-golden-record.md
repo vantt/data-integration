@@ -4,7 +4,7 @@
 
 ## Overview
 - **Priority:** P0 (lõi v1; chặn 03/05/06 vì mọi thứ gắn `party_id`)
-- **Status:** ⬜
+- **Status:** ✅ DONE — migration 0002, FTS5 (modernc supported), normalize VN phone/email, merge+undo reversible (undone_at guard), ScanCandidates exact phone+email, 3 endpoint dedup, 10 test PASS, code-review fixed. **TODO sau:** nối FTS5 fuzzy-name vào batch ScanCandidates (SearchByName đã có).
 - Xây **golden record**: gộp nhiều danh tính (Sapo customer_id, SĐT, email, FB PSID, Zalo UID) về 1 `party` duy nhất. Warehouse KHÔNG có lớp này — CRM tự sở hữu.
 
 ## Key Insights

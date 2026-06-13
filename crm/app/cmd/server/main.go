@@ -19,6 +19,7 @@ import (
 
 	inboundhttp "github.com/vantt/data-integration/crm/app/internal/adapters/inbound/http"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/outbound/sqlite"
+	"github.com/vantt/data-integration/crm/app/internal/application"
 )
 
 func main() {
@@ -38,12 +39,21 @@ func main() {
 	}
 	log.Println("migrations applied")
 
+	// Repositories and services.
+	partyRepo := sqlite.NewPartyRepo(db)
+	dedupRepo := sqlite.NewDedupRepo(db)
+	mergeService := application.NewMergeService(partyRepo, dedupRepo)
+
 	// Chi router.
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Get("/healthz", inboundhttp.HealthHandler(db))
+
+	// Dedup endpoints.
+	dedupHandler := inboundhttp.NewDedupHandler(dedupRepo, mergeService)
+	dedupHandler.RegisterRoutes(r)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),

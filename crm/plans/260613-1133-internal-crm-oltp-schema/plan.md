@@ -64,7 +64,7 @@ flowchart LR
 | # | Phase | Trạng thái | Output chính |
 |---|---|---|---|
 | 01 | [Nền tảng & stack & local env](phase-01-foundation-stack-local-env.md) | ✅ | crm.db+cache.db (WAL/ATTACH), Go skeleton hexagonal, migrate, `crm_app_user`, /healthz 200 |
-| 02 | [Identity & golden record (dedup)](phase-02-identity-golden-record.md) | ⬜ | `party`, `party_identity`, `dedup_candidate`, `party_merge_log` |
+| 02 | [Identity & golden record (dedup)](phase-02-identity-golden-record.md) | ✅ | `party`/`party_identity`/`dedup_candidate`/`merge_log`, FTS5, merge+undo, 10 test (fuzzy-sweep TODO) |
 | 03 | [Customer 360 + custom fields + tags](phase-03-customer-360-custom-fields-tags.md) | ⬜ | `customer_profile`, `custom_field_def`, `tag`, `note` |
 | 04 | [Reverse-ETL warehouse read-cache](phase-04-reverse-etl-insight-cache.md) | ⬜ | `wh_*` insight + order/customer/product + Python sync |
 | 05 | [Activity + tasks + chat tracking](phase-05-activity-tasks-conversation.md) | ⬜ | `activity`, `task`, `conversation`, `message` |

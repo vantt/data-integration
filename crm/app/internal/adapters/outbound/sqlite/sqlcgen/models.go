@@ -18,3 +18,56 @@ type CrmAppUser struct {
 	CreatedAt string        `json:"created_at"`
 	UpdatedAt string        `json:"updated_at"`
 }
+
+type CrmDedupCandidate struct {
+	CandidateID string         `json:"candidate_id"`
+	PartyA      string         `json:"party_a"`
+	PartyB      string         `json:"party_b"`
+	MatchRule   string         `json:"match_rule"`
+	MatchScore  float64        `json:"match_score"`
+	Status      string         `json:"status"`
+	ReviewedBy  sql.NullString `json:"reviewed_by"`
+	ReviewedAt  sql.NullString `json:"reviewed_at"`
+	CreatedAt   string         `json:"created_at"`
+}
+
+type CrmParty struct {
+	PartyID      string         `json:"party_id"`
+	PartyType    string         `json:"party_type"`
+	DisplayName  sql.NullString `json:"display_name"`
+	PrimaryPhone sql.NullString `json:"primary_phone"`
+	PrimaryEmail sql.NullString `json:"primary_email"`
+	Status       string         `json:"status"`
+	IsMerged     int64          `json:"is_merged"`
+	MergedInto   sql.NullString `json:"merged_into"`
+	CreatedAt    string         `json:"created_at"`
+	UpdatedAt    string         `json:"updated_at"`
+}
+
+type CrmPartyFt struct {
+	PartyID  string `json:"party_id"`
+	NameNorm string `json:"name_norm"`
+}
+
+type CrmPartyIdentity struct {
+	IdentityID    string         `json:"identity_id"`
+	PartyID       string         `json:"party_id"`
+	SourceSystem  string         `json:"source_system"`
+	IdentityType  string         `json:"identity_type"`
+	IdentityValue string         `json:"identity_value"`
+	Confidence    float64        `json:"confidence"`
+	IsPrimary     int64          `json:"is_primary"`
+	VerifiedAt    sql.NullString `json:"verified_at"`
+	CreatedAt     string         `json:"created_at"`
+}
+
+type CrmPartyMergeLog struct {
+	MergeID          string         `json:"merge_id"`
+	SurvivingPartyID string         `json:"surviving_party_id"`
+	MergedPartyID    string         `json:"merged_party_id"`
+	Reason           sql.NullString `json:"reason"`
+	MergedBy         sql.NullString `json:"merged_by"`
+	Snapshot         sql.NullString `json:"snapshot"`
+	MergedAt         string         `json:"merged_at"`
+	UndonAt          sql.NullString `json:"undone_at"` // set when UndoMerge applied
+}
