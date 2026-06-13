@@ -562,6 +562,45 @@ P3 Behavioral Metrics provide deeper insight into customer purchasing patterns a
 - **Common Use Cases:** Trigger "we miss you" campaign for OVERDUE segment; send product recommendations to DUE_SOON cohort; exclude ON_TRACK from re-engagement (avoid fatigue).
 - **Pitfalls / Edge Cases:** NULL for 1-time buyers; recency drift if product is seasonal (manually adjust thresholds for seasonal verticals).
 
+##### 8.8 SKU-Level Product Affinity — last/top/second
+
+> **Phase 1 Status:** Ready (Implemented 2026-06-13)
+> **dbt Model:** [int_customer_metrics](../../../transformation/models/marts/core/intermediate/int_customer_metrics.sql) (source) & [dim_customers](../../../transformation/models/marts/core/dim_customers.sql) (5 columns)
+> **Also in:** [mart_customer_action_queue](../../../transformation/models/marts/customer/mart_customer_action_queue.sql)
+
+Five columns provide SKU-level purchase preference signals for personalizing CSKH/Sales reorder and cross-sell scripts.
+
+| Column | Type | Meaning |
+|---|---|---|
+| `last_purchased_product` | VARCHAR | Display name of SKU from customer's most-recent **paid** order; multi-SKU order → highest quantity line |
+| `last_purchased_sku` | VARCHAR | SKU code of `last_purchased_product` |
+| `top_affinity_product` | VARCHAR | SKU bought across the most distinct orders (repurchase frequency rank #1) |
+| `top_affinity_sku` | VARCHAR | SKU code of `top_affinity_product` |
+| `second_affinity_product` | VARCHAR | Frequency rank #2 SKU — for cross-sell. NULL if customer ever bought only 1 distinct paid SKU |
+
+**Filter criteria (all three signals):** Only `net_revenue > 0` lines (excludes 0đ gift/swag — 43.9% of all order lines) on non-cancelled orders (`is_active_order`) with a non-NULL `product_name`. See [revenue_terminology.md](../guides/revenue_terminology.md) §7 for what `net_revenue = 0` means.
+
+**Ranking key** for top/second affinity per `(customer, product)`: `COUNT(DISTINCT order_id) DESC → SUM(quantity) DESC → MAX(ordered_at) DESC → SUM(net_revenue) DESC → product_key ASC`.
+
+**NULL meaning:** all three product columns NULL = customer has **never made a paid purchase** (only ever received gifts, e.g. CrossBorder/US gift recipients). These customers belong to a gift-conversion play, not a reorder script — do not confuse with "data missing".
+
+**Display name:** `variant_name` when it differs from `product_name` (adds packaging info like "- Hộp"/"- Chai"); otherwise `product_name`.
+
+**Relationship to brand-level `product_affinity`:** `product_affinity` is a brand label (4 values: `PRODUCT_FINE_JAPAN`, `PRODUCT_FG_CARE`, `PRODUCT_FINE_CARE`, `PRODUCT_MULTI`) derived from revenue share across brands. The SKU-level columns here are finer-grained and use **order frequency** (not revenue share) as the primary ranking signal. Use `product_affinity` for brand portfolio analysis; use the SKU columns for script personalization.
+
+**Script use-cases:**
+
+```
+Reorder: "Lần trước anh/chị mua [last_purchased_product] (mã [last_purchased_sku]).
+          Anh/chị có muốn bổ sung thêm không?"
+
+Cross-sell: "Nhiều khách hay dùng [top_affinity_product] cùng với [second_affinity_product].
+             Anh/chị đã thử [second_affinity_product] chưa?"
+```
+
+- **Common Misunderstandings:** `top_affinity_product` ≠ `last_purchased_product` for repeat buyers — the habitual item and the most-recent item often differ. Use both together for richer script context.
+- **Pitfalls / Edge Cases:** NULL `second_affinity_product` is expected for customers who have purchased only one distinct SKU — do not substitute `top_affinity_product` as a fallback for cross-sell (they're the same item).
+
 ## Implementation Planning
 
 #### 1. Deployment Strategy

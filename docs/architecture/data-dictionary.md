@@ -633,6 +633,13 @@ Customer dimension with current state.
 | `total_orders`     | INTEGER | Lifetime order count                 |
 | `total_spent`      | DECIMAL | Lifetime value                       |
 | `is_active`        | BOOLEAN | Has ordered in last 90 days          |
+| `last_purchased_product` | VARCHAR | Display name of SKU from most-recent paid order; NULL = never paid |
+| `last_purchased_sku`     | VARCHAR | SKU code of `last_purchased_product` |
+| `top_affinity_product`   | VARCHAR | SKU bought across most distinct paid orders (repurchase frequency rank #1) |
+| `top_affinity_sku`       | VARCHAR | SKU code of `top_affinity_product` |
+| `second_affinity_product`| VARCHAR | Frequency rank #2 SKU for cross-sell; NULL if customer bought only 1 distinct paid SKU |
+
+> **Note:** This table lists selected columns. For the full behavioral attribute set (RFM, discount_sensitivity, next_purchase_signal, avg_order_spend, etc.) see [customer.md](../analytics-handbook/domains/customer.md) § P3 Behavioral Metrics.
 
 **Tier Logic:**
 
