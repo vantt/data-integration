@@ -1,0 +1,29 @@
+# UI Spec Configuration
+# Copy this to your spec root and customize
+
+project: myapp                    # Project name (used in contract tag: myapp-contract)
+contract_tag: myapp-contract      # Tag for fenced YAML blocks
+entry_surface: S01                # Entry screen for interpreter
+platforms: [desktop, mobile]      # Available platforms
+
+# Directories containing surface files (relative to spec root)
+surface_dirs:
+  - screens
+  - panels
+  - modals
+  - overlays
+  - components
+  - flows
+  - canvas          # optional, for canvas-based apps
+
+# Cross-cutting files that contain contract blocks (relative to spec root)
+cross_cutting:
+  - 20-domain-rules.md
+  - 15-system-events.md
+
+# Extend trigger/action enums (merged with base)
+extra_triggers: []    # e.g. [swipe, voice, gesture]
+extra_actions: []     # e.g. [animate, log]
+
+# Optional: custom domain validation script
+# domain_validators: ./validators/

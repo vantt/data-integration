@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "ui-spec-surface-contract",
+  "title": "UI Spec surface interaction contract",
+  "description": "Schema for the fenced YAML contract block embedded in each surface markdown file.",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "system": {
+      "type": "string",
+      "description": "Optional: system/subsystem name for system event files"
+    },
+    "interactions": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/interaction" }
+    },
+    "emits": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/emit" }
+    },
+    "flow": { "$ref": "#/$defs/flow" },
+    "rules": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ruleMapping" }
+    }
+  },
+  "$defs": {
+    "actionId": {
+      "type": "string",
+      "pattern": "^A-[A-Z0-9]+-[A-Za-z0-9]+$"
+    },
+    "trigger": {
+      "type": "string",
+      "enum": [
+        "click", "double_click", "contextmenu", "tap", "long_press",
+        "drag", "drag_start", "drag_end", "drag_drop", "drop",
+        "submit", "change", "input", "blur", "validate",
+        "keydown", "hover", "focus",
+        "system_event", "event"
+      ]
+    },
+    "action": {
+      "type": "string",
+      "enum": ["navigate", "open_overlay", "close_overlay", "mutate", "emit_event", "external", "system_event"]
+    },
+    "interaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/actionId" },
+        "element": { "type": "string" },
+        "region": { "type": "string", "description": "Optional: named region within the surface (e.g. header, sidebar, footer)" },
+        "trigger": { "$ref": "#/$defs/trigger" },
+        "listens_to": { "type": "string" },
+        "guard": { "type": "string" },
+        "action": { "$ref": "#/$defs/action" },
+        "target": { "type": "string" },
+        "event": { "type": "string" },
+        "payload": { "type": "object" },
+        "effects": { "type": "array", "items": { "type": "string" } }
+      },
+      "allOf": [
+        {
+          "comment": "navigate/open_overlay require a target",
+          "if": { "properties": { "action": { "enum": ["navigate", "open_overlay"] } }, "required": ["action"] },
+          "then": { "required": ["target"] }
+        },
+        {
+          "comment": "a non-listener interaction needs a trigger",
+          "if": { "not": { "required": ["listens_to"] } },
+          "then": { "required": ["trigger"] }
+        }
+      ]
+    },
+    "emit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "event"],
+      "properties": {
+        "id": { "$ref": "#/$defs/actionId" },
+        "element": { "type": "string" },
+        "region": { "type": "string", "description": "Optional: named region within the surface" },
+        "trigger": { "$ref": "#/$defs/trigger" },
+        "guard": { "type": "string" },
+        "event": { "type": "string" },
+        "payload": { "type": "object" }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["goal", "steps"],
+      "properties": {
+        "goal": { "type": "string" },
+        "preconditions": { "type": "array", "items": { "type": "string" } },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/actionId" } },
+        "branches": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["when", "action"],
+            "properties": {
+              "when": { "type": "string" },
+              "action": { "$ref": "#/$defs/actionId" }
+            }
+          }
+        }
+      }
+    },
+    "ruleMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "surfaces"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^R[0-9]+$" },
+        "name": { "type": "string" },
+        "surfaces": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}
