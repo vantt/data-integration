@@ -86,7 +86,7 @@ FROM mtd_actual a, monthly_target t
 <BigValue data={mtd_progress} value="target_pct"  title="% of Target"   fmt="0.0" />
 <BigValue data={mtd_progress} value="pace_index"  title="Pace Index"    fmt="0.00" />
 
-> **Pace Index:** >1.0 = Ahead · 0.8–1.0 = On Track · <0.8 = Behind
+> **Pace Index:** >1.0 = Ahead · 0.8–1.0 = On Track · &lt;0.8 = Behind
 
 ---
 
