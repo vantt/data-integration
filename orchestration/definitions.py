@@ -28,7 +28,7 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure
+from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
 from orchestration.ops.purge_runs import maintain_purge_runs_job
@@ -43,7 +43,7 @@ from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_s
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
 # Don't call it from here: definitions.py is re-imported on every gRPC code
 # server spawn (e.g. each `dagster job launch`), which would add noise.
-all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure])
+all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -79,14 +79,14 @@ SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 # 1. Realtime Job (Webhook)
 pipeline_sapo_v2_realtime_job = define_asset_job(
     name="pipeline_sapo_v2_realtime_job",
-    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish),
+    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
     tags=SYNC_TAGS,
 )
 
 # 2. Incremental Job (History Log)
 pipeline_sapo_v2_incremental_job = define_asset_job(
     name="pipeline_sapo_v2_incremental_job",
-    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish),
+    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
@@ -113,6 +113,7 @@ ingest_sheets_sync_job = define_asset_job(
         | _sheets_sources.downstream()
         | AssetSelection.assets(serving.build_serving_db)
         | AssetSelection.assets(rill.build_rill_publish)
+        | AssetSelection.assets(crm_sync.crm_cache_refresh)
     ),
     tags=SYNC_TAGS,
 )
@@ -133,6 +134,7 @@ ingest_filedrop_shopee_job = define_asset_job(
         | _shopee_source.downstream()
         | _fact_order_returns
         | AssetSelection.assets(serving.build_serving_db)
+        | AssetSelection.assets(crm_sync.crm_cache_refresh)
     ),
     tags=SYNC_TAGS,
 )
@@ -146,6 +148,7 @@ ingest_filedrop_misa_job = define_asset_job(
         | _misa_source.downstream()
         | _fact_order_returns
         | AssetSelection.assets(serving.build_serving_db)
+        | AssetSelection.assets(crm_sync.crm_cache_refresh)
     ),
     tags=SYNC_TAGS,
 )
@@ -160,6 +163,7 @@ ingest_filedrop_misa_account_ledger_job = define_asset_job(
         _misa_account_ledger_source
         | _misa_account_ledger_source.downstream()
         | AssetSelection.assets(serving.build_serving_db)
+        | AssetSelection.assets(crm_sync.crm_cache_refresh)
     ),
     tags=SYNC_TAGS,
 )
@@ -182,7 +186,8 @@ _nightly_batch_selection = (
     all_dbt_assets |
     AssetSelection.assets(serving.build_serving_db) |
     AssetSelection.assets(serving.build_standalone_export) |
-    AssetSelection.assets(rill.build_rill_publish)
+    AssetSelection.assets(rill.build_rill_publish) |
+    AssetSelection.assets(crm_sync.crm_cache_refresh)
 )
 
 pipeline_batch_nightly_job = define_asset_job(
