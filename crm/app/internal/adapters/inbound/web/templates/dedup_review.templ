@@ -1,0 +1,95 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// DedupReviewPage renders S04 — Dedup Review.
+templ DedupReviewPage(candidates []domain.DedupCandidate, partyNames map[string]string, matchRuleFilter string) {
+	@AppShell("S04", "Dedup Review") {
+		@Topbar("Dedup Review") {
+			<div class="topbar-actions">
+				<span class="text-muted">Pending: { fmt.Sprintf("%d", len(candidates)) }</span>
+				<select
+					name="match_rule"
+					class="form-control form-control-sm"
+					hx-get="/dedup"
+					hx-target="body"
+					hx-push-url="true"
+				>
+					<option value="" selected?={ matchRuleFilter == "" }>Tất cả quy tắc</option>
+					<option value="exact_phone" selected?={ matchRuleFilter == "exact_phone" }>Exact phone</option>
+					<option value="exact_email" selected?={ matchRuleFilter == "exact_email" }>Exact email</option>
+					<option value="fts_name_phone" selected?={ matchRuleFilter == "fts_name_phone" }>FTS name+phone</option>
+				</select>
+			</div>
+		}
+		<div class="page-content">
+			if len(candidates) == 0 {
+				@dedupEmpty()
+			} else {
+				<div class="dedup-list">
+					for _, c := range candidates {
+						@dedupCandidateRow(c, partyNames)
+					}
+				</div>
+			}
+		</div>
+		@modalContainer()
+	}
+}
+
+// dedupCandidateRow renders one candidate pair with merge/reject actions.
+templ dedupCandidateRow(c domain.DedupCandidate, partyNames map[string]string) {
+	<div class="dedup-row" id={ "cand-" + c.CandidateID }>
+		<div class="dedup-parties">
+			<div class="dedup-party">
+				<div class="dedup-party-label">Party A</div>
+				<strong>{ partyNameOrID(partyNames, c.PartyA) }</strong>
+				<a href={ templ.SafeURL("/customers/" + c.PartyA) } class="btn btn-secondary btn-sm ml-4">Hồ sơ</a>
+			</div>
+			<div class="dedup-vs">vs</div>
+			<div class="dedup-party">
+				<div class="dedup-party-label">Party B</div>
+				<strong>{ partyNameOrID(partyNames, c.PartyB) }</strong>
+				<a href={ templ.SafeURL("/customers/" + c.PartyB) } class="btn btn-secondary btn-sm ml-4">Hồ sơ</a>
+			</div>
+		</div>
+		<div class="dedup-meta text-muted">
+			Rule: <strong>{ c.MatchRule }</strong> · Score: { fmt.Sprintf("%.2f", c.MatchScore) } · { formatICTHelper(c.CreatedAt) }
+		</div>
+		<div class="dedup-actions mt-8">
+			<button
+				class="btn btn-danger btn-sm"
+				hx-get={ "/dedup/" + c.CandidateID + "/modal/merge" }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>🔀 Merge A←B</button>
+			<button
+				class="btn btn-secondary btn-sm"
+				hx-post={ "/dedup/" + c.CandidateID + "/reject" }
+				hx-target={ "#cand-" + c.CandidateID }
+				hx-swap="outerHTML"
+				hx-confirm="Từ chối cặp khách này?"
+			>✗ Reject</button>
+		</div>
+	</div>
+}
+
+templ dedupEmpty() {
+	<div class="empty-state">
+		<div class="empty-state-icon">✨</div>
+		<div class="empty-state-title">Không có candidate nào cần xử lý</div>
+		<div class="empty-state-desc">Tất cả cặp khách hàng nghi ngờ trùng đã được xử lý.</div>
+	</div>
+}
+
+// ── pure helpers ──────────────────────────────────────────────────────────────
+
+func partyNameOrID(names map[string]string, partyID string) string {
+	if n, ok := names[partyID]; ok && n != "" {
+		return n
+	}
+	return partyID
+}

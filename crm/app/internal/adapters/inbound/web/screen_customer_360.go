@@ -20,6 +20,9 @@ func init() {
 		r.Get("/customers/{partyID}", d.handleCustomer360)
 		r.Get("/customers/{partyID}/panels/{panel}", d.handleCustomer360Panel)
 		r.Post("/customers/{partyID}/notes", d.handleAddNote)
+		// M08 log-activity from Customer 360 (not from inbox context).
+		r.Get("/customers/{partyID}/modal/log-activity", d.handleModalLogActivityParty)
+		r.Post("/customers/{partyID}/log-activity", d.handleLogActivityOnParty)
 	})
 }
 
@@ -137,7 +140,7 @@ func (d *Deps) renderTimelinePanel(w http.ResponseWriter, r *http.Request, party
 		log.Printf("c360 timeline: list %s: %v", partyID, err)
 		activities = []domain.Activity{}
 	}
-	if err := templates.P03ActivityTimelinePanel(activities).Render(r.Context(), w); err != nil {
+	if err := templates.P03ActivityTimelinePanel(activities, partyID).Render(r.Context(), w); err != nil {
 		log.Printf("c360 timeline: render panel: %v", err)
 	}
 }
@@ -188,6 +191,48 @@ func (d *Deps) load360Base(r *http.Request, partyID string) (
 	}
 
 	return party360, identities, nil
+}
+
+// handleModalLogActivityParty serves GET /customers/{partyID}/modal/log-activity —
+// renders M08 modal with partyID pre-filled and empty convID.
+func (d *Deps) handleModalLogActivityParty(w http.ResponseWriter, r *http.Request) {
+	partyID := chi.URLParam(r, "partyID")
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := templates.ModalLogActivity(partyID, "").Render(r.Context(), w); err != nil {
+		log.Printf("modal log activity party: render: %v", err)
+	}
+}
+
+// handleLogActivityOnParty serves POST /customers/{partyID}/log-activity —
+// creates an activity, then returns the refreshed activity-timeline panel fragment.
+func (d *Deps) handleLogActivityOnParty(w http.ResponseWriter, r *http.Request) {
+	partyID := chi.URLParam(r, "partyID")
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	actType := strings.TrimSpace(r.FormValue("activity_type"))
+	body := strings.TrimSpace(r.FormValue("body"))
+	if body == "" {
+		http.Error(w, "body required", http.StatusBadRequest)
+		return
+	}
+	if actType == "" {
+		actType = "note"
+	}
+	a := &domain.Activity{
+		PartyID:      partyID,
+		ActivityType: actType,
+		Body:         body,
+		Channel:      "crm",
+	}
+	if err := d.ActivityLog.LogActivity(r.Context(), a); err != nil {
+		log.Printf("log activity party %s: %v", partyID, err)
+		http.Error(w, "failed to log activity", http.StatusInternalServerError)
+		return
+	}
+	// Return the refreshed timeline panel fragment so HTMX can swap it in.
+	d.renderTimelinePanel(w, r, partyID)
 }
 
 // resolveSapoCustomerID finds the Sapo customer_id from a party's identities.

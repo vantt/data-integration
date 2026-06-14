@@ -1,0 +1,308 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// ── S10 Campaigns List ────────────────────────────────────────────────────────
+
+// CampaignsPage renders S10 — Campaigns List.
+templ CampaignsPage(campaigns []domain.Campaign, segmentNames map[string]string) {
+	@AppShell("S10", "Chiến dịch") {
+		@Topbar("📣 Chiến dịch") {
+			<button
+				class="btn btn-primary"
+				hx-get="/campaigns/modal/create"
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>+ Tạo chiến dịch</button>
+		}
+		<div class="content-area">
+			@CampaignsTable(campaigns, segmentNames)
+		</div>
+		<div id="modal"></div>
+	}
+}
+
+// CampaignsTable renders the campaigns list table.
+templ CampaignsTable(campaigns []domain.Campaign, segmentNames map[string]string) {
+	if len(campaigns) == 0 {
+		<div class="empty-state">
+			<p class="text-muted">Chưa có chiến dịch nào. Tạo chiến dịch đầu tiên của bạn!</p>
+		</div>
+	} else {
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Tên</th>
+					<th>Mục tiêu</th>
+					<th>Kênh</th>
+					<th>Segment</th>
+					<th>Trạng thái</th>
+					<th>Lên lịch</th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, c := range campaigns {
+					<tr
+						class="data-row clickable"
+						hx-get={ "/campaigns/" + c.CampaignID }
+						hx-target="body"
+						hx-push-url="true"
+					>
+						<td><strong>{ c.Name }</strong></td>
+						<td><span class="badge badge-action-default">{ c.Objective }</span></td>
+						<td>{ c.Channel }</td>
+						<td>
+							if c.SegmentID != nil {
+								{ segmentNames[*c.SegmentID] }
+							} else {
+								<span class="text-muted">—</span>
+							}
+						</td>
+						<td><span class={ campaignStatusClass(c.Status) }>{ c.Status }</span></td>
+						<td>
+							if c.ScheduledAt != nil {
+								{ formatICTHelper(*c.ScheduledAt) }
+							} else {
+								<span class="text-muted">—</span>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+// ── S11 Campaign Detail / Targets ─────────────────────────────────────────────
+
+// CampaignDetailPage renders S11 — Campaign Detail with ROI summary and target list.
+templ CampaignDetailPage(
+	campaign *domain.Campaign,
+	targets []domain.CampaignTarget,
+	roi *domain.CampaignROI,
+	partyNames map[string]string,
+	segmentName string,
+) {
+	@AppShell("S10", campaign.Name) {
+		@Topbar("") {
+			<a href="/campaigns" class="btn btn-sm btn-secondary">← Chiến dịch</a>
+			<span class="topbar-title">{ campaign.Name }</span>
+			<button
+				class="btn btn-sm btn-secondary"
+				hx-get={ "/campaigns/" + campaign.CampaignID + "/modal/edit" }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>Sửa</button>
+		}
+		<div class="content-area">
+			// ROI Summary Bar
+			<div class="summary-bar" id="roi-summary">
+				@CampaignROIFragment(roi)
+			</div>
+			// Action buttons
+			<div class="action-bar mt-8">
+				<button
+					class="btn btn-secondary"
+					hx-post={ "/campaigns/" + campaign.CampaignID + "/generate-targets" }
+					hx-target="#targets-section"
+					hx-swap="innerHTML"
+				>⚡ Tạo targets từ segment</button>
+				<button
+					class="btn btn-secondary"
+					hx-post={ "/campaigns/" + campaign.CampaignID + "/scan-conversions" }
+					hx-target="#roi-summary"
+					hx-swap="innerHTML"
+				>🔍 Scan conversions</button>
+			</div>
+			// Target list
+			<div id="targets-section" class="mt-16">
+				@CampaignTargetList(campaign.CampaignID, targets, partyNames)
+			</div>
+		</div>
+		<div id="modal"></div>
+	}
+}
+
+// CampaignROIFragment renders the ROI summary bar (HTMX swap target).
+templ CampaignROIFragment(roi *domain.CampaignROI) {
+	if roi == nil {
+		<div class="text-muted">Chưa có dữ liệu ROI.</div>
+	} else {
+		<div class="roi-stats">
+			<div class="roi-stat">
+				<span class="roi-label">Tổng targets</span>
+				<span class="roi-value">{ fmt.Sprintf("%d", roi.TotalTargets) }</span>
+			</div>
+			<div class="roi-stat">
+				<span class="roi-label">Queued</span>
+				<span class="roi-value">{ fmt.Sprintf("%d", roi.StatusCounts["queued"]) }</span>
+			</div>
+			<div class="roi-stat">
+				<span class="roi-label">Sent</span>
+				<span class="roi-value">{ fmt.Sprintf("%d", roi.StatusCounts["sent"]) }</span>
+			</div>
+			<div class="roi-stat">
+				<span class="roi-label">Converted</span>
+				<span class="roi-value badge-active">{ fmt.Sprintf("%d", roi.StatusCounts["converted"]) }</span>
+			</div>
+			<div class="roi-stat">
+				<span class="roi-label">Tỉ lệ</span>
+				<span class="roi-value">
+					if roi.TotalTargets > 0 {
+						{ fmt.Sprintf("%.1f%%", float64(roi.StatusCounts["converted"])*100/float64(roi.TotalTargets)) }
+					} else {
+						—
+					}
+				</span>
+			</div>
+			<div class="roi-stat">
+				<span class="roi-label">Doanh thu quy đổi</span>
+				<span class="roi-value">{ formatVNDHelper(roi.TotalConvertedRevVND) }</span>
+			</div>
+		</div>
+	}
+}
+
+// CampaignTargetList renders the target table (also used as HTMX fragment).
+templ CampaignTargetList(campaignID string, targets []domain.CampaignTarget, partyNames map[string]string) {
+	if len(targets) == 0 {
+		<div class="empty-state">
+			<p class="text-muted">Chưa có target nào. Nhấn "Tạo targets từ segment" để bắt đầu.</p>
+		</div>
+	} else {
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Khách</th>
+					<th>Status</th>
+					<th>Assignee</th>
+					<th>Đơn hàng</th>
+					<th>Doanh thu</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, t := range targets {
+					<tr class="data-row" id={ "target-" + t.PartyID }>
+						<td>
+							<a href={ templ.SafeURL("/customers/" + t.PartyID) }>
+								{ partyDisplayName(partyNames, t.PartyID) }
+							</a>
+						</td>
+						<td><span class={ targetStatusClass(t.Status) }>{ t.Status }</span></td>
+						<td>
+							if t.AssignedUserID != nil {
+								{ *t.AssignedUserID }
+							} else {
+								<span class="text-muted">—</span>
+							}
+						</td>
+						<td>
+							if t.ConvertedOrderCode != nil {
+								<code>{ *t.ConvertedOrderCode }</code>
+							} else {
+								<span class="text-muted">—</span>
+							}
+						</td>
+						<td>
+							if t.ConvertedRevenueVND != nil {
+								{ formatVNDHelper(*t.ConvertedRevenueVND) }
+							} else {
+								<span class="text-muted">—</span>
+							}
+						</td>
+						<td class="action-cell">
+							if t.Status != "converted" && t.Status != "skipped" {
+								<button
+									class="btn btn-sm btn-primary"
+									hx-get={ "/campaigns/" + campaignID + "/targets/" + t.PartyID + "/modal/convert" }
+									hx-target="#modal"
+									hx-swap="innerHTML"
+								>✓ Converted</button>
+								<button
+									class="btn btn-sm btn-secondary"
+									hx-patch={ "/campaigns/" + campaignID + "/targets/" + t.PartyID + "/status" }
+									hx-vals={ `{"status":"skipped"}` }
+									hx-target={ "#target-" + t.PartyID }
+									hx-swap="outerHTML"
+								>Skip</button>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+// CampaignTargetRow renders a single target row (HTMX swap after status update).
+templ CampaignTargetRow(campaignID string, t domain.CampaignTarget, partyNames map[string]string) {
+	<tr class="data-row" id={ "target-" + t.PartyID }>
+		<td>
+			<a href={ templ.SafeURL("/customers/" + t.PartyID) }>
+				{ partyDisplayName(partyNames, t.PartyID) }
+			</a>
+		</td>
+		<td><span class={ targetStatusClass(t.Status) }>{ t.Status }</span></td>
+		<td>
+			if t.AssignedUserID != nil {
+				{ *t.AssignedUserID }
+			} else {
+				<span class="text-muted">—</span>
+			}
+		</td>
+		<td>
+			if t.ConvertedOrderCode != nil {
+				<code>{ *t.ConvertedOrderCode }</code>
+			} else {
+				<span class="text-muted">—</span>
+			}
+		</td>
+		<td>
+			if t.ConvertedRevenueVND != nil {
+				{ formatVNDHelper(*t.ConvertedRevenueVND) }
+			} else {
+				<span class="text-muted">—</span>
+			}
+		</td>
+		<td></td>
+	</tr>
+}
+
+// ── pure helpers ──────────────────────────────────────────────────────────────
+
+func campaignStatusClass(status string) string {
+	switch status {
+	case "running":
+		return "badge badge-active"
+	case "done":
+		return "badge badge-silver"
+	default:
+		return "badge badge-new"
+	}
+}
+
+func targetStatusClass(status string) string {
+	switch status {
+	case "converted":
+		return "badge badge-active"
+	case "skipped":
+		return "badge badge-churned"
+	case "sent":
+		return "badge badge-at-risk"
+	case "responded":
+		return "badge badge-vip"
+	default:
+		return "badge badge-new"
+	}
+}
+
+func partyDisplayName(names map[string]string, partyID string) string {
+	if n, ok := names[partyID]; ok && n != "" {
+		return n
+	}
+	return partyID
+}

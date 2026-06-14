@@ -4,10 +4,16 @@ package templates
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
 )
+
+// queryEscapeHelper URL-encodes a string for safe use in query parameters.
+func queryEscapeHelper(s string) string {
+	return url.QueryEscape(s)
+}
 
 // ict is loaded once; falls back to UTC+7 fixed offset.
 var ict *time.Location

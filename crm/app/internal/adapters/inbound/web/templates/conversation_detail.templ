@@ -1,0 +1,116 @@
+package templates
+
+import (
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// ConversationDetailPage renders S06 — Conversation Detail.
+templ ConversationDetailPage(conv *domain.Conversation, msgs []domain.Message, partyName, partyLink string) {
+	@AppShell("S05", "Hội thoại") {
+		@Topbar(convDetailTitle(conv)) {
+			<div class="topbar-actions">
+				<a href="/inbox" class="btn btn-secondary btn-sm">← Inbox</a>
+				if conv.Status != "closed" {
+					<button
+						class="btn btn-secondary btn-sm"
+						hx-get={ "/inbox/" + conv.ConversationID + "/modal/assign" }
+						hx-target="#modal"
+						hx-swap="innerHTML"
+					>Đổi NV</button>
+					<button
+						class="btn btn-secondary btn-sm"
+						hx-get={ "/inbox/" + conv.ConversationID + "/modal/log-activity" }
+						hx-target="#modal"
+						hx-swap="innerHTML"
+					>Ghi note</button>
+					<button
+						class="btn btn-danger btn-sm"
+						hx-get={ "/inbox/" + conv.ConversationID + "/modal/close" }
+						hx-target="#modal"
+						hx-swap="innerHTML"
+					>Đóng hội thoại</button>
+				} else {
+					<button
+						class="btn btn-secondary btn-sm"
+						hx-post={ "/inbox/" + conv.ConversationID + "/assign" }
+						hx-vals={ `{"assignee_user_id":""}` }
+					>Mở lại</button>
+				}
+			</div>
+		}
+		<div class="page-content conv-detail-layout">
+			<div class="conv-thread">
+				if len(msgs) == 0 {
+					<div class="empty-state">
+						<div class="empty-state-icon">💬</div>
+						<div class="empty-state-title">Chưa có tin nhắn</div>
+					</div>
+				} else {
+					for _, m := range msgs {
+						@msgBubble(m)
+					}
+				}
+			</div>
+			<div class="conv-sidebar">
+				if partyName == "" {
+					<div class="card">
+						<div class="card-title">🔍 Gắn khách hàng</div>
+						<p class="text-muted">Hội thoại chưa được gắn với khách hàng nào.</p>
+						<button
+							class="btn btn-primary btn-sm"
+							hx-get={ "/inbox/" + conv.ConversationID + "/modal/link-party" }
+							hx-target="#modal"
+							hx-swap="innerHTML"
+						>Tìm & gắn khách</button>
+					</div>
+				} else {
+					<div class="card">
+						<div class="card-title">👤 { partyName }</div>
+						<a href={ templ.SafeURL(partyLink) } class="btn btn-secondary btn-sm mt-8">
+							Mở hồ sơ đầy đủ →
+						</a>
+					</div>
+				}
+				<div class="card mt-8">
+					<div class="card-title text-muted">Kênh: { conv.Channel }</div>
+					<div class="text-muted">PSID: { conv.ExternalThreadID }</div>
+					<div class="text-muted">
+						Trạng thái: <span class={ "badge-pill " + convStatusClass(conv.Status) }>{ conv.Status }</span>
+					</div>
+				</div>
+			</div>
+		</div>
+		@modalContainer()
+	}
+}
+
+// msgBubble renders one message bubble (in = customer, out = staff).
+templ msgBubble(m domain.Message) {
+	<div class={ msgBubbleClass(m.Direction) }>
+		<div class="msg-body">{ m.Body }</div>
+		<div class="msg-meta text-muted">{ formatICTHelper(m.SentAt) }</div>
+	</div>
+}
+
+// ── modal container (shared slot for all HTMX-loaded modals) ──────────────────
+
+// modalContainer is the shared anchor HTMX swaps modal HTML into.
+templ modalContainer() {
+	<div id="modal"></div>
+}
+
+// ── pure helpers ──────────────────────────────────────────────────────────────
+
+func convDetailTitle(conv *domain.Conversation) string {
+	if conv == nil {
+		return "Hội thoại"
+	}
+	return "Hội thoại · " + conv.Channel + " · " + conv.Status
+}
+
+func msgBubbleClass(direction string) string {
+	if direction == "out" {
+		return "msg-bubble msg-out"
+	}
+	return "msg-bubble msg-in"
+}

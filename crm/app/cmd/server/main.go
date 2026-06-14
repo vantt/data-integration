@@ -101,17 +101,34 @@ func main() {
 
 	// Web UI adapter (templ + HTMX) — mounted at / (JSON API stays under /api).
 	// Auth: DEFERRED — LAN-trust only.
+	appUserRepo := sqlite.NewAppUserRepo(db)
 	webDeps := &web.Deps{
-		ActionQueue: cacheRepo,
-		Tasks:       taskSvc,
-		TaskWriter:  taskSvc,
-		Parties:     web.NewWebPartyRepo(partyRepo, db.SQLDB()),
-		Profile:     profileSvc,
-		Insight:     cacheRepo,
-		Identities:  partyRepo,
-		Activities:  activitySvc,
-		Notes:       profileSvc,
-		PartyTasks:  web.NewWebTaskRepo(db.SQLDB()),
+		ActionQueue:   cacheRepo,
+		Tasks:         taskSvc,
+		TaskWriter:    taskSvc,
+		TaskCreator:   taskSvc,
+		TaskGen:       taskSvc,
+		Parties:       web.NewWebPartyRepo(partyRepo, db.SQLDB()),
+		Profile:       profileSvc,
+		Insight:       cacheRepo,
+		Identities:    partyRepo,
+		Activities:    activitySvc,
+		Notes:         profileSvc,
+		PartyTasks:    web.NewWebTaskRepo(db.SQLDB()),
+		Conversations: convSvc,
+		ConvWriter:    convSvc,
+		ConvLinker:    web.NewWebConvRepo(convRepo, db.SQLDB()),
+		AppUsers:      appUserRepo,
+		Dedup:         dedupRepo,
+		Merger:        mergeService,
+		ActivityLog:   activitySvc,
+		// Shared modals (M02, M04).
+		PartyCreator:  partyRepo,
+		OwnerAssigner: profileSvc,
+		// Management screens (S08–S13).
+		Segments:    segmentSvc,
+		Campaigns:   campaignSvc,
+		SettingsMgr: profileSvc,
 	}
 	web.Mount(r, webDeps)
 

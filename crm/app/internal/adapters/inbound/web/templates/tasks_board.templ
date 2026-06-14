@@ -1,0 +1,130 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// TasksBoardPage renders S07 — Tasks Board.
+templ TasksBoardPage(grouped map[string][]domain.Task, assigneeFilter, statusFilter string) {
+	@AppShell("S07", "Tasks") {
+		@Topbar("Tasks") {
+			<div class="topbar-actions">
+				<button
+					class="btn btn-primary btn-sm"
+					hx-get="/tasks/modal/create"
+					hx-target="#modal"
+					hx-swap="innerHTML"
+				>+ Tạo task</button>
+				<select
+					name="status"
+					class="form-control form-control-sm"
+					hx-get="/tasks"
+					hx-target="body"
+					hx-push-url="true"
+					hx-include="[name='assignee']"
+				>
+					<option value="" selected?={ statusFilter == "" }>Tất cả trạng thái</option>
+					<option value="open" selected?={ statusFilter == "open" }>Open</option>
+					<option value="doing" selected?={ statusFilter == "doing" }>Doing</option>
+					<option value="done" selected?={ statusFilter == "done" }>Done</option>
+					<option value="cancelled" selected?={ statusFilter == "cancelled" }>Cancelled</option>
+				</select>
+			</div>
+		}
+		<div class="page-content">
+			if isBoardEmpty(grouped) {
+				@tasksBoardEmptyState()
+			} else {
+				<div class="kanban-board">
+					@kanbanColumn("open", "📬 Open", grouped["open"])
+					@kanbanColumn("doing", "🔧 Doing", grouped["doing"])
+					@kanbanColumn("done", "✅ Done", grouped["done"])
+					@kanbanColumn("cancelled", "✗ Cancelled", grouped["cancelled"])
+				</div>
+			}
+		</div>
+		@modalContainer()
+	}
+}
+
+// kanbanColumn renders one status column of the tasks board.
+templ kanbanColumn(status, label string, tasks []domain.Task) {
+	<div class="kanban-col">
+		<div class="kanban-col-header">
+			{ label }
+			<span class="badge-count">{ fmt.Sprintf("%d", len(tasks)) }</span>
+		</div>
+		<div class="kanban-col-body">
+			if len(tasks) == 0 {
+				<div class="kanban-empty text-muted">Không có task</div>
+			} else {
+				for _, t := range tasks {
+					@taskCard(t)
+				}
+			}
+		</div>
+	</div>
+}
+
+// taskCard renders one task card in a kanban column.
+templ taskCard(t domain.Task) {
+	<div class={ "task-card " + taskStatusClassHelper(t.Status) } id={ "task-card-" + t.TaskID }>
+		<div class="task-card-title">{ t.Title }</div>
+		if t.Description != "" {
+			<div class="task-card-desc text-muted">{ truncStr(t.Description, 60) }</div>
+		}
+		<div class="task-card-meta">
+			if t.Source == "action_queue" {
+				<span class="badge-pill badge-action-default">AUTO</span>
+			}
+			if t.DueAt != nil {
+				<span class="text-muted">Due: { formatICTHelper(*t.DueAt) }</span>
+			}
+		</div>
+		<div class="task-card-actions mt-4">
+			if t.PartyID != nil {
+				<a href={ templ.SafeURL("/customers/" + *t.PartyID) } class="btn btn-secondary btn-sm">Hồ sơ</a>
+			}
+			if t.Status != "done" && t.Status != "cancelled" {
+				<button
+					class="btn btn-primary btn-sm"
+					hx-patch={ "/tasks/" + t.TaskID + "/status" }
+					hx-vals={ `{"status":"done"}` }
+				>✓ Done</button>
+			}
+			if t.Status == "open" {
+				<button
+					class="btn btn-secondary btn-sm"
+					hx-patch={ "/tasks/" + t.TaskID + "/status" }
+					hx-vals={ `{"status":"doing"}` }
+				>→ Doing</button>
+			}
+		</div>
+	</div>
+}
+
+templ tasksBoardEmptyState() {
+	<div class="empty-state">
+		<div class="empty-state-icon">✅</div>
+		<div class="empty-state-title">Không có task nào</div>
+		<div class="empty-state-desc">
+			Hãy <button
+				class="btn btn-primary btn-sm"
+				hx-get="/tasks/modal/create"
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>tạo task mới</button> hoặc lọc theo tiêu chí khác.
+		</div>
+	</div>
+}
+
+// isBoardEmpty returns true when all columns are empty.
+func isBoardEmpty(grouped map[string][]domain.Task) bool {
+	for _, tasks := range grouped {
+		if len(tasks) > 0 {
+			return false
+		}
+	}
+	return true
+}

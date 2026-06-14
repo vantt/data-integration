@@ -1,0 +1,298 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// ── M09 Assign Conversation ───────────────────────────────────────────────────
+
+// ModalAssignConversation renders M09 — assign or re-assign a conversation to a staff user.
+templ ModalAssignConversation(convID string, conv *domain.Conversation, users []domain.AppUser) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Gán NV xử lý</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post={ "/inbox/" + convID + "/assign" }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					if conv != nil && conv.AssigneeUserID != nil {
+						<p class="text-muted mb-8">NV hiện tại: <strong>{ *conv.AssigneeUserID }</strong></p>
+					}
+					<label class="form-label">Gán cho</label>
+					if len(users) == 0 {
+						<p class="text-muted">Chưa có NV nào trong hệ thống.</p>
+						<input type="hidden" name="assignee_user_id" value=""/>
+					} else {
+						<select name="assignee_user_id" class="form-control" required>
+							<option value="">-- Chọn NV --</option>
+							for _, u := range users {
+								<option
+									value={ u.UserID }
+									selected?={ conv != nil && conv.AssigneeUserID != nil && *conv.AssigneeUserID == u.UserID }
+								>{ u.FullName } ({ u.Role })</option>
+							}
+						</select>
+					}
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Gán</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M10 Close Conversation ────────────────────────────────────────────────────
+
+// ModalCloseConversation renders M10 — close a conversation with an optional result note.
+templ ModalCloseConversation(convID string, conv *domain.Conversation) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Đóng hội thoại</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post={ "/inbox/" + convID + "/close" }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					<label class="form-label">Kết quả xử lý (tuỳ chọn)</label>
+					<textarea name="result" class="form-control" rows="3" placeholder="Đã giải quyết thắc mắc về đơn hàng..."></textarea>
+					if conv != nil && conv.PartyID != nil {
+						<div class="mt-8">
+							<label class="form-check">
+								<input type="checkbox" name="log_activity" value="1" checked/>
+								<span>Ghi vào activity timeline của khách</span>
+							</label>
+						</div>
+					}
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-danger">Đóng hội thoại</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M11 Link Party to Conversation ───────────────────────────────────────────
+
+// ModalLinkParty renders M11 — search and link a party to a conversation.
+templ ModalLinkParty(convID string, conv *domain.Conversation) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal modal-wide" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Gắn khách vào hội thoại</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<div class="modal-body">
+				<input
+					type="search"
+					class="form-control"
+					placeholder="🔍 Tìm theo SĐT, tên, email..."
+					name="q"
+					hx-get={ "/inbox/" + convID + "/parties/search" }
+					hx-target="#party-search-results"
+					hx-trigger="input changed delay:300ms"
+				/>
+				<div id="party-search-results" class="mt-8"></div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+			</div>
+		</div>
+	</div>
+}
+
+// PartySearchResults renders the live search results inside M11.
+// convID is required to build the correct hx-post URL for link-party.
+templ PartySearchResults(parties []domain.Party, convID string) {
+	if len(parties) == 0 {
+		<div class="text-muted">Không tìm thấy khách hàng nào.</div>
+	} else {
+		<div class="party-search-list">
+			for _, p := range parties {
+				<div class="party-search-row">
+					<div class="party-search-info">
+						<strong>{ p.DisplayName }</strong>
+						<span class="text-muted">{ p.PrimaryPhone }</span>
+					</div>
+					<form
+						hx-post={ "/inbox/" + convID + "/link-party" }
+						style="display:inline"
+					>
+						<input type="hidden" name="party_id" value={ p.PartyID }/>
+						<button type="submit" class="btn btn-primary btn-sm">Chọn</button>
+					</form>
+				</div>
+			}
+		</div>
+	}
+}
+
+// ── M08 Log Activity ──────────────────────────────────────────────────────────
+
+// ModalLogActivity renders M08 — log an activity for a party.
+// convID may be empty when invoked from Customer 360 (not a conversation context).
+templ ModalLogActivity(partyID, convID string) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Ghi log hoạt động</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post={ logActivityPostURL(partyID, convID) }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<input type="hidden" name="party_id" value={ partyID }/>
+				<div class="modal-body">
+					<label class="form-label">Loại *</label>
+					<div class="radio-group mb-8">
+						<label class="form-check">
+							<input type="radio" name="activity_type" value="call" checked/> Cuộc gọi
+						</label>
+						<label class="form-check">
+							<input type="radio" name="activity_type" value="note"/> Ghi chú
+						</label>
+						<label class="form-check">
+							<input type="radio" name="activity_type" value="chat"/> Chat
+						</label>
+						<label class="form-check">
+							<input type="radio" name="activity_type" value="email"/> Email
+						</label>
+					</div>
+					<label class="form-label">Kết quả / Nội dung *</label>
+					<textarea name="body" class="form-control" rows="4" placeholder="Khách xác nhận sẽ đặt tuần tới..." required></textarea>
+					<label class="form-label mt-8">Đơn liên quan (tuỳ chọn)</label>
+					<input type="text" name="related_order_code" class="form-control" placeholder="ORD-20060812"/>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Lưu</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M05 Create Task ───────────────────────────────────────────────────────────
+
+// ModalCreateTask renders M05 — create a new task.
+templ ModalCreateTask(prefillPartyID string) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Tạo task mới</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post="/tasks"
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					<label class="form-label">Tiêu đề *</label>
+					<input type="text" name="title" class="form-control" placeholder="Follow-up sau cuộc gọi" required/>
+					<label class="form-label mt-8">Khách hàng (ID, tuỳ chọn)</label>
+					<input type="text" name="party_id" class="form-control" value={ prefillPartyID } placeholder="party-uuid"/>
+					<label class="form-label mt-8">Due date</label>
+					<input type="datetime-local" name="due_at" class="form-control"/>
+					<label class="form-label mt-8">Ghi chú</label>
+					<textarea name="description" class="form-control" rows="2" placeholder="Chi tiết..."></textarea>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Lưu task</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M01 Merge Confirm ─────────────────────────────────────────────────────────
+
+// ModalMergeConfirm renders M01 — confirm party merge (Party B → Party A).
+templ ModalMergeConfirm(cand *domain.DedupCandidate, partyA, partyB *domain.Party) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal modal-wide" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Xác nhận gộp khách</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post={ "/dedup/" + cand.CandidateID + "/merge" }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					<div class="merge-compare">
+						<div class="merge-party">
+							<div class="merge-party-label">Party A (giữ lại)</div>
+							if partyA != nil {
+								<div><strong>{ partyA.DisplayName }</strong></div>
+								<div class="text-muted">{ partyA.PrimaryPhone }</div>
+								<div class="text-muted">{ partyA.PrimaryEmail }</div>
+							} else {
+								<div class="text-muted">Không tìm thấy</div>
+							}
+						</div>
+						<div class="merge-arrow">←</div>
+						<div class="merge-party">
+							<div class="merge-party-label">Party B (gộp vào)</div>
+							if partyB != nil {
+								<div><strong>{ partyB.DisplayName }</strong></div>
+								<div class="text-muted">{ partyB.PrimaryPhone }</div>
+								<div class="text-muted">{ partyB.PrimaryEmail }</div>
+							} else {
+								<div class="text-muted">Không tìm thấy</div>
+							}
+						</div>
+					</div>
+					<div class="mt-8 text-muted">
+						Match rule: <strong>{ cand.MatchRule }</strong> · Score: { formatScore(cand.MatchScore) }
+					</div>
+					<div class="alert alert-warning mt-8">
+						⚠ Party B sẽ bị ẩn (is_merged=true). Snapshot undo sẽ được lưu tự động.
+					</div>
+					<label class="form-check mt-8">
+						<input type="checkbox" name="confirm" value="1" required/>
+						<span>Tôi xác nhận muốn gộp 2 khách này</span>
+					</label>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-danger">Xác nhận Merge</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── pure helpers ──────────────────────────────────────────────────────────────
+
+func logActivityPostURL(partyID, convID string) string {
+	if convID != "" {
+		return "/inbox/" + convID + "/log-activity"
+	}
+	return "/customers/" + partyID + "/log-activity"
+}
+
+func formatScore(score float64) string {
+	if score >= 1.0 {
+		return "1.00"
+	}
+	s := fmt.Sprintf("%.2f", score)
+	return s
+}

@@ -258,3 +258,24 @@ func (s *ProfileService) UpdateCustomFieldDef(ctx context.Context, d *domain.Cus
 	}
 	return nil
 }
+
+// GetCustomFieldDef returns a single definition by field_id, or nil if not found.
+func (s *ProfileService) GetCustomFieldDef(ctx context.Context, fieldID string) (*domain.CustomFieldDef, error) {
+	return s.customFields.GetDef(ctx, fieldID)
+}
+
+// ListTags returns all tags optionally filtered by category (empty = all).
+func (s *ProfileService) ListTags(ctx context.Context, category string) ([]domain.Tag, error) {
+	return s.tags.ListTags(ctx, category)
+}
+
+// CreateTag inserts a new tag.
+func (s *ProfileService) CreateTag(ctx context.Context, t *domain.Tag) error {
+	if t.TagID == "" {
+		t.TagID = uuid.New().String()
+	}
+	if err := s.tags.CreateTag(ctx, t); err != nil {
+		return fmt.Errorf("profile service: create tag: %w", err)
+	}
+	return nil
+}

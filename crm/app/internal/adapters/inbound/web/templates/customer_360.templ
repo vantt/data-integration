@@ -252,31 +252,42 @@ templ P02OrderHistoryPanel(orders []domain.RecentOrder) {
 }
 
 // P03ActivityTimelinePanel renders the activity timeline tab.
-templ P03ActivityTimelinePanel(activities []domain.Activity) {
-	if len(activities) == 0 {
-		<div class="empty-state">
-			<div class="empty-state-icon">📅</div>
-			<div class="empty-state-title">Chưa có hoạt động nào</div>
-			<div class="empty-state-desc">Ghi log cuộc gọi, ghi chú, hoặc lần ghé thăm đầu tiên.</div>
+// partyID is passed so the "Log activity" button can open the correct modal.
+templ P03ActivityTimelinePanel(activities []domain.Activity, partyID string) {
+	<div>
+		<div class="flex-gap mb-8" style="justify-content:flex-end;">
+			<button
+				class="btn btn-secondary btn-sm"
+				hx-get={ fmt.Sprintf("/customers/%s/modal/log-activity", partyID) }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>+ Ghi hoạt động</button>
 		</div>
-	} else {
-		<div class="timeline">
-			for _, a := range activities {
-				<div class="timeline-item">
-					<div class="timeline-time">
-						{ formatICTHelper(a.OccurredAt) }
-						<span class={ "badge-pill " + activityTypeBadge(a.ActivityType) } style="margin-left:6px;">{ a.ActivityType }</span>
+		if len(activities) == 0 {
+			<div class="empty-state">
+				<div class="empty-state-icon">📅</div>
+				<div class="empty-state-title">Chưa có hoạt động nào</div>
+				<div class="empty-state-desc">Ghi log cuộc gọi, ghi chú, hoặc lần ghé thăm đầu tiên.</div>
+			</div>
+		} else {
+			<div class="timeline">
+				for _, a := range activities {
+					<div class="timeline-item">
+						<div class="timeline-time">
+							{ formatICTHelper(a.OccurredAt) }
+							<span class={ "badge-pill " + activityTypeBadge(a.ActivityType) } style="margin-left:6px;">{ a.ActivityType }</span>
+						</div>
+						<div class="timeline-content">
+							if a.Subject != "" {
+								<strong>{ a.Subject }</strong> —{ " " }
+							}
+							{ a.Body }
+						</div>
 					</div>
-					<div class="timeline-content">
-						if a.Subject != "" {
-							<strong>{ a.Subject }</strong> —{ " " }
-						}
-						{ a.Body }
-					</div>
-				</div>
-			}
-		</div>
-	}
+				}
+			</div>
+		}
+	</div>
 }
 
 // P04TasksPanel renders the tasks tab for one party.

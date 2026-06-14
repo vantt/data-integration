@@ -3,14 +3,15 @@
 package web
 
 import (
+	"html"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/vantt/data-integration/crm/app/internal/domain"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/inbound/web/templates"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
 )
 
 func init() {
@@ -52,8 +53,9 @@ func (d *Deps) handleMarkTaskDone(w http.ResponseWriter, r *http.Request) {
 	task, err := d.Tasks.GetTask(r.Context(), taskID)
 	if err != nil || task == nil {
 		// Fallback: return a simple done indicator.
+		// html.EscapeString prevents XSS via a crafted taskID path segment.
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		_, _ = w.Write([]byte(`<div class="task-row done" id="task-` + taskID + `"><span class="text-muted">✓ Đã hoàn thành</span></div>`))
+		_, _ = w.Write([]byte(`<div class="task-row done" id="task-` + html.EscapeString(taskID) + `"><span class="text-muted">✓ Đã hoàn thành</span></div>`))
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

@@ -1,0 +1,363 @@
+package templates
+
+import (
+	"strings"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// ── M02 Create Party ──────────────────────────────────────────────────────────
+
+// ModalCreateParty renders M02 — create a new party from the customer list.
+templ ModalCreateParty() {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Tạo khách hàng mới</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post="/parties"
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					<label class="form-label">Tên hiển thị *</label>
+					<input type="text" name="display_name" class="form-control" required placeholder="Nguyễn Văn A"/>
+					<label class="form-label mt-8">Số điện thoại *</label>
+					<input type="tel" name="phone" class="form-control" required placeholder="0901234567"/>
+					<label class="form-label mt-8">Email</label>
+					<input type="email" name="email" class="form-control" placeholder="example@email.com"/>
+					<label class="form-label mt-8">Ghi chú nhanh</label>
+					<input type="text" name="note" class="form-control" placeholder="Tuỳ chọn"/>
+					<p class="text-muted text-sm mt-8">⚠ Nếu SĐT đã tồn tại, hệ thống sẽ cảnh báo.</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Tạo khách</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M04 Assign Owner ──────────────────────────────────────────────────────────
+
+// ModalAssignOwner renders M04 — assign owner to a party.
+templ ModalAssignOwner(partyID string, currentOwnerID *string, users []domain.AppUser) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Gán phụ trách</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post={ "/customers/" + partyID + "/assign-owner" }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					if currentOwnerID != nil && *currentOwnerID != "" {
+						<p class="text-muted mb-8">Phụ trách hiện tại: <strong>{ *currentOwnerID }</strong></p>
+					}
+					<label class="form-label">Chọn NV mới</label>
+					if len(users) == 0 {
+						<p class="text-muted">Chưa có NV nào trong hệ thống.</p>
+						<input type="hidden" name="owner_user_id" value=""/>
+					} else {
+						<select name="owner_user_id" class="form-control" required>
+							<option value="">-- Chọn NV --</option>
+							for _, u := range users {
+								<option
+									value={ u.UserID }
+									selected?={ currentOwnerID != nil && *currentOwnerID == u.UserID }
+								>{ u.FullName } ({ u.Role })</option>
+							}
+						</select>
+					}
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Lưu</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M07 Create / Edit Campaign ────────────────────────────────────────────────
+
+// ModalCreateCampaign renders M07 — create a new campaign.
+templ ModalCreateCampaign(segments []domain.Segment, users []domain.AppUser) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal modal-wide" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Tạo chiến dịch mới</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post="/campaigns"
+				hx-target="body"
+				hx-push-url="true"
+			>
+				<div class="modal-body">
+					<label class="form-label">Tên chiến dịch *</label>
+					<input type="text" name="name" class="form-control" required placeholder="React-Jul-2026"/>
+					<label class="form-label mt-8">Mục tiêu *</label>
+					<select name="objective" class="form-control" required>
+						<option value="">-- Chọn --</option>
+						for _, obj := range []string{"reactivation", "winback", "upsell", "crosssell"} {
+							<option value={ obj }>{ obj }</option>
+						}
+					</select>
+					<label class="form-label mt-8">Kênh *</label>
+					<select name="channel" class="form-control" required>
+						<option value="">-- Chọn --</option>
+						for _, ch := range []string{"messenger", "call", "email", "zalo"} {
+							<option value={ ch }>{ ch }</option>
+						}
+					</select>
+					<label class="form-label mt-8">Segment *</label>
+					<select name="segment_id" class="form-control" required>
+						<option value="">-- Chọn segment --</option>
+						for _, seg := range segments {
+							<option value={ seg.SegmentID }>{ seg.Name }</option>
+						}
+					</select>
+					<label class="form-label mt-8">Ngày bắt đầu *</label>
+					<input type="date" name="scheduled_at" class="form-control" required/>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Tạo &amp; Kích hoạt</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ModalEditCampaign renders M07 in edit mode for an existing campaign.
+templ ModalEditCampaign(campaign *domain.Campaign, segments []domain.Segment) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal modal-wide" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Sửa chiến dịch</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-patch={ "/campaigns/" + campaign.CampaignID }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					<label class="form-label">Tên chiến dịch *</label>
+					<input type="text" name="name" class="form-control" value={ campaign.Name } required/>
+					<label class="form-label mt-8">Mục tiêu *</label>
+					<select name="objective" class="form-control" required>
+						for _, obj := range []string{"reactivation", "winback", "upsell", "crosssell"} {
+							<option value={ obj } selected?={ campaign.Objective == obj }>{ obj }</option>
+						}
+					</select>
+					<label class="form-label mt-8">Kênh</label>
+					<select name="channel" class="form-control">
+						for _, ch := range []string{"messenger", "call", "email", "zalo"} {
+							<option value={ ch } selected?={ campaign.Channel == ch }>{ ch }</option>
+						}
+					</select>
+					<label class="form-label mt-8">Segment</label>
+					<select name="segment_id" class="form-control">
+						<option value="">-- Không --</option>
+						for _, seg := range segments {
+							<option value={ seg.SegmentID } selected?={ campaign.SegmentID != nil && *campaign.SegmentID == seg.SegmentID }>{ seg.Name }</option>
+						}
+					</select>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Lưu</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M12 Record Conversion ─────────────────────────────────────────────────────
+
+// ModalRecordConversion renders M12 — record a manual conversion for a campaign target.
+templ ModalRecordConversion(campaignID, partyID, partyName string) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Ghi chuyển đổi: { partyName }</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post={ "/campaigns/" + campaignID + "/targets/" + partyID + "/convert" }
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<input type="hidden" name="party_id" value={ partyID }/>
+				<div class="modal-body">
+					<label class="form-label">Mã đơn hàng</label>
+					<input type="text" name="order_code" class="form-control" placeholder="ORD-20060901"/>
+					<p class="text-muted text-sm mt-4">Để trống nếu muốn ghi thủ công.</p>
+					<label class="form-label mt-8">Doanh thu ước tính (đ)</label>
+					<input type="number" name="revenue_vnd" class="form-control" min="0" placeholder="0"/>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Ghi nhận</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M13 Custom Field Def ──────────────────────────────────────────────────────
+
+// ModalCustomFieldDef renders M13 — create or edit a custom field definition.
+templ ModalCustomFieldDef(field *domain.CustomFieldDef, isNew bool) {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				if isNew {
+					<span class="modal-title">Tạo custom field mới</span>
+				} else {
+					<span class="modal-title">Sửa custom field</span>
+				}
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				if isNew {
+					hx-post="/settings/custom-fields"
+				} else {
+					hx-patch={ "/settings/custom-fields/" + field.FieldID }
+				}
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					<label class="form-label">Field key (slug) *</label>
+					<input
+						type="text"
+						name="field_key"
+						class="form-control"
+						value={ fieldValue(field, "key") }
+						required
+						placeholder="da_nhay_cam"
+						if !isNew {
+							readonly
+						}
+					/>
+					<label class="form-label mt-8">Nhãn hiển thị *</label>
+					<input
+						type="text"
+						name="label"
+						class="form-control"
+						value={ fieldValue(field, "label") }
+						required
+						placeholder="Da nhạy cảm"
+					/>
+					<label class="form-label mt-8">Loại dữ liệu *</label>
+					<select name="data_type" class="form-control" required>
+						<option value="">-- Chọn --</option>
+						for _, dt := range domain.ValidCustomDataTypes {
+							<option value={ dt } selected?={ field != nil && field.DataType == dt }>{ dt }</option>
+						}
+					</select>
+					<label class="form-label mt-8">Bắt buộc</label>
+					<div class="radio-group">
+						<label class="form-check">
+							<input type="radio" name="is_required" value="true" checked?={ field != nil && field.IsRequired }/>
+							Có
+						</label>
+						<label class="form-check">
+							<input type="radio" name="is_required" value="false" checked?={ field == nil || !field.IsRequired }/>
+							Không
+						</label>
+					</div>
+					<label class="form-label mt-8">Tùy chọn (cho select/multiselect, mỗi dòng một giá trị)</label>
+					<textarea
+						name="options"
+						class="form-control"
+						rows="3"
+						placeholder="vip&#10;gold&#10;silver"
+					>{ fieldOptions(field) }</textarea>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Lưu</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── M14 Create Tag ────────────────────────────────────────────────────────────
+
+// ModalCreateTag renders M14 — create a new tag.
+templ ModalCreateTag() {
+	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
+		<div class="modal" onclick="event.stopPropagation()">
+			<div class="modal-header">
+				<span class="modal-title">Tạo tag mới</span>
+				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+			</div>
+			<form
+				hx-post="/settings/tags"
+				hx-target="#modal"
+				hx-swap="innerHTML"
+			>
+				<div class="modal-body">
+					<label class="form-label">Tag name (slug) *</label>
+					<input type="text" name="name" class="form-control" required placeholder="vip-repeat"/>
+					<label class="form-label mt-8">Category</label>
+					<input type="text" name="category" class="form-control" placeholder="customer-segment"/>
+					<label class="form-label mt-8">Màu (hex, tuỳ chọn)</label>
+					<div class="color-options">
+						<label class="form-check">
+							<input type="radio" name="color" value="#3b82f6"/> Xanh
+						</label>
+						<label class="form-check">
+							<input type="radio" name="color" value="#ef4444"/> Đỏ
+						</label>
+						<label class="form-check">
+							<input type="radio" name="color" value="#f59e0b"/> Vàng
+						</label>
+						<label class="form-check">
+							<input type="radio" name="color" value="#10b981"/> Xanh lá
+						</label>
+						<label class="form-check">
+							<input type="radio" name="color" value=""/> Không màu
+						</label>
+					</div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn-primary">Tạo tag</button>
+				</div>
+			</form>
+		</div>
+	</div>
+}
+
+// ── pure helpers ──────────────────────────────────────────────────────────────
+
+func fieldValue(f *domain.CustomFieldDef, field string) string {
+	if f == nil {
+		return ""
+	}
+	switch field {
+	case "key":
+		return f.FieldKey
+	case "label":
+		return f.Label
+	}
+	return ""
+}
+
+func fieldOptions(f *domain.CustomFieldDef) string {
+	if f == nil || len(f.Options) == 0 {
+		return ""
+	}
+	return strings.Join(f.Options, "\n")
+}

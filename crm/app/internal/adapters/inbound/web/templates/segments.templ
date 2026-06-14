@@ -1,0 +1,313 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// ── S08 Segments List ─────────────────────────────────────────────────────────
+
+// SegmentsPage renders S08 — Segments List.
+templ SegmentsPage(segments []domain.Segment, memberCounts map[string]int) {
+	@AppShell("S08", "Segments") {
+		@Topbar("🎯 Segments") {
+			<a
+				href="/segments/new"
+				class="btn btn-primary"
+			>+ Tạo segment</a>
+		}
+		<div class="content-area">
+			@SegmentsTable(segments, memberCounts)
+		</div>
+		<div id="modal"></div>
+	}
+}
+
+// SegmentsTable renders the segment list table (also used as HTMX fragment).
+templ SegmentsTable(segments []domain.Segment, memberCounts map[string]int) {
+	if len(segments) == 0 {
+		<div class="empty-state">
+			<p class="text-muted">Chưa có segment nào. <a href="/segments/new">Tạo ngay</a>.</p>
+		</div>
+	} else {
+		<table class="data-table">
+			<thead>
+				<tr>
+					<th>Tên</th>
+					<th>Loại</th>
+					<th>Thành viên</th>
+					<th>Cập nhật</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, seg := range segments {
+					<tr class="data-row" id={ "seg-" + seg.SegmentID }>
+						<td>
+							<a href={ templ.SafeURL("/segments/" + seg.SegmentID) }>{ seg.Name }</a>
+							if seg.Description != "" {
+								<div class="text-muted text-sm">{ truncStr(seg.Description, 60) }</div>
+							}
+						</td>
+						<td>
+							if seg.IsDynamic {
+								<span class="badge badge-active">dynamic</span>
+							} else {
+								<span class="badge badge-silver">static</span>
+							}
+						</td>
+						<td>{ fmt.Sprintf("%d", memberCounts[seg.SegmentID]) }</td>
+						<td>{ formatICTHelper(seg.UpdatedAt) }</td>
+						<td>
+							if seg.IsDynamic {
+								<button
+									class="btn btn-sm btn-secondary"
+									hx-post={ "/segments/" + seg.SegmentID + "/refresh" }
+									hx-target={ "#seg-" + seg.SegmentID }
+									hx-swap="outerHTML"
+								>↻ Refresh</button>
+							}
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	}
+}
+
+// SegmentRowRefreshed renders a single refreshed segment row (HTMX swap target).
+templ SegmentRowRefreshed(seg domain.Segment, memberCount int) {
+	<tr class="data-row" id={ "seg-" + seg.SegmentID }>
+		<td>
+			<a href={ templ.SafeURL("/segments/" + seg.SegmentID) }>{ seg.Name }</a>
+		</td>
+		<td>
+			if seg.IsDynamic {
+				<span class="badge badge-active">dynamic</span>
+			} else {
+				<span class="badge badge-silver">static</span>
+			}
+		</td>
+		<td>{ fmt.Sprintf("%d", memberCount) }</td>
+		<td>{ formatICTHelper(seg.UpdatedAt) }</td>
+		<td>
+			<button
+				class="btn btn-sm btn-secondary"
+				hx-post={ "/segments/" + seg.SegmentID + "/refresh" }
+				hx-target={ "#seg-" + seg.SegmentID }
+				hx-swap="outerHTML"
+			>↻ Refresh</button>
+		</td>
+	</tr>
+}
+
+// ── S09 Segment Builder ───────────────────────────────────────────────────────
+
+// SegmentBuilderPage renders S09 — Segment Builder (new or edit).
+templ SegmentBuilderPage(seg *domain.Segment, members []domain.SegmentMember, isNew bool) {
+	@AppShell("S08", "Segment Builder") {
+		@Topbar("") {
+			<a href="/segments" class="btn btn-sm btn-secondary">← Segments</a>
+			if isNew {
+				<span class="topbar-title">Tạo segment mới</span>
+			} else {
+				<span class="topbar-title">{ seg.Name }</span>
+			}
+		}
+		<div class="content-area">
+			<div class="builder-layout">
+				<div class="builder-rule-editor">
+					<form
+						if isNew {
+							hx-post="/segments"
+						} else {
+							hx-put={ "/segments/" + seg.SegmentID }
+						}
+						hx-target="body"
+						hx-push-url="true"
+					>
+						<div class="form-group">
+							<label class="form-label">Tên segment *</label>
+							<input
+								type="text"
+								name="name"
+								class="form-control"
+								value={ seg.Name }
+								required
+								placeholder="VD: Reactivation tháng 7"
+							/>
+						</div>
+						<div class="form-group mt-8">
+							<label class="form-label">Loại</label>
+							<div class="radio-group">
+								<label class="form-check">
+									<input type="radio" name="is_dynamic" value="true" checked?={ seg.IsDynamic }/>
+									Dynamic (rule tự động)
+								</label>
+								<label class="form-check">
+									<input type="radio" name="is_dynamic" value="false" checked?={ !seg.IsDynamic }/>
+									Static (thêm tay)
+								</label>
+							</div>
+						</div>
+						<div class="form-group mt-8">
+							<label class="form-label">Mô tả</label>
+							<input type="text" name="description" class="form-control" value={ seg.Description } placeholder="Tuỳ chọn"/>
+						</div>
+						<fieldset class="rule-fieldset mt-8">
+							<legend class="form-label">Điều kiện (AND — chỉ áp dụng cho Dynamic)</legend>
+							@segmentRuleFields(seg)
+						</fieldset>
+						<div class="form-actions mt-16">
+							<a href="/segments" class="btn btn-secondary">Hủy</a>
+							<button type="submit" class="btn btn-primary">
+								if isNew {
+									Tạo &amp; Lưu
+								} else {
+									Lưu thay đổi
+								}
+							</button>
+						</div>
+					</form>
+				</div>
+				<div class="builder-preview">
+					<div class="preview-header text-muted">Thành viên hiện tại: { fmt.Sprintf("%d", len(members)) }</div>
+					if len(members) > 0 {
+						<ul class="member-list">
+							for i, m := range members {
+								if i < 20 {
+									<li class="member-item text-sm">{ m.PartyID } <span class="badge badge-silver">{ m.Source }</span></li>
+								}
+							}
+							if len(members) > 20 {
+								<li class="text-muted text-sm">... và { fmt.Sprintf("%d", len(members)-20) } khác</li>
+							}
+						</ul>
+					} else {
+						<p class="text-muted text-sm">Chưa có thành viên nào. Lưu rồi Refresh để tính.</p>
+					}
+				</div>
+			</div>
+		</div>
+		<div id="modal"></div>
+	}
+}
+
+// segmentRuleFields renders the whitelisted rule input fields.
+templ segmentRuleFields(seg *domain.Segment) {
+	<div class="rule-fields">
+		<div class="form-group">
+			<label class="form-label">value_group (multi)</label>
+			<div class="checkbox-group">
+				for _, vg := range []string{"VIP", "GOLD", "SILVER", "BRONZE"} {
+					<label class="form-check">
+						<input
+							type="checkbox"
+							name="rule_value_group"
+							value={ vg }
+							checked?={ segmentHasValueGroup(seg, vg) }
+						/>
+						<span class={ valueGroupBadgeClassHelper(vg) }>{ vg }</span>
+					</label>
+				}
+			</div>
+		</div>
+		<div class="form-group mt-8">
+			<label class="form-label">customer_status</label>
+			<select name="rule_customer_status" class="form-control">
+				<option value="">-- Tất cả --</option>
+				for _, cs := range []string{"active", "at_risk", "churned"} {
+					<option value={ cs } selected?={ segmentHasCustomerStatus(seg, cs) }>{ cs }</option>
+				}
+			</select>
+		</div>
+		<div class="form-group mt-8">
+			<label class="form-label">days_since_last_order_gte</label>
+			<input
+				type="number"
+				name="rule_days_since"
+				class="form-control"
+				min="0"
+				value={ segmentDaysSince(seg) }
+				placeholder="VD: 60"
+			/>
+		</div>
+		<div class="form-group mt-8">
+			<label class="form-label">channel_preference</label>
+			<input
+				type="text"
+				name="rule_channel"
+				class="form-control"
+				value={ segmentChannelPref(seg) }
+				placeholder="messenger / zalo / ..."
+			/>
+		</div>
+	</div>
+}
+
+// pure helpers — no templ needed
+
+func segmentHasValueGroup(seg *domain.Segment, vg string) bool {
+	if seg == nil || seg.Definition == "" {
+		return false
+	}
+	return containsString(seg.Definition, `"`+vg+`"`)
+}
+
+func segmentHasCustomerStatus(seg *domain.Segment, cs string) bool {
+	if seg == nil || seg.Definition == "" {
+		return false
+	}
+	return containsString(seg.Definition, `"customer_status":"`+cs+`"`)
+}
+
+func segmentDaysSince(seg *domain.Segment) string {
+	if seg == nil || seg.Definition == "" {
+		return ""
+	}
+	// Extract numeric value after "days_since_last_order_gte":
+	idx := findStr(seg.Definition, `"days_since_last_order_gte":`)
+	if idx < 0 {
+		return ""
+	}
+	rest := seg.Definition[idx+len(`"days_since_last_order_gte":`):]
+	var n string
+	for _, c := range rest {
+		if c >= '0' && c <= '9' {
+			n += string(c)
+		} else if n != "" {
+			break
+		}
+	}
+	return n
+}
+
+func segmentChannelPref(seg *domain.Segment) string {
+	if seg == nil || seg.Definition == "" {
+		return ""
+	}
+	prefix := `"channel_preference":"`
+	idx := findStr(seg.Definition, prefix)
+	if idx < 0 {
+		return ""
+	}
+	rest := seg.Definition[idx+len(prefix):]
+	end := findStr(rest, `"`)
+	if end < 0 {
+		return rest
+	}
+	return rest[:end]
+}
+
+func containsString(s, sub string) bool {
+	return findStr(s, sub) >= 0
+}
+
+func findStr(s, sub string) int {
+	for i := 0; i <= len(s)-len(sub); i++ {
+		if s[i:i+len(sub)] == sub {
+			return i
+		}
+	}
+	return -1
+}

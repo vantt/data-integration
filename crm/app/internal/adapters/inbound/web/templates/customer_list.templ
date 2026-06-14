@@ -100,11 +100,11 @@ templ CustomerListPagination(total, page, pageSize int, query string) {
 	} else {
 		<div class="pagination">
 			if page > 1 {
-				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page-1, query)) } class="btn btn-secondary btn-sm">← Trước</a>
+				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page-1, queryEscapeHelper(query))) } class="btn btn-secondary btn-sm">← Trước</a>
 			}
 			<span>Trang { fmt.Sprintf("%d", page) } / { fmt.Sprintf("%d", totalPages(total, pageSize)) }</span>
 			if page < totalPages(total, pageSize) {
-				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page+1, query)) } class="btn btn-secondary btn-sm">Sau →</a>
+				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page+1, queryEscapeHelper(query))) } class="btn btn-secondary btn-sm">Sau →</a>
 			}
 		</div>
 	}

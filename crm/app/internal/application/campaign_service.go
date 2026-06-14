@@ -268,6 +268,46 @@ func (s *CampaignService) ScanConversions(ctx context.Context, campaignID string
 	return converted, nil
 }
 
+// GetTarget returns a single campaign target by (campaignID, partyID), or nil if not found.
+// Used by the web adapter to load target state before recording a manual conversion.
+func (s *CampaignService) GetTarget(ctx context.Context, campaignID, partyID string) (*domain.CampaignTarget, error) {
+	t, err := s.campaignRepo.GetTarget(ctx, campaignID, partyID)
+	if err != nil {
+		return nil, fmt.Errorf("campaign service: get target: %w", err)
+	}
+	return t, nil
+}
+
+// RecordConversion persists a manually confirmed conversion for a target.
+// Sets status=converted, stores order_code and revenue when provided.
+// Returns a ValidationError when the target is already in a terminal state.
+func (s *CampaignService) RecordConversion(ctx context.Context, t *domain.CampaignTarget) error {
+	if t == nil {
+		return domain.NewValidationError("target must not be nil")
+	}
+	existing, err := s.campaignRepo.GetTarget(ctx, t.CampaignID, t.PartyID)
+	if err != nil {
+		return fmt.Errorf("campaign service: record conversion get target: %w", err)
+	}
+	if existing == nil {
+		return domain.NewValidationError(fmt.Sprintf("target (%s, %s) not found", t.CampaignID, t.PartyID))
+	}
+	if !domain.CanReceiveConversion(existing.Status) {
+		return domain.NewValidationError(fmt.Sprintf("target already in terminal status %q", existing.Status))
+	}
+	now := utcNow()
+	existing.Status = "converted"
+	existing.LastTouchAt = &now
+	existing.ConvertedAt = &now
+	if t.ConvertedOrderCode != nil {
+		existing.ConvertedOrderCode = t.ConvertedOrderCode
+	}
+	if t.ConvertedRevenueVND != nil {
+		existing.ConvertedRevenueVND = t.ConvertedRevenueVND
+	}
+	return s.campaignRepo.UpdateTarget(ctx, existing)
+}
+
 // GetROI returns a summary of a campaign's target statuses and total converted revenue.
 func (s *CampaignService) GetROI(ctx context.Context, campaignID string) (*domain.CampaignROI, error) {
 	targets, err := s.campaignRepo.ListTargets(ctx, campaignID)
