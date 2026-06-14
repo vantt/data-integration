@@ -240,6 +240,52 @@ func (r *CacheRepo) fetchRecentOrders(ctx context.Context, customerID int64) ([]
 	return out, nil
 }
 
+// ListAllActionQueue returns every row from cache.wh_action_queue.
+// Returns empty slice when table is absent (graceful-empty).
+func (r *CacheRepo) ListAllActionQueue(ctx context.Context) ([]domain.ActionQueueItem, error) {
+	const q = `
+		SELECT action_id, customer_key, action_type, rationale_vi,
+		       value_at_stake_vnd, priority, generated_date, refreshed_at
+		FROM cache.wh_action_queue
+		ORDER BY priority ASC`
+
+	rows, err := r.db.SQLDB().QueryContext(ctx, q)
+	if err != nil {
+		if isMissingTable(err) {
+			return []domain.ActionQueueItem{}, nil
+		}
+		return nil, fmt.Errorf("cache repo: list all actions: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.ActionQueueItem
+	for rows.Next() {
+		var a domain.ActionQueueItem
+		var rationale, genDate, refreshed sql.NullString
+		var valueAtStake, priority sql.NullInt64
+
+		if err := rows.Scan(
+			&a.ActionID, &a.CustomerKey, &a.ActionType,
+			&rationale, &valueAtStake, &priority, &genDate, &refreshed,
+		); err != nil {
+			return nil, fmt.Errorf("cache repo: scan all actions: %w", err)
+		}
+		a.RationaleVI = rationale.String
+		a.ValueAtStakeVND = valueAtStake.Int64
+		a.Priority = int(priority.Int64)
+		a.GeneratedDate = genDate.String
+		a.RefreshedAt = refreshed.String
+		out = append(out, a)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("cache repo: all actions rows: %w", err)
+	}
+	if out == nil {
+		out = []domain.ActionQueueItem{}
+	}
+	return out, nil
+}
+
 // ListPartySeed returns all rows from cache.wh_party_seed.
 // Returns empty slice when table is absent (cache not yet populated).
 func (r *CacheRepo) ListPartySeed(ctx context.Context) ([]domain.PartySeed, error) {

@@ -20,4 +20,9 @@ type CacheRepository interface {
 	// ListPartySeed returns all rows from wh_party_seed that the seed consumer
 	// has not yet processed.  Returns an empty slice when the table is absent.
 	ListPartySeed(ctx context.Context) ([]domain.PartySeed, error)
+
+	// ListAllActionQueue returns all rows from wh_action_queue regardless of customer.
+	// Used by GenerateTasksFromActionQueue to batch-convert actions to tasks.
+	// Returns an empty slice (no error) when the table is absent.
+	ListAllActionQueue(ctx context.Context) ([]domain.ActionQueueItem, error)
 }

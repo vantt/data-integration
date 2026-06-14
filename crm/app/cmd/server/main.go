@@ -71,6 +71,22 @@ func main() {
 	insightHandler := inboundhttp.NewInsightHandler(partyRepo, cacheRepo)
 	insightHandler.RegisterRoutes(r)
 
+	// Phase 05 — activity, task, conversation/inbox + Messenger ingest.
+	activityRepo := sqlite.NewActivityRepo(db)
+	activitySvc := application.NewActivityService(activityRepo)
+	activityHandler := inboundhttp.NewActivityHandler(activitySvc, activitySvc)
+	activityHandler.RegisterRoutes(r)
+
+	taskRepo := sqlite.NewTaskRepo(db)
+	taskSvc := application.NewTaskService(taskRepo, partyRepo, cacheRepo)
+	taskHandler := inboundhttp.NewTaskHandler(taskSvc, taskSvc, taskSvc)
+	taskHandler.RegisterRoutes(r)
+
+	convRepo := sqlite.NewConversationRepo(db)
+	convSvc := application.NewConversationService(convRepo, partyRepo)
+	convHandler := inboundhttp.NewConversationHandler(convSvc, convSvc, convSvc)
+	convHandler.RegisterRoutes(r)
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),
 		Handler:      r,

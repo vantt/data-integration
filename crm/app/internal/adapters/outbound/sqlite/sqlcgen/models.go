@@ -8,6 +8,21 @@ import (
 	"database/sql"
 )
 
+type CrmActivity struct {
+	ActivityID       string         `json:"activity_id"`
+	PartyID          string         `json:"party_id"`
+	ActivityType     string         `json:"activity_type"`
+	Direction        sql.NullString `json:"direction"`
+	Channel          sql.NullString `json:"channel"`
+	Subject          sql.NullString `json:"subject"`
+	Body             sql.NullString `json:"body"`
+	Outcome          sql.NullString `json:"outcome"`
+	RelatedOrderCode sql.NullString `json:"related_order_code"`
+	StaffUserID      sql.NullString `json:"staff_user_id"`
+	OccurredAt       string         `json:"occurred_at"`
+	CreatedAt        string         `json:"created_at"`
+}
+
 type CrmAppUser struct {
 	UserID    string        `json:"user_id"`
 	StaffID   sql.NullInt64 `json:"staff_id"`
@@ -17,6 +32,20 @@ type CrmAppUser struct {
 	IsActive  int64         `json:"is_active"`
 	CreatedAt string        `json:"created_at"`
 	UpdatedAt string        `json:"updated_at"`
+}
+
+type CrmConversation struct {
+	ConversationID   string         `json:"conversation_id"`
+	PartyID          sql.NullString `json:"party_id"`
+	Channel          string         `json:"channel"`
+	ExternalThreadID string         `json:"external_thread_id"`
+	PageID           sql.NullString `json:"page_id"`
+	Status           string         `json:"status"`
+	AssigneeUserID   sql.NullString `json:"assignee_user_id"`
+	LastMessageAt    sql.NullString `json:"last_message_at"`
+	UnreadCount      int64          `json:"unread_count"`
+	CreatedAt        string         `json:"created_at"`
+	UpdatedAt        string         `json:"updated_at"`
 }
 
 type CrmCustomFieldDef struct {
@@ -55,6 +84,17 @@ type CrmDedupCandidate struct {
 	ReviewedBy  sql.NullString `json:"reviewed_by"`
 	ReviewedAt  sql.NullString `json:"reviewed_at"`
 	CreatedAt   string         `json:"created_at"`
+}
+
+type CrmMessage struct {
+	MessageID         string         `json:"message_id"`
+	ConversationID    string         `json:"conversation_id"`
+	ExternalMessageID sql.NullString `json:"external_message_id"`
+	Direction         sql.NullString `json:"direction"`
+	SenderRef         sql.NullString `json:"sender_ref"`
+	Body              sql.NullString `json:"body"`
+	Attachments       sql.NullString `json:"attachments"`
+	SentAt            string         `json:"sent_at"`
 }
 
 type CrmNote struct {
@@ -140,4 +180,21 @@ type CrmTag struct {
 	Name     string         `json:"name"`
 	Category sql.NullString `json:"category"`
 	Color    sql.NullString `json:"color"`
+}
+
+type CrmTask struct {
+	TaskID         string         `json:"task_id"`
+	PartyID        sql.NullString `json:"party_id"`
+	Title          string         `json:"title"`
+	Description    sql.NullString `json:"description"`
+	DueAt          sql.NullString `json:"due_at"`
+	Priority       int64          `json:"priority"`
+	Status         string         `json:"status"`
+	AssigneeUserID sql.NullString `json:"assignee_user_id"`
+	Source         string         `json:"source"`
+	SourceRef      sql.NullString `json:"source_ref"`
+	CreatedBy      sql.NullString `json:"created_by"`
+	CreatedAt      string         `json:"created_at"`
+	UpdatedAt      string         `json:"updated_at"`
+	CompletedAt    sql.NullString `json:"completed_at"`
 }

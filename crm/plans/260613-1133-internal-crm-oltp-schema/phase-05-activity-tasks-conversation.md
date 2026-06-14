@@ -4,7 +4,7 @@
 
 ## Overview
 - **Priority:** P1
-- **Status:** ⬜ (cần Phase 02 party)
+- **Status:** ✅ DONE — migration 0004 (activity/task/conversation/message + CHECK + unique source_ref), task-gen từ `cache.wh_action_queue` (idempotent, party-resolve), Messenger parse+ingest (psid→party, echo-safe thread-key, atomic unread), inbox assign/close, 6 endpoint, tests PASS. **Live-FB hoãn**: parser sẵn, cần token/webhook (xem TODO trong `messenger_parser.go`). Migration thực tế = 0004 (DDL trong doc đánh số minh hoạ cũ).
 - Flow tác nghiệp: nhật ký tương tác, giao việc follow-up, và **theo dõi hội thoại** (chat) gắn với khách. Worklist follow-up có thể sinh từ `wh_cache.action_queue`.
 - **Chat: v1 chỉ Messenger** (Shopee + Zalo để sau). Schema `conversation/message` tổng quát theo `channel` → thêm 2 kênh sau chỉ là viết adapter, không đổi schema.
 
