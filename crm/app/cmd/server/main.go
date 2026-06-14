@@ -66,6 +66,11 @@ func main() {
 	c360Handler := inboundhttp.NewCustomer360Handler(profileSvc, profileSvc, profileSvc, profileSvc, profileSvc, partyRepo)
 	c360Handler.RegisterRoutes(r)
 
+	// Phase 04 — cache insight endpoint (GET /api/parties/{id}/insight).
+	cacheRepo := sqlite.NewCacheRepo(db)
+	insightHandler := inboundhttp.NewInsightHandler(partyRepo, cacheRepo)
+	insightHandler.RegisterRoutes(r)
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),
 		Handler:      r,

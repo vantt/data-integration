@@ -5,3 +5,5 @@
 *.exe
 __pycache__/
 .venv/
+/sync/.venv/
+*.duckdb

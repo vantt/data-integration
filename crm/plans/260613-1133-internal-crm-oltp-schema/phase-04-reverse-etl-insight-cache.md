@@ -4,7 +4,7 @@
 
 ## Overview
 - **Priority:** P0 (giá trị "deep insight" + dữ liệu order/customer/product cho CRM nằm ở đây)
-- **Status:** ⬜
+- **Status:** ✅ DONE — Python reverse-ETL (`crm/sync/`: duckdb_reader read-only + pinned cols fail-fast, sqlite_upsert idempotent, orchestrator + `wh_sync_run` + 30d trim, order HWM `>=`), `cache.db` schema (insight + order/customer/product + party_seed), Go seed-consumer (`cmd/syncparties`, 1-writer crm.db) + cache insight read (graceful-empty), 45 test (Go 39 + pytest 6) PASS, code-review fixed. Build+test bằng fixture DuckDB (không có olap.duckdb thật ở máy này — chạy data thật khi deploy).
 - `cache.db` = **mọi dữ liệu gốc-warehouse mà CRM cần ĐỌC** (read-only), gồm 2 nhóm:
   - **Nhóm 2 — Insight đã tính:** `wh_*_insight`, `wh_action_queue`.
   - **Nhóm 3 — Quan hệ gốc:** `wh_customer_base`, `wh_product`, `wh_order` (header). Đây KHÔNG phải insight — là master/transactional data Sapo→warehouse.
