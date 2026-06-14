@@ -4,7 +4,7 @@
 
 ## Overview
 - **Priority:** P1
-- **Status:** ⬜ (cần Phase 02 party + Phase 04 insight)
+- **Status:** ✅ Segments + Campaigns DONE · ⏸ **Ads HOÃN** (chưa làm `crm_ad_*`). Migration 0005 (segment/segment_member/campaign/campaign_target), SegmentService (rule evaluator whitelist + parameterized, injection-safe; manual-member preserved khi refresh; reactivation = khách đã từng mua, no-order bị loại có chủ đích), CampaignService (GenerateTargets loại consent=0, ScanConversions theo ICT date_key + tôn trọng terminal state, ROI), tests PASS, code-review fixed. Ads (`ad_campaign/spend/lead/attribution`) làm sau khi cần.
 - Biến insight thành hành động bán lại: tạo **tệp khách** (segment), chạy **chiến dịch reactivation/winback/upsell**, đo kết quả; và **theo dõi ads** + attribution mà warehouse không có.
 
 ## Key Insights

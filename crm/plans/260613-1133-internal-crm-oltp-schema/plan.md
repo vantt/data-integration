@@ -68,7 +68,7 @@ flowchart LR
 | 03 | [Customer 360 + custom fields + tags](phase-03-customer-360-custom-fields-tags.md) | ✅ | `customer_profile`/`custom_field_def`/`tag`/`note`, custom-JSON validate, `party_360` view (crm-only), 32 test |
 | 04 | [Reverse-ETL warehouse read-cache](phase-04-reverse-etl-insight-cache.md) | ✅ | Python reverse-ETL → `cache.db` (`wh_*` insight+order+customer+product), Go seed-consumer + insight read (graceful-empty), 45 test |
 | 05 | [Activity + tasks + chat tracking](phase-05-activity-tasks-conversation.md) | ✅ | `activity`/`task`/`conversation`/`message`, task-gen từ action_queue, Messenger ingest (parse+psid→party, echo-safe), inbox; live-FB seam (TODO token) |
-| 06 | [Segments + reactivation + ads tracking](phase-06-segments-campaigns-ads.md) | ⬜ | `segment`, `campaign`, `ad_campaign`, `ad_attribution` |
+| 06 | [Segments + reactivation + ads tracking](phase-06-segments-campaigns-ads.md) | ✅ Segments+Campaign · ⏸ Ads hoãn | `segment` (rule eval whitelist), `campaign`, `campaign_target` (consent-gated, conversion ROI từ wh_order_hdr) |
 | 07 | [Sapo 2-chiều write-back (hoãn sau v1)](phase-07-sapo-writeback-sync.md) | ⬜ | `sync_outbox`, `writeback_map`; adapter Sapo (hexagonal) |
 | BL | Backlog — CRM enrichment → warehouse (ingestion pipeline mới) | 🔮 | luồng ngược để re-analysis, làm SAU |
 

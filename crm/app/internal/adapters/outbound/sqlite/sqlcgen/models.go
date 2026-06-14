@@ -34,6 +34,30 @@ type CrmAppUser struct {
 	UpdatedAt string        `json:"updated_at"`
 }
 
+type CrmCampaign struct {
+	CampaignID  string         `json:"campaign_id"`
+	Name        string         `json:"name"`
+	Objective   string         `json:"objective"`
+	Channel     sql.NullString `json:"channel"`
+	SegmentID   sql.NullString `json:"segment_id"`
+	Status      string         `json:"status"`
+	ScheduledAt sql.NullString `json:"scheduled_at"`
+	CreatedBy   sql.NullString `json:"created_by"`
+	CreatedAt   string         `json:"created_at"`
+	UpdatedAt   string         `json:"updated_at"`
+}
+
+type CrmCampaignTarget struct {
+	CampaignID          string         `json:"campaign_id"`
+	PartyID             string         `json:"party_id"`
+	Status              string         `json:"status"`
+	AssignedUserID      sql.NullString `json:"assigned_user_id"`
+	LastTouchAt         sql.NullString `json:"last_touch_at"`
+	ConvertedOrderCode  sql.NullString `json:"converted_order_code"`
+	ConvertedRevenueVnd sql.NullInt64  `json:"converted_revenue_vnd"`
+	ConvertedAt         sql.NullString `json:"converted_at"`
+}
+
 type CrmConversation struct {
 	ConversationID   string         `json:"conversation_id"`
 	PartyID          sql.NullString `json:"party_id"`
@@ -173,6 +197,24 @@ type CrmPartyTag struct {
 	TagID    string         `json:"tag_id"`
 	TaggedBy sql.NullString `json:"tagged_by"`
 	TaggedAt string         `json:"tagged_at"`
+}
+
+type CrmSegment struct {
+	SegmentID   string         `json:"segment_id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	IsDynamic   int64          `json:"is_dynamic"`
+	Definition  sql.NullString `json:"definition"`
+	OwnerUserID sql.NullString `json:"owner_user_id"`
+	CreatedAt   string         `json:"created_at"`
+	UpdatedAt   string         `json:"updated_at"`
+}
+
+type CrmSegmentMember struct {
+	SegmentID string `json:"segment_id"`
+	PartyID   string `json:"party_id"`
+	Source    string `json:"source"`
+	AddedAt   string `json:"added_at"`
 }
 
 type CrmTag struct {

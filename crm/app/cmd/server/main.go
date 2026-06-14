@@ -87,6 +87,17 @@ func main() {
 	convHandler := inboundhttp.NewConversationHandler(convSvc, convSvc, convSvc)
 	convHandler.RegisterRoutes(r)
 
+	// Phase 06 — segments + reactivation campaigns.
+	segmentRepo := sqlite.NewSegmentRepo(db)
+	segmentSvc := application.NewSegmentService(segmentRepo, db.SQLDB())
+	segmentHandler := inboundhttp.NewSegmentHandler(segmentSvc, segmentSvc, segmentSvc)
+	segmentHandler.RegisterRoutes(r)
+
+	campaignRepo := sqlite.NewCampaignRepo(db)
+	campaignSvc := application.NewCampaignService(campaignRepo, segmentRepo, partyRepo, db.SQLDB())
+	campaignHandler := inboundhttp.NewCampaignHandler(campaignSvc, campaignSvc)
+	campaignHandler.RegisterRoutes(r)
+
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),
 		Handler:      r,
