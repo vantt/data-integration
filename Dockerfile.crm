@@ -1,0 +1,82 @@
+# CRM service — multi-stage build (Go app + Python reverse-ETL)
+# Build context = repo root (.) — mirrors other first-party services.
+
+# ─── Stage 1: Go build ────────────────────────────────────────────────────────
+FROM golang:1.25 AS go-builder
+
+WORKDIR /src
+
+# Allow Go to auto-download the toolchain version required by go.mod (1.26.x).
+ENV GOTOOLCHAIN=auto
+
+# Install templ code generator at the pinned version from go.mod.
+RUN go install github.com/a-h/templ/cmd/templ@v0.3.1020
+
+# Copy Go module files first for layer caching.
+COPY crm/go.mod crm/go.sum ./crm/
+RUN cd crm && go mod download
+
+# Copy full CRM source tree.
+COPY crm/ ./crm/
+
+# Regenerate templ templates (bakes fresh _templ.go from .templ sources).
+RUN cd crm && templ generate ./...
+
+# Build static binaries (CGO_ENABLED=0 — modernc.org/sqlite, pure Go).
+RUN cd crm && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/crm-server    ./app/cmd/server     && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/syncparties   ./app/cmd/syncparties && \
+    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    go build -trimpath -ldflags="-s -w" -o /out/crm-migrate   ./app/cmd/migrate
+
+# ─── Stage 2: Runtime image ───────────────────────────────────────────────────
+# python:3.12-slim gives us Python + pip for the reverse-ETL; Go binaries are static.
+FROM python:3.12-slim
+
+# Install duckdb for the Python reverse-ETL (exclude dev/test deps).
+# Pin to a version compatible with the warehouse (>=1.0 per requirements.txt).
+RUN pip install --no-cache-dir "duckdb>=1.0,<2.0"
+
+WORKDIR /app
+
+# Copy Go static binaries.
+COPY --from=go-builder /out/crm-server   /app/crm-server
+COPY --from=go-builder /out/syncparties  /app/syncparties
+COPY --from=go-builder /out/crm-migrate  /app/crm-migrate
+
+# Copy Python reverse-ETL (sync package + schema DDL).
+# Placed under /app/crm/sync/ so `python -m crm.sync.reverse_etl_warehouse_to_crm`
+# resolves correctly when PYTHONPATH=/app.
+COPY crm/sync/__init__.py          /app/crm/sync/__init__.py
+COPY crm/sync/config.py            /app/crm/sync/config.py
+COPY crm/sync/duckdb_reader.py     /app/crm/sync/duckdb_reader.py
+COPY crm/sync/sqlite_upsert.py     /app/crm/sync/sqlite_upsert.py
+COPY crm/sync/reverse_etl_warehouse_to_crm.py /app/crm/sync/reverse_etl_warehouse_to_crm.py
+COPY crm/sync/cache_schema.sql     /app/crm/sync/cache_schema.sql
+
+# Stub __init__.py for the top-level crm package so Python module resolution works.
+RUN echo "" > /app/crm/__init__.py
+
+# Entrypoint and refresh scripts.
+COPY crm/entrypoint.sh /app/entrypoint.sh
+COPY crm/refresh.sh    /app/refresh.sh
+RUN chmod +x /app/entrypoint.sh /app/refresh.sh
+
+# Environment defaults (overridable via docker-compose env:).
+ENV CRM_DATA_DIR=/data \
+    CRM_PORT=8090 \
+    CRM_OLAP_PATH=/app/var/data_lake/serving/olap.duckdb \
+    CRM_CACHE_DB=/data/cache.db \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    TZ=Asia/Ho_Chi_Minh
+
+EXPOSE 8090
+
+# Liveness check — JSON healthz endpoint.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD python3 -c "import urllib.request,sys; r=urllib.request.urlopen('http://127.0.0.1:8090/healthz',timeout=4); sys.exit(0 if r.status==200 else 1)" || exit 1
+
+ENTRYPOINT ["/app/entrypoint.sh"]

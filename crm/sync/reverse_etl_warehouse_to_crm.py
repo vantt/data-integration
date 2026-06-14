@@ -90,12 +90,20 @@ def _build_party_seed_rows(
     Derive wh_party_seed entries from customer_base rows.
     Each distinct customer_id → one seed row (last customer_key wins on duplicates).
     """
+    # The warehouse customer_id is VARCHAR and may hold a non-numeric sentinel
+    # (e.g. 'Unknown' for the guest/unmapped bucket). Such rows cannot seed a
+    # crm_party_identity (no real Sapo customer_id) — skip them rather than crash.
     seen: dict[int, str] = {}
     for row in customer_base_rows:
         cid = row.get("customer_id")
         ckey = row.get("customer_key")
-        if cid is not None and ckey is not None:
-            seen[int(cid)] = str(ckey)
+        if cid is None or ckey is None:
+            continue
+        try:
+            cid_int = int(cid)
+        except (ValueError, TypeError):
+            continue
+        seen[cid_int] = str(ckey)
 
     return [
         {"customer_id": cid, "customer_key": ckey, "seen_at": utc_now}
