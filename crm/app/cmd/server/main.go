@@ -19,6 +19,7 @@ import (
 
 	inboundhttp "github.com/vantt/data-integration/crm/app/internal/adapters/inbound/http"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/inbound/web"
+	"github.com/vantt/data-integration/crm/app/internal/adapters/outbound/refresh"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/outbound/sqlite"
 	"github.com/vantt/data-integration/crm/app/internal/application"
 )
@@ -58,6 +59,13 @@ func main() {
 	r.Use(middleware.Recoverer)
 
 	r.Get("/healthz", inboundhttp.HealthHandler(db))
+
+	// Admin endpoint — POST /admin/refresh triggers reverse-ETL + syncparties
+	// on demand (used by Dagster after the warehouse serving layer updates).
+	// Shells out to refresh.sh; optionally protected by CRM_REFRESH_TOKEN.
+	shellRefresher := refresh.NewShellRefresher(os.Getenv("CRM_REFRESH_SCRIPT"))
+	adminHandler := inboundhttp.NewAdminHandler(shellRefresher, os.Getenv("CRM_REFRESH_TOKEN"))
+	adminHandler.RegisterRoutes(r)
 
 	// Dedup endpoints.
 	dedupHandler := inboundhttp.NewDedupHandler(dedupRepo, mergeService)

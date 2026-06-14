@@ -32,6 +32,13 @@ crm/
 | DB (cache) | SQLite WAL — `cache.db` (warehouse read-cache, ATTACH read-only) |
 | Reverse-ETL | Python — reads `olap.duckdb` read-only, writes `cache.db` |
 
+## Admin refresh endpoint
+
+Dagster triggers the reverse-ETL + syncparties on demand via
+`POST /admin/refresh` (header `X-Refresh-Token: $CRM_REFRESH_TOKEN`) after the
+warehouse serving layer updates. Synchronous; returns `{"status":"ok",...}` on
+success, `409 {"status":"busy"}` if a refresh is already running, `401` on bad token.
+
 ## Design & phases
 
 → `plans/260613-1133-internal-crm-oltp-schema/plan.md`

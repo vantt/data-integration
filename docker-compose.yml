@@ -164,6 +164,9 @@ services:
       - CRM_OLAP_PATH=/app/var/data_lake/serving/olap.duckdb
       - CRM_CACHE_DB=/data/cache.db
       - CRM_PORT=8090
+      # Shared secret for POST /admin/refresh (X-Refresh-Token header). Dagster
+      # uses this to trigger reverse-ETL on demand. Unset = endpoint unprotected.
+      - CRM_REFRESH_TOKEN=change-me-crm-refresh
       - TZ=Asia/Ho_Chi_Minh
     networks:
       - caddy_net
