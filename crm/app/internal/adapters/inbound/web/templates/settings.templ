@@ -14,34 +14,50 @@ templ SettingsPage(
 	users []domain.AppUser,
 ) {
 	@AppShell("S13", "Cài đặt") {
-		@Topbar("⚙️ Cài đặt") {}
-		<div class="content-area settings-layout">
-			<nav class="settings-nav">
-				<a
-					href="/settings?tab=custom_fields"
-					class={ settingsNavClass(activeTab, "custom_fields") }
-				>Custom Fields</a>
-				<a
-					href="/settings?tab=tags"
-					class={ settingsNavClass(activeTab, "tags") }
-				>Tags</a>
-				<a
-					href="/settings?tab=users"
-					class={ settingsNavClass(activeTab, "users") }
-				>Người dùng</a>
-			</nav>
-			<div class="settings-content">
-				switch activeTab {
-					case "tags":
-						@SettingsTagsSection(tags)
-					case "users":
-						@SettingsUsersSection(users)
-					default:
-						@SettingsCustomFieldsSection(customFields)
-				}
+		<div class="crm-page page-enter">
+			<div class="crm-pagehead">
+				<div>
+					<div class="caption crm-pagehead__eyebrow">CÀI ĐẶT</div>
+					<h1 class="crm-pagehead__title">Cài đặt</h1>
+				</div>
 			</div>
+			<div class="settings-grid">
+				<nav class="settings-nav">
+					<a
+						href="/settings?tab=custom_fields"
+						class={ settingsNavClass(activeTab, "custom_fields") }
+					>
+						@Icon("doc", 15)
+						Custom Fields
+					</a>
+					<a
+						href="/settings?tab=tags"
+						class={ settingsNavClass(activeTab, "tags") }
+					>
+						@Icon("tag", 15)
+						Tags
+					</a>
+					<a
+						href="/settings?tab=users"
+						class={ settingsNavClass(activeTab, "users") }
+					>
+						@Icon("user", 15)
+						Người dùng
+					</a>
+				</nav>
+				<div>
+					switch activeTab {
+						case "tags":
+							@SettingsTagsSection(tags)
+						case "users":
+							@SettingsUsersSection(users)
+						default:
+							@SettingsCustomFieldsSection(customFields)
+					}
+				</div>
+			</div>
+			<div id="modal"></div>
 		</div>
-		<div id="modal"></div>
 	}
 }
 
@@ -49,54 +65,67 @@ templ SettingsPage(
 
 // SettingsCustomFieldsSection renders the Custom Fields sub-section.
 templ SettingsCustomFieldsSection(fields []domain.CustomFieldDef) {
-	<div class="settings-section">
-		<div class="section-header">
-			<h3>Custom Fields</h3>
+	<div class="stack stack-4">
+		<div class="row-between">
+			<span class="panel-title">Custom Fields</span>
 			<button
-				class="btn btn-primary btn-sm"
+				class="btn btn--primary"
 				hx-get="/settings/custom-fields/modal/create"
 				hx-target="#modal"
 				hx-swap="innerHTML"
-			>+ Thêm field</button>
+			>
+				@Icon("plus", 13)
+				Thêm field
+			</button>
 		</div>
 		if len(fields) == 0 {
-			<p class="text-muted">Chưa có custom field nào.</p>
+			<div class="state">
+				<div class="state__inner">
+					<div class="state__icon">@Icon("doc", 28)</div>
+					<div class="state__title">Chưa có custom field nào.</div>
+				</div>
+			</div>
 		} else {
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>Field key</th>
-						<th>Nhãn</th>
-						<th>Loại</th>
-						<th>Bắt buộc</th>
-						<th></th>
-					</tr>
-				</thead>
-				<tbody>
-					for _, f := range fields {
-						<tr class="data-row" id={ "cfd-" + f.FieldID }>
-							<td><code>{ f.FieldKey }</code></td>
-							<td>{ f.Label }</td>
-							<td><span class="badge badge-silver">{ f.DataType }</span></td>
-							<td>
-								if f.IsRequired {
-									<span class="badge badge-at-risk">Có</span>
-								} else {
-									<span class="text-muted">Không</span>
-								}
-							</td>
-							<td>
-								<button
-									class="btn btn-sm btn-secondary"
-									hx-get={ "/settings/custom-fields/" + f.FieldID + "/modal/edit" }
-									hx-target="#modal"
-									hx-swap="innerHTML"
-								>Sửa</button>
-							</td>
+			<div class="tbl-wrap">
+				<table class="tbl">
+					<thead>
+						<tr>
+							<th>Tên field</th>
+							<th>Field key</th>
+							<th>Loại</th>
+							<th>Bắt buộc</th>
+							<th class="th-go"></th>
 						</tr>
-					}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						for _, f := range fields {
+							<tr id={ "cfd-" + f.FieldID }>
+								<td class="cell-strong">{ f.Label }</td>
+								<td class="mono muted">{ f.FieldKey }</td>
+								<td><span class="bdg">{ f.DataType }</span></td>
+								<td>
+									if f.IsRequired {
+										<span class="bdg bdg--warn">Có</span>
+									} else {
+										<span class="muted">Không</span>
+									}
+								</td>
+								<td class="td-go">
+									<div class="flex-wrap justify-end">
+										<button
+											class="icon-btn icon-btn--sm"
+											hx-get={ "/settings/custom-fields/" + f.FieldID + "/modal/edit" }
+											hx-target="#modal"
+											hx-swap="innerHTML"
+											aria-label="Sửa"
+										>@Icon("edit", 13)</button>
+									</div>
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
 		}
 	</div>
 }
@@ -105,99 +134,140 @@ templ SettingsCustomFieldsSection(fields []domain.CustomFieldDef) {
 
 // SettingsTagsSection renders the Tags sub-section.
 templ SettingsTagsSection(tags []domain.Tag) {
-	<div class="settings-section">
-		<div class="section-header">
-			<h3>Tags</h3>
+	<div class="stack stack-4">
+		<div class="row-between">
+			<span class="panel-title">Tags</span>
 			<button
-				class="btn btn-primary btn-sm"
+				class="btn btn--primary"
 				hx-get="/settings/tags/modal/create"
 				hx-target="#modal"
 				hx-swap="innerHTML"
-			>+ Tạo tag</button>
+			>
+				@Icon("plus", 13)
+				Tạo tag
+			</button>
 		</div>
 		if len(tags) == 0 {
-			<p class="text-muted">Chưa có tag nào.</p>
+			<div class="state">
+				<div class="state__inner">
+					<div class="state__icon">@Icon("tag", 28)</div>
+					<div class="state__title">Chưa có tag nào.</div>
+				</div>
+			</div>
 		} else {
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>Tên (slug)</th>
-						<th>Category</th>
-						<th>Màu</th>
-					</tr>
-				</thead>
-				<tbody>
-					for _, tag := range tags {
-						<tr class="data-row">
-							<td><code>{ tag.Name }</code></td>
-							<td>
-								if tag.Category != "" {
-									<span class="badge badge-silver">{ tag.Category }</span>
-								} else {
-									<span class="text-muted">—</span>
-								}
-							</td>
-							<td>
-								if tag.Color != "" {
-									<span class="color-swatch" style={ "background:" + tag.Color }>{ tag.Color }</span>
-								} else {
-									<span class="text-muted">—</span>
-								}
-							</td>
+			<div class="tbl-wrap">
+				<table class="tbl">
+					<thead>
+						<tr>
+							<th>Nhãn</th>
+							<th>Tên (slug)</th>
+							<th>Category</th>
+							<th>Màu</th>
 						</tr>
-					}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						for _, tag := range tags {
+							<tr>
+								<td>
+									<span class={ "chip " + tagChipClass(tag.Color) }>{ tag.Name }</span>
+								</td>
+								<td class="mono muted">{ tag.Name }</td>
+								<td>
+									if tag.Category != "" {
+										{ tag.Category }
+									} else {
+										<span class="muted">—</span>
+									}
+								</td>
+								<td>
+									if tag.Color != "" {
+										<span class="tag-dot" style={ "--tag-color:" + tag.Color }></span>
+									} else {
+										<span class="muted">—</span>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
 		}
 	</div>
 }
 
 // ── Users tab ─────────────────────────────────────────────────────────────────
 
-// SettingsUsersSection renders the Users sub-section (read-only).
+// SettingsUsersSection renders the Users sub-section (read-only with role inline-select).
 templ SettingsUsersSection(users []domain.AppUser) {
-	<div class="settings-section">
-		<div class="section-header">
-			<h3>Người dùng</h3>
-		</div>
+	<div class="stack stack-4">
+		<span class="panel-title">Người dùng &amp; vai trò</span>
 		if len(users) == 0 {
-			<p class="text-muted">Chưa có người dùng nào.</p>
+			<div class="state">
+				<div class="state__inner">
+					<div class="state__icon">@Icon("user", 28)</div>
+					<div class="state__title">Chưa có người dùng nào.</div>
+				</div>
+			</div>
 		} else {
-			<table class="data-table">
-				<thead>
-					<tr>
-						<th>Họ tên</th>
-						<th>Email</th>
-						<th>Role</th>
-						<th>Trạng thái</th>
-					</tr>
-				</thead>
-				<tbody>
-					for _, u := range users {
-						<tr class="data-row">
-							<td><strong>{ u.FullName }</strong></td>
-							<td>{ u.Email }</td>
-							<td><span class="badge badge-silver">{ u.Role }</span></td>
-							<td>
-								if u.IsActive {
-									<span class="badge badge-active">Active</span>
-								} else {
-									<span class="badge badge-churned">Inactive</span>
-								}
-							</td>
+			<div class="tbl-wrap">
+				<table class="tbl">
+					<thead>
+						<tr>
+							<th>Họ tên</th>
+							<th>Email</th>
+							<th>Vai trò</th>
+							<th>Trạng thái</th>
 						</tr>
-					}
-				</tbody>
-			</table>
+					</thead>
+					<tbody>
+						for _, u := range users {
+							<tr>
+								<td class="cell-strong">{ u.FullName }</td>
+								<td class="mono muted">{ u.Email }</td>
+								<td>
+									<div class="inp-sel inp-sel--narrow">
+										<select name="role">
+											<option value="sales" selected?={ u.Role == "sales" }>sales</option>
+											<option value="care" selected?={ u.Role == "care" }>care</option>
+											<option value="manager" selected?={ u.Role == "manager" }>manager</option>
+											<option value="admin" selected?={ u.Role == "admin" }>admin</option>
+										</select>
+										<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+									</div>
+								</td>
+								<td>
+									if u.IsActive {
+										<span class="bdg bdg--good">Active</span>
+									} else {
+										<span class="bdg">Inactive</span>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
 		}
 	</div>
 }
 
-// ── pure helper ───────────────────────────────────────────────────────────────
+// ── pure helpers ───────────────────────────────────────────────────────────────
 
 func settingsNavClass(active, tab string) string {
 	if active == tab {
-		return "settings-nav-link active"
+		return "settings-nav__item settings-nav__item--on"
 	}
-	return "settings-nav-link"
+	return "settings-nav__item"
+}
+
+func tagChipClass(color string) string {
+	switch color {
+	case "#84b577", "moss":
+		return "chip--moss"
+	case "#e8a341", "amber":
+		return "chip--amber"
+	case "#e0746c", "coral":
+		return "chip--coral"
+	}
+	return ""
 }

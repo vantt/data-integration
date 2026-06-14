@@ -8,72 +8,112 @@ import (
 // InboxPage renders S05 — Inbox (Conversations).
 templ InboxPage(convs []domain.Conversation, partyNames map[string]string, statusFilter, assigneeFilter string) {
 	@AppShell("S05", "Hộp thư") {
-		@Topbar("Hộp thư") {
-			<div class="topbar-actions">
-				<select
-					name="status"
-					class="form-control form-control-sm"
-					hx-get="/inbox"
-					hx-target="body"
-					hx-push-url="true"
-					hx-include="[name='assignee']"
-				>
-					<option value="" selected?={ statusFilter == "" }>Tất cả</option>
-					<option value="open" selected?={ statusFilter == "open" }>Đang mở</option>
-					<option value="pending" selected?={ statusFilter == "pending" }>Chờ xử lý</option>
-					<option value="closed" selected?={ statusFilter == "closed" }>Đã đóng</option>
-				</select>
-			</div>
-		}
-		<div class="page-content">
-			if len(convs) == 0 {
-				@inboxEmpty()
-			} else {
-				<div class="conv-list">
-					for _, c := range convs {
-						@convRow(c, partyNames)
-					}
+		<div class="crm-page page-enter">
+			<div class="crm-pagehead">
+				<div>
+					<div class="caption crm-pagehead__eyebrow">HỘP THƯ</div>
+					<h1 class="crm-pagehead__title">Hộp thư</h1>
 				</div>
-			}
+				<div class="crm-pagehead__aside">
+					<button class="btn btn--secondary">Gán cho tôi</button>
+				</div>
+			</div>
+			<div class="toolbar">
+				<div class="toolbar__filters">
+					<div class="fsel">
+						<span class="fsel__label caption">Trạng thái</span>
+						<div class="fsel__field">
+							<select
+								name="status"
+								hx-get="/inbox"
+								hx-target="body"
+								hx-push-url="true"
+								hx-include="[name='assignee']"
+							>
+								<option value="" selected?={ statusFilter == "" }>Tất cả</option>
+								<option value="open" selected?={ statusFilter == "open" }>Đang mở</option>
+								<option value="pending" selected?={ statusFilter == "pending" }>Chờ xử lý</option>
+								<option value="closed" selected?={ statusFilter == "closed" }>Đã đóng</option>
+							</select>
+							<span class="fsel__chev">@Icon("chevdown", 12)</span>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="inbox-grid">
+				if len(convs) == 0 {
+					<div class="conv-list">
+						<div class="state">
+							<div class="state__inner">
+								<div class="state__title">Không có hội thoại nào</div>
+								<p class="state__sub">Chưa có tin nhắn inbound nào trong filter này.</p>
+							</div>
+						</div>
+					</div>
+				} else {
+					<div class="conv-list">
+						for _, c := range convs {
+							@convRow(c, partyNames)
+						}
+					</div>
+				}
+				<div class="preview-pane">
+					<div class="state">
+						<div class="state__inner">
+							<div class="state__title">Chọn một hội thoại</div>
+							<p class="state__sub">Chọn hội thoại bên trái để xem trước nội dung.</p>
+						</div>
+					</div>
+				</div>
+			</div>
+			@modalContainer()
 		</div>
-		@modalContainer()
 	}
 }
 
 // convRow renders one conversation row in the inbox list.
 templ convRow(c domain.Conversation, partyNames map[string]string) {
-	<div class="conv-row" id={ "conv-" + c.ConversationID }>
-		<a href={ templ.SafeURL("/inbox/" + c.ConversationID) } class="conv-row-link">
-			<div class="conv-row-header">
-				<span class="conv-party-name">
-					if c.PartyID != nil {
-						{ partyNames[*c.PartyID] }
-					} else {
-						<span class="badge-pill badge-amber">Chưa link khách</span>
-					}
-				</span>
-				<span class={ "badge-pill " + convStatusClass(c.Status) }>{ c.Status }</span>
-				if c.UnreadCount > 0 {
-					<span class="badge-unread">{ fmt.Sprintf("%d", c.UnreadCount) }</span>
+	<a
+		href={ templ.SafeURL("/inbox/" + c.ConversationID) }
+		class="conv-row"
+		id={ "conv-" + c.ConversationID }
+	>
+		<span
+			class={ "conv-row__unread" + func() string {
+				if c.UnreadCount == 0 {
+					return " conv-row__unread--none"
+				}
+				return ""
+			}() }
+		></span>
+		<div class="conv-row__main">
+			<div class="conv-row__name">
+				if c.PartyID != nil {
+					<b>{ partyNames[*c.PartyID] }</b>
+					<span class="bdg bdg--good">Đã link</span>
+				} else {
+					<span class="psid-mono">{ c.ExternalThreadID }</span>
+					<span class="bdg bdg--warn">Chưa link khách</span>
 				}
 			</div>
-			<div class="conv-row-meta text-muted">
-				<span>{ c.Channel }</span>
-				if c.LastMessageAt != nil {
-					<span>· { formatICTHelper(*c.LastMessageAt) }</span>
-				}
+			<div class="conv-row__prev">
+				<span class={ "bdg " + convStatusBdgClass(c.Status) }>{ c.Status }</span>
+				<span class="mono">{ c.Channel }</span>
 			</div>
-		</a>
-	</div>
+		</div>
+		<div class="conv-row__time">
+			if c.LastMessageAt != nil {
+				{ formatICTHelper(*c.LastMessageAt) }
+			}
+			if c.UnreadCount > 0 {
+				<br/>
+				<span class="crm-nav__badge crm-nav__badge--warn">{ fmt.Sprintf("%d", c.UnreadCount) }</span>
+			}
+		</div>
+	</a>
 }
 
-templ inboxEmpty() {
-	<div class="empty-state">
-		<div class="empty-state-icon">💬</div>
-		<div class="empty-state-title">Không có hội thoại nào</div>
-		<div class="empty-state-desc">Chưa có tin nhắn inbound nào trong filter này.</div>
-	</div>
-}
+// ── modal container (shared slot for all HTMX-loaded modals) ──────────────────
 
 // ── local helpers ─────────────────────────────────────────────────────────────
 
@@ -87,5 +127,18 @@ func convStatusClass(status string) string {
 		return "badge-silver"
 	default:
 		return "badge-silver"
+	}
+}
+
+func convStatusBdgClass(status string) string {
+	switch status {
+	case "open":
+		return "bdg--good"
+	case "pending":
+		return "bdg--warn"
+	case "closed":
+		return ""
+	default:
+		return ""
 	}
 }

@@ -8,35 +8,53 @@ import (
 // CustomerListPage renders S02 — Customer List & Search.
 templ CustomerListPage(parties []domain.Party, total, page, pageSize int, query string) {
 	@AppShell("S02", "Khách hàng") {
-		@Topbar("Khách hàng") {
-			<div class="topbar-search">
-				<input
-					type="search"
-					name="q"
-					placeholder="🔍 Tìm theo tên, SĐT, email..."
-					value={ query }
+		<div class="crm-page page-enter">
+			<div class="crm-pagehead">
+				<div>
+					<div class="caption crm-pagehead__eyebrow">KHÁCH HÀNG</div>
+					<h1 class="crm-pagehead__title">Khách hàng</h1>
+				</div>
+				<div class="crm-pagehead__aside">
+					<button class="btn btn--primary">
+						@Icon("plus", 13)
+						Tạo mới
+					</button>
+				</div>
+			</div>
+
+			<div class="toolbar">
+				<form
+					class="toolbar__search"
+					role="search"
 					hx-get="/customers/search"
 					hx-target="#customer-list-body"
 					hx-swap="innerHTML"
 					hx-trigger="input changed delay:300ms, search"
 					hx-indicator="#search-spinner"
-				/>
+				>
+					@Icon("search", 15)
+					<input
+						type="search"
+						name="q"
+						placeholder="Tìm theo tên, SĐT, email..."
+						value={ query }
+					/>
+					<span id="search-spinner" class="htmx-indicator spinner"></span>
+				</form>
+				<div class="toolbar__filters">
+					<span class="muted">{ fmt.Sprintf("%d khách hàng", total) }</span>
+				</div>
 			</div>
-			<span id="search-spinner" class="htmx-indicator spinner"></span>
-			<div class="topbar-actions">
-				<span class="text-muted">{ fmt.Sprintf("%d khách hàng", total) }</span>
-			</div>
-		}
-		<div class="page-content">
-			<div class="card" style="padding:0; overflow:hidden;">
-				<table>
+
+			<div class="tbl-wrap">
+				<table class="tbl tbl--cust">
 					<thead>
 						<tr>
 							<th>Họ tên</th>
 							<th>SĐT</th>
 							<th>Email</th>
 							<th>Trạng thái</th>
-							<th></th>
+							<th class="th-go"></th>
 						</tr>
 					</thead>
 					<tbody id="customer-list-body">
@@ -44,6 +62,7 @@ templ CustomerListPage(parties []domain.Party, total, page, pageSize int, query 
 					</tbody>
 				</table>
 			</div>
+
 			@CustomerListPagination(total, page, pageSize, query)
 		</div>
 	}
@@ -54,39 +73,46 @@ templ CustomerListRows(parties []domain.Party) {
 	if len(parties) == 0 {
 		<tr>
 			<td colspan="5">
-				<div class="empty-state" style="padding:32px 0;">
-					<div class="empty-state-title">Không tìm thấy khách hàng</div>
-					<div class="empty-state-desc">Thử từ khoá khác hoặc kiểm tra lại SĐT.</div>
+				<div class="state">
+					<div class="state__inner">
+						<div class="state__title">Không tìm thấy khách hàng</div>
+						<div class="state__sub">Thử từ khoá khác hoặc kiểm tra lại SĐT.</div>
+					</div>
 				</div>
 			</td>
 		</tr>
 	} else {
 		for _, p := range parties {
-			<tr>
+			<tr
+				class="is-clickable"
+				hx-get={ "/customers/" + p.PartyID }
+				hx-target="body"
+				hx-push-url="true"
+			>
 				<td>
-					<a href={ templ.SafeURL("/customers/" + p.PartyID) } style="font-weight:600;color:inherit;text-decoration:none;">
-						{ p.DisplayName }
-					</a>
+					<span class="cell-strong">{ p.DisplayName }</span>
 				</td>
-				<td>
+				<td class="mono">
 					if p.PrimaryPhone != "" {
-						<a href={ templ.SafeURL("tel:" + p.PrimaryPhone) } class="phone-link">{ p.PrimaryPhone }</a>
+						<a href={ templ.SafeURL("tel:" + p.PrimaryPhone) }>{ p.PrimaryPhone }</a>
 					} else {
-						<span class="text-muted">—</span>
+						<span class="dash">—</span>
 					}
 				</td>
 				<td>
 					if p.PrimaryEmail != "" {
 						{ p.PrimaryEmail }
 					} else {
-						<span class="text-muted">—</span>
+						<span class="dash">—</span>
 					}
 				</td>
 				<td>
-					<span class={ "badge-pill " + statusBadgeClassHelper(p.Status) }>{ p.Status }</span>
+					<span class={ "bdg " + statusBadgeClassHelper(p.Status) }>{ p.Status }</span>
 				</td>
-				<td>
-					<a href={ templ.SafeURL("/customers/" + p.PartyID) } class="btn btn-secondary btn-sm">Xem</a>
+				<td class="td-go">
+					<span class="go-arrow">
+						@Icon("chevron", 14)
+					</span>
 				</td>
 			</tr>
 		}
@@ -95,17 +121,28 @@ templ CustomerListRows(parties []domain.Party) {
 
 // CustomerListPagination renders prev/next controls.
 templ CustomerListPagination(total, page, pageSize int, query string) {
-	if total <= pageSize {
-		<div></div>
-	} else {
-		<div class="pagination">
-			if page > 1 {
-				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page-1, queryEscapeHelper(query))) } class="btn btn-secondary btn-sm">← Trước</a>
-			}
-			<span>Trang { fmt.Sprintf("%d", page) } / { fmt.Sprintf("%d", totalPages(total, pageSize)) }</span>
-			if page < totalPages(total, pageSize) {
-				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page+1, queryEscapeHelper(query))) } class="btn btn-secondary btn-sm">Sau →</a>
-			}
+	if total > pageSize {
+		<div class="pager">
+			<div class="pager__info">{ fmt.Sprintf("%d kết quả", total) }</div>
+			<div class="pager__ctrls">
+				if page > 1 {
+					<a
+						href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page-1, queryEscapeHelper(query))) }
+						class="pager__btn"
+					>‹ Trước</a>
+				} else {
+					<button class="pager__btn" disabled>‹ Trước</button>
+				}
+				<span class="pager__pages">Trang { fmt.Sprintf("%d", page) } / { fmt.Sprintf("%d", totalPages(total, pageSize)) }</span>
+				if page < totalPages(total, pageSize) {
+					<a
+						href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page+1, queryEscapeHelper(query))) }
+						class="pager__btn"
+					>Sau ›</a>
+				} else {
+					<button class="pager__btn" disabled>Sau ›</button>
+				}
+			</div>
 		</div>
 	}
 }

@@ -7,88 +7,130 @@ import (
 // ConversationDetailPage renders S06 — Conversation Detail.
 templ ConversationDetailPage(conv *domain.Conversation, msgs []domain.Message, partyName, partyLink string) {
 	@AppShell("S05", "Hội thoại") {
-		@Topbar(convDetailTitle(conv)) {
-			<div class="topbar-actions">
-				<a href="/inbox" class="btn btn-secondary btn-sm">← Inbox</a>
-				if conv.Status != "closed" {
-					<button
-						class="btn btn-secondary btn-sm"
-						hx-get={ "/inbox/" + conv.ConversationID + "/modal/assign" }
-						hx-target="#modal"
-						hx-swap="innerHTML"
-					>Đổi NV</button>
-					<button
-						class="btn btn-secondary btn-sm"
-						hx-get={ "/inbox/" + conv.ConversationID + "/modal/log-activity" }
-						hx-target="#modal"
-						hx-swap="innerHTML"
-					>Ghi note</button>
-					<button
-						class="btn btn-danger btn-sm"
-						hx-get={ "/inbox/" + conv.ConversationID + "/modal/close" }
-						hx-target="#modal"
-						hx-swap="innerHTML"
-					>Đóng hội thoại</button>
-				} else {
-					<button
-						class="btn btn-secondary btn-sm"
-						hx-post={ "/inbox/" + conv.ConversationID + "/assign" }
-						hx-vals={ `{"assignee_user_id":""}` }
-					>Mở lại</button>
-				}
-			</div>
-		}
-		<div class="page-content conv-detail-layout">
-			<div class="conv-thread">
-				if len(msgs) == 0 {
-					<div class="empty-state">
-						<div class="empty-state-icon">💬</div>
-						<div class="empty-state-title">Chưa có tin nhắn</div>
-					</div>
-				} else {
-					for _, m := range msgs {
-						@msgBubble(m)
-					}
-				}
-			</div>
-			<div class="conv-sidebar">
-				if partyName == "" {
-					<div class="card">
-						<div class="card-title">🔍 Gắn khách hàng</div>
-						<p class="text-muted">Hội thoại chưa được gắn với khách hàng nào.</p>
+		<div class="crm-page page-enter">
+			<div class="c360-topbar">
+				<a class="c360-back" href="/inbox">
+					@Icon("back", 13)
+					Inbox
+				</a>
+				<div class="c360-id">
+					<span class="c360-name">{ convDetailTitle(conv) }</span>
+					<span class={ "bdg " + convStatusBdgClass(conv.Status) }>{ conv.Status }</span>
+				</div>
+				<div class="c360-actions">
+					if conv.Status != "closed" {
 						<button
-							class="btn btn-primary btn-sm"
-							hx-get={ "/inbox/" + conv.ConversationID + "/modal/link-party" }
+							class="btn btn--secondary"
+							hx-get={ "/inbox/" + conv.ConversationID + "/modal/assign" }
 							hx-target="#modal"
 							hx-swap="innerHTML"
-						>Tìm & gắn khách</button>
-					</div>
-				} else {
-					<div class="card">
-						<div class="card-title">👤 { partyName }</div>
-						<a href={ templ.SafeURL(partyLink) } class="btn btn-secondary btn-sm mt-8">
-							Mở hồ sơ đầy đủ →
-						</a>
-					</div>
-				}
-				<div class="card mt-8">
-					<div class="card-title text-muted">Kênh: { conv.Channel }</div>
-					<div class="text-muted">PSID: { conv.ExternalThreadID }</div>
-					<div class="text-muted">
-						Trạng thái: <span class={ "badge-pill " + convStatusClass(conv.Status) }>{ conv.Status }</span>
-					</div>
+						>
+							@Icon("user", 13)
+							Đổi NV
+						</button>
+						<button
+							class="btn btn--secondary"
+							hx-get={ "/inbox/" + conv.ConversationID + "/modal/log-activity" }
+							hx-target="#modal"
+							hx-swap="innerHTML"
+						>
+							@Icon("doc", 13)
+							Ghi note
+						</button>
+						<button
+							class="btn btn--primary"
+							hx-get={ "/inbox/" + conv.ConversationID + "/modal/close" }
+							hx-target="#modal"
+							hx-swap="innerHTML"
+						>Đóng hội thoại</button>
+					} else {
+						<button
+							class="btn btn--secondary"
+							hx-post={ "/inbox/" + conv.ConversationID + "/assign" }
+							hx-vals={ `{"assignee_user_id":""}` }
+						>Mở lại</button>
+					}
 				</div>
 			</div>
+			<div class="conv-detail">
+				<div class="thread-wrap">
+					<div class="thread">
+						if len(msgs) == 0 {
+							<div class="state">
+								<div class="state__inner">
+									<div class="state__title">Chưa có tin nhắn</div>
+								</div>
+							</div>
+						} else {
+							for _, m := range msgs {
+								@msgBubble(m)
+							}
+						}
+					</div>
+					if conv.Status == "closed" {
+						<div class="input-bar">
+							<div class="input-bar__fake">Hội thoại đã đóng</div>
+						</div>
+					} else {
+						<div class="input-bar">
+							<div class="input-bar__fake">Chế độ chỉ đọc (v1)</div>
+						</div>
+					}
+				</div>
+				<div>
+					if partyName == "" {
+						<div class="scard">
+							<div class="caption scard__eyebrow">Chưa link khách</div>
+							<p class="state__sub">PSID này chưa khớp với party nào. Tìm và gắn khách để xem hồ sơ 360.</p>
+							<button
+								class="btn btn--primary"
+								hx-get={ "/inbox/" + conv.ConversationID + "/modal/link-party" }
+								hx-target="#modal"
+								hx-swap="innerHTML"
+							>
+								@Icon("link", 13)
+								Tìm & gắn khách
+							</button>
+						</div>
+					} else {
+						<div class="conv-cust-card">
+							<div class="row-between">
+								<span class="mini-name">{ partyName }</span>
+							</div>
+							<div class="facts">
+								<div class="fact">
+									<span class="fact__k">Kênh</span>
+									<span class="fact__v">{ conv.Channel }</span>
+								</div>
+								<div class="fact">
+									<span class="fact__k">PSID</span>
+									<span class="fact__v mono">{ conv.ExternalThreadID }</span>
+								</div>
+								<div class="fact">
+									<span class="fact__k">Trạng thái</span>
+									<span class="fact__v">
+										<span class={ "bdg " + convStatusBdgClass(conv.Status) }>{ conv.Status }</span>
+									</span>
+								</div>
+							</div>
+							<a href={ templ.SafeURL(partyLink) } class="btn btn--primary party-cta">
+								Mở hồ sơ đầy đủ
+								@Icon("chevron", 13)
+							</a>
+						</div>
+					}
+				</div>
+			</div>
+			@modalContainer()
 		</div>
-		@modalContainer()
 	}
 }
 
 // msgBubble renders one message bubble (in = customer, out = staff).
 templ msgBubble(m domain.Message) {
-	<div class={ msgBubbleClass(m.Direction) }>
-		<div class="msg-body">{ m.Body }</div>
-		<div class="msg-meta text-muted">{ formatICTHelper(m.SentAt) }</div>
+	<div class={ "msg " + msgDirClass(m.Direction) }>
+		<div class="msg__bubble">{ m.Body }</div>
+		<div class="msg__time">{ formatICTHelper(m.SentAt) } ICT</div>
 	</div>
 }
 
@@ -113,4 +155,11 @@ func msgBubbleClass(direction string) string {
 		return "msg-bubble msg-out"
 	}
 	return "msg-bubble msg-in"
+}
+
+func msgDirClass(direction string) string {
+	if direction == "out" {
+		return "msg--agent"
+	}
+	return "msg--customer"
 }

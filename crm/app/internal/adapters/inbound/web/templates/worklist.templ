@@ -8,22 +8,29 @@ import (
 // WorklistPage renders S01 — Worklist / Dashboard.
 templ WorklistPage(actions []domain.ActionQueueItem, tasks []domain.Task, refreshedAt string, isStale bool) {
 	@AppShell("S01", "Worklist") {
-		@Topbar("Worklist hôm nay") {
-			<div class="topbar-actions">
-				<button
-					class="btn btn-secondary btn-sm"
-					hx-get="/worklist/fragment"
-					hx-target="#worklist-container"
-					hx-swap="outerHTML"
-					hx-indicator="#refresh-spinner"
-				>
-					<span id="refresh-spinner" class="htmx-indicator spinner"></span>
-					🔄 Làm mới
-				</button>
+		<div class="crm-page page-enter">
+			<div class="crm-pagehead">
+				<div>
+					<div class="caption crm-pagehead__eyebrow">WORKLIST</div>
+					<h1 class="crm-pagehead__title">Worklist hôm nay</h1>
+				</div>
+				<div class="crm-pagehead__aside">
+					<button
+						class="btn btn--secondary"
+						hx-get="/worklist/fragment"
+						hx-target="#worklist-container"
+						hx-swap="outerHTML"
+						hx-indicator="#refresh-spinner"
+					>
+						<span id="refresh-spinner" class="htmx-indicator spinner"></span>
+						@Icon("refresh", 13)
+						Làm mới
+					</button>
+				</div>
 			</div>
-		}
-		<div class="page-content">
-			@WorklistFragment(actions, tasks, refreshedAt, isStale)
+			<div id="worklist-container">
+				@WorklistFragment(actions, tasks, refreshedAt, isStale)
+			</div>
 		</div>
 	}
 }
@@ -35,16 +42,10 @@ templ WorklistFragment(actions []domain.ActionQueueItem, tasks []domain.Task, re
 			@worklistEmpty()
 		} else {
 			if len(actions) > 0 {
-				<div class="card mb-12">
-					<div class="card-title">📊 Hàng đợi hành động từ kho dữ liệu</div>
-					@actionQueueTable(actions)
-				</div>
+				@actionQueueSection(actions)
 			}
 			if len(tasks) > 0 {
-				<div class="card">
-					<div class="card-title">✅ Tasks được giao hôm nay</div>
-					@taskListWidget(tasks)
-				</div>
+				@taskListWidget(tasks)
 			}
 		}
 		@FreshnessBadge(refreshedAt, isStale)
@@ -53,85 +54,108 @@ templ WorklistFragment(actions []domain.ActionQueueItem, tasks []domain.Task, re
 
 // FreshnessBadge shows when the cache was last refreshed.
 templ FreshnessBadge(refreshedAt string, isStale bool) {
-	<div class={ freshnessBarClass(isStale) }>
-		<span class={ freshnessDotClass(isStale) }></span>
-		if refreshedAt == "" {
-			Cache chưa có dữ liệu — chạy sync để cập nhật.
-		} else if isStale {
-			⚠️ Cache cũ (cập nhật lúc { refreshedAt }) — đã quá 24h.
-		} else {
-			Cache cập nhật lúc { refreshedAt } ✓
-		}
-	</div>
+	if isStale {
+		<div class="caveat caveat--warn">
+			<span class="caveat__mark">@Icon("warn", 13)</span>
+			if refreshedAt == "" {
+				Cache chưa có dữ liệu — chạy sync để cập nhật.
+			} else {
+				Cache cũ (cập nhật lúc { refreshedAt }) — đã quá 24h.
+			}
+		</div>
+	} else {
+		<div class="caveat caveat--info">
+			<span class="caveat__mark">@Icon("clock", 13)</span>
+			if refreshedAt == "" {
+				Cache chưa có dữ liệu — chạy sync để cập nhật.
+			} else {
+				Cache cập nhật lúc { refreshedAt }
+			}
+		</div>
+	}
 }
 
 // ── private sub-templates ──────────────────────────────────────────────────────
 
-templ actionQueueTable(actions []domain.ActionQueueItem) {
-	<div class="table-wrap">
-		<table>
-			<thead>
-				<tr>
-					<th>Loại</th>
-					<th>Khách hàng</th>
-					<th>Lý do</th>
-					<th>Giá trị tiềm năng</th>
-					<th>Ngày tạo</th>
-					<th></th>
-				</tr>
-			</thead>
-			<tbody>
-				for _, a := range actions {
-					<tr style="cursor:pointer;">
-						<td>
-							<span class={ "badge-pill " + actionTypeBadgeClassHelper(a.ActionType) }>
-								{ a.ActionType }
-							</span>
-						</td>
-						<td class="task-customer">{ a.CustomerKey }</td>
-						<td class="text-muted">{ truncStr(a.RationaleVI, 60) }</td>
-						<td class="task-value">{ formatVNDHelper(a.ValueAtStakeVND) }</td>
-						<td class="text-muted">{ a.GeneratedDate }</td>
-						<td>
-							<a href={ templ.SafeURL(fmt.Sprintf("/customers?q=%s", a.CustomerKey)) } class="btn btn-secondary btn-sm">
-								Mở hồ sơ
-							</a>
-						</td>
-					</tr>
-				}
-			</tbody>
-		</table>
+// actionQueueSection renders the action queue as DS aq-cards.
+templ actionQueueSection(actions []domain.ActionQueueItem) {
+	<div class="dash-card">
+		<div class="dash-card__head">
+			<div>
+				<div class="dash-card__title">Hàng đợi hành động</div>
+				<div class="dash-card__sub">từ kho dữ liệu</div>
+			</div>
+		</div>
+		<div>
+			for _, a := range actions {
+				<div class="aq-card aq-card--compact">
+					<div class="aq-card__top">
+						<span class={ "chip " + actionTypeBadgeClassHelper(a.ActionType) }>{ a.ActionType }</span>
+						<span class="aq-card__val">
+							@Icon("money", 13)
+							{ formatVNDHelper(a.ValueAtStakeVND) }
+						</span>
+					</div>
+					<div class="aq-card__rationale">{ truncStr(a.RationaleVI, 80) }</div>
+					<div class="aq-card__foot">
+						<a
+							href={ templ.SafeURL(fmt.Sprintf("/customers?q=%s", a.CustomerKey)) }
+							class="btn btn--secondary aq-card__cta"
+						>
+							{ a.CustomerKey } — Mở hồ sơ
+							@Icon("chevron", 12)
+						</a>
+					</div>
+				</div>
+			}
+		</div>
 	</div>
 }
 
+// taskListWidget renders assigned tasks as DS wl-row items.
 templ taskListWidget(tasks []domain.Task) {
-	<div>
+	<div class="wl-list">
 		for _, t := range tasks {
 			<div class={ wlTaskRowClass(t.Status) } id={ "task-" + t.TaskID }>
-				<input
-					type="checkbox"
-					class="task-checkbox"
-					checked?={ t.Status == "done" }
+				<button
+					class={ wlCheckClass(t.Status) }
 					hx-patch={ "/tasks/" + t.TaskID + "/done" }
 					hx-target={ "#task-" + t.TaskID }
 					hx-swap="outerHTML"
-				/>
-				<div class="task-body">
-					<div class="task-customer">{ t.Title }</div>
-					if t.Description != "" {
-						<div class="task-rationale">{ truncStr(t.Description, 80) }</div>
+					aria-label="done"
+				>
+					if t.Status == "done" {
+						@Icon("check", 13)
 					}
-					<div class="task-meta">
-						<span class={ taskStatusClassHelper(t.Status) }>{ t.Status }</span>
-						if t.DueAt != nil {
-							<span>Due: { formatICTHelper(*t.DueAt) }</span>
-						}
+				</button>
+				<div class="wl-row__main">
+					<div class="wl-row__top">
+						<span class={ "chip " + taskStatusChipClass(t.Status) }>{ t.Status }</span>
 						if t.PartyID != nil {
-							<a href={ templ.SafeURL("/customers/" + *t.PartyID) } class="btn btn-secondary btn-sm">
-								Mở hồ sơ
-							</a>
+							<a class="wl-row__name" href={ templ.SafeURL("/customers/" + *t.PartyID) }>{ t.Title }</a>
+						} else {
+							<span class="wl-row__name">{ t.Title }</span>
 						}
 					</div>
+					if t.Description != "" {
+						<div class="wl-row__why">{ truncStr(t.Description, 80) }</div>
+					}
+					<div class="wl-row__meta">
+						if t.DueAt != nil {
+							<span class="wl-row__due">
+								@Icon("clock", 11)
+								Due: { formatICTHelper(*t.DueAt) }
+							</span>
+						}
+					</div>
+				</div>
+				<div class="wl-row__aside">
+					if t.PartyID != nil {
+						<a href={ templ.SafeURL("/customers/" + *t.PartyID) } class="btn btn--ghost">
+							Mở hồ sơ
+							@Icon("chevron", 12)
+						</a>
+					}
 				</div>
 			</div>
 		}
@@ -139,12 +163,16 @@ templ taskListWidget(tasks []domain.Task) {
 }
 
 templ worklistEmpty() {
-	<div class="empty-state">
-		<div class="empty-state-icon">🎉</div>
-		<div class="empty-state-title">Không có việc cần làm hôm nay</div>
-		<div class="empty-state-desc">
-			Chưa có hành động nào từ kho dữ liệu.<br/>
-			Hãy <a href="/customers">duyệt danh sách khách hàng</a> hoặc chờ sync tiếp theo.
+	<div class="state">
+		<div class="state__inner">
+			<div class="state__title">Không có việc cần làm hôm nay</div>
+			<div class="state__sub">
+				Chưa có hành động nào từ kho dữ liệu.<br/>
+				Hãy duyệt danh sách khách hàng hoặc chờ sync tiếp theo.
+			</div>
+			<div class="state__actions">
+				<a href="/customers" class="btn btn--secondary">Duyệt khách hàng</a>
+			</div>
 		</div>
 	</div>
 }
@@ -153,21 +181,26 @@ templ worklistEmpty() {
 
 func wlTaskRowClass(status string) string {
 	if status == "done" || status == "cancelled" {
-		return "task-row done"
+		return "wl-row wl-row--done"
 	}
-	return "task-row"
+	return "wl-row"
 }
 
-func freshnessBarClass(stale bool) string {
-	if stale {
-		return "freshness-bar stale"
+func wlCheckClass(status string) string {
+	if status == "done" {
+		return "wl-check wl-check--on"
 	}
-	return "freshness-bar"
+	return "wl-check"
 }
 
-func freshnessDotClass(stale bool) string {
-	if stale {
-		return "freshness-dot stale"
+// taskStatusChipClass maps task status to a chip tone modifier.
+func taskStatusChipClass(status string) string {
+	switch status {
+	case "done":
+		return "chip--moss"
+	case "cancelled":
+		return "chip--coral"
+	default:
+		return "chip--amber"
 	}
-	return "freshness-dot"
 }
