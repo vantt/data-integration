@@ -1,5 +1,6 @@
-// Package http — handler-level tests for AdminHandler (POST /admin/refresh).
-// Uses net/http/httptest with a fake Refresher — never shells out.
+// Package http — handler-level tests for AdminHandler (POST /admin/refresh,
+// GET /admin/refresh/status). Uses net/http/httptest with a fake Refresher —
+// never shells out.
 package http
 
 import (
@@ -61,66 +62,128 @@ func postRefresh(handler http.Handler, token string) *httptest.ResponseRecorder 
 	return w
 }
 
-// ─── tests ─────────────────────────────────────────────────────────────────
+func getStatus(handler http.Handler) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, "/admin/refresh/status", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	return w
+}
 
-// TestRefresh_Success_Returns200 — fake succeeds → 200 with status ok.
-func TestRefresh_Success_Returns200(t *testing.T) {
-	handler := buildAdminTestHandler(&fakeRefresher{}, "")
-
-	w := postRefresh(handler, "")
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d; want 200", w.Code)
-	}
+// decodeStatus reads the GET /admin/refresh/status body's "state" field.
+func decodeStatus(t *testing.T, w *httptest.ResponseRecorder) string {
+	t.Helper()
 	var resp map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
-		t.Fatalf("decode: %v", err)
+		t.Fatalf("decode status: %v", err)
 	}
-	if resp["status"] != "ok" {
-		t.Errorf("status = %v; want ok", resp["status"])
+	state, _ := resp["state"].(string)
+	return state
+}
+
+// waitForState polls GET /admin/refresh/status until it reaches want or times out.
+func waitForState(t *testing.T, handler http.Handler, want string) {
+	t.Helper()
+	deadline := time.After(2 * time.Second)
+	for {
+		if decodeStatus(t, getStatus(handler)) == want {
+			return
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("status never reached %q", want)
+		case <-time.After(5 * time.Millisecond):
+		}
 	}
 }
 
-// TestRefresh_Error_Returns500 — fake returns error → 500 with status error.
-func TestRefresh_Error_Returns500(t *testing.T) {
-	handler := buildAdminTestHandler(&fakeRefresher{err: errors.New("boom")}, "")
+// ─── tests ─────────────────────────────────────────────────────────────────
+
+// TestRefresh_Accepted_Returns202Immediately — POST returns 202 BEFORE the fake
+// Refresher (blocked on a channel) finishes, proving the call is async.
+func TestRefresh_Accepted_Returns202Immediately(t *testing.T) {
+	block := make(chan struct{})
+	started := make(chan struct{})
+	handler := buildAdminTestHandler(&fakeRefresher{block: block, started: started}, "")
 
 	w := postRefresh(handler, "")
 
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d; want 500", w.Code)
+	// 202 must come back while the fake is still blocked (not yet released).
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("status = %d; want 202", w.Code)
 	}
 	var resp map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp["status"] != "error" {
-		t.Errorf("status = %v; want error", resp["status"])
+	if resp["status"] != "accepted" {
+		t.Errorf("status = %v; want accepted", resp["status"])
+	}
+
+	// The refresh goroutine should have entered Refresh and be blocked.
+	select {
+	case <-started:
+	case <-time.After(2 * time.Second):
+		t.Fatal("refresh goroutine did not start")
+	}
+
+	// Release and let it finish so the goroutine doesn't leak.
+	close(block)
+	waitForState(t, handler, "ok")
+}
+
+// TestRefresh_Async_StatusOk — after the fake completes successfully, GET
+// /admin/refresh/status reports state ok.
+func TestRefresh_Async_StatusOk(t *testing.T) {
+	handler := buildAdminTestHandler(&fakeRefresher{}, "")
+
+	if w := postRefresh(handler, ""); w.Code != http.StatusAccepted {
+		t.Fatalf("status = %d; want 202", w.Code)
+	}
+
+	waitForState(t, handler, "ok")
+}
+
+// TestRefresh_Async_StatusError — when the fake returns an error, GET
+// /admin/refresh/status eventually reports state error.
+func TestRefresh_Async_StatusError(t *testing.T) {
+	handler := buildAdminTestHandler(&fakeRefresher{err: errors.New("boom")}, "")
+
+	if w := postRefresh(handler, ""); w.Code != http.StatusAccepted {
+		t.Fatalf("status = %d; want 202", w.Code)
+	}
+
+	waitForState(t, handler, "error")
+
+	// Confirm the error message is surfaced in the status payload.
+	var resp map[string]any
+	if err := json.NewDecoder(getStatus(handler).Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
 	}
 	if resp["error"] == "" || resp["error"] == nil {
 		t.Errorf("expected non-empty error field, got: %v", resp)
 	}
 }
 
-// TestRefresh_InFlight_Returns409 — second concurrent request while the first
-// is still running gets 409 busy.
+// TestRefresh_InFlight_Returns409 — a second POST while the first is still
+// running gets 409 busy.
 func TestRefresh_InFlight_Returns409(t *testing.T) {
 	block := make(chan struct{})
 	started := make(chan struct{})
 	handler := buildAdminTestHandler(&fakeRefresher{block: block, started: started}, "")
 
-	// Fire the first request in the background; it blocks inside Refresh.
-	firstDone := make(chan *httptest.ResponseRecorder, 1)
-	go func() { firstDone <- postRefresh(handler, "") }()
+	// First request returns 202 immediately, but its goroutine blocks in Refresh.
+	if w1 := postRefresh(handler, ""); w1.Code != http.StatusAccepted {
+		t.Fatalf("first status = %d; want 202", w1.Code)
+	}
 
-	// Wait until the first request has actually entered Refresh (slot claimed).
+	// Wait until the first refresh has actually entered Refresh (slot claimed).
 	select {
 	case <-started:
 	case <-time.After(2 * time.Second):
 		t.Fatal("first refresh did not start in time")
 	}
 
-	// Second request must be rejected with 409 immediately.
+	// Second request must be rejected with 409 busy.
 	w2 := postRefresh(handler, "")
 	if w2.Code != http.StatusConflict {
 		t.Fatalf("second status = %d; want 409", w2.Code)
@@ -133,16 +196,9 @@ func TestRefresh_InFlight_Returns409(t *testing.T) {
 		t.Errorf("status = %v; want busy", resp["status"])
 	}
 
-	// Release the first request and confirm it succeeded (200).
+	// Release the first request and confirm it completed (status ok).
 	close(block)
-	select {
-	case w1 := <-firstDone:
-		if w1.Code != http.StatusOK {
-			t.Errorf("first status = %d; want 200", w1.Code)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("first refresh did not finish in time")
-	}
+	waitForState(t, handler, "ok")
 }
 
 // TestRefresh_TokenSet_WrongOrMissing_Returns401.
@@ -159,20 +215,35 @@ func TestRefresh_TokenSet_WrongOrMissing_Returns401(t *testing.T) {
 	}
 }
 
-// TestRefresh_TokenSet_Correct_Returns200.
-func TestRefresh_TokenSet_Correct_Returns200(t *testing.T) {
+// TestRefresh_TokenSet_Correct_Returns202.
+func TestRefresh_TokenSet_Correct_Returns202(t *testing.T) {
 	handler := buildAdminTestHandler(&fakeRefresher{}, "secret-token")
 
 	w := postRefresh(handler, "secret-token")
 
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d; want 200", w.Code)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("status = %d; want 202", w.Code)
 	}
 	var resp map[string]any
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if resp["status"] != "ok" {
-		t.Errorf("status = %v; want ok", resp["status"])
+	if resp["status"] != "accepted" {
+		t.Errorf("status = %v; want accepted", resp["status"])
+	}
+
+	waitForState(t, handler, "ok")
+}
+
+// TestStatus_InitiallyIdle — before any refresh, GET status reports idle.
+func TestStatus_InitiallyIdle(t *testing.T) {
+	handler := buildAdminTestHandler(&fakeRefresher{}, "")
+
+	w := getStatus(handler)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d; want 200", w.Code)
+	}
+	if got := decodeStatus(t, w); got != "idle" {
+		t.Errorf("state = %q; want idle", got)
 	}
 }

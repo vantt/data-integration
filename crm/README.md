@@ -36,8 +36,11 @@ crm/
 
 Dagster triggers the reverse-ETL + syncparties on demand via
 `POST /admin/refresh` (header `X-Refresh-Token: $CRM_REFRESH_TOKEN`) after the
-warehouse serving layer updates. Synchronous; returns `{"status":"ok",...}` on
-success, `409 {"status":"busy"}` if a refresh is already running, `401` on bad token.
+warehouse serving layer updates. Fire-and-forget: the refresh runs async on a
+background goroutine and the POST returns `202 {"status":"accepted",...}`
+immediately, `409 {"status":"busy"}` if a refresh is already running, `401` on
+bad token. Poll `GET /admin/refresh/status` for the last run's outcome
+(`{"state":"idle|running|ok|error",...}`).
 
 ## Design & phases
 
