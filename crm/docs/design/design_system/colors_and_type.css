@@ -1,0 +1,807 @@
+/* ============================================================
+   Precision Design System — colors_and_type.css
+   The visual language of PassMan. v0.1.
+
+   Authoritative tokens live in :root.
+   ============================================================ */
+
+/* ── Google Fonts — Fraunces, Geist, Geist Mono ─────────── */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400;1,9..144,500&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500;600;700&display=swap');
+
+/* @font-face declarations — satisfy the DS compiler; actual files
+   are served by the Google Fonts @import above. */
+@font-face {
+  font-family: 'Fraunces';
+  src: local('Fraunces');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist';
+  src: local('Geist');
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: local('Geist Mono');
+  font-display: swap;
+}
+
+:root {
+  /* ── INK RAMP (warm desaturated grays) ───────────────────── */
+  --ink-000: #0a0a0c;
+  --ink-050: #0e0e10;  /* page base                              */
+  --ink-100: #15151a;  /* card surface                           */
+  --ink-150: #1c1c22;  /* raised surface                         */
+  --ink-200: #232329;  /* hairline                               */
+  --ink-300: #2f2f36;  /* strong border                          */
+  --ink-400: #44413c;  /* disabled fg                            */
+  --ink-500: #6a655d;  /* tertiary text                          */
+  --ink-600: #8a857a;  /* secondary text                         */
+  --ink-700: #b4ad9f;
+  --ink-800: #d8d2c3;
+  --ink-900: #f0ece2;  /* display fg, warm off-white             */
+
+  /* ── SEMANTIC ACCENTS (use only when something is true,
+        wrong, or actionable) ────────────────────────────────── */
+  --amber-500: #e8a341;   /* primary action, verify, pepper dot  */
+  --amber-hi:  #f5b35a;   /* hover                                */
+  --amber-lo:  #b97d23;   /* pressed / muted                      */
+  --amber-bg:  #3a2a14;   /* surface tint for amber chips         */
+
+  --moss-500:  #84b577;   /* success · ready · verified          */
+  --moss-bg:   #1d2818;
+
+  --coral-500: #e0746c;   /* blocking error                       */
+  --coral-bg:  #2b1815;
+
+  --honey-500: #d4a548;   /* warning · pepper hint dot            */
+
+  /* ── ALIASES (semantic) ─────────────────────────────────── */
+  --fg:           var(--ink-900);
+  --fg-1:         var(--ink-800);
+  --fg-2:         var(--ink-700);
+  --fg-muted:     var(--ink-600);
+  --fg-tertiary:  var(--ink-500);
+  --fg-disabled:  var(--ink-400);
+
+  --bg-page:      var(--ink-050);
+  --bg-surface:   var(--ink-100);
+  --bg-raised:    var(--ink-150);
+
+  --border:        var(--ink-200);  /* hairline                   */
+  --border-strong: var(--ink-300);
+  --border-amber:  var(--amber-500);
+
+  --accent:       var(--amber-500);
+  --accent-hover: var(--amber-hi);
+  --accent-press: var(--amber-lo);
+
+  --success:      var(--moss-500);
+  --warning:      var(--honey-500);
+  --danger:       var(--coral-500);
+
+  /* ── FINANCE SEMANTICS (value direction — money in / out) ───
+        Distinct from --accent: gain/loss describe NUMBERS, the
+        accent describes ACTIONS. Never collapse them. Defaults
+        below are the dark-theme greens/reds; the finance + light
+        themes re-point them. */
+  --gain:     var(--moss-500);   /* positive · credit · up        */
+  --gain-bg:  var(--moss-bg);
+  --loss:     var(--coral-500);  /* negative · debit · down        */
+  --loss-bg:  var(--coral-bg);
+
+  --on-amber:     #1a0f02;          /* fg on amber button         */
+  --on-accent:    var(--on-amber);  /* fg on the accent button     */
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────── */
+  --font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --font-body:    'Geist', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono:    'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* size scale */
+  --fs-display:    64px;   /* doc hero                            */
+  --fs-h1:         44px;
+  --fs-h2:         28px;
+  --fs-h3:         22px;
+  --fs-name:       20px;   /* profile name                        */
+  --fs-mono-xl:    32px;   /* password slab                       */
+  --fs-body:       15px;
+  --fs-body-sm:    13px;
+  --fs-caption:    10.5px;
+  --fs-micro:      9.5px;
+
+  /* line-heights */
+  --lh-display:    1.02; /* @kind other */
+  --lh-tight:      1.15;  /* @kind other */
+  --lh-snug:       1.3;   /* @kind other */
+  --lh-body:       1.55;  /* @kind other */
+
+  /* letter-spacing */
+  --tracking-display: -0.03em; /* @kind other */
+  --tracking-tight:   -0.02em;  /* @kind other */
+  --tracking-name:    -0.015em; /* @kind other */
+  --tracking-body:    -0.005em; /* @kind other */
+  --tracking-mono:     0.005em; /* @kind other */
+  --tracking-caps:     0.22em;  /* @kind other */
+  --tracking-eyebrow:  0.18em;  /* @kind other */
+
+  /* font weights */
+  --fw-light:    300; /* @kind font */
+  --fw-regular:  400;  /* @kind font */
+  --fw-medium:   500;  /* @kind font */
+  --fw-semi:     600;  /* @kind font */
+  --fw-bold:     700;  /* @kind font */
+
+  /* ── SPACING (4-base scale, sp/0..sp/8) ─────────────────── */
+  --sp-0: 0; /* @kind spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 36px;
+  --sp-7: 56px;
+  --sp-8: 80px;
+
+  /* ── RADII ──────────────────────────────────────────────── */
+  --radii-hairline: 2px;
+  --radii-control:  4px;
+  --radii-soft:     8px;
+  --radii-pill:     999px;
+
+  /* ── SHADOW (precision is almost shadowless) ────────────── */
+  --shadow-status-glow: 0 0 8px;             /* + color66 inline   */
+  --shadow-cta-hover:   0 8px 24px rgba(232,163,65,0.20),
+                        0 0 0 1px var(--amber-hi);
+
+  /* ── MOTION ─────────────────────────────────────────────── */
+  --dur-instant: 0ms;   /* @kind other */
+  --dur-fast:    120ms; /* @kind other */
+  --dur-settle:  200ms; /* @kind other */
+  --dur-open:    260ms; /* @kind other */
+
+  --ease-fast:   cubic-bezier(.2,0,.1,1);   /* @kind other */
+  --ease-settle: cubic-bezier(.2,.6,.1,1);  /* @kind other */
+  --ease-open:   cubic-bezier(.2,.8,.2,1);  /* @kind other */
+
+  /* ── LAYOUT ─────────────────────────────────────────────── */
+  --popup-w: 600px;
+  --popup-h: 520px;
+  --content-max: 1040px;
+
+  /* ── BACKGROUND VIGNETTE (atmospheric — opt in) ─────────── */
+  --bg-vignette: radial-gradient(ellipse at 70% -10%,
+                  rgba(232,163,65,0.04), transparent 60%);
+}
+
+/* ══════════════════════════════════════════════════════════
+   FINANCE LIGHT  —  html[data-theme="finance"]
+   A light theme tuned for money-management surfaces. Neutral
+   (faintly cool) ink ramp · INDIGO accent for ACTIONS · the
+   gain/loss pair carries value direction so it never collides
+   with the accent. Same switching mechanism as dark / light.
+   ══════════════════════════════════════════════════════════ */
+html[data-theme="finance"] {
+  /* ink ramp — neutral, faintly cool (page → ink) */
+  --ink-000: #ffffff;
+  --ink-050: #f5f6f7;  /* page          */
+  --ink-100: #ffffff;  /* card          */
+  --ink-150: #ffffff;  /* raised        */
+  --ink-200: #e9ebed;  /* hairline      */
+  --ink-300: #d7dade;  /* strong border */
+  --ink-400: #abafb5;  /* disabled fg   */
+  --ink-500: #7f848c;  /* tertiary text */
+  --ink-600: #565b63;  /* secondary text*/
+  --ink-700: #3a3f46;
+  --ink-800: #23272d;
+  --ink-900: #13161b;  /* ink           */
+
+  /* accent — INDIGO (actions only) */
+  --indigo-500: #3a47d6;
+  --indigo-hi:  #4f5cf0;
+  --indigo-lo:  #2c37ad;
+  --indigo-bg:  #e9ebfb;
+
+  --accent:       var(--indigo-500);
+  --accent-hover: var(--indigo-hi);
+  --accent-press: var(--indigo-lo);
+  --border-amber: var(--indigo-500);   /* keep alias honest      */
+  --on-amber:     #ffffff;
+  --on-accent:    #ffffff;
+
+  /* value direction — money in / out */
+  --gain:     #0f9564;  --gain-bg:  #e2f1ea;
+  --loss:     #d63b48;  --loss-bg:  #fbe1e3;
+
+  /* re-point success/danger to the finance greens/reds so the
+     existing status pills + callouts speak finance too */
+  --success:  var(--gain);
+  --danger:   var(--loss);
+  --warning:  #c0871f;          /* warning stays amber, darkened for paper */
+
+  /* semantic-accent surface tints (light) */
+  --amber-bg: var(--indigo-bg);
+  --moss-bg:  var(--gain-bg);
+  --coral-bg: var(--loss-bg);
+
+  /* indigo CTA glow + indigo vignette */
+  --shadow-cta-hover: 0 8px 24px rgba(58,71,214,0.20), 0 0 0 1px var(--indigo-lo);
+  --bg-vignette: radial-gradient(ellipse at 70% -10%,
+                  rgba(58,71,214,0.05), transparent 60%);
+}
+html[data-theme="finance"] body { background: var(--bg-page); }
+html[data-theme="finance"] ::selection { background: rgba(58,71,214,0.16); color: var(--ink-900); }
+
+/* ──────────────────────────────────────────────────────────
+   BASE
+   ────────────────────────────────────────────────────────── */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-page);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--tracking-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+* { box-sizing: border-box; }
+
+::selection { background: rgba(232,163,65,0.20); color: var(--ink-900); }
+
+/* ──────────────────────────────────────────────────────────
+   SEMANTIC TYPE
+   ────────────────────────────────────────────────────────── */
+
+/* Display — Fraunces, used sparingly */
+.display, h1 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-display);
+  line-height: var(--lh-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--fg);
+  margin: 0;
+}
+h2 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  margin: 0;
+}
+h3 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-h2);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  margin: 0;
+}
+
+/* Italic Fraunces is reserved for human voice */
+.voice, em.voice {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--tracking-name);
+  color: var(--fg-1);
+}
+
+/* Body */
+p, .body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: var(--tracking-body);
+  color: var(--fg-2);
+  margin: 0;
+}
+.body-sm { font-size: var(--fs-body-sm); }
+
+/* Name / value */
+.name {
+  font-family: var(--font-body);
+  font-size: var(--fs-name);
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--tracking-name);
+  color: var(--fg);
+}
+
+/* Mono — labels, data, password */
+.mono     { font-family: var(--font-mono); letter-spacing: var(--tracking-mono); }
+.mono-xl  { font-family: var(--font-mono); font-size: var(--fs-mono-xl);
+            letter-spacing: var(--tracking-mono); color: var(--fg);
+            line-height: 1; }
+code      { font-family: var(--font-mono); font-size: 0.95em;
+            color: var(--fg-1); }
+
+/* Captions / eyebrows — Geist Mono, uppercase, tracked */
+.caption, .eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+  line-height: 1;
+}
+.caption--accent, .eyebrow--accent { color: var(--accent); }
+.caption--small { font-size: var(--fs-micro); letter-spacing: var(--tracking-eyebrow); }
+
+/* Links */
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--dur-fast) var(--ease-fast);
+}
+a:hover { color: var(--accent); }
+
+/* Focus */
+:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ──────────────────────────────────────────────────────────
+   PRIMITIVES
+   ────────────────────────────────────────────────────────── */
+
+.hairline   { height: 1px; background: var(--border); border: 0; }
+.hairline-strong { height: 1px; background: var(--border-strong); border: 0; }
+
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radii-control);
+  padding: var(--sp-4);
+}
+.card--rule {
+  border-left: 2px solid var(--accent);
+  padding-left: var(--sp-4);
+}
+
+/* Status pill */
+.status {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  font-size: var(--fs-body-sm); color: var(--fg);
+}
+.status::before {
+  content: ""; width: 7px; height: 7px; border-radius: var(--radii-pill);
+  background: var(--moss-500);
+  box-shadow: 0 0 8px rgba(132,181,119,0.40);
+}
+.status--ready::before   { background: var(--moss-500);  box-shadow: 0 0 8px rgba(132,181,119,0.40); }
+.status--warn::before    { background: var(--amber-500); box-shadow: 0 0 8px rgba(232,163,65,0.40); }
+.status--blocked::before { background: var(--coral-500); box-shadow: 0 0 8px rgba(224,116,108,0.40); }
+.status--locked::before  { background: var(--ink-400);   box-shadow: none; }
+.status--warn    { color: var(--amber-500); }
+.status--blocked { color: var(--coral-500); }
+.status--locked  { color: var(--ink-700); }
+
+/* Chip */
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: var(--fw-medium);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-700);
+  background: transparent;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radii-hairline);
+}
+.chip--moss  { color: var(--moss-500);  background: rgba(29,40,24,0.50);  border-color: rgba(132,181,119,0.33); }
+.chip--amber { color: var(--amber-500); background: rgba(58,42,20,0.50);  border-color: rgba(232,163,65,0.33); }
+.chip--coral { color: var(--coral-500); background: rgba(43,24,21,0.50);  border-color: rgba(224,116,108,0.33); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-body);
+  border-radius: var(--radii-control);
+  border: 0;
+  cursor: pointer;
+  padding: 12px 22px;
+  transition: background var(--dur-fast) var(--ease-fast),
+              box-shadow var(--dur-fast) var(--ease-fast),
+              color var(--dur-fast) var(--ease-fast);
+}
+.btn--primary {
+  background: var(--accent);
+  color: var(--on-amber);
+}
+.btn--primary:hover {
+  background: var(--accent-hover);
+  box-shadow: var(--shadow-cta-hover);
+}
+.btn--primary:active { background: var(--accent-press); box-shadow: none; }
+.btn--secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  padding: 11px 22px;
+}
+.btn--secondary:hover { background: rgba(232,163,65,0.08); }
+.btn--ghost {
+  background: transparent;
+  color: var(--fg-muted);
+  padding: 4px 0;
+}
+.btn--ghost:hover { color: var(--accent); }
+.btn:disabled,
+.btn--primary:disabled {
+  background: var(--ink-200);
+  color: var(--ink-400);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Password slab — the hero of every screen */
+.slab {
+  display: flex; align-items: stretch;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  transition: border-color var(--dur-settle) var(--ease-settle);
+}
+.slab__value {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fs-mono-xl);
+  letter-spacing: var(--tracking-mono);
+  color: var(--fg);
+  line-height: 1;
+  display: flex; align-items: center;
+  padding: var(--sp-4) 0;
+}
+.slab__copy {
+  display: flex; align-items: center; gap: var(--sp-2);
+  border: 0; background: transparent;
+  color: var(--fg-1);
+  font-family: var(--font-body); font-size: var(--fs-body-sm);
+  font-weight: var(--fw-medium);
+  padding: 0 var(--sp-4);
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-fast);
+}
+.slab__copy:hover { color: var(--accent); }
+.slab--copied               { border-color: var(--accent); }
+.slab--copied .slab__copy   { color: var(--accent); }
+
+/* ============================================================
+   LONG-FORM / READING LAYER  (v0.2)
+   For markdown & documentation surfaces. The UI scale (fs-body
+   15px / lh 1.55) is tuned for chrome; reading wants a larger
+   measure-bound rhythm. Distilled from the editorial composer:
+   centred column · eyebrow → title → lede · 17/1.7 body · tonal
+   callouts · dark code. Set in Precision's Fraunces + Geist.
+   ============================================================ */
+:root {
+  /* ── READING TYPE SCALE ─────────────────────────────────── */
+  --fs-title:      40px;   /* article title (Fraunces)             */
+  --fs-lede:       20px;   /* standfirst / deck                    */
+  --fs-prose-h1:   34px;   /* in-content top head (Fraunces)       */
+  --fs-prose-h2:   28px;   /* section head (Fraunces)              */
+  --fs-prose-h3:   20px;   /* sub-section (Fraunces)               */
+  --fs-prose-h4:   15px;   /* run-in label (Geist Mono caps)       */
+  --fs-prose:      17px;   /* reading body (Geist)                 */
+  --fs-prose-sm:   14.5px; /* aside / figure caption               */
+  --fs-prose-code: 14.5px; /* inline + block mono                  */
+  --fs-pullquote:  24px;   /* Fraunces italic pull-quote           */
+
+  /* ── READING LINE-HEIGHTS ───────────────────────────────── */
+  --lh-prose:      1.7;    /* @kind other */  /* body — generous for the page */
+  --lh-lede:       1.5;    /* @kind other */  /* standfirst */
+  --lh-prose-head: 1.2;    /* @kind other */  /* article & section heads */
+  --lh-prose-code: 1.6;    /* @kind other */  /* code block */
+
+  /* ── READING MEASURE & RHYTHM ───────────────────────────── */
+  --measure:       68ch;     /* ideal line length for body text    */
+  --reading-col:   720px;    /* the centred reading column         */
+  --reading-pad:   var(--sp-7);  /* 56px — gutter inside the column */
+  --flow:          1.35em;   /* @kind other */  /* default block-to-block gap */
+  --flow-tight:    0.5em;    /* @kind other */  /* list item / caption gap */
+  --flow-loose:    2.1em;    /* @kind other */  /* space before a section head */
+}
+
+/* ──────────────────────────────────────────────────────────
+   .prose — drop rendered markdown inside this and the rhythm,
+   measure and type are handled. Block flow uses the owl
+   selector so authored HTML needs no per-element margins.
+   ────────────────────────────────────────────────────────── */
+.prose {
+  font-family: var(--font-body);
+  font-size: var(--fs-prose);
+  line-height: var(--lh-prose);
+  letter-spacing: var(--tracking-body);
+  color: var(--fg-1);
+  max-width: var(--measure);
+  text-wrap: pretty;
+}
+.prose > * { margin: 0; }
+.prose > * + * { margin-top: var(--flow); }
+
+/* Headings — Fraunces, with breathing room above */
+.prose h1, .prose h2, .prose h3 {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  line-height: var(--lh-prose-head);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+}
+.prose h2 { font-size: var(--fs-prose-h2); }
+.prose h3 { font-size: var(--fs-prose-h3); }
+.prose h1 { font-size: var(--fs-prose-h1); line-height: var(--lh-tight); }
+.prose > h1 + *, .prose > h2 + *, .prose > h3 + *, .prose > h4 + * { margin-top: var(--flow-tight); }
+.prose > * + h1 { margin-top: var(--flow-loose); }
+.prose > * + h2 { margin-top: var(--flow-loose); }
+.prose > * + h3 { margin-top: calc(var(--flow) * 1.3); }
+
+/* h4 — a run-in label, set in tracked mono like an eyebrow */
+.prose h4 {
+  font-family: var(--font-mono);
+  font-size: var(--fs-prose-h4);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+  margin: 0;
+}
+.prose > * + h4 { margin-top: var(--flow-loose); }
+
+/* Body */
+.prose p { font-size: var(--fs-prose); line-height: var(--lh-prose); color: var(--fg-1); }
+.prose strong { font-weight: var(--fw-semi); color: var(--fg); }
+.prose em { font-style: italic; }
+
+/* Inline marks */
+.prose mark { background: rgba(232,163,65,0.22); color: var(--fg); padding: 0.02em 0.22em; border-radius: var(--radii-hairline); }
+.prose del  { color: var(--fg-tertiary); text-decoration: line-through; }
+.prose ins  { color: var(--moss-500); text-decoration: none; }
+.prose small { font-size: 0.82em; color: var(--fg-muted); }
+.prose sub, .prose sup { font-size: 0.72em; line-height: 0; }
+.prose abbr { text-decoration: underline dotted var(--border-strong); text-underline-offset: 3px; cursor: help; }
+.prose kbd {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  color: var(--fg);
+  background: var(--ink-150);
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radii-control);
+  padding: 0.12em 0.46em;
+  white-space: nowrap;
+}
+
+/* Links — amber, hairline underline that thickens on hover */
+.prose a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(232,163,65,0.35);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.prose a:hover { text-decoration-color: var(--accent); }
+
+/* Lists */
+.prose ul, .prose ol { padding-left: 1.4em; }
+.prose li + li { margin-top: var(--flow-tight); }
+.prose li { padding-left: 0.3em; }
+.prose ul > li::marker { color: var(--accent); }
+.prose ol > li::marker { color: var(--fg-tertiary); font-family: var(--font-mono); font-size: 0.9em; }
+.prose li > ul, .prose li > ol { margin-top: var(--flow-tight); }
+
+/* Definition list — mono term in accent, value alongside */
+.prose dl {
+  display: grid;
+  grid-template-columns: minmax(8ch, max-content) 1fr;
+  column-gap: var(--sp-5);
+  row-gap: var(--sp-3);
+  align-items: baseline;
+}
+.prose dt {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.prose dd { margin: 0; color: var(--fg-1); }
+
+/* Inline code */
+.prose code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-prose-code);
+  letter-spacing: var(--tracking-mono);
+  color: var(--fg);
+  background: var(--ink-150);
+  border: 1px solid var(--border);
+  border-radius: var(--radii-hairline);
+  padding: 0.08em 0.34em;
+}
+
+/* Code block */
+.prose pre {
+  font-family: var(--font-mono);
+  font-size: var(--fs-prose-code);
+  line-height: var(--lh-prose-code);
+  letter-spacing: var(--tracking-mono);
+  color: var(--ink-800);
+  background: var(--ink-000);
+  border: 1px solid var(--border);
+  border-radius: var(--radii-soft);
+  padding: var(--sp-4) var(--sp-5);
+  overflow-x: auto;
+  max-width: 100%;
+}
+.prose pre code {
+  background: none; border: 0; padding: 0;
+  color: inherit; font-size: inherit;
+}
+
+/* Code block with a filename / language bar (furniture) */
+.codeblock {
+  border: 1px solid var(--border);
+  border-radius: var(--radii-soft);
+  overflow: hidden;
+  background: var(--ink-000);
+}
+.codeblock__bar {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--ink-100);
+}
+.codeblock__name {
+  font-family: var(--font-mono); font-size: var(--fs-caption);
+  letter-spacing: var(--tracking-mono); color: var(--fg-muted);
+}
+.codeblock__lang {
+  margin-left: auto;
+  font-family: var(--font-mono); font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-caps); text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+.codeblock pre { border: 0; border-radius: 0; background: none; }
+
+/* Blockquote — editorial pull, amber rule, Fraunces italic */
+.prose blockquote {
+  border-left: 2px solid var(--accent);
+  padding-left: var(--sp-4);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: var(--fs-pullquote);
+  line-height: var(--lh-snug);
+  letter-spacing: var(--tracking-name);
+  color: var(--fg-1);
+}
+.prose blockquote p { font: inherit; color: inherit; }
+.prose blockquote cite {
+  display: block;
+  margin-top: var(--sp-3);
+  font: var(--fw-medium) var(--fs-caption)/1 var(--font-mono);
+  font-style: normal;
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+
+/* Aside quote — a quieter citation, not an editorial pull */
+.prose blockquote.aside,
+.prose blockquote.plain {
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: var(--fs-prose);
+  line-height: var(--lh-prose);
+  letter-spacing: var(--tracking-body);
+  border-left-color: var(--border-strong);
+  color: var(--fg-2);
+}
+.prose blockquote.aside p,
+.prose blockquote.plain p { font: inherit; color: inherit; }
+
+/* Horizontal rule — a centred dot rule, not a line */
+.prose hr {
+  border: 0;
+  height: var(--sp-5);
+  margin: var(--flow-loose) auto;
+  background: none;
+  text-align: center;
+}
+.prose hr::before {
+  content: "· · ·";
+  font-family: var(--font-mono);
+  letter-spacing: 0.5em;
+  color: var(--fg-tertiary);
+}
+
+/* Figures & images */
+.prose img { display: block; width: 100%; border-radius: var(--radii-soft); }
+.prose figure { margin: 0; }
+.prose figcaption {
+  margin-top: var(--sp-3);
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+
+/* Tables */
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-prose-sm);
+}
+.prose th, .prose td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+.prose th {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--fg-tertiary);
+}
+.prose td { color: var(--fg-1); }
+
+/* ── ARTICLE FURNITURE ─────────────────────────────────────
+   The header block above .prose: eyebrow → title → lede.    */
+.lede {
+  font-family: var(--font-body);
+  font-size: var(--fs-lede);
+  line-height: var(--lh-lede);
+  letter-spacing: var(--tracking-body);
+  color: var(--fg-muted);
+}
+.article-title {
+  font-family: var(--font-display);
+  font-weight: var(--fw-regular);
+  font-size: var(--fs-title);
+  line-height: var(--lh-tight);
+  letter-spacing: var(--tracking-tight);
+  color: var(--fg);
+  margin: 0;
+}
+
+/* Tonal callout — side-note without a hard box (per the ref).
+   Variants tint with a semantic accent at low alpha. */
+.callout {
+  border-left: 2px solid var(--accent);
+  background: rgba(232,163,65,0.06);
+  border-radius: 0 var(--radii-control) var(--radii-control) 0;
+  padding: var(--sp-4) var(--sp-5);
+}
+.callout__label {
+  font-family: var(--font-mono);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: var(--sp-2);
+}
+.callout p { font-size: var(--fs-prose); line-height: var(--lh-prose); color: var(--fg-1); }
+.callout--moss  { border-color: var(--moss-500);  background: rgba(132,181,119,0.06); }
+.callout--moss  .callout__label { color: var(--moss-500); }
+.callout--coral { border-color: var(--coral-500); background: rgba(224,116,108,0.06); }
+.callout--coral .callout__label { color: var(--coral-500); }
+.callout--honey { border-color: var(--honey-500); background: rgba(212,165,72,0.06); }
+.callout--honey .callout__label { color: var(--honey-500); }
+.callout--note  { border-color: var(--border-strong); background: var(--ink-100); }
+.callout--note  .callout__label { color: var(--fg-tertiary); }

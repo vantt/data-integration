@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>retailCRM — Prototype</title>
+
+<!-- Precision Design System — tokens + CRM ui-kit (binding visual contract).
+     styles.css @imports colors_and_type.css + app.css + crm.css. -->
+<link rel="stylesheet" href="../design_system/styles.css" />
+
+<!-- Extra font families for the Tweaks "Bộ chữ" picker (Precision default loads via the DS css) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Source+Sans+3:wght@300..700&family=IBM+Plex+Serif:wght@400;500;600&family=IBM+Plex+Sans:wght@300..700&family=IBM+Plex+Mono:wght@300..600&family=JetBrains+Mono:wght@300..600&display=swap" rel="stylesheet" />
+
+<link rel="stylesheet" href="crm/crm-extra.css" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  html, body { min-height: 100%; }
+  #root { min-height: 100vh; }
+  /* keep app chrome above DS background vignette */
+  body { background-attachment: fixed; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- data layer (plain JS) -->
+<script src="crm/data.js"></script>
+
+<!-- app (JSX, order matters: helpers → modals → screens → app) -->
+<script type="text/babel" src="crm/helpers.jsx"></script>
+<script type="text/babel" src="crm/modals.jsx"></script>
+<script type="text/babel" src="crm/screens_lists.jsx"></script>
+<script type="text/babel" src="crm/screens_360.jsx"></script>
+<script type="text/babel" src="crm/screens_inbox.jsx"></script>
+<script type="text/babel" src="crm/screens_growth.jsx"></script>
+<script type="text/babel" src="crm/app.jsx"></script>
+</body>
+</html>

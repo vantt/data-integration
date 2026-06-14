@@ -1,0 +1,8 @@
+/* ============================================================
+   Precision Design System — root entry point
+   Import this single file to get all tokens, base styles,
+   and CRM UI-kit utilities.
+   ============================================================ */
+@import './colors_and_type.css';
+@import './ui_kits/crm/styles/app.css';
+@import './ui_kits/crm/styles/crm.css';
