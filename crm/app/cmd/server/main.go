@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	inboundhttp "github.com/vantt/data-integration/crm/app/internal/adapters/inbound/http"
+	"github.com/vantt/data-integration/crm/app/internal/adapters/inbound/web"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/outbound/sqlite"
 	"github.com/vantt/data-integration/crm/app/internal/application"
 )
@@ -97,6 +98,22 @@ func main() {
 	campaignSvc := application.NewCampaignService(campaignRepo, segmentRepo, partyRepo, db.SQLDB())
 	campaignHandler := inboundhttp.NewCampaignHandler(campaignSvc, campaignSvc)
 	campaignHandler.RegisterRoutes(r)
+
+	// Web UI adapter (templ + HTMX) — mounted at / (JSON API stays under /api).
+	// Auth: DEFERRED — LAN-trust only.
+	webDeps := &web.Deps{
+		ActionQueue: cacheRepo,
+		Tasks:       taskSvc,
+		TaskWriter:  taskSvc,
+		Parties:     web.NewWebPartyRepo(partyRepo, db.SQLDB()),
+		Profile:     profileSvc,
+		Insight:     cacheRepo,
+		Identities:  partyRepo,
+		Activities:  activitySvc,
+		Notes:       profileSvc,
+		PartyTasks:  web.NewWebTaskRepo(db.SQLDB()),
+	}
+	web.Mount(r, webDeps)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%s", port),

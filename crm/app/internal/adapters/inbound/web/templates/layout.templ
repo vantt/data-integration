@@ -1,0 +1,71 @@
+package templates
+
+// AppShell renders the full HTML page shell with sidebar + topbar.
+// Content is injected via the body component argument.
+templ AppShell(activeScreen string, title string) {
+	<!DOCTYPE html>
+	<html lang="vi">
+		<head>
+			<meta charset="UTF-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<title>{ title } — CRM</title>
+			<link rel="stylesheet" href="/static/app.css"/>
+			<script src="/static/htmx.min.js"></script>
+		</head>
+		<body>
+			@SidebarNav(activeScreen)
+			<div class="main-wrap">
+				{ children... }
+			</div>
+		</body>
+	</html>
+}
+
+// SidebarNav renders the fixed left sidebar navigation.
+templ SidebarNav(activeScreen string) {
+	<nav class="sidebar">
+		<div class="sidebar-logo">⬡ CRM Nội bộ</div>
+		<div class="sidebar-nav">
+			<a href="/" class={ sidebarLinkClass(activeScreen, "S01") }>
+				📋 Worklist
+			</a>
+			<a href="/customers" class={ sidebarLinkClass(activeScreen, "S02") }>
+				👥 Khách hàng
+			</a>
+			<a href="/inbox" class={ sidebarLinkClass(activeScreen, "S05") }>
+				💬 Hộp thư
+			</a>
+			<a href="/tasks" class={ sidebarLinkClass(activeScreen, "S07") }>
+				✅ Tasks
+			</a>
+			<a href="/segments" class={ sidebarLinkClass(activeScreen, "S08") }>
+				🎯 Segments
+			</a>
+			<a href="/campaigns" class={ sidebarLinkClass(activeScreen, "S10") }>
+				📣 Chiến dịch
+			</a>
+			<a href="/settings" class={ sidebarLinkClass(activeScreen, "S13") }>
+				⚙️ Cài đặt
+			</a>
+		</div>
+		<div class="sidebar-footer">
+			CRM v0.7 · LAN-trust
+		</div>
+	</nav>
+}
+
+// Topbar renders the sticky top bar with a title and optional search slot.
+templ Topbar(title string) {
+	<header class="topbar">
+		<span class="topbar-title">{ title }</span>
+		{ children... }
+	</header>
+}
+
+// sidebarLinkClass returns "active" when the link matches the current screen.
+func sidebarLinkClass(active, screen string) string {
+	if active == screen {
+		return "active"
+	}
+	return ""
+}

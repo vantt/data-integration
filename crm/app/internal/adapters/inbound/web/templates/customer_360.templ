@@ -1,0 +1,396 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// Customer360Page renders S03 — Customer 360 Detail.
+templ Customer360Page(
+	party *domain.Party360,
+	identities []domain.PartyIdentity,
+	activeTab string,
+) {
+	@AppShell("S03", party.DisplayName) {
+		@Topbar("") {
+			<a href="/customers" class="back-link">← Danh sách</a>
+			<span style="font-weight:600;font-size:15px;margin-left:8px;">{ party.DisplayName }</span>
+			if party.PrimaryPhone != "" {
+				<span class="text-muted" style="margin-left:8px;">{ party.PrimaryPhone }</span>
+			}
+			<span class={ "badge-pill " + statusBadgeClassHelper(party.Status) } style="margin-left:8px;">{ party.Status }</span>
+		}
+		<div class="page-content">
+			<div class="c360-layout">
+				<!-- Left column: static info -->
+				<div class="c360-left">
+					@c360InfoCard(party, identities)
+				</div>
+				<!-- Right column: tab panels -->
+				<div class="c360-right">
+					@c360TabBar(party.PartyID, activeTab)
+					<div class="tab-panel">
+						@c360ActivePanel(party.PartyID, activeTab)
+					</div>
+				</div>
+			</div>
+		</div>
+	}
+}
+
+// c360InfoCard renders the left-column static party info.
+templ c360InfoCard(party *domain.Party360, identities []domain.PartyIdentity) {
+	<div class="card">
+		<div class="card-title">Thông tin cơ bản</div>
+		<div class="info-row">
+			<span class="label">Tên:</span>
+			<span class="value">{ party.DisplayName }</span>
+		</div>
+		if party.PrimaryPhone != "" {
+			<div class="info-row">
+				<span class="label">SĐT:</span>
+				<span class="value">
+					<a href={ templ.SafeURL("tel:" + party.PrimaryPhone) } class="phone-link">{ party.PrimaryPhone }</a>
+				</span>
+			</div>
+		}
+		if party.PrimaryEmail != "" {
+			<div class="info-row">
+				<span class="label">Email:</span>
+				<span class="value">{ party.PrimaryEmail }</span>
+			</div>
+		}
+		if party.LifecycleStage != "" {
+			<div class="info-row">
+				<span class="label">Giai đoạn:</span>
+				<span class="value">{ party.LifecycleStage }</span>
+			</div>
+		}
+		if party.OwnerUserID != nil {
+			<div class="info-row">
+				<span class="label">Owner:</span>
+				<span class="value">{ *party.OwnerUserID }</span>
+			</div>
+		}
+		<div class="info-row">
+			<span class="label">Loại:</span>
+			<span class="value">{ party.PartyType }</span>
+		</div>
+		<!-- Identities -->
+		if len(identities) > 0 {
+			<div class="card-section-label">Định danh</div>
+			for _, id := range identities {
+				<div class="info-row">
+					<span class="label">{ id.IdentityType }:</span>
+					<span class="value">{ id.IdentityValue }</span>
+				</div>
+			}
+		}
+		<!-- Tags JSON placeholder — tags are rendered from TagsJSON if present -->
+		if party.TagsJSON != "" && party.TagsJSON != "[]" && party.TagsJSON != "null" {
+			<div class="card-section-label">Tags</div>
+			<div class="tag-chips">
+				<span class="tag-chip">{ truncStr(party.TagsJSON, 40) }</span>
+			</div>
+		}
+		<div class="card-section-label">Thời gian</div>
+		<div class="info-row">
+			<span class="label">Tạo lúc:</span>
+			<span class="value text-muted">{ formatICTHelper(party.PartyCreatedAt) }</span>
+		</div>
+	</div>
+}
+
+// c360TabBar renders the horizontal tab navigation.
+templ c360TabBar(partyID string, activeTab string) {
+	<div class="tab-bar">
+		@c360Tab(partyID, "insight", "📊 Insight", activeTab)
+		@c360Tab(partyID, "orders", "🛒 Đơn hàng", activeTab)
+		@c360Tab(partyID, "timeline", "📅 Timeline", activeTab)
+		@c360Tab(partyID, "tasks", "✅ Tasks", activeTab)
+		@c360Tab(partyID, "notes", "📝 Ghi chú", activeTab)
+	</div>
+}
+
+templ c360Tab(partyID, tab, label, activeTab string) {
+	<a
+		href={ templ.SafeURL(fmt.Sprintf("/customers/%s?tab=%s", partyID, tab)) }
+		class={ c360TabClass(tab, activeTab) }
+		hx-get={ fmt.Sprintf("/customers/%s/panels/%s", partyID, tab) }
+		hx-target=".tab-panel"
+		hx-swap="innerHTML"
+		hx-push-url={ fmt.Sprintf("/customers/%s?tab=%s", partyID, tab) }
+	>
+		{ label }
+	</a>
+}
+
+// c360ActivePanel renders the initially active panel on full-page load.
+templ c360ActivePanel(partyID string, activeTab string) {
+	<!-- HTMX loads panels on tab click; initial load uses hx-get on mount -->
+	<div
+		hx-get={ fmt.Sprintf("/customers/%s/panels/%s", partyID, activeTab) }
+		hx-trigger="load"
+		hx-swap="outerHTML"
+	>
+		<div class="empty-state" style="padding:24px 0;">
+			<span class="spinner"></span> Đang tải...
+		</div>
+	</div>
+}
+
+func c360TabClass(tab, active string) string {
+	if tab == active {
+		return "tab-item active"
+	}
+	return "tab-item"
+}
+
+// ── Panel templates (returned as HTMX fragments) ───────────────────────────────
+
+// P01InsightPanel renders the insight tab content.
+templ P01InsightPanel(insight *domain.CacheInsight) {
+	if insight == nil || insight.Insight == nil {
+		<div class="empty-state">
+			<div class="empty-state-icon">📊</div>
+			<div class="empty-state-title">Chưa có dữ liệu phân tích</div>
+			<div class="empty-state-desc">
+				Insight từ kho dữ liệu chưa được sync.<br/>
+				Chạy reverse-ETL để cập nhật.
+			</div>
+		</div>
+	} else {
+		<!-- Action Queue -->
+		if len(insight.Actions) > 0 {
+			<div class="card-section-label" style="border-top:none;padding-top:0;margin-top:0;">Hành động đề xuất</div>
+			for _, a := range insight.Actions {
+				<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;">
+					<span class={ "badge-pill " + actionTypeBadgeClassHelper(a.ActionType) }>{ a.ActionType }</span>
+					<span style="flex:1;font-size:13px;">{ a.RationaleVI }</span>
+					<span class="task-value">{ formatVNDHelper(a.ValueAtStakeVND) }</span>
+				</div>
+			}
+		}
+		<!-- RFM block -->
+		<div class="card-section-label">RFM</div>
+		<div class="flex-gap" style="flex-wrap:wrap;gap:16px;">
+			<div>
+				<div class="text-muted" style="font-size:11px;">Nhóm</div>
+				<span class={ "badge-pill " + valueGroupBadgeClassHelper(insight.Insight.ValueGroup) }>{ insight.Insight.ValueGroup }</span>
+			</div>
+			<div>
+				<div class="text-muted" style="font-size:11px;">Tần suất mua TB</div>
+				<div style="font-weight:600;">{ fmt.Sprintf("%.0f ngày", insight.Insight.AvgDaysBetweenOrders) }</div>
+			</div>
+			<div>
+				<div class="text-muted" style="font-size:11px;">Giá trị đóng góp LTV</div>
+				<div style="font-weight:600;">{ formatVNDHelper(int64(insight.Insight.LifetimeContributionMargin)) }</div>
+			</div>
+		</div>
+		<!-- Signals -->
+		<div class="card-section-label">Tín hiệu</div>
+		<div class="flex-gap" style="flex-wrap:wrap;gap:16px;">
+			<div>
+				<div class="text-muted" style="font-size:11px;">Trạng thái</div>
+				<span class={ "badge-pill " + statusBadgeClassHelper(insight.Insight.CustomerStatus) }>{ insight.Insight.CustomerStatus }</span>
+			</div>
+			<div>
+				<div class="text-muted" style="font-size:11px;">Tín hiệu mua tiếp</div>
+				<div style="font-weight:600;">{ insight.Insight.NextPurchaseSignal }</div>
+			</div>
+			if insight.Insight.TopAffinityProduct != "" {
+				<div>
+					<div class="text-muted" style="font-size:11px;">Sản phẩm yêu thích</div>
+					<div style="font-weight:600;">{ truncStr(insight.Insight.TopAffinityProduct, 30) }</div>
+				</div>
+			}
+			<div>
+				<div class="text-muted" style="font-size:11px;">Nhạy cảm giảm giá</div>
+				<div style="font-weight:600;">{ insight.Insight.DiscountSensitivity }</div>
+			</div>
+		</div>
+		@FreshnessBadge(insight.RefreshedAt, false)
+	}
+}
+
+// P02OrderHistoryPanel renders the order history tab.
+templ P02OrderHistoryPanel(orders []domain.RecentOrder) {
+	if len(orders) == 0 {
+		<div class="empty-state">
+			<div class="empty-state-icon">🛒</div>
+			<div class="empty-state-title">Khách chưa có đơn hàng</div>
+			<div class="empty-state-desc">Dữ liệu đơn hàng chưa được sync từ kho.</div>
+		</div>
+	} else {
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>Mã đơn</th>
+						<th>Ngày (ICT)</th>
+						<th>Doanh thu thuần</th>
+						<th>Trạng thái</th>
+						<th>Kênh</th>
+						<th>Số SP</th>
+					</tr>
+				</thead>
+				<tbody>
+					for _, o := range orders {
+						<tr>
+							<td style="font-weight:600;">{ o.OrderCode }</td>
+							<td class="text-muted">{ formatDateKeyHelper(o.DateKey) }</td>
+							<td class="task-value">{ formatVNDHelper(o.NetRevenue) }</td>
+							<td>{ o.Status }</td>
+							<td class="text-muted">{ o.Channel }</td>
+							<td class="text-muted">{ fmt.Sprintf("%d", o.ItemCount) }</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+// P03ActivityTimelinePanel renders the activity timeline tab.
+templ P03ActivityTimelinePanel(activities []domain.Activity) {
+	if len(activities) == 0 {
+		<div class="empty-state">
+			<div class="empty-state-icon">📅</div>
+			<div class="empty-state-title">Chưa có hoạt động nào</div>
+			<div class="empty-state-desc">Ghi log cuộc gọi, ghi chú, hoặc lần ghé thăm đầu tiên.</div>
+		</div>
+	} else {
+		<div class="timeline">
+			for _, a := range activities {
+				<div class="timeline-item">
+					<div class="timeline-time">
+						{ formatICTHelper(a.OccurredAt) }
+						<span class={ "badge-pill " + activityTypeBadge(a.ActivityType) } style="margin-left:6px;">{ a.ActivityType }</span>
+					</div>
+					<div class="timeline-content">
+						if a.Subject != "" {
+							<strong>{ a.Subject }</strong> —{ " " }
+						}
+						{ a.Body }
+					</div>
+				</div>
+			}
+		</div>
+	}
+}
+
+// P04TasksPanel renders the tasks tab for one party.
+templ P04TasksPanel(tasks []domain.Task, partyID string) {
+	<div>
+		if len(tasks) == 0 {
+			<div class="empty-state">
+				<div class="empty-state-icon">✅</div>
+				<div class="empty-state-title">Không có task nào</div>
+				<div class="empty-state-desc">Task sẽ hiển thị khi được tạo thủ công hoặc từ action queue.</div>
+			</div>
+		} else {
+			<div>
+				for _, t := range tasks {
+					<div class={ p04TaskRowClass(t.Status) } id={ "ptask-" + t.TaskID }>
+						<input
+							type="checkbox"
+							class="task-checkbox"
+							checked?={ t.Status == "done" }
+							hx-patch={ "/tasks/" + t.TaskID + "/done" }
+							hx-target={ "#ptask-" + t.TaskID }
+							hx-swap="outerHTML"
+						/>
+						<div class="task-body">
+							<div class="task-customer">
+								if t.Source == "action_queue" {
+									<span class="badge-pill badge-auto" style="margin-right:4px;">AUTO</span>
+								}
+								{ t.Title }
+							</div>
+							<div class="task-meta">
+								<span class={ taskStatusClassHelper(t.Status) }>{ t.Status }</span>
+								if t.DueAt != nil {
+									<span>Due: { formatICTHelper(*t.DueAt) }</span>
+								}
+								if t.AssigneeUserID != nil {
+									<span>→ { *t.AssigneeUserID }</span>
+								}
+							</div>
+						</div>
+					</div>
+				}
+			</div>
+		}
+	</div>
+}
+
+// P05NotesPanel renders the notes tab with an add-note form.
+templ P05NotesPanel(notes []domain.Note, partyID string) {
+	<div>
+		<!-- Add note form -->
+		<div class="note-form">
+			<form
+				hx-post={ fmt.Sprintf("/customers/%s/notes", partyID) }
+				hx-target="#notes-list"
+				hx-swap="afterbegin"
+				hx-on::after-request="this.reset()"
+			>
+				<textarea
+					name="body"
+					placeholder="Thêm ghi chú về khách hàng..."
+					rows="3"
+				></textarea>
+				<div class="flex-gap mt-8">
+					<button type="submit" class="btn btn-primary btn-sm">+ Lưu ghi chú</button>
+				</div>
+			</form>
+		</div>
+		<!-- Notes list -->
+		<div id="notes-list" class="mt-12">
+			if len(notes) == 0 {
+				<div class="empty-state" style="padding:24px 0;">
+					<div class="empty-state-title">Chưa có ghi chú nào</div>
+				</div>
+			} else {
+				for _, n := range notes {
+					@NoteCard(n)
+				}
+			}
+		</div>
+	</div>
+}
+
+// NoteCard renders one note — also used as the HTMX prepend fragment after POST.
+templ NoteCard(n domain.Note) {
+	<div class="note-card">
+		<div class="note-meta">
+			if n.AuthorUserID != nil {
+				{ *n.AuthorUserID } •{ " " }
+			}
+			{ formatICTHelper(n.CreatedAt) }
+		</div>
+		<div class="note-body">{ n.Body }</div>
+	</div>
+}
+
+// ── helpers local to this file ─────────────────────────────────────────────────
+
+func p04TaskRowClass(status string) string {
+	if status == "done" || status == "cancelled" {
+		return "task-row done"
+	}
+	return "task-row"
+}
+
+func activityTypeBadge(t string) string {
+	switch t {
+	case "call":
+		return "badge-action-call"
+	case "chat":
+		return "badge-action-upsell"
+	case "note":
+		return "badge-new"
+	default:
+		return "badge-action-default"
+	}
+}

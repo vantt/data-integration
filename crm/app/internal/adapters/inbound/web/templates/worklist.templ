@@ -1,0 +1,173 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// WorklistPage renders S01 — Worklist / Dashboard.
+templ WorklistPage(actions []domain.ActionQueueItem, tasks []domain.Task, refreshedAt string, isStale bool) {
+	@AppShell("S01", "Worklist") {
+		@Topbar("Worklist hôm nay") {
+			<div class="topbar-actions">
+				<button
+					class="btn btn-secondary btn-sm"
+					hx-get="/worklist/fragment"
+					hx-target="#worklist-container"
+					hx-swap="outerHTML"
+					hx-indicator="#refresh-spinner"
+				>
+					<span id="refresh-spinner" class="htmx-indicator spinner"></span>
+					🔄 Làm mới
+				</button>
+			</div>
+		}
+		<div class="page-content">
+			@WorklistFragment(actions, tasks, refreshedAt, isStale)
+		</div>
+	}
+}
+
+// WorklistFragment is the HTMX-refreshable inner fragment (also served at GET /worklist/fragment).
+templ WorklistFragment(actions []domain.ActionQueueItem, tasks []domain.Task, refreshedAt string, isStale bool) {
+	<div id="worklist-container">
+		if len(actions) == 0 && len(tasks) == 0 {
+			@worklistEmpty()
+		} else {
+			if len(actions) > 0 {
+				<div class="card mb-12">
+					<div class="card-title">📊 Hàng đợi hành động từ kho dữ liệu</div>
+					@actionQueueTable(actions)
+				</div>
+			}
+			if len(tasks) > 0 {
+				<div class="card">
+					<div class="card-title">✅ Tasks được giao hôm nay</div>
+					@taskListWidget(tasks)
+				</div>
+			}
+		}
+		@FreshnessBadge(refreshedAt, isStale)
+	</div>
+}
+
+// FreshnessBadge shows when the cache was last refreshed.
+templ FreshnessBadge(refreshedAt string, isStale bool) {
+	<div class={ freshnessBarClass(isStale) }>
+		<span class={ freshnessDotClass(isStale) }></span>
+		if refreshedAt == "" {
+			Cache chưa có dữ liệu — chạy sync để cập nhật.
+		} else if isStale {
+			⚠️ Cache cũ (cập nhật lúc { refreshedAt }) — đã quá 24h.
+		} else {
+			Cache cập nhật lúc { refreshedAt } ✓
+		}
+	</div>
+}
+
+// ── private sub-templates ──────────────────────────────────────────────────────
+
+templ actionQueueTable(actions []domain.ActionQueueItem) {
+	<div class="table-wrap">
+		<table>
+			<thead>
+				<tr>
+					<th>Loại</th>
+					<th>Khách hàng</th>
+					<th>Lý do</th>
+					<th>Giá trị tiềm năng</th>
+					<th>Ngày tạo</th>
+					<th></th>
+				</tr>
+			</thead>
+			<tbody>
+				for _, a := range actions {
+					<tr style="cursor:pointer;">
+						<td>
+							<span class={ "badge-pill " + actionTypeBadgeClassHelper(a.ActionType) }>
+								{ a.ActionType }
+							</span>
+						</td>
+						<td class="task-customer">{ a.CustomerKey }</td>
+						<td class="text-muted">{ truncStr(a.RationaleVI, 60) }</td>
+						<td class="task-value">{ formatVNDHelper(a.ValueAtStakeVND) }</td>
+						<td class="text-muted">{ a.GeneratedDate }</td>
+						<td>
+							<a href={ templ.SafeURL(fmt.Sprintf("/customers?q=%s", a.CustomerKey)) } class="btn btn-secondary btn-sm">
+								Mở hồ sơ
+							</a>
+						</td>
+					</tr>
+				}
+			</tbody>
+		</table>
+	</div>
+}
+
+templ taskListWidget(tasks []domain.Task) {
+	<div>
+		for _, t := range tasks {
+			<div class={ wlTaskRowClass(t.Status) } id={ "task-" + t.TaskID }>
+				<input
+					type="checkbox"
+					class="task-checkbox"
+					checked?={ t.Status == "done" }
+					hx-patch={ "/tasks/" + t.TaskID + "/done" }
+					hx-target={ "#task-" + t.TaskID }
+					hx-swap="outerHTML"
+				/>
+				<div class="task-body">
+					<div class="task-customer">{ t.Title }</div>
+					if t.Description != "" {
+						<div class="task-rationale">{ truncStr(t.Description, 80) }</div>
+					}
+					<div class="task-meta">
+						<span class={ taskStatusClassHelper(t.Status) }>{ t.Status }</span>
+						if t.DueAt != nil {
+							<span>Due: { formatICTHelper(*t.DueAt) }</span>
+						}
+						if t.PartyID != nil {
+							<a href={ templ.SafeURL("/customers/" + *t.PartyID) } class="btn btn-secondary btn-sm">
+								Mở hồ sơ
+							</a>
+						}
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+}
+
+templ worklistEmpty() {
+	<div class="empty-state">
+		<div class="empty-state-icon">🎉</div>
+		<div class="empty-state-title">Không có việc cần làm hôm nay</div>
+		<div class="empty-state-desc">
+			Chưa có hành động nào từ kho dữ liệu.<br/>
+			Hãy <a href="/customers">duyệt danh sách khách hàng</a> hoặc chờ sync tiếp theo.
+		</div>
+	</div>
+}
+
+// ── local pure helpers ─────────────────────────────────────────────────────────
+
+func wlTaskRowClass(status string) string {
+	if status == "done" || status == "cancelled" {
+		return "task-row done"
+	}
+	return "task-row"
+}
+
+func freshnessBarClass(stale bool) string {
+	if stale {
+		return "freshness-bar stale"
+	}
+	return "freshness-bar"
+}
+
+func freshnessDotClass(stale bool) string {
+	if stale {
+		return "freshness-dot stale"
+	}
+	return "freshness-dot"
+}

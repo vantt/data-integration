@@ -7,16 +7,21 @@ DATA_DIR := ./data
 DB_PATH  := $(DATA_DIR)/crm.db
 MIGRATE  := migrate
 
-.PHONY: build run migrate-up migrate-down sqlc vet clean
+.PHONY: build run migrate-up migrate-down sqlc vet clean templ
 
-## build: compile static binary (CGO_ENABLED=0, pure-Go SQLite)
-##   raw: CGO_ENABLED=0 go build -o bin/crm-server ./app/cmd/server
-build:
+## templ: generate Go code from .templ files (must run before build)
+##   raw: templ generate ./app/internal/adapters/inbound/web/templates
+templ:
+	templ generate ./app/internal/adapters/inbound/web/templates
+
+## build: generate templ then compile static binary (CGO_ENABLED=0, pure-Go SQLite)
+##   raw: templ generate ... && CGO_ENABLED=0 go build -o bin/crm-server ./app/cmd/server
+build: templ
 	CGO_ENABLED=0 go build -o $(BINARY) $(MAIN)
 
-## run: run the server directly (no pre-built binary needed)
-##   raw: CGO_ENABLED=0 CRM_DATA_DIR=./data CRM_PORT=8090 go run ./app/cmd/server
-run:
+## run: generate templ then run the server directly (no pre-built binary needed)
+##   raw: templ generate ... && CGO_ENABLED=0 go run ./app/cmd/server
+run: templ
 	CGO_ENABLED=0 go run $(MAIN)
 
 ## migrate-up: apply pending migrations via embedded Go runner

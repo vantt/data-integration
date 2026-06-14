@@ -3,6 +3,9 @@
 /data/*.db-shm
 /bin/
 *.exe
+
+# templ-generated files — rebuilt via `templ generate`, never committed
+*_templ.go
 __pycache__/
 .venv/
 /sync/.venv/

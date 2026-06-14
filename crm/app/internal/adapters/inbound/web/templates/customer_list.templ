@@ -1,0 +1,122 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// CustomerListPage renders S02 — Customer List & Search.
+templ CustomerListPage(parties []domain.Party, total, page, pageSize int, query string) {
+	@AppShell("S02", "Khách hàng") {
+		@Topbar("Khách hàng") {
+			<div class="topbar-search">
+				<input
+					type="search"
+					name="q"
+					placeholder="🔍 Tìm theo tên, SĐT, email..."
+					value={ query }
+					hx-get="/customers/search"
+					hx-target="#customer-list-body"
+					hx-swap="innerHTML"
+					hx-trigger="input changed delay:300ms, search"
+					hx-indicator="#search-spinner"
+				/>
+			</div>
+			<span id="search-spinner" class="htmx-indicator spinner"></span>
+			<div class="topbar-actions">
+				<span class="text-muted">{ fmt.Sprintf("%d khách hàng", total) }</span>
+			</div>
+		}
+		<div class="page-content">
+			<div class="card" style="padding:0; overflow:hidden;">
+				<table>
+					<thead>
+						<tr>
+							<th>Họ tên</th>
+							<th>SĐT</th>
+							<th>Email</th>
+							<th>Trạng thái</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody id="customer-list-body">
+						@CustomerListRows(parties)
+					</tbody>
+				</table>
+			</div>
+			@CustomerListPagination(total, page, pageSize, query)
+		</div>
+	}
+}
+
+// CustomerListRows is the HTMX-swappable fragment for live search results.
+templ CustomerListRows(parties []domain.Party) {
+	if len(parties) == 0 {
+		<tr>
+			<td colspan="5">
+				<div class="empty-state" style="padding:32px 0;">
+					<div class="empty-state-title">Không tìm thấy khách hàng</div>
+					<div class="empty-state-desc">Thử từ khoá khác hoặc kiểm tra lại SĐT.</div>
+				</div>
+			</td>
+		</tr>
+	} else {
+		for _, p := range parties {
+			<tr>
+				<td>
+					<a href={ templ.SafeURL("/customers/" + p.PartyID) } style="font-weight:600;color:inherit;text-decoration:none;">
+						{ p.DisplayName }
+					</a>
+				</td>
+				<td>
+					if p.PrimaryPhone != "" {
+						<a href={ templ.SafeURL("tel:" + p.PrimaryPhone) } class="phone-link">{ p.PrimaryPhone }</a>
+					} else {
+						<span class="text-muted">—</span>
+					}
+				</td>
+				<td>
+					if p.PrimaryEmail != "" {
+						{ p.PrimaryEmail }
+					} else {
+						<span class="text-muted">—</span>
+					}
+				</td>
+				<td>
+					<span class={ "badge-pill " + statusBadgeClassHelper(p.Status) }>{ p.Status }</span>
+				</td>
+				<td>
+					<a href={ templ.SafeURL("/customers/" + p.PartyID) } class="btn btn-secondary btn-sm">Xem</a>
+				</td>
+			</tr>
+		}
+	}
+}
+
+// CustomerListPagination renders prev/next controls.
+templ CustomerListPagination(total, page, pageSize int, query string) {
+	if total <= pageSize {
+		<div></div>
+	} else {
+		<div class="pagination">
+			if page > 1 {
+				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page-1, query)) } class="btn btn-secondary btn-sm">← Trước</a>
+			}
+			<span>Trang { fmt.Sprintf("%d", page) } / { fmt.Sprintf("%d", totalPages(total, pageSize)) }</span>
+			if page < totalPages(total, pageSize) {
+				<a href={ templ.SafeURL(fmt.Sprintf("/customers?page=%d&q=%s", page+1, query)) } class="btn btn-secondary btn-sm">Sau →</a>
+			}
+		</div>
+	}
+}
+
+func totalPages(total, pageSize int) int {
+	if pageSize == 0 {
+		return 1
+	}
+	p := total / pageSize
+	if total%pageSize != 0 {
+		p++
+	}
+	return p
+}
