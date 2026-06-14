@@ -74,15 +74,18 @@ func (s *PartySeedService) SyncParties(ctx context.Context, cache ports.CacheRep
 	return count, nil
 }
 
-// processSeed ensures one crm_party + sapo_customer identity exists for the seed.
-// Enrichment fields (name/phone/email) are left empty in v1; they will be backfilled
-// from Sapo-sourced data in a later phase. wh_customer_base data is available via the
-// wh_customer_base table but not fetched here to keep the seed path lean.
+// processSeed ensures one crm_party + sapo_customer identity exists for the seed,
+// enriched with the real display_name/phone/email carried on the seed (joined from
+// wh_customer_base by the cache repo). Enrichment fields may be empty when no
+// wh_customer_base row matched — in that case the party is still created, just
+// without a name. UpsertFromSapoIdentity backfills empty fields on re-run, so
+// already-created parties get their names filled the next time sync runs.
 func (s *PartySeedService) processSeed(ctx context.Context, seed domain.PartySeed) error {
 	sapoID := strconv.FormatInt(seed.CustomerID, 10)
 
-	// UpsertFromSapoIdentity is idempotent (UNIQUE constraint guards duplicates).
-	_, err := s.partySvc.UpsertFromSapoIdentity(ctx, sapoID, "", "", "")
+	// UpsertFromSapoIdentity is idempotent (UNIQUE constraint guards duplicates)
+	// and backfills empty name/phone/email without clobbering existing values.
+	_, err := s.partySvc.UpsertFromSapoIdentity(ctx, sapoID, seed.Phone, seed.Email, seed.DisplayName)
 	if err != nil {
 		return fmt.Errorf("upsert party for sapo_id=%s: %w", sapoID, err)
 	}

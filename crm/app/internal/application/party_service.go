@@ -30,7 +30,12 @@ func NewPartyService(repo ports.PartyRepository) *PartyService {
 //  2. If not found → create Party + sapo_customer identity atomically in one transaction
 //     (prevents orphan party if identity attachment fails mid-way).
 //  3. If phone/email provided → upsert as additional identities (UNIQUE guard at DB level).
-//  4. Update primary_phone / primary_email on the party if blank.
+//  4. Backfill display_name / primary_phone / primary_email on the party if blank.
+//
+// Backfill is non-destructive: an empty incoming value never clears an existing one,
+// and a present incoming value only fills a field that is currently blank — so a
+// manually-edited name is preserved across re-runs. This makes the seed sync
+// idempotent and lets a later run fill names for parties created name-less earlier.
 //
 // Returns the party_id of the found or created party.
 func (s *PartyService) UpsertFromSapoIdentity(
@@ -76,29 +81,37 @@ func (s *PartyService) UpsertFromSapoIdentity(
 		}
 	}
 
-	// 3. Attach phone identity (UNIQUE constraint handles duplicates silently).
+	// 3. Attach phone/email identities (UNIQUE constraint handles duplicates silently).
 	if normPhone != "" {
 		if err := s.upsertIdentity(ctx, party.PartyID, "sapo", "phone", normPhone, 1.0, false); err != nil {
 			return "", fmt.Errorf("party service: attach phone identity: %w", err)
 		}
-		// 4. Backfill primary_phone on party if blank.
-		if party.PrimaryPhone == "" {
-			party.PrimaryPhone = normPhone
-			if err := s.repo.Update(ctx, party); err != nil {
-				return "", fmt.Errorf("party service: update primary phone: %w", err)
-			}
-		}
 	}
-
 	if normEmail != "" {
 		if err := s.upsertIdentity(ctx, party.PartyID, "sapo", "email", normEmail, 1.0, false); err != nil {
 			return "", fmt.Errorf("party service: attach email identity: %w", err)
 		}
-		if party.PrimaryEmail == "" {
-			party.PrimaryEmail = normEmail
-			if err := s.repo.Update(ctx, party); err != nil {
-				return "", fmt.Errorf("party service: update primary email: %w", err)
-			}
+	}
+
+	// 4. Backfill blank golden-record fields, then persist in a single Update.
+	// Only fill fields that are currently empty AND have an incoming value, so
+	// re-running sync fills name-less parties without clobbering edited values.
+	dirty := false
+	if party.DisplayName == "" && name != "" {
+		party.DisplayName = name
+		dirty = true
+	}
+	if party.PrimaryPhone == "" && normPhone != "" {
+		party.PrimaryPhone = normPhone
+		dirty = true
+	}
+	if party.PrimaryEmail == "" && normEmail != "" {
+		party.PrimaryEmail = normEmail
+		dirty = true
+	}
+	if dirty {
+		if err := s.repo.Update(ctx, party); err != nil {
+			return "", fmt.Errorf("party service: backfill golden record: %w", err)
 		}
 	}
 

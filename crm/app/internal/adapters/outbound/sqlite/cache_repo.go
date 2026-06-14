@@ -286,10 +286,24 @@ func (r *CacheRepo) ListAllActionQueue(ctx context.Context) ([]domain.ActionQueu
 	return out, nil
 }
 
-// ListPartySeed returns all rows from cache.wh_party_seed.
-// Returns empty slice when table is absent (cache not yet populated).
+// ListPartySeed returns all rows from cache.wh_party_seed, enriched with the
+// real display_name/phone/email from cache.wh_customer_base.
+//
+// The LEFT JOIN is on the INTEGER customer_id (both columns are INTEGER in
+// cache.db) — this avoids the TEXT↔INTEGER cast pitfall that would arise if the
+// match were done against crm_party_identity.identity_value (TEXT). When no
+// wh_customer_base row matches, the enrichment fields come back NULL → empty
+// strings, so the seed still produces a party (just without a name).
+//
+// Returns empty slice when wh_party_seed is absent (cache not yet populated).
+// The query degrades gracefully if wh_customer_base is also absent: "no such
+// table" is treated as empty, never an error.
 func (r *CacheRepo) ListPartySeed(ctx context.Context) ([]domain.PartySeed, error) {
-	const q = `SELECT customer_id, customer_key, seen_at FROM cache.wh_party_seed`
+	const q = `
+		SELECT ps.customer_id, ps.customer_key, ps.seen_at,
+		       bc.display_name, bc.phone, bc.email
+		FROM cache.wh_party_seed ps
+		LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id`
 
 	rows, err := r.db.SQLDB().QueryContext(ctx, q)
 	if err != nil {
@@ -303,9 +317,16 @@ func (r *CacheRepo) ListPartySeed(ctx context.Context) ([]domain.PartySeed, erro
 	var out []domain.PartySeed
 	for rows.Next() {
 		var s domain.PartySeed
-		if err := rows.Scan(&s.CustomerID, &s.CustomerKey, &s.SeenAt); err != nil {
+		var displayName, phone, email sql.NullString
+		if err := rows.Scan(
+			&s.CustomerID, &s.CustomerKey, &s.SeenAt,
+			&displayName, &phone, &email,
+		); err != nil {
 			return nil, fmt.Errorf("cache repo: scan party seed: %w", err)
 		}
+		s.DisplayName = displayName.String
+		s.Phone = phone.String
+		s.Email = email.String
 		out = append(out, s)
 	}
 	if err := rows.Err(); err != nil {
