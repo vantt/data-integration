@@ -4,10 +4,14 @@ package templates
 
 import (
 	"fmt"
+	"math"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/vantt/data-integration/crm/app/internal/domain"
 )
 
 // queryEscapeHelper URL-encodes a string for safe use in query parameters.
@@ -166,4 +170,240 @@ func truncStr(s string, max int) string {
 		return s
 	}
 	return string(runes[:max]) + "…"
+}
+
+// ── Order detail helpers ───────────────────────────────────────────────────────
+
+// formatPctHelper formats a *float64 (0.0–1.0 scale) as "12.5%" or "".
+// Returns "" (not "—") so callers can omit the element entirely on nil.
+func formatPctHelper(pct *float64) string {
+	if pct == nil {
+		return ""
+	}
+	v := *pct * 100
+	if v < 0 {
+		return fmt.Sprintf("−%.1f%%", -v)
+	}
+	return fmt.Sprintf("%.1f%%", v)
+}
+
+// formatPctAmtHelper computes amt/base as a percentage string (e.g. "12.5%").
+// Returns "" when base is zero to avoid division-by-zero.
+func formatPctAmtHelper(amt, base int64) string {
+	if base == 0 {
+		return ""
+	}
+	v := math.Abs(float64(amt)/float64(base)) * 100
+	return fmt.Sprintf("%.1f%%", v)
+}
+
+// verdictToneHelper returns "moss" (profit), "coral" (loss), or "mute" (indeterminate).
+func verdictToneHelper(cogsSource string, profit int64) string {
+	if cogsSource == "" || cogsSource == "none" {
+		return "mute"
+	}
+	if profit <= 0 {
+		return "coral"
+	}
+	return "moss"
+}
+
+// verdictWordHelper returns the Vietnamese verdict word for a tone.
+func verdictWordHelper(tone string) string {
+	switch tone {
+	case "coral":
+		return "Lỗ"
+	case "moss":
+		return "Lãi"
+	default:
+		return "Chưa xác định"
+	}
+}
+
+// shipToneHelper maps a fulfillment/shipment status to a Precision tone name.
+func shipToneHelper(status string) string {
+	switch strings.ToUpper(status) {
+	case "DELIVERED":
+		return "good"
+	case "SHIPPING", "PENDING", "PACKED":
+		return "warn"
+	case "CANCELLED", "FAILED":
+		return "bad"
+	default:
+		return "neutral"
+	}
+}
+
+// paymentToneHelper maps a payment status to a Precision tone name.
+func paymentToneHelper(status string) string {
+	switch strings.ToUpper(status) {
+	case "PAID", "COMPLETED", "SUCCESS":
+		return "good"
+	case "PENDING", "PROCESSING":
+		return "warn"
+	case "FAILED", "VOIDED", "CANCELLED":
+		return "bad"
+	default:
+		return "neutral"
+	}
+}
+
+// bdgToneHelper converts a tone name to the Precision badge CSS modifier class.
+func bdgToneHelper(tone string) string {
+	switch tone {
+	case "good":
+		return "bdg--good"
+	case "warn":
+		return "bdg--warn"
+	case "bad":
+		return "bdg--bad"
+	case "accent":
+		return "bdg--accent"
+	case "moss":
+		return "bdg--good"
+	case "coral":
+		return "bdg--bad"
+	default:
+		return ""
+	}
+}
+
+// cogsLabelHelper returns the human-readable COGS source label.
+func cogsLabelHelper(source string) string {
+	switch source {
+	case "sapo_mac":
+		return "Sapo-MAC"
+	case "both":
+		return "Sapo-MAC · MISA"
+	case "misa":
+		return "MISA"
+	default:
+		return ""
+	}
+}
+
+// signPrefixHelper returns "+" for positive amounts, "−" for negative, "" for zero.
+func signPrefixHelper(amt int64) string {
+	if amt > 0 {
+		return "+"
+	}
+	if amt < 0 {
+		return "−"
+	}
+	return ""
+}
+
+// absVNDHelper returns the absolute VND amount as formatted string.
+func absVNDHelper(amt int64) string {
+	return formatVNDHelper(amt) // formatVNDHelper already shows "—" for zero; abs handled by caller
+}
+
+// formatVNDAbsHelper formats the absolute value of amt (always positive display).
+func formatVNDAbsHelper(amt int64) string {
+	if amt < 0 {
+		amt = -amt
+	}
+	return formatVNDHelper(amt)
+}
+
+// titleCaseReplace replaces underscores with spaces and title-cases the string.
+func titleCaseReplace(s string) string {
+	s = strings.ReplaceAll(s, "_", " ")
+	return strings.Title(strings.ToLower(s)) //nolint:staticcheck
+}
+
+// joinNonEmpty joins non-empty strings with sep.
+func joinNonEmpty(parts []string, sep string) string {
+	var out []string
+	for _, p := range parts {
+		if p != "" {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, sep)
+}
+
+// ── Helpers extracted from templ components ({{ }} must be single-statement) ──
+
+func absInt64(v int64) int64 {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+func absFloat64(v float64) float64 {
+	return math.Abs(v)
+}
+
+func sortShipments(shps []domain.Shipment) []domain.Shipment {
+	result := make([]domain.Shipment, len(shps))
+	copy(result, shps)
+	sort.Slice(result, func(i, j int) bool {
+		a, b := result[i].ShippedAt, result[j].ShippedAt
+		if a == "" && b == "" {
+			return false
+		}
+		if a == "" {
+			return false
+		}
+		if b == "" {
+			return true
+		}
+		return a > b
+	})
+	return result
+}
+
+func sortReturns(rets []domain.ReturnEvent) []domain.ReturnEvent {
+	result := make([]domain.ReturnEvent, len(rets))
+	copy(result, rets)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ReturnDate > result[j].ReturnDate
+	})
+	return result
+}
+
+// orderedCostCategories returns distinct cost categories in display order:
+// priority order (DISCOUNT, PLATFORM_FEE, OVERHEAD) first, then others.
+// COGS and PROMO_GOODS are excluded (rendered separately).
+func orderedCostCategories(rows []domain.CostRow) []string {
+	catOrder := []string{"DISCOUNT", "PLATFORM_FEE", "OVERHEAD"}
+	inOrder := map[string]bool{}
+	for _, c := range catOrder {
+		inOrder[c] = true
+	}
+	seen := map[string]bool{}
+	var result []string
+	for _, cat := range catOrder {
+		for _, row := range rows {
+			if row.CostCategory == cat && !seen[cat] {
+				seen[cat] = true
+				result = append(result, cat)
+				break
+			}
+		}
+	}
+	for _, row := range rows {
+		cat := row.CostCategory
+		if cat == "COGS" || cat == "PROMO_GOODS" || inOrder[cat] || seen[cat] {
+			continue
+		}
+		seen[cat] = true
+		result = append(result, cat)
+	}
+	return result
+}
+
+func costCategoryTone(cat string) string {
+	switch cat {
+	case "COGS":
+		return "good"
+	case "PLATFORM_FEE":
+		return "warn"
+	case "DISCOUNT", "PROMO_GOODS", "OVERHEAD":
+		return "accent"
+	default:
+		return "neutral"
+	}
 }

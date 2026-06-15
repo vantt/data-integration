@@ -163,6 +163,12 @@ type OwnerAssigner interface {
 	UpsertProfile(ctx context.Context, p *domain.CustomerProfile) error
 }
 
+// OrderReader fetches a single order aggregate from olap.duckdb (read-only).
+// Satisfied by *duckdbadapter.OrderRepo.
+type OrderReader interface {
+	GetByCode(ctx context.Context, orderCode string) (*domain.OrderDetail, error)
+}
+
 // ─── management screen interfaces ─────────────────────────────────────────────
 
 // SegmentManager covers all segment operations needed by S08/S09.
@@ -237,4 +243,6 @@ type Deps struct {
 	Segments    SegmentManager
 	Campaigns   CampaignManager
 	SettingsMgr SettingsManager
+	// Order detail (S12 — reads olap.duckdb via CGO-backed go-duckdb).
+	Orders OrderReader
 }

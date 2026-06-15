@@ -1,0 +1,336 @@
+package templates
+
+import (
+	"fmt"
+	"strings"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// OrderDetailPage renders S12 — Order at a glance.
+// Layout: detail-grid → detail-main (tabbar + #tab-panel) | detail-sidebar (scard stack).
+// The active tab is rendered inline on first paint; other tabs load via HTMX.
+templ OrderDetailPage(o *domain.OrderDetail, activeTab string) {
+	@AppShell("S12", "Order "+o.Header.OrderCode) {
+		<div class="detail-grid page-enter" data-surface="S12">
+			<!-- MAIN: tabbar + tab panel -->
+			<section class="detail-main" aria-label="Order detail tabs">
+				@orderDetailTabBar(o.Header.OrderCode, activeTab)
+				<div
+					id="tab-panel"
+					class="tabpanel"
+					role="tabpanel"
+					aria-labelledby={ "tab-" + activeTab }
+					tabindex="0"
+				>
+					switch activeTab {
+					case "items":
+						@OrderItemsTab(o)
+					case "operations":
+						@OrderOperationsTab(o)
+					case "context":
+						@OrderContextTab(o)
+					default:
+						@OrderFinancialTab(o)
+					}
+				</div>
+			</section>
+			<!-- SIDEBAR: order at a glance -->
+			<aside class="detail-sidebar" aria-label="Order at a glance">
+				@orderIdentityCard(o)
+				@orderMoneyHeadlineCard(o)
+				if o.Customer != nil && o.Customer.CustomerID != "" {
+					@orderRecipientLinkCard(o)
+				}
+				@orderQuickFactsCard(o)
+			</aside>
+		</div>
+		<!-- Shipment tracking copy-on-click + cost group toggle -->
+		<script>
+		(function () {
+		  var COPY_HTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.3" y="4.3" width="6.4" height="6.4" rx="1.2"/><path d="M8.4 2.3H3.4a1.1 1.1 0 0 0-1.1 1.1v5"/></svg> copy';
+		  var CHECK_HTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.7 6.8 5.3 9.4 10.3 3.7"/></svg> copied';
+		  var reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+		  function flashCopied(btn) {
+		    var card = btn.closest('[data-ship-card]'), glyph = btn.querySelector('[data-copy-glyph]');
+		    if (glyph) { glyph.innerHTML = CHECK_HTML; glyph.classList.add('is-copied'); }
+		    if (card && !reducedMotion) card.classList.add('ship-card--copied');
+		    setTimeout(function () {
+		      if (glyph) { glyph.innerHTML = COPY_HTML; glyph.classList.remove('is-copied'); }
+		      if (card) card.classList.remove('ship-card--copied');
+		    }, 1500);
+		  }
+		  document.addEventListener('click', function (e) {
+		    var btn = e.target.closest('[data-track-btn]');
+		    if (!btn) return;
+		    var code = (btn.dataset.code || '').trim();
+		    if (!code || code === '—') return;
+		    try {
+		      if (navigator.clipboard && navigator.clipboard.writeText)
+		        navigator.clipboard.writeText(code).then(function(){flashCopied(btn);},function(){flashCopied(btn);});
+		      else {
+		        var ta = document.createElement('textarea');
+		        ta.value = code; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+		        document.body.appendChild(ta); ta.focus(); ta.select();
+		        try { document.execCommand('copy'); } catch(_){}
+		        document.body.removeChild(ta); flashCopied(btn);
+		      }
+		    } catch(_) { flashCopied(btn); }
+		  });
+		  document.addEventListener('click', function (e) {
+		    var head = e.target.closest('.group__head');
+		    if (!head) return;
+		    var group = head.closest('.group');
+		    if (!group) return;
+		    group.dataset.open = group.dataset.open === 'false' ? 'true' : 'false';
+		  });
+		  // Sync aria-selected on tab click so the active indicator follows the click.
+		  document.addEventListener('click', function (e) {
+		    var tab = e.target.closest('.tabbar .tab');
+		    if (!tab) return;
+		    var bar = tab.closest('.tabbar');
+		    if (!bar) return;
+		    bar.querySelectorAll('.tab').forEach(function (t) { t.removeAttribute('aria-selected'); });
+		    tab.setAttribute('aria-selected', 'true');
+		  });
+		})();
+		</script>
+	}
+}
+
+// orderDetailTabBar renders the horizontal tab navigation for an order.
+templ orderDetailTabBar(code, activeTab string) {
+	<div class="tabbar" role="tablist" aria-label="Order tabs">
+		@orderDetailTab(code, "financial", "Financial", activeTab)
+		@orderDetailTab(code, "items", "Items", activeTab)
+		@orderDetailTab(code, "operations", "Operations", activeTab)
+		@orderDetailTab(code, "context", "Context", activeTab)
+	</div>
+}
+
+templ orderDetailTab(code, tab, label, activeTab string) {
+	<a
+		href={ templ.SafeURL(fmt.Sprintf("/orders/%s?tab=%s", code, tab)) }
+		id={ "tab-" + tab }
+		class="tab"
+		role="tab"
+		if tab == activeTab {
+			aria-selected="true"
+		}
+		hx-get={ fmt.Sprintf("/orders/%s/tabs/%s", code, tab) }
+		hx-target="#tab-panel"
+		hx-swap="innerHTML"
+		hx-push-url={ fmt.Sprintf("/orders/%s?tab=%s", code, tab) }
+	>
+		{ label }
+	</a>
+}
+
+// ── Sidebar cards ─────────────────────────────────────────────────────────────
+
+templ orderIdentityCard(o *domain.OrderDetail) {
+	<div class="scard">
+		<div class="caption scard__eyebrow">ORDER AT A GLANCE</div>
+		<div class="id-code">{ o.Header.OrderCode }</div>
+		if o.Header.OrderID != "" || o.Channel.ChannelName != "" {
+			<div class="facts" style="margin-top:var(--sp-3)">
+				if o.Header.OrderID != "" {
+					<div class="fact">
+						<span class="fact__k">order_id</span>
+						<span class="fact__v mono">{ o.Header.OrderID }</span>
+					</div>
+				}
+				if o.Channel.ChannelName != "" {
+					<div class="fact">
+						<span class="fact__k">Channel</span>
+						<span class="fact__v">{ o.Channel.ChannelName }</span>
+					</div>
+				}
+			</div>
+		}
+		<!-- Status badges -->
+		<div class="badge-row">
+			if o.Header.Status != "" {
+				<span class={ "bdg " + bdgToneHelper(orderStatusTone(o.Header.Status)) }>{ o.Header.Status }</span>
+			}
+			if o.Header.PaymentStatus != "" {
+				<span class={ "bdg " + bdgToneHelper(paymentToneHelper(o.Header.PaymentStatus)) + " bdg--dot" }>{ o.Header.PaymentStatus }</span>
+			}
+			if o.Header.FulfillmentStatus != "" {
+				<span class={ "bdg " + bdgToneHelper(shipToneHelper(o.Header.FulfillmentStatus)) + " bdg--dot" }>{ o.Header.FulfillmentStatus }</span>
+			}
+		</div>
+	</div>
+}
+
+templ orderMoneyHeadlineCard(o *domain.OrderDetail) {
+	{{ f := o.Financial }}
+	{{ tone := verdictToneHelper(f.CogsSource, f.ChannelNetProfit) }}
+	<div class="scard">
+		<div class="caption scard__eyebrow" style="color:var(--accent)">MONEY HEADLINE</div>
+		<!-- Verdict glance -->
+		<div class={ "verdict-glance verdict--" + tone } style="margin-bottom:var(--sp-3)">
+			<span class="verdict-dot verdict-dot--sm" aria-hidden="true"></span>
+			<span class="verdict-glance__word">{ verdictWordHelper(tone) }</span>
+			<span class="verdict-glance__fig">
+				if tone != "mute" {
+					if f.ChannelNetMarginPct != nil {
+						<span class="verdict-glance__pct">{ formatPctHelper(f.ChannelNetMarginPct) }</span>
+					}
+					if f.ChannelNetProfit != 0 {
+						{ signPrefixHelper(f.ChannelNetProfit) }{ formatVNDAbsHelper(f.ChannelNetProfit) }
+					} else {
+						{ formatVNDHelper(0) }
+					}
+				} else {
+					<span class="dash">—</span>
+				}
+			</span>
+		</div>
+		<!-- Money lines -->
+		<div class="money-line money-line--hero">
+			<span class="money-line__label">
+				if f.IsUS {
+					US revenue (incl. VAT)
+					<span class="bdg bdg--accent">US</span>
+				} else {
+					Net revenue
+				}
+			</span>
+			<span class="money-line__val">
+				if f.IsUS {
+					{ formatVNDHelper(f.USRevenueInclVAT) }
+				} else {
+					{ formatVNDHelper(f.NetRevenue) }
+				}
+			</span>
+		</div>
+		<div class="money-line">
+			<span class="money-line__label">
+				Gross profit
+				if f.CogsSource == "" || f.CogsSource == "none" {
+					<span class="bdg bdg--warn">unverified</span>
+				}
+			</span>
+			<span class="money-line__val">
+				if f.GrossMarginPct != nil {
+					<span class="pct">{ formatPctHelper(f.GrossMarginPct) }</span>
+				}
+				{ formatVNDHelper(f.GrossProfit) }
+			</span>
+		</div>
+		<div class="money-line">
+			<span class="money-line__label">Channel net</span>
+			<span class="money-line__val">
+				if f.ChannelNetMarginPct != nil {
+					<span class="pct">{ formatPctHelper(f.ChannelNetMarginPct) }</span>
+				}
+				{ formatVNDHelper(f.ChannelNetProfit) }
+			</span>
+		</div>
+	</div>
+}
+
+templ orderRecipientLinkCard(o *domain.OrderDetail) {
+	<a
+		href={ templ.SafeURL("/customers/" + o.Customer.CustomerID) }
+		class="scard scard--link scard--recipient"
+		aria-label={ "Open customer " + o.Customer.FullName }
+	>
+		<div class="party-head">
+			<div class="caption scard__eyebrow" style="color:var(--accent)">RECIPIENT · BUYER</div>
+			<span class="bdg">same person</span>
+		</div>
+		if o.Customer.FullName != "" {
+			<div class="mini-name">{ o.Customer.FullName }</div>
+		}
+		<div class="facts party-facts" style="margin-top:var(--sp-3)">
+			<div class="fact">
+				<span class="fact__k">LTV</span>
+				<span class="fact__v money-line__val" style="font-size:22px">{ formatVNDHelper(o.Customer.LifetimeValue) }</span>
+			</div>
+			if o.Shipping.District != "" || o.Shipping.Province != "" {
+				<div class="fact">
+					<span class="fact__k">Ship to</span>
+					<span class="fact__v">{ joinNonEmpty([]string{o.Shipping.District, o.Shipping.Province}, ", ") }</span>
+				</div>
+			}
+		</div>
+		<div class="mini-meta party-link-row">
+			<span>
+				if o.Customer.ValueGroup != "" {
+					<span class={ "bdg bdg--good bdg--dot" }>{ o.Customer.ValueGroup }</span>
+				}
+			</span>
+			<span class="mini-arrow mono">→</span>
+		</div>
+	</a>
+}
+
+templ orderQuickFactsCard(o *domain.OrderDetail) {
+	<div class="scard">
+		<div class="caption scard__eyebrow">QUICK FACTS</div>
+		<div class="facts" style="margin-top:var(--sp-3)">
+			if o.Channel.ChannelName != "" {
+				<div class="fact">
+					<span class="fact__k">Channel</span>
+					<span class="fact__v">{ o.Channel.ChannelName }</span>
+				</div>
+			}
+			if o.Staff.SellerName != "" {
+				<div class="fact">
+					<span class="fact__k">Seller</span>
+					<span class="fact__v">{ o.Staff.SellerName }</span>
+				</div>
+			}
+			if o.Staff.BranchName != "" {
+				<div class="fact">
+					<span class="fact__k">Branch</span>
+					<span class="fact__v">{ o.Staff.BranchName }</span>
+				</div>
+			}
+			if o.Header.CreatedAt != "" {
+				<div class="fact">
+					<span class="fact__k">Created</span>
+					<span class="fact__v mono">{ formatICTHelper(o.Header.CreatedAt) }</span>
+				</div>
+			}
+			if o.Header.FirstShippedAt != "" {
+				<div class="fact">
+					<span class="fact__k">Shipped</span>
+					<span class="fact__v mono">{ formatICTHelper(o.Header.FirstShippedAt) }</span>
+				</div>
+			}
+			if len(o.Shipments) > 0 && o.Shipments[0].ShippingService != "" {
+				<div class="fact">
+					<span class="fact__k">Carrier</span>
+					<span class="fact__v">{ o.Shipments[0].ShippingService }</span>
+				</div>
+			} else if o.Financial.CarrierID != "" {
+				<div class="fact">
+					<span class="fact__k">Carrier</span>
+					<span class="fact__v">{ o.Financial.CarrierID }</span>
+				</div>
+			}
+			if o.Financial.CODAmount > 0 {
+				<div class="fact">
+					<span class="fact__k">COD</span>
+					<span class="fact__v mono">{ formatVNDHelper(o.Financial.CODAmount) }</span>
+				</div>
+			}
+		</div>
+	</div>
+}
+
+// orderStatusTone returns a Precision tone for the top-level order status.
+func orderStatusTone(status string) string {
+	switch strings.ToLower(status) {
+	case "completed", "complete":
+		return "good"
+	case "cancelled", "voided":
+		return "bad"
+	case "pending", "processing", "waiting":
+		return "warn"
+	default:
+		return "neutral"
+	}
+}

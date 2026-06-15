@@ -9,6 +9,9 @@ WORKDIR /src
 # Allow Go to auto-download the toolchain version required by go.mod (1.26.x).
 ENV GOTOOLCHAIN=auto
 
+# gcc is needed for CGO (go-duckdb links libduckdb).
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev && rm -rf /var/lib/apt/lists/*
+
 # Install templ code generator at the pinned version from go.mod.
 RUN go install github.com/a-h/templ/cmd/templ@v0.3.1020
 
@@ -22,9 +25,10 @@ COPY crm/ ./crm/
 # Regenerate templ templates (bakes fresh _templ.go from .templ sources).
 RUN cd crm && templ generate ./...
 
-# Build static binaries (CGO_ENABLED=0 — modernc.org/sqlite, pure Go).
+# crm-server: CGO_ENABLED=1 for go-duckdb (reads olap.duckdb for order detail).
+# syncparties + crm-migrate: remain pure Go (CGO_ENABLED=0).
 RUN cd crm && \
-    CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+    CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /out/crm-server    ./app/cmd/server     && \
     CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /out/syncparties   ./app/cmd/syncparties && \
@@ -35,9 +39,10 @@ RUN cd crm && \
 # python:3.12-slim gives us Python + pip for the reverse-ETL; Go binaries are static.
 FROM python:3.12-slim
 
-# Install duckdb for the Python reverse-ETL (exclude dev/test deps).
-# Pin to a version compatible with the warehouse (>=1.0 per requirements.txt).
-RUN pip install --no-cache-dir "duckdb>=1.0,<2.0"
+# libgcc-s1 is required at runtime because crm-server links go-duckdb via CGO.
+# duckdb Python package for the reverse-ETL.
+RUN apt-get update && apt-get install -y --no-install-recommends libgcc-s1 && rm -rf /var/lib/apt/lists/* && \
+    pip install --no-cache-dir "duckdb>=1.0,<2.0"
 
 WORKDIR /app
 

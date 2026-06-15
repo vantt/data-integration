@@ -1,0 +1,613 @@
+package templates
+
+import (
+	"fmt"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// OrderFinancialTab renders the Financial tab content (P&L waterfall + cost ledger + COGS recon).
+// Returned as an HTMX fragment for /orders/{code}/tabs/financial.
+// Also rendered inline on the first full-page paint.
+templ OrderFinancialTab(o *domain.OrderDetail) {
+	{{ f := o.Financial }}
+	{{ tone := verdictToneHelper(f.CogsSource, f.ChannelNetProfit) }}
+	<div class="tab-sections">
+		<!-- ── Zone 0: Revenue waterfall + P&L ──────────────────────── -->
+		<div class="tabpanel stack-4">
+			<div class="panel-head">
+				<span class="panel-title">P&amp;L</span>
+				if f.IsUS {
+					<span class="panel-sub">fact_us_shipment_economics</span>
+				} else {
+					<span class="panel-sub">fact_orders · fact_order_economics</span>
+				}
+			</div>
+			if f.IsUS {
+				<!-- US CrossBorder caveat -->
+				<div class="caveat caveat--warn" style="margin-bottom:var(--sp-3)">
+					<span class="caveat__mark">⚠</span>
+					<span><b>US CrossBorder order.</b> Domestic <code>net_revenue = 0</code> — revenue is sourced from US shipment economics.</span>
+				</div>
+			}
+			<!-- Zone 1: Verdict bar -->
+			<div class="verdict-zone">
+				<div class={ "verdict verdict--bar verdict--" + tone }>
+					<span class="verdict-dot" aria-hidden="true"></span>
+					<div class="verdict-bar__body">
+						<div class="verdict-word">{ verdictWordHelper(tone) }</div>
+						<div class="verdict-line">
+							@orderVerdictLine(f, tone)
+						</div>
+					</div>
+					<div class="verdict-bar__figs">
+						<div class="verdict-net">
+							if tone == "mute" {
+								<span class="dash">—</span>
+							} else if f.ChannelNetProfit < 0 {
+								−{ formatVNDAbsHelper(f.ChannelNetProfit) }
+							} else if f.ChannelNetProfit > 0 {
+								+{ formatVNDHelper(f.ChannelNetProfit) }
+							} else {
+								{ formatVNDHelper(0) }
+							}
+						</div>
+						<div class="verdict-sub">
+							if f.ChannelNetMarginPct != nil {
+								{ formatPctHelper(f.ChannelNetMarginPct) }
+							} else {
+								<span class="dash">—</span>
+							}
+							ròng
+							if f.GrossProfit != 0 {
+								· gộp
+								if f.GrossProfit < 0 {
+									−{ formatVNDAbsHelper(f.GrossProfit) }
+								} else {
+									+{ formatVNDHelper(f.GrossProfit) }
+								}
+							}
+						</div>
+					</div>
+				</div>
+				<!-- Fully-loaded footnote — only when overhead is allocated -->
+				if f.AllocatedOverhead > 0 && f.FullyLoadedNetProfit != 0 {
+					<div class="fl-note" title="Lãi ròng đầy đủ — Lãi đóng góp − chi phí vận hành. Để báo cáo.">
+						<span class="fl-note__mark">ⓘ</span>
+						<span>
+							Sau phân bổ chi phí vận hành (ước tính):
+							<span class="fl-note__fig">
+								Fully-loaded net profit
+								<span class="mono">
+									{ signPrefixHelper(f.FullyLoadedNetProfit) }{ formatVNDAbsHelper(f.FullyLoadedNetProfit) }
+								</span>
+								if f.FullyLoadedMarginPct != nil {
+									<span class="mono"> · { formatPctHelper(f.FullyLoadedMarginPct) }</span>
+								}
+							</span>
+						</span>
+					</div>
+				}
+			</div>
+			<!-- Zone 3: Waterfall -->
+			<div class="waterfall waterfall--pl">
+				if f.IsUS {
+					@wfRowPlain(" ", "US revenue (excl. VAT)", "", formatVNDHelper(f.USRevenueExclVAT), false)
+					@wfRowPlain("+", "US VAT / sales tax", "", formatVNDHelper(f.VatAmount), false)
+					@wfRowResult("=", "US revenue (incl. VAT)", "", formatVNDHelper(f.USRevenueInclVAT))
+					@wfRowCogs(f)
+					@wfRowGrossProfit(f)
+				} else {
+					@wfRowPlain(" ", "Gross revenue", "gồm VAT", formatVNDHelper(f.GrossRevenue), false)
+					@wfRowNeg("−", "Discount", "", formatVNDHelper(f.DiscountAmount))
+					@wfRowResult("=", "Total collected", "gồm VAT", formatVNDHelper(f.TotalCollected))
+					@wfRowNeg("−", "VAT output", "nhúng trong giá", formatVNDHelper(f.VatAmount))
+					@wfRowResult("=", "Net revenue", "trừ VAT", formatVNDHelper(f.NetRevenue))
+					@wfRowCogs(f)
+					if f.PromoGoodsCost > 0 {
+						<!-- Promo annotation — informational only, NOT a separate deduction -->
+						<div class="wf-row--pl" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:6px var(--sp-4);border-top:1px solid var(--border)">
+							<span></span>
+							<span class="caption" title="Hàng tặng (promo): chi phí giá vốn của SKU tặng kèm — đã nằm trong COGS ở trên, không trừ thêm">
+								trong đó hàng tặng (promo): { formatVNDHelper(f.PromoGoodsCost) }
+							</span>
+							<span></span>
+							<span></span>
+						</div>
+					}
+					@wfRowGrossProfit(f)
+					@wfRowPlatformFees(f, o.Channel.Platform)
+					<!-- Decision tier: Channel net profit -->
+					{{ cnpNeg := f.ChannelNetProfit < 0 }}
+					<div
+						class={ "wf-row--pl wf-row--decision" + func() string {
+							if cnpNeg { return " wf-amt--neg" }
+							return ""
+						}() }
+						style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4)"
+					>
+						<span class="wf-op wf-op--eq">=</span>
+						<span class="wf-label">
+							<span class="wf-star" aria-hidden="true">★</span>
+							Channel net profit
+							<span class="caption wf-tag" title="Lãi đóng góp kênh — trước phân bổ overhead vận hành">contribution margin</span>
+						</span>
+						<span class="wf-pct">{ formatPctHelper(f.ChannelNetMarginPct) }</span>
+						<span class={ "wf-amt" + func() string { if cnpNeg { return " wf-amt--neg" }; return "" }() }>
+							if tone == "mute" {
+								<span class="dash">—</span>
+							} else if f.ChannelNetProfit < 0 {
+								−{ formatVNDAbsHelper(f.ChannelNetProfit) }
+							} else if f.ChannelNetProfit > 0 {
+								+{ formatVNDHelper(f.ChannelNetProfit) }
+							} else {
+								{ formatVNDHelper(0) }
+							}
+						</span>
+					</div>
+				}
+			</div>
+			<!-- Fully-loaded footer (outside waterfall, dashed border) -->
+			if f.AllocatedOverhead > 0 {
+				<div class="wf-footer-muted">
+					<div class="wf-footer-row">
+						<span class="wf-footer__op">−</span>
+						<span class="wf-footer__label">
+							Allocated overhead
+							<span class="wf-tag">[allocated]</span>
+							if f.IsOverheadEstimated {
+								<span class="bdg bdg--warn">estimated</span>
+							}
+						</span>
+						<span class="wf-footer__amt">−{ formatVNDHelper(f.AllocatedOverhead) }</span>
+					</div>
+					<div class="wf-footer-row wf-footer-row--result">
+						<span class="wf-footer__op">=</span>
+						<span class="wf-footer__label">
+							Fully-loaded net profit
+							<span class="wf-tag">[for reporting]</span>
+						</span>
+						<span class="wf-footer__amt">
+							if f.FullyLoadedMarginPct != nil {
+								<span class="wf-footer__pct">{ formatPctHelper(f.FullyLoadedMarginPct) }</span>
+							}
+							{ signPrefixHelper(f.FullyLoadedNetProfit) }{ formatVNDAbsHelper(f.FullyLoadedNetProfit) }
+						</span>
+					</div>
+				</div>
+			}
+			<!-- No-COGS caveat -->
+			if f.CogsSource == "" || f.CogsSource == "none" {
+				<div class="caveat caveat--warn">
+					<span class="caveat__mark">⚠</span>
+					<span>Margin unverified — no COGS match for this order.</span>
+				</div>
+			}
+			<!-- Returns reference note -->
+			if f.HasReturns {
+				<div class="caveat caveat--info">
+					<span class="caveat__mark">ⓘ</span>
+					<span>Returns: { formatVNDHelper(f.ReturnAmount) } — reference only, not subtracted from this order's P&amp;L.</span>
+				</div>
+			}
+		</div>
+		<!-- ── Cost breakdown (grouped ledger) ──────────────────────── -->
+		<div class="tabpanel stack-4">
+			@orderCostLedger(o)
+		</div>
+		<!-- ── COGS reconciliation (gated on cogs_source == 'both') ── -->
+		if f.CogsSource == "both" {
+			<div class="tabpanel stack-4">
+				@orderCogsRecon(o)
+			</div>
+		}
+	</div>
+}
+
+// orderVerdictLine renders the explanatory line inside the verdict bar.
+templ orderVerdictLine(f domain.OrderFinancial, tone string) {
+	if tone == "mute" {
+		Chưa thể tính lãi/lỗ — giá vốn (COGS) chưa được xác minh cho đơn này.
+	} else if f.ChannelNetProfit <= 0 {
+		if f.GrossProfit > 0 && f.HasPlatformFees {
+			Lợi nhuận gộp vẫn dương (+{ formatVNDHelper(f.GrossProfit) }) nhưng { formatVNDAbsHelper(f.ShopeePlatformFees) } phí sàn đẩy đơn thành lỗ { formatVNDAbsHelper(f.ChannelNetProfit) }.
+		} else {
+			Đơn này lỗ { formatVNDAbsHelper(f.ChannelNetProfit) } sau mọi chi phí — biên ròng { formatPctHelper(f.ChannelNetMarginPct) }.
+		}
+	} else {
+		Lãi { formatVNDHelper(f.ChannelNetProfit) } sau mọi chi phí — biên ròng { formatPctHelper(f.ChannelNetMarginPct) }.
+	}
+}
+
+// ── Waterfall row helpers ─────────────────────────────────────────────────────
+
+// wfRowPlain renders a plain (non-total, non-result) waterfall row.
+templ wfRowPlain(op, label, caption, amt string, neg bool) {
+	<div class="wf-row--pl" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-top:1px solid var(--border)">
+		<span class={ func() string {
+			switch op {
+			case "+": return "wf-op wf-op--add"
+			case "−", "-": return "wf-op wf-op--sub"
+			default: return "wf-op"
+			}
+		}() }>{ op }</span>
+		<span class="wf-label">
+			{ label }
+			if caption != "" {
+				<span class="caption" style="margin-left:6px">{ caption }</span>
+			}
+		</span>
+		<span class="wf-pct"></span>
+		<span class={ "wf-amt" + func() string { if neg { return " wf-amt--neg" }; return "" }() }>{ amt }</span>
+	</div>
+}
+
+templ wfRowNeg(op, label, caption, amt string) {
+	<div class="wf-row--pl" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-top:1px solid var(--border)">
+		<span class="wf-op wf-op--sub">{ op }</span>
+		<span class="wf-label">
+			{ label }
+			if caption != "" {
+				<span class="caption" style="margin-left:6px">{ caption }</span>
+			}
+		</span>
+		<span class="wf-pct"></span>
+		<span class="wf-amt">{ amt }</span>
+	</div>
+}
+
+templ wfRowResult(op, label, caption, amt string) {
+	<div class="wf-row--pl wf-row--total" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-top:1px solid var(--border);background:color-mix(in srgb, var(--bg-raised) 60%, transparent)">
+		<span class="wf-op wf-op--eq">{ op }</span>
+		<span class="wf-label" style="font-weight:var(--fw-semi)">
+			{ label }
+			if caption != "" {
+				<span class="caption" style="margin-left:6px">{ caption }</span>
+			}
+		</span>
+		<span class="wf-pct"></span>
+		<span class="wf-amt" style="font-size:17px">{ amt }</span>
+	</div>
+}
+
+templ wfRowCogs(f domain.OrderFinancial) {
+	{{ cogsLbl := cogsLabelHelper(f.CogsSource) }}
+	{{ pctStr := func() string {
+		if f.NetRevenue > 0 && f.HasCogs { return formatPctAmtHelper(f.CogsAmount, f.NetRevenue) }
+		return ""
+	}() }}
+	<div class="wf-row--pl" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-top:1px solid var(--border)">
+		<span class="wf-op wf-op--sub">−</span>
+		<span class="wf-label">
+			COGS
+			if cogsLbl != "" {
+				<span class="caption" style="margin-left:6px">{ cogsLbl }</span>
+			}
+			if f.CogsSource == "" || f.CogsSource == "none" {
+				<span class="bdg bdg--warn bdg--dot">unverified</span>
+			}
+		</span>
+		<span class="wf-pct">{ pctStr }</span>
+		<span class="wf-amt">{ formatVNDHelper(f.CogsAmount) }</span>
+	</div>
+}
+
+templ wfRowGrossProfit(f domain.OrderFinancial) {
+	{{ pctStr := formatPctHelper(f.GrossMarginPct) }}
+	<div class="wf-row--pl wf-row--result" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-top:1px solid var(--border);background:var(--bg-raised)">
+		<span class="wf-op wf-op--eq">=</span>
+		<span class="wf-label" style="font-weight:var(--fw-semi)">Gross profit</span>
+		<span class="wf-pct">{ pctStr }</span>
+		<span class="wf-amt" style="font-size:17px">{ formatVNDHelper(f.GrossProfit) }</span>
+	</div>
+}
+
+templ wfRowPlatformFees(f domain.OrderFinancial, platform string) {
+	{{ pct := func() string {
+		if f.NetRevenue > 0 && f.HasPlatformFees {
+			fees := f.ShopeePlatformFees
+			if fees < 0 { fees = -fees }
+			return formatPctAmtHelper(fees, f.NetRevenue)
+		}
+		return ""
+	}() }}
+	{{ feesAmt := func() string {
+		if !f.HasPlatformFees { return "—" }
+		fees := f.ShopeePlatformFees
+		if fees < 0 { fees = -fees }
+		return formatVNDHelper(fees)
+	}() }}
+	<div class="wf-row--pl" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-top:1px solid var(--border)">
+		<span class="wf-op wf-op--sub">−</span>
+		<span class="wf-label">
+			Platform fees
+			if platform != "" {
+				<span class="caption" style="margin-left:6px">{ platform }</span>
+			}
+		</span>
+		<span class="wf-pct">{ pct }</span>
+		<span class="wf-amt">{ feesAmt }</span>
+	</div>
+}
+
+// ── Cost ledger ───────────────────────────────────────────────────────────────
+
+templ orderCostLedger(o *domain.OrderDetail) {
+	if len(o.CostLedger) == 0 && len(o.CogsItems) == 0 {
+		<div class="panel-head">
+			<span class="panel-title">Cost breakdown</span>
+			<span class="panel-sub">fact_order_costs</span>
+		</div>
+		<div class="note-line">
+			<span class="caveat__mark">ⓘ</span>
+			<span>No cost ledger entries found for this order.</span>
+		</div>
+	} else {
+		<div class="panel-head">
+			<span class="panel-title">Cost breakdown</span>
+			<span class="panel-sub">fact_order_costs</span>
+		</div>
+		<!-- COGS per-SKU section (from int_order_cogs_reconciled) -->
+		if len(o.CogsItems) > 0 {
+			{{ cogsTotal := func() int64 {
+				var t int64
+				for _, item := range o.CogsItems { t += item.CogsGoodsPrimary }
+				return t
+			}() }}
+			<div class="group" data-open="true">
+				<div class="group__head">
+					<div class="group__cat">
+						<span class="group__chev">▾</span>
+						<span class="bdg bdg--good">COGS</span>
+						<span class="wf-tag" style="margin-left:6px">per SKU · Sapo-MAC</span>
+					</div>
+					<span class="group__total">{ formatVNDHelper(cogsTotal) }</span>
+				</div>
+				<div class="group__body tbl-wrap" style="border-radius:0;border:0;border-top:1px solid var(--border)">
+					<table class="tbl tbl--ledger">
+						<thead>
+							<tr>
+								<th>SKU</th>
+								<th>Source</th>
+								<th>Variant ID</th>
+								<th>Fee src</th>
+								<th class="num-h">Amount (Sapo)</th>
+							</tr>
+						</thead>
+						<tbody>
+							for _, item := range o.CogsItems {
+								<tr>
+									<td class="cell-strong mono" style="font-size:12px">
+										{ item.SKU }
+										if item.IsPromo {
+											<span class="bdg bdg--accent">gift</span>
+										}
+									</td>
+									<td class="muted">
+										if item.CogsSource == "both" {
+											<span class="bdg bdg--good">Sapo+MISA</span>
+										} else if item.CogsSource == "sapo_mac" {
+											<span class="bdg">Sapo-MAC</span>
+										} else if item.CogsSource == "misa" {
+											<span class="bdg bdg--warn">MISA</span>
+										} else {
+											<span class="muted">—</span>
+										}
+									</td>
+									<td class="mono muted" style="font-size:11px">{ item.VariantID }</td>
+									<td><span class="bdg bdg--good">actual</span></td>
+									<td class="num" style="white-space:normal">
+										{ formatVNDHelper(item.CogsGoodsPrimary) }
+										if item.CogsGoodsMisa != 0 {
+											<div class="caption" style="margin-top:2px">MISA: { formatVNDHelper(item.CogsGoodsMisa) }</div>
+										}
+									</td>
+								</tr>
+							}
+						</tbody>
+					</table>
+				</div>
+			</div>
+		}
+		<!-- Other cost categories (DISCOUNT, PLATFORM_FEE, OVERHEAD, etc.) -->
+		@orderCostGroups(o.CostLedger)
+		<div class="note-line">
+			<span class="caveat__mark">ⓘ</span>
+			<span>Each row is traceable to its source system + record. Fee source marks actual vs estimated. Promo goods cost (hàng tặng) đã nhúng trong COGS — không cộng thêm lần 2.</span>
+		</div>
+	}
+}
+
+templ orderCostGroups(rows []domain.CostRow) {
+	{{ cats := orderedCostCategories(rows) }}
+	for _, cat := range cats {
+		@orderCostGroup(cat, costCategoryTone(cat), rows)
+	}
+}
+
+templ orderCostGroup(cat, tone string, allRows []domain.CostRow) {
+	{{ var catRows []domain.CostRow }}
+	{{ var subtotal int64 }}
+	for _, row := range allRows {
+		if row.CostCategory == cat {
+			{{ catRows = append(catRows, row) }}
+			{{ subtotal += row.Amount }}
+		}
+	}
+	if len(catRows) > 0 {
+		<div class="group" data-open="true">
+			<div class="group__head">
+				<div class="group__cat">
+					<span class="group__chev">▾</span>
+					<span class={ "bdg " + bdgToneHelper(tone) }>{ cat }</span>
+					if cat == "OVERHEAD" {
+						<span class="wf-tag" style="margin-left:6px">(allocated)</span>
+					}
+				</div>
+				<span class="group__total">{ formatVNDHelper(subtotal) }</span>
+			</div>
+			<div class="group__body tbl-wrap" style="border-radius:0;border:0;border-top:1px solid var(--border)">
+				<table class="tbl tbl--ledger">
+					<thead>
+						<tr>
+							<th>Cost type</th>
+							<th>Source</th>
+							<th>Record</th>
+							<th>Fee src</th>
+							<th class="num-h">Amount</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, row := range catRows {
+							<tr>
+								<td class="cell-strong mono" style="font-size:12px">{ row.CostType }</td>
+								<td class="muted">{ row.SourceSystem }</td>
+								<td class="mono muted" style="font-size:11px">{ row.SourceRecord }</td>
+								<td>
+									if row.FeeSource == "actual" {
+										<span class="bdg bdg--good">actual</span>
+									} else if row.FeeSource == "estimated" {
+										<span class="bdg bdg--warn">estimated</span>
+									} else {
+										<span class="muted">—</span>
+									}
+								</td>
+								<td class="num">{ formatVNDHelper(row.Amount) }</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	}
+}
+
+// ── COGS reconciliation (only when cogs_source == 'both') ────────────────────
+
+templ orderCogsRecon(o *domain.OrderDetail) {
+	{{ var sapoTotal, misaTotal int64 }}
+	{{ var matched int }}
+	for _, item := range o.CogsItems {
+		if item.CogsGoodsSapo != 0 && item.CogsGoodsMisa != 0 {
+			{{ sapoTotal += item.CogsGoodsSapo }}
+			{{ misaTotal += item.CogsGoodsMisa }}
+			{{ matched++ }}
+		}
+	}
+	{{ variance := sapoTotal - misaTotal }}
+	{{ var reconPctStr string }}
+	if misaTotal != 0 {
+		{{ reconPctStr = fmt.Sprintf("%.1f%%", float64(variance)/float64(misaTotal)*100) }}
+	}
+	<details class="recon-panel">
+		<summary class="recon-panel__head">
+			<span class="recon-panel__chev">▸</span>
+			<span class="recon-panel__title">Đối chiếu giá vốn (COGS)</span>
+			<span class="recon-panel__tag"><span class="bdg bdg--good">Sapo + MISA</span></span>
+			<span class="recon-panel__hint muted" style="margin-left:auto;font-size:12px">
+				chênh lệch
+				if reconPctStr != "" {
+					{ signPrefixHelper(variance) }{ reconPctStr }
+				} else {
+					—
+				}
+				· P&amp;L dùng Sapo-MAC
+			</span>
+		</summary>
+		<div class="recon-detail" style="padding:var(--sp-3) var(--sp-4)">
+			<div class="tbl-wrap" style="margin-bottom:var(--sp-3)">
+				<table class="tbl" style="table-layout:fixed;width:100%">
+					<colgroup>
+						<col style="width:28%"/>
+						<col style="width:22%"/>
+						<col style="width:22%"/>
+						<col style="width:16%"/>
+						<col style="width:12%"/>
+					</colgroup>
+					<thead>
+						<tr>
+							<th>SKU</th>
+							<th class="num-h">Sapo-MAC</th>
+							<th class="num-h">MISA TK632</th>
+							<th class="num-h">Chênh lệch</th>
+							<th class="num-h">%</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, item := range o.CogsItems {
+							{{ v := item.CogsGoodsSapo - item.CogsGoodsMisa }}
+							{{ var vPctStr string }}
+							if item.CogsGoodsMisa != 0 {
+								{{ vPct := absFloat64(float64(v) / float64(item.CogsGoodsMisa) * 100) }}
+								{{ vPctStr = fmt.Sprintf("%.1f%%", vPct) }}
+							}
+							{{ highVariance := item.CogsGoodsSapo != 0 && item.CogsGoodsMisa != 0 && vPctStr != "" }}
+							<tr>
+								<td class="mono" style="font-size:12px">
+									if item.SKU != "" {
+										{ item.SKU }
+									} else {
+										{ "—" }
+									}
+									if item.IsPromo {
+										<span class="bdg bdg--accent">gift</span>
+									}
+								</td>
+								<td class="num">{ formatVNDHelper(item.CogsGoodsSapo) }</td>
+								<td class={ "num" + func() string { if item.CogsGoodsMisa == 0 { return " muted" }; return "" }() }>
+									if item.CogsGoodsMisa != 0 {
+										{ formatVNDHelper(item.CogsGoodsMisa) }
+									} else {
+										—
+										if item.IsGiftNoInvoice {
+											<span class="caption"> không có entry</span>
+										}
+									}
+								</td>
+								if item.CogsGoodsSapo != 0 && item.CogsGoodsMisa != 0 {
+									<td class={ "num" + func() string { if highVariance { return " wf-amt--neg" }; return " muted" }() }>
+										{ signPrefixHelper(v) }{ formatVNDAbsHelper(v) }
+									</td>
+									<td class={ "num" + func() string { if highVariance { return " wf-amt--neg" }; return " muted" }() }>
+										if vPctStr != "" {
+											{ signPrefixHelper(v) }{ vPctStr }
+										} else {
+											—
+										}
+									</td>
+								} else {
+									<td class="num muted">—</td>
+									<td class="num muted">—</td>
+								}
+							</tr>
+						}
+					</tbody>
+					if matched > 0 {
+						{{ absVar := absInt64(variance) }}
+						{{ highTotal := reconPctStr != "" }}
+						<tfoot>
+							<tr style="border-top:2px solid var(--border);font-weight:600">
+								<td style="font-size:12px">Tổng ({ fmt.Sprintf("%d", matched) } SKU khớp)</td>
+								<td class="num">{ formatVNDHelper(sapoTotal) }</td>
+								<td class="num">{ formatVNDHelper(misaTotal) }</td>
+								<td class={ "num" + func() string { if highTotal { return " wf-amt--neg" }; return "" }() }>
+									{ signPrefixHelper(variance) }{ formatVNDHelper(absVar) }
+								</td>
+								<td class={ "num" + func() string { if highTotal && reconPctStr != "" { return " wf-amt--neg" }; return "" }() }>
+									if reconPctStr != "" {
+										{ signPrefixHelper(variance) }{ reconPctStr }
+									} else {
+										—
+									}
+								</td>
+							</tr>
+						</tfoot>
+					}
+				</table>
+			</div>
+			<div class="note-line">
+				<span class="caveat__mark">ⓘ</span>
+				<span>P&amp;L dùng <b>Sapo-MAC</b> làm nguồn chính thức. MISA TK632 là đối chiếu — chênh lệch &gt;10% cần kiểm tra lại nhập liệu kế toán hoặc định giá kho.</span>
+			</div>
+		</div>
+	</details>
+}

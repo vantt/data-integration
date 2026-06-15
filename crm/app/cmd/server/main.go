@@ -1,6 +1,6 @@
 // Command server starts the CRM HTTP server.
 // Self-migrates crm.db on startup; ATTACHes cache.db read-only.
-// CGO_ENABLED=0 — uses modernc.org/sqlite (pure Go).
+// go-duckdb (CGO) opens olap.duckdb read-only for order detail queries.
 package main
 
 import (
@@ -19,6 +19,7 @@ import (
 
 	inboundhttp "github.com/vantt/data-integration/crm/app/internal/adapters/inbound/http"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/inbound/web"
+	duckdbadapter "github.com/vantt/data-integration/crm/app/internal/adapters/outbound/duckdb"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/outbound/refresh"
 	"github.com/vantt/data-integration/crm/app/internal/adapters/outbound/sqlite"
 	"github.com/vantt/data-integration/crm/app/internal/application"
@@ -27,6 +28,7 @@ import (
 func main() {
 	dataDir := getEnv("CRM_DATA_DIR", filepath.Join(".", "data"))
 	port := getEnv("CRM_PORT", "8090")
+	olapPath := getEnv("CRM_OLAP_PATH", "/app/var/data_lake/serving/olap.duckdb")
 
 	// Open crm.db (WAL) + ATTACH cache.db (read-only).
 	db, err := sqlite.Open(dataDir)
@@ -137,6 +139,16 @@ func main() {
 		Segments:    segmentSvc,
 		Campaigns:   campaignSvc,
 		SettingsMgr: profileSvc,
+	}
+
+	// Order detail — open olap.duckdb read-only via CGO-backed go-duckdb.
+	// Non-fatal: if the file is missing or locked, order detail returns 503.
+	orderRepo, err := duckdbadapter.NewOrderRepo(olapPath)
+	if err != nil {
+		log.Printf("warn: order repo unavailable (%v) — /orders/* will return 503", err)
+	} else {
+		defer orderRepo.Close()
+		webDeps.Orders = orderRepo
 	}
 	web.Mount(r, webDeps)
 

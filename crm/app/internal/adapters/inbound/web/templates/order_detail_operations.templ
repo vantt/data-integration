@@ -1,0 +1,520 @@
+package templates
+
+import (
+	"fmt"
+	"strings"
+	"github.com/vantt/data-integration/crm/app/internal/domain"
+)
+
+// OrderOperationsTab renders the Operations tab.
+// Sections: Recipient & delivery → Fulfillment → Shipments → Payments → Returns.
+// Returned as an HTMX fragment for /orders/{code}/tabs/operations.
+templ OrderOperationsTab(o *domain.OrderDetail) {
+	<div class="tab-sections">
+		@orderRecipientSection(o)
+		@orderFulfillmentSection(o)
+		@orderShipmentsSection(o.Shipments, o.Header.FulfillmentStatus)
+		@orderPaymentsSection(o.Payments)
+		@orderReturnsSection(o.Returns)
+	</div>
+}
+
+// ── 1. Recipient & delivery ───────────────────────────────────────────────────
+
+templ orderRecipientSection(o *domain.OrderDetail) {
+	<div class="tabpanel stack-4">
+		<div class="panel-head">
+			<span class="panel-title">Recipient &amp; delivery</span>
+			<span class="panel-sub">fact_orders · recipient</span>
+		</div>
+		<div class="party-split">
+			<!-- Left: Recipient — receives goods -->
+			<div class="scard scard--recipient scard--lead">
+				<div class="caption scard__eyebrow" style="color:var(--accent)">RECIPIENT — receives the goods</div>
+				<div class="recipient-name" style="margin-top:var(--sp-2)">
+					if o.Customer != nil && o.Customer.FullName != "" {
+						{ o.Customer.FullName }
+					} else {
+						<span class="muted">—</span>
+					}
+				</div>
+				<div class="badge-row">
+					<span class="bdg bdg--good bdg--dot">same as buyer</span>
+				</div>
+				<div class="facts" style="margin-top:var(--sp-3)">
+					if o.Shipping.Address != "" {
+						<div class="fact">
+							<span class="fact__k">Address</span>
+							<span class="fact__v">{ o.Shipping.Address }</span>
+						</div>
+					}
+					if o.Shipping.Ward != "" || o.Shipping.District != "" {
+						<div class="fact">
+							<span class="fact__k">Ward / District</span>
+							<span class="fact__v">{ joinNonEmpty([]string{o.Shipping.Ward, o.Shipping.District}, ", ") }</span>
+						</div>
+					}
+					if o.Shipping.Province != "" {
+						<div class="fact">
+							<span class="fact__k">Province</span>
+							<span class="fact__v">{ o.Shipping.Province }</span>
+						</div>
+					}
+					if o.Shipping.Country != "" && o.Shipping.Country != "Việt Nam" && o.Shipping.Country != "Vietnam" {
+						<div class="fact">
+							<span class="fact__k">Country</span>
+							<span class="fact__v">{ o.Shipping.Country }</span>
+						</div>
+					}
+				</div>
+			</div>
+			<!-- Right: Buyer account -->
+			<div class="scard">
+				<div class="caption scard__eyebrow">BUYER — placed &amp; paid</div>
+				<div class="recipient-name recipient-name--muted" style="margin-top:var(--sp-2)">
+					if o.Customer != nil && o.Customer.FullName != "" {
+						{ o.Customer.FullName }
+					} else {
+						<span class="muted">—</span>
+					}
+				</div>
+				if o.Customer != nil {
+					if o.Customer.CustomerType != "" || o.Customer.ValueGroup != "" {
+						<div class="badge-row">
+							if o.Customer.CustomerType != "" {
+								<span class="bdg">{ o.Customer.CustomerType }</span>
+							}
+							if o.Customer.ValueGroup != "" {
+								<span class="bdg bdg--good bdg--dot">{ o.Customer.ValueGroup }</span>
+							}
+						</div>
+					}
+					if o.Customer.LifetimeValue != 0 {
+						<div class="facts" style="margin-top:var(--sp-3)">
+							<div class="fact">
+								<span class="fact__k">LTV</span>
+								<span class="fact__v">{ formatVNDHelper(o.Customer.LifetimeValue) }</span>
+							</div>
+						</div>
+					}
+					if o.Customer.CustomerID != "" {
+						<a
+							href={ templ.SafeURL("/customers/" + o.Customer.CustomerID) }
+							class="btn btn--secondary party-cta"
+							style="display:block;margin-top:var(--sp-4);text-align:center;padding:var(--sp-2) var(--sp-4);border:1px solid var(--border);border-radius:var(--radii-control);color:var(--fg-1);text-decoration:none;font-size:13px;transition:border-color var(--dur-fast) var(--ease-fast)"
+						>
+							Open customer <span class="mono">→</span>
+						</a>
+					}
+				}
+			</div>
+		</div>
+	</div>
+}
+
+// ── 2. Fulfillment ────────────────────────────────────────────────────────────
+
+templ orderFulfillmentSection(o *domain.OrderDetail) {
+	{{ h := o.Header }}
+	{{ f := o.Financial }}
+	<div class="tabpanel stack-4">
+		<div class="panel-head">
+			<span class="panel-title">Fulfillment</span>
+			<span class="panel-sub">fact_orders · fact_order_economics</span>
+		</div>
+		<div class="badge-row" style="margin-bottom:var(--sp-3)">
+			if h.Status != "" {
+				<span class={ "bdg " + bdgToneHelper(orderStatusTone(h.Status)) }>{ h.Status }</span>
+			}
+			if h.PaymentStatus != "" {
+				<span class={ "bdg bdg--dot " + bdgToneHelper(paymentToneHelper(h.PaymentStatus)) }>{ h.PaymentStatus }</span>
+			}
+			if h.FulfillmentStatus != "" {
+				<span class={ "bdg bdg--dot " + bdgToneHelper(shipToneHelper(h.FulfillmentStatus)) }>{ h.FulfillmentStatus }</span>
+			}
+		</div>
+		<div class="scard facts">
+			if h.FirstShippedAt != "" {
+				<div class="fact">
+					<span class="fact__k">Shipped</span>
+					<span class="fact__v mono">{ formatICTHelper(h.FirstShippedAt) }</span>
+				</div>
+			}
+			if f.CarrierID != "" {
+				<div class="fact">
+					<span class="fact__k">Carrier</span>
+					<span class="fact__v">{ f.CarrierID }</span>
+				</div>
+			}
+			<div class="fact">
+				<span class="fact__k">COD</span>
+				<span class="fact__v mono">
+					if f.CODAmount != 0 {
+						{ formatVNDHelper(f.CODAmount) }
+					} else {
+						—
+					}
+				</span>
+			</div>
+			<div class="fact">
+				<span class="fact__k">TTC</span>
+				<span class="fact__v">
+					if h.TimeToCompleteHours != nil {
+						{ fmt.Sprintf("%.1fh", *h.TimeToCompleteHours) }
+					} else {
+						in transit
+					}
+				</span>
+			</div>
+		</div>
+		<div class="note-line">
+			<span class="caveat__mark">ⓘ</span>
+			<span>Order-level summary. Per-leg carrier codes and live status are in Shipments below.</span>
+		</div>
+	</div>
+}
+
+// ── 3. Shipments ──────────────────────────────────────────────────────────────
+
+templ orderShipmentsSection(shipsRaw []domain.Shipment, fulfillmentStatus string) {
+	{{ shps := sortShipments(shipsRaw) }}
+	{{ n := len(shps) }}
+	<div class="tabpanel stack-4">
+		<div class="panel-head ship-head">
+			<div class="ship-head__title">
+				<span class="panel-title">Shipments</span>
+				if n > 1 {
+					<span class="ship-count">{ fmt.Sprintf("%d", n) }</span>
+				}
+			</div>
+			if n > 0 {
+				<div class="ship-summary">
+					for _, key := range []string{"DELIVERED", "SHIPPING", "PACKED", "PENDING", "CANCELLED", "FAILED"} {
+						{{ cnt := 0 }}
+						for _, s := range shps {
+							if strings.ToUpper(s.Status) == key {
+								{{ cnt++ }}
+							}
+						}
+						if cnt > 0 {
+							<span class="ship-summary__seg">
+								<i class={ "ship-tone-dot ship-tone-dot--" + shipToneHelper(key) }></i>
+								{ fmt.Sprintf("%d %s", cnt, strings.ToLower(key)) }
+							</span>
+						}
+					}
+				</div>
+			} else {
+				<div class="panel-sub">fact_fulfillments · leg-level</div>
+			}
+		</div>
+		if n == 0 {
+			<div class="ship-empty">
+				<div class="ship-empty__title voice"><em>No shipments yet</em></div>
+				<p class="ship-empty__sub">
+					This order has no shipment legs.
+					if fulfillmentStatus != "" {
+						Fulfillment status is
+						<span class={ "bdg bdg--dot " + bdgToneHelper(shipToneHelper(fulfillmentStatus)) }>
+							{ fulfillmentStatus }
+						</span>.
+					}
+				</p>
+			</div>
+		} else {
+			<div class="ship-list">
+				for idx, s := range shps {
+					{{ tone := shipToneHelper(s.Status) }}
+					{{ isBad := strings.ToUpper(s.Status) == "CANCELLED" || strings.ToUpper(s.Status) == "FAILED" }}
+					{{ code := s.TrackingCode }}
+					<div
+						class={ "ship-card" + func() string { if isBad { return " ship-card--bad" }; return "" }() }
+						data-ship-card
+						id={ fmt.Sprintf("ship-card-%d", idx+1) }
+					>
+						<div class="ship-card__top">
+							<div class="ship-card__lead">
+								<span class={ "bdg bdg--dot " + bdgToneHelper(tone) }>
+									if s.Status != "" {
+										{ s.Status }
+									} else {
+										UNKNOWN
+									}
+								</span>
+								if isBad {
+									<span class="ship-stages ship-stages--err" title={ strings.ToLower(s.Status) } aria-hidden="true">
+										<span class="ship-stages__err">✕</span>
+									</span>
+								} else {
+									{{ stages := []string{"PACKED", "SHIPPING", "DELIVERED"} }}
+									{{ currIdx := -1 }}
+									for si, stage := range stages {
+										if strings.ToUpper(s.Status) == stage {
+											{{ currIdx = si }}
+										}
+									}
+									<span class="ship-stages" title="packed → shipping → delivered" aria-hidden="true">
+										for si, _ := range stages {
+											if si > 0 {
+												<span class={ "ship-stages__bar" + func() string { if si <= currIdx { return " is-on" }; return "" }() }></span>
+											}
+											<span class={ "ship-stages__node" + func() string {
+												cls := ""
+												if si <= currIdx { cls += " is-on" }
+												if si == currIdx { cls += " is-now" }
+												return cls
+											}() }></span>
+										}
+									</span>
+								}
+							</div>
+							<div class="ship-card__carrier">
+								<span class="ship-carrier__name">
+									if s.CarrierID != "" {
+										{ s.CarrierID }
+									} else {
+										{ "—" }
+									}
+								</span>
+								if s.ShippingService != "" {
+									<span class="ship-sep">·</span>
+									<span class="ship-carrier__svc">{ s.ShippingService }</span>
+								}
+							</div>
+						</div>
+						<button
+							type="button"
+							class="ship-track"
+							data-track-btn
+							data-card-id={ fmt.Sprintf("%d", idx+1) }
+							data-code={ code }
+							title="Copy tracking code"
+							aria-label={ "Tracking code " + code + " — copy" }
+						>
+							<span class="ship-track__label">Tracking</span>
+							<span class={ "ship-track__code" + func() string { if isBad { return " ship-track__code--voided" }; return "" }() }>
+								if code != "" {
+									{ code }
+								} else {
+									{ "—" }
+								}
+							</span>
+							<span class="ship-track__copy" data-copy-glyph aria-hidden="true">
+								<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+									<rect x="4.3" y="4.3" width="6.4" height="6.4" rx="1.2"></rect>
+									<path d="M8.4 2.3H3.4a1.1 1.1 0 0 0-1.1 1.1v5"></path>
+								</svg>
+								copy
+							</span>
+						</button>
+						<div class="ship-card__meta">
+							<span class="ship-meta__code mono">
+								if s.FulfillmentCode != "" {
+									{ s.FulfillmentCode }
+								} else {
+									{ "—" }
+								}
+							</span>
+							<span class="ship-meta__sep">·</span>
+							<span class="ship-meta__time">
+								if s.ShippedAt != "" {
+									shipped <span class="mono">{ formatICTHelper(s.ShippedAt) }</span>
+									<span class="ship-meta__rel">(ICT)</span>
+								} else {
+									<span class="ship-meta__null">not shipped yet</span>
+								}
+							</span>
+							<span class="ship-meta__sep">·</span>
+							<span class="ship-meta__cod">
+								if s.CODAmount > 0 {
+									COD <b class="mono">{ formatVNDHelper(s.CODAmount) }</b>
+								} else {
+									<span class="muted">COD <span class="dash">—</span></span>
+								}
+							</span>
+						</div>
+					</div>
+				}
+			</div>
+			<div class="note-line">
+				<span class="caveat__mark">ⓘ</span>
+				<span>Tracking codes are copy-only — no carrier link map in the serving layer yet.</span>
+			</div>
+		}
+	</div>
+}
+
+// ── 4. Payments ───────────────────────────────────────────────────────────────
+
+templ orderPaymentsSection(pmts []domain.Payment) {
+	<div class="tabpanel stack-4">
+		<div class="panel-head">
+			<span class="panel-title">Payments</span>
+			<span class="panel-sub">fact_payments × dim_payment_methods</span>
+		</div>
+		if len(pmts) == 0 {
+			<div class="ship-empty">
+				<div class="ship-empty__title voice"><em>No payment records</em></div>
+				<p class="ship-empty__sub">No payment entries found for this order.</p>
+			</div>
+		} else {
+			{{ var total, cod int64 }}
+			for _, p := range pmts {
+				{{ total += p.Amount }}
+				if strings.ToUpper(p.PaymentMethodType) == "COD" {
+					{{ cod += p.Amount }}
+				}
+			}
+			{{ codPct := 0 }}
+			if total > 0 {
+				{{ codPct = int(float64(cod) / float64(total) * 100) }}
+			}
+			<div class="tbl-wrap">
+				<table class="tbl">
+					<thead>
+						<tr>
+							<th>Method</th>
+							<th>Type</th>
+							<th>Status</th>
+							<th>Paid on</th>
+							<th class="num-h">Amount</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, p := range pmts {
+							<tr>
+								<td class="cell-strong">
+									if p.PaymentMethodName != "" {
+										{ p.PaymentMethodName }
+									} else {
+										{ "—" }
+									}
+								</td>
+								<td class="muted mono" style="font-size:12px">
+									if p.PaymentMethodType != "" {
+										{ p.PaymentMethodType }
+									} else {
+										{ "—" }
+									}
+								</td>
+								<td>
+									if p.Status != "" {
+										<span class={ "bdg bdg--dot " + bdgToneHelper(paymentToneHelper(p.Status)) }>{ p.Status }</span>
+									} else {
+										<span class="muted">—</span>
+									}
+								</td>
+								<td class="mono muted" style="font-size:12px">
+									if p.PaidOn != "" {
+										{ formatICTHelper(p.PaidOn) }
+									} else {
+										—
+									}
+								</td>
+								<td class="num cell-strong">{ formatVNDHelper(p.Amount) }</td>
+							</tr>
+						}
+					</tbody>
+					<tfoot>
+						<tr>
+							<td colspan="4">Σ paid · COD { fmt.Sprintf("%d%%", codPct) }</td>
+							<td class="num cell-strong">{ formatVNDHelper(total) }</td>
+						</tr>
+					</tfoot>
+				</table>
+			</div>
+		}
+	</div>
+}
+
+// ── 5. Returns ────────────────────────────────────────────────────────────────
+
+templ orderReturnsSection(retsRaw []domain.ReturnEvent) {
+	{{ rets := sortReturns(retsRaw) }}
+	{{ n := len(rets) }}
+	{{ var paidTotal int64 }}
+	for _, r := range rets {
+		if strings.ToLower(r.RefundStatus) == "paid" {
+			{{ paidTotal += r.RefundAmount }}
+		}
+	}
+	<div class="tabpanel stack-4">
+		<div class="panel-head ret-head">
+			<div class="ship-head__title">
+				<span class="panel-title">Returns</span>
+				if n > 1 {
+					<span class="ship-count">{ fmt.Sprintf("%d", n) }</span>
+				}
+			</div>
+			if n > 1 {
+				<div class="ret-total">
+					total refunded <b class="mono">{ formatVNDHelper(paidTotal) }</b>
+				</div>
+			} else {
+				<div class="panel-sub">fact_order_returns</div>
+			}
+		</div>
+		if n == 0 {
+			<div class="ret-empty">
+				<span class="ret-empty__dot"></span>
+				No returns
+			</div>
+		} else {
+			<div class="ret-list">
+				for _, r := range rets {
+					{{ refundTone := "warn" }}
+					if strings.ToLower(r.RefundStatus) == "paid" {
+						{{ refundTone = "good" }}
+					}
+					{{ retTone := "neutral" }}
+					if strings.ToLower(r.ReturnStatus) == "cancelled" {
+						{{ retTone = "bad" }}
+					}
+					<div class="ret-card">
+						<div class="ret-card__top">
+							<div class="ret-amt mono">{ formatVNDHelper(r.RefundAmount) }</div>
+							<div class="ret-badges">
+								<span class={ "bdg bdg--dot " + bdgToneHelper(refundTone) }>
+									Refund: { titleCaseReplace(r.RefundStatus) }
+								</span>
+								<span class={ "bdg " + bdgToneHelper(retTone) }>
+									{ titleCaseReplace(r.ReturnStatus) }
+								</span>
+							</div>
+						</div>
+						<div class="ret-card__meta">
+							<span class="ret-meta__date mono">
+								if r.ReturnDate != "" {
+									{ formatICTHelper(r.ReturnDate) }
+								} else {
+									—
+								}
+							</span>
+							<span class="ret-meta__ict">ICT</span>
+							<span class="ret-sep">·</span>
+							<span>
+								qty
+								if r.ReturnQuantity > 0 {
+									<span class="mono">{ fmt.Sprintf("%d", r.ReturnQuantity) }</span>
+								} else {
+									<span class="ret-na">—</span>
+								}
+							</span>
+						</div>
+						<div class="ret-card__reason">
+							if r.ReturnReason != "" {
+								<span class="ret-reason__k">Reason</span> { r.ReturnReason }
+							} else {
+								<span class="ret-reason__none">No reason recorded</span>
+							}
+						</div>
+					</div>
+				}
+			</div>
+			<div class="note-line">
+				<span class="caveat__mark">ⓘ</span>
+				<span>Reference only — returns are not deducted from this order's P&amp;L.</span>
+			</div>
+		}
+	</div>
+}
