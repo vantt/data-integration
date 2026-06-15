@@ -240,14 +240,22 @@ func (r *CacheRepo) fetchRecentOrders(ctx context.Context, customerID int64) ([]
 	return out, nil
 }
 
-// ListAllActionQueue returns every row from cache.wh_action_queue.
+// ListAllActionQueue returns every row from cache.wh_action_queue enriched with
+// the customer display_name (from wh_party_seed + wh_customer_base) and CRM
+// party_id (from crm_party_identity in the main DB).
 // Returns empty slice when table is absent (graceful-empty).
 func (r *CacheRepo) ListAllActionQueue(ctx context.Context) ([]domain.ActionQueueItem, error) {
 	const q = `
-		SELECT action_id, customer_key, action_type, rationale_vi,
-		       value_at_stake_vnd, priority, generated_date, refreshed_at
-		FROM cache.wh_action_queue
-		ORDER BY priority ASC`
+		SELECT a.action_id, a.customer_key, a.action_type, a.rationale_vi,
+		       a.value_at_stake_vnd, a.priority, a.generated_date, a.refreshed_at,
+		       COALESCE(bc.display_name, '') AS customer_name,
+		       pi.party_id AS party_id
+		FROM cache.wh_action_queue a
+		LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
+		LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id
+		LEFT JOIN crm_party_identity pi
+		       ON pi.identity_type = 'sapo_customer' AND pi.identity_value = a.customer_key
+		ORDER BY a.priority ASC`
 
 	rows, err := r.db.SQLDB().QueryContext(ctx, q)
 	if err != nil {
@@ -261,12 +269,13 @@ func (r *CacheRepo) ListAllActionQueue(ctx context.Context) ([]domain.ActionQueu
 	var out []domain.ActionQueueItem
 	for rows.Next() {
 		var a domain.ActionQueueItem
-		var rationale, genDate, refreshed sql.NullString
+		var rationale, genDate, refreshed, customerName, partyID sql.NullString
 		var valueAtStake, priority sql.NullInt64
 
 		if err := rows.Scan(
 			&a.ActionID, &a.CustomerKey, &a.ActionType,
 			&rationale, &valueAtStake, &priority, &genDate, &refreshed,
+			&customerName, &partyID,
 		); err != nil {
 			return nil, fmt.Errorf("cache repo: scan all actions: %w", err)
 		}
@@ -275,6 +284,10 @@ func (r *CacheRepo) ListAllActionQueue(ctx context.Context) ([]domain.ActionQueu
 		a.Priority = int(priority.Int64)
 		a.GeneratedDate = genDate.String
 		a.RefreshedAt = refreshed.String
+		a.CustomerName = customerName.String
+		if partyID.Valid {
+			a.PartyID = &partyID.String
+		}
 		out = append(out, a)
 	}
 	if err := rows.Err(); err != nil {

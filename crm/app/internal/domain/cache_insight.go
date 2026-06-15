@@ -29,8 +29,10 @@ type CustomerInsight struct {
 type ActionQueueItem struct {
 	ActionID        string
 	CustomerKey     string
-	ActionType      string // CALL_NOW|REORDER_NUDGE|WIN_BACK|UPSELL|CROSS_SELL|COLLECT_FEEDBACK
-	RationaleVI     string // Vietnamese rationale text
+	CustomerName    string  // display_name from wh_customer_base; empty when not found
+	PartyID         *string // CRM party_id resolved via crm_party_identity; nil when not yet synced
+	ActionType      string  // CALL_NOW|REORDER_NUDGE|WIN_BACK|UPSELL|CROSS_SELL|COLLECT_FEEDBACK
+	RationaleVI     string  // Vietnamese rationale text
 	ValueAtStakeVND int64
 	Priority        int
 	GeneratedDate   string // YYYY-MM-DD

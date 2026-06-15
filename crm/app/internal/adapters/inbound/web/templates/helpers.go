@@ -151,6 +151,14 @@ func safeStr(s *string) string {
 	return *s
 }
 
+// customerLabelHelper returns the customer's display name if known, else the raw key.
+func customerLabelHelper(name, key string) string {
+	if name != "" {
+		return name
+	}
+	return key
+}
+
 // truncStr truncates to max runes, appending "…" if needed.
 func truncStr(s string, max int) string {
 	runes := []rune(s)

@@ -98,13 +98,23 @@ templ actionQueueSection(actions []domain.ActionQueueItem) {
 					</div>
 					<div class="aq-card__rationale">{ truncStr(a.RationaleVI, 80) }</div>
 					<div class="aq-card__foot">
-						<a
-							href={ templ.SafeURL(fmt.Sprintf("/customers?q=%s", a.CustomerKey)) }
-							class="btn btn--secondary aq-card__cta"
-						>
-							{ a.CustomerKey } — Mở hồ sơ
-							@Icon("chevron", 12)
-						</a>
+						if a.PartyID != nil {
+							<a
+								href={ templ.SafeURL("/customers/" + *a.PartyID) }
+								class="btn btn--secondary aq-card__cta"
+							>
+								{ customerLabelHelper(a.CustomerName, a.CustomerKey) } — Mở hồ sơ
+								@Icon("chevron", 12)
+							</a>
+						} else {
+							<a
+								href={ templ.SafeURL(fmt.Sprintf("/customers?q=%s", a.CustomerKey)) }
+								class="btn btn--secondary aq-card__cta"
+							>
+								{ customerLabelHelper(a.CustomerName, a.CustomerKey) } — Mở hồ sơ
+								@Icon("chevron", 12)
+							</a>
+						}
 					</div>
 				</div>
 			}

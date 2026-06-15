@@ -105,6 +105,27 @@ func seedActionQueueInCache(t *testing.T, dataDir string, actions []domain.Actio
 		t.Fatalf("create wh_action_queue in cache.db: %v", err)
 	}
 
+	// wh_party_seed and wh_customer_base must exist for ListAllActionQueue's LEFT JOINs.
+	_, err = cacheConn.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS wh_party_seed (
+			customer_id  INTEGER,
+			customer_key TEXT PRIMARY KEY,
+			seen_at      TEXT
+		)`)
+	if err != nil {
+		t.Fatalf("create wh_party_seed in cache.db: %v", err)
+	}
+	_, err = cacheConn.ExecContext(ctx, `
+		CREATE TABLE IF NOT EXISTS wh_customer_base (
+			customer_id  INTEGER PRIMARY KEY,
+			display_name TEXT,
+			phone        TEXT,
+			email        TEXT
+		)`)
+	if err != nil {
+		t.Fatalf("create wh_customer_base in cache.db: %v", err)
+	}
+
 	for _, a := range actions {
 		_, err := cacheConn.ExecContext(ctx,
 			`INSERT OR REPLACE INTO wh_action_queue
