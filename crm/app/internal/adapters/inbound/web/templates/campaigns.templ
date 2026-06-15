@@ -10,7 +10,7 @@ import (
 // CampaignsPage renders S10 — Campaigns List.
 templ CampaignsPage(campaigns []domain.Campaign, segmentNames map[string]string) {
 	@AppShell("S10", "Chiến dịch") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S10">
 			<div class="crm-pagehead">
 				<div>
 					<div class="caption crm-pagehead__eyebrow">CHIẾN DỊCH</div>
@@ -138,7 +138,7 @@ templ CampaignDetailPage(
 	segmentName string,
 ) {
 	@AppShell("S10", campaign.Name) {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S11">
 			// Topbar: back · name+status · actions
 			<div class="c360-topbar">
 				<a class="c360-back" href="/campaigns">

@@ -9,7 +9,7 @@ import (
 
 // ModalAssignConversation renders M09 — assign or re-assign a conversation to a staff user.
 templ ModalAssignConversation(convID string, conv *domain.Conversation, users []domain.AppUser) {
-	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''">
+	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''" data-surface="M09">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -65,7 +65,7 @@ templ ModalAssignConversation(convID string, conv *domain.Conversation, users []
 
 // ModalCloseConversation renders M10 — close a conversation with an optional result note.
 templ ModalCloseConversation(convID string, conv *domain.Conversation) {
-	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''">
+	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''" data-surface="M10">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -106,7 +106,7 @@ templ ModalCloseConversation(convID string, conv *domain.Conversation) {
 
 // ModalLinkParty renders M11 — search and link a party to a conversation.
 templ ModalLinkParty(convID string, conv *domain.Conversation) {
-	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''">
+	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''" data-surface="M11">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -168,7 +168,7 @@ templ PartySearchResults(parties []domain.Party, convID string) {
 // ModalLogActivity renders M08 — log an activity for a party.
 // convID may be empty when invoked from Customer 360 (not a conversation context).
 templ ModalLogActivity(partyID, convID string) {
-	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''">
+	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''" data-surface="M08">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -233,7 +233,7 @@ templ ModalLogActivity(partyID, convID string) {
 
 // ModalCreateTask renders M05 — create a new task.
 templ ModalCreateTask(prefillPartyID string) {
-	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''">
+	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''" data-surface="M05">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -286,7 +286,7 @@ templ ModalCreateTask(prefillPartyID string) {
 
 // ModalMergeConfirm renders M01 — confirm party merge (Party B → Party A).
 templ ModalMergeConfirm(cand *domain.DedupCandidate, partyA, partyB *domain.Party) {
-	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''">
+	<div class="modal-scrim" onclick="document.getElementById('modal').innerHTML=''" data-surface="M01">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>

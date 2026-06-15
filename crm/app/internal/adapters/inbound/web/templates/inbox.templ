@@ -8,7 +8,7 @@ import (
 // InboxPage renders S05 — Inbox (Conversations).
 templ InboxPage(convs []domain.Conversation, partyNames map[string]string, statusFilter, assigneeFilter string) {
 	@AppShell("S05", "Hộp thư") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S05">
 			<div class="crm-pagehead">
 				<div>
 					<div class="caption crm-pagehead__eyebrow">HỘP THƯ</div>

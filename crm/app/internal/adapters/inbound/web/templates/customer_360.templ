@@ -12,7 +12,7 @@ templ Customer360Page(
 	activeTab string,
 ) {
 	@AppShell("S03", party.DisplayName) {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S03">
 			<!-- c360-topbar: back · name + badges · action buttons -->
 			<div class="c360-topbar">
 				<a class="c360-back" href="/customers">
@@ -179,6 +179,7 @@ templ c360ActivePanel(partyID string, activeTab string) {
 
 // P01InsightPanel renders the insight tab content.
 templ P01InsightPanel(insight *domain.CacheInsight) {
+	<div data-surface="P01">
 	if insight == nil || insight.Insight == nil {
 		<div class="state">
 			<div class="state__inner">
@@ -266,10 +267,12 @@ templ P01InsightPanel(insight *domain.CacheInsight) {
 			@FreshnessBadge(insight.RefreshedAt, false)
 		</div>
 	}
+	</div>
 }
 
 // P02OrderHistoryPanel renders the order history tab.
 templ P02OrderHistoryPanel(orders []domain.RecentOrder) {
+	<div data-surface="P02">
 	if len(orders) == 0 {
 		<div class="state">
 			<div class="state__inner">
@@ -316,12 +319,13 @@ templ P02OrderHistoryPanel(orders []domain.RecentOrder) {
 			</div>
 		</div>
 	}
+	</div>
 }
 
 // P03ActivityTimelinePanel renders the activity timeline tab.
 // partyID is passed so the "Log activity" button can open the correct modal.
 templ P03ActivityTimelinePanel(activities []domain.Activity, partyID string) {
-	<div class="stack stack-4">
+	<div class="stack stack-4" data-surface="P03">
 		<div class="panel-head">
 			<span class="panel-title">Activity timeline</span>
 			<button
@@ -362,7 +366,7 @@ templ P03ActivityTimelinePanel(activities []domain.Activity, partyID string) {
 
 // P04TasksPanel renders the tasks tab for one party.
 templ P04TasksPanel(tasks []domain.Task, partyID string) {
-	<div class="stack stack-4">
+	<div class="stack stack-4" data-surface="P04">
 		<div class="panel-head">
 			<span class="panel-title">Tasks</span>
 		</div>
@@ -411,7 +415,7 @@ templ P04TasksPanel(tasks []domain.Task, partyID string) {
 
 // P05NotesPanel renders the notes tab with an add-note form.
 templ P05NotesPanel(notes []domain.Note, partyID string) {
-	<div class="stack stack-4">
+	<div class="stack stack-4" data-surface="P05">
 		<div class="panel-head">
 			<span class="panel-title">Ghi chú</span>
 		</div>

@@ -45,7 +45,7 @@ templ AppHeader(title string) {
 			<span class="brand__dot"></span>
 			<span class="brand__name">retail<b>CRM</b></span>
 		</a>
-		<form class="search" action="/customers" method="get" role="search">
+		<form class="search" action="/customers" method="get" role="search" data-surface="C02">
 			<div class="search__field">
 				<input
 					class="search__input"
@@ -102,7 +102,7 @@ var crmNav = []navGroup{
 
 // SidebarNav renders the fixed left-rail navigation (C01).
 templ SidebarNav(activeScreen string) {
-	<nav class="crm-nav" aria-label="Điều hướng">
+	<nav class="crm-nav" aria-label="Điều hướng" data-surface="C01">
 		for _, g := range crmNav {
 			<div class="crm-nav__group">
 				<div class="caption crm-nav__eyebrow">{ g.Eyebrow }</div>

@@ -8,7 +8,7 @@ import (
 // DedupReviewPage renders S04 — Dedup Review.
 templ DedupReviewPage(candidates []domain.DedupCandidate, partyNames map[string]string, matchRuleFilter string) {
 	@AppShell("S04", "Dedup Review") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S04">
 			<div class="crm-pagehead">
 				<div>
 					<div class="caption crm-pagehead__eyebrow">QUẢN TRỊ</div>

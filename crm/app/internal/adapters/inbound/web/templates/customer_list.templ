@@ -8,7 +8,7 @@ import (
 // CustomerListPage renders S02 — Customer List & Search.
 templ CustomerListPage(parties []domain.Party, total, page, pageSize int, query string) {
 	@AppShell("S02", "Khách hàng") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S02">
 			<div class="crm-pagehead">
 				<div>
 					<div class="caption crm-pagehead__eyebrow">KHÁCH HÀNG</div>

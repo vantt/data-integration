@@ -9,7 +9,7 @@ import (
 
 // ModalCreateParty renders M02 — create a new party from the customer list.
 templ ModalCreateParty() {
-	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M02">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -59,7 +59,7 @@ templ ModalCreateParty() {
 
 // ModalAssignOwner renders M04 — assign owner to a party.
 templ ModalAssignOwner(partyID string, currentOwnerID *string, users []domain.AppUser) {
-	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M04">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -115,7 +115,7 @@ templ ModalAssignOwner(partyID string, currentOwnerID *string, users []domain.Ap
 
 // ModalCreateCampaign renders M07 — create a new campaign.
 templ ModalCreateCampaign(segments []domain.Segment, users []domain.AppUser) {
-	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M07">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -190,7 +190,7 @@ templ ModalCreateCampaign(segments []domain.Segment, users []domain.AppUser) {
 
 // ModalEditCampaign renders M07 in edit mode for an existing campaign.
 templ ModalEditCampaign(campaign *domain.Campaign, segments []domain.Segment) {
-	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M07">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -260,7 +260,7 @@ templ ModalEditCampaign(campaign *domain.Campaign, segments []domain.Segment) {
 
 // ModalRecordConversion renders M12 — record a manual conversion for a campaign target.
 templ ModalRecordConversion(campaignID, partyID, partyName string) {
-	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M12">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -301,7 +301,7 @@ templ ModalRecordConversion(campaignID, partyID, partyName string) {
 
 // ModalCustomFieldDef renders M13 — create or edit a custom field definition.
 templ ModalCustomFieldDef(field *domain.CustomFieldDef, isNew bool) {
-	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M13">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>
@@ -404,7 +404,7 @@ templ ModalCustomFieldDef(field *domain.CustomFieldDef, isNew bool) {
 
 // ModalCreateTag renders M14 — create a new tag.
 templ ModalCreateTag() {
-	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M14">
 		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
 			<div class="modal__head">
 				<div>

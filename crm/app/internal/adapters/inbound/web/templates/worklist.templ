@@ -8,7 +8,7 @@ import (
 // WorklistPage renders S01 — Worklist / Dashboard.
 templ WorklistPage(actions []domain.ActionQueueItem, tasks []domain.Task, refreshedAt string, isStale bool) {
 	@AppShell("S01", "Worklist") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S01">
 			<div class="crm-pagehead">
 				<div>
 					<div class="caption crm-pagehead__eyebrow">WORKLIST</div>
@@ -55,7 +55,7 @@ templ WorklistFragment(actions []domain.ActionQueueItem, tasks []domain.Task, re
 // FreshnessBadge shows when the cache was last refreshed.
 templ FreshnessBadge(refreshedAt string, isStale bool) {
 	if isStale {
-		<div class="caveat caveat--warn">
+		<div class="caveat caveat--warn" data-surface="C06">
 			<span class="caveat__mark">@Icon("warn", 13)</span>
 			if refreshedAt == "" {
 				Cache chưa có dữ liệu — chạy sync để cập nhật.
@@ -64,7 +64,7 @@ templ FreshnessBadge(refreshedAt string, isStale bool) {
 			}
 		</div>
 	} else {
-		<div class="caveat caveat--info">
+		<div class="caveat caveat--info" data-surface="C06">
 			<span class="caveat__mark">@Icon("clock", 13)</span>
 			if refreshedAt == "" {
 				Cache chưa có dữ liệu — chạy sync để cập nhật.

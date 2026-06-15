@@ -10,7 +10,7 @@ import (
 // SegmentsPage renders S08 — Segments List.
 templ SegmentsPage(segments []domain.Segment, memberCounts map[string]int) {
 	@AppShell("S08", "Segments") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S08">
 			<div class="crm-pagehead">
 				<div>
 					<div class="caption crm-pagehead__eyebrow">SEGMENTS</div>
@@ -169,7 +169,7 @@ templ SegmentRowRefreshed(seg domain.Segment, memberCount int) {
 // SegmentBuilderPage renders S09 — Segment Builder (new or edit).
 templ SegmentBuilderPage(seg *domain.Segment, members []domain.SegmentMember, isNew bool) {
 	@AppShell("S08", "Segment Builder") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S09">
 			<!-- single form wraps topbar + builder-grid so all inputs submit together -->
 			<form
 				if isNew {

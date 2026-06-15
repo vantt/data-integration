@@ -7,7 +7,7 @@ import (
 // ConversationDetailPage renders S06 — Conversation Detail.
 templ ConversationDetailPage(conv *domain.Conversation, msgs []domain.Message, partyName, partyLink string) {
 	@AppShell("S05", "Hội thoại") {
-		<div class="crm-page page-enter">
+		<div class="crm-page page-enter" data-surface="S06">
 			<div class="c360-topbar">
 				<a class="c360-back" href="/inbox">
 					@Icon("back", 13)
