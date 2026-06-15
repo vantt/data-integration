@@ -5,16 +5,23 @@ import "github.com/vantt/data-integration/crm/app/internal/domain"
 // TaskDoneRow renders a single task row in "done" state.
 // Returned as an HTMX swap fragment after PATCH /tasks/{id}/done.
 templ TaskDoneRow(t domain.Task) {
-	<div class="task-row done" id={ "task-" + t.TaskID }>
-		<input type="checkbox" class="task-checkbox" checked disabled/>
-		<div class="task-body">
-			<div class="task-customer">{ t.Title }</div>
-			<div class="task-meta">
-				<span class="status-done">✓ done</span>
-				if t.CompletedAt != nil {
-					<span class="text-muted">{ formatICTHelper(*t.CompletedAt) }</span>
-				}
+	<div class="wl-row wl-row--done" id={ "task-" + t.TaskID }>
+		<button class="wl-check wl-check--on" disabled aria-label="done">
+			@Icon("check", 13)
+		</button>
+		<div class="wl-row__main">
+			<div class="wl-row__top">
+				<span class="chip chip--moss">done</span>
+				<span class="wl-row__name">{ t.Title }</span>
 			</div>
+			if t.CompletedAt != nil {
+				<div class="wl-row__meta">
+					<span class="wl-row__due">
+						@Icon("clock", 11)
+						{ formatICTHelper(*t.CompletedAt) }
+					</span>
+				</div>
+			}
 		</div>
 	</div>
 }

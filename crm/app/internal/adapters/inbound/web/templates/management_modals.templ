@@ -9,31 +9,46 @@ import (
 
 // ModalCreateParty renders M02 — create a new party from the customer list.
 templ ModalCreateParty() {
-	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
-		<div class="modal" onclick="event.stopPropagation()">
-			<div class="modal-header">
-				<span class="modal-title">Tạo khách hàng mới</span>
-				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+			<div class="modal__head">
+				<div>
+					<div class="modal__title">Tạo khách hàng mới</div>
+				</div>
+				<button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">
+					@Icon("close", 14)
+				</button>
 			</div>
 			<form
 				hx-post="/parties"
 				hx-target="#modal"
 				hx-swap="innerHTML"
 			>
-				<div class="modal-body">
-					<label class="form-label">Tên hiển thị *</label>
-					<input type="text" name="display_name" class="form-control" required placeholder="Nguyễn Văn A"/>
-					<label class="form-label mt-8">Số điện thoại *</label>
-					<input type="tel" name="phone" class="form-control" required placeholder="0901234567"/>
-					<label class="form-label mt-8">Email</label>
-					<input type="email" name="email" class="form-control" placeholder="example@email.com"/>
-					<label class="form-label mt-8">Ghi chú nhanh</label>
-					<input type="text" name="note" class="form-control" placeholder="Tuỳ chọn"/>
-					<p class="text-muted text-sm mt-8">⚠ Nếu SĐT đã tồn tại, hệ thống sẽ cảnh báo.</p>
+				<div class="modal__body">
+					<label class="field">
+						<span class="field__label">Tên hiển thị<span class="field__req"> *</span></span>
+						<input class="inp" type="text" name="display_name" required placeholder="Nguyễn Văn A"/>
+					</label>
+					<label class="field">
+						<span class="field__label">Số điện thoại<span class="field__req"> *</span></span>
+						<input class="inp" type="tel" name="phone" required placeholder="0901234567"/>
+					</label>
+					<label class="field">
+						<span class="field__label">Email</span>
+						<input class="inp" type="email" name="email" placeholder="example@email.com"/>
+					</label>
+					<label class="field">
+						<span class="field__label">Ghi chú nhanh</span>
+						<input class="inp" type="text" name="note" placeholder="Tuỳ chọn"/>
+					</label>
+					<div class="modal__note">
+						@Icon("warn", 13)
+						<span>Nếu SĐT đã tồn tại, hệ thống sẽ cảnh báo trùng (ERR-DUPLICATE-IDENTITY).</span>
+					</div>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
-					<button type="submit" class="btn btn-primary">Tạo khách</button>
+				<div class="modal__actions">
+					<button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn--primary">Tạo khách</button>
 				</div>
 			</form>
 		</div>
@@ -44,40 +59,52 @@ templ ModalCreateParty() {
 
 // ModalAssignOwner renders M04 — assign owner to a party.
 templ ModalAssignOwner(partyID string, currentOwnerID *string, users []domain.AppUser) {
-	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
-		<div class="modal" onclick="event.stopPropagation()">
-			<div class="modal-header">
-				<span class="modal-title">Gán phụ trách</span>
-				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+			<div class="modal__head">
+				<div>
+					<div class="modal__title">Gán phụ trách</div>
+				</div>
+				<button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">
+					@Icon("close", 14)
+				</button>
 			</div>
 			<form
 				hx-post={ "/customers/" + partyID + "/assign-owner" }
 				hx-target="#modal"
 				hx-swap="innerHTML"
 			>
-				<div class="modal-body">
+				<div class="modal__body">
 					if currentOwnerID != nil && *currentOwnerID != "" {
-						<p class="text-muted mb-8">Phụ trách hiện tại: <strong>{ *currentOwnerID }</strong></p>
+						<label class="field">
+							<span class="field__label">Phụ trách hiện tại</span>
+							<span>{ *currentOwnerID }</span>
+						</label>
 					}
-					<label class="form-label">Chọn NV mới</label>
-					if len(users) == 0 {
-						<p class="text-muted">Chưa có NV nào trong hệ thống.</p>
-						<input type="hidden" name="owner_user_id" value=""/>
-					} else {
-						<select name="owner_user_id" class="form-control" required>
-							<option value="">-- Chọn NV --</option>
-							for _, u := range users {
-								<option
-									value={ u.UserID }
-									selected?={ currentOwnerID != nil && *currentOwnerID == u.UserID }
-								>{ u.FullName } ({ u.Role })</option>
-							}
-						</select>
-					}
+					<label class="field">
+						<span class="field__label">Chọn NV mới<span class="field__req"> *</span></span>
+						if len(users) == 0 {
+							<span class="field__hint">Chưa có NV nào trong hệ thống.</span>
+							<input type="hidden" name="owner_user_id" value=""/>
+						} else {
+							<div class="inp-sel">
+								<select name="owner_user_id" required>
+									<option value="">-- Chọn NV --</option>
+									for _, u := range users {
+										<option
+											value={ u.UserID }
+											selected?={ currentOwnerID != nil && *currentOwnerID == u.UserID }
+										>{ u.FullName } ({ u.Role })</option>
+									}
+								</select>
+								<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+							</div>
+						}
+					</label>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
-					<button type="submit" class="btn btn-primary">Lưu</button>
+				<div class="modal__actions">
+					<button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn--primary">Lưu</button>
 				</div>
 			</form>
 		</div>
@@ -88,47 +115,73 @@ templ ModalAssignOwner(partyID string, currentOwnerID *string, users []domain.Ap
 
 // ModalCreateCampaign renders M07 — create a new campaign.
 templ ModalCreateCampaign(segments []domain.Segment, users []domain.AppUser) {
-	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
-		<div class="modal modal-wide" onclick="event.stopPropagation()">
-			<div class="modal-header">
-				<span class="modal-title">Tạo chiến dịch mới</span>
-				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+			<div class="modal__head">
+				<div>
+					<div class="modal__title">Tạo chiến dịch mới</div>
+				</div>
+				<button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">
+					@Icon("close", 14)
+				</button>
 			</div>
 			<form
 				hx-post="/campaigns"
 				hx-target="body"
 				hx-push-url="true"
 			>
-				<div class="modal-body">
-					<label class="form-label">Tên chiến dịch *</label>
-					<input type="text" name="name" class="form-control" required placeholder="React-Jul-2026"/>
-					<label class="form-label mt-8">Mục tiêu *</label>
-					<select name="objective" class="form-control" required>
-						<option value="">-- Chọn --</option>
-						for _, obj := range []string{"reactivation", "winback", "upsell", "crosssell"} {
-							<option value={ obj }>{ obj }</option>
-						}
-					</select>
-					<label class="form-label mt-8">Kênh *</label>
-					<select name="channel" class="form-control" required>
-						<option value="">-- Chọn --</option>
-						for _, ch := range []string{"messenger", "call", "email", "zalo"} {
-							<option value={ ch }>{ ch }</option>
-						}
-					</select>
-					<label class="form-label mt-8">Segment *</label>
-					<select name="segment_id" class="form-control" required>
-						<option value="">-- Chọn segment --</option>
-						for _, seg := range segments {
-							<option value={ seg.SegmentID }>{ seg.Name }</option>
-						}
-					</select>
-					<label class="form-label mt-8">Ngày bắt đầu *</label>
-					<input type="date" name="scheduled_at" class="form-control" required/>
+				<div class="modal__body">
+					<label class="field">
+						<span class="field__label">Tên chiến dịch<span class="field__req"> *</span></span>
+						<input class="inp" type="text" name="name" required placeholder="React-Jul-2026"/>
+					</label>
+					<div class="field-row">
+						<label class="field">
+							<span class="field__label">Mục tiêu<span class="field__req"> *</span></span>
+							<div class="inp-sel">
+								<select name="objective" required>
+									<option value="">-- Chọn --</option>
+									for _, obj := range []string{"reactivation", "winback", "upsell", "crosssell"} {
+										<option value={ obj }>{ obj }</option>
+									}
+								</select>
+								<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+							</div>
+						</label>
+						<label class="field">
+							<span class="field__label">Kênh<span class="field__req"> *</span></span>
+							<div class="inp-sel">
+								<select name="channel" required>
+									<option value="">-- Chọn --</option>
+									for _, ch := range []string{"messenger", "call", "email", "zalo"} {
+										<option value={ ch }>{ ch }</option>
+									}
+								</select>
+								<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+							</div>
+						</label>
+					</div>
+					<label class="field">
+						<span class="field__label">Segment<span class="field__req"> *</span></span>
+						<div class="inp-sel">
+							<select name="segment_id" required>
+								<option value="">-- Chọn segment --</option>
+								for _, seg := range segments {
+									<option value={ seg.SegmentID }>{ seg.Name }</option>
+								}
+							</select>
+							<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+						</div>
+						<span class="field__hint">Chỉ khách đã consent (R1) được liên hệ.</span>
+					</label>
+					<label class="field">
+						<span class="field__label">Ngày bắt đầu<span class="field__req"> *</span></span>
+						<input class="inp inp--mono" type="date" name="scheduled_at" required/>
+					</label>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
-					<button type="submit" class="btn btn-primary">Tạo &amp; Kích hoạt</button>
+				<div class="modal__actions">
+					<button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn--primary">Tạo &amp; Kích hoạt</button>
 				</div>
 			</form>
 		</div>
@@ -137,43 +190,66 @@ templ ModalCreateCampaign(segments []domain.Segment, users []domain.AppUser) {
 
 // ModalEditCampaign renders M07 in edit mode for an existing campaign.
 templ ModalEditCampaign(campaign *domain.Campaign, segments []domain.Segment) {
-	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
-		<div class="modal modal-wide" onclick="event.stopPropagation()">
-			<div class="modal-header">
-				<span class="modal-title">Sửa chiến dịch</span>
-				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+			<div class="modal__head">
+				<div>
+					<div class="modal__title">Sửa chiến dịch</div>
+				</div>
+				<button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">
+					@Icon("close", 14)
+				</button>
 			</div>
 			<form
 				hx-patch={ "/campaigns/" + campaign.CampaignID }
 				hx-target="#modal"
 				hx-swap="innerHTML"
 			>
-				<div class="modal-body">
-					<label class="form-label">Tên chiến dịch *</label>
-					<input type="text" name="name" class="form-control" value={ campaign.Name } required/>
-					<label class="form-label mt-8">Mục tiêu *</label>
-					<select name="objective" class="form-control" required>
-						for _, obj := range []string{"reactivation", "winback", "upsell", "crosssell"} {
-							<option value={ obj } selected?={ campaign.Objective == obj }>{ obj }</option>
-						}
-					</select>
-					<label class="form-label mt-8">Kênh</label>
-					<select name="channel" class="form-control">
-						for _, ch := range []string{"messenger", "call", "email", "zalo"} {
-							<option value={ ch } selected?={ campaign.Channel == ch }>{ ch }</option>
-						}
-					</select>
-					<label class="form-label mt-8">Segment</label>
-					<select name="segment_id" class="form-control">
-						<option value="">-- Không --</option>
-						for _, seg := range segments {
-							<option value={ seg.SegmentID } selected?={ campaign.SegmentID != nil && *campaign.SegmentID == seg.SegmentID }>{ seg.Name }</option>
-						}
-					</select>
+				<div class="modal__body">
+					<label class="field">
+						<span class="field__label">Tên chiến dịch<span class="field__req"> *</span></span>
+						<input class="inp" type="text" name="name" value={ campaign.Name } required/>
+					</label>
+					<div class="field-row">
+						<label class="field">
+							<span class="field__label">Mục tiêu<span class="field__req"> *</span></span>
+							<div class="inp-sel">
+								<select name="objective" required>
+									for _, obj := range []string{"reactivation", "winback", "upsell", "crosssell"} {
+										<option value={ obj } selected?={ campaign.Objective == obj }>{ obj }</option>
+									}
+								</select>
+								<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+							</div>
+						</label>
+						<label class="field">
+							<span class="field__label">Kênh</span>
+							<div class="inp-sel">
+								<select name="channel">
+									for _, ch := range []string{"messenger", "call", "email", "zalo"} {
+										<option value={ ch } selected?={ campaign.Channel == ch }>{ ch }</option>
+									}
+								</select>
+								<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+							</div>
+						</label>
+					</div>
+					<label class="field">
+						<span class="field__label">Segment</span>
+						<div class="inp-sel">
+							<select name="segment_id">
+								<option value="">-- Không --</option>
+								for _, seg := range segments {
+									<option value={ seg.SegmentID } selected?={ campaign.SegmentID != nil && *campaign.SegmentID == seg.SegmentID }>{ seg.Name }</option>
+								}
+							</select>
+							<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+						</div>
+					</label>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
-					<button type="submit" class="btn btn-primary">Lưu</button>
+				<div class="modal__actions">
+					<button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn--primary">Lưu</button>
 				</div>
 			</form>
 		</div>
@@ -184,11 +260,16 @@ templ ModalEditCampaign(campaign *domain.Campaign, segments []domain.Segment) {
 
 // ModalRecordConversion renders M12 — record a manual conversion for a campaign target.
 templ ModalRecordConversion(campaignID, partyID, partyName string) {
-	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
-		<div class="modal" onclick="event.stopPropagation()">
-			<div class="modal-header">
-				<span class="modal-title">Ghi chuyển đổi: { partyName }</span>
-				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+			<div class="modal__head">
+				<div>
+					<div class="modal__title">Ghi chuyển đổi</div>
+					<div class="modal__sub">{ partyName }</div>
+				</div>
+				<button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">
+					@Icon("close", 14)
+				</button>
 			</div>
 			<form
 				hx-post={ "/campaigns/" + campaignID + "/targets/" + partyID + "/convert" }
@@ -196,16 +277,20 @@ templ ModalRecordConversion(campaignID, partyID, partyName string) {
 				hx-swap="innerHTML"
 			>
 				<input type="hidden" name="party_id" value={ partyID }/>
-				<div class="modal-body">
-					<label class="form-label">Mã đơn hàng</label>
-					<input type="text" name="order_code" class="form-control" placeholder="ORD-20060901"/>
-					<p class="text-muted text-sm mt-4">Để trống nếu muốn ghi thủ công.</p>
-					<label class="form-label mt-8">Doanh thu ước tính (đ)</label>
-					<input type="number" name="revenue_vnd" class="form-control" min="0" placeholder="0"/>
+				<div class="modal__body">
+					<label class="field">
+						<span class="field__label">Mã đơn hàng</span>
+						<input class="inp inp--mono" type="text" name="order_code" placeholder="ORD-20060901"/>
+						<span class="field__hint">Để trống nếu muốn ghi thủ công.</span>
+					</label>
+					<label class="field">
+						<span class="field__label">Doanh thu ước tính (đ)</span>
+						<input class="inp inp--mono" type="number" name="revenue_vnd" min="0" placeholder="0"/>
+					</label>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
-					<button type="submit" class="btn btn-primary">Ghi nhận</button>
+				<div class="modal__actions">
+					<button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn--primary">Ghi nhận</button>
 				</div>
 			</form>
 		</div>
@@ -216,15 +301,19 @@ templ ModalRecordConversion(campaignID, partyID, partyName string) {
 
 // ModalCustomFieldDef renders M13 — create or edit a custom field definition.
 templ ModalCustomFieldDef(field *domain.CustomFieldDef, isNew bool) {
-	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
-		<div class="modal" onclick="event.stopPropagation()">
-			<div class="modal-header">
-				if isNew {
-					<span class="modal-title">Tạo custom field mới</span>
-				} else {
-					<span class="modal-title">Sửa custom field</span>
-				}
-				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+			<div class="modal__head">
+				<div>
+					if isNew {
+						<div class="modal__title">Tạo custom field mới</div>
+					} else {
+						<div class="modal__title">Sửa custom field</div>
+					}
+				</div>
+				<button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">
+					@Icon("close", 14)
+				</button>
 			</div>
 			<form
 				if isNew {
@@ -235,57 +324,76 @@ templ ModalCustomFieldDef(field *domain.CustomFieldDef, isNew bool) {
 				hx-target="#modal"
 				hx-swap="innerHTML"
 			>
-				<div class="modal-body">
-					<label class="form-label">Field key (slug) *</label>
-					<input
-						type="text"
-						name="field_key"
-						class="form-control"
-						value={ fieldValue(field, "key") }
-						required
-						placeholder="da_nhay_cam"
+				<div class="modal__body">
+					<label class="field">
+						<span class="field__label">Field key (slug)<span class="field__req"> *</span></span>
+						<input
+							class="inp inp--mono"
+							type="text"
+							name="field_key"
+							value={ fieldValue(field, "key") }
+							required
+							placeholder="da_nhay_cam"
+							if !isNew {
+								readonly
+							}
+						/>
 						if !isNew {
-							readonly
+							<span class="field__hint">Không thể đổi key sau khi tạo.</span>
 						}
-					/>
-					<label class="form-label mt-8">Nhãn hiển thị *</label>
-					<input
-						type="text"
-						name="label"
-						class="form-control"
-						value={ fieldValue(field, "label") }
-						required
-						placeholder="Da nhạy cảm"
-					/>
-					<label class="form-label mt-8">Loại dữ liệu *</label>
-					<select name="data_type" class="form-control" required>
-						<option value="">-- Chọn --</option>
-						for _, dt := range domain.ValidCustomDataTypes {
-							<option value={ dt } selected?={ field != nil && field.DataType == dt }>{ dt }</option>
-						}
-					</select>
-					<label class="form-label mt-8">Bắt buộc</label>
-					<div class="radio-group">
-						<label class="form-check">
-							<input type="radio" name="is_required" value="true" checked?={ field != nil && field.IsRequired }/>
-							Có
-						</label>
-						<label class="form-check">
-							<input type="radio" name="is_required" value="false" checked?={ field == nil || !field.IsRequired }/>
-							Không
-						</label>
-					</div>
-					<label class="form-label mt-8">Tùy chọn (cho select/multiselect, mỗi dòng một giá trị)</label>
-					<textarea
-						name="options"
-						class="form-control"
-						rows="3"
-						placeholder="vip&#10;gold&#10;silver"
-					>{ fieldOptions(field) }</textarea>
+					</label>
+					<label class="field">
+						<span class="field__label">Nhãn hiển thị<span class="field__req"> *</span></span>
+						<input
+							class="inp"
+							type="text"
+							name="label"
+							value={ fieldValue(field, "label") }
+							required
+							placeholder="Da nhạy cảm"
+						/>
+					</label>
+					<label class="field">
+						<span class="field__label">Loại dữ liệu<span class="field__req"> *</span></span>
+						<div class="inp-sel">
+							<select name="data_type" required>
+								<option value="">-- Chọn --</option>
+								for _, dt := range domain.ValidCustomDataTypes {
+									<option value={ dt } selected?={ field != nil && field.DataType == dt }>{ dt }</option>
+								}
+							</select>
+							<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+						</div>
+					</label>
+					<label class="field">
+						<span class="field__label">Bắt buộc</span>
+						<div class="radioset">
+							<label class={ "radio-pill" + boolPillOn(field != nil && field.IsRequired) }>
+								<span class="radio-pill__dot"></span>
+								<input type="radio" name="is_required" value="true" checked?={ field != nil && field.IsRequired } class="sr-only"/>
+								Có
+							</label>
+							<label class={ "radio-pill" + boolPillOn(field == nil || !field.IsRequired) }>
+								<span class="radio-pill__dot"></span>
+								<input type="radio" name="is_required" value="false" checked?={ field == nil || !field.IsRequired } class="sr-only"/>
+								Không
+							</label>
+						</div>
+					</label>
+					<label class="field">
+						<span class="field__label">Tùy chọn</span>
+						<textarea
+							class="inp inp--area"
+							name="options"
+							rows="3"
+							placeholder="vip&#10;gold&#10;silver"
+						>{ fieldOptions(field) }</textarea>
+						<span class="field__hint">Dành cho select/multiselect — mỗi dòng một giá trị.</span>
+					</label>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
-					<button type="submit" class="btn btn-primary">Lưu</button>
+				<div class="modal__actions">
+					<button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn--primary">Lưu</button>
 				</div>
 			</form>
 		</div>
@@ -296,44 +404,64 @@ templ ModalCustomFieldDef(field *domain.CustomFieldDef, isNew bool) {
 
 // ModalCreateTag renders M14 — create a new tag.
 templ ModalCreateTag() {
-	<div class="modal-backdrop" onclick="this.parentElement.innerHTML=''">
-		<div class="modal" onclick="event.stopPropagation()">
-			<div class="modal-header">
-				<span class="modal-title">Tạo tag mới</span>
-				<button class="modal-close" onclick="document.getElementById('modal').innerHTML=''">✕</button>
+	<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''">
+		<div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+			<div class="modal__head">
+				<div>
+					<div class="modal__title">Tạo tag mới</div>
+				</div>
+				<button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">
+					@Icon("close", 14)
+				</button>
 			</div>
 			<form
 				hx-post="/settings/tags"
 				hx-target="#modal"
 				hx-swap="innerHTML"
 			>
-				<div class="modal-body">
-					<label class="form-label">Tag name (slug) *</label>
-					<input type="text" name="name" class="form-control" required placeholder="vip-repeat"/>
-					<label class="form-label mt-8">Category</label>
-					<input type="text" name="category" class="form-control" placeholder="customer-segment"/>
-					<label class="form-label mt-8">Màu (hex, tuỳ chọn)</label>
-					<div class="color-options">
-						<label class="form-check">
-							<input type="radio" name="color" value="#3b82f6"/> Xanh
-						</label>
-						<label class="form-check">
-							<input type="radio" name="color" value="#ef4444"/> Đỏ
-						</label>
-						<label class="form-check">
-							<input type="radio" name="color" value="#f59e0b"/> Vàng
-						</label>
-						<label class="form-check">
-							<input type="radio" name="color" value="#10b981"/> Xanh lá
-						</label>
-						<label class="form-check">
-							<input type="radio" name="color" value=""/> Không màu
-						</label>
-					</div>
+				<div class="modal__body">
+					<label class="field">
+						<span class="field__label">Tag name (slug)<span class="field__req"> *</span></span>
+						<input class="inp inp--mono" type="text" name="name" required placeholder="vip-repeat"/>
+					</label>
+					<label class="field">
+						<span class="field__label">Category</span>
+						<input class="inp" type="text" name="category" placeholder="customer-segment"/>
+					</label>
+					<label class="field">
+						<span class="field__label">Màu (tùy chọn)</span>
+						<div class="radioset">
+							<label class="radio-pill">
+								<span class="radio-pill__dot"></span>
+								<input type="radio" name="color" value="#3b82f6" class="sr-only"/>
+								Xanh
+							</label>
+							<label class="radio-pill">
+								<span class="radio-pill__dot"></span>
+								<input type="radio" name="color" value="#ef4444" class="sr-only"/>
+								Đỏ
+							</label>
+							<label class="radio-pill">
+								<span class="radio-pill__dot"></span>
+								<input type="radio" name="color" value="#f59e0b" class="sr-only"/>
+								Vàng
+							</label>
+							<label class="radio-pill">
+								<span class="radio-pill__dot"></span>
+								<input type="radio" name="color" value="#10b981" class="sr-only"/>
+								Xanh lá
+							</label>
+							<label class="radio-pill">
+								<span class="radio-pill__dot"></span>
+								<input type="radio" name="color" value="" class="sr-only"/>
+								Không màu
+							</label>
+						</div>
+					</label>
 				</div>
-				<div class="modal-footer">
-					<button type="button" class="btn btn-secondary" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
-					<button type="submit" class="btn btn-primary">Tạo tag</button>
+				<div class="modal__actions">
+					<button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+					<button type="submit" class="btn btn--primary">Tạo tag</button>
 				</div>
 			</form>
 		</div>
@@ -360,4 +488,12 @@ func fieldOptions(f *domain.CustomFieldDef) string {
 		return ""
 	}
 	return strings.Join(f.Options, "\n")
+}
+
+// boolPillOn returns " radio-pill--on" when the condition is true, else "".
+func boolPillOn(on bool) string {
+	if on {
+		return " radio-pill--on"
+	}
+	return ""
 }

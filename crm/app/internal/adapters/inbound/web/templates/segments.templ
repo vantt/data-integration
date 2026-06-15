@@ -10,93 +10,156 @@ import (
 // SegmentsPage renders S08 — Segments List.
 templ SegmentsPage(segments []domain.Segment, memberCounts map[string]int) {
 	@AppShell("S08", "Segments") {
-		@Topbar("🎯 Segments") {
-			<a
-				href="/segments/new"
-				class="btn btn-primary"
-			>+ Tạo segment</a>
-		}
-		<div class="content-area">
-			@SegmentsTable(segments, memberCounts)
+		<div class="crm-page page-enter">
+			<div class="crm-pagehead">
+				<div>
+					<div class="caption crm-pagehead__eyebrow">SEGMENTS</div>
+					<h1 class="crm-pagehead__title">Phân khúc khách hàng</h1>
+				</div>
+				<div class="crm-pagehead__aside">
+					<a class="btn btn--primary" href="/segments/new">
+						@Icon("plus", 13)
+						Tạo segment
+					</a>
+				</div>
+			</div>
+			<div class="toolbar">
+				<label class="toolbar__search">
+					@Icon("search", 14)
+					<input
+						type="search"
+						name="q"
+						placeholder="Tìm theo tên segment..."
+						hx-get="/segments"
+						hx-trigger="input changed delay:300ms"
+						hx-target="#segments-table"
+						hx-swap="innerHTML"
+					/>
+				</label>
+			</div>
+			<div id="segments-table">
+				@SegmentsTable(segments, memberCounts)
+			</div>
 		</div>
-		<div id="modal"></div>
 	}
 }
 
 // SegmentsTable renders the segment list table (also used as HTMX fragment).
 templ SegmentsTable(segments []domain.Segment, memberCounts map[string]int) {
 	if len(segments) == 0 {
-		<div class="empty-state">
-			<p class="text-muted">Chưa có segment nào. <a href="/segments/new">Tạo ngay</a>.</p>
+		<div class="state">
+			<div class="state__inner">
+				<div class="state__title">Chưa có segment nào</div>
+				<p class="state__sub">Tạo segment đầu tiên để phân loại khách hàng theo rule.</p>
+				<div class="state__actions">
+					<a href="/segments/new" class="btn btn--primary">
+						@Icon("plus", 13)
+						Tạo segment
+					</a>
+				</div>
+			</div>
 		</div>
 	} else {
-		<table class="data-table">
-			<thead>
-				<tr>
-					<th>Tên</th>
-					<th>Loại</th>
-					<th>Thành viên</th>
-					<th>Cập nhật</th>
-					<th></th>
-				</tr>
-			</thead>
-			<tbody>
-				for _, seg := range segments {
-					<tr class="data-row" id={ "seg-" + seg.SegmentID }>
-						<td>
-							<a href={ templ.SafeURL("/segments/" + seg.SegmentID) }>{ seg.Name }</a>
-							if seg.Description != "" {
-								<div class="text-muted text-sm">{ truncStr(seg.Description, 60) }</div>
-							}
-						</td>
-						<td>
-							if seg.IsDynamic {
-								<span class="badge badge-active">dynamic</span>
-							} else {
-								<span class="badge badge-silver">static</span>
-							}
-						</td>
-						<td>{ fmt.Sprintf("%d", memberCounts[seg.SegmentID]) }</td>
-						<td>{ formatICTHelper(seg.UpdatedAt) }</td>
-						<td>
-							if seg.IsDynamic {
-								<button
-									class="btn btn-sm btn-secondary"
-									hx-post={ "/segments/" + seg.SegmentID + "/refresh" }
-									hx-target={ "#seg-" + seg.SegmentID }
-									hx-swap="outerHTML"
-								>↻ Refresh</button>
-							}
-						</td>
+		<div class="tbl-wrap">
+			<table class="tbl">
+				<thead>
+					<tr>
+						<th>Tên</th>
+						<th>Loại</th>
+						<th class="num-h">Thành viên</th>
+						<th>Cập nhật</th>
+						<th>Trạng thái</th>
+						<th class="th-go"></th>
 					</tr>
-				}
-			</tbody>
-		</table>
+				</thead>
+				<tbody>
+					for _, seg := range segments {
+						<tr
+							class="is-clickable"
+							id={ "seg-" + seg.SegmentID }
+							hx-get={ "/segments/" + seg.SegmentID }
+							hx-target="body"
+							hx-push-url="true"
+						>
+							<td>
+								<span class="cell-strong">{ seg.Name }</span>
+								if seg.Description != "" {
+									<span class="cell-sub">{ truncStr(seg.Description, 60) }</span>
+								}
+							</td>
+							<td>
+								if seg.IsDynamic {
+									<span class="bdg bdg--accent">dynamic</span>
+								} else {
+									<span class="bdg">static</span>
+								}
+							</td>
+							<td class="num">
+								if memberCounts[seg.SegmentID] == 0 {
+									<span class="bdg bdg--warn">0</span>
+								} else {
+									{ fmt.Sprintf("%d", memberCounts[seg.SegmentID]) }
+								}
+							</td>
+							<td class="mono muted">{ formatICTHelper(seg.UpdatedAt) }</td>
+							<td>
+								if seg.IsDynamic {
+									<span class="status status--ready">ready</span>
+								} else {
+									<span class="bdg">static</span>
+								}
+							</td>
+							<td class="td-go">
+								<span class="go-arrow">
+									@Icon("chevron", 14)
+								</span>
+							</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
 	}
 }
 
 // SegmentRowRefreshed renders a single refreshed segment row (HTMX swap target).
 templ SegmentRowRefreshed(seg domain.Segment, memberCount int) {
-	<tr class="data-row" id={ "seg-" + seg.SegmentID }>
+	<tr
+		class="is-clickable"
+		id={ "seg-" + seg.SegmentID }
+		hx-get={ "/segments/" + seg.SegmentID }
+		hx-target="body"
+		hx-push-url="true"
+	>
 		<td>
-			<a href={ templ.SafeURL("/segments/" + seg.SegmentID) }>{ seg.Name }</a>
+			<span class="cell-strong">{ seg.Name }</span>
 		</td>
 		<td>
 			if seg.IsDynamic {
-				<span class="badge badge-active">dynamic</span>
+				<span class="bdg bdg--accent">dynamic</span>
 			} else {
-				<span class="badge badge-silver">static</span>
+				<span class="bdg">static</span>
 			}
 		</td>
-		<td>{ fmt.Sprintf("%d", memberCount) }</td>
-		<td>{ formatICTHelper(seg.UpdatedAt) }</td>
+		<td class="num">
+			if memberCount == 0 {
+				<span class="bdg bdg--warn">0</span>
+			} else {
+				{ fmt.Sprintf("%d", memberCount) }
+			}
+		</td>
+		<td class="mono muted">{ formatICTHelper(seg.UpdatedAt) }</td>
 		<td>
-			<button
-				class="btn btn-sm btn-secondary"
-				hx-post={ "/segments/" + seg.SegmentID + "/refresh" }
-				hx-target={ "#seg-" + seg.SegmentID }
-				hx-swap="outerHTML"
-			>↻ Refresh</button>
+			if seg.IsDynamic {
+				<span class="status status--ready">ready</span>
+			} else {
+				<span class="bdg">static</span>
+			}
+		</td>
+		<td class="td-go">
+			<span class="go-arrow">
+				@Icon("chevron", 14)
+			</span>
 		</td>
 	</tr>
 }
@@ -106,143 +169,297 @@ templ SegmentRowRefreshed(seg domain.Segment, memberCount int) {
 // SegmentBuilderPage renders S09 — Segment Builder (new or edit).
 templ SegmentBuilderPage(seg *domain.Segment, members []domain.SegmentMember, isNew bool) {
 	@AppShell("S08", "Segment Builder") {
-		@Topbar("") {
-			<a href="/segments" class="btn btn-sm btn-secondary">← Segments</a>
-			if isNew {
-				<span class="topbar-title">Tạo segment mới</span>
-			} else {
-				<span class="topbar-title">{ seg.Name }</span>
-			}
-		}
-		<div class="content-area">
-			<div class="builder-layout">
-				<div class="builder-rule-editor">
-					<form
-						if isNew {
-							hx-post="/segments"
-						} else {
-							hx-put={ "/segments/" + seg.SegmentID }
-						}
-						hx-target="body"
-						hx-push-url="true"
-					>
-						<div class="form-group">
-							<label class="form-label">Tên segment *</label>
-							<input
-								type="text"
-								name="name"
-								class="form-control"
-								value={ seg.Name }
-								required
-								placeholder="VD: Reactivation tháng 7"
-							/>
+		<div class="crm-page page-enter">
+			<!-- single form wraps topbar + builder-grid so all inputs submit together -->
+			<form
+				if isNew {
+					hx-post="/segments"
+				} else {
+					hx-put={ "/segments/" + seg.SegmentID }
+				}
+				hx-target="body"
+				hx-push-url="true"
+			>
+				<!-- S09 topbar: back breadcrumb · name input · type radio-pills -->
+				<div class="c360-topbar">
+					<a class="c360-back" href="/segments">
+						@Icon("back", 13)
+						Segments
+					</a>
+					<div class="c360-id">
+						<input
+							type="text"
+							name="name"
+							class="inp"
+							value={ seg.Name }
+							required
+							placeholder="Tên segment..."
+						/>
+					</div>
+					<div class="c360-actions">
+						<!-- is_dynamic submitted as hidden; radio-pills are visual only -->
+						<input
+							type="hidden"
+							name="is_dynamic"
+							value={ boolStr(seg.IsDynamic) }
+						/>
+						<div class="radioset">
+							<label class={ "radio-pill" + boolClass(seg.IsDynamic, " radio-pill--on") }>
+								<span class="radio-pill__dot"></span>
+								Dynamic
+							</label>
+							<label class={ "radio-pill" + boolClass(!seg.IsDynamic, " radio-pill--on") }>
+								<span class="radio-pill__dot"></span>
+								Static
+							</label>
 						</div>
-						<div class="form-group mt-8">
-							<label class="form-label">Loại</label>
-							<div class="radio-group">
-								<label class="form-check">
-									<input type="radio" name="is_dynamic" value="true" checked?={ seg.IsDynamic }/>
-									Dynamic (rule tự động)
-								</label>
-								<label class="form-check">
-									<input type="radio" name="is_dynamic" value="false" checked?={ !seg.IsDynamic }/>
-									Static (thêm tay)
-								</label>
+					</div>
+				</div>
+
+				<!-- S09 2-column layout: rule editor (left) + preview panel (right) -->
+				<div class="builder-grid">
+					<!-- Left: rule editor with condition rows -->
+					<div class="rule-editor">
+						<div class="caption">Điều kiện (AND — chỉ áp dụng cho Dynamic)</div>
+						@segmentRuleFields(seg)
+						<!-- Read-only JSON definition preview -->
+						if seg != nil && seg.Definition != "" {
+							<div class="caveat caveat--info">
+								<span class="caveat__mark">JSON</span>
+								<pre class="mono">{ seg.Definition }</pre>
 							</div>
-						</div>
-						<div class="form-group mt-8">
-							<label class="form-label">Mô tả</label>
-							<input type="text" name="description" class="form-control" value={ seg.Description } placeholder="Tuỳ chọn"/>
-						</div>
-						<fieldset class="rule-fieldset mt-8">
-							<legend class="form-label">Điều kiện (AND — chỉ áp dụng cho Dynamic)</legend>
-							@segmentRuleFields(seg)
-						</fieldset>
-						<div class="form-actions mt-16">
-							<a href="/segments" class="btn btn-secondary">Hủy</a>
-							<button type="submit" class="btn btn-primary">
+						}
+						<div class="panel-head">
+							<a href="/segments" class="btn btn--ghost">Hủy</a>
+							<button type="submit" class="btn btn--primary">
 								if isNew {
 									Tạo &amp; Lưu
 								} else {
-									Lưu thay đổi
+									Lưu &amp; Materialize
 								}
 							</button>
 						</div>
-					</form>
-				</div>
-				<div class="builder-preview">
-					<div class="preview-header text-muted">Thành viên hiện tại: { fmt.Sprintf("%d", len(members)) }</div>
-					if len(members) > 0 {
-						<ul class="member-list">
-							for i, m := range members {
-								if i < 20 {
-									<li class="member-item text-sm">{ m.PartyID } <span class="badge badge-silver">{ m.Source }</span></li>
+					</div>
+
+					<!-- Right: preview panel -->
+					<div class="preview-panel">
+						<div class="caption">Kết quả dự kiến</div>
+						<div class="preview-big">{ fmt.Sprintf("%d", len(members)) }</div>
+						<p class="muted">khách khớp rule</p>
+						if len(members) == 0 {
+							<div class="caveat caveat--warn">0 party khớp — cân nhắc nới rule trước khi lưu.</div>
+						}
+						if len(members) > 0 {
+							<div>
+								for i, m := range members {
+									if i < 20 {
+										<div class="member-mini">
+											<span>{ m.PartyID }</span>
+											<span class="bdg">{ m.Source }</span>
+										</div>
+									}
 								}
-							}
-							if len(members) > 20 {
-								<li class="text-muted text-sm">... và { fmt.Sprintf("%d", len(members)-20) } khác</li>
-							}
-						</ul>
-					} else {
-						<p class="text-muted text-sm">Chưa có thành viên nào. Lưu rồi Refresh để tính.</p>
-					}
+								if len(members) > 20 {
+									<div class="caveat caveat--info">
+										<span class="caveat__mark">+</span>
+										<span>{ fmt.Sprintf("%d", len(members)-20) } khách khác</span>
+									</div>
+								}
+							</div>
+						}
+						if len(members) == 0 && (seg == nil || seg.Definition == "") {
+							<p class="muted">Chưa có thành viên nào. Lưu rồi Refresh để tính.</p>
+						}
+						<!-- Refresh action for dynamic segments (outside form submit, uses hx-post) -->
+						if !isNew && seg != nil && seg.IsDynamic {
+							<button
+								type="button"
+								class="btn btn--ghost"
+								hx-post={ "/segments/" + seg.SegmentID + "/refresh" }
+								hx-target={ "#seg-" + seg.SegmentID }
+								hx-swap="outerHTML"
+							>
+								@Icon("refresh", 13)
+								Refresh
+							</button>
+						}
+					</div>
 				</div>
-			</div>
+			</form>
 		</div>
-		<div id="modal"></div>
 	}
 }
 
-// segmentRuleFields renders the whitelisted rule input fields.
+// segmentRuleFields renders the whitelisted rule input fields as DS condition rows.
 templ segmentRuleFields(seg *domain.Segment) {
-	<div class="rule-fields">
-		<div class="form-group">
-			<label class="form-label">value_group (multi)</label>
-			<div class="checkbox-group">
-				for _, vg := range []string{"VIP", "GOLD", "SILVER", "BRONZE"} {
-					<label class="form-check">
-						<input
-							type="checkbox"
-							name="rule_value_group"
-							value={ vg }
-							checked?={ segmentHasValueGroup(seg, vg) }
-						/>
-						<span class={ valueGroupBadgeClassHelper(vg) }>{ vg }</span>
-					</label>
-				}
-			</div>
-		</div>
-		<div class="form-group mt-8">
-			<label class="form-label">customer_status</label>
-			<select name="rule_customer_status" class="form-control">
-				<option value="">-- Tất cả --</option>
-				for _, cs := range []string{"active", "at_risk", "churned"} {
-					<option value={ cs } selected?={ segmentHasCustomerStatus(seg, cs) }>{ cs }</option>
-				}
+	<!-- value_group condition row -->
+	<div class="cond-row">
+		<div class="inp-sel">
+			<select name="rule_field_1">
+				<option value="value_group" selected>value_group</option>
+				<option value="customer_status">customer_status</option>
+				<option value="recency_days">recency_days</option>
+				<option value="channel_preference">channel_preference</option>
 			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
 		</div>
-		<div class="form-group mt-8">
-			<label class="form-label">days_since_last_order_gte</label>
-			<input
-				type="number"
-				name="rule_days_since"
-				class="form-control"
-				min="0"
-				value={ segmentDaysSince(seg) }
-				placeholder="VD: 60"
-			/>
+		<div class="inp-sel">
+			<select name="rule_op_1">
+				<option value="in" selected>in</option>
+				<option value="=">=</option>
+				<option value="!=">!=</option>
+			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
 		</div>
-		<div class="form-group mt-8">
-			<label class="form-label">channel_preference</label>
-			<input
-				type="text"
-				name="rule_channel"
-				class="form-control"
-				value={ segmentChannelPref(seg) }
-				placeholder="messenger / zalo / ..."
-			/>
+		<div>
+			for _, vg := range []string{"VIP", "GOLD", "SILVER", "BRONZE"} {
+				<label>
+					<input
+						type="checkbox"
+						name="rule_value_group"
+						value={ vg }
+						checked?={ segmentHasValueGroup(seg, vg) }
+					/>
+					<span class={ valueGroupBadgeClassHelper(vg) }>{ vg }</span>
+				</label>
+			}
 		</div>
+		<button class="cond-x" type="button" aria-label="Xóa điều kiện">
+			@Icon("close", 13)
+		</button>
 	</div>
+
+	<div class="cond-join">
+		<span class="cond-join__line"></span>
+		<span class="cond-join__pill">AND</span>
+		<span class="cond-join__line"></span>
+	</div>
+
+	<!-- customer_status condition row -->
+	<div class="cond-row">
+		<div class="inp-sel">
+			<select name="rule_field_2">
+				<option value="value_group">value_group</option>
+				<option value="customer_status" selected>customer_status</option>
+				<option value="recency_days">recency_days</option>
+				<option value="channel_preference">channel_preference</option>
+			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+		</div>
+		<div class="inp-sel">
+			<select name="rule_op_2">
+				<option value="=" selected>=</option>
+				<option value="!=">!=</option>
+			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+		</div>
+		<select name="rule_customer_status" class="inp">
+			<option value="">-- Tất cả --</option>
+			for _, cs := range []string{"active", "at_risk", "churned"} {
+				<option value={ cs } selected?={ segmentHasCustomerStatus(seg, cs) }>{ cs }</option>
+			}
+		</select>
+		<button class="cond-x" type="button" aria-label="Xóa điều kiện">
+			@Icon("close", 13)
+		</button>
+	</div>
+
+	<div class="cond-join">
+		<span class="cond-join__line"></span>
+		<span class="cond-join__pill">AND</span>
+		<span class="cond-join__line"></span>
+	</div>
+
+	<!-- days_since_last_order_gte condition row -->
+	<div class="cond-row">
+		<div class="inp-sel">
+			<select name="rule_field_3">
+				<option value="value_group">value_group</option>
+				<option value="customer_status">customer_status</option>
+				<option value="recency_days" selected>recency_days</option>
+				<option value="channel_preference">channel_preference</option>
+			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+		</div>
+		<div class="inp-sel">
+			<select name="rule_op_3">
+				<option value=">=" selected>&gt;=</option>
+				<option value=">">&gt;</option>
+				<option value="<">&lt;</option>
+			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+		</div>
+		<input
+			type="number"
+			name="rule_days_since"
+			class="inp"
+			min="0"
+			value={ segmentDaysSince(seg) }
+			placeholder="VD: 60"
+		/>
+		<button class="cond-x" type="button" aria-label="Xóa điều kiện">
+			@Icon("close", 13)
+		</button>
+	</div>
+
+	<div class="cond-join">
+		<span class="cond-join__line"></span>
+		<span class="cond-join__pill">AND</span>
+		<span class="cond-join__line"></span>
+	</div>
+
+	<!-- channel_preference condition row -->
+	<div class="cond-row">
+		<div class="inp-sel">
+			<select name="rule_field_4">
+				<option value="value_group">value_group</option>
+				<option value="customer_status">customer_status</option>
+				<option value="recency_days">recency_days</option>
+				<option value="channel_preference" selected>channel_preference</option>
+			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+		</div>
+		<div class="inp-sel">
+			<select name="rule_op_4">
+				<option value="=" selected>=</option>
+				<option value="!=">!=</option>
+			</select>
+			<span class="inp-sel__chev">@Icon("chevdown", 12)</span>
+		</div>
+		<input
+			type="text"
+			name="rule_channel"
+			class="inp"
+			value={ segmentChannelPref(seg) }
+			placeholder="messenger / zalo / ..."
+		/>
+		<button class="cond-x" type="button" aria-label="Xóa điều kiện">
+			@Icon("close", 13)
+		</button>
+	</div>
+
+	<!-- Add condition button -->
+	<button class="btn btn--ghost" type="button">
+		@Icon("plus", 13)
+		Thêm điều kiện
+	</button>
+}
+
+// boolClass returns suffix when cond is true, "" otherwise.
+// Used for conditional templ class concatenation.
+func boolClass(cond bool, suffix string) string {
+	if cond {
+		return suffix
+	}
+	return ""
+}
+
+// boolStr converts a bool to its string representation for hidden inputs.
+func boolStr(b bool) string {
+	if b {
+		return "true"
+	}
+	return "false"
 }
 
 // pure helpers — no templ needed

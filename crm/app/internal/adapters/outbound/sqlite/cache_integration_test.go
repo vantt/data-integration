@@ -102,6 +102,16 @@ CREATE TABLE IF NOT EXISTS wh_party_seed (
 	customer_id INTEGER PRIMARY KEY,
 	customer_key TEXT,
 	seen_at TEXT
+);
+CREATE TABLE IF NOT EXISTS wh_customer_base (
+	customer_key TEXT PRIMARY KEY,
+	customer_id INTEGER,
+	customer_code TEXT,
+	display_name TEXT,
+	phone TEXT,
+	email TEXT,
+	customer_group TEXT,
+	first_order_date TEXT
 );`
 
 // prepareCacheDB writes the wh_* schema (and optionally data) into cache.db
@@ -181,6 +191,47 @@ func rwInsertSeed(t *testing.T, conn *sql.DB, customerID int64, customerKey stri
 	if err != nil {
 		t.Fatalf("rwInsertSeed: %v", err)
 	}
+}
+
+func rwInsertCustomerBase(t *testing.T, conn *sql.DB, customerID int64, customerKey, displayName, phone, email string) {
+	t.Helper()
+	_, err := conn.Exec(`
+		INSERT INTO wh_customer_base
+		  (customer_key, customer_id, customer_code, display_name, phone, email, customer_group, first_order_date)
+		VALUES (?, ?, ?, ?, ?, ?, '{"group":"RETAIL"}', '2025-01-01')`,
+		customerKey, customerID, fmt.Sprintf("CUST%d", customerID), displayName, phone, email,
+	)
+	if err != nil {
+		t.Fatalf("rwInsertCustomerBase: %v", err)
+	}
+}
+
+// partyDisplayName fetches a party's display_name + primary_phone by its sapo_customer id.
+func partyBySapoID(t *testing.T, db *DB, sapoID string) (displayName, primaryPhone string) {
+	t.Helper()
+	var dn, pp sql.NullString
+	err := db.SQLDB().QueryRow(`
+		SELECT p.display_name, p.primary_phone
+		FROM crm_party p
+		JOIN crm_party_identity i ON i.party_id = p.party_id
+		WHERE i.identity_type = 'sapo_customer' AND i.identity_value = ?`, sapoID,
+	).Scan(&dn, &pp)
+	if err != nil {
+		t.Fatalf("partyBySapoID(%s): %v", sapoID, err)
+	}
+	return dn.String, pp.String
+}
+
+func countIdentitiesByTypeValue(t *testing.T, db *DB, idType, idValue string) int {
+	t.Helper()
+	var n int
+	if err := db.SQLDB().QueryRow(
+		`SELECT COUNT(*) FROM crm_party_identity
+		 WHERE identity_type = ? AND identity_value = ?`, idType, idValue,
+	).Scan(&n); err != nil {
+		t.Fatalf("countIdentitiesByTypeValue: %v", err)
+	}
+	return n
 }
 
 // ─── crm.db helpers ───────────────────────────────────────────────────────────
@@ -506,6 +557,203 @@ func TestCacheRepo_ActionsEmptySlice(t *testing.T) {
 	}
 	if len(result.Actions) != 0 {
 		t.Errorf("expected 0 actions, got %d", len(result.Actions))
+	}
+}
+
+// ─── T: SyncParties — enriches party with real name/phone from wh_customer_base ─
+
+func TestPartySeedConsumer_EnrichesFromCustomerBase(t *testing.T) {
+	dir := t.TempDir()
+	cachePath := filepath.Join(dir, "cache.db")
+
+	prepareCacheDB(t, cachePath, func(conn *sql.DB) {
+		rwInsertSeed(t, conn, 1001, "key-cust-001")
+		rwInsertCustomerBase(t, conn, 1001, "key-cust-001", "Nguyen Van A", "0901234567", "a@example.vn")
+	})
+
+	db, err := Open(dir)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer db.Close()
+	if err := MigrateUp(db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cacheRepo := NewCacheRepo(db)
+	svc := application.NewPartySeedService(cacheRepo, NewPartyRepo(db))
+	if _, err := svc.SyncParties(context.Background(), cacheRepo); err != nil {
+		t.Fatalf("SyncParties: %v", err)
+	}
+
+	name, phone := partyBySapoID(t, db, "1001")
+	if name != "Nguyen Van A" {
+		t.Errorf("display_name = %q; want %q", name, "Nguyen Van A")
+	}
+	// NormalizePhone turns 0901234567 → +84901234567.
+	if phone != "+84901234567" {
+		t.Errorf("primary_phone = %q; want +84901234567", phone)
+	}
+	// A phone identity must exist (normalized).
+	if c := countIdentitiesByTypeValue(t, db, "phone", "+84901234567"); c != 1 {
+		t.Errorf("phone identity count = %d; want 1", c)
+	}
+}
+
+// ─── T: SyncParties — enrichment is idempotent (name kept, no dup identities) ──
+
+func TestPartySeedConsumer_EnrichIdempotent(t *testing.T) {
+	dir := t.TempDir()
+	cachePath := filepath.Join(dir, "cache.db")
+
+	prepareCacheDB(t, cachePath, func(conn *sql.DB) {
+		rwInsertSeed(t, conn, 1001, "key-cust-001")
+		rwInsertCustomerBase(t, conn, 1001, "key-cust-001", "Nguyen Van A", "0901234567", "a@example.vn")
+	})
+
+	db, err := Open(dir)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer db.Close()
+	if err := MigrateUp(db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cacheRepo := NewCacheRepo(db)
+	svc := application.NewPartySeedService(cacheRepo, NewPartyRepo(db))
+	ctx := context.Background()
+	if _, err := svc.SyncParties(ctx, cacheRepo); err != nil {
+		t.Fatalf("first SyncParties: %v", err)
+	}
+	if _, err := svc.SyncParties(ctx, cacheRepo); err != nil {
+		t.Fatalf("second SyncParties: %v", err)
+	}
+
+	if got := countParties(t, db); got != 1 {
+		t.Errorf("crm_party count = %d after two runs; want 1", got)
+	}
+	name, _ := partyBySapoID(t, db, "1001")
+	if name != "Nguyen Van A" {
+		t.Errorf("display_name = %q after two runs; want %q", name, "Nguyen Van A")
+	}
+	if c := countIdentitiesByTypeValue(t, db, "phone", "+84901234567"); c != 1 {
+		t.Errorf("phone identity count = %d after two runs; want 1 (no dups)", c)
+	}
+	if c := countIdentitiesBySapoID(t, db, "1001"); c != 1 {
+		t.Errorf("sapo_customer identity count = %d; want 1", c)
+	}
+}
+
+// ─── T: SyncParties — backfills a pre-existing name-less party ────────────────
+
+func TestPartySeedConsumer_BackfillsExistingParty(t *testing.T) {
+	dir := t.TempDir()
+	cachePath := filepath.Join(dir, "cache.db")
+
+	// Round 1: seed with NO wh_customer_base row → party created without a name.
+	prepareCacheDB(t, cachePath, func(conn *sql.DB) {
+		rwInsertSeed(t, conn, 1001, "key-cust-001")
+	})
+
+	db, err := Open(dir)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	if err := MigrateUp(db); err != nil {
+		_ = db.Close()
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cacheRepo := NewCacheRepo(db)
+	svc := application.NewPartySeedService(cacheRepo, NewPartyRepo(db))
+	if _, err := svc.SyncParties(context.Background(), cacheRepo); err != nil {
+		_ = db.Close()
+		t.Fatalf("first SyncParties: %v", err)
+	}
+	if name, _ := partyBySapoID(t, db, "1001"); name != "" {
+		_ = db.Close()
+		t.Fatalf("expected empty display_name before enrichment, got %q", name)
+	}
+	// Close so we can write the base row into cache.db (Go ATTACH is RO).
+	_ = db.Close()
+
+	// Add the wh_customer_base row now.
+	conn, err := openCacheRW(cachePath)
+	if err != nil {
+		t.Fatalf("reopen cache rw: %v", err)
+	}
+	if _, err := conn.Exec(cacheSchemaSQL); err != nil {
+		_ = conn.Close()
+		t.Fatalf("ensure schema: %v", err)
+	}
+	rwInsertCustomerBase(t, conn, 1001, "key-cust-001", "Nguyen Van A", "0901234567", "a@example.vn")
+	_ = conn.Close()
+
+	// Round 2: re-open Go DB and re-sync → name backfilled.
+	db2, err := Open(dir)
+	if err != nil {
+		t.Fatalf("reopen go db: %v", err)
+	}
+	defer db2.Close()
+	if err := MigrateUp(db2); err != nil {
+		t.Fatalf("migrate2: %v", err)
+	}
+	cacheRepo2 := NewCacheRepo(db2)
+	svc2 := application.NewPartySeedService(cacheRepo2, NewPartyRepo(db2))
+	if _, err := svc2.SyncParties(context.Background(), cacheRepo2); err != nil {
+		t.Fatalf("second SyncParties: %v", err)
+	}
+
+	name, phone := partyBySapoID(t, db2, "1001")
+	if name != "Nguyen Van A" {
+		t.Errorf("display_name after backfill = %q; want %q", name, "Nguyen Van A")
+	}
+	if phone != "+84901234567" {
+		t.Errorf("primary_phone after backfill = %q; want +84901234567", phone)
+	}
+	if got := countParties(t, db2); got != 1 {
+		t.Errorf("crm_party count = %d; want 1 (backfill must not create a new party)", got)
+	}
+}
+
+// ─── T: SyncParties — graceful when no wh_customer_base row exists ────────────
+
+func TestPartySeedConsumer_GracefulNoCustomerBase(t *testing.T) {
+	dir := t.TempDir()
+	cachePath := filepath.Join(dir, "cache.db")
+
+	// Seed exists, but wh_customer_base has no matching row.
+	prepareCacheDB(t, cachePath, func(conn *sql.DB) {
+		rwInsertSeed(t, conn, 1001, "key-cust-001")
+		rwInsertCustomerBase(t, conn, 2002, "key-cust-002", "Other Person", "0900000000", "other@example.vn")
+	})
+
+	db, err := Open(dir)
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	defer db.Close()
+	if err := MigrateUp(db); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+
+	cacheRepo := NewCacheRepo(db)
+	svc := application.NewPartySeedService(cacheRepo, NewPartyRepo(db))
+	if _, err := svc.SyncParties(context.Background(), cacheRepo); err != nil {
+		t.Fatalf("SyncParties: %v", err)
+	}
+
+	// Party created with empty name, no error.
+	name, phone := partyBySapoID(t, db, "1001")
+	if name != "" {
+		t.Errorf("display_name = %q; want empty (no matching base row)", name)
+	}
+	if phone != "" {
+		t.Errorf("primary_phone = %q; want empty", phone)
+	}
+	if got := countParties(t, db); got != 1 {
+		t.Errorf("crm_party count = %d; want 1", got)
 	}
 }
 

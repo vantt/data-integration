@@ -47,3 +47,15 @@ transformation/**/logs/
 # OS
 Thumbs.db
 Desktop.ini
+
+# CRM — exclude runtime data, venv, test artifacts, and doc tooling from build context.
+# The build stage regenerates *_templ.go; pre-generated copies are included but overwritten.
+crm/data/
+crm/sync/.venv/
+crm/sync/__pycache__/
+crm/sync/tests/
+crm/docs/
+crm/plans/
+crm/*.db
+crm/**/__pycache__/
+crm/**/node_modules/

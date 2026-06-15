@@ -60,8 +60,15 @@ type CacheInsight struct {
 
 // PartySeed is a row from wh_party_seed used by the seed consumer to create
 // crm_party records without the Python sync touching crm.db.
+//
+// DisplayName/Phone/Email are enriched from wh_customer_base (joined by the
+// integer customer_id) so the seed consumer can populate the golden record.
+// They are empty when no matching wh_customer_base row exists.
 type PartySeed struct {
 	CustomerID  int64
 	CustomerKey string
 	SeenAt      string
+	DisplayName string
+	Phone       string
+	Email       string
 }

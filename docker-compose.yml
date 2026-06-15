@@ -151,8 +151,38 @@ services:
       caddy: detailview.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 8000}}"
 
+  crm:
+    build:
+      context: .
+      dockerfile: Dockerfile.crm
+    container_name: crm
+    restart: unless-stopped
+    ports:
+      - "3007:8090"
+    environment:
+      - CRM_DATA_DIR=/data
+      - CRM_OLAP_PATH=/app/var/data_lake/serving/olap.duckdb
+      - CRM_CACHE_DB=/data/cache.db
+      - CRM_PORT=8090
+      # Shared secret for POST /admin/refresh (X-Refresh-Token header). Dagster
+      # uses this to trigger reverse-ETL on demand. Unset = endpoint unprotected.
+      - CRM_REFRESH_TOKEN=change-me-crm-refresh
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - caddy_net
+    volumes:
+      # Persistent CRM databases (crm.db + cache.db) — named volume avoids Windows filesystem lock issues.
+      - crm_data:/data
+      # Read-only: whole data_lake mounted so olap.duckdb views can resolve their parquet paths.
+      - ./app_data/data_lake:/app/var/data_lake:ro
+    labels:
+      caddy: crm.lan.fwg.vn
+      caddy.reverse_proxy: "{{upstreams 8090}}"
+
 volumes:
   monitoring_db:
     # Stored in Docker VM — isolated from Windows filesystem scanning (no dllhost/Defender lock)
+  crm_data:
+    # CRM SQLite databases (crm.db + cache.db) — stored in Docker VM for consistent locking.
 
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)

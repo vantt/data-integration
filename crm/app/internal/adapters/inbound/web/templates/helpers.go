@@ -15,6 +15,9 @@ func queryEscapeHelper(s string) string {
 	return url.QueryEscape(s)
 }
 
+// itoa renders an int as a decimal string (for SVG width/height attributes).
+func itoa(n int) string { return strconv.Itoa(n) }
+
 // ict is loaded once; falls back to UTC+7 fixed offset.
 var ict *time.Location
 
@@ -82,64 +85,60 @@ func formatDateKeyHelper(dk int) string {
 	return fmt.Sprintf("%s/%s/%s", s[6:8], s[4:6], s[0:4])
 }
 
-// actionTypeBadgeClassHelper returns a CSS badge class for the action type.
+// actionTypeBadgeClassHelper returns the Precision chip tone modifier for an
+// action type. Pair with the base class: class={ "chip " + ... }.
 func actionTypeBadgeClassHelper(actionType string) string {
 	switch strings.ToUpper(actionType) {
 	case "CALL_NOW":
-		return "badge-action-call"
-	case "WIN_BACK":
-		return "badge-action-win"
+		return "chip--coral"
+	case "WIN_BACK", "UPSELL", "CROSS_SELL":
+		return "chip--amber"
 	case "REORDER_NUDGE":
-		return "badge-action-reorder"
-	case "UPSELL", "CROSS_SELL":
-		return "badge-action-upsell"
+		return "chip--moss"
 	default:
-		return "badge-action-default"
+		return ""
 	}
 }
 
-// valueGroupBadgeClassHelper returns a CSS badge class for a value group.
+// valueGroupBadgeClassHelper returns the Precision badge tone modifier for a
+// value group. Pair with the base class: class={ "bdg " + ... }.
 func valueGroupBadgeClassHelper(vg string) string {
 	switch strings.ToUpper(vg) {
-	case "VIP":
-		return "badge-vip"
-	case "GOLD":
-		return "badge-gold"
-	case "SILVER":
-		return "badge-silver"
-	case "BRONZE":
-		return "badge-bronze"
-	default:
-		return "badge-new"
+	case "VIP", "GOLD":
+		return "bdg--accent"
+	case "NEW":
+		return "bdg--good"
+	default: // SILVER / BRONZE / unknown — neutral badge
+		return ""
 	}
 }
 
-// statusBadgeClassHelper returns a CSS badge class for customer status.
+// statusBadgeClassHelper returns the Precision badge tone modifier for a
+// customer lifecycle status. Pair with the base class: class={ "bdg " + ... }.
 func statusBadgeClassHelper(status string) string {
 	switch status {
 	case "active":
-		return "badge-active"
+		return "bdg--good"
 	case "at_risk":
-		return "badge-at-risk"
+		return "bdg--warn"
 	case "churned":
-		return "badge-churned"
+		return "bdg--bad"
 	default:
-		return "badge-silver"
+		return ""
 	}
 }
 
-// taskStatusClassHelper returns a CSS class for a task status string.
+// taskStatusClassHelper returns the Precision badge tone modifier for a task
+// status. Pair with the base class: class={ "bdg " + ... }.
 func taskStatusClassHelper(status string) string {
 	switch status {
-	case "open":
-		return "status-open"
 	case "doing":
-		return "status-doing"
+		return "bdg--warn"
 	case "done":
-		return "status-done"
+		return "bdg--good"
 	case "cancelled":
-		return "status-cancelled"
-	default:
+		return "bdg--bad"
+	default: // open / unknown — neutral badge
 		return ""
 	}
 }

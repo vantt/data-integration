@@ -1,7 +1,9 @@
 package templates
 
-// AppShell renders the full HTML page shell with sidebar + topbar.
-// Content is injected via the body component argument.
+// AppShell renders the full HTML page shell on the Precision design system:
+// a sticky global header (brand · customer search · context) + a fixed left
+// rail (crm-nav) + a scrolling content column (app-content). Screen markup is
+// injected via children and should open with a <div class="crm-page page-enter">.
 templ AppShell(activeScreen string, title string) {
 	<!DOCTYPE html>
 	<html lang="vi">
@@ -9,63 +11,132 @@ templ AppShell(activeScreen string, title string) {
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>{ title } — CRM</title>
+			<link rel="preconnect" href="https://fonts.googleapis.com"/>
+			<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+			<link
+				href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap"
+				rel="stylesheet"
+			/>
+			<!-- Precision design system (tokens → ui-kit → crm → prototype surfaces) -->
+			<link rel="stylesheet" href="/static/ds-precision.css"/>
+			<link rel="stylesheet" href="/static/ds-app.css"/>
+			<link rel="stylesheet" href="/static/ds-crm.css"/>
+			<link rel="stylesheet" href="/static/ds-extra.css"/>
 			<link rel="stylesheet" href="/static/app.css"/>
 			<script src="/static/htmx.min.js"></script>
 		</head>
-		<body>
-			@SidebarNav(activeScreen)
-			<div class="main-wrap">
-				{ children... }
+		<body class="app">
+			@AppHeader(title)
+			<div class="app-body">
+				@SidebarNav(activeScreen)
+				<main class="app-content">
+					{ children... }
+				</main>
 			</div>
 		</body>
 	</html>
 }
 
-// SidebarNav renders the fixed left sidebar navigation.
-templ SidebarNav(activeScreen string) {
-	<nav class="sidebar">
-		<div class="sidebar-logo">⬡ CRM Nội bộ</div>
-		<div class="sidebar-nav">
-			<a href="/" class={ sidebarLinkClass(activeScreen, "S01") }>
-				📋 Worklist
-			</a>
-			<a href="/customers" class={ sidebarLinkClass(activeScreen, "S02") }>
-				👥 Khách hàng
-			</a>
-			<a href="/inbox" class={ sidebarLinkClass(activeScreen, "S05") }>
-				💬 Hộp thư
-			</a>
-			<a href="/tasks" class={ sidebarLinkClass(activeScreen, "S07") }>
-				✅ Tasks
-			</a>
-			<a href="/segments" class={ sidebarLinkClass(activeScreen, "S08") }>
-				🎯 Segments
-			</a>
-			<a href="/campaigns" class={ sidebarLinkClass(activeScreen, "S10") }>
-				📣 Chiến dịch
-			</a>
-			<a href="/settings" class={ sidebarLinkClass(activeScreen, "S13") }>
-				⚙️ Cài đặt
-			</a>
+// AppHeader renders the sticky global header: brand, global customer search,
+// and a context crumb showing the current screen title.
+templ AppHeader(title string) {
+	<header class="app-header" data-scrolled="false">
+		<a class="brand" href="/" aria-label="Trang chủ">
+			<span class="brand__dot"></span>
+			<span class="brand__name">retail<b>CRM</b></span>
+		</a>
+		<form class="search" action="/customers" method="get" role="search">
+			<div class="search__field">
+				<input
+					class="search__input"
+					type="search"
+					name="q"
+					placeholder="Tìm khách: SĐT, tên, email, code…"
+					autocomplete="off"
+				/>
+				<button class="search__submit" type="submit" aria-label="Tìm">
+					@Icon("search", 15)
+				</button>
+			</div>
+		</form>
+		<div class="context-slot">
+			<span class="context-crumb"><b>{ title }</b></span>
+			<button class="icon-btn" type="button" aria-label="Tài khoản">
+				@Icon("user", 15)
+			</button>
 		</div>
-		<div class="sidebar-footer">
-			CRM v0.7 · LAN-trust
+	</header>
+}
+
+// navItem describes one left-rail entry.
+type navItem struct {
+	Screen string
+	Href   string
+	Icon   string
+	Label  string
+}
+
+// navGroup is a labelled cluster of nav items.
+type navGroup struct {
+	Eyebrow string
+	Items   []navItem
+}
+
+// crmNav is the C01 navigation model (Daily / Growth / Admin).
+var crmNav = []navGroup{
+	{Eyebrow: "Hằng ngày", Items: []navItem{
+		{Screen: "S01", Href: "/", Icon: "worklist", Label: "Worklist"},
+		{Screen: "S02", Href: "/customers", Icon: "customers", Label: "Khách hàng"},
+		{Screen: "S05", Href: "/inbox", Icon: "inbox", Label: "Hộp thư"},
+		{Screen: "S07", Href: "/tasks", Icon: "tasks", Label: "Tasks"},
+	}},
+	{Eyebrow: "Tăng trưởng", Items: []navItem{
+		{Screen: "S08", Href: "/segments", Icon: "segments", Label: "Segments"},
+		{Screen: "S10", Href: "/campaigns", Icon: "campaigns", Label: "Chiến dịch"},
+	}},
+	{Eyebrow: "Quản trị", Items: []navItem{
+		{Screen: "S04", Href: "/dedup", Icon: "dedup", Label: "Dedup"},
+		{Screen: "S13", Href: "/settings", Icon: "settings", Label: "Cài đặt"},
+	}},
+}
+
+// SidebarNav renders the fixed left-rail navigation (C01).
+templ SidebarNav(activeScreen string) {
+	<nav class="crm-nav" aria-label="Điều hướng">
+		for _, g := range crmNav {
+			<div class="crm-nav__group">
+				<div class="caption crm-nav__eyebrow">{ g.Eyebrow }</div>
+				for _, it := range g.Items {
+					<a
+						href={ templ.SafeURL(it.Href) }
+						class="crm-nav__item"
+						if navActive(activeScreen, it.Screen) {
+							aria-current="page"
+						}
+					>
+						<span class="crm-nav__icon">
+							@Icon(it.Icon, 17)
+						</span>
+						<span class="crm-nav__label">{ it.Label }</span>
+					</a>
+				}
+			</div>
+		}
+		<div class="crm-nav__foot">
+			<div class="status status--ready">
+				<span class="mono caption">SERVING · SYNCED</span>
+			</div>
+			<div class="crm-nav__sync">CRM v0.7 · LAN-trust</div>
 		</div>
 	</nav>
 }
 
-// Topbar renders the sticky top bar with a title and optional search slot.
-templ Topbar(title string) {
-	<header class="topbar">
-		<span class="topbar-title">{ title }</span>
-		{ children... }
-	</header>
-}
-
-// sidebarLinkClass returns "active" when the link matches the current screen.
-func sidebarLinkClass(active, screen string) string {
-	if active == screen {
-		return "active"
+// navActive reports whether a nav screen id is the active one, folding detail
+// screens onto their list parent (S03→S02, S06→S05, S09→S08, S11→S10).
+func navActive(active, screen string) bool {
+	parent := map[string]string{"S03": "S02", "S06": "S05", "S09": "S08", "S11": "S10"}
+	if p, ok := parent[active]; ok {
+		active = p
 	}
-	return ""
+	return active == screen
 }
