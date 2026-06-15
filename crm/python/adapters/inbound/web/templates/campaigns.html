@@ -1,0 +1,428 @@
+{% extends "layout.html" %}
+{% block title %}{% if view == "detail" %}{{ campaign.name }}{% else %}Chiến dịch{% endif %}{% endblock %}
+{% block active_screen %}S10{% endblock %}
+
+{% block content %}
+{# ── helpers ──────────────────────────────────────────────────────────────── #}
+{% macro campaign_status_bdg(status) %}
+  {% if status == "running" %}bdg--good
+  {% elif status == "done" %}bdg--accent
+  {% endif %}
+{% endmacro %}
+
+{% macro target_status_bdg(status) %}
+  {% if status == "converted" %}bdg--good
+  {% elif status == "skipped" %}bdg--bad
+  {% elif status == "sent" %}bdg--accent
+  {% elif status == "responded" %}bdg--warn
+  {% endif %}
+{% endmacro %}
+
+{# ── S10 Campaigns list ───────────────────────────────────────────────────── #}
+{% if view == "list" %}
+<div class="crm-page page-enter" data-surface="S10">
+  <div class="crm-pagehead">
+    <div>
+      <div class="caption crm-pagehead__eyebrow">CHIẾN DỊCH</div>
+      <h1 class="crm-pagehead__title">Chiến dịch</h1>
+    </div>
+    <div class="crm-pagehead__aside">
+      <button class="btn btn--primary"
+              hx-get="/campaigns/modal/create"
+              hx-target="#modal" hx-swap="innerHTML">
+        {% include "icons/plus.svg" %} Tạo chiến dịch
+      </button>
+    </div>
+  </div>
+
+  {% if not campaigns %}
+  <div class="state">
+    <div class="state__inner">
+      <div class="state__title">Chưa có chiến dịch nào</div>
+      <div class="state__sub">Tạo chiến dịch đầu tiên từ một segment.</div>
+      <div class="state__actions">
+        <button class="btn btn--secondary"
+                hx-get="/campaigns/modal/create"
+                hx-target="#modal" hx-swap="innerHTML">
+          {% include "icons/plus.svg" %} Tạo chiến dịch
+        </button>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <div class="fsel">
+        <div class="caption fsel__label">TRẠNG THÁI</div>
+        <div class="fsel__field">
+          <select name="status"
+                  hx-get="/campaigns" hx-target="#campaigns-list"
+                  hx-swap="innerHTML" hx-trigger="change">
+            <option value="all">Tất cả</option>
+            <option value="draft">Draft</option>
+            <option value="running">Active</option>
+            <option value="done">Done</option>
+          </select>
+          <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Tên</th><th>Objective</th><th>Kênh</th>
+          <th class="num-h">Targets</th><th class="num-h">Converted</th>
+          <th class="num-h">Rate</th><th>Trạng thái</th><th class="th-go"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in campaigns %}
+        <tr class="is-clickable"
+            hx-get="/campaigns/{{ c.campaign_id }}"
+            hx-target="body" hx-push-url="true">
+          <td>
+            <span class="cell-strong">{{ c.name }}</span>
+            {% if c.segment_id %}
+            <span class="cell-sub">{{ segment_names.get(c.segment_id, "") }}</span>
+            {% endif %}
+          </td>
+          <td>{{ c.objective }}</td>
+          <td class="muted">{{ c.channel }}</td>
+          <td class="num">—</td>
+          <td class="num cell-strong">—</td>
+          <td class="num">—</td>
+          <td>
+            <span class="bdg {{ campaign_status_bdg(c.status) }}">
+              <span class="bdg__dot"></span> {{ c.status }}
+            </span>
+          </td>
+          <td class="td-go"><span class="go-arrow">{% include "icons/chevron.svg" %}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+<div id="modal"></div>
+
+{# ── S11 Campaign detail ───────────────────────────────────────────────────── #}
+{% elif view == "detail" %}
+<div class="crm-page page-enter" data-surface="S11">
+  <div class="c360-topbar">
+    <a class="c360-back" href="/campaigns">
+      {% include "icons/back.svg" %} Chiến dịch
+    </a>
+    <div class="c360-id">
+      <span class="c360-name">{{ campaign.name }}</span>
+      <span class="bdg {{ campaign_status_bdg(campaign.status) }}">
+        <span class="bdg__dot"></span> {{ campaign.status }}
+      </span>
+    </div>
+    <div class="c360-actions">
+      <button class="btn btn--secondary"
+              hx-get="/campaigns/{{ campaign.campaign_id }}/modal/edit"
+              hx-target="#modal" hx-swap="innerHTML">
+        {% include "icons/edit.svg" %} Sửa
+      </button>
+      {% if campaign.status == "draft" %}
+      <button class="btn btn--primary"
+              hx-post="/campaigns/{{ campaign.campaign_id }}/activate"
+              hx-target="body">
+        {% include "icons/bolt.svg" %} Kích hoạt
+      </button>
+      {% endif %}
+    </div>
+  </div>
+
+  <div id="roi-summary">
+    {% include "campaigns.html" with {"view": "roi_fragment"} %}
+  </div>
+
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <button class="btn btn--secondary"
+              hx-post="/campaigns/{{ campaign.campaign_id }}/generate-targets"
+              hx-target="#targets-section" hx-swap="innerHTML">
+        {% include "icons/bolt.svg" %} Tạo targets từ segment
+      </button>
+      <button class="btn btn--secondary"
+              hx-post="/campaigns/{{ campaign.campaign_id }}/scan-conversions"
+              hx-target="#roi-summary" hx-swap="innerHTML">
+        {% include "icons/refresh.svg" %} Scan conversions
+      </button>
+    </div>
+  </div>
+
+  <div id="targets-section">
+    {% set _campaign_id = campaign.campaign_id %}
+    {% include "campaigns.html" with {"view": "target_list", "campaign_id": _campaign_id} %}
+  </div>
+</div>
+<div id="modal"></div>
+
+{# ── ROI fragment (HTMX swap target #roi-summary) ────────────────────────── #}
+{% elif view == "roi_fragment" %}
+{% if roi is none %}
+<div class="caveat caveat--info">{% include "icons/warn.svg" %} Chưa có dữ liệu ROI.</div>
+{% else %}
+<div class="strip-stats">
+  <div class="strip-stat">
+    <div class="strip-stat__k caption">TARGETS</div>
+    <div class="strip-stat__v">{{ roi.total_targets }}</div>
+  </div>
+  <div class="strip-stat">
+    <div class="strip-stat__k caption">SENT</div>
+    <div class="strip-stat__v">{{ roi.status_counts.get("sent", 0) }}</div>
+  </div>
+  <div class="strip-stat">
+    <div class="strip-stat__k caption">RESPONDED</div>
+    <div class="strip-stat__v">{{ roi.status_counts.get("responded", 0) }}</div>
+  </div>
+  <div class="strip-stat">
+    <div class="strip-stat__k caption">CONVERTED</div>
+    <div class="strip-stat__v">{{ roi.status_counts.get("converted", 0) }}</div>
+  </div>
+  <div class="strip-stat">
+    <div class="strip-stat__k caption">RATE</div>
+    <div class="strip-stat__v">
+      {% if roi.total_targets > 0 %}
+      {{ "%.1f%%" | format(roi.status_counts.get("converted", 0) * 100 / roi.total_targets) }}
+      {% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+<div class="caveat caveat--info">
+  {% include "icons/money.svg" %}
+  Doanh thu attributed: <b>{{ roi.total_converted_rev_vnd | format_vnd }}</b>
+  · R11 · order_code mới sau scheduled_at ICT
+</div>
+{% endif %}
+
+{# ── Target list fragment (HTMX swap target #targets-section) ─────────────── #}
+{% elif view == "target_list" %}
+{% if not targets %}
+<div class="state">
+  <div class="state__inner">
+    <div class="state__title">Chưa có target</div>
+    <div class="state__sub">Segment có 0 member hoặc chiến dịch chưa kích hoạt.</div>
+  </div>
+</div>
+{% else %}
+<div class="toolbar">
+  <div class="toolbar__filters">
+    <div class="fsel">
+      <div class="caption fsel__label">STATUS</div>
+      <div class="fsel__field">
+        <select name="status"
+                hx-get="/campaigns/{{ campaign_id }}/targets"
+                hx-target="#targets-section" hx-swap="innerHTML"
+                hx-trigger="change">
+          <option value="all">Tất cả</option>
+          <option value="queued">queued</option>
+          <option value="sent">sent</option>
+          <option value="responded">responded</option>
+          <option value="converted">converted</option>
+          <option value="skipped">skipped</option>
+        </select>
+        <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Khách</th><th>Status</th><th>Assignee</th>
+        <th>Order code</th><th class="num-h">Revenue</th><th class="th-go"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in targets %}
+      <tr id="target-{{ t.party_id }}">
+        <td>
+          <a class="cell-strong" href="/customers/{{ t.party_id }}">
+            {{ party_names.get(t.party_id, t.party_id) }}
+          </a>
+        </td>
+        <td>
+          <span class="bdg {{ target_status_bdg(t.status) }}">
+            <span class="bdg__dot"></span> {{ t.status }}
+          </span>
+        </td>
+        <td class="muted">
+          {% if t.assigned_user_id %}{{ t.assigned_user_id }}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </td>
+        <td>
+          {% if t.converted_order_code %}<span class="mono">{{ t.converted_order_code }}</span>
+          {% else %}<span class="dash">—</span>{% endif %}
+        </td>
+        <td class="num">
+          {% if t.converted_revenue_vnd %}{{ t.converted_revenue_vnd | format_vnd }}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </td>
+        <td class="td-go">
+          {% if t.status not in ("converted", "skipped") %}
+          <button class="btn btn--ghost"
+                  hx-get="/campaigns/{{ campaign_id }}/targets/{{ t.party_id }}/modal/convert"
+                  hx-target="#modal" hx-swap="innerHTML">Ghi convert</button>
+          <button class="btn btn--ghost"
+                  hx-patch="/campaigns/{{ campaign_id }}/targets/{{ t.party_id }}/status"
+                  hx-vals='{"status":"skipped"}'
+                  hx-target="#target-{{ t.party_id }}" hx-swap="outerHTML">Skip</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{# ── Single target row (HTMX swap after status update) ───────────────────── #}
+{% elif view == "target_row" %}
+<tr id="target-{{ target.party_id }}">
+  <td>
+    <a class="cell-strong" href="/customers/{{ target.party_id }}">
+      {{ party_names.get(target.party_id, target.party_id) }}
+    </a>
+  </td>
+  <td>
+    <span class="bdg {{ target_status_bdg(target.status) }}">
+      <span class="bdg__dot"></span> {{ target.status }}
+    </span>
+  </td>
+  <td class="muted">
+    {% if target.assigned_user_id %}{{ target.assigned_user_id }}
+    {% else %}<span class="dash">—</span>{% endif %}
+  </td>
+  <td>
+    {% if target.converted_order_code %}<span class="mono">{{ target.converted_order_code }}</span>
+    {% else %}<span class="dash">—</span>{% endif %}
+  </td>
+  <td class="num">
+    {% if target.converted_revenue_vnd %}{{ target.converted_revenue_vnd | format_vnd }}
+    {% else %}<span class="dash">—</span>{% endif %}
+  </td>
+  <td></td>
+</tr>
+
+{# ── M07 Create campaign modal ─────────────────────────────────────────────── #}
+{% elif view == "modal_create" %}
+<div class="modal-backdrop">
+  <div class="modal">
+    <div class="modal__head"><h2 class="modal__title">Tạo chiến dịch</h2></div>
+    <form hx-post="/campaigns" hx-target="body">
+      <div class="modal__body stack stack-3">
+        <label class="field">
+          <span class="field__label">Tên *</span>
+          <input type="text" name="name" class="inp" required placeholder="Tên chiến dịch...">
+        </label>
+        <label class="field">
+          <span class="field__label">Objective</span>
+          <input type="text" name="objective" class="inp" placeholder="upsell / reactivate / ...">
+        </label>
+        <label class="field">
+          <span class="field__label">Kênh</span>
+          <input type="text" name="channel" class="inp" placeholder="zalo / messenger / sms">
+        </label>
+        <label class="field">
+          <span class="field__label">Segment</span>
+          <div class="inp-sel">
+            <select name="segment_id" class="inp">
+              <option value="">-- Không có --</option>
+              {% for s in segments %}
+              <option value="{{ s.segment_id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+            <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+          </div>
+        </label>
+        <label class="field">
+          <span class="field__label">Lên lịch</span>
+          <input type="date" name="scheduled_at" class="inp">
+        </label>
+      </div>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" onclick="this.closest('.modal-backdrop').remove()">Hủy</button>
+        <button type="submit" class="btn btn--primary">Tạo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── M07 Edit campaign modal ───────────────────────────────────────────────── #}
+{% elif view == "modal_edit" %}
+<div class="modal-backdrop">
+  <div class="modal">
+    <div class="modal__head"><h2 class="modal__title">Sửa chiến dịch</h2></div>
+    <form hx-patch="/campaigns/{{ campaign.campaign_id }}" hx-target="body">
+      <div class="modal__body stack stack-3">
+        <label class="field">
+          <span class="field__label">Tên *</span>
+          <input type="text" name="name" class="inp" required value="{{ campaign.name }}">
+        </label>
+        <label class="field">
+          <span class="field__label">Objective</span>
+          <input type="text" name="objective" class="inp" value="{{ campaign.objective }}">
+        </label>
+        <label class="field">
+          <span class="field__label">Kênh</span>
+          <input type="text" name="channel" class="inp" value="{{ campaign.channel }}">
+        </label>
+        <label class="field">
+          <span class="field__label">Segment</span>
+          <div class="inp-sel">
+            <select name="segment_id" class="inp">
+              <option value="">-- Không có --</option>
+              {% for s in segments %}
+              <option value="{{ s.segment_id }}"
+                {% if campaign.segment_id == s.segment_id %}selected{% endif %}>
+                {{ s.name }}
+              </option>
+              {% endfor %}
+            </select>
+            <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+          </div>
+        </label>
+      </div>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" onclick="this.closest('.modal-backdrop').remove()">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ── M12 Record conversion modal ──────────────────────────────────────────── #}
+{% elif view == "modal_convert" %}
+<div class="modal-backdrop">
+  <div class="modal">
+    <div class="modal__head">
+      <h2 class="modal__title">Ghi convert — {{ party_name }}</h2>
+    </div>
+    <form hx-post="/campaigns/{{ campaign_id }}/targets/{{ party_id }}/convert"
+          hx-target="body">
+      <div class="modal__body stack stack-3">
+        <label class="field">
+          <span class="field__label">Order code</span>
+          <input type="text" name="order_code" class="inp" placeholder="HD-...">
+        </label>
+        <label class="field">
+          <span class="field__label">Doanh thu (VND)</span>
+          <input type="number" name="revenue_vnd" class="inp" min="0" placeholder="0">
+        </label>
+      </div>
+      <div class="modal__foot">
+        <button type="button" class="btn btn--ghost" onclick="this.closest('.modal-backdrop').remove()">Hủy</button>
+        <button type="submit" class="btn btn--primary">Xác nhận</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

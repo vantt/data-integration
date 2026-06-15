@@ -1,0 +1,42 @@
+{# P05 Notes panel — HTMX fragment for /customers/{party_id}/panels/notes.
+   Data: party_id (str), notes (list[Note]).
+   Add-note form POSTs to /customers/{party_id}/notes → returns note_card.html fragment
+   via hx-swap="afterbegin" on .note-list.
+#}
+<div class="panel-section">
+  <div class="panel-head">
+    <span class="panel-title">Ghi chú</span>
+    <span class="panel-sub">crm_note</span>
+  </div>
+
+  {# Add note form #}
+  <form hx-post="/customers/{{ party_id }}/notes"
+        hx-target=".note-list"
+        hx-swap="afterbegin"
+        hx-on::after-request="this.reset()"
+        style="margin-bottom:var(--sp-4)">
+    <label class="field">
+      <textarea name="body" class="inp inp--area" rows="3"
+                placeholder="Ghi chú nhanh về khách..." required></textarea>
+    </label>
+    <div style="display:flex;justify-content:flex-end;margin-top:var(--sp-2)">
+      <button type="submit" class="btn btn--primary">Lưu ghi chú</button>
+    </div>
+  </form>
+
+  {# Notes list — new notes prepended via HTMX #}
+  <div class="note-list">
+    {% if not notes %}
+    <div class="state">
+      <div class="state__inner">
+        <div class="state__title">Chưa có ghi chú</div>
+        <p class="state__sub">Thêm ghi chú đầu tiên bên trên.</p>
+      </div>
+    </div>
+    {% else %}
+    {% for note in notes %}
+    {% include "fragments/note_card.html" %}
+    {% endfor %}
+    {% endif %}
+  </div>
+</div>

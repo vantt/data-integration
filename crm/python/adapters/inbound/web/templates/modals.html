@@ -1,0 +1,83 @@
+{# ── M02 Create Party ─────────────────────────────────────────────────────── #}
+{% macro modal_create_party() %}
+<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M02">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div><div class="modal__title">Tạo khách hàng mới</div></div>
+      <button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">✕</button>
+    </div>
+    <form hx-post="/parties" hx-target="#modal" hx-swap="innerHTML">
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">Tên hiển thị<span class="field__req">*</span></span>
+          <input class="inp" type="text" name="display_name" required placeholder="Nguyễn Văn A">
+        </label>
+        <label class="field">
+          <span class="field__label">Số điện thoại<span class="field__req">*</span></span>
+          <input class="inp" type="tel" name="phone" required placeholder="0901234567">
+        </label>
+        <label class="field">
+          <span class="field__label">Email</span>
+          <input class="inp" type="email" name="email" placeholder="example@email.com">
+        </label>
+        <label class="field">
+          <span class="field__label">Ghi chú nhanh</span>
+          <input class="inp" type="text" name="note" placeholder="Tuỳ chọn">
+        </label>
+        <div class="modal__note">
+          ⚠ <span>Nếu SĐT đã tồn tại, hệ thống sẽ cảnh báo trùng (ERR-DUPLICATE-IDENTITY).</span>
+        </div>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Tạo khách</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endmacro %}
+
+{# ── M04 Assign Owner ─────────────────────────────────────────────────────── #}
+{% macro modal_assign_owner(party_id, current_owner_id, users) %}
+<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M04">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div><div class="modal__title">Gán phụ trách</div></div>
+      <button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">✕</button>
+    </div>
+    <form hx-post="/customers/{{ party_id }}/assign-owner" hx-target="#modal" hx-swap="innerHTML">
+      <div class="modal__body">
+        {% if current_owner_id %}
+        <label class="field">
+          <span class="field__label">Phụ trách hiện tại</span>
+          <span>{{ current_owner_id }}</span>
+        </label>
+        {% endif %}
+        <label class="field">
+          <span class="field__label">Chọn NV mới<span class="field__req">*</span></span>
+          {% if not users %}
+          <span class="field__hint">Chưa có NV nào trong hệ thống.</span>
+          <input type="hidden" name="owner_user_id" value="">
+          {% else %}
+          <div class="inp-sel">
+            <select name="owner_user_id" required>
+              <option value="">-- Chọn NV --</option>
+              {% for u in users %}
+              <option value="{{ u.user_id }}"{% if current_owner_id == u.user_id %} selected{% endif %}>
+                {{ u.full_name }} ({{ u.role }})
+              </option>
+              {% endfor %}
+            </select>
+            <span class="inp-sel__chev">⌄</span>
+          </div>
+          {% endif %}
+        </label>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endmacro %}

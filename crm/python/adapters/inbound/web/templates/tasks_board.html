@@ -1,0 +1,139 @@
+{% from "modals.html" import modal_container %}
+{% extends "base.html" %}
+
+{% block title %}Tasks — CRM{% endblock %}
+
+{% block content %}
+<div class="crm-page page-enter" data-surface="S07">
+
+  {# ── Page head ─────────────────────────────────────────────────────────── #}
+  <div class="crm-pagehead">
+    <div>
+      <div class="caption crm-pagehead__eyebrow">TASKS</div>
+      <h1 class="crm-pagehead__title">Bảng công việc</h1>
+    </div>
+    <div class="crm-pagehead__aside">
+      <div class="chips">
+        <button class="fchip fchip--on">Board</button>
+        <button class="fchip">List</button>
+      </div>
+      <button class="btn btn--primary"
+              hx-get="/tasks/modal/create"
+              hx-target="#modal"
+              hx-swap="innerHTML">
+        + Tạo task
+      </button>
+    </div>
+  </div>
+
+  {# ── Toolbar / filters ─────────────────────────────────────────────────── #}
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <div class="fsel">
+        <span class="fsel__label caption">Trạng thái</span>
+        <div class="fsel__field">
+          <select name="status"
+                  hx-get="/tasks"
+                  hx-target="body"
+                  hx-push-url="true"
+                  hx-include="[name='assignee']">
+            <option value=""{% if status_filter == "" %} selected{% endif %}>Tất cả trạng thái</option>
+            <option value="open"{% if status_filter == "open" %} selected{% endif %}>Open</option>
+            <option value="doing"{% if status_filter == "doing" %} selected{% endif %}>Doing</option>
+            <option value="done"{% if status_filter == "done" %} selected{% endif %}>Done</option>
+            <option value="cancelled"{% if status_filter == "cancelled" %} selected{% endif %}>Cancelled</option>
+          </select>
+          <span class="fsel__chev">⌄</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Board or empty state ──────────────────────────────────────────────── #}
+  {% set total = grouped.open|length + grouped.doing|length + grouped.done|length + grouped.cancelled|length %}
+  {% if total == 0 %}
+    <div class="state">
+      <div class="state__inner">
+        <div class="state__title">Không có task nào</div>
+        <p class="state__sub">Hãy tạo task mới hoặc lọc theo tiêu chí khác.</p>
+        <div class="state__actions">
+          <button class="btn btn--primary"
+                  hx-get="/tasks/modal/create"
+                  hx-target="#modal"
+                  hx-swap="innerHTML">
+            + Tạo task mới
+          </button>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <div class="board">
+      {% for col_status, col_label in [("open","OPEN"),("doing","DOING"),("done","DONE"),("cancelled","CANCELLED")] %}
+        {% set col_tasks = grouped[col_status] %}
+        <div class="board-col">
+          <div class="board-col__head">
+            <span class="board-col__name">{{ col_label }}</span>
+            <span class="board-col__count">{{ col_tasks|length }}</span>
+          </div>
+          <div class="board-col__body">
+            {% if col_tasks|length == 0 %}
+              <div class="board-col__empty mono">—</div>
+            {% else %}
+              {% for t in col_tasks %}
+                <div class="tcard" id="task-card-{{ t.task_id }}" draggable="true">
+
+                  <div class="tcard__top">
+                    {% if t.source == "action_queue" %}
+                      <span class="auto-tag">AUTO</span>
+                    {% endif %}
+                    <span class="bdg {{ task_status_css(t.status) }}">{{ t.status }}</span>
+                  </div>
+
+                  <div class="tcard__title">{{ t.title }}</div>
+
+                  {% if t.description %}
+                    <div class="tcard__meta">{{ t.description[:60] }}{% if t.description|length > 60 %}…{% endif %}</div>
+                  {% endif %}
+
+                  <div class="tcard__meta">
+                    {% if t.party_id %}
+                      <a href="/customers/{{ t.party_id }}" class="ghost-link">
+                        👤 Hồ sơ
+                      </a>
+                    {% endif %}
+                    {% if t.due_at %}
+                      <span>🕐 {{ t.due_at | format_datetime_ict }}</span>
+                    {% endif %}
+                  </div>
+
+                  <div class="tcard__meta">
+                    {% if t.status not in ("done", "cancelled") %}
+                      <button class="ghost-link"
+                              hx-patch="/tasks/{{ t.task_id }}/status"
+                              hx-vals='{"status":"done"}'>
+                        ✓ Done
+                      </button>
+                    {% endif %}
+                    {% if t.status == "open" %}
+                      <button class="ghost-link"
+                              hx-patch="/tasks/{{ t.task_id }}/status"
+                              hx-vals='{"status":"doing"}'>
+                        › Doing
+                      </button>
+                    {% endif %}
+                  </div>
+
+                </div>{# /.tcard #}
+              {% endfor %}
+            {% endif %}
+          </div>{# /.board-col__body #}
+        </div>{# /.board-col #}
+      {% endfor %}
+    </div>{# /.board #}
+  {% endif %}
+
+  {# ── Modal anchor ──────────────────────────────────────────────────────── #}
+  <div id="modal"></div>
+
+</div>{# /.crm-page #}
+{% endblock %}

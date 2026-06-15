@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}Hộp thư — CRM{% endblock %}
+
+{% block content %}
+<div class="crm-page page-enter" data-surface="S05">
+
+  {# ── Page head ─────────────────────────────────────────────────────────── #}
+  <div class="crm-pagehead">
+    <div>
+      <div class="caption crm-pagehead__eyebrow">HỘP THƯ</div>
+      <h1 class="crm-pagehead__title">Hộp thư</h1>
+    </div>
+    <div class="crm-pagehead__aside">
+      <button class="btn btn--secondary">Gán cho tôi</button>
+    </div>
+  </div>
+
+  {# ── Toolbar / filters ─────────────────────────────────────────────────── #}
+  <div class="toolbar">
+    <div class="toolbar__filters">
+      <div class="fsel">
+        <span class="fsel__label caption">Trạng thái</span>
+        <div class="fsel__field">
+          <select name="status"
+                  hx-get="/inbox"
+                  hx-target="body"
+                  hx-push-url="true"
+                  hx-include="[name='assignee']">
+            <option value=""{% if status_filter == "" %} selected{% endif %}>Tất cả</option>
+            <option value="open"{% if status_filter == "open" %} selected{% endif %}>Đang mở</option>
+            <option value="pending"{% if status_filter == "pending" %} selected{% endif %}>Chờ xử lý</option>
+            <option value="closed"{% if status_filter == "closed" %} selected{% endif %}>Đã đóng</option>
+          </select>
+          <span class="fsel__chev">⌄</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Inbox grid: conv list + preview pane ──────────────────────────────── #}
+  <div class="inbox-grid">
+
+    {# ── Conversation list ───────────────────────────────────────────────── #}
+    {% if convs|length == 0 %}
+      <div class="conv-list">
+        <div class="state">
+          <div class="state__inner">
+            <div class="state__title">Không có hội thoại nào</div>
+            <p class="state__sub">Chưa có tin nhắn inbound nào trong filter này.</p>
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="conv-list">
+        {% for c in convs %}
+          <a href="/inbox/{{ c.conversation_id }}"
+             class="conv-row"
+             id="conv-{{ c.conversation_id }}">
+
+            {# Unread indicator #}
+            <span class="conv-row__unread{% if c.unread_count == 0 %} conv-row__unread--none{% endif %}"></span>
+
+            <div class="conv-row__main">
+              <div class="conv-row__name">
+                {% if c.party_id %}
+                  <b>{{ party_names.get(c.party_id, "") }}</b>
+                  <span class="bdg bdg--good">Đã link</span>
+                {% else %}
+                  <span class="psid-mono">{{ c.external_thread_id }}</span>
+                  <span class="bdg bdg--warn">Chưa link khách</span>
+                {% endif %}
+              </div>
+              <div class="conv-row__prev">
+                <span class="bdg {{ conv_status_bdg(c.status) }}">{{ c.status }}</span>
+                <span class="mono">{{ c.channel }}</span>
+              </div>
+            </div>
+
+            <div class="conv-row__time">
+              {% if c.last_message_at %}
+                {{ c.last_message_at | format_datetime_ict }}
+              {% endif %}
+              {% if c.unread_count > 0 %}
+                <br>
+                <span class="crm-nav__badge crm-nav__badge--warn">{{ c.unread_count }}</span>
+              {% endif %}
+            </div>
+
+          </a>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {# ── Preview pane (empty until a conv is selected) ───────────────────── #}
+    <div class="preview-pane">
+      <div class="state">
+        <div class="state__inner">
+          <div class="state__title">Chọn một hội thoại</div>
+          <p class="state__sub">Chọn hội thoại bên trái để xem trước nội dung.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>{# /.inbox-grid #}
+
+  {# ── Modal anchor ──────────────────────────────────────────────────────── #}
+  <div id="modal"></div>
+
+</div>{# /.crm-page #}
+{% endblock %}

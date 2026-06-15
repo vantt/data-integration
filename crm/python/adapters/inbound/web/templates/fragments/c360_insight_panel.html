@@ -1,0 +1,124 @@
+{# P01 Insight panel — HTMX fragment for /customers/{party_id}/panels/insight.
+   Data: party_id (str), insight (CacheInsight | None).
+   Shows: action queue cards · RFM block · behavioural signals grid.
+#}
+{% if not insight or not insight.insight %}
+<div class="state">
+  <div class="state__inner">
+    <div class="state__title">Chưa có dữ liệu insight</div>
+    <p class="state__sub">Warehouse chưa tính toán chỉ số cho khách hàng này.</p>
+  </div>
+</div>
+{% else %}
+{% set ins = insight.insight %}
+
+{# ── Action queue ── #}
+{% if insight.actions %}
+<div class="panel-section">
+  <div class="panel-head"><span class="panel-title">Hành động đề xuất</span></div>
+  <div class="action-list">
+    {% for act in insight.actions %}
+    <div class="action-card">
+      <div class="action-card__top">
+        <span class="bdg bdg--accent">{{ act.action_type }}</span>
+        {% if act.value_at_stake_vnd > 0 %}
+        <span class="action-card__stake mono">{{ act.value_at_stake_vnd | fmt_vnd }}</span>
+        {% endif %}
+      </div>
+      <div class="action-card__body">{{ act.rationale_vi }}</div>
+      <div class="action-card__meta muted caption">{{ act.generated_date }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+{# ── RFM block ── #}
+<div class="panel-section">
+  <div class="panel-head">
+    <span class="panel-title">RFM · Giá trị</span>
+    {% if insight.refreshed_at %}
+    <span class="panel-sub">{{ insight.refreshed_at | format_ict }}</span>
+    {% endif %}
+  </div>
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-card__label">Value group</div>
+      <div class="kpi-card__val">
+        <span class="bdg bdg--good bdg--dot">{{ ins.value_group }}</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__label">Status</div>
+      <div class="kpi-card__val">
+        <span class="bdg bdg--dot bdg--{% if ins.customer_status == 'active' %}good{% elif ins.customer_status == 'at_risk' %}warn{% else %}bad{% endif %}">{{ ins.customer_status }}</span>
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__label">Avg. order</div>
+      <div class="kpi-card__val mono">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__label">Avg. days between orders</div>
+      <div class="kpi-card__val mono">{{ "%.0f"|format(ins.avg_days_between_orders) }}d</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__label">Lifetime contribution margin</div>
+      <div class="kpi-card__val mono {% if ins.is_margin_negative %}wf-amt--neg{% endif %}">
+        {{ ins.lifetime_contribution_margin | int | fmt_vnd }}
+      </div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-card__label">Cancel rate</div>
+      <div class="kpi-card__val mono">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</div>
+    </div>
+  </div>
+</div>
+
+{# ── Signals grid ── #}
+<div class="panel-section">
+  <div class="panel-head"><span class="panel-title">Signals</span></div>
+  <div class="facts">
+    <div class="fact">
+      <span class="fact__k">Next purchase</span>
+      <span class="fact__v">
+        <span class="bdg bdg--dot bdg--{% if ins.next_purchase_signal == 'OVERDUE' %}bad{% elif ins.next_purchase_signal == 'DUE_SOON' %}warn{% else %}good{% endif %}">
+          {{ ins.next_purchase_signal }}
+        </span>
+        {% if ins.predicted_next_purchase_date %}
+        <span class="muted caption">{{ ins.predicted_next_purchase_date }}</span>
+        {% endif %}
+      </span>
+    </div>
+    <div class="fact">
+      <span class="fact__k">Discount sensitivity</span>
+      <span class="fact__v">{{ ins.discount_sensitivity }}</span>
+    </div>
+    {% if ins.channel_preference %}
+    <div class="fact">
+      <span class="fact__k">Channel preference</span>
+      <span class="fact__v">{{ ins.channel_preference }}</span>
+    </div>
+    {% endif %}
+    {% if ins.last_purchased_sku %}
+    <div class="fact">
+      <span class="fact__k">Last SKU</span>
+      <span class="fact__v mono">{{ ins.last_purchased_sku }}</span>
+    </div>
+    {% endif %}
+    {% if ins.top_affinity_product %}
+    <div class="fact">
+      <span class="fact__k">Top affinity</span>
+      <span class="fact__v">{{ ins.top_affinity_product }}</span>
+    </div>
+    {% endif %}
+    {% if ins.second_affinity_product %}
+    <div class="fact">
+      <span class="fact__k">2nd affinity</span>
+      <span class="fact__v">{{ ins.second_affinity_product }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endif %}

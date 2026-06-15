@@ -1,0 +1,128 @@
+{# HTMX-refreshable inner fragment — also served at GET /worklist/fragment.
+   Target: #worklist-container (outerHTML swap). #}
+<div id="worklist-container">
+  {% if not actions and not tasks %}
+    {# ── Empty state ── #}
+    <div class="state">
+      <div class="state__inner">
+        <div class="state__title">Không có việc cần làm hôm nay</div>
+        <div class="state__sub">
+          Chưa có hành động nào từ kho dữ liệu.<br>
+          Hãy duyệt danh sách khách hàng hoặc chờ sync tiếp theo.
+        </div>
+        <div class="state__actions">
+          <a href="/customers" class="btn btn--secondary">Duyệt khách hàng</a>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    {% if actions %}
+      {# ── Action queue section (C03 aq-cards) ── #}
+      <div class="dash-card">
+        <div class="dash-card__head">
+          <div>
+            <div class="dash-card__title">Hàng đợi hành động</div>
+            <div class="dash-card__sub">từ kho dữ liệu</div>
+          </div>
+        </div>
+        <div>
+          {% for a in actions %}
+            {% set badge_cls = "chip " ~ action_type_badge_class(a.action_type) %}
+            <div class="aq-card aq-card--compact">
+              <div class="aq-card__top">
+                <span class="{{ badge_cls }}">{{ a.action_type }}</span>
+                <span class="aq-card__val">
+                  {% include "icons/money.svg" %}
+                  {{ a.value_at_stake_vnd | format_vnd }}
+                </span>
+              </div>
+              <div class="aq-card__rationale">{{ a.rationale_vi | truncate_str(80) }}</div>
+              <div class="aq-card__foot">
+                {% if a.party_id %}
+                  <a href="/customers/{{ a.party_id }}" class="btn btn--secondary aq-card__cta">
+                    {{ customer_label(a.customer_name, a.customer_key) }} — Mở hồ sơ
+                    {% include "icons/chevron.svg" %}
+                  </a>
+                {% else %}
+                  <a href="/customers?q={{ a.customer_key | urlencode }}" class="btn btn--secondary aq-card__cta">
+                    {{ customer_label(a.customer_name, a.customer_key) }} — Mở hồ sơ
+                    {% include "icons/chevron.svg" %}
+                  </a>
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+    {% if tasks %}
+      {# ── Today's task list (wl-row items) ── #}
+      <div class="wl-list">
+        {% for t in tasks %}
+          {% set row_cls = "wl-row wl-row--done" if t.status in ("done", "cancelled") else "wl-row" %}
+          {% set check_cls = "wl-check wl-check--on" if t.status == "done" else "wl-check" %}
+          {% set chip_cls = "chip " ~ task_status_chip_class(t.status) %}
+          <div class="{{ row_cls }}" id="task-{{ t.task_id }}">
+            <button class="{{ check_cls }}"
+                    hx-patch="/tasks/{{ t.task_id }}/done"
+                    hx-target="#task-{{ t.task_id }}"
+                    hx-swap="outerHTML"
+                    aria-label="done">
+              {% if t.status == "done" %}{% include "icons/check.svg" %}{% endif %}
+            </button>
+            <div class="wl-row__main">
+              <div class="wl-row__top">
+                <span class="{{ chip_cls }}">{{ t.status }}</span>
+                {% if t.party_id %}
+                  <a class="wl-row__name" href="/customers/{{ t.party_id }}">{{ t.title }}</a>
+                {% else %}
+                  <span class="wl-row__name">{{ t.title }}</span>
+                {% endif %}
+              </div>
+              {% if t.description %}
+                <div class="wl-row__why">{{ t.description | truncate_str(80) }}</div>
+              {% endif %}
+              <div class="wl-row__meta">
+                {% if t.due_at %}
+                  <span class="wl-row__due">
+                    {% include "icons/clock.svg" %}
+                    Due: {{ t.due_at | format_datetime_ict }}
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="wl-row__aside">
+              {% if t.party_id %}
+                <a href="/customers/{{ t.party_id }}" class="btn btn--ghost">
+                  Mở hồ sơ{% include "icons/chevron.svg" %}
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endif %}
+
+  {# ── Freshness badge (C06) ── #}
+  {% if is_stale %}
+    <div class="caveat caveat--warn" data-surface="C06">
+      <span class="caveat__mark">{% include "icons/warn.svg" %}</span>
+      {% if not refreshed_at %}
+        Cache chưa có dữ liệu — chạy sync để cập nhật.
+      {% else %}
+        Cache cũ (cập nhật lúc {{ refreshed_at }}) — đã quá 24h.
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="caveat caveat--info" data-surface="C06">
+      <span class="caveat__mark">{% include "icons/clock.svg" %}</span>
+      {% if not refreshed_at %}
+        Cache chưa có dữ liệu — chạy sync để cập nhật.
+      {% else %}
+        Cache cập nhật lúc {{ refreshed_at }}
+      {% endif %}
+    </div>
+  {% endif %}
+</div>

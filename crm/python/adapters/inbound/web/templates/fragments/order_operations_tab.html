@@ -1,0 +1,349 @@
+{# S12 Operations tab — HTMX fragment for /orders/{code}/tabs/operations.
+   Data: order (OrderDetail).
+   Sections: Recipient & delivery · Fulfillment · Shipments · Payments · Returns.
+#}
+{% set h = order.header %}
+{% set f = order.financial %}
+<div class="tab-sections">
+
+  {# ── 1. Recipient & delivery ── #}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Recipient &amp; delivery</span>
+      <span class="panel-sub">fact_orders · recipient</span>
+    </div>
+    <div class="party-split">
+
+      {# Left: Recipient — receives goods #}
+      <div class="scard scard--recipient scard--lead">
+        <div class="caption scard__eyebrow" style="color:var(--accent)">RECIPIENT — receives the goods</div>
+        <div class="recipient-name" style="margin-top:var(--sp-2)">
+          {% if order.customer and order.customer.full_name %}{{ order.customer.full_name }}
+          {% else %}<span class="muted">—</span>{% endif %}
+        </div>
+        <div class="badge-row">
+          <span class="bdg bdg--good bdg--dot">same as buyer</span>
+        </div>
+        <div class="facts" style="margin-top:var(--sp-3)">
+          {% if order.shipping.address %}
+          <div class="fact"><span class="fact__k">Address</span> <span class="fact__v">{{ order.shipping.address }}</span></div>
+          {% endif %}
+          {% if order.shipping.ward or order.shipping.district %}
+          <div class="fact">
+            <span class="fact__k">Ward / District</span>
+            <span class="fact__v">{{ [order.shipping.ward, order.shipping.district] | join_nonempty(", ") }}</span>
+          </div>
+          {% endif %}
+          {% if order.shipping.province %}
+          <div class="fact"><span class="fact__k">Province</span> <span class="fact__v">{{ order.shipping.province }}</span></div>
+          {% endif %}
+          {% if order.shipping.country and order.shipping.country not in ("Việt Nam", "Vietnam") %}
+          <div class="fact"><span class="fact__k">Country</span> <span class="fact__v">{{ order.shipping.country }}</span></div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Right: Buyer account #}
+      <div class="scard">
+        <div class="caption scard__eyebrow">BUYER — placed &amp; paid</div>
+        <div class="recipient-name recipient-name--muted" style="margin-top:var(--sp-2)">
+          {% if order.customer and order.customer.full_name %}{{ order.customer.full_name }}
+          {% else %}<span class="muted">—</span>{% endif %}
+        </div>
+        {% if order.customer %}
+          {% if order.customer.customer_type or order.customer.value_group %}
+          <div class="badge-row">
+            {% if order.customer.customer_type %}<span class="bdg">{{ order.customer.customer_type }}</span> {% endif %}
+            {% if order.customer.value_group %}<span class="bdg bdg--good bdg--dot">{{ order.customer.value_group }}</span>{% endif %}
+          </div>
+          {% endif %}
+          {% if order.customer.lifetime_value != 0 %}
+          <div class="facts" style="margin-top:var(--sp-3)">
+            <div class="fact"><span class="fact__k">LTV</span> <span class="fact__v">{{ order.customer.lifetime_value | fmt_vnd }}</span></div>
+          </div>
+          {% endif %}
+          {% if order.customer.customer_id %}
+          <a href="/customers/{{ order.customer.customer_id }}"
+             class="btn btn--secondary party-cta"
+             style="display:block;margin-top:var(--sp-4);text-align:center;padding:var(--sp-2) var(--sp-4);border:1px solid var(--border);border-radius:var(--radii-control);color:var(--fg-1);text-decoration:none;font-size:13px;transition:border-color var(--dur-fast) var(--ease-fast)">
+            Open customer <span class="mono">→</span>
+          </a>
+          {% endif %}
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  {# ── 2. Fulfillment ── #}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Fulfillment</span>
+      <span class="panel-sub">fact_orders · fact_order_economics</span>
+    </div>
+    <div class="badge-row" style="margin-bottom:var(--sp-3)">
+      {% if h.status %}<span class="bdg bdg--{{ h.status | order_status_tone }}">{{ h.status }}</span> {% endif %}
+      {% if h.payment_status %}<span class="bdg bdg--dot bdg--{{ h.payment_status | payment_tone }}">{{ h.payment_status }}</span> {% endif %}
+      {% if h.fulfillment_status %}<span class="bdg bdg--dot bdg--{{ h.fulfillment_status | ship_tone }}">{{ h.fulfillment_status }}</span>{% endif %}
+    </div>
+    <div class="scard facts">
+      {% if h.first_shipped_at %}
+      <div class="fact"><span class="fact__k">Shipped</span> <span class="fact__v mono">{{ h.first_shipped_at | format_ict }}</span></div>
+      {% endif %}
+      {% if f.carrier_id %}
+      <div class="fact"><span class="fact__k">Carrier</span> <span class="fact__v">{{ f.carrier_id }}</span></div>
+      {% endif %}
+      <div class="fact">
+        <span class="fact__k">COD</span>
+        <span class="fact__v mono">{% if f.cod_amount != 0 %}{{ f.cod_amount | fmt_vnd }}{% else %}—{% endif %}</span>
+      </div>
+      <div class="fact">
+        <span class="fact__k">TTC</span>
+        <span class="fact__v">{% if h.time_to_complete_hours is not none %}{{ "%.1f"|format(h.time_to_complete_hours) }}h{% else %}in transit{% endif %}</span>
+      </div>
+    </div>
+    <div class="note-line">
+      <span class="caveat__mark">ⓘ</span>
+      <span>Order-level summary. Per-leg carrier codes and live status are in Shipments below.</span>
+    </div>
+  </div>
+
+  {# ── 3. Shipments ── #}
+  {% set shps = order.shipments %}
+  {% set n_shps = shps | length %}
+  <div class="tabpanel stack-4">
+    <div class="panel-head ship-head">
+      <div class="ship-head__title">
+        <span class="panel-title">Shipments</span>
+        {% if n_shps > 1 %}<span class="ship-count">{{ n_shps }}</span>{% endif %}
+      </div>
+      {% if n_shps > 0 %}
+      <div class="ship-summary">
+        {% for key in ["DELIVERED", "SHIPPING", "PACKED", "PENDING", "CANCELLED", "FAILED"] %}
+          {% set cnt = shps | selectattr("status", "upper_eq", key) | list | length %}
+          {# Jinja2 doesn't have upper_eq; use loop counting instead #}
+        {% endfor %}
+        {# Count per status using namespace trick #}
+        {% set ns = namespace(delivered=0, shipping=0, packed=0, pending=0, cancelled=0, failed=0) %}
+        {% for s in shps %}
+          {% set su = s.status | upper %}
+          {% if su == "DELIVERED" %}{% set ns.delivered = ns.delivered + 1 %}
+          {% elif su == "SHIPPING" %}{% set ns.shipping = ns.shipping + 1 %}
+          {% elif su == "PACKED" %}{% set ns.packed = ns.packed + 1 %}
+          {% elif su == "PENDING" %}{% set ns.pending = ns.pending + 1 %}
+          {% elif su == "CANCELLED" %}{% set ns.cancelled = ns.cancelled + 1 %}
+          {% elif su == "FAILED" %}{% set ns.failed = ns.failed + 1 %}
+          {% endif %}
+        {% endfor %}
+        {% if ns.delivered > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--good"></i> {{ ns.delivered }} delivered</span>{% endif %}
+        {% if ns.shipping > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--warn"></i> {{ ns.shipping }} shipping</span>{% endif %}
+        {% if ns.packed > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--neutral"></i> {{ ns.packed }} packed</span>{% endif %}
+        {% if ns.pending > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--neutral"></i> {{ ns.pending }} pending</span>{% endif %}
+        {% if ns.cancelled > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--bad"></i> {{ ns.cancelled }} cancelled</span>{% endif %}
+        {% if ns.failed > 0 %}<span class="ship-summary__seg"><i class="ship-tone-dot ship-tone-dot--bad"></i> {{ ns.failed }} failed</span>{% endif %}
+      </div>
+      {% else %}
+      <div class="panel-sub">fact_fulfillments · leg-level</div>
+      {% endif %}
+    </div>
+
+    {% if n_shps == 0 %}
+    <div class="ship-empty">
+      <div class="ship-empty__title voice"><em>No shipments yet</em></div>
+      <p class="ship-empty__sub">This order has no shipment legs.
+        {% if h.fulfillment_status %}
+        Fulfillment status is <span class="bdg bdg--dot bdg--{{ h.fulfillment_status | ship_tone }}">{{ h.fulfillment_status }}</span>.
+        {% endif %}
+      </p>
+    </div>
+    {% else %}
+    <div class="ship-list">
+      {% for s in shps %}
+      {% set is_bad = s.status | upper in ("CANCELLED", "FAILED") %}
+      {% set tone = s.status | ship_tone %}
+      {% set code = s.tracking_code %}
+      <div class="ship-card{% if is_bad %} ship-card--bad{% endif %}" data-ship-card id="ship-card-{{ loop.index }}">
+        <div class="ship-card__top">
+          <div class="ship-card__lead">
+            <span class="bdg bdg--dot bdg--{{ tone }}">{{ s.status or "UNKNOWN" }}</span>
+            {% if is_bad %}
+            <span class="ship-stages ship-stages--err" title="{{ s.status | lower }}" aria-hidden="true">
+              <span class="ship-stages__err">✕</span>
+            </span>
+            {% else %}
+            {# Stage tracker: PACKED → SHIPPING → DELIVERED #}
+            {% set stages = ["PACKED", "SHIPPING", "DELIVERED"] %}
+            {% set curr_idx = namespace(v=-1) %}
+            {% for stage in stages %}
+              {% if s.status | upper == stage %}{% set curr_idx.v = loop.index0 %}{% endif %}
+            {% endfor %}
+            <span class="ship-stages" title="packed → shipping → delivered" aria-hidden="true">
+              {% for stage in stages %}
+              {% if loop.index0 > 0 %}
+              <span class="ship-stages__bar{% if loop.index0 <= curr_idx.v %} is-on{% endif %}"></span>
+              {% endif %}
+              <span class="ship-stages__node{% if loop.index0 <= curr_idx.v %} is-on{% endif %}{% if loop.index0 == curr_idx.v %} is-now{% endif %}"></span>
+              {% endfor %}
+            </span>
+            {% endif %}
+          </div>
+          <div class="ship-card__carrier">
+            <span class="ship-carrier__name">{{ s.carrier_id or "—" }}</span>
+            {% if s.shipping_service %}
+            <span class="ship-sep">·</span>
+            <span class="ship-carrier__svc">{{ s.shipping_service }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <button type="button" class="ship-track" data-track-btn
+                data-card-id="{{ loop.index }}"
+                data-code="{{ code }}"
+                title="Copy tracking code"
+                aria-label="Tracking code {{ code }} — copy">
+          <span class="ship-track__label">Tracking</span>
+          <span class="ship-track__code{% if is_bad %} ship-track__code--voided{% endif %}">{{ code or "—" }}</span>
+          <span class="ship-track__copy" data-copy-glyph aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4.3" y="4.3" width="6.4" height="6.4" rx="1.2"/><path d="M8.4 2.3H3.4a1.1 1.1 0 0 0-1.1 1.1v5"/>
+            </svg> copy
+          </span>
+        </button>
+        <div class="ship-card__meta">
+          <span class="ship-meta__code mono">{{ s.fulfillment_code or "—" }}</span>
+          <span class="ship-meta__sep">·</span>
+          <span class="ship-meta__time">
+            {% if s.shipped_at %}
+            shipped <span class="mono">{{ s.shipped_at | format_ict }}</span>
+            <span class="ship-meta__rel">(ICT)</span>
+            {% else %}
+            <span class="ship-meta__null">not shipped yet</span>
+            {% endif %}
+          </span>
+          <span class="ship-meta__sep">·</span>
+          <span class="ship-meta__cod">
+            {% if s.cod_amount > 0 %}COD <b class="mono">{{ s.cod_amount | fmt_vnd }}</b>
+            {% else %}<span class="muted">COD <span class="dash">—</span></span>{% endif %}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="note-line">
+      <span class="caveat__mark">ⓘ</span>
+      <span>Tracking codes are copy-only — no carrier link map in the serving layer yet.</span>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── 4. Payments ── #}
+  {% set pmts = order.payments %}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Payments</span>
+      <span class="panel-sub">fact_payments × dim_payment_methods</span>
+    </div>
+    {% if not pmts %}
+    <div class="ship-empty">
+      <div class="ship-empty__title voice"><em>No payment records</em></div>
+      <p class="ship-empty__sub">No payment entries found for this order.</p>
+    </div>
+    {% else %}
+    {% set ns2 = namespace(total=0, cod=0) %}
+    {% for p in pmts %}
+      {% set ns2.total = ns2.total + p.amount %}
+      {% if p.payment_method_type | upper == "COD" %}{% set ns2.cod = ns2.cod + p.amount %}{% endif %}
+    {% endfor %}
+    {% set cod_pct = ((ns2.cod / ns2.total * 100) | int) if ns2.total > 0 else 0 %}
+    <div class="tbl-wrap">
+      <table class="tbl">
+        <thead>
+          <tr><th>Method</th><th>Type</th><th>Status</th><th>Paid on</th><th class="num-h">Amount</th></tr>
+        </thead>
+        <tbody>
+        {% for p in pmts %}
+        <tr>
+          <td class="cell-strong">{{ p.payment_method_name or "—" }}</td>
+          <td class="muted mono" style="font-size:12px">{{ p.payment_method_type or "—" }}</td>
+          <td>
+            {% if p.status %}
+            <span class="bdg bdg--dot bdg--{{ p.status | payment_tone }}">{{ p.status }}</span>
+            {% else %}<span class="muted">—</span>{% endif %}
+          </td>
+          <td class="mono muted" style="font-size:12px">{{ p.paid_on | format_ict if p.paid_on else "—" }}</td>
+          <td class="num cell-strong">{{ p.amount | fmt_vnd }}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4">Σ paid · COD {{ cod_pct }}%</td>
+            <td class="num cell-strong">{{ ns2.total | fmt_vnd }}</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── 5. Returns ── #}
+  {% set rets = order.returns %}
+  {% set n_rets = rets | length %}
+  {% set ns3 = namespace(paid_total=0) %}
+  {% for r in rets %}
+    {% if r.refund_status | lower == "paid" %}{% set ns3.paid_total = ns3.paid_total + r.refund_amount %}{% endif %}
+  {% endfor %}
+  <div class="tabpanel stack-4">
+    <div class="panel-head ret-head">
+      <div class="ship-head__title">
+        <span class="panel-title">Returns</span>
+        {% if n_rets > 1 %}<span class="ship-count">{{ n_rets }}</span>{% endif %}
+      </div>
+      {% if n_rets > 1 %}
+      <div class="ret-total">total refunded <b class="mono">{{ ns3.paid_total | fmt_vnd }}</b></div>
+      {% else %}
+      <div class="panel-sub">fact_order_returns</div>
+      {% endif %}
+    </div>
+
+    {% if n_rets == 0 %}
+    <div class="ret-empty"><span class="ret-empty__dot"></span> No returns</div>
+    {% else %}
+    <div class="ret-list">
+      {% for r in rets %}
+      {% set refund_tone = "good" if r.refund_status | lower == "paid" else "warn" %}
+      {% set ret_tone = "bad" if r.return_status | lower == "cancelled" else "neutral" %}
+      <div class="ret-card">
+        <div class="ret-card__top">
+          <div class="ret-amt mono">{{ r.refund_amount | fmt_vnd }}</div>
+          <div class="ret-badges">
+            <span class="bdg bdg--dot bdg--{{ refund_tone }}">Refund: {{ r.refund_status | title }}</span>
+            <span class="bdg bdg--{{ ret_tone }}">{{ r.return_status | title }}</span>
+          </div>
+        </div>
+        <div class="ret-card__meta">
+          <span class="ret-meta__date mono">{{ r.return_date | format_ict if r.return_date else "—" }}</span>
+          <span class="ret-meta__ict">ICT</span>
+          <span class="ret-sep">·</span>
+          <span>qty
+            {% if r.return_quantity > 0 %}<span class="mono">{{ r.return_quantity }}</span>
+            {% else %}<span class="ret-na">—</span>{% endif %}
+          </span>
+        </div>
+        <div class="ret-card__reason">
+          {% if r.return_reason %}
+          <span class="ret-reason__k">Reason</span> {{ r.return_reason }}
+          {% else %}
+          <span class="ret-reason__none">No reason recorded</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="note-line">
+      <span class="caveat__mark">ⓘ</span>
+      <span>Reference only — returns are not deducted from this order's P&amp;L.</span>
+    </div>
+    {% endif %}
+  </div>
+
+</div>{# /tab-sections #}

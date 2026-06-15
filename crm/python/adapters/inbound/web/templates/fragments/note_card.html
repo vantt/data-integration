@@ -1,0 +1,13 @@
+{# Single note card — rendered inline inside c360_notes_panel.html and returned
+   by POST /customers/{party_id}/notes for HTMX prepend.
+   Data: note (Note).
+#}
+<div class="note-card">
+  <div class="note-card__body">{{ note.body }}</div>
+  <div class="note-card__meta muted caption">
+    <span class="mono">{{ note.created_at | format_ict }}</span>
+    {% if note.author_user_id %}
+    · {{ note.author_user_id }}
+    {% endif %}
+  </div>
+</div>

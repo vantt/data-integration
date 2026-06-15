@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Hội thoại — CRM{% endblock %}
+
+{% block content %}
+<div class="crm-page page-enter" data-surface="S06">
+
+  {# ── Top bar: back link + title + status + actions ─────────────────────── #}
+  <div class="c360-topbar">
+    <a class="c360-back" href="/inbox">← Inbox</a>
+
+    <div class="c360-id">
+      <span class="c360-name">
+        Hội thoại · {{ conv.channel }} · {{ conv.status }}
+      </span>
+      <span class="bdg {{ conv_status_bdg(conv.status) }}">{{ conv.status }}</span>
+    </div>
+
+    <div class="c360-actions">
+      {% if conv.status != "closed" %}
+        <button class="btn btn--secondary"
+                hx-get="/inbox/{{ conv.conversation_id }}/modal/assign"
+                hx-target="#modal"
+                hx-swap="innerHTML">
+          👤 Đổi NV
+        </button>
+        <button class="btn btn--secondary"
+                hx-get="/inbox/{{ conv.conversation_id }}/modal/log-activity"
+                hx-target="#modal"
+                hx-swap="innerHTML">
+          📄 Ghi note
+        </button>
+        <button class="btn btn--primary"
+                hx-get="/inbox/{{ conv.conversation_id }}/modal/close"
+                hx-target="#modal"
+                hx-swap="innerHTML">
+          Đóng hội thoại
+        </button>
+      {% else %}
+        <button class="btn btn--secondary"
+                hx-post="/inbox/{{ conv.conversation_id }}/assign"
+                hx-vals='{"assignee_user_id":""}'>
+          Mở lại
+        </button>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Detail body: thread + sidebar ─────────────────────────────────────── #}
+  <div class="conv-detail">
+
+    {# ── Message thread ──────────────────────────────────────────────────── #}
+    <div class="thread-wrap">
+      <div class="thread">
+        {% if msgs|length == 0 %}
+          <div class="state">
+            <div class="state__inner">
+              <div class="state__title">Chưa có tin nhắn</div>
+            </div>
+          </div>
+        {% else %}
+          {% for m in msgs %}
+            <div class="msg {% if m.direction == 'out' %}msg--agent{% else %}msg--customer{% endif %}">
+              <div class="msg__bubble">{{ m.body or "" }}</div>
+              <div class="msg__time">{{ m.sent_at | format_datetime_ict }} ICT</div>
+            </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+
+      {# Read-only input bar #}
+      {% if conv.status == "closed" %}
+        <div class="input-bar">
+          <div class="input-bar__fake">Hội thoại đã đóng</div>
+        </div>
+      {% else %}
+        <div class="input-bar">
+          <div class="input-bar__fake">Chế độ chỉ đọc (v1)</div>
+        </div>
+      {% endif %}
+    </div>
+
+    {# ── Sidebar: party card or link prompt ──────────────────────────────── #}
+    <div>
+      {% if not party_name %}
+        <div class="scard">
+          <div class="caption scard__eyebrow">Chưa link khách</div>
+          <p class="state__sub">
+            PSID này chưa khớp với party nào. Tìm và gắn khách để xem hồ sơ 360.
+          </p>
+          <button class="btn btn--primary"
+                  hx-get="/inbox/{{ conv.conversation_id }}/modal/link-party"
+                  hx-target="#modal"
+                  hx-swap="innerHTML">
+            🔗 Tìm &amp; gắn khách
+          </button>
+        </div>
+      {% else %}
+        <div class="conv-cust-card">
+          <div class="row-between">
+            <span class="mini-name">{{ party_name }}</span>
+          </div>
+          <div class="facts">
+            <div class="fact">
+              <span class="fact__k">Kênh</span>
+              <span class="fact__v">{{ conv.channel }}</span>
+            </div>
+            <div class="fact">
+              <span class="fact__k">PSID</span>
+              <span class="fact__v mono">{{ conv.external_thread_id }}</span>
+            </div>
+            <div class="fact">
+              <span class="fact__k">Trạng thái</span>
+              <span class="fact__v">
+                <span class="bdg {{ conv_status_bdg(conv.status) }}">{{ conv.status }}</span>
+              </span>
+            </div>
+          </div>
+          <a href="{{ party_link }}" class="btn btn--primary party-cta">
+            Mở hồ sơ đầy đủ ›
+          </a>
+        </div>
+      {% endif %}
+    </div>
+
+  </div>{# /.conv-detail #}
+
+  {# ── Modal anchor ──────────────────────────────────────────────────────── #}
+  <div id="modal"></div>
+
+</div>{# /.crm-page #}
+{% endblock %}

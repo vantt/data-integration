@@ -1,0 +1,46 @@
+{# HTMX-swappable tbody rows — served at GET /customers/search and included
+   inline in customer_list.html. Target: #customer-list-body (innerHTML swap). #}
+{% if not parties %}
+  <tr>
+    <td colspan="5">
+      <div class="state">
+        <div class="state__inner">
+          <div class="state__title">Không tìm thấy khách hàng</div>
+          <div class="state__sub">Thử từ khoá khác hoặc kiểm tra lại SĐT.</div>
+        </div>
+      </div>
+    </td>
+  </tr>
+{% else %}
+  {% for p in parties %}
+    {% set status_cls = "bdg " ~ status_badge_class(p.status) %}
+    <tr class="is-clickable"
+        hx-get="/customers/{{ p.party_id }}"
+        hx-target="body"
+        hx-push-url="true">
+      <td>
+        <span class="cell-strong">{{ p.display_name | e }}</span>
+      </td>
+      <td class="mono">
+        {% if p.primary_phone %}
+          <a href="tel:{{ p.primary_phone | e }}">{{ p.primary_phone | e }}</a>
+        {% else %}
+          <span class="dash">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if p.primary_email %}
+          {{ p.primary_email | e }}
+        {% else %}
+          <span class="dash">—</span>
+        {% endif %}
+      </td>
+      <td>
+        <span class="{{ status_cls }}">{{ p.status | e }}</span>
+      </td>
+      <td class="td-go">
+        <span class="go-arrow">{% include "icons/chevron.svg" %}</span>
+      </td>
+    </tr>
+  {% endfor %}
+{% endif %}

@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+
+{% block title %}Worklist hôm nay{% endblock %}
+
+{% block content %}
+<div class="crm-page page-enter" data-surface="S01">
+  <div class="crm-pagehead">
+    <div>
+      <div class="caption crm-pagehead__eyebrow">WORKLIST</div>
+      <h1 class="crm-pagehead__title">Worklist hôm nay</h1>
+    </div>
+    <div class="crm-pagehead__aside">
+      <button class="btn btn--secondary"
+              hx-get="/worklist/fragment"
+              hx-target="#worklist-container"
+              hx-swap="outerHTML"
+              hx-indicator="#refresh-spinner">
+        <span id="refresh-spinner" class="htmx-indicator spinner"></span>
+        {% include "icons/refresh.svg" %}
+        Làm mới
+      </button>
+    </div>
+  </div>
+
+  <div id="worklist-container">
+    {% include "fragments/worklist_fragment.html" %}
+  </div>
+</div>
+{% endblock %}

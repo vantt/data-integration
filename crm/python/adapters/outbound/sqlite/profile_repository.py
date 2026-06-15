@@ -1,0 +1,183 @@
+"""SQLite adapter for CustomerProfile and Party360.
+
+Implements ports.ProfileRepository using raw sqlite3 queries
+ported from profile_queries.sql (Go sqlc source).
+"""
+from __future__ import annotations
+
+import json
+import sqlite3
+from typing import Optional
+
+from crm.python.adapters.outbound.sqlite.connection import CRMDatabase
+from crm.python.domain.entities.profile import CustomerProfile, Party360
+
+
+# ---------------------------------------------------------------------------
+# Row → entity helpers
+# ---------------------------------------------------------------------------
+
+def _row_to_profile(row: sqlite3.Row) -> CustomerProfile:
+    custom_raw = row["custom"]
+    if isinstance(custom_raw, str) and custom_raw:
+        try:
+            custom = json.loads(custom_raw)
+        except json.JSONDecodeError:
+            custom = {}
+    else:
+        custom = {}
+
+    address_raw = row["address"]
+    if isinstance(address_raw, str) and address_raw:
+        try:
+            address = json.loads(address_raw)
+        except json.JSONDecodeError:
+            address = None
+    else:
+        address = None
+
+    prefs_raw = row["preferences"]
+    if isinstance(prefs_raw, str) and prefs_raw:
+        try:
+            preferences = json.loads(prefs_raw)
+        except json.JSONDecodeError:
+            preferences = None
+    else:
+        preferences = None
+
+    return CustomerProfile(
+        party_id=row["party_id"],
+        owner_user_id=row["owner_user_id"],
+        lifecycle_stage=row["lifecycle_stage"],
+        acquisition_source=row["acquisition_source"],
+        birthday=row["birthday"],
+        address=address,
+        preferences=preferences,
+        custom=custom,
+        consent_contact=bool(row["consent_contact"]),
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def _row_to_party360(row: sqlite3.Row) -> Party360:
+    consent_raw = row["consent_contact"]
+    consent = bool(consent_raw) if consent_raw is not None else False
+    return Party360(
+        party_id=row["party_id"],
+        party_type=row["party_type"],
+        display_name=row["display_name"] or "",
+        primary_phone=row["primary_phone"] or "",
+        primary_email=row["primary_email"] or "",
+        status=row["status"],
+        is_merged=bool(row["is_merged"]),
+        party_created_at=row["party_created_at"],
+        party_updated_at=row["party_updated_at"],
+        owner_user_id=row["owner_user_id"],
+        lifecycle_stage=row["lifecycle_stage"],
+        acquisition_source=row["acquisition_source"],
+        birthday=row["birthday"],
+        address=row["address"],
+        preferences=row["preferences"],
+        custom=row["custom"] or "",
+        consent_contact=consent,
+        profile_updated_at=row["profile_updated_at"] or "",
+    )
+
+
+# ---------------------------------------------------------------------------
+# Repository
+# ---------------------------------------------------------------------------
+
+class SQLiteProfileRepository:
+    """Implements ProfileRepository port against crm.db."""
+
+    def __init__(self, db: CRMDatabase) -> None:
+        self._db = db
+
+    # ── Queries (ported from profile_queries.sql) ─────────────────────────────
+
+    _SQL_GET = """
+        SELECT party_id, owner_user_id, lifecycle_stage, acquisition_source,
+               birthday, address, preferences, custom, consent_contact,
+               created_at, updated_at
+        FROM crm_customer_profile
+        WHERE party_id = ?
+        LIMIT 1
+    """
+
+    _SQL_UPSERT = """
+        INSERT INTO crm_customer_profile (
+          party_id, owner_user_id, lifecycle_stage, acquisition_source,
+          birthday, address, preferences, custom, consent_contact,
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (party_id) DO UPDATE SET
+          owner_user_id      = excluded.owner_user_id,
+          lifecycle_stage    = excluded.lifecycle_stage,
+          acquisition_source = excluded.acquisition_source,
+          birthday           = excluded.birthday,
+          address            = excluded.address,
+          preferences        = excluded.preferences,
+          custom             = excluded.custom,
+          consent_contact    = excluded.consent_contact,
+          updated_at         = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+    """
+
+    _SQL_UPDATE_CUSTOM = """
+        UPDATE crm_customer_profile
+        SET custom     = ?,
+            updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE party_id = ?
+    """
+
+    _SQL_GET_360 = """
+        SELECT
+          party_id, party_type, display_name, primary_phone, primary_email,
+          status, is_merged, party_created_at, party_updated_at,
+          owner_user_id, lifecycle_stage, acquisition_source, birthday,
+          address, preferences, custom, consent_contact, profile_updated_at,
+          tags_json
+        FROM crm_party_360
+        WHERE party_id = ?
+        LIMIT 1
+    """
+
+    # ── Public API ────────────────────────────────────────────────────────────
+
+    def get_profile(self, party_id: str) -> Optional[CustomerProfile]:
+        row = self._db.conn.execute(self._SQL_GET, (party_id,)).fetchone()
+        if row is None:
+            return None
+        return _row_to_profile(row)
+
+    def upsert_profile(self, profile: CustomerProfile) -> None:
+        """INSERT OR UPDATE — maps Python types to SQLite column values."""
+        address_json = json.dumps(profile.address) if profile.address else None
+        prefs_json = json.dumps(profile.preferences) if profile.preferences else None
+        custom_json = json.dumps(profile.custom) if profile.custom else "{}"
+        self._db.conn.execute(self._SQL_UPSERT, (
+            profile.party_id,
+            profile.owner_user_id,
+            profile.lifecycle_stage,
+            profile.acquisition_source,
+            profile.birthday,
+            address_json,
+            prefs_json,
+            custom_json,
+            int(profile.consent_contact),
+            profile.created_at,
+            profile.updated_at,
+        ))
+        self._db.conn.commit()
+
+    def update_custom_json(self, party_id: str, custom_json: str) -> None:
+        """Replace the custom column; caller is responsible for merging values."""
+        self._db.conn.execute(self._SQL_UPDATE_CUSTOM, (custom_json, party_id))
+        self._db.conn.commit()
+
+    def get_party360(self, party_id: str) -> Optional[Party360]:
+        row = self._db.conn.execute(self._SQL_GET_360, (party_id,)).fetchone()
+        if row is None:
+            return None
+        return _row_to_party360(row)

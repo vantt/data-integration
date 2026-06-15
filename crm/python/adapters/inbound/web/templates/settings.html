@@ -1,0 +1,144 @@
+{% extends "layout.html" %}
+{% block title %}Cài đặt{% endblock %}
+{% block active_screen %}S13{% endblock %}
+{% block content %}
+{% if view == "modal_cfd" %}
+<div class="modal-backdrop"><div class="modal">
+  <div class="modal__head"><h2 class="modal__title">{% if is_new %}Thêm custom field{% else %}Sửa custom field{% endif %}</h2></div>
+  <form {% if is_new %}hx-post="/settings/custom-fields"{% else %}hx-patch="/settings/custom-fields/{{ field.field_id }}"{% endif %} hx-target="body">
+    <div class="modal__body stack stack-3">
+      <label class="field"><span class="field__label">Field key *</span>
+        <input type="text" name="field_key" class="inp" required {% if not is_new %}readonly{% endif %}
+               value="{{ field.field_key if field else '' }}" placeholder="snake_case_key"></label>
+      <label class="field"><span class="field__label">Nhãn hiển thị *</span>
+        <input type="text" name="label" class="inp" required
+               value="{{ field.label if field else '' }}" placeholder="Tên hiển thị..."></label>
+      <label class="field"><span class="field__label">Kiểu dữ liệu</span>
+        <div class="inp-sel">
+          <select name="data_type" class="inp">
+            {% for dt in ["text", "number", "boolean", "date", "select", "multiselect"] %}
+            <option value="{{ dt }}" {% if field and field.data_type == dt %}selected{% endif %}>{{ dt }}</option>
+            {% endfor %}
+          </select>
+          <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+        </div></label>
+      <label class="field"><span class="field__label">Options (mỗi dòng 1 giá trị)</span>
+        <textarea name="options" class="inp" rows="4" placeholder="option1&#10;option2">{{- (field.options | join("\n")) if field and field.options else "" -}}</textarea></label>
+      <label class="field field--inline">
+        <input type="checkbox" name="is_required" value="true" {% if field and field.is_required %}checked{% endif %}>
+        <span>Bắt buộc</span></label>
+    </div>
+    <div class="modal__foot">
+      <button type="button" class="btn btn--ghost" onclick="this.closest('.modal-backdrop').remove()">Hủy</button>
+      <button type="submit" class="btn btn--primary">{% if is_new %}Tạo{% else %}Lưu{% endif %}</button>
+    </div>
+  </form>
+</div></div>
+{% elif view == "modal_tag" %}
+<div class="modal-backdrop"><div class="modal">
+  <div class="modal__head"><h2 class="modal__title">Tạo tag</h2></div>
+  <form hx-post="/settings/tags" hx-target="body">
+    <div class="modal__body stack stack-3">
+      <label class="field"><span class="field__label">Tên tag *</span>
+        <input type="text" name="name" class="inp" required placeholder="vip / hot-lead / ..."></label>
+      <label class="field"><span class="field__label">Category</span>
+        <input type="text" name="category" class="inp" placeholder="sales / support / ..."></label>
+      <label class="field"><span class="field__label">Màu (#RRGGBB)</span>
+        <input type="text" name="color" class="inp" placeholder="#84b577"></label>
+    </div>
+    <div class="modal__foot">
+      <button type="button" class="btn btn--ghost" onclick="this.closest('.modal-backdrop').remove()">Hủy</button>
+      <button type="submit" class="btn btn--primary">Tạo</button>
+    </div>
+  </form>
+</div></div>
+{% else %}
+<div class="crm-page page-enter" data-surface="S13">
+  <div class="crm-pagehead"><div>
+    <div class="caption crm-pagehead__eyebrow">CÀI ĐẶT</div>
+    <h1 class="crm-pagehead__title">Cài đặt</h1>
+  </div></div>
+  <div class="settings-grid">
+    <nav class="settings-nav">
+      {% for tab_id, tab_label, tab_icon in [("custom_fields", "Custom Fields", "doc"), ("tags", "Tags", "tag"), ("users", "Người dùng", "user")] %}
+      <a href="/settings?tab={{ tab_id }}"
+         class="settings-nav__item{% if active_tab == tab_id %} settings-nav__item--on{% endif %}">
+        {% include "icons/" + tab_icon + ".svg" %} {{ tab_label }}
+      </a>
+      {% endfor %}
+    </nav>
+    <div>
+      {% if active_tab == "tags" %}
+      <div class="stack stack-4">
+        <div class="row-between"><span class="panel-title">Tags</span>
+          <button class="btn btn--primary" hx-get="/settings/tags/modal/create" hx-target="#modal" hx-swap="innerHTML">
+            {% include "icons/plus.svg" %} Tạo tag</button></div>
+        {% if not tags %}<div class="state"><div class="state__inner">
+          <div class="state__icon">{% include "icons/tag.svg" %}</div>
+          <div class="state__title">Chưa có tag nào.</div>
+        </div></div>
+        {% else %}<div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Nhãn</th><th>Tên (slug)</th><th>Category</th><th>Màu</th></tr></thead>
+          <tbody>{% for tag in tags %}<tr>
+            <td><span class="chip{% if tag.color %} chip--custom{% endif %}"{% if tag.color %} style="--tag-color:{{ tag.color }}"{% endif %}>{{ tag.name }}</span></td>
+            <td class="mono muted">{{ tag.name }}</td>
+            <td>{% if tag.category %}{{ tag.category }}{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td>{% if tag.color %}<span class="tag-dot" style="--tag-color:{{ tag.color }}"></span>{% else %}<span class="muted">—</span>{% endif %}</td>
+          </tr>{% endfor %}</tbody>
+        </table></div>{% endif %}
+      </div>
+      {% elif active_tab == "users" %}
+      <div class="stack stack-4">
+        <span class="panel-title">Người dùng &amp; vai trò</span>
+        {% if not users %}<div class="state"><div class="state__inner">
+          <div class="state__icon">{% include "icons/user.svg" %}</div>
+          <div class="state__title">Chưa có người dùng nào.</div>
+        </div></div>
+        {% else %}<div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th></tr></thead>
+          <tbody>{% for u in users %}<tr>
+            <td class="cell-strong">{{ u.full_name }}</td>
+            <td class="mono muted">{{ u.email }}</td>
+            <td><div class="inp-sel inp-sel--narrow">
+              <select name="role">
+                {% for r in ["sales", "care", "manager", "admin"] %}
+                <option value="{{ r }}" {% if u.role == r %}selected{% endif %}>{{ r }}</option>
+                {% endfor %}
+              </select>
+              <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+            </div></td>
+            <td>{% if u.is_active %}<span class="bdg bdg--good">Active</span>{% else %}<span class="bdg">Inactive</span>{% endif %}</td>
+          </tr>{% endfor %}</tbody>
+        </table></div>{% endif %}
+      </div>
+      {% else %}{# custom_fields (default) #}
+      <div class="stack stack-4">
+        <div class="row-between"><span class="panel-title">Custom Fields</span>
+          <button class="btn btn--primary" hx-get="/settings/custom-fields/modal/create" hx-target="#modal" hx-swap="innerHTML">
+            {% include "icons/plus.svg" %} Thêm field</button></div>
+        {% if not custom_fields %}<div class="state"><div class="state__inner">
+          <div class="state__icon">{% include "icons/doc.svg" %}</div>
+          <div class="state__title">Chưa có custom field nào.</div>
+        </div></div>
+        {% else %}<div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Tên field</th><th>Field key</th><th>Loại</th><th>Bắt buộc</th><th class="th-go"></th></tr></thead>
+          <tbody>{% for f in custom_fields %}<tr id="cfd-{{ f.field_id }}">
+            <td class="cell-strong">{{ f.label }}</td>
+            <td class="mono muted">{{ f.field_key }}</td>
+            <td><span class="bdg">{{ f.data_type }}</span></td>
+            <td>{% if f.is_required %}<span class="bdg bdg--warn">Có</span>{% else %}<span class="muted">Không</span>{% endif %}</td>
+            <td class="td-go"><div class="flex-wrap justify-end">
+              <button class="icon-btn icon-btn--sm" aria-label="Sửa"
+                      hx-get="/settings/custom-fields/{{ f.field_id }}/modal/edit"
+                      hx-target="#modal" hx-swap="innerHTML">{% include "icons/edit.svg" %}</button>
+            </div></td>
+          </tr>{% endfor %}</tbody>
+        </table></div>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div id="modal"></div>
+</div>
+{% endif %}
+{% endblock %}

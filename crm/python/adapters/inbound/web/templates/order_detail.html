@@ -1,0 +1,244 @@
+{# S12 Order Detail — full page.
+   Extends app shell. Data: order (OrderDetail), active_tab (str).
+   Tab panels are HTMX fragments at /orders/{code}/tabs/{tab}.
+   Sidebar cards: identity · money headline · recipient link · quick facts.
+   Tab panel fragments live in order_detail_tabs.html (included below).
+#}
+{% extends "base.html" %}
+{% block title %}Order {{ order.header.order_code }} · CRM{% endblock %}
+
+{% block content %}
+<div class="detail-grid page-enter" data-surface="S12">
+
+  {# ── MAIN: tabbar + tab panel ── #}
+  <section class="detail-main" aria-label="Order detail tabs">
+
+    {# Tab bar #}
+    <div class="tabbar" role="tablist" aria-label="Order tabs">
+      {% set tabs = [
+        ("financial",  "Financial"),
+        ("items",      "Items"),
+        ("operations", "Operations"),
+        ("context",    "Context"),
+      ] %}
+      {% for tab_key, tab_label in tabs %}
+      <a href="/orders/{{ order.header.order_code }}?tab={{ tab_key }}"
+         id="tab-{{ tab_key }}"
+         class="tab" role="tab"
+         {% if tab_key == active_tab %}aria-selected="true"{% endif %}
+         hx-get="/orders/{{ order.header.order_code }}/tabs/{{ tab_key }}"
+         hx-target="#tab-panel"
+         hx-swap="innerHTML"
+         hx-push-url="/orders/{{ order.header.order_code }}?tab={{ tab_key }}">
+        {{ tab_label }}
+      </a>
+      {% endfor %}
+    </div>
+
+    {# Active tab panel — rendered inline on first paint #}
+    <div id="tab-panel" class="tabpanel" role="tabpanel"
+         aria-labelledby="tab-{{ active_tab }}" tabindex="0">
+      {% if active_tab == "items" %}
+        {% include "fragments/order_items_tab.html" %}
+      {% elif active_tab == "operations" %}
+        {% include "fragments/order_operations_tab.html" %}
+      {% elif active_tab == "context" %}
+        {% include "fragments/order_context_tab.html" %}
+      {% else %}
+        {% include "fragments/order_financial_tab.html" %}
+      {% endif %}
+    </div>
+
+  </section>
+
+  {# ── SIDEBAR: order at a glance ── #}
+  <aside class="detail-sidebar" aria-label="Order at a glance">
+
+    {# Identity card #}
+    <div class="scard">
+      <div class="caption scard__eyebrow">ORDER AT A GLANCE</div>
+      <div class="id-code">{{ order.header.order_code }}</div>
+      {% if order.header.order_id or order.channel.channel_name %}
+      <div class="facts" style="margin-top:var(--sp-3)">
+        {% if order.header.order_id %}
+        <div class="fact"><span class="fact__k">order_id</span> <span class="fact__v mono">{{ order.header.order_id }}</span></div>
+        {% endif %}
+        {% if order.channel.channel_name %}
+        <div class="fact"><span class="fact__k">Channel</span> <span class="fact__v">{{ order.channel.channel_name }}</span></div>
+        {% endif %}
+      </div>
+      {% endif %}
+      <div class="badge-row">
+        {% if order.header.status %}
+        <span class="bdg bdg--{{ order.header.status | order_status_tone }}">{{ order.header.status }}</span>
+        {% endif %}
+        {% if order.header.payment_status %}
+        <span class="bdg bdg--dot bdg--{{ order.header.payment_status | payment_tone }}">{{ order.header.payment_status }}</span>
+        {% endif %}
+        {% if order.header.fulfillment_status %}
+        <span class="bdg bdg--dot bdg--{{ order.header.fulfillment_status | ship_tone }}">{{ order.header.fulfillment_status }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Money headline card #}
+    {% set f = order.financial %}
+    {% set tone = f | verdict_tone %}
+    <div class="scard">
+      <div class="caption scard__eyebrow" style="color:var(--accent)">MONEY HEADLINE</div>
+      <div class="verdict-glance verdict--{{ tone }}" style="margin-bottom:var(--sp-3)">
+        <span class="verdict-dot verdict-dot--sm" aria-hidden="true"></span>
+        <span class="verdict-glance__word">{{ tone | verdict_word }}</span>
+        <span class="verdict-glance__fig">
+          {% if tone != "mute" %}
+            {% if f.channel_net_margin_pct is not none %}
+            <span class="verdict-glance__pct">{{ f.channel_net_margin_pct | fmt_pct }}</span>
+            {% endif %}
+            {{ f.channel_net_profit | fmt_vnd_signed }}
+          {% else %}
+          <span class="dash">—</span>
+          {% endif %}
+        </span>
+      </div>
+      <div class="money-line money-line--hero">
+        <span class="money-line__label">
+          {% if f.is_us %}US revenue (incl. VAT) <span class="bdg bdg--accent">US</span>
+          {% else %}Net revenue{% endif %}
+        </span>
+        <span class="money-line__val">
+          {% if f.is_us %}{{ f.us_revenue_incl_vat | fmt_vnd }}
+          {% else %}{{ f.net_revenue | fmt_vnd }}{% endif %}
+        </span>
+      </div>
+      <div class="money-line">
+        <span class="money-line__label">Gross profit
+          {% if not f.cogs_source or f.cogs_source == "none" %}
+          <span class="bdg bdg--warn">unverified</span>
+          {% endif %}
+        </span>
+        <span class="money-line__val">
+          {% if f.gross_margin_pct is not none %}<span class="pct">{{ f.gross_margin_pct | fmt_pct }}</span> {% endif %}
+          {{ f.gross_profit | fmt_vnd }}
+        </span>
+      </div>
+      <div class="money-line">
+        <span class="money-line__label">Channel net</span>
+        <span class="money-line__val">
+          {% if f.channel_net_margin_pct is not none %}<span class="pct">{{ f.channel_net_margin_pct | fmt_pct }}</span> {% endif %}
+          {{ f.channel_net_profit | fmt_vnd }}
+        </span>
+      </div>
+    </div>
+
+    {# Recipient link card (only when customer is linked) #}
+    {% if order.customer and order.customer.customer_id %}
+    {% set c = order.customer %}
+    <a href="/customers/{{ c.customer_id }}"
+       class="scard scard--link scard--recipient"
+       aria-label="Open customer {{ c.full_name }}">
+      <div class="party-head">
+        <div class="caption scard__eyebrow" style="color:var(--accent)">RECIPIENT · BUYER</div>
+        <span class="bdg">same person</span>
+      </div>
+      {% if c.full_name %}<div class="mini-name">{{ c.full_name }}</div>{% endif %}
+      <div class="facts party-facts" style="margin-top:var(--sp-3)">
+        <div class="fact">
+          <span class="fact__k">LTV</span>
+          <span class="fact__v money-line__val" style="font-size:22px">{{ c.lifetime_value | fmt_vnd }}</span>
+        </div>
+        {% if order.shipping.district or order.shipping.province %}
+        <div class="fact">
+          <span class="fact__k">Ship to</span>
+          <span class="fact__v">{{ [order.shipping.district, order.shipping.province] | join_nonempty(", ") }}</span>
+        </div>
+        {% endif %}
+      </div>
+      <div class="mini-meta party-link-row">
+        <span>
+          {% if c.value_group %}<span class="bdg bdg--good bdg--dot">{{ c.value_group }}</span>{% endif %}
+        </span>
+        <span class="mini-arrow mono">→</span>
+      </div>
+    </a>
+    {% endif %}
+
+    {# Quick facts card #}
+    <div class="scard">
+      <div class="caption scard__eyebrow">QUICK FACTS</div>
+      <div class="facts" style="margin-top:var(--sp-3)">
+        {% if order.channel.channel_name %}
+        <div class="fact"><span class="fact__k">Channel</span> <span class="fact__v">{{ order.channel.channel_name }}</span></div>
+        {% endif %}
+        {% if order.staff.seller_name %}
+        <div class="fact"><span class="fact__k">Seller</span> <span class="fact__v">{{ order.staff.seller_name }}</span></div>
+        {% endif %}
+        {% if order.staff.branch_name %}
+        <div class="fact"><span class="fact__k">Branch</span> <span class="fact__v">{{ order.staff.branch_name }}</span></div>
+        {% endif %}
+        {% if order.header.created_at %}
+        <div class="fact"><span class="fact__k">Created</span> <span class="fact__v mono">{{ order.header.created_at | format_ict }}</span></div>
+        {% endif %}
+        {% if order.header.first_shipped_at %}
+        <div class="fact"><span class="fact__k">Shipped</span> <span class="fact__v mono">{{ order.header.first_shipped_at | format_ict }}</span></div>
+        {% endif %}
+        {% if order.shipments and order.shipments[0].shipping_service %}
+        <div class="fact"><span class="fact__k">Carrier</span> <span class="fact__v">{{ order.shipments[0].shipping_service }}</span></div>
+        {% elif order.financial.carrier_id %}
+        <div class="fact"><span class="fact__k">Carrier</span> <span class="fact__v">{{ order.financial.carrier_id }}</span></div>
+        {% endif %}
+        {% if order.financial.cod_amount > 0 %}
+        <div class="fact"><span class="fact__k">COD</span> <span class="fact__v mono">{{ order.financial.cod_amount | fmt_vnd }}</span></div>
+        {% endif %}
+      </div>
+    </div>
+
+  </aside>
+</div>{# /detail-grid #}
+
+{# Shipment tracking copy-on-click + cost group toggle #}
+<script>
+(function () {
+  var COPY_HTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4.3" y="4.3" width="6.4" height="6.4" rx="1.2"/><path d="M8.4 2.3H3.4a1.1 1.1 0 0 0-1.1 1.1v5"/></svg> copy';
+  var CHECK_HTML = '<svg width="13" height="13" viewBox="0 0 13 13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.7 6.8 5.3 9.4 10.3 3.7"/></svg> copied';
+  function flashCopied(btn) {
+    var card = btn.closest('[data-ship-card]'), glyph = btn.querySelector('[data-copy-glyph]');
+    if (glyph) { glyph.innerHTML = CHECK_HTML; glyph.classList.add('is-copied'); }
+    if (card) card.classList.add('ship-card--copied');
+    setTimeout(function () {
+      if (glyph) { glyph.innerHTML = COPY_HTML; glyph.classList.remove('is-copied'); }
+      if (card) card.classList.remove('ship-card--copied');
+    }, 1500);
+  }
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-track-btn]');
+    if (!btn) return;
+    var code = (btn.dataset.code || '').trim();
+    if (!code || code === '—') return;
+    if (navigator.clipboard && navigator.clipboard.writeText)
+      navigator.clipboard.writeText(code).then(function(){flashCopied(btn);},function(){flashCopied(btn);});
+    else {
+      var ta = document.createElement('textarea');
+      ta.value = code; ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      try { document.execCommand('copy'); } catch(_){}
+      document.body.removeChild(ta); flashCopied(btn);
+    }
+  });
+  document.addEventListener('click', function (e) {
+    var head = e.target.closest('.group__head');
+    if (!head) return;
+    var group = head.closest('.group');
+    if (!group) return;
+    group.dataset.open = group.dataset.open === 'false' ? 'true' : 'false';
+  });
+  document.addEventListener('click', function (e) {
+    var tab = e.target.closest('.tabbar .tab');
+    if (!tab) return;
+    var bar = tab.closest('.tabbar');
+    if (!bar) return;
+    bar.querySelectorAll('.tab').forEach(function (t) { t.removeAttribute('aria-selected'); });
+    tab.setAttribute('aria-selected', 'true');
+  });
+})();
+</script>
+{% endblock %}

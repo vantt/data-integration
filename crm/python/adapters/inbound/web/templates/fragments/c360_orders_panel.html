@@ -1,0 +1,52 @@
+{# P02 Orders panel — HTMX fragment for /customers/{party_id}/panels/orders.
+   Data: party_id (str), orders (list[RecentOrder]).
+   Shows recent orders from wh_order_hdr via CacheInsight.
+#}
+<div class="panel-section">
+  <div class="panel-head">
+    <span class="panel-title">Đơn hàng gần đây</span>
+    <span class="panel-sub">wh_order_hdr · cache</span>
+  </div>
+
+  {% if not orders %}
+  <div class="state">
+    <div class="state__inner">
+      <div class="state__title">Không có đơn hàng</div>
+      <p class="state__sub">Chưa tìm thấy đơn nào cho khách này trong cache.</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Mã đơn</th>
+          <th>Ngày</th>
+          <th>Kênh</th>
+          <th>Trạng thái</th>
+          <th class="num-h">Doanh thu</th>
+          <th class="num-h">Sản phẩm</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for o in orders %}
+      <tr>
+        <td class="cell-strong mono">
+          <a href="/orders/{{ o.order_code }}" class="link">{{ o.order_code }}</a>
+        </td>
+        <td class="muted mono" style="font-size:12px">{{ o.date_key }}</td>
+        <td class="muted">{{ o.channel or "—" }}</td>
+        <td><span class="bdg">{{ o.status }}</span></td>
+        <td class="num cell-strong">{{ o.net_revenue | fmt_vnd }}</td>
+        <td class="num muted">{{ o.item_count }}</td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="note-line">
+    <span class="caveat__mark">ⓘ</span>
+    <span>Danh sách từ cache — có thể chậm tối đa 24h so với thực tế.</span>
+  </div>
+  {% endif %}
+</div>

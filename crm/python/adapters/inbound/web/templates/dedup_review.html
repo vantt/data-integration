@@ -1,0 +1,136 @@
+{% extends "layout.html" %}
+{% block title %}Dedup Review{% endblock %}
+{% block active_screen %}S04{% endblock %}
+{% block content %}
+{% if view == "modal_merge" %}
+<div class="modal-backdrop"><div class="modal">
+  <div class="modal__head"><h2 class="modal__title">Xác nhận gộp</h2></div>
+  <form hx-post="/dedup/{{ candidate.candidate_id }}/merge" hx-target="body">
+    <div class="modal__body stack stack-3">
+      <div class="caveat caveat--warn">Party B sẽ bị gộp vào Party A và không thể khôi phục.</div>
+      <div class="dedup-compare">
+        <div class="dedup-card dedup-card--survive">
+          <span class="dedup-card__tag bdg bdg--accent">GIỮ LẠI</span>
+          <div class="facts">
+            <div class="fact"><span class="fact__k">Party A</span>
+              <span class="fact__v">{{ party_a.display_name if party_a else candidate.party_a }}</span></div>
+            <div class="fact"><span class="fact__k">ID</span>
+              <span class="fact__v mono">{{ candidate.party_a }}</span></div>
+          </div>
+        </div>
+        <div class="dedup-card">
+          <span class="dedup-card__tag bdg">GỘP VÀO</span>
+          <div class="facts">
+            <div class="fact"><span class="fact__k">Party B</span>
+              <span class="fact__v">{{ party_b.display_name if party_b else candidate.party_b }}</span></div>
+            <div class="fact"><span class="fact__k">ID</span>
+              <span class="fact__v mono">{{ candidate.party_b }}</span></div>
+          </div>
+        </div>
+      </div>
+      <label class="field field--inline">
+        <input type="checkbox" name="confirm" value="1" required>
+        <span>Tôi xác nhận gộp B → A</span>
+      </label>
+    </div>
+    <div class="modal__foot">
+      <button type="button" class="btn btn--ghost"
+              onclick="this.closest('.modal-backdrop').remove()">Hủy</button>
+      <button type="submit" class="btn btn--primary">Merge A←B</button>
+    </div>
+  </form>
+</div></div>
+{% else %}
+<div class="crm-page page-enter" data-surface="S04">
+  <div class="crm-pagehead">
+    <div>
+      <div class="caption crm-pagehead__eyebrow">QUẢN TRỊ</div>
+      <h1 class="crm-pagehead__title">Trùng lặp chờ duyệt</h1>
+    </div>
+    <div class="crm-pagehead__aside">
+      <span class="bdg bdg--warn"><span class="bdg__dot"></span> Pending: {{ candidates | length }}</span>
+      <div class="fsel">
+        <div class="caption fsel__label">MATCH RULE</div>
+        <div class="fsel__field">
+          <select name="match_rule" hx-get="/dedup" hx-target="body" hx-push-url="true">
+            <option value="" {% if not match_rule_filter %}selected{% endif %}>Tất cả quy tắc</option>
+            <option value="exact_phone" {% if match_rule_filter == "exact_phone" %}selected{% endif %}>Exact phone</option>
+            <option value="exact_email" {% if match_rule_filter == "exact_email" %}selected{% endif %}>Exact email</option>
+            <option value="fts_name_phone" {% if match_rule_filter == "fts_name_phone" %}selected{% endif %}>FTS name+phone</option>
+          </select>
+          <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if not candidates %}
+  <div class="state"><div class="state__inner">
+    <div class="state__title">Không có candidate nào cần xử lý</div>
+    <div class="state__sub">Tất cả cặp khách hàng nghi ngờ trùng đã được xử lý.</div>
+  </div></div>
+  {% else %}
+  <div class="dedup-grid">
+    <div class="cand-list">
+      {% for c in candidates %}
+      <div class="cand-row" id="cand-{{ c.candidate_id }}">
+        <div class="cand-row__top">
+          <span class="cand-row__names">
+            {{ party_names.get(c.party_a, c.party_a) }}
+            <span class="muted">vs </span>
+            {{ party_names.get(c.party_b, c.party_b) }}
+          </span>
+        </div>
+        <span class="cand-row__rule">{{ c.match_rule }}</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div>
+      {% for c in candidates %}
+      <div id="detail-{{ c.candidate_id }}">
+        <div class="dedup-compare">
+          <div class="dedup-card dedup-card--survive">
+            <span class="dedup-card__tag bdg bdg--accent">GIỮ LẠI</span>
+            <div class="facts">
+              <div class="fact"><span class="fact__k">Party A</span> <span class="fact__v">{{ party_names.get(c.party_a, c.party_a) }}</span></div>
+              <div class="fact"><span class="fact__k">ID</span> <span class="fact__v mono">{{ c.party_a }}</span></div>
+              <div class="fact"><span class="fact__k">Rule</span> <span class="fact__v mono">{{ c.match_rule }}</span></div>
+              <div class="fact"><span class="fact__k">Score</span> <span class="fact__v mono">{{ "%.2f" | format(c.match_score) }}</span></div>
+            </div>
+            <a href="/customers/{{ c.party_a }}" class="ghost-link">Xem hồ sơ {% include "icons/external.svg" %}</a>
+          </div>
+          <div class="dedup-card">
+            <span class="dedup-card__tag bdg">GỘP VÀO</span>
+            <div class="facts">
+              <div class="fact"><span class="fact__k">Party B</span> <span class="fact__v">{{ party_names.get(c.party_b, c.party_b) }}</span></div>
+              <div class="fact"><span class="fact__k">ID</span> <span class="fact__v mono">{{ c.party_b }}</span></div>
+              <div class="fact"><span class="fact__k">Thời gian</span> <span class="fact__v mono">{{ c.created_at | format_ict }}</span></div>
+            </div>
+            <a href="/customers/{{ c.party_b }}" class="ghost-link">Xem hồ sơ {% include "icons/external.svg" %}</a>
+          </div>
+        </div>
+        <div class="caveat caveat--rule">
+          <span class="caveat__mark">{% include "icons/bolt.svg" %}</span>
+          Match rule: <b>{{ c.match_rule }}</b> · Score {{ "%.2f" | format(c.match_score) }} · {{ c.created_at | format_ict }}
+        </div>
+        <div class="dedup-detail-actions">
+          <button class="btn btn--primary"
+                  hx-get="/dedup/{{ c.candidate_id }}/modal/merge"
+                  hx-target="#modal" hx-swap="innerHTML">
+            {% include "icons/merge.svg" %} Merge A&#8592;B
+          </button>
+          <button class="btn btn--secondary"
+                  hx-post="/dedup/{{ c.candidate_id }}/reject"
+                  hx-target="#cand-{{ c.candidate_id }}" hx-swap="outerHTML"
+                  hx-confirm="Từ chối cặp khách này?">Reject</button>
+          <button class="btn btn--ghost">Bỏ qua</button>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+<div id="modal"></div>
+{% endif %}
+{% endblock %}

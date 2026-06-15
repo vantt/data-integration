@@ -1,0 +1,159 @@
+{# ── M07 Create Campaign ───────────────────────────────────────────────────── #}
+{% macro modal_create_campaign(segments, users) %}
+<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M07">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div><div class="modal__title">Tạo chiến dịch mới</div></div>
+      <button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">✕</button>
+    </div>
+    <form hx-post="/campaigns" hx-target="body" hx-push-url="true">
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">Tên chiến dịch<span class="field__req">*</span></span>
+          <input class="inp" type="text" name="name" required placeholder="React-Jul-2026">
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">Mục tiêu<span class="field__req">*</span></span>
+            <div class="inp-sel">
+              <select name="objective" required>
+                <option value="">-- Chọn --</option>
+                {% for obj in ["reactivation","winback","upsell","crosssell"] %}
+                <option value="{{ obj }}">{{ obj }}</option>
+                {% endfor %}
+              </select>
+              <span class="inp-sel__chev">⌄</span>
+            </div>
+          </label>
+          <label class="field">
+            <span class="field__label">Kênh<span class="field__req">*</span></span>
+            <div class="inp-sel">
+              <select name="channel" required>
+                <option value="">-- Chọn --</option>
+                {% for ch in ["messenger","call","email","zalo"] %}
+                <option value="{{ ch }}">{{ ch }}</option>
+                {% endfor %}
+              </select>
+              <span class="inp-sel__chev">⌄</span>
+            </div>
+          </label>
+        </div>
+        <label class="field">
+          <span class="field__label">Segment<span class="field__req">*</span></span>
+          <div class="inp-sel">
+            <select name="segment_id" required>
+              <option value="">-- Chọn segment --</option>
+              {% for seg in segments %}
+              <option value="{{ seg.segment_id }}">{{ seg.name }}</option>
+              {% endfor %}
+            </select>
+            <span class="inp-sel__chev">⌄</span>
+          </div>
+          <span class="field__hint">Chỉ khách đã consent (R1) được liên hệ.</span>
+        </label>
+        <label class="field">
+          <span class="field__label">Ngày bắt đầu<span class="field__req">*</span></span>
+          <input class="inp inp--mono" type="date" name="scheduled_at" required>
+        </label>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Tạo &amp; Kích hoạt</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endmacro %}
+
+{# ── M07 Edit Campaign ────────────────────────────────────────────────────── #}
+{% macro modal_edit_campaign(campaign, segments) %}
+<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M07">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div><div class="modal__title">Sửa chiến dịch</div></div>
+      <button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">✕</button>
+    </div>
+    <form hx-patch="/campaigns/{{ campaign.campaign_id }}" hx-target="#modal" hx-swap="innerHTML">
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">Tên chiến dịch<span class="field__req">*</span></span>
+          <input class="inp" type="text" name="name" value="{{ campaign.name }}" required>
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">Mục tiêu<span class="field__req">*</span></span>
+            <div class="inp-sel">
+              <select name="objective" required>
+                {% for obj in ["reactivation","winback","upsell","crosssell"] %}
+                <option value="{{ obj }}"{% if campaign.objective == obj %} selected{% endif %}>{{ obj }}</option>
+                {% endfor %}
+              </select>
+              <span class="inp-sel__chev">⌄</span>
+            </div>
+          </label>
+          <label class="field">
+            <span class="field__label">Kênh</span>
+            <div class="inp-sel">
+              <select name="channel">
+                {% for ch in ["messenger","call","email","zalo"] %}
+                <option value="{{ ch }}"{% if campaign.channel == ch %} selected{% endif %}>{{ ch }}</option>
+                {% endfor %}
+              </select>
+              <span class="inp-sel__chev">⌄</span>
+            </div>
+          </label>
+        </div>
+        <label class="field">
+          <span class="field__label">Segment</span>
+          <div class="inp-sel">
+            <select name="segment_id">
+              <option value="">-- Không --</option>
+              {% for seg in segments %}
+              <option value="{{ seg.segment_id }}"{% if campaign.segment_id == seg.segment_id %} selected{% endif %}>{{ seg.name }}</option>
+              {% endfor %}
+            </select>
+            <span class="inp-sel__chev">⌄</span>
+          </div>
+        </label>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endmacro %}
+
+{# ── M12 Record Conversion ────────────────────────────────────────────────── #}
+{% macro modal_record_conversion(campaign_id, party_id, party_name) %}
+<div class="modal-scrim" onmousedown="if(event.target===this)this.parentElement.innerHTML=''" data-surface="M12">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">Ghi chuyển đổi</div>
+        <div class="modal__sub">{{ party_name }}</div>
+      </div>
+      <button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">✕</button>
+    </div>
+    <form hx-post="/campaigns/{{ campaign_id }}/targets/{{ party_id }}/convert" hx-target="#modal" hx-swap="innerHTML">
+      <input type="hidden" name="party_id" value="{{ party_id }}">
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">Mã đơn hàng</span>
+          <input class="inp inp--mono" type="text" name="order_code" placeholder="ORD-20060901">
+          <span class="field__hint">Để trống nếu muốn ghi thủ công.</span>
+        </label>
+        <label class="field">
+          <span class="field__label">Doanh thu ước tính (đ)</span>
+          <input class="inp inp--mono" type="number" name="revenue_vnd" min="0" placeholder="0">
+        </label>
+      </div>
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Ghi nhận</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endmacro %}
