@@ -1,26 +1,30 @@
 ---
-title: "05 · Action Plans — Kế hoạch đã cam kết"
+title: "STAGE-05 — Action Plans: Kế hoạch đã cam kết"
 stage: 5
+status: living
 ---
 
-# 05 · Action Plans — Kế hoạch đã cam kết
+# STAGE-05 — Action Plans: Kế Hoạch Đã Cam Kết
 
-> **Luồng:** ← [04-opportunities](../04-opportunities/) (cơ hội đã được [03](../03-evaluate/) đánh giá & promote) · → [06-execute](../06-execute/) (thực thi)
+> **Luồng:** ← [04-opportunities](../04-opportunities/) sau khi được [03-evaluate](../03-evaluate/) promote · → [06-execute](../06-execute/) để chạy và đo.
 
-Stage này chứa các kế hoạch hành động đã được cam kết triển khai — nghĩa là cơ hội đã qua đánh giá ở stage 03, được promote từ stage 04, và đã có owner + timeline rõ ràng. Mỗi file là một nhóm action cohesion cao, sẵn sàng để stage 06 pick up và thực thi.
+Stage này chứa các kế hoạch hành động đã cam kết triển khai: có owner, timeline, KPI và execution path. Worklist có PII không được commit vào repo.
 
 ## Index
 
-| File | Nội dung | Status |
-|---|---|---|
-| [b2c-reactivation-phases.md](./b2c-reactivation-phases.md) | Lộ trình P0–P4: từ quick wins (0-build) đến vận hành retention hệ thống | committed |
-| [action-flows.md](./action-flows.md) | 5 luồng hành động, lịch vận hành tuần, offer matrix, holdout, checklist, 3-touchpoint onboarding | committed |
-| [us-gift-recipients.md](./us-gift-recipients.md) | Luồng riêng cho 824 người nhận quà US — test 51 khách nóng trước khi mở rộng | pending |
+| ID | File | Nội dung | Status |
+|---|---|---|---|
+| PLAN-001 | [B2C reactivation phases](./PLAN-001-b2c-reactivation-phases.md) | Lộ trình P0-P4 từ quick wins đến retention operating system | committed |
+| PLAN-002 | [Action flows](./PLAN-002-action-flows.md) | 5 luồng hành động, lịch tuần, offer matrix, holdout, checklist, onboarding | committed |
+| PLAN-003 | [US gift recipients](./PLAN-003-us-gift-recipients.md) | Luồng người nhận quà US; test 51 khách nóng trước khi mở rộng | pending |
 
-## Cảnh báo PII
+## Cảnh Báo PII
 
-Worklist export (tên/SĐT khách) sinh ra từ các kế hoạch này **KHÔNG được commit vào git**. Lưu ngoài repo (Google Sheet hoặc thư mục local không-tracked).
+Worklist export (tên/SĐT khách) sinh ra từ các kế hoạch này **không được commit vào git**. Lưu ngoài repo, ví dụ Google Sheet hoặc thư mục local không tracked.
 
-## Thêm plan mới
+## Thêm Plan Mới
 
-Promote cơ hội từ [04-opportunities](../04-opportunities/) sau khi đã chấm điểm và đánh giá ở [03-evaluate](../03-evaluate/). Mỗi plan mới trong folder này phải có owner, timeline, và KPI rõ ràng trước khi commit.
+1. Promote cơ hội từ [04-opportunities](../04-opportunities/) sau khi đã đánh giá ở [03-evaluate](../03-evaluate/).
+2. Dùng prefix `PLAN-###`.
+3. Mỗi plan phải có owner, timeline, KPI, holdout/measurement rule nếu có outreach.
+4. Cập nhật [REGISTRY.md](../REGISTRY.md), README stage này, và [06-execute/operating-board.md](../06-execute/operating-board.md) nếu plan đã sẵn sàng chạy.

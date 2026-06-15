@@ -9,7 +9,7 @@ related: [guides/analytics_improvement_opportunities.md, mart_customer_action_qu
 
 # Chẩn đoán "bán ế" & Playbook khai thác dữ liệu
 
-> **Archive notice:** Bản nguồn lịch sử/provenance only. Không dùng file này như tài liệu vận hành hiện tại; đọc luồng hiện hành từ [../plan.md](../plan.md).
+> **Archive notice:** Bản nguồn lịch sử/provenance only. Không dùng file này như tài liệu vận hành hiện tại; đọc luồng hiện hành từ [../06-execute/operating-board.md](../06-execute/operating-board.md).
 
 > **Mục đích.** Trả lời: "Bán ế — khai thác data nào để gợi ý hành động cho Marketing/CSKH/Sales?"
 > Tài liệu dựa trên **số thật** truy vấn từ warehouse 2026-06-04
@@ -710,4 +710,4 @@ egotiated_deep`) chiếm bao nhiêu % doanh thu 2023–2025? (cần chạy thêm
 ---
 
 *Kế hoạch triển khai chi tiết (phase P0–P4, todo, owner, KPI):*
-[`plan.md`](../plan.md)
+[`06-execute/operating-board.md`](../06-execute/operating-board.md)

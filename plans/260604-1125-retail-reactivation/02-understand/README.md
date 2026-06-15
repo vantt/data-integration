@@ -1,60 +1,54 @@
 ---
-title: "02 · Understand — Khám phá & điều tra"
+title: "STAGE-02 — Understand: Khám phá & điều tra"
 stage: 2
 status: living
 ---
 
-# 02 · Understand — Khám phá & điều tra
+# STAGE-02 — Understand: Khám Phá & Điều Tra
 
-> **Luồng:** ← [01-perspectives](../01-perspectives/) · → [03-evaluate](../03-evaluate/) (đánh giá findings)
+> **Luồng:** ← [01-perspectives](../01-perspectives/) · → [03-evaluate](../03-evaluate/) khi finding đủ rõ để đánh giá hoặc chốt quyết định.
 
-Mục đích: hiểu vấn đề bằng số thật — bóc tách kênh, đo retention, phân khúc khách. Song song điều tra những gì chưa rõ nguyên nhân.
+Mục đích: hiểu vấn đề bằng số thật, field evidence, caveat và open question. Đọc [FIND-000-current-diagnosis](./FIND-000-current-diagnosis.md) trước.
 
----
+## Template
 
-## Đã chốt (resolved)
-
-| File | Nội dung |
+| File | Dùng để |
 |---|---|
-| [channel-mix-illusion.md](channel-mix-illusion.md) | Marketplace che lõi: B2B completed-only trông sụp ~95% (T1→T5), Shopee tạo ảo giác tăng trưởng; xu hướng năm + tháng có số cụ thể ⚠️ xem hiệu chỉnh bên trong |
-| [retention-leak.md](retention-leak.md) | M1 repeat chỉ 3–17% (benchmark 30–50%+); waterfall point-in-time & SQL; model cũ sai 9× |
-| [customer-segments.md](customer-segments.md) | Tệp 1.082 khách lẻ: phân khúc Active/At-Risk/Churned, tín hiệu mua tiếp, rào cản Shopee "thuê không sở hữu", tài sản ẩn US gift |
-| [b2b-collapse-root-cause.md](b2b-collapse-root-cause.md) | ✅ **RESOLVED 2026-06-09:** B2B KHÔNG sụp — artifact completed-only + COD lag (~46–78 ngày) + 491tr OPEN. Cầu 2026 = 2–3× 2025; top VIP vẫn active. |
-| [product-performance-assessment.md](product-performance-assessment.md) | ✅ data product đủ, KHÔNG cần pipeline lớn; reframe: portfolio sức khỏe người lớn tuổi; retention theo sản phẩm (Cordyceps dính, Fucoidan bẫy volume) |
+| [_TEMPLATE-INV-investigation.md](./_TEMPLATE-INV-investigation.md) | Mở investigation/data scan/field audit mới trong stage 02 |
 
----
+## Findings Đã Chốt
 
-## Đang điều tra (open)
+| ID | File | Nội dung |
+|---|---|---|
+| FIND-000 | [current diagnosis](./FIND-000-current-diagnosis.md) | Tóm tắt hiện trạng mới nhất: focus B2C/retail, B2B artifact, cashflow blocked, retention leak, VOC priority |
+| FIND-001 | [channel mix illusion](./FIND-001-channel-mix-illusion.md) | Marketplace che lõi; B2B completed-only nhìn như sụp nhưng cần hiệu chỉnh |
+| FIND-002 | [retention leak](./FIND-002-retention-leak.md) | M1 repeat thấp; waterfall point-in-time; model cũ sai 9× |
+| FIND-003 | [customer segments](./FIND-003-customer-segments.md) | Tệp 1.082 khách lẻ, Active/At-Risk/Churned, Shopee contactability, US gift asset |
+| FIND-004 | [b2b collapse root cause](./FIND-004-b2b-collapse-root-cause.md) | Resolved: B2B không sụp; artifact completed-only + COD lag + OPEN orders |
+| FIND-005 | [product performance assessment](./FIND-005-product-performance-assessment.md) | Không cần pipeline product lớn; portfolio là sức khỏe người lớn tuổi; retention theo sản phẩm |
+| FIND-006 | [margin activation signals](./FIND-006-margin-activation-signals.md) | Margin thật, delivery, activation signals refresh 2026-06-11 |
+| FIND-007 | [fresh scan data market](./FIND-007-fresh-scan-data-market.md) | Fresh scan 2026-06-13: data nội bộ + thị trường + 4 mâu thuẫn cần chốt |
 
-| File | Giả thuyết đang kiểm |
-|---|---|
-| [cashflow-collection-ar.md](cashflow-collection-ar.md) | Nghi phạm thật của "ế" — AR/COD 54tr ≤Feb chưa thu; dòng tiền thực vs doanh thu kế toán. 🟠 findings mạnh nhưng BLOCKED (fact_payments rỗng + cần hỏi chủ); ~2.7 tỷ AR B2B cô đặc 2 VIP |
-| [demand-migration-recon.md](demand-migration-recon.md) | Cầu dịch sang TikTok Shop/livestream thay vì mất hoàn toàn |
-| [open-questions.md](open-questions.md) | 9 câu hỏi dữ liệu/vận hành còn OPEN (Q1–Q9; Q8–Q9 thêm 2026-06-09) |
-| [voc-customer-interviews.md](voc-customer-interviews.md) | ⭐ **Đòn bẩy #1** — VOC: tại sao 72% one-timer không quay lại? Phỏng vấn 15 one-time + 10 repeater (NGOÀI hệ thống, owner/CSKH làm tuần này) |
-| [unboxing-experience-audit.md](unboxing-experience-audit.md) | Audit unboxing & follow-up sau mua: hộp lẻ có card/QR/hướng dẫn không? So sánh với TikTok Shop/spa (mystery shopping, NGOÀI hệ thống) |
+## Investigations / Questions Đang Mở
 
----
+| ID | File | Giả thuyết / câu hỏi |
+|---|---|---|
+| INV-001 | [cashflow collection AR](./INV-001-cashflow-collection-ar.md) | Nghi phạm thật của "ế": AR/COD, dòng tiền thực vs doanh thu kế toán; blocked bởi payment data |
+| INV-002 | [demand migration recon](./INV-002-demand-migration-recon.md) | Cầu dịch sang TikTok Shop/livestream thay vì mất hoàn toàn |
+| INV-003 | [VOC customer interviews](./INV-003-voc-customer-interviews.md) | Tại sao 72% one-timer không quay lại? |
+| INV-004 | [unboxing experience audit](./INV-004-unboxing-experience-audit.md) | Hộp lẻ có card/QR/hướng dẫn không? Follow-up sau mua ra sao? |
+| Q-001 | [open questions](./Q-001-open-questions.md) | Câu hỏi dữ liệu/vận hành còn mở |
 
-## Mở điều tra mới
+## Companion
 
-Tạo file mới theo template dưới, `status: open`; khi có kết luận → đổi `status: resolved`.
+| ID | File | Parent |
+|---|---|---|
+| COMP-001 | [VOC interview script](./COMP-001-voc-interview-script.md) | [INV-003](./INV-003-voc-customer-interviews.md) |
 
-```markdown
----
-title: "Điều tra: <tên giả thuyết>"
-stage: 2
-status: open
-source: ../archive/2026-06-04-original-sales-slowdown-playbook.md
----
+## Mở Điều Tra Mới
 
-## Giả thuyết
-
-## Câu hỏi cần trả lời
-
-## Cách điều tra
-
-## Bằng chứng đã có
-
-## Kết luận
-```
+1. Copy [_TEMPLATE-INV-investigation.md](./_TEMPLATE-INV-investigation.md).
+2. Dùng prefix `INV-###` nếu đang điều tra, `FIND-###` nếu đã là kết luận evidence-backed, `Q-###` nếu chỉ là câu hỏi mở.
+3. Viết TL;DR ở đầu file, kể cả khi kết luận là "chưa biết".
+4. Cập nhật README này, [REGISTRY.md](../REGISTRY.md), và [FIND-000](./FIND-000-current-diagnosis.md) nếu diagnosis tổng thay đổi.
+5. Nếu có quyết định chiến lược, cập nhật [DEC-001](../03-evaluate/DEC-001-decision-register.md).

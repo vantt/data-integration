@@ -1,82 +1,42 @@
 ---
-title: "04 · Opportunities — Hướng actions (backlog, chưa cam kết)"
+title: "STAGE-04 — Opportunities: Backlog cơ hội"
 stage: 4
 status: living
 ---
 
-# 04 · Opportunities — Hướng actions (backlog, chưa cam kết)
+# STAGE-04 — Opportunities: Backlog Cơ Hội
 
-> **Luồng:** ← [01](../01-perspectives/) (lens) / [02](../02-understand/) (finding) / [03](../03-evaluate/) (đánh giá) · → [05-action-plans](../05-action-plans/) (promote thành plan sau khi chấm điểm ở 03)
+> **Luồng:** ← [01](../01-perspectives/) lens / [02](../02-understand/) finding / [03](../03-evaluate/) decision · → [05-action-plans](../05-action-plans/) khi được promote.
 
-**Mục đích:** Nơi gom MỌI cơ hội action ứng viên — GTM plays + data gaps — để đánh giá rồi mới cam kết. Không có gì ở đây là đã quyết định. Đây là **không gian mở rộng** — càng nhiều ứng viên càng tốt trước khi lọc.
+Đây là nơi gom cơ hội action ứng viên. Không có gì ở stage 04 là cam kết cho đến khi được đánh giá ở 03 và promote sang 05.
 
----
+## Files Trong Folder
 
-## Index tổng — tất cả opportunities
-
-| Opportunity | Nguồn (lens/finding) | Loại | Status |
+| ID | File | Nội dung | Status |
 |---|---|---|---|
-| **⭐O1 Lái acquisition sang SKU gateway** (+450tr LTV) | L7 — fresh-scan 2026-06-13 | Data/GTM — gốc rễ | idea |
-| **⭐O2 Bắt liên hệ Shopee → Zalo OA** [cấu trúc #1] | L2 — fresh-scan 2026-06-13 | GTM/Data | idea |
-| **⭐O3 Lập Zalo OA verified** [hạ tầng nền] | H — fresh-scan 2026-06-13 | Hạ tầng — làm trước | idea |
-| **O4 Calibrate timing chu kỳ 30/45 ngày** | F — fresh-scan 2026-06-13 | Data — dùng ngay | idea |
-| **O5 Census mép cứu-được (116 khách/1.17 tỷ)** | F — fresh-scan 2026-06-13 | Data — dùng ngay | idea |
-| **O6 Pocket địa lý (ĐBSCL/Tây Nguyên/Đà Nẵng)** | D — fresh-scan 2026-06-13 | Retail/offline | idea |
-| **O7 Kênh nhà thuốc chuỗi (Long Châu/An Khang)** | G — fresh-scan 2026-06-13 | GTM play | idea |
-| **O8 Hợp nhất giá + dẹp xung đột 2 site nhà** | §I audit kênh nhà 2026-06-13 | GTM — làm ngay | idea |
-| **O9 Nạp đủ catalog vào kênh nhà (web/Zalo)** | §I audit kênh nhà 2026-06-13 | GTM/Data | idea |
-| **O10 Gift bundle kênh nhà (Tết/8-3/T11)** | §I + L5 | GTM play | idea |
-| **O11 Timeline/liệu trình + tem QR trang SP** | §I — giải Q17 | Messaging/Trust | idea |
-| **① Bộ "bằng chứng kết quả"** [khuyến nghị mũi nhọn] | L1 — retail-offline-plays | Retail/offline play | idea |
-| **② Vỉ 30 ngày + neo thói quen** | L3 — retail-offline-plays | Retail/offline play | idea |
-| **③ Kênh spa/clinic/dược + micro-KOL** [khuyến nghị mũi nhọn] | L2, L4 — retail-offline-plays | Retail/offline play | idea |
-| **④ Trust/chính hãng + tư vấn video Zalo** | L4, L6 — retail-offline-plays | Retail/offline play | idea |
-| **⑤ Quà biếu theo dịp** | L5 — retail-offline-plays | Retail/offline play | idea |
-| **⑥ Cộng đồng before/after** | L1 + referral — retail-offline-plays | Retail/offline play | idea |
-| **⑦ CSKH thành tư vấn viên + SLA phản hồi** | L4 — retail-offline-plays | Retail/offline play | idea |
-| **JTBD: Bán "kết quả/sự kiện"** | B4 — first-principles-lenses | GTM play | idea |
-| **Subscribe & Save** | B5 — first-principles-lenses | GTM play | idea |
-| **Trust/Chính hãng làm con hào** | B6 — first-principles-lenses | GTM play | idea |
-| **Touch "kết quả" + Referral Flywheel** | B7 — first-principles-lenses | GTM play | idea |
-| **Message Core → channel adapters** (listing/telesales > ads-deferred) | L1/L2/L4/L6 — messaging-core | Messaging asset | idea (pending product+VOC) |
-| **Chạy call-list `mart_customer_action_queue`** (~1.76 tỷ) | §7.1 playbook | Data — dùng ngay | idea |
-| **`REORDER_PREEMPT` cho nhóm DUE_SOON** | §7.1 playbook | Data — dùng ngay | idea |
-| **Phân tích `return_reason`** | §7.1 playbook | Data — dùng ngay | idea |
-| **FB Messenger pipeline (FRT/AHT)** | §7.2 playbook | Data — build nhỏ | idea |
-| **Surface `debt` công nợ sỉ** | §7.2 playbook | Data — build nhỏ | idea |
-| **Parse `tags` sản phẩm (JSON)** | §7.2 playbook | Data — build nhỏ | idea |
-| **`first_order_channel` (cohort theo kênh)** | §4.5 + §7.2 playbook | Data — build nhỏ | idea |
-| **`is_contactable` cờ lọc tệp** | §4.5 playbook | Data — build nhỏ | idea |
-| **`is_us_gift_recipient` cờ tách luồng US** | §4.5 + §6.5 playbook | Data — build nhỏ | idea |
-| **Shopee→owned migration tracking** | §4.5 playbook | Data — build nhỏ | idea |
-| **`mart_retention_waterfall_monthly` (point-in-time)** | §3.3 playbook | Data — build lớn | idea |
-| **Dashboard "Retention Health" (Metabase)** | §3.3 playbook | Data — build lớn | idea |
-| **Market-basket model (frequently-bought-together)** | §7.3 playbook | Data — build lớn | idea |
-| **ROAS cấp chiến dịch (FB Ads)** | §7.3 playbook | Data — build lớn | idea |
-| **Phễu trước mua (session/add-to-cart)** | §7.3 playbook | Data — build lớn | idea |
-| **Churn-propensity / CLV dự báo** | §7.3 playbook | Data — build lớn | idea |
-| **NPS / voice-of-customer** | §7.3 playbook | Data — build lớn | idea |
+| OPP-001 | [retention mechanisms](./OPP-001-retention-mechanisms.md) | GTM plays từ first-principles: JTBD, Subscribe&Save, Trust, Referral | idea |
+| OPP-002 | [retail offline plays](./OPP-002-retail-offline-plays.md) | 7 cơ hội bán lẻ ngoài hệ thống | idea |
+| OPP-003 | [messaging core](./OPP-003-messaging-core.md) | Lõi thông điệp → adapter kênh; ads gác lại | idea |
+| OPP-004 | [data backlog](./OPP-004-data-backlog.md) | Data opportunities: dùng ngay / build nhỏ / build lớn | idea |
+| TEMPLATE | [_TEMPLATE-OPP-opportunity](./_TEMPLATE-OPP-opportunity.md) | Scaffold mở cho opportunity mới | template |
 
----
+## Opportunity Index
 
-## Files trong folder này
+Các nhóm đang đáng chú ý nhất:
 
-| File | Nội dung |
-|---|---|
-| [retention-mechanisms.md](./retention-mechanisms.md) | 4 GTM plays từ lens B (JTBD, Subscribe&Save, Trust, Referral) |
-| [retail-offline-plays.md](./retail-offline-plays.md) | 7 cơ hội bán lẻ ngoài hệ thống (session ultrathink 2026-06-09) |
-| [messaging-core.md](./messaging-core.md) | Lõi thông điệp → adapter mỗi kênh (telesales/listing/ads…); ads gác lại; chờ product+VOC |
-| [data-backlog.md](./data-backlog.md) | Data opportunities — 3 nhóm: dùng ngay / build nhỏ / build lớn |
-| [_TEMPLATE-opportunity.md](./_TEMPLATE-opportunity.md) | Template thêm opportunity mới |
+| Opportunity | Source | Moves to |
+|---|---|---|
+| Shopee→Zalo QR capture + Zalo OA | [FIND-007](../02-understand/FIND-007-fresh-scan-data-market.md) | PLAN |
+| Gift engine quà sức khỏe biếu bố mẹ | [PERS-004](../01-perspectives/PERS-004-engine-vs-treadmill-synthesis.md) | PLAN |
+| Gateway SKU + catalog kênh nhà | [FIND-005](../02-understand/FIND-005-product-performance-assessment.md), [FIND-007](../02-understand/FIND-007-fresh-scan-data-market.md) | PLAN |
+| Message Core → telesales/listing/ads deferred | [OPP-003](./OPP-003-messaging-core.md) | PLAN / copy |
+| Data gaps: payment, return_reason, contactable, US gift recipient | [OPP-004](./OPP-004-data-backlog.md) | 02 / 05 |
 
----
+## Cách Thêm Cơ Hội Mới
 
-## Cách thêm cơ hội mới
-
-1. Copy `_TEMPLATE-opportunity.md` → đặt tên mô tả (vd: `b2b-reactivation-outreach.md`).
-2. Điền đầy đủ các mục: Ý tưởng · Vì sao · Cách triển khai · Nguồn · Chấm điểm.
-3. Chấm điểm bằng framework tại [../03-evaluate/evaluation-framework.md](../03-evaluate/evaluation-framework.md).
-4. Thêm vào bảng Index ở trên.
-5. Khi đã chấm điểm và quyết định → promote sang [../05-action-plans/](../05-action-plans/) và đổi status thành `promoted`.
-
-> **Không cần hoàn chỉnh trước khi thêm vào đây.** Một dòng ý tưởng thô cũng được — điền dần.
+1. Copy [_TEMPLATE-OPP-opportunity.md](./_TEMPLATE-OPP-opportunity.md).
+2. Dùng prefix `OPP-###`.
+3. Ghi `from`, `moves_to`, source evidence, proposed move, success signal, risk/blocker.
+4. Chấm điểm bằng [RUBRIC-001](../03-evaluate/RUBRIC-001-evaluation-framework.md) khi đủ evidence.
+5. Cập nhật README này và [REGISTRY.md](../REGISTRY.md).
+6. Khi được chọn, promote sang [05-action-plans](../05-action-plans/) và đổi status thành `promoted`.
