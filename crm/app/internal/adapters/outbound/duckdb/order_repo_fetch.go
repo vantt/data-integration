@@ -317,7 +317,7 @@ func (r *OrderRepo) fetchLineItems(ctx context.Context, orderID string) ([]domai
 	const q = `
 		SELECT fs.order_line_id, dp.sku, dp.product_name, dp.variant_name,
 		       dp.brand_name, dp.category, dp.unit,
-		       fs.quantity,
+		       CAST(fs.quantity                    AS DOUBLE) AS quantity,
 		       CAST(fs.net_revenue                AS DOUBLE) AS revenue,
 		       CAST(fs.discount_amount             AS DOUBLE) AS discount_amount,
 		       CAST(fs.distributed_discount_amount AS DOUBLE) AS distributed_discount_amount,
@@ -329,7 +329,7 @@ func (r *OrderRepo) fetchLineItems(ctx context.Context, orderID string) ([]domai
 
 	rows, err := r.db.QueryContext(ctx, q, orderID)
 	if err != nil {
-		return []domain.LineItem{}, nil // degrade gracefully
+		return []domain.LineItem{}, nil
 	}
 	defer rows.Close()
 
@@ -338,12 +338,12 @@ func (r *OrderRepo) fetchLineItems(ctx context.Context, orderID string) ([]domai
 		var (
 			sID, sSKU, sProd, sVar sql.NullString
 			sBrand, sCat, sUnit    sql.NullString
-			iQty                   sql.NullInt64
+			fQty                   sql.NullFloat64 // DECIMAL(18,2) in fact_sales → must CAST AS DOUBLE in SQL
 			fRev, fDisc, fDDist   sql.NullFloat64
 			fWt                    sql.NullFloat64
 		)
 		if err := rows.Scan(&sID, &sSKU, &sProd, &sVar, &sBrand, &sCat, &sUnit,
-			&iQty, &fRev, &fDisc, &fDDist, &fWt); err != nil {
+			&fQty, &fRev, &fDisc, &fDDist, &fWt); err != nil {
 			continue
 		}
 		item := domain.LineItem{
@@ -354,7 +354,7 @@ func (r *OrderRepo) fetchLineItems(ctx context.Context, orderID string) ([]domai
 			BrandName:                 ns(sBrand),
 			Category:                  ns(sCat),
 			Unit:                      ns(sUnit),
-			Quantity:                  int(iQty.Int64),
+			Quantity:                  int(math.Round(fQty.Float64)),
 			Revenue:                   ni(fRev),
 			DiscountAmount:            ni(fDisc),
 			DistributedDiscountAmount: ni(fDDist),
