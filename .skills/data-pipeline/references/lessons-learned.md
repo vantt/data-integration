@@ -4094,3 +4094,32 @@ Pre-pivoted cards are window-type-aware by design: they only make sense for the 
 5. DuckDB connector scans ALL tables in the database by default — add `schemas: [main_marts]` to `connection.yaml` to limit to serving layer only (prevents crawling hundreds of raw tables at startup).
 
 **Reference:** `evidence/pages/ceo-weekly-pulse/` (customers.md line 73/160, index.md line 89 — fixed 2026-06-13)
+
+### L131 — CRM reverse-ETL: `crm_party_identity.identity_value` stores numeric customer_id, not MD5 customer_key
+
+**Group:** SERVE
+
+**Symptom:** SQL JOIN between `cache.wh_action_queue.customer_key` (MD5 hash like `33b8f275...`) and `crm_party_identity.identity_value` returns 0 matches, so `party_id` is always NULL and UI links fall back to search instead of the customer profile.
+
+**Root cause:** Two different representations of the same customer exist in the pipeline:
+- `wh_action_queue.customer_key` — 32-char MD5 surrogate key used by the warehouse dimension model
+- `crm_party_identity.identity_value` — the raw **numeric** Sapo customer ID (e.g. `100035814`) stored when `syncparties` runs `FindByIdentity(ctx, "sapo_customer", ...)`
+
+Directly joining `pi.identity_value = a.customer_key` compares a numeric string to an MD5 — will never match.
+
+**Fix:** Bridge via `cache.wh_party_seed` which holds both columns:
+```sql
+LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
+LEFT JOIN crm_party_identity pi
+       ON pi.identity_type = 'sapo_customer'
+      AND pi.identity_value = CAST(ps.customer_id AS TEXT)
+```
+`wh_party_seed.customer_id` is the integer Sapo ID; `CAST(... AS TEXT)` makes it match the TEXT column in `crm_party_identity`.
+
+**Rules:**
+1. When joining warehouse cache tables to CRM identity tables, always check which identifier format each side uses — MD5 vs numeric are NOT interchangeable.
+2. `wh_party_seed` is the canonical bridge: `customer_key (MD5) ↔ customer_id (INTEGER)`.
+3. `crm_party_identity` stores `identity_value` as TEXT even for numeric IDs — always `CAST(integer_col AS TEXT)` on the join side.
+4. Before assuming a JOIN works, verify with `COUNT(*)` on the live DB and inspect a few sample values from each side.
+
+**Reference:** `crm/app/internal/adapters/outbound/sqlite/cache_repo.go:ListAllActionQueue` (fixed 2026-06-15, commit e3cfed3)
