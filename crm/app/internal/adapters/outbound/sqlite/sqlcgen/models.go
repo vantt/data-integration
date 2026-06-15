@@ -170,15 +170,17 @@ type CrmPartyFt struct {
 }
 
 type CrmPartyIdentity struct {
-	IdentityID    string         `json:"identity_id"`
-	PartyID       string         `json:"party_id"`
-	SourceSystem  string         `json:"source_system"`
-	IdentityType  string         `json:"identity_type"`
-	IdentityValue string         `json:"identity_value"`
-	Confidence    float64        `json:"confidence"`
-	IsPrimary     int64          `json:"is_primary"`
-	VerifiedAt    sql.NullString `json:"verified_at"`
-	CreatedAt     string         `json:"created_at"`
+	IdentityID           string         `json:"identity_id"`
+	PartyID              string         `json:"party_id"`
+	SourceSystem         string         `json:"source_system"`
+	IdentityType         string         `json:"identity_type"`
+	IdentityValue        string         `json:"identity_value"`
+	Confidence           float64        `json:"confidence"`
+	IsPrimary            int64          `json:"is_primary"`
+	VerifiedAt           sql.NullString `json:"verified_at"`
+	SourceContactQuality string         `json:"source_contact_quality"`
+	ContactQuality       string         `json:"contact_quality"`
+	CreatedAt            string         `json:"created_at"`
 }
 
 type CrmPartyMergeLog struct {

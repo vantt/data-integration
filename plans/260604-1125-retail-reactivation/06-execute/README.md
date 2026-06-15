@@ -80,6 +80,7 @@ flowchart TD
 | Day-7 engagement rate | % khách mới phản hồi Touch 1 hoặc Touch 2 | Ghi vào Sheet tracking |
 | “Thấy hiệu quả” rate | % WIN_BACK/SECOND_ORDER call trả lời “có thấy hiệu quả” | Cột trong Sheet outcome |
 | Dùng đúng cách Y/N | % khách được tư vấn lại sau khi nói “không thấy gì” | Cột trong Sheet |
+| **Shopee → direct contact capture rate** | % đơn Shopee mà team lấy được SĐT/Zalo để đưa vào kênh trực tiếp | `captured_direct / shopee_orders` — cập nhật hàng tuần trong Sheet |
 
 > Nếu Day-7 engagement thấp, product journey chưa hoạt động; call-list về sau sẽ không đủ.
 

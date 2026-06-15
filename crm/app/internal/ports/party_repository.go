@@ -44,4 +44,8 @@ type PartyRepository interface {
 	// CreateWithIdentities inserts a party and all supplied identities in a single
 	// atomic transaction. Prevents an orphan party row when identity attachment fails mid-way.
 	CreateWithIdentities(ctx context.Context, p *domain.Party, identities []*domain.PartyIdentity) error
+
+	// UpdateContactQuality updates the mutable contact_quality field on an identity row.
+	// Valid values: masked | unverified | verified.
+	UpdateContactQuality(ctx context.Context, identityID, quality string) error
 }

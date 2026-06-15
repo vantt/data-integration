@@ -171,15 +171,17 @@ func (r *PartyRepo) CreateWithIdentities(ctx context.Context, p *domain.Party, i
 			verifiedAt = sql.NullString{String: *id.VerifiedAt, Valid: true}
 		}
 		if err := qtx.UpsertPartyIdentity(ctx, sqlcgen.UpsertPartyIdentityParams{
-			IdentityID:    id.IdentityID,
-			PartyID:       id.PartyID,
-			SourceSystem:  id.SourceSystem,
-			IdentityType:  id.IdentityType,
-			IdentityValue: id.IdentityValue,
-			Confidence:    id.Confidence,
-			IsPrimary:     boolToInt(id.IsPrimary),
-			VerifiedAt:    verifiedAt,
-			CreatedAt:     id.CreatedAt,
+			IdentityID:           id.IdentityID,
+			PartyID:              id.PartyID,
+			SourceSystem:         id.SourceSystem,
+			IdentityType:         id.IdentityType,
+			IdentityValue:        id.IdentityValue,
+			Confidence:           id.Confidence,
+			IsPrimary:            boolToInt(id.IsPrimary),
+			VerifiedAt:           verifiedAt,
+			SourceContactQuality: id.SourceContactQuality,
+			ContactQuality:       id.ContactQuality,
+			CreatedAt:            id.CreatedAt,
 		}); err != nil {
 			return fmt.Errorf("party repo: upsert identity %s in tx: %w", id.IdentityType, err)
 		}
@@ -197,18 +199,32 @@ func (r *PartyRepo) UpsertIdentity(ctx context.Context, id *domain.PartyIdentity
 		verifiedAt = sql.NullString{String: *id.VerifiedAt, Valid: true}
 	}
 	err := r.q.UpsertPartyIdentity(ctx, sqlcgen.UpsertPartyIdentityParams{
-		IdentityID:    id.IdentityID,
-		PartyID:       id.PartyID,
-		SourceSystem:  id.SourceSystem,
-		IdentityType:  id.IdentityType,
-		IdentityValue: id.IdentityValue,
-		Confidence:    id.Confidence,
-		IsPrimary:     boolToInt(id.IsPrimary),
-		VerifiedAt:    verifiedAt,
-		CreatedAt:     id.CreatedAt,
+		IdentityID:           id.IdentityID,
+		PartyID:              id.PartyID,
+		SourceSystem:         id.SourceSystem,
+		IdentityType:         id.IdentityType,
+		IdentityValue:        id.IdentityValue,
+		Confidence:           id.Confidence,
+		IsPrimary:            boolToInt(id.IsPrimary),
+		VerifiedAt:           verifiedAt,
+		SourceContactQuality: id.SourceContactQuality,
+		ContactQuality:       id.ContactQuality,
+		CreatedAt:            id.CreatedAt,
 	})
 	if err != nil {
 		return fmt.Errorf("party repo: upsert identity: %w", err)
+	}
+	return nil
+}
+
+// UpdateContactQuality updates the mutable contact_quality field on a single identity row.
+func (r *PartyRepo) UpdateContactQuality(ctx context.Context, identityID, quality string) error {
+	err := r.q.UpdateIdentityContactQuality(ctx, sqlcgen.UpdateIdentityContactQualityParams{
+		IdentityID:     identityID,
+		ContactQuality: quality,
+	})
+	if err != nil {
+		return fmt.Errorf("party repo: update contact quality: %w", err)
 	}
 	return nil
 }
@@ -256,14 +272,16 @@ func rowsToParties(rows []sqlcgen.CrmParty) []domain.Party {
 
 func rowToIdentity(r sqlcgen.CrmPartyIdentity) domain.PartyIdentity {
 	id := domain.PartyIdentity{
-		IdentityID:    r.IdentityID,
-		PartyID:       r.PartyID,
-		SourceSystem:  r.SourceSystem,
-		IdentityType:  r.IdentityType,
-		IdentityValue: r.IdentityValue,
-		Confidence:    r.Confidence,
-		IsPrimary:     r.IsPrimary != 0,
-		CreatedAt:     r.CreatedAt,
+		IdentityID:           r.IdentityID,
+		PartyID:              r.PartyID,
+		SourceSystem:         r.SourceSystem,
+		IdentityType:         r.IdentityType,
+		IdentityValue:        r.IdentityValue,
+		Confidence:           r.Confidence,
+		IsPrimary:            r.IsPrimary != 0,
+		SourceContactQuality: r.SourceContactQuality,
+		ContactQuality:       r.ContactQuality,
+		CreatedAt:            r.CreatedAt,
 	}
 	if r.VerifiedAt.Valid {
 		s := r.VerifiedAt.String

@@ -67,10 +67,12 @@ type CacheInsight struct {
 // integer customer_id) so the seed consumer can populate the golden record.
 // They are empty when no matching wh_customer_base row exists.
 type PartySeed struct {
-	CustomerID  int64
-	CustomerKey string
-	SeenAt      string
-	DisplayName string
-	Phone       string
-	Email       string
+	CustomerID           int64
+	CustomerKey          string
+	SeenAt               string
+	DisplayName          string
+	Phone                string
+	Email                string
+	SourceContactQuality string // masked|real — warehouse-computed, immutable
+	ContactQuality       string // masked|unverified|verified — initial value from warehouse
 }

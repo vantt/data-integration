@@ -85,7 +85,12 @@ func (s *PartySeedService) processSeed(ctx context.Context, seed domain.PartySee
 
 	// UpsertFromSapoIdentity is idempotent (UNIQUE constraint guards duplicates)
 	// and backfills empty name/phone/email without clobbering existing values.
-	_, err := s.partySvc.UpsertFromSapoIdentity(ctx, sapoID, seed.Phone, seed.Email, seed.DisplayName)
+	// Quality fields come from the warehouse; INSERT OR IGNORE in crm_party_identity
+	// ensures existing CRM-upgraded contact_quality values are never overwritten.
+	_, err := s.partySvc.UpsertFromSapoIdentity(
+		ctx, sapoID, seed.Phone, seed.Email, seed.DisplayName,
+		seed.SourceContactQuality, seed.ContactQuality,
+	)
 	if err != nil {
 		return fmt.Errorf("upsert party for sapo_id=%s: %w", sapoID, err)
 	}

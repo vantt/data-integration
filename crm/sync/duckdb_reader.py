@@ -67,6 +67,8 @@ _DIM_CUSTOMERS_BASE_COLS = [
     "email",
     "customer_group",
     "first_order_date",
+    "source_contact_quality",
+    "contact_quality",
 ]
 
 # mart_product_health columns for product_insight
@@ -227,7 +229,8 @@ def fetch_customer_base(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     sql = (
         "SELECT customer_key, customer_id, customer_code, "
         "full_name AS display_name, phone, email, customer_group, "
-        "strftime(first_order_date, '%Y-%m-%d') AS first_order_date "
+        "strftime(first_order_date, '%Y-%m-%d') AS first_order_date, "
+        "source_contact_quality, contact_quality "
         "FROM main_marts.dim_customers"
     )
     rows = _fetch(conn, sql)

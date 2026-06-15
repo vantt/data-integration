@@ -42,6 +42,7 @@ func (s *PartyService) UpsertFromSapoIdentity(
 	ctx context.Context,
 	sapoCustomerID string,
 	phone, email, name string,
+	sourceContactQuality, contactQuality string,
 ) (string, error) {
 	normPhone := NormalizePhone(phone)
 	normEmail := NormalizeEmail(email)
@@ -67,14 +68,16 @@ func (s *PartyService) UpsertFromSapoIdentity(
 			UpdatedAt:    now,
 		}
 		sapoIdentity := &domain.PartyIdentity{
-			IdentityID:    uuid.New().String(),
-			PartyID:       party.PartyID,
-			SourceSystem:  "sapo",
-			IdentityType:  "sapo_customer",
-			IdentityValue: sapoCustomerID,
-			Confidence:    1.0,
-			IsPrimary:     true,
-			CreatedAt:     now,
+			IdentityID:           uuid.New().String(),
+			PartyID:              party.PartyID,
+			SourceSystem:         "sapo",
+			IdentityType:         "sapo_customer",
+			IdentityValue:        sapoCustomerID,
+			Confidence:           1.0,
+			IsPrimary:            true,
+			CreatedAt:            now,
+			SourceContactQuality: sourceContactQuality,
+			ContactQuality:       contactQuality,
 		}
 		if err := s.repo.CreateWithIdentities(ctx, party, []*domain.PartyIdentity{sapoIdentity}); err != nil {
 			return "", fmt.Errorf("party service: create party with sapo identity: %w", err)
@@ -82,13 +85,14 @@ func (s *PartyService) UpsertFromSapoIdentity(
 	}
 
 	// 3. Attach phone/email identities (UNIQUE constraint handles duplicates silently).
+	// Phone/email inherit contact quality from the sapo_customer anchor identity.
 	if normPhone != "" {
-		if err := s.upsertIdentity(ctx, party.PartyID, "sapo", "phone", normPhone, 1.0, false); err != nil {
+		if err := s.upsertIdentity(ctx, party.PartyID, "sapo", "phone", normPhone, 1.0, false, sourceContactQuality, contactQuality); err != nil {
 			return "", fmt.Errorf("party service: attach phone identity: %w", err)
 		}
 	}
 	if normEmail != "" {
-		if err := s.upsertIdentity(ctx, party.PartyID, "sapo", "email", normEmail, 1.0, false); err != nil {
+		if err := s.upsertIdentity(ctx, party.PartyID, "sapo", "email", normEmail, 1.0, false, sourceContactQuality, contactQuality); err != nil {
 			return "", fmt.Errorf("party service: attach email identity: %w", err)
 		}
 	}
@@ -123,16 +127,19 @@ func (s *PartyService) upsertIdentity(
 	partyID, source, idType, idValue string,
 	confidence float64,
 	isPrimary bool,
+	sourceContactQuality, contactQuality string,
 ) error {
 	id := &domain.PartyIdentity{
-		IdentityID:    uuid.New().String(),
-		PartyID:       partyID,
-		SourceSystem:  source,
-		IdentityType:  idType,
-		IdentityValue: idValue,
-		Confidence:    confidence,
-		IsPrimary:     isPrimary,
-		CreatedAt:     utcNow(),
+		IdentityID:           uuid.New().String(),
+		PartyID:              partyID,
+		SourceSystem:         source,
+		IdentityType:         idType,
+		IdentityValue:        idValue,
+		Confidence:           confidence,
+		IsPrimary:            isPrimary,
+		CreatedAt:            utcNow(),
+		SourceContactQuality: sourceContactQuality,
+		ContactQuality:       contactQuality,
 	}
 	return s.repo.UpsertIdentity(ctx, id)
 }

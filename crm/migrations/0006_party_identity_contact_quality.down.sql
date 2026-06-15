@@ -1,0 +1,15 @@
+-- Migration 0006 DOWN: remove contact quality fields from crm_party_identity
+--
+-- SQLite does not support DROP COLUMN on older versions (pre-3.35.0).
+-- To reverse this migration, recreate the table without these columns:
+--
+--   CREATE TABLE crm_party_identity_new AS SELECT
+--     identity_id, party_id, source_system, identity_type, identity_value,
+--     confidence, is_primary, verified_at, created_at
+--   FROM crm_party_identity;
+--   DROP TABLE crm_party_identity;
+--   ALTER TABLE crm_party_identity_new RENAME TO crm_party_identity;
+--
+-- In practice this migration is safe to leave applied; DEFAULT 'real' means
+-- existing data is semantically unchanged.
+SELECT 1; -- no-op placeholder so migration tooling sees a valid SQL statement

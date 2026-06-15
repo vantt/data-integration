@@ -89,11 +89,13 @@ def _build_party_seed_rows(
     """
     Derive wh_party_seed entries from customer_base rows.
     Each distinct customer_id → one seed row (last customer_key wins on duplicates).
+    Quality fields (source_contact_quality, contact_quality) are warehouse-computed
+    and written once — ON CONFLICT does not update them (first-write wins).
     """
     # The warehouse customer_id is VARCHAR and may hold a non-numeric sentinel
     # (e.g. 'Unknown' for the guest/unmapped bucket). Such rows cannot seed a
     # crm_party_identity (no real Sapo customer_id) — skip them rather than crash.
-    seen: dict[int, str] = {}
+    seen: dict[int, dict] = {}
     for row in customer_base_rows:
         cid = row.get("customer_id")
         ckey = row.get("customer_key")
@@ -103,11 +105,21 @@ def _build_party_seed_rows(
             cid_int = int(cid)
         except (ValueError, TypeError):
             continue
-        seen[cid_int] = str(ckey)
+        seen[cid_int] = {
+            "customer_key": str(ckey),
+            "source_contact_quality": row.get("source_contact_quality") or "real",
+            "contact_quality": row.get("contact_quality") or "real",
+        }
 
     return [
-        {"customer_id": cid, "customer_key": ckey, "seen_at": utc_now}
-        for cid, ckey in seen.items()
+        {
+            "customer_id": cid,
+            "customer_key": data["customer_key"],
+            "seen_at": utc_now,
+            "source_contact_quality": data["source_contact_quality"],
+            "contact_quality": data["contact_quality"],
+        }
+        for cid, data in seen.items()
     ]
 
 

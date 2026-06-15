@@ -109,7 +109,7 @@ func (q *Queries) GetPartyByID(ctx context.Context, partyID string) (CrmParty, e
 
 const listIdentitiesByParty = `-- name: ListIdentitiesByParty :many
 SELECT identity_id, party_id, source_system, identity_type, identity_value,
-       confidence, is_primary, verified_at, created_at
+       confidence, is_primary, verified_at, source_contact_quality, contact_quality, created_at
 FROM crm_party_identity
 WHERE party_id = ?
 ORDER BY is_primary DESC, created_at
@@ -133,6 +133,8 @@ func (q *Queries) ListIdentitiesByParty(ctx context.Context, partyID string) ([]
 			&i.Confidence,
 			&i.IsPrimary,
 			&i.VerifiedAt,
+			&i.SourceContactQuality,
+			&i.ContactQuality,
 			&i.CreatedAt,
 		); err != nil {
 			return nil, err
@@ -286,20 +288,22 @@ const upsertPartyIdentity = `-- name: UpsertPartyIdentity :exec
 
 INSERT OR IGNORE INTO crm_party_identity (
   identity_id, party_id, source_system, identity_type, identity_value,
-  confidence, is_primary, verified_at, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  confidence, is_primary, verified_at, source_contact_quality, contact_quality, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type UpsertPartyIdentityParams struct {
-	IdentityID    string         `json:"identity_id"`
-	PartyID       string         `json:"party_id"`
-	SourceSystem  string         `json:"source_system"`
-	IdentityType  string         `json:"identity_type"`
-	IdentityValue string         `json:"identity_value"`
-	Confidence    float64        `json:"confidence"`
-	IsPrimary     int64          `json:"is_primary"`
-	VerifiedAt    sql.NullString `json:"verified_at"`
-	CreatedAt     string         `json:"created_at"`
+	IdentityID           string         `json:"identity_id"`
+	PartyID              string         `json:"party_id"`
+	SourceSystem         string         `json:"source_system"`
+	IdentityType         string         `json:"identity_type"`
+	IdentityValue        string         `json:"identity_value"`
+	Confidence           float64        `json:"confidence"`
+	IsPrimary            int64          `json:"is_primary"`
+	VerifiedAt           sql.NullString `json:"verified_at"`
+	SourceContactQuality string         `json:"source_contact_quality"`
+	ContactQuality       string         `json:"contact_quality"`
+	CreatedAt            string         `json:"created_at"`
 }
 
 // Party identity queries
@@ -313,7 +317,25 @@ func (q *Queries) UpsertPartyIdentity(ctx context.Context, arg UpsertPartyIdenti
 		arg.Confidence,
 		arg.IsPrimary,
 		arg.VerifiedAt,
+		arg.SourceContactQuality,
+		arg.ContactQuality,
 		arg.CreatedAt,
 	)
+	return err
+}
+
+const updateIdentityContactQuality = `-- name: UpdateIdentityContactQuality :exec
+UPDATE crm_party_identity
+SET contact_quality = ?
+WHERE identity_id = ?
+`
+
+type UpdateIdentityContactQualityParams struct {
+	ContactQuality string `json:"contact_quality"`
+	IdentityID     string `json:"identity_id"`
+}
+
+func (q *Queries) UpdateIdentityContactQuality(ctx context.Context, arg UpdateIdentityContactQualityParams) error {
+	_, err := q.db.ExecContext(ctx, updateIdentityContactQuality, arg.ContactQuality, arg.IdentityID)
 	return err
 }

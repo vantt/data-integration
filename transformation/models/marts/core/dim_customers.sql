@@ -215,6 +215,21 @@ SELECT
     -- Flag exposes the segment for filtering without requiring a self-join on customer_type.
     (customer_group LIKE '%TYPE_CROSSBORDER%' OR customer_group LIKE '%CTN00014%') AS is_us_gift_recipient,
 
+    -- source_contact_quality: immutable — reflects whether the contact value is usable.
+    -- '*' in phone = already obfuscated by source (relay/masked number from marketplace etc.).
+    -- NULL or empty = no contact captured. Otherwise → real number.
+    CASE
+        WHEN phone IS NULL OR phone = '' OR phone LIKE '%*%' THEN 'masked'
+        ELSE 'real'
+    END AS source_contact_quality,
+
+    -- contact_quality: mutable initial state; CRM staff upgrades to 'verified'
+    -- via UpdateContactQuality. 'unverified' = real phone obtained, not yet confirmed reachable.
+    CASE
+        WHEN phone IS NULL OR phone = '' OR phone LIKE '%*%' THEN 'masked'
+        ELSE 'unverified'
+    END AS contact_quality,
+
     -- Contribution margin economics (channel_net_profit basis; excludes overhead)
     COALESCE(lifetime_gross_profit, 0)              AS lifetime_gross_profit,
     COALESCE(lifetime_contribution_margin, 0)       AS lifetime_contribution_margin,

@@ -33,9 +33,14 @@ type PartyIdentity struct {
 	IdentityValue string  // normalised value
 	Confidence    float64 // 0.0–1.0
 	IsPrimary     bool
-	VerifiedAt    *string // nullable UTC ISO-8601
-	CreatedAt     string
+	VerifiedAt           *string // nullable UTC ISO-8601
+	SourceContactQuality string  // masked|real — immutable, set at creation
+	ContactQuality       string  // masked|unverified|verified — mutable
+	CreatedAt            string
 }
+
+// ValidContactQualities lists accepted contact_quality values.
+var ValidContactQualities = []string{"masked", "unverified", "verified"}
 
 // ValidIdentityTypes lists known identity_type values.
 var ValidIdentityTypes = []string{

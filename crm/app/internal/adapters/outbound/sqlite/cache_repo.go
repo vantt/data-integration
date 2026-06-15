@@ -40,6 +40,16 @@ func isMissingTable(err error) bool {
 	return strings.Contains(msg, "no such table")
 }
 
+// isMissingColumn returns true when SQLite reports "no such column" — meaning
+// cache.db has an older schema without recently-added columns.
+func isMissingColumn(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "no such column")
+}
+
 // GetCustomerInsight returns the composed insight for a Sapo customer_id.
 // Returns (nil, nil) when no data exists or tables are absent (graceful empty).
 func (r *CacheRepo) GetCustomerInsight(ctx context.Context, customerID int64) (*domain.CacheInsight, error) {
@@ -312,15 +322,19 @@ func (r *CacheRepo) ListAllActionQueue(ctx context.Context) ([]domain.ActionQueu
 // The query degrades gracefully if wh_customer_base is also absent: "no such
 // table" is treated as empty, never an error.
 func (r *CacheRepo) ListPartySeed(ctx context.Context) ([]domain.PartySeed, error) {
+	// COALESCE on quality fields: falls back to 'real'/'real' for rows written
+	// before this column was added (apply_schema runs ALTER TABLE on each Python run).
 	const q = `
 		SELECT ps.customer_id, ps.customer_key, ps.seen_at,
+		       COALESCE(ps.source_contact_quality, 'real') AS source_contact_quality,
+		       COALESCE(ps.contact_quality, 'real') AS contact_quality,
 		       bc.display_name, bc.phone, bc.email
 		FROM cache.wh_party_seed ps
 		LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id`
 
 	rows, err := r.db.SQLDB().QueryContext(ctx, q)
 	if err != nil {
-		if isMissingTable(err) {
+		if isMissingTable(err) || isMissingColumn(err) {
 			return []domain.PartySeed{}, nil
 		}
 		return nil, fmt.Errorf("cache repo: list party seed: %w", err)
@@ -333,6 +347,7 @@ func (r *CacheRepo) ListPartySeed(ctx context.Context) ([]domain.PartySeed, erro
 		var displayName, phone, email sql.NullString
 		if err := rows.Scan(
 			&s.CustomerID, &s.CustomerKey, &s.SeenAt,
+			&s.SourceContactQuality, &s.ContactQuality,
 			&displayName, &phone, &email,
 		); err != nil {
 			return nil, fmt.Errorf("cache repo: scan party seed: %w", err)

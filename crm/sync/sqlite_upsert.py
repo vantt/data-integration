@@ -18,6 +18,13 @@ from typing import Any
 
 _SCHEMA_SQL = pathlib.Path(__file__).with_name("cache_schema.sql").read_text(encoding="utf-8")
 
+# ALTER TABLE migrations for columns added after initial schema creation.
+# SQLite has no ADD COLUMN IF NOT EXISTS; catch OperationalError and continue.
+_COLUMN_MIGRATIONS = [
+    "ALTER TABLE wh_party_seed ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
+    "ALTER TABLE wh_party_seed ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
+]
+
 
 def open_cache_db(path: str) -> sqlite3.Connection:
     """
@@ -36,9 +43,16 @@ def open_cache_db(path: str) -> sqlite3.Connection:
 
 
 def apply_schema(conn: sqlite3.Connection) -> None:
-    """Apply cache_schema.sql (CREATE TABLE / INDEX IF NOT EXISTS — idempotent)."""
+    """Apply cache_schema.sql (CREATE TABLE / INDEX IF NOT EXISTS — idempotent).
+    Also runs ALTER TABLE column migrations for existing databases."""
     conn.executescript(_SCHEMA_SQL)
     conn.commit()
+    for stmt in _COLUMN_MIGRATIONS:
+        try:
+            conn.execute(stmt)
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 # ─── Upsert helpers ──────────────────────────────────────────────────────────
@@ -103,18 +117,26 @@ def upsert_order_hdr(conn: sqlite3.Connection, rows: list[dict]) -> int:
 def upsert_party_seed(conn: sqlite3.Connection, rows: list[dict]) -> int:
     """
     Upsert rows into wh_party_seed.
-    Each row: {customer_id, customer_key, seen_at}.
-    seen_at is only updated if not already present (keep first-seen timestamp).
+    Each row: {customer_id, customer_key, seen_at, source_contact_quality, contact_quality}.
+
+    Only customer_key is updated on conflict — seen_at and quality fields use
+    first-write-wins semantics so re-syncs don't overwrite CRM-upgraded contact_quality.
     """
     if not rows:
         return 0
     sql = (
-        "INSERT INTO wh_party_seed (customer_id, customer_key, seen_at) "
-        "VALUES (?, ?, ?) "
+        "INSERT INTO wh_party_seed "
+        "(customer_id, customer_key, seen_at, source_contact_quality, contact_quality) "
+        "VALUES (?, ?, ?, ?, ?) "
         "ON CONFLICT(customer_id) DO UPDATE SET customer_key = excluded.customer_key"
-        # seen_at intentionally not updated: preserve first-seen timestamp
+        # seen_at / quality fields intentionally not updated: first-write wins.
+        # source_contact_quality is immutable; contact_quality is upgraded in crm.db by staff.
     )
-    values = [(r["customer_id"], r["customer_key"], r["seen_at"]) for r in rows]
+    values = [
+        (r["customer_id"], r["customer_key"], r["seen_at"],
+         r.get("source_contact_quality", "real"), r.get("contact_quality", "real"))
+        for r in rows
+    ]
     with conn:
         conn.executemany(sql, values)
     return len(rows)

@@ -42,8 +42,8 @@ WHERE primary_email = ?
 -- name: UpsertPartyIdentity :exec
 INSERT OR IGNORE INTO crm_party_identity (
   identity_id, party_id, source_system, identity_type, identity_value,
-  confidence, is_primary, verified_at, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+  confidence, is_primary, verified_at, source_contact_quality, contact_quality, created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: FindPartyByIdentity :one
 SELECT p.party_id, p.party_type, p.display_name, p.primary_phone, p.primary_email,
@@ -56,10 +56,15 @@ LIMIT 1;
 
 -- name: ListIdentitiesByParty :many
 SELECT identity_id, party_id, source_system, identity_type, identity_value,
-       confidence, is_primary, verified_at, created_at
+       confidence, is_primary, verified_at, source_contact_quality, contact_quality, created_at
 FROM crm_party_identity
 WHERE party_id = ?
 ORDER BY is_primary DESC, created_at;
+
+-- name: UpdateIdentityContactQuality :exec
+UPDATE crm_party_identity
+SET contact_quality = ?
+WHERE identity_id = ?;
 
 -- name: ReassignIdentity :exec
 UPDATE crm_party_identity

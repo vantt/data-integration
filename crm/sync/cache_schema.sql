@@ -90,10 +90,13 @@ CREATE TABLE IF NOT EXISTS wh_order_hdr (
 
 -- wh_party_seed: one-way channel so Go creates crm_party / crm_party_identity
 -- without Python ever touching crm.db (1-writer rule).
+-- Quality fields are warehouse-computed and written once (first-write wins on conflict).
 CREATE TABLE IF NOT EXISTS wh_party_seed (
-  customer_id  INTEGER PRIMARY KEY,      -- Sapo customer_id (natural key)
-  customer_key TEXT,                     -- MD5 surrogate from warehouse
-  seen_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  customer_id           INTEGER PRIMARY KEY,  -- Sapo customer_id (natural key)
+  customer_key          TEXT,                 -- MD5 surrogate from warehouse
+  seen_at               TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  source_contact_quality TEXT NOT NULL DEFAULT 'real',  -- masked|real, immutable
+  contact_quality        TEXT NOT NULL DEFAULT 'real'   -- masked|unverified|verified, initial value
 );
 
 -- wh_sync_run: audit log for every ETL run (one row per source table per run).
