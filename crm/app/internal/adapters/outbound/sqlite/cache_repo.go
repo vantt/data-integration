@@ -264,7 +264,7 @@ func (r *CacheRepo) ListAllActionQueue(ctx context.Context) ([]domain.ActionQueu
 		LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
 		LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id
 		LEFT JOIN crm_party_identity pi
-		       ON pi.identity_type = 'sapo_customer' AND pi.identity_value = a.customer_key
+		       ON pi.identity_type = 'sapo_customer' AND pi.identity_value = CAST(ps.customer_id AS TEXT)
 		ORDER BY a.priority ASC`
 
 	rows, err := r.db.SQLDB().QueryContext(ctx, q)
