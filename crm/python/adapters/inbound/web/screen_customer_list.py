@@ -7,6 +7,7 @@ No business logic — thin adapter only.
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional, Protocol
 
 from fastapi import APIRouter, Request, Response
@@ -19,6 +20,10 @@ log = logging.getLogger(__name__)
 
 DEFAULT_PAGE_SIZE = 30
 
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
+)
+
 # ── Service protocols ─────────────────────────────────────────────────────────
 
 
@@ -30,12 +35,17 @@ class PartyLister(Protocol):
     def find_by_identity(self, identity_type: str, identity_value: str) -> Optional[Party]: ...
 
 
+class CustomerCodeResolver(Protocol):
+    def find_customer_id_by_code(self, customer_code: str) -> Optional[str]: ...
+
+
 # ── Router factory ────────────────────────────────────────────────────────────
 
 
 def make_customer_list_router(
     templates: Jinja2Templates,
     parties: PartyLister,
+    customer_code_resolver: Optional[CustomerCodeResolver] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer List routes."""
     router = APIRouter()
@@ -67,22 +77,47 @@ def make_customer_list_router(
 
         return out
 
-    # ── Lookup by Sapo customer_key → redirect to party page ─────────────────
+    # ── Lookup by party-id / customer-id / customer-code → redirect ──────────
 
     @router.get("/customers/by-key/{customer_key}", response_class=HTMLResponse)
     async def handle_customer_by_key(request: Request, customer_key: str) -> Response:
-        """Resolve a Sapo customer_key (numeric string) to a CRM party and redirect."""
-        customer_key = customer_key.strip()
-        party = None
-        try:
-            # customer_key is the numeric Sapo customer_id stored as identity_value
-            party = parties.find_by_identity("sapo_customer", customer_key)
-        except Exception as exc:
-            log.error("customer by-key: find %r: %s", customer_key, exc)
-        if party is not None:
-            return RedirectResponse(url=f"/customers/{party.party_id}", status_code=302)
-        # Fall back to search page
-        return RedirectResponse(url=f"/customers?q={customer_key}", status_code=302)
+        """Resolve any customer identifier to the CRM party page.
+
+        Resolution order:
+        1. UUID → treat as party_id, redirect directly.
+        2. Pure digits → Sapo customer_id (sapo_customer identity).
+        3. Alphanumeric → Sapo customer_code lookup via DuckDB → customer_id → identity.
+        4. Fall back to search.
+        """
+        key = customer_key.strip()
+
+        # 1. UUID → party_id redirect (bypass identity table)
+        if _UUID_RE.match(key):
+            return RedirectResponse(url=f"/customers/{key}", status_code=302)
+
+        # 2. Numeric digits → Sapo customer_id
+        if key.isdigit():
+            party = None
+            try:
+                party = parties.find_by_identity("sapo_customer", key)
+            except Exception as exc:
+                log.error("customer by-key: sapo_customer %r: %s", key, exc)
+            if party is not None:
+                return RedirectResponse(url=f"/customers/{party.party_id}", status_code=302)
+
+        # 3. Alphanumeric → customer_code → customer_id → sapo_customer identity
+        elif customer_code_resolver is not None:
+            try:
+                customer_id = customer_code_resolver.find_customer_id_by_code(key)
+                if customer_id:
+                    party = parties.find_by_identity("sapo_customer", customer_id)
+                    if party is not None:
+                        return RedirectResponse(url=f"/customers/{party.party_id}", status_code=302)
+            except Exception as exc:
+                log.error("customer by-key: customer_code %r: %s", key, exc)
+
+        # 4. Fall back to search page
+        return RedirectResponse(url=f"/customers?q={key}", status_code=302)
 
     # ── Full page ─────────────────────────────────────────────────────────────
 

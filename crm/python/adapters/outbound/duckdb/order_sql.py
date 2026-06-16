@@ -58,7 +58,9 @@ SELECT
     cust.full_name     AS cust_full_name,
     cust.customer_type AS cust_customer_type,
     cust.value_group   AS cust_value_group,
-    CAST(cust.lifetime_value AS DOUBLE) AS cust_lifetime_value
+    CAST(cust.lifetime_value AS DOUBLE) AS cust_lifetime_value,
+    dd.date_actual, dd.year, dd.month, dd.quarter, dd.day_of_week, dd.is_weekend,
+    dt.time_of_day_24, dt.day_period, dt.is_business_hour, dt.is_peak_hour
 FROM fact_orders fo
 LEFT JOIN fact_order_economics foe      ON fo.order_id = foe.order_id
 LEFT JOIN fact_us_shipment_economics us ON fo.order_id = us.order_id
@@ -70,6 +72,8 @@ LEFT JOIN dim_teams tm                  ON fo.team_key = tm.team_key
 LEFT JOIN dim_branch_location bl        ON fo.branch_location_key = bl.branch_location_key
 LEFT JOIN dim_geography geo             ON fo.shipping_geography_key = geo.geography_key
 LEFT JOIN dim_customers cust            ON fo.customer_key = cust.customer_key
+LEFT JOIN dim_date dd                   ON fo.date_key = dd.date_key
+LEFT JOIN dim_time dt                   ON fo.time_key = dt.time_key
 WHERE UPPER(fo.order_code) = UPPER(?)
 LIMIT 1
 """

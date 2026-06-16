@@ -25,6 +25,17 @@ class OrderHeader:
     first_shipped_at: str       # UTC ISO-8601; empty when not yet shipped
     updated_at: str             # UTC ISO-8601
     time_to_complete_hours: Optional[float] = None  # None when order not yet complete
+    # dim_date / dim_time attributes (joined via fo.date_key / fo.time_key)
+    date_actual: str = ""       # YYYY-MM-DD (ICT date of order)
+    year: int = 0
+    month: int = 0
+    quarter: int = 0
+    day_of_week: int = 0        # 0=Sunday … 6=Saturday (DuckDB extract(dayofweek))
+    is_weekend: bool = False
+    time_of_day_24: str = ""    # HH:MM (ICT time of order)
+    day_period: str = ""        # Morning | Afternoon | Evening | Night
+    is_business_hour: bool = False
+    is_peak_hour: bool = False
 
 
 @dataclass

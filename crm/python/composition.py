@@ -226,6 +226,7 @@ def create_app() -> FastAPI:
     app.include_router(make_customer_list_router(
         templates=templates,
         parties=party_repo,
+        customer_code_resolver=order_repo,
     ))
     app.include_router(make_customer_360_router(
         templates=templates,
@@ -236,6 +237,8 @@ def create_app() -> FastAPI:
         activity_log=activity_svc,
         notes=profile_svc,
         party_tasks=task_repo,
+        party_finder=party_repo,
+        customer_code_resolver=order_repo,
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,

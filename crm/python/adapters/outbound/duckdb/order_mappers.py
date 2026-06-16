@@ -65,6 +65,16 @@ def map_header(row: dict) -> OrderHeader:
         first_shipped_at=_s(row, "first_shipped_at"),
         updated_at=_s(row, "updated_at"),
         time_to_complete_hours=_f(row, "time_to_complete_hours"),
+        date_actual=_s(row, "date_actual"),
+        year=int(row.get("year") or 0),
+        month=int(row.get("month") or 0),
+        quarter=int(row.get("quarter") or 0),
+        day_of_week=int(row.get("day_of_week") or 0),
+        is_weekend=_b(row, "is_weekend"),
+        time_of_day_24=_s(row, "time_of_day_24"),
+        day_period=_s(row, "day_period"),
+        is_business_hour=_b(row, "is_business_hour"),
+        is_peak_hour=_b(row, "is_peak_hour"),
     )
 
 

@@ -3,10 +3,16 @@
 FastAPI router mirroring screen_customer_360.go.
 Serves full HTML page + HTMX panel fragments (panels: insight, orders,
 timeline, tasks, notes). No business logic — thin adapter only.
+
+Identifier resolution on the full-page route:
+  UUID         → direct get_party_360 lookup
+  pure digits  → find_by_identity("sapo_customer", value)
+  alphanumeric → DuckDB customer_code lookup → sapo_customer identity
 """
 from __future__ import annotations
 
 import logging
+import re
 from typing import Optional, Protocol
 
 from fastapi import APIRouter, Form, Request, Response
@@ -20,10 +26,23 @@ from crm.python.domain.entities.task import Task
 
 log = logging.getLogger(__name__)
 
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
 # ── Service protocols ─────────────────────────────────────────────────────────
 
 class ProfileReader(Protocol):
     def get_party_360(self, party_id: str) -> Optional[Party360]: ...
+
+
+class PartyFinder(Protocol):
+    def find_by_identity(self, identity_type: str, identity_value: str) -> Optional[object]: ...
+
+
+class CustomerCodeResolver(Protocol):
+    def find_customer_id_by_code(self, customer_code: str) -> Optional[str]: ...
 
 
 class IdentityReader(Protocol):
@@ -35,7 +54,7 @@ class InsightReader(Protocol):
 
 
 class ActivityReader(Protocol):
-    def list_timeline(self, party_id: str) -> list[Activity]: ...
+    def list_activities(self, party_id: str) -> list[Activity]: ...
 
 
 class ActivityLogger(Protocol):
@@ -62,9 +81,35 @@ def make_customer_360_router(
     activity_log: ActivityLogger,
     notes: NoteReader,
     party_tasks: TaskQuerier,
+    party_finder: Optional[PartyFinder] = None,
+    customer_code_resolver: Optional[CustomerCodeResolver] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
+
+    def _resolve_to_party_id(identifier: str) -> Optional[str]:
+        """Resolve any identifier to a party_id string, or None."""
+        # 1. UUID → direct
+        if _UUID_RE.match(identifier):
+            return identifier
+        if party_finder is None:
+            return None
+        # 2. Numeric digits → sapo_customer identity
+        if identifier.isdigit():
+            party = party_finder.find_by_identity("sapo_customer", identifier)
+            if party is not None:
+                return getattr(party, "party_id", None)
+        # 3. Alphanumeric → customer_code → customer_id → identity
+        elif customer_code_resolver is not None:
+            try:
+                customer_id = customer_code_resolver.find_customer_id_by_code(identifier)
+                if customer_id:
+                    party = party_finder.find_by_identity("sapo_customer", customer_id)
+                    if party is not None:
+                        return getattr(party, "party_id", None)
+            except Exception as exc:
+                log.error("c360 resolve customer_code %r: %s", identifier, exc)
+        return None
 
     def _load_base(party_id: str) -> tuple[Optional[Party360], list[PartyIdentity]]:
         party360 = profile.get_party_360(party_id)
@@ -73,27 +118,52 @@ def make_customer_360_router(
         ids = identities.list_identities(party_id)
         return party360, ids
 
-    def _sapo_customer_id(party_id: str) -> int:
-        """Resolve Sapo customer_id from party identities; 0 when not found."""
-        try:
-            for pid in identities.list_identities(party_id):
-                if pid.identity_type == "sapo_customer":
+    def _sapo_customer_id(ids: list[PartyIdentity]) -> int:
+        """Resolve Sapo customer_id from a list of party identities; 0 when not found."""
+        for pid in ids:
+            if pid.identity_type == "sapo_customer":
+                try:
                     return int(pid.identity_value)
-        except Exception:
-            pass
+                except (ValueError, TypeError):
+                    pass
         return 0
+
+    def _load_insight(ids: list[PartyIdentity]) -> Optional[CacheInsight]:
+        customer_id = _sapo_customer_id(ids)
+        if not customer_id:
+            return None
+        try:
+            return insight.get_customer_insight(customer_id)
+        except Exception as exc:
+            log.warning("c360: load insight for customer_id %d: %s", customer_id, exc)
+            return None
 
     # ── Full page ─────────────────────────────────────────────────────────────
 
-    @router.get("/customers/{party_id}", response_class=HTMLResponse)
-    async def handle_customer_360(request: Request, party_id: str) -> Response:
+    @router.get("/customers/{identifier}", response_class=HTMLResponse)
+    async def handle_customer_360(request: Request, identifier: str) -> Response:
         active_tab = request.query_params.get("tab", "insight")
+
+        # Resolve identifier to party_id (UUID, sapo_customer numeric, or customer_code)
+        party_id = _resolve_to_party_id(identifier.strip())
+        if party_id is None:
+            return HTMLResponse("Không tìm thấy khách hàng", status_code=404)
+
         party360, ids = _load_base(party_id)
         if party360 is None:
             return HTMLResponse("Không tìm thấy khách hàng", status_code=404)
+
+        ins = _load_insight(ids)
+
         return templates.TemplateResponse(
             "customer_360.html",
-            {"request": request, "party": party360, "identities": ids, "active_tab": active_tab},
+            {
+                "request": request,
+                "party": party360,
+                "identities": ids,
+                "active_tab": active_tab,
+                "insight": ins,
+            },
         )
 
     # ── HTMX panel fragments ──────────────────────────────────────────────────
@@ -104,20 +174,20 @@ def make_customer_360_router(
     ) -> Response:
         ctx: dict = {"request": request, "party_id": party_id}
         if panel == "insight":
-            customer_id = _sapo_customer_id(party_id)
-            ins = insight.get_customer_insight(customer_id) if customer_id else None
+            _, ids = _load_base(party_id)
+            ins = _load_insight(ids)
             return templates.TemplateResponse(
                 "fragments/c360_insight_panel.html", {**ctx, "insight": ins}
             )
         if panel == "orders":
-            customer_id = _sapo_customer_id(party_id)
-            ins = insight.get_customer_insight(customer_id) if customer_id else None
+            _, ids = _load_base(party_id)
+            ins = _load_insight(ids)
             orders = ins.recent_orders if ins else []
             return templates.TemplateResponse(
                 "fragments/c360_orders_panel.html", {**ctx, "orders": orders}
             )
         if panel == "timeline":
-            acts = activities.list_timeline(party_id)
+            acts = activities.list_activities(party_id)
             return templates.TemplateResponse(
                 "fragments/c360_timeline_panel.html", {**ctx, "activities": acts}
             )
@@ -181,7 +251,7 @@ def make_customer_360_router(
         except Exception as exc:
             log.error("log activity party %s: %s", party_id, exc)
             return HTMLResponse("failed to log activity", status_code=500)
-        acts = activities.list_timeline(party_id)
+        acts = activities.list_activities(party_id)
         return templates.TemplateResponse(
             "fragments/c360_timeline_panel.html",
             {"request": request, "party_id": party_id, "activities": acts},

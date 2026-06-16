@@ -17,7 +17,7 @@ from crm.python.domain.entities.order import OrderDetail
 
 log = logging.getLogger(__name__)
 
-_VALID_TABS = {"financial", "items", "operations", "context"}
+_VALID_TABS = {"financial", "items", "operations", "context", "action"}
 
 
 # ── Service protocol ──────────────────────────────────────────────────────────
@@ -85,6 +85,7 @@ def make_order_detail_router(
             "items":      "fragments/order_items_tab.html",
             "operations": "fragments/order_operations_tab.html",
             "context":    "fragments/order_context_tab.html",
+            "action":     "fragments/order_action_tab.html",
         }
         tmpl = tab_templates.get(tab)
         if tmpl is None:

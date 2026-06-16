@@ -38,6 +38,26 @@ class DuckDBOrderRepository:
     def get_by_code(self, order_code: str) -> OrderDetail | None:
         return self.get_order_detail(order_code)
 
+    def find_customer_id_by_code(self, customer_code: str) -> str | None:
+        """Return the Sapo numeric customer_id for a given customer_code, or None."""
+        if not customer_code or not customer_code.strip():
+            return None
+        conn = open_olap(self._db_path)
+        if conn is None:
+            return None
+        try:
+            rel = conn.execute(
+                "SELECT customer_id FROM main_marts.dim_customers WHERE customer_code = ? LIMIT 1",
+                [customer_code.strip()],
+            )
+            row = rel.fetchone()
+            return str(row[0]) if row and row[0] else None
+        except Exception:
+            logger.warning("find_customer_id_by_code %r failed", customer_code, exc_info=True)
+            return None
+        finally:
+            conn.close()
+
     def get_order_detail(self, order_code: str) -> OrderDetail | None:
         """Full order aggregate for order_code (case-insensitive), or None.
 

@@ -87,6 +87,16 @@ ORDER BY due_at ASC, priority DESC
 LIMIT ?
 """
 
+_LIST_BY_PARTY = """
+SELECT
+  task_id, party_id, title, description, due_at, priority, status,
+  assignee_user_id, source, source_ref, created_by, created_at, updated_at, completed_at
+FROM crm_task
+WHERE party_id = ?
+ORDER BY due_at ASC, priority DESC
+LIMIT ?
+"""
+
 
 # ---------------------------------------------------------------------------
 # Row mapper
@@ -200,6 +210,11 @@ class SQLiteTaskRepository:
         else:
             rows = self._conn.execute(_LIST_ALL, (limit,)).fetchall()
 
+        return [_task_from_row(r) for r in rows]
+
+    def list_by_party(self, party_id: str, limit: int = 100) -> list[Task]:
+        """Return all tasks linked to a party, ordered by due date."""
+        rows = self._conn.execute(_LIST_BY_PARTY, (party_id, limit)).fetchall()
         return [_task_from_row(r) for r in rows]
 
     def exists_by_source_ref(self, source: str, source_ref: str) -> bool:
