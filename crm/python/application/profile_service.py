@@ -239,6 +239,20 @@ class ProfileService:
     def list_party_tags(self, party_id: str) -> list[PartyTag]:
         return self._tags.list_party_tags(party_id)
 
+    def list_tags(self, category: str) -> list[Tag]:
+        return self._tags.list_tags(category)
+
+    def create_tag(self, name: str, category: str, color: str) -> Tag:
+        tag = Tag(
+            tag_id=str(uuid.uuid4()),
+            name=name,
+            category=category or "general",
+            color=color or "#6b7280",
+            created_at=_utc_now(),
+        )
+        self._tags.create_tag(tag)
+        return tag
+
     # --- Notes ---
 
     def add_note(self, party_id: str, body: str, author_user_id: Optional[str] = None) -> Note:

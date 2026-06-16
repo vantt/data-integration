@@ -120,8 +120,9 @@ def truncate_str(s: str, n: int) -> str:
     return "".join(runes[:n]) + "…"
 
 
-# alias used in order detail templates
+# aliases
 fmt_vnd = format_vnd
+format_ict = format_date_ict
 
 
 def join_nonempty(items: list, sep: str = ", ") -> str:
@@ -197,3 +198,16 @@ def target_status_bdg(status: str) -> str:
 def customer_label(name: str | None, key: str | None) -> str:
     """Return display label for a customer: name if available, else key."""
     return name or key or "—"
+
+
+def segment_days_since(segment: object) -> str:
+    """Extract recency_days value from a segment's rule definition for template display."""
+    import json as _json
+    if segment is None:
+        return ""
+    defn = getattr(segment, "definition", "") or ""
+    try:
+        data = _json.loads(defn)
+        return str(data.get("recency_days", ""))
+    except Exception:
+        return ""

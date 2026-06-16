@@ -1,0 +1,62 @@
+{% if not segments %}
+<div class="state">
+  <div class="state__inner">
+    <div class="state__title">Chưa có segment nào</div>
+    <p class="state__sub">Tạo segment đầu tiên để phân loại khách hàng theo rule.</p>
+    <div class="state__actions">
+      <a href="/segments/new" class="btn btn--primary">
+        {% include "icons/plus.svg" %} Tạo segment
+      </a>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="tbl-wrap">
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Tên</th><th>Loại</th><th class="num-h">Thành viên</th>
+        <th>Cập nhật</th><th>Trạng thái</th><th class="th-go"></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for seg in segments %}
+      <tr class="is-clickable" id="seg-{{ seg.segment_id }}"
+          hx-get="/segments/{{ seg.segment_id }}"
+          hx-target="body" hx-push-url="true">
+        <td>
+          <span class="cell-strong">{{ seg.name }}</span>
+          {% if seg.description %}
+          <span class="cell-sub">{{ seg.description[:60] }}</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if seg.is_dynamic %}
+          <span class="bdg bdg--accent">dynamic</span>
+          {% else %}
+          <span class="bdg">static</span>
+          {% endif %}
+        </td>
+        <td class="num">
+          {% set cnt = member_counts.get(seg.segment_id, 0) %}
+          {% if cnt == 0 %}
+          <span class="bdg bdg--warn">0</span>
+          {% else %}
+          {{ cnt }}
+          {% endif %}
+        </td>
+        <td class="mono muted">{{ seg.updated_at | format_date_ict }}</td>
+        <td>
+          {% if seg.is_dynamic %}
+          <span class="status status--ready">ready</span>
+          {% else %}
+          <span class="bdg">static</span>
+          {% endif %}
+        </td>
+        <td class="td-go"><span class="go-arrow">{% include "icons/chevron.svg" %}</span></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

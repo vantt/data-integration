@@ -64,7 +64,7 @@ from adapters.inbound.http.campaign_handler import make_campaign_router
 # ── Inbound: Web UI screens ───────────────────────────────────────────────────
 from adapters.inbound.web.format_helpers import (
     format_vnd, fmt_vnd, format_date_ict, format_datetime_ict, format_relative,
-    truncate_str, join_nonempty,
+    format_ict, truncate_str, join_nonempty, segment_days_since,
     action_type_badge_class, task_status_css, conv_status_bdg,
     campaign_status_bdg, target_status_bdg, customer_label,
 )
@@ -153,6 +153,8 @@ def create_app() -> FastAPI:
     templates.env.filters["format_relative"] = format_relative
     templates.env.filters["truncate_str"] = truncate_str
     templates.env.filters["join_nonempty"] = join_nonempty
+    templates.env.filters["format_ict"] = format_ict
+    templates.env.filters["segment_days_since"] = segment_days_since
     # Global functions callable from any template
     templates.env.globals["action_type_badge_class"] = action_type_badge_class
     templates.env.globals["task_status_css"] = task_status_css
