@@ -23,6 +23,8 @@ _SCHEMA_SQL = pathlib.Path(__file__).with_name("cache_schema.sql").read_text(enc
 _COLUMN_MIGRATIONS = [
     "ALTER TABLE wh_party_seed ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
     "ALTER TABLE wh_party_seed ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
+    "ALTER TABLE wh_customer_base ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
+    "ALTER TABLE wh_customer_base ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
 ]
 
 
