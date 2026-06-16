@@ -35,4 +35,9 @@ fi
 
 # ── Step 4: Start CRM server (foreground) ────────────────────────────────────
 echo "[entrypoint] starting CRM server on :${CRM_PORT} …"
-exec python3 -m uvicorn crm.python.main:app --host 0.0.0.0 --port "${CRM_PORT:-8090}"
+if [ "${CRM_DEV_RELOAD:-0}" = "1" ]; then
+    echo "[entrypoint] DEV mode — uvicorn --reload enabled"
+    exec python3 -m uvicorn crm.python.main:app --host 0.0.0.0 --port "${CRM_PORT:-8090}" --reload --reload-dir /app/crm/python
+else
+    exec python3 -m uvicorn crm.python.main:app --host 0.0.0.0 --port "${CRM_PORT:-8090}"
+fi

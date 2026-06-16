@@ -1,0 +1,6 @@
+# Dev overrides — auto-applied by `docker compose up` locally.
+# Production: use `docker compose -f docker-compose.yml up -d`
+services:
+  crm:
+    environment:
+      - CRM_DEV_RELOAD=1

@@ -175,6 +175,9 @@ services:
       - crm_data:/data
       # Read-only: whole data_lake mounted so olap.duckdb views can resolve their parquet paths.
       - ./app_data/data_lake:/app/var/data_lake:ro
+      # Dev live-reload: mount source so template/static edits are visible without rebuild.
+      - ./crm/python:/app/crm/python
+      - ./crm/app/internal/adapters/inbound/web/static:/app/crm/app/internal/adapters/inbound/web/static
     labels:
       caddy: crm.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 8090}}"
