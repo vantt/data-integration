@@ -75,3 +75,12 @@ Every UI surface defined in `docs/ui-spec/` has a stable ID (S01–S13, P01–P0
 5. **Before assigning a new ID**: check `docs/ui-spec/00-overview.md` to pick the correct ID and avoid collisions.
 
 **Search pattern:** `grep -r 'data-surface="S01"' crm/app/` to instantly find any surface's template code.
+
+### Python port (Jinja2 templates)
+
+Full convention for the Python UI layer: **`docs/ui-conventions.md`** — surface map, banner template, `data-surface` rationale. When creating or editing any Jinja2 template:
+
+1. Add `{# @surface ID · Name ... #}` as **line 1** of the file (source banner).
+2. Add `data-surface="ID"` on the **outermost element** of each top-level surface root.
+3. Partials (HTMX fragments): banner only — no nested `data-surface` marker.
+4. When delegating UI work to sub-agents, tell them to read `docs/ui-conventions.md` first.

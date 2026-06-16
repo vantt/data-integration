@@ -1,4 +1,7 @@
-{# S12 Order Detail — full page.
+{# @surface  S12 · Order Detail (Python port repurposes S12 — spec had Ads Tracking here)
+   @source   crm/docs/ui-spec/screens/S12-ads-tracking.md
+   @kind     SCREEN
+   Full page.
    Extends app shell. Data: order (OrderDetail), active_tab (str).
    Tab panels are HTMX fragments at /orders/{code}/tabs/{tab}.
    Sidebar cards: identity · money headline · recipient link · quick facts.
@@ -20,6 +23,7 @@
         ("items",      "Items"),
         ("operations", "Operations"),
         ("context",    "Context"),
+        ("action",     "Action"),
       ] %}
       {% for tab_key, tab_label in tabs %}
       <a href="/orders/{{ order.header.order_code }}?tab={{ tab_key }}"
@@ -44,6 +48,8 @@
         {% include "fragments/order_operations_tab.html" %}
       {% elif active_tab == "context" %}
         {% include "fragments/order_context_tab.html" %}
+      {% elif active_tab == "action" %}
+        {% include "fragments/order_action_tab.html" %}
       {% else %}
         {% include "fragments/order_financial_tab.html" %}
       {% endif %}
@@ -192,6 +198,38 @@
       </div>
     </div>
 
+    {# Data-quality flags card #}
+    <div class="scard">
+      <div class="caption scard__eyebrow">DATA-QUALITY FLAGS</div>
+      <div class="badge-row" style="flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)">
+        {# COGS source #}
+        {% if not f.cogs_source or f.cogs_source == "none" %}
+        <span class="bdg bdg--warn">COGS unverified</span>
+        {% elif f.cogs_source == "both" %}
+        <span class="bdg bdg--good">COGS: sapo+misa</span>
+        {% else %}
+        <span class="bdg bdg--good">COGS: {{ f.cogs_source }}</span>
+        {% endif %}
+        {# Warning flags #}
+        {% if f.has_unpriced_sku %}
+        <span class="bdg bdg--warn">unpriced SKU × {{ f.unpriced_sku_count }}</span>
+        {% endif %}
+        {% if f.is_overhead_estimated %}
+        <span class="bdg bdg--warn">overhead estimated</span>
+        {% endif %}
+        {# Info flags #}
+        {% if f.has_returns %}
+        <span class="bdg bdg--dot">returns</span>
+        {% endif %}
+        {% if f.has_platform_fees %}
+        <span class="bdg bdg--dot">platform fees</span>
+        {% endif %}
+        {% if f.is_us %}
+        <span class="bdg bdg--accent">US CrossBorder</span>
+        {% endif %}
+      </div>
+    </div>
+
   </aside>
 </div>{# /detail-grid #}
 
@@ -241,4 +279,6 @@
   });
 })();
 </script>
+
+<div id="modal-root"></div>
 {% endblock %}

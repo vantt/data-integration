@@ -1,4 +1,7 @@
-{# HTMX-swappable tbody rows — served at GET /customers/search and included
+{# @surface  S02 · Customer List & Search (partial — HTMX tbody swap)
+   @source   crm/docs/ui-spec/screens/S02-customer-list-search.md
+   @kind     SCREEN
+   HTMX-swappable tbody rows — served at GET /customers/search and included
    inline in customer_list.html. Target: #customer-list-body (innerHTML swap). #}
 {% if not parties %}
   <tr>

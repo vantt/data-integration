@@ -1,4 +1,7 @@
-{# HTMX-refreshable inner fragment — also served at GET /worklist/fragment.
+{# @surface  S01 · Worklist / Dashboard (partial — HTMX-refreshable inner fragment)
+   @source   crm/docs/ui-spec/screens/S01-worklist-dashboard.md
+   @kind     SCREEN
+   HTMX-refreshable inner fragment — also served at GET /worklist/fragment.
    Target: #worklist-container (outerHTML swap). #}
 <div id="worklist-container">
   {% if not actions and not tasks %}

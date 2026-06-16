@@ -59,3 +59,76 @@
 
 /* narrowed select for inline table cells (role picker, etc.) */
 .inp-sel--narrow { max-width: 12rem; }
+
+/* ── Theme switcher panel ─────────────────────────────────────────────────── */
+/* Anchor panel to context-slot so it drops below the header icons */
+.context-slot { position: relative; }
+
+.theme-panel {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 80;
+  width: 236px;
+  background: var(--bg-raised); border: 1px solid var(--border-strong);
+  border-radius: var(--radii-soft);
+  box-shadow: 0 8px 32px rgba(0,0,0,.28);
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  animation: drop var(--dur-open) var(--ease-open);
+}
+/* [hidden] must override display:flex */
+.theme-panel[hidden] { display: none !important; }
+
+.theme-panel__head {
+  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary);
+  padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border);
+}
+.theme-panel__section { display: flex; flex-direction: column; gap: 7px; }
+.theme-panel__lbl {
+  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary);
+}
+
+/* 3-way theme swatches */
+.ts-swatches { display: flex; gap: var(--sp-2); }
+.ts-swatch {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 7px var(--sp-1); border: 1px solid var(--border); border-radius: var(--radii-control);
+  cursor: pointer; background: transparent;
+  transition: border-color var(--dur-fast) var(--ease-fast);
+}
+.ts-swatch:hover { border-color: var(--border-strong); }
+.ts-swatch[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.ts-swatch__dot { width: 36px; height: 20px; border-radius: var(--radii-hairline); }
+.ts-swatch__name {
+  font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--tracking-mono);
+  color: var(--fg-muted); text-transform: uppercase;
+}
+
+/* accent dots */
+.ts-accents { display: flex; gap: var(--sp-2); }
+.ts-accent {
+  width: 26px; height: 26px; border-radius: var(--radii-control);
+  border: 2px solid transparent; cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-fast), transform var(--dur-fast) var(--ease-fast);
+}
+.ts-accent:hover { transform: scale(1.1); }
+.ts-accent[aria-pressed="true"] { border-color: var(--fg-1); }
+
+/* density / numfont pills */
+.ts-pills { display: flex; gap: var(--sp-2); }
+.ts-pill {
+  flex: 1; padding: 6px; text-align: center;
+  border: 1px solid var(--border); border-radius: var(--radii-control);
+  background: transparent; color: var(--fg-muted); cursor: pointer;
+  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  transition: all var(--dur-fast) var(--ease-fast);
+}
+.ts-pill:hover { border-color: var(--border-strong); color: var(--fg-1); }
+.ts-pill[aria-pressed="true"] {
+  border-color: var(--accent); color: var(--fg);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}

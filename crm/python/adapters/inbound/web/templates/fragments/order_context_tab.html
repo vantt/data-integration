@@ -1,89 +1,192 @@
-{# S12 Context tab — HTMX fragment for /orders/{code}/tabs/context.
-   Data: order (OrderDetail). Two-column: Channel card + Staff card.
+{# @surface  S12 · Order Detail (partial — Context tab)
+   @source   crm/docs/ui-spec/screens/S12-ads-tracking.md
+   @kind     SCREEN
+   HTMX fragment for /orders/{code}/tabs/context.
+   Data: order (OrderDetail).
+   Sections: Channel + Staff · Order timeline · Customer action.
 #}
 {% set ch = order.channel %}
 {% set st = order.staff %}
-<div class="tabpanel stack-4">
-  <div class="panel-head">
-    <span class="panel-title">Channel &amp; staff</span>
-    <span class="panel-sub">dim_channels · dim_staff · dim_promotions</span>
-  </div>
+{% set h = order.header %}
+<div class="tab-sections">
 
-  <div class="kpi-grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-4)">
-
-    {# Channel card #}
-    <div class="scard">
-      <div class="caption scard__eyebrow" style="color:var(--accent)">CHANNEL</div>
-      <div class="facts" style="margin-top:var(--sp-3)">
-        {% if ch.channel_name or ch.channel_code %}
-        <div class="fact">
-          <span class="fact__k">Name</span>
-          <span class="fact__v">{{ [ch.channel_name, ch.channel_code] | join_nonempty(" · ") }}</span>
-        </div>
-        {% endif %}
-        {% if ch.channel_category or ch.channel_format %}
-        <div class="fact">
-          <span class="fact__k">Category</span>
-          <span class="fact__v">{{ [ch.channel_category, ch.channel_format] | join_nonempty(" · ") }}</span>
-        </div>
-        {% endif %}
-        {% if ch.platform or ch.channel_brand %}
-        <div class="fact">
-          <span class="fact__k">Platform</span>
-          <span class="fact__v">{{ [ch.platform, ch.channel_brand] | join_nonempty(" · ") }}</span>
-        </div>
-        {% endif %}
-        {% if ch.market %}
-        <div class="fact">
-          <span class="fact__k">Market</span>
-          <span class="fact__v">{{ ch.market }}</span>
-        </div>
-        {% endif %}
-        {% if ch.promotion_code or ch.max_discount_rate is not none or ch.primary_discount_type %}
-        {% set promo_parts = [] %}
-        {% if ch.promotion_code %}{% set _ = promo_parts.append(ch.promotion_code) %}{% endif %}
-        {% if ch.max_discount_rate is not none %}{% set _ = promo_parts.append("max " + (ch.max_discount_rate | fmt_pct)) %}{% endif %}
-        {% if ch.primary_discount_type %}{% set _ = promo_parts.append(ch.primary_discount_type) %}{% endif %}
-        <div class="fact">
-          <span class="fact__k">Promo</span>
-          <span class="fact__v">{{ promo_parts | join(" · ") }}</span>
-        </div>
-        {% endif %}
-      </div>
+  {# ── Section 1: Channel + Staff ── #}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Channel &amp; staff</span>
+      <span class="panel-sub">dim_channels · dim_staff · dim_promotions</span>
     </div>
 
-    {# Staff card #}
-    <div class="scard">
-      <div class="caption scard__eyebrow" style="color:var(--accent)">STAFF</div>
-      <div class="facts" style="margin-top:var(--sp-3)">
-        {% if st.seller_name %}
-        <div class="fact">
-          <span class="fact__k">Seller</span>
-          <span class="fact__v">{{ st.seller_name }}
-            {% if st.seller_email %}<span class="muted">&lt;{{ st.seller_email }}&gt;</span>{% endif %}
-          </span>
-        </div>
-        {% endif %}
-        {% if st.creator_name %}
-        <div class="fact">
-          <span class="fact__k">Creator</span>
-          <span class="fact__v">{{ st.creator_name }}</span>
-        </div>
-        {% endif %}
-        {% if st.team_name %}
-        <div class="fact">
-          <span class="fact__k">Team</span>
-          <span class="fact__v">{{ st.team_name }}</span>
-        </div>
-        {% endif %}
-        {% if st.branch_name %}
-        <div class="fact">
-          <span class="fact__k">Branch</span>
-          <span class="fact__v">{{ st.branch_name }}</span>
-        </div>
-        {% endif %}
-      </div>
-    </div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-4)">
 
+      {# Channel card #}
+      <div class="scard">
+        <div class="caption scard__eyebrow" style="color:var(--accent)">CHANNEL</div>
+        <div class="facts" style="margin-top:var(--sp-3)">
+          {% if ch.channel_name or ch.channel_code %}
+          <div class="fact">
+            <span class="fact__k">Name</span>
+            <span class="fact__v">{{ [ch.channel_name, ch.channel_code] | join_nonempty(" · ") }}</span>
+          </div>
+          {% endif %}
+          {% if ch.channel_category or ch.channel_format %}
+          <div class="fact">
+            <span class="fact__k">Category</span>
+            <span class="fact__v">{{ [ch.channel_category, ch.channel_format] | join_nonempty(" · ") }}</span>
+          </div>
+          {% endif %}
+          {% if ch.platform or ch.channel_brand %}
+          <div class="fact">
+            <span class="fact__k">Platform</span>
+            <span class="fact__v">{{ [ch.platform, ch.channel_brand] | join_nonempty(" · ") }}</span>
+          </div>
+          {% endif %}
+          {% if ch.market %}
+          <div class="fact">
+            <span class="fact__k">Market</span>
+            <span class="fact__v">{{ ch.market }}</span>
+          </div>
+          {% endif %}
+          {% if ch.promotion_code or ch.max_discount_rate is not none or ch.primary_discount_type %}
+          {% set promo_parts = [] %}
+          {% if ch.promotion_code %}{% set _ = promo_parts.append(ch.promotion_code) %}{% endif %}
+          {% if ch.max_discount_rate is not none %}{% set _ = promo_parts.append("max " + (ch.max_discount_rate | fmt_pct)) %}{% endif %}
+          {% if ch.primary_discount_type %}{% set _ = promo_parts.append(ch.primary_discount_type) %}{% endif %}
+          <div class="fact">
+            <span class="fact__k">Promo</span>
+            <span class="fact__v">{{ promo_parts | join(" · ") }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Staff card #}
+      <div class="scard">
+        <div class="caption scard__eyebrow" style="color:var(--accent)">STAFF</div>
+        <div class="facts" style="margin-top:var(--sp-3)">
+          {% if st.seller_name %}
+          <div class="fact">
+            <span class="fact__k">Seller</span>
+            <span class="fact__v">{{ st.seller_name }}
+              {% if st.seller_email %}<span class="muted">&lt;{{ st.seller_email }}&gt;</span>{% endif %}
+            </span>
+          </div>
+          {% endif %}
+          {% if st.creator_name %}
+          <div class="fact">
+            <span class="fact__k">Creator</span>
+            <span class="fact__v">{{ st.creator_name }}</span>
+          </div>
+          {% endif %}
+          {% if st.team_name %}
+          <div class="fact">
+            <span class="fact__k">Team</span>
+            <span class="fact__v">{{ st.team_name }}</span>
+          </div>
+          {% endif %}
+          {% if st.branch_name %}
+          <div class="fact">
+            <span class="fact__k">Branch</span>
+            <span class="fact__v">{{ st.branch_name }}</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
   </div>
-</div>
+
+  {# ── Section 2: Timeline (dim_date · dim_time) ── #}
+  {% set _dow = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] %}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Timeline</span>
+      <span class="panel-sub">fact_orders · dim_date · dim_time</span>
+    </div>
+    <div class="kpi-grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-4)">
+
+      {# Date card #}
+      <div class="scard">
+        <div class="caption scard__eyebrow" style="color:var(--accent)">DATE</div>
+        <div class="facts" style="margin-top:var(--sp-3)">
+          {% if h.date_actual %}
+          <div class="fact">
+            <span class="fact__k">Date</span>
+            <span class="fact__v mono">{{ h.date_actual }}</span>
+          </div>
+          {% endif %}
+          {% if h.year %}
+          <div class="fact">
+            <span class="fact__k">Year / Q / M</span>
+            <span class="fact__v mono">{{ h.year }} · Q{{ h.quarter }} · M{{ h.month }}</span>
+          </div>
+          {% endif %}
+          {% if h.day_of_week is not none and h.year %}
+          <div class="fact">
+            <span class="fact__k">Day</span>
+            <span class="fact__v">
+              {{ _dow[h.day_of_week] }}
+              {% if h.is_weekend %}<span class="bdg bdg--warn" style="margin-left:4px">weekend</span>{% endif %}
+            </span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Time card #}
+      <div class="scard">
+        <div class="caption scard__eyebrow" style="color:var(--accent)">TIME (ICT)</div>
+        <div class="facts" style="margin-top:var(--sp-3)">
+          {% if h.time_of_day_24 %}
+          <div class="fact">
+            <span class="fact__k">Time</span>
+            <span class="fact__v mono">{{ h.time_of_day_24 }}</span>
+          </div>
+          {% endif %}
+          {% if h.day_period %}
+          <div class="fact">
+            <span class="fact__k">Period</span>
+            <span class="fact__v">{{ h.day_period }}</span>
+          </div>
+          {% endif %}
+          <div class="fact">
+            <span class="fact__k">Business hr</span>
+            <span class="fact__v">
+              {% if h.is_business_hour %}<span class="bdg bdg--good">yes</span>
+              {% else %}<span class="bdg">no</span>{% endif %}
+            </span>
+          </div>
+          <div class="fact">
+            <span class="fact__k">Peak hr</span>
+            <span class="fact__v">
+              {% if h.is_peak_hour %}<span class="bdg bdg--accent">yes</span>
+              {% else %}<span class="bdg">no</span>{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  {# ── Section 3: Customer action (only when linked customer has an action) ── #}
+  {% if order.customer and order.customer.customer_action_type %}
+  {% set c = order.customer %}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Hành động đề xuất</span>
+      <span class="panel-sub">mart_customer_action_queue</span>
+    </div>
+    <div class="scard scard--lead">
+      <div style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-3)">
+        <span class="bdg bdg--accent">{{ c.customer_action_type }}</span>
+        {% if c.full_name %}<span class="muted" style="font-size:13px">→ {{ c.full_name }}</span>{% endif %}
+      </div>
+      {% if c.customer_action_rationale %}
+      <div style="font-size:14px;color:var(--fg-2);line-height:1.5">{{ c.customer_action_rationale }}</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>{# /tab-sections #}

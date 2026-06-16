@@ -1,3 +1,6 @@
+{# @surface  S10 · Campaigns List | S11 · Campaign Detail / Targets (dual-view, toggled by ?view=detail)
+   @source   crm/docs/ui-spec/screens/S10-campaigns-list.md
+   @kind     SCREEN #}
 {% extends "layout.html" %}
 {% block title %}{% if view == "detail" %}{{ campaign.name }}{% else %}Chiến dịch{% endif %}{% endblock %}
 {% block active_screen %}S10{% endblock %}

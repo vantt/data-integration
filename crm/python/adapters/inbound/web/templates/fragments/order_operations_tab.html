@@ -1,4 +1,7 @@
-{# S12 Operations tab — HTMX fragment for /orders/{code}/tabs/operations.
+{# @surface  S12 · Order Detail (partial — Operations tab)
+   @source   crm/docs/ui-spec/screens/S12-ads-tracking.md
+   @kind     SCREEN
+   HTMX fragment for /orders/{code}/tabs/operations.
    Data: order (OrderDetail).
    Sections: Recipient & delivery · Fulfillment · Shipments · Payments · Returns.
 #}
@@ -119,10 +122,6 @@
       </div>
       {% if n_shps > 0 %}
       <div class="ship-summary">
-        {% for key in ["DELIVERED", "SHIPPING", "PACKED", "PENDING", "CANCELLED", "FAILED"] %}
-          {% set cnt = shps | selectattr("status", "upper_eq", key) | list | length %}
-          {# Jinja2 doesn't have upper_eq; use loop counting instead #}
-        {% endfor %}
         {# Count per status using namespace trick #}
         {% set ns = namespace(delivered=0, shipping=0, packed=0, pending=0, cancelled=0, failed=0) %}
         {% for s in shps %}

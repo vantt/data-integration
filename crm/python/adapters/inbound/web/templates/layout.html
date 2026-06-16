@@ -1,9 +1,14 @@
+{# @surface  LAYOUT · App Shell (C01 Sidebar Nav · C02 Search · C07 Theme Switcher hosted here)
+   @source   crm/docs/ui-spec/00-overview.md
+   @kind     LAYOUT #}
 <!doctype html>
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{{ page_title | default('') }}{% endblock %} — CRM</title>
+  <!-- Apply saved theme before CSS renders to prevent flash of wrong theme -->
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem('crm-theme')||'{}');var h=document.documentElement;if(p.theme&&p.theme!=='dark')h.setAttribute('data-theme',p.theme);if(p.accent&&p.accent!=='amber')h.setAttribute('data-accent',p.accent);if(p.density&&p.density!=='normal')h.setAttribute('data-density',p.density);if(p.numfont&&p.numfont!=='mono')h.setAttribute('data-numfont',p.numfont);}catch(e){}}());</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
@@ -45,6 +50,18 @@
 
     <div class="context-slot">
       <span class="context-crumb"><b>{% block crumb_title %}{{ page_title | default('') }}{% endblock %}</b></span>
+      <!-- theme switcher trigger -->
+      <button class="icon-btn" id="theme-btn" type="button" aria-label="Giao diện" aria-expanded="false" aria-haspopup="true">
+        <!-- icon: palette -->
+        <svg class="ico" width="15" height="15" viewBox="0 0 16 16" fill="none"
+             stroke="currentColor" stroke-width="1.3" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 2c3.3 0 5.5 2 5.5 4.5 0 1.6-1 2.5-2.5 2.5a1.5 1.5 0 0 0-1.5 1.5 1.5 1.5 0 0 1-1.5 1.5C5.5 12 2.5 10 2.5 7.5 2.5 4.5 4.7 2 8 2z"/>
+          <circle cx="5.5" cy="7.5" r="0.7" fill="currentColor" stroke="none"/>
+          <circle cx="7"   cy="5"   r="0.7" fill="currentColor" stroke="none"/>
+          <circle cx="10"  cy="5"   r="0.7" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
       <button class="icon-btn" type="button" aria-label="Tài khoản">
         <!-- icon: user -->
         <svg class="ico" width="15" height="15" viewBox="0 0 16 16" fill="none"
@@ -54,6 +71,53 @@
           <path d="M3.2 13.2c.5-2.6 2.4-4 4.8-4s4.3 1.4 4.8 4"></path>
         </svg>
       </button>
+      <!-- theme switcher panel -->
+      <div id="theme-panel" class="theme-panel" hidden role="dialog" aria-label="Tuỳ chỉnh giao diện" data-surface="C07" data-surface-name="Theme Switcher">
+        <div class="theme-panel__head">Giao diện</div>
+
+        <div class="theme-panel__section">
+          <div class="theme-panel__lbl">Bộ màu</div>
+          <div class="ts-swatches">
+            <button class="ts-swatch" data-ts-theme="dark" aria-pressed="true" type="button">
+              <div class="ts-swatch__dot" style="background:#15151a;border:1px solid #2f2f36;"></div>
+              <span class="ts-swatch__name">Dark</span>
+            </button>
+            <button class="ts-swatch" data-ts-theme="light" aria-pressed="false" type="button">
+              <div class="ts-swatch__dot" style="background:#faf7f0;border:1px solid #e5ded0;"></div>
+              <span class="ts-swatch__name">Light</span>
+            </button>
+            <button class="ts-swatch" data-ts-theme="finance" aria-pressed="false" type="button">
+              <div class="ts-swatch__dot" style="background:linear-gradient(to right,#f5f6f7 60%,#3a47d6 60%);border:1px solid #d7dade;"></div>
+              <span class="ts-swatch__name">Finance</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="theme-panel__section">
+          <div class="theme-panel__lbl">Màu nhấn</div>
+          <div class="ts-accents">
+            <button class="ts-accent" data-ts-accent="amber" aria-pressed="true" type="button" style="background:#e8a341;" title="Amber" aria-label="Amber"></button>
+            <button class="ts-accent" data-ts-accent="moss"  aria-pressed="false" type="button" style="background:#84b577;" title="Moss"  aria-label="Moss"></button>
+            <button class="ts-accent" data-ts-accent="honey" aria-pressed="false" type="button" style="background:#d4a548;" title="Honey" aria-label="Honey"></button>
+          </div>
+        </div>
+
+        <div class="theme-panel__section">
+          <div class="theme-panel__lbl">Mật độ</div>
+          <div class="ts-pills">
+            <button class="ts-pill" data-ts-density="normal"  aria-pressed="true"  type="button">Thường</button>
+            <button class="ts-pill" data-ts-density="compact" aria-pressed="false" type="button">Compact</button>
+          </div>
+        </div>
+
+        <div class="theme-panel__section">
+          <div class="theme-panel__lbl">Font số</div>
+          <div class="ts-pills">
+            <button class="ts-pill" data-ts-numfont="mono" aria-pressed="true"  type="button">Mono</button>
+            <button class="ts-pill" data-ts-numfont="sans" aria-pressed="false" type="button">Sans</button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
@@ -193,5 +257,124 @@
 
   </div><!-- /.app-body -->
 
+<script>
+/* Tab activation helper — used by detail screens (customer 360, order detail). */
+function dvActivateTab(tabEl, url) {
+  var tablist = tabEl.closest('[role="tablist"]');
+  if (tablist) {
+    tablist.querySelectorAll('[role="tab"]').forEach(function(t) {
+      t.setAttribute('aria-selected', t === tabEl ? 'true' : 'false');
+    });
+  }
+  var loading = document.getElementById('tab-loading');
+  var panel   = document.getElementById('tab-panel');
+  if (loading) { loading.style.display = ''; loading.setAttribute('aria-busy', 'true'); }
+  if (panel)   panel.innerHTML = '';
+  if (url && window.htmx) {
+    htmx.ajax('GET', url, { target: '#tab-panel', swap: 'innerHTML' }).then(function() {
+      if (loading) { loading.style.display = 'none'; loading.setAttribute('aria-busy', 'false'); }
+    });
+  }
+}
+
+/* ── Theme switcher ──────────────────────────────────────────────────────────
+   Reads/writes localStorage('crm-theme') and toggles html[data-*] attributes.
+   The early inline script in <head> applies saved prefs before CSS loads. */
+(function () {
+  var KEY = 'crm-theme';
+
+  function getPrefs() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) { return {}; }
+  }
+
+  function applyPrefs(p) {
+    var h = document.documentElement;
+    var theme   = p.theme   || 'dark';
+    var accent  = p.accent  || 'amber';
+    var density = p.density || 'normal';
+    var numfont = p.numfont || 'mono';
+    theme   !== 'dark'    ? h.setAttribute('data-theme',   theme)   : h.removeAttribute('data-theme');
+    accent  !== 'amber'   ? h.setAttribute('data-accent',  accent)  : h.removeAttribute('data-accent');
+    density !== 'normal'  ? h.setAttribute('data-density', density) : h.removeAttribute('data-density');
+    numfont !== 'mono'    ? h.setAttribute('data-numfont', numfont) : h.removeAttribute('data-numfont');
+  }
+
+  function setPref(key, val) {
+    var p = getPrefs();
+    p[key] = val;
+    localStorage.setItem(KEY, JSON.stringify(p));
+    applyPrefs(p);
+    syncPanel();
+  }
+
+  function syncPanel() {
+    var p       = getPrefs();
+    var theme   = p.theme   || 'dark';
+    var accent  = p.accent  || 'amber';
+    var density = p.density || 'normal';
+    var numfont = p.numfont || 'mono';
+    document.querySelectorAll('[data-ts-theme]').forEach(function (el) {
+      el.setAttribute('aria-pressed', el.dataset.tsTheme   === theme   ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-ts-accent]').forEach(function (el) {
+      el.setAttribute('aria-pressed', el.dataset.tsAccent  === accent  ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-ts-density]').forEach(function (el) {
+      el.setAttribute('aria-pressed', el.dataset.tsDensity === density ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-ts-numfont]').forEach(function (el) {
+      el.setAttribute('aria-pressed', el.dataset.tsNumfont === numfont ? 'true' : 'false');
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var btn   = document.getElementById('theme-btn');
+    var panel = document.getElementById('theme-panel');
+    if (!btn || !panel) return;
+
+    /* toggle open / close */
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var opening = panel.hidden;
+      panel.hidden = !opening;
+      btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
+      if (opening) syncPanel();
+    });
+
+    /* close on outside click */
+    document.addEventListener('click', function (e) {
+      if (!panel.hidden && !panel.contains(e.target) && e.target !== btn) {
+        panel.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    /* close on Escape */
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !panel.hidden) {
+        panel.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+        btn.focus();
+      }
+    });
+
+    /* wire controls */
+    panel.querySelectorAll('[data-ts-theme]').forEach(function (el) {
+      el.addEventListener('click', function () { setPref('theme', el.dataset.tsTheme); });
+    });
+    panel.querySelectorAll('[data-ts-accent]').forEach(function (el) {
+      el.addEventListener('click', function () { setPref('accent', el.dataset.tsAccent); });
+    });
+    panel.querySelectorAll('[data-ts-density]').forEach(function (el) {
+      el.addEventListener('click', function () { setPref('density', el.dataset.tsDensity); });
+    });
+    panel.querySelectorAll('[data-ts-numfont]').forEach(function (el) {
+      el.addEventListener('click', function () { setPref('numfont', el.dataset.tsNumfont); });
+    });
+
+    syncPanel();
+  });
+}());
+</script>
 </body>
 </html>

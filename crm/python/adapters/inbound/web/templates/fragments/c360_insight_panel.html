@@ -1,6 +1,9 @@
-{# P01 Insight panel — HTMX fragment for /customers/{party_id}/panels/insight.
+{# @surface  P01 · Insight Panel (partial — hosted in S03)
+   @source   crm/docs/ui-spec/panels/P01-insight-panel.md
+   @kind     PANEL
+   HTMX fragment for /customers/{party_id}/panels/insight.
+   CSS classes: tab-sections · tabpanel · stack-5 · rfm · kpi-grid · kpi · kpi--hero · facts · badge-row
    Data: party_id (str), insight (CacheInsight | None).
-   Shows: action queue cards · RFM block · behavioural signals grid.
 #}
 {% if not insight or not insight.insight %}
 <div class="state">
@@ -12,113 +15,129 @@
 {% else %}
 {% set ins = insight.insight %}
 
-{# ── Action queue ── #}
-{% if insight.actions %}
-<div class="panel-section">
-  <div class="panel-head"><span class="panel-title">Hành động đề xuất</span></div>
-  <div class="action-list">
+<div class="tab-sections">
+
+  {# ── Section 1: Hành động đề xuất (action queue) ──────── #}
+  {% if insight.actions %}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Hành động đề xuất</span>
+    </div>
     {% for act in insight.actions %}
-    <div class="action-card">
-      <div class="action-card__top">
+    <div class="scard scard--lead">
+      <div style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-3)">
         <span class="bdg bdg--accent">{{ act.action_type }}</span>
         {% if act.value_at_stake_vnd > 0 %}
-        <span class="action-card__stake mono">{{ act.value_at_stake_vnd | fmt_vnd }}</span>
+        <span class="wf-amt" style="margin-left:auto">{{ act.value_at_stake_vnd | fmt_vnd }}</span>
         {% endif %}
       </div>
-      <div class="action-card__body">{{ act.rationale_vi }}</div>
-      <div class="action-card__meta muted caption">{{ act.generated_date }}</div>
+      <div style="font-size:14px;color:var(--fg-2);line-height:1.5">{{ act.rationale_vi }}</div>
+      <div class="caption" style="color:var(--fg-tertiary);margin-top:var(--sp-2)">{{ act.generated_date }}</div>
     </div>
     {% endfor %}
   </div>
-</div>
-{% endif %}
+  {% endif %}
 
-{# ── RFM block ── #}
-<div class="panel-section">
-  <div class="panel-head">
-    <span class="panel-title">RFM · Giá trị</span>
-    {% if insight.refreshed_at %}
-    <span class="panel-sub">{{ insight.refreshed_at | format_ict }}</span>
-    {% endif %}
-  </div>
-  <div class="kpi-grid">
-    <div class="kpi-card">
-      <div class="kpi-card__label">Value group</div>
-      <div class="kpi-card__val">
-        <span class="bdg bdg--good bdg--dot">{{ ins.value_group }}</span>
-      </div>
+  {# ── Section 2: RFM & Segmentation ───────────────────── #}
+  <div class="tabpanel stack-5">
+    <div class="panel-head">
+      <span class="panel-title">RFM · Phân khúc</span>
+      {% if insight.refreshed_at %}
+      <span class="panel-sub">{{ insight.refreshed_at | format_ict }}</span>
+      {% endif %}
     </div>
-    <div class="kpi-card">
-      <div class="kpi-card__label">Status</div>
-      <div class="kpi-card__val">
-        <span class="bdg bdg--dot bdg--{% if ins.customer_status == 'active' %}good{% elif ins.customer_status == 'at_risk' %}warn{% else %}bad{% endif %}">{{ ins.customer_status }}</span>
-      </div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-card__label">Avg. order</div>
-      <div class="kpi-card__val mono">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-card__label">Avg. days between orders</div>
-      <div class="kpi-card__val mono">{{ "%.0f"|format(ins.avg_days_between_orders) }}d</div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-card__label">Lifetime contribution margin</div>
-      <div class="kpi-card__val mono {% if ins.is_margin_negative %}wf-amt--neg{% endif %}">
-        {{ ins.lifetime_contribution_margin | int | fmt_vnd }}
-      </div>
-    </div>
-    <div class="kpi-card">
-      <div class="kpi-card__label">Cancel rate</div>
-      <div class="kpi-card__val mono">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</div>
-    </div>
-  </div>
-</div>
 
-{# ── Signals grid ── #}
-<div class="panel-section">
-  <div class="panel-head"><span class="panel-title">Signals</span></div>
-  <div class="facts">
-    <div class="fact">
-      <span class="fact__k">Next purchase</span>
-      <span class="fact__v">
-        <span class="bdg bdg--dot bdg--{% if ins.next_purchase_signal == 'OVERDUE' %}bad{% elif ins.next_purchase_signal == 'DUE_SOON' %}warn{% else %}good{% endif %}">
-          {{ ins.next_purchase_signal }}
+    {# RFM trio — cycle / value group / AOV #}
+    <div class="rfm">
+      <div class="rfm__cell">
+        <div class="rfm__glyph">R</div>
+        <div class="rfm__name">Recency</div>
+        <div class="rfm__val">{{ ins.avg_days_between_orders | round | int }}d</div>
+      </div>
+      <div class="rfm__cell">
+        <div class="rfm__glyph">F</div>
+        <div class="rfm__name">Nhóm giá trị</div>
+        <div class="rfm__val" style="font-size:14px">{{ ins.value_group }}</div>
+      </div>
+      <div class="rfm__cell">
+        <div class="rfm__glyph">M</div>
+        <div class="rfm__name">AOV</div>
+        <div class="rfm__val" style="font-size:16px">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
+      </div>
+    </div>
+
+    {# Segmentation chips #}
+    <div>
+      <div class="caption" style="color:var(--fg-tertiary);margin-bottom:var(--sp-2)">Phân khúc</div>
+      <div class="badge-row">
+        <span class="bdg bdg--{% if ins.customer_status == 'active' %}good{% elif ins.customer_status == 'at_risk' %}warn{% else %}bad{% endif %}">
+          {{ ins.customer_status }}
         </span>
-        {% if ins.predicted_next_purchase_date %}
-        <span class="muted caption">{{ ins.predicted_next_purchase_date }}</span>
+        {% if ins.channel_preference %}
+        <span class="bdg">{{ ins.channel_preference }}</span>
         {% endif %}
-      </span>
+        {% if ins.discount_sensitivity %}
+        <span class="bdg">discount: {{ ins.discount_sensitivity }}</span>
+        {% endif %}
+        {% if ins.top_affinity_product %}
+        <span class="bdg">{{ ins.top_affinity_product }}</span>
+        {% endif %}
+        {% if ins.second_affinity_product %}
+        <span class="bdg">{{ ins.second_affinity_product }}</span>
+        {% endif %}
+      </div>
     </div>
-    <div class="fact">
-      <span class="fact__k">Discount sensitivity</span>
-      <span class="fact__v">{{ ins.discount_sensitivity }}</span>
-    </div>
-    {% if ins.channel_preference %}
-    <div class="fact">
-      <span class="fact__k">Channel preference</span>
-      <span class="fact__v">{{ ins.channel_preference }}</span>
-    </div>
-    {% endif %}
-    {% if ins.last_purchased_sku %}
-    <div class="fact">
-      <span class="fact__k">Last SKU</span>
-      <span class="fact__v mono">{{ ins.last_purchased_sku }}</span>
-    </div>
-    {% endif %}
-    {% if ins.top_affinity_product %}
-    <div class="fact">
-      <span class="fact__k">Top affinity</span>
-      <span class="fact__v">{{ ins.top_affinity_product }}</span>
-    </div>
-    {% endif %}
-    {% if ins.second_affinity_product %}
-    <div class="fact">
-      <span class="fact__k">2nd affinity</span>
-      <span class="fact__v">{{ ins.second_affinity_product }}</span>
-    </div>
-    {% endif %}
   </div>
-</div>
 
+  {# ── Section 3: Value metrics ─────────────────────────── #}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Chỉ số giá trị</span>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi kpi--hero">
+        <div class="kpi__label">Lợi nhuận đóng góp</div>
+        <div class="kpi__val {% if ins.is_margin_negative %}wf-amt--neg{% endif %}">
+          {{ ins.lifetime_contribution_margin | int | fmt_vnd }}
+        </div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__label">AOV trung bình</div>
+        <div class="kpi__val">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__label">Tỉ lệ huỷ</div>
+        <div class="kpi__val">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</div>
+      </div>
+    </div>
+  </div>
+
+  {# ── Section 4: Signals ───────────────────────────────── #}
+  <div class="tabpanel stack-3">
+    <div class="panel-head">
+      <span class="panel-title">Signals</span>
+    </div>
+    <div class="facts">
+      <div class="fact">
+        <span class="fact__k">Tín hiệu mua tiếp</span>
+        <span class="fact__v">
+          <span class="bdg bdg--{% if ins.next_purchase_signal == 'OVERDUE' %}bad{% elif ins.next_purchase_signal == 'DUE_SOON' %}warn{% else %}good{% endif %}">
+            {{ ins.next_purchase_signal }}
+          </span>
+          {% if ins.predicted_next_purchase_date %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ ins.predicted_next_purchase_date }}</span>
+          {% endif %}
+        </span>
+      </div>
+      {% if ins.last_purchased_sku %}
+      <div class="fact">
+        <span class="fact__k">SKU mua gần nhất</span>
+        <span class="fact__v mono">{{ ins.last_purchased_sku }}</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>{# /tab-sections #}
 {% endif %}

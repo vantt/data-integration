@@ -1,4 +1,7 @@
-{# P05 Notes panel — HTMX fragment for /customers/{party_id}/panels/notes.
+{# @surface  P05 · Notes Panel (partial — hosted in S03)
+   @source   crm/docs/ui-spec/panels/P05-notes-panel.md
+   @kind     PANEL
+   HTMX fragment for /customers/{party_id}/panels/notes.
    Data: party_id (str), notes (list[Note]).
    Add-note form POSTs to /customers/{party_id}/notes → returns note_card.html fragment
    via hx-swap="afterbegin" on .note-list.

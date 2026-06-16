@@ -1,146 +1,207 @@
-{# S03 Customer 360 Detail — full page.
-   Extends app shell. Data: party (Party360), identities (list[PartyIdentity]), active_tab (str).
-   Panels (P01-P05) are HTMX fragments loaded via /customers/{party_id}/panels/{panel}.
+{# @surface  S03 · Customer 360 Detail
+   @source   crm/docs/ui-spec/screens/S03-customer-360-detail.md
+   @kind     SCREEN
+   Full page.
+   Layout: detail-grid (2fr main | 1fr sidebar) — mirrors detailView customer_detail.html.
+   Panels (P01-P05) are HTMX fragments at /customers/{party_id}/panels/{panel}.
+   Identifier resolution is done server-side; {identifier} in URL can be UUID,
+   Sapo customer_id (numeric), or customer_code (alphanumeric).
 #}
-{% extends "base.html" %}
-{% block title %}{{ party.display_name }} · CRM{% endblock %}
+{% extends "layout.html" %}
+{% block title %}{{ party.display_name }}{% endblock %}
+{% block crumb_title %}{{ party.display_name or "Khách hàng" }}{% endblock %}
 
 {% block content %}
-<div class="crm-page page-enter" data-surface="S03">
+<div class="detail-grid page-enter" data-surface="S03">
 
-  {# ── Topbar: back · name + badges · action buttons ── #}
-  <div class="c360-topbar">
-    <a class="c360-back" href="/customers">← Khách hàng</a>
+  {# ── MAIN: topbar · tabbar · lazy panel ── #}
+  <section class="detail-main">
 
-    <div class="c360-id">
-      <span class="c360-name">{{ party.display_name }}</span>
-      <span class="bdg bdg--{{ party.status | lower }}">{{ party.status }}</span>
+    {# Back + quick actions — uses CSS classes from ds-extra.css #}
+    <div class="c360-topbar" style="margin-bottom:var(--sp-5)">
+      <a class="c360-back" href="/customers">← Khách hàng</a>
+      <div class="c360-actions">
+        <button class="btn btn--secondary" style="padding:8px 14px;font-size:13px"
+                hx-get="/customers/{{ party.party_id }}/modal/log-activity"
+                hx-target="#modal-root" hx-swap="innerHTML">
+          Ghi log
+        </button>
+        <button class="btn btn--secondary" style="padding:8px 14px;font-size:13px">Task</button>
+        <button class="btn btn--secondary" style="padding:8px 14px;font-size:13px">Gán NV</button>
+        <button class="btn btn--secondary" style="padding:8px 14px;font-size:13px">Tag</button>
+      </div>
     </div>
 
-    <div class="c360-actions">
-      <button class="btn btn--secondary"
-              hx-get="/customers/{{ party.party_id }}/modal/log-activity"
-              hx-target="#modal-root" hx-swap="innerHTML">
-        Ghi log
+    {# Tabbar #}
+    <div class="tabbar" role="tablist" aria-label="Phần khách hàng">
+      {% set tabs = [
+        ("insight",  "Insight"),
+        ("orders",   "Đơn hàng"),
+        ("timeline", "Timeline"),
+        ("tasks",    "Tasks"),
+        ("notes",    "Ghi chú"),
+        ("chat",     "Chat"),
+      ] %}
+      {% for tab_key, tab_label in tabs %}
+      <button role="tab"
+              class="tab"
+              aria-selected="{{ 'true' if tab_key == active_tab else 'false' }}"
+              aria-controls="tab-panel"
+              onclick="dvActivateTab(this, '/customers/{{ party.party_id }}/panels/{{ tab_key }}')">
+        {{ tab_label }}
       </button>
-      <button class="btn btn--secondary">Task</button>
-      <button class="btn btn--secondary">Gán NV</button>
-      <button class="btn btn--secondary">Tag</button>
+      {% endfor %}
     </div>
-  </div>
 
-  {# ── 2-column grid: left = tabs, right = info sidebar ── #}
-  <div class="detail-grid">
+    {# Loading shimmer #}
+    <div id="tab-loading" class="skeleton"
+         style="display:none;padding:var(--sp-5) 0" aria-busy="true">
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+      <div class="sk-row"></div>
+    </div>
 
-    {# LEFT: tab bar + active panel #}
-    <div class="detail-main">
-      <div class="tabbar">
-        {% set tabs = [
-          ("insight",  "Insight"),
-          ("orders",   "Đơn hàng"),
-          ("timeline", "Timeline"),
-          ("tasks",    "Tasks"),
-          ("notes",    "Ghi chú"),
-          ("chat",     "Chat"),
-        ] %}
-        {% for tab_key, tab_label in tabs %}
-        <a href="/customers/{{ party.party_id }}?tab={{ tab_key }}"
-           class="tab"
-           {% if tab_key == active_tab %}aria-selected="true"{% endif %}
-           hx-get="/customers/{{ party.party_id }}/panels/{{ tab_key }}"
-           hx-target=".tabpanel"
-           hx-swap="innerHTML"
-           hx-push-url="/customers/{{ party.party_id }}?tab={{ tab_key }}">
-          {{ tab_label }}
-        </a>
+    {# Tab panel — initial content auto-loaded on first paint #}
+    <div id="tab-panel" class="tabpanel" role="tabpanel" tabindex="0">
+      <div hx-get="/customers/{{ party.party_id }}/panels/{{ active_tab }}"
+           hx-trigger="load"
+           hx-swap="outerHTML">
+        <div class="state">
+          <div class="state__inner"><span class="spinner"></span></div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  {# ── SIDEBAR: sticky customer profile ── #}
+  <aside class="detail-sidebar" aria-label="Hồ sơ khách hàng">
+
+    {# Card 1 — Identity: name · Sapo ID · status badges #}
+    <div class="scard">
+      <div class="caption scard__eyebrow">Hồ sơ khách hàng</div>
+      <div class="id-code id-code--name">{{ party.display_name or "—" }}</div>
+      {% for ident in identities %}{% if ident.identity_type == "sapo_customer" %}
+      <div class="id-sub">{{ ident.identity_value }}</div>
+      {% endif %}{% endfor %}
+      <div class="badge-row">
+        <span class="bdg {{ status_badge_class(party.status) }}">{{ party.status }}</span>
+        {% if insight and insight.insight %}
+        <span class="bdg">{{ insight.insight.value_group }}</span>
+        {% endif %}
+        {% if party.lifecycle_stage %}
+        <span class="bdg">{{ party.lifecycle_stage }}</span>
+        {% endif %}
+        {% if not party.consent_contact %}
+        <span class="bdg bdg--warn">DNC</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Card 2 — Headline KPIs (only when insight available) #}
+    {% if insight and insight.insight %}
+    {% set ins = insight.insight %}
+    <div class="scard">
+      <div class="caption scard__eyebrow" style="color:var(--accent)">Chỉ số</div>
+      <div class="kpi-grid">
+        <div class="kpi kpi--hero">
+          <div class="kpi__label">Lợi nhuận đóng góp</div>
+          <div class="kpi__val">{{ ins.lifetime_contribution_margin | fmt_vnd }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">AOV</div>
+          <div class="kpi__val">{{ ins.avg_order_spend | fmt_vnd }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">Chu kỳ mua</div>
+          <div class="kpi__val">{{ ins.avg_days_between_orders | round | int }}d</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {# Card 3 — Contact & profile #}
+    <div class="scard">
+      <div class="caption scard__eyebrow">Liên lạc</div>
+      <div class="facts">
+        {% if party.primary_phone %}
+        <div class="fact">
+          <span class="fact__k">SĐT</span>
+          <span class="fact__v"><a href="tel:{{ party.primary_phone }}" class="mono">{{ party.primary_phone }}</a></span>
+        </div>
+        {% endif %}
+        {% if party.primary_email %}
+        <div class="fact">
+          <span class="fact__k">Email</span>
+          <span class="fact__v">{{ party.primary_email }}</span>
+        </div>
+        {% endif %}
+        {% if party.birthday %}
+        <div class="fact">
+          <span class="fact__k">Sinh nhật</span>
+          <span class="fact__v">{{ party.birthday | format_ict }}</span>
+        </div>
+        {% endif %}
+        {% if party.owner_user_id %}
+        <div class="fact">
+          <span class="fact__k">Owner</span>
+          <span class="fact__v">{{ party.owner_user_id }}</span>
+        </div>
+        {% endif %}
+        {% if party.acquisition_source %}
+        <div class="fact">
+          <span class="fact__k">Nguồn</span>
+          <span class="fact__v">{{ party.acquisition_source }}</span>
+        </div>
+        {% endif %}
+        {% if insight and insight.insight and insight.insight.channel_preference %}
+        <div class="fact">
+          <span class="fact__k">Kênh</span>
+          <span class="fact__v">{{ insight.insight.channel_preference }}</span>
+        </div>
+        {% endif %}
+      </div>
+      <div class="consent-row" style="margin-top:var(--sp-3)">
+        {% if party.consent_contact %}
+        <span class="consent-yes">✓ Cho phép liên lạc</span>
+        {% else %}
+        <span class="consent-no">✕ Không liên lạc</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Card 4 — Dates #}
+    <div class="scard">
+      <div class="caption scard__eyebrow">Thời gian</div>
+      <div class="facts">
+        <div class="fact">
+          <span class="fact__k">Tạo lúc</span>
+          <span class="fact__v">{{ party.party_created_at | format_ict }}</span>
+        </div>
+        {% if party.profile_updated_at %}
+        <div class="fact">
+          <span class="fact__k">Cập nhật</span>
+          <span class="fact__v">{{ party.profile_updated_at | format_ict }}</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Tags — only when present #}
+    {% if party.tags %}
+    <div class="scard">
+      <div class="caption scard__eyebrow">Tags</div>
+      <div class="chips">
+        {% for tag in party.tags %}
+        <span class="chip">{{ tag.name }}</span>
         {% endfor %}
       </div>
-
-      {# Active panel — loaded via HTMX on page load, then swapped on tab click #}
-      <div class="tabpanel">
-        <div hx-get="/customers/{{ party.party_id }}/panels/{{ active_tab }}"
-             hx-trigger="load"
-             hx-swap="outerHTML">
-          <div class="state"><div class="state__inner"><span class="spinner"></span></div></div>
-        </div>
-      </div>
     </div>
+    {% endif %}
 
-    {# RIGHT: static info sidebar #}
-    <aside class="detail-sidebar">
+  </aside>
 
-      {# Basic info card #}
-      <div class="scard">
-        <div class="caption scard__eyebrow">THÔNG TIN CƠ BẢN</div>
-        <div class="facts">
-          <div class="fact"><span class="fact__k">Tên</span> <span class="fact__v">{{ party.display_name }}</span></div>
-          {% if party.primary_phone %}
-          <div class="fact">
-            <span class="fact__k">SĐT</span>
-            <span class="fact__v"><a href="tel:{{ party.primary_phone }}" class="mono">{{ party.primary_phone }}</a></span>
-          </div>
-          {% endif %}
-          {% if party.primary_email %}
-          <div class="fact"><span class="fact__k">Email</span> <span class="fact__v">{{ party.primary_email }}</span></div>
-          {% endif %}
-          {% if party.lifecycle_stage %}
-          <div class="fact"><span class="fact__k">Giai đoạn</span> <span class="fact__v">{{ party.lifecycle_stage }}</span></div>
-          {% endif %}
-          <div class="fact"><span class="fact__k">Loại</span> <span class="fact__v">{{ party.party_type }}</span></div>
-          {% if party.owner_user_id %}
-          <div class="fact"><span class="fact__k">Owner</span> <span class="fact__v">{{ party.owner_user_id }}</span></div>
-          {% endif %}
-        </div>
+</div>{# /detail-grid #}
 
-        <div class="consent-row">
-          {% if party.consent_contact %}
-          <span class="consent-yes">✓ Cho phép liên lạc</span>
-          {% else %}
-          <span class="consent-no">✕ Không liên lạc</span>
-          {% endif %}
-        </div>
-      </div>
-
-      {# Identities card #}
-      {% if identities %}
-      <div class="scard">
-        <div class="caption scard__eyebrow">ĐỊNH DANH</div>
-        <div class="facts">
-          {% for id in identities %}
-          <div class="fact">
-            <span class="fact__k">{{ id.identity_type }}</span>
-            <span class="fact__v mono">{{ id.identity_value }}</span>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {# Tags card #}
-      {% if party.tags_json and party.tags_json not in ('[]', 'null', '') %}
-      <div class="scard">
-        <div class="caption scard__eyebrow">TAGS</div>
-        <div class="chips">
-          <span class="chip chip--amber">{{ party.tags_json[:40] }}</span>
-        </div>
-      </div>
-      {% endif %}
-
-      {# Timestamps card #}
-      <div class="scard">
-        <div class="caption scard__eyebrow">THỜI GIAN</div>
-        <div class="facts">
-          <div class="fact">
-            <span class="fact__k">Tạo lúc</span>
-            <span class="fact__v muted">{{ party.party_created_at | format_ict }}</span>
-          </div>
-        </div>
-      </div>
-
-    </aside>
-  </div>{# /detail-grid #}
-</div>{# /crm-page #}
-
-{# Modal root for HTMX-swapped modals (M08, etc.) #}
 <div id="modal-root"></div>
 {% endblock %}

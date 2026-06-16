@@ -1,11 +1,27 @@
-{# S12 Financial tab — HTMX fragment for /orders/{code}/tabs/financial.
-   Data: order (OrderDetail). Sections: verdict bar · P&L waterfall · cost ledger · COGS recon.
+{# @surface  S12 · Order Detail (partial — Financial tab)
+   @source   crm/docs/ui-spec/screens/S12-ads-tracking.md
+   @kind     SCREEN
+   HTMX fragment for /orders/{code}/tabs/financial.
+   Data: order (OrderDetail). Sections: verdict bar · P&L waterfall · cost breakdown · COGS recon.
+   Waterfall: 4-col (op | label | pct | amount) using waterfall--pl + wf-row--pl.
+   Cost breakdown: collapsible .group per cost_category; COGS uses cogs_items per-SKU when available.
 #}
 {% set f = order.financial %}
 {% set tone = f | verdict_tone %}
+
+{# Shared 4-col waterfall row macro — defined once, used in both is_us and domestic branches #}
+{% macro wf_row(op, label, caption="", amt="", pct="", neg=false, total=false, result=false) %}
+<div class="wf-row--pl{% if total %} wf-row--total{% endif %}{% if result %} wf-row--result{% endif %}">
+  <span class="wf-op{% if op == '+' %} wf-op--add{% elif op in ('-','−') %} wf-op--sub{% elif op == '=' %} wf-op--eq{% endif %}">{{ op }}</span>
+  <span class="wf-label">{{ label | safe }}{% if caption %} <span class="caption" style="margin-left:6px">{{ caption }}</span>{% endif %}</span>
+  <span class="wf-pct">{{ pct }}</span>
+  <span class="wf-amt{% if neg %} wf-amt--neg{% endif %}">{{ amt }}</span>
+</div>
+{% endmacro %}
+
 <div class="tab-sections">
 
-  {# ── P&L waterfall section ── #}
+  {# ── Section 1: P&L waterfall ─────────────────────────────────────── #}
   <div class="tabpanel stack-4">
     <div class="panel-head">
       <span class="panel-title">P&amp;L</span>
@@ -15,9 +31,9 @@
     </div>
 
     {% if f.is_us %}
-    <div class="caveat caveat--warn" style="margin-bottom:var(--sp-3)">
+    <div class="caveat caveat--warn">
       <span class="caveat__mark">⚠</span>
-      <span><b>US CrossBorder order.</b> Domestic <code>net_revenue = 0</code> — revenue is sourced from US shipment economics.</span>
+      <span><b>US CrossBorder order.</b> Domestic <code>net_revenue = 0</code> — revenue sourced from US shipment economics.</span>
     </div>
     {% endif %}
 
@@ -28,12 +44,11 @@
         <div class="verdict-bar__body">
           <div class="verdict-word">{{ tone | verdict_word }}</div>
           <div class="verdict-line">
-            {# verdict line copy #}
             {% if tone == "mute" %}
               Chưa thể tính lãi/lỗ — giá vốn (COGS) chưa được xác minh cho đơn này.
             {% elif f.channel_net_profit <= 0 %}
               {% if f.gross_profit > 0 and f.has_platform_fees %}
-                Lợi nhuận gộp vẫn dương (+{{ f.gross_profit | fmt_vnd }}) nhưng {{ f.shopee_platform_fees | abs | fmt_vnd }} phí sàn đẩy đơn thành lỗ {{ f.channel_net_profit | abs | fmt_vnd }}.
+                Lợi nhuận gộp vẫn dương (+{{ f.gross_profit | abs | fmt_vnd }}) nhưng {{ f.shopee_platform_fees | abs | fmt_vnd }} phí sàn đẩy đơn thành lỗ {{ f.channel_net_profit | abs | fmt_vnd }}.
               {% else %}
                 Đơn này lỗ {{ f.channel_net_profit | abs | fmt_vnd }} sau mọi chi phí — biên ròng {{ f.channel_net_margin_pct | fmt_pct }}.
               {% endif %}
@@ -50,7 +65,7 @@
             {% else %}{{ 0 | fmt_vnd }}{% endif %}
           </div>
           <div class="verdict-sub">
-            {% if f.channel_net_margin_pct is not none %}{{ f.channel_net_margin_pct | fmt_pct }} {% else %}<span class="dash">—</span> {% endif %}
+            {% if f.channel_net_margin_pct is not none %}{{ f.channel_net_margin_pct | fmt_pct }}{% else %}<span class="dash">—</span>{% endif %}
             ròng
             {% if f.gross_profit %}
               · gộp {% if f.gross_profit < 0 %}−{{ f.gross_profit | abs | fmt_vnd }}{% else %}+{{ f.gross_profit | fmt_vnd }}{% endif %}
@@ -58,61 +73,72 @@
           </div>
         </div>
       </div>
-    </div>
 
-    {% if f.allocated_overhead > 0 and f.fully_loaded_net_profit != 0 %}
-    <div class="fl-note" title="Lãi ròng đầy đủ — Lãi đóng góp − chi phí vận hành. Để báo cáo.">
-      <span class="fl-note__mark">ⓘ</span>
-      <span>Sau phân bổ chi phí vận hành (ước tính):
-        <span class="fl-note__fig">Fully-loaded net profit
-          <span class="mono">{{ f.fully_loaded_net_profit | fmt_vnd_signed }}{{ f.fully_loaded_net_profit | abs | fmt_vnd }}</span>
-          {% if f.fully_loaded_margin_pct is not none %}<span class="mono">· {{ f.fully_loaded_margin_pct | fmt_pct }}</span>{% endif %}
+      {% if f.allocated_overhead > 0 and f.fully_loaded_net_profit != 0 %}
+      <div class="fl-note" title="Lãi ròng đầy đủ — Lãi đóng góp − chi phí vận hành. Để báo cáo.">
+        <span class="fl-note__mark">ⓘ</span>
+        <span>Sau phân bổ chi phí vận hành (ước tính):
+          <span class="fl-note__fig">Fully-loaded net profit
+            <span class="mono">{{ f.fully_loaded_net_profit | fmt_vnd_signed }}</span>
+            {% if f.fully_loaded_margin_pct is not none %}<span class="mono">· {{ f.fully_loaded_margin_pct | fmt_pct }}</span>{% endif %}
+          </span>
         </span>
-      </span>
+      </div>
+      {% endif %}
     </div>
-    {% endif %}
 
-    {# Waterfall rows #}
+    {# P&L waterfall — 4-col (op | label | % | amount) #}
     <div class="waterfall waterfall--pl">
       {% if f.is_us %}
-        {% call wf_plain(" ", "US revenue (excl. VAT)", "", f.us_revenue_excl_vat | fmt_vnd, false) %}{% endcall %}
-        {% call wf_plain("+", "US VAT / sales tax", "", f.vat_amount | fmt_vnd, false) %}{% endcall %}
-        {% call wf_result("=", "US revenue (incl. VAT)", "", f.us_revenue_incl_vat | fmt_vnd) %}{% endcall %}
+        {{ wf_row(" ", "US revenue (excl. VAT)", "", f.us_revenue_excl_vat | int | fmt_vnd) }}
+        {{ wf_row("+", "US VAT / sales tax", "", f.vat_amount | int | fmt_vnd) }}
+        {{ wf_row("=", "US revenue (incl. VAT)", "", f.us_revenue_incl_vat | int | fmt_vnd, result=true) }}
       {% else %}
-        {# Standard domestic waterfall #}
-        {% macro wf_row(op, label, caption, amt, neg=false, result=false, decision=false) %}
-        <div class="wf-row--pl{% if result %} wf-row--result{% endif %}{% if decision %} wf-row--decision{% endif %}{% if neg %} wf-amt--neg{% endif %}"
-             style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4);border-top:1px solid var(--border)">
-          <span class="wf-op{% if op == '+' %} wf-op--add{% elif op in ('-','−') %} wf-op--sub{% elif op == '=' %} wf-op--eq{% endif %}">{{ op }}</span>
-          <span class="wf-label">{{ label }}{% if caption %} <span class="caption" style="margin-left:6px">{{ caption }}</span>{% endif %}</span>
-          <span class="wf-pct"></span>
-          <span class="wf-amt{% if neg %} wf-amt--neg{% endif %}">{{ amt }}</span>
-        </div>
-        {% endmacro %}
-        {{ wf_row(" ", "Gross revenue", "gồm VAT", f.gross_revenue | fmt_vnd) }}
-        {{ wf_row("−", "Discount", "", f.discount_amount | fmt_vnd, neg=true) }}
-        {{ wf_row("=", "Total collected", "gồm VAT", f.total_collected | fmt_vnd, result=true) }}
-        {{ wf_row("−", "VAT output", "nhúng trong giá", f.vat_amount | fmt_vnd, neg=true) }}
-        {{ wf_row("=", "Net revenue", "trừ VAT", f.net_revenue | fmt_vnd, result=true) }}
-        {{ wf_row("−", "COGS" + (" <span class='bdg bdg--warn'>unverified</span>" if not f.cogs_source or f.cogs_source == 'none' else ""), "", f.cogs_amount | fmt_vnd, neg=true) }}
+        {{ wf_row(" ", "Gross revenue", "gồm VAT", f.gross_revenue | int | fmt_vnd) }}
+        {{ wf_row("−", "Discount", order.channel.primary_discount_type or "", f.discount_amount | int | fmt_vnd, neg=true) }}
+        {{ wf_row("=", "Total collected", "gồm VAT", f.total_collected | int | fmt_vnd, total=true) }}
+        {{ wf_row("−", "VAT output", "nhúng trong giá", f.vat_amount | int | fmt_vnd, neg=true) }}
+        {{ wf_row("=", "Net revenue", "trừ VAT", f.net_revenue | int | fmt_vnd, total=true) }}
+
+        {# COGS with % of net revenue #}
+        {% set cogs_pct = (f.cogs_amount / f.net_revenue) | fmt_pct if f.net_revenue > 0 else "" %}
+        {% set cogs_label = "COGS" %}
+        {% if not f.cogs_source or f.cogs_source == "none" %}
+          {% set cogs_label = "COGS <span class='bdg bdg--warn'>unverified</span>" %}
+        {% elif f.cogs_source in ("sapo_mac", "both") %}
+          {% set cogs_label = "COGS <span class='caption' style='margin-left:6px'>Sapo-MAC</span>" %}
+        {% endif %}
+        {{ wf_row("−", cogs_label, "", f.cogs_amount | int | fmt_vnd, pct=cogs_pct, neg=true) }}
+
         {% if f.promo_goods_cost > 0 %}
-        <div class="wf-row--pl" style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:6px var(--sp-4);border-top:1px solid var(--border)">
+        <div class="wf-row--pl">
           <span></span>
-          <span class="caption" title="Hàng tặng (promo): chi phí giá vốn của SKU tặng kèm — đã nằm trong COGS ở trên, không trừ thêm">trong đó hàng tặng (promo): {{ f.promo_goods_cost | fmt_vnd }}</span>
+          <span class="caption" style="color:var(--fg-muted)" title="Hàng tặng (promo): chi phí giá vốn của SKU tặng kèm — đã nằm trong COGS ở trên, không trừ thêm">
+            trong đó hàng tặng (promo): {{ f.promo_goods_cost | int | fmt_vnd }}
+          </span>
           <span></span><span></span>
         </div>
         {% endif %}
-        {{ wf_row("=", "Gross profit", "", f.gross_profit | fmt_vnd, result=true) }}
+
+        {# Gross profit with gross margin % #}
+        {{ wf_row("=", "Gross profit", "", f.gross_profit | int | fmt_vnd, pct=f.gross_margin_pct | fmt_pct, result=true) }}
+
         {% if f.has_platform_fees %}
-        {{ wf_row("−", "Platform fees", "", f.shopee_platform_fees | abs | fmt_vnd, neg=true) }}
+        {{ wf_row("−", "Platform fees", order.channel.channel_category or "", f.shopee_platform_fees | abs | int | fmt_vnd, neg=true) }}
         {% endif %}
-        {# Channel net profit decision row #}
+
+        {# Channel net profit — decision row (special rendering, not via macro) #}
         {% set cnp_neg = f.channel_net_profit < 0 %}
-        <div class="wf-row--pl wf-row--decision{% if cnp_neg %} wf-amt--neg{% endif %}"
-             style="display:grid;grid-template-columns:20px 1fr 72px 140px;align-items:center;gap:var(--sp-3);padding:10px var(--sp-4)">
+        <div class="wf-row--pl wf-row--result wf-row--decision">
           <span class="wf-op wf-op--eq">=</span>
-          <span class="wf-label"><span class="wf-star" aria-hidden="true">★</span> Channel net profit <span class="caption wf-tag" title="Lãi đóng góp kênh — trước phân bổ overhead vận hành">contribution margin</span></span>
-          <span class="wf-pct">{{ f.channel_net_margin_pct | fmt_pct }}</span>
+          <span class="wf-label">
+            <span class="wf-star" aria-hidden="true">★</span>
+            Channel net profit
+            <span class="wf-tag" title="Lãi đóng góp kênh — trước phân bổ overhead vận hành">contribution margin</span>
+          </span>
+          <span class="wf-pct">
+            {% if f.channel_net_margin_pct is not none and tone != "mute" %}{{ f.channel_net_margin_pct | fmt_pct }}{% endif %}
+          </span>
           <span class="wf-amt{% if cnp_neg %} wf-amt--neg{% endif %}">
             {% if tone == "mute" %}<span class="dash">—</span>
             {% elif f.channel_net_profit < 0 %}−{{ f.channel_net_profit | abs | fmt_vnd }}
@@ -120,29 +146,31 @@
             {% else %}{{ 0 | fmt_vnd }}{% endif %}
           </span>
         </div>
-      {% endif %}
-    </div>
 
-    {# Fully-loaded footer #}
-    {% if f.allocated_overhead > 0 %}
-    <div class="wf-footer-muted">
-      <div class="wf-footer-row">
-        <span class="wf-footer__op">−</span>
-        <span class="wf-footer__label">Allocated overhead <span class="wf-tag">[allocated]</span>
-          {% if f.is_overhead_estimated %}<span class="bdg bdg--warn">estimated</span>{% endif %}
-        </span>
-        <span class="wf-footer__amt">−{{ f.allocated_overhead | fmt_vnd }}</span>
-      </div>
-      <div class="wf-footer-row wf-footer-row--result">
-        <span class="wf-footer__op">=</span>
-        <span class="wf-footer__label">Fully-loaded net profit <span class="wf-tag">[for reporting]</span></span>
-        <span class="wf-footer__amt">
-          {% if f.fully_loaded_margin_pct is not none %}<span class="wf-footer__pct">{{ f.fully_loaded_margin_pct | fmt_pct }}</span> {% endif %}
-          {{ f.fully_loaded_net_profit | fmt_vnd_signed }}
-        </span>
-      </div>
-    </div>
-    {% endif %}
+        {# Fully-loaded footer rows — kept inside waterfall to share 4-col grid #}
+        {% if f.allocated_overhead > 0 %}
+        <div class="wf-row--pl" style="border-top:1px dashed var(--border);color:var(--fg-muted)">
+          <span class="wf-op wf-op--sub" style="color:var(--fg-tertiary)">−</span>
+          <span class="wf-label" style="color:var(--fg-muted)">
+            Allocated overhead <span class="wf-tag">[allocated]</span>
+            {% if f.is_overhead_estimated %}<span class="bdg bdg--warn">estimated</span>{% endif %}
+          </span>
+          <span class="wf-pct"></span>
+          <span class="wf-amt" style="color:var(--fg-muted)">−{{ f.allocated_overhead | int | fmt_vnd }}</span>
+        </div>
+        <div class="wf-row--pl" style="border-top:1px dashed var(--border);color:var(--fg-muted)">
+          <span class="wf-op wf-op--eq" style="color:var(--fg-tertiary)">=</span>
+          <span class="wf-label" style="color:var(--fg-muted)">
+            Fully-loaded net profit <span class="wf-tag">[for reporting]</span>
+          </span>
+          <span class="wf-pct" style="color:var(--fg-muted)">
+            {% if f.fully_loaded_margin_pct is not none %}{{ f.fully_loaded_margin_pct | fmt_pct }}{% endif %}
+          </span>
+          <span class="wf-amt" style="color:var(--fg-muted)">{{ f.fully_loaded_net_profit | fmt_vnd_signed }}</span>
+        </div>
+        {% endif %}
+      {% endif %}
+    </div>{# /waterfall #}
 
     {% if not f.cogs_source or f.cogs_source == "none" %}
     <div class="caveat caveat--warn"><span class="caveat__mark">⚠</span> <span>Margin unverified — no COGS match for this order.</span></div>
@@ -152,38 +180,128 @@
     {% endif %}
   </div>{# /P&L section #}
 
-  {# ── Cost ledger section ── #}
+  {# ── Section 2: Cost breakdown — one collapsible group per cost_category ── #}
   <div class="tabpanel stack-4">
-    <div class="panel-head"><span class="panel-title">Cost breakdown</span> <span class="panel-sub">fact_order_costs</span></div>
-    {% if order.cost_ledger %}
-    <div class="tbl-wrap">
-      <table class="tbl">
-        <thead><tr><th>Type</th><th>Category</th><th class="num-h">Amount</th><th>Source</th></tr></thead>
-        <tbody>
-        {% for row in order.cost_ledger %}
-        <tr>
-          <td>{{ row.cost_type }}</td>
-          <td class="muted">{{ row.cost_category }}</td>
-          <td class="num">{{ row.amount | fmt_vnd }}</td>
-          <td class="muted caption">{{ row.source_system }}</td>
-        </tr>
-        {% endfor %}
-        </tbody>
-      </table>
+    <div class="panel-head">
+      <span class="panel-title">Cost breakdown</span>
+      <span class="panel-sub">fact_order_costs</span>
     </div>
-    {% else %}
-    <div class="caveat caveat--info"><span class="caveat__mark">ⓘ</span> <span>No cost rows found for this order.</span></div>
-    {% endif %}
-  </div>
 
-  {# ── COGS reconciliation (only when cogs_source == 'both') ── #}
+    {% if not order.cost_ledger %}
+    <div class="caveat caveat--info"><span class="caveat__mark">ⓘ</span> <span>No cost rows found for this order.</span></div>
+    {% else %}
+
+    {% for category, cat_rows_iter in order.cost_ledger | groupby("cost_category") %}
+    {% if category != "PROMO_GOODS" %}{# promo goods are annotated in waterfall, not repeated here #}
+    {% set cat_rows = cat_rows_iter | list %}
+    {% set group_total = cat_rows | sum(attribute="amount") %}
+
+    <div class="group" data-open="true">
+      <div class="group__head">
+        <div class="group__cat">
+          <span class="group__chev">▾</span>
+          {% if category == "COGS" %}
+          <span class="bdg bdg--good">{{ category }}</span>
+          {% if order.cogs_items %}<span class="wf-tag">per SKU · Sapo-MAC</span>{% endif %}
+          {% elif category == "OVERHEAD" %}
+          <span class="bdg bdg--accent">{{ category }}</span>
+          <span class="wf-tag">(allocated)</span>
+          {% else %}
+          <span class="bdg">{{ category }}</span>
+          {% endif %}
+        </div>
+        <span class="group__total">{{ group_total | int | fmt_vnd }}</span>
+      </div>
+      <div class="group__body tbl-wrap" style="border-radius:0;border:0;border-top:1px solid var(--border)">
+
+        {% if category == "COGS" and order.cogs_items %}
+        {# Per-SKU COGS from int_order_cogs_reconciled — richer detail #}
+        <table class="tbl tbl--ledger">
+          <colgroup>
+            <col class="col-type" /><col class="col-source" /><col class="col-record" />
+            <col class="col-feesrc" /><col class="col-amount" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>SKU</th><th>Source</th><th>Variant ID</th><th>Fee src</th>
+              <th class="num-h">Amount (Sapo)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ci in order.cogs_items %}
+            <tr>
+              <td class="cell-strong mono" style="font-size:12px">
+                {{ ci.sku or "—" }}
+                {% if ci.is_promo %}<span class="bdg bdg--accent">gift</span>{% endif %}
+              </td>
+              <td class="muted"><span class="bdg">{{ ci.cogs_source }}</span></td>
+              <td class="mono muted" style="font-size:11px">{{ ci.variant_id }}</td>
+              <td><span class="bdg bdg--good">actual</span></td>
+              <td class="num">{{ ci.cogs_goods_primary | int | fmt_vnd }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+
+        {% else %}
+        {# Generic ledger table for OVERHEAD and other categories #}
+        <table class="tbl tbl--ledger">
+          <colgroup>
+            <col class="col-type" /><col class="col-source" /><col class="col-record" />
+            <col class="col-feesrc" /><col class="col-amount" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th>Cost type</th><th>Source</th><th>Record</th><th>Fee src</th>
+              <th class="num-h">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in cat_rows %}
+            <tr>
+              <td class="cell-strong mono" style="font-size:12px">{{ r.cost_type }}</td>
+              <td class="muted">{{ r.source_system }}</td>
+              <td class="mono muted" style="font-size:11px">{{ r.source_record }}</td>
+              <td>
+                <span class="bdg bdg--{{ 'good' if r.fee_source == 'actual' else 'warn' }}">
+                  {{ r.fee_source or "—" }}
+                </span>
+              </td>
+              <td class="num">{{ r.amount | int | fmt_vnd }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+      </div>
+    </div>{# /group #}
+    {% endif %}
+    {% endfor %}
+
+    <div class="note-line">
+      <span class="caveat__mark">ⓘ</span>
+      <span>Each row is traceable to its source system + record. Fee source marks actual vs estimated. Promo goods cost (hàng tặng) đã nhúng trong COGS — không cộng thêm lần 2.</span>
+    </div>
+    {% endif %}
+  </div>{# /Cost breakdown section #}
+
+  {# ── Section 3: COGS reconciliation (only when both sources present) ── #}
   {% if f.cogs_source == "both" %}
   <div class="tabpanel stack-4">
-    <div class="panel-head"><span class="panel-title">COGS reconciliation</span> <span class="panel-sub">int_order_cogs_reconciled</span></div>
+    <div class="panel-head">
+      <span class="panel-title">COGS reconciliation</span>
+      <span class="panel-sub">int_order_cogs_reconciled</span>
+    </div>
     {% if order.cogs_items %}
     <div class="tbl-wrap">
       <table class="tbl">
-        <thead><tr><th>SKU</th><th class="num-h">Sapo MAC</th><th class="num-h">MISA</th><th class="num-h">Primary</th><th>Source</th></tr></thead>
+        <thead>
+          <tr>
+            <th>SKU</th><th class="num-h">Sapo MAC</th><th class="num-h">MISA</th>
+            <th class="num-h">Primary</th><th>Source</th>
+          </tr>
+        </thead>
         <tbody>
         {% for ci in order.cogs_items %}
         <tr>

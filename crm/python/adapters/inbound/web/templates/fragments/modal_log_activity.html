@@ -1,4 +1,7 @@
-{# M08 Log Activity modal — served at GET /customers/{party_id}/modal/log-activity.
+{# @surface  M08 · Log Activity Modal (partial — HTMX-served modal)
+   @source   crm/docs/ui-spec/00-overview.md
+   @kind     MODAL
+   M08 Log Activity modal — served at GET /customers/{party_id}/modal/log-activity.
    Data: party_id (str), conv_id (str — empty when invoked from Customer 360).
    POST target: /customers/{party_id}/log-activity (or /inbox/{conv_id}/log-activity).
    Response swaps back into #modal-root via hx-target="#modal-root".
