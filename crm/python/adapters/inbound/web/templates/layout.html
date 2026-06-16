@@ -8,10 +8,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}{{ page_title | default('') }}{% endblock %} — CRM</title>
   <!-- Apply saved theme before CSS renders to prevent flash of wrong theme -->
-  <script>(function(){try{var p=JSON.parse(localStorage.getItem('crm-theme')||'{}');var h=document.documentElement;if(p.theme&&p.theme!=='dark')h.setAttribute('data-theme',p.theme);if(p.accent&&p.accent!=='amber')h.setAttribute('data-accent',p.accent);if(p.density&&p.density!=='normal')h.setAttribute('data-density',p.density);if(p.numfont&&p.numfont!=='mono')h.setAttribute('data-numfont',p.numfont);}catch(e){}}());</script>
+  <script>(function(){try{var p=JSON.parse(localStorage.getItem('crm-theme')||'{}');var h=document.documentElement;if(p.theme&&p.theme!=='dark')h.setAttribute('data-theme',p.theme);if(p.accent&&p.accent!=='amber')h.setAttribute('data-accent',p.accent);if(p.density==='compact')h.setAttribute('data-density','compact');else h.removeAttribute('data-density');if(p.numfont&&p.numfont!=='mono')h.setAttribute('data-numfont',p.numfont);if(p.font&&p.font!=='editorial')h.setAttribute('data-font',p.font);else h.removeAttribute('data-font');}catch(e){}}());</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Space+Grotesk:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <!-- Precision design system (tokens → ui-kit → crm → prototype surfaces) -->
   <link rel="stylesheet" href="/static/ds-precision.css">
   <link rel="stylesheet" href="/static/ds-app.css">
@@ -71,50 +71,93 @@
           <path d="M3.2 13.2c.5-2.6 2.4-4 4.8-4s4.3 1.4 4.8 4"></path>
         </svg>
       </button>
-      <!-- theme switcher panel -->
+      <!-- theme switcher panel (C07) -->
       <div id="theme-panel" class="theme-panel" hidden role="dialog" aria-label="Tuỳ chỉnh giao diện" data-surface="C07" data-surface-name="Theme Switcher">
-        <div class="theme-panel__head">Giao diện</div>
+        <div class="tweaks-panel__head">
+          <div>
+            <span class="tweaks-panel__title">Theme</span>
+            <div class="theme-panel__sub">Màu &amp; bộ chữ · lưu cục bộ</div>
+          </div>
+          <button class="icon-btn icon-btn--sm" id="theme-close" type="button" aria-label="Đóng">
+            <svg class="ico" width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/>
+            </svg>
+          </button>
+        </div>
 
-        <div class="theme-panel__section">
-          <div class="theme-panel__lbl">Bộ màu</div>
-          <div class="ts-swatches">
-            <button class="ts-swatch" data-ts-theme="dark" aria-pressed="true" type="button">
-              <div class="ts-swatch__dot" style="background:#15151a;border:1px solid #2f2f36;"></div>
-              <span class="ts-swatch__name">Dark</span>
+        <div class="tweaks-sec">
+          <div class="tweaks-sec__label">Bảng màu nền</div>
+          <div class="theme-swatches">
+            <button class="theme-sw" data-ts-theme="dark" type="button">
+              <span class="theme-sw__chip" style="background:#15151a;"></span>
+              <span class="theme-sw__name">Precision</span>
             </button>
-            <button class="ts-swatch" data-ts-theme="light" aria-pressed="false" type="button">
-              <div class="ts-swatch__dot" style="background:#faf7f0;border:1px solid #e5ded0;"></div>
-              <span class="ts-swatch__name">Light</span>
+            <button class="theme-sw" data-ts-theme="light" type="button">
+              <span class="theme-sw__chip" style="background:#faf7f0;border-color:#d4cdc4;"></span>
+              <span class="theme-sw__name">Sáng ấm</span>
             </button>
-            <button class="ts-swatch" data-ts-theme="finance" aria-pressed="false" type="button">
-              <div class="ts-swatch__dot" style="background:linear-gradient(to right,#f5f6f7 60%,#3a47d6 60%);border:1px solid #d7dade;"></div>
-              <span class="ts-swatch__name">Finance</span>
+            <button class="theme-sw" data-ts-theme="finance" type="button">
+              <span class="theme-sw__chip" style="background:#eef0fb;border-color:#c8ccec;"></span>
+              <span class="theme-sw__name">Tài chính</span>
             </button>
           </div>
         </div>
 
-        <div class="theme-panel__section">
-          <div class="theme-panel__lbl">Màu nhấn</div>
-          <div class="ts-accents">
-            <button class="ts-accent" data-ts-accent="amber" aria-pressed="true" type="button" style="background:#e8a341;" title="Amber" aria-label="Amber"></button>
-            <button class="ts-accent" data-ts-accent="moss"  aria-pressed="false" type="button" style="background:#84b577;" title="Moss"  aria-label="Moss"></button>
-            <button class="ts-accent" data-ts-accent="honey" aria-pressed="false" type="button" style="background:#d4a548;" title="Honey" aria-label="Honey"></button>
+        <div class="tweaks-sec">
+          <div class="tweaks-sec__label">Màu nhấn</div>
+          <div class="theme-accents">
+            <button class="theme-acc" data-ts-accent="amber" type="button">
+              <span class="theme-acc__dot" style="background:#e8a341;"></span>
+              <span class="theme-acc__name">Hổ phách</span>
+            </button>
+            <button class="theme-acc" data-ts-accent="moss" type="button">
+              <span class="theme-acc__dot" style="background:#84b577;"></span>
+              <span class="theme-acc__name">Rêu</span>
+            </button>
+            <button class="theme-acc" data-ts-accent="honey" type="button">
+              <span class="theme-acc__dot" style="background:#d4a548;"></span>
+              <span class="theme-acc__name">Mật ong</span>
+            </button>
+            <button class="theme-acc" data-ts-accent="indigo" type="button">
+              <span class="theme-acc__dot" style="background:#3a47d6;"></span>
+              <span class="theme-acc__name">Chàm</span>
+            </button>
+            <button class="theme-acc" data-ts-accent="teal" type="button">
+              <span class="theme-acc__dot" style="background:#4bb3a7;"></span>
+              <span class="theme-acc__name">Ngọc</span>
+            </button>
+            <button class="theme-acc" data-ts-accent="coral" type="button">
+              <span class="theme-acc__dot" style="background:#e0746c;"></span>
+              <span class="theme-acc__name">San hô</span>
+            </button>
           </div>
         </div>
 
-        <div class="theme-panel__section">
-          <div class="theme-panel__lbl">Mật độ</div>
-          <div class="ts-pills">
-            <button class="ts-pill" data-ts-density="normal"  aria-pressed="true"  type="button">Thường</button>
-            <button class="ts-pill" data-ts-density="compact" aria-pressed="false" type="button">Compact</button>
+        <div class="tweaks-sec">
+          <div class="tweaks-sec__label">Bộ chữ</div>
+          <div class="tweaks-opts">
+            <button class="twk" data-ts-font="editorial" type="button" style="font-family:'Newsreader',serif">Editorial</button>
+            <button class="twk" data-ts-font="precision" type="button" style="font-family:'Fraunces',serif">Precision</button>
+            <button class="twk" data-ts-font="grotesk"   type="button" style="font-family:'Space Grotesk',sans-serif">Grotesk</button>
+            <button class="twk" data-ts-font="plex"      type="button" style="font-family:'IBM Plex Serif',serif">Plex</button>
+            <button class="twk" data-ts-font="source"    type="button" style="font-family:'Source Sans 3',sans-serif">Source</button>
           </div>
         </div>
 
-        <div class="theme-panel__section">
-          <div class="theme-panel__lbl">Font số</div>
-          <div class="ts-pills">
-            <button class="ts-pill" data-ts-numfont="mono" aria-pressed="true"  type="button">Mono</button>
-            <button class="ts-pill" data-ts-numfont="sans" aria-pressed="false" type="button">Sans</button>
+        <div class="tweaks-sec tweaks-sec--row">
+          <div>
+            <div class="tweaks-sec__label">Mật độ</div>
+            <div class="tweaks-opts">
+              <button class="twk" data-ts-density="comfortable" type="button">Thoáng</button>
+              <button class="twk" data-ts-density="compact" type="button">Gọn</button>
+            </div>
+          </div>
+          <div>
+            <div class="tweaks-sec__label">Font số</div>
+            <div class="tweaks-opts">
+              <button class="twk" data-ts-numfont="mono" type="button">Mono</button>
+              <button class="twk" data-ts-numfont="sans" type="button">Sans</button>
+            </div>
           </div>
         </div>
       </div>
@@ -277,9 +320,10 @@ function dvActivateTab(tabEl, url) {
   }
 }
 
-/* ── Theme switcher ──────────────────────────────────────────────────────────
+/* ── Theme switcher (C07) ────────────────────────────────────────────────────
    Reads/writes localStorage('crm-theme') and toggles html[data-*] attributes.
-   The early inline script in <head> applies saved prefs before CSS loads. */
+   The early inline script in <head> applies saved prefs before CSS loads.
+   Active state: --on modifier classes (theme-sw--on, theme-acc--on, twk--on). */
 (function () {
   var KEY = 'crm-theme';
 
@@ -291,12 +335,14 @@ function dvActivateTab(tabEl, url) {
     var h = document.documentElement;
     var theme   = p.theme   || 'dark';
     var accent  = p.accent  || 'amber';
-    var density = p.density || 'normal';
+    var density = p.density || 'comfortable';
     var numfont = p.numfont || 'mono';
+    var font    = p.font    || 'editorial';
     theme   !== 'dark'    ? h.setAttribute('data-theme',   theme)   : h.removeAttribute('data-theme');
     accent  !== 'amber'   ? h.setAttribute('data-accent',  accent)  : h.removeAttribute('data-accent');
-    density !== 'normal'  ? h.setAttribute('data-density', density) : h.removeAttribute('data-density');
+    density === 'compact' ? h.setAttribute('data-density', 'compact') : h.removeAttribute('data-density');
     numfont !== 'mono'    ? h.setAttribute('data-numfont', numfont) : h.removeAttribute('data-numfont');
+    font    !== 'editorial' ? h.setAttribute('data-font',  font)    : h.removeAttribute('data-font');
   }
 
   function setPref(key, val) {
@@ -311,54 +357,59 @@ function dvActivateTab(tabEl, url) {
     var p       = getPrefs();
     var theme   = p.theme   || 'dark';
     var accent  = p.accent  || 'amber';
-    var density = p.density || 'normal';
+    var density = p.density || 'comfortable';
     var numfont = p.numfont || 'mono';
+    var font    = p.font    || 'editorial';
     document.querySelectorAll('[data-ts-theme]').forEach(function (el) {
-      el.setAttribute('aria-pressed', el.dataset.tsTheme   === theme   ? 'true' : 'false');
+      el.classList.toggle('theme-sw--on', el.dataset.tsTheme === theme);
     });
     document.querySelectorAll('[data-ts-accent]').forEach(function (el) {
-      el.setAttribute('aria-pressed', el.dataset.tsAccent  === accent  ? 'true' : 'false');
+      el.classList.toggle('theme-acc--on', el.dataset.tsAccent === accent);
     });
     document.querySelectorAll('[data-ts-density]').forEach(function (el) {
-      el.setAttribute('aria-pressed', el.dataset.tsDensity === density ? 'true' : 'false');
+      el.classList.toggle('twk--on', el.dataset.tsDensity === density);
     });
     document.querySelectorAll('[data-ts-numfont]').forEach(function (el) {
-      el.setAttribute('aria-pressed', el.dataset.tsNumfont === numfont ? 'true' : 'false');
+      el.classList.toggle('twk--on', el.dataset.tsNumfont === numfont);
+    });
+    document.querySelectorAll('[data-ts-font]').forEach(function (el) {
+      el.classList.toggle('twk--on', el.dataset.tsFont === font);
     });
   }
 
   document.addEventListener('DOMContentLoaded', function () {
     var btn   = document.getElementById('theme-btn');
     var panel = document.getElementById('theme-panel');
+    var closeBtn = document.getElementById('theme-close');
     if (!btn || !panel) return;
 
-    /* toggle open / close */
+    function openPanel() {
+      panel.hidden = false;
+      btn.setAttribute('aria-expanded', 'true');
+      btn.classList.add('icon-btn--on');
+      syncPanel();
+    }
+    function closePanel() {
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+      btn.classList.remove('icon-btn--on');
+    }
+
     btn.addEventListener('click', function (e) {
       e.stopPropagation();
-      var opening = panel.hidden;
-      panel.hidden = !opening;
-      btn.setAttribute('aria-expanded', opening ? 'true' : 'false');
-      if (opening) syncPanel();
+      panel.hidden ? openPanel() : closePanel();
     });
 
-    /* close on outside click */
+    if (closeBtn) closeBtn.addEventListener('click', function () { closePanel(); btn.focus(); });
+
     document.addEventListener('click', function (e) {
-      if (!panel.hidden && !panel.contains(e.target) && e.target !== btn) {
-        panel.hidden = true;
-        btn.setAttribute('aria-expanded', 'false');
-      }
+      if (!panel.hidden && !panel.contains(e.target) && e.target !== btn) closePanel();
     });
 
-    /* close on Escape */
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !panel.hidden) {
-        panel.hidden = true;
-        btn.setAttribute('aria-expanded', 'false');
-        btn.focus();
-      }
+      if (e.key === 'Escape' && !panel.hidden) { closePanel(); btn.focus(); }
     });
 
-    /* wire controls */
     panel.querySelectorAll('[data-ts-theme]').forEach(function (el) {
       el.addEventListener('click', function () { setPref('theme', el.dataset.tsTheme); });
     });
@@ -370,6 +421,9 @@ function dvActivateTab(tabEl, url) {
     });
     panel.querySelectorAll('[data-ts-numfont]').forEach(function (el) {
       el.addEventListener('click', function () { setPref('numfont', el.dataset.tsNumfont); });
+    });
+    panel.querySelectorAll('[data-ts-font]').forEach(function (el) {
+      el.addEventListener('click', function () { setPref('font', el.dataset.tsFont); });
     });
 
     syncPanel();

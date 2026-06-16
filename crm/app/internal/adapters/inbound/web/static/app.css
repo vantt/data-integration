@@ -19,6 +19,19 @@
   --font-display: 'Newsreader', Georgia, 'Times New Roman', serif;
 }
 
+/* ── Additional accent overrides (extend ds-app.css) ─────────
+   moss + honey are defined in ds-app.css; indigo/teal/coral added here. */
+html[data-accent="indigo"] { --accent: var(--indigo-500); --accent-hover: var(--indigo-hi); --accent-press: var(--indigo-lo); --on-amber: #0a0c2a; }
+html[data-accent="teal"]   { --accent: #4bb3a7; --accent-hover: #65c4b9; --accent-press: #3a8f85; --on-amber: #071413; }
+html[data-accent="coral"]  { --accent: var(--coral-500); --accent-hover: #e88880; --accent-press: #c05850; --on-amber: #2b0c0a; }
+
+/* ── Font-family overrides (data-font) ───────────────────────
+   editorial = Newsreader (default above); other options below. */
+html[data-font="precision"] { --font-display: 'Fraunces', Georgia, 'Times New Roman', serif; }
+html[data-font="grotesk"]   { --font-display: 'Space Grotesk', sans-serif; --font-body: 'Space Grotesk', system-ui, sans-serif; }
+html[data-font="plex"]      { --font-display: 'IBM Plex Serif', serif; --font-body: 'IBM Plex Sans', sans-serif; --font-mono: 'IBM Plex Mono', monospace; }
+html[data-font="source"]    { --font-display: 'Source Sans 3', sans-serif; --font-body: 'Source Sans 3', system-ui, sans-serif; --font-mono: 'JetBrains Mono', monospace; }
+
 /* ── HTMX request affordances ────────────────────────────────
    htmx toggles .htmx-request on the triggering element during a
    request; indicators are hidden until then. */
@@ -60,75 +73,71 @@
 /* narrowed select for inline table cells (role picker, etc.) */
 .inp-sel--narrow { max-width: 12rem; }
 
-/* ── Theme switcher panel ─────────────────────────────────────────────────── */
-/* Anchor panel to context-slot so it drops below the header icons */
-.context-slot { position: relative; }
-
+/* ── Theme switcher panel (C07) ───────────────────────────────────────────── */
 .theme-panel {
-  position: absolute; top: calc(100% + 10px); right: 0; z-index: 80;
-  width: 236px;
+  position: fixed; right: 24px; top: 70px; z-index: 260;
+  width: 304px; max-height: calc(100vh - 90px); overflow-y: auto;
   background: var(--bg-raised); border: 1px solid var(--border-strong);
   border-radius: var(--radii-soft);
-  box-shadow: 0 8px 32px rgba(0,0,0,.28);
-  padding: var(--sp-3) var(--sp-4) var(--sp-4);
-  display: flex; flex-direction: column; gap: var(--sp-3);
-  animation: drop var(--dur-open) var(--ease-open);
+  box-shadow: 0 16px 44px rgba(0,0,0,.42);
+  animation: themeIn var(--dur-open) var(--ease-open);
 }
-/* [hidden] must override display:flex */
 .theme-panel[hidden] { display: none !important; }
+@keyframes themeIn { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-.theme-panel__head {
-  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary);
-  padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border);
+.tweaks-panel__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-4); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; background: var(--bg-raised);
 }
-.theme-panel__section { display: flex; flex-direction: column; gap: 7px; }
-.theme-panel__lbl {
-  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary);
+.tweaks-panel__title { font-family: var(--font-display); font-size: 18px; color: var(--fg); }
+.theme-panel__sub {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: var(--tracking-mono); color: var(--fg-tertiary); margin-top: 4px;
 }
-
-/* 3-way theme swatches */
-.ts-swatches { display: flex; gap: var(--sp-2); }
-.ts-swatch {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
-  padding: 7px var(--sp-1); border: 1px solid var(--border); border-radius: var(--radii-control);
-  cursor: pointer; background: transparent;
-  transition: border-color var(--dur-fast) var(--ease-fast);
+.tweaks-sec { padding: var(--sp-4); }
+.tweaks-sec + .tweaks-sec { border-top: 1px solid var(--border); }
+.tweaks-sec__label {
+  font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary); margin-bottom: var(--sp-3);
 }
-.ts-swatch:hover { border-color: var(--border-strong); }
-.ts-swatch[aria-pressed="true"] {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-}
-.ts-swatch__dot { width: 36px; height: 20px; border-radius: var(--radii-hairline); }
-.ts-swatch__name {
-  font-family: var(--font-mono); font-size: 9px; letter-spacing: var(--tracking-mono);
-  color: var(--fg-muted); text-transform: uppercase;
-}
-
-/* accent dots */
-.ts-accents { display: flex; gap: var(--sp-2); }
-.ts-accent {
-  width: 26px; height: 26px; border-radius: var(--radii-control);
-  border: 2px solid transparent; cursor: pointer;
-  transition: border-color var(--dur-fast) var(--ease-fast), transform var(--dur-fast) var(--ease-fast);
-}
-.ts-accent:hover { transform: scale(1.1); }
-.ts-accent[aria-pressed="true"] { border-color: var(--fg-1); }
-
-/* density / numfont pills */
-.ts-pills { display: flex; gap: var(--sp-2); }
-.ts-pill {
-  flex: 1; padding: 6px; text-align: center;
+.tweaks-sec--row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+.tweaks-opts { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.twk {
+  cursor: pointer; padding: 7px 12px;
   border: 1px solid var(--border); border-radius: var(--radii-control);
-  background: transparent; color: var(--fg-muted); cursor: pointer;
-  font-family: var(--font-mono); font-size: 9px; text-transform: uppercase;
-  letter-spacing: var(--tracking-eyebrow);
+  background: var(--bg-surface); color: var(--fg-muted); font-size: 12.5px;
   transition: all var(--dur-fast) var(--ease-fast);
 }
-.ts-pill:hover { border-color: var(--border-strong); color: var(--fg-1); }
-.ts-pill[aria-pressed="true"] {
-  border-color: var(--accent); color: var(--fg);
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+.twk:hover { border-color: var(--border-strong); color: var(--fg-1); }
+.twk--on { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+
+/* theme swatches — 2-col grid, chip + label */
+.theme-swatches { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.theme-sw {
+  display: flex; align-items: center; gap: var(--sp-2); padding: 7px var(--sp-2);
+  cursor: pointer; border: 1px solid var(--border); border-radius: var(--radii-control);
+  background: var(--bg-surface); color: var(--fg-muted); font-size: 12.5px;
+  transition: all var(--dur-fast) var(--ease-fast);
 }
+.theme-sw:hover { border-color: var(--border-strong); color: var(--fg-1); }
+.theme-sw--on { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.theme-sw__chip { width: 18px; height: 18px; flex: none; border-radius: var(--radii-hairline); border: 1px solid var(--border-strong); }
+.theme-sw__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* accent picker — 3-col grid, dot + label below */
+.theme-accents { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--sp-2); }
+.theme-acc {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 9px 4px; cursor: pointer;
+  border: 1px solid var(--border); border-radius: var(--radii-control);
+  background: var(--bg-surface); color: var(--fg-muted); font-size: 11px;
+  transition: all var(--dur-fast) var(--ease-fast);
+}
+.theme-acc:hover { border-color: var(--border-strong); color: var(--fg-1); }
+.theme-acc--on { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.theme-acc__dot {
+  width: 18px; height: 18px; border-radius: var(--radii-pill); flex: none;
+  border: 1px solid color-mix(in srgb, #000 18%, transparent);
+}
+.theme-acc--on .theme-acc__dot { box-shadow: 0 0 0 2px var(--bg-raised), 0 0 0 3px var(--accent); }
