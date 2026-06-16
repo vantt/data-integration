@@ -85,6 +85,7 @@ function Icon({ name, size = 16 }) {
     case "external": return svg(<><path d="M6 3.5H3.5v9h9V10M9.5 3.5H13v3.5M13 3.5 7.5 9" /></>);
     case "copy": return svg(<><rect x="5.5" y="5.5" width="7" height="7" rx="1" /><path d="M3.5 9.5h-1v-7h7v1" /></>);
     case "refresh": return svg(<><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2.5V5h-2.5" /></>);
+    case "palette": return svg(<><path d="M8 1.7C4.3 1.7 1.4 4.3 1.4 7.7c0 2.6 2 4.4 4.1 4.4.95 0 1.5-.6 1.5-1.35 0-.5-.3-.8-.3-1.25 0-.62.5-1.1 1.25-1.1h1.2c2.3 0 4.05-1.6 4.05-3.9 0-2.95-2.75-4.8-5.25-4.8z" /><circle cx="4.5" cy="7.2" r=".85" fill="currentColor" stroke="none" /><circle cx="6.3" cy="4.7" r=".85" fill="currentColor" stroke="none" /><circle cx="9.4" cy="4.6" r=".85" fill="currentColor" stroke="none" /><circle cx="11.2" cy="6.8" r=".85" fill="currentColor" stroke="none" /></>);
     default: return null;
   }
 }
