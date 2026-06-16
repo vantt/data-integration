@@ -118,3 +118,82 @@ def truncate_str(s: str, n: int) -> str:
     if len(runes) <= n:
         return s
     return "".join(runes[:n]) + "…"
+
+
+# alias used in order detail templates
+fmt_vnd = format_vnd
+
+
+def join_nonempty(items: list, sep: str = ", ") -> str:
+    """Join non-empty/non-None items with sep."""
+    return sep.join(str(x) for x in items if x)
+
+
+# ── Badge / CSS helpers (used as Jinja2 globals) ─────────────────────────────
+
+_ACTION_TYPE_CSS: dict[str, str] = {
+    "CALL_NOW":         "chip--danger",
+    "WIN_BACK":         "chip--warning",
+    "REORDER_NUDGE":    "chip--info",
+    "UPSELL":           "chip--success",
+    "CROSS_SELL":       "chip--success",
+    "COLLECT_FEEDBACK": "chip--neutral",
+}
+
+
+def action_type_badge_class(action_type: str) -> str:
+    return _ACTION_TYPE_CSS.get(action_type or "", "chip--neutral")
+
+
+_TASK_STATUS_CSS: dict[str, str] = {
+    "open":        "bdg--open",
+    "in_progress": "bdg--progress",
+    "done":        "bdg--done",
+    "cancelled":   "bdg--cancelled",
+}
+
+
+def task_status_css(status: str) -> str:
+    return _TASK_STATUS_CSS.get(status or "", "bdg--neutral")
+
+
+_CONV_STATUS_CSS: dict[str, str] = {
+    "open":     "bdg--open",
+    "closed":   "bdg--done",
+    "pending":  "bdg--progress",
+}
+
+
+def conv_status_bdg(status: str) -> str:
+    return _CONV_STATUS_CSS.get(status or "", "bdg--neutral")
+
+
+_CAMPAIGN_STATUS_CSS: dict[str, str] = {
+    "draft":     "bdg--neutral",
+    "active":    "bdg--open",
+    "completed": "bdg--done",
+    "paused":    "bdg--progress",
+    "archived":  "bdg--cancelled",
+}
+
+
+def campaign_status_bdg(status: str) -> str:
+    return _CAMPAIGN_STATUS_CSS.get(status or "", "bdg--neutral")
+
+
+_TARGET_STATUS_CSS: dict[str, str] = {
+    "pending":   "bdg--neutral",
+    "sent":      "bdg--progress",
+    "responded": "bdg--open",
+    "converted": "bdg--done",
+    "opted_out": "bdg--cancelled",
+}
+
+
+def target_status_bdg(status: str) -> str:
+    return _TARGET_STATUS_CSS.get(status or "", "bdg--neutral")
+
+
+def customer_label(name: str | None, key: str | None) -> str:
+    """Return display label for a customer: name if available, else key."""
+    return name or key or "—"

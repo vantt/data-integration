@@ -62,6 +62,12 @@ from adapters.inbound.http.segment_handler import make_segment_router
 from adapters.inbound.http.campaign_handler import make_campaign_router
 
 # ── Inbound: Web UI screens ───────────────────────────────────────────────────
+from adapters.inbound.web.format_helpers import (
+    format_vnd, fmt_vnd, format_date_ict, format_datetime_ict, format_relative,
+    truncate_str, join_nonempty,
+    action_type_badge_class, task_status_css, conv_status_bdg,
+    campaign_status_bdg, target_status_bdg, customer_label,
+)
 from adapters.inbound.web.screen_modals import init_modals, router as modals_router
 from adapters.inbound.web.screen_worklist import make_worklist_router
 from adapters.inbound.web.screen_customer_list import make_customer_list_router
@@ -139,6 +145,21 @@ def create_app() -> FastAPI:
 
     # 6. Templates + static.
     templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+    # Custom Jinja2 filters
+    templates.env.filters["format_vnd"] = format_vnd
+    templates.env.filters["fmt_vnd"] = fmt_vnd
+    templates.env.filters["format_date_ict"] = format_date_ict
+    templates.env.filters["format_datetime_ict"] = format_datetime_ict
+    templates.env.filters["format_relative"] = format_relative
+    templates.env.filters["truncate_str"] = truncate_str
+    templates.env.filters["join_nonempty"] = join_nonempty
+    # Global functions callable from any template
+    templates.env.globals["action_type_badge_class"] = action_type_badge_class
+    templates.env.globals["task_status_css"] = task_status_css
+    templates.env.globals["conv_status_bdg"] = conv_status_bdg
+    templates.env.globals["campaign_status_bdg"] = campaign_status_bdg
+    templates.env.globals["target_status_bdg"] = target_status_bdg
+    templates.env.globals["customer_label"] = customer_label
     static_dir = _resolve_static_dir()
     if static_dir:
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
