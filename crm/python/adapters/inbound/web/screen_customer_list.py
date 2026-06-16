@@ -10,7 +10,7 @@ import logging
 from typing import Optional, Protocol
 
 from fastapi import APIRouter, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from crm.python.domain.entities.party import Party
@@ -27,6 +27,7 @@ class PartyLister(Protocol):
     def search_by_name(self, q: str) -> list[str]: ...
     def get_by_id(self, party_id: str) -> Optional[Party]: ...
     def list_by_phone(self, q: str) -> list[Party]: ...
+    def find_by_identity(self, identity_type: str, identity_value: str) -> Optional[Party]: ...
 
 
 # ── Router factory ────────────────────────────────────────────────────────────
@@ -65,6 +66,23 @@ def make_customer_list_router(
             log.error("customer list: phone search %r: %s", q, exc)
 
         return out
+
+    # ── Lookup by Sapo customer_key → redirect to party page ─────────────────
+
+    @router.get("/customers/by-key/{customer_key}", response_class=HTMLResponse)
+    async def handle_customer_by_key(request: Request, customer_key: str) -> Response:
+        """Resolve a Sapo customer_key (numeric string) to a CRM party and redirect."""
+        customer_key = customer_key.strip()
+        party = None
+        try:
+            # customer_key is the numeric Sapo customer_id stored as identity_value
+            party = parties.find_by_identity("sapo_customer", customer_key)
+        except Exception as exc:
+            log.error("customer by-key: find %r: %s", customer_key, exc)
+        if party is not None:
+            return RedirectResponse(url=f"/customers/{party.party_id}", status_code=302)
+        # Fall back to search page
+        return RedirectResponse(url=f"/customers?q={customer_key}", status_code=302)
 
     # ── Full page ─────────────────────────────────────────────────────────────
 

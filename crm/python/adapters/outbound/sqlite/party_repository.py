@@ -23,6 +23,8 @@ from adapters.outbound.sqlite.party_repository_queries import (
     SQL_UPSERT_IDENTITY,
     SQL_LIST_IDENTITIES,
     SQL_UPDATE_CONTACT_QUALITY,
+    SQL_LIST_ALL_PARTIES,
+    SQL_COUNT_PARTIES,
     row_to_party,
     row_to_identity,
     party_create_params,
@@ -69,6 +71,11 @@ class SQLitePartyRepository:
     def list_by_phone(self, phone: str) -> list[Party]:
         rows = self._conn.execute(SQL_LIST_BY_PHONE, (phone or None,)).fetchall()
         return [row_to_party(r) for r in rows]
+
+    def list_all(self, offset: int, limit: int) -> tuple[list[Party], int]:
+        total = self._conn.execute(SQL_COUNT_PARTIES).fetchone()[0]
+        rows = self._conn.execute(SQL_LIST_ALL_PARTIES, (limit, offset)).fetchall()
+        return [row_to_party(r) for r in rows], total
 
     def list_by_email(self, email: str) -> list[Party]:
         rows = self._conn.execute(SQL_LIST_BY_EMAIL, (email or None,)).fetchall()

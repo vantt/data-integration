@@ -35,6 +35,9 @@ class DuckDBOrderRepository:
     def __init__(self, db_path: str) -> None:
         self._db_path = db_path
 
+    def get_by_code(self, order_code: str) -> OrderDetail | None:
+        return self.get_order_detail(order_code)
+
     def get_order_detail(self, order_code: str) -> OrderDetail | None:
         """Full order aggregate for order_code (case-insensitive), or None.
 

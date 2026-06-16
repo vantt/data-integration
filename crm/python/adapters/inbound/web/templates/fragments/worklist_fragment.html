@@ -44,7 +44,7 @@
                     {% include "icons/chevron.svg" %}
                   </a>
                 {% else %}
-                  <a href="/customers?q={{ a.customer_key | urlencode }}" class="btn btn--secondary aq-card__cta">
+                  <a href="/customers/by-key/{{ a.customer_key | urlencode }}" class="btn btn--secondary aq-card__cta">
                     {{ customer_label(a.customer_name, a.customer_key) }} — Mở hồ sơ
                     {% include "icons/chevron.svg" %}
                   </a>

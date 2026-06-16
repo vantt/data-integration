@@ -200,6 +200,132 @@ def customer_label(name: str | None, key: str | None) -> str:
     return name or key or "—"
 
 
+def task_status_chip_class(status: str) -> str:
+    return _TASK_STATUS_CSS.get(status or "", "bdg--neutral")
+
+
+_PARTY_STATUS_CSS: dict[str, str] = {
+    "active":   "bdg--open",
+    "inactive": "bdg--neutral",
+    "at_risk":  "bdg--progress",
+    "churned":  "bdg--cancelled",
+    "merged":   "bdg--neutral",
+}
+
+
+def status_badge_class(status: str) -> str:
+    return _PARTY_STATUS_CSS.get(status or "", "bdg--neutral")
+
+
+# ── Order detail helpers ──────────────────────────────────────────────────────
+
+def fmt_pct(value: float | None) -> str:
+    """Format a 0–1 decimal fraction as a percentage string, e.g. 0.125 → '12.5%'."""
+    if value is None:
+        return "—"
+    try:
+        pct = float(value) * 100
+        return f"{pct:.1f}%".rstrip("0").rstrip(".")  + "%"
+    except (TypeError, ValueError):
+        return "—"
+
+
+def fmt_vnd_signed(amount: int | float | None) -> str:
+    """VND amount with explicit +/- prefix (negatives use '−', positives use '+')."""
+    if amount is None:
+        return "—"
+    try:
+        int_amount = int(amount)
+    except (TypeError, ValueError):
+        return "—"
+    if int_amount == 0:
+        return "0đ"
+    formatted = f"{abs(int_amount):,}".replace(",", ".")
+    prefix = "+" if int_amount > 0 else "−"
+    return f"{prefix}{formatted}đ"
+
+
+_ORDER_STATUS_TONE: dict[str, str] = {
+    "completed":  "done",
+    "complete":   "done",
+    "processing": "progress",
+    "pending":    "progress",
+    "cancelled":  "cancelled",
+    "canceled":   "cancelled",
+    "returned":   "warn",
+}
+
+
+def order_status_tone(status: str) -> str:
+    return _ORDER_STATUS_TONE.get(status or "", "neutral")
+
+
+_PAYMENT_TONE: dict[str, str] = {
+    "paid":      "done",
+    "partial":   "progress",
+    "unpaid":    "warn",
+    "refunded":  "cancelled",
+    "voided":    "cancelled",
+}
+
+
+def payment_tone(status: str) -> str:
+    return _PAYMENT_TONE.get(status or "", "neutral")
+
+
+_SHIP_TONE: dict[str, str] = {
+    "delivered":   "done",
+    "shipping":    "progress",
+    "unshipped":   "warn",
+    "returned":    "cancelled",
+    "cancelled":   "cancelled",
+    "canceled":    "cancelled",
+}
+
+
+def ship_tone(status: str) -> str:
+    return _SHIP_TONE.get(status or "", "neutral")
+
+
+def verdict_tone(financial) -> str:
+    """Return 'positive', 'negative', or 'neutral' based on channel_net_profit."""
+    try:
+        profit = getattr(financial, "channel_net_profit", None)
+        if profit is None:
+            return "neutral"
+        if int(profit) > 0:
+            return "positive"
+        if int(profit) < 0:
+            return "negative"
+    except (TypeError, ValueError):
+        pass
+    return "neutral"
+
+
+_VERDICT_WORD: dict[str, str] = {
+    "positive": "Có lãi",
+    "negative": "Lỗ",
+    "neutral":  "Hòa vốn",
+}
+
+
+def verdict_word(tone: str) -> str:
+    return _VERDICT_WORD.get(tone or "", "—")
+
+
+def segment_channel_pref(segment: object) -> str:
+    """Extract channel_preference value from a segment's rule definition for template display."""
+    import json as _json
+    if segment is None:
+        return ""
+    defn = getattr(segment, "definition", "") or ""
+    try:
+        data = _json.loads(defn)
+        return str(data.get("channel_preference", ""))
+    except Exception:
+        return ""
+
+
 def segment_days_since(segment: object) -> str:
     """Extract recency_days value from a segment's rule definition for template display."""
     import json as _json

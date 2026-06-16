@@ -64,9 +64,11 @@ from adapters.inbound.http.campaign_handler import make_campaign_router
 # ── Inbound: Web UI screens ───────────────────────────────────────────────────
 from adapters.inbound.web.format_helpers import (
     format_vnd, fmt_vnd, format_date_ict, format_datetime_ict, format_relative,
-    format_ict, truncate_str, join_nonempty, segment_days_since,
-    action_type_badge_class, task_status_css, conv_status_bdg,
-    campaign_status_bdg, target_status_bdg, customer_label,
+    format_ict, truncate_str, join_nonempty, segment_days_since, segment_channel_pref,
+    action_type_badge_class, task_status_css, task_status_chip_class, conv_status_bdg,
+    campaign_status_bdg, target_status_bdg, customer_label, status_badge_class,
+    fmt_pct, fmt_vnd_signed, order_status_tone, payment_tone, ship_tone,
+    verdict_tone, verdict_word,
 )
 from adapters.inbound.web.screen_modals import init_modals, router as modals_router
 from adapters.inbound.web.screen_worklist import make_worklist_router
@@ -155,9 +157,20 @@ def create_app() -> FastAPI:
     templates.env.filters["join_nonempty"] = join_nonempty
     templates.env.filters["format_ict"] = format_ict
     templates.env.filters["segment_days_since"] = segment_days_since
+    templates.env.filters["segment_channel_pref"] = segment_channel_pref
     # Global functions callable from any template
     templates.env.globals["action_type_badge_class"] = action_type_badge_class
     templates.env.globals["task_status_css"] = task_status_css
+    templates.env.globals["task_status_chip_class"] = task_status_chip_class
+    templates.env.globals["status_badge_class"] = status_badge_class
+    # Order detail filters
+    templates.env.filters["fmt_pct"] = fmt_pct
+    templates.env.filters["fmt_vnd_signed"] = fmt_vnd_signed
+    templates.env.filters["order_status_tone"] = order_status_tone
+    templates.env.filters["payment_tone"] = payment_tone
+    templates.env.filters["ship_tone"] = ship_tone
+    templates.env.filters["verdict_tone"] = verdict_tone
+    templates.env.filters["verdict_word"] = verdict_word
     templates.env.globals["conv_status_bdg"] = conv_status_bdg
     templates.env.globals["campaign_status_bdg"] = campaign_status_bdg
     templates.env.globals["target_status_bdg"] = target_status_bdg

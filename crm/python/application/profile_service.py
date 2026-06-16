@@ -127,6 +127,9 @@ class ProfileService:
 
     # --- Profile ---
 
+    def get_party_360(self, party_id: str) -> Optional[Party360]:
+        return self._profiles.get_party360(party_id)
+
     def get_profile(self, party_id: str) -> Optional[CustomerProfile]:
         return self._profiles.get_profile(party_id)
 

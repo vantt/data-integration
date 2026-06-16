@@ -76,6 +76,15 @@ SQL_UPDATE_CONTACT_QUALITY = (
     "UPDATE crm_party_identity SET contact_quality = ? WHERE identity_id = ?"
 )
 
+SQL_LIST_ALL_PARTIES = (
+    "SELECT party_id, party_type, display_name, primary_phone, primary_email,"
+    "       status, is_merged, merged_into, created_at, updated_at"
+    " FROM crm_party WHERE is_merged = 0"
+    " ORDER BY updated_at DESC LIMIT ? OFFSET ?"
+)
+
+SQL_COUNT_PARTIES = "SELECT COUNT(*) FROM crm_party WHERE is_merged = 0"
+
 # ── Row mappers ───────────────────────────────────────────────────────────────
 
 def row_to_party(row: sqlite3.Row) -> Party:
