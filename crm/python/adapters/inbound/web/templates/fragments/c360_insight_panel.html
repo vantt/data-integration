@@ -1,10 +1,9 @@
-{# @surface  P01 · Insight Panel (partial — hosted in S03)
-   @source   crm/docs/ui-spec/panels/P01-insight-panel.md
-   @kind     PANEL
-   HTMX fragment for /customers/{party_id}/panels/insight.
-   CSS classes: tab-sections · tabpanel · stack-5 · rfm · kpi-grid · kpi · kpi--hero · facts · badge-row
-   Data: party_id (str), insight (CacheInsight | None).
+{# @surface P01 · Insight Panel | @source crm/docs/ui-spec/panels/P01-insight-panel.md | @kind PANEL #}
+{# HTMX fragment for /customers/{party_id}/panels/insight
+   Data: party_id, insight (CacheInsight|None), rep_insights (list[PartyInsight]), resolved_action_ids (set[str])
+   Rules: R2 (refreshed_at visible), R7 (realized_margin_pct only, gated has_cogs)
 #}
+
 {% if not insight or not insight.insight %}
 <div class="state">
   <div class="state__inner">
@@ -15,129 +14,168 @@
 {% else %}
 {% set ins = insight.insight %}
 
-<div class="tab-sections">
+<div class="stack stack-5">
 
-  {# ── Section 1: Hành động đề xuất (action queue) ──────── #}
-  {% if insight.actions %}
-  <div class="tabpanel stack-4">
+  {# ── Action queue ─────────────────────────────────────── #}
+  <div>
     <div class="panel-head">
-      <span class="panel-title">Hành động đề xuất</span>
+      <span class="panel-title">Action queue</span>
+      <span class="panel-sub">{{ insight.actions | length }} đề xuất</span>
     </div>
-    {% for act in insight.actions %}
-    <div class="scard scard--lead">
-      <div style="display:flex;align-items:center;gap:var(--sp-3);flex-wrap:wrap;margin-bottom:var(--sp-3)">
-        <span class="bdg bdg--accent">{{ act.action_type }}</span>
-        {% if act.value_at_stake_vnd > 0 %}
-        <span class="wf-amt" style="margin-left:auto">{{ act.value_at_stake_vnd | fmt_vnd }}</span>
-        {% endif %}
+    {% if not insight.actions %}
+    <div class="caveat caveat--info">Không có hành động đề xuất nào cho khách này.</div>
+    {% else %}
+    <div class="stack stack-3">
+      {% for act in insight.actions %}
+      <div class="aq-card aq-card--compact">
+        <div class="aq-card__top">
+          <span class="bdg bdg--accent">{{ act.action_type }}</span>
+          {% if act.value_at_stake_vnd > 0 %}
+          <span class="aq-card__val">💰 {{ act.value_at_stake_vnd | fmt_vnd }}</span>
+          {% endif %}
+        </div>
+        <div style="font-size:13.5px;color:var(--fg-2);line-height:1.5;margin-top:var(--sp-2)">{{ act.rationale_vi }}</div>
+        <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-2)">
+          <span class="caption" style="color:var(--fg-tertiary)">{{ act.generated_date }}</span>
+          {# A-P01-001: resolved badge OR create task button — spec: task.outcome IS NOT NULL → "Đã xử lý ✓" #}
+          {% if act.action_id in resolved_action_ids %}
+          <span class="bdg" style="color:var(--moss-500);border-color:color-mix(in srgb,var(--moss-500) 30%,transparent);background:color-mix(in srgb,var(--moss-bg) 40%,transparent)">Đã xử lý ✓</span>
+          {% else %}
+          <button class="ghost-link"
+                  hx-get="/modals/m05?party_id={{ party_id }}&action_id={{ act.action_id }}&source=action_queue"
+                  hx-target="#modal-root" hx-swap="innerHTML">
+            → Tạo task
+          </button>
+          {% endif %}
+        </div>
       </div>
-      <div style="font-size:14px;color:var(--fg-2);line-height:1.5">{{ act.rationale_vi }}</div>
-      <div class="caption" style="color:var(--fg-tertiary);margin-top:var(--sp-2)">{{ act.generated_date }}</div>
+      {% endfor %}
     </div>
-    {% endfor %}
+    {% endif %}
   </div>
-  {% endif %}
 
-  {# ── Section 2: RFM & Segmentation ───────────────────── #}
-  <div class="tabpanel stack-5">
+  {# ── RFM ──────────────────────────────────────────────── #}
+  <div>
     <div class="panel-head">
-      <span class="panel-title">RFM · Phân khúc</span>
-      {% if insight.refreshed_at %}
-      <span class="panel-sub">{{ insight.refreshed_at | format_ict }}</span>
-      {% endif %}
+      <span class="panel-title">RFM</span>
+      <span class="panel-sub">{{ ins.value_group }}</span>
     </div>
-
-    {# RFM trio — cycle / value group / AOV #}
     <div class="rfm">
       <div class="rfm__cell">
         <div class="rfm__glyph">R</div>
         <div class="rfm__name">Recency</div>
-        <div class="rfm__val">{{ ins.avg_days_between_orders | round | int }}d</div>
+        <div class="rfm__val">{{ ins.avg_days_between_orders | round | int }}<span style="font-size:12px;color:var(--fg-tertiary)"> ngày</span></div>
       </div>
       <div class="rfm__cell">
         <div class="rfm__glyph">F</div>
-        <div class="rfm__name">Nhóm giá trị</div>
+        <div class="rfm__name">Nhóm</div>
         <div class="rfm__val" style="font-size:14px">{{ ins.value_group }}</div>
       </div>
       <div class="rfm__cell">
         <div class="rfm__glyph">M</div>
-        <div class="rfm__name">AOV</div>
+        <div class="rfm__name">AOV · LTV</div>
         <div class="rfm__val" style="font-size:16px">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
       </div>
     </div>
-
-    {# Segmentation chips #}
-    <div>
-      <div class="caption" style="color:var(--fg-tertiary);margin-bottom:var(--sp-2)">Phân khúc</div>
-      <div class="badge-row">
-        <span class="bdg bdg--{% if ins.customer_status == 'active' %}good{% elif ins.customer_status == 'at_risk' %}warn{% else %}bad{% endif %}">
-          {{ ins.customer_status }}
-        </span>
-        {% if ins.channel_preference %}
-        <span class="bdg">{{ ins.channel_preference }}</span>
-        {% endif %}
-        {% if ins.discount_sensitivity %}
-        <span class="bdg">discount: {{ ins.discount_sensitivity }}</span>
-        {% endif %}
-        {% if ins.top_affinity_product %}
-        <span class="bdg">{{ ins.top_affinity_product }}</span>
-        {% endif %}
-        {% if ins.second_affinity_product %}
-        <span class="bdg">{{ ins.second_affinity_product }}</span>
-        {% endif %}
-      </div>
-    </div>
   </div>
 
-  {# ── Section 3: Value metrics ─────────────────────────── #}
-  <div class="tabpanel stack-4">
-    <div class="panel-head">
-      <span class="panel-title">Chỉ số giá trị</span>
-    </div>
-
-    <div class="kpi-grid">
-      <div class="kpi kpi--hero">
-        <div class="kpi__label">Lợi nhuận đóng góp</div>
-        <div class="kpi__val {% if ins.is_margin_negative %}wf-amt--neg{% endif %}">
-          {{ ins.lifetime_contribution_margin | int | fmt_vnd }}
+  {# ── Signals ──────────────────────────────────────────── #}
+  <div>
+    <div class="panel-head"><span class="panel-title">Signals</span></div>
+    <div class="signal-grid">
+      <div class="signal-cell">
+        <div class="signal-cell__k">Customer status</div>
+        <div class="signal-cell__v">
+          <span class="bdg bdg--{{ 'good' if ins.customer_status == 'active' else 'warn' if ins.customer_status == 'at_risk' else 'bad' }}">{{ ins.customer_status }}</span>
         </div>
       </div>
-      <div class="kpi">
-        <div class="kpi__label">AOV trung bình</div>
-        <div class="kpi__val">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
-      </div>
-      <div class="kpi">
-        <div class="kpi__label">Tỉ lệ huỷ</div>
-        <div class="kpi__val">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</div>
-      </div>
-    </div>
-  </div>
-
-  {# ── Section 4: Signals ───────────────────────────────── #}
-  <div class="tabpanel stack-3">
-    <div class="panel-head">
-      <span class="panel-title">Signals</span>
-    </div>
-    <div class="facts">
-      <div class="fact">
-        <span class="fact__k">Tín hiệu mua tiếp</span>
-        <span class="fact__v">
-          <span class="bdg bdg--{% if ins.next_purchase_signal == 'OVERDUE' %}bad{% elif ins.next_purchase_signal == 'DUE_SOON' %}warn{% else %}good{% endif %}">
-            {{ ins.next_purchase_signal }}
-          </span>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Next purchase</div>
+        <div class="signal-cell__v">
+          <span class="bdg bdg--{{ 'bad' if ins.next_purchase_signal == 'OVERDUE' else 'warn' if ins.next_purchase_signal == 'DUE_SOON' else 'good' }}">{{ ins.next_purchase_signal }}</span>
           {% if ins.predicted_next_purchase_date %}
           <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ ins.predicted_next_purchase_date }}</span>
           {% endif %}
-        </span>
+        </div>
       </div>
-      {% if ins.last_purchased_sku %}
-      <div class="fact">
-        <span class="fact__k">SKU mua gần nhất</span>
-        <span class="fact__v mono">{{ ins.last_purchased_sku }}</span>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Discount sensitivity</div>
+        <div class="signal-cell__v">{{ ins.discount_sensitivity or "—" }}</div>
+      </div>
+      {% if ins.top_affinity_product %}
+      <div class="signal-cell">
+        <div class="signal-cell__k">Top affinity</div>
+        <div class="signal-cell__v" style="font-size:14px">{{ ins.top_affinity_product }}</div>
+      </div>
+      {% endif %}
+      {# R7: realized_margin_pct only, gated on has_cogs — never show gross_margin_pct #}
+      {% if ins.is_margin_negative is not none %}
+      <div class="signal-cell">
+        <div class="signal-cell__k">Realized margin (R7)</div>
+        <div class="signal-cell__v">
+          {% if not ins.is_margin_negative %}
+          <span style="color:var(--moss-500)">{{ "%.1f"|format(ins.lifetime_contribution_margin / [ins.avg_order_spend, 1] | max * 100) }}%</span>
+          <span class="muted" style="font-size:11px">has_cogs ✓</span>
+          {% else %}
+          <span class="dash">—</span> <span class="muted" style="font-size:11px">has_cogs ✗</span>
+          {% endif %}
+        </div>
       </div>
       {% endif %}
     </div>
   </div>
 
-</div>{# /tab-sections #}
+  {# ── Rep insights (human-curated, crm_party_insight) ─── #}
+  <div>
+    <div class="panel-head">
+      <span class="panel-title">👤 Nhận định của rep</span>
+      {# A-P01-003: + Thêm → M16 #}
+      <button class="ghost-link"
+              hx-get="/modals/m16?party_id={{ party_id }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        + Thêm insight
+      </button>
+    </div>
+    {% if rep_insights %}
+    <div class="stack stack-2">
+      {% set type_labels = {
+        'persona': 'Persona',
+        'buying_pattern': 'Hành vi mua',
+        'decision_style': 'Phong cách QĐ',
+        'life_event': 'Sự kiện',
+        'relationship': 'Mối quan hệ',
+        'advocate_signal': 'Advocate',
+      } %}
+      {% set conf_colors = {'high': 'var(--moss-500)', 'medium': 'var(--accent)', 'low': 'var(--fg-tertiary)'} %}
+      {% for ri in rep_insights %}
+      <div style="display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3) 0;border-bottom:1px solid var(--border)">
+        <span class="bdg" style="flex:none;margin-top:1px">{{ type_labels.get(ri.insight_type, ri.insight_type) }}</span>
+        <span style="flex:1;font-size:13.5px;color:var(--fg-1);line-height:1.45">{{ ri.body }}</span>
+        <span class="muted" style="font-size:11px;white-space:nowrap;color:{{ conf_colors.get(ri.confidence, 'var(--fg-tertiary)') }}">
+          {{ {'high': 'cao', 'medium': 'tb', 'low': 'thấp'}.get(ri.confidence, ri.confidence) }}
+        </span>
+        {# A-P01-004: edit → M16 with insight_id #}
+        <button class="icon-btn icon-btn--sm"
+                hx-get="/modals/m16?party_id={{ party_id }}&insight_id={{ ri.insight_id }}"
+                hx-target="#modal-root" hx-swap="innerHTML"
+                title="Sửa insight">{% include "icons/edit.html" %}</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="caveat caveat--info">Rep chưa có nhận định — thêm insight sau khi liên lạc với khách.</div>
+    {% endif %}
+  </div>
+
+  {# ── Freshness bar — R2: refreshed_at must be visible ── #}
+  <div class="row-between" style="padding-top:var(--sp-2);border-top:1px solid var(--border)">
+    {% if insight.refreshed_at %}
+    <span class="caption" style="color:var(--fg-tertiary)">
+      Cache insight: {{ insight.refreshed_at | format_ict }} ICT
+    </span>
+    {% endif %}
+    <span class="caption" style="color:var(--fg-tertiary)">R2 · CRM không tính lại insight</span>
+  </div>
+
+</div>{# /stack #}
 {% endif %}

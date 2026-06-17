@@ -120,6 +120,25 @@ class Note:
 
 
 @dataclass
+class PartyInsight:
+    """Rep-curated insight about a party (migration 0011).
+
+    Distinct from machine-generated wh_customer_insight (cache.db).
+    Surfaces in P01 rep_insights_block alongside warehouse signals.
+    """
+    insight_id: str
+    party_id: str
+    insight_type: str           # persona|buying_pattern|decision_style|life_event|relationship|advocate_signal
+    body: str
+    confidence: str             # low|medium|high
+    created_at: str             # UTC ISO-8601 with 'Z'
+    created_by: Optional[str] = None        # FK → crm_app_user
+    source_note_id: Optional[str] = None    # set when promoted from a note via M16
+    updated_at: Optional[str] = None
+    deleted_at: Optional[str] = None        # soft delete
+
+
+@dataclass
 class Party360:
     """Aggregated read model from crm_party_360 view.
 

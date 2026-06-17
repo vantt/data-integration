@@ -21,7 +21,7 @@ from fastapi.templating import Jinja2Templates
 
 from crm.python.domain.entities.activity import Activity
 from crm.python.domain.entities.cache_insight import CacheInsight
-from crm.python.domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity
+from crm.python.domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity, PartyInsight
 from crm.python.domain.entities.task import Task
 
 log = logging.getLogger(__name__)
@@ -70,6 +70,15 @@ class CustomFieldDefReader(Protocol):
     def list_by_entity_type(self, entity_type: str) -> list[CustomFieldDef]: ...
 
 
+class PartyInsightReader(Protocol):
+    def list_by_party(self, party_id: str) -> list[PartyInsight]: ...
+
+
+class ActionTaskResolver(Protocol):
+    """Returns the set of action_ids that have a resolved CRM task (outcome IS NOT NULL)."""
+    def resolved_action_ids(self, party_id: str) -> set[str]: ...
+
+
 class TaskQuerier(Protocol):
     def list_by_party(self, party_id: str) -> list[Task]: ...
 
@@ -86,6 +95,8 @@ def make_customer_360_router(
     notes: NoteReader,
     party_tasks: TaskQuerier,
     custom_field_defs: Optional[CustomFieldDefReader] = None,
+    party_insights: Optional[PartyInsightReader] = None,
+    action_task_resolver: Optional[ActionTaskResolver] = None,
     party_finder: Optional[PartyFinder] = None,
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
 ) -> APIRouter:
@@ -206,8 +217,24 @@ def make_customer_360_router(
         if panel == "insight":
             _, ids = _load_base(party_id)
             ins = _load_insight(ids)
+            rep_ins: list[PartyInsight] = []
+            if party_insights is not None:
+                try:
+                    rep_ins = [
+                        i for i in party_insights.list_by_party(party_id)
+                        if not i.deleted_at
+                    ]
+                except Exception as exc:
+                    log.warning("c360 insight panel: rep insights %s: %s", party_id, exc)
+            resolved_ids: set[str] = set()
+            if action_task_resolver is not None:
+                try:
+                    resolved_ids = action_task_resolver.resolved_action_ids(party_id)
+                except Exception as exc:
+                    log.warning("c360 insight panel: resolved_ids %s: %s", party_id, exc)
             return templates.TemplateResponse(
-                "fragments/c360_insight_panel.html", {**ctx, "insight": ins}
+                "fragments/c360_insight_panel.html",
+                {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids},
             )
         if panel == "orders":
             _, ids = _load_base(party_id)
