@@ -4,55 +4,56 @@
 {% block crumb_title %}{{ party.display_name or "Khách hàng" }}{% endblock %}
 
 {% block content %}
-<div class="detail-grid page-enter" data-surface="S03"
-     style="padding:0;max-width:none;grid-template-columns:minmax(0,2.3fr) minmax(280px,1fr)">
+<div class="crm-page page-enter" data-surface="S03">
 
-  {# ── MAIN: topbar · tabbar · lazy panel ── #}
+  {# Topbar — A-S03-001 back, A-S03-002 gán NV, A-S03-003 tag, A-S03-011 ghi log, A-S03-012 task #}
+  <div class="c360-topbar" style="margin-bottom:var(--sp-5)">
+    <a class="c360-back" href="/customers">
+      {% include "icons/back.svg" %} Quay lại
+    </a>
+    <div class="c360-id">
+      <span class="c360-name">{{ party.display_name or "—" }}</span>
+      {% if insight and insight.insight and insight.insight.value_group %}
+      <span class="bdg">{{ insight.insight.value_group }}</span>
+      {% endif %}
+      <span class="bdg {{ status_badge_class(party.status) }}">{{ party.status }}</span>
+    </div>
+    <div class="c360-actions">
+      <button class="btn btn--secondary" style="padding:9px 14px"
+              hx-get="/customers/{{ party.party_id }}/modal/log-activity"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        {% include "icons/doc.svg" %} Ghi log
+      </button>
+      <button class="btn btn--secondary" style="padding:9px 14px"
+              hx-get="/modals/m05?party_id={{ party.party_id }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        {% include "icons/plus.svg" %} Task
+      </button>
+      <button class="btn btn--secondary" style="padding:9px 14px"
+              hx-get="/modals/m04?party_id={{ party.party_id }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        {% include "icons/user.svg" %} Gán NV
+      </button>
+      <button class="btn btn--primary" style="padding:9px 14px"
+              hx-get="/modals/m03?party_id={{ party.party_id }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        {% include "icons/tag.svg" %} Tag
+      </button>
+    </div>
+  </div>
+
+  {# ST-360-MERGED banner #}
+  {% if party.is_merged %}
+  <div class="merged-banner" style="margin-bottom:var(--sp-4)">
+    {% include "icons/warn.svg" %}
+    <span>Party này đã được <b>gộp</b> vào hồ sơ khác.</span>
+  </div>
+  {% endif %}
+
+  <div class="detail-grid" style="padding:0;max-width:none;grid-template-columns:minmax(0,2.3fr) minmax(280px,1fr)">
+
+  {# ── MAIN: tabbar · lazy panel ── #}
   <section class="detail-main" style="order:1">
-
-    {# Topbar — A-S03-001 back, A-S03-002 gán NV, A-S03-003 tag, A-S03-011 ghi log, A-S03-012 task #}
-    <div class="c360-topbar" style="margin-bottom:var(--sp-5)">
-      <a class="c360-back" href="/customers">
-        {% include "icons/back.svg" %} Quay lại
-      </a>
-      <div class="c360-id">
-        <span class="c360-name">{{ party.display_name or "—" }}</span>
-        {% if insight and insight.insight and insight.insight.value_group %}
-        <span class="bdg">{{ insight.insight.value_group }}</span>
-        {% endif %}
-        <span class="bdg {{ status_badge_class(party.status) }}">{{ party.status }}</span>
-      </div>
-      <div class="c360-actions">
-        <button class="btn btn--secondary" style="padding:9px 14px"
-                hx-get="/customers/{{ party.party_id }}/modal/log-activity"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/doc.svg" %} Ghi log
-        </button>
-        <button class="btn btn--secondary" style="padding:9px 14px"
-                hx-get="/modals/m05?party_id={{ party.party_id }}"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/plus.svg" %} Task
-        </button>
-        <button class="btn btn--secondary" style="padding:9px 14px"
-                hx-get="/modals/m04?party_id={{ party.party_id }}"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/user.svg" %} Gán NV
-        </button>
-        <button class="btn btn--primary" style="padding:9px 14px"
-                hx-get="/modals/m03?party_id={{ party.party_id }}"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/tag.svg" %} Tag
-        </button>
-      </div>
-    </div>
-
-    {# ST-360-MERGED banner #}
-    {% if party.is_merged %}
-    <div class="merged-banner" style="margin-bottom:var(--sp-4)">
-      {% include "icons/warn.svg" %}
-      <span>Party này đã được <b>gộp</b> vào hồ sơ khác.</span>
-    </div>
-    {% endif %}
 
     {# Tabbar — A-S03-004..009 #}
     <div class="tabbar" role="tablist" aria-label="Phần khách hàng">
@@ -291,7 +292,9 @@
 
   </aside>
 
-</div>{# /detail-grid #}
+  </div>{# /detail-grid #}
+
+</div>{# /crm-page #}
 
 <div id="modal-root"></div>
 {% endblock %}
