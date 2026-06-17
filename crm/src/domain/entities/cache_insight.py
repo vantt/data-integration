@@ -88,6 +88,7 @@ class CustomerInsight:
     lifetime_contribution_margin: float
     is_margin_negative: bool
     refreshed_at: str
+    first_order_date: str = ""               # YYYY-MM-DD from wh_customer_base; empty when absent
     predicted_next_purchase_date: str = ""  # YYYY-MM-DD or empty
     last_purchased_sku: str = ""
     top_affinity_product: str = ""

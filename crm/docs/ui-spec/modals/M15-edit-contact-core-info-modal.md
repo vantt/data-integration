@@ -19,7 +19,7 @@ Chỉnh sửa thông tin cốt lõi của party: kênh liên lạc (contacts), �
 được sync từ Sapo hoặc nhập thủ công — không phải schema-less JSON.
 
 3 tabs: Liên lạc / Địa chỉ / Thông tin cơ bản.
-Mở từ S03 left col với tab được preselect theo button clicked (A-S03-013/014/015).
+Mở từ S03 sidebar với tab được preselect theo button clicked (A-S03-013/014/015).
 
 ## Layout — Tab: Liên lạc
 
@@ -78,10 +78,15 @@ Mở từ S03 left col với tab được preselect theo button clicked (A-S03-0
 │  Tên hiển thị *  [Nguyễn Văn A___________]       │
 │  Email           [email@domain.com________]      │
 │  Ngày sinh       [dd/mm/yyyy]                    │
+│  Giới tính       [Nam ▼]  -- Nam / Nữ / Khác    │
+│  Đồng ý LH       [● Cho phép  ○ Không liên lạc] │
 ├───────────────────────────────────────────────────┤
 │  [Hủy]                                  [Lưu]   │
 └───────────────────────────────────────────────────┘
 ```
+
+- `Giới tính` maps to `party.gender`; options: `male`, `female`, `other`, `unknown`
+- `Đồng ý LH` maps to `party.consent_contact` (boolean); unchecked = R1 rule enforced
 
 ## Business Rules
 
@@ -142,5 +147,5 @@ interactions:
     trigger: click
     guard: "active_tab == 'core' ? form.display_name != '' : true"
     action: mutate
-    effects: [party_or_identity.save, modal.close, ui.toast.show, left_col.reload]
+    effects: [party_or_identity.save, modal.close, ui.toast.show, sidebar.reload]
 ```

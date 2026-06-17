@@ -120,6 +120,51 @@ def truncate_str(s: str, n: int) -> str:
     return "".join(runes[:n]) + "…"
 
 
+def recency_days_label(date_key: int | None) -> str:
+    """Return 'N d' (days since a YYYYMMDD date_key) for the Recency KPI. Returns '—' for None/0."""
+    if not date_key:
+        return "—"
+    try:
+        s = str(int(date_key))
+        if len(s) == 8:
+            dt = datetime(int(s[0:4]), int(s[4:6]), int(s[6:8]), tzinfo=_UTC)
+            days = (datetime.now(_UTC) - dt).days
+            return f"{max(0, days)} d"
+    except (TypeError, ValueError):
+        pass
+    return "—"
+
+
+def fmt_date_key(date_key: int | None) -> str:
+    """Convert YYYYMMDD integer date_key to 'dd/mm/yyyy'. Returns '—' for falsy values."""
+    if not date_key:
+        return "—"
+    try:
+        s = str(int(date_key))
+        if len(s) == 8:
+            return f"{s[6:8]}/{s[4:6]}/{s[0:4]}"
+    except (TypeError, ValueError):
+        pass
+    return "—"
+
+
+def days_since(date_str: str | None) -> str:
+    """Return tenure string from a YYYY-MM-DD date to today, e.g. '365 ngày (1 năm)'."""
+    if not date_str:
+        return "—"
+    dt = _parse_iso(date_str)
+    if dt is None:
+        return "—"
+    elapsed = int((datetime.now(_UTC) - dt).total_seconds())
+    if elapsed < 0:
+        return "—"
+    total_days = elapsed // 86400
+    years = total_days // 365
+    if years > 0:
+        return f"{total_days} ngày ({years} năm)"
+    return f"{total_days} ngày"
+
+
 # aliases
 fmt_vnd = format_vnd
 format_ict = format_date_ict

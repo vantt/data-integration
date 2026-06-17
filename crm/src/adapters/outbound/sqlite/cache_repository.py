@@ -154,22 +154,24 @@ class SQLiteCacheRepository:
 
     def _fetch_insight(self, customer_id: int) -> Optional[CustomerInsight]:
         sql = """
-            SELECT customer_key, customer_id,
-                   value_group, customer_status,
-                   next_purchase_signal, predicted_next_purchase_date,
-                   avg_days_between_orders, avg_order_spend,
-                   discount_sensitivity, cancel_rate,
-                   last_purchased_sku, top_affinity_product, second_affinity_product,
-                   channel_preference, lifetime_contribution_margin, is_margin_negative,
-                   refreshed_at
-            FROM cache.wh_customer_insight
-            WHERE customer_id = ?
+            SELECT ci.customer_key, ci.customer_id,
+                   ci.value_group, ci.customer_status,
+                   ci.next_purchase_signal, ci.predicted_next_purchase_date,
+                   ci.avg_days_between_orders, ci.avg_order_spend,
+                   ci.discount_sensitivity, ci.cancel_rate,
+                   ci.last_purchased_sku, ci.top_affinity_product, ci.second_affinity_product,
+                   ci.channel_preference, ci.lifetime_contribution_margin, ci.is_margin_negative,
+                   ci.refreshed_at,
+                   COALESCE(cb.first_order_date, '') AS first_order_date
+            FROM cache.wh_customer_insight ci
+            LEFT JOIN cache.wh_customer_base cb ON cb.customer_id = ci.customer_id
+            WHERE ci.customer_id = ?
             LIMIT 1
         """
         try:
             row = self._conn.execute(sql, (customer_id,)).fetchone()
         except sqlite3.OperationalError as exc:
-            if _is_missing_table(exc):
+            if _is_missing_table(exc) or _is_missing_column(exc):
                 return None
             raise
         if row is None:
@@ -180,6 +182,7 @@ class SQLiteCacheRepository:
             value_group=row["value_group"] or "",
             customer_status=row["customer_status"] or "",
             next_purchase_signal=row["next_purchase_signal"] or "",
+            first_order_date=row["first_order_date"] or "",
             predicted_next_purchase_date=row["predicted_next_purchase_date"] or "",
             avg_days_between_orders=row["avg_days_between_orders"] or 0.0,
             avg_order_spend=row["avg_order_spend"] or 0.0,

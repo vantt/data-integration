@@ -63,6 +63,7 @@ def _row_to_profile(row: sqlite3.Row) -> CustomerProfile:
 def _row_to_party360(row: sqlite3.Row) -> Party360:
     consent_raw = row["consent_contact"]
     consent = bool(consent_raw) if consent_raw is not None else False
+    keys = row.keys()
     return Party360(
         party_id=row["party_id"],
         party_type=row["party_type"],
@@ -77,11 +78,18 @@ def _row_to_party360(row: sqlite3.Row) -> Party360:
         lifecycle_stage=row["lifecycle_stage"],
         acquisition_source=row["acquisition_source"],
         birthday=row["birthday"],
+        gender=row["gender"] if "gender" in keys else None,
         address=row["address"],
         preferences=row["preferences"],
         custom=row["custom"] or "",
         consent_contact=consent,
         profile_updated_at=row["profile_updated_at"] or "",
+        address_line=row["address_line"] if "address_line" in keys else None,
+        ward=row["ward"] if "ward" in keys else None,
+        district=row["district"] if "district" in keys else None,
+        province=row["province"] if "province" in keys else None,
+        address_source=row["address_source"] if "address_source" in keys else "sapo_sync",
+        address_note=row["address_note"] if "address_note" in keys else None,
     )
 
 
@@ -109,14 +117,15 @@ class SQLiteProfileRepository:
     _SQL_UPSERT = """
         INSERT INTO crm_customer_profile (
           party_id, owner_user_id, lifecycle_stage, acquisition_source,
-          birthday, address, preferences, custom, consent_contact,
+          birthday, gender, address, preferences, custom, consent_contact,
           created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (party_id) DO UPDATE SET
           owner_user_id      = excluded.owner_user_id,
           lifecycle_stage    = excluded.lifecycle_stage,
           acquisition_source = excluded.acquisition_source,
           birthday           = excluded.birthday,
+          gender             = excluded.gender,
           address            = excluded.address,
           preferences        = excluded.preferences,
           custom             = excluded.custom,
@@ -135,8 +144,9 @@ class SQLiteProfileRepository:
         SELECT
           party_id, party_type, display_name, primary_phone, primary_email,
           status, is_merged, party_created_at, party_updated_at,
-          owner_user_id, lifecycle_stage, acquisition_source, birthday,
+          owner_user_id, lifecycle_stage, acquisition_source, birthday, gender,
           address, preferences, custom, consent_contact, profile_updated_at,
+          address_line, ward, district, province, address_source, address_note,
           tags_json
         FROM crm_party_360
         WHERE party_id = ?
@@ -162,6 +172,7 @@ class SQLiteProfileRepository:
             profile.lifecycle_stage,
             profile.acquisition_source,
             profile.birthday,
+            profile.gender,
             address_json,
             prefs_json,
             custom_json,

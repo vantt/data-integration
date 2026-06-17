@@ -105,7 +105,7 @@ Source: `wh_customer_insight` / `wh_customer_base` (warehouse cache):
 - ST-360-NO-PROFILE: Profile chưa tạo → CTA "Tạo hồ sơ"
 - ST-360-NO-INSIGHT: Insight chưa có trong cache → placeholder + refreshed_at
 - ST-360-MERGED: Party is_merged=true → warning banner + link to surviving party
-- ST-360-WARNING: Có warning note → red banner đầu left col
+- ST-360-WARNING: Có warning note → red banner đầu sidebar
 
 ## Interactions
 
@@ -136,37 +136,37 @@ interactions:
     region: tab_bar
     trigger: click
     action: mutate
-    effects: [right_col.show_panel_P01]
+    effects: [main_col.show_panel_P01]
   - id: A-S03-005
     element: tab_orders
     region: tab_bar
     trigger: click
     action: mutate
-    effects: [right_col.show_panel_P02]
+    effects: [main_col.show_panel_P02]
   - id: A-S03-006
     element: tab_timeline
     region: tab_bar
     trigger: click
     action: mutate
-    effects: [right_col.show_panel_P03]
+    effects: [main_col.show_panel_P03]
   - id: A-S03-007
     element: tab_tasks
     region: tab_bar
     trigger: click
     action: mutate
-    effects: [right_col.show_panel_P04]
+    effects: [main_col.show_panel_P04]
   - id: A-S03-008
     element: tab_notes
     region: tab_bar
     trigger: click
     action: mutate
-    effects: [right_col.show_panel_P05]
+    effects: [main_col.show_panel_P05]
   - id: A-S03-009
     element: tab_chat
     region: tab_bar
     trigger: click
     action: mutate
-    effects: [right_col.show_panel_P06]
+    effects: [main_col.show_panel_P06]
   - id: A-S03-011
     element: btn_log_activity
     region: topbar
@@ -209,6 +209,13 @@ interactions:
     action: open_overlay
     target: M08
     payload: { party_id: "$party.id", mode: "contact_attempt", channel: "$channel.type" }
+  - id: A-S03-017
+    element: btn_edit_tags
+    region: sidebar
+    trigger: click
+    action: open_overlay
+    target: M03
+    payload: { party_id: "$party.id" }
   - id: A-S03-LSN01
     listens_to: cache.refreshed
     action: mutate

@@ -300,6 +300,35 @@
           <input type="date" name="birthday" class="inp"
                  value="{{ party.birthday or '' }}">
         </label>
+
+        <label class="field">
+          <span class="field__label">GIỚI TÍNH</span>
+          <div class="inp-sel">
+            <select name="gender">
+              <option value="">— Chưa chọn —</option>
+              <option value="male" {% if party.gender == 'male' %}selected{% endif %}>Nam</option>
+              <option value="female" {% if party.gender == 'female' %}selected{% endif %}>Nữ</option>
+              <option value="other" {% if party.gender == 'other' %}selected{% endif %}>Khác</option>
+            </select>
+            <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+          </div>
+        </label>
+
+        <div class="field">
+          <span class="field__label">ĐỒNG Ý LIÊN LẠC</span>
+          <div class="radioset">
+            <label class="radio-pill {% if party.consent_contact %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="consent_contact" value="1"
+                     {% if party.consent_contact %}checked{% endif %} class="sr-only"> Cho phép
+            </label>
+            <label class="radio-pill {% if not party.consent_contact %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="consent_contact" value="0"
+                     {% if not party.consent_contact %}checked{% endif %} class="sr-only"> Không liên lạc
+            </label>
+          </div>
+        </div>
       </div>{# .modal__body #}
 
       <div class="modal__actions">

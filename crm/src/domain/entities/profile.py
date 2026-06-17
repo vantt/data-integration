@@ -59,6 +59,7 @@ class CustomerProfile:
     lifecycle_stage: Optional[str] = None   # lead|new|active|at_risk|churned
     acquisition_source: Optional[str] = None
     birthday: Optional[str] = None          # YYYY-MM-DD or None
+    gender: Optional[str] = None            # male|female|other|unknown; migration 0016
     address: Optional[dict] = None          # {province, district, ward, street}
     preferences: Optional[dict] = None     # manually recorded preferences
     custom: dict = field(default_factory=dict)  # values keyed by CustomFieldDef.field_key
@@ -161,6 +162,7 @@ class Party360:
     lifecycle_stage: Optional[str] = None
     acquisition_source: Optional[str] = None
     birthday: Optional[str] = None
+    gender: Optional[str] = None            # male|female|other|unknown; migration 0016
     address: Optional[str] = None           # raw JSON string from the view
     preferences: Optional[str] = None      # raw JSON string from the view
     custom: str = ""                        # raw JSON from the view

@@ -90,7 +90,7 @@
   {# ── SIDEBAR: sticky left col — static info ── #}
   <aside class="detail-sidebar" style="order:2" aria-label="Hồ sơ khách hàng">
 
-    {# ST-360-WARNING — Cảnh báo (only when warning notes exist) — A-S03 #}
+    {# ST-360-WARNING — Cảnh báo (only when warning notes exist) #}
     {% if warning_notes %}
     <div style="background:color-mix(in srgb,var(--coral-bg) 30%,transparent);border:1px solid color-mix(in srgb,var(--coral-500) 30%,transparent);border-radius:var(--radii-control);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-3)">
       {% for w in warning_notes %}
@@ -102,22 +102,113 @@
     </div>
     {% endif %}
 
-    {# Liên lạc — A-S03-013 (M15 contacts), A-S03-016 (M08 contact_attempt) #}
+    {# Thông Tin Cơ Bản — A-S03-015 (M15 core tab) #}
     <div class="scard">
       <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Liên lạc</span>
+        <span class="caption">Thông Tin Cơ Bản</span>
         <button class="ghost-link"
-                hx-get="/modals/m15?party_id={{ party.party_id }}&tab=contacts"
+                hx-get="/modals/m15?party_id={{ party.party_id }}&tab=core"
                 hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/plus.svg" %} Thêm
+          {% include "icons/edit.svg" %} Sửa
         </button>
       </div>
+      {# Name + badges row #}
+      <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2)">
+        <span style="font-size:14px;font-weight:600;color:var(--fg)">{{ party.display_name or "—" }}</span>
+        {% if insight and insight.insight and insight.insight.value_group %}
+        <span class="bdg">{{ insight.insight.value_group }}</span>
+        {% endif %}
+        <span class="bdg {{ status_badge_class(party.status) }}">{{ party.status }}</span>
+      </div>
+      <div class="facts">
+        {# Primary phone from identities #}
+        {% set ns = namespace(primary_phone="") %}
+        {% for ident in identities %}{% if ident.identity_type == 'phone' and ident.is_preferred and not ns.primary_phone %}{% set ns.primary_phone = ident.identity_value %}{% endif %}{% endfor %}
+        {% if not ns.primary_phone %}{% for ident in identities %}{% if ident.identity_type == 'phone' and not ns.primary_phone %}{% set ns.primary_phone = ident.identity_value %}{% endif %}{% endfor %}{% endif %}
+        {% if ns.primary_phone %}
+        <div class="fact"><span class="fact__k">Điện thoại</span><span class="fact__v mono">{{ ns.primary_phone }}</span></div>
+        {% endif %}
+        {# Sapo IDs from identities #}
+        {% for ident in identities %}{% if ident.identity_type == 'sapo_customer' %}
+        <div class="fact"><span class="fact__k">Sapo ID</span><span class="fact__v mono">{{ ident.identity_value }}</span></div>
+        {% endif %}{% endfor %}
+        {% for ident in identities %}{% if ident.identity_type == 'customer_code' %}
+        <div class="fact"><span class="fact__k">Sapo Code</span><span class="fact__v mono">{{ ident.identity_value }}</span></div>
+        {% endif %}{% endfor %}
+        {# Gender #}
+        {% if party.gender %}
+        {% set gender_map = {'male': 'Nam', 'female': 'Nữ', 'other': 'Khác', 'unknown': '—'} %}
+        <div class="fact"><span class="fact__k">Giới tính</span><span class="fact__v">{{ gender_map.get(party.gender, party.gender) }}</span></div>
+        {% endif %}
+        {# Owner #}
+        {% if party.owner_user_id %}
+        <div class="fact"><span class="fact__k">Phụ trách</span><span class="fact__v">{{ party.owner_user_id }}</span></div>
+        {% endif %}
+      </div>
+      {# Consent row #}
+      <div class="consent-row" style="margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)">
+        {% if party.consent_contact %}
+        <span class="consent-yes">{% include "icons/check.svg" %} Cho phép liên lạc</span>
+        {% else %}
+        <span class="consent-no">{% include "icons/close.svg" %} Không liên lạc (R1)</span>
+        {% endif %}
+      </div>
+    </div>
+
+    {# Head Line — warehouse KPIs from wh_customer_insight #}
+    <div class="scard">
+      <div class="caption caption--accent scard__eyebrow">Headline</div>
+      {% if insight and insight.insight %}
+      {% set ins = insight.insight %}
+      {% set last_dk = insight.recent_orders[0].date_key if insight.recent_orders else 0 %}
+      <div class="kpi-grid">
+        <div class="kpi kpi--hero">
+          <div class="kpi__label">Lifetime value</div>
+          <div class="kpi__val">{{ ins.lifetime_contribution_margin | format_vnd }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">Orders</div>
+          <div class="kpi__val">{{ insight.recent_orders | length }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">AOV</div>
+          <div class="kpi__val">{{ ins.avg_order_spend | format_vnd }}</div>
+        </div>
+        <div class="kpi">
+          <div class="kpi__label">Recency</div>
+          <div class="kpi__val">{{ last_dk | recency_days_label }}</div>
+        </div>
+      </div>
+      {% else %}
+      <span class="muted" style="font-size:13px">Chưa có dữ liệu insight</span>
+      {% endif %}
+    </div>
+
+    {# Liên Lạc — channels + address merged block — A-S03-013 / A-S03-014 / A-S03-016 #}
+    <div class="scard">
+      <div class="row-between" style="margin-bottom:var(--sp-3)">
+        <span class="caption">Liên Lạc</span>
+        <div style="display:flex;gap:var(--sp-1)">
+          <button class="ghost-link"
+                  hx-get="/modals/m15?party_id={{ party.party_id }}&tab=contacts"
+                  hx-target="#modal-root" hx-swap="innerHTML">
+            {% include "icons/plus.svg" %} Thêm
+          </button>
+          <button class="ghost-link"
+                  hx-get="/modals/m15?party_id={{ party.party_id }}&tab=address"
+                  hx-target="#modal-root" hx-swap="innerHTML"
+                  title="Sửa địa chỉ">
+            {% include "icons/edit.svg" %}
+          </button>
+        </div>
+      </div>
+
+      {# Contact channels #}
       {% if identities %}
       <div class="stack" style="gap:var(--sp-2)">
         {% for ident in identities | sort(attribute='is_preferred', reverse=true) %}
         {% if ident.identity_type in ['phone', 'phone_secondary', 'zalo', 'facebook', 'email'] %}
         <div style="display:flex;align-items:center;gap:var(--sp-2);{% if ident.contact_status == 'invalid' %}opacity:0.5{% endif %}">
-          {# Channel icon #}
           {% if ident.identity_type in ['phone', 'phone_secondary'] %}
           <span style="color:var(--fg-muted);flex:none">{% include "icons/phone.svg" %}</span>
           {% elif ident.identity_type == 'zalo' %}
@@ -127,21 +218,15 @@
           {% else %}
           <span style="color:var(--fg-muted);flex:none">{% include "icons/doc.svg" %}</span>
           {% endif %}
-          {# Value — preferred is bold #}
-          <span class="fact__v mono{{ ' cell-strong' if ident.is_preferred else '' }}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
-            {{ ident.identity_value }}
-          </span>
-          {# Label #}
+          <span class="fact__v mono{{ ' cell-strong' if ident.is_preferred else '' }}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ident.identity_value }}</span>
           {% if ident.display_label %}
           <span class="muted" style="font-size:11px;white-space:nowrap">{{ ident.display_label }}</span>
           {% endif %}
-          {# Status badge #}
           {% if ident.contact_status == 'invalid' %}
           <span class="bdg bdg--warn" style="font-size:10px">invalid</span>
           {% elif ident.contact_status == 'unreachable' %}
           <span class="bdg" style="font-size:10px">unreachable</span>
           {% endif %}
-          {# Quick action: phone → copy; zalo/fb → M08 contact_attempt — A-S03-016 #}
           {% if ident.identity_type in ['phone', 'phone_secondary'] and ident.contact_status == 'active' %}
           <button class="icon-btn icon-btn--sm"
                   onclick="navigator.clipboard.writeText('{{ ident.identity_value }}')"
@@ -159,7 +244,8 @@
       {% else %}
       <span class="muted" style="font-size:13px">Chưa có kênh liên lạc</span>
       {% endif %}
-      {# contact_pref notes inline — spec: "contact_pref notes hiển thị inline bên dưới contact list" #}
+
+      {# contact_pref notes #}
       {% if contact_pref_notes %}
       <div style="margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)">
         {% for n in contact_pref_notes %}
@@ -167,73 +253,52 @@
         {% endfor %}
       </div>
       {% endif %}
-    </div>
 
-    {# Địa chỉ — A-S03-014 (M15 address tab) — R13 #}
-    <div class="scard">
-      <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Địa chỉ</span>
-        <button class="ghost-link"
-                hx-get="/modals/m15?party_id={{ party.party_id }}&tab=address"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/edit.svg" %} Sửa
-        </button>
-      </div>
+      {# Address sub-section — R13 #}
       {% if party.address_line or party.ward or party.district or party.province %}
-      <div style="font-size:13.5px;color:var(--fg-1);line-height:1.55">
-        {% if party.address_line %}<div>{{ party.address_line }}</div>{% endif %}
-        {% if party.ward or party.district %}<div>{{ [party.ward, party.district] | select | join(', ') }}</div>{% endif %}
-        {% if party.province %}<div>{{ party.province }}</div>{% endif %}
-      </div>
-      {# R13 source badge #}
-      {% if party.address_source == 'manual' %}
-      <span class="bdg" style="margin-top:var(--sp-2);color:var(--moss-500);border-color:color-mix(in srgb,var(--moss-500) 30%,transparent);background:color-mix(in srgb,var(--moss-bg) 40%,transparent)">đã xác nhận</span>
-      {% else %}
-      <span class="bdg" style="margin-top:var(--sp-2)">sapo_sync</span>
-      {% endif %}
-      {% if party.address_note %}
-      <div class="muted" style="font-size:12px;font-style:italic;margin-top:var(--sp-2)">{{ party.address_note }}</div>
-      {% endif %}
-      {% else %}
-      <span class="muted" style="font-size:13px">Chưa có địa chỉ</span>
-      {% endif %}
-    </div>
-
-    {# Thông tin cơ bản — A-S03-015 (M15 core tab) #}
-    <div class="scard">
-      <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Thông tin cơ bản</span>
-        <button class="ghost-link"
-                hx-get="/modals/m15?party_id={{ party.party_id }}&tab=core"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/edit.svg" %} Sửa
-        </button>
-      </div>
-      <div class="facts">
-        <div class="fact"><span class="fact__k">Tên</span><span class="fact__v">{{ party.display_name or "—" }}</span></div>
-        {% for ident in identities %}{% if ident.identity_type == 'email' %}
-        <div class="fact"><span class="fact__k">Email</span><span class="fact__v">{{ ident.identity_value }}</span></div>
-        {% endif %}{% endfor %}
-        {% if party.birthday %}
-        <div class="fact"><span class="fact__k">Sinh nhật</span><span class="fact__v">{{ party.birthday }}</span></div>
-        {% endif %}
-        {% if party.owner_user_id %}
-        <div class="fact"><span class="fact__k">Owner</span><span class="fact__v">{{ party.owner_user_id }}</span></div>
-        {% endif %}
-        {% if party.lifecycle_stage %}
-        <div class="fact"><span class="fact__k">Giai đoạn</span><span class="fact__v">{{ party.lifecycle_stage }}</span></div>
-        {% endif %}
-      </div>
-      <div class="consent-row" style="margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)">
-        {% if party.consent_contact %}
-        <span class="consent-yes">{% include "icons/check.svg" %} Cho phép liên lạc</span>
+      <div style="margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)">
+        <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2)">
+          <span style="color:var(--fg-muted);flex:none;font-size:14px">📍</span>
+          <div style="font-size:13px;color:var(--fg-1);line-height:1.5">
+            {% if party.address_line %}<div>{{ party.address_line }}</div>{% endif %}
+            {% if party.ward or party.district %}<div>{{ [party.ward, party.district] | select | join(', ') }}</div>{% endif %}
+            {% if party.province %}<div>{{ party.province }}</div>{% endif %}
+          </div>
+        </div>
+        {% if party.address_source == 'manual' %}
+        <span class="bdg" style="color:var(--moss-500);border-color:color-mix(in srgb,var(--moss-500) 30%,transparent);background:color-mix(in srgb,var(--moss-bg) 40%,transparent)">đã xác nhận</span>
         {% else %}
-        <span class="consent-no">{% include "icons/close.svg" %} Không liên lạc (R1)</span>
+        <span class="bdg">sapo_sync</span>
         {% endif %}
+        {% if party.address_note %}
+        <div class="muted" style="font-size:12px;font-style:italic;margin-top:var(--sp-2)">{{ party.address_note }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    {# Dates — First/Last order + Tenure — source: wh_customer_insight / wh_customer_base #}
+    <div class="scard">
+      <div class="caption" style="margin-bottom:var(--sp-3)">Dates</div>
+      {% set first_date = (insight.insight.first_order_date if insight and insight.insight else "") %}
+      {% set last_date_key = (insight.recent_orders[0].date_key if insight and insight.recent_orders else 0) %}
+      <div class="facts">
+        <div class="fact">
+          <span class="fact__k">First Order</span>
+          <span class="fact__v">{{ first_date | format_date_ict if first_date else "—" }}</span>
+        </div>
+        <div class="fact">
+          <span class="fact__k">Last Order</span>
+          <span class="fact__v">{{ last_date_key | fmt_date_key }}</span>
+        </div>
+        <div class="fact">
+          <span class="fact__k">Tenure</span>
+          <span class="fact__v">{{ first_date | days_since if first_date else "—" }}</span>
+        </div>
       </div>
     </div>
 
-    {# Tags — A-S03-003 (M03) #}
+    {# Tags — A-S03-017 (M03) #}
     <div class="scard">
       <div class="row-between" style="margin-bottom:var(--sp-3)">
         <span class="caption">Tags</span>
@@ -253,42 +318,6 @@
       <span class="muted" style="font-size:13px">Chưa có tag</span>
       {% endif %}
     </div>
-
-    {# Custom fields grouped by section — A-S03-010 (M06) #}
-    {% if custom_field_defs %}
-    <div class="scard">
-      <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Thông tin bổ sung</span>
-        <button class="ghost-link"
-                hx-get="/modals/m06?party_id={{ party.party_id }}"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/edit.svg" %} Sửa
-        </button>
-      </div>
-      {% set custom_vals = party.custom | from_json if party.custom else {} %}
-      {% set sections = custom_field_defs | map(attribute='section') | unique | list %}
-      {% for section in sections %}
-      {% set section_fields = custom_field_defs | selectattr('section', 'equalto', section) | list %}
-      {% if section %}
-      <div class="caption" style="margin-bottom:var(--sp-2);{% if not loop.first %}margin-top:var(--sp-3){% endif %}">{{ section }}</div>
-      {% endif %}
-      <div class="facts">
-        {% for fd in section_fields | sort(attribute='sort_order') %}
-        {% set v = custom_vals.get(fd.field_key) %}
-        <div class="fact">
-          <span class="fact__k">{{ fd.label }}</span>
-          <span class="fact__v">
-            {% if v is none or v == '' %}<span class="dash">—</span>
-            {% elif v == true %}Có
-            {% elif v == false %}Không
-            {% else %}{{ v }}{% endif %}
-          </span>
-        </div>
-        {% endfor %}
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
 
   </aside>
 

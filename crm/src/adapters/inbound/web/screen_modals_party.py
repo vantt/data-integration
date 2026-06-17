@@ -339,6 +339,8 @@ def make_party_modals_router(
         display_name: str = Form(""),
         primary_email: str = Form(""),
         birthday: str = Form(""),
+        gender: str = Form(""),
+        consent_contact: str = Form("1"),
     ) -> Response:
         display_name = display_name.strip()
         if not display_name:
@@ -349,7 +351,12 @@ def make_party_modals_router(
                 party.display_name = display_name
                 party.primary_email = primary_email.strip() or ""
                 party_repo.update(party)
-            profile.upsert_profile(party_id, birthday=birthday.strip() or None)
+            profile.upsert_profile(
+                party_id,
+                birthday=birthday.strip() or None,
+                gender=gender.strip() or None,
+                consent_contact=consent_contact == "1",
+            )
         except Exception as exc:
             log.error("post_core %s: %s", party_id, exc)
             return HTMLResponse(f"Lỗi lưu thông tin: {exc}", status_code=500)
