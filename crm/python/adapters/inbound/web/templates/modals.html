@@ -7,9 +7,9 @@
   <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
     <div class="modal__head">
       <div><div class="modal__title">Tạo khách hàng mới</div></div>
-      <button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">✕</button>
+      <button class="icon-btn" onclick="document.getElementById('modal-root').innerHTML=''" aria-label="Đóng">✕</button>
     </div>
-    <form hx-post="/parties" hx-target="#modal" hx-swap="innerHTML">
+    <form hx-post="/parties" hx-target="#modal-root" hx-swap="innerHTML">
       <div class="modal__body">
         <label class="field">
           <span class="field__label">Tên hiển thị<span class="field__req">*</span></span>
@@ -32,7 +32,7 @@
         </div>
       </div>
       <div class="modal__actions">
-        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
         <button type="submit" class="btn btn--primary">Tạo khách</button>
       </div>
     </form>
@@ -46,9 +46,9 @@
   <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
     <div class="modal__head">
       <div><div class="modal__title">Gán phụ trách</div></div>
-      <button class="icon-btn" onclick="document.getElementById('modal').innerHTML=''" aria-label="Đóng">✕</button>
+      <button class="icon-btn" onclick="document.getElementById('modal-root').innerHTML=''" aria-label="Đóng">✕</button>
     </div>
-    <form hx-post="/customers/{{ party_id }}/assign-owner" hx-target="#modal" hx-swap="innerHTML">
+    <form hx-post="/customers/{{ party_id }}/assign-owner" hx-target="#modal-root" hx-swap="innerHTML">
       <div class="modal__body">
         {% if current_owner_id %}
         <label class="field">
@@ -77,10 +77,17 @@
         </label>
       </div>
       <div class="modal__actions">
-        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal').innerHTML=''">Hủy</button>
+        <button type="button" class="btn btn--ghost" onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
         <button type="submit" class="btn btn--primary">Lưu</button>
       </div>
     </form>
   </div>
 </div>
 {% endmacro %}
+
+{# ── Dispatcher: render the requested macro when served as an HTMX fragment ── #}
+{% if macro is defined %}
+  {% if macro == "modal_create_party" %}{{ modal_create_party() }}
+  {% elif macro == "modal_assign_owner" %}{{ modal_assign_owner(party_id, current_owner_id, users) }}
+  {% endif %}
+{% endif %}

@@ -1,0 +1,105 @@
+{# @surface  M03 · Tag Management Modal (partial — HTMX-served modal)
+   @source   crm/docs/ui-spec/modals/M03-tag-management-modal.md
+   @kind     MODAL
+   M03 Tag Management modal — served at GET /modals/m03?party_id=...
+   Data: party_id (str), all_tags (list[Tag]), party_tag_ids (set[str]).
+   Tag fields: tag_id, name, category, color.
+   POST target: /customers/{party_id}/tags.
+   Response swaps back into #modal-root via hx-target="#modal-root".
+#}
+
+<div class="modal-scrim" onclick="document.getElementById('modal-root').innerHTML=''" data-surface="M03">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+
+    {# ── Header ── #}
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">Quản lý Tags</div>
+      </div>
+      <button class="icon-btn"
+              onclick="document.getElementById('modal-root').innerHTML=''"
+              aria-label="Đóng">✕</button>
+    </div>
+
+    <form hx-post="/customers/{{ party_id }}/tags"
+          hx-target="#modal-root"
+          hx-swap="innerHTML">
+      <input type="hidden" name="party_id" value="{{ party_id }}">
+
+      <div class="modal__body">
+        {% if all_tags %}
+          {# ── Group tags by category ── #}
+          {% set ns = namespace(categories={}, category_order=[]) %}
+          {% for tag in all_tags %}
+            {% set cat = tag.category if tag.category else "Chung" %}
+            {% if cat not in ns.category_order %}
+              {% set _ = ns.category_order.append(cat) %}
+              {% set _ = ns.categories.update({cat: []}) %}
+            {% endif %}
+            {% set _ = ns.categories[cat].append(tag) %}
+          {% endfor %}
+
+          {% set show_categories = ns.category_order | length > 1 %}
+
+          {% for cat in ns.category_order %}
+            {% if show_categories %}
+              <div class="caption"
+                   style="color:var(--fg-tertiary);margin:var(--sp-4) 0 var(--sp-2);border-bottom:1px solid var(--border);padding-bottom:var(--sp-1)">
+                {{ cat }}
+              </div>
+            {% endif %}
+
+            <div class="chips" style="flex-wrap:wrap;">
+              {% for tag in ns.categories[cat] %}
+                {% set is_active = tag.tag_id in party_tag_ids %}
+                {# Hidden checkbox — carries the form value; toggled by JS #}
+                <input type="checkbox"
+                       id="m03-chk-{{ tag.tag_id }}"
+                       name="tag_ids"
+                       value="{{ tag.tag_id }}"
+                       class="sr-only"
+                       {% if is_active %}checked{% endif %}>
+                {# Visible chip label — clicking toggles checkbox + class #}
+                <label for="m03-chk-{{ tag.tag_id }}"
+                       class="chip {% if is_active %}chip--active{% endif %}"
+                       {% if tag.color %}style="--chip-color:{{ tag.color }};"{% endif %}
+                       onclick="m03ToggleTag(this)"
+                       title="{{ tag.name }}"
+                       tabindex="0"
+                       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m03ToggleTag(this)}">
+                  {{ tag.name }}
+                </label>
+              {% endfor %}
+            </div>
+          {% endfor %}
+
+        {% else %}
+          <div style="font-size:13.5px;color:var(--fg-muted);text-align:center;padding:var(--sp-6);">
+            Chưa có tag nào trong hệ thống.
+          </div>
+        {% endif %}
+      </div>{# .modal__body #}
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+
+  </div>{# .modal #}
+</div>{# .modal-scrim #}
+
+<script>
+  function m03ToggleTag(labelEl) {
+    // The <label for="..."> click already toggles the checkbox via browser default.
+    // We only need to sync the visual class — use a microtask so the checkbox
+    // state has already flipped before we read it.
+    requestAnimationFrame(function () {
+      var chk = document.getElementById(labelEl.htmlFor);
+      if (chk) {
+        labelEl.classList.toggle('chip--active', chk.checked);
+      }
+    });
+  }
+</script>

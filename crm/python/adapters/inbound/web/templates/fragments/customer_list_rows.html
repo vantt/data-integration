@@ -18,9 +18,10 @@
   {% for p in parties %}
     {% set status_cls = "bdg " ~ status_badge_class(p.status) %}
     <tr class="is-clickable"
-        hx-get="/customers/{{ p.party_id }}"
-        hx-target="body"
-        hx-push-url="true">
+        onclick="if (!event.target.closest('a')) window.location.href='/customers/{{ p.party_id }}'"
+        role="button" tabindex="0"
+        onkeydown="if (event.key === 'Enter') window.location.href='/customers/{{ p.party_id }}'"
+        aria-label="Xem khách hàng {{ p.display_name | e }}">
       <td>
         <span class="cell-strong">{{ p.display_name | e }}</span>
       </td>

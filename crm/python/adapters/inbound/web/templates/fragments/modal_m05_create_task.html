@@ -1,0 +1,131 @@
+{# @surface  M05 · Create Task Modal (partial — HTMX-served modal)
+   @source   crm/docs/ui-spec/modals/M05-create-task-modal.md
+   @kind     MODAL
+   M05 Create Task modal — served at GET /modals/m05?party_id=...
+   Data: party_id (str), app_users (list[AppUser]).
+   AppUser fields: user_id, full_name, role.
+   POST target: /customers/{party_id}/tasks.
+   Response swaps back into #modal-root via hx-target="#modal-root".
+#}
+
+<div class="modal-scrim" onclick="document.getElementById('modal-root').innerHTML=''" data-surface="M05">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+
+    {# ── Header ── #}
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">Tạo nhiệm vụ mới</div>
+      </div>
+      <button class="icon-btn"
+              onclick="document.getElementById('modal-root').innerHTML=''"
+              aria-label="Đóng">✕</button>
+    </div>
+
+    <form hx-post="/customers/{{ party_id }}/tasks"
+          hx-target="#modal-root"
+          hx-swap="innerHTML">
+      <input type="hidden" name="party_id" value="{{ party_id }}">
+
+      <div class="modal__body">
+
+        {# ── Tiêu đề ── #}
+        <label class="field">
+          <span class="field__label">TIÊU ĐỀ<span class="field__req">*</span></span>
+          <input type="text"
+                 name="title"
+                 class="inp"
+                 placeholder="VD: Gọi lại xác nhận đơn hàng"
+                 required
+                 autofocus>
+        </label>
+
+        {# ── Mô tả ── #}
+        <label class="field">
+          <span class="field__label">MÔ TẢ</span>
+          <textarea name="description"
+                    class="inp inp--area"
+                    rows="3"
+                    placeholder="Chi tiết thêm về nhiệm vụ (không bắt buộc)"></textarea>
+        </label>
+
+        <div class="field-row">
+          {# ── Ngày hạn ── #}
+          <label class="field">
+            <span class="field__label">NGÀY HẠN</span>
+            <input type="date"
+                   name="due_at"
+                   class="inp inp--mono">
+          </label>
+
+          {# ── Gán cho NV ── #}
+          <label class="field">
+            <span class="field__label">GIAO CHO</span>
+            <div class="inp-sel">
+              <select name="assignee_user_id" class="inp">
+                <option value="">— Chưa giao —</option>
+                {% for user in app_users %}
+                  <option value="{{ user.user_id }}">{{ user.full_name }}{% if user.role %} · {{ user.role }}{% endif %}</option>
+                {% endfor %}
+              </select>
+              <span class="inp-sel__chev">{% include 'icons/chevdown.svg' %}</span>
+            </div>
+          </label>
+        </div>
+
+        {# ── Mức độ ưu tiên ── #}
+        <div class="field">
+          <span class="field__label">ĐỘ ƯU TIÊN</span>
+          <div class="radioset" id="m05-priority-set">
+            <label class="radio-pill radio-pill--on"
+                   onclick="m05SetPriority(this, 0)"
+                   tabindex="0"
+                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m05SetPriority(this,0)}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="_priority_radio" value="0" checked class="sr-only"> Bình thường
+            </label>
+            <label class="radio-pill"
+                   onclick="m05SetPriority(this, 1)"
+                   tabindex="0"
+                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m05SetPriority(this,1)}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="_priority_radio" value="1" class="sr-only"> Cao
+            </label>
+            <label class="radio-pill"
+                   onclick="m05SetPriority(this, 2)"
+                   tabindex="0"
+                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m05SetPriority(this,2)}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="_priority_radio" value="2" class="sr-only"> Khẩn cấp
+            </label>
+          </div>
+          {# Hidden field carries the actual submitted value so server reads a clean integer #}
+          <input type="hidden" id="m05-priority-val" name="priority" value="0">
+        </div>
+
+      </div>{# .modal__body #}
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Tạo task</button>
+      </div>
+    </form>
+
+  </div>{# .modal #}
+</div>{# .modal-scrim #}
+
+<script>
+  function m05SetPriority(clickedLabel, value) {
+    // Sync the hidden field value.
+    document.getElementById('m05-priority-val').value = value;
+    // Toggle radio-pill--on across all pills in the group.
+    var pills = document.querySelectorAll('#m05-priority-set .radio-pill');
+    pills.forEach(function (pill) {
+      pill.classList.remove('radio-pill--on');
+    });
+    clickedLabel.classList.add('radio-pill--on');
+    // Also tick the corresponding hidden radio for native form semantics.
+    var radio = clickedLabel.querySelector('input[type="radio"]');
+    if (radio) { radio.checked = true; }
+  }
+</script>

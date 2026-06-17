@@ -85,9 +85,11 @@ templ CustomerListRows(parties []domain.Party) {
 		for _, p := range parties {
 			<tr
 				class="is-clickable"
-				hx-get={ "/customers/" + p.PartyID }
-				hx-target="body"
-				hx-push-url="true"
+				data-href={ "/customers/" + p.PartyID }
+				onclick="if (!event.target.closest('a')) window.location.href=this.dataset.href"
+				role="button"
+				tabindex="0"
+				onkeydown="if (event.key === 'Enter') window.location.href=this.dataset.href"
 			>
 				<td>
 					<span class="cell-strong">{ p.DisplayName }</span>

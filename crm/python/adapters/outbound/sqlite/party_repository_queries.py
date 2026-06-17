@@ -67,9 +67,10 @@ SQL_UPSERT_IDENTITY = (
 
 SQL_LIST_IDENTITIES = (
     "SELECT identity_id, party_id, source_system, identity_type, identity_value,"
-    "       confidence, is_primary, verified_at, source_contact_quality, contact_quality, created_at"
+    "       confidence, is_primary, verified_at, source_contact_quality, contact_quality, created_at,"
+    "       display_label, contact_status, is_preferred"
     " FROM crm_party_identity WHERE party_id = ?"
-    " ORDER BY is_primary DESC, created_at"
+    " ORDER BY is_preferred DESC, is_primary DESC, created_at"
 )
 
 SQL_UPDATE_CONTACT_QUALITY = (
@@ -84,6 +85,31 @@ SQL_LIST_ALL_PARTIES = (
 )
 
 SQL_COUNT_PARTIES = "SELECT COUNT(*) FROM crm_party WHERE is_merged = 0"
+
+SQL_UPDATE_PARTY_ADDRESS = (
+    "UPDATE crm_party"
+    " SET address_line = ?, ward = ?, district = ?, province = ?,"
+    "     address_source = 'manual', address_note = ?, updated_at = ?"
+    " WHERE party_id = ?"
+)
+
+SQL_DEACTIVATE_IDENTITY = (
+    "UPDATE crm_party_identity SET contact_status = 'invalid' WHERE identity_id = ?"
+)
+
+SQL_INSERT_IDENTITY_FULL = (
+    "INSERT OR IGNORE INTO crm_party_identity"
+    " (identity_id, party_id, source_system, identity_type, identity_value,"
+    "  confidence, is_primary, verified_at, source_contact_quality, contact_quality,"
+    "  created_at, display_label, contact_status, is_preferred)"
+    " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+)
+
+SQL_UPDATE_IDENTITY_INFO = (
+    "UPDATE crm_party_identity"
+    " SET display_label = ?, contact_status = ?, is_preferred = ?"
+    " WHERE identity_id = ?"
+)
 
 # ── Row mappers ───────────────────────────────────────────────────────────────
 
@@ -115,6 +141,9 @@ def row_to_identity(row: sqlite3.Row) -> PartyIdentity:
         source_contact_quality=row["source_contact_quality"],
         contact_quality=row["contact_quality"],
         created_at=row["created_at"],
+        display_label=row["display_label"],
+        contact_status=row["contact_status"] or "active",
+        is_preferred=bool(row["is_preferred"] or 0),
     )
 
 
@@ -158,4 +187,23 @@ def identity_upsert_params(identity: PartyIdentity) -> tuple:
         identity.source_contact_quality,
         identity.contact_quality,
         identity.created_at,
+    )
+
+
+def identity_insert_full_params(identity: PartyIdentity) -> tuple:
+    return (
+        identity.identity_id,
+        identity.party_id,
+        identity.source_system,
+        identity.identity_type,
+        identity.identity_value,
+        identity.confidence,
+        1 if identity.is_primary else 0,
+        identity.verified_at,
+        identity.source_contact_quality,
+        identity.contact_quality,
+        identity.created_at,
+        identity.display_label,
+        identity.contact_status or "active",
+        1 if identity.is_preferred else 0,
     )

@@ -25,11 +25,16 @@ from adapters.outbound.sqlite.party_repository_queries import (
     SQL_UPDATE_CONTACT_QUALITY,
     SQL_LIST_ALL_PARTIES,
     SQL_COUNT_PARTIES,
+    SQL_UPDATE_PARTY_ADDRESS,
+    SQL_DEACTIVATE_IDENTITY,
+    SQL_INSERT_IDENTITY_FULL,
+    SQL_UPDATE_IDENTITY_INFO,
     row_to_party,
     row_to_identity,
     party_create_params,
     party_update_params,
     identity_upsert_params,
+    identity_insert_full_params,
 )
 
 
@@ -99,6 +104,44 @@ class SQLitePartyRepository:
 
     def update_contact_quality(self, identity_id: str, contact_quality: str) -> None:
         self._conn.execute(SQL_UPDATE_CONTACT_QUALITY, (contact_quality, identity_id))
+
+    def update_party_address(
+        self,
+        party_id: str,
+        address_line: Optional[str],
+        ward: Optional[str],
+        district: Optional[str],
+        province: Optional[str],
+        address_note: Optional[str],
+        updated_at: str,
+    ) -> None:
+        """Update address fields on crm_party (sets address_source='manual')."""
+        self._conn.execute(
+            SQL_UPDATE_PARTY_ADDRESS,
+            (address_line or None, ward or None, district or None, province or None,
+             address_note or None, updated_at, party_id),
+        )
+
+    def deactivate_identity(self, identity_id: str) -> None:
+        """Mark an identity as invalid (contact_status='invalid')."""
+        self._conn.execute(SQL_DEACTIVATE_IDENTITY, (identity_id,))
+
+    def insert_identity_full(self, identity: PartyIdentity) -> None:
+        """Insert a new identity with all migration 0008 fields. INSERT OR IGNORE on duplicate."""
+        self._conn.execute(SQL_INSERT_IDENTITY_FULL, identity_insert_full_params(identity))
+
+    def update_identity_info(
+        self,
+        identity_id: str,
+        display_label: Optional[str],
+        contact_status: str,
+        is_preferred: bool,
+    ) -> None:
+        """Update display_label, contact_status, is_preferred on an existing identity."""
+        self._conn.execute(
+            SQL_UPDATE_IDENTITY_INFO,
+            (display_label or None, contact_status or "active", 1 if is_preferred else 0, identity_id),
+        )
 
     def create_with_identities(self, party: Party, identities: list[PartyIdentity]) -> Party:
         """Atomic insert: party row + all identity rows. Rolls back on any failure."""

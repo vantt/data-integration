@@ -1,0 +1,58 @@
+{# Inline edit form for an existing identity — injected into #m15-inline-form (M15 contacts tab).
+   Data: party_id (str), identity (PartyIdentity).
+   Fields submitted via the outer M15 form: action=edit_channel, identity_id, edit_* fields.
+#}
+<input type="hidden" name="action" value="edit_channel">
+<input type="hidden" name="identity_id" value="{{ identity.identity_id }}">
+
+<div style="display:flex;flex-direction:column;gap:var(--sp-3);background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--radii-control);padding:var(--sp-4);">
+  <div style="font-size:12.5px;color:var(--fg-tertiary);">
+    Đang sửa: <code style="color:var(--fg)">{{ identity.identity_value }}</code>
+    <span style="margin-left:var(--sp-2);color:var(--fg-muted)">({{ identity.identity_type }})</span>
+  </div>
+
+  <div class="field-row">
+    <label class="field">
+      <span class="field__label">NHÃN</span>
+      <input type="text" name="edit_display_label" class="inp"
+             value="{{ identity.display_label or '' }}"
+             placeholder="VD: Số công ty">
+    </label>
+    <label class="field">
+      <span class="field__label">TRẠNG THÁI</span>
+      <div class="inp-sel">
+        <select name="edit_contact_status" class="inp">
+          <option value="active"{% if identity.contact_status == 'active' %} selected{% endif %}>Hoạt động</option>
+          <option value="invalid"{% if identity.contact_status == 'invalid' %} selected{% endif %}>Không hợp lệ</option>
+          <option value="unreachable"{% if identity.contact_status == 'unreachable' %} selected{% endif %}>Không liên lạc được</option>
+        </select>
+        <span class="inp-sel__chev">{% include 'icons/chevdown.svg' %}</span>
+      </div>
+    </label>
+  </div>
+
+  <label class="field">
+    <span class="field__label">ƯU TIÊN</span>
+    <div class="radioset">
+      <label class="radio-pill{% if not identity.is_preferred %} radio-pill--on{% endif %}">
+        <span class="radio-pill__dot"></span>
+        <input type="radio" name="edit_is_preferred" value="0" class="sr-only"{% if not identity.is_preferred %} checked{% endif %}> Không
+      </label>
+      <label class="radio-pill{% if identity.is_preferred %} radio-pill--on{% endif %}">
+        <span class="radio-pill__dot"></span>
+        <input type="radio" name="edit_is_preferred" value="1" class="sr-only"{% if identity.is_preferred %} checked{% endif %}> Có
+      </label>
+    </div>
+  </label>
+
+  <div>
+    <button type="button"
+            class="btn btn--ghost"
+            style="font-size:12px"
+            hx-get="/customers/{{ party_id }}/modal/edit-contact?tab=contacts"
+            hx-target="#modal-root"
+            hx-swap="innerHTML">
+      Hủy sửa
+    </button>
+  </div>
+</div>

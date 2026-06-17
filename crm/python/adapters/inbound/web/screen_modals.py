@@ -68,7 +68,7 @@ def init_modals(deps: WebDeps, templates: Jinja2Templates) -> None:
 async def get_modal_create_party(request: Request) -> HTMLResponse:
     return _templates.TemplateResponse(
         "modals.html",
-        {"request": request},
+        {"request": request, "macro": "modal_create_party"},
     )
 
 

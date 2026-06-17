@@ -71,6 +71,7 @@ from adapters.inbound.web.format_helpers import (
     verdict_tone, verdict_word,
 )
 from adapters.inbound.web.screen_modals import init_modals, router as modals_router
+from adapters.inbound.web.screen_modals_party import make_party_modals_router
 from adapters.inbound.web.screen_worklist import make_worklist_router
 from adapters.inbound.web.screen_customer_list import make_customer_list_router
 from adapters.inbound.web.screen_customer_360 import make_customer_360_router
@@ -216,6 +217,14 @@ def create_app() -> FastAPI:
         templates=templates,
     )
     app.include_router(modals_router)
+
+    app.include_router(make_party_modals_router(
+        templates=templates,
+        profile=profile_svc,
+        party_repo=party_repo,
+        task_svc=task_svc,
+        app_users=app_user_repo,
+    ))
 
     app.include_router(make_worklist_router(
         templates=templates,

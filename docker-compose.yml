@@ -178,6 +178,8 @@ services:
       # Dev live-reload: mount source so template/static edits are visible without rebuild.
       - ./crm/python:/app/crm/python
       - ./crm/app/internal/adapters/inbound/web/static:/app/crm/app/internal/adapters/inbound/web/static
+      # Migrations: mount so new *.up.sql files are picked up on restart without image rebuild.
+      - ./crm/migrations:/app/crm/migrations
     labels:
       caddy: crm.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 8090}}"
