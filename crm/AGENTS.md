@@ -4,16 +4,16 @@ Internal CRM OLTP sub-project. Read global `AGENTS.md` at repo root first — th
 
 ## Boundary rule
 
-Go app, migrations, Python sync, and SQLite data files live ONLY under `crm/`. Never cross-write into `ingestion/`, `transformation/`, `orchestration/`, `detailView/`, or any other sub-project.
+Python app, migrations, Python sync, and SQLite data files live ONLY under `crm/`. Never cross-write into `ingestion/`, `transformation/`, `orchestration/`, `detailView/`, or any other sub-project.
 
 ## Stack
 
 | Layer | Choice |
 |---|---|
-| App | Go — chi router, sqlc, golang-migrate |
+| App | Python — FastAPI + Jinja2/HTMX, uvicorn |
 | Reverse-ETL | Python — reads `olap.duckdb` read-only |
-| DB owned | `data/crm.db` — SQLite WAL |
-| DB cache | `data/cache.db` — warehouse read-cache, ATTACHed read-only |
+| DB owned | `crm.db` — SQLite WAL (Docker named volume `crm_data`) |
+| DB cache | `cache.db` — warehouse read-cache, ATTACHed read-only |
 
 ## Conventions
 
@@ -38,15 +38,14 @@ PRAGMA busy_timeout = 5000;
 
 ```
 crm/
-├── app/cmd/server/             # Go main
-├── app/internal/domain/        # entities, rules
-├── app/internal/ports/         # interfaces
-├── app/internal/adapters/inbound/http/
-├── app/internal/adapters/outbound/sqlite/
-├── app/internal/adapters/outbound/sapo/
+├── python/                     # FastAPI app (hexagonal)
+│   ├── domain/                 # entities, ports
+│   ├── application/            # services
+│   ├── adapters/inbound/web/   # Jinja2/HTMX screens + fragments
+│   └── adapters/outbound/sqlite/  # crm.db + cache.db queries
 ├── migrations/                 # SQL migration files
-├── sync/                       # Python reverse-ETL
-└── data/                       # runtime SQLite (gitignored)
+├── sync/                       # Python reverse-ETL (warehouse → cache.db)
+└── docs/                       # UI spec, conventions
 ```
 
 ## Plans & design
