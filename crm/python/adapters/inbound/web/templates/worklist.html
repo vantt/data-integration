@@ -1,18 +1,17 @@
-{# @surface  S01 · Worklist / Dashboard
-   @source   crm/docs/ui-spec/screens/S01-worklist-dashboard.md
-   @kind     SCREEN #}
+{# @surface S01 · Worklist / Dashboard | @source crm/docs/ui-spec/screens/S01-worklist-dashboard.md | @kind SCREEN #}
 {% extends "layout.html" %}
 
 {% block title %}Worklist hôm nay{% endblock %}
 
 {% block content %}
 <div class="crm-page page-enter" data-surface="S01">
+
   <div class="crm-pagehead">
     <div>
-      <div class="caption crm-pagehead__eyebrow">WORKLIST</div>
-      <h1 class="crm-pagehead__title">Worklist hôm nay</h1>
+      <div class="caption crm-pagehead__eyebrow">WORKLIST · HÔM NAY</div>
+      <h1 class="crm-pagehead__title">Việc cần làm hôm nay</h1>
     </div>
-    <div class="crm-pagehead__aside">
+    <div class="crm-pagehead__aside" style="display:flex;gap:var(--sp-2)">
       <button class="btn btn--secondary"
               hx-get="/worklist/fragment"
               hx-target="#worklist-container"
@@ -22,11 +21,20 @@
         {% include "icons/refresh.svg" %}
         Làm mới
       </button>
+      {# A-S01-004: + Tạo task → M05 #}
+      <button class="btn btn--primary"
+              hx-get="/modals/m05"
+              hx-target="#modal-root"
+              hx-swap="innerHTML">
+        {% include "icons/plus.svg" %} Tạo task
+      </button>
     </div>
   </div>
 
   <div id="worklist-container">
     {% include "fragments/worklist_fragment.html" %}
   </div>
+
 </div>
+<div id="modal-root"></div>
 {% endblock %}

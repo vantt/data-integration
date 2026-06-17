@@ -1,0 +1,52 @@
+{# @surface P05 · Notes Panel | @source crm/docs/ui-spec/panels/P05-notes-panel.md | @kind PARTIAL #}
+{# Typed note card — included by c360_notes_panel.html for each note.
+   Expects: note (Note), is_pinned (bool), party_id (str)
+   note.note_type: general|preference|contact_pref|warning|outcome|internal
+#}
+{% set type_labels = {
+  'preference':  ('preference',  'bdg--good',   ''),
+  'contact_pref':('liên lạc',   'bdg--accent',  'color:var(--purple-500,#7c3aed);border-color:color-mix(in srgb,var(--purple-500,#7c3aed) 30%,transparent);background:color-mix(in srgb,var(--purple-500,#7c3aed) 10%,transparent)'),
+  'warning':     ('⚠ cảnh báo', 'bdg--bad',    ''),
+  'outcome':     ('kết quả',    'bdg',          'color:var(--fg-2)'),
+  'internal':    ('nội bộ',     'bdg',          'color:var(--fg-tertiary)'),
+} %}
+{% set type_info = type_labels.get(note.note_type) %}
+
+<div class="note-card">
+  <div class="note-card__head">
+    <div class="note-card__who">
+      {% if is_pinned %}<span style="color:var(--accent);margin-right:var(--sp-1)">★</span>{% endif %}
+      {% if type_info %}
+      <span class="bdg {{ type_info[1] }}"{% if type_info[2] %} style="{{ type_info[2] }}"{% endif %}>{{ type_info[0] }}</span>
+      {% endif %}
+      {% if note.author_user_id %}<span>{{ note.author_user_id }}</span>{% endif %}
+      <span class="note-card__when">· {{ note.created_at | format_ict }} ICT</span>
+    </div>
+    <div class="note-card__acts">
+      {# A-P05-002: edit → M08 mode=edit_note #}
+      <button class="icon-btn icon-btn--sm"
+              hx-get="/modals/m08?party_id={{ party_id }}&note_id={{ note.note_id }}&mode=edit_note"
+              hx-target="#modal-root" hx-swap="innerHTML"
+              title="Sửa ghi chú">{% include "icons/edit.svg" %}</button>
+      {# A-P05-003: delete → O01 confirm #}
+      <button class="icon-btn icon-btn--sm"
+              hx-get="/overlays/o01?confirm_type=delete_note&note_id={{ note.note_id }}"
+              hx-target="#modal-root" hx-swap="innerHTML"
+              title="Xóa ghi chú">{% include "icons/trash.svg" %}</button>
+    </div>
+  </div>
+
+  <div class="note-card__body">{{ note.body }}</div>
+
+  {# Outcome notes: show task link + promote-to-insight button (A-P05-005) #}
+  {% if note.note_type == 'outcome' and note.task_id %}
+  <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-2);padding-top:var(--sp-2);border-top:1px solid var(--border)">
+    <span class="caption" style="color:var(--fg-tertiary)">Task: {{ note.task_id }}</span>
+    <button class="ghost-link"
+            hx-get="/modals/m16?party_id={{ party_id }}&source_note_id={{ note.note_id }}&prefill_body={{ note.body | urlencode }}"
+            hx-target="#modal-root" hx-swap="innerHTML">
+      ★ Đúc kết thành insight
+    </button>
+  </div>
+  {% endif %}
+</div>

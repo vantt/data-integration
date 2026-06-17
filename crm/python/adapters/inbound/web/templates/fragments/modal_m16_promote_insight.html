@@ -1,0 +1,153 @@
+{# @surface M16 · Promote / Create Insight | @source crm/docs/ui-spec/modals/M16-promote-insight-modal.md | @kind MODAL #}
+{#
+  M16 Promote / Create Insight modal — served at GET /customers/{party_id}/modal/promote-insight
+  Data:
+    party_id       (str)              — required
+    party_name     (str|empty)        — display name for header subtitle
+    source_note_id (str|empty)        — if set: promote-from-note mode; shown as readonly source
+    prefill_body   (str|empty)        — pre-fill body textarea (from note content)
+    insight_id     (str|empty)        — if set: edit mode
+    insight        (PartyInsight|None) — existing insight in edit mode
+  POST targets:
+    create → POST /customers/{party_id}/insights
+    edit   → POST /customers/{party_id}/insights/{insight_id}
+  After save: swaps #modal-root to empty (close), then fires insightSaved event on body
+  so P01 insight panel can reload.
+#}
+{% set is_edit = insight_id is defined and insight_id %}
+{% set post_url = "/customers/" ~ party_id ~ "/insights/" ~ insight_id if is_edit else "/customers/" ~ party_id ~ "/insights" %}
+
+<div class="modal-scrim"
+     onclick="document.getElementById('modal-root').innerHTML=''"
+     data-surface="M16">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+
+    {# ── Header ── #}
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">{% if is_edit %}Sửa insight{% else %}Đúc kết insight{% endif %}</div>
+        {% if party_name %}
+          <div class="modal__sub">{{ party_name }}</div>
+        {% elif party_id %}
+          <div class="modal__sub">{{ party_id }}</div>
+        {% endif %}
+      </div>
+      <button class="icon-btn"
+              onclick="document.getElementById('modal-root').innerHTML=''"
+              aria-label="Đóng">
+        {% include "icons/close.svg" %}
+      </button>
+    </div>
+
+    {# ── Body + form ── #}
+    <form hx-post="{{ post_url }}"
+          hx-target="#modal-root"
+          hx-swap="innerHTML"
+          hx-on::after-request="document.body.dispatchEvent(new Event('insightSaved'))">
+      <input type="hidden" name="party_id" value="{{ party_id }}">
+      {% if is_edit %}
+        <input type="hidden" name="insight_id" value="{{ insight_id }}">
+      {% endif %}
+      {% if source_note_id is defined and source_note_id %}
+        <input type="hidden" name="source_note_id" value="{{ source_note_id }}">
+      {% endif %}
+
+      <div class="modal__body">
+
+        {# Insight type select #}
+        <label class="field">
+          <span class="field__label">LOẠI INSIGHT<span class="field__req">*</span></span>
+          <div class="inp-sel">
+            <select name="insight_type" required>
+              <option value=""
+                      {% if not is_edit %}selected{% endif %}
+                      disabled>Chọn loại…</option>
+              <option value="persona"
+                      {% if is_edit and insight and insight.insight_type == 'persona' %}selected{% endif %}>
+                Persona — đặc điểm / vai trò thực
+              </option>
+              <option value="buying_pattern"
+                      {% if is_edit and insight and insight.insight_type == 'buying_pattern' %}selected{% endif %}>
+                Hành vi mua — pattern mua hàng
+              </option>
+              <option value="decision_style"
+                      {% if is_edit and insight and insight.insight_type == 'decision_style' %}selected{% endif %}>
+                Phong cách QĐ — cách ra quyết định
+              </option>
+              <option value="life_event"
+                      {% if is_edit and insight and insight.insight_type == 'life_event' %}selected{% endif %}>
+                Sự kiện đời sống — ảnh hưởng mua hàng
+              </option>
+              <option value="relationship"
+                      {% if is_edit and insight and insight.insight_type == 'relationship' %}selected{% endif %}>
+                Mối quan hệ — mua cho ai, liên quan ai
+              </option>
+              <option value="advocate_signal"
+                      {% if is_edit and insight and insight.insight_type == 'advocate_signal' %}selected{% endif %}>
+                Tiềm năng Advocate — hay share, giới thiệu
+              </option>
+            </select>
+            <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+          </div>
+        </label>
+
+        {# Body textarea #}
+        <label class="field">
+          <span class="field__label">NỘI DUNG<span class="field__req">*</span></span>
+          <textarea name="body"
+                    class="inp inp--area"
+                    rows="4"
+                    placeholder="VD: Mua cho shop tại Q7, không phải cá nhân. Cần báo giá sỉ thay vì giá lẻ."
+                    required>{% if is_edit and insight and insight.body %}{{ insight.body }}{% elif prefill_body is defined and prefill_body %}{{ prefill_body }}{% endif %}</textarea>
+        </label>
+
+        {# Confidence radio #}
+        <label class="field">
+          <span class="field__label">ĐỘ TIN CẬY</span>
+          <div class="radioset">
+            {% set current_confidence = (insight.confidence if is_edit and insight and insight.confidence else 'high') %}
+            <label class="radio-pill{% if current_confidence == 'high' %} radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="confidence" value="high"
+                     {% if current_confidence == 'high' %}checked{% endif %}
+                     class="sr-only"> Cao
+            </label>
+            <label class="radio-pill{% if current_confidence == 'medium' %} radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="confidence" value="medium"
+                     {% if current_confidence == 'medium' %}checked{% endif %}
+                     class="sr-only"> Trung bình
+            </label>
+            <label class="radio-pill{% if current_confidence == 'low' %} radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="confidence" value="low"
+                     {% if current_confidence == 'low' %}checked{% endif %}
+                     class="sr-only"> Thấp
+            </label>
+          </div>
+        </label>
+
+        {# Source note — readonly, shown only when promoting from a note #}
+        {% if source_note_id is defined and source_note_id %}
+          <div style="display: flex; flex-direction: column; gap: 5px;">
+            <span class="field__label">NGUỒN</span>
+            <div style="display: flex; align-items: center; gap: var(--sp-2); font-size: 13px; color: var(--fg-muted);
+                        background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radii-control);
+                        padding: 8px var(--sp-3);">
+              {% include "icons/doc.svg" %}
+              <span>Ghi chú #{{ source_note_id }}</span>
+            </div>
+          </div>
+        {% endif %}
+
+      </div>{# .modal__body #}
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu insight</button>
+      </div>
+    </form>
+
+  </div>{# .modal #}
+</div>{# .modal-scrim #}

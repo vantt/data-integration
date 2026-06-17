@@ -255,8 +255,10 @@ def make_customer_360_router(
             )
         if panel == "notes":
             note_list = notes.list_notes(party_id)
+            type_filter = request.query_params.get("type_filter", "all")
             return templates.TemplateResponse(
-                "fragments/c360_notes_panel.html", {**ctx, "notes": note_list}
+                "fragments/c360_notes_panel.html",
+                {**ctx, "notes": note_list, "type_filter": type_filter},
             )
         return HTMLResponse("panel not found", status_code=404)
 

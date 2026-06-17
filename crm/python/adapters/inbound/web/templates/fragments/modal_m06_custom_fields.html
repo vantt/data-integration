@@ -1,0 +1,122 @@
+{# @surface  M06 · Custom Fields Edit Modal (partial — HTMX-served modal)
+   @source   crm/docs/ui-spec/modals/M06-custom-fields-edit-modal.md
+   @kind     MODAL
+   M06 Custom Fields Edit modal — served at GET /customers/{party_id}/modal/custom-fields.
+   Data: party_id (str), custom_field_defs (list[CustomFieldDef]), custom_values (dict keyed by field_key).
+   POST target: /customers/{party_id}/custom-fields.
+   Response swaps back into #modal-root via hx-target="#modal-root".
+#}
+
+{# ── Group fields by section ── #}
+{% set ns = namespace(sections={}, section_order=[]) %}
+{% for fd in custom_field_defs | sort(attribute='sort_order') %}
+  {% set sec = fd.section if fd.section else "Thông tin bổ sung" %}
+  {% if sec not in ns.section_order %}
+    {% set _ = ns.section_order.append(sec) %}
+    {% set _ = ns.sections.update({sec: []}) %}
+  {% endif %}
+  {% set _ = ns.sections[sec].append(fd) %}
+{% endfor %}
+
+{% set show_section_headers = ns.section_order | length > 1 %}
+
+<div class="modal-scrim" onclick="document.getElementById('modal-root').innerHTML=''" data-surface="M06">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">Chỉnh sửa thông tin bổ sung</div>
+      </div>
+      <button class="icon-btn"
+              onclick="document.getElementById('modal-root').innerHTML=''"
+              aria-label="Đóng">✕</button>
+    </div>
+
+    <form hx-post="/customers/{{ party_id }}/custom-fields"
+          hx-target="#modal-root"
+          hx-swap="innerHTML">
+      <input type="hidden" name="party_id" value="{{ party_id }}">
+
+      <div class="modal__body">
+        {% for sec in ns.section_order %}
+          {% if show_section_headers %}
+            <div class="caption" style="color:var(--fg-tertiary);margin:var(--sp-4) 0 var(--sp-2);border-bottom:1px solid var(--border);padding-bottom:var(--sp-1)">{{ sec }}</div>
+          {% endif %}
+
+          {% for fd in ns.sections[sec] %}
+            {% set current_val = custom_values.get(fd.field_key, '') %}
+            <label class="field">
+              <span class="field__label">
+                {{ fd.label }}
+                {% if fd.is_required %}<span style="color:var(--coral-500)">*</span>{% endif %}
+              </span>
+
+              {% if fd.data_type == 'bool' %}
+                <div class="radioset">
+                  <label class="radio-pill {% if current_val == 'true' %}radio-pill--on{% endif %}">
+                    <span class="radio-pill__dot"></span>
+                    <input type="radio" name="{{ fd.field_key }}" value="true"
+                           class="sr-only"
+                           {% if current_val == 'true' %}checked{% endif %}
+                           {% if fd.is_required %}required{% endif %}> Có
+                  </label>
+                  <label class="radio-pill {% if current_val != 'true' %}radio-pill--on{% endif %}">
+                    <span class="radio-pill__dot"></span>
+                    <input type="radio" name="{{ fd.field_key }}" value="false"
+                           class="sr-only"
+                           {% if current_val != 'true' %}checked{% endif %}> Không
+                  </label>
+                </div>
+
+              {% elif fd.data_type == 'select' %}
+                <div class="inp-sel">
+                  <select name="{{ fd.field_key }}" class="inp"
+                          {% if fd.is_required %}required{% endif %}>
+                    <option value="">—</option>
+                    {% for opt in fd.options or [] %}
+                      <option value="{{ opt }}" {% if current_val == opt %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                  </select>
+                  <span class="inp-sel__chev">{% include 'icons/chevdown.svg' %}</span>
+                </div>
+
+              {% elif fd.data_type == 'multiselect' %}
+                <div class="inp-sel">
+                  <select name="{{ fd.field_key }}" class="inp" multiple
+                          {% if fd.is_required %}required{% endif %}>
+                    {% for opt in fd.options or [] %}
+                      <option value="{{ opt }}"
+                              {% if opt in (current_val if current_val is iterable and current_val is not string else []) %}selected{% endif %}>{{ opt }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+
+              {% elif fd.data_type == 'date' %}
+                <input type="date" name="{{ fd.field_key }}" class="inp inp--mono"
+                       value="{{ current_val }}"
+                       {% if fd.is_required %}required{% endif %}>
+
+              {% elif fd.data_type == 'number' %}
+                <input type="number" name="{{ fd.field_key }}" class="inp"
+                       value="{{ current_val }}"
+                       placeholder="—"
+                       {% if fd.is_required %}required{% endif %}>
+
+              {% else %}{# text #}
+                <input type="text" name="{{ fd.field_key }}" class="inp"
+                       value="{{ current_val }}"
+                       placeholder="—"
+                       {% if fd.is_required %}required{% endif %}>
+              {% endif %}
+            </label>
+          {% endfor %}
+        {% endfor %}
+      </div>
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+  </div>
+</div>

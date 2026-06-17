@@ -1,0 +1,314 @@
+{# @surface M15 · Edit Contact & Core Info | @source crm/docs/ui-spec/modals/M15-edit-contact-core-info-modal.md | @kind MODAL #}
+{#
+  M15 Edit Contact & Core Info modal — served at GET /customers/{party_id}/modal/edit-contact?tab=contacts|address|core
+  Data: party (Party360), identities (list[PartyIdentity]), active_tab (str: contacts|address|core, default contacts)
+  POST targets:
+    contacts tab → POST /customers/{party.party_id}/contact
+    address  tab → POST /customers/{party.party_id}/address
+    core     tab → POST /customers/{party.party_id}/core
+  Response swaps back into #modal-root via hx-target="#modal-root".
+
+  PartyIdentity fields: identity_id, identity_type, identity_value, contact_status, is_preferred, display_label
+  Rules: R5 (E.164 normalisation before save), R13 (save address sets address_source='manual')
+#}
+{% set active_tab = active_tab if active_tab in ('contacts', 'address', 'core') else 'contacts' %}
+
+<div class="modal-scrim"
+     onclick="document.getElementById('modal-root').innerHTML=''"
+     data-surface="M15">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+
+    {# ── Header ── #}
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">Chỉnh sửa thông tin</div>
+        {% if party %}
+          <div class="modal__sub">{{ party.display_name or party.party_id }}</div>
+        {% endif %}
+      </div>
+      <button class="icon-btn"
+              onclick="document.getElementById('modal-root').innerHTML=''"
+              aria-label="Đóng">
+        {% include "icons/close.svg" %}
+      </button>
+    </div>
+
+    {# ── Tab bar ── #}
+    <div style="padding: 0 var(--sp-5); border-bottom: 1px solid var(--border);">
+      <div class="tabbar" role="tablist" aria-label="Chỉnh sửa thông tin tabs" style="margin-bottom: 0; border-bottom: none;">
+        <button class="tab"
+                role="tab"
+                id="m15-tab-contacts"
+                {% if active_tab == 'contacts' %}aria-selected="true"{% endif %}
+                hx-get="/customers/{{ party.party_id }}/modal/edit-contact?tab=contacts"
+                hx-target="#modal-root"
+                hx-swap="innerHTML">
+          Liên lạc
+        </button>
+        <button class="tab"
+                role="tab"
+                id="m15-tab-address"
+                {% if active_tab == 'address' %}aria-selected="true"{% endif %}
+                hx-get="/customers/{{ party.party_id }}/modal/edit-contact?tab=address"
+                hx-target="#modal-root"
+                hx-swap="innerHTML">
+          Địa chỉ
+        </button>
+        <button class="tab"
+                role="tab"
+                id="m15-tab-core"
+                {% if active_tab == 'core' %}aria-selected="true"{% endif %}
+                hx-get="/customers/{{ party.party_id }}/modal/edit-contact?tab=core"
+                hx-target="#modal-root"
+                hx-swap="innerHTML">
+          Thông tin cơ bản
+        </button>
+      </div>
+    </div>
+
+    {# ═══════════════════════════════════════════════════════
+       TAB: Liên lạc (contacts)
+       ═══════════════════════════════════════════════════════ #}
+    {% if active_tab == 'contacts' %}
+    <form hx-post="/customers/{{ party.party_id }}/contact"
+          hx-target="#modal-root"
+          hx-swap="innerHTML">
+      <input type="hidden" name="party_id" value="{{ party.party_id }}">
+
+      <div class="modal__body">
+
+        {# Identity list #}
+        {% if identities %}
+          <div style="display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface);">
+            {% for identity in identities %}
+              <div style="display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-3); align-items: start; padding: var(--sp-3) var(--sp-4);">
+
+                {# Type icon #}
+                <div style="width: 28px; height: 28px; display: grid; place-items: center; font-size: 16px; flex: none; margin-top: 2px;">
+                  {% if identity.identity_type == 'phone' or identity.identity_type == 'phone_secondary' %}📞
+                  {% elif identity.identity_type == 'zalo' %}💬
+                  {% elif identity.identity_type == 'facebook' %}📘
+                  {% elif identity.identity_type == 'email' %}✉
+                  {% else %}📋{% endif %}
+                </div>
+
+                {# Value & status #}
+                <div style="min-width: 0; display: flex; flex-direction: column; gap: 4px;">
+                  <div style="display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap;">
+                    <span style="font-size: 14px; color: var(--fg); font-family: var(--font-mono); letter-spacing: var(--tracking-mono);">
+                      {{ identity.identity_value }}
+                    </span>
+                    {% if identity.display_label %}
+                      <span style="font-size: 11px; color: var(--fg-tertiary);">({{ identity.display_label }})</span>
+                    {% endif %}
+                    {% if identity.is_preferred %}
+                      <span class="chip chip--amber" style="font-size: 10px; padding: 1px 6px;">ưu tiên</span>
+                    {% endif %}
+                  </div>
+                  <div style="font-size: 12px; display: flex; align-items: center; gap: 5px;">
+                    <span style="width: 7px; height: 7px; border-radius: var(--radii-pill); flex: none; background: {% if identity.contact_status == 'active' %}var(--moss-500){% else %}var(--coral-500){% endif %};"></span>
+                    <span style="color: var(--fg-tertiary);">{{ identity.contact_status }}</span>
+                  </div>
+                </div>
+
+                {# Actions #}
+                <div style="display: flex; gap: var(--sp-1); align-items: center; margin-top: 2px;">
+                  <button type="button"
+                          class="icon-btn icon-btn--sm"
+                          aria-label="Sửa"
+                          title="Sửa"
+                          hx-get="/customers/{{ party.party_id }}/contact/{{ identity.identity_id }}/edit-form"
+                          hx-target="#m15-inline-form"
+                          hx-swap="innerHTML">
+                    {% include "icons/edit.svg" %}
+                  </button>
+                  {% if identity.contact_status == 'active' %}
+                    <button type="button"
+                            class="icon-btn icon-btn--sm"
+                            aria-label="Huỷ kích hoạt"
+                            title="Huỷ kích hoạt"
+                            style="color: var(--coral-500);"
+                            hx-post="/customers/{{ party.party_id }}/contact/{{ identity.identity_id }}/deactivate"
+                            hx-target="#modal-root"
+                            hx-swap="innerHTML"
+                            hx-confirm="Xác nhận huỷ kích hoạt kênh này?">
+                      {% include "icons/close.svg" %}
+                    </button>
+                  {% endif %}
+                </div>
+              </div>
+              {% if not loop.last %}
+                <div style="height: 1px; background: var(--border); margin: 0;"></div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        {% else %}
+          <div style="font-size: 13.5px; color: var(--fg-muted); text-align: center; padding: var(--sp-4);">
+            Chưa có kênh liên lạc nào.
+          </div>
+        {% endif %}
+
+        {# Inline add/edit form slot #}
+        <div id="m15-inline-form">
+          {# Default: + Thêm kênh button — click reveals the add form via HTMX or JS toggle #}
+          <button type="button"
+                  class="btn btn--ghost"
+                  style="display: inline-flex; align-items: center; gap: var(--sp-2); font-size: 13px;"
+                  onclick="document.getElementById('m15-add-form').style.display = document.getElementById('m15-add-form').style.display === 'none' ? 'flex' : 'none'; this.style.display = 'none';">
+            {% include "icons/plus.svg" %}
+            Thêm kênh liên lạc
+          </button>
+
+          <div id="m15-add-form"
+               style="display: none; flex-direction: column; gap: var(--sp-3); background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radii-control); padding: var(--sp-4);">
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">LOẠI</span>
+                <div class="inp-sel">
+                  <select name="add_identity_type">
+                    <option value="phone_secondary">Số phụ</option>
+                    <option value="zalo">Zalo</option>
+                    <option value="facebook">Facebook</option>
+                    <option value="email">Email</option>
+                  </select>
+                  <span class="inp-sel__chev">{% include "icons/chevdown.svg" %}</span>
+                </div>
+              </label>
+              <label class="field">
+                <span class="field__label">GIÁ TRỊ<span class="field__req">*</span></span>
+                <input type="text" name="add_identity_value" class="inp" placeholder="+84901234567">
+              </label>
+            </div>
+            <div class="field-row">
+              <label class="field">
+                <span class="field__label">NHÃN</span>
+                <input type="text" name="add_display_label" class="inp" placeholder="VD: Số công ty">
+                <span class="field__hint">(tùy chọn)</span>
+              </label>
+              <label class="field">
+                <span class="field__label">ƯU TIÊN</span>
+                <div class="radioset">
+                  <label class="radio-pill radio-pill--on">
+                    <span class="radio-pill__dot"></span>
+                    <input type="radio" name="add_is_preferred" value="0" checked class="sr-only"> Không
+                  </label>
+                  <label class="radio-pill">
+                    <span class="radio-pill__dot"></span>
+                    <input type="radio" name="add_is_preferred" value="1" class="sr-only"> Có
+                  </label>
+                </div>
+              </label>
+            </div>
+            <input type="hidden" name="action" value="add_channel">
+          </div>
+        </div>
+
+      </div>{# .modal__body #}
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+
+    {# ═══════════════════════════════════════════════════════
+       TAB: Địa chỉ (address)
+       ═══════════════════════════════════════════════════════ #}
+    {% elif active_tab == 'address' %}
+    <form hx-post="/customers/{{ party.party_id }}/address"
+          hx-target="#modal-root"
+          hx-swap="innerHTML">
+      <input type="hidden" name="party_id" value="{{ party.party_id }}">
+
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">ĐỊA CHỈ ĐẦY ĐỦ</span>
+          <input type="text" name="address_line" class="inp"
+                 value="{{ party.address_line or '' }}"
+                 placeholder="123 Nguyễn Huệ">
+        </label>
+
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">PHƯỜNG / XÃ</span>
+            <input type="text" name="ward" class="inp"
+                   value="{{ party.ward or '' }}"
+                   placeholder="Bến Nghé">
+          </label>
+          <label class="field">
+            <span class="field__label">QUẬN / HUYỆN</span>
+            <input type="text" name="district" class="inp"
+                   value="{{ party.district or '' }}"
+                   placeholder="Quận 1">
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field__label">TỈNH / THÀNH PHỐ</span>
+          <input type="text" name="province" class="inp"
+                 value="{{ party.province or '' }}"
+                 placeholder="TP. Hồ Chí Minh">
+        </label>
+
+        <label class="field">
+          <span class="field__label">GHI CHÚ ĐỊA CHỈ</span>
+          <textarea name="address_note" class="inp inp--area" rows="3"
+                    placeholder="Địa chỉ sàn bị mask, đã xác nhận qua điện thoại">{{ party.address_note or '' }}</textarea>
+        </label>
+
+        <div class="modal__note">
+          {% include "icons/warn.svg" %}
+          <span>Lưu sẽ đặt <code>address_source = 'manual'</code> — dữ liệu Sapo sync sẽ không ghi đè địa chỉ này (R13).</span>
+        </div>
+      </div>{# .modal__body #}
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+
+    {# ═══════════════════════════════════════════════════════
+       TAB: Thông tin cơ bản (core)
+       ═══════════════════════════════════════════════════════ #}
+    {% else %}
+    <form hx-post="/customers/{{ party.party_id }}/core"
+          hx-target="#modal-root"
+          hx-swap="innerHTML">
+      <input type="hidden" name="party_id" value="{{ party.party_id }}">
+
+      <div class="modal__body">
+        <label class="field">
+          <span class="field__label">TÊN HIỂN THỊ<span class="field__req">*</span></span>
+          <input type="text" name="display_name" class="inp"
+                 value="{{ party.display_name or '' }}"
+                 placeholder="Nguyễn Văn A"
+                 required>
+        </label>
+
+        <label class="field">
+          <span class="field__label">EMAIL</span>
+          <input type="email" name="primary_email" class="inp"
+                 value="{{ party.primary_email or '' }}"
+                 placeholder="email@domain.com">
+        </label>
+
+        <label class="field">
+          <span class="field__label">NGÀY SINH</span>
+          <input type="date" name="birthday" class="inp"
+                 value="{{ party.birthday or '' }}">
+        </label>
+      </div>{# .modal__body #}
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+    {% endif %}
+
+  </div>{# .modal #}
+</div>{# .modal-scrim #}

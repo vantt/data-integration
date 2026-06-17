@@ -15,6 +15,8 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from crm.python.domain.entities.cache_insight import ActionQueueItem
+from crm.python.domain.entities.profile import Note
+from crm.python.domain.entities.party import PartyIdentity
 from crm.python.domain.entities.task import Task
 
 log = logging.getLogger(__name__)
@@ -35,6 +37,11 @@ class TaskWriter(Protocol):
     def transition_status(self, task_id: str, status: str) -> None: ...
 
 
+class PartyContactReader(Protocol):
+    def get_preferred_identity(self, party_id: str) -> Optional[PartyIdentity]: ...
+    def list_pinned_contact_pref_notes(self, party_id: str) -> list[Note]: ...
+
+
 # ── Router factory ────────────────────────────────────────────────────────────
 
 
@@ -43,37 +50,66 @@ def make_worklist_router(
     action_queue: ActionQueueReader,
     tasks: TaskQuerier,
     task_writer: TaskWriter,
+    party_contacts: Optional[PartyContactReader] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Worklist routes."""
     router = APIRouter()
 
-    def _load_worklist_data() -> tuple[list[ActionQueueItem], list[Task], str, bool]:
+    def _load_worklist_data(
+        filter_assignee: str = "me",
+        filter_priority: str = "all",
+    ) -> tuple[list[ActionQueueItem], list[Task], str, bool, dict]:
         try:
-            actions = action_queue.list_all_action_queue()
+            all_actions = action_queue.list_all_action_queue()
         except Exception as exc:
             log.error("worklist: list actions: %s", exc)
-            actions = []
+            all_actions = []
 
         try:
-            task_list = tasks.list_tasks("", "open")
+            all_tasks = tasks.list_tasks("", "open")
         except Exception as exc:
             log.error("worklist: list tasks: %s", exc)
-            task_list = []
+            all_tasks = []
+
+        # Apply priority filter (int: 0=normal, higher=more urgent; high>=3, urgent>=4)
+        if filter_priority == "urgent":
+            all_tasks = [t for t in all_tasks if t.priority >= 4]
+        elif filter_priority == "high":
+            all_tasks = [t for t in all_tasks if t.priority >= 3]
 
         refreshed_at = ""
         is_stale = False
-        if actions:
-            refreshed_at = actions[0].refreshed_at
+        if all_actions:
+            refreshed_at = all_actions[0].refreshed_at
             is_stale = _is_cache_stale(refreshed_at)
 
-        return actions, task_list, refreshed_at, is_stale
+        # Batch-load contact_pref notes + preferred identity per party
+        party_extras: dict = {}
+        if party_contacts is not None:
+            seen: set[str] = set()
+            party_ids = [a.party_id for a in all_actions if a.party_id]
+            party_ids += [t.party_id for t in all_tasks if t.party_id]
+            for pid in party_ids:
+                if pid in seen:
+                    continue
+                seen.add(pid)
+                try:
+                    pref = party_contacts.get_preferred_identity(pid)
+                    cp_notes = party_contacts.list_pinned_contact_pref_notes(pid)
+                    party_extras[pid] = {"preferred_identity": pref, "contact_pref_notes": cp_notes}
+                except Exception as exc:
+                    log.warning("worklist: enrich party %s: %s", pid, exc)
+
+        return all_actions, all_tasks, refreshed_at, is_stale, party_extras
 
     # ── Full page ─────────────────────────────────────────────────────────────
 
     @router.get("/", response_class=HTMLResponse)
     @router.get("/worklist", response_class=HTMLResponse)
     async def handle_worklist(request: Request) -> Response:
-        actions, task_list, refreshed_at, is_stale = _load_worklist_data()
+        fa = request.query_params.get("assignee", "me")
+        fp = request.query_params.get("priority", "all")
+        actions, task_list, refreshed_at, is_stale, party_extras = _load_worklist_data(fa, fp)
         return templates.TemplateResponse(
             "worklist.html",
             {
@@ -82,6 +118,9 @@ def make_worklist_router(
                 "tasks": task_list,
                 "refreshed_at": refreshed_at,
                 "is_stale": is_stale,
+                "party_extras": party_extras,
+                "filter_assignee": fa,
+                "filter_priority": fp,
             },
         )
 
@@ -89,7 +128,9 @@ def make_worklist_router(
 
     @router.get("/worklist/fragment", response_class=HTMLResponse)
     async def handle_worklist_fragment(request: Request) -> Response:
-        actions, task_list, refreshed_at, is_stale = _load_worklist_data()
+        fa = request.query_params.get("assignee", "me")
+        fp = request.query_params.get("priority", "all")
+        actions, task_list, refreshed_at, is_stale, party_extras = _load_worklist_data(fa, fp)
         return templates.TemplateResponse(
             "fragments/worklist_fragment.html",
             {
@@ -98,6 +139,9 @@ def make_worklist_router(
                 "tasks": task_list,
                 "refreshed_at": refreshed_at,
                 "is_stale": is_stale,
+                "party_extras": party_extras,
+                "filter_assignee": fa,
+                "filter_priority": fp,
             },
         )
 

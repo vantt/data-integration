@@ -1,0 +1,177 @@
+{# @surface  M13 · Custom Field Definition Modal (partial — HTMX-served modal)
+   @source   crm/docs/ui-spec/modals/M13-custom-field-def-modal.md
+   @kind     MODAL
+   M13 Custom Field Definition modal — served at GET /settings/custom-fields/modal/new
+   and GET /settings/custom-fields/{field_id}/modal/edit.
+   Data: field (CustomFieldDef|None — None = create mode).
+   POST target: /settings/custom-fields (create) or /settings/custom-fields/{field_id} (edit).
+   Response swaps back into #modal-root via hx-target="#modal-root".
+#}
+
+{% set editing = field is not none %}
+{% set post_url = "/settings/custom-fields/" + field.field_id if editing else "/settings/custom-fields" %}
+{% set title = "Chỉnh sửa custom field" if editing else "Tạo custom field mới" %}
+
+<div class="modal-scrim" onclick="document.getElementById('modal-root').innerHTML=''" data-surface="M13">
+  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+    <div class="modal__head">
+      <div>
+        <div class="modal__title">{{ title }}</div>
+      </div>
+      <button class="icon-btn"
+              onclick="document.getElementById('modal-root').innerHTML=''"
+              aria-label="Đóng">✕</button>
+    </div>
+
+    <form hx-post="{{ post_url }}"
+          hx-target="#modal-root"
+          hx-swap="innerHTML">
+      {% if editing %}
+        <input type="hidden" name="_method" value="PUT">
+        <input type="hidden" name="field_id" value="{{ field.field_id }}">
+      {% endif %}
+
+      <div class="modal__body">
+
+        {# Entity type — radio pills #}
+        <label class="field">
+          <span class="field__label">Áp dụng cho <span style="color:var(--coral-500)">*</span></span>
+          <div class="radioset">
+            <label class="radio-pill {% if not editing or field.entity_type == 'party' %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="entity_type" value="party" class="sr-only"
+                     {% if not editing or field.entity_type == 'party' %}checked{% endif %}
+                     {% if editing %}disabled{% endif %}
+                     required> Khách hàng
+            </label>
+            <label class="radio-pill {% if editing and field.entity_type == 'order' %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="entity_type" value="order" class="sr-only"
+                     {% if editing and field.entity_type == 'order' %}checked{% endif %}
+                     {% if editing %}disabled{% endif %}> Đơn hàng
+            </label>
+          </div>
+          {% if editing %}
+            <input type="hidden" name="entity_type" value="{{ field.entity_type }}">
+          {% endif %}
+        </label>
+
+        {# field_key (slug) — readonly in edit mode #}
+        <label class="field">
+          <span class="field__label">Field name (slug) <span style="color:var(--coral-500)">*</span></span>
+          <input type="text" name="field_key" class="inp inp--mono"
+                 value="{{ field.field_key if editing else '' }}"
+                 placeholder="da_nhay_cam"
+                 {% if editing %}readonly{% endif %}
+                 {% if not editing %}required{% endif %}
+                 autocomplete="off">
+          {% if editing %}
+            <span class="field__hint">Không thể đổi sau khi tạo</span>
+          {% endif %}
+        </label>
+
+        {# Display label #}
+        <label class="field">
+          <span class="field__label">Nhãn hiển thị <span style="color:var(--coral-500)">*</span></span>
+          <input type="text" name="label" class="inp"
+                 value="{{ field.label if editing else '' }}"
+                 placeholder="Da nhạy cảm"
+                 required>
+        </label>
+
+        {# Section (free text, optional) #}
+        <label class="field">
+          <span class="field__label">Section (nhóm)</span>
+          <input type="text" name="section" class="inp"
+                 value="{{ field.section if editing and field.section else '' }}"
+                 placeholder="Sức khoẻ & Da liễu">
+          <span class="field__hint">(tùy chọn — dùng để nhóm fields trong form)</span>
+        </label>
+
+        {# Sort order #}
+        <label class="field">
+          <span class="field__label">Thứ tự hiển thị</span>
+          <input type="number" name="sort_order" class="inp inp--mono"
+                 value="{{ field.sort_order if editing else 1 }}"
+                 min="1" style="max-width:100px">
+        </label>
+
+        {# Data type — locked in edit mode #}
+        <label class="field">
+          <span class="field__label">Loại dữ liệu <span style="color:var(--coral-500)">*</span></span>
+          <div class="inp-sel">
+            <select name="data_type" class="inp"
+                    id="m13-data-type"
+                    onchange="document.getElementById('m13-options-row').style.display=(this.value==='select'||this.value==='multiselect')?'flex':'none'"
+                    {% if editing %}disabled{% endif %}
+                    required>
+              <option value="text"        {% if editing and field.data_type == 'text' %}selected{% endif %}>Text</option>
+              <option value="number"      {% if editing and field.data_type == 'number' %}selected{% endif %}>Number</option>
+              <option value="date"        {% if editing and field.data_type == 'date' %}selected{% endif %}>Date</option>
+              <option value="bool"        {% if (not editing) or field.data_type == 'bool' %}selected{% endif %}>Boolean (Có/Không)</option>
+              <option value="select"      {% if editing and field.data_type == 'select' %}selected{% endif %}>Select</option>
+              <option value="multiselect" {% if editing and field.data_type == 'multiselect' %}selected{% endif %}>Multi-select</option>
+            </select>
+            <span class="inp-sel__chev">{% include 'icons/chevdown.svg' %}</span>
+          </div>
+          {% if editing %}
+            <input type="hidden" name="data_type" value="{{ field.data_type }}">
+          {% endif %}
+        </label>
+
+        {# is_required — radio pills #}
+        <label class="field">
+          <span class="field__label">Bắt buộc</span>
+          <div class="radioset">
+            <label class="radio-pill {% if editing and field.is_required %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="is_required" value="true" class="sr-only"
+                     {% if editing and field.is_required %}checked{% endif %}> Có
+            </label>
+            <label class="radio-pill {% if not editing or not field.is_required %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="is_required" value="false" class="sr-only"
+                     {% if not editing or not field.is_required %}checked{% endif %}> Không
+            </label>
+          </div>
+        </label>
+
+        {# is_active (edit mode only) #}
+        {% if editing %}
+          <label class="field">
+            <span class="field__label">Trạng thái</span>
+            <div class="radioset">
+              <label class="radio-pill {% if field.is_active %}radio-pill--on{% endif %}">
+                <span class="radio-pill__dot"></span>
+                <input type="radio" name="is_active" value="true" class="sr-only"
+                       {% if field.is_active %}checked{% endif %}> Đang dùng
+              </label>
+              <label class="radio-pill {% if not field.is_active %}radio-pill--on{% endif %}">
+                <span class="radio-pill__dot"></span>
+                <input type="radio" name="is_active" value="false" class="sr-only"
+                       {% if not field.is_active %}checked{% endif %}> Tắt
+              </label>
+            </div>
+          </label>
+        {% endif %}
+
+        {# Options textarea — only for select / multiselect #}
+        {% set show_options = editing and field.data_type in ('select', 'multiselect') %}
+        <div id="m13-options-row" class="field"
+             style="display:{% if show_options %}flex{% else %}none{% endif %};flex-direction:column;gap:7px">
+          <span class="field__label">Tùy chọn</span>
+          <textarea name="options_text" class="inp inp--area" rows="4"
+                    placeholder="Da dầu&#10;Da khô&#10;Da hỗn hợp&#10;Da nhạy cảm">{% if editing and field.options %}{{ field.options | join('\n') }}{% endif %}</textarea>
+          <span class="field__hint">Mỗi dòng một tùy chọn</span>
+        </div>
+
+      </div>
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu</button>
+      </div>
+    </form>
+  </div>
+</div>

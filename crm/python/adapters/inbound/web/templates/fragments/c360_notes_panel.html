@@ -1,45 +1,89 @@
-{# @surface  P05 · Notes Panel (partial — hosted in S03)
-   @source   crm/docs/ui-spec/panels/P05-notes-panel.md
-   @kind     PANEL
-   HTMX fragment for /customers/{party_id}/panels/notes.
-   Data: party_id (str), notes (list[Note]).
-   Add-note form POSTs to /customers/{party_id}/notes → returns note_card.html fragment
-   via hx-swap="afterbegin" on .note-list.
+{# @surface P05 · Notes Panel | @source crm/docs/ui-spec/panels/P05-notes-panel.md | @kind PANEL #}
+{# HTMX fragment for /customers/{party_id}/panels/notes[?type_filter=...]
+   Data: party_id (str), notes (list[Note]), type_filter (str, default "all")
+   A-P05-001: + Thêm → M08 mode=note_only
+   A-P05-002: edit → M08 mode=edit_note
+   A-P05-003: delete → O01 confirm
+   A-P05-004: tab filter → hx-get reload with type_filter param
+   A-P05-005: btn_promote → M16 with source_note_id + prefill_body
 #}
-<div class="panel-section">
-  <div class="panel-head">
-    <span class="panel-title">Ghi chú</span>
-    <span class="panel-sub">crm_note</span>
+{% set type_filter = type_filter | default('all') %}
+{% set active_notes = notes | selectattr('deleted_at', 'none') | list %}
+
+{# Apply type filter #}
+{% if type_filter == 'pinned' %}
+  {% set filtered = active_notes | selectattr('pinned', 'equalto', true) | list %}
+{% elif type_filter == 'warning' %}
+  {% set filtered = active_notes | selectattr('note_type', 'equalto', 'warning') | list %}
+{% elif type_filter == 'contact' %}
+  {% set filtered = active_notes | selectattr('note_type', 'equalto', 'contact_pref') | list %}
+{% elif type_filter == 'campaign' %}
+  {% set filtered = active_notes | selectattr('campaign_id', 'defined') | selectattr('campaign_id', 'ne', none) | list %}
+{% else %}
+  {% set filtered = active_notes %}
+{% endif %}
+
+{# Split: pinned vs rest (only shown in "all" and "pinned" views) #}
+{% set pinned_notes = filtered | selectattr('pinned', 'equalto', true) | list %}
+{% set regular_notes = filtered | rejectattr('pinned', 'equalto', true) | list | sort(attribute='created_at', reverse=true) %}
+
+<div class="stack stack-4">
+
+  {# ── Toolbar: type-filter tabs + add button ──────────── #}
+  <div class="toolbar" style="flex-wrap:wrap;gap:var(--sp-2)">
+    <div style="display:flex;gap:var(--sp-1);flex-wrap:wrap">
+      {% for tab_key, tab_label in [
+        ('all', 'Tất cả'),
+        ('pinned', '★ Ưu tiên'),
+        ('warning', '⚠ Cảnh báo'),
+        ('contact', '📞 Liên lạc'),
+        ('campaign', 'Campaign'),
+      ] %}
+      <button class="tab" aria-selected="{{ 'true' if type_filter == tab_key else 'false' }}"
+              hx-get="/customers/{{ party_id }}/panels/notes?type_filter={{ tab_key }}"
+              hx-target="#notes-panel-root" hx-swap="outerHTML">
+        {{ tab_label }}
+      </button>
+      {% endfor %}
+    </div>
+    {# A-P05-001: + Thêm ghi chú → M08 mode=note_only #}
+    <button class="btn btn--secondary" style="padding:8px 12px;margin-left:auto"
+            hx-get="/modals/m08?party_id={{ party_id }}&mode=note_only"
+            hx-target="#modal-root" hx-swap="innerHTML">
+      {% include "icons/plus.svg" %} Thêm ghi chú
+    </button>
   </div>
 
-  {# Add note form #}
-  <form hx-post="/customers/{{ party_id }}/notes"
-        hx-target=".note-list"
-        hx-swap="afterbegin"
-        hx-on::after-request="this.reset()"
-        style="margin-bottom:var(--sp-4)">
-    <label class="field">
-      <textarea name="body" class="inp inp--area" rows="3"
-                placeholder="Ghi chú nhanh về khách..." required></textarea>
-    </label>
-    <div style="display:flex;justify-content:flex-end;margin-top:var(--sp-2)">
-      <button type="submit" class="btn btn--primary">Lưu ghi chú</button>
-    </div>
-  </form>
+  <div id="notes-panel-root">
 
-  {# Notes list — new notes prepended via HTMX #}
-  <div class="note-list">
-    {% if not notes %}
+    {# ── PINNED section ──────────────────────────────────── #}
+    {% if pinned_notes %}
+    <div style="margin-bottom:var(--sp-4)">
+      <div class="caption" style="color:var(--fg-tertiary);margin-bottom:var(--sp-2)">★ Ghim</div>
+      {% for note in pinned_notes %}
+      {% set is_pinned = true %}
+      {% include "fragments/note_card_typed.html" %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Notes list ──────────────────────────────────────── #}
+    {% if regular_notes %}
+    <div class="stack stack-2">
+      {% for note in regular_notes %}
+      {% set is_pinned = false %}
+      {% include "fragments/note_card_typed.html" %}
+      {% endfor %}
+    </div>
+    {% elif not pinned_notes %}
     <div class="state">
       <div class="state__inner">
-        <div class="state__title">Chưa có ghi chú</div>
-        <p class="state__sub">Thêm ghi chú đầu tiên bên trên.</p>
+        <div class="state__title">Chưa có ghi chú nào</div>
+        <p class="state__sub">Thêm ghi chú đầu tiên để ghi nhận thông tin về khách.</p>
       </div>
     </div>
-    {% else %}
-    {% for note in notes %}
-    {% include "fragments/note_card.html" %}
-    {% endfor %}
     {% endif %}
+
   </div>
+
 </div>
