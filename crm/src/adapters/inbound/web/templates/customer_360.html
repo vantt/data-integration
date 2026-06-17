@@ -163,7 +163,7 @@
       {% set last_dk = insight.recent_orders[0].date_key if insight.recent_orders else 0 %}
       <div class="kpi-grid">
         <div class="kpi kpi--hero">
-          <div class="kpi__label">Lifetime value</div>
+          <div class="kpi__label">LTV ~ contribution margin</div>
           <div class="kpi__val">{{ ins.lifetime_contribution_margin | format_vnd }}</div>
         </div>
         <div class="kpi">
@@ -206,10 +206,11 @@
       {# Contact channels #}
       {% set _ch_labels = {'phone': 'SĐT', 'phone_secondary': 'SĐT 2', 'zalo': 'Zalo', 'facebook': 'FB', 'email': 'Email'} %}
       {% set _ch_list = identities | selectattr('identity_type', 'in', ['phone', 'phone_secondary', 'zalo', 'facebook', 'email']) | sort(attribute='is_preferred', reverse=true) | list %}
-      {% if _ch_list %}
+      {% set _has_address = party.address_line or party.ward or party.district or party.province %}
+      {% if _ch_list or _has_address %}
       <div class="facts">
         {% for ident in _ch_list %}
-        <div class="fact" style="grid-template-columns:52px 1fr{% if ident.contact_status == 'invalid' %};opacity:.5{% endif %}">
+        <div class="fact"{% if ident.contact_status == 'invalid' %} style="opacity:.5"{% endif %}>
           <span class="fact__k">{{ _ch_labels[ident.identity_type] }}</span>
           <div style="display:flex;align-items:center;gap:var(--sp-2);min-width:0">
             <span class="fact__v mono{{ ' cell-strong' if ident.is_preferred else '' }}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ident.identity_value }}</span>
@@ -234,6 +235,9 @@
           </div>
         </div>
         {% endfor %}
+        {% if _has_address %}
+        <div class="fact"><span class="fact__k">Address</span><span class="fact__v">{{ [party.address_line, party.ward, party.district, party.province] | select | join(', ') }}</span></div>
+        {% endif %}
       </div>
       {% else %}
       <span class="muted" style="font-size:13px">Chưa có kênh liên lạc</span>
@@ -245,28 +249,6 @@
         {% for n in contact_pref_notes %}
         <div style="font-size:12.5px;color:var(--fg-muted);line-height:1.45">📞 {{ n.body }}</div>
         {% endfor %}
-      </div>
-      {% endif %}
-
-      {# Address sub-section — R13 #}
-      {% if party.address_line or party.ward or party.district or party.province %}
-      <div style="margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)">
-        <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2)">
-          <span style="color:var(--fg-muted);flex:none;font-size:14px">📍</span>
-          <div style="font-size:13px;color:var(--fg-1);line-height:1.5">
-            {% if party.address_line %}<div>{{ party.address_line }}</div>{% endif %}
-            {% if party.ward or party.district %}<div>{{ [party.ward, party.district] | select | join(', ') }}</div>{% endif %}
-            {% if party.province %}<div>{{ party.province }}</div>{% endif %}
-          </div>
-        </div>
-        {% if party.address_source == 'manual' %}
-        <span class="bdg" style="color:var(--moss-500);border-color:color-mix(in srgb,var(--moss-500) 30%,transparent);background:color-mix(in srgb,var(--moss-bg) 40%,transparent)">đã xác nhận</span>
-        {% else %}
-        <span class="bdg">sapo_sync</span>
-        {% endif %}
-        {% if party.address_note %}
-        <div class="muted" style="font-size:12px;font-style:italic;margin-top:var(--sp-2)">{{ party.address_note }}</div>
-        {% endif %}
       </div>
       {% endif %}
     </div>
