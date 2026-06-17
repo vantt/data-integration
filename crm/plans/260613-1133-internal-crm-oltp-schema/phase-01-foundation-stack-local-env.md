@@ -63,7 +63,7 @@ END;
 ```
 
 ## Related Code Files
-- **Tạo:** `crm/migrations/0001_app_user_pragmas.up.sql` (+`.down.sql`), `crm/app/cmd/server/main.go`, `crm/app/internal/adapters/outbound/sqlite/db.go` (mở crm.db WAL + ATTACH cache.db RO + PRAGMA), `crm/app/sqlc.yaml`, `crm/AGENTS.md`, `crm/.env.example`, `crm/Makefile` (migrate-up/down/build).
+- **Tạo:** `crm/migrations/0001_app_user_pragmas.up.sql` (+`.down.sql`), `crm/src/cmd/server/main.go`, `crm/src/internal/adapters/outbound/sqlite/db.go` (mở crm.db WAL + ATTACH cache.db RO + PRAGMA), `crm/src/sqlc.yaml`, `crm/AGENTS.md`, `crm/.env.example`, `crm/Makefile` (migrate-up/down/build).
 - **Đọc tham chiếu:** `detailView/` (mẫu hexagonal + LAN-trust no-auth — học cấu trúc).
 
 ## Implementation Steps

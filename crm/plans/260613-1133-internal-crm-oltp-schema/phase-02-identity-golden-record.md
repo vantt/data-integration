@@ -85,7 +85,7 @@ CREATE VIRTUAL TABLE crm_party_fts USING fts5(
 3. Nhân viên review → merge: chuyển identity của B sang A, set B `is_merged`, ghi `party_merge_log` (snapshot để undo).
 
 ## Related Code Files
-- **Tạo:** `crm/migrations/0003_party_identity_golden_record.up.sql`, `crm/app/internal/dedup/*.go` (chuẩn hoá phone/email, match), Go endpoint review/merge.
+- **Tạo:** `crm/migrations/0003_party_identity_golden_record.up.sql`, `crm/src/internal/dedup/*.go` (chuẩn hoá phone/email, match), Go endpoint review/merge.
 - **Đọc:** `transformation/docs/DEDUPLICATION.md`, `dim_customers_base.sql` (cách sinh customer_key).
 
 ## Implementation Steps

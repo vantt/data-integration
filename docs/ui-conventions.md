@@ -1,7 +1,7 @@
 # CRM UI Surface Conventions
 
 Framework: Jinja2 HTML templates + HTMX · Python FastAPI
-Templates live in: `crm/app/adapters/inbound/web/templates/`
+Templates live in: `crm/src/adapters/inbound/web/templates/`
 
 ---
 

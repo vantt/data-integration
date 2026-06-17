@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /
 
 WORKDIR /app
 
-COPY crm/app/requirements.txt ./crm/app/
-RUN pip install --no-cache-dir -r /app/crm/app/requirements.txt
+COPY crm/src/requirements.txt ./crm/src/
+RUN pip install --no-cache-dir -r /app/crm/src/requirements.txt
 
 COPY crm/ ./crm/
 # crm/__init__.py already exists
@@ -18,7 +18,7 @@ ENV CRM_DATA_DIR=/data \
     CRM_OLAP_PATH=/app/var/data_lake/serving/olap.duckdb \
     CRM_CACHE_DB=/data/cache.db \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app:/app/crm/app \
+    PYTHONPATH=/app:/app/crm/src \
     TZ=Asia/Ho_Chi_Minh
 
 EXPOSE 8090

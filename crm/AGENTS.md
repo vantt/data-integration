@@ -73,7 +73,7 @@ Every UI surface defined in `docs/ui-spec/` has a stable ID (S01–S13, P01–P0
 4. **New shared component** (`CXX`): add `data-surface="CXX"` to the component's root element.
 5. **Before assigning a new ID**: check `docs/ui-spec/00-overview.md` to pick the correct ID and avoid collisions.
 
-**Search pattern:** `grep -r 'data-surface="S01"' crm/app/` to instantly find any surface's template code.
+**Search pattern:** `grep -r 'data-surface="S01"' crm/src/` to instantly find any surface's template code.
 
 ### Python port (Jinja2 templates)
 

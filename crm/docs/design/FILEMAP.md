@@ -55,14 +55,14 @@
 | Surface | Name | Host(s) | File | Component |
 |---------|------|---------|------|-----------|
 | O01 | Confirm / Toast Overlay | S03 · S05 · S13 · P05 | `crm/modals.jsx` + `crm/helpers.jsx` | `"O01"` modal + `ToastStack` |
-| O02 | Quick Customer Preview | S01 · S07 | `crm/app.jsx` | `QuickPreview` |
+| O02 | Quick Customer Preview | S01 · S07 | `crm/src.jsx` | `QuickPreview` |
 
 ## Components
 
 | Surface | Name | Host(s) | File | Component |
 |---------|------|---------|------|-----------|
-| C01 | Sidebar Nav | All screens | `crm/app.jsx` | `Sidebar` |
-| C02 | Global Customer Search | S02 · S03 (header) | `crm/app.jsx` | `GlobalSearch` |
+| C01 | Sidebar Nav | All screens | `crm/src.jsx` | `Sidebar` |
+| C02 | Global Customer Search | S02 · S03 (header) | `crm/src.jsx` | `GlobalSearch` |
 | C03 | Action Queue Card | P01 · S01 | `crm/helpers.jsx` | `AQCard` |
 | C04 | Tag Chips | S02 · S03 · S04 | `crm/helpers.jsx` | `TagChips` |
 | C05 | Filter Bar | S01 · S02 · S05 · S07 · S10 · S11 | `crm/helpers.jsx` | `FilterBar` |
@@ -72,12 +72,12 @@
 
 | Artifact | File | Notes |
 |----------|------|-------|
-| `HarnessRail` | `crm/app.jsx` | Surface jump-nav for design review — not a product feature |
-| `CleanNav` | `crm/app.jsx` | ←/→ surface flipper for review — not a product feature |
-| `ThemePanel` | `crm/app.jsx` | Design-time theme switcher — replace with user-preferences API |
-| `RegRow` / `regActive` | `crm/app.jsx` | Registry row renderers for harness only |
+| `HarnessRail` | `crm/src.jsx` | Surface jump-nav for design review — not a product feature |
+| `CleanNav` | `crm/src.jsx` | ←/→ surface flipper for review — not a product feature |
+| `ThemePanel` | `crm/src.jsx` | Design-time theme switcher — replace with user-preferences API |
+| `RegRow` / `regActive` | `crm/src.jsx` | Registry row renderers for harness only |
 | `window.REG` | `crm/registry.js` | Surface registry for harness; `SURF` map is useful reference |
-| `SURFACE_ORDER` / `loadClean` | `crm/app.jsx` | Clean-view helpers |
+| `SURFACE_ORDER` / `loadClean` | `crm/src.jsx` | Clean-view helpers |
 | Harness + clean-view CSS | `crm/crm-extra.css` | See README §CSS Split for class list |
 
 ## Shared helpers (`crm/helpers.jsx`)
