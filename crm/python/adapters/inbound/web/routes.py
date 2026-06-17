@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from .screen_modals import init_modals, router as modals_router
+from .templating import make_templates
 
 
 class WebDeps:
@@ -25,7 +25,7 @@ def mount_web(app: FastAPI, deps: WebDeps, templates_dir: str, static_dir: str) 
 
     Call once during application startup, after all services are wired.
     """
-    templates = Jinja2Templates(directory=templates_dir)
+    templates = make_templates(templates_dir)
 
     # Initialise per-router deps + templates reference.
     init_modals(deps, templates)  # type: ignore[arg-type]

@@ -13,7 +13,8 @@ from typing import Optional
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
+
+from adapters.inbound.web.templating import make_templates
 
 from config import (
     crm_db_path,
@@ -147,7 +148,7 @@ def create_app() -> FastAPI:
     app.state.conversation_service = conv_svc
 
     # 6. Templates + static.
-    templates = Jinja2Templates(directory=str(_TEMPLATES_DIR))
+    templates = make_templates(str(_TEMPLATES_DIR))
     # Custom Jinja2 filters
     templates.env.filters["format_vnd"] = format_vnd
     templates.env.filters["fmt_vnd"] = fmt_vnd

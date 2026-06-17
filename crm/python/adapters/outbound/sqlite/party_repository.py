@@ -72,6 +72,7 @@ class SQLitePartyRepository:
 
     def update(self, party: Party) -> None:
         self._conn.execute(SQL_UPDATE_PARTY, party_update_params(party))
+        self._conn.commit()
 
     def list_by_phone(self, phone: str) -> list[Party]:
         rows = self._conn.execute(SQL_LIST_BY_PHONE, (phone or None,)).fetchall()
@@ -104,6 +105,7 @@ class SQLitePartyRepository:
 
     def update_contact_quality(self, identity_id: str, contact_quality: str) -> None:
         self._conn.execute(SQL_UPDATE_CONTACT_QUALITY, (contact_quality, identity_id))
+        self._conn.commit()
 
     def update_party_address(
         self,
@@ -121,14 +123,17 @@ class SQLitePartyRepository:
             (address_line or None, ward or None, district or None, province or None,
              address_note or None, updated_at, party_id),
         )
+        self._conn.commit()
 
     def deactivate_identity(self, identity_id: str) -> None:
         """Mark an identity as invalid (contact_status='invalid')."""
         self._conn.execute(SQL_DEACTIVATE_IDENTITY, (identity_id,))
+        self._conn.commit()
 
     def insert_identity_full(self, identity: PartyIdentity) -> None:
         """Insert a new identity with all migration 0008 fields. INSERT OR IGNORE on duplicate."""
         self._conn.execute(SQL_INSERT_IDENTITY_FULL, identity_insert_full_params(identity))
+        self._conn.commit()
 
     def update_identity_info(
         self,
@@ -142,6 +147,7 @@ class SQLitePartyRepository:
             SQL_UPDATE_IDENTITY_INFO,
             (display_label or None, contact_status or "active", 1 if is_preferred else 0, identity_id),
         )
+        self._conn.commit()
 
     def create_with_identities(self, party: Party, identities: list[PartyIdentity]) -> Party:
         """Atomic insert: party row + all identity rows. Rolls back on any failure."""
