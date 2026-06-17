@@ -20,11 +20,26 @@ _SCHEMA_SQL = pathlib.Path(__file__).with_name("cache_schema.sql").read_text(enc
 
 # ALTER TABLE migrations for columns added after initial schema creation.
 # SQLite has no ADD COLUMN IF NOT EXISTS; catch OperationalError and continue.
+# Statements run in order; idempotent by design (ALTER raises on re-run → caught).
 _COLUMN_MIGRATIONS = [
     "ALTER TABLE wh_party_seed ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
     "ALTER TABLE wh_party_seed ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
     "ALTER TABLE wh_customer_base ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
     "ALTER TABLE wh_customer_base ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
+    # wh_action_queue episode-based dedup: keep only the latest row per (customer_key, action_type)
+    # before adding the UNIQUE index (prevents index creation failure on existing dbs with duplicates).
+    """DELETE FROM wh_action_queue WHERE action_id IN (
+        SELECT a.action_id FROM wh_action_queue a
+        WHERE EXISTS (
+            SELECT 1 FROM wh_action_queue b
+            WHERE b.customer_key = a.customer_key
+              AND b.action_type  = a.action_type
+              AND b.generated_date > a.generated_date
+        )
+    )""",
+    "ALTER TABLE wh_action_queue ADD COLUMN pending_since TEXT",
+    "UPDATE wh_action_queue SET pending_since = generated_date WHERE pending_since IS NULL",
+    "CREATE UNIQUE INDEX IF NOT EXISTS uidx_wh_action_queue_customer_type ON wh_action_queue (customer_key, action_type)",
 ]
 
 
@@ -101,7 +116,62 @@ def upsert_product_insight(conn: sqlite3.Connection, rows: list[dict]) -> int:
 
 
 def upsert_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
-    return _upsert(conn, "wh_action_queue", "action_id", rows)
+    """Upsert action queue with episode-based stable action_id.
+
+    action_id = md5(customer_key|action_type|pending_since) — stable for the lifetime of the episode.
+    Conflict key: (customer_key, action_type) — one active row per type per customer.
+    On conflict: updates data fields only; preserves action_id and pending_since.
+    Cleanup: deletes rows not in today's batch (warehouse signal gone).
+    """
+    import hashlib
+
+    upsert_sql = (
+        "INSERT INTO wh_action_queue "
+        "  (action_id, customer_key, action_type, rationale_vi, value_at_stake_vnd, "
+        "   priority, pending_since, generated_date) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+        "ON CONFLICT(customer_key, action_type) DO UPDATE SET "
+        "  generated_date     = excluded.generated_date, "
+        "  rationale_vi       = excluded.rationale_vi, "
+        "  value_at_stake_vnd = excluded.value_at_stake_vnd, "
+        "  priority           = excluded.priority, "
+        "  refreshed_at       = strftime('%Y-%m-%dT%H:%M:%fZ','now')"
+        # action_id and pending_since intentionally preserved on conflict
+    )
+
+    def _action_id(customer_key: str, action_type: str, date: str) -> str:
+        return hashlib.md5(f"{customer_key}|{action_type}|{date}".encode()).hexdigest()
+
+    values = [
+        (
+            _action_id(r["customer_key"], r["action_type"], r["generated_date"]),
+            r["customer_key"],
+            r["action_type"],
+            r.get("rationale_vi"),
+            r.get("value_at_stake_vnd"),
+            r.get("priority"),
+            r["generated_date"],   # pending_since = generated_date on first insert
+            r["generated_date"],
+        )
+        for r in rows
+    ]
+
+    with conn:
+        conn.executemany(upsert_sql, values)
+
+        # Remove rows whose warehouse signal disappeared (signal-based full replacement).
+        if rows:
+            placeholders = ",".join(["(?,?)"] * len(rows))
+            flat_args = [v for r in rows for v in (r["customer_key"], r["action_type"])]
+            conn.execute(
+                f"DELETE FROM wh_action_queue "
+                f"WHERE (customer_key, action_type) NOT IN ({placeholders})",
+                flat_args,
+            )
+        else:
+            conn.execute("DELETE FROM wh_action_queue")
+
+    return len(rows)
 
 
 def upsert_customer_base(conn: sqlite3.Connection, rows: list[dict]) -> int:

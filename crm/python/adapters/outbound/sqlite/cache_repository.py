@@ -93,27 +93,42 @@ class SQLiteCacheRepository:
         ]
 
     def list_all_action_queue(self) -> list[ActionQueueItem]:
-        """Return all wh_action_queue rows enriched with customer_name and party_id.
+        """Return actionable wh_action_queue rows for the worklist.
 
+        Filters out: dismissed actions, snoozed-until-future actions,
+        and actions that already have an open/doing crm_task.
         Returns [] when table is absent.
         """
         sql = """
             SELECT a.action_id, a.customer_key, a.action_type, a.rationale_vi,
-                   a.value_at_stake_vnd, a.priority, a.generated_date, a.refreshed_at,
+                   a.value_at_stake_vnd, a.priority,
+                   COALESCE(a.pending_since, a.generated_date) AS pending_since,
+                   a.generated_date, a.refreshed_at,
                    COALESCE(bc.display_name, '') AS customer_name,
-                   pi.party_id AS party_id
+                   pi.party_id AS party_id,
+                   COALESCE(s.status, 'open') AS status,
+                   s.snoozed_until
             FROM cache.wh_action_queue a
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id
             LEFT JOIN crm_party_identity pi
                    ON pi.identity_type = 'sapo_customer'
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
+            LEFT JOIN crm_action_state s ON s.action_id = a.action_id
+            LEFT JOIN crm_task t
+                   ON t.source = 'action_queue'
+                  AND t.source_ref = a.action_id
+                  AND t.status NOT IN ('done', 'cancelled')
+            WHERE COALESCE(s.status, 'open') != 'dismissed'
+              AND (COALESCE(s.status, 'open') != 'snoozed'
+                   OR s.snoozed_until < date('now', '+7 hours'))
+              AND t.task_id IS NULL
             ORDER BY a.priority ASC
         """
         try:
             rows = self._conn.execute(sql).fetchall()
         except sqlite3.OperationalError as exc:
-            if _is_missing_table(exc):
+            if _is_missing_table(exc) or _is_missing_column(exc):
                 return []
             raise
         return [
@@ -124,10 +139,13 @@ class SQLiteCacheRepository:
                 rationale_vi=row["rationale_vi"] or "",
                 value_at_stake_vnd=row["value_at_stake_vnd"] or 0,
                 priority=row["priority"] or 0,
+                pending_since=row["pending_since"] or "",
                 generated_date=row["generated_date"] or "",
                 refreshed_at=row["refreshed_at"] or "",
                 customer_name=row["customer_name"] or "",
                 party_id=row["party_id"],
+                status=row["status"] or "open",
+                snoozed_until=row["snoozed_until"],
             )
             for row in rows
         ]
@@ -177,20 +195,26 @@ class SQLiteCacheRepository:
         )
 
     def _fetch_actions(self, customer_key: str) -> list[ActionQueueItem]:
+        """Return all actions for a customer (customer 360 view — no status filtering)."""
         if not customer_key:
             return []
         sql = """
-            SELECT action_id, customer_key, action_type, rationale_vi,
-                   value_at_stake_vnd, priority, generated_date, refreshed_at
-            FROM cache.wh_action_queue
-            WHERE customer_key = ?
-            ORDER BY priority ASC
+            SELECT a.action_id, a.customer_key, a.action_type, a.rationale_vi,
+                   a.value_at_stake_vnd, a.priority,
+                   COALESCE(a.pending_since, a.generated_date) AS pending_since,
+                   a.generated_date, a.refreshed_at,
+                   COALESCE(s.status, 'open') AS status,
+                   s.snoozed_until
+            FROM cache.wh_action_queue a
+            LEFT JOIN crm_action_state s ON s.action_id = a.action_id
+            WHERE a.customer_key = ?
+            ORDER BY a.priority ASC
             LIMIT 10
         """
         try:
             rows = self._conn.execute(sql, (customer_key,)).fetchall()
         except sqlite3.OperationalError as exc:
-            if _is_missing_table(exc):
+            if _is_missing_table(exc) or _is_missing_column(exc):
                 return []
             raise
         return [
@@ -201,8 +225,11 @@ class SQLiteCacheRepository:
                 rationale_vi=row["rationale_vi"] or "",
                 value_at_stake_vnd=row["value_at_stake_vnd"] or 0,
                 priority=row["priority"] or 0,
+                pending_since=row["pending_since"] or "",
                 generated_date=row["generated_date"] or "",
                 refreshed_at=row["refreshed_at"] or "",
+                status=row["status"] or "open",
+                snoozed_until=row["snoozed_until"],
             )
             for row in rows
         ]

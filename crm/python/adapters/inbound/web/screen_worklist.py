@@ -2,12 +2,14 @@
 
 FastAPI router mirroring screen_worklist.go.
 Serves full HTML page + HTMX-refreshable fragment + task-done PATCH.
+Also handles action lifecycle: dismiss (PATCH /worklist/actions/{id}/dismiss)
+and snooze (PATCH /worklist/actions/{id}/snooze?days=N).
 No business logic — thin adapter only.
 """
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Protocol
 
 from fastapi import APIRouter, Request, Response
@@ -37,6 +39,11 @@ class TaskWriter(Protocol):
     def transition_status(self, task_id: str, status: str) -> None: ...
 
 
+class ActionStateWriter(Protocol):
+    def dismiss(self, action_id: str, user_id: Optional[str]) -> None: ...
+    def snooze(self, action_id: str, until_date: str, user_id: Optional[str]) -> None: ...
+
+
 class PartyContactReader(Protocol):
     def get_preferred_identity(self, party_id: str) -> Optional[PartyIdentity]: ...
     def list_pinned_contact_pref_notes(self, party_id: str) -> list[Note]: ...
@@ -50,6 +57,7 @@ def make_worklist_router(
     action_queue: ActionQueueReader,
     tasks: TaskQuerier,
     task_writer: TaskWriter,
+    action_state: Optional[ActionStateWriter] = None,
     party_contacts: Optional[PartyContactReader] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Worklist routes."""
@@ -172,6 +180,36 @@ def make_worklist_router(
             "fragments/task_done_row.html",
             {"request": request, "task": task},
         )
+
+    # ── Action lifecycle: dismiss ─────────────────────────────────────────
+
+    @router.patch("/worklist/actions/{action_id}/dismiss", response_class=HTMLResponse)
+    async def handle_dismiss_action(request: Request, action_id: str) -> Response:
+        if action_state is None:
+            return HTMLResponse("", status_code=204)
+        try:
+            action_state.dismiss(action_id, user_id=None)
+        except Exception as exc:
+            log.error("worklist: dismiss action %s: %s", action_id, exc)
+            return HTMLResponse("failed", status_code=500)
+        # hx-swap="delete" on the client removes the row; return empty body
+        return HTMLResponse("", status_code=200)
+
+    # ── Action lifecycle: snooze ──────────────────────────────────────────
+
+    @router.patch("/worklist/actions/{action_id}/snooze", response_class=HTMLResponse)
+    async def handle_snooze_action(request: Request, action_id: str) -> Response:
+        if action_state is None:
+            return HTMLResponse("", status_code=204)
+        try:
+            days = int(request.query_params.get("days", "3"))
+            days = max(1, min(days, 30))  # clamp to sensible range
+            until_date = (datetime.now(timezone.utc) + timedelta(days=days)).strftime("%Y-%m-%d")
+            action_state.snooze(action_id, until_date, user_id=None)
+        except Exception as exc:
+            log.error("worklist: snooze action %s: %s", action_id, exc)
+            return HTMLResponse("failed", status_code=500)
+        return HTMLResponse("", status_code=200)
 
     return router
 

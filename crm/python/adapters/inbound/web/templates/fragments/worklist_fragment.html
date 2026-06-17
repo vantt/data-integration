@@ -84,10 +84,14 @@
     {% set cp_notes = extras.get('contact_pref_notes', []) %}
     <div class="wl-row" id="aq-{{ a.action_id }}"
          hx-get="/customers/{{ a.party_id }}" hx-target="body" hx-push-url="true"
-         hx-trigger="click[!event.target.closest('button,a')]">
-      {# Checkbox — action queue items: mark-done not wired yet #}
-      <button class="wl-check" type="button" aria-label="done" title="Đánh dấu xong"
-              onclick="this.classList.toggle('wl-check--on');this.closest('.wl-row').classList.toggle('wl-row--done');event.stopPropagation()">
+         hx-trigger="click[!event.target.closest('button,a,details')]">
+      {# Dismiss checkbox #}
+      <button class="wl-check" type="button" aria-label="Bỏ qua action này"
+              title="Bỏ qua"
+              hx-patch="/worklist/actions/{{ a.action_id }}/dismiss"
+              hx-target="#aq-{{ a.action_id }}"
+              hx-swap="delete"
+              onclick="event.stopPropagation()">
         {% include "icons/check.svg" %}
       </button>
       <div class="wl-row__main">
@@ -107,10 +111,12 @@
           {% if a.value_at_stake_vnd > 0 %}
           <span class="wl-row__value">{% include "icons/money.svg" %} {{ a.value_at_stake_vnd | fmt_vnd }}</span>
           {% endif %}
-          <span class="wl-row__due">{% include "icons/clock.svg" %} {{ a.generated_date }}</span>
+          <span class="wl-row__due">{% include "icons/clock.svg" %}
+            Chờ từ {{ a.pending_since if a.pending_since else a.generated_date }}
+          </span>
         </div>
       </div>
-      {# Quick-action buttons + navigate (★★★ spec A-S01-007/008) #}
+      {# Quick-action buttons + navigate + snooze (★★★ spec A-S01-007/008) #}
       <div class="wl-row__aside">
         {% if pref_id %}
           {% if pref_id.identity_type in ('phone', 'phone_secondary') %}
@@ -144,6 +150,23 @@
             📞 Gọi
           </button>
         {% endif %}
+        {# Snooze dropdown #}
+        <details style="position:relative" onclick="event.stopPropagation()">
+          <summary class="btn btn--ghost" style="padding:8px 10px;list-style:none;cursor:pointer"
+                   title="Tạm hoãn">⏰</summary>
+          <div style="position:absolute;right:0;top:100%;background:var(--surface-raised,#fff);
+                      border:1px solid var(--border);border-radius:6px;padding:4px;
+                      min-width:110px;z-index:20;display:flex;flex-direction:column;gap:2px">
+            {% for days, label in [(1,'1 ngày'),(3,'3 ngày'),(7,'1 tuần')] %}
+            <button class="btn btn--ghost" style="padding:6px 10px;text-align:left;width:100%"
+                    hx-patch="/worklist/actions/{{ a.action_id }}/snooze?days={{ days }}"
+                    hx-target="#aq-{{ a.action_id }}"
+                    hx-swap="delete">
+              {{ label }}
+            </button>
+            {% endfor %}
+          </div>
+        </details>
         {% if a.party_id %}
         <a href="/customers/{{ a.party_id }}" class="btn btn--ghost" style="padding:8px 10px"
            onclick="event.stopPropagation()">

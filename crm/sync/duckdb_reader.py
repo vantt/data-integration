@@ -85,11 +85,10 @@ _MART_PRODUCT_HEALTH_COLS = [
 ]
 
 # mart_customer_action_queue output columns for action_queue (cache-facing names).
-# Live warehouse has no action_id (derived from customer_key+action_type+generated_date)
-# and uses different source names: action_rationale, value_at_stake, priority_rank,
-# queue_generated_at — all aliased back in the SELECT.
+# action_id is NOT returned here; it is derived Python-side in sqlite_upsert.upsert_action_queue
+# as md5(customer_key|action_type|generated_date) for new episode rows.
+# Source names: action_rationale, value_at_stake, priority_rank, queue_generated_at.
 _MART_ACTION_QUEUE_COLS = [
-    "action_id",
     "customer_key",
     "action_type",
     "rationale_vi",
@@ -258,8 +257,6 @@ def fetch_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     """
     sql = (
         "SELECT "
-        "  md5(customer_key || '|' || action_type || '|' "
-        "      || strftime(queue_generated_at, '%Y-%m-%d')) AS action_id, "
         "  customer_key, "
         "  action_type, "
         "  action_rationale AS rationale_vi, "

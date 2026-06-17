@@ -39,14 +39,16 @@ CREATE TABLE IF NOT EXISTS wh_product_insight (
 );
 
 CREATE TABLE IF NOT EXISTS wh_action_queue (
-  action_id         TEXT    PRIMARY KEY,  -- stable: customer_key+action_type+generated_date
+  action_id         TEXT    PRIMARY KEY,  -- md5(customer_key|action_type|pending_since); stable per episode
   customer_key      TEXT,
   action_type       TEXT,                 -- CALL_NOW|REORDER_NUDGE|WIN_BACK|UPSELL|CROSS_SELL|COLLECT_FEEDBACK
   rationale_vi      TEXT,                 -- human-readable Vietnamese rationale
   value_at_stake_vnd INTEGER,             -- VND
   priority          INTEGER,
-  generated_date    TEXT,                 -- YYYY-MM-DD
+  pending_since     TEXT,                 -- YYYY-MM-DD; first day this episode appeared (never updated)
+  generated_date    TEXT,                 -- YYYY-MM-DD; last warehouse refresh (updated daily)
   refreshed_at      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+  -- status/snoozed_until live in crm.db:crm_action_state (keyed on action_id)
 );
 
 -- ─── GROUP 3: Source relational data (Sapo → warehouse; CRM does NOT recompute) ─

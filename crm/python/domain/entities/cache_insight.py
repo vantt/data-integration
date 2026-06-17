@@ -57,6 +57,13 @@ VALID_ACTION_TYPES = [
     ACTION_COLLECT_FEEDBACK,
 ]
 
+# ---------------------------------------------------------------------------
+# Action lifecycle status constants (crm_action_state)
+# ---------------------------------------------------------------------------
+ACTION_STATUS_OPEN = "open"
+ACTION_STATUS_DISMISSED = "dismissed"
+ACTION_STATUS_SNOOZED = "snoozed"
+
 
 # ---------------------------------------------------------------------------
 # Entities
@@ -97,10 +104,13 @@ class ActionQueueItem:
     rationale_vi: str       # Vietnamese rationale text
     value_at_stake_vnd: int
     priority: int
-    generated_date: str     # YYYY-MM-DD
+    pending_since: str      # YYYY-MM-DD; first day this episode appeared
+    generated_date: str     # YYYY-MM-DD; last warehouse refresh
     refreshed_at: str
     customer_name: str = ""             # display_name from wh_customer_base; empty when not found
     party_id: Optional[str] = None      # CRM party_id resolved via crm_party_identity; None when not synced
+    status: str = "open"                # open|dismissed|snoozed (from crm_action_state)
+    snoozed_until: Optional[str] = None # YYYY-MM-DD; set when status = 'snoozed'
 
 
 @dataclass
