@@ -7,7 +7,7 @@ hosts: [P01, P02, P03, P04, P05, P06]
 status: active
 design_ref: ""
 rules: [R2, R3, R6, R7]
-regions: [topbar, left_col, right_col, tab_bar]
+regions: [topbar, sidebar, main_col, tab_bar]
 ---
 
 # S03 — Customer 360 Detail
@@ -18,76 +18,86 @@ Hồ sơ đầy đủ 360° của một party. Sales Rep mở màn hình này tr
 cảnh báo về khách, kênh liên lạc ưu tiên, insight warehouse (RFM, affinity, action_queue),
 insight do rep đúc kết, lịch sử đơn hàng, tags, ghi chú, task đang mở, và activity timeline.
 
-Layout 2 cột: cột trái = thông tin tĩnh (warnings, contacts, address, core info, tags, custom fields);
-cột phải = tab bar chứa các panel động (Insight P01, Đơn hàng P02, Timeline P03, Tasks P04, Ghi chú P05, Hội thoại P06).
+Layout 2 cột: cột trái (70%) = main + tab bar chứa các panel động (Insight P01, Đơn hàng P02,
+Timeline P03, Tasks P04, Ghi chú P05, Hội thoại P06); cột phải (30%) = sidebar tĩnh với các
+block: Cảnh báo, Thông Tin Cơ Bản, Head Line, Liên Lạc, Dates, Tags.
 
 Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển thị tại P01.
 
 ## Layout
 
 ```
-┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
-│               │  TOPBAR: [← Quay lại]  Nguyễn Văn A  GOLD · active          │
-│               │  [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]                │
-│               ├──────────────────────────────────────────────────────────────┤
-│               │  LEFT COL (30%)           │  RIGHT COL (70%)                 │
-│               │  ┌─────────────────────┐  │  [Insight|Đơn|Timeline|Tasks|   │
-│               │  │ ⚠ Cảnh báo (nếu có)│  │   Ghi chú|Chat]                 │
-│               │  ├─────────────────────┤  │                                 │
-│               │  │ LIÊN LẠC        [+] │  │  (P01 / P02 / P03 / P04 /      │
-│               │  │ 📞 0901234567 Chính │  │   P05 / P06 shown here)         │
-│               │  │ 💬 zalo_id    Zalo  │  │                                 │
-│               │  ├─────────────────────┤  │                                 │
-│               │  │ ĐỊA CHỈ        [✎] │  │                                 │
-│               │  │ Q.1, TP.HCM (sync) │  │                                 │
-│               │  ├─────────────────────┤  │                                 │
-│               │  │ THÔNG TIN      [✎] │  │                                 │
-│               │  │ Tên, email, ...     │  │                                 │
-│               │  ├─────────────────────┤  │                                 │
-│               │  │ TAGS           [✎] │  │                                 │
-│               │  │ [VIP] [repeat]      │  │                                 │
-│               │  ├─────────────────────┤  │                                 │
-│               │  │ CUSTOM FIELDS  [✎] │  │                                 │
-│               │  │ (grouped by section)│  │                                 │
-│               │  ├─────────────────────┤  │                                 │
-│               │  │ Consent: ✓          │  │                                 │
-│               │  └─────────────────────┘  │                                 │
-└───────────────┴──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────┬─── SIDEBAR (30%) ─────────────┐
+│ TOPBAR: [← Quay lại]  Nguyễn Văn A           │ ⚠ Cảnh báo (conditional)     │
+│ [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]  ├───────────────────────────────┤
+├──────────────────────────────────────────────┤ THÔNG TIN CƠ BẢN          [✎] │
+│  MAIN (70%) — tabbar + lazy panels           │ tên, badges, phone,            │
+│  [Insight|Đơn|Timeline|Tasks|Ghi chú|Chat]   │ sapo-id, sapo-code,            │
+│                                              │ sex, owner, consent            │
+│  (P01 / P02 / P03 / P04 / P05 / P06)         ├───────────────────────────────┤
+│                                              │ HEAD LINE                      │
+│                                              │ LTV  ·  Đơn  ·  AOV  ·  Recency│
+│                                              ├───────────────────────────────┤
+│                                              │ LIÊN LẠC                  [+] │
+│                                              │ 📞 0901234567 (chính)          │
+│                                              │ 💬 zalo_id                     │
+│                                              │ ✉ email                        │
+│                                              │ 📍 Q.1, TP.HCM · region        │
+│                                              ├───────────────────────────────┤
+│                                              │ DATES                          │
+│                                              │ First Order · Last Order       │
+│                                              │ Tenure                         │
+│                                              ├───────────────────────────────┤
+│                                              │ TAGS                      [✎] │
+│                                              │ [VIP] [repeat]                 │
+└──────────────────────────────────────────────┴───────────────────────────────┘
 ```
 
-## Left Column Sections
+## Sidebar Sections
 
 ### Cảnh báo (warning notes)
 - Chỉ hiển thị khi có `crm_note.note_type='warning'` và `is_active=true`
-- Luôn nằm đầu left col, nền đỏ nhạt
-- Click → expand note body
+- Luôn nằm đầu sidebar, nền đỏ nhạt
 - Chỉ manager mới xóa được warning note
 
-### Liên lạc
-- Render tất cả `crm_party_identity` của party, group theo identity_type
-- Mỗi row: icon type, value, display_label, status badge (invalid/dnc nếu không active)
-- `is_preferred=true` → hiển thị trước, bold
-- Quick-action: click phone → copy số; click zalo/facebook → log contact attempt (M08 mode=contact_attempt)
-- [+] → M15 (Add/Edit Contact)
-- `contact_pref` notes hiển thị inline bên dưới contact list
+### Thông Tin Cơ Bản
+- **tên**: `party.display_name`
+- **badges**: value_group (warehouse), status
+- **phone**: số điện thoại chính (crm_party_identity type=phone, is_preferred=true)
+- **sapo-id**: `wh_customer_base.customer_id` (Sapo customer ID)
+- **sapo-code**: `wh_customer_base.customer_code`
+- **sex**: `party.gender`
+- **owner**: `party.owner_user_id`
+- **consent**: `party.consent_contact` → icon ✓ "Cho phép liên lạc" hoặc ✕ "Không liên lạc (R1)"
+- [✎] → M15 (tab: core)
 
-### Địa chỉ
-- Hiển thị `address_line`, ward, district, province
-- Badge nguồn: `sapo_sync` (xám) hoặc `manual` (xanh lá, "đã xác nhận")
-- `address_note` hiển thị italic nếu có
-- [✎] → M15 (Edit Address tab)
+### Head Line
+KPI grid (4 ô), source: `wh_customer_insight` (warehouse cache):
+- **Lifetime value** (`lifetime_contribution_margin`) — hero, định dạng VND
+- **Đơn** (`order_count`) — số lượng đơn hàng
+- **AOV** (`avg_order_spend`) — định dạng VND
+- **Recency** (`avg_days_between_orders` hoặc days since last order) — đơn vị ngày
+- Placeholder "—" khi insight chưa có (ST-360-NO-INSIGHT)
 
-### Thông tin cơ bản
-- display_name, email (từ crm_party_identity type=email), ngày sinh (nếu có)
-- [✎] → M15 (Edit Core Info tab)
+### Liên Lạc
+Gộp contact channels + địa chỉ + region thành một block:
+- **Channels**: tất cả `crm_party_identity` (phone, phone_secondary, zalo, facebook, email)
+  - Mỗi row: icon, value, display_label, status badge; is_preferred → bold, hiển thị trước
+  - Quick-action: phone → copy; zalo/facebook → log contact attempt (M08)
+  - `contact_pref` notes hiển thị inline bên dưới channel list
+- **Địa chỉ**: `address_line`, ward, district, province; badge nguồn sapo_sync/manual; `address_note` italic
+- **Region**: `wh_customer_base.geo_region` (nếu có)
+- [+] → M15 (tab: contacts); [✎] địa chỉ → M15 (tab: address)
+
+### Dates
+Source: `wh_customer_insight` / `wh_customer_base` (warehouse cache):
+- **First Order**: ngày đặt hàng đầu tiên (`first_order_date`)
+- **Last Order**: ngày đặt hàng gần nhất (`last_order_date`)
+- **Tenure**: số ngày kể từ first order (lifespan_days), format "N d (X y)"
+- Placeholder "—" khi không có dữ liệu
 
 ### Tags
 - [✎] → M03
-
-### Custom Fields
-- Grouped by `crm_custom_field_def.section`, entity_type='customer'
-- Sort theo sort_order trong mỗi section
-- [✎] → M06
 
 ## States
 
@@ -157,13 +167,6 @@ interactions:
     trigger: click
     action: mutate
     effects: [right_col.show_panel_P06]
-  - id: A-S03-010
-    element: btn_edit_custom_fields
-    region: left_col
-    trigger: click
-    action: open_overlay
-    target: M06
-    payload: { party_id: "$party.id" }
   - id: A-S03-011
     element: btn_log_activity
     region: topbar
@@ -180,28 +183,28 @@ interactions:
     payload: { party_id: "$party.id" }
   - id: A-S03-013
     element: btn_edit_contacts
-    region: left_col
+    region: sidebar
     trigger: click
     action: open_overlay
     target: M15
     payload: { party_id: "$party.id", tab: "contacts" }
   - id: A-S03-014
     element: btn_edit_address
-    region: left_col
+    region: sidebar
     trigger: click
     action: open_overlay
     target: M15
     payload: { party_id: "$party.id", tab: "address" }
   - id: A-S03-015
     element: btn_edit_core_info
-    region: left_col
+    region: sidebar
     trigger: click
     action: open_overlay
     target: M15
     payload: { party_id: "$party.id", tab: "core" }
   - id: A-S03-016
     element: contact_channel_quick_action
-    region: left_col
+    region: sidebar
     trigger: click
     action: open_overlay
     target: M08
