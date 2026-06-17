@@ -72,13 +72,14 @@ class CustomFieldDef:
     """
     field_id: str           # UUID
     entity_type: str        # "party" | "order" (extensible)
-    field_key: str          # key inside the JSON custom blob
-    label: str              # human-readable label
+    field_key: str          # key inside the JSON custom blob; immutable after creation
+    label: str              # human-readable display label
     data_type: str          # text|number|date|bool|select|multiselect
     is_required: bool
     is_active: bool
     sort_order: int
-    options: Optional[list] = None  # allowed values for select/multiselect
+    options: Optional[list] = None      # allowed values for select/multiselect
+    section: Optional[str] = None       # free-text grouping label (migration 0014)
 
 
 @dataclass
@@ -104,12 +105,18 @@ class PartyTag:
 
 @dataclass
 class Note:
-    """Free-form text note attached to a party by a CRM user."""
+    """Typed note attached to a party, supporting pins, visibility, and task linkage."""
     note_id: str            # UUID
     party_id: str           # FK → crm_party
     body: str
     created_at: str         # UTC ISO-8601 with 'Z'
     author_user_id: Optional[str] = None    # FK → crm_app_user (nullable)
+    # Migration 0010
+    note_type: str = "general"      # general|preference|contact_pref|warning|outcome|internal
+    pinned: bool = False
+    visibility: str = "team"        # team|private
+    task_id: Optional[str] = None   # FK → crm_task (retail activation chain)
+    deleted_at: Optional[str] = None  # soft delete
 
 
 @dataclass
@@ -138,6 +145,13 @@ class Party360:
     address: Optional[str] = None           # raw JSON string from the view
     preferences: Optional[str] = None      # raw JSON string from the view
     custom: str = ""                        # raw JSON from the view
+    # Address fields (migration 0007) — R13: address_source distinguishes sync vs manual
+    address_line: Optional[str] = None
+    ward: Optional[str] = None
+    district: Optional[str] = None
+    province: Optional[str] = None
+    address_source: str = "sapo_sync"       # sapo_sync | manual
+    address_note: Optional[str] = None
     # Relations
     tags: list[PartyTag] = field(default_factory=list)
     identities: list[PartyIdentity] = field(default_factory=list)

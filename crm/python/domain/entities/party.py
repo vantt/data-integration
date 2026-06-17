@@ -27,17 +27,35 @@ VALID_PARTY_STATUSES = [PARTY_STATUS_ACTIVE, PARTY_STATUS_INACTIVE, PARTY_STATUS
 # ---------------------------------------------------------------------------
 IDENTITY_TYPE_SAPO_CUSTOMER = "sapo_customer"
 IDENTITY_TYPE_PHONE = "phone"
+IDENTITY_TYPE_PHONE_SECONDARY = "phone_secondary"
 IDENTITY_TYPE_EMAIL = "email"
 IDENTITY_TYPE_PSID = "psid"
 IDENTITY_TYPE_ZALO_UID = "zalo_uid"
+IDENTITY_TYPE_ZALO = "zalo"
+IDENTITY_TYPE_FACEBOOK = "facebook"
 IDENTITY_TYPE_CUSTOMER_CODE = "customer_code"
 VALID_IDENTITY_TYPES = [
     IDENTITY_TYPE_SAPO_CUSTOMER,
     IDENTITY_TYPE_PHONE,
+    IDENTITY_TYPE_PHONE_SECONDARY,
     IDENTITY_TYPE_EMAIL,
     IDENTITY_TYPE_PSID,
     IDENTITY_TYPE_ZALO_UID,
+    IDENTITY_TYPE_ZALO,
+    IDENTITY_TYPE_FACEBOOK,
     IDENTITY_TYPE_CUSTOMER_CODE,
+]
+
+# ---------------------------------------------------------------------------
+# Contact status constants (migration 0008)
+# ---------------------------------------------------------------------------
+CONTACT_STATUS_ACTIVE = "active"
+CONTACT_STATUS_INVALID = "invalid"
+CONTACT_STATUS_UNREACHABLE = "unreachable"
+VALID_CONTACT_STATUSES = [
+    CONTACT_STATUS_ACTIVE,
+    CONTACT_STATUS_INVALID,
+    CONTACT_STATUS_UNREACHABLE,
 ]
 
 # ---------------------------------------------------------------------------
@@ -91,14 +109,18 @@ class PartyIdentity:
     identity_id: str            # UUID
     party_id: str               # FK → crm_party
     source_system: str          # sapo|messenger|zalo|manual
-    identity_type: str          # sapo_customer|phone|email|psid|zalo_uid|customer_code
-    identity_value: str         # normalised value
+    identity_type: str          # sapo_customer|phone|phone_secondary|email|psid|zalo|facebook|…
+    identity_value: str         # normalised value (E.164 for phone, per R5)
     confidence: float           # 0.0–1.0
     is_primary: bool
     source_contact_quality: str # masked|real — immutable, set at creation
     contact_quality: str        # masked|unverified|verified — mutable
     created_at: str
-    verified_at: Optional[str] = None  # nullable UTC ISO-8601
+    verified_at: Optional[str] = None       # nullable UTC ISO-8601
+    # Migration 0008
+    display_label: Optional[str] = None     # human-readable label e.g. "Số công ty"
+    contact_status: str = "active"          # active|invalid|unreachable
+    is_preferred: bool = False              # True = preferred channel for outreach
 
 
 @dataclass

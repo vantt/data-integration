@@ -21,7 +21,7 @@ from fastapi.templating import Jinja2Templates
 
 from crm.python.domain.entities.activity import Activity
 from crm.python.domain.entities.cache_insight import CacheInsight
-from crm.python.domain.entities.profile import Note, Party360, PartyIdentity
+from crm.python.domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity
 from crm.python.domain.entities.task import Task
 
 log = logging.getLogger(__name__)
@@ -66,6 +66,10 @@ class NoteReader(Protocol):
     def list_notes(self, party_id: str) -> list[Note]: ...
 
 
+class CustomFieldDefReader(Protocol):
+    def list_by_entity_type(self, entity_type: str) -> list[CustomFieldDef]: ...
+
+
 class TaskQuerier(Protocol):
     def list_by_party(self, party_id: str) -> list[Task]: ...
 
@@ -81,6 +85,7 @@ def make_customer_360_router(
     activity_log: ActivityLogger,
     notes: NoteReader,
     party_tasks: TaskQuerier,
+    custom_field_defs: Optional[CustomFieldDefReader] = None,
     party_finder: Optional[PartyFinder] = None,
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
 ) -> APIRouter:
@@ -155,6 +160,28 @@ def make_customer_360_router(
 
         ins = _load_insight(ids)
 
+        # Notes split by type for S03 left col (warning banner + contact_pref inline)
+        all_notes: list[Note] = []
+        try:
+            all_notes = notes.list_notes(party_id)
+        except Exception as exc:
+            log.warning("c360: load notes %s: %s", party_id, exc)
+
+        active_notes = [n for n in all_notes if not n.deleted_at]
+        warning_notes = [n for n in active_notes if n.note_type == "warning"]
+        contact_pref_notes = [n for n in active_notes if n.note_type == "contact_pref" and n.pinned]
+
+        # Custom field definitions for left col grouped display
+        cfd_list: list[CustomFieldDef] = []
+        if custom_field_defs is not None:
+            try:
+                cfd_list = [
+                    fd for fd in custom_field_defs.list_by_entity_type("party")
+                    if fd.is_active
+                ]
+            except Exception as exc:
+                log.warning("c360: load custom_field_defs: %s", exc)
+
         return templates.TemplateResponse(
             "customer_360.html",
             {
@@ -163,6 +190,9 @@ def make_customer_360_router(
                 "identities": ids,
                 "active_tab": active_tab,
                 "insight": ins,
+                "warning_notes": warning_notes,
+                "contact_pref_notes": contact_pref_notes,
+                "custom_field_defs": cfd_list,
             },
         )
 
