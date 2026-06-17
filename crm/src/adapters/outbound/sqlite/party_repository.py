@@ -98,6 +98,7 @@ class SQLitePartyRepository:
 
     def upsert_identity(self, identity: PartyIdentity) -> None:
         self._conn.execute(SQL_UPSERT_IDENTITY, identity_upsert_params(identity))
+        self._conn.commit()
 
     def list_identities(self, party_id: str) -> list[PartyIdentity]:
         rows = self._conn.execute(SQL_LIST_IDENTITIES, (party_id,)).fetchall()

@@ -70,4 +70,5 @@ class PartySeedService:
             display_name=seed.display_name,
             src_quality=seed.source_contact_quality,
             quality=seed.contact_quality,
+            customer_code=seed.customer_code,
         )

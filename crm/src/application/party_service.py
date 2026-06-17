@@ -87,6 +87,7 @@ class PartyService:
         display_name: str,
         src_quality: str,
         quality: str,
+        customer_code: str = "",
     ) -> Party:
         """Ensure a Party exists for the given Sapo customer and attach identities.
 
@@ -135,11 +136,13 @@ class PartyService:
             )
             self._repo.create_with_identities(party, [sapo_identity])
 
-        # Step 3: attach phone/email identities (INSERT OR IGNORE semantics)
+        # Step 3: attach phone/email/customer_code identities (INSERT OR IGNORE semantics)
         if norm_phone:
             self._upsert_identity(party.party_id, "sapo", "phone", norm_phone, 1.0, False, src_quality, quality)
         if norm_email:
             self._upsert_identity(party.party_id, "sapo", "email", norm_email, 1.0, False, src_quality, quality)
+        if customer_code:
+            self._upsert_identity(party.party_id, "sapo", "customer_code", customer_code, 1.0, False, src_quality, quality)
 
         # Step 4: backfill empty golden-record fields (non-destructive)
         dirty = False

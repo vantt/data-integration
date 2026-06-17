@@ -164,4 +164,5 @@ class PartySeed:
     email: str
     source_contact_quality: str  # masked|real — warehouse-computed, immutable
     contact_quality: str         # masked|unverified|verified — initial value from warehouse
+    customer_code: str = ""
     seen_at: str = ""

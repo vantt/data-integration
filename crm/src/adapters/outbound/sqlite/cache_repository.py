@@ -68,7 +68,7 @@ class SQLiteCacheRepository:
             SELECT ps.customer_id, ps.customer_key, ps.seen_at,
                    COALESCE(ps.source_contact_quality, 'real') AS source_contact_quality,
                    COALESCE(ps.contact_quality, 'real') AS contact_quality,
-                   bc.display_name, bc.phone, bc.email
+                   bc.display_name, bc.phone, bc.email, bc.customer_code
             FROM cache.wh_party_seed ps
             LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id
         """
@@ -88,6 +88,7 @@ class SQLiteCacheRepository:
                 display_name=row["display_name"] or "",
                 phone=row["phone"] or "",
                 email=row["email"] or "",
+                customer_code=row["customer_code"] or "",
             )
             for row in rows
         ]
