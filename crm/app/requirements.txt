@@ -1,0 +1,14 @@
+# crm/app — reverse-ETL sync service
+# Pin duckdb to match the version that writes/refreshes the serving DB
+# (see ingestion/requirements.txt — must read olap.duckdb storage format).
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+jinja2==3.1.4
+duckdb==1.5.2
+# duckdb imports pytz when materializing TIMESTAMPTZ values under a named session
+# timezone (Asia/Ho_Chi_Minh). Required at runtime — omitting it crashes the first query.
+pytz==2024.2
+# zoneinfo (ICT formatting) has no tz database on Windows or python:slim images.
+tzdata==2024.2
+pydantic==2.10.6
+python-multipart==0.0.20

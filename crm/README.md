@@ -6,7 +6,7 @@ Embedded SQLite WAL CRM for ~10 sales/care staff. Enriches and standardizes ware
 
 ```
 crm/
-├── python/                     # FastAPI app (hexagonal)
+├── app/                        # FastAPI app (hexagonal)
 │   ├── domain/                 # entities, ports
 │   ├── application/            # services
 │   ├── adapters/inbound/web/   # Jinja2/HTMX screens + fragments

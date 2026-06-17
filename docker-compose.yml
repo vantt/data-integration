@@ -176,8 +176,8 @@ services:
       # Read-only: whole data_lake mounted so olap.duckdb views can resolve their parquet paths.
       - ./app_data/data_lake:/app/var/data_lake:ro
       # Dev live-reload: mount source so template/static edits are visible without rebuild.
-      - ./crm/python:/app/crm/python
-      - ./crm/python/adapters/inbound/web/static:/app/crm/python/adapters/inbound/web/static
+      - ./crm/app:/app/crm/app
+      - ./crm/app/adapters/inbound/web/static:/app/crm/app/adapters/inbound/web/static
       # Migrations: mount so new *.up.sql files are picked up on restart without image rebuild.
       - ./crm/migrations:/app/crm/migrations
     labels:

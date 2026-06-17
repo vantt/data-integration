@@ -38,7 +38,7 @@ PRAGMA busy_timeout = 5000;
 
 ```
 crm/
-├── python/                     # FastAPI app (hexagonal)
+├── app/                        # FastAPI app (hexagonal)
 │   ├── domain/                 # entities, ports
 │   ├── application/            # services
 │   ├── adapters/inbound/web/   # Jinja2/HTMX screens + fragments

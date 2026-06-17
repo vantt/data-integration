@@ -8,7 +8,7 @@ echo "[entrypoint] CRM starting — data dir: ${CRM_DATA_DIR}"
 
 # ── Step 1: Apply crm.db schema migrations ────────────────────────────────────
 echo "[entrypoint] running migrations …"
-if python3 -c "import sys,os; sys.path.insert(0,'/app'); from crm.python.adapters.outbound.sqlite.migrations import apply_migrations; apply_migrations(os.environ.get('CRM_DATA_DIR','/data'))"; then
+if python3 -c "import sys,os; sys.path.insert(0,'/app'); from crm.app.adapters.outbound.sqlite.migrations import apply_migrations; apply_migrations(os.environ.get('CRM_DATA_DIR','/data'))"; then
     echo "[entrypoint] migrations OK"
 else
     echo "[entrypoint] WARN: migrations failed" >&2
@@ -27,7 +27,7 @@ fi
 # ── Step 3: Sync warehouse party seeds → crm_party rows ──────────────────────
 # Reads cache.db (wh_party_seed); writes crm.db (crm_party + identities).
 echo "[entrypoint] running sync_parties …"
-if PYTHONPATH=/app python3 -m crm.python.sync_parties; then
+if PYTHONPATH=/app python3 -m crm.app.sync_parties; then
     echo "[entrypoint] sync_parties OK"
 else
     echo "[entrypoint] WARN: sync_parties failed — crm_party table may be empty" >&2
@@ -37,7 +37,7 @@ fi
 echo "[entrypoint] starting CRM server on :${CRM_PORT} …"
 if [ "${CRM_DEV_RELOAD:-0}" = "1" ]; then
     echo "[entrypoint] DEV mode — uvicorn --reload enabled"
-    exec python3 -m uvicorn crm.python.main:app --host 0.0.0.0 --port "${CRM_PORT:-8090}" --reload --reload-dir /app/crm/python
+    exec python3 -m uvicorn crm.app.main:app --host 0.0.0.0 --port "${CRM_PORT:-8090}" --reload --reload-dir /app/crm/app
 else
-    exec python3 -m uvicorn crm.python.main:app --host 0.0.0.0 --port "${CRM_PORT:-8090}"
+    exec python3 -m uvicorn crm.app.main:app --host 0.0.0.0 --port "${CRM_PORT:-8090}"
 fi
