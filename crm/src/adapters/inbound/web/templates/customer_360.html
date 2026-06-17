@@ -113,8 +113,8 @@
         </button>
       </div>
       {# Name + badges row #}
-      <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-2)">
-        <span style="font-size:14px;font-weight:600;color:var(--fg)">{{ party.display_name or "—" }}</span>
+      <span class="id-code--name" style="display:block;margin-bottom:var(--sp-2)">{{ party.display_name or "—" }}</span>
+      <div class="badge-row" style="margin-bottom:var(--sp-3)">
         {% if insight and insight.insight and insight.insight.value_group %}
         <span class="bdg">{{ insight.insight.value_group }}</span>
         {% endif %}
@@ -204,41 +204,35 @@
       </div>
 
       {# Contact channels #}
-      {% if identities %}
-      <div class="stack" style="gap:var(--sp-2)">
-        {% for ident in identities | sort(attribute='is_preferred', reverse=true) %}
-        {% if ident.identity_type in ['phone', 'phone_secondary', 'zalo', 'facebook', 'email'] %}
-        <div style="display:flex;align-items:center;gap:var(--sp-2);{% if ident.contact_status == 'invalid' %}opacity:0.5{% endif %}">
-          {% if ident.identity_type in ['phone', 'phone_secondary'] %}
-          <span style="color:var(--fg-muted);flex:none">{% include "icons/phone.svg" %}</span>
-          {% elif ident.identity_type == 'zalo' %}
-          <span style="color:var(--fg-muted);flex:none">{% include "icons/chat.svg" %}</span>
-          {% elif ident.identity_type == 'facebook' %}
-          <span style="color:var(--fg-muted);flex:none">{% include "icons/inbox.svg" %}</span>
-          {% else %}
-          <span style="color:var(--fg-muted);flex:none">{% include "icons/doc.svg" %}</span>
-          {% endif %}
-          <span class="fact__v mono{{ ' cell-strong' if ident.is_preferred else '' }}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ident.identity_value }}</span>
-          {% if ident.display_label %}
-          <span class="muted" style="font-size:11px;white-space:nowrap">{{ ident.display_label }}</span>
-          {% endif %}
-          {% if ident.contact_status == 'invalid' %}
-          <span class="bdg bdg--warn" style="font-size:10px">invalid</span>
-          {% elif ident.contact_status == 'unreachable' %}
-          <span class="bdg" style="font-size:10px">unreachable</span>
-          {% endif %}
-          {% if ident.identity_type in ['phone', 'phone_secondary'] and ident.contact_status == 'active' %}
-          <button class="icon-btn icon-btn--sm"
-                  onclick="navigator.clipboard.writeText('{{ ident.identity_value }}')"
-                  title="Copy số">{% include "icons/copy.svg" %}</button>
-          {% elif ident.identity_type in ['zalo', 'facebook'] and ident.contact_status == 'active' %}
-          <button class="icon-btn icon-btn--sm"
-                  hx-get="/modals/m08?party_id={{ party.party_id }}&mode=contact_attempt&channel={{ ident.identity_type }}"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  title="Ghi contact attempt">{% include "icons/doc.svg" %}</button>
-          {% endif %}
+      {% set _ch_labels = {'phone': 'SĐT', 'phone_secondary': 'SĐT 2', 'zalo': 'Zalo', 'facebook': 'FB', 'email': 'Email'} %}
+      {% set _ch_list = identities | selectattr('identity_type', 'in', ['phone', 'phone_secondary', 'zalo', 'facebook', 'email']) | sort(attribute='is_preferred', reverse=true) | list %}
+      {% if _ch_list %}
+      <div class="facts">
+        {% for ident in _ch_list %}
+        <div class="fact" style="grid-template-columns:52px 1fr{% if ident.contact_status == 'invalid' %};opacity:.5{% endif %}">
+          <span class="fact__k">{{ _ch_labels[ident.identity_type] }}</span>
+          <div style="display:flex;align-items:center;gap:var(--sp-2);min-width:0">
+            <span class="fact__v mono{{ ' cell-strong' if ident.is_preferred else '' }}" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ ident.identity_value }}</span>
+            {% if ident.display_label %}
+            <span class="muted" style="font-size:11px;white-space:nowrap">{{ ident.display_label }}</span>
+            {% endif %}
+            {% if ident.contact_status == 'invalid' %}
+            <span class="bdg bdg--warn" style="font-size:10px">invalid</span>
+            {% elif ident.contact_status == 'unreachable' %}
+            <span class="bdg" style="font-size:10px">unreachable</span>
+            {% endif %}
+            {% if ident.identity_type in ['phone', 'phone_secondary'] and ident.contact_status == 'active' %}
+            <button class="icon-btn icon-btn--sm"
+                    onclick="navigator.clipboard.writeText('{{ ident.identity_value }}')"
+                    title="Copy số">{% include "icons/copy.svg" %}</button>
+            {% elif ident.identity_type in ['zalo', 'facebook'] and ident.contact_status == 'active' %}
+            <button class="icon-btn icon-btn--sm"
+                    hx-get="/modals/m08?party_id={{ party.party_id }}&mode=contact_attempt&channel={{ ident.identity_type }}"
+                    hx-target="#modal-root" hx-swap="innerHTML"
+                    title="Ghi contact attempt">{% include "icons/doc.svg" %}</button>
+            {% endif %}
+          </div>
         </div>
-        {% endif %}
         {% endfor %}
       </div>
       {% else %}
@@ -293,7 +287,7 @@
         </div>
         <div class="fact">
           <span class="fact__k">Tenure</span>
-          <span class="fact__v">{{ first_date | days_since if first_date else "—" }}</span>
+          <span class="fact__v mono">{{ first_date | days_since if first_date else "—" }}</span>
         </div>
       </div>
     </div>

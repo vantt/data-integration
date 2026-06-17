@@ -149,7 +149,7 @@ def fmt_date_key(date_key: int | None) -> str:
 
 
 def days_since(date_str: str | None) -> str:
-    """Return tenure string from a YYYY-MM-DD date to today, e.g. '365 ngày (1 năm)'."""
+    """Return compact tenure string, e.g. '626 d (1.7 y)'."""
     if not date_str:
         return "—"
     dt = _parse_iso(date_str)
@@ -159,10 +159,10 @@ def days_since(date_str: str | None) -> str:
     if elapsed < 0:
         return "—"
     total_days = elapsed // 86400
-    years = total_days // 365
-    if years > 0:
-        return f"{total_days} ngày ({years} năm)"
-    return f"{total_days} ngày"
+    years = total_days / 365
+    if years >= 1:
+        return f"{total_days} d ({years:.1f} y)"
+    return f"{total_days} d"
 
 
 # aliases
