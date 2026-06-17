@@ -14,29 +14,45 @@ regions: [header, body, actions]
 
 ## Purpose
 
-Chỉnh sửa giá trị custom fields cho party hiện tại trong Customer 360 (S03). Render dynamically
-từ `crm_custom_field_def` registry — không hardcode fields. Mỗi field render đúng input type
-(text/number/date/bool/select/multiselect). Validate theo data_type + required trước khi save.
-Lưu vào `crm_customer_profile.custom` JSON1.
+Chỉnh sửa giá trị custom fields cho party hiện tại (entity_type='customer') trong Customer 360 (S03).
+Render dynamically từ `crm_custom_field_def` registry — không hardcode fields.
+Fields được group theo `section` và sort theo `sort_order` trong mỗi section.
+Mỗi field render đúng input type (text/number/date/bool/select/multiselect).
+Validate theo data_type + required trước khi save. Lưu vào `crm_customer_profile.custom` JSON1.
+
+Chỉ hiển thị fields có `entity_type='customer'`. Order custom fields (entity_type='order') không hiện ở đây.
 
 ## Layout
 
 ```
-┌ MODAL — Thông tin bổ sung ─────────────────────────┐
-│  Chỉnh sửa thông tin bổ sung                 [✕]  │
-├────────────────────────────────────────────────────┤
-│  Da nhạy cảm    [✓ Có / ✗ Không]  (bool)         │
-│  Nguồn KH       [Facebook ▼]       (select)       │
-│  Ngày sinh      [dd/mm/yyyy]       (date)         │
-│  Ghi chú nội bộ [________________] (text)         │
-├────────────────────────────────────────────────────┤
-│  [Hủy]                                   [Lưu]   │
-└────────────────────────────────────────────────────┘
+┌ MODAL — Thông tin bổ sung ──────────────────────────┐
+│  Chỉnh sửa thông tin bổ sung                  [✕]  │
+├─────────────────────────────────────────────────────┤
+│  ── Sức khoẻ & Da liễu ──────────────────────────   │
+│  Da nhạy cảm    [✓ Có / ✗ Không]  (bool)           │
+│  Loại da        [Da dầu ▼]         (select)         │
+│                                                     │
+│  ── Nguồn & Marketing ───────────────────────────   │
+│  Nguồn KH       [Facebook ▼]       (select)        │
+│  Ngày sinh      [dd/mm/yyyy]       (date)           │
+│                                                     │
+│  ── Nội bộ ──────────────────────────────────────   │
+│  Ghi chú nội bộ [________________] (text)          │
+├─────────────────────────────────────────────────────┤
+│  [Hủy]                                    [Lưu]   │
+└─────────────────────────────────────────────────────┘
 ```
+
+## Render Rules
+
+- Query: `SELECT * FROM crm_custom_field_def WHERE entity_type='customer' ORDER BY section, sort_order`
+- Group fields vào sections (header = section text, hoặc "Thông tin bổ sung" nếu section IS NULL)
+- Nếu chỉ có 1 section → không hiển thị section header
+- `required=true` → label có dấu * đỏ; block save nếu empty
 
 ## States
 
-- default: Fields loaded từ registry + current values prefilled
+- default: Fields loaded từ registry + current values prefilled từ crm_customer_profile.custom
 - submitting: Save in-flight
 - error: Validation lỗi inline per field
 
@@ -62,4 +78,5 @@ interactions:
     trigger: click
     guard: "form.requiredFields.allValid"
     action: mutate
-    effects: [profile.custom.update, modal.close, ui.toast.show]
+    effects: [profile.custom.update, modal.close, ui.toast.show, left_col.custom_fields.reload]
+```

@@ -16,7 +16,8 @@ regions: [topbar, sidebar, main, task_list]
 
 Màn hình chính mà Sales Rep mở mỗi buổi sáng. Hiển thị danh sách task hôm nay được giao cho NV
 (từ `crm_task` + `wh_action_queue`), sắp xếp theo due_at + priority. Mỗi task row có tên khách,
-lý do hành động (`rationale_vi`), giá trị tiềm năng (`value_at_stake_vnd`), và SĐT để gọi nhanh.
+lý do hành động (`rationale_vi`), giá trị tiềm năng (`value_at_stake_vnd`), kênh liên lạc ưu tiên,
+và `contact_pref` note inline (nếu có) để rep biết cách tiếp cận ngay mà không cần mở S03.
 
 NV nhấn vào task → Customer 360. NV có thể filter theo assignee, tag task done trực tiếp từ list,
 hoặc tạo task mới thủ công. Badge trên sidebar cập nhật theo SSE khi có task mới hoặc cache refresh.
@@ -29,19 +30,37 @@ hoặc tạo task mới thủ công. Badge trên sidebar cập nhật theo SSE k
 │  > Worklist  ●    ├─────────────────────────────────────────────────────┤
 │    Khách hàng     │  TASK LIST                                           │
 │    Inbox     3    │  ┌──────────────────────────────────────────────────┐│
-│    Tasks          │  │ ☐ CALL_NOW   Nguyễn Văn A  0901234567           ││
+│    Tasks          │  │ ☐ CALL_NOW   Nguyễn Văn A                       ││
 │    Segments       │  │   "Sắp hết hàng yêu thích — gọi ngay"           ││
-│    Chiến dịch     │  │   💰 2.400.000đ   Due: Hôm nay  [Mở hồ sơ]     ││
-│    Ads            │  ├──────────────────────────────────────────────────┤│
-│    Cài đặt        │  │ ☐ WIN_BACK   Trần Thị B    0912345678           ││
+│    Chiến dịch     │  │   💰 2.400.000đ  ·  Due: Hôm nay                ││
+│    Ads            │  │   💬 Chỉ Zalo sau 8pm                           ││
+│    Cài đặt        │  │   [📞 Gọi] [💬 Zalo] [Xem 360]                  ││
+│                   │  ├──────────────────────────────────────────────────┤│
+│  [User: NV A]     │  │ ☐ WIN_BACK   Trần Thị B                         ││
 │                   │  │   "Chưa mua 92 ngày, GOLD"                       ││
-│  [User: NV A]     │  │   💰 1.800.000đ   Due: Hôm nay  [Mở hồ sơ]     ││
+│                   │  │   💰 1.800.000đ  ·  Due: Hôm nay                ││
+│                   │  │   📞 0912 345 678                                ││
+│                   │  │   [📞 Gọi] [Xem 360]                             ││
 │                   │  └──────────────────────────────────────────────────┘│
 │                   │  ... (paginated list)                                │
 │                   │                                                      │
 │                   │  FRESHNESS: cache cập nhật lúc 07:15 ICT ✓          │
 └───────────────────┴──────────────────────────────────────────────────────┘
 ```
+
+## Task Row Detail
+
+Mỗi task row hiển thị:
+- Checkbox done + action_type badge (CALL_NOW, WIN_BACK, UPSELL, ...)
+- Tên khách hàng
+- `rationale_vi` (lý do từ action_queue hoặc task notes)
+- `value_at_stake_vnd` (nếu từ action_queue)
+- Due date + priority badge
+- `contact_pref` note inline (nếu party có note_type='contact_pref' và pinned=true)
+- Kênh liên lạc ưu tiên (`is_preferred=true` từ crm_party_identity)
+- Quick-action buttons: [Gọi] / [Zalo] / [Facebook] tuỳ theo kênh available + [Xem 360]
+
+Quick-action buttons chỉ log contact attempt (M08 mode=contact_attempt), không navigate ra ngoài.
 
 ## States
 
@@ -92,6 +111,20 @@ interactions:
     trigger: change
     action: mutate
     effects: [task_list.reload]
+  - id: A-S01-007
+    element: btn_quick_call
+    region: task_list
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload: { party_id: "$task.party_id", task_id: "$task.id", mode: "contact_attempt", channel: "phone" }
+  - id: A-S01-008
+    element: btn_quick_zalo
+    region: task_list
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload: { party_id: "$task.party_id", task_id: "$task.id", mode: "contact_attempt", channel: "zalo" }
   - id: A-S01-LSN01
     listens_to: cache.refreshed
     action: mutate

@@ -76,6 +76,14 @@ và party_id match. Ghi `converted_order_code`, `converted_revenue_vnd`, `conver
 
 v1: CRM chỉ ingest + hiển thị Messenger. Không gửi tin nhắn ra. Gửi 2 chiều để Phase 2.
 
+## R13 — Address Source Priority (manual overrides sync)
+
+`crm_party.address_source` quyết định ai được ghi đè địa chỉ:
+- `sapo_sync`: địa chỉ lấy từ shipping address đơn hàng Sapo. Sync job ghi đè bình thường.
+- `manual`: rep đã xác nhận địa chỉ thực (thường qua điện thoại vì marketplace mask địa chỉ). Sync job **không được ghi đè**.
+
+Khi rep lưu địa chỉ qua M15 → `address_source` tự động set `manual`. Chỉ reset về `sapo_sync` nếu rep xóa địa chỉ manual.
+
 ---
 
 ```yaml crm-contract
@@ -116,4 +124,7 @@ rules:
   - id: R12
     name: Messenger Read-Only v1
     surfaces: [S05, S06]
+  - id: R13
+    name: Address Source Priority
+    surfaces: [M15, S03]
 ```

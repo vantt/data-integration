@@ -15,8 +15,10 @@ regions: [header, body, actions]
 ## Purpose
 
 Tạo tag mới trong `crm_tag`. Dùng từ Settings (S13) hoặc inline từ Tag Management Modal (M03).
-Tag có name (slug), display_label, category (free text). Sau khi tạo, tag khả dụng ngay trong
-toàn hệ thống.
+Tag có name (slug), display_label, category (enum chuẩn), và optional color.
+Sau khi tạo, tag khả dụng ngay trong toàn hệ thống.
+
+Category là enum cố định để warehouse có thể group tags khi phân tích.
 
 ## Layout
 
@@ -26,12 +28,29 @@ toàn hệ thống.
 ├───────────────────────────────────────────────────┤
 │  Tag name (slug) *   [vip-repeat____________]    │
 │  Nhãn hiển thị *     [VIP Repeat____________]   │
-│  Category            [customer-segment______]   │
-│  Màu (optional)      [● Xanh  ○ Đỏ  ○ Vàng]   │
+│  Phân loại *         [Phân tầng VIP ▼]          │
+│  -- Hành vi mua      (behavioral)               │
+│  -- Đặc điểm KH      (demographic)              │
+│  -- Sở thích SP      (preference)               │
+│  -- Phân tầng VIP    (vip_tier)                 │
+│  -- Rủi ro           (risk)                     │
+│  -- Nguồn gốc        (source)                   │
+│  Màu (optional)      [● Xanh  ○ Đỏ  ○ Vàng ...]│
 ├───────────────────────────────────────────────────┤
 │  [Hủy]                               [Tạo tag]  │
 └───────────────────────────────────────────────────┘
 ```
+
+## Tag Category Enum
+
+| Value | Nhãn VI | Dùng cho |
+|-------|---------|---------|
+| `behavioral` | Hành vi mua | Hay mua cuối tuần, thích flash sale |
+| `demographic` | Đặc điểm KH | Doanh nghiệp, cá nhân, bà mẹ bỉm sữa |
+| `preference` | Sở thích SP | Thích dòng gentle, không dùng retinol |
+| `vip_tier` | Phân tầng VIP | Gold, Silver, Wholesale |
+| `risk` | Rủi ro | Nợ xấu, hay hoàn hàng |
+| `source` | Nguồn gốc | Từ ads, referral, walk-in |
 
 ## States
 
@@ -58,6 +77,7 @@ interactions:
     element: btn_create_tag
     region: actions
     trigger: click
-    guard: "form.name != '' && form.display_label != ''"
+    guard: "form.name != '' && form.display_label != '' && form.category != null"
     action: mutate
     effects: [tag.create, modal.close, ui.toast.show]
+```

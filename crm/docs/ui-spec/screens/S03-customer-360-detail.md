@@ -15,10 +15,10 @@ regions: [topbar, left_col, right_col, tab_bar]
 ## Purpose
 
 Hồ sơ đầy đủ 360° của một party. Sales Rep mở màn hình này trước khi gọi điện để nắm:
-thông tin cơ bản, insight warehouse (RFM, affinity, action_queue), lịch sử đơn hàng, tags, ghi chú cũ,
-task đang mở, và activity timeline.
+cảnh báo về khách, kênh liên lạc ưu tiên, insight warehouse (RFM, affinity, action_queue),
+insight do rep đúc kết, lịch sử đơn hàng, tags, ghi chú, task đang mở, và activity timeline.
 
-Layout 2 cột: cột trái = thông tin tĩnh (profile, identity, tags, custom fields, owner);
+Layout 2 cột: cột trái = thông tin tĩnh (warnings, contacts, address, core info, tags, custom fields);
 cột phải = tab bar chứa các panel động (Insight P01, Đơn hàng P02, Timeline P03, Tasks P04, Ghi chú P05, Hội thoại P06).
 
 Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển thị tại P01.
@@ -28,22 +28,66 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: [← Quay lại]  Nguyễn Văn A  GOLD · active          │
-│               │  SĐT: 0901234567  |  Owner: NV A  |  [Gán NV ▼]  [+ Tag]    │
+│               │  [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]                │
 │               ├──────────────────────────────────────────────────────────────┤
 │               │  LEFT COL (30%)           │  RIGHT COL (70%)                 │
 │               │  ┌─────────────────────┐  │  [Insight|Đơn|Timeline|Tasks|   │
-│               │  │ Thông tin cơ bản    │  │   Ghi chú|Chat]                 │
-│               │  │ Tên: Nguyễn Văn A   │  │                                 │
-│               │  │ SĐT: +84901234567   │  │  (P01 / P02 / P03 / P04 /      │
-│               │  │ Email: —            │  │   P05 / P06 shown here)         │
-│               │  │ Sapo ID: 12345      │  │                                 │
+│               │  │ ⚠ Cảnh báo (nếu có)│  │   Ghi chú|Chat]                 │
 │               │  ├─────────────────────┤  │                                 │
-│               │  │ Tags: [VIP] [repeat]│  │                                 │
-│               │  │ Custom fields...    │  │                                 │
+│               │  │ LIÊN LẠC        [+] │  │  (P01 / P02 / P03 / P04 /      │
+│               │  │ 📞 0901234567 Chính │  │   P05 / P06 shown here)         │
+│               │  │ 💬 zalo_id    Zalo  │  │                                 │
+│               │  ├─────────────────────┤  │                                 │
+│               │  │ ĐỊA CHỈ        [✎] │  │                                 │
+│               │  │ Q.1, TP.HCM (sync) │  │                                 │
+│               │  ├─────────────────────┤  │                                 │
+│               │  │ THÔNG TIN      [✎] │  │                                 │
+│               │  │ Tên, email, ...     │  │                                 │
+│               │  ├─────────────────────┤  │                                 │
+│               │  │ TAGS           [✎] │  │                                 │
+│               │  │ [VIP] [repeat]      │  │                                 │
+│               │  ├─────────────────────┤  │                                 │
+│               │  │ CUSTOM FIELDS  [✎] │  │                                 │
+│               │  │ (grouped by section)│  │                                 │
+│               │  ├─────────────────────┤  │                                 │
 │               │  │ Consent: ✓          │  │                                 │
 │               │  └─────────────────────┘  │                                 │
 └───────────────┴──────────────────────────────────────────────────────────────┘
 ```
+
+## Left Column Sections
+
+### Cảnh báo (warning notes)
+- Chỉ hiển thị khi có `crm_note.note_type='warning'` và `is_active=true`
+- Luôn nằm đầu left col, nền đỏ nhạt
+- Click → expand note body
+- Chỉ manager mới xóa được warning note
+
+### Liên lạc
+- Render tất cả `crm_party_identity` của party, group theo identity_type
+- Mỗi row: icon type, value, display_label, status badge (invalid/dnc nếu không active)
+- `is_preferred=true` → hiển thị trước, bold
+- Quick-action: click phone → copy số; click zalo/facebook → log contact attempt (M08 mode=contact_attempt)
+- [+] → M15 (Add/Edit Contact)
+- `contact_pref` notes hiển thị inline bên dưới contact list
+
+### Địa chỉ
+- Hiển thị `address_line`, ward, district, province
+- Badge nguồn: `sapo_sync` (xám) hoặc `manual` (xanh lá, "đã xác nhận")
+- `address_note` hiển thị italic nếu có
+- [✎] → M15 (Edit Address tab)
+
+### Thông tin cơ bản
+- display_name, email (từ crm_party_identity type=email), ngày sinh (nếu có)
+- [✎] → M15 (Edit Core Info tab)
+
+### Tags
+- [✎] → M03
+
+### Custom Fields
+- Grouped by `crm_custom_field_def.section`, entity_type='customer'
+- Sort theo sort_order trong mỗi section
+- [✎] → M06
 
 ## States
 
@@ -51,6 +95,7 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 - ST-360-NO-PROFILE: Profile chưa tạo → CTA "Tạo hồ sơ"
 - ST-360-NO-INSIGHT: Insight chưa có trong cache → placeholder + refreshed_at
 - ST-360-MERGED: Party is_merged=true → warning banner + link to surviving party
+- ST-360-WARNING: Có warning note → red banner đầu left col
 
 ## Interactions
 
@@ -133,6 +178,34 @@ interactions:
     action: open_overlay
     target: M05
     payload: { party_id: "$party.id" }
+  - id: A-S03-013
+    element: btn_edit_contacts
+    region: left_col
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload: { party_id: "$party.id", tab: "contacts" }
+  - id: A-S03-014
+    element: btn_edit_address
+    region: left_col
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload: { party_id: "$party.id", tab: "address" }
+  - id: A-S03-015
+    element: btn_edit_core_info
+    region: left_col
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload: { party_id: "$party.id", tab: "core" }
+  - id: A-S03-016
+    element: contact_channel_quick_action
+    region: left_col
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload: { party_id: "$party.id", mode: "contact_attempt", channel: "$channel.type" }
   - id: A-S03-LSN01
     listens_to: cache.refreshed
     action: mutate

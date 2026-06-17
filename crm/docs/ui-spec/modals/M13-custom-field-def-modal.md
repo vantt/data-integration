@@ -15,8 +15,8 @@ regions: [header, body, actions]
 ## Purpose
 
 Tạo mới hoặc chỉnh sửa `crm_custom_field_def` từ Settings (S13). Định nghĩa field mới không
-cần migration — schema-less JSON1. Admin chọn: field_name (slug), display_label, data_type
-(text/number/date/bool/select/multiselect), required, options (nếu select/multiselect).
+cần migration — schema-less JSON1. Admin chọn: entity_type (customer/order), field_name (slug),
+display_label, section (grouping), sort_order, data_type, required, options (select/multiselect).
 
 ## Layout
 
@@ -24,20 +24,33 @@ cần migration — schema-less JSON1. Admin chọn: field_name (slug), display_
 ┌ MODAL — Định nghĩa custom field ──────────────────┐
 │  Tạo custom field mới                        [✕]  │
 ├───────────────────────────────────────────────────┤
+│  Áp dụng cho *    [● Khách hàng  ○ Đơn hàng]    │
 │  Field name (slug) *  [da_nhay_cam__________]    │
 │  Nhãn hiển thị *      [Da nhạy cảm__________]   │
+│  Section (nhóm)       [Sức khoẻ & Da liễu___]   │
+│  Thứ tự hiển thị      [1]                        │
 │  Loại dữ liệu *       [Boolean (Có/Không) ▼]    │
-│  Bắt buộc             [○ Có  ● Không]           │
+│  -- Text / Số / Ngày / Boolean / Chọn / Đa chọn  │
+│  Bắt buộc             [○ Có  ● Không]            │
 │  (options — chỉ hiện khi loại = select):         │
-│  Tùy chọn             [+ Thêm tùy chọn]         │
+│  Tùy chọn             [+ Thêm tùy chọn]          │
 ├───────────────────────────────────────────────────┤
 │  [Hủy]                                  [Lưu]   │
 └───────────────────────────────────────────────────┘
 ```
 
+## Field Notes
+
+- `entity_type`: bắt buộc. Quyết định field hiện ở M06 (customer) hay trong order detail (order)
+- `section`: free-text, không enum. VD: "Sức khoẻ & Da liễu", "Nguồn & Marketing", "Nội bộ"
+- `sort_order`: integer, sort trong cùng section. Mặc định = số thứ tự tạo
+- `field_name`: slug không dấu, dùng làm key trong JSON1. Không thể đổi sau khi tạo (edit lock)
+- Khi edit: field_name readonly, chỉ sửa được display_label, section, sort_order, required, options
+
 ## States
 
 - default: Form trống hoặc prefilled khi edit
+- edit_mode: field_name input disabled
 - submitting: Save in-flight
 
 ## Interactions
@@ -66,6 +79,7 @@ interactions:
     element: btn_save
     region: actions
     trigger: click
-    guard: "form.field_name != '' && form.display_label != '' && form.data_type != null"
+    guard: "form.entity_type != null && form.field_name != '' && form.display_label != '' && form.data_type != null"
     action: mutate
-    effects: [custom_field_def.save, modal.close, ui.toast.show]
+    effects: [custom_field_def.save, modal.close, ui.toast.show, settings_list.reload]
+```
