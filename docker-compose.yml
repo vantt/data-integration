@@ -177,7 +177,7 @@ services:
       - ./app_data/data_lake:/app/var/data_lake:ro
       # Dev live-reload: mount source so template/static edits are visible without rebuild.
       - ./crm/python:/app/crm/python
-      - ./crm/app/internal/adapters/inbound/web/static:/app/crm/app/internal/adapters/inbound/web/static
+      - ./crm/python/adapters/inbound/web/static:/app/crm/python/adapters/inbound/web/static
       # Migrations: mount so new *.up.sql files are picked up on restart without image rebuild.
       - ./crm/migrations:/app/crm/migrations
     labels:

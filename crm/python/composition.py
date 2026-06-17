@@ -31,6 +31,7 @@ from adapters.outbound.sqlite.profile_repository import SQLiteProfileRepository
 from adapters.outbound.sqlite.custom_field_repository import SQLiteCustomFieldRepository
 from adapters.outbound.sqlite.tag_note_repository import SQLiteTagRepository, SQLiteNoteRepository
 from adapters.outbound.sqlite.cache_repository import SQLiteCacheRepository
+from adapters.outbound.sqlite.action_state_repository import SQLiteActionStateRepository
 from adapters.outbound.sqlite.activity_repository import SQLiteActivityRepository
 from adapters.outbound.sqlite.task_repository import SQLiteTaskRepository
 from adapters.outbound.sqlite.conversation_repository import SQLiteConversationRepository
@@ -86,16 +87,12 @@ log = logging.getLogger(__name__)
 # Paths relative to this file (crm/python/).
 _THIS_DIR = Path(__file__).parent
 _TEMPLATES_DIR = _THIS_DIR / "adapters" / "inbound" / "web" / "templates"
-# Static assets: fall back to the Go web adapter's static dir when no Python-specific dir exists.
 _STATIC_DIR = _THIS_DIR / "adapters" / "inbound" / "web" / "static"
-_GO_STATIC_DIR = _THIS_DIR.parent / "app" / "internal" / "adapters" / "inbound" / "web" / "static"
 
 
 def _resolve_static_dir() -> Optional[Path]:
     if _STATIC_DIR.exists():
         return _STATIC_DIR
-    if _GO_STATIC_DIR.exists():
-        return _GO_STATIC_DIR
     return None
 
 
@@ -113,6 +110,7 @@ def create_app() -> FastAPI:
     party_repo = SQLitePartyRepository(conn)
     dedup_repo = SQLiteDedupRepository(conn)
     cache_repo = SQLiteCacheRepository(conn)
+    action_state_repo = SQLiteActionStateRepository(conn)
     profile_repo = SQLiteProfileRepository(db)
     cf_repo = SQLiteCustomFieldRepository(db)
     tag_repo = SQLiteTagRepository(db)
@@ -232,6 +230,7 @@ def create_app() -> FastAPI:
         action_queue=cache_repo,
         tasks=task_svc,
         task_writer=task_svc,
+        action_state=action_state_repo,
     ))
     app.include_router(make_customer_list_router(
         templates=templates,
