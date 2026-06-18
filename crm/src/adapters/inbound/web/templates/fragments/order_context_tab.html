@@ -169,6 +169,77 @@
     </div>
   </div>
 
+  {# ── Section 4: Event Timeline ── #}
+  {% set h_tl = order.header %}
+  {% set has_tl = h_tl.created_at or h_tl.first_shipped_at or order.payments or order.returns or h_tl.updated_at %}
+  {% if has_tl %}
+  <div class="tabpanel stack-4">
+    <div class="panel-head">
+      <span class="panel-title">Event timeline</span>
+      <span class="panel-sub">fact_orders · fact_payments · fact_order_returns</span>
+    </div>
+    <div class="timeline scard" style="padding-left:calc(var(--sp-5) + var(--sp-4))">
+
+      {# Created #}
+      {% if h_tl.created_at %}
+      <div class="tl-item tl-item--muted">
+        <div class="tl-time">{{ h_tl.created_at | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-title">Order created</div>
+      </div>
+      {% endif %}
+
+      {# First shipped #}
+      {% if h_tl.first_shipped_at %}
+      <div class="tl-item">
+        <div class="tl-time">{{ h_tl.first_shipped_at | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-title">First shipped</div>
+      </div>
+      {% endif %}
+
+      {# Payment events — prefer payment_timestamp, fall back to paid_on #}
+      {% for p in order.payments %}
+        {% set ptimestamp = p.payment_timestamp if p.payment_timestamp else p.paid_on %}
+        {% if ptimestamp %}
+        <div class="tl-item tl-item--good">
+          <div class="tl-time">{{ ptimestamp | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+          <div class="tl-title">Payment{% if p.payment_method_name %} · {{ p.payment_method_name }}{% endif %}</div>
+          <div class="tl-meta">
+            {{ p.amount | fmt_vnd }}
+            {% if p.status %}&nbsp;<span class="bdg {% if p.status | upper in ('PAID', 'COMPLETED') %}bdg--good{% endif %}">{{ p.status }}</span>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      {# Return events #}
+      {% for r in order.returns %}
+        {% if r.return_date %}
+        <div class="tl-item tl-item--bad">
+          <div class="tl-time">{{ r.return_date | format_date_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+          <div class="tl-title">Return event</div>
+          <div class="tl-meta">
+            refund {{ r.refund_amount | fmt_vnd }}
+            {% if r.return_reason %} · {{ r.return_reason }}{% endif %}
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      {# Last updated / completed #}
+      {% if h_tl.updated_at %}
+      <div class="tl-item tl-item--{{ 'good' if h_tl.time_to_complete_hours is not none else 'muted' }}">
+        <div class="tl-time">{{ h_tl.updated_at | format_datetime_ict }} <span class="caption" style="margin-left:6px">ICT</span></div>
+        <div class="tl-title">{% if h_tl.time_to_complete_hours is not none %}Completed{% else %}Last updated{% endif %}</div>
+        {% if h_tl.time_to_complete_hours is not none %}
+        <div class="tl-meta">time to complete: {{ h_tl.time_to_complete_hours }} h</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+  {% endif %}
+
   {# ── Section 3: Customer action (only when linked customer has an action) ── #}
   {% if order.customer and order.customer.customer_action_type %}
   {% set c = order.customer %}
