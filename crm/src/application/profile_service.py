@@ -274,7 +274,9 @@ class ProfileService:
 
     # --- Notes ---
 
-    def add_note(self, party_id: str, body: str, author_user_id: Optional[str] = None) -> Note:
+    def add_note(self, party_id: str, body: str, author_user_id: Optional[str] = None,
+                 note_type: str = "general", pinned: bool = False, visibility: str = "team",
+                 source_activity_id: Optional[str] = None) -> Note:
         if not body.strip():
             raise ValueError("profile service: note body must not be empty")
         note = Note(
@@ -283,12 +285,25 @@ class ProfileService:
             body=body,
             author_user_id=author_user_id,
             created_at=_utc_now(),
+            note_type=note_type,
+            pinned=pinned,
+            visibility=visibility,
+            source_activity_id=source_activity_id,
         )
         self._notes.add_note(note)
         return note
 
     def list_notes(self, party_id: str) -> list[Note]:
         return self._notes.list_notes(party_id)
+
+    def update_note(self, note_id: str, body: str, note_type: str = "general",
+                    pinned: bool = False, visibility: str = "team") -> None:
+        if not body.strip():
+            raise ValueError("profile service: note body must not be empty")
+        self._notes.update_note(note_id, body, note_type, pinned, visibility)
+
+    def delete_note(self, note_id: str) -> None:
+        self._notes.soft_delete_note(note_id)
 
     # --- Owner ---
 

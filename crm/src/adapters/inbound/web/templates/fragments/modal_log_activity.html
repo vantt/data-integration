@@ -1,37 +1,56 @@
-{# @surface M08 · Log Activity Modal | @source crm/docs/ui-spec/modals/M08-log-activity-modal.md | @kind MODAL #}
-{#
-  M08 Log Activity — HTMX-served modal fragment.
-  GET  /modals/m08?party_id=<id>&mode=<activity|contact_attempt|note_only|edit_note>&note_id=<id>&party_name=<str>
-  POST /customers/<party_id>/log-activity          (mode: activity, contact_attempt)
-  POST /customers/<party_id>/notes                  (mode: note_only)
-  POST /customers/<party_id>/notes/<note_id>        (mode: edit_note)
-  Response swaps into #modal-root.
-  R6: all datetime inputs pre-filled to ICT (UTC+7) via inline JS.
-#}
-{% set mode = mode | default('activity') %}
+{# @surface M08 · Log Activity Modal — unified contact log | @kind MODAL #}
+{# GET  /modals/m08?party_id=<id>&mode=log|edit_note&note_id=<id>&party_name=<str>  #}
+{# POST /customers/<party_id>/log-activity  (mode: log)                             #}
+{# POST /customers/<party_id>/notes/<note_id>  (mode: edit_note)                   #}
+{% set mode = mode | default('log') %}
 {% set party_id = party_id | default('') %}
 {% set note_id = note_id | default('') %}
 {% set party_name = party_name | default('') %}
 {% set contact_pref_notes = contact_pref_notes | default([]) %}
+{% set identities = identities | default([]) %}
 {% set note_body = note_body | default('') %}
 {% set note_type_val = note_type_val | default('general') %}
 {% set note_pinned = note_pinned | default(False) %}
 {% set note_visibility = note_visibility | default('team') %}
 
-{# Determine title and save endpoint per mode #}
-{% if mode == 'contact_attempt' %}
-  {% set modal_title = 'Ghi nhận liên lạc' %}
-  {% set save_url = '/customers/' ~ party_id ~ '/log-activity' %}
-{% elif mode == 'note_only' %}
-  {% set modal_title = 'Thêm ghi chú' %}
-  {% set save_url = '/customers/' ~ party_id ~ '/notes' %}
-{% elif mode == 'edit_note' %}
-  {% set modal_title = 'Sửa ghi chú' %}
-  {% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}
-{% else %}
-  {% set modal_title = 'Ghi log hoạt động' %}
-  {% set save_url = '/customers/' ~ party_id ~ '/log-activity' %}
-{% endif %}
+{# Partition identities by channel type #}
+{% set ns = namespace(call_ids=[], zalo_ids=[], fb_ids=[], email_ids=[]) %}
+{% for idn in identities %}
+  {% if idn.identity_type in ('phone', 'phone_secondary') %}{% set ns.call_ids = ns.call_ids + [idn] %}
+  {% elif idn.identity_type == 'zalo' %}{% set ns.zalo_ids = ns.zalo_ids + [idn] %}
+  {% elif idn.identity_type in ('facebook', 'psid') %}{% set ns.fb_ids = ns.fb_ids + [idn] %}
+  {% elif idn.identity_type == 'email' %}{% set ns.email_ids = ns.email_ids + [idn] %}
+  {% endif %}
+{% endfor %}
+
+{% if mode == 'edit_note' %}{% set modal_title = 'Sửa ghi chú' %}{% set save_url = '/customers/' ~ party_id ~ '/notes/' ~ note_id %}
+{% else %}{% set modal_title = 'Ghi nhận tiếp xúc' %}{% set save_url = '/customers/' ~ party_id ~ '/log-activity' %}{% endif %}
+
+{# ── Identity section macro ─────────────────────────────────────────────── #}
+{% macro identity_section(sec_id, label, ids) %}
+<div id="{{ sec_id }}" class="field" style="display:none;">
+  <span class="field__label">{{ label }}</span>
+  {% if not ids %}
+  <span class="field__hint">Không có trong hồ sơ — bỏ qua</span>
+  {% elif ids | length == 1 %}
+  <div class="radio-pill radio-pill--on" style="cursor:default;"
+       data-chan-id="{{ ids[0].identity_id }}" data-chan-val="{{ ids[0].identity_value }}">
+    <span class="radio-pill__dot"></span>{{ ids[0].identity_value }}{% if ids[0].is_primary %} (chính){% endif %}
+  </div>
+  {% else %}
+  <div class="radioset">
+    {% for idn in ids %}
+    <label class="radio-pill{% if idn.is_primary %} radio-pill--on{% endif %}"
+           data-chan-id="{{ idn.identity_id }}" data-chan-val="{{ idn.identity_value }}"
+           {% if idn.contact_quality == 'masked' %}style="opacity:.55"{% endif %}
+           onclick="m08PickChan(this,'{{ idn.identity_id }}','{{ idn.identity_value }}')">
+      <span class="radio-pill__dot"></span>{{ idn.identity_value }}{% if idn.is_primary %} (chính){% endif %}
+    </label>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endmacro %}
 
 <div class="modal-scrim"
      hx-get=""
@@ -40,19 +59,12 @@
      hx-trigger="click[!event.target.closest('.modal')]">
   <div class="modal" role="dialog" aria-modal="true" aria-label="{{ modal_title }}">
 
-    {# ── Head ── #}
     <div class="modal__head">
       <div>
         <div class="modal__title">{{ modal_title }}</div>
-        {% if party_name %}
-          <div class="modal__sub">{{ party_name }}</div>
-        {% endif %}
+        {% if party_name %}<div class="modal__sub">{{ party_name }}</div>{% endif %}
       </div>
-      <button class="icon-btn"
-              hx-get=""
-              hx-target="#modal-root"
-              hx-swap="innerHTML"
-              aria-label="Đóng">
+      <button class="icon-btn" hx-get="" hx-target="#modal-root" hx-swap="innerHTML" aria-label="Đóng">
         <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none"
              stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
           <path d="M2 2l10 10M12 2L2 12"/>
@@ -60,305 +72,312 @@
       </button>
     </div>
 
-    {# ── Mode tabs ── #}
-    <div class="modal__body" style="padding-bottom:0;gap:0;">
-      <div class="radioset" role="tablist" style="gap:var(--sp-2);flex-wrap:wrap;">
-        {% set tabs = [
-          ('activity',        'Hoạt động'),
-          ('contact_attempt', 'Liên lạc'),
-          ('note_only',       'Ghi chú'),
-        ] + ([('edit_note', 'Sửa ghi chú')] if note_id else []) %}
-        {% for tab_mode, tab_label in tabs %}
-          <button type="button" role="tab"
-                  class="radio-pill{% if mode == tab_mode %} radio-pill--on{% endif %}"
-                  hx-get="/modals/m08?party_id={{ party_id }}&mode={{ tab_mode }}{% if note_id %}&note_id={{ note_id }}{% endif %}{% if party_name %}&party_name={{ party_name | urlencode }}{% endif %}"
-                  hx-target="#modal-root"
-                  hx-swap="innerHTML"
-                  aria-selected="{{ 'true' if mode == tab_mode else 'false' }}">
-            <span class="radio-pill__dot"></span>
-            {{ tab_label }}
-          </button>
-        {% endfor %}
-      </div>
-    </div>
-
-    {# ── Form ── #}
-    <form hx-post="{{ save_url }}"
-          hx-target="#modal-root"
-          hx-swap="innerHTML">
+    <form hx-post="{{ save_url }}" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
-      <input type="hidden" name="mode" value="{{ mode }}">
       {% if note_id %}<input type="hidden" name="note_id" value="{{ note_id }}">{% endif %}
 
       <div class="modal__body">
 
         {# ── Contact pref banner ── #}
         {% if contact_pref_notes %}
-          <div class="caveat caveat--warn" style="display:flex;flex-direction:column;gap:var(--sp-2);">
-            <div style="display:flex;align-items:center;gap:var(--sp-2);font-weight:var(--fw-medium);font-size:13px;color:var(--fg-1);">
-              <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none"
-                   stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 6v3m0 2.5h.01"/>
-              </svg>
-              Lưu ý ưu tiên liên lạc
-            </div>
-            {% for pref in contact_pref_notes %}
-              <div style="font-size:13.5px;color:var(--fg-1);line-height:1.45;">💬 {{ pref.body }}</div>
-            {% endfor %}
+        <div class="caveat caveat--warn" style="display:flex;flex-direction:column;gap:var(--sp-2);">
+          <div style="display:flex;align-items:center;gap:var(--sp-2);font-weight:var(--fw-medium);font-size:13px;color:var(--fg-1);">
+            <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none"
+                 stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 2.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM8 6v3m0 2.5h.01"/>
+            </svg>
+            Lưu ý ưu tiên liên lạc
           </div>
+          {% for pref in contact_pref_notes %}
+          <div style="font-size:13.5px;color:var(--fg-1);line-height:1.45;">💬 {{ pref.body }}</div>
+          {% endfor %}
+        </div>
         {% endif %}
 
-        {# ══════════════════════════════════════════════════════ #}
-        {# Mode: activity                                         #}
-        {# ══════════════════════════════════════════════════════ #}
-        {% if mode == 'activity' %}
-
-          <label class="field">
-            <span class="field__label">LOẠI<span class="field__req">*</span></span>
-            <div class="radioset">
-              {% set act_types = [
-                ('call',  'Cuộc gọi'),
-                ('note',  'Ghi chú'),
-                ('email', 'Email'),
-                ('other', 'Khác'),
-              ] %}
-              {% for val, label in act_types %}
-                <label class="radio-pill{% if val == 'call' %} radio-pill--on{% endif %}"
-                       onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
-                  <span class="radio-pill__dot"></span>
-                  <input type="radio" name="activity_type" value="{{ val }}"
-                         {% if val == 'call' %}checked{% endif %} class="sr-only"> {{ label }}
-                </label>
+        {% if mode == 'edit_note' %}
+        {# ════════════════════════════════════════════════ #}
+        {# edit_note form                                    #}
+        {# ════════════════════════════════════════════════ #}
+        <label class="field">
+          <span class="field__label">LOẠI GHI CHÚ</span>
+          <div class="inp-sel">
+            <select name="note_type" class="inp">
+              {% for val, lbl in [('general','Chung'),('preference','Sở thích'),('contact_pref','Ưu tiên liên lạc'),('warning','Cảnh báo'),('outcome','Kết quả'),('internal','Nội bộ')] %}
+              <option value="{{ val }}"{% if val == note_type_val %} selected{% endif %}>{{ lbl }}</option>
               {% endfor %}
-            </div>
-          </label>
-
-          <label class="field">
-            <span class="field__label">KẾT QUẢ / NỘI DUNG<span class="field__req">*</span></span>
-            <textarea name="body" class="inp inp--area" rows="4"
-                      placeholder="Khách xác nhận sẽ đặt tuần tới..." required></textarea>
-          </label>
-
-          <label class="field">
-            <span class="field__label">ĐƠN LIÊN QUAN</span>
-            <input type="text" name="related_order_code" class="inp inp--mono"
-                   placeholder="ORD-20060812">
-            <span class="field__hint">(tùy chọn)</span>
-          </label>
-
-          <label class="field">
-            <span class="field__label">THỜI GIAN (ICT)</span>
-            <input type="datetime-local" name="occurred_at" id="m08-occurred-at"
-                   class="inp inp--mono">
-          </label>
-
-        {# ══════════════════════════════════════════════════════ #}
-        {# Mode: contact_attempt                                  #}
-        {# ══════════════════════════════════════════════════════ #}
-        {% elif mode == 'contact_attempt' %}
-
-          <label class="field">
-            <span class="field__label">KÊNH<span class="field__req">*</span></span>
-            <div class="radioset">
-              {% set channels = [
-                ('phone',    'Phone'),
-                ('zalo',     'Zalo'),
-                ('facebook', 'Facebook'),
-                ('visit',    'Ghé thăm'),
-              ] %}
-              {% for val, label in channels %}
-                <label class="radio-pill{% if val == 'phone' %} radio-pill--on{% endif %}"
-                       onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
-                  <span class="radio-pill__dot"></span>
-                  <input type="radio" name="channel_used" value="{{ val }}"
-                         {% if val == 'phone' %}checked{% endif %} class="sr-only"> {{ label }}
-                </label>
-              {% endfor %}
-            </div>
-          </label>
-
-          <label class="field">
-            <span class="field__label">KẾT QUẢ<span class="field__req">*</span></span>
-            <div class="radioset" id="m08-outcome-set"
-                 onchange="m08ToggleOutcomeFields()">
-              {% set outcomes = [
-                ('answered',  'Đã nghe'),
-                ('no_answer', 'Không bắt'),
-                ('callback',  'Hẹn lại'),
-                ('declined',  'Từ chối'),
-              ] %}
-              {% for val, label in outcomes %}
-                <label class="radio-pill{% if val == 'answered' %} radio-pill--on{% endif %}"
-                       onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on');m08ToggleOutcomeFields()">
-                  <span class="radio-pill__dot"></span>
-                  <input type="radio" name="contact_outcome" value="{{ val }}"
-                         {% if val == 'answered' %}checked{% endif %} class="sr-only"> {{ label }}
-                </label>
-              {% endfor %}
-            </div>
-          </label>
-
-          {# Conditional: note textarea (shown when outcome=answered) #}
-          <div id="m08-note-wrap" class="field">
-            <span class="field__label">GHI CHÚ NỘI DUNG</span>
-            <textarea name="body" class="inp inp--area" rows="3"
-                      placeholder="Nội dung trao đổi..."></textarea>
+            </select>
+            <span class="inp-sel__chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg></span>
           </div>
+        </label>
+        <label class="field">
+          <span class="field__label">NỘI DUNG<span class="field__req">*</span></span>
+          <textarea name="body" class="inp inp--area" rows="4" placeholder="Ghi chú về khách hàng..." required>{{ note_body }}</textarea>
+        </label>
+        <div class="field">
+          <span class="field__label">GHIM GHI CHÚ</span>
+          <div class="radioset">
+            <label class="radio-pill{% if not note_pinned %} radio-pill--on{% endif %}" onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')"><span class="radio-pill__dot"></span><input type="radio" name="pinned" value="0"{% if not note_pinned %} checked{% endif %} class="sr-only">Không ghim</label>
+            <label class="radio-pill{% if note_pinned %} radio-pill--on{% endif %}" onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')"><span class="radio-pill__dot"></span><input type="radio" name="pinned" value="1"{% if note_pinned %} checked{% endif %} class="sr-only">Ghim</label>
+          </div>
+        </div>
+        <label class="field">
+          <span class="field__label">HIỂN THỊ</span>
+          <div class="inp-sel">
+            <select name="visibility" class="inp">
+              {% for val, lbl in [('team','Team'),('manager','Manager'),('private','Riêng')] %}
+              <option value="{{ val }}"{% if val == note_visibility %} selected{% endif %}>{{ lbl }}</option>
+              {% endfor %}
+            </select>
+            <span class="inp-sel__chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg></span>
+          </div>
+        </label>
 
-          {# Conditional: callback datetime (shown when outcome=callback) #}
-          <div id="m08-callback-wrap" class="field" style="display:none;">
-            <span class="field__label">HẸN GỌI LẠI LÚC<span class="field__req">*</span></span>
-            <input type="datetime-local" name="callback_at" id="m08-callback-at"
-                   class="inp inp--mono">
-            <label class="chk-row" style="margin-top:var(--sp-2);">
-              <span class="chk-box chk-box--on" style="pointer-events:none;">
-                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                     stroke-linejoin="round" aria-hidden="true">
-                  <path d="M2 6l3 3 5-5"/>
-                </svg>
-              </span>
-              <input type="hidden" name="create_callback_task" value="1">
-              <span class="chk-row__text">Tạo task nhắc tự động</span>
+        {% else %}
+        {# ════════════════════════════════════════════════ #}
+        {# unified log form                                  #}
+        {# ════════════════════════════════════════════════ #}
+
+        {# HÌNH THỨC #}
+        <input type="hidden" name="hinh_thuc" id="m08-ht" value="call">
+        <div class="field">
+          <span class="field__label">HÌNH THỨC<span class="field__req">*</span></span>
+          <div class="radioset" id="m08-ht-set">
+            {% for val, icon, lbl in [('call','📞','Cuộc Gọi'),('zalo','💬','Zalo'),('fb','📘','Facebook'),('email','✉','Email'),('visit','🚶','Thăm'),('other','⋯','Khác')] %}
+            <label class="radio-pill{% if val == 'call' %} radio-pill--on{% endif %}" onclick="m08PickHT(this,'{{ val }}')">
+              <span class="radio-pill__dot"></span>{{ icon }} {{ lbl }}
             </label>
+            {% endfor %}
           </div>
+        </div>
 
-          <label class="field">
-            <span class="field__label">THỜI LƯỢNG (giây, tùy chọn)</span>
-            <input type="number" name="duration_seconds" class="inp inp--mono"
-                   min="0" placeholder="120">
+        {# KÊNH CỤ THỂ #}
+        <input type="hidden" name="channel_identity_id" id="m08-chan-id" value="">
+        <input type="hidden" name="channel_value" id="m08-chan-val" value="">
+        {{ identity_section('m08-sec-call', 'SỐ ĐIỆN THOẠI', ns.call_ids) }}
+        {{ identity_section('m08-sec-zalo', 'TÀI KHOẢN ZALO', ns.zalo_ids) }}
+        {{ identity_section('m08-sec-fb',   'TÀI KHOẢN FACEBOOK', ns.fb_ids) }}
+        {{ identity_section('m08-sec-email','ĐỊA CHỈ EMAIL', ns.email_ids) }}
+
+        {# KẾT QUẢ #}
+        <input type="hidden" name="outcome" id="m08-out" value="">
+
+        <div id="m08-sec-out-call" class="field">
+          <span class="field__label">KẾT QUẢ<span class="field__req">*</span></span>
+          <div class="radioset">
+            {% for val, lbl in [('answered','Đã nghe'),('no_answer','Không bắt'),('callback','Hẹn lại'),('declined','Từ chối')] %}
+            <label class="radio-pill" onclick="m08PickOut(this,'{{ val }}')"><span class="radio-pill__dot"></span>{{ lbl }}</label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div id="m08-sec-out-chat" class="field" style="display:none;">
+          <span class="field__label">KẾT QUẢ<span class="field__req">*</span></span>
+          <div class="radioset">
+            {% for val, lbl in [('replied','Đã phản hồi'),('pending','Chưa phản hồi'),('no_reply','Không phản hồi')] %}
+            <label class="radio-pill" onclick="m08PickOut(this,'{{ val }}')"><span class="radio-pill__dot"></span>{{ lbl }}</label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div id="m08-sec-out-visit" class="field" style="display:none;">
+          <span class="field__label">KẾT QUẢ<span class="field__req">*</span></span>
+          <div class="radioset">
+            {% for val, lbl in [('met','Gặp được'),('not_met','Không gặp được')] %}
+            <label class="radio-pill" onclick="m08PickOut(this,'{{ val }}')"><span class="radio-pill__dot"></span>{{ lbl }}</label>
+            {% endfor %}
+          </div>
+        </div>
+
+        {# HẸN LẠI — shown when outcome = callback #}
+        <div id="m08-callback-wrap" class="field" style="display:none;">
+          <span class="field__label">HẸN GỌI LẠI LÚC<span class="field__req">*</span></span>
+          <input type="datetime-local" name="callback_at" id="m08-callback-at" class="inp inp--mono">
+          <label class="chk-row" style="margin-top:var(--sp-2);">
+            <span class="chk-box chk-box--on" style="pointer-events:none;">
+              <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 6l3 3 5-5"/>
+              </svg>
+            </span>
+            <input type="hidden" name="create_callback_task" value="1">
+            <span class="chk-row__text">Tạo task nhắc tự động</span>
           </label>
+        </div>
 
-          <label class="field">
-            <span class="field__label">THỜI GIAN (ICT)</span>
-            <input type="datetime-local" name="occurred_at" id="m08-occurred-at"
-                   class="inp inp--mono">
-          </label>
+        {# NỘI DUNG #}
+        <div class="field">
+          <span class="field__label">NỘI DUNG</span>
+          <textarea name="body" id="m08-body" class="inp inp--area" rows="3"
+                    placeholder="Nội dung trao đổi..."></textarea>
+        </div>
 
-        {# ══════════════════════════════════════════════════════ #}
-        {# Mode: note_only / edit_note                            #}
-        {# ══════════════════════════════════════════════════════ #}
-        {% elif mode in ('note_only', 'edit_note') %}
-
+        {# LƯU THÀNH GHI CHÚ #}
+        <label class="chk-row" onclick="m08ToggleSaveNote()">
+          <span class="chk-box" id="m08-sanote-box">
+            <svg id="m08-sanote-chk" width="10" height="10" viewBox="0 0 12 12" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true" style="display:none;">
+              <path d="M2 6l3 3 5-5"/>
+            </svg>
+          </span>
+          <input type="checkbox" name="save_as_note" value="1" id="m08-save-note-chk" class="sr-only">
+          <span class="chk-row__text">Lưu thành ghi chú hồ sơ</span>
+        </label>
+        <div id="m08-note-opts" style="display:none;border-left:2px solid var(--border);padding-left:var(--sp-4);margin-top:var(--sp-2);" class="stack stack-3">
           <label class="field">
             <span class="field__label">LOẠI GHI CHÚ</span>
             <div class="inp-sel">
-              <select name="note_type" class="inp">
-                {% set note_types = [
-                  ('general',      'Chung'),
-                  ('preference',   'Sở thích'),
-                  ('contact_pref', 'Ưu tiên liên lạc'),
-                  ('warning',      'Cảnh báo'),
-                  ('outcome',      'Kết quả'),
-                  ('internal',     'Nội bộ'),
-                ] %}
-                {% for val, label in note_types %}
-                  <option value="{{ val }}"
-                          {% if val == note_type_val %}selected{% endif %}>{{ label }}</option>
+              <select name="note_type" id="m08-note-type" class="inp">
+                {% for val, lbl in [('outcome','Kết quả'),('general','Chung'),('preference','Sở thích'),('warning','Cảnh báo'),('internal','Nội bộ')] %}
+                <option value="{{ val }}">{{ lbl }}</option>
                 {% endfor %}
               </select>
-              <span class="inp-sel__chev" aria-hidden="true">
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
-                     stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
-                     stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg>
-              </span>
+              <span class="inp-sel__chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg></span>
             </div>
           </label>
-
-          <label class="field">
-            <span class="field__label">NỘI DUNG<span class="field__req">*</span></span>
-            <textarea name="body" class="inp inp--area" rows="4"
-                      placeholder="Ghi chú về khách hàng..."
-                      required>{{ note_body }}</textarea>
-          </label>
-
           <div class="field">
-            <span class="field__label">GHIM GHI CHÚ</span>
+            <span class="field__label">GHIM</span>
             <div class="radioset">
-              <label class="radio-pill{% if not note_pinned %} radio-pill--on{% endif %}"
-                     onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
-                <span class="radio-pill__dot"></span>
-                <input type="radio" name="pinned" value="0"
-                       {% if not note_pinned %}checked{% endif %} class="sr-only"> Không
-              </label>
-              <label class="radio-pill{% if note_pinned %} radio-pill--on{% endif %}"
-                     onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
-                <span class="radio-pill__dot"></span>
-                <input type="radio" name="pinned" value="1"
-                       {% if note_pinned %}checked{% endif %} class="sr-only"> Có
-              </label>
+              <label class="radio-pill radio-pill--on" onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')"><span class="radio-pill__dot"></span><input type="radio" name="pinned" value="0" checked class="sr-only">Không ghim</label>
+              <label class="radio-pill" onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')"><span class="radio-pill__dot"></span><input type="radio" name="pinned" value="1" class="sr-only">Ghim</label>
             </div>
           </div>
-
           <label class="field">
             <span class="field__label">HIỂN THỊ</span>
             <div class="inp-sel">
               <select name="visibility" class="inp">
-                {% set visibilities = [
-                  ('team',    'Team'),
-                  ('manager', 'Manager'),
-                  ('private', 'Riêng'),
-                ] %}
-                {% for val, label in visibilities %}
-                  <option value="{{ val }}"
-                          {% if val == note_visibility %}selected{% endif %}>{{ label }}</option>
+                {% for val, lbl in [('team','Team'),('private','Riêng')] %}
+                <option value="{{ val }}">{{ lbl }}</option>
                 {% endfor %}
               </select>
-              <span class="inp-sel__chev" aria-hidden="true">
-                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
-                     stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
-                     stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg>
-              </span>
+              <span class="inp-sel__chev" aria-hidden="true"><svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg></span>
             </div>
           </label>
+        </div>
+
+        {# THỜI GIAN + ĐƠN #}
+        <label class="field">
+          <span class="field__label">THỜI GIAN</span>
+          <input type="datetime-local" name="occurred_at" id="m08-occurred-at" class="inp inp--mono">
+        </label>
+        <label class="field">
+          <span class="field__label">ĐƠN LIÊN QUAN</span>
+          <input type="text" name="related_order_code" class="inp inp--mono" placeholder="ORD-...">
+          <span class="field__hint">(tùy chọn)</span>
+        </label>
 
         {% endif %}
 
       </div>{# /.modal__body #}
 
-      {# ── Actions ── #}
       <div class="modal__actions">
         <button type="button" class="btn btn--ghost"
-                hx-get=""
-                hx-target="#modal-root"
-                hx-swap="innerHTML">Hủy</button>
-        <button type="submit" class="btn btn--primary">Lưu</button>
+                hx-get="" hx-target="#modal-root" hx-swap="innerHTML">Hủy</button>
+        <button type="submit" class="btn btn--primary">
+          {% if mode == 'edit_note' %}Lưu ghi chú{% else %}Lưu hoạt động{% endif %}
+        </button>
       </div>
 
     </form>
   </div>{# /.modal #}
 </div>{# /.modal-scrim #}
 
-{# ── ICT prefill + contact_attempt field toggling ── #}
 <script>
 (function () {
-  /* Pre-fill datetime-local inputs with current ICT (UTC+7) */
-  var ICT_OFFSET_MS = 7 * 60 * 60 * 1000;
-  var now = new Date(Date.now() + ICT_OFFSET_MS);
-  /* datetime-local expects "YYYY-MM-DDTHH:MM" */
+  var ICT = 7 * 60 * 60 * 1000;
+  var now = new Date(Date.now() + ICT);
   var pad = function (n) { return String(n).padStart(2, '0'); };
-  var ict = now.getUTCFullYear() + '-'
-    + pad(now.getUTCMonth() + 1) + '-'
-    + pad(now.getUTCDate()) + 'T'
-    + pad(now.getUTCHours()) + ':'
-    + pad(now.getUTCMinutes());
-  document.querySelectorAll('#m08-occurred-at, #m08-callback-at').forEach(function (el) {
-    el.value = ict;
+  var ict = now.getUTCFullYear() + '-' + pad(now.getUTCMonth() + 1) + '-'
+          + pad(now.getUTCDate()) + 'T' + pad(now.getUTCHours()) + ':' + pad(now.getUTCMinutes());
+  ['m08-occurred-at', 'm08-callback-at'].forEach(function (id) {
+    var el = document.getElementById(id); if (el) el.value = ict;
   });
 })();
 
-/* Toggle conditional fields for contact_attempt mode */
-function m08ToggleOutcomeFields() {
-  var checked = document.querySelector('#m08-outcome-set input[type=radio]:checked');
-  var outcome = checked ? checked.value : '';
-  var noteWrap = document.getElementById('m08-note-wrap');
-  var cbWrap   = document.getElementById('m08-callback-wrap');
-  if (noteWrap) noteWrap.style.display = (outcome === 'answered') ? '' : 'none';
-  if (cbWrap)   cbWrap.style.display   = (outcome === 'callback') ? '' : 'none';
+var M08_BODY_PH = {
+  call:  { answered: 'Nội dung trao đổi...', no_answer: 'Ghi chú thêm (không bắt buộc)', callback: 'Ghi chú thêm...', declined: 'Lý do từ chối...', '': 'Nội dung...' },
+  zalo:  { '': 'Tin nhắn Zalo...' },
+  fb:    { '': 'Tin nhắn Facebook...' },
+  email: { '': 'Nội dung email...' },
+  visit: { met: 'Kết quả buổi ghé thăm...', not_met: 'Ghi chú...', '': 'Kết quả...' },
+  other: { '': 'Mô tả hoạt động...' }
+};
+var M08_CHAN_SEC = { call: 'm08-sec-call', zalo: 'm08-sec-zalo', fb: 'm08-sec-fb', email: 'm08-sec-email' };
+var M08_OUT_SEC = { call: 'm08-sec-out-call', zalo: 'm08-sec-out-chat', fb: 'm08-sec-out-chat', email: 'm08-sec-out-chat', visit: 'm08-sec-out-visit' };
+var m08CurHT = 'call', m08CurOut = '';
+
+function m08El(id) { return document.getElementById(id); }
+function m08Show(id) { var el = m08El(id); if (el) el.style.display = ''; }
+function m08Hide(id) { var el = m08El(id); if (el) el.style.display = 'none'; }
+function m08Val(id, v) { var el = m08El(id); if (el) el.value = v; }
+
+function m08PickHT(btn, val) {
+  m08El('m08-ht-set').querySelectorAll('.radio-pill').forEach(function (p) { p.classList.remove('radio-pill--on'); });
+  btn.classList.add('radio-pill--on');
+  m08Val('m08-ht', val);
+  m08CurHT = val;
+  /* channel section */
+  ['m08-sec-call', 'm08-sec-zalo', 'm08-sec-fb', 'm08-sec-email'].forEach(m08Hide);
+  var chanSecId = M08_CHAN_SEC[val];
+  if (chanSecId) {
+    m08Show(chanSecId);
+    var pill = m08El(chanSecId).querySelector('.radio-pill--on[data-chan-id]');
+    if (pill) { m08Val('m08-chan-id', pill.dataset.chanId); m08Val('m08-chan-val', pill.dataset.chanVal); }
+    else { m08Val('m08-chan-id', ''); m08Val('m08-chan-val', ''); }
+  } else { m08Val('m08-chan-id', ''); m08Val('m08-chan-val', ''); }
+  /* outcome section */
+  ['m08-sec-out-call', 'm08-sec-out-chat', 'm08-sec-out-visit'].forEach(m08Hide);
+  var outSecId = M08_OUT_SEC[val];
+  if (outSecId) {
+    m08Show(outSecId);
+    m08El(outSecId).querySelectorAll('.radio-pill').forEach(function (p) { p.classList.remove('radio-pill--on'); });
+  }
+  m08Hide('m08-callback-wrap');
+  m08Val('m08-out', '');
+  m08CurOut = '';
+  m08UpdateBodyPH();
 }
 
-/* Run once on load so initial state matches checked radio */
-{% if mode == 'contact_attempt' %}
-m08ToggleOutcomeFields();
+function m08PickChan(btn, id, val) {
+  btn.closest('.radioset').querySelectorAll('.radio-pill').forEach(function (p) { p.classList.remove('radio-pill--on'); });
+  btn.classList.add('radio-pill--on');
+  m08Val('m08-chan-id', id);
+  m08Val('m08-chan-val', val);
+}
+
+function m08PickOut(btn, val) {
+  btn.closest('.radioset').querySelectorAll('.radio-pill').forEach(function (p) { p.classList.remove('radio-pill--on'); });
+  btn.classList.add('radio-pill--on');
+  m08Val('m08-out', val);
+  m08CurOut = val;
+  if (val === 'callback') { m08Show('m08-callback-wrap'); } else { m08Hide('m08-callback-wrap'); }
+  m08UpdateBodyPH();
+}
+
+function m08UpdateBodyPH() {
+  var el = m08El('m08-body'); if (!el) return;
+  var map = M08_BODY_PH[m08CurHT] || {};
+  el.placeholder = map[m08CurOut] || map[''] || 'Nội dung...';
+}
+
+function m08ToggleSaveNote() {
+  var chk = m08El('m08-save-note-chk');
+  chk.checked = !chk.checked;
+  m08El('m08-sanote-box').classList.toggle('chk-box--on', chk.checked);
+  m08El('m08-sanote-chk').style.display = chk.checked ? '' : 'none';
+  m08El('m08-note-opts').style.display = chk.checked ? '' : 'none';
+  /* default note_type based on hinh_thuc */
+  if (chk.checked) {
+    var nt = m08El('m08-note-type');
+    if (nt) nt.value = (m08CurHT === 'visit' || m08CurHT === 'call' || m08CurHT === 'zalo' || m08CurHT === 'fb') ? 'outcome' : 'general';
+  }
+}
+
+{% if mode != 'edit_note' %}
+/* init: show call section by default */
+(function () {
+  var firstPill = document.querySelector('#m08-ht-set .radio-pill');
+  if (firstPill) m08PickHT(firstPill, 'call');
+})();
 {% endif %}
 </script>

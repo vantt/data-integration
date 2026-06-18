@@ -13,7 +13,19 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Protocol
+
+_ICT = timezone(timedelta(hours=7))
+
+
+def _ict_local_to_utc(ict_str: str) -> str:
+    """Parse datetime-local input (assumed ICT/UTC+7) → UTC ISO-8601 string."""
+    try:
+        dt = datetime.strptime(ict_str.strip(), "%Y-%m-%dT%H:%M").replace(tzinfo=_ICT)
+        return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    except Exception:
+        return ""
 
 from fastapi import APIRouter, Form, Request, Response
 from fastapi.responses import HTMLResponse
@@ -76,12 +88,17 @@ class ActivityReader(Protocol):
 
 
 class ActivityLogger(Protocol):
-    def log_activity(self, a: Activity) -> None: ...
+    def log_activity(self, activity_data: dict) -> Activity: ...
 
 
 class NoteReader(Protocol):
-    def add_note(self, party_id: str, body: str, author_user_id: Optional[str] = None) -> Note: ...
+    def add_note(self, party_id: str, body: str, author_user_id: Optional[str] = None,
+                 note_type: str = "general", pinned: bool = False, visibility: str = "team",
+                 source_activity_id: Optional[str] = None) -> Note: ...
     def list_notes(self, party_id: str) -> list[Note]: ...
+    def update_note(self, note_id: str, body: str, note_type: str = "general",
+                    pinned: bool = False, visibility: str = "team") -> None: ...
+    def delete_note(self, note_id: str) -> None: ...
 
 
 class CustomFieldDefReader(Protocol):
@@ -323,58 +340,190 @@ def make_customer_360_router(
             )
         return HTMLResponse("panel not found", status_code=404)
 
-    # ── Note creation ─────────────────────────────────────────────────────────
+    # ── M08 modal — serve & tab switching ────────────────────────────────────
 
-    @router.post("/customers/{party_id}/notes", response_class=HTMLResponse)
-    async def handle_add_note(
-        request: Request, party_id: str, body: str = Form(...)
+    def _m08_ctx(request: Request, party_id: str, mode: str = "log",
+                 note_id: str = "", party_name: str = "") -> dict:
+        # normalize legacy mode names → unified 'log'
+        if mode not in ("log", "edit_note"):
+            mode = "log"
+        contact_pref_notes: list[Note] = []
+        note_body = ""
+        note_type_val = "general"
+        note_pinned = False
+        note_visibility = "team"
+        party_identities: list[PartyIdentity] = []
+        if mode == "log":
+            try:
+                contact_pref_notes = [
+                    n for n in notes.list_notes(party_id)
+                    if not n.deleted_at and n.note_type == "contact_pref" and n.pinned
+                ]
+            except Exception as exc:
+                log.warning("m08: contact_pref_notes %s: %s", party_id, exc)
+            try:
+                party_identities = identities.list_identities(party_id)
+            except Exception as exc:
+                log.warning("m08: identities %s: %s", party_id, exc)
+        if mode == "edit_note" and note_id:
+            try:
+                existing = next(
+                    (n for n in notes.list_notes(party_id) if n.note_id == note_id), None
+                )
+                if existing:
+                    note_body = existing.body
+                    note_type_val = existing.note_type
+                    note_pinned = existing.pinned
+                    note_visibility = existing.visibility
+            except Exception as exc:
+                log.warning("m08: load edit_note %s: %s", note_id, exc)
+        return {
+            "request": request,
+            "party_id": party_id,
+            "mode": mode,
+            "note_id": note_id,
+            "party_name": party_name,
+            "identities": party_identities,
+            "contact_pref_notes": contact_pref_notes,
+            "note_body": note_body,
+            "note_type_val": note_type_val,
+            "note_pinned": note_pinned,
+            "note_visibility": note_visibility,
+        }
+
+    @router.get("/modals/m08", response_class=HTMLResponse)
+    async def handle_modal_m08(
+        request: Request,
+        party_id: str,
+        mode: str = "activity",
+        note_id: str = "",
+        party_name: str = "",
     ) -> Response:
-        body = body.strip()
-        if not body:
-            return HTMLResponse("body required", status_code=400)
-        try:
-            note = notes.add_note(party_id, body)
-        except Exception as exc:
-            log.error("c360: add note %s: %s", party_id, exc)
-            return HTMLResponse("failed to add note", status_code=500)
-        return templates.TemplateResponse(
-            "fragments/note_card.html", {"request": request, "note": note}
-        )
-
-    # ── Activity log (M08 modal) ──────────────────────────────────────────────
-
-    @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
-    async def handle_modal_log_activity(request: Request, party_id: str) -> Response:
         return templates.TemplateResponse(
             "fragments/modal_log_activity.html",
-            {"request": request, "party_id": party_id, "conv_id": ""},
+            _m08_ctx(request, party_id, mode, note_id, party_name),
         )
+
+    @router.get("/customers/{party_id}/modal/log-activity", response_class=HTMLResponse)
+    async def handle_modal_log_activity(
+        request: Request, party_id: str,
+        mode: str = "activity",
+        party_name: str = "",
+    ) -> Response:
+        return templates.TemplateResponse(
+            "fragments/modal_log_activity.html",
+            _m08_ctx(request, party_id, mode, "", party_name),
+        )
+
+    # ── Activity log POST ─────────────────────────────────────────────────────
+
+    _HT_TO_ACT_TYPE = {"call": "call", "zalo": "chat", "fb": "chat",
+                       "email": "email", "visit": "visit", "other": "other"}
 
     @router.post("/customers/{party_id}/log-activity", response_class=HTMLResponse)
     async def handle_log_activity(
         request: Request,
         party_id: str,
-        activity_type: str = Form(default="note"),
+        hinh_thuc: str = Form(default="call"),
+        channel_identity_id: str = Form(default=""),
+        channel_value: str = Form(default=""),
+        outcome: str = Form(default=""),
+        body: str = Form(default=""),
+        occurred_at: str = Form(default=""),
+        related_order_code: str = Form(default=""),
+        callback_at: str = Form(default=""),
+        create_callback_task: str = Form(default=""),
+        save_as_note: str = Form(default=""),
+        note_type: str = Form(default="outcome"),
+        pinned: str = Form(default="0"),
+        visibility: str = Form(default="team"),
+    ) -> Response:
+        utc_occurred = _ict_local_to_utc(occurred_at) if occurred_at.strip() else ""
+        act_data: dict = {
+            "party_id": party_id,
+            "activity_type": _HT_TO_ACT_TYPE.get(hinh_thuc, "other"),
+            "direction": "out",
+            "channel": channel_value.strip() or None,
+            "outcome": outcome.strip() or None,
+            "body": body.strip() or None,
+            "occurred_at": utc_occurred,
+            "related_order_code": related_order_code.strip() or None,
+        }
+        if outcome == "callback" and callback_at.strip():
+            act_data["callback_at"] = _ict_local_to_utc(callback_at)
+            act_data["create_callback_task"] = create_callback_task == "1"
+        try:
+            activity = activity_log.log_activity(act_data)
+        except ValueError as exc:
+            return HTMLResponse(str(exc), status_code=400)
+        except Exception as exc:
+            log.error("log activity party %s: %s", party_id, exc)
+            return HTMLResponse("Lỗi ghi log hoạt động", status_code=500)
+        if save_as_note == "1" and body.strip():
+            try:
+                notes.add_note(
+                    party_id, body.strip(),
+                    note_type=note_type or "outcome",
+                    pinned=pinned == "1",
+                    visibility=visibility or "team",
+                    source_activity_id=getattr(activity, "activity_id", None),
+                )
+            except Exception as exc:
+                log.warning("m08: linked note %s: %s", party_id, exc)
+        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=timeline"})
+
+    # ── Note CRUD ─────────────────────────────────────────────────────────────
+
+    @router.post("/customers/{party_id}/notes", response_class=HTMLResponse)
+    async def handle_add_note(
+        request: Request,
+        party_id: str,
         body: str = Form(...),
+        note_type: str = Form(default="general"),
+        pinned: str = Form(default="0"),
+        visibility: str = Form(default="team"),
     ) -> Response:
         body = body.strip()
         if not body:
-            return HTMLResponse("body required", status_code=400)
-        act = Activity(
-            party_id=party_id,
-            activity_type=activity_type or "note",
-            body=body,
-            channel="crm",
-        )
+            return HTMLResponse("Nội dung không được bỏ trống", status_code=400)
         try:
-            activity_log.log_activity(act)
+            notes.add_note(party_id, body, note_type=note_type,
+                           pinned=pinned == "1", visibility=visibility)
         except Exception as exc:
-            log.error("log activity party %s: %s", party_id, exc)
-            return HTMLResponse("failed to log activity", status_code=500)
-        acts = activities.list_activities(party_id)
-        return templates.TemplateResponse(
-            "fragments/c360_timeline_panel.html",
-            {"request": request, "party_id": party_id, "activities": acts},
-        )
+            log.error("c360: add note %s: %s", party_id, exc)
+            return HTMLResponse("Lỗi thêm ghi chú", status_code=500)
+        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=notes"})
+
+    @router.post("/customers/{party_id}/notes/{note_id}", response_class=HTMLResponse)
+    async def handle_edit_note(
+        request: Request,
+        party_id: str,
+        note_id: str,
+        body: str = Form(...),
+        note_type: str = Form(default="general"),
+        pinned: str = Form(default="0"),
+        visibility: str = Form(default="team"),
+    ) -> Response:
+        body = body.strip()
+        if not body:
+            return HTMLResponse("Nội dung không được bỏ trống", status_code=400)
+        try:
+            notes.update_note(note_id, body, note_type=note_type,
+                              pinned=pinned == "1", visibility=visibility)
+        except Exception as exc:
+            log.error("c360: edit note %s: %s", note_id, exc)
+            return HTMLResponse("Lỗi cập nhật ghi chú", status_code=500)
+        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=notes"})
+
+    @router.post("/customers/{party_id}/notes/{note_id}/delete", response_class=HTMLResponse)
+    async def handle_delete_note(
+        request: Request, party_id: str, note_id: str
+    ) -> Response:
+        try:
+            notes.delete_note(note_id)
+        except Exception as exc:
+            log.error("c360: delete note %s: %s", note_id, exc)
+            return HTMLResponse("Lỗi xoá ghi chú", status_code=500)
+        return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=notes"})
 
     return router

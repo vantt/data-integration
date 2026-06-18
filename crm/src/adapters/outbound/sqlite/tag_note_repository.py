@@ -122,19 +122,10 @@ class SQLiteTagRepository:
         self._db.conn.execute(self._SQL_DELETE, (tag_id,))
         self._db.conn.commit()
 
-    def attach_tag(self, party_id: str, tag_id: str, user_id: Optional[str], tagged_at: str) -> None:
+    def attach_tag(self, party_tag: PartyTag) -> None:
         """INSERT OR IGNORE — idempotent on duplicate (party_id, tag_id)."""
-        self._db.conn.execute(self._SQL_ATTACH, (party_id, tag_id, user_id, tagged_at))
+        self._db.conn.execute(self._SQL_ATTACH, (party_tag.party_id, party_tag.tag_id, party_tag.tagged_by, party_tag.tagged_at))
         self._db.conn.commit()
-
-    def attach_party_tag(self, party_tag: PartyTag) -> None:
-        """Convenience overload accepting a PartyTag dataclass."""
-        self.attach_tag(
-            party_id=party_tag.party_id,
-            tag_id=party_tag.tag_id,
-            user_id=party_tag.tagged_by,
-            tagged_at=party_tag.tagged_at,
-        )
 
     def detach_tag(self, party_id: str, tag_id: str) -> None:
         self._db.conn.execute(self._SQL_DETACH, (party_id, tag_id))
@@ -176,15 +167,27 @@ class SQLiteNoteRepository:
     # ── SQL (ported from note_queries.sql) ────────────────────────────────────
 
     _SQL_INSERT = """
-        INSERT INTO crm_note (note_id, party_id, body, author_user_id, created_at)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO crm_note (note_id, party_id, body, author_user_id, note_type, pinned, visibility, created_at, source_activity_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     """
 
     _SQL_LIST = """
-        SELECT note_id, party_id, body, author_user_id, created_at
+        SELECT note_id, party_id, body, author_user_id, created_at,
+               note_type, pinned, visibility, task_id, source_activity_id, deleted_at
         FROM crm_note
         WHERE party_id = ?
-        ORDER BY created_at DESC
+        ORDER BY pinned DESC, created_at DESC
+    """
+
+    _SQL_UPDATE = """
+        UPDATE crm_note
+        SET body = ?, note_type = ?, pinned = ?, visibility = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE note_id = ?
+    """
+
+    _SQL_SOFT_DELETE = """
+        UPDATE crm_note SET deleted_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        WHERE note_id = ?
     """
 
     # ── Public API ────────────────────────────────────────────────────────────
@@ -195,7 +198,11 @@ class SQLiteNoteRepository:
             note.party_id,
             note.body,
             note.author_user_id,
+            note.note_type,
+            1 if note.pinned else 0,
+            note.visibility,
             note.created_at,
+            note.source_activity_id,
         ))
         self._db.conn.commit()
 
@@ -208,6 +215,21 @@ class SQLiteNoteRepository:
                 body=r["body"],
                 author_user_id=r["author_user_id"],
                 created_at=r["created_at"],
+                note_type=r["note_type"] or "general",
+                pinned=bool(r["pinned"]),
+                visibility=r["visibility"] or "team",
+                task_id=r["task_id"],
+                source_activity_id=r["source_activity_id"],
+                deleted_at=r["deleted_at"],
             )
             for r in rows
         ]
+
+    def update_note(self, note_id: str, body: str, note_type: str = "general",
+                    pinned: bool = False, visibility: str = "team") -> None:
+        self._db.conn.execute(self._SQL_UPDATE, (body, note_type, 1 if pinned else 0, visibility, note_id))
+        self._db.conn.commit()
+
+    def soft_delete_note(self, note_id: str) -> None:
+        self._db.conn.execute(self._SQL_SOFT_DELETE, (note_id,))
+        self._db.conn.commit()
