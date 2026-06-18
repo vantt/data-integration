@@ -1,0 +1,27 @@
+{# @surface  DATA-HEALTH · Global data quality strip
+   Lazy-loaded by layout.html via HTMX. Degrades to empty when mart unavailable.
+   Data: dq (DataQualitySummary). #}
+<footer class="data-health" role="contentinfo" aria-label="Data health summary">
+  <div class="data-health__inner">
+    <span class="data-health__item">
+      <span class="data-health__label">Data as-of</span>
+      <span class="data-health__val">{{ dq.as_of_str }} (ICT)</span>
+    </span>
+    {% if dq.cogs_rate_pct is not none %}
+    <span class="data-health__sep" aria-hidden="true">·</span>
+    <span class="data-health__item">
+      <span class="data-health__label">COGS</span>
+      <span class="data-health__val">{{ dq.cogs_rate_pct | round }}% covered</span>
+    </span>
+    {% endif %}
+    {% if dq.stale_views %}
+    <span class="data-health__sep" aria-hidden="true">·</span>
+    <span class="data-health__item data-health__item--warn"
+          aria-label="Stale views: {{ dq.stale_views | join(', ') }}">
+      <span class="data-health__warn-icon" aria-hidden="true">⚠</span>
+      <span class="data-health__label">stale:</span>
+      <span class="data-health__val">{{ dq.stale_views | join(', ') }}</span>
+    </span>
+    {% endif %}
+  </div>
+</footer>

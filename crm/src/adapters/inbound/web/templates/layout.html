@@ -556,5 +556,7 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
+  <!-- lazy data-health strip (loads after page renders) -->
+  <div id="dq-strip-anchor" hx-get="/_dq_strip" hx-trigger="load delay:1500ms" hx-swap="outerHTML"></div>
 </body>
 </html>

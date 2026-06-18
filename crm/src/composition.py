@@ -41,6 +41,7 @@ from adapters.outbound.sqlite.app_user_repository import SQLiteAppUserRepository
 
 # ── Outbound: DuckDB ──────────────────────────────────────────────────────────
 from adapters.outbound.duckdb.order_repository import DuckDBOrderRepository
+from adapters.outbound.duckdb.dataquality_repository import DataQualityRepository
 
 # ── Application services ──────────────────────────────────────────────────────
 from application.merge_service import MergeService
@@ -62,6 +63,7 @@ from adapters.inbound.http.task_handler import wire_task_router, router as task_
 from adapters.inbound.http.conversation_handler import router as conv_router
 from adapters.inbound.http.segment_handler import make_segment_router
 from adapters.inbound.http.campaign_handler import make_campaign_router
+from adapters.inbound.http.dataquality_handler import make_dataquality_router
 
 # ── Inbound: Web UI screens ───────────────────────────────────────────────────
 from adapters.inbound.web.format_helpers import (
@@ -142,6 +144,12 @@ def create_app() -> FastAPI:
     except Exception as exc:
         log.warning("order repo unavailable (%s) — /orders/* will return 503", exc)
 
+    dq_repo: Optional[DataQualityRepository] = None
+    try:
+        dq_repo = DataQualityRepository(olap_path())
+    except Exception as exc:
+        log.warning("dq repo unavailable (%s) — /_dq_strip will return empty", exc)
+
     # 5. FastAPI app.
     app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
 
@@ -218,6 +226,7 @@ def create_app() -> FastAPI:
     ))
     app.include_router(make_segment_router(segment_svc))
     app.include_router(make_campaign_router(campaign_svc))
+    app.include_router(make_dataquality_router(dq=dq_repo, templates=templates))
 
     # 8. Web UI routers (no prefix — serve at root paths).
     init_modals(
