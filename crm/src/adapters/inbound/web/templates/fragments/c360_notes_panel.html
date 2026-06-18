@@ -27,7 +27,7 @@
 {% set pinned_notes = filtered | selectattr('pinned', 'equalto', true) | list %}
 {% set regular_notes = filtered | rejectattr('pinned', 'equalto', true) | list | sort(attribute='created_at', reverse=true) %}
 
-<div class="stack stack-4">
+<div class="stack stack-4" id="notes-panel-root">
 
   {# ── Toolbar: type-filter tabs + add button ──────────── #}
   <div class="toolbar" style="flex-wrap:wrap;gap:var(--sp-2)">
@@ -54,7 +54,7 @@
     </button>
   </div>
 
-  <div id="notes-panel-root">
+  <div>
 
     {# ── PINNED section ──────────────────────────────────── #}
     {% if pinned_notes %}

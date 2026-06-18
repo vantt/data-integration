@@ -937,3 +937,61 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
   .verdict-bar__figs { grid-column: 2; text-align: left; margin-top: var(--sp-2); }
   .verdict--bar .verdict-net { font-size: 20px; }
 }
+
+/* ── M08 redesign — channel picker & layout classes ────────── */
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+
+.ghost-link {
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--accent); font-size: 13px;
+  text-decoration: underline; text-underline-offset: 2px;
+}
+.ghost-link:hover { color: var(--fg); }
+
+.m8-chanset { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.m8-chan {
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  padding: 9px var(--sp-3); border: 1px solid var(--border);
+  border-radius: var(--radii-control); color: var(--fg-1);
+  transition: border-color var(--dur-fast) var(--ease-fast),
+              background var(--dur-fast) var(--ease-fast);
+}
+.m8-chan:hover { border-color: var(--border-strong); }
+.m8-chan--on {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--fg);
+}
+.m8-chan--on .radio-pill__dot {
+  border-color: var(--accent); background: var(--accent);
+  box-shadow: inset 0 0 0 2px var(--bg-surface);
+}
+.m8-chan--off { opacity: 0.5; }
+.m8-chan__val { flex: 1; font-size: 14px; }
+.m8-chan__auto {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: var(--tracking-mono); color: var(--moss-500); white-space: nowrap;
+}
+.m8-chan__tag {
+  font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary);
+  border: 1px solid var(--border); border-radius: var(--radii-hairline); padding: 2px 6px;
+}
+.m8-chan__tag--off {
+  color: var(--coral-500);
+  border-color: color-mix(in srgb, var(--coral-500) 30%, transparent);
+}
+.m8-chan--custom { flex-direction: column; align-items: stretch; gap: 0; }
+.m8-chan__head { display: flex; align-items: center; gap: 9px; }
+
+.m8-notebox {
+  display: flex; flex-direction: column; gap: var(--sp-3);
+  padding: var(--sp-4); margin-top: var(--sp-3);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radii-control) var(--radii-control) 0;
+}
+
+.m8-rule { height: 1px; background: var(--border); margin: var(--sp-2) 0; }
+.m8-dim { color: var(--fg-tertiary); }

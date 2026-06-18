@@ -345,7 +345,7 @@ def make_customer_360_router(
     def _m08_ctx(request: Request, party_id: str, mode: str = "log",
                  note_id: str = "", party_name: str = "") -> dict:
         # normalize legacy mode names → unified 'log'
-        if mode not in ("log", "edit_note"):
+        if mode not in ("log", "edit_note", "note_only"):
             mode = "log"
         contact_pref_notes: list[Note] = []
         note_body = ""
