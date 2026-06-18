@@ -301,6 +301,50 @@
   </div><!-- /.app-body -->
 
 <script>
+/* [data-tooltip] — JS tooltip appended to <body> to bypass overflow:hidden containers.
+   Event-delegated so HTMX-loaded fragments work without re-init. */
+(function () {
+  var tip = document.createElement('div');
+  Object.assign(tip.style, {
+    position: 'fixed', zIndex: '9999', pointerEvents: 'none',
+    padding: '4px 9px', borderRadius: '4px',
+    fontSize: '11px', fontFamily: 'var(--font-sans,sans-serif)',
+    fontWeight: '400', letterSpacing: '0', textTransform: 'none',
+    whiteSpace: 'nowrap', lineHeight: '1.5',
+    background: 'rgba(18,18,26,.93)', color: '#f0f0f0',
+    boxShadow: '0 2px 8px rgba(0,0,0,.4)',
+    opacity: '0', transition: 'opacity .1s', top: '0', left: '0',
+  });
+  document.addEventListener('DOMContentLoaded', function () { document.body.appendChild(tip); });
+
+  document.addEventListener('mouseover', function (e) {
+    var el = e.target.closest('[data-tooltip]');
+    if (!el) return;
+    var text = el.getAttribute('data-tooltip');
+    if (!text) return;
+    tip.textContent = text;
+    tip.style.opacity = '0';
+    var r = el.getBoundingClientRect();
+    var tw = tip.offsetWidth || 120;
+    var th = tip.offsetHeight || 22;
+    var left = r.left + r.width / 2 - tw / 2;
+    var top  = r.top - th - 6;
+    if (top < 6) top = r.bottom + 6;
+    left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+    tip.style.left = left + 'px';
+    tip.style.top  = top + 'px';
+    tip.style.opacity = '1';
+  });
+
+  document.addEventListener('mouseout', function (e) {
+    if (e.target.closest('[data-tooltip]')) tip.style.opacity = '0';
+  });
+
+  document.addEventListener('scroll', function () { tip.style.opacity = '0'; }, true);
+}());
+</script>
+
+<script>
 /* Tab activation helper — used by detail screens (customer 360, order detail). */
 function dvActivateTab(tabEl, url) {
   var tablist = tabEl.closest('[role="tablist"]');

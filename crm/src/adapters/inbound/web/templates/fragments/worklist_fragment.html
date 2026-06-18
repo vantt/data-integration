@@ -96,7 +96,7 @@
       </button>
       <div class="wl-row__main">
         <div class="wl-row__top">
-          <span class="bdg bdg--accent">{{ a.action_type }}</span>
+          <span class="{{ a.action_type | bdg_cls('action_type') }}" data-tooltip="{{ a.action_type | bdg_tip('action_type') }}">{{ a.action_type }}</span>
           {% if a.customer_name %}
           <span class="wl-row__name">{{ a.customer_name }}</span>
           {% endif %}

@@ -24,7 +24,7 @@
       <div class="task-card__top">
         <span class="task-card__title">{{ task.title }}</span>
         <div class="task-card__badges">
-          <span class="bdg bdg--dot bdg--{% if task.status == 'done' %}good{% elif task.status == 'doing' %}warn{% elif task.status == 'cancelled' %}bad{% else %}neutral{% endif %}">
+          <span class="{{ task.status | bdg_cls('task_status') }} bdg--dot" data-tooltip="{{ task.status | bdg_tip('task_status') }}">
             {{ task.status }}
           </span>
           {% if task.priority > 0 %}

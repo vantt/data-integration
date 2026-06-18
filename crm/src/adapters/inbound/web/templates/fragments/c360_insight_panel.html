@@ -29,7 +29,7 @@
       {% for act in insight.actions %}
       <div class="aq-card aq-card--compact">
         <div class="aq-card__top">
-          <span class="bdg bdg--accent">{{ act.action_type }}</span>
+          <span class="{{ act.action_type | bdg_cls('action_type') }}" data-tooltip="{{ act.action_type | bdg_tip('action_type') }}">{{ act.action_type }}</span>
           {% if act.value_at_stake_vnd > 0 %}
           <span class="aq-card__val">💰 {{ act.value_at_stake_vnd | fmt_vnd }}</span>
           {% endif %}
@@ -54,10 +54,10 @@
     {% endif %}
   </div>
 
-  {# ── RFM ──────────────────────────────────────────────── #}
+  {# ── RFM & Segments ───────────────────────────────────── #}
   <div>
     <div class="panel-head">
-      <span class="panel-title">RFM</span>
+      <span class="panel-title">RFM & Segments</span>
       <span class="panel-sub">{{ ins.value_group }}</span>
     </div>
     <div class="rfm">
@@ -68,13 +68,73 @@
       </div>
       <div class="rfm__cell">
         <div class="rfm__glyph">F</div>
-        <div class="rfm__name">Nhóm</div>
-        <div class="rfm__val" style="font-size:14px">{{ ins.value_group }}</div>
+        <div class="rfm__name">Frequency</div>
+        <div class="rfm__val">{{ insight.recent_orders | length }}<span style="font-size:12px;color:var(--fg-tertiary)"> đơn</span></div>
       </div>
       <div class="rfm__cell">
         <div class="rfm__glyph">M</div>
-        <div class="rfm__name">AOV · LTV</div>
+        <div class="rfm__name">Monetary</div>
         <div class="rfm__val" style="font-size:16px">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
+      </div>
+    </div>
+    {# Segment tags — horizontal flat badges below RFM grid #}
+    <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)">
+      <span class="{{ ins.value_group | bdg_cls('value_group') }}" data-tooltip="{{ ins.value_group | bdg_tip('value_group') }}">{{ ins.value_group }}</span>
+      <span class="{{ ins.customer_status | bdg_cls('customer_status') }}" data-tooltip="{{ ins.customer_status | bdg_tip('customer_status') }}">{{ ins.customer_status }}</span>
+      <span class="{{ ins.next_purchase_signal | bdg_cls('purchase_signal') }}" data-tooltip="{{ ins.next_purchase_signal | bdg_tip('purchase_signal') }}">{{ ins.next_purchase_signal }}</span>
+      {% if ins.channel_preference %}
+      <span class="bdg">{{ ins.channel_preference }}</span>
+      {% endif %}
+      {% if ins.discount_sensitivity == 'HIGH' %}
+      <span class="bdg bdg--warn">discount sensitive</span>
+      {% endif %}
+      {% if ins.cancel_rate > 0.1 %}
+      <span class="bdg bdg--bad">high cancel</span>
+      {% endif %}
+    </div>
+  </div>
+
+  {# ── Value Metrics ─────────────────────────────────────── #}
+  <div>
+    <div class="panel-head"><span class="panel-title">Value Metrics</span></div>
+    {# Single 4-col grid: LTV spans 2 cols so rows align top↔bottom #}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)">
+      <div class="kpi kpi--hero" style="grid-column:span 2">
+        <div class="kpi__label">Lifetime value</div>
+        <div class="kpi__val">{{ ins.lifetime_contribution_margin | int | fmt_vnd }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__label">Total orders</div>
+        <div class="kpi__val">{{ insight.recent_orders | length }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__label">Avg order value</div>
+        <div class="kpi__val">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
+      </div>
+      {# Row 2 — 4 equal cells aligning with 4 columns above #}
+      <div class="signal-cell">
+        <div class="signal-cell__k">Gross margin</div>
+        <div class="signal-cell__v">
+          {% if ins.is_margin_negative is not none and not ins.is_margin_negative %}
+          <span style="color:var(--moss-500);font-weight:600">{{ "%.1f"|format(ins.lifetime_contribution_margin / [ins.avg_order_spend, 1] | max * 100) }}%</span>
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Cancel rate</div>
+        <div class="signal-cell__v">
+          {% if ins.cancel_rate > 0 %}
+          <span style="color:{{ 'var(--coral-500)' if ins.cancel_rate > 0.1 else 'var(--fg-2)' }}">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</span>
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Avg cycle</div>
+        <div class="signal-cell__v mono">{{ ins.avg_days_between_orders | round | int }}d</div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Channel</div>
+        <div class="signal-cell__v">{{ ins.channel_preference or "—" }}</div>
       </div>
     </div>
   </div>
@@ -86,13 +146,13 @@
       <div class="signal-cell">
         <div class="signal-cell__k">Customer status</div>
         <div class="signal-cell__v">
-          <span class="bdg bdg--{{ 'good' if ins.customer_status == 'active' else 'warn' if ins.customer_status == 'at_risk' else 'bad' }}">{{ ins.customer_status }}</span>
+          <span class="{{ ins.customer_status | bdg_cls('customer_status') }}" data-tooltip="{{ ins.customer_status | bdg_tip('customer_status') }}">{{ ins.customer_status }}</span>
         </div>
       </div>
       <div class="signal-cell">
         <div class="signal-cell__k">Next purchase</div>
         <div class="signal-cell__v">
-          <span class="bdg bdg--{{ 'bad' if ins.next_purchase_signal == 'OVERDUE' else 'warn' if ins.next_purchase_signal == 'DUE_SOON' else 'good' }}">{{ ins.next_purchase_signal }}</span>
+          <span class="{{ ins.next_purchase_signal | bdg_cls('purchase_signal') }}" data-tooltip="{{ ins.next_purchase_signal | bdg_tip('purchase_signal') }}">{{ ins.next_purchase_signal }}</span>
           {% if ins.predicted_next_purchase_date %}
           <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ ins.predicted_next_purchase_date }}</span>
           {% endif %}
@@ -106,20 +166,6 @@
       <div class="signal-cell">
         <div class="signal-cell__k">Top affinity</div>
         <div class="signal-cell__v" style="font-size:14px">{{ ins.top_affinity_product }}</div>
-      </div>
-      {% endif %}
-      {# R7: realized_margin_pct only, gated on has_cogs — never show gross_margin_pct #}
-      {% if ins.is_margin_negative is not none %}
-      <div class="signal-cell">
-        <div class="signal-cell__k">Realized margin (R7)</div>
-        <div class="signal-cell__v">
-          {% if not ins.is_margin_negative %}
-          <span style="color:var(--moss-500)">{{ "%.1f"|format(ins.lifetime_contribution_margin / [ins.avg_order_spend, 1] | max * 100) }}%</span>
-          <span class="muted" style="font-size:11px">has_cogs ✓</span>
-          {% else %}
-          <span class="dash">—</span> <span class="muted" style="font-size:11px">has_cogs ✗</span>
-          {% endif %}
-        </div>
       </div>
       {% endif %}
     </div>

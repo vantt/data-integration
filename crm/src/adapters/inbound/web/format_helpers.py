@@ -175,69 +175,38 @@ def join_nonempty(items: list, sep: str = ", ") -> str:
     return sep.join(str(x) for x in items if x)
 
 
-# ── Badge / CSS helpers (used as Jinja2 globals) ─────────────────────────────
+# ── Badge / CSS helpers (used as Jinja2 globals/filters) ─────────────────────
+# All lookups delegate to badge_catalog — single source of truth for colors+hints.
 
-_ACTION_TYPE_CSS: dict[str, str] = {
-    "CALL_NOW":         "chip--danger",
-    "WIN_BACK":         "chip--warning",
-    "REORDER_NUDGE":    "chip--info",
-    "UPSELL":           "chip--success",
-    "CROSS_SELL":       "chip--success",
-    "COLLECT_FEEDBACK": "chip--neutral",
-}
+from .badge_catalog import bdg_lookup, bdg_mod_cls, bdg_full_cls, bdg_hint  # noqa: E402
 
 
 def action_type_badge_class(action_type: str) -> str:
-    return _ACTION_TYPE_CSS.get(action_type or "", "chip--neutral")
-
-
-_TASK_STATUS_CSS: dict[str, str] = {
-    "open":        "bdg--open",
-    "in_progress": "bdg--progress",
-    "done":        "bdg--done",
-    "cancelled":   "bdg--cancelled",
-}
+    return bdg_mod_cls("action_type", action_type)
 
 
 def task_status_css(status: str) -> str:
-    return _TASK_STATUS_CSS.get(status or "", "bdg--neutral")
+    return bdg_mod_cls("task_status", status)
 
 
-_CONV_STATUS_CSS: dict[str, str] = {
-    "open":     "bdg--open",
-    "closed":   "bdg--done",
-    "pending":  "bdg--progress",
-}
+def task_status_chip_class(status: str) -> str:
+    return bdg_mod_cls("task_status", status)
 
 
 def conv_status_bdg(status: str) -> str:
-    return _CONV_STATUS_CSS.get(status or "", "bdg--neutral")
-
-
-_CAMPAIGN_STATUS_CSS: dict[str, str] = {
-    "draft":     "bdg--neutral",
-    "active":    "bdg--open",
-    "completed": "bdg--done",
-    "paused":    "bdg--progress",
-    "archived":  "bdg--cancelled",
-}
+    return bdg_mod_cls("conv_status", status)
 
 
 def campaign_status_bdg(status: str) -> str:
-    return _CAMPAIGN_STATUS_CSS.get(status or "", "bdg--neutral")
-
-
-_TARGET_STATUS_CSS: dict[str, str] = {
-    "pending":   "bdg--neutral",
-    "sent":      "bdg--progress",
-    "responded": "bdg--open",
-    "converted": "bdg--done",
-    "opted_out": "bdg--cancelled",
-}
+    return bdg_mod_cls("campaign_status", status)
 
 
 def target_status_bdg(status: str) -> str:
-    return _TARGET_STATUS_CSS.get(status or "", "bdg--neutral")
+    return bdg_mod_cls("campaign_target", status)
+
+
+def status_badge_class(status: str) -> str:
+    return bdg_mod_cls("party_status", status)
 
 
 def customer_label(name: str | None, key: str | None) -> str:
@@ -245,21 +214,15 @@ def customer_label(name: str | None, key: str | None) -> str:
     return name or key or "—"
 
 
-def task_status_chip_class(status: str) -> str:
-    return _TASK_STATUS_CSS.get(status or "", "bdg--neutral")
+# Jinja2 filter helpers — called as: value | bdg_cls('domain'), value | bdg_tip('domain')
+def bdg_cls_filter(key: str, domain: str) -> str:
+    """Full CSS class for a badge: 'bdg bdg--good' | 'bdg'."""
+    return bdg_full_cls(domain, key)
 
 
-_PARTY_STATUS_CSS: dict[str, str] = {
-    "active":   "bdg--open",
-    "inactive": "bdg--neutral",
-    "at_risk":  "bdg--progress",
-    "churned":  "bdg--cancelled",
-    "merged":   "bdg--neutral",
-}
-
-
-def status_badge_class(status: str) -> str:
-    return _PARTY_STATUS_CSS.get(status or "", "bdg--neutral")
+def bdg_tip_filter(key: str, domain: str) -> str:
+    """Vietnamese tooltip text for a domain+key."""
+    return bdg_hint(domain, key)
 
 
 # ── Order detail helpers ──────────────────────────────────────────────────────
@@ -290,46 +253,19 @@ def fmt_vnd_signed(amount: int | float | None) -> str:
     return f"{prefix}{formatted}đ"
 
 
-_ORDER_STATUS_TONE: dict[str, str] = {
-    "completed":  "done",
-    "complete":   "done",
-    "processing": "progress",
-    "pending":    "progress",
-    "cancelled":  "cancelled",
-    "canceled":   "cancelled",
-    "returned":   "warn",
-}
-
+# Tone filters — return CSS modifier suffix ('good'|'warn'|'bad'|'accent'|'')
+# Used in templates as: bdg--{{ value | order_status_tone }}
 
 def order_status_tone(status: str) -> str:
-    return _ORDER_STATUS_TONE.get(status or "", "neutral")
-
-
-_PAYMENT_TONE: dict[str, str] = {
-    "paid":      "done",
-    "partial":   "progress",
-    "unpaid":    "warn",
-    "refunded":  "cancelled",
-    "voided":    "cancelled",
-}
+    return bdg_lookup("order_status", (status or "").lower()).css_mod
 
 
 def payment_tone(status: str) -> str:
-    return _PAYMENT_TONE.get(status or "", "neutral")
-
-
-_SHIP_TONE: dict[str, str] = {
-    "delivered":   "done",
-    "shipping":    "progress",
-    "unshipped":   "warn",
-    "returned":    "cancelled",
-    "cancelled":   "cancelled",
-    "canceled":    "cancelled",
-}
+    return bdg_lookup("payment_status", (status or "").lower()).css_mod
 
 
 def ship_tone(status: str) -> str:
-    return _SHIP_TONE.get(status or "", "neutral")
+    return bdg_lookup("fulfillment_status", (status or "").lower()).css_mod
 
 
 def verdict_tone(financial) -> str:

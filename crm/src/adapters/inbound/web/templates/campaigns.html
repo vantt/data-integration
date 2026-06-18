@@ -97,7 +97,7 @@
           <td class="num cell-strong">—</td>
           <td class="num">—</td>
           <td>
-            <span class="bdg {{ campaign_status_bdg(c.status) }}">
+            <span class="bdg {{ campaign_status_bdg(c.status) }}" data-tooltip="{{ c.status | bdg_tip('campaign_status') }}">
               <span class="bdg__dot"></span> {{ c.status }}
             </span>
           </td>
@@ -120,7 +120,7 @@
     </a>
     <div class="c360-id">
       <span class="c360-name">{{ campaign.name }}</span>
-      <span class="bdg {{ campaign_status_bdg(campaign.status) }}">
+      <span class="bdg {{ campaign_status_bdg(campaign.status) }}" data-tooltip="{{ campaign.status | bdg_tip('campaign_status') }}">
         <span class="bdg__dot"></span> {{ campaign.status }}
       </span>
     </div>
@@ -252,7 +252,7 @@
           </a>
         </td>
         <td>
-          <span class="bdg {{ target_status_bdg(t.status) }}">
+          <span class="bdg {{ target_status_bdg(t.status) }}" data-tooltip="{{ t.status | bdg_tip('campaign_target') }}">
             <span class="bdg__dot"></span> {{ t.status }}
           </span>
         </td>
@@ -295,7 +295,7 @@
     </a>
   </td>
   <td>
-    <span class="bdg {{ target_status_bdg(target.status) }}">
+    <span class="bdg {{ target_status_bdg(target.status) }}" data-tooltip="{{ target.status | bdg_tip('campaign_target') }}">
       <span class="bdg__dot"></span> {{ target.status }}
     </span>
   </td>

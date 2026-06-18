@@ -85,9 +85,9 @@
       <span class="panel-sub">fact_orders · fact_order_economics</span>
     </div>
     <div class="badge-row" style="margin-bottom:var(--sp-3)">
-      {% if h.status %}<span class="bdg bdg--{{ h.status | order_status_tone }}">{{ h.status }}</span> {% endif %}
-      {% if h.payment_status %}<span class="bdg bdg--dot bdg--{{ h.payment_status | payment_tone }}">{{ h.payment_status }}</span> {% endif %}
-      {% if h.fulfillment_status %}<span class="bdg bdg--dot bdg--{{ h.fulfillment_status | ship_tone }}">{{ h.fulfillment_status }}</span>{% endif %}
+      {% if h.status %}<span class="bdg bdg--{{ h.status | order_status_tone }}" data-tooltip="{{ h.status | bdg_tip('order_status') }}">{{ h.status }}</span> {% endif %}
+      {% if h.payment_status %}<span class="bdg bdg--dot bdg--{{ h.payment_status | payment_tone }}" data-tooltip="{{ h.payment_status | bdg_tip('payment_status') }}">{{ h.payment_status }}</span> {% endif %}
+      {% if h.fulfillment_status %}<span class="bdg bdg--dot bdg--{{ h.fulfillment_status | ship_tone }}" data-tooltip="{{ h.fulfillment_status | bdg_tip('fulfillment_status') }}">{{ h.fulfillment_status }}</span>{% endif %}
     </div>
     <div class="scard facts">
       {% if h.first_shipped_at %}
@@ -151,7 +151,7 @@
       <div class="ship-empty__title voice"><em>No shipments yet</em></div>
       <p class="ship-empty__sub">This order has no shipment legs.
         {% if h.fulfillment_status %}
-        Fulfillment status is <span class="bdg bdg--dot bdg--{{ h.fulfillment_status | ship_tone }}">{{ h.fulfillment_status }}</span>.
+        Fulfillment status is <span class="bdg bdg--dot bdg--{{ h.fulfillment_status | ship_tone }}" data-tooltip="{{ h.fulfillment_status | bdg_tip('fulfillment_status') }}">{{ h.fulfillment_status }}</span>.
         {% endif %}
       </p>
     </div>
@@ -164,7 +164,7 @@
       <div class="ship-card{% if is_bad %} ship-card--bad{% endif %}" data-ship-card id="ship-card-{{ loop.index }}">
         <div class="ship-card__top">
           <div class="ship-card__lead">
-            <span class="bdg bdg--dot bdg--{{ tone }}">{{ s.status or "UNKNOWN" }}</span>
+            <span class="bdg bdg--dot bdg--{{ tone }}" data-tooltip="{{ (s.status or '') | bdg_tip('fulfillment_status') }}">{{ s.status or "UNKNOWN" }}</span>
             {% if is_bad %}
             <span class="ship-stages ship-stages--err" title="{{ s.status | lower }}" aria-hidden="true">
               <span class="ship-stages__err">✕</span>
@@ -265,7 +265,7 @@
           <td class="muted mono" style="font-size:12px">{{ p.payment_method_type or "—" }}</td>
           <td>
             {% if p.status %}
-            <span class="bdg bdg--dot bdg--{{ p.status | payment_tone }}">{{ p.status }}</span>
+            <span class="bdg bdg--dot bdg--{{ p.status | payment_tone }}" data-tooltip="{{ p.status | bdg_tip('payment_status') }}">{{ p.status }}</span>
             {% else %}<span class="muted">—</span>{% endif %}
           </td>
           <td class="mono muted" style="font-size:12px">{{ p.paid_on | format_ict if p.paid_on else "—" }}</td>

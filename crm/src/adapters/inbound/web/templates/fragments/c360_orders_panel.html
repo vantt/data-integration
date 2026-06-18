@@ -24,7 +24,6 @@
       <thead>
         <tr>
           <th>Mã đơn</th>
-          <th>Ngày</th>
           <th>Kênh</th>
           <th>Trạng thái</th>
           <th class="num-h">Doanh thu</th>
@@ -36,10 +35,11 @@
       <tr>
         <td class="cell-strong mono">
           <a href="/orders/{{ o.order_code }}" class="link">{{ o.order_code }}</a>
+          {% set dk = o.date_key | string %}
+          <div class="muted" style="font-size:11px">{{ dk[:4] }}-{{ dk[4:6] }}-{{ dk[6:] }}</div>
         </td>
-        <td class="muted mono" style="font-size:12px">{{ o.date_key }}</td>
         <td class="muted">{{ o.channel or "—" }}</td>
-        <td><span class="bdg">{{ o.status }}</span></td>
+        <td><span class="{{ o.status | bdg_cls('order_status') }}" data-tooltip="{{ o.status | bdg_tip('order_status') }}">{{ o.status }}</span></td>
         <td class="num cell-strong">{{ o.net_revenue | fmt_vnd }}</td>
         <td class="num muted">{{ o.item_count }}</td>
       </tr>

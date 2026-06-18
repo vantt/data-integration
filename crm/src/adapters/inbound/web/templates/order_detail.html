@@ -76,13 +76,13 @@
       {% endif %}
       <div class="badge-row">
         {% if order.header.status %}
-        <span class="bdg bdg--{{ order.header.status | order_status_tone }}">{{ order.header.status }}</span>
+        <span class="bdg bdg--{{ order.header.status | order_status_tone }}" data-tooltip="{{ order.header.status | bdg_tip('order_status') }}">{{ order.header.status }}</span>
         {% endif %}
         {% if order.header.payment_status %}
-        <span class="bdg bdg--dot bdg--{{ order.header.payment_status | payment_tone }}">{{ order.header.payment_status }}</span>
+        <span class="bdg bdg--dot bdg--{{ order.header.payment_status | payment_tone }}" data-tooltip="{{ order.header.payment_status | bdg_tip('payment_status') }}">{{ order.header.payment_status }}</span>
         {% endif %}
         {% if order.header.fulfillment_status %}
-        <span class="bdg bdg--dot bdg--{{ order.header.fulfillment_status | ship_tone }}">{{ order.header.fulfillment_status }}</span>
+        <span class="bdg bdg--dot bdg--{{ order.header.fulfillment_status | ship_tone }}" data-tooltip="{{ order.header.fulfillment_status | bdg_tip('fulfillment_status') }}">{{ order.header.fulfillment_status }}</span>
         {% endif %}
       </div>
     </div>

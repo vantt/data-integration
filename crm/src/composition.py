@@ -71,7 +71,9 @@ from adapters.inbound.web.format_helpers import (
     campaign_status_bdg, target_status_bdg, customer_label, status_badge_class,
     fmt_pct, fmt_vnd_signed, order_status_tone, payment_tone, ship_tone,
     verdict_tone, verdict_word, fmt_date_key, days_since, recency_days_label,
+    bdg_cls_filter, bdg_tip_filter,
 )
+from adapters.inbound.web.badge_catalog import bdg_lookup
 from adapters.inbound.web.screen_modals import init_modals, router as modals_router
 from adapters.inbound.web.screen_modals_party import make_party_modals_router
 from adapters.inbound.web.screen_worklist import make_worklist_router
@@ -178,6 +180,9 @@ def create_app() -> FastAPI:
     templates.env.filters["fmt_date_key"] = fmt_date_key
     templates.env.filters["days_since"] = days_since
     templates.env.filters["recency_days_label"] = recency_days_label
+    templates.env.filters["bdg_cls"] = bdg_cls_filter
+    templates.env.filters["bdg_tip"] = bdg_tip_filter
+    templates.env.globals["bdg_lookup"] = bdg_lookup
     static_dir = _resolve_static_dir()
     if static_dir:
         app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
