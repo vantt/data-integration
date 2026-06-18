@@ -1,0 +1,22 @@
+{# Global header search: customer disambiguation dropdown.
+   Context: hits list[Party], q str
+   Rendered into #search-results when multiple candidates match. #}
+<div role="listbox"
+     aria-label="Kết quả tìm kiếm cho &ldquo;{{ q }}&rdquo;">
+
+  {% for p in hits %}
+  <a href="/customers/{{ p.party_id }}"
+     class="result-row"
+     role="option"
+     aria-label="Khách hàng {{ p.display_name or p.party_id }}{% if p.primary_phone %}, {{ p.primary_phone }}{% endif %}">
+    <div>
+      <div class="result-row__name">{{ p.display_name or "(chưa đặt tên)" }}</div>
+      <div class="result-row__meta">
+        {{ p.party_id }}
+        {% if p.primary_phone %}&nbsp;·&nbsp;{{ p.primary_phone }}{% endif %}
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+
+</div>

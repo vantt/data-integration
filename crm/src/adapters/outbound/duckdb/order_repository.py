@@ -38,6 +38,35 @@ class DuckDBOrderRepository:
     def get_by_code(self, order_code: str) -> OrderDetail | None:
         return self.get_order_detail(order_code)
 
+    def resolve_order_code(self, q: str) -> str | None:
+        """Return canonical order_code for any identifier (code/id/fulfillment), or None."""
+        if not q or not q.strip():
+            return None
+        q = q.strip()
+        conn = open_olap(self._db_path)
+        if conn is None:
+            return None
+        try:
+            params = [q, q, q, q, q, q]
+            try:
+                rel = conn.execute(sql.RESOLVE_ORDER_SQL, params)
+                row = rel.fetchone()
+                return str(row[0]) if row and row[0] else None
+            except Exception:
+                # fact_fulfillments absent — fall back to order-only match
+                rel = conn.execute(
+                    "SELECT order_code FROM fact_orders "
+                    "WHERE UPPER(order_code) = UPPER(?) OR order_id = ? LIMIT 1",
+                    [q, q],
+                )
+                row = rel.fetchone()
+                return str(row[0]) if row and row[0] else None
+        except Exception:
+            logger.warning("crm duckdb: resolve_order_code %r failed", q, exc_info=True)
+            return None
+        finally:
+            conn.close()
+
     def find_customer_id_by_code(self, customer_code: str) -> str | None:
         """Return the Sapo numeric customer_id for a given customer_code, or None."""
         if not customer_code or not customer_code.strip():

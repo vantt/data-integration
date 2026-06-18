@@ -1,0 +1,23 @@
+{# Global header search: not-found / ambiguous hint.
+   Context: q str, mode str, ambiguous bool
+   Rendered into #search-results when zero hits or auto-mode ambiguous match. #}
+<div class="result-empty" role="status" aria-live="polite">
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none"
+       stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+    <circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/>
+  </svg>
+  {% if ambiguous %}
+  <span class="mono">&ldquo;{{ q }}&rdquo;</span>
+  khớp cả đơn hàng lẫn khách hàng &mdash; chọn <b>Đơn hàng</b> hoặc <b>Khách hàng</b>.
+  {% else %}
+  Không tìm thấy
+  <span class="mono">&ldquo;{{ q }}&rdquo;</span>
+  {% if mode == "order" %}
+  &mdash; thử mã đơn hoặc mã vận đơn.
+  {% elif mode == "customer" %}
+  &mdash; thử SĐT, tên, email hoặc mã KH (CUZN…).
+  {% else %}
+  &mdash; thử mã đơn hàng, SĐT hoặc tên khách.
+  {% endif %}
+  {% endif %}
+</div>

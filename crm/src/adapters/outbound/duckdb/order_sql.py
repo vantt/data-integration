@@ -145,3 +145,34 @@ LEFT JOIN int_order_promo_goods_cost p
 WHERE r.order_code = ?
 ORDER BY COALESCE(p.order_code IS NOT NULL, FALSE), r.sku
 """
+
+# Lightweight resolver — returns only the canonical order_code.
+# Priority: order_code (rank 0) > order_id (rank 1) > fulfillment identifiers (rank 2).
+# If fact_fulfillments is absent the UNION ALL leg produces zero rows (no crash).
+# Positional params (6): order_code×2, order_id, fulfillment_code, fulfillment_id, tracking_code.
+RESOLVE_ORDER_SQL = """
+SELECT order_code
+FROM (
+    SELECT
+        order_code,
+        CASE WHEN UPPER(order_code) = UPPER(?) THEN 0 ELSE 1 END AS match_rank
+    FROM fact_orders
+    WHERE UPPER(order_code) = UPPER(?)
+       OR order_id = ?
+
+    UNION ALL
+
+    SELECT fo.order_code, 2 AS match_rank
+    FROM fact_orders fo
+    INNER JOIN (
+        SELECT order_code AS ff_order_code
+        FROM fact_fulfillments
+        WHERE UPPER(fulfillment_code) = UPPER(?)
+           OR UPPER(fulfillment_id)   = UPPER(?)
+           OR UPPER(tracking_code)    = UPPER(?)
+        LIMIT 1
+    ) ff ON UPPER(fo.order_code) = UPPER(ff.ff_order_code)
+) combined
+ORDER BY match_rank
+LIMIT 1
+"""
