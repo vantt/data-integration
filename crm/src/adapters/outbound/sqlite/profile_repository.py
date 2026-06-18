@@ -10,7 +10,7 @@ import sqlite3
 from typing import Optional
 
 from crm.src.adapters.outbound.sqlite.connection import CRMDatabase
-from crm.src.domain.entities.profile import CustomerProfile, Party360
+from crm.src.domain.entities.profile import CustomerProfile, Party360, PartyTag
 
 
 # ---------------------------------------------------------------------------
@@ -60,6 +60,28 @@ def _row_to_profile(row: sqlite3.Row) -> CustomerProfile:
     )
 
 
+def _parse_tags_json(tags_json: Optional[str], party_id: str) -> list[PartyTag]:
+    if not tags_json:
+        return []
+    try:
+        items = json.loads(tags_json)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    return [
+        PartyTag(
+            party_id=party_id,
+            tag_id=t["tag_id"],
+            name=t.get("name", ""),
+            tagged_at="",
+            category=t.get("category"),
+            color=t.get("color"),
+            display_label=t.get("display_label"),
+        )
+        for t in items
+        if isinstance(t, dict) and t.get("tag_id")
+    ]
+
+
 def _row_to_party360(row: sqlite3.Row) -> Party360:
     consent_raw = row["consent_contact"]
     consent = bool(consent_raw) if consent_raw is not None else False
@@ -90,6 +112,7 @@ def _row_to_party360(row: sqlite3.Row) -> Party360:
         province=row["province"] if "province" in keys else None,
         address_source=row["address_source"] if "address_source" in keys else "sapo_sync",
         address_note=row["address_note"] if "address_note" in keys else None,
+        tags=_parse_tags_json(row["tags_json"] if "tags_json" in keys else None, row["party_id"]),
     )
 
 
