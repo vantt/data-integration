@@ -8,7 +8,7 @@ from client import CloudflareWorkerClient
 WORKER_URL = os.getenv("WORKER_URL", "http://localhost:8787")
 POLL_LIMIT = int(os.getenv("POLL_LIMIT", "100"))
 SLEEP_INTERVAL = int(os.getenv("SLEEP_INTERVAL", "5")) # Seconds to sleep if no data
-SOURCE_SYSTEM = "sapo" # Optional: Filter by source
+SOURCE_SYSTEM = "sapo_v2" # Optional: Filter by source
 
 def run():
     client = CloudflareWorkerClient(WORKER_URL)

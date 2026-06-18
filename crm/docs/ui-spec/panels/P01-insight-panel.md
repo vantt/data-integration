@@ -1,21 +1,21 @@
 ---
 id: P01
 type: panel
-name: "Insight Panel"
+name: "Value & Behavior Panel"
 platforms: [desktop]
 hosts: [S03]
 status: active
 design_ref: ""
 rules: [R2, R7]
-regions: [action_queue, rfm_block, signals_block, rep_insights_block, freshness_bar]
+regions: [action_queue, rfm_segments_block, value_metrics_block, signals_block, rep_insights_block, freshness_bar]
 ---
 
-# P01 — Insight Panel
+# P01 — Value & Behavior Panel
 
 ## Purpose
 
-Panel tab "Insight" trong Customer 360 (S03). Hiển thị hai lớp insight song song:
-1. **Warehouse insights** (machine-generated): RFM, affinity, action_queue, signals — đọc từ `cache.wh_customer_insight` và `cache.wh_action_queue`. CRM không tính lại.
+Panel tab "Value & Behavior" trong Customer 360 (S03). Hiển thị hai lớp insight song song:
+1. **Warehouse insights** (machine-generated): RFM & Segments, Value Metrics, Signals, action_queue — đọc từ `cache.wh_customer_insight` và `cache.wh_action_queue`. CRM không tính lại.
 2. **Rep insights** (human-curated): các nhận định rep đã đúc kết từ `crm_party_insight` — persona, buying pattern, decision style, v.v.
 
 `refreshed_at` hiển thị rõ tại freshness_bar (chỉ áp dụng cho warehouse layer).
@@ -23,23 +23,28 @@ Panel tab "Insight" trong Customer 360 (S03). Hiển thị hai lớp insight son
 ## Layout
 
 ```
-┌ ACTION QUEUE ─────────────────────────────────────────────────────────┐
-│ ┌─────────────────────────────────────────────────────────────────┐   │
-│ │ CALL_NOW  "Sắp hết hàng yêu thích — gọi ngay"  💰 2.400.000đ  │   │
-│ │           [Đã xử lý ✓] hoặc [→ Tạo task]                      │   │
-│ │ REORDER_NUDGE  "Chu kỳ mua ~30 ngày, đã 28 ngày"  💰 900.000đ │   │
-│ └─────────────────────────────────────────────────────────────────┘   │
-├ RFM BLOCK ────────────────────────────────────────────────────────────┤
-│  Nhóm: GOLD  |  Recency: 28 ngày  |  Freq: 8 đơn  |  LTV: 18.400.000 │
-├ SIGNALS ──────────────────────────────────────────────────────────────┤
-│  Status: active  |  Next purchase: IMMINENT  |  Affinity: Sữa rửa mặt │
-│  Discount sensitivity: LOW  |  Margin: 34.2% (has_cogs ✓)            │
-├ REP INSIGHTS ──────────────────────────── 👤 Minh (3 insights) [+ Thêm]┤
-│  [Persona]       Mua cho shop Q7 — cần báo giá sỉ         [cao] ✓    │
-│  [Quyết định]    Hay do dự, cần follow up ≥3 lần          [tb]  ✓    │
-│  [Mùa vụ]        Mua mạnh T10–T12                         [cao] ✓    │
-├ FRESHNESS ─────────────────────────────────────────────────────────────┤
-│  Cache insight: 07:15 ICT hôm nay ✓                                  │
+┌ ACTION QUEUE ──────────────────────────────────────────────────────────┐
+│ CALL_NOW  "Sắp hết hàng yêu thích — gọi ngay"  💰 2.400.000đ         │
+│           [Đã xử lý ✓] hoặc [→ Tạo task]                             │
+├ RFM & SEGMENTS ────────────────────────────────────────────────────────┤
+│  R: Recency 28 ngày  |  F: Frequency 8 đơn  |  M: Monetary 2.350.000đ │
+│  [GOLD] [active] [ON_TRACK] [CHANNEL_XYZ] [discount sensitive]        │
+├ VALUE METRICS ─────────────────────────────────────────────────────────┤
+│  ┌──────────────────────────┬─────────────┬─────────────┐             │
+│  │ Lifetime value (hero×2)  │ Total orders│ Avg order   │             │
+│  │ 18.400.000 ₫             │ 8           │ 2.300.000 ₫ │             │
+│  ├───────────┬──────────────┬─────────────┬─────────────┤             │
+│  │ Gross marg│ Cancel rate  │ Avg cycle   │ Channel     │             │
+│  │ 34.2%     │ 5%           │ 32d         │ POS         │             │
+│  └───────────┴──────────────┴─────────────┴─────────────┘             │
+├ SIGNALS ───────────────────────────────────────────────────────────────┤
+│  Customer status: active  |  Next purchase: ON_TRACK (2025-07-15)     │
+│  Discount sensitivity: LOW  |  Top affinity: Sữa rửa mặt             │
+├ REP INSIGHTS ────────────────────────────── 👤 [+ Thêm insight]       │
+│  [Persona]    Mua cho shop Q7 — cần báo giá sỉ       [cao]           │
+│  [Quyết định] Hay do dự, cần follow up ≥3 lần        [tb]            │
+├ FRESHNESS ──────────────────────────────────────────────────────────────┤
+│  Cache insight: 07:15 ICT hôm nay  ·  R2 · CRM không tính lại insight │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -47,6 +52,24 @@ Panel tab "Insight" trong Customer 360 (S03). Hiển thị hai lớp insight son
 
 - Nếu `crm_task.action_queue_id = item.action_id` và `task.outcome IS NOT NULL` → badge "Đã xử lý ✓" + outcome label
 - Nếu chưa có task → button "→ Tạo task" (prefill từ action item)
+
+## RFM & Segments Block
+
+3 cells ngang: **R** (Recency = `avg_days_between_orders`), **F** (Frequency = tổng số đơn `recent_orders.length`), **M** (Monetary = `avg_order_spend`).
+
+Bên dưới RFM grid: flat horizontal segment badges —
+- `value_group` (VIP/GOLD/SILVER/BRONZE) — màu tier riêng
+- `customer_status` (active/at_risk/churned)
+- `next_purchase_signal` (OVERDUE/DUE_SOON/ON_TRACK)
+- `channel_preference` (nếu có)
+- "discount sensitive" (nếu `discount_sensitivity == HIGH`)
+- "high cancel" (nếu `cancel_rate > 0.1`)
+
+## Value Metrics Block
+
+Grid 4 cột, 2 hàng:
+- **Hàng 1**: Lifetime value (hero, span 2 cột, `lifetime_contribution_margin`) | Total orders (`recent_orders.length`) | Avg order value (`avg_order_spend`)
+- **Hàng 2**: Gross margin (R7: `lifetime_contribution_margin / avg_order_spend * 100`, gated `not is_margin_negative`) | Cancel rate (`cancel_rate %`) | Avg cycle (`avg_days_between_orders d`) | Channel (`channel_preference`)
 
 ## Rep Insights Block
 

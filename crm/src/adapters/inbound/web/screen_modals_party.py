@@ -257,6 +257,7 @@ def make_party_modals_router(
         edit_display_label: str = Form(""),
         edit_contact_status: str = Form("active"),
         edit_is_preferred: str = Form("0"),
+        consent_contact: str = Form("1"),
     ) -> Response:
         try:
             if action == "add_channel":
@@ -286,6 +287,7 @@ def make_party_modals_router(
                     contact_status=edit_contact_status or "active",
                     is_preferred=edit_is_preferred == "1",
                 )
+            profile.upsert_profile(party_id, consent_contact=consent_contact == "1")
         except Exception as exc:
             log.error("post_contact %s: %s", party_id, exc)
             return HTMLResponse(f"Lỗi lưu kênh liên lạc: {exc}", status_code=500)

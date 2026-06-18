@@ -60,7 +60,7 @@ def test_party_merged_into_field():
 
 def test_party_identity_creation_and_defaults():
     ident = PartyIdentity(
-        identity_id="i-001", party_id="p-001", source_system="sapo",
+        identity_id="i-001", party_id="p-001", source_system="sapo_v2",
         identity_type=IDENTITY_TYPE_SAPO_CUSTOMER, identity_value="1001",
         confidence=1.0, is_primary=True,
         source_contact_quality=CONTACT_QUALITY_UNVERIFIED,

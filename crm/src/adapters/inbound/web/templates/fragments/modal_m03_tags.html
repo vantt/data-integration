@@ -64,10 +64,10 @@
                        class="chip {% if is_active %}chip--active{% endif %}"
                        {% if tag.color %}style="--chip-color:{{ tag.color }};"{% endif %}
                        onclick="m03ToggleTag(this)"
-                       title="{{ tag.name }}"
+                       title="{{ tag.display_label or tag.name }}"
                        tabindex="0"
                        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m03ToggleTag(this)}">
-                  {{ tag.name }}
+                  {{ tag.display_label or tag.name }}
                 </label>
               {% endfor %}
             </div>

@@ -55,7 +55,7 @@ class SharedCookieManager:
 
     Example:
         manager = SharedCookieManager(
-            source='sapo',
+            source='sapo_v2',
             login_url='https://admin.sapo.vn/login',
             username='user@example.com',
             password='password123'
@@ -81,7 +81,7 @@ class SharedCookieManager:
         Initialize cookie manager.
 
         Args:
-            source: Source system identifier (e.g., 'sapo', 'shopify')
+            source: Source system identifier (e.g., 'sapo_v2', 'shopify')
             login_url: URL of the login page
             username: Login username/email
             password: Login password

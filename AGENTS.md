@@ -288,6 +288,21 @@ dbt models may start before ingestion finishes in subset jobs. **Fix**: Manually
 
 ---
 
+## source_system Convention (IMPORTANT for agents)
+
+`source_system` = `{system}_{version}` — combined identifier. Version is load-bearing for mapping logic. **No separate `source_version` column exists.**
+
+- ✅ `'sapo_v2'` — Sapo API v2 ingestion
+- ✅ `'sapo_v3'` — Sapo API v3 (future)
+- ✅ `'sapo_v2_mac'` — Sapo MAC variant
+- ✅ `'sapo_v2_mac+misa'` — Sapo MAC + MISA blended
+- ❌ `'sapo'` — WRONG, bare name without version is meaningless for mapping logic
+- ❌ `'sapo'` + separate `source_version = 'v2'` — also WRONG, no such column exists
+
+**Never use bare `'sapo'` as a `source_system` value anywhere in code or SQL.**
+
+---
+
 ## Proven Solutions & Common Pitfalls (Lessons Learned)
 
 **IGNORE THEM AT YOUR PERIL.**

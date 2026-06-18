@@ -424,24 +424,58 @@ def make_management_router(
 
     @router.get("/settings/tags/modal/create", response_class=HTMLResponse)
     def modal_tag_create(request: Request):
-        return templates.TemplateResponse("settings.html", {
-            "request": request, "view": "modal_tag",
+        return templates.TemplateResponse("fragments/modal_m14_create_tag.html", {
+            "request": request, "tag": None,
+        })
+
+    @router.get("/settings/tags/{tag_id}/modal/edit", response_class=HTMLResponse)
+    def modal_tag_edit(request: Request, tag_id: str):
+        tag = settings_svc.get_tag(tag_id)
+        if not tag:
+            return HTMLResponse("not found", status_code=404)
+        return templates.TemplateResponse("fragments/modal_m14_create_tag.html", {
+            "request": request, "tag": tag,
         })
 
     @router.post("/settings/tags")
     async def tag_create(
         name: str = Form(""), color: str = Form(""),
-        category: str = Form(""),
+        category: str = Form(""), display_label: str = Form(""),
     ):
         if not name.strip():
             return HTMLResponse("name required", status_code=400)
-        if not _is_valid_hex_color(color.strip()):
-            return HTMLResponse("invalid color: must be #RRGGBB or empty", status_code=400)
+        color_val = color.strip()
+        if color_val and color_val not in {"default", "moss", "coral", "amber"} and not _is_valid_hex_color(color_val):
+            return HTMLResponse("invalid color", status_code=400)
         settings_svc.create_tag(
-            tag_id=str(uuid.uuid4()), name=name.strip(),
-            category=category.strip(), color=color.strip(),
+            name=name.strip(),
+            category=category.strip(), color=color_val,
+            display_label=display_label.strip(),
         )
         return Response(status_code=200, headers={"HX-Redirect": "/settings?tab=tags"})
+
+    @router.patch("/settings/tags/{tag_id}")
+    async def tag_update(
+        tag_id: str,
+        name: str = Form(""), color: str = Form(""),
+        category: str = Form(""), display_label: str = Form(""),
+    ):
+        if not name.strip():
+            return HTMLResponse("name required", status_code=400)
+        color_val = color.strip()
+        if color_val and color_val not in {"default", "moss", "coral", "amber"} and not _is_valid_hex_color(color_val):
+            return HTMLResponse("invalid color", status_code=400)
+        settings_svc.update_tag(
+            tag_id=tag_id, name=name.strip(),
+            category=category.strip(), color=color_val,
+            display_label=display_label.strip(),
+        )
+        return Response(status_code=200, headers={"HX-Redirect": "/settings?tab=tags"})
+
+    @router.delete("/settings/tags/{tag_id}")
+    async def tag_delete(tag_id: str):
+        settings_svc.delete_tag(tag_id)
+        return Response(status_code=200)  # HTMX removes the row via outerHTML swap
 
     return router
 

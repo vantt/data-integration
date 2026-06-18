@@ -212,7 +212,7 @@ class SQLitePartyRepository:
         identity = PartyIdentity(
             identity_id=str(uuid.uuid4()),
             party_id=party_id,
-            source_system="sapo",
+            source_system="sapo_v2",
             identity_type="sapo_customer",
             identity_value=identity_value,
             confidence=1.0,

@@ -28,7 +28,7 @@ END;
 CREATE TABLE IF NOT EXISTS crm_party_identity (
   identity_id    TEXT PRIMARY KEY,
   party_id       TEXT NOT NULL REFERENCES crm_party(party_id),
-  source_system  TEXT NOT NULL,   -- sapo|messenger|zalo|manual
+  source_system  TEXT NOT NULL,   -- sapo_v2|messenger|zalo|manual
   identity_type  TEXT NOT NULL,   -- sapo_customer|phone|email|psid|zalo_uid|customer_code
   identity_value TEXT NOT NULL,   -- normalised value
   confidence     REAL NOT NULL DEFAULT 1.0,

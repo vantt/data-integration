@@ -25,28 +25,37 @@ class SQLiteTagRepository:
     # ── SQL (ported from tag_queries.sql) ─────────────────────────────────────
 
     _SQL_LIST_ALL = """
-        SELECT tag_id, name, category, color
+        SELECT tag_id, name, display_label, category, color
         FROM crm_tag
         ORDER BY category, name
     """
 
     _SQL_LIST_BY_CATEGORY = """
-        SELECT tag_id, name, category, color
+        SELECT tag_id, name, display_label, category, color
         FROM crm_tag
         WHERE category = ?
         ORDER BY name
     """
 
     _SQL_GET = """
-        SELECT tag_id, name, category, color
+        SELECT tag_id, name, display_label, category, color
         FROM crm_tag
         WHERE tag_id = ?
         LIMIT 1
     """
 
     _SQL_CREATE = """
-        INSERT INTO crm_tag (tag_id, name, category, color)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO crm_tag (tag_id, name, display_label, category, color)
+        VALUES (?, ?, ?, ?, ?)
+    """
+
+    _SQL_UPDATE = """
+        UPDATE crm_tag SET name = ?, display_label = ?, category = ?, color = ?
+        WHERE tag_id = ?
+    """
+
+    _SQL_DELETE = """
+        DELETE FROM crm_tag WHERE tag_id = ?
     """
 
     _SQL_ATTACH = """
@@ -60,7 +69,7 @@ class SQLiteTagRepository:
     """
 
     _SQL_LIST_PARTY_TAGS = """
-        SELECT t.tag_id, t.name, t.category, t.color
+        SELECT t.tag_id, t.name, t.display_label, t.category, t.color
         FROM crm_tag t
         JOIN crm_party_tag pt ON pt.tag_id = t.tag_id
         WHERE pt.party_id = ?
@@ -68,7 +77,7 @@ class SQLiteTagRepository:
     """
 
     _SQL_LIST_PARTY_TAGS_WITH_META = """
-        SELECT t.tag_id, t.name, t.category, t.color,
+        SELECT t.tag_id, t.name, t.display_label, t.category, t.color,
                pt.tagged_by, pt.tagged_at
         FROM crm_tag t
         JOIN crm_party_tag pt ON pt.tag_id = t.tag_id
@@ -83,6 +92,7 @@ class SQLiteTagRepository:
         return Tag(
             tag_id=row["tag_id"],
             name=row["name"],
+            display_label=row["display_label"],
             category=row["category"],
             color=row["color"],
         )
@@ -101,7 +111,15 @@ class SQLiteTagRepository:
         return self._row_to_tag(row) if row else None
 
     def create_tag(self, tag: Tag) -> None:
-        self._db.conn.execute(self._SQL_CREATE, (tag.tag_id, tag.name, tag.category, tag.color))
+        self._db.conn.execute(self._SQL_CREATE, (tag.tag_id, tag.name, tag.display_label, tag.category, tag.color))
+        self._db.conn.commit()
+
+    def update_tag(self, tag: Tag) -> None:
+        self._db.conn.execute(self._SQL_UPDATE, (tag.name, tag.display_label, tag.category, tag.color, tag.tag_id))
+        self._db.conn.commit()
+
+    def delete_tag(self, tag_id: str) -> None:
+        self._db.conn.execute(self._SQL_DELETE, (tag_id,))
         self._db.conn.commit()
 
     def attach_tag(self, party_id: str, tag_id: str, user_id: Optional[str], tagged_at: str) -> None:
@@ -135,6 +153,7 @@ class SQLiteTagRepository:
                 party_id=party_id,
                 tag_id=r["tag_id"],
                 name=r["name"],
+                display_label=r["display_label"],
                 category=r["category"],
                 color=r["color"],
                 tagged_by=r["tagged_by"],

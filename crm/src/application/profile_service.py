@@ -245,16 +245,32 @@ class ProfileService:
     def list_tags(self, category: str) -> list[Tag]:
         return self._tags.list_tags(category)
 
-    def create_tag(self, name: str, category: str, color: str) -> Tag:
+    def get_tag(self, tag_id: str) -> Optional[Tag]:
+        return self._tags.get_tag(tag_id)
+
+    def create_tag(self, name: str, category: str, color: str, display_label: str = "") -> Tag:
         tag = Tag(
             tag_id=str(uuid.uuid4()),
             name=name,
+            display_label=display_label or None,
             category=category or "general",
-            color=color or "#6b7280",
-            created_at=_utc_now(),
+            color=color or "default",
         )
         self._tags.create_tag(tag)
         return tag
+
+    def update_tag(self, tag_id: str, name: str, category: str, color: str, display_label: str = "") -> None:
+        tag = Tag(
+            tag_id=tag_id,
+            name=name,
+            display_label=display_label or None,
+            category=category or "general",
+            color=color or "default",
+        )
+        self._tags.update_tag(tag)
+
+    def delete_tag(self, tag_id: str) -> None:
+        self._tags.delete_tag(tag_id)
 
     # --- Notes ---
 

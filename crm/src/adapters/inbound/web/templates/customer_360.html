@@ -151,19 +151,12 @@
     <div class="scard">
       <div class="row-between" style="margin-bottom:var(--sp-3)">
         <span class="caption">Liên Lạc</span>
-        <div style="display:flex;gap:var(--sp-1)">
-          <button class="ghost-link"
-                  hx-get="/modals/m15?party_id={{ party.party_id }}&tab=contacts"
-                  hx-target="#modal-root" hx-swap="innerHTML">
-            {% include "icons/plus.svg" %} Thêm
-          </button>
-          <button class="ghost-link"
-                  hx-get="/modals/m15?party_id={{ party.party_id }}&tab=address"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  title="Sửa địa chỉ">
-            {% include "icons/edit.svg" %}
-          </button>
-        </div>
+        <button class="ghost-link"
+                hx-get="/modals/m15?party_id={{ party.party_id }}&tab=contacts"
+                hx-target="#modal-root" hx-swap="innerHTML"
+                title="Sửa">
+          {% include "icons/edit.svg" %}
+        </button>
       </div>
 
       {# Contact channels #}

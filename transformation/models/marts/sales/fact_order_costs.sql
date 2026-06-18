@@ -29,8 +29,8 @@ cogs AS (
         ABS(SUM(COALESCE(r.cogs_goods_sapo, r.cogs_goods_misa, 0))) AS amount,
         -- Reflects actual data origin for traceability
         CASE
-            WHEN BOOL_OR(r.cogs_goods_sapo IS NOT NULL) AND BOOL_OR(r.cogs_goods_misa IS NOT NULL) THEN 'sapo_mac+misa'
-            WHEN BOOL_OR(r.cogs_goods_sapo IS NOT NULL) THEN 'sapo_mac'
+            WHEN BOOL_OR(r.cogs_goods_sapo IS NOT NULL) AND BOOL_OR(r.cogs_goods_misa IS NOT NULL) THEN 'sapo_v2_mac+misa'
+            WHEN BOOL_OR(r.cogs_goods_sapo IS NOT NULL) THEN 'sapo_v2_mac'
             WHEN BOOL_OR(r.cogs_goods_misa IS NOT NULL) THEN 'misa'
             ELSE 'none'
         END                                 AS source_system,
@@ -156,7 +156,7 @@ sapo_discounts AS (
         SUM(amount)                        AS amount,
         MAX(discount_rate)                 AS discount_rate,
         MAX_BY(discount_type, amount)      AS discount_type,
-        'sapo'               AS source_system,
+        'sapo_v2'               AS source_system,
         MIN(source_record)   AS source_record,
         'actual'             AS fee_source,
         MIN(date_key)        AS date_key,
@@ -262,7 +262,7 @@ SELECT
     amount,
     NULL                            AS discount_rate,
     NULL                            AS discount_type,
-    'sapo'                          AS source_system,
+    'sapo_v2'                       AS source_system,
     order_code                      AS source_record,
     'actual'                        AS fee_source,
     date_key,

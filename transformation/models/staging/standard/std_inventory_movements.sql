@@ -20,7 +20,7 @@
 --   total_mac always 0 — dropped per analysis.
 --
 -- Dedup: QUALIFY ROW_NUMBER() on entity_id (business-grain dedup at std gate).
--- source_system = 'sapo', source_version = 'v2'.
+-- source_system = 'sapo_v2', source_version = 'v2'.
 -- =================================================================================================
 
 WITH source_data AS (
@@ -98,7 +98,7 @@ SELECT
     event_timestamp,
 
     -- Source provenance
-    'sapo'  AS source_system,
+    'sapo_v2'  AS source_system,
     'v2'    AS source_version
 
 FROM source_data

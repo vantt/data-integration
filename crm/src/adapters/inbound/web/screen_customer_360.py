@@ -26,6 +26,24 @@ from crm.src.domain.entities.task import Task
 
 log = logging.getLogger(__name__)
 
+_GEO_HCMC = {'Hồ Chí Minh', 'TP Hồ Chí Minh', 'TP. Hồ Chí Minh', 'HCM', 'Ho Chi Minh'}
+_GEO_HANOI = {'Hà Nội', 'Ha Noi', 'Hanoi'}
+_GEO_MEKONG = {'An Giang', 'Bạc Liêu', 'Bến Tre', 'Cà Mau', 'Cần Thơ', 'Đồng Tháp', 'Hậu Giang', 'Kiên Giang', 'Long An', 'Sóc Trăng', 'Tiền Giang', 'Trà Vinh', 'Vĩnh Long'}
+_GEO_CENTRAL = {'Đà Nẵng', 'Thừa Thiên Huế', 'Quảng Nam', 'Quảng Ngãi', 'Bình Định', 'Phú Yên', 'Khánh Hòa', 'Ninh Thuận', 'Bình Thuận', 'Quảng Bình', 'Quảng Trị', 'Hà Tĩnh', 'Nghệ An', 'Thanh Hóa'}
+
+def _geo_region(province: Optional[str]) -> str:
+    if not province:
+        return ""
+    if province in _GEO_HCMC:
+        return "HCMC"
+    if province in _GEO_HANOI:
+        return "Hà Nội"
+    if province in _GEO_MEKONG:
+        return "Mekong"
+    if province in _GEO_CENTRAL:
+        return "Miền Trung"
+    return "Khác"
+
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
     re.IGNORECASE,
@@ -204,6 +222,7 @@ def make_customer_360_router(
                 "warning_notes": warning_notes,
                 "contact_pref_notes": contact_pref_notes,
                 "custom_field_defs": cfd_list,
+                "geo_region": _geo_region(party360.province),
             },
         )
 

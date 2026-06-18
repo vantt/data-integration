@@ -5,7 +5,7 @@
 CREATE TABLE IF NOT EXISTS crm_party_external_id (
   ext_id        TEXT PRIMARY KEY,
   party_id      TEXT NOT NULL REFERENCES crm_party(party_id),
-  source_system TEXT NOT NULL,   -- sapo | woocommerce | shopify | tiki | shopee
+  source_system TEXT NOT NULL,   -- sapo_v2 | woocommerce | shopify | tiki | shopee
   external_key  TEXT NOT NULL,   -- customer_id or equivalent in that platform
   created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
   UNIQUE (source_system, external_key)

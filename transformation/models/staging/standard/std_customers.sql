@@ -15,7 +15,7 @@ SELECT
     -- Identity
     sapo_customer_id as customer_id,
     customer_code,
-    'sapo' as source_system,
+    'sapo_v2' as source_system,
     'v2'   as source_version,
     
     -- Contact

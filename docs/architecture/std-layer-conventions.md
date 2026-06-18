@@ -17,13 +17,13 @@ raw (dlt) → src_<source>_<entity>_v<N> → stg_<source>_<entity>_v<N> → std_
 Every source entity that feeds a `dim_`, `fact_`, or `int_` model MUST flow through a `std_<entity>` conformance model. Downstream models read `std_*`, **never** `stg_<source>_*` directly. (Upstream `stg → stg` chains are fine; the gate applies to dim/fact/int consumers.)
 
 ### R2 — std model = faithful pass-through (no renames in v2)
-A `std_<entity>` is a thin `view` over its `stg_<source>_<entity>` source: select ALL columns the stg outputs — **never drop or rename a column** — plus `'sapo' AS source_system` and `'v2' AS source_version`. Column renaming/standardization is a SEPARATE effort (see the P1+ rename phases), not done inside the v2 pass-through.
+A `std_<entity>` is a thin `view` over its `stg_<source>_<entity>` source: select ALL columns the stg outputs — **never drop or rename a column** — plus `'sapo_v2' AS source_system`. Column renaming/standardization is a SEPARATE effort (see the P1+ rename phases), not done inside the v2 pass-through. **No `source_version` column** — version is embedded in `source_system`.
 
 ### R3 — Versioning suffix
 The source **version is a `_v<N>` suffix** on src/stg models (`src_sapo_orders_v2`, `stg_sapo_orders_v2`; later `_v3`). The `std_<entity>` model is **version-agnostic — never carries a suffix**; it UNIONs the versions and is the stable contract every downstream model reads. (See `naming-conventions.md` §7.)
 
 ### R4 — std contract = the v3 interface
-Each `std_<entity>` exposes a fixed column set = the **interface** that a future `stg_<source>_v3_<entity>` must satisfy. Document the column list in a header comment (`-- STD CONTRACT v2 … interface for v3 …`). When adding v3, map v3's structure to the SAME columns; `source_version` discriminates ('v2'/'v3').
+Each `std_<entity>` exposes a fixed column set = the **interface** that a future `stg_<source>_v3_<entity>` must satisfy. Document the column list in a header comment (`-- STD CONTRACT v2 … interface for v3 …`). When adding v3, map v3's structure to the SAME columns; `source_system` discriminates (`'sapo_v2'`/`'sapo_v3'`).
 
 ### R5 — Don't wrap dead code
 If a `stg_*` model has zero consumers (grep `ref('stg_…')` returns nothing), do NOT create a std for it — that violates YAGNI. Flag it as dead code for cleanup instead. (Example: `stg_sapo_inventories` is unused; inventory flows via `std_variants.inventories_json`.)

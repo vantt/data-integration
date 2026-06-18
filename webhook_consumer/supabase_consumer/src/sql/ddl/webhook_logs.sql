@@ -1,3 +1,5 @@
+-- ARCHIVED: system migrated to Cloudflare D1; this file is no longer used
+
 -- Table: public.webhook_logs
 
 -- DROP TABLE IF EXISTS public.webhook_logs;

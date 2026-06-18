@@ -108,7 +108,7 @@ class PartyIdentity:
     """
     identity_id: str            # UUID
     party_id: str               # FK → crm_party
-    source_system: str          # sapo|messenger|zalo|manual
+    source_system: str          # sapo_v2|messenger|zalo|manual
     identity_type: str          # sapo_customer|phone|phone_secondary|email|psid|zalo|facebook|…
     identity_value: str         # normalised value (E.164 for phone, per R5)
     confidence: float           # 0.0–1.0

@@ -9,7 +9,7 @@
 --   refund_amount (DOUBLE), return_quantity (INTEGER),
 --   issued_at (TIMESTAMPTZ), received_at (TIMESTAMPTZ),
 --   created_at (TIMESTAMPTZ), modified_at (TIMESTAMPTZ)
--- Plus: source_system='sapo', source_version IN ('v2','v3').
+-- Plus: source_system='sapo_v2', source_version='v2' (or 'v3' for v3 union).
 
 -- =================================================================================================
 -- HOP: STANDARD ORDER RETURNS - v2.0
@@ -39,7 +39,7 @@ SELECT
     modified_at,
 
     -- Source lineage (P0 gate discriminator; v3 union sets 'v3')
-    'sapo' AS source_system,
+    'sapo_v2' AS source_system,
     'v2'   AS source_version
 
 FROM source_data

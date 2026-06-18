@@ -87,9 +87,10 @@ class CustomFieldDef:
 class Tag:
     """Label that can be attached to many parties."""
     tag_id: str             # UUID
-    name: str
-    category: Optional[str] = None  # e.g. segment|profile|action
-    color: Optional[str] = None     # hex color string
+    name: str               # slug: lowercase, hyphen, machine-readable
+    category: Optional[str] = None
+    color: Optional[str] = None
+    display_label: Optional[str] = None     # human-readable label (Vietnamese OK); falls back to name in UI
 
 
 @dataclass
@@ -102,6 +103,7 @@ class PartyTag:
     category: Optional[str] = None
     color: Optional[str] = None
     tagged_by: Optional[str] = None         # FK → crm_app_user (nullable)
+    display_label: Optional[str] = None     # denormalised from crm_tag.display_label
 
 
 @dataclass

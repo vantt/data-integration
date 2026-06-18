@@ -124,7 +124,7 @@ class PartyService:
             sapo_identity = PartyIdentity(
                 identity_id=str(uuid.uuid4()),
                 party_id=party.party_id,
-                source_system="sapo",
+                source_system="sapo_v2",
                 identity_type="sapo_customer",
                 identity_value=sapo_id,
                 confidence=1.0,

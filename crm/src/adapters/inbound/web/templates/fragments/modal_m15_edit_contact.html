@@ -203,6 +203,23 @@
           </div>
         </div>
 
+        {# Consent #}
+        <div class="field" style="padding-top:var(--sp-3);border-top:1px solid var(--border)">
+          <span class="field__label">ĐỒNG Ý LIÊN LẠC</span>
+          <div class="radioset">
+            <label class="radio-pill {% if party.consent_contact %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="consent_contact" value="1"
+                     {% if party.consent_contact %}checked{% endif %} class="sr-only"> Cho phép
+            </label>
+            <label class="radio-pill {% if not party.consent_contact %}radio-pill--on{% endif %}">
+              <span class="radio-pill__dot"></span>
+              <input type="radio" name="consent_contact" value="0"
+                     {% if not party.consent_contact %}checked{% endif %} class="sr-only"> Không liên lạc
+            </label>
+          </div>
+        </div>
+
       </div>{# .modal__body #}
 
       <div class="modal__actions">
@@ -314,21 +331,6 @@
           </div>
         </label>
 
-        <div class="field">
-          <span class="field__label">ĐỒNG Ý LIÊN LẠC</span>
-          <div class="radioset">
-            <label class="radio-pill {% if party.consent_contact %}radio-pill--on{% endif %}">
-              <span class="radio-pill__dot"></span>
-              <input type="radio" name="consent_contact" value="1"
-                     {% if party.consent_contact %}checked{% endif %} class="sr-only"> Cho phép
-            </label>
-            <label class="radio-pill {% if not party.consent_contact %}radio-pill--on{% endif %}">
-              <span class="radio-pill__dot"></span>
-              <input type="radio" name="consent_contact" value="0"
-                     {% if not party.consent_contact %}checked{% endif %} class="sr-only"> Không liên lạc
-            </label>
-          </div>
-        </div>
       </div>{# .modal__body #}
 
       <div class="modal__actions">

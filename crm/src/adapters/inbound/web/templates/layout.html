@@ -474,5 +474,16 @@ function dvActivateTab(tabEl, url) {
   });
 }());
 </script>
+<script>
+// Toggle radio-pill--on class on selection change (class is server-rendered, needs JS to stay in sync)
+document.addEventListener('change', function(e) {
+  if (e.target.type !== 'radio') return;
+  var rs = e.target.closest('.radioset');
+  if (!rs) return;
+  rs.querySelectorAll('.radio-pill').forEach(function(pill) {
+    pill.classList.toggle('radio-pill--on', !!pill.querySelector('input[type="radio"]:checked'));
+  });
+});
+</script>
 </body>
 </html>

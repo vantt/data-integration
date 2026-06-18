@@ -14,7 +14,7 @@ WITH source_data AS (
 SELECT
     -- Identity
     account_id,
-    'sapo' as source_system,
+    'sapo_v2' as source_system,
     'v2'   as source_version,
 
     -- Staff info

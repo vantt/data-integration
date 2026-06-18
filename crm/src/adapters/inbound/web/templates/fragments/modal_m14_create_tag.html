@@ -23,15 +23,26 @@
               aria-label="Đóng">✕</button>
     </div>
 
+    {% if editing %}
+    <form hx-patch="{{ post_url }}"
+    {% else %}
     <form hx-post="{{ post_url }}"
+    {% endif %}
           hx-target="#modal-root"
           hx-swap="innerHTML">
-      {% if editing %}
-        <input type="hidden" name="_method" value="PUT">
-        <input type="hidden" name="tag_id" value="{{ tag.tag_id }}">
-      {% endif %}
 
       <div class="modal__body">
+
+        {# Display label — human-readable, shown in UI chips #}
+        <label class="field">
+          <span class="field__label">Nhãn hiển thị</span>
+          <input type="text" name="display_label" class="inp"
+                 value="{{ tag.display_label if editing and tag.display_label else '' }}"
+                 placeholder="VIP lặp lại"
+                 {% if not editing %}autofocus{% endif %}
+                 autocomplete="off">
+          <span class="field__hint">Tên hiển thị trên giao diện (tiếng Việt OK). Để trống sẽ dùng slug.</span>
+        </label>
 
         {# Tag name (slug) #}
         <label class="field">
@@ -39,19 +50,9 @@
           <input type="text" name="name" class="inp inp--mono"
                  value="{{ tag.name if editing else '' }}"
                  placeholder="vip-repeat"
-                 {% if not editing %}autofocus{% endif %}
                  required
                  autocomplete="off">
           <span class="field__hint">Chỉ dùng chữ thường, số, dấu gạch ngang</span>
-        </label>
-
-        {# Display label #}
-        <label class="field">
-          <span class="field__label">Nhãn hiển thị <span style="color:var(--coral-500)">*</span></span>
-          <input type="text" name="display_label" class="inp"
-                 value="{{ tag.display_label if editing else '' }}"
-                 placeholder="VIP Repeat"
-                 required>
         </label>
 
         {# Category — select enum from migration 0014 #}
@@ -74,23 +75,27 @@
         {# Color — radio pills using design-system tone names #}
         <div class="field">
           <span class="field__label">Màu (tùy chọn)</span>
-          <div class="radioset">
-            <label class="radio-pill {% if not editing or tag.color == 'default' or not tag.color %}radio-pill--on{% endif %}">
+          <div class="radioset" id="m14-color-set">
+            <label class="radio-pill {% if not editing or tag.color == 'default' or not tag.color %}radio-pill--on{% endif %}"
+                   onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
               <span class="radio-pill__dot"></span>
               <input type="radio" name="color" value="default" class="sr-only"
                      {% if not editing or not tag.color or tag.color == 'default' %}checked{% endif %}> Trung tính
             </label>
-            <label class="radio-pill {% if editing and tag.color == 'moss' %}radio-pill--on{% endif %}">
+            <label class="radio-pill {% if editing and tag.color == 'moss' %}radio-pill--on{% endif %}"
+                   onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
               <span class="radio-pill__dot"></span>
               <input type="radio" name="color" value="moss" class="sr-only"
                      {% if editing and tag.color == 'moss' %}checked{% endif %}> Xanh
             </label>
-            <label class="radio-pill {% if editing and tag.color == 'coral' %}radio-pill--on{% endif %}">
+            <label class="radio-pill {% if editing and tag.color == 'coral' %}radio-pill--on{% endif %}"
+                   onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
               <span class="radio-pill__dot"></span>
               <input type="radio" name="color" value="coral" class="sr-only"
                      {% if editing and tag.color == 'coral' %}checked{% endif %}> Đỏ
             </label>
-            <label class="radio-pill {% if editing and tag.color == 'amber' %}radio-pill--on{% endif %}">
+            <label class="radio-pill {% if editing and tag.color == 'amber' %}radio-pill--on{% endif %}"
+                   onclick="this.closest('.radioset').querySelectorAll('.radio-pill').forEach(function(p){p.classList.remove('radio-pill--on')});this.classList.add('radio-pill--on')">
               <span class="radio-pill__dot"></span>
               <input type="radio" name="color" value="amber" class="sr-only"
                      {% if editing and tag.color == 'amber' %}checked{% endif %}> Vàng

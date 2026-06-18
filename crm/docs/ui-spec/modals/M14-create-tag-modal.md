@@ -15,10 +15,10 @@ regions: [header, body, actions]
 ## Purpose
 
 Tạo tag mới trong `crm_tag`. Dùng từ Settings (S13) hoặc inline từ Tag Management Modal (M03).
-Tag có name (slug), display_label, category (enum chuẩn), và optional color.
+Tag có name (slug), display_label, category (enum chuẩn — selectbox), và optional color.
 Sau khi tạo, tag khả dụng ngay trong toàn hệ thống.
 
-Category là enum cố định để warehouse có thể group tags khi phân tích.
+Category là enum cố định (selectbox, không cho nhập tay) để warehouse có thể group tags khi phân tích.
 
 ## Layout
 

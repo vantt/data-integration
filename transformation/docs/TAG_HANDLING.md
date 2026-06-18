@@ -2,6 +2,12 @@
 
 > Comprehensive guide for order & customer tag processing, categorization, and monitoring.
 
+## source_system Convention
+
+Tag data originates from Sapo. When `source_system` is stored alongside tag records, always use the combined `{system}_{version}` identifier:
+- ✅ `'sapo_v2'` — Sapo API v2 ingestion
+- ❌ `'sapo'` — bare name without version, never use
+
 ## Overview
 
 Tags are semi-structured, multi-value JSON arrays attached to orders and customers in Sapo. They encode:

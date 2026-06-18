@@ -54,6 +54,38 @@
     {% endif %}
   </div>
 
+  {# ── Signals ──────────────────────────────────────────── #}
+  <div>
+    <div class="panel-head"><span class="panel-title">Signals</span></div>
+    <div class="signal-grid">
+      <div class="signal-cell">
+        <div class="signal-cell__k">Customer status</div>
+        <div class="signal-cell__v">
+          <span class="{{ ins.customer_status | bdg_cls('customer_status') }}" data-tooltip="{{ ins.customer_status | bdg_tip('customer_status') }}">{{ ins.customer_status }}</span>
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Next purchase</div>
+        <div class="signal-cell__v">
+          <span class="{{ ins.next_purchase_signal | bdg_cls('purchase_signal') }}" data-tooltip="{{ ins.next_purchase_signal | bdg_tip('purchase_signal') }}">{{ ins.next_purchase_signal }}</span>
+          {% if ins.predicted_next_purchase_date %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ ins.predicted_next_purchase_date }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Discount sensitivity</div>
+        <div class="signal-cell__v">{{ ins.discount_sensitivity or "—" }}</div>
+      </div>
+      {% if ins.top_affinity_product %}
+      <div class="signal-cell">
+        <div class="signal-cell__k">Top affinity</div>
+        <div class="signal-cell__v" style="font-size:14px">{{ ins.top_affinity_product }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
   {# ── RFM & Segments ───────────────────────────────────── #}
   <div>
     <div class="panel-head">
@@ -136,38 +168,6 @@
         <div class="signal-cell__k">Channel</div>
         <div class="signal-cell__v">{{ ins.channel_preference or "—" }}</div>
       </div>
-    </div>
-  </div>
-
-  {# ── Signals ──────────────────────────────────────────── #}
-  <div>
-    <div class="panel-head"><span class="panel-title">Signals</span></div>
-    <div class="signal-grid">
-      <div class="signal-cell">
-        <div class="signal-cell__k">Customer status</div>
-        <div class="signal-cell__v">
-          <span class="{{ ins.customer_status | bdg_cls('customer_status') }}" data-tooltip="{{ ins.customer_status | bdg_tip('customer_status') }}">{{ ins.customer_status }}</span>
-        </div>
-      </div>
-      <div class="signal-cell">
-        <div class="signal-cell__k">Next purchase</div>
-        <div class="signal-cell__v">
-          <span class="{{ ins.next_purchase_signal | bdg_cls('purchase_signal') }}" data-tooltip="{{ ins.next_purchase_signal | bdg_tip('purchase_signal') }}">{{ ins.next_purchase_signal }}</span>
-          {% if ins.predicted_next_purchase_date %}
-          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ ins.predicted_next_purchase_date }}</span>
-          {% endif %}
-        </div>
-      </div>
-      <div class="signal-cell">
-        <div class="signal-cell__k">Discount sensitivity</div>
-        <div class="signal-cell__v">{{ ins.discount_sensitivity or "—" }}</div>
-      </div>
-      {% if ins.top_affinity_product %}
-      <div class="signal-cell">
-        <div class="signal-cell__k">Top affinity</div>
-        <div class="signal-cell__v" style="font-size:14px">{{ ins.top_affinity_product }}</div>
-      </div>
-      {% endif %}
     </div>
   </div>
 

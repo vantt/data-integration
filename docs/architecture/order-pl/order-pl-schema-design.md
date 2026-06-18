@@ -77,7 +77,7 @@ order_code      VARCHAR
 cost_type       VARCHAR    -- taxonomy bên dưới
 cost_category   VARCHAR    -- COGS | PLATFORM_FEE | SHIPPING | PAYMENT | TAX | DISCOUNT | REFUND
 amount          DECIMAL    -- luôn positive (ABS), sign convention theo cost_category
-source_system   VARCHAR    -- 'sapo' | 'misa' | 'shopee' | 'carrier_ghtk' | ...
+source_system   VARCHAR    -- 'sapo_v2' | 'misa' | 'shopee' | 'carrier_ghtk' | ...
 source_record   VARCHAR    -- traceability (voucher_no, invoice_id, ...)
 fee_source      VARCHAR    -- 'actual' | 'estimated'
 recorded_at     TIMESTAMPTZ

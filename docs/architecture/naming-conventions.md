@@ -42,7 +42,7 @@ Standards followed: Kimball dimensional modeling + dbt-labs style guide + e-comm
 
 ## 6. Types & lineage
 - Categorical "kind of X" columns → `_type` (NOT `_nature`): `discount_type`, `payment_method_type`, `return_status`.
-- Lineage/metadata columns: `source_system` ('sapo', 'misa', 'shopee'), `source_version` ('v2' / 'v3'), `source_record`, `extracted_at`.
+- Lineage/metadata columns: `source_system` (combined `{system}_{version}` identifier — e.g. `'sapo_v2'`, `'misa'`, `'shopee'`), `source_record`, `extracted_at`. **No separate `source_version` column** — version is encoded in `source_system` and is load-bearing for mapping logic.
 - Source-specific columns keep a system prefix: `misa_join_key`, `shopee_net_settlement`.
 
 ## 7. Models

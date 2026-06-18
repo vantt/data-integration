@@ -178,7 +178,7 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
                 "month": str(dt.month),
                 "payload": inner_payload, # Use the unwrapped entity data
                 "sync_metadata": {
-                    "source_system": source_system or "sapo", # Use arg or default
+                    "source_system": source_system or "sapo_v2",
                     "event_timestamp": received_at_str or datetime.utcnow().isoformat(),
                     "processing_timestamp": datetime.utcnow().isoformat(),
                     "original_event_id": str(msg_id)

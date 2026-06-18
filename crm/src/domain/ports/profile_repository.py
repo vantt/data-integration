@@ -69,6 +69,14 @@ class TagRepository(Protocol):
         """Insert a new tag. UNIQUE(category, name) enforced at DB level."""
         ...
 
+    def update_tag(self, tag: Tag) -> None:
+        """Update name, category, color of an existing tag."""
+        ...
+
+    def delete_tag(self, tag_id: str) -> None:
+        """Delete a tag by tag_id."""
+        ...
+
     def attach_tag(self, party_tag: PartyTag) -> None:
         """Create a crm_party_tag row (INSERT OR IGNORE — idempotent on duplicate)."""
         ...

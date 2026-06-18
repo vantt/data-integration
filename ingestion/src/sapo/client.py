@@ -61,7 +61,7 @@ def get_sapo_client() -> Any:
         raise ValueError("Missing 'password' in secrets.toml or SOURCES__SAPO__PASSWORD env var")
 
     # Initialize cookie manager
-    cookie_manager = get_cookie_manager('sapo', {
+    cookie_manager = get_cookie_manager('sapo_v2', {
         'login_url': login_url,
         'username': username,
         'password': password,

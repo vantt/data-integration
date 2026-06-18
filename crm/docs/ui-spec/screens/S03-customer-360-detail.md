@@ -4,6 +4,7 @@ type: screen
 name: "Customer 360 Detail"
 platforms: [desktop]
 hosts: [P01, P02, P03, P04, P05, P06]
+tab_labels: ["Value & Behavior", "Đơn hàng", "Timeline", "Tasks", "Ghi chú", "Chat"]
 status: active
 design_ref: ""
 rules: [R2, R3, R6, R7]
@@ -32,7 +33,7 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 │ [Gán NV ▼]  [+ Tag]  [Ghi log]  [Tạo task]  ├───────────────────────────────┤
 ├──────────────────────────────────────────────┤ THÔNG TIN CƠ BẢN          [✎] │
 │  MAIN (70%) — tabbar + lazy panels           │ tên, badges, phone,            │
-│  [Insight|Đơn|Timeline|Tasks|Ghi chú|Chat]   │ sapo-id, sapo-code,            │
+│  [Value & Behavior|Đơn|Timeline|Tasks|Ghi chú|Chat]│ sapo-id, sapo-code,            │
 │                                              │ sex, owner, consent            │
 │  (P01 / P02 / P03 / P04 / P05 / P06)         ├───────────────────────────────┤
 │                                              │ HEAD LINE                      │
@@ -73,7 +74,7 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 
 ### Head Line
 KPI grid (4 ô), source: `wh_customer_insight` (warehouse cache):
-- **Lifetime value** (`lifetime_contribution_margin`) — hero, định dạng VND
+- **LTV ~ contribution margin** (`lifetime_contribution_margin`) — hero, định dạng VND
 - **Đơn** (`order_count`) — số lượng đơn hàng
 - **AOV** (`avg_order_spend`) — định dạng VND
 - **Recency** (`avg_days_between_orders` hoặc days since last order) — đơn vị ngày
