@@ -1,0 +1,102 @@
+{# @surface  P07 · Customer Status Timeline Panel (partial — hosted in S03)
+   @source   mart_customer_status_snapshot_monthly · 24 months
+   @kind     PANEL
+   HTMX fragment for /customers/{party_id}/panels/status_history.
+   Data: party_id (str), snapshots (list[StatusSnapshot]), timeline_available (bool).
+   RETAIL-only: non-RETAIL customers receive a caveat; no strip rendered.
+   Strip cells: data-st="ACTIVE|AT_RISK|CHURNED|NONE"
+   is_new marker = acquisition month dot.
+   Hover tooltip via data-tip (rendered by ds-app.css ::after).
+#}
+<div class="panel-section">
+
+  {% if not timeline_available %}
+  {# ── mart unavailable (503 path) ─────────────────────────────────────── #}
+  <div class="panel-head">
+    <span class="panel-title">Lịch sử trạng thái</span>
+    <span class="panel-sub">mart_customer_status_snapshot_monthly</span>
+  </div>
+  <div class="caveat caveat--warn">
+    <span class="caveat__mark">⚠</span>
+    <span>Dữ liệu trạng thái chưa sẵn sàng — mart chưa được tính hoặc chỉ áp dụng cho khách RETAIL.</span>
+  </div>
+
+  {% elif not snapshots %}
+  {# ── RETAIL but no data ───────────────────────────────────────────────── #}
+  <div class="panel-head">
+    <span class="panel-title">Lịch sử trạng thái</span>
+    <span class="panel-sub">mart_customer_status_snapshot_monthly</span>
+  </div>
+  <div class="state">
+    <div class="state__inner">
+      <div class="state__title">Không có dữ liệu</div>
+      <p class="state__sub">Chưa tìm thấy snapshot tháng nào cho khách này.</p>
+    </div>
+  </div>
+
+  {% else %}
+  {# ── Strip ────────────────────────────────────────────────────────────── #}
+  <div class="panel-head">
+    <span class="panel-title">Lịch sử trạng thái</span>
+    <span class="panel-sub">mart_customer_status_snapshot_monthly · {{ snapshots | length }} tháng</span>
+  </div>
+
+  <div class="scard">
+
+    {# Month strip — one cell per snapshot, oldest-first (SQL ORDER ASC) #}
+    <div class="strip" role="list" aria-label="Monthly status strip">
+      {% for snap in snapshots %}
+        {% set st = (snap.status or "NONE") | upper %}
+        {% set abbr = "A" if st == "ACTIVE"
+                      else "R" if st == "AT_RISK"
+                      else "C" if st == "CHURNED"
+                      else "·" %}
+
+        {# Build tooltip parts #}
+        {% set tip_parts = [] %}
+        {% if snap.snapshot_month %}
+          {% set _ = tip_parts.append(snap.snapshot_month[:7]) %}
+        {% endif %}
+        {% set _ = tip_parts.append(st) %}
+        {% if snap.days_since_last_order is not none %}
+          {% set _ = tip_parts.append(snap.days_since_last_order | string ~ "d since order") %}
+        {% endif %}
+        {% if snap.value_group %}
+          {% set _ = tip_parts.append(snap.value_group) %}
+        {% endif %}
+
+        <div class="strip-cell"
+             data-st="{{ st }}"
+             data-tip="{{ tip_parts | join(' · ') }}"
+             role="listitem"
+             aria-label="{{ st }}{% if snap.is_new %} (acquisition){% endif %}{% if snap.snapshot_month %}, {{ snap.snapshot_month[:7] }}{% endif %}">
+          {{- abbr -}}
+          {% if snap.is_new %}<span class="strip-cell__new" aria-hidden="true"></span>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+
+    {# Axis: first … last month labels #}
+    <div class="strip-axis" aria-hidden="true">
+      <span>{{ snapshots[0].snapshot_month[:7] if snapshots[0].snapshot_month else "" }}</span>
+      <span>{{ snapshots[-1].snapshot_month[:7] if snapshots[-1].snapshot_month else "" }}</span>
+    </div>
+
+    {# Legend #}
+    <div class="strip-legend" aria-label="Status legend">
+      <span><i style="background:var(--moss-500)"  aria-hidden="true"></i>ACTIVE</span>
+      <span><i style="background:var(--amber-500)" aria-hidden="true"></i>AT_RISK</span>
+      <span><i style="background:var(--coral-500)" aria-hidden="true"></i>CHURNED</span>
+      <span><i style="background:var(--accent);border-radius:50%" aria-hidden="true"></i>acquisition</span>
+    </div>
+
+  </div>{# /scard #}
+
+  <div class="note-line">
+    <span class="caveat__mark">ⓘ</span>
+    <span>Hover từng tháng để xem số ngày kể từ đơn gần nhất và value group. Chỉ áp dụng cho khách RETAIL.</span>
+  </div>
+
+  {% endif %}
+
+</div>{# /panel-section #}

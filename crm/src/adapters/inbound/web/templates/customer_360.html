@@ -58,12 +58,13 @@
     {# Tabbar — A-S03-004..009 #}
     <div class="tabbar" role="tablist" aria-label="Phần khách hàng">
       {% set tabs = [
-        ("insight",  "Value & Behavior",   "P01"),
-        ("orders",   "Đơn hàng",  "P02"),
-        ("timeline", "Timeline",  "P03"),
-        ("tasks",    "Tasks",     "P04"),
-        ("notes",    "Ghi chú",   "P05"),
-        ("chat",     "Chat",      "P06"),
+        ("insight",        "Value & Behavior",   "P01"),
+        ("orders",         "Đơn hàng",           "P02"),
+        ("timeline",       "Timeline",            "P03"),
+        ("tasks",          "Tasks",               "P04"),
+        ("notes",          "Ghi chú",             "P05"),
+        ("status_history", "Lịch sử TT",          "P07"),
+        ("chat",           "Chat",                "P06"),
       ] %}
       {% for tab_key, tab_label, _ in tabs %}
       <button role="tab"

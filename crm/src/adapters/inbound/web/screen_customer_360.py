@@ -117,6 +117,8 @@ def make_customer_360_router(
     action_task_resolver: Optional[ActionTaskResolver] = None,
     party_finder: Optional[PartyFinder] = None,
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
+    customer_timeline=None,
+    customer_orders=None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -259,6 +261,15 @@ def make_customer_360_router(
             _, ids = _load_base(party_id)
             ins = _load_insight(ids)
             orders = ins.recent_orders if ins else []
+            if customer_orders is not None:
+                customer_id = _sapo_customer_id(ids)
+                if customer_id:
+                    try:
+                        live = customer_orders.get_by_customer_id(customer_id)
+                        if live:
+                            orders = live
+                    except Exception as exc:
+                        log.warning("c360 orders panel: live fetch %s: %s", party_id, exc)
             return templates.TemplateResponse(
                 "fragments/c360_orders_panel.html", {**ctx, "orders": orders}
             )
@@ -278,6 +289,28 @@ def make_customer_360_router(
             return templates.TemplateResponse(
                 "fragments/c360_notes_panel.html",
                 {**ctx, "notes": note_list, "type_filter": type_filter},
+            )
+        if panel == "status_history":
+            if customer_timeline is None:
+                return HTMLResponse(
+                    '<div class="caveat caveat--warn">Dữ liệu trạng thái chưa sẵn sàng.</div>',
+                    status_code=503,
+                )
+            _, ids = _load_base(party_id)
+            customer_id = _sapo_customer_id(ids)
+            snapshots = []
+            if customer_id:
+                try:
+                    snapshots = customer_timeline.get_by_customer_id(customer_id)
+                except Exception as exc:
+                    log.warning("c360 status_history panel: %s: %s", party_id, exc)
+            return templates.TemplateResponse(
+                "fragments/c360_status_timeline_panel.html",
+                {
+                    **ctx,
+                    "snapshots": snapshots,
+                    "timeline_available": True,
+                },
             )
         return HTMLResponse("panel not found", status_code=404)
 

@@ -137,3 +137,47 @@ class CacheInsight:
     insight: Optional[CustomerInsight] = None           # None when no insight row exists
     actions: list[ActionQueueItem] = field(default_factory=list)
     recent_orders: list[RecentOrder] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Status timeline snapshot (mart_customer_status_snapshot_monthly)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class StatusSnapshot:
+    """One monthly status snapshot from mart_customer_status_snapshot_monthly.
+
+    snapshot_month: ISO date string 'YYYY-MM-DD' (first day of month).
+    status: 'ACTIVE' | 'AT_RISK' | 'CHURNED' | ''.
+    days_since_last_order: int or None when not available.
+    value_group: 'VIP'|'GOLD'|'SILVER'|'BRONZE'|''.
+    is_new: True when this was the customer's acquisition month.
+    """
+    snapshot_month: str
+    status: str
+    days_since_last_order: Optional[int]
+    value_group: str
+    is_new: bool
+
+
+# ---------------------------------------------------------------------------
+# Live order row from DuckDB (fact_orders × economics × dims)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CustomerOrderRow:
+    """Full order row fetched from olap.duckdb — richer than RecentOrder.
+
+    Monetary values are float VND (from DuckDB DOUBLE cast).
+    gross_margin_pct is a ratio (0.0–1.0); None when economics unavailable.
+    """
+    order_code: str
+    created_at: str          # ISO datetime string (ICT)
+    status: str
+    channel_name: str
+    seller_name: str
+    total_collected: float
+    gross_profit: Optional[float]
+    gross_margin_pct: Optional[float]
+    payment_label: str
+    has_return: bool

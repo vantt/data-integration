@@ -41,6 +41,8 @@ from adapters.outbound.sqlite.app_user_repository import SQLiteAppUserRepository
 
 # ── Outbound: DuckDB ──────────────────────────────────────────────────────────
 from adapters.outbound.duckdb.order_repository import DuckDBOrderRepository
+from adapters.outbound.duckdb.customer_timeline_repository import CustomerTimelineRepository
+from adapters.outbound.duckdb.customer_orders_repository import CustomerOrdersRepository
 
 # ── Application services ──────────────────────────────────────────────────────
 from application.merge_service import MergeService
@@ -135,13 +137,25 @@ def create_app() -> FastAPI:
     segment_svc = SegmentService(segment_repo, conn)
     campaign_svc = CampaignService(campaign_repo, segment_repo, party_repo, conn)
 
-    # 4. DuckDB order repo — non-fatal if olap.duckdb is unavailable.
+    # 4. DuckDB repos — non-fatal if olap.duckdb is unavailable.
     order_repo: Optional[DuckDBOrderRepository] = None
     try:
         order_repo = DuckDBOrderRepository(olap_path())
         log.info("order repo: olap.duckdb mounted at %s", olap_path())
     except Exception as exc:
         log.warning("order repo unavailable (%s) — /orders/* will return 503", exc)
+
+    timeline_repo: Optional[CustomerTimelineRepository] = None
+    try:
+        timeline_repo = CustomerTimelineRepository(olap_path())
+    except Exception as exc:
+        log.warning("timeline repo unavailable (%s) — status_history panel will return 503", exc)
+
+    customer_orders_repo: Optional[CustomerOrdersRepository] = None
+    try:
+        customer_orders_repo = CustomerOrdersRepository(olap_path())
+    except Exception as exc:
+        log.warning("customer_orders repo unavailable (%s) — orders panel falls back to cache", exc)
 
     # 5. FastAPI app.
     app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
@@ -258,6 +272,8 @@ def create_app() -> FastAPI:
         party_tasks=task_repo,
         party_finder=party_repo,
         customer_code_resolver=order_repo,
+        customer_timeline=timeline_repo,
+        customer_orders=customer_orders_repo,
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,

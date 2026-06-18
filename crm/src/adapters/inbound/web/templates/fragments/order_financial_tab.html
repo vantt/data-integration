@@ -87,6 +87,78 @@
       {% endif %}
     </div>
 
+    {# ── Zone 2: Composition bar (domestic orders only) ── #}
+    {% if not f.is_us and f.cogs_amount is not none and f.net_revenue and f.net_revenue > 0 %}
+      {# Raw segment values #}
+      {% set _cogs_val   = f.cogs_amount %}
+      {% set _fees_val   = (f.shopee_platform_fees | abs) if f.has_platform_fees and f.shopee_platform_fees else 0 %}
+      {% set _profit_val = f.gross_profit if f.gross_profit and f.gross_profit > 0 else 0 %}
+
+      {# Raw widths as % of net_revenue (pre-normalization) #}
+      {% set _cogs_raw   = [(_cogs_val   / f.net_revenue * 100), 0] | max %}
+      {% set _fees_raw   = [(_fees_val   / f.net_revenue * 100), 0] | max %}
+      {% set _profit_raw = [(_profit_val / f.net_revenue * 100), 0] | max %}
+      {% set _total_raw  = _cogs_raw + _fees_raw + _profit_raw %}
+
+      {# Normalize so segments sum to 100%; clamp each to [0, 100] #}
+      {% if _total_raw > 0 %}
+        {% set _cogs_pct   = [(_cogs_raw   / _total_raw * 100) | round(1), 100] | min %}
+        {% set _fees_pct   = [(_fees_raw   / _total_raw * 100) | round(1), 100] | min %}
+        {% set _profit_pct = [(_profit_raw / _total_raw * 100) | round(1), 100] | min %}
+      {% else %}
+        {% set _cogs_pct = 0 %}{% set _fees_pct = 0 %}{% set _profit_pct = 0 %}
+      {% endif %}
+
+      {# Only render bar if COGS segment is non-zero #}
+      {% if _cogs_pct > 0 %}
+      <div class="comp-bar-wrap">
+        <div class="comp-bar__head">
+          <span class="comp-bar__title caption">NET REVENUE COMPOSITION</span>
+        </div>
+        <div class="comp-bar" role="img" aria-label="Revenue composition by cost category">
+          {% if _cogs_pct > 0 %}
+          <div class="comp-seg comp-seg--cogs" style="width:{{ _cogs_pct }}%" title="COGS: {{ _cogs_val | int | fmt_vnd }} ({{ _cogs_pct }}%)">
+            {% if _cogs_pct >= 8 %}<span class="comp-seg__pct">{{ _cogs_pct }}%</span>{% endif %}
+          </div>
+          {% endif %}
+          {% if _fees_pct > 0 %}
+          <div class="comp-seg comp-seg--fees" style="width:{{ _fees_pct }}%" title="Platform fees: {{ _fees_val | int | fmt_vnd }} ({{ _fees_pct }}%)">
+            {% if _fees_pct >= 8 %}<span class="comp-seg__pct">{{ _fees_pct }}%</span>{% endif %}
+          </div>
+          {% endif %}
+          {% if _profit_pct > 0 %}
+          <div class="comp-seg comp-seg--profit" style="width:{{ _profit_pct }}%" title="Gross profit: {{ _profit_val | int | fmt_vnd }} ({{ _profit_pct }}%)">
+            {% if _profit_pct >= 8 %}<span class="comp-seg__pct">{{ _profit_pct }}%</span>{% endif %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="comp-legend">
+          {% if _cogs_pct >= 3 %}
+          <div class="comp-legend__item">
+            <span class="comp-legend__dot comp-seg--cogs"></span>
+            <span>COGS</span>
+            <span class="comp-legend__pct">{{ _cogs_pct }}%</span>
+          </div>
+          {% endif %}
+          {% if _fees_pct >= 3 %}
+          <div class="comp-legend__item">
+            <span class="comp-legend__dot comp-seg--fees"></span>
+            <span>Platform fees</span>
+            <span class="comp-legend__pct">{{ _fees_pct }}%</span>
+          </div>
+          {% endif %}
+          {% if _profit_pct >= 3 %}
+          <div class="comp-legend__item">
+            <span class="comp-legend__dot comp-seg--profit"></span>
+            <span>Gross profit</span>
+            <span class="comp-legend__pct">{{ _profit_pct }}%</span>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+    {% endif %}
+
     {# P&L waterfall — 4-col (op | label | % | amount) #}
     <div class="waterfall waterfall--pl">
       {% if f.is_us %}
@@ -300,19 +372,57 @@
           <tr>
             <th>SKU</th><th class="num-h">Sapo MAC</th><th class="num-h">MISA</th>
             <th class="num-h">Primary</th><th>Source</th>
+            <th class="num-h">Variance</th>
           </tr>
         </thead>
         <tbody>
         {% for ci in order.cogs_items %}
         <tr>
           <td class="mono">{{ ci.sku or "—" }}</td>
-          <td class="num">{{ ci.cogs_goods_sapo | fmt_vnd }}</td>
-          <td class="num">{{ ci.cogs_goods_misa | fmt_vnd }}</td>
+          <td class="num">{{ ci.cogs_goods_sapo | fmt_vnd if ci.cogs_goods_sapo is not none else "—" }}</td>
+          <td class="num">{{ ci.cogs_goods_misa | fmt_vnd if ci.cogs_goods_misa is not none else "—" }}</td>
           <td class="num cell-strong">{{ ci.cogs_goods_primary | fmt_vnd }}</td>
           <td class="muted caption">{{ ci.cogs_source }}</td>
+          {% if ci.cogs_goods_sapo is not none and ci.cogs_goods_misa is not none %}
+            {% set _var = ci.cogs_goods_sapo - ci.cogs_goods_misa %}
+            {% set _var_pct = (_var / ci.cogs_goods_misa * 100) if ci.cogs_goods_misa else none %}
+            {% set _var_hi = _var_pct is not none and (_var_pct | abs) > 10 %}
+          <td class="num{% if _var_hi %} wf-amt--neg{% elif _var != 0 %} muted{% endif %}">
+            {% if _var > 0 %}+{% elif _var < 0 %}−{% endif %}{{ _var | abs | int | fmt_vnd }}
+            {% if _var_pct is not none %}
+              <span class="caption" style="margin-left:4px">{% if _var > 0 %}+{% elif _var < 0 %}−{% endif %}{{ _var_pct | abs | round(1) }}%</span>
+            {% endif %}
+          </td>
+          {% else %}
+          <td class="num muted">—</td>
+          {% endif %}
         </tr>
         {% endfor %}
         </tbody>
+        {# Totals footer #}
+        {% set _sapo_total   = order.cogs_items | selectattr("cogs_goods_sapo", "ne", none) | sum(attribute="cogs_goods_sapo") %}
+        {% set _misa_total   = order.cogs_items | selectattr("cogs_goods_misa", "ne", none) | sum(attribute="cogs_goods_misa") %}
+        {% set _has_both     = (order.cogs_items | selectattr("cogs_goods_sapo", "ne", none) | list | length > 0)
+                             and (order.cogs_items | selectattr("cogs_goods_misa", "ne", none) | list | length > 0) %}
+        {% if _has_both %}
+          {% set _total_var     = _sapo_total - _misa_total %}
+          {% set _total_var_pct = (_total_var / _misa_total * 100) if _misa_total else none %}
+          {% set _total_var_hi  = _total_var_pct is not none and (_total_var_pct | abs) > 10 %}
+        <tfoot>
+          <tr style="border-top:2px solid var(--border);font-weight:600">
+            <td style="font-size:12px">Totals</td>
+            <td class="num">{{ _sapo_total | int | fmt_vnd }}</td>
+            <td class="num">{{ _misa_total | int | fmt_vnd }}</td>
+            <td></td><td></td>
+            <td class="num{% if _total_var_hi %} wf-amt--neg{% elif _total_var != 0 %} muted{% endif %}">
+              {% if _total_var > 0 %}+{% elif _total_var < 0 %}−{% endif %}{{ _total_var | abs | int | fmt_vnd }}
+              {% if _total_var_pct is not none %}
+                <span class="caption" style="margin-left:4px">{% if _total_var > 0 %}+{% elif _total_var < 0 %}−{% endif %}{{ _total_var_pct | abs | round(1) }}%</span>
+              {% endif %}
+            </td>
+          </tr>
+        </tfoot>
+        {% endif %}
       </table>
     </div>
     {% endif %}

@@ -2,23 +2,101 @@
    @source   crm/docs/ui-spec/panels/P02-order-history-panel.md
    @kind     PANEL
    HTMX fragment for /customers/{party_id}/panels/orders.
-   Data: party_id (str), orders (list[RecentOrder]).
-   Shows recent orders from wh_order_hdr via CacheInsight.
+   Data: party_id (str), orders (list[RecentOrder | CustomerOrderRow]).
+   CustomerOrderRow (DuckDB) has gross_profit/gross_margin_pct/seller/payment/has_return.
+   RecentOrder (SQLite cache) has net_revenue/item_count — rendered in degraded mode.
 #}
 <div class="panel-section">
   <div class="panel-head">
-    <span class="panel-title">Đơn hàng gần đây</span>
+    <span class="panel-title">Đơn hàng</span>
+    {% if orders and orders[0].gross_profit is defined %}
+    <span class="panel-sub">fact_orders × economics · DuckDB</span>
+    {% else %}
     <span class="panel-sub">wh_order_hdr · cache</span>
+    {% endif %}
   </div>
 
   {% if not orders %}
   <div class="state">
     <div class="state__inner">
       <div class="state__title">Không có đơn hàng</div>
-      <p class="state__sub">Chưa tìm thấy đơn nào cho khách này trong cache.</p>
+      <p class="state__sub">Chưa tìm thấy đơn nào cho khách này.</p>
     </div>
   </div>
+
+  {% elif orders[0].gross_profit is defined %}
+  {# ── Rich view: CustomerOrderRow from DuckDB ──────────────────────────── #}
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th>Mã đơn · Ngày</th>
+          <th>Trạng thái</th>
+          <th>Kênh</th>
+          <th>NV bán</th>
+          <th class="num-h">Tổng thu · TT</th>
+          <th class="num-h">GP</th>
+          <th class="num-h">Margin</th>
+          <th>Ret</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for o in orders %}
+        {% set margin_pct = o.gross_margin_pct %}
+        {% set margin_cls = "pct--good" if (margin_pct is not none and margin_pct >= 0.28)
+                            else "pct--bad" if (margin_pct is not none and margin_pct < 0.24)
+                            else "" %}
+        <tr class="is-clickable"
+            onclick="window.location.href='/orders/{{ o.order_code }}'"
+            title="Xem đơn {{ o.order_code }}"
+            tabindex="0"
+            onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();window.location.href='/orders/{{ o.order_code }}'}">
+          <td class="cell-strong mono">
+            <a href="/orders/{{ o.order_code }}" onclick="event.stopPropagation()" class="link">{{ o.order_code }}</a>
+            <div class="muted" style="font-size:11px">{{ o.created_at[:10] if o.created_at else "—" }}</div>
+          </td>
+          <td>
+            <span class="{{ o.status | bdg_cls('order_status') }}" data-tooltip="{{ o.status | bdg_tip('order_status') }}">{{ o.status or "—" }}</span>
+          </td>
+          <td class="muted">{{ o.channel_name or "—" }}</td>
+          <td class="muted">{{ o.seller_name or "—" }}</td>
+          <td class="num cell-strong">
+            {{ o.total_collected | int | fmt_vnd }}
+            <div class="muted" style="font-size:11px;text-align:right">{{ o.payment_label or "—" }}</div>
+          </td>
+          <td class="num">
+            {% if o.gross_profit is not none %}
+              {{ o.gross_profit | int | fmt_vnd }}
+            {% else %}
+              <span class="dash">—</span>
+            {% endif %}
+          </td>
+          <td class="num">
+            {% if margin_pct is not none %}
+              <span class="pct {{ margin_cls }}">{{ (margin_pct * 100) | round(1) }}%</span>
+            {% else %}
+              <span class="bdg bdg--warn">n/a</span>
+            {% endif %}
+          </td>
+          <td style="text-align:center">
+            {% if o.has_return %}
+              <span class="bdg bdg--bad">↩</span>
+            {% else %}
+              <span class="dash" aria-hidden="true">—</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="note-line">
+    <span class="caveat__mark">ⓘ</span>
+    <span>{{ orders | length }} đơn · mới nhất trước · GP dùng realized_margin_pct (H010-corrected).</span>
+  </div>
+
   {% else %}
+  {# ── Degraded view: RecentOrder from SQLite cache ─────────────────────── #}
   <div class="tbl-wrap">
     <table class="tbl">
       <thead>
@@ -49,7 +127,8 @@
   </div>
   <div class="note-line">
     <span class="caveat__mark">ⓘ</span>
-    <span>Danh sách từ cache — có thể chậm tối đa 24h so với thực tế.</span>
+    <span>Danh sách từ cache — có thể chậm tối đa 24h. GP/margin chưa sẵn sàng (DuckDB không khả dụng).</span>
   </div>
   {% endif %}
+
 </div>
