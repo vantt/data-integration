@@ -279,9 +279,19 @@ def make_customer_360_router(
                         dim_metrics = customer_dim_metrics.get_by_customer_id(sapo_id)
                     except Exception as exc:
                         log.warning("c360 insight panel: dim_metrics %s: %s", party_id, exc)
+            snapshots: list = []
+            timeline_available = customer_timeline is not None
+            if customer_timeline is not None:
+                sapo_id = _sapo_customer_id(ids)
+                if sapo_id:
+                    try:
+                        snapshots = customer_timeline.get_by_customer_id(sapo_id)
+                    except Exception as exc:
+                        log.warning("c360 insight panel: snapshots %s: %s", party_id, exc)
             return templates.TemplateResponse(
                 "fragments/c360_insight_panel.html",
-                {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids, "dim_metrics": dim_metrics},
+                {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids,
+                 "dim_metrics": dim_metrics, "snapshots": snapshots, "timeline_available": timeline_available},
             )
         if panel == "orders":
             _, ids = _load_base(party_id)
