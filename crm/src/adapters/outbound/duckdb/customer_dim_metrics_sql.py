@@ -10,7 +10,7 @@ SELECT
     customer_type,
     first_order_date
 FROM main_marts.dim_customers
-WHERE customer_id = ?
+WHERE customer_id = CAST(? AS VARCHAR)
 LIMIT 1
 """
 

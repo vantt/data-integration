@@ -22,7 +22,7 @@ SELECT
     m.is_new
 FROM main_marts.mart_customer_status_snapshot_monthly m
 JOIN main_marts.dim_customers d ON d.customer_key = m.customer_key
-WHERE d.customer_id = ?
+WHERE d.customer_id = CAST(? AS VARCHAR)
 ORDER BY m.snapshot_month ASC
 LIMIT 24
 """

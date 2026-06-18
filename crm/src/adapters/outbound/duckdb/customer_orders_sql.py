@@ -29,7 +29,7 @@ SELECT
     )                                       AS has_return
 FROM main_marts.fact_orders fo
 JOIN main_marts.dim_customers dc
-    ON dc.customer_id = ?
+    ON dc.customer_id = CAST(? AS VARCHAR)
    AND dc.customer_key = fo.customer_key
 LEFT JOIN main_marts.fact_order_economics foe
     ON foe.order_id = fo.order_id
