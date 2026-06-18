@@ -90,16 +90,20 @@
   </div>{# .modal #}
 </div>{# .modal-scrim #}
 
+<style>
+  #modal-root label.chip { cursor: pointer; }
+  /* CSS fallback: chip--active via checkbox state (works even if m03ToggleTag fails) */
+  #modal-root input[type=checkbox]:checked + label.chip {
+    color: var(--amber-500); background: rgba(58,42,20,0.60); border-color: rgba(232,163,65,0.55); font-weight: var(--fw-semibold);
+  }
+</style>
 <script>
   function m03ToggleTag(labelEl) {
-    // The <label for="..."> click already toggles the checkbox via browser default.
-    // We only need to sync the visual class — use a microtask so the checkbox
-    // state has already flipped before we read it.
-    requestAnimationFrame(function () {
-      var chk = document.getElementById(labelEl.htmlFor);
-      if (chk) {
-        labelEl.classList.toggle('chip--active', chk.checked);
-      }
-    });
+    // Browser's native label→checkbox toggle fires AFTER this handler returns,
+    // so we predict the post-toggle state by inverting the current checked value.
+    var chk = document.getElementById(labelEl.htmlFor);
+    if (chk) {
+      labelEl.classList.toggle('chip--active', !chk.checked);
+    }
   }
 </script>

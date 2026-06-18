@@ -399,9 +399,10 @@ a:hover { color: var(--accent); }
   border: 1px solid var(--ink-300);
   border-radius: var(--radii-hairline);
 }
-.chip--moss  { color: var(--moss-500);  background: rgba(29,40,24,0.50);  border-color: rgba(132,181,119,0.33); }
-.chip--amber { color: var(--amber-500); background: rgba(58,42,20,0.50);  border-color: rgba(232,163,65,0.33); }
-.chip--coral { color: var(--coral-500); background: rgba(43,24,21,0.50);  border-color: rgba(224,116,108,0.33); }
+.chip--moss   { color: var(--moss-500);  background: rgba(29,40,24,0.50);  border-color: rgba(132,181,119,0.33); }
+.chip--amber  { color: var(--amber-500); background: rgba(58,42,20,0.50);  border-color: rgba(232,163,65,0.33); }
+.chip--coral  { color: var(--coral-500); background: rgba(43,24,21,0.50);  border-color: rgba(224,116,108,0.33); }
+.chip--active { color: var(--amber-500); background: rgba(58,42,20,0.60);  border-color: rgba(232,163,65,0.55); font-weight: var(--fw-semibold); }
 
 /* Buttons */
 .btn {
