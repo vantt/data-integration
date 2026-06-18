@@ -62,6 +62,7 @@ from adapters.inbound.http.task_handler import wire_task_router, router as task_
 from adapters.inbound.http.conversation_handler import router as conv_router
 from adapters.inbound.http.segment_handler import make_segment_router
 from adapters.inbound.http.campaign_handler import make_campaign_router
+from adapters.inbound.http.json_api_mirror_handler import make_json_api_mirror_router
 
 # ── Inbound: Web UI screens ───────────────────────────────────────────────────
 from adapters.inbound.web.format_helpers import (
@@ -218,6 +219,7 @@ def create_app() -> FastAPI:
     ))
     app.include_router(make_segment_router(segment_svc))
     app.include_router(make_campaign_router(campaign_svc))
+    app.include_router(make_json_api_mirror_router(orders=order_repo, parties=party_repo))
 
     # 8. Web UI routers (no prefix — serve at root paths).
     init_modals(
