@@ -44,6 +44,7 @@ from adapters.outbound.duckdb.order_repository import DuckDBOrderRepository
 from adapters.outbound.duckdb.customer_timeline_repository import CustomerTimelineRepository
 from adapters.outbound.duckdb.customer_orders_repository import CustomerOrdersRepository
 from adapters.outbound.duckdb.customer_dim_metrics_repository import CustomerDimMetricsRepository
+from adapters.outbound.duckdb.dataquality_repository import DataQualityRepository
 
 # ── Application services ──────────────────────────────────────────────────────
 from application.merge_service import MergeService
@@ -66,6 +67,7 @@ from adapters.inbound.http.conversation_handler import router as conv_router
 from adapters.inbound.http.segment_handler import make_segment_router
 from adapters.inbound.http.campaign_handler import make_campaign_router
 from adapters.inbound.http.json_api_mirror_handler import make_json_api_mirror_router
+from adapters.inbound.http.dataquality_handler import make_dataquality_router
 
 # ── Inbound: Web UI screens ───────────────────────────────────────────────────
 from adapters.inbound.web.format_helpers import (
@@ -165,6 +167,12 @@ def create_app() -> FastAPI:
     except Exception as exc:
         log.warning("dim_metrics repo unavailable (%s) — insight panel segments/profitability hidden", exc)
 
+    dq_repo: Optional[DataQualityRepository] = None
+    try:
+        dq_repo = DataQualityRepository(olap_path())
+    except Exception as exc:
+        log.warning("dq repo unavailable (%s) — /_dq_strip will return empty", exc)
+
     # 5. FastAPI app.
     app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
 
@@ -242,6 +250,7 @@ def create_app() -> FastAPI:
     app.include_router(make_segment_router(segment_svc))
     app.include_router(make_campaign_router(campaign_svc))
     app.include_router(make_json_api_mirror_router(orders=order_repo, parties=party_repo))
+    app.include_router(make_dataquality_router(dq=dq_repo, templates=templates))
 
     # 8. Web UI routers (no prefix — serve at root paths).
     init_modals(
