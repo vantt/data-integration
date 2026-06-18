@@ -84,6 +84,7 @@ from adapters.inbound.web.screen_inbox import make_inbox_router
 from adapters.inbound.web.screen_order_detail import make_order_detail_router
 from adapters.inbound.web.screen_management import make_management_router
 from adapters.inbound.web.screen_search import make_search_router
+from adapters.inbound.web.screen_resolver import make_resolver_router
 
 log = logging.getLogger(__name__)
 
@@ -280,6 +281,10 @@ def create_app() -> FastAPI:
     ))
     app.include_router(make_search_router(
         templates=templates,
+        parties=party_repo,
+        orders=order_repo,
+    ))
+    app.include_router(make_resolver_router(
         parties=party_repo,
         orders=order_repo,
     ))
