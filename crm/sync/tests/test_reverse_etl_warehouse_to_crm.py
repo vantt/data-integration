@@ -48,16 +48,18 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
     conn.execute("CREATE SCHEMA IF NOT EXISTS main_marts")
 
     # dim_customers — covers both insight + base column sets
+    # Note: live warehouse uses full_name (not display_name); duckdb_reader aliases it back
+    # first_order_date must be DATE (not TEXT) so strftime() in fetch_customer_base resolves
     conn.execute("""
         CREATE TABLE main_marts.dim_customers (
             customer_key TEXT,
             customer_id BIGINT,
             customer_code TEXT,
-            display_name TEXT,
+            full_name TEXT,
             phone TEXT,
             email TEXT,
             customer_group TEXT,
-            first_order_date TEXT,
+            first_order_date DATE,
             value_group TEXT,
             customer_status TEXT,
             next_purchase_signal TEXT,
@@ -71,23 +73,25 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
             second_affinity_product TEXT,
             channel_preference TEXT,
             lifetime_contribution_margin DOUBLE,
-            is_margin_negative BOOLEAN
+            is_margin_negative BOOLEAN,
+            source_contact_quality TEXT,
+            contact_quality TEXT
         )
     """)
     conn.execute("""
         INSERT INTO main_marts.dim_customers VALUES
-          ('key-cust-001', 1001, 'C001', 'Nguyen Van A', '+84901000001',
+          ('key-cust-001', 1001, 'C001', 'Nguyen Van A', '0901000001',
            'a@test.vn', 'Retail', '2023-01-10',
            'VIP', 'active', 'DUE_SOON', '2026-06-20',
            14.5, 850000.0, 'LOW', 0.02,
            'SKU-A', 'SKU-B', 'SKU-C', 'online',
-           1200000.0, false),
-          ('key-cust-002', 1002, 'C002', 'Tran Thi B', '+84902000002',
+           1200000.0, false, 'unverified', 'unverified'),
+          ('key-cust-002', 1002, 'C002', 'Tran Thi B', '0902000002',
            'b@test.vn', 'Wholesale', '2022-05-15',
            'GOLD', 'at_risk', 'OVERDUE', '2026-06-10',
            30.0, 2000000.0, 'HIGH', 0.10,
            'SKU-D', 'SKU-E', NULL, 'store',
-           800000.0, false)
+           800000.0, false, 'unverified', 'unverified')
     """)
 
     # mart_product_health
@@ -111,61 +115,75 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
     """)
 
     # mart_customer_action_queue
+    # Note: duckdb_reader aliases action_rationale→rationale_vi, value_at_stake→value_at_stake_vnd,
+    # priority_rank→priority, queue_generated_at→generated_date
     conn.execute("""
         CREATE TABLE main_marts.mart_customer_action_queue (
-            action_id TEXT,
             customer_key TEXT,
             action_type TEXT,
-            rationale_vi TEXT,
-            value_at_stake_vnd BIGINT,
-            priority INTEGER,
-            generated_date TEXT
+            action_rationale TEXT,
+            value_at_stake BIGINT,
+            priority_rank INTEGER,
+            queue_generated_at DATE
         )
     """)
     conn.execute("""
         INSERT INTO main_marts.mart_customer_action_queue VALUES
-          ('act-001', 'key-cust-001', 'REORDER_NUDGE',
+          ('key-cust-001', 'REORDER_NUDGE',
            'Khách sắp đến chu kỳ mua', 850000, 1, '2026-06-14'),
-          ('act-002', 'key-cust-002', 'WIN_BACK',
+          ('key-cust-002', 'WIN_BACK',
            'Khách chưa mua 45 ngày', 2000000, 2, '2026-06-14')
     """)
 
     # dim_products
+    # Note: duckdb_reader aliases brand_name→brand, last_sold_price→unit_price
     conn.execute("""
         CREATE TABLE main_marts.dim_products (
             product_key TEXT,
             sku TEXT,
             variant_id BIGINT,
             product_name TEXT,
-            brand TEXT,
-            unit_price BIGINT,
+            brand_name TEXT,
+            last_sold_price DOUBLE,
             is_active BOOLEAN
         )
     """)
     conn.execute("""
         INSERT INTO main_marts.dim_products VALUES
-          ('pk-001', 'SKU-A', 10001, 'Kem Duong Am A', 'BrandX', 250000, true),
-          ('pk-002', 'SKU-B', 10002, 'Serum Trang Da B', 'BrandY', 450000, true)
+          ('pk-001', 'SKU-A', 10001, 'Kem Duong Am A', 'BrandX', 250000.0, true),
+          ('pk-002', 'SKU-B', 10002, 'Serum Trang Da B', 'BrandY', 450000.0, true)
     """)
 
-    # fact_orders
+    # dim_channels — needed by fetch_order_hdr JOIN
+    conn.execute("""
+        CREATE TABLE main_marts.dim_channels (
+            channel_key TEXT,
+            channel_name TEXT
+        )
+    """)
+    conn.execute("""
+        INSERT INTO main_marts.dim_channels VALUES
+          ('ch-online', 'online'),
+          ('ch-store', 'store')
+    """)
+
+    # fact_orders — uses customer_key (MD5) and channel_key, not customer_id/channel directly
     conn.execute("""
         CREATE TABLE main_marts.fact_orders (
             order_id TEXT,
             order_code TEXT,
-            customer_id BIGINT,
+            customer_key TEXT,
+            channel_key TEXT,
             date_key INTEGER,
             net_revenue BIGINT,
-            status TEXT,
-            channel TEXT,
-            item_count INTEGER
+            status TEXT
         )
     """)
     conn.execute("""
         INSERT INTO main_marts.fact_orders VALUES
-          ('ord-001', 'HD001', 1001, 20260101, 850000, 'completed', 'online', 2),
-          ('ord-002', 'HD002', 1002, 20260201, 2000000, 'completed', 'store', 3),
-          ('ord-003', 'HD003', 1001, 20260601, 500000, 'completed', 'online', 1)
+          ('ord-001', 'HD001', 'key-cust-001', 'ch-online', 20260101, 850000, 'completed'),
+          ('ord-002', 'HD002', 'key-cust-002', 'ch-store',  20260201, 2000000, 'completed'),
+          ('ord-003', 'HD003', 'key-cust-001', 'ch-online', 20260601, 500000, 'completed')
     """)
 
     conn.close()
@@ -303,14 +321,14 @@ def test_t5_incremental_order_hdr(tmp_dirs):
     _create_minimal_dim_tables(conn)
     conn.execute("""
         CREATE TABLE main_marts.fact_orders (
-            order_id TEXT, order_code TEXT, customer_id BIGINT, date_key INTEGER,
-            net_revenue BIGINT, status TEXT, channel TEXT, item_count INTEGER
+            order_id TEXT, order_code TEXT, customer_key TEXT, channel_key TEXT,
+            date_key INTEGER, net_revenue BIGINT, status TEXT
         )
     """)
     conn.execute("""
         INSERT INTO main_marts.fact_orders VALUES
-          ('ord-A', 'HA001', 1001, 20260101, 100000, 'completed', 'online', 1),
-          ('ord-B', 'HA002', 1001, 20260201, 200000, 'completed', 'online', 1)
+          ('ord-A', 'HA001', 'key-c1', 'ch-online', 20260101, 100000, 'completed'),
+          ('ord-B', 'HA002', 'key-c1', 'ch-online', 20260201, 200000, 'completed')
     """)
     conn.close()
 
@@ -327,7 +345,7 @@ def test_t5_incremental_order_hdr(tmp_dirs):
     conn2 = duckdb.connect(olap_path)
     conn2.execute(
         "INSERT INTO main_marts.fact_orders VALUES "
-        "('ord-C', 'HA003', 1001, 20260601, 300000, 'completed', 'online', 1)"
+        "('ord-C', 'HA003', 'key-c1', 'ch-online', 20260601, 300000, 'completed')"
     )
     conn2.close()
 
@@ -375,21 +393,22 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS main_marts.dim_customers (
             customer_key TEXT, customer_id BIGINT, customer_code TEXT,
-            display_name TEXT, phone TEXT, email TEXT, customer_group TEXT,
-            first_order_date TEXT, value_group TEXT, customer_status TEXT,
+            full_name TEXT, phone TEXT, email TEXT, customer_group TEXT,
+            first_order_date DATE, value_group TEXT, customer_status TEXT,
             next_purchase_signal TEXT, predicted_next_purchase_date TEXT,
             avg_days_between_orders DOUBLE, avg_order_spend DOUBLE,
             discount_sensitivity TEXT, cancel_rate DOUBLE, last_purchased_sku TEXT,
             top_affinity_product TEXT, second_affinity_product TEXT,
             channel_preference TEXT, lifetime_contribution_margin DOUBLE,
-            is_margin_negative BOOLEAN
+            is_margin_negative BOOLEAN,
+            source_contact_quality TEXT, contact_quality TEXT
         )
     """)
     conn.execute("""
         INSERT INTO main_marts.dim_customers VALUES
-          ('key-c1', 1001, 'C1', 'Test', '+84901', 't@t.vn', 'R', '2023-01-01',
+          ('key-c1', 1001, 'C1', 'Test', '0901', 't@t.vn', 'R', '2023-01-01',
            'VIP', 'active', 'DUE_SOON', NULL, 14.0, 500000.0, 'LOW', 0.01,
-           'S1', 'S2', NULL, 'online', 500000.0, false)
+           'S1', 'S2', NULL, 'online', 500000.0, false, 'unverified', 'unverified')
     """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS main_marts.mart_product_health (
@@ -400,13 +419,21 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS main_marts.mart_customer_action_queue (
-            action_id TEXT, customer_key TEXT, action_type TEXT, rationale_vi TEXT,
-            value_at_stake_vnd BIGINT, priority INTEGER, generated_date TEXT
+            customer_key TEXT, action_type TEXT, action_rationale TEXT,
+            value_at_stake BIGINT, priority_rank INTEGER, queue_generated_at DATE
         )
     """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS main_marts.dim_products (
             product_key TEXT, sku TEXT, variant_id BIGINT, product_name TEXT,
-            brand TEXT, unit_price BIGINT, is_active BOOLEAN
+            brand_name TEXT, last_sold_price DOUBLE, is_active BOOLEAN
         )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS main_marts.dim_channels (
+            channel_key TEXT, channel_name TEXT
+        )
+    """)
+    conn.execute("""
+        INSERT INTO main_marts.dim_channels VALUES ('ch-online', 'online')
     """)

@@ -91,7 +91,7 @@ class Party:
     party_id: str                       # UUID (TEXT in SQLite)
     party_type: str                     # person|org
     display_name: str
-    primary_phone: str                  # normalised E.164-ish (+84...)
+    primary_phone: str                  # normalised local VN format (09...)
     primary_email: str
     status: str                         # active|inactive|blocked
     is_merged: bool

@@ -29,7 +29,7 @@ _TS = "2026-06-15T00:00:00.000Z"
 
 def test_party_creation_and_defaults():
     p = Party(party_id="p-001", party_type=PARTY_TYPE_PERSON, display_name="Nguyen Van A",
-              primary_phone="+84901000001", primary_email="a@test.vn",
+              primary_phone="0901000001", primary_email="a@test.vn",
               status=PARTY_STATUS_ACTIVE, is_merged=False, created_at=_TS, updated_at=_TS)
     assert p.party_id == "p-001"
     assert p.is_merged is False
@@ -74,7 +74,7 @@ def test_identity_type_constants():
     assert IDENTITY_TYPE_SAPO_CUSTOMER == "sapo_customer"
     assert IDENTITY_TYPE_PHONE == "phone"
     assert IDENTITY_TYPE_EMAIL == "email"
-    assert len(VALID_IDENTITY_TYPES) == 6
+    assert len(VALID_IDENTITY_TYPES) == 9
 
 
 def test_contact_quality_constants():

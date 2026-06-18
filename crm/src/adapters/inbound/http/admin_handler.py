@@ -52,6 +52,19 @@ def _reverse_etl_run() -> None:
     reverse_etl_warehouse_to_crm.run()
 
 
+def _rebuild_search_index_run() -> None:
+    """Rebuild crm_party_search FTS5 index from crm.db + cache.db."""
+    import os as _os
+    data_dir = _os.environ.get("CRM_DATA_DIR", "./data")
+    import pathlib
+    crm_db = str(pathlib.Path(data_dir) / "crm.db")
+    cache_db = str(pathlib.Path(data_dir) / "cache.db")
+
+    from crm.sync.search_index import rebuild_search_index
+    n = rebuild_search_index(crm_db, cache_db)
+    log.info("search_index: %d parties indexed", n)
+
+
 def create_admin_router() -> APIRouter:
     """Return the admin router.  Token is read from CRM_REFRESH_TOKEN at request time."""
     r = APIRouter()
@@ -76,6 +89,14 @@ def create_admin_router() -> APIRouter:
                 loop.run_in_executor(None, _sync_parties_run),
                 timeout=_REFRESH_TIMEOUT_S,
             )
+            log.info("admin: rebuild_search_index starting")
+            try:
+                await asyncio.wait_for(
+                    loop.run_in_executor(None, _rebuild_search_index_run),
+                    timeout=_REFRESH_TIMEOUT_S,
+                )
+            except Exception as idx_exc:
+                log.error("admin: rebuild_search_index failed (non-critical): %s", idx_exc)
             finished_at = datetime.now(timezone.utc)
             duration_ms = int((finished_at - started_at).total_seconds() * 1000)
             log.info("admin: refresh ok in %dms", duration_ms)

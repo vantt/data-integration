@@ -78,15 +78,16 @@
       <div class="modal__body">
 
         {# Identity list #}
-        {% if identities %}
+        {% set contact_identities = identities | selectattr('identity_type', 'in', ['phone', 'phone_secondary', 'zalo', 'facebook', 'email']) | list %}
+        {% if contact_identities %}
           <div style="display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface);">
-            {% for identity in identities %}
+            {% for identity in contact_identities %}
               <div style="display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-3); align-items: start; padding: var(--sp-3) var(--sp-4);">
 
                 {# Type icon #}
                 <div style="width: 28px; height: 28px; display: grid; place-items: center; font-size: 16px; flex: none; margin-top: 2px;">
-                  {% if identity.identity_type == 'phone' or identity.identity_type == 'phone_secondary' %}📞
-                  {% elif identity.identity_type == 'zalo' %}💬
+                  {% if identity.identity_type == 'phone' or identity.identity_type == 'phone_secondary' %}{% include "icons/phone.svg" %}
+                  {% elif identity.identity_type == 'zalo' %}{% include "icons/zalo.svg" %}
                   {% elif identity.identity_type == 'facebook' %}📘
                   {% elif identity.identity_type == 'email' %}✉
                   {% else %}📋{% endif %}

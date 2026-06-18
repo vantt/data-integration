@@ -58,6 +58,12 @@ SQL_FTS_SEARCH = (
     " ORDER BY rank LIMIT 50"
 )
 
+SQL_UNIFIED_SEARCH = (
+    "SELECT party_id FROM crm_party_search"
+    " WHERE crm_party_search MATCH ?"
+    " ORDER BY rank LIMIT 50"
+)
+
 SQL_UPSERT_IDENTITY = (
     "INSERT OR IGNORE INTO crm_party_identity"
     " (identity_id, party_id, source_system, identity_type, identity_value,"

@@ -20,6 +20,7 @@ from adapters.outbound.sqlite.party_repository_queries import (
     SQL_LIST_BY_PHONE,
     SQL_LIST_BY_EMAIL,
     SQL_FTS_SEARCH,
+    SQL_UNIFIED_SEARCH,
     SQL_UPSERT_IDENTITY,
     SQL_LIST_IDENTITIES,
     SQL_UPDATE_CONTACT_QUALITY,
@@ -93,6 +94,13 @@ class SQLitePartyRepository:
             return []
         rows = self._conn.execute(SQL_FTS_SEARCH, (_fts_quote(query),)).fetchall()
         return [r["party_id"] for r in rows]
+
+    def search_unified(self, fts_query: str) -> list[str]:
+        """FTS5 MATCH on crm_party_search; returns party_ids ordered by rank."""
+        if not fts_query:
+            return []
+        cur = self._conn.execute(SQL_UNIFIED_SEARCH, (fts_query,))
+        return [row[0] for row in cur.fetchall()]
 
     # ── Identity operations ───────────────────────────────────────────────────
 

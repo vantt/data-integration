@@ -20,6 +20,17 @@ log = logging.getLogger(__name__)
 
 DEFAULT_PAGE_SIZE = 30
 
+
+def _fts_query(q: str) -> str:
+    """Wrap user input as FTS5 quoted string + prefix wildcard.
+
+    Quoted strings in FTS5 treat all chars as literals except '"'.
+    Stripping '"' from user input prevents syntax errors.
+    Trailing '*' enables prefix matching.
+    """
+    clean = q.replace('"', ' ').strip()
+    return f'"{clean}"*'
+
 _UUID_RE = re.compile(
     r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.IGNORECASE
 )
@@ -29,7 +40,7 @@ _UUID_RE = re.compile(
 
 class PartyLister(Protocol):
     def list_all(self, offset: int, limit: int) -> tuple[list[Party], int]: ...
-    def search_by_name(self, q: str) -> list[str]: ...
+    def search_unified(self, q: str) -> list[str]: ...  # returns party_ids
     def get_by_id(self, party_id: str) -> Optional[Party]: ...
     def list_by_phone(self, q: str) -> list[Party]: ...
     def find_by_identity(self, identity_type: str, identity_value: str) -> Optional[Party]: ...
@@ -51,30 +62,16 @@ def make_customer_list_router(
     router = APIRouter()
 
     def _search_parties(q: str) -> list[Party]:
-        """FTS name search + phone prefix search, deduplicated."""
-        seen: set[str] = set()
-        out: list[Party] = []
-
         try:
-            ids = parties.search_by_name(q)
-            for pid in ids:
-                if pid in seen:
-                    continue
-                p = parties.get_by_id(pid)
-                if p is not None and not p.is_merged:
-                    out.append(p)
-                    seen.add(pid)
+            ids = parties.search_unified(_fts_query(q))
         except Exception as exc:
-            log.error("customer list: name search %r: %s", q, exc)
-
-        try:
-            for p in parties.list_by_phone(q):
-                if p.party_id not in seen and not p.is_merged:
-                    out.append(p)
-                    seen.add(p.party_id)
-        except Exception as exc:
-            log.error("customer list: phone search %r: %s", q, exc)
-
+            log.error("customer search: %r: %s", q, exc)
+            ids = []
+        out = []
+        for pid in ids:
+            p = parties.get_by_id(pid)
+            if p and not p.is_merged:
+                out.append(p)
         return out
 
     # ── Lookup by party-id / customer-id / customer-code → redirect ──────────

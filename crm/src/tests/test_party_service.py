@@ -11,7 +11,7 @@ for _p in (_REPO_ROOT, _PYTHON_ROOT):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
-from crm.src.application.party_service import normalize_phone, normalize_email, PartyService  # noqa: E402
+from crm.src.application.party_service import normalize_phone, normalize_email, phone_to_e164, PartyService  # noqa: E402
 from crm.src.domain.entities.party import Party  # noqa: E402
 
 _TS = "2026-06-15T00:00:00.000Z"
@@ -20,14 +20,14 @@ _TS = "2026-06-15T00:00:00.000Z"
 # ── normalize_phone ───────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("raw,expected", [
-    ("0912345678",      "+84912345678"),   # VN 0-prefix
-    ("0 912 345 678",   "+84912345678"),   # spaces
-    ("0912.345.678",    "+84912345678"),   # dots
-    ("+84912345678",    "+84912345678"),   # already E.164
-    ("+84 912 345 678", "+84912345678"),   # E.164 + spaces
-    ("84912345678",     "+84912345678"),   # 84-prefix, no +
+    ("0912345678",      "0912345678"),     # VN 0-prefix kept as-is
+    ("0 912 345 678",   "0912345678"),     # spaces stripped
+    ("0912.345.678",    "0912345678"),     # dots stripped
+    ("+84912345678",    "0912345678"),     # +84 → 0
+    ("+84 912 345 678", "0912345678"),     # +84 + spaces → 0
+    ("84912345678",     "0912345678"),     # 84-prefix (11 digits) → 0
     ("",                ""),
-    ("+1 800 555 1234", "+18005551234"),   # non-VN stripped only
+    ("+1 800 555 1234", "+18005551234"),   # non-VN: strip non-digit-non-plus, keep +
     ("   ",             ""),
     ("+",               ""),              # no digits
     ("abcdef",          ""),
@@ -37,7 +37,7 @@ def test_normalize_phone(raw, expected):
 
 
 def test_normalize_phone_zero_edge():
-    assert normalize_phone("0") == "+84"  # Go rule: 0-prefix, no length guard
+    assert normalize_phone("0") == "0"  # 0-prefix keeps as-is
 
 
 # ── normalize_email ───────────────────────────────────────────────────────────
@@ -61,7 +61,7 @@ def _repo(existing=None):
     return r
 
 
-def _party(name="Nguyen Van A", phone="+84901000001"):
+def _party(name="Nguyen Van A", phone="0901000001"):
     return Party(party_id="p-001", party_type="person", display_name=name,
                  primary_phone=phone, primary_email="a@test.vn", status="active",
                  is_merged=False, created_at=_TS, updated_at=_TS)
@@ -79,7 +79,7 @@ def test_upsert_creates_party_and_sapo_identity():
     repo = _repo()
     _upsert(PartyService(repo))
     party, ids = repo.create_with_identities.call_args[0]
-    assert party.primary_phone == "+84901000001"
+    assert party.primary_phone == "0901000001"
     assert ids[0].identity_type == "sapo_customer" and ids[0].identity_value == "1001"
 
 
@@ -115,3 +115,14 @@ def test_upsert_does_not_overwrite_existing_name():
     repo = _repo(existing=_party(name="Original"))
     _upsert(PartyService(repo), name="New")
     repo.update.assert_not_called()
+
+
+# ── phone_to_e164 ─────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("local,expected", [
+    ("0912345678",   "+84912345678"),
+    ("+84912345678", "+84912345678"),  # already E.164
+    ("12345",        "12345"),         # unrecognized, pass-through
+])
+def test_phone_to_e164(local, expected):
+    assert phone_to_e164(local) == expected

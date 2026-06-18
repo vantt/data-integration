@@ -33,15 +33,15 @@ _NON_DIGIT_NON_PLUS = re.compile(r"[^\d+]")
 
 
 def normalize_phone(raw: str) -> str:
-    """Convert Vietnamese phone to canonical +84 format.
+    """Convert Vietnamese phone to local VN format (09...).
 
-    Rules (mirrors NormalizePhone in normalize.go):
+    Rules:
       - Strip everything except digits and '+'.
-      - "+84..." → kept as-is.
-      - "84..."  (≥11 chars after strip) → prepend "+".
-      - "0..."   → replace leading 0 with "+84".
+      - "+84..." → '0' + rest (strip +84, prepend 0).
+      - "84..."  (≥11 digits total) → '0' + digits[2:].
+      - "0..."   → keep as-is.
       - No digit remaining after strip → return "".
-      - Other unrecognised formats → returned stripped only.
+      - Other unrecognised formats → return stripped digits only.
     """
     s = _NON_DIGIT_NON_PLUS.sub("", raw)
     if not s:
@@ -50,12 +50,27 @@ def normalize_phone(raw: str) -> str:
     if not any(c.isdigit() for c in s):
         return ""
     if s.startswith("+84"):
-        return s
+        return "0" + s[3:]
     if s.startswith("84") and len(s) >= 11:
-        return "+" + s
+        return "0" + s[2:]
     if s.startswith("0"):
-        return "+84" + s[1:]
+        return s
     return s
+
+
+def phone_to_e164(local: str) -> str:
+    """Convert local VN format (09...) to E.164 (+84...) for external export.
+
+    Rules:
+      - "0..."    → "+84" + rest.
+      - "+84..."  → keep as-is (already E.164).
+      - Otherwise → return as-is.
+    """
+    if local.startswith("0"):
+        return "+84" + local[1:]
+    if local.startswith("+84"):
+        return local
+    return local
 
 
 def normalize_email(raw: str) -> str:

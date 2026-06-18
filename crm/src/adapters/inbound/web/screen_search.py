@@ -9,11 +9,7 @@ Returns one of:
 
 Customer resolution order:
   1. UUID → party_id direct
-  2. Pure digits → sapo_customer identity; if miss → phone fallback
-  3. Contains '@' → email exact match
-  4. 9+ stripped digits → phone prefix search
-  5. Alphanumeric (non-UUID, non-digit) → customer_code via DuckDB
-  6. Fallback → name FTS
+  2. Unified FTS (crm_party_search) for everything else
 
 Order resolution delegates to DuckDBOrderRepository.resolve_order_code().
 """
@@ -37,12 +33,23 @@ _UUID_RE = re.compile(
 )
 
 
+def _fts_query(q: str) -> str:
+    """Wrap user input as FTS5 quoted string + prefix wildcard.
+
+    Quoted strings in FTS5 treat all chars as literals except '"'.
+    Stripping '"' from user input prevents syntax errors.
+    Trailing '*' enables prefix matching.
+    """
+    clean = q.replace('"', ' ').strip()
+    return f'"{clean}"*'
+
+
 # ── Service protocols ─────────────────────────────────────────────────────────
 
 class PartySearcher(Protocol):
     def get_by_id(self, party_id: str) -> Optional[Party]: ...
     def find_by_identity(self, identity_type: str, identity_value: str) -> Optional[Party]: ...
-    def search_by_name(self, q: str) -> list[str]: ...
+    def search_unified(self, q: str) -> list[str]: ...  # returns party_ids
     def list_by_phone(self, q: str) -> list[Party]: ...
     def list_by_email(self, q: str) -> list[Party]: ...
 
@@ -84,57 +91,16 @@ def make_search_router(
 
         Exactly one of the two return values is non-empty, or both are empty on miss.
         """
-        phone_digits = re.sub(r"[^0-9]", "", q)
-
         # 1. UUID → party_id direct
         if _UUID_RE.match(q):
             p = parties.get_by_id(q)
             return (f"/customers/{q}" if p else None), []
 
-        # 2. Pure digits → sapo_customer identity
-        if q.isdigit():
-            p = parties.find_by_identity("sapo_customer", q)
-            if p:
-                return f"/customers/{p.party_id}", []
-            # fall through to phone check (a 10-digit number may be a phone)
-
-        # 3. Email
-        if "@" in q:
-            try:
-                hits = [p for p in parties.list_by_email(q) if not p.is_merged]
-            except Exception:
-                hits = []
-            if len(hits) == 1:
-                return f"/customers/{hits[0].party_id}", []
-            if hits:
-                return None, hits[:10]
-            return None, []
-
-        # 4. Phone (9+ stripped digits covers Vietnamese 10-digit phones with separators)
-        if len(phone_digits) >= 9:
-            try:
-                hits = [p for p in parties.list_by_phone(q) if not p.is_merged]
-            except Exception:
-                hits = []
-            if len(hits) == 1:
-                return f"/customers/{hits[0].party_id}", []
-            if hits:
-                return None, hits[:10]
-
-        # 5. Customer code → DuckDB lookup (alphanumeric, non-UUID, non-digit, non-email)
-        if orders is not None and not q.isdigit():
-            try:
-                customer_id = orders.find_customer_id_by_code(q)
-                if customer_id:
-                    p = parties.find_by_identity("sapo_customer", customer_id)
-                    return (f"/customers/{p.party_id}" if p else None), []
-            except Exception:
-                log.warning("search: customer_code resolve %r failed", q, exc_info=True)
-
-        # 6. Name FTS fallback
+        # 2. Unified FTS for everything else
         try:
-            ids = parties.search_by_name(q)
+            ids = parties.search_unified(_fts_query(q))
         except Exception:
+            log.warning("search: search_unified %r failed", q, exc_info=True)
             ids = []
         valid: list[Party] = []
         for pid in ids[:15]:
