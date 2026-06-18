@@ -26,6 +26,7 @@
           <th>Product / Variant</th>
           <th>Brand</th>
           <th class="num-h">Qty</th>
+          <th class="num-h">Unit</th>
           <th class="num-h">Line</th>
           <th class="num-h">Disc.</th>
           <th class="num-h">Wt (g)</th>
@@ -42,6 +43,8 @@
         </td>
         <td class="muted">{{ item.brand_name or "—" }}</td>
         <td class="num">{{ item.quantity }}</td>
+        {% set unit_price = (item.revenue / item.quantity) | int if item.quantity and item.quantity > 0 else none %}
+        <td class="num muted">{{ unit_price | fmt_vnd if unit_price is not none else "—" }}</td>
         <td class="num cell-strong">{{ item.revenue | fmt_vnd }}</td>
         <td class="num muted">
           {% if item.discount_amount != 0 %}{{ item.discount_amount | fmt_vnd }}
@@ -57,7 +60,7 @@
       {% set sum_line = items | sum(attribute='revenue') %}
       {% set net_ref = f.us_revenue_excl_vat if f.is_us else f.net_revenue %}
       <tr>
-        <td colspan="4">Σ line revenue</td>
+        <td colspan="5">Σ line revenue</td>
         <td class="num cell-strong" colspan="3">
           {{ sum_line | fmt_vnd }}
           {% if net_ref != 0 %}
