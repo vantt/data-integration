@@ -1,6 +1,7 @@
 {# @surface P01 · Insight Panel | @source crm/docs/ui-spec/panels/P01-insight-panel.md | @kind PANEL #}
 {# HTMX fragment for /customers/{party_id}/panels/insight
-   Data: party_id, insight (CacheInsight|None), rep_insights (list[PartyInsight]), resolved_action_ids (set[str])
+   Data: party_id, insight (CacheInsight|None), rep_insights (list[PartyInsight]),
+         resolved_action_ids (set[str]), dim_metrics (CustomerDimMetrics|None)
    Rules: R2 (refreshed_at visible), R7 (realized_margin_pct only, gated has_cogs)
 #}
 
@@ -123,6 +124,24 @@
       {% if ins.cancel_rate > 0.1 %}
       <span class="bdg bdg--bad">high cancel</span>
       {% endif %}
+      {# Extended behavior segments from dim_customers (live DuckDB) #}
+      {% if dim_metrics %}
+        {% if dim_metrics.lifecycle_stage %}
+        <span class="bdg">{{ dim_metrics.lifecycle_stage }}</span>
+        {% endif %}
+        {% if dim_metrics.product_affinity %}
+        <span class="bdg">{{ dim_metrics.product_affinity }}</span>
+        {% endif %}
+        {% if dim_metrics.payment_behavior %}
+        <span class="bdg">{{ dim_metrics.payment_behavior }}</span>
+        {% endif %}
+        {% if dim_metrics.geo_region %}
+        <span class="bdg">{{ dim_metrics.geo_region }}</span>
+        {% endif %}
+        {% if dim_metrics.cohort_month %}
+        <span class="bdg bdg--accent">Cohort {{ dim_metrics.cohort_month }}</span>
+        {% endif %}
+      {% endif %}
     </div>
   </div>
 
@@ -170,6 +189,46 @@
       </div>
     </div>
   </div>
+
+  {# ── Profitability & Returns (dim_metrics from DuckDB) ── #}
+  {% if dim_metrics and dim_metrics.total_gross_profit is not none %}
+  {% set cov_pct = ((dim_metrics.cogs_order_count or 0) / (dim_metrics.order_count or 1) * 100) | round | int %}
+  <div>
+    <div class="panel-head"><span class="panel-title">Profitability & Returns</span></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)">
+      <div class="kpi">
+        <div class="kpi__label">Gross profit</div>
+        <div class="kpi__val" style="font-size:15px">{{ dim_metrics.total_gross_profit | int | fmt_vnd }}</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi__label">Total COGS</div>
+        <div class="kpi__val" style="font-size:15px">{{ dim_metrics.total_cogs | int | fmt_vnd if dim_metrics.total_cogs is not none else "—" }}</div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Avg margin</div>
+        <div class="signal-cell__v">
+          {% if dim_metrics.avg_gross_margin_pct is not none %}
+          <span style="color:var(--moss-500);font-weight:600">{{ "%.1f"|format(dim_metrics.avg_gross_margin_pct * 100) }}%</span>
+          {% if dim_metrics.cogs_order_count is not none and dim_metrics.order_count and dim_metrics.cogs_order_count < dim_metrics.order_count %}
+          <span class="bdg bdg--warn" style="margin-left:var(--sp-2)">{{ cov_pct }}% COGS coverage</span>
+          {% endif %}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+      <div class="signal-cell">
+        <div class="signal-cell__k">Returns</div>
+        <div class="signal-cell__v">
+          {% if dim_metrics.total_return_amount %}
+          <span style="color:var(--coral-500)">{{ dim_metrics.total_return_amount | int | fmt_vnd }}</span>
+          {% if dim_metrics.return_count %}
+          <span class="caption" style="color:var(--fg-tertiary);margin-left:var(--sp-2)">{{ dim_metrics.return_count }} đơn</span>
+          {% endif %}
+          {% else %}<span class="dash">—</span>{% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {# ── Rep insights (human-curated, crm_party_insight) ─── #}
   <div>

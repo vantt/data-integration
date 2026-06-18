@@ -43,6 +43,7 @@ from adapters.outbound.sqlite.app_user_repository import SQLiteAppUserRepository
 from adapters.outbound.duckdb.order_repository import DuckDBOrderRepository
 from adapters.outbound.duckdb.customer_timeline_repository import CustomerTimelineRepository
 from adapters.outbound.duckdb.customer_orders_repository import CustomerOrdersRepository
+from adapters.outbound.duckdb.customer_dim_metrics_repository import CustomerDimMetricsRepository
 
 # ── Application services ──────────────────────────────────────────────────────
 from application.merge_service import MergeService
@@ -156,6 +157,12 @@ def create_app() -> FastAPI:
         customer_orders_repo = CustomerOrdersRepository(olap_path())
     except Exception as exc:
         log.warning("customer_orders repo unavailable (%s) — orders panel falls back to cache", exc)
+
+    dim_metrics_repo: Optional[CustomerDimMetricsRepository] = None
+    try:
+        dim_metrics_repo = CustomerDimMetricsRepository(olap_path())
+    except Exception as exc:
+        log.warning("dim_metrics repo unavailable (%s) — insight panel segments/profitability hidden", exc)
 
     # 5. FastAPI app.
     app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
@@ -274,6 +281,7 @@ def create_app() -> FastAPI:
         customer_code_resolver=order_repo,
         customer_timeline=timeline_repo,
         customer_orders=customer_orders_repo,
+        customer_dim_metrics=dim_metrics_repo,
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,
