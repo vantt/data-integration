@@ -213,17 +213,17 @@
 
         {# LƯU THÀNH GHI CHÚ #}
         <label class="chk-row" onclick="m08ToggleSaveNote()">
-          <span class="chk-box" id="m08-sanote-box">
+          <span class="chk-box chk-box--on" id="m08-sanote-box">
             <svg id="m08-sanote-chk" width="10" height="10" viewBox="0 0 12 12" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                 aria-hidden="true" style="display:none;">
+                 aria-hidden="true">
               <path d="M2 6l3 3 5-5"/>
             </svg>
           </span>
-          <input type="checkbox" name="save_as_note" value="1" id="m08-save-note-chk" class="sr-only">
+          <input type="checkbox" name="save_as_note" value="1" id="m08-save-note-chk" checked class="sr-only">
           <span class="chk-row__text">Lưu thành ghi chú hồ sơ</span>
         </label>
-        <div id="m08-note-opts" style="display:none;border-left:2px solid var(--border);padding-left:var(--sp-4);margin-top:var(--sp-2);" class="stack stack-3">
+        <div id="m08-note-opts" style="border-left:2px solid var(--border);padding-left:var(--sp-4);margin-top:var(--sp-2);" class="stack stack-3">
           <label class="field">
             <span class="field__label">LOẠI GHI CHÚ</span>
             <div class="inp-sel">
