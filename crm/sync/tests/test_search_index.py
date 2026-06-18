@@ -41,13 +41,18 @@ def _make_crm_db(path: str) -> None:
 
 
 def _make_cache_db(path: str) -> None:
-    """Minimal cache.db with wh_order_hdr."""
+    """Minimal cache.db with wh_order_hdr and wh_customer_base."""
     conn = sqlite3.connect(path)
     conn.executescript("""
         CREATE TABLE wh_order_hdr (
             order_id INTEGER,
             order_code TEXT,
             customer_id INTEGER
+        );
+        CREATE TABLE wh_customer_base (
+            customer_key TEXT PRIMARY KEY,
+            customer_id INTEGER,
+            display_name TEXT
         );
     """)
     conn.commit()
@@ -149,6 +154,28 @@ def test_rebuild_skips_null_customer_id_orders():
         conn.close()
         if row:
             assert "DH-GUEST" not in row[0]
+
+
+def test_rebuild_indexes_warehouse_fullname():
+    """Sapo full_name from wh_customer_base is searchable even when CRM name differs."""
+    with tempfile.TemporaryDirectory() as tmp:
+        crm = tmp + "/crm.db"
+        cache = tmp + "/cache.db"
+        _make_crm_db(crm)
+        _make_cache_db(cache)
+        _insert_party(crm, "p-006", "An", [
+            ("sapo_customer", "2001", "active"),
+        ])
+        conn = sqlite3.connect(cache)
+        conn.execute("INSERT INTO wh_customer_base VALUES (?, ?, ?)", ("ck-2001", 2001, "Nguyễn Văn An"))
+        conn.commit()
+        conn.close()
+        rebuild_search_index(crm, cache)
+        conn = sqlite3.connect(crm)
+        tokens = conn.execute("SELECT tokens FROM crm_party_search WHERE party_id='p-006'").fetchone()[0]
+        conn.close()
+        assert "Nguyễn Văn An" in tokens
+        assert "An" in tokens
 
 
 def test_rebuild_is_idempotent():

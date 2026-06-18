@@ -84,6 +84,36 @@ def _build_customer_id_to_party(crm_conn: sqlite3.Connection) -> dict[str, str]:
     return mapping
 
 
+def _load_warehouse_names(
+    cache_conn: sqlite3.Connection,
+    customer_id_to_party: dict[str, str],
+) -> dict[str, list[str]]:
+    """
+    Load display_name (= Sapo full_name) from wh_customer_base in cache.db.
+
+    Supplements crm_party.display_name — ensures the Sapo full name is
+    searchable even when the CRM name was manually edited or is null.
+    """
+    exists = cache_conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='wh_customer_base'"
+    ).fetchone()
+    if not exists:
+        log.debug("wh_customer_base not found in cache.db — skipping warehouse names")
+        return {}
+
+    name_tokens: dict[str, list[str]] = {}
+    for row in cache_conn.execute(
+        "SELECT customer_id, display_name FROM wh_customer_base"
+        " WHERE customer_id IS NOT NULL AND display_name IS NOT NULL AND display_name != ''"
+    ):
+        cid_str = str(row["customer_id"])
+        party_id = customer_id_to_party.get(cid_str)
+        if not party_id:
+            continue
+        name_tokens.setdefault(party_id, []).append(row["display_name"])
+    return name_tokens
+
+
 def _load_order_tokens(
     cache_conn: sqlite3.Connection,
     customer_id_to_party: dict[str, str],
@@ -137,18 +167,22 @@ def rebuild_search_index(crm_db_path: str, cache_db_path: str) -> int:
         # Keep crm_conn open for the final write — close after insert
         pass
 
-    # ── 2. Load order tokens from cache.db (read-only) ───────────────────────
+    # ── 2. Load supplementary tokens from cache.db (read-only) ──────────────
     cache_conn = sqlite3.connect(f"file:{cache_db_path}?mode=ro", uri=True)
     cache_conn.row_factory = sqlite3.Row
     try:
         order_tokens = _load_order_tokens(cache_conn, customer_id_to_party)
+        warehouse_names = _load_warehouse_names(cache_conn, customer_id_to_party)
     finally:
         cache_conn.close()
 
-    # ── 3. Merge order tokens into party token lists ──────────────────────────
+    # ── 3. Merge supplementary tokens into party token lists ─────────────────
     for party_id, tokens in order_tokens.items():
         if party_id in parties:
             parties[party_id].extend(tokens)
+    for party_id, names in warehouse_names.items():
+        if party_id in parties:
+            parties[party_id].extend(names)
 
     # ── 4. DELETE all + INSERT batch into crm_party_search ───────────────────
     rows = [
