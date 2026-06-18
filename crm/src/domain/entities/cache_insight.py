@@ -181,3 +181,30 @@ class CustomerOrderRow:
     gross_margin_pct: Optional[float]
     payment_label: str
     has_return: bool
+
+
+# ---------------------------------------------------------------------------
+# Live dim_customers segments + aggregated profitability/returns metrics
+# ---------------------------------------------------------------------------
+
+@dataclass
+class CustomerDimMetrics:
+    """Live dim_customers behavior segments + aggregated value metrics.
+
+    Fetched on demand from olap.duckdb — never cached in SQLite.
+    All monetary values are float VND. Degrades gracefully to None when absent.
+    """
+    customer_key: str = ""
+    lifecycle_stage: str = ""
+    product_affinity: str = ""
+    payment_behavior: str = ""
+    geo_region: str = ""
+    customer_type: str = ""
+    cohort_month: str = ""          # first 7 chars of first_order_date (YYYY-MM)
+    total_gross_profit: Optional[float] = None
+    total_cogs: Optional[float] = None
+    avg_gross_margin_pct: Optional[float] = None
+    cogs_order_count: Optional[int] = None
+    order_count: Optional[int] = None
+    total_return_amount: Optional[float] = None
+    return_count: Optional[int] = None

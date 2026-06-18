@@ -20,7 +20,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from crm.src.domain.entities.activity import Activity
-from crm.src.domain.entities.cache_insight import CacheInsight
+from crm.src.domain.entities.cache_insight import CacheInsight, CustomerDimMetrics
 from crm.src.domain.entities.profile import CustomFieldDef, Note, Party360, PartyIdentity, PartyInsight
 from crm.src.domain.entities.task import Task
 
@@ -119,6 +119,7 @@ def make_customer_360_router(
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
     customer_timeline=None,
     customer_orders=None,
+    customer_dim_metrics=None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -253,9 +254,17 @@ def make_customer_360_router(
                     resolved_ids = action_task_resolver.resolved_action_ids(party_id)
                 except Exception as exc:
                     log.warning("c360 insight panel: resolved_ids %s: %s", party_id, exc)
+            dim_metrics: Optional[CustomerDimMetrics] = None
+            if customer_dim_metrics is not None:
+                sapo_id = _sapo_customer_id(ids)
+                if sapo_id:
+                    try:
+                        dim_metrics = customer_dim_metrics.get_by_customer_id(sapo_id)
+                    except Exception as exc:
+                        log.warning("c360 insight panel: dim_metrics %s: %s", party_id, exc)
             return templates.TemplateResponse(
                 "fragments/c360_insight_panel.html",
-                {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids},
+                {**ctx, "insight": ins, "rep_insights": rep_ins, "resolved_action_ids": resolved_ids, "dim_metrics": dim_metrics},
             )
         if panel == "orders":
             _, ids = _load_base(party_id)
