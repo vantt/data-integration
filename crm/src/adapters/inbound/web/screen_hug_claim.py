@@ -192,6 +192,9 @@ def _render_page(
       <label for="order_code">Mã đơn (Sapo)</label>
       <input type="text" id="order_code" name="order_code" value="{oc}"
              placeholder="SO1234" inputmode="text">
+      <label for="token">Tem (quét mã 2D)</label>
+      <input type="text" id="token" name="token" value="{tk}"
+             placeholder="quét tem…" autofocus autocapitalize="characters" spellcheck="false">
       <div class="row">
         <div class="grp">
           <label for="op_type">Loại điểm chạm</label>
@@ -209,9 +212,6 @@ def _render_page(
           <span>is_gift (người quét ≠ người mua)</span>
         </div>
       </div>
-      <label for="token">Tem (quét mã 2D)</label>
-      <input type="text" id="token" name="token" value="{tk}"
-             placeholder="quét tem…" autofocus autocapitalize="characters" spellcheck="false">
       <button type="submit">Bind</button>
     </form>
     {result_html}
