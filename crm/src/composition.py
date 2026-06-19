@@ -292,6 +292,7 @@ def create_app() -> FastAPI:
         customer_code_resolver=order_repo,
         sapo_id_resolver=party_repo,
         rfm_loader=list_rfm_repo,
+        tier_loader=cache_repo,
     ))
     app.include_router(make_customer_360_router(
         templates=templates,

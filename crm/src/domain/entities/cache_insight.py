@@ -128,6 +128,20 @@ class RecentOrder:
 
 
 @dataclass
+class CustomerTier:
+    """Strategic tier row from wh_customer_tier (mart_customer_tier sync)."""
+    customer_key: str
+    customer_id: int
+    strategic_tier: str          # LIVE_CORE|SECOND_ORDER|DORMANT_VALUABLE|LAPSED_VALUABLE|MASKED_REPEAT|NONBUYER|GRAVEYARD
+    tier_reason: str
+    recency_days: int
+    order_count: int
+    value_group: str
+    is_contactable: bool
+    tier_generated_at: str
+
+
+@dataclass
 class CacheInsight:
     """Composed read model returned by get_customer_insight.
 
@@ -135,6 +149,7 @@ class CacheInsight:
     """
     refreshed_at: str = ""                              # from insight.refreshed_at or empty
     insight: Optional[CustomerInsight] = None           # None when no insight row exists
+    tier: Optional[CustomerTier] = None                 # None when mart_customer_tier not yet synced
     actions: list[ActionQueueItem] = field(default_factory=list)
     recent_orders: list[RecentOrder] = field(default_factory=list)
 

@@ -135,6 +135,42 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
            'Khách chưa mua 45 ngày', 2000000, 2, '2026-06-14')
     """)
 
+    # mart_customer_tier — strategic tier output (7 tier first-match)
+    conn.execute("""
+        CREATE TABLE main_marts.mart_customer_tier (
+            customer_key TEXT,
+            customer_id BIGINT,
+            customer_code TEXT,
+            full_name TEXT,
+            customer_type TEXT,
+            value_group TEXT,
+            customer_status TEXT,
+            order_count INTEGER,
+            recency_days INTEGER,
+            last_order_date DATE,
+            lifetime_value BIGINT,
+            lifetime_contribution_margin BIGINT,
+            channel_preference TEXT,
+            is_contactable BOOLEAN,
+            source_contact_quality TEXT,
+            contact_quality TEXT,
+            strategic_tier TEXT,
+            tier_reason TEXT,
+            tier_generated_at TIMESTAMPTZ
+        )
+    """)
+    conn.execute("""
+        INSERT INTO main_marts.mart_customer_tier VALUES
+          ('key-cust-001', 1001, 'C001', 'Nguyen Van A', 'retail',
+           'VIP', 'active', 5, 14, '2026-06-05', 4250000, 1200000,
+           'online', true, 'unverified', 'unverified',
+           'LIVE_CORE', 'real+recency<=90+order_count>1', '2026-06-19T10:00:00+07:00'),
+          ('key-cust-002', 1002, 'C002', 'Tran Thi B', 'retail',
+           'GOLD', 'at_risk', 3, 45, '2026-05-04', 6000000, 800000,
+           'store', true, 'unverified', 'unverified',
+           'DORMANT_VALUABLE', 'real+recency<=365+repeat', '2026-06-19T10:00:00+07:00')
+    """)
+
     # dim_products
     # Note: duckdb_reader aliases brand_name→brand, last_sold_price→unit_price
     conn.execute("""
@@ -219,6 +255,7 @@ def test_t1_all_tables_populated(warehouse_and_cache):
             "wh_customer_insight": 2,
             "wh_product_insight": 2,
             "wh_action_queue": 2,
+            "wh_customer_tier": 2,
             "wh_customer_base": 2,
             "wh_product": 2,
             "wh_order_hdr": 3,
@@ -238,7 +275,7 @@ def test_t2_idempotent(warehouse_and_cache):
 
     _wh_tables = [
         "wh_customer_insight", "wh_product_insight", "wh_action_queue",
-        "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
+        "wh_customer_tier", "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
     ]
 
     run(olap_conn=olap_conn, cache_db=cache_path)
@@ -301,7 +338,7 @@ def test_t4_sync_run_logged_ok(warehouse_and_cache):
 
         expected_tables = [
             "wh_customer_insight", "wh_product_insight", "wh_action_queue",
-            "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
+            "wh_customer_tier", "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
         ]
         for t in expected_tables:
             assert t in statuses, f"wh_sync_run missing entry for {t}"
@@ -436,4 +473,15 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
     """)
     conn.execute("""
         INSERT INTO main_marts.dim_channels VALUES ('ch-online', 'online')
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS main_marts.mart_customer_tier (
+            customer_key TEXT, customer_id BIGINT, customer_code TEXT,
+            full_name TEXT, customer_type TEXT, value_group TEXT, customer_status TEXT,
+            order_count INTEGER, recency_days INTEGER, last_order_date DATE,
+            lifetime_value BIGINT, lifetime_contribution_margin BIGINT,
+            channel_preference TEXT, is_contactable BOOLEAN,
+            source_contact_quality TEXT, contact_quality TEXT,
+            strategic_tier TEXT, tier_reason TEXT, tier_generated_at TIMESTAMPTZ
+        )
     """)

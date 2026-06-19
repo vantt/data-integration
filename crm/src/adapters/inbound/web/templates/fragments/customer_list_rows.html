@@ -44,7 +44,12 @@
         <span class="{{ status_cls }}">{{ p.status | e }}</span>
       </td>
       <td>
-        {% if rfm and rfm.customer_type %}
+        {% if rfm and rfm.strategic_tier %}
+          <span class="{{ rfm.strategic_tier | bdg_cls('strategic_tier') }}"
+                title="{{ rfm.strategic_tier | bdg_tip('strategic_tier') }}">
+            {{ rfm.strategic_tier }}
+          </span>
+        {% elif rfm and rfm.customer_type %}
           <span class="{{ rfm.customer_type | bdg_cls('customer_type') }}"
                 title="{{ rfm.customer_type | bdg_tip('customer_type') }}">
             {{ rfm.customer_type | bdg_tip('customer_type') or rfm.customer_type }}

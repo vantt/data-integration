@@ -116,6 +116,15 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
         "converted": BadgeDef("good",   "Đã chuyển đổi"),
         "opted_out": BadgeDef("bad",    "Đã từ chối"),
     },
+    "strategic_tier": {
+        "live_core":        BadgeDef("good",   "KH sống — mua gần đây, giữ chân"),
+        "second_order":     BadgeDef("warn",   "Mới — chưa có đơn-2, cần activation"),
+        "dormant_valuable": BadgeDef("warn",   "Nguội gần (91-365 ngày) — win-back ưu tiên"),
+        "lapsed_valuable":  BadgeDef("",       "Nguội xa (>365 ngày) — win-back thử"),
+        "masked_repeat":    BadgeDef("accent", "Shopee ẩn, repeat — thu định danh"),
+        "nonbuyer":         BadgeDef("",       "Chưa mua — nuôi lead"),
+        "graveyard":        BadgeDef("bad",    "Nghĩa địa — suppress"),
+    },
 }
 
 

@@ -77,6 +77,14 @@
           <span class="{{ ins.customer_status | bdg_cls('customer_status') }}" data-tooltip="{{ ins.customer_status | bdg_tip('customer_status') }}">{{ ins.customer_status }}</span>
         </div>
       </div>
+      {% if insight.tier and insight.tier.strategic_tier %}
+      <div class="signal-cell">
+        <div class="signal-cell__k">Strategic tier</div>
+        <div class="signal-cell__v">
+          <span class="{{ insight.tier.strategic_tier | bdg_cls('strategic_tier') }}" data-tooltip="{{ insight.tier.strategic_tier | bdg_tip('strategic_tier') }}">{{ insight.tier.strategic_tier }}</span>
+        </div>
+      </div>
+      {% endif %}
       <div class="signal-cell">
         <div class="signal-cell__k">Next purchase</div>
         <div class="signal-cell__v">
@@ -124,6 +132,9 @@
     </div>
     {# Segment tags — horizontal flat badges below RFM grid #}
     <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-3)">
+      {% if insight.tier and insight.tier.strategic_tier %}
+      <span class="{{ insight.tier.strategic_tier | bdg_cls('strategic_tier') }}" data-tooltip="{{ insight.tier.strategic_tier | bdg_tip('strategic_tier') }}">{{ insight.tier.strategic_tier }}</span>
+      {% endif %}
       <span class="{{ ins.value_group | bdg_cls('value_group') }}" data-tooltip="{{ ins.value_group | bdg_tip('value_group') }}">{{ ins.value_group }}</span>
       <span class="{{ ins.customer_status | bdg_cls('customer_status') }}" data-tooltip="{{ ins.customer_status | bdg_tip('customer_status') }}">{{ ins.customer_status }}</span>
       <span class="{{ ins.next_purchase_signal | bdg_cls('purchase_signal') }}" data-tooltip="{{ ins.next_purchase_signal | bdg_tip('purchase_signal') }}">{{ ins.next_purchase_signal }}</span>

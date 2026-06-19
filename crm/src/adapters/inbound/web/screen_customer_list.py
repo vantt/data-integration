@@ -58,6 +58,10 @@ class PartyRFMLookup(Protocol):
     def get_rfm_for_customer_ids(self, customer_ids: list[int]) -> dict[int, dict]: ...
 
 
+class PartyTierLookup(Protocol):
+    def get_tiers_batch(self, customer_ids: list[int]) -> dict[int, str]: ...
+
+
 # ── Router factory ────────────────────────────────────────────────────────────
 
 
@@ -67,13 +71,14 @@ def make_customer_list_router(
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
     sapo_id_resolver: Optional[PartySapoIdResolver] = None,
     rfm_loader: Optional[PartyRFMLookup] = None,
+    tier_loader: Optional[PartyTierLookup] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer List routes."""
     router = APIRouter()
 
     def _build_rfm_map(party_list: list[Party]) -> dict[str, dict]:
-        """Return {party_id: {customer_type, last_order_date, order_count}} for the page."""
-        if sapo_id_resolver is None or rfm_loader is None or not party_list:
+        """Return {party_id: {customer_type, last_order_date, order_count, strategic_tier}} for the page."""
+        if sapo_id_resolver is None or not party_list:
             return {}
         try:
             pid_to_cid = sapo_id_resolver.get_sapo_ids_for_parties(
@@ -81,12 +86,27 @@ def make_customer_list_router(
             )
             if not pid_to_cid:
                 return {}
-            cid_to_rfm = rfm_loader.get_rfm_for_customer_ids(list(pid_to_cid.values()))
-            return {
-                pid: cid_to_rfm[cid]
-                for pid, cid in pid_to_cid.items()
-                if cid in cid_to_rfm
-            }
+            cids = list(pid_to_cid.values())
+
+            cid_to_rfm: dict[int, dict] = {}
+            if rfm_loader is not None:
+                cid_to_rfm = rfm_loader.get_rfm_for_customer_ids(cids)
+
+            cid_to_tier: dict[int, str] = {}
+            if tier_loader is not None:
+                try:
+                    cid_to_tier = tier_loader.get_tiers_batch(cids)
+                except Exception:
+                    log.warning("customer list: tier enrichment failed", exc_info=True)
+
+            result: dict[str, dict] = {}
+            for pid, cid in pid_to_cid.items():
+                rfm = dict(cid_to_rfm.get(cid, {}))
+                if cid in cid_to_tier:
+                    rfm["strategic_tier"] = cid_to_tier[cid]
+                if rfm:
+                    result[pid] = rfm
+            return result
         except Exception:
             log.warning("customer list: rfm enrichment failed", exc_info=True)
             return {}

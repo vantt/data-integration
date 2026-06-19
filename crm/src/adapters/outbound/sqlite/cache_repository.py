@@ -17,6 +17,7 @@ from domain.entities.cache_insight import (
     ActionQueueItem,
     CacheInsight,
     CustomerInsight,
+    CustomerTier,
     RecentOrder,
 )
 from domain.entities.party import PartySeed
@@ -39,24 +40,48 @@ class SQLiteCacheRepository:
     # ── Public API ─────────────────────────────────────────────────────────────
 
     def get_customer_insight(self, customer_id: int) -> Optional[CacheInsight]:
-        """Return composed CacheInsight (insight + actions + recent orders) for customer_id.
+        """Return composed CacheInsight (insight + tier + actions + recent orders) for customer_id.
 
         Returns None when no data exists or cache tables are absent.
         """
         insight = self._fetch_insight(customer_id)
         customer_key = insight.customer_key if insight else ""
+        tier = self._fetch_tier(customer_id)
         actions = self._fetch_actions(customer_key)
         recent_orders = self._fetch_recent_orders(customer_id)
 
-        if insight is None and not actions and not recent_orders:
+        if insight is None and tier is None and not actions and not recent_orders:
             return None
 
         return CacheInsight(
             insight=insight,
+            tier=tier,
             actions=actions,
             recent_orders=recent_orders,
             refreshed_at=insight.refreshed_at if insight else "",
         )
+
+    def get_tiers_batch(self, customer_ids: list[int]) -> dict[int, str]:
+        """Return {customer_id: strategic_tier} for a batch of customer_ids.
+
+        Used by the customer list to show tier badge without DuckDB round-trip.
+        Returns {} when table is absent or customer_ids is empty.
+        """
+        if not customer_ids:
+            return {}
+        placeholders = ",".join("?" for _ in customer_ids)
+        sql = (
+            f"SELECT customer_id, strategic_tier "
+            f"FROM cache.wh_customer_tier "
+            f"WHERE customer_id IN ({placeholders})"
+        )
+        try:
+            rows = self._conn.execute(sql, customer_ids).fetchall()
+        except sqlite3.OperationalError as exc:
+            if _is_missing_table(exc) or _is_missing_column(exc):
+                return {}
+            raise
+        return {row["customer_id"]: row["strategic_tier"] or "" for row in rows}
 
     def list_party_seed(self) -> list[PartySeed]:
         """Return all wh_party_seed rows enriched with display_name/phone/email.
@@ -152,6 +177,35 @@ class SQLiteCacheRepository:
         ]
 
     # ── Private helpers ────────────────────────────────────────────────────────
+
+    def _fetch_tier(self, customer_id: int) -> Optional[CustomerTier]:
+        sql = """
+            SELECT customer_key, customer_id, strategic_tier, tier_reason,
+                   recency_days, order_count, value_group,
+                   is_contactable, tier_generated_at
+            FROM cache.wh_customer_tier
+            WHERE customer_id = ?
+            LIMIT 1
+        """
+        try:
+            row = self._conn.execute(sql, (customer_id,)).fetchone()
+        except sqlite3.OperationalError as exc:
+            if _is_missing_table(exc) or _is_missing_column(exc):
+                return None
+            raise
+        if row is None:
+            return None
+        return CustomerTier(
+            customer_key=row["customer_key"] or "",
+            customer_id=row["customer_id"],
+            strategic_tier=row["strategic_tier"] or "",
+            tier_reason=row["tier_reason"] or "",
+            recency_days=row["recency_days"] or 0,
+            order_count=row["order_count"] or 0,
+            value_group=row["value_group"] or "",
+            is_contactable=bool(row["is_contactable"]),
+            tier_generated_at=row["tier_generated_at"] or "",
+        )
 
     def _fetch_insight(self, customer_id: int) -> Optional[CustomerInsight]:
         sql = """
