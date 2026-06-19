@@ -93,7 +93,6 @@ def bind_token(
     token: str,
     *,
     order_code: str,
-    op_type: str = "package_insert",
     is_gift: bool = False,
     channel: str | None = None,
     campaign_hint: str | None = None,
@@ -114,15 +113,16 @@ def bind_token(
         )
 
     bound_at = _utc_now()
+    # op_type is a MINT-time (batch) property of the physical sticker — do NOT
+    # overwrite it at claim. Claim only sets order_code + is_gift.
     conn.execute(
         "UPDATE hug_token SET "
-        "  status='bound', order_code=?, op_type=?, is_gift=?, "
+        "  status='bound', order_code=?, is_gift=?, "
         "  channel=COALESCE(?, channel), campaign_hint=COALESCE(?, campaign_hint), "
         "  bound_at=? "
         "WHERE token=?",
         (
             order_code,
-            op_type,
             1 if is_gift else 0,
             channel,
             campaign_hint,

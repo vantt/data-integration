@@ -75,13 +75,15 @@ def test_mint_count_validation(hug_conn):
 # ── claim / bind ───────────────────────────────────────────────────────────────
 
 def test_bind_token_lifecycle(hug_conn):
-    [tok] = repository.mint_batch(hug_conn, 1, batch_id="B-bind")
+    [tok] = repository.mint_batch(hug_conn, 1, batch_id="B-bind", op_type="winback_flyer")
     row = repository.bind_token(
-        hug_conn, tok, order_code="SO1234", op_type="package_insert", is_gift=True
+        hug_conn, tok, order_code="SO1234", is_gift=True
     )
     assert row["status"] == "bound"
     assert row["order_code"] == "SO1234"
     assert row["is_gift"] == 1
+    # claim must NOT overwrite the mint-time op_type (it's a batch/sticker property)
+    assert row["op_type"] == "winback_flyer"
     assert row["bound_at"] is not None
 
 
@@ -134,7 +136,7 @@ def test_d1_payload_matches_worker_contract(hug_conn):
     """Edge row must carry exactly the Worker's HugTokenRow fields, no is_gift."""
     [tok] = repository.mint_batch(hug_conn, 1, batch_id="B-contract")
     row = repository.bind_token(
-        hug_conn, tok, order_code="SO5", op_type="package_insert", is_gift=True
+        hug_conn, tok, order_code="SO5", is_gift=True
     )
     payload = d1_push._row_to_payload(row)
     assert set(payload.keys()) == {

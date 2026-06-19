@@ -46,7 +46,6 @@ def make_hug_claim_router(conn: sqlite3.Connection) -> APIRouter:
     async def claim_submit(
         token: str = Form(default=""),
         order_code: str = Form(default=""),
-        op_type: str = Form(default="package_insert"),
         is_gift: str = Form(default=""),
     ) -> HTMLResponse:
         token = token.strip().upper()
@@ -65,7 +64,6 @@ def make_hug_claim_router(conn: sqlite3.Connection) -> APIRouter:
                 conn,
                 token,
                 order_code=order_code,
-                op_type=op_type or "package_insert",
                 is_gift=gift,
             )
         except KeyError:
@@ -198,16 +196,6 @@ def _render_page(
       <input type="text" id="token" name="token" value="{tk}"
              placeholder="quét tem…" autofocus autocapitalize="characters" spellcheck="false">
       <div class="row">
-        <div class="grp">
-          <label for="op_type">Tem dán ở đâu?</label>
-          <select id="op_type" name="op_type">
-            <option value="package_insert" selected>Trong kiện hàng (mặc định)</option>
-            <option value="loyalty_card">Thẻ thành viên</option>
-            <option value="winback_flyer">Tờ rơi mời mua lại</option>
-            <option value="receipt">Hóa đơn</option>
-            <option value="acquire">Phát lẻ / chưa gắn khách</option>
-          </select>
-        </div>
         <div class="grp toggle">
           <label style="margin:0">Đơn là quà tặng?</label>
           <input type="checkbox" id="is_gift" name="is_gift" value="1">
