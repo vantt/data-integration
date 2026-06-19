@@ -84,6 +84,29 @@ _MART_PRODUCT_HEALTH_COLS = [
     "discount_dependency",
 ]
 
+# mart_customer_tier output columns for customer tier (cache-facing names).
+_MART_CUSTOMER_TIER_COLS = [
+    "customer_key",
+    "customer_id",
+    "customer_code",
+    "full_name",
+    "customer_type",
+    "value_group",
+    "customer_status",
+    "order_count",
+    "recency_days",
+    "last_order_date",
+    "lifetime_value",
+    "lifetime_contribution_margin",
+    "channel_preference",
+    "is_contactable",
+    "source_contact_quality",
+    "contact_quality",
+    "strategic_tier",
+    "tier_reason",
+    "tier_generated_at",
+]
+
 # mart_customer_action_queue output columns for action_queue (cache-facing names).
 # action_id is NOT returned here; it is derived Python-side in sqlite_upsert.upsert_action_queue
 # as md5(customer_key|action_type|generated_date) for new episode rows.
@@ -267,6 +290,41 @@ def fetch_action_queue(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     )
     rows = _fetch(conn, sql)
     _check_columns(rows, _MART_ACTION_QUEUE_COLS, "main_marts.mart_customer_action_queue")
+    return rows
+
+
+def fetch_customer_tier(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
+    """Read strategic tier from main_marts.mart_customer_tier.
+
+    tier_generated_at is TIMESTAMPTZ; cast to ICT text to avoid tz-aware object
+    materialisation (same pattern as other TIMESTAMPTZ columns in this module).
+    Numeric aggregates (lifetime_value, lifetime_contribution_margin) cast to BIGINT VND.
+    """
+    sql = (
+        "SELECT "
+        "  customer_key, "
+        "  customer_id, "
+        "  customer_code, "
+        "  full_name, "
+        "  customer_type, "
+        "  value_group, "
+        "  customer_status, "
+        "  CAST(order_count AS INTEGER) AS order_count, "
+        "  CAST(recency_days AS INTEGER) AS recency_days, "
+        "  strftime(last_order_date, '%Y-%m-%d') AS last_order_date, "
+        "  CAST(lifetime_value AS BIGINT) AS lifetime_value, "
+        "  CAST(lifetime_contribution_margin AS BIGINT) AS lifetime_contribution_margin, "
+        "  channel_preference, "
+        "  CAST(is_contactable AS INTEGER) AS is_contactable, "
+        "  source_contact_quality, "
+        "  contact_quality, "
+        "  strategic_tier, "
+        "  tier_reason, "
+        "  strftime(tier_generated_at, '%Y-%m-%dT%H:%M:%S') AS tier_generated_at "
+        "FROM main_marts.mart_customer_tier"
+    )
+    rows = _fetch(conn, sql)
+    _check_columns(rows, _MART_CUSTOMER_TIER_COLS, "main_marts.mart_customer_tier")
     return rows
 
 

@@ -174,6 +174,16 @@ def upsert_action_queue(conn: sqlite3.Connection, rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_customer_tier(conn: sqlite3.Connection, rows: list[dict]) -> int:
+    """Full-replace upsert for wh_customer_tier (1 row per customer, keyed on customer_key).
+
+    Uses generic _upsert (INSERT … ON CONFLICT DO UPDATE SET all columns) —
+    identical pattern to upsert_customer_insight.  The warehouse produces exactly
+    one tier row per customer; no episode logic needed.
+    """
+    return _upsert(conn, "wh_customer_tier", "customer_key", rows)
+
+
 def upsert_customer_base(conn: sqlite3.Connection, rows: list[dict]) -> int:
     return _upsert(conn, "wh_customer_base", "customer_key", rows)
 

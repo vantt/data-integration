@@ -88,6 +88,31 @@ CREATE TABLE IF NOT EXISTS wh_order_hdr (
   refreshed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 
+-- ─── GROUP 2 (cont): Strategic tier — NBA resell engine ──────────────────────
+
+CREATE TABLE IF NOT EXISTS wh_customer_tier (
+  customer_key              TEXT    PRIMARY KEY,   -- MD5 surrogate from warehouse
+  customer_id               INTEGER,               -- natural key (links to crm_party_identity)
+  customer_code             TEXT,
+  full_name                 TEXT,
+  customer_type             TEXT,
+  value_group               TEXT,
+  customer_status           TEXT,
+  order_count               INTEGER,
+  recency_days              INTEGER,
+  last_order_date           TEXT,                  -- YYYY-MM-DD
+  lifetime_value            INTEGER,               -- VND INTEGER
+  lifetime_contribution_margin INTEGER,            -- VND INTEGER
+  channel_preference        TEXT,
+  is_contactable            INTEGER,               -- 0/1
+  source_contact_quality    TEXT,
+  contact_quality           TEXT,
+  strategic_tier            TEXT,                  -- LIVE_CORE|SECOND_ORDER|DORMANT_VALUABLE|LAPSED_VALUABLE|MASKED_REPEAT|NONBUYER|GRAVEYARD
+  tier_reason               TEXT,
+  tier_generated_at         TEXT,                  -- ISO-8601 ICT
+  refreshed_at              TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+
 -- ─── PLUMBING ─────────────────────────────────────────────────────────────────
 
 -- wh_party_seed: one-way channel so Go creates crm_party / crm_party_identity
@@ -119,3 +144,5 @@ CREATE INDEX IF NOT EXISTS idx_wh_action_queue_customer_key_pri  ON wh_action_qu
 CREATE INDEX IF NOT EXISTS idx_wh_customer_base_customer_id      ON wh_customer_base (customer_id);
 CREATE INDEX IF NOT EXISTS idx_wh_product_sku                    ON wh_product (sku);
 CREATE INDEX IF NOT EXISTS idx_wh_order_hdr_customer_date        ON wh_order_hdr (customer_id, date_key);
+CREATE INDEX IF NOT EXISTS idx_wh_customer_tier_customer_id      ON wh_customer_tier (customer_id);
+CREATE INDEX IF NOT EXISTS idx_wh_customer_tier_strategic_tier   ON wh_customer_tier (strategic_tier);

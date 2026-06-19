@@ -162,6 +162,7 @@ def run(olap_conn=None, cache_db: str | None = None) -> None:
         customer_base_rows    = dr.fetch_customer_base(olap_conn)
         product_insight_rows  = dr.fetch_product_insight(olap_conn)
         action_queue_rows     = dr.fetch_action_queue(olap_conn)
+        customer_tier_rows    = dr.fetch_customer_tier(olap_conn)
         product_rows          = dr.fetch_products(olap_conn)
         order_hdr_rows        = dr.fetch_order_hdr(olap_conn, since_date_key=hwm)
 
@@ -176,6 +177,9 @@ def run(olap_conn=None, cache_db: str | None = None) -> None:
 
         _run_step(cache_conn, "batch", "wh_action_queue",
                   su.upsert_action_queue, action_queue_rows)
+
+        _run_step(cache_conn, "batch", "wh_customer_tier",
+                  su.upsert_customer_tier, customer_tier_rows)
 
         # ── Group 3: relational source data ───────────────────────────────────
         _run_step(cache_conn, "batch", "wh_customer_base",
