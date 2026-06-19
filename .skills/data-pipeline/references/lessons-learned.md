@@ -4123,3 +4123,33 @@ LEFT JOIN crm_party_identity pi
 4. Before assuming a JOIN works, verify with `COUNT(*)` on the live DB and inspect a few sample values from each side.
 
 **Reference:** `crm/app/internal/adapters/outbound/sqlite/cache_repo.go:ListAllActionQueue` (fixed 2026-06-15, commit e3cfed3)
+
+---
+
+### L132 — CRM filter logic: hardcoded thresholds out of sync with domain constants → filter always returns empty
+
+**Group:** SERVE
+
+**Symptom:** Clicking "Khẩn" (urgent) or "Cao" (high) filter on S01 worklist always shows an empty list, even when urgent/high-priority tasks exist in the database.
+
+**Root cause:** Filter thresholds in `screen_worklist.py` used magic numbers (`>= 4` for urgent, `>= 3` for high) that never matched actual task priorities. The domain constants defined in `task.py` are `TASK_PRIORITY_NORMAL=0`, `TASK_PRIORITY_HIGH=1`, `TASK_PRIORITY_URGENT=2`. The Jinja KPI counter in `worklist_fragment.html` had the same stale magic number (`ge 4`).
+
+**Fix:** Replace hardcoded thresholds with values matching domain constants:
+```python
+# screen_worklist.py
+if filter_priority == "urgent":
+    all_tasks = [t for t in all_tasks if t.priority >= 2]  # TASK_PRIORITY_URGENT
+elif filter_priority == "high":
+    all_tasks = [t for t in all_tasks if t.priority >= 1]  # TASK_PRIORITY_HIGH
+```
+```jinja
+{# worklist_fragment.html #}
+{% set p1_count = tasks | selectattr('priority', 'ge', 2) | list | length %}
+```
+
+**Rules:**
+1. Never hardcode numeric thresholds for domain enum/constant comparisons — always reference the named constant or add a comment citing the constant name and file.
+2. When domain constants change (e.g. priority scale is rescaled), grep for every numeric comparison that depends on them — in-memory Python filters and Jinja templates are silent blind spots, unlike DB CHECK constraints.
+3. In-memory filters that return zero results are indistinguishable from "no data" to the user — always test edge cases with known data when adding filters.
+
+**Reference:** `crm/src/domain/entities/task.py` (constants), `crm/src/adapters/inbound/web/screen_worklist.py` (filter), `crm/src/adapters/inbound/web/templates/fragments/worklist_fragment.html` (KPI). Fixed 2026-06-19, commit f430c9e.
