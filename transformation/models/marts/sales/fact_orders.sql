@@ -171,6 +171,7 @@ SELECT
     
     orders.client_info,
     orders.discount_codes,
+    orders.order_coupon_code,
     dos.max_discount_rate,
     dos.primary_discount_type,
 

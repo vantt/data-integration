@@ -150,6 +150,11 @@ extracted AS (
         json_extract_string(payload, '$.note') as note,
         json_extract_string(payload, '$.tags') as tags,
         json_extract_string(payload, '$.discount_codes') as discount_codes,
+        -- Human-readable coupon code on the order (e.g. OFF100, HUG50). Drives Hug redeem-matching:
+        -- match (customer_id + order_coupon_code) back to an issued hug_voucher row.
+        -- NOTE: $.order_coupon_code is a JSON OBJECT ({coupon_code, coupon_promotion_id,
+        -- order_total_required, discount_amount, ...}); the code string is the nested .coupon_code.
+        json_extract_string(payload, '$.order_coupon_code.coupon_code') as order_coupon_code,
         json_extract_string(payload, '$.client_details') as client_details,
 
         -- Timestamps
@@ -180,13 +185,14 @@ extracted AS (
 -- New columns (e.g. discount_items_json) are appended separately with NULL fallback
 -- so that incremental runs don't fail when the column hasn't been added to {{ this }} yet.
 {% set union_cols_base = 'entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id, order_id, modified_on, order_code, order_status, financial_status, fulfillment_status, packed_status, received_status, total_amount, total_discount, tax_amount, customer_id, source_id, location_id, assignee_id, assignee_name, assignee_full_name, assignee_email, account_id, account_name, account_full_name, account_email, user_name, customer_name, customer_phone, customer_email, billing_address_json, shipping_address_json, shipping_province, shipping_district, shipping_ward, shipping_address1, shipping_address2, shipping_city, shipping_zip, shipping_country, shipping_phone, shipping_name, billing_province, billing_district, billing_ward, billing_address1, billing_address2, billing_city, billing_zip, billing_country, billing_company, billing_phone, billing_tax_code, note, tags, discount_codes, client_details, created_on, issued_on, finalized_on, cancelled_on, completed_on, channel_name, payment_method_id, order_line_items_json, payments_json, fulfillments_json' %}
-{% set union_cols = union_cols_base + ', discount_items_json' %}
+{% set union_cols = union_cols_base + ', discount_items_json, order_coupon_code' %}
 SELECT * FROM (
     SELECT {{ union_cols }} FROM extracted
     {% if is_incremental() and '_dlt_load_id' in existing_cols %}
     UNION ALL
     SELECT {{ union_cols_base }},
-        {% if 'discount_items_json' in existing_cols %}discount_items_json{% else %}NULL{% endif %} AS discount_items_json
+        {% if 'discount_items_json' in existing_cols %}discount_items_json{% else %}NULL{% endif %} AS discount_items_json,
+        {% if 'order_coupon_code' in existing_cols %}order_coupon_code{% else %}NULL{% endif %} AS order_coupon_code
     FROM {{ this }}
     WHERE order_id IN (SELECT DISTINCT order_id FROM extracted)
     {% endif %}

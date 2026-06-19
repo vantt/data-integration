@@ -136,6 +136,7 @@ SELECT
     billing_phone,
     billing_tax_code,
     discount_codes,
+    order_coupon_code,
     client_details AS client_info,
     
     tags,
