@@ -4153,3 +4153,39 @@ elif filter_priority == "high":
 3. In-memory filters that return zero results are indistinguishable from "no data" to the user — always test edge cases with known data when adding filters.
 
 **Reference:** `crm/src/domain/entities/task.py` (constants), `crm/src/adapters/inbound/web/screen_worklist.py` (filter), `crm/src/adapters/inbound/web/templates/fragments/worklist_fragment.html` (KPI). Fixed 2026-06-19, commit f430c9e.
+
+---
+
+### L133 — CRM S01: filter applied to only one list in a multi-source view → UI appears frozen
+
+**Group:** SERVE
+
+**Symptom:** Clicking "Tất cả", "Cao", "Khẩn" filter buttons on S01 worklist shows zero visible change. All rows stay the same regardless of which filter is selected.
+
+**Root cause:** The page renders two independent lists: `all_actions` (ActionQueueItem from warehouse) and `all_tasks` (manual Tasks from SQLite). The priority filter in `_load_worklist_data` only filtered `all_tasks` — the smaller, less visible list. `all_actions` was never touched, so the dominant content remained unchanged and the UI appeared frozen.
+
+Secondary issue: `prio_label` template mapping used thresholds `>= 4 / == 3 / == 2` (copied from stale magic-number pattern) against a domain where max priority is 2, so the P1 badge never rendered.
+
+**Fix:**
+```python
+# screen_worklist.py — filter BOTH lists
+if filter_priority == "urgent":
+    all_tasks   = [t for t in all_tasks   if t.priority >= 2]
+    all_actions = [a for a in all_actions if a.priority >= 2]
+elif filter_priority == "high":
+    all_tasks   = [t for t in all_tasks   if t.priority >= 1]
+    all_actions = [a for a in all_actions if a.priority >= 1]
+```
+```jinja
+{# worklist_fragment.html — correct prio_label mapping #}
+{% if t.priority >= 2 %}{% set prio_label = 'P1' %}
+{% elif t.priority == 1 %}{% set prio_label = 'P2' %}
+{% else %}{% set prio_label = 'P3' %}{% endif %}
+```
+
+**Rules:**
+1. When a screen renders multiple independent data collections (e.g. tasks + action queue items), every filter must be applied to ALL collections — missing one makes the filter appear broken even when it technically works on the filtered subset.
+2. Before shipping a filter, enumerate every loop in the template and confirm the filter touches the data source for each one.
+3. See also [[L132]] — magic number thresholds out of sync with domain constants compound this: even after fixing partial filtering, wrong thresholds would still cause empty results.
+
+**Reference:** `crm/src/adapters/inbound/web/screen_worklist.py`, `worklist_fragment.html`. Fixed 2026-06-19, commit 2dede55.
