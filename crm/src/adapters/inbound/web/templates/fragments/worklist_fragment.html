@@ -182,10 +182,9 @@
     {% set extras = party_extras.get(t.party_id, {}) if t.party_id else {} %}
     {% set pref_id = extras.get('preferred_identity') %}
     {% set cp_notes = extras.get('contact_pref_notes', []) %}
-    {% if t.priority >= 4 %}{% set prio_label = 'P1' %}
-    {% elif t.priority == 3 %}{% set prio_label = 'P2' %}
-    {% elif t.priority == 2 %}{% set prio_label = 'P3' %}
-    {% else %}{% set prio_label = 'P4' %}{% endif %}
+    {% if t.priority >= 2 %}{% set prio_label = 'P1' %}
+    {% elif t.priority == 1 %}{% set prio_label = 'P2' %}
+    {% else %}{% set prio_label = 'P3' %}{% endif %}
     <div class="wl-row{% if t.status in ('done', 'cancelled') %} wl-row--done{% endif %}"
          id="task-{{ t.task_id }}">
       {# A-S01-003: checkbox → PATCH done #}
