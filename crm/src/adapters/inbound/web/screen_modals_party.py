@@ -34,6 +34,18 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+_PRIO_STR_TO_INT: dict[str, int] = {"P1": 2, "P2": 1, "P3": 0, "P4": 0}
+_PRIO_INT_TO_STR: dict[int, str] = {2: "P1", 1: "P2", 0: "P3"}
+
+
+def _parse_priority(s: str) -> int:
+    """Convert P1-P4 code or numeric string to domain int (2=urgent, 1=high, 0=normal)."""
+    v = s.strip().upper()
+    if v in _PRIO_STR_TO_INT:
+        return _PRIO_STR_TO_INT[v]
+    return int(v) if v.isdigit() else 0
+
+
 # ── Service protocols ─────────────────────────────────────────────────────────
 
 class ProfileSvc(Protocol):
@@ -135,6 +147,10 @@ def make_party_modals_router(
         request: Request,
         party_id: str = "",
         task_id: str = "",
+        source: str = "",
+        source_ref: str = "",
+        prefill_title: str = "",
+        prefill_priority: str = "",
     ) -> Response:
         au = []
         try:
@@ -149,9 +165,42 @@ def make_party_modals_router(
                 log.warning("m05: get_task %s: %s", task_id, exc)
             if task and not party_id:
                 party_id = task.party_id or ""
+        # Resolve party name for the Khách hàng display field
+        party_name = ""
+        if party_id:
+            try:
+                p360 = profile.get_party_360(party_id)
+                if p360:
+                    party_name = p360.display_name
+            except Exception as exc:
+                log.debug("m05: get_party_360 %s: %s", party_id, exc)
+        # Compute P-code for priority select
+        if task:
+            prio_code = _PRIO_INT_TO_STR.get(task.priority, "P3")
+        else:
+            prio_code = "P2"  # prototype default for new tasks
+        # Split due_at into date/time parts for the two inputs
+        due_date_val = ""
+        due_time_val = "10:00"
+        if task and task.due_at:
+            due_date_val = task.due_at[:10]
+            if len(task.due_at) > 10:
+                due_time_val = task.due_at[11:16]
         return templates.TemplateResponse(
             "fragments/modal_m05_create_task.html",
-            {"request": request, "party_id": party_id, "app_users": au, "task": task},
+            {
+                "request": request,
+                "party_id": party_id,
+                "party_name": party_name,
+                "app_users": au,
+                "task": task,
+                "prefill_source": source,
+                "prefill_source_ref": source_ref,
+                "prefill_title": prefill_title,
+                "prio_code": prio_code,
+                "due_date_val": due_date_val,
+                "due_time_val": due_time_val,
+            },
         )
 
     # ── PATCH /tasks/{task_id}/edit — Save task edits ────────────────────────
@@ -163,7 +212,7 @@ def make_party_modals_router(
         title: str = Form(...),
         description: str = Form(default=""),
         due_at: str = Form(default=""),
-        priority: str = Form(default="0"),
+        priority: str = Form(default="P3"),
         assignee_user_id: str = Form(default=""),
         party_id: str = Form(default=""),
     ) -> Response:
@@ -175,7 +224,7 @@ def make_party_modals_router(
                 "title": title,
                 "description": description.strip(),
                 "due_at": due_at.strip() or None,
-                "priority": int(priority) if priority.strip().isdigit() else 0,
+                "priority": _parse_priority(priority),
                 "assignee_user_id": assignee_user_id.strip() or None,
             })
         except Exception as exc:
@@ -269,7 +318,7 @@ def make_party_modals_router(
         description: str = Form(""),
         due_at: str = Form(""),
         assignee_user_id: str = Form(""),
-        priority: int = Form(0),
+        priority: str = Form("P3"),
         source: str = Form("manual"),
         source_ref: str = Form(""),
     ) -> Response:
@@ -283,7 +332,7 @@ def make_party_modals_router(
                 "description": description.strip() or None,
                 "due_at": due_at.strip() or None,
                 "assignee_user_id": assignee_user_id.strip() or None,
-                "priority": priority,
+                "priority": _parse_priority(priority),
                 "source": source.strip() or "manual",
                 "source_ref": source_ref.strip() or None,
             })

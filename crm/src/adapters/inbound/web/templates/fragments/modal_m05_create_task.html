@@ -1,136 +1,185 @@
-{# @surface  M05 · Create / Edit Task Modal (partial — HTMX-served modal)
-   @source   crm/docs/ui-spec/modals/M05-create-task-modal.md
-   @kind     MODAL
-   Create mode: GET /modals/m05?party_id=...           → POST /customers/{party_id}/tasks
-   Edit mode:   GET /modals/m05?task_id=...&party_id=  → PATCH /tasks/{task_id}/edit
-   Data: party_id (str), app_users (list[AppUser]), task (Task|None — None = create mode).
-#}
+{# @surface M05 · Create / Edit Task Modal | @source crm/docs/ui-spec/modals/M05-create-edit-task-modal.md | @kind MODAL #}
+{# GET  /modals/m05?party_id=<id>[&task_id=<id>&source=action_queue&source_ref=<id>&prefill_title=<str>&prefill_priority=<0-2>] #}
+{# POST /customers/<party_id>/tasks  (create)                                              #}
+{# PATCH /tasks/<task_id>/edit       (edit)                                                #}
+{# Data: party_id (str), party_name (str), app_users (list[AppUser]),                     #}
+{#       task (Task|None), prio_code (str "P1"-"P4"), due_date_val (str), due_time_val (str) #}
 {% set edit_mode = task is not none and task %}
+{% set prefill_source = prefill_source | default('') %}
+{% set prefill_source_ref = prefill_source_ref | default('') %}
+{% set prefill_title = prefill_title | default('') %}
+{% set party_name = party_name | default('') %}
+{% set prio_code = prio_code | default('P2') %}
+{% set due_date_val = due_date_val | default('') %}
+{% set due_time_val = due_time_val | default('10:00') %}
 
-<div class="modal-scrim" onclick="document.getElementById('modal-root').innerHTML=''" data-surface="M05">
-  <div class="modal" role="dialog" aria-modal="true" onclick="event.stopPropagation()">
+<div class="modal-scrim"
+     hx-get=""
+     hx-target="#modal-root"
+     hx-swap="innerHTML"
+     hx-trigger="click[!event.target.closest('.modal')]">
+  <div class="modal" role="dialog" aria-modal="true">
 
     {# ── Header ── #}
     <div class="modal__head">
       <div>
-        <div class="modal__title">{{ "Chỉnh sửa nhiệm vụ" if edit_mode else "Tạo nhiệm vụ mới" }}</div>
+        <div class="modal__title">{{ "Sửa task" if edit_mode else "Tạo task mới" }}</div>
+        {% if prefill_source == 'action_queue' %}
+        <div class="modal__sub">Prefill từ action_queue</div>
+        {% endif %}
       </div>
-      <button class="icon-btn"
-              onclick="document.getElementById('modal-root').innerHTML=''"
-              aria-label="Đóng">✕</button>
+      <button class="icon-btn" hx-get="" hx-target="#modal-root" hx-swap="innerHTML" aria-label="Đóng">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"
+             stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 4l8 8M12 4l-8 8"/>
+        </svg>
+      </button>
     </div>
 
+    {# ── Form ── #}
     {% if edit_mode %}
-    <form hx-patch="/tasks/{{ task.task_id }}/edit"
-          hx-target="#modal-root"
-          hx-swap="innerHTML">
+    <form hx-patch="/tasks/{{ task.task_id }}/edit" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
     {% else %}
-    <form hx-post="/customers/{{ party_id }}/tasks"
-          hx-target="#modal-root"
-          hx-swap="innerHTML">
+    <form hx-post="/customers/{{ party_id }}/tasks" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
+      {% if prefill_source %}
+      <input type="hidden" name="source" value="{{ prefill_source }}">
+      <input type="hidden" name="source_ref" value="{{ prefill_source_ref }}">
+      {% endif %}
     {% endif %}
 
       <div class="modal__body">
 
-        {# ── Tiêu đề ── #}
+        {# ── Tiêu đề * ── #}
         <label class="field">
-          <span class="field__label">TIÊU ĐỀ<span class="field__req">*</span></span>
-          <input type="text"
-                 name="title"
-                 class="inp"
-                 placeholder="VD: Gọi lại xác nhận đơn hàng"
-                 value="{{ task.title if edit_mode else '' }}"
-                 required
-                 autofocus>
+          <span class="field__label">Tiêu đề<span class="field__req"> *</span></span>
+          <input type="text" name="title" class="inp"
+                 value="{{ task.title if edit_mode else prefill_title }}"
+                 placeholder="Follow-up sau cuộc gọi…"
+                 required autofocus>
         </label>
 
-        {# ── Mô tả ── #}
+        {# ── Khách hàng (optional) ── #}
         <label class="field">
-          <span class="field__label">MÔ TẢ</span>
-          <textarea name="description"
-                    class="inp inp--area"
-                    rows="3"
-                    placeholder="Chi tiết thêm về nhiệm vụ (không bắt buộc)">{{ task.description if edit_mode and task.description else '' }}</textarea>
+          <span class="field__label">Khách hàng</span>
+          <div class="inp-sel">
+            <select name="task_party_display" disabled style="pointer-events:none">
+              {% if party_id and party_name %}
+              <option value="{{ party_id }}" selected>{{ party_name }}</option>
+              {% else %}
+              <option value="">— (không gắn)</option>
+              {% endif %}
+            </select>
+            <span class="inp-sel__chev" aria-hidden="true">
+              <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
+                   stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 4l4 4 4-4"/>
+              </svg>
+            </span>
+          </div>
         </label>
 
+        {# ── Due date * + Giờ ── #}
+        {# hidden due_at field; JS combines date+time before submit #}
+        <input type="hidden" name="due_at" id="m05-due-at">
         <div class="field-row">
-          {# ── Ngày hạn ── #}
           <label class="field">
-            <span class="field__label">NGÀY HẠN</span>
-            <input type="date"
-                   name="due_at"
-                   class="inp inp--mono"
-                   value="{{ task.due_at[:10] if edit_mode and task.due_at else '' }}">
+            <span class="field__label">Due date<span class="field__req"> *</span></span>
+            <input type="date" id="m05-due-date" class="inp inp--mono"
+                   value="{{ due_date_val }}"
+                   onchange="m05Sync()">
           </label>
-
-          {# ── Gán cho NV ── #}
           <label class="field">
-            <span class="field__label">GIAO CHO</span>
+            <span class="field__label">Giờ</span>
+            <input type="time" id="m05-due-time" class="inp inp--mono"
+                   value="{{ due_time_val }}"
+                   onchange="m05Sync()">
+          </label>
+        </div>
+        <div id="m05-past-warn" class="field__error" style="display:none;margin-top:calc(var(--sp-2)*-1);margin-bottom:var(--sp-2)">
+          ⚠ Quá khứ — vẫn cho phép lưu
+        </div>
+
+        {# ── Priority + Giao cho ── #}
+        <div class="field-row">
+          <label class="field">
+            <span class="field__label">Priority</span>
             <div class="inp-sel">
-              <select name="assignee_user_id" class="inp">
+              <select name="priority">
+                <option value="P1"{% if prio_code == 'P1' %} selected{% endif %}>P1 — Khẩn</option>
+                <option value="P2"{% if prio_code == 'P2' %} selected{% endif %}>P2 — Cao</option>
+                <option value="P3"{% if prio_code == 'P3' %} selected{% endif %}>P3 — Thường</option>
+                <option value="P4"{% if prio_code == 'P4' %} selected{% endif %}>P4 — Thấp</option>
+              </select>
+              <span class="inp-sel__chev" aria-hidden="true">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
+                     stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 4l4 4 4-4"/>
+                </svg>
+              </span>
+            </div>
+          </label>
+          <label class="field">
+            <span class="field__label">Giao cho</span>
+            <div class="inp-sel">
+              <select name="assignee_user_id">
                 <option value="">— Chưa giao —</option>
                 {% for user in app_users %}
-                  <option value="{{ user.user_id }}"
-                    {% if edit_mode and task.assignee_user_id == user.user_id %}selected{% endif %}>
-                    {{ user.full_name }}{% if user.role %} · {{ user.role }}{% endif %}
-                  </option>
+                <option value="{{ user.user_id }}"
+                  {% if edit_mode and task.assignee_user_id == user.user_id %} selected{% endif %}>
+                  {{ user.full_name }}{% if user.role %} · {{ user.role }}{% endif %}
+                </option>
                 {% endfor %}
               </select>
-              <span class="inp-sel__chev">{% include 'icons/chevdown.svg' %}</span>
+              <span class="inp-sel__chev" aria-hidden="true">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"
+                     stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 4l4 4 4-4"/>
+                </svg>
+              </span>
             </div>
           </label>
         </div>
 
-        {# ── Mức độ ưu tiên ── #}
-        <div class="field">
-          <span class="field__label">ĐỘ ƯU TIÊN</span>
-          <div class="radioset" id="m05-priority-set">
-            {% set cur_prio = task.priority if edit_mode else 0 %}
-            <label class="radio-pill {{ 'radio-pill--on' if cur_prio == 0 else '' }}"
-                   onclick="m05SetPriority(this, 0)" tabindex="0"
-                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m05SetPriority(this,0)}">
-              <span class="radio-pill__dot"></span>
-              <input type="radio" name="_priority_radio" value="0" {{ 'checked' if cur_prio == 0 else '' }} class="sr-only"> Bình thường
-            </label>
-            <label class="radio-pill {{ 'radio-pill--on' if cur_prio == 1 else '' }}"
-                   onclick="m05SetPriority(this, 1)" tabindex="0"
-                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m05SetPriority(this,1)}">
-              <span class="radio-pill__dot"></span>
-              <input type="radio" name="_priority_radio" value="1" {{ 'checked' if cur_prio == 1 else '' }} class="sr-only"> Cao
-            </label>
-            <label class="radio-pill {{ 'radio-pill--on' if cur_prio >= 2 else '' }}"
-                   onclick="m05SetPriority(this, 2)" tabindex="0"
-                   onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m05SetPriority(this,2)}">
-              <span class="radio-pill__dot"></span>
-              <input type="radio" name="_priority_radio" value="2" {{ 'checked' if cur_prio >= 2 else '' }} class="sr-only"> Khẩn cấp
-            </label>
-          </div>
-          <input type="hidden" id="m05-priority-val" name="priority" value="{{ cur_prio }}">
-        </div>
+        {# ── Ghi chú (optional) ── #}
+        <label class="field">
+          <span class="field__label">Ghi chú</span>
+          <textarea name="description" class="inp inp--area"
+                    placeholder="(tùy chọn)">{{ task.description if edit_mode and task.description else '' }}</textarea>
+        </label>
 
       </div>{# .modal__body #}
 
       <div class="modal__actions">
         <button type="button" class="btn btn--ghost"
-                onclick="document.getElementById('modal-root').innerHTML=''">Hủy</button>
-        <button type="submit" class="btn btn--primary">
-          {{ "Lưu thay đổi" if edit_mode else "Tạo task" }}
-        </button>
+                hx-get="" hx-target="#modal-root" hx-swap="innerHTML"
+                style="padding:10px 14px">Hủy</button>
+        <button type="submit" class="btn btn--primary">Lưu task</button>
       </div>
-    </form>
 
+    </form>
   </div>{# .modal #}
 </div>{# .modal-scrim #}
 
 <script>
-  function m05SetPriority(clickedLabel, value) {
-    document.getElementById('m05-priority-val').value = value;
-    var pills = document.querySelectorAll('#m05-priority-set .radio-pill');
-    pills.forEach(function (pill) { pill.classList.remove('radio-pill--on'); });
-    clickedLabel.classList.add('radio-pill--on');
-    var radio = clickedLabel.querySelector('input[type="radio"]');
-    if (radio) { radio.checked = true; }
+(function () {
+  function ictToday() {
+    var d = new Date(Date.now() + 7 * 3600000);
+    var p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
   }
+  window.m05Sync = function () {
+    var dateEl = document.getElementById('m05-due-date');
+    var timeEl = document.getElementById('m05-due-time');
+    var hidden = document.getElementById('m05-due-at');
+    var warn   = document.getElementById('m05-past-warn');
+    if (!dateEl || !hidden) return;
+    var date = dateEl.value;
+    var time = (timeEl && timeEl.value) ? timeEl.value : '00:00';
+    hidden.value = date ? (date + 'T' + time + ':00') : '';
+    if (warn) warn.style.display = (date && date < ictToday()) ? '' : 'none';
+  };
+  m05Sync();
+})();
 </script>
