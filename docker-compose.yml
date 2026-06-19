@@ -168,6 +168,8 @@ services:
       # uses this to trigger reverse-ETL on demand. Unset = endpoint unprotected.
       - CRM_REFRESH_TOKEN=change-me-crm-refresh
       - TZ=Asia/Ho_Chi_Minh
+      # Dev: uncomment to enable uvicorn --reload + Jinja2 auto_reload (template edits apply instantly).
+      - CRM_DEV_RELOAD=1
       # Hug edge push: claim station signs POST /hug/token/upsert to the Worker.
       # Secret via root .env substitution (gitignored) — not baked into this tracked file.
       - HUG_WORKER_URL=https://hug.fjp.vn
