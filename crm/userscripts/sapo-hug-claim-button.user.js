@@ -1,8 +1,9 @@
 // ==UserScript==
 // @name         Sapo → Hug Claim button
 // @namespace    fwg.hug
-// @version      0.1.0
+// @version      0.2.0
 // @description  Inject a "Claim Hug" button on the Sapo order page that opens the Hug claim station pre-filled with the order code.
+// @match        https://*.mysapogo.com/admin/orders/*
 // @match        https://*.mysapo.net/admin/orders/*
 // @match        https://*.sapo.vn/admin/orders/*
 // @match        https://*.sapogo.com/admin/orders/*
@@ -19,43 +20,43 @@
   // CLAIM_BASE: LAN URL of the Hug claim station (the CRM app). The button opens
   //   `${CLAIM_BASE}?order=<orderCode>`. Change to your CRM host/port.
   //
-  // ⚠️ ORDER_CODE extraction is UNVERIFIED against the live Sapo DOM. Two
-  //   strategies are tried in order; tune ORDER_CODE_SELECTORS / URL_ORDER_RE
-  //   once you can inspect a real order page.
-  //     1. From the page URL  (Sapo order URLs are typically /admin/orders/<id>
-  //        — that id is the internal order id, which MAY differ from the human
-  //        order CODE "SOxxxx". If so, prefer the DOM selector below.)
-  //     2. From a DOM element  (the visible order code heading, e.g. "#SON1234").
+  // ORDER_CODE extraction: primary selector `.detail_order h4` (confirmed on the
+  //   live Sapo order page = the visible order-code heading). Other selectors +
+  //   the URL are kept as fallbacks. The code must match fact_orders.order_code.
   // ─────────────────────────────────────────────────────────────────────────
   const CONFIG = {
     CLAIM_BASE: "https://crm.lan.fwg.vn/hug/claim",  // CRM app via Caddy (https, *.lan.fwg.vn)
-    // Regex to pull a human order code from the URL path, if present.
-    URL_ORDER_RE: /\/orders\/([A-Za-z0-9_-]+)/,
     // DOM selectors to try for the visible order code (first match wins).
     ORDER_CODE_SELECTORS: [
+      '.detail_order h4',   // ← confirmed: order-code heading on the Sapo order page
       '[data-order-code]',
       '.order-code',
       'h1.page-title',
       '.s-page-title',
     ],
-    // If the extracted text contains a leading '#', strip it.
-    STRIP_HASH: true,
+    // Fallback only: pull an order code from the URL path if the DOM misses.
+    URL_ORDER_RE: /\/orders\/([A-Za-z0-9_-]+)/,
   };
 
   function extractOrderCode() {
-    // Strategy 2 (preferred): visible DOM order code.
     for (const sel of CONFIG.ORDER_CODE_SELECTORS) {
       const el = document.querySelector(sel);
       if (!el) continue;
       const attr = el.getAttribute && el.getAttribute("data-order-code");
-      let txt = (attr || el.textContent || "").trim();
-      // Pull a token that looks like an order code (letters+digits).
-      const m = txt.match(/#?\s*([A-Za-z]{1,4}\d{3,})/);
-      if (m) return CONFIG.STRIP_HASH ? m[1] : m[0].trim();
+      // Take the heading text, strip a leading '#', collapse whitespace.
+      let txt = (attr || el.textContent || "").trim().replace(/^#\s*/, "");
+      if (!txt) continue;
+      // Single token (no spaces) → it IS the order code (e.g. "SON00123").
+      if (!/\s/.test(txt)) return txt;
+      // Mixed text (e.g. "Đơn hàng SON00123") → first token containing a digit.
+      const m = txt.match(/([A-Za-z0-9._-]*\d[A-Za-z0-9._-]*)/);
+      if (m) return m[1];
     }
-    // Strategy 1 (fallback): from the URL.
+    // URL fallback ONLY if it looks like a human code (contains a letter).
+    // This Sapo's /admin/orders/<id> is a numeric INTERNAL id (≠ order_code),
+    // so pure digits are skipped → button shows blank, staff types the code.
     const um = location.pathname.match(CONFIG.URL_ORDER_RE);
-    if (um) return um[1];
+    if (um && /[A-Za-z]/.test(um[1])) return um[1];
     return "";
   }
 
