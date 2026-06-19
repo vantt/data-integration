@@ -2,6 +2,22 @@ name = "webhook-receiver"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
 
+# CRITICAL: keep the workers.dev URL ENABLED — the Sapo webhook ingestion +
+# local /poll consumer target webhook-receiver.admin-1d2.workers.dev. Adding a
+# custom-domain route disables workers.dev by default, which would break ingestion.
+workers_dev = true
+
+# Hug touchpoint runs on the SAME Worker via a custom domain — QR scans hit /h/{token}.
+# Webhook ingestion keeps its default workers.dev URL (one Worker, two domains).
+# Requires the fjp.vn zone to be on this Cloudflare account. Takes effect on `wrangler deploy`.
+routes = [
+  { pattern = "hug.fjp.vn", custom_domain = true }
+]
+
+# Non-secret config. HUG_ADMIN_SECRET stays a wrangler secret (do NOT put it here).
+[vars]
+HUG_FALLBACK_URL = "https://finejapanvietnam.com"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "fgcare-webhook-db"

@@ -12,3 +12,6 @@ pytz==2024.2
 tzdata==2024.2
 pydantic==2.10.6
 python-multipart==0.0.20
+# Hug QR label printing (hug_qr_print.py). Optional: without it the label page
+# falls back to in-browser QR rendering via CDN. Install for fully-offline print.
+qrcode==8.0

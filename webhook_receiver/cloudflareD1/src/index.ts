@@ -1,11 +1,35 @@
 export type { Env } from './utils';
 import { Env, verifySignature, logError } from './utils';
 import { SOURCE_CONFIGS, DEFAULT_CONFIG, SourceConfig } from './config';
+import {
+    handleHugScan,
+    handleHugTokenUpsert,
+    handleHugCustomerUpsert,
+    handleHugCampaignUpsert,
+} from './hug-handler';
 
 export default {
     async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
         const url = new URL(request.url);
 
+        // ── Hug Dynamic Touchpoint Platform ──────────────────────────────────
+        // GET /h/:token  — public scan redirect (no HMAC; token is opaque)
+        const hugScanMatch = url.pathname.match(/^\/h\/([^/]+)$/);
+        if (request.method === "GET" && hugScanMatch) {
+            return handleHugScan(request, env, ctx, hugScanMatch[1]);
+        }
+        // POST /hug/*/upsert  — admin provisioning routes (HMAC via HUG_ADMIN_SECRET)
+        if (request.method === "POST" && url.pathname === "/hug/token/upsert") {
+            return handleHugTokenUpsert(request, env);
+        }
+        if (request.method === "POST" && url.pathname === "/hug/customer/upsert") {
+            return handleHugCustomerUpsert(request, env);
+        }
+        if (request.method === "POST" && url.pathname === "/hug/campaign/upsert") {
+            return handleHugCampaignUpsert(request, env);
+        }
+
+        // ── Existing webhook queue routes (UNCHANGED) ─────────────────────
         // Match /webhook/<source_system>/<entity_type>/<action>
         if (request.method === "POST" && url.pathname.startsWith("/webhook/")) {
             return handleWebhook(request, env);

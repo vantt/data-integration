@@ -3,6 +3,12 @@ export interface Env {
     WEBHOOK_SECRET?: string;
     HMAC_HEADER_NAME?: string;
     CHECK_HMAC?: string;
+    // Hug Dynamic Touchpoint Platform
+    // Set via: wrangler secret put HUG_ADMIN_SECRET
+    HUG_ADMIN_SECRET?: string;
+    // Fallback redirect URL when token not found or no campaign matches.
+    // Set via: wrangler secret put HUG_FALLBACK_URL  (or as a plain var in wrangler.toml)
+    HUG_FALLBACK_URL?: string;
     [key: string]: any; // Allow dynamic access for other secrets
 }
 
