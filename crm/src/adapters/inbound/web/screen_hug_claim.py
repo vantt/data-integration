@@ -181,7 +181,9 @@ def _render_page(
   .result .msg {{ font-size: 18px; margin-top: 8px; font-weight: 600; }}
   .result .edge {{ font-size: 12px; color: #cbd5e1; margin-top: 8px; }}
   .hint {{ margin-top: 18px; font-size: 12px; color: #64748b; text-align: center; }}
-  button {{ display:none; }}
+  button {{ width: 100%; margin-top: 18px; padding: 16px; font-size: 18px; font-weight: 700;
+          border: none; border-radius: 10px; background: #38bdf8; color: #0f172a; cursor: pointer; }}
+  button:hover {{ background: #0ea5e9; }}
 </style>
 </head>
 <body>
