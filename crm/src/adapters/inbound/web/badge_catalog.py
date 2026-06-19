@@ -56,10 +56,10 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
         "canceled":   BadgeDef("bad",    "Vận chuyển bị hủy"),
     },
     "value_group": {
-        "VIP":    BadgeDef("accent", "VIP — khách hàng giá trị đặc biệt cao"),
-        "GOLD":   BadgeDef("good",   "GOLD — khách hàng giá trị cao"),
-        "SILVER": BadgeDef("warn",   "SILVER — khách hàng giá trị trung bình"),
-        "BRONZE": BadgeDef("",       "BRONZE — khách hàng mới hoặc giá trị cơ bản"),
+        "vip":    BadgeDef("accent", "VIP — khách hàng giá trị đặc biệt cao"),
+        "gold":   BadgeDef("good",   "GOLD — khách hàng giá trị cao"),
+        "silver": BadgeDef("warn",   "SILVER — khách hàng giá trị trung bình"),
+        "bronze": BadgeDef("",       "BRONZE — khách hàng mới hoặc giá trị cơ bản"),
     },
     "customer_status": {
         "active":   BadgeDef("good",  "Đang hoạt động — có giao dịch gần đây"),
@@ -67,22 +67,22 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
         "churned":  BadgeDef("bad",   "Đã rời bỏ — không còn hoạt động"),
     },
     "purchase_signal": {
-        "OVERDUE":   BadgeDef("bad",  "Quá hạn mua lại theo dự đoán"),
-        "DUE_SOON":  BadgeDef("warn", "Sắp đến hạn mua lại"),
-        "ON_TRACK":  BadgeDef("good", "Đang trong chu kỳ mua bình thường"),
+        "overdue":   BadgeDef("bad",  "Quá hạn mua lại theo dự đoán"),
+        "due_soon":  BadgeDef("warn", "Sắp đến hạn mua lại"),
+        "on_track":  BadgeDef("good", "Đang trong chu kỳ mua bình thường"),
     },
     "action_type": {
-        "CALL_NOW":         BadgeDef("bad",    "Gọi ngay — khách có nguy cơ rời bỏ cao"),
-        "REORDER_NUDGE":    BadgeDef("warn",   "Nhắc tái đặt hàng — sắp đến chu kỳ"),
-        "WIN_BACK":         BadgeDef("warn",   "Tái kích hoạt — đã lâu không mua"),
-        "UPSELL":           BadgeDef("good",   "Upsell — tiềm năng nâng hạng"),
-        "CROSS_SELL":       BadgeDef("good",   "Cross-sell — đề xuất sản phẩm bổ sung"),
-        "COLLECT_FEEDBACK": BadgeDef("accent", "Thu thập phản hồi từ khách"),
+        "call_now":         BadgeDef("bad",    "Gọi ngay — khách có nguy cơ rời bỏ cao"),
+        "reorder_nudge":    BadgeDef("warn",   "Nhắc tái đặt hàng — sắp đến chu kỳ"),
+        "win_back":         BadgeDef("warn",   "Tái kích hoạt — đã lâu không mua"),
+        "upsell":           BadgeDef("good",   "Upsell — tiềm năng nâng hạng"),
+        "cross_sell":       BadgeDef("good",   "Cross-sell — đề xuất sản phẩm bổ sung"),
+        "collect_feedback": BadgeDef("accent", "Thu thập phản hồi từ khách"),
     },
     "customer_type": {
-        "RETAIL":    BadgeDef("",       "Khách lẻ"),
-        "WHOLESALE": BadgeDef("accent", "Khách buôn / B2B"),
-        "PARTNER":   BadgeDef("accent", "Đối tác"),
+        "retail":    BadgeDef("",       "Khách lẻ"),
+        "wholesale": BadgeDef("accent", "Khách buôn / B2B"),
+        "partner":   BadgeDef("accent", "Đối tác"),
     },
     "party_status": {
         "active":   BadgeDef("good",  "Hồ sơ đang hoạt động"),
@@ -121,7 +121,7 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
 
 def bdg_lookup(domain: str, key: str) -> BadgeDef:
     """Return BadgeDef for domain+key; falls back to neutral on miss."""
-    return _CATALOG.get(domain, {}).get((key or "").strip(), _NEUTRAL)
+    return _CATALOG.get(domain, {}).get((key or "").strip().lower(), _NEUTRAL)
 
 
 def bdg_mod_cls(domain: str, key: str) -> str:
