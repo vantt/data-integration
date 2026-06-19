@@ -92,6 +92,10 @@ from adapters.inbound.web.screen_order_detail import make_order_detail_router
 from adapters.inbound.web.screen_management import make_management_router
 from adapters.inbound.web.screen_search import make_search_router
 from adapters.inbound.web.screen_resolver import make_resolver_router
+from adapters.inbound.web.screen_hug_claim import make_hug_claim_router
+
+# ── Hug — local token-provisioning master (separate Python-owned hug.db) ──────
+from hug import db as hug_db
 
 log = logging.getLogger(__name__)
 
@@ -302,6 +306,8 @@ def create_app() -> FastAPI:
         customer_timeline=timeline_repo,
         customer_orders=customer_orders_repo,
         customer_dim_metrics=dim_metrics_repo,
+        task_svc=task_svc,
+        app_users=app_user_repo,
     ))
     app.include_router(make_tasks_board_router(
         templates=templates,
@@ -342,6 +348,16 @@ def create_app() -> FastAPI:
         settings_svc=profile_svc,
         app_users_svc=app_user_repo,
     ))
+
+    # 9. Hug claim station — owns its own hug.db connection (single writer).
+    #    Non-fatal: if hug.db can't open the rest of the CRM still serves.
+    try:
+        hug_conn = hug_db.connect()
+        app.state.hug_conn = hug_conn  # keep alive for the app's lifetime
+        app.include_router(make_hug_claim_router(hug_conn))
+        log.info("hug claim station mounted at /hug/claim")
+    except Exception as exc:  # noqa: BLE001
+        log.warning("hug claim station unavailable (%s) — /hug/claim disabled", exc)
 
     return app
 

@@ -1,49 +1,108 @@
-{# @surface  P04 · Tasks Panel (partial — hosted in S03)
-   @source   crm/docs/ui-spec/panels/P04-tasks-panel.md
-   @kind     PANEL
-   HTMX fragment for /customers/{party_id}/panels/tasks.
-   Data: party_id (str), tasks (list[Task]).
+{# @surface P04 · Tasks Panel | @source crm/docs/ui-spec/panels/P04-tasks-panel.md | @kind PANEL #}
+{# HTMX fragment for /customers/{party_id}/panel?panel=tasks[&filter=open|all]
+   Data: party_id (str), tasks (list[Task]), filter (str, default "open")
+   A-P04-001: btn_create_task   → hx-get /modals/m05?party_id=…   → #modal-root
+   A-P04-002: task_checkbox     → hx-patch /tasks/{id}/done        → #task-{id} outerHTML
+   A-P04-003: task_row_edit     → hx-get /modals/m05?task_id=…    → #modal-root
+   A-P04-004: filter_status     → hx-get /customers/{id}/panel?panel=tasks&filter=…
 #}
-<div class="panel-section">
-  <div class="panel-head">
-    <span class="panel-title">Tasks</span>
-    <span class="panel-sub">crm_task</span>
-  </div>
+{% set filter = filter | default('open') %}
+{% if filter == 'open' %}
+  {% set visible_tasks = tasks | rejectattr('status', 'in', ['done', 'cancelled']) | list %}
+{% else %}
+  {% set visible_tasks = tasks %}
+{% endif %}
 
-  {% if not tasks %}
-  <div class="state">
-    <div class="state__inner">
-      <div class="state__title">Chưa có task</div>
-      <p class="state__sub">Tạo task mới để theo dõi follow-up với khách.</p>
+<div class="stack stack-4" id="c360-tasks-root">
+
+  {# ── Toolbar ──────────────────────────────────────────── #}
+  <div class="toolbar">
+    <span class="panel-title">Tasks</span>
+    <div class="flex-wrap">
+
+      {# A-P04-004: filter select — HTMX includes name=filter as query param on change #}
+      <div class="fsel">
+        <div class="fsel__label caption">Trạng thái</div>
+        <div class="fsel__field">
+          <select name="filter"
+                  hx-get="/customers/{{ party_id }}/panel?panel=tasks"
+                  hx-trigger="change" hx-target="#c360-tasks-root" hx-swap="outerHTML">
+            <option value="open" {% if filter == 'open' %}selected{% endif %}>Đang mở</option>
+            <option value="all"  {% if filter == 'all'  %}selected{% endif %}>Tất cả</option>
+          </select>
+          <span class="fsel__chev">{% include "icons/chevdown.svg" %}</span>
+        </div>
+      </div>
+
+      {# A-P04-001: tạo task → M05 #}
+      <button class="btn btn--secondary" style="padding:8px 12px"
+              hx-get="/modals/m05?party_id={{ party_id }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        {% include "icons/plus.svg" %} Tạo task
+      </button>
+
     </div>
   </div>
+
+  {# ── Empty state ──────────────────────────────────────── #}
+  {% if not visible_tasks %}
+  <div class="state">
+    <div class="state__inner">
+      <div class="state__icon">{% include "icons/tasks.svg" %}</div>
+      <div class="state__title">Không có task nào</div>
+      <p class="state__sub">Tạo follow-up task cho khách này.</p>
+    </div>
+  </div>
+
   {% else %}
-  <div class="task-list">
-    {% for task in tasks %}
-    <div class="task-card task-card--{{ task.status }}">
-      <div class="task-card__top">
-        <span class="task-card__title">{{ task.title }}</span>
-        <div class="task-card__badges">
-          <span class="{{ task.status | bdg_cls('task_status') }} bdg--dot" data-tooltip="{{ task.status | bdg_tip('task_status') }}">
-            {{ task.status }}
-          </span>
-          {% if task.priority > 0 %}
-          <span class="bdg bdg--{{ 'bad' if task.priority >= 2 else 'warn' }}">
-            {{ "URGENT" if task.priority >= 2 else "HIGH" }}
-          </span>
+  {# ── Task list ─────────────────────────────────────────── #}
+  <div class="wl-list">
+    {% for t in visible_tasks %}
+    {% if t.priority >= 2 %}{% set prio_label = 'P1' %}
+    {% elif t.priority == 1 %}{% set prio_label = 'P2' %}
+    {% else %}{% set prio_label = 'P3' %}{% endif %}
+    {% set is_done = t.status in ('done', 'cancelled') %}
+
+    <div class="wl-row{% if is_done %} wl-row--done{% endif %}" id="task-{{ t.task_id }}">
+
+      {# A-P04-002: checkbox → mark done #}
+      <button class="wl-check{% if is_done %} wl-check--on{% endif %}" type="button"
+              aria-label="Đánh dấu hoàn thành"
+              hx-patch="/tasks/{{ t.task_id }}/done"
+              hx-target="#task-{{ t.task_id }}" hx-swap="outerHTML">
+        {% if is_done %}{% include "icons/check.svg" %}{% endif %}
+      </button>
+
+      <div class="wl-row__main">
+        <div class="wl-row__top">
+          {% if t.source == 'action_queue' %}<span class="auto-tag">AUTO</span>{% endif %}
+          <span class="wl-row__name" style="cursor:default">{{ t.title }}</span>
+        </div>
+        <div class="wl-row__meta">
+          {% if is_done and t.completed_at %}
+          <span class="wl-row__due">{% include "icons/clock.svg" %} Done: {{ t.completed_at | format_ict }}</span>
+          {% elif t.due_at %}
+          <span class="wl-row__due">{% include "icons/clock.svg" %} Due: {{ t.due_at | format_ict }}</span>
+          {% endif %}
+          {% if t.priority > 0 %}
+          <span class="prio prio--{{ prio_label }}">{{ prio_label }}</span>
+          {% endif %}
+          {% if t.assignee_user_id %}
+          <span class="muted" style="font-size:11px">{{ user_map.get(t.assignee_user_id, t.assignee_user_id) }}</span>
           {% endif %}
         </div>
       </div>
-      {% if task.description %}
-      <div class="task-card__desc muted">{{ task.description }}</div>
-      {% endif %}
-      <div class="task-card__meta muted caption">
-        {% if task.due_at %}Due <span class="mono">{{ task.due_at | format_ict }}</span>{% endif %}
-        {% if task.assignee_user_id %} · {{ task.assignee_user_id }}{% endif %}
-        {% if task.source != 'manual' %} · <span class="bdg">{{ task.source }}</span>{% endif %}
-      </div>
+
+      {# A-P04-003: edit → M05 #}
+      <button class="icon-btn icon-btn--sm" type="button" aria-label="Chỉnh sửa task"
+              hx-get="/modals/m05?task_id={{ t.task_id }}&party_id={{ party_id }}"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        {% include "icons/edit.svg" %}
+      </button>
+
     </div>
     {% endfor %}
   </div>
   {% endif %}
+
 </div>

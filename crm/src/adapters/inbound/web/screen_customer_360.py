@@ -118,6 +118,14 @@ class TaskQuerier(Protocol):
     def list_by_party(self, party_id: str) -> list[Task]: ...
 
 
+class TaskCreator(Protocol):
+    def create_task(self, task_data: dict) -> object: ...
+
+
+class AppUserReader(Protocol):
+    def list_active(self) -> list: ...
+
+
 # ── Router factory ────────────────────────────────────────────────────────────
 
 def make_customer_360_router(
@@ -137,6 +145,8 @@ def make_customer_360_router(
     customer_timeline=None,
     customer_orders=None,
     customer_dim_metrics=None,
+    task_svc: Optional[TaskCreator] = None,
+    app_users: Optional[AppUserReader] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer 360 routes."""
     router = APIRouter()
@@ -315,9 +325,17 @@ def make_customer_360_router(
                 "fragments/c360_timeline_panel.html", {**ctx, "activities": acts}
             )
         if panel == "tasks":
+            status_filter = request.query_params.get("filter", "open")
             task_list = party_tasks.list_by_party(party_id)
+            user_map: dict = {}
+            if app_users is not None:
+                try:
+                    user_map = {u.user_id: u.full_name for u in app_users.list_active()}
+                except Exception as exc:
+                    log.warning("c360 tasks: list_active: %s", exc)
             return templates.TemplateResponse(
-                "fragments/c360_tasks_panel.html", {**ctx, "tasks": task_list}
+                "fragments/c360_tasks_panel.html",
+                {**ctx, "tasks": task_list, "filter": status_filter, "user_map": user_map},
             )
         if panel == "notes":
             note_list = notes.list_notes(party_id)
@@ -425,6 +443,7 @@ def make_customer_360_router(
         note_type: str = Form(default="outcome"),
         pinned: str = Form(default="0"),
         visibility: str = Form(default="team"),
+        schedule_followup_at: str = Form(default=""),
     ) -> Response:
         utc_occurred = _ict_local_to_utc(occurred_at) if occurred_at.strip() else ""
         act_data: dict = {
@@ -458,6 +477,19 @@ def make_customer_360_router(
                 )
             except Exception as exc:
                 log.warning("m08: linked note %s: %s", party_id, exc)
+        if task_svc is not None and schedule_followup_at.strip():
+            try:
+                party360 = profile.get_party_360(party_id)
+                name = party360.display_name if party360 else party_id
+                task_svc.create_task({
+                    "party_id": party_id,
+                    "title": f"Theo dõi: {name}",
+                    "due_at": schedule_followup_at.strip(),
+                    "source": "manual",
+                    "priority": 0,
+                })
+            except Exception as exc:
+                log.warning("m08: schedule followup task %s: %s", party_id, exc)
         return HTMLResponse(content="", headers={"HX-Redirect": f"/customers/{party_id}?tab=timeline"})
 
     # ── Note CRUD ─────────────────────────────────────────────────────────────

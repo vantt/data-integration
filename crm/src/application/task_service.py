@@ -77,6 +77,24 @@ class TaskService:
         """Return a task by ID, or None if not found."""
         return self._task_repo.get_by_id(task_id)
 
+    def update_task(self, task_id: str, data: dict) -> Task:
+        """Update editable fields (title, description, due_at, priority, assignee)."""
+        task = self._task_repo.get_by_id(task_id)
+        if task is None:
+            raise ValueError(f"task {task_id!r} not found")
+        if data.get("title"):
+            task.title = data["title"]
+        if "description" in data:
+            task.description = data["description"] or None
+        if "due_at" in data:
+            task.due_at = data["due_at"] or None
+        if "priority" in data:
+            task.priority = int(data["priority"])
+        if "assignee_user_id" in data:
+            task.assignee_user_id = data["assignee_user_id"] or None
+        self._task_repo.update(task)
+        return task
+
     def assign_task(self, task_id: str, assignee_id: str) -> None:
         """Assign a task to a staff user."""
         task = self._task_repo.get_by_id(task_id)

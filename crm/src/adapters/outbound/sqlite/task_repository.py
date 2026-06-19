@@ -35,11 +35,11 @@ UPDATE crm_task
 SET
   title            = ?,
   description      = ?,
+  priority         = ?,
   status           = ?,
   assignee_user_id = ?,
   due_at           = ?,
-  completed_at     = ?,
-  updated_at       = ?
+  completed_at     = ?
 WHERE task_id = ?
 """
 
@@ -160,22 +160,17 @@ class SQLiteTaskRepository:
         row = self._conn.execute(_GET_BY_ID, (task_id,)).fetchone()
         return _task_from_row(row) if row is not None else None
 
-    def update(self, task_id: str, **kwargs) -> None:
-        """Persist mutable task fields. kwargs override the current row values.
-
-        Requires a prior get_by_id to supply all update fields. Caller must
-        pass at minimum: title, description, status, assignee_user_id, due_at,
-        completed_at, updated_at.
-        """
+    def update(self, task: Task) -> None:
+        """Persist mutable task fields. updated_at is managed by DB trigger."""
         self._conn.execute(_UPDATE, (
-            kwargs["title"],
-            kwargs.get("description"),
-            kwargs["status"],
-            kwargs.get("assignee_user_id"),
-            kwargs.get("due_at"),
-            kwargs.get("completed_at"),
-            kwargs["updated_at"],
-            task_id,
+            task.title,
+            task.description,
+            task.priority,
+            task.status,
+            task.assignee_user_id,
+            task.due_at,
+            task.completed_at,
+            task.task_id,
         ))
         self._conn.commit()
 

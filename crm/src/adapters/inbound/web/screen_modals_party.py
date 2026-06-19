@@ -25,6 +25,7 @@ from fastapi.templating import Jinja2Templates
 from crm.src.domain.entities.app_user import AppUser
 from crm.src.domain.entities.party import PartyIdentity
 from crm.src.domain.entities.profile import CustomFieldDef, Party360, Tag
+from crm.src.domain.entities.task import Task
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +65,8 @@ class PartyRepo(Protocol):
 
 class TaskSvc(Protocol):
     def create_task(self, task_data: dict) -> object: ...
+    def get_task(self, task_id: str) -> Optional[Task]: ...
+    def update_task(self, task_id: str, data: dict) -> Task: ...
 
 
 class AppUserRepo(Protocol):
@@ -125,19 +128,61 @@ def make_party_modals_router(
              "party_id": party_id, "current_owner_id": current_owner_id, "users": users},
         )
 
-    # ── GET /modals/m05 — Create Task ─────────────────────────────────────────
+    # ── GET /modals/m05 — Create / Edit Task ─────────────────────────────────
 
     @router.get("/modals/m05", response_class=HTMLResponse)
-    async def get_modal_m05(request: Request, party_id: str) -> Response:
+    async def get_modal_m05(
+        request: Request,
+        party_id: str = "",
+        task_id: str = "",
+    ) -> Response:
         au = []
         try:
             au = app_users.list_active()
         except Exception as exc:
             log.warning("m05: list_active: %s", exc)
+        task: Optional[Task] = None
+        if task_id:
+            try:
+                task = task_svc.get_task(task_id)
+            except Exception as exc:
+                log.warning("m05: get_task %s: %s", task_id, exc)
+            if task and not party_id:
+                party_id = task.party_id or ""
         return templates.TemplateResponse(
             "fragments/modal_m05_create_task.html",
-            {"request": request, "party_id": party_id, "app_users": au},
+            {"request": request, "party_id": party_id, "app_users": au, "task": task},
         )
+
+    # ── PATCH /tasks/{task_id}/edit — Save task edits ────────────────────────
+
+    @router.patch("/tasks/{task_id}/edit", response_class=HTMLResponse)
+    async def patch_task_edit(
+        request: Request,
+        task_id: str,
+        title: str = Form(...),
+        description: str = Form(default=""),
+        due_at: str = Form(default=""),
+        priority: str = Form(default="0"),
+        assignee_user_id: str = Form(default=""),
+        party_id: str = Form(default=""),
+    ) -> Response:
+        title = title.strip()
+        if not title:
+            return HTMLResponse("Tiêu đề không được bỏ trống", status_code=400)
+        try:
+            task_svc.update_task(task_id, {
+                "title": title,
+                "description": description.strip(),
+                "due_at": due_at.strip() or None,
+                "priority": int(priority) if priority.strip().isdigit() else 0,
+                "assignee_user_id": assignee_user_id.strip() or None,
+            })
+        except Exception as exc:
+            log.error("m05 edit task %s: %s", task_id, exc)
+            return HTMLResponse("Lưu thất bại", status_code=500)
+        redirect = f"/customers/{party_id}?tab=tasks" if party_id else "/tasks"
+        return Response(status_code=200, headers={"HX-Redirect": redirect})
 
     # ── GET /modals/m06 — Custom Fields ──────────────────────────────────────
 
@@ -225,6 +270,8 @@ def make_party_modals_router(
         due_at: str = Form(""),
         assignee_user_id: str = Form(""),
         priority: int = Form(0),
+        source: str = Form("manual"),
+        source_ref: str = Form(""),
     ) -> Response:
         title = title.strip()
         if not title:
@@ -237,6 +284,8 @@ def make_party_modals_router(
                 "due_at": due_at.strip() or None,
                 "assignee_user_id": assignee_user_id.strip() or None,
                 "priority": priority,
+                "source": source.strip() or "manual",
+                "source_ref": source_ref.strip() or None,
             })
         except Exception as exc:
             log.error("post_task %s: %s", party_id, exc)
@@ -257,7 +306,6 @@ def make_party_modals_router(
         edit_display_label: str = Form(""),
         edit_contact_status: str = Form("active"),
         edit_is_preferred: str = Form("0"),
-        consent_contact: str = Form("1"),
     ) -> Response:
         try:
             if action == "add_channel":
@@ -287,10 +335,23 @@ def make_party_modals_router(
                     contact_status=edit_contact_status or "active",
                     is_preferred=edit_is_preferred == "1",
                 )
-            profile.upsert_profile(party_id, consent_contact=consent_contact == "1")
         except Exception as exc:
             log.error("post_contact %s: %s", party_id, exc)
             return HTMLResponse(f"Lỗi lưu kênh liên lạc: {exc}", status_code=500)
+        return _redirect(party_id)
+
+    # ── POST /customers/{party_id}/consent ────────────────────────────────────
+
+    @router.post("/customers/{party_id}/consent", response_class=HTMLResponse)
+    async def post_consent(
+        party_id: str,
+        consent_contact: str = Form("1"),
+    ) -> Response:
+        try:
+            profile.upsert_profile(party_id, consent_contact=consent_contact == "1")
+        except Exception as exc:
+            log.error("post_consent %s: %s", party_id, exc)
+            return HTMLResponse(f"Lỗi cập nhật đồng ý liên lạc: {exc}", status_code=500)
         return _redirect(party_id)
 
     # ── POST /customers/{party_id}/contact/{identity_id}/deactivate ──────────
