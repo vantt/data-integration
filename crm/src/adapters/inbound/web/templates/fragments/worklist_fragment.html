@@ -12,7 +12,7 @@
 {# KPI computation #}
 {% set open_count = tasks | length %}
 {% set value_total = actions | sum(attribute='value_at_stake_vnd') %}
-{% set p1_count = tasks | selectattr('priority', 'ge', 4) | list | length %}
+{% set p1_count = tasks | selectattr('priority', 'ge', 2) | list | length %}
 
 <div id="worklist-container">
 

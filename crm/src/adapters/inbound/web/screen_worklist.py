@@ -79,11 +79,11 @@ def make_worklist_router(
             log.error("worklist: list tasks: %s", exc)
             all_tasks = []
 
-        # Apply priority filter (int: 0=normal, higher=more urgent; high>=3, urgent>=4)
+        # Priority constants: 0=normal, 1=high, 2=urgent (TASK_PRIORITY_* in task.py)
         if filter_priority == "urgent":
-            all_tasks = [t for t in all_tasks if t.priority >= 4]
+            all_tasks = [t for t in all_tasks if t.priority >= 2]
         elif filter_priority == "high":
-            all_tasks = [t for t in all_tasks if t.priority >= 3]
+            all_tasks = [t for t in all_tasks if t.priority >= 1]
 
         refreshed_at = ""
         is_stale = False
