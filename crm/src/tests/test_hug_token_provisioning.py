@@ -45,6 +45,57 @@ def test_human_code_format():
     assert tokens.human_code("ABCDEFGH2345") == "HUG-ABCD-EFGH-2345"
 
 
+def test_grouped_code_no_prefix():
+    # Printed token line: grouped by 4, dash-separated, no HUG- prefix.
+    assert tokens.grouped_code("ABCDEFGH2345") == "ABCD-EFGH-2345"
+
+
+# ── normalize_input ───────────────────────────────────────────────────────────
+
+def test_normalize_bare_token_unchanged():
+    """A well-formed bare token must pass through without modification."""
+    assert tokens.normalize_input("7K2NQ9XRWAB4") == "7K2NQ9XRWAB4"
+
+
+def test_normalize_printed_human_code():
+    """Printed ``HUG-XXXX-XXXX-XXXX`` form must strip prefix and dashes."""
+    assert tokens.normalize_input("HUG-7K2N-Q9XR-WAB4") == "7K2NQ9XRWAB4"
+
+
+def test_normalize_lowercase_with_spaces():
+    """Mixed-case input with surrounding whitespace must be handled gracefully."""
+    assert tokens.normalize_input(" hug-7k2n-q9xr-wab4 ") == "7K2NQ9XRWAB4"
+
+
+def test_normalize_scan_url():
+    """A full QR scan URL must yield just the token path segment."""
+    assert tokens.normalize_input("https://hug.fjp.vn/h/7K2NQ9XRWAB4") == "7K2NQ9XRWAB4"
+
+
+def test_normalize_scan_url_with_query_and_fragment():
+    """URL with query string and fragment must be stripped correctly."""
+    assert tokens.normalize_input("https://hug.fjp.vn/h/7K2NQ9XRWAB4?foo=1#bar") == "7K2NQ9XRWAB4"
+
+
+def test_normalize_bare_token_starting_with_hug_stays_intact():
+    """A 12-char token that happens to start with HUG must NOT be truncated.
+
+    The alphabet includes H, U, G, so tokens like HUG234567892 are valid.
+    Stripping the prefix would corrupt the token — we only strip when the
+    de-dashed string is 15 chars (unambiguous human_code shape).
+    """
+    edge_token = "HUG234567892"  # valid: H, U, G, 2-9 all in alphabet; length 12
+    assert tokens.is_valid_token(edge_token), "precondition: token must be valid"
+    result = tokens.normalize_input(edge_token)
+    assert result == edge_token, f"bare HUG-prefix token was wrongly truncated to {result!r}"
+    assert tokens.is_valid_token(result)
+
+
+def test_normalize_then_validate_roundtrip():
+    """normalize_input of a printed human code must produce a valid token."""
+    assert tokens.is_valid_token(tokens.normalize_input("HUG-7K2N-Q9XR-WAB4"))
+
+
 def test_token_generation_is_random():
     sample = {tokens.generate_token() for _ in range(1000)}
     assert len(sample) == 1000  # no dup in 1000 draws over a 7.8e17 space

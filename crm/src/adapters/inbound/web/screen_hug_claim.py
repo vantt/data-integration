@@ -29,7 +29,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from hug import config as hug_config
 from hug import d1_push, repository
-from hug.tokens import human_code, is_valid_token
+from hug.tokens import human_code, is_valid_token, normalize_input
 
 log = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ def make_hug_claim_router(conn: sqlite3.Connection) -> APIRouter:
         order_code: str = Form(default=""),
         is_gift: str = Form(default=""),
     ) -> HTMLResponse:
-        token = token.strip().upper()
+        token = normalize_input(token)
         order_code = order_code.strip()
         gift = is_gift in ("1", "true", "on", "yes")
 
@@ -232,9 +232,24 @@ def _render_page(
 
   // Auto-submit when a full token has been scanned/typed (scanner sends Enter,
   // but also auto-fire once 12 valid chars are present for robustness).
+  // Normalization mirrors the server-side normalize_input() logic so that
+  // printed human codes (HUG-XXXX-XXXX-XXXX) and scanned full URLs auto-submit.
   const RE = /^[2-9A-HJKMNP-Z]{{12}}$/;
+  function normalizeToken(v) {{
+    v = v.trim().toUpperCase();
+    // If a scanner emits the full QR URL, extract the token from the last path segment.
+    if (v.includes("://")) {{
+      v = v.split("?")[0].split("#")[0].replace(/\\/+$/, "").split("/").pop();
+    }}
+    // Remove dashes and spaces (handles HUG-XXXX-XXXX-XXXX and stray whitespace).
+    v = v.replace(/-/g, "").replace(/\\s+/g, "");
+    // Strip a "HUG" prefix only when the result is exactly 15 chars (= "HUG" + 12-char token).
+    // A genuine 12-char token starting with HUG stays intact — length 12 never triggers this.
+    if (v.length === 15 && v.startsWith("HUG")) v = v.slice(3);
+    return v;
+  }}
   tokenEl.addEventListener("input", () => {{
-    tokenEl.value = tokenEl.value.toUpperCase().replace(/\\s+/g, "");
+    tokenEl.value = normalizeToken(tokenEl.value);
     if (RE.test(tokenEl.value)) document.getElementById("claim").submit();
   }});
   // After a successful claim, clear the token field for the next scan.
