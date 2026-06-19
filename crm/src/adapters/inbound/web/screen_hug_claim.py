@@ -197,22 +197,22 @@ def _render_page(
              placeholder="quét tem…" autofocus autocapitalize="characters" spellcheck="false">
       <div class="row">
         <div class="grp">
-          <label for="op_type">Loại điểm chạm</label>
+          <label for="op_type">Tem dán ở đâu?</label>
           <select id="op_type" name="op_type">
-            <option value="package_insert" selected>package_insert (tem trong kiện)</option>
-            <option value="loyalty_card">loyalty_card</option>
-            <option value="winback_flyer">winback_flyer</option>
-            <option value="receipt">receipt</option>
-            <option value="acquire">acquire</option>
+            <option value="package_insert" selected>Trong kiện hàng (mặc định)</option>
+            <option value="loyalty_card">Thẻ thành viên</option>
+            <option value="winback_flyer">Tờ rơi mời mua lại</option>
+            <option value="receipt">Hóa đơn</option>
+            <option value="acquire">Phát lẻ / chưa gắn khách</option>
           </select>
         </div>
         <div class="grp toggle">
-          <label style="margin:0">Quà tặng?</label>
+          <label style="margin:0">Đơn là quà tặng?</label>
           <input type="checkbox" id="is_gift" name="is_gift" value="1">
-          <span>is_gift (người quét ≠ người mua)</span>
+          <span>Tick nếu người NHẬN hàng khác người ĐẶT mua</span>
         </div>
       </div>
-      <button type="submit">Bind</button>
+      <button type="submit">Gắn tem vào đơn</button>
     </form>
     {result_html}
     <p class="hint">Tem = 12 ký tự. Máy quét tự xuống dòng → tự gửi.</p>
