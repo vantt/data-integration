@@ -44,6 +44,7 @@ from adapters.outbound.duckdb.order_repository import DuckDBOrderRepository
 from adapters.outbound.duckdb.customer_timeline_repository import CustomerTimelineRepository
 from adapters.outbound.duckdb.customer_orders_repository import CustomerOrdersRepository
 from adapters.outbound.duckdb.customer_dim_metrics_repository import CustomerDimMetricsRepository
+from adapters.outbound.duckdb.customer_list_rfm_repository import CustomerListRFMRepository
 from adapters.outbound.duckdb.dataquality_repository import DataQualityRepository
 
 # ── Application services ──────────────────────────────────────────────────────
@@ -167,6 +168,12 @@ def create_app() -> FastAPI:
     except Exception as exc:
         log.warning("dim_metrics repo unavailable (%s) — insight panel segments/profitability hidden", exc)
 
+    list_rfm_repo: Optional[CustomerListRFMRepository] = None
+    try:
+        list_rfm_repo = CustomerListRFMRepository(olap_path())
+    except Exception as exc:
+        log.warning("list_rfm repo unavailable (%s) — Recency/Frequency/customer_type hidden in S02", exc)
+
     dq_repo: Optional[DataQualityRepository] = None
     try:
         dq_repo = DataQualityRepository(olap_path())
@@ -278,6 +285,8 @@ def create_app() -> FastAPI:
         templates=templates,
         parties=party_repo,
         customer_code_resolver=order_repo,
+        sapo_id_resolver=party_repo,
+        rfm_loader=list_rfm_repo,
     ))
     app.include_router(make_customer_360_router(
         templates=templates,

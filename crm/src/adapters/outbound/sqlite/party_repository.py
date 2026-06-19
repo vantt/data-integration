@@ -84,6 +84,21 @@ class SQLitePartyRepository:
         rows = self._conn.execute(SQL_LIST_ALL_PARTIES, (limit, offset)).fetchall()
         return [row_to_party(r) for r in rows], total
 
+    def get_sapo_ids_for_parties(self, party_ids: list[str]) -> dict[str, int]:
+        """Return {party_id: sapo_customer_id} for parties with a sapo_customer identity."""
+        if not party_ids:
+            return {}
+        placeholders = ",".join("?" * len(party_ids))
+        sql = (
+            f"SELECT party_id, MIN(CAST(identity_value AS INTEGER)) AS customer_id"
+            f" FROM crm_party_identity"
+            f" WHERE identity_type = 'sapo_customer'"
+            f" AND party_id IN ({placeholders})"
+            f" GROUP BY party_id"
+        )
+        rows = self._conn.execute(sql, party_ids).fetchall()
+        return {row[0]: row[1] for row in rows if row[1] is not None}
+
     def list_by_email(self, email: str) -> list[Party]:
         rows = self._conn.execute(SQL_LIST_BY_EMAIL, (email or None,)).fetchall()
         return [row_to_party(r) for r in rows]

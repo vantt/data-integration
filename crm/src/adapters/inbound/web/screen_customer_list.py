@@ -50,6 +50,14 @@ class CustomerCodeResolver(Protocol):
     def find_customer_id_by_code(self, customer_code: str) -> Optional[str]: ...
 
 
+class PartySapoIdResolver(Protocol):
+    def get_sapo_ids_for_parties(self, party_ids: list[str]) -> dict[str, int]: ...
+
+
+class PartyRFMLookup(Protocol):
+    def get_rfm_for_customer_ids(self, customer_ids: list[int]) -> dict[int, dict]: ...
+
+
 # ── Router factory ────────────────────────────────────────────────────────────
 
 
@@ -57,9 +65,31 @@ def make_customer_list_router(
     templates: Jinja2Templates,
     parties: PartyLister,
     customer_code_resolver: Optional[CustomerCodeResolver] = None,
+    sapo_id_resolver: Optional[PartySapoIdResolver] = None,
+    rfm_loader: Optional[PartyRFMLookup] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Customer List routes."""
     router = APIRouter()
+
+    def _build_rfm_map(party_list: list[Party]) -> dict[str, dict]:
+        """Return {party_id: {customer_type, last_order_date, order_count}} for the page."""
+        if sapo_id_resolver is None or rfm_loader is None or not party_list:
+            return {}
+        try:
+            pid_to_cid = sapo_id_resolver.get_sapo_ids_for_parties(
+                [p.party_id for p in party_list]
+            )
+            if not pid_to_cid:
+                return {}
+            cid_to_rfm = rfm_loader.get_rfm_for_customer_ids(list(pid_to_cid.values()))
+            return {
+                pid: cid_to_rfm[cid]
+                for pid, cid in pid_to_cid.items()
+                if cid in cid_to_rfm
+            }
+        except Exception:
+            log.warning("customer list: rfm enrichment failed", exc_info=True)
+            return {}
 
     def _search_parties(q: str) -> list[Party]:
         try:
@@ -145,6 +175,7 @@ def make_customer_list_router(
                 "page": page,
                 "page_size": DEFAULT_PAGE_SIZE,
                 "query": q,
+                "rfm_map": _build_rfm_map(party_list),
             },
         )
 
@@ -165,7 +196,7 @@ def make_customer_list_router(
 
         return templates.TemplateResponse(
             "fragments/customer_list_rows.html",
-            {"request": request, "parties": party_list},
+            {"request": request, "parties": party_list, "rfm_map": _build_rfm_map(party_list)},
         )
 
     return router

@@ -5,7 +5,7 @@
    inline in customer_list.html. Target: #customer-list-body (innerHTML swap). #}
 {% if not parties %}
   <tr>
-    <td colspan="5">
+    <td colspan="8">
       <div class="state">
         <div class="state__inner">
           <div class="state__title">Không tìm thấy khách hàng</div>
@@ -17,6 +17,7 @@
 {% else %}
   {% for p in parties %}
     {% set status_cls = "bdg " ~ status_badge_class(p.status) %}
+    {% set rfm = rfm_map.get(p.party_id) if rfm_map else None %}
     <tr class="is-clickable"
         onclick="if (!event.target.closest('a')) window.location.href='/customers/{{ p.party_id }}'"
         role="button" tabindex="0"
@@ -41,6 +42,30 @@
       </td>
       <td>
         <span class="{{ status_cls }}">{{ p.status | e }}</span>
+      </td>
+      <td>
+        {% if rfm and rfm.customer_type %}
+          <span class="{{ rfm.customer_type | bdg_cls('customer_type') }}"
+                title="{{ rfm.customer_type | bdg_tip('customer_type') }}">
+            {{ rfm.customer_type | bdg_tip('customer_type') or rfm.customer_type }}
+          </span>
+        {% else %}
+          <span class="dash">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if rfm and rfm.last_order_date %}
+          {{ rfm.last_order_date | format_date_ict }}
+        {% else %}
+          <span class="dash">—</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if rfm and rfm.order_count %}
+          {{ rfm.order_count }}
+        {% else %}
+          <span class="dash">—</span>
+        {% endif %}
       </td>
       <td class="td-go">
         <span class="go-arrow">{% include "icons/chevron.svg" %}</span>
