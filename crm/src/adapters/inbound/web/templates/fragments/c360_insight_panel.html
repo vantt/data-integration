@@ -32,23 +32,35 @@
         <div class="aq-card__top">
           <span class="{{ act.action_type | bdg_cls('action_type') }}" data-tooltip="{{ act.action_type | bdg_tip('action_type') }}">{{ act.action_type }}</span>
           {% if act.value_at_stake_vnd > 0 %}
-          <span class="aq-card__val">💰 {{ act.value_at_stake_vnd | fmt_vnd }}</span>
+          <span class="aq-card__val">💰 <span style="font-size:11px;opacity:.7">Giá trị ước tính</span> {{ act.value_at_stake_vnd | fmt_vnd }}</span>
           {% endif %}
         </div>
         <div style="font-size:13.5px;color:var(--fg-2);line-height:1.5;margin-top:var(--sp-2)">{{ act.rationale_vi }}</div>
-        <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-2)">
-          <span class="caption" style="color:var(--fg-tertiary)">{{ act.generated_date }}</span>
-          {# A-P01-001: resolved badge OR create task button — spec: task.outcome IS NOT NULL → "Đã xử lý ✓" #}
-          {% if act.action_id in resolved_action_ids %}
-          <span class="bdg" style="color:var(--moss-500);border-color:color-mix(in srgb,var(--moss-500) 30%,transparent);background:color-mix(in srgb,var(--moss-bg) 40%,transparent)">Đã xử lý ✓</span>
-          {% else %}
-          <button class="ghost-link"
-                  hx-get="/modals/m05?party_id={{ party_id }}&action_id={{ act.action_id }}&source=action_queue"
-                  hx-target="#modal-root" hx-swap="innerHTML">
-            → Tạo task
-          </button>
-          {% endif %}
+        <div style="margin-top:var(--sp-2)">
+          <span style="font-size:11px;color:var(--fg-tertiary)">Đề xuất ngày {{ act.generated_date }}</span>
         </div>
+        {# A-P01-001: resolved badge OR action CTAs #}
+        {% if act.action_id in resolved_action_ids %}
+        <div style="margin-top:var(--sp-3)">
+          <span class="bdg" style="color:var(--moss-500);border-color:color-mix(in srgb,var(--moss-500) 30%,transparent);background:color-mix(in srgb,var(--moss-bg) 40%,transparent)">Đã xử lý ✓</span>
+        </div>
+        {% else %}
+        <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-3)">
+          <button class="btn btn--secondary"
+                  style="font-size:13px;padding:5px 10px"
+                  hx-get="/modals/m08?party_id={{ party_id }}"
+                  hx-target="#modal-root" hx-swap="innerHTML">
+            {% include "icons/phone.svg" %} Gọi ngay
+          </button>
+          <button class="ghost-link"
+                  style="font-size:12px"
+                  hx-get="/modals/m05"
+                  hx-target="#modal-root" hx-swap="innerHTML"
+                  hx-vals='{{ {"party_id": party_id, "source": "action_queue", "source_ref": act.action_id, "prefill_title": "[" + act.action_type + "] " + (act.rationale_vi or "")[:60], "prefill_priority": act.priority} | tojson }}'>
+            {% include "icons/clock.svg" %} Đặt Lịch
+          </button>
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
@@ -287,3 +299,4 @@
 
 </div>{# /stack #}
 {% endif %}
+

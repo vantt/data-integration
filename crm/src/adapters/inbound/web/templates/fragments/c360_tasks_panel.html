@@ -91,6 +91,9 @@
           <span class="muted" style="font-size:11px">{{ user_map.get(t.assignee_user_id, t.assignee_user_id) }}</span>
           {% endif %}
         </div>
+        {% if t.description %}
+        <div class="wl-row__desc muted" style="font-size:12px;margin-top:2px;white-space:pre-wrap">{{ t.description }}</div>
+        {% endif %}
       </div>
 
       {# A-P04-003: edit → M05 #}
