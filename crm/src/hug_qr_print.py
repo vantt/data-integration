@@ -73,7 +73,18 @@ def _label_html(token: str, url: str, use_server_qr: bool) -> str:
     )
 
 
-def _render(tokens: list[str], batch_id: str) -> str:
+def render_labels_html(tokens: list[str], batch_id: str) -> str:
+    """Return a self-contained print-ready HTML page for the given token batch.
+
+    QR rendering strategy:
+    - Server-side SVG via the `qrcode` lib when available (fully offline).
+    - Client-side CDN (qrcodejs) fallback when the lib is absent — labels still
+      print correctly from any internet-connected machine (and from the web UI
+      running in the crm container, which may not have the lib installed).
+
+    This function is imported by both the CLI (hug_qr_print.py) and the web
+    admin screen (screen_hug_mint.py) so QR HTML is never duplicated.
+    """
     use_server_qr = _qr_svg("probe") is not None
     if not use_server_qr:
         log.warning(
@@ -108,6 +119,11 @@ def _render(tokens: list[str], batch_id: str) -> str:
 <style>
   body {{ font-family: system-ui, sans-serif; margin: 12mm; }}
   h1 {{ font-size: 14px; color: #334155; }}
+  .no-print {{ margin-bottom: 8mm; display: flex; gap: 8px; align-items: center; }}
+  .btn-print {{ padding: 8px 18px; background: #0f172a; color: #f1f5f9; border: none;
+              border-radius: 6px; font-size: 14px; cursor: pointer; }}
+  .btn-print:hover {{ background: #1e293b; }}
+  .btn-back {{ font-size: 13px; color: #475569; text-decoration: none; }}
   .sheet {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 6mm; }}
   .label {{ border: 1px dashed #cbd5e1; border-radius: 6px; padding: 6mm 4mm;
            text-align: center; break-inside: avoid; }}
@@ -115,17 +131,25 @@ def _render(tokens: list[str], batch_id: str) -> str:
   .qr svg, .qr img, .qr canvas {{ width: 100%; height: 100%; }}
   .code {{ margin-top: 3mm; font-family: ui-monospace, "SF Mono", Menlo, monospace;
           font-size: 13px; letter-spacing: 1px; color: #0f172a; }}
-  @media print {{ .label {{ border-color: #e2e8f0; }} h1 {{ display:none; }} }}
+  @media print {{ .no-print {{ display:none; }} .label {{ border-color: #e2e8f0; }} }}
 </style>
 </head>
 <body>
-  <h1>Hug labels · batch {html.escape(batch_id)} · {len(tokens)} tem · scan domain {html.escape(hug_config.hug_domain())}</h1>
+  <div class="no-print">
+    <button class="btn-print" onclick="window.print()">&#128438; In</button>
+    <a class="btn-back" href="/hug/mint">&#8592; Sinh batch khác</a>
+    <span style="color:#64748b;font-size:13px">Batch {html.escape(batch_id)} &middot; {len(tokens)} tem</span>
+  </div>
   <div class="sheet">
     {labels}
   </div>
   {js}
 </body>
 </html>"""
+
+
+# Keep internal alias used by main() for the CLI path (no API change).
+_render = render_labels_html
 
 
 def main() -> None:
