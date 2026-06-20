@@ -137,6 +137,45 @@ CREATE TABLE IF NOT EXISTS wh_sync_run (
   error        TEXT
 );
 
+-- ─── Dead-stock targeting engine (PLAN-004) ──────────────────────────────────
+-- One row per (product_key × customer_key) — mirrors mart_deadstock_target_queue grain.
+-- Tracked independently from wh_action_queue (NBA customer-state queue).
+-- PII: full_name, customer_key → keep in cache.db only (never export to git).
+
+CREATE TABLE IF NOT EXISTS wh_deadstock_target (
+  product_key               TEXT    NOT NULL,  -- SKU surrogate (own-brand FJV slow/dead)
+  customer_key              TEXT    NOT NULL,  -- Customer MD5 surrogate
+  sku                       TEXT,
+  product_name              TEXT,
+  category                  TEXT,
+  brand_code                TEXT,
+  health_class              TEXT,              -- DOG|QUESTION|BALANCED (dead_stock=TRUE)
+  is_dead_stock             INTEGER,           -- 0/1
+  dead_stock_value_at_risk  INTEGER,           -- VND
+  stock_value_at_mac        INTEGER,           -- VND
+  days_since_last_sale      INTEGER,
+  full_name                 TEXT,              -- PII — cache.db only
+  strategic_tier            TEXT,              -- LIVE_CORE|SECOND_ORDER|DORMANT_VALUABLE|LAPSED_VALUABLE|MASKED_REPEAT
+  source_contact_quality    TEXT,              -- real|masked
+  next_purchase_signal      TEXT,              -- OVERDUE|DUE_SOON|ON_TRACK|NULL
+  predicted_next_purchase_date TEXT,           -- YYYY-MM-DD or NULL
+  discount_sensitivity      TEXT,              -- PROMO_DEPENDENT|PROMO_MIXED|FULL_PRICE|NULL
+  value_group               TEXT,
+  lifetime_value            INTEGER,           -- VND
+  recency_days              INTEGER,
+  order_count               INTEGER,
+  buyer_sku_qty             INTEGER,           -- units bought of this SKU historically
+  buyer_sku_last_date       TEXT,              -- YYYYMMDD date_key of last purchase of this SKU
+  route_channel             TEXT    NOT NULL,  -- HUG|SHOPEE_NATIVE
+  voucher_eligible          INTEGER NOT NULL,  -- 0/1; FALSE for FULL_PRICE buyers
+  is_holdout                INTEGER NOT NULL,  -- 0/1; ~20% deterministic holdout for measurement
+  target_rank               INTEGER,           -- rank within SKU (1 = highest priority)
+  reason_fragment           TEXT,              -- human-readable Vietnamese context
+  queue_generated_at        TEXT,              -- ISO-8601 ICT
+  refreshed_at              TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY (product_key, customer_key)
+);
+
 -- ─── INDEXES ─────────────────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS idx_wh_customer_insight_customer_id  ON wh_customer_insight (customer_id);
@@ -146,3 +185,5 @@ CREATE INDEX IF NOT EXISTS idx_wh_product_sku                    ON wh_product (
 CREATE INDEX IF NOT EXISTS idx_wh_order_hdr_customer_date        ON wh_order_hdr (customer_id, date_key);
 CREATE INDEX IF NOT EXISTS idx_wh_customer_tier_customer_id      ON wh_customer_tier (customer_id);
 CREATE INDEX IF NOT EXISTS idx_wh_customer_tier_strategic_tier   ON wh_customer_tier (strategic_tier);
+CREATE INDEX IF NOT EXISTS idx_wh_deadstock_target_route_holdout ON wh_deadstock_target (route_channel, is_holdout);
+CREATE INDEX IF NOT EXISTS idx_wh_deadstock_target_customer_key  ON wh_deadstock_target (customer_key);

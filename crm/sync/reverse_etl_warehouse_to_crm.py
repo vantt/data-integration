@@ -158,13 +158,14 @@ def run(olap_conn=None, cache_db: str | None = None) -> None:
 
         # ── Read from warehouse ───────────────────────────────────────────────
         print("reading from warehouse …")
-        customer_insight_rows = dr.fetch_customer_insight(olap_conn)
-        customer_base_rows    = dr.fetch_customer_base(olap_conn)
-        product_insight_rows  = dr.fetch_product_insight(olap_conn)
-        action_queue_rows     = dr.fetch_action_queue(olap_conn)
-        customer_tier_rows    = dr.fetch_customer_tier(olap_conn)
-        product_rows          = dr.fetch_products(olap_conn)
-        order_hdr_rows        = dr.fetch_order_hdr(olap_conn, since_date_key=hwm)
+        customer_insight_rows   = dr.fetch_customer_insight(olap_conn)
+        customer_base_rows      = dr.fetch_customer_base(olap_conn)
+        product_insight_rows    = dr.fetch_product_insight(olap_conn)
+        action_queue_rows       = dr.fetch_action_queue(olap_conn)
+        customer_tier_rows      = dr.fetch_customer_tier(olap_conn)
+        product_rows            = dr.fetch_products(olap_conn)
+        order_hdr_rows          = dr.fetch_order_hdr(olap_conn, since_date_key=hwm)
+        deadstock_target_rows   = dr.fetch_deadstock_targets(olap_conn)
 
         print("upserting into cache.db …")
 
@@ -190,6 +191,10 @@ def run(olap_conn=None, cache_db: str | None = None) -> None:
 
         _run_step(cache_conn, "batch", "wh_order_hdr",
                   su.upsert_order_hdr, order_hdr_rows)
+
+        # ── Dead-stock targeting engine (separate from NBA customer-state) ──────
+        _run_step(cache_conn, "batch", "wh_deadstock_target",
+                  su.upsert_deadstock_target, deadstock_target_rows)
 
         # ── Plumbing: party seed (Go reads this to create crm_party) ─────────
         seed_rows = _build_party_seed_rows(customer_base_rows, now)

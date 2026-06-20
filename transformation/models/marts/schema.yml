@@ -1306,6 +1306,52 @@ models:
       - name: priority_rank
         tests: [not_null]
 
+  - name: mart_deadstock_target_queue
+    description: >
+      Dead-stock → customer targeting engine. Grain: 1 row per (product_key × customer_key).
+      Joins own-brand FJV slow/dead SKUs (mart_product_health) with past buyers (fact_sales COMPLETED)
+      gated to 5 eligible strategic tiers. Drives two outreach legs: HUG (contactable) and
+      SHOPEE_NATIVE (masked-repeat). Includes rank, reason fragment, voucher eligibility,
+      and deterministic holdout flag for P3 measurement.
+    columns:
+      - name: product_key
+        description: "Surrogate product key (FK to dim_products)."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_products')
+                field: product_key
+      - name: customer_key
+        description: "Surrogate customer key (FK to dim_customers)."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_key
+      - name: target_rank
+        description: "Row rank within each SKU: OVERDUE > DUE_SOON > ON_TRACK, then lifetime_value DESC, recency_days ASC."
+        tests: [not_null]
+      - name: route_channel
+        description: "HUG (contactable real phone) or SHOPEE_NATIVE (masked-repeat)."
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['HUG', 'SHOPEE_NATIVE']
+      - name: voucher_eligible
+        description: "FALSE for FULL_PRICE buyers (margin protection); TRUE otherwise."
+        tests: [not_null]
+      - name: is_holdout
+        description: "Deterministic ~20% holdout for P3 measurement (hash(customer_key||sku) % 10 < 2)."
+        tests: [not_null]
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - product_key
+            - customer_key
+
   - name: int_customer_entry_attributes
     description: "One row per retail customer — entry-point attributes derived from their first order. Source for mart_cohort_retention cohort axis assignment."
     columns:

@@ -43,7 +43,7 @@ TARGETING_CATALOG: dict[str, dict] = {
         "type": "list",
         "description": "Phân khúc khách hàng",
         "values": [
-            "VIP", "CORE", "CASUAL", "NEW", "SECOND_ORDER",
+            "VIP", "CORE", "CASUAL", "NEW", "LIVE_CORE", "SECOND_ORDER",
             "DORMANT_VALUABLE", "LAPSED_VALUABLE", "MASKED_REPEAT", "UNKNOWN",
         ],
     },

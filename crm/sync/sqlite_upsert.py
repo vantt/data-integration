@@ -224,6 +224,37 @@ def upsert_party_seed(conn: sqlite3.Connection, rows: list[dict]) -> int:
     return len(rows)
 
 
+def upsert_deadstock_target(conn: sqlite3.Connection, rows: list[dict]) -> int:
+    """Upsert dead-stock target queue rows into wh_deadstock_target.
+
+    Composite PK (product_key, customer_key) — grain matches mart_deadstock_target_queue.
+    Full-replace semantics: all columns updated on conflict (queue refreshes daily).
+    Tracked separately from wh_action_queue (NBA customer-state).
+    Returns number of rows processed.
+    """
+    if not rows:
+        return 0
+
+    cols = list(rows[0].keys())
+    placeholders = ", ".join("?" for _ in cols)
+    col_names = ", ".join(cols)
+    # Exclude both PK columns from the SET clause
+    update_set = ", ".join(
+        f"{c} = excluded.{c}" for c in cols
+        if c not in ("product_key", "customer_key")
+    )
+
+    sql = (
+        f"INSERT INTO wh_deadstock_target ({col_names}) VALUES ({placeholders}) "
+        f"ON CONFLICT(product_key, customer_key) DO UPDATE SET {update_set}"
+    )
+
+    values = [tuple(row.get(c) for c in cols) for row in rows]
+    with conn:
+        conn.executemany(sql, values)
+    return len(rows)
+
+
 def insert_sync_run(conn: sqlite3.Connection, row: dict) -> None:
     """Insert a single wh_sync_run audit row."""
     sql = (

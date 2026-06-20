@@ -346,6 +346,78 @@ def fetch_products(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
     return rows
 
 
+# mart_deadstock_target_queue columns (pinned; timestamp cast to VARCHAR — no pytz at runtime).
+# Composite grain: (product_key, customer_key) — unique enforced by dbt test.
+_MART_DEADSTOCK_TARGET_COLS = [
+    "product_key",
+    "sku",
+    "product_name",
+    "category",
+    "brand_code",
+    "health_class",
+    "is_dead_stock",
+    "dead_stock_value_at_risk",
+    "stock_value_at_mac",
+    "days_since_last_sale",
+    "customer_key",
+    "full_name",
+    "strategic_tier",
+    "source_contact_quality",
+    "next_purchase_signal",
+    "predicted_next_purchase_date",
+    "discount_sensitivity",
+    "value_group",
+    "lifetime_value",
+    "recency_days",
+    "order_count",
+    "buyer_sku_qty",
+    "buyer_sku_last_date",
+    "route_channel",
+    "voucher_eligible",
+    "is_holdout",
+    "target_rank",
+    "reason_fragment",
+    "queue_generated_at",
+]
+
+
+def fetch_deadstock_targets(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
+    """Read dead-stock target queue from main_marts.mart_deadstock_target_queue (read-only).
+
+    Casts TIMESTAMPTZ (queue_generated_at) and DATE (predicted_next_purchase_date)
+    to VARCHAR — the runtime has no pytz and cache.db stores TEXT.
+    Numeric vốn columns cast to BIGINT (VND); bool columns cast to INTEGER (SQLite bool).
+    """
+    sql = (
+        "SELECT "
+        "  product_key, sku, product_name, category, brand_code, "
+        "  health_class, "
+        "  CAST(is_dead_stock AS INTEGER) AS is_dead_stock, "
+        "  CAST(dead_stock_value_at_risk AS BIGINT) AS dead_stock_value_at_risk, "
+        "  CAST(stock_value_at_mac AS BIGINT) AS stock_value_at_mac, "
+        "  CAST(days_since_last_sale AS INTEGER) AS days_since_last_sale, "
+        "  customer_key, full_name, strategic_tier, source_contact_quality, "
+        "  next_purchase_signal, "
+        "  CAST(predicted_next_purchase_date AS VARCHAR) AS predicted_next_purchase_date, "
+        "  discount_sensitivity, value_group, "
+        "  CAST(lifetime_value AS BIGINT) AS lifetime_value, "
+        "  CAST(recency_days AS INTEGER) AS recency_days, "
+        "  CAST(order_count AS INTEGER) AS order_count, "
+        "  CAST(buyer_sku_qty AS INTEGER) AS buyer_sku_qty, "
+        "  CAST(buyer_sku_last_date AS VARCHAR) AS buyer_sku_last_date, "
+        "  route_channel, "
+        "  CAST(voucher_eligible AS INTEGER) AS voucher_eligible, "
+        "  CAST(is_holdout AS INTEGER) AS is_holdout, "
+        "  CAST(target_rank AS INTEGER) AS target_rank, "
+        "  reason_fragment, "
+        "  strftime(queue_generated_at, '%Y-%m-%dT%H:%M:%S') AS queue_generated_at "
+        "FROM main_marts.mart_deadstock_target_queue"
+    )
+    rows = _fetch(conn, sql)
+    _check_columns(rows, _MART_DEADSTOCK_TARGET_COLS, "main_marts.mart_deadstock_target_queue")
+    return rows
+
+
 def fetch_order_hdr(
     conn: "duckdb.DuckDBPyConnection",
     since_date_key: int | None = None,

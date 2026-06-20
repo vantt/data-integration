@@ -93,6 +93,11 @@ classified AS (
                 THEN 'RESTOCK_NOW'
             WHEN COALESCE(is_dead_stock, FALSE)
                  AND COALESCE(dead_stock_value_at_risk, 0) > 0
+                 -- Clearance targets sellable merchandise only. Operational supplies
+                 -- (packaging, demo units, umbrellas) and unclassified items are not
+                 -- customer-clearable; excluding them keeps this signal clean for the
+                 -- downstream product→customer targeting engine.
+                 AND COALESCE(category, 'Uncategorized') NOT IN ('Vận Hành', 'Uncategorized')
                 THEN 'CLEAR_DEADSTOCK'
             WHEN COALESCE(margin_outlier, FALSE)
                  OR COALESCE(cogs_variance_pct, 0) > 0.20
