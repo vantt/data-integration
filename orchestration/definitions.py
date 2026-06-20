@@ -28,7 +28,7 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync
+from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
 from orchestration.ops.purge_runs import maintain_purge_runs_job
@@ -43,7 +43,7 @@ from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_s
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
 # Don't call it from here: definitions.py is re-imported on every gRPC code
 # server spawn (e.g. each `dagster job launch`), which would add noise.
-all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync])
+all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -80,6 +80,13 @@ SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 pipeline_sapo_v2_realtime_job = define_asset_job(
     name="pipeline_sapo_v2_realtime_job",
     selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
+    tags=SYNC_TAGS,
+)
+
+# 1b. Hug Realtime Job (Hug webhook poll — separate dataset from Sapo)
+pipeline_hug_realtime_job = define_asset_job(
+    name="pipeline_hug_realtime_job",
+    selection=AssetSelection.assets(hug_assets.ingest_hug_webhook_consumer_asset),
     tags=SYNC_TAGS,
 )
 
@@ -290,6 +297,7 @@ def _long_dbt_rw_holder(context) -> str | None:
 # IMPORTANT: Update this list when adding new ingestion/transform jobs!
 _INGESTION_JOBS = [
     "pipeline_sapo_v2_realtime_job",
+    "pipeline_hug_realtime_job",
     "pipeline_sapo_v2_incremental_job",
     "pipeline_sapo_v2_hourly_job",
     "ingest_sheets_sync_job",
@@ -333,6 +341,23 @@ def pipeline_sapo_v2_realtime_schedule(context):
     # Skip instead; next tick in 3 min retries after purge completes (~15-20 min window).
     if _has_active_run(context, "maintain_purge_runs_job"):
         return SkipReason("realtime: yielding to purge_runs (SQLite index.db lock)")
+    return RunRequest(run_key=None)
+
+
+@schedule(
+    job=pipeline_hug_realtime_job,
+    cron_schedule="*/3 * * * *",
+    execution_timezone="Asia/Ho_Chi_Minh",
+)
+def pipeline_hug_realtime_schedule(context):
+    active = _has_active_run(context, "pipeline_hug_realtime_job")
+    if active:
+        return SkipReason(f"hug_realtime: previous run still active ({active[:8]})")
+    holder = _long_dbt_rw_holder(context)
+    if holder:
+        return SkipReason(f"hug_realtime: yielding to {holder} (dbt_rw occupied)")
+    if _has_active_run(context, "maintain_purge_runs_job"):
+        return SkipReason("hug_realtime: yielding to purge_runs (SQLite index.db lock)")
     return RunRequest(run_key=None)
 
 
@@ -587,6 +612,7 @@ defs = Definitions(
     jobs=[
         # ingest_*
         pipeline_sapo_v2_realtime_job,
+        pipeline_hug_realtime_job,
         pipeline_sapo_v2_incremental_job,
         pipeline_sapo_v2_hourly_job,
         ingest_sheets_sync_job,
@@ -608,6 +634,7 @@ defs = Definitions(
     schedules=[
         # ingest_*
         pipeline_sapo_v2_realtime_schedule,
+        pipeline_hug_realtime_schedule,
         pipeline_sapo_v2_incremental_schedule,
         pipeline_sapo_v2_hourly_schedule,
         # transform_*

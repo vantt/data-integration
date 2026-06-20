@@ -1,6 +1,32 @@
 version: 2
 
 models:
+  # Hug
+  - name: mart_hug_optin
+    description: >
+      Deduplicated Hug opt-in events ready for local identity resolution.
+      Grain: one row per (token, phone) — latest opt-in wins. Zalo-only rows
+      (NULL phone) are kept once per token. Consumed by the I2-resolve identity
+      resolver which writes crm_identity_link + updates crm_party_identity.
+    columns:
+      - name: token
+        description: "Opaque 12-char Crockford base32 token (the QR code payload)."
+        tests: [not_null]
+      - name: buyer_customer_id
+        description: "Sapo customer_id from the token's order context; NULL when token was not yet bound to an order."
+      - name: phone
+        description: "Scanner's phone in VN local format (09...); NULL for Zalo-only opt-ins."
+      - name: zalo_uid
+        description: "Scanner's Zalo UID; NULL when not provided."
+      - name: name
+        description: "Scanner's display name from opt-in form; NULL when not provided."
+      - name: consent_json
+        description: "Raw JSON consent payload from the landing page."
+      - name: event_ts
+        description: "Timestamp of the opt-in event (UTC TIMESTAMPTZ); watermark column for incremental resolver runs."
+      - name: ingested_at
+        description: "Timestamp when the event was ingested from the D1 queue (UTC TIMESTAMPTZ)."
+
   # Order Transitions (history_log)
   - name: fact_order_transitions
     description: >

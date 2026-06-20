@@ -114,6 +114,23 @@ sources:
       - name: order_adjustments
         description: "Shopee order-level adjustments: marketing fees, compensations (Adjustment sheet, detail rows only)"
 
+  - name: hug_raw
+    schema: main
+    meta:
+      external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/hug_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+    tables:
+      - name: scan
+        description: >
+          Raw Hug scan events from Cloudflare D1 queue (source_system='hug', entity_type='scan').
+          One row per poll batch per token. entity_id = token (no numeric 'id' field).
+          Produced by hug_webhook_consumer DLT pipeline, landing in hug_raw/scan/.
+      - name: optin_event
+        description: >
+          Raw Hug opt-in events from Cloudflare D1 queue (source_system='hug', entity_type='optin').
+          Posted by the landing page to /webhook/hug/optin/created, enqueued at edge,
+          polled locally. entity_id = token. Nullable fields: phone, zalo_uid, name.
+          Landing in hug_raw/optin_event/. Landing page built in a later task (L1-landing).
+
   - name: misa_raw
     schema: main
     meta:
