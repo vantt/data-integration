@@ -111,3 +111,5 @@ def make_hug_review_router(conn: sqlite3.Connection) -> APIRouter:
             "hug review: confirmed token=%s phone=%s → party=%s", token, phone, resolved_id
         )
         return RedirectResponse("/hug/review", status_code=303)
+
+    return router
