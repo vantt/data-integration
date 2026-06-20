@@ -52,6 +52,25 @@ def _reverse_etl_run() -> None:
     reverse_etl_warehouse_to_crm.run()
 
 
+def _hug_customer_push_run() -> None:
+    """Push refreshed hug_customer rows to the Cloudflare Worker edge replica.
+
+    Runs AFTER reverse_etl so wh_customer_tier is already fresh in cache.db.
+    Config-gated: skips silently when HUG_WORKER_URL is unset (pre-deploy).
+    """
+    from hug.customer_push import run as push_run
+    result = push_run()
+    if result.get("skipped"):
+        log.info("hug_customer_push: skipped — %s", result.get("reason", ""))
+    elif result.get("error"):
+        log.error("hug_customer_push: error — %s", result["error"])
+    else:
+        log.info(
+            "hug_customer_push: %d/%d rows pushed, %d failed",
+            result.get("ok", 0), result.get("total", 0), result.get("failed", 0),
+        )
+
+
 def _rebuild_search_index_run() -> None:
     """Rebuild crm_party_search FTS5 index from crm.db + cache.db."""
     import os as _os
@@ -84,6 +103,16 @@ def create_admin_router() -> APIRouter:
                 loop.run_in_executor(None, _reverse_etl_run),
                 timeout=_REFRESH_TIMEOUT_S,
             )
+            # Push hug_customer replica to edge AFTER wh_customer_tier is fresh.
+            # Best-effort: a push failure must not abort the rest of the refresh.
+            log.info("admin: hug_customer_push starting")
+            try:
+                await asyncio.wait_for(
+                    loop.run_in_executor(None, _hug_customer_push_run),
+                    timeout=_REFRESH_TIMEOUT_S,
+                )
+            except Exception as push_exc:
+                log.error("admin: hug_customer_push failed (non-critical): %s", push_exc)
             log.info("admin: sync_parties starting")
             await asyncio.wait_for(
                 loop.run_in_executor(None, _sync_parties_run),

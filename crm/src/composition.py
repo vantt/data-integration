@@ -94,6 +94,7 @@ from adapters.inbound.web.screen_search import make_search_router
 from adapters.inbound.web.screen_resolver import make_resolver_router
 from adapters.inbound.web.screen_hug_claim import make_hug_claim_router
 from adapters.inbound.web.screen_hug_mint import make_hug_mint_router
+from adapters.inbound.web.screen_hug_review import make_hug_review_router
 
 # ── Hug — local token-provisioning master (separate Python-owned hug.db) ──────
 from hug import db as hug_db
@@ -358,7 +359,9 @@ def create_app() -> FastAPI:
         app.state.hug_conn = hug_conn  # keep alive for the app's lifetime
         app.include_router(make_hug_claim_router(hug_conn))
         app.include_router(make_hug_mint_router(hug_conn))
-        log.info("hug stations mounted at /hug/claim and /hug/mint")
+        # Review queue reads crm.db only; conn is the crm.db connection.
+        app.include_router(make_hug_review_router(conn))
+        log.info("hug stations mounted at /hug/claim, /hug/mint, /hug/review")
     except Exception as exc:  # noqa: BLE001
         log.warning("hug stations unavailable (%s) — /hug/claim and /hug/mint disabled", exc)
 

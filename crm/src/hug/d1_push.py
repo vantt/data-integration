@@ -12,26 +12,21 @@ Uses only the stdlib (urllib) — no new runtime dependency.
 """
 from __future__ import annotations
 
-import hashlib
-import hmac
-import json
 import logging
 import sqlite3
-import urllib.error
-import urllib.request
 from typing import Any
 
 from hug.config import admin_secret, push_enabled, worker_url
+from hug.d1_transport import post_signed, sign as _sign_fn
 
 log = logging.getLogger(__name__)
 
 _UPSERT_PATH = "/hug/token/upsert"
-_TIMEOUT_S = 8
 
 
 def _sign(secret: str, raw_body: bytes) -> str:
-    digest = hmac.new(secret.encode("utf-8"), raw_body, hashlib.sha256).hexdigest()
-    return f"sha256={digest}"
+    """Thin wrapper kept for backwards-compat with tests that call d1_push._sign."""
+    return _sign_fn(secret, raw_body)
 
 
 def _row_to_payload(row: sqlite3.Row) -> dict[str, Any]:
@@ -80,27 +75,8 @@ def push_bound_token(row: sqlite3.Row) -> dict[str, Any]:
     # Worker contract: POST /hug/token/upsert  body = { "rows": HugTokenRow[] }.
     # We push one bound token per claim; chunked batches are a later optimisation.
     envelope = {"rows": [_row_to_payload(row)]}
-    raw_body = json.dumps(envelope, separators=(",", ":")).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=raw_body,
-        method="POST",
-        headers={
-            "Content-Type": "application/json",
-            "X-Hug-Signature": _sign(secret, raw_body),
-            # Explicit UA: Cloudflare Bot Fight Mode 403s (error 1010) the default
-            # "Python-urllib/x.y" agent on the proxied Worker domains.
-            "User-Agent": "FineJapan-Hug-Push/1.0",
-        },
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=_TIMEOUT_S) as resp:
-            status = resp.status
-            log.info("hug d1 push: token=%s upserted (HTTP %d)", row["token"], status)
-            return {"ok": True, "skipped": False, "status": status}
-    except urllib.error.HTTPError as exc:
-        log.error("hug d1 push: token=%s HTTP %d — %s", row["token"], exc.code, exc.reason)
-        return {"ok": False, "skipped": False, "error": f"http {exc.code}"}
-    except Exception as exc:  # network/timeout — retryable later
-        log.error("hug d1 push: token=%s failed — %s", row["token"], exc)
-        return {"ok": False, "skipped": False, "error": str(exc)}
+    result = post_signed(url, secret, envelope)
+    if result["ok"]:
+        log.info("hug d1 push: token=%s upserted (HTTP %d)", row["token"], result.get("status"))
+        return {"ok": True, "skipped": False, "status": result["status"]}
+    return {"ok": False, "skipped": False, "error": result.get("error", "unknown")}
