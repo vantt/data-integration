@@ -97,7 +97,7 @@ SELECT * FROM (
     SELECT
         entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id,
         token, buyer_customer_id, phone, zalo_uid, name, consent_json, opted_in_at_raw,
-        campaign_id
+        {% if 'campaign_id' in existing_cols %}campaign_id{% else %}NULL{% endif %} AS campaign_id
     FROM {{ this }}
     WHERE entity_id IN (SELECT DISTINCT entity_id FROM extracted)
     {% endif %}

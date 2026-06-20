@@ -251,6 +251,28 @@
           </label>
         </div>
 
+        {# Step 3c — LÊN LỊCH THEO DÕI (positive outcomes: answered, met, replied) #}
+        <div id="m08-followup-sec" class="m8-notebox" style="display:none">
+          <label class="chk-row" onclick="m08ToggleFollowup()">
+            <span class="chk-box" id="m08-followup-box">
+              <!-- no checkmark SVG — unchecked by default -->
+            </span>
+            <input type="checkbox" name="schedule_followup" value="1" id="m08-followup-chk" class="sr-only">
+            <span class="chk-row__text">Lên lịch theo dõi</span>
+          </label>
+          <div id="m08-followup-opts" style="display:none; margin-top: var(--sp-3)">
+            <label class="field">
+              <span class="field__label">NGÀY THEO DÕI</span>
+              <input type="date" name="schedule_followup_at" id="m08-followup-at" class="inp inp--mono">
+            </label>
+            <div style="display:flex; gap: var(--sp-2); margin-top: var(--sp-1)">
+              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(7)">+7 ngày</button>
+              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(14)">+14 ngày</button>
+              <button type="button" class="ghost-link caption" onclick="m08FillFollowup(30)">+30 ngày</button>
+            </div>
+          </div>
+        </div>
+
         {# Step 4 — NỘI DUNG #}
         <label class="field" id="m08-body-label">
           <span class="field__label">NỘI DUNG</span>
@@ -442,6 +464,20 @@
     document.querySelectorAll('#m08-outcome-pills .radio-pill').forEach(function(p) { p.classList.remove('radio-pill--on'); });
     if (pill) pill.classList.add('radio-pill--on');
     document.getElementById('m08-callback-sec').style.display = (val==='callback' && m08CurHT==='call') ? '' : 'none';
+    var followupSec = document.getElementById('m08-followup-sec');
+    if (followupSec) {
+      var positive = ['answered', 'met', 'replied'];
+      var show = positive.indexOf(val) >= 0;
+      followupSec.style.display = show ? '' : 'none';
+      if (!show) {
+        var chk = document.getElementById('m08-followup-chk');
+        if (chk) chk.checked = false;
+        var box = document.getElementById('m08-followup-box');
+        if (box) box.classList.remove('chk-box--on');
+        var opts = document.getElementById('m08-followup-opts');
+        if (opts) opts.style.display = 'none';
+      }
+    }
     m08UpdateBody(m08CurHT, val);
   };
 
@@ -486,6 +522,23 @@
     var chk = document.getElementById('m08-task-chk');
     chk.checked = !chk.checked;
     document.getElementById('m08-task-box').classList.toggle('chk-box--on', chk.checked);
+  };
+
+  /* ── Follow-up schedule toggle ────────────────────────── */
+  window.m08ToggleFollowup = function() {
+    var chk = document.getElementById('m08-followup-chk');
+    chk.checked = !chk.checked;
+    document.getElementById('m08-followup-box').classList.toggle('chk-box--on', chk.checked);
+    document.getElementById('m08-followup-opts').style.display = chk.checked ? '' : 'none';
+  };
+
+  /* ── Fill follow-up date (ICT today + N days) ─────────── */
+  window.m08FillFollowup = function(days) {
+    var d = new Date(Date.now() + 7*3600000 + days*86400000);
+    var p = function(n) { return String(n).padStart(2,'0'); };
+    var dateStr = d.getUTCFullYear()+'-'+p(d.getUTCMonth()+1)+'-'+p(d.getUTCDate());
+    var el = document.getElementById('m08-followup-at');
+    if (el) el.value = dateStr;
   };
 
   /* ── Init ─────────────────────────────────────────────── */

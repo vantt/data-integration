@@ -166,7 +166,10 @@
               <label class="field">
                 <span class="field__label">LOẠI</span>
                 <div class="inp-sel">
-                  <select name="add_identity_type">
+                  <select name="add_identity_type" id="m15-add-type"
+                          onchange="
+                            var p={'phone_secondary':'0901234567','zalo':'0901234567','facebook':'Link hoặc tên FB','email':'email@domain.com'};
+                            document.getElementById('m15-add-value').placeholder=p[this.value]||'';">
                     <option value="phone_secondary">Số phụ</option>
                     <option value="zalo">Zalo</option>
                     <option value="facebook">Facebook</option>
@@ -177,14 +180,13 @@
               </label>
               <label class="field">
                 <span class="field__label">GIÁ TRỊ<span class="field__req">*</span></span>
-                <input type="text" name="add_identity_value" class="inp" placeholder="+84901234567">
+                <input type="text" name="add_identity_value" id="m15-add-value" class="inp" placeholder="0901234567">
               </label>
             </div>
             <div class="field-row">
               <label class="field">
-                <span class="field__label">NHÃN</span>
+                <span class="field__label">NHÃN <span style="font-weight:400;text-transform:none;font-size:11px;color:var(--fg-tertiary)">(tùy chọn)</span></span>
                 <input type="text" name="add_display_label" class="inp" placeholder="VD: Số công ty">
-                <span class="field__hint">(tùy chọn)</span>
               </label>
               <label class="field">
                 <span class="field__label">ƯU TIÊN</span>
@@ -204,20 +206,29 @@
           </div>
         </div>
 
-        {# Consent #}
-        <div class="field" style="padding-top:var(--sp-3);border-top:1px solid var(--border)">
-          <span class="field__label">ĐỒNG Ý LIÊN LẠC</span>
-          <div class="radioset">
-            <label class="radio-pill {% if party.consent_contact %}radio-pill--on{% endif %}">
-              <span class="radio-pill__dot"></span>
-              <input type="radio" name="consent_contact" value="1"
-                     {% if party.consent_contact %}checked{% endif %} class="sr-only"> Cho phép
-            </label>
-            <label class="radio-pill {% if not party.consent_contact %}radio-pill--on{% endif %}">
-              <span class="radio-pill__dot"></span>
-              <input type="radio" name="consent_contact" value="0"
-                     {% if not party.consent_contact %}checked{% endif %} class="sr-only"> Không liên lạc
-            </label>
+        {# Consent — type=button prevents outer form submit; hx-include grabs radio value #}
+        <div id="m15-consent-block" style="padding-top:var(--sp-3);border-top:1px solid var(--border)">
+          <div class="field">
+            <span class="field__label">ĐỒNG Ý LIÊN LẠC</span>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4)">
+              <div class="radioset">
+                <label class="radio-pill {% if party.consent_contact %}radio-pill--on{% endif %}">
+                  <span class="radio-pill__dot"></span>
+                  <input type="radio" name="consent_contact" value="1"
+                         {% if party.consent_contact %}checked{% endif %} class="sr-only"> Cho phép
+                </label>
+                <label class="radio-pill {% if not party.consent_contact %}radio-pill--on{% endif %}">
+                  <span class="radio-pill__dot"></span>
+                  <input type="radio" name="consent_contact" value="0"
+                         {% if not party.consent_contact %}checked{% endif %} class="sr-only"> Không liên lạc
+                </label>
+              </div>
+              <button type="button" class="btn btn--secondary" style="white-space:nowrap"
+                      hx-post="/customers/{{ party.party_id }}/consent"
+                      hx-include="#m15-consent-block"
+                      hx-target="#modal-root"
+                      hx-swap="innerHTML">Cập nhật</button>
+            </div>
           </div>
         </div>
 

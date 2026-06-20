@@ -33,6 +33,12 @@ TARGETING_CATALOG: dict[str, dict] = {
         # Per-scan attr: cannot be counted in customer-level preview.
         "touchpoint_level": True,
     },
+    "channel": {
+        "type": "list",
+        "description": "Kênh bán hàng",
+        "values": ["shopee", "tiki", "lazada", "website", "pos", "other"],
+        "touchpoint_level": True,
+    },
     "tier": {
         "type": "list",
         "description": "Phân khúc khách hàng",
@@ -40,12 +46,6 @@ TARGETING_CATALOG: dict[str, dict] = {
             "VIP", "CORE", "CASUAL", "NEW", "SECOND_ORDER",
             "DORMANT_VALUABLE", "LAPSED_VALUABLE", "MASKED_REPEAT", "UNKNOWN",
         ],
-    },
-    "channel": {
-        "type": "list",
-        "description": "Kênh bán hàng",
-        "values": ["shopee", "tiki", "lazada", "website", "pos", "other"],
-        "touchpoint_level": True,
     },
     "value_group": {
         "type": "list",
