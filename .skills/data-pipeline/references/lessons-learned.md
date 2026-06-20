@@ -4230,3 +4230,22 @@ elif filter_priority == "high":
 3. Splitting rendering into framework-free helpers is great for testability but leaves the thin FastAPI adapter (the factory + route wiring) untested — add at least one smoke test that the app builds and the route returns 200, or the integration seam is a blind spot.
 
 **Reference:** `crm/src/adapters/inbound/web/screen_hug_review.py`, `crm/src/composition.py` (hug stations block). Fixed 2026-06-20, commit 8a8073e.
+
+---
+
+### L136 — A new mart a CRM job reads is absent from the serving DB until its first data row (serving builder skips empty marts)
+
+**Group:** SERVE
+
+**Symptom:** Every `/admin/refresh` logged `hug_resolve` ERROR: `Catalog Error: Table with name mart_hug_optin does not exist!`, even though the dbt model `mart_hug_optin` builds fine and its tests pass on every Dagster run.
+
+**Root cause:** Two different DuckDB files. dbt builds the mart in the warehouse DB, but the CRM resolver reads the **serving** DB (`olap.duckdb`, schema `main_marts`). The serving-DB builder **skips creating a table for a mart whose source folder is empty** — and `mart_hug_optin` has zero rows until the first real opt-in is ingested. So the table is simply missing from the serving DB, and `fetch_new_optins` blew up querying it on every refresh.
+
+**Fix:** Make the consumer tolerate the not-yet-materialized mart — catch `duckdb.CatalogException` and return `[]` (nothing to resolve yet) instead of reding the job. Verified live: `hug_resolve: processed 0 opt-in rows`, refresh ok. The table appears on its own once real data flows (or run `bootstrap_serving_views.py` to create the empty shell).
+
+**Rules:**
+1. A brand-new mart that a CRM/serving consumer queries does NOT exist in `olap.duckdb` until it has ≥1 row OR `bootstrap_serving_views.py` is run — the serving builder skips empty-folder marts. New CRM-consumed marts need either the bootstrap step (see [[feedback_new_mart_crm_serving_integration]]) or a consumer that tolerates absence.
+2. "dbt model builds + tests pass" ≠ "the table is queryable from the serving DB" — they are different DuckDB files. Always verify the read path the consumer actually uses.
+3. Day-zero (no data yet) is a first-class state for any new pipeline branch — every reader must handle the empty/absent case without erroring, or it spams ERROR logs on every scheduled run.
+
+**Reference:** `crm/src/hug/identity_resolver_io.py` (fetch_new_optins), `transformation/models/marts/customer/mart_hug_optin.sql`. Fixed 2026-06-20, commit a01dcd2.
