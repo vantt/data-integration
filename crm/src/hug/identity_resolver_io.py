@@ -83,17 +83,24 @@ def fetch_new_optins(olap_path: str, since_ts: str) -> list[dict]:
 
     con = duckdb.connect(olap_path, read_only=True)
     try:
-        rows = con.execute(
-            """
-            SELECT
-                token, buyer_customer_id, phone, zalo_uid, name, consent_json,
-                CAST(event_ts AS VARCHAR) AS event_ts
-            FROM main_marts.mart_hug_optin
-            WHERE CAST(event_ts AS VARCHAR) > ?
-            ORDER BY event_ts ASC
-            """,
-            [since_ts],
-        ).fetchall()
+        try:
+            rows = con.execute(
+                """
+                SELECT
+                    token, buyer_customer_id, phone, zalo_uid, name, consent_json,
+                    CAST(event_ts AS VARCHAR) AS event_ts
+                FROM main_marts.mart_hug_optin
+                WHERE CAST(event_ts AS VARCHAR) > ?
+                ORDER BY event_ts ASC
+                """,
+                [since_ts],
+            ).fetchall()
+        except duckdb.CatalogException:
+            # mart_hug_optin is absent from the serving DB until the first real
+            # opt-in is ingested (the serving builder skips an empty-folder mart).
+            # No data to resolve yet — return cleanly instead of reding the refresh.
+            log.info("fetch_new_optins: mart_hug_optin not in serving db yet — 0 rows")
+            return []
         cols = ["token", "buyer_customer_id", "phone", "zalo_uid", "name", "consent_json", "event_ts"]
         return [dict(zip(cols, r)) for r in rows]
     finally:
