@@ -9,6 +9,9 @@ export interface Env {
     // Fallback redirect URL when token not found or no campaign matches.
     // Set via: wrangler secret put HUG_FALLBACK_URL  (or as a plain var in wrangler.toml)
     HUG_FALLBACK_URL?: string;
+    // Zalo OA follow link displayed on the opt-in landing page.
+    // Set via: wrangler secret put HUG_ZALO_OA_URL  (or as a var in wrangler.toml for non-secret values)
+    HUG_ZALO_OA_URL?: string;
     [key: string]: any; // Allow dynamic access for other secrets
 }
 

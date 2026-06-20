@@ -3,6 +3,7 @@ import { Env, verifySignature, logError } from './utils';
 import { SOURCE_CONFIGS, DEFAULT_CONFIG, SourceConfig } from './config';
 import {
     handleHugScan,
+    handleHugOptinLanding,
     handleHugTokenUpsert,
     handleHugCustomerUpsert,
     handleHugCampaignUpsert,
@@ -17,6 +18,11 @@ export default {
         const hugScanMatch = url.pathname.match(/^\/h\/([^/]+)$/);
         if (request.method === "GET" && hugScanMatch) {
             return handleHugScan(request, env, ctx, hugScanMatch[1]);
+        }
+        // GET /optin/:token  — opt-in landing page; campaign destination_url points here
+        const hugOptinMatch = url.pathname.match(/^\/optin\/([^/]+)$/);
+        if (request.method === "GET" && hugOptinMatch) {
+            return handleHugOptinLanding(request, env, hugOptinMatch[1]);
         }
         // POST /hug/*/upsert  — admin provisioning routes (HMAC via HUG_ADMIN_SECRET)
         if (request.method === "POST" && url.pathname === "/hug/token/upsert") {

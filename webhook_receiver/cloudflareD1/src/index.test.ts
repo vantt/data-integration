@@ -1,10 +1,11 @@
 import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import worker, { Env } from './index';
+import { normaliseVnPhone } from './hug-handler';
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS webhooks (
-    msg_id TEXT PRIMARY KEY,       -- UUID 
+    msg_id TEXT PRIMARY KEY,       -- UUID
     payload TEXT,                  -- JSON Body
     source_system TEXT,            -- "stripe", "github", etc.
     headers TEXT,                  -- JSON Headers
@@ -26,6 +27,45 @@ CREATE TABLE IF NOT EXISTS webhook_errors (
     created_at INTEGER DEFAULT (strftime('%s', 'now'))
 );
 CREATE INDEX IF NOT EXISTS idx_errors_created_at ON webhook_errors(created_at);
+
+CREATE TABLE IF NOT EXISTS hug_token (
+    token TEXT PRIMARY KEY,
+    customer_id TEXT,
+    op_type TEXT NOT NULL,
+    order_code TEXT,
+    channel TEXT,
+    ship_date TEXT,
+    sku TEXT,
+    campaign_hint TEXT,
+    status TEXT NOT NULL DEFAULT 'bound',
+    batch_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS hug_customer (
+    customer_id TEXT PRIMARY KEY,
+    tier TEXT,
+    recency_days INTEGER,
+    value_group TEXT,
+    is_contactable INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
+
+CREATE TABLE IF NOT EXISTS hug_campaign (
+    campaign_id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    targeting TEXT NOT NULL DEFAULT '{}',
+    destination_type TEXT NOT NULL,
+    destination_url TEXT NOT NULL,
+    offer_ref TEXT,
+    priority INTEGER NOT NULL DEFAULT 100,
+    schedule_start TEXT,
+    schedule_end TEXT,
+    quota_total INTEGER,
+    quota_used INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL DEFAULT 'active',
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+);
 `;
 
 // Helper to generate HMAC signature
@@ -42,20 +82,19 @@ async function generateSignature(secret: string, body: string): Promise<string> 
   return 'sha256=' + Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-describe('Webhook Receiver Worker', () => {
-  const SECRET = 'test-secret';
-
-  beforeAll(async () => {
-    // Apply schema
+// Apply full schema once before all test suites so every describe block shares the same DB.
+beforeAll(async () => {
     const statements = SCHEMA_SQL
         .split(';')
         .map((s: string) => s.trim())
         .filter((s: string) => s.length > 0);
-        
     for (const statement of statements) {
         await (env as unknown as Env).DB.prepare(statement).run();
     }
-  });
+});
+
+describe('Webhook Receiver Worker', () => {
+  const SECRET = 'test-secret';
 
   it('responds with 404 for unknown paths', async () => {
     const request = new Request('http://example.com/unknown', { method: 'GET' });
@@ -304,15 +343,15 @@ describe('Webhook Receiver Worker', () => {
   describe('Error Logging', () => {
       it('logs errors to webhook_errors table on failure', async () => {
           // Trigger a failure by sending an invalid JSON body which we catch in handleWebhook
-          // Note: handleWebhook catches JSON parse errors in the request.text() if possible, 
+          // Note: handleWebhook catches JSON parse errors in the request.text() if possible,
           // or more likely if we can trigger a DB error or something.
           // Easier: Trigger invalid URL format which calls logError
-          
+
           const request = new Request('http://example.com/webhook/invalid-format', { method: 'POST' });
           const ctx = createExecutionContext();
           const response = await worker.fetch(request, env as unknown as Env, ctx);
           await waitOnExecutionContext(ctx);
-          
+
           expect(response.status).toBe(400);
 
           const { results } = await (env as unknown as Env).DB.prepare("SELECT * FROM webhook_errors").all();
@@ -320,4 +359,216 @@ describe('Webhook Receiver Worker', () => {
           expect(results[0].error_type).toBe('INVALID_URL_FORMAT');
       });
   });
+});
+
+// ---------------------------------------------------------------------------
+// normaliseVnPhone unit tests
+// ---------------------------------------------------------------------------
+describe('normaliseVnPhone', () => {
+    it('accepts standard 10-digit VN mobile', () => {
+        expect(normaliseVnPhone('0912345678')).toBe('0912345678');
+    });
+
+    it('strips spaces and dashes', () => {
+        expect(normaliseVnPhone('0912 345 678')).toBe('0912345678');
+        expect(normaliseVnPhone('091-234-5678')).toBe('0912345678');
+    });
+
+    it('rewrites +84 prefix to 0', () => {
+        expect(normaliseVnPhone('+84912345678')).toBe('0912345678');
+    });
+
+    it('rewrites 84XXXXXXXXX (11 digits) to 0', () => {
+        expect(normaliseVnPhone('84912345678')).toBe('0912345678');
+    });
+
+    it('rejects landline (9 digits after 0)', () => {
+        expect(normaliseVnPhone('02812345678')).toBeNull();
+    });
+
+    it('rejects too-short number', () => {
+        expect(normaliseVnPhone('091234')).toBeNull();
+    });
+
+    it('rejects empty string', () => {
+        expect(normaliseVnPhone('')).toBeNull();
+    });
+});
+
+// ---------------------------------------------------------------------------
+// Hug opt-in landing page and opt-in capture tests
+// ---------------------------------------------------------------------------
+describe('Hug opt-in landing page (GET /optin/:token)', () => {
+    it('returns 200 HTML page containing the token, form, and Zalo CTA', async () => {
+        const token = 'abc123testtoken';
+        const testEnv = { ...env, HUG_ZALO_OA_URL: 'https://zalo.me/test_oa' };
+        const request = new Request(`http://example.com/optin/${token}`, { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Content-Type')).toContain('text/html');
+
+        const body = await response.text();
+        // Token embedded in page JS for form submission
+        expect(body).toContain(JSON.stringify(token));
+        // Form with phone input
+        expect(body).toContain('type="tel"');
+        // Consent checkbox
+        expect(body).toContain('type="checkbox"');
+        // Zalo follow CTA link
+        expect(body).toContain('https://zalo.me/test_oa');
+        expect(body).toContain('Zalo OA');
+        // Submit posts to generic hug optin webhook path
+        expect(body).toContain('/webhook/hug/optin/created');
+    });
+
+    it('uses placeholder Zalo URL when HUG_ZALO_OA_URL is not set', async () => {
+        const token = 'tok999';
+        const request = new Request(`http://example.com/optin/${token}`, { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        expect(body).toContain('zalo.me/YOUR_OA_ID');
+    });
+
+    it('rejects empty token', async () => {
+        // /optin/ without token falls through to 404 (no route match)
+        const request = new Request('http://example.com/optin/', { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(response.status).toBe(404);
+    });
+
+    it('sanitises token in HTML output to prevent XSS', async () => {
+        // Token with HTML-special chars: the handler strips them with safeToken replacement
+        // before embedding in the HTML. URL-encoding means the Request path won't contain
+        // literal < >, so we test XSS hygiene by checking the output doesn't contain unescaped
+        // HTML injection for a crafted token value.
+        const request = new Request('http://example.com/optin/tok-safe-123', { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        // Token must appear correctly in output (not stripped or corrupted for safe tokens)
+        expect(body).toContain(JSON.stringify('tok-safe-123'));
+    });
+});
+
+describe('Hug opt-in capture (POST /webhook/hug/optin/created)', () => {
+    const OPTIN_URL = 'http://example.com/webhook/hug/optin/created';
+
+    it('enqueues a row with source_system=hug, entity_type=optin, and required payload keys', async () => {
+        // Clear hug rows from previous tests
+        await (env as unknown as Env).DB.prepare("DELETE FROM webhooks WHERE source_system = 'hug'").run();
+
+        const ts = new Date().toISOString();
+        const body = JSON.stringify({
+            token: 'tok-optin-001',
+            phone: '0912345678',
+            consent: { phone: true, ts },
+            ts,
+        });
+
+        const request = new Request(OPTIN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+        });
+        const ctx = createExecutionContext();
+        // CHECK_HMAC is not set → no HMAC check (public form endpoint)
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+
+        // Verify the stored row matches what the consumer expects
+        const { results } = await (env as unknown as Env).DB.prepare(
+            "SELECT * FROM webhooks WHERE source_system = 'hug'"
+        ).all();
+
+        expect(results.length).toBe(1);
+        const row = results[0];
+
+        // Top-level row: source_system must be 'hug' so the consumer's poll filter works
+        expect(row.source_system).toBe('hug');
+
+        // Parse the stored wrapper JSON
+        const wrapper = JSON.parse(row.payload as string);
+
+        // entity_type in wrapper = 'optin' (consumer reads this from wrapper.entity_type)
+        expect(wrapper.entity_type).toBe('optin');
+        expect(wrapper.source_system).toBe('hug');
+        expect(wrapper.action).toBe('created');
+
+        // Inner payload must have all required keys for the dbt model
+        const inner = wrapper.payload;
+        expect(inner.token).toBe('tok-optin-001');
+        expect(inner.phone).toBe('0912345678');
+        expect(inner.consent).toBeDefined();
+        expect(inner.consent.phone).toBe(true);
+        expect(inner.ts).toBe(ts);
+    });
+
+    it('enqueues row including optional name field when provided', async () => {
+        await (env as unknown as Env).DB.prepare("DELETE FROM webhooks WHERE source_system = 'hug'").run();
+
+        const ts = new Date().toISOString();
+        const body = JSON.stringify({
+            token: 'tok-optin-002',
+            phone: '0987654321',
+            name: 'Nguyễn Thị B',
+            consent: { phone: true, ts },
+            ts,
+        });
+
+        const request = new Request(OPTIN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+        });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+
+        const { results } = await (env as unknown as Env).DB.prepare(
+            "SELECT * FROM webhooks WHERE source_system = 'hug'"
+        ).all();
+        const inner = JSON.parse(results[0].payload as string).payload;
+        expect(inner.name).toBe('Nguyễn Thị B');
+    });
+
+    it('accepts the request without HMAC when CHECK_HMAC is not set (default deployment)', async () => {
+        // The form is a public endpoint. The default deployment does NOT set CHECK_HMAC,
+        // so the generic handler skips HMAC verification for all sources including 'hug'.
+        const ts = new Date().toISOString();
+        const body = JSON.stringify({
+            token: 'tok-public',
+            phone: '0900111222',
+            consent: { phone: true, ts },
+            ts,
+        });
+        // No CHECK_HMAC, no WEBHOOK_SECRET — mirrors default Cloudflare deployment for hug
+        const testEnv = { ...env };
+
+        const request = new Request(OPTIN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+        });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+    });
 });

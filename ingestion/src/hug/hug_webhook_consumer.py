@@ -84,16 +84,11 @@ def hug_event_dispatcher(worker_url: str, poll_limit: int = 100) -> Iterator[Any
     for msg in messages:
         try:
             msg_id = msg.get("msg_id") or msg.get("id")
-            entity_type = msg.get("entity_type", "unknown").lower()
 
-            # Only handle known entity types; log and skip anything else.
-            if entity_type not in ("scan", "optin"):
-                print(
-                    f"Unknown Hug entity_type='{entity_type}' for msg_id={msg_id}. Skipping."
-                )
-                continue
-
-            # Parse the outer wrapper (JSON string → dict)
+            # Parse the outer wrapper (JSON string → dict) FIRST. The webhooks
+            # row has no top-level entity_type column — entity_type lives inside
+            # this wrapper JSON, so it must be read after parsing (reading it off
+            # the raw msg always yields 'unknown' and drops every event).
             raw_payload_str = msg.get("payload")
             wrapper: dict = {}
             if isinstance(raw_payload_str, str):
@@ -110,6 +105,14 @@ def hug_event_dispatcher(worker_url: str, poll_limit: int = 100) -> Iterator[Any
             else:
                 print(
                     f"Unexpected payload type {type(raw_payload_str)} for msg_id={msg_id}. Skipping."
+                )
+                continue
+
+            # entity_type comes from the wrapper (edge sets it: 'scan' | 'optin').
+            entity_type = str(wrapper.get("entity_type", "unknown")).lower()
+            if entity_type not in ("scan", "optin"):
+                print(
+                    f"Unknown Hug entity_type='{entity_type}' for msg_id={msg_id}. Skipping."
                 )
                 continue
 

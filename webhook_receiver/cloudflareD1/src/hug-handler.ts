@@ -3,13 +3,23 @@
  *
  * Surfaces added (all additive, existing routes untouched):
  *   GET  /h/:token                   — public scan redirect (no HMAC)
+ *   GET  /optin/:token               — opt-in landing page (mobile-first Vietnamese HTML)
  *   POST /hug/token/upsert           — admin: batch upsert hug_token rows
  *   POST /hug/customer/upsert        — admin: batch upsert hug_customer rows
  *   POST /hug/campaign/upsert        — admin: upsert hug_campaign rows
  *
  * Auth:
- *   /h/:token   — public; token is opaque, no PII on URL.
- *   /hug/*      — HMAC-secured via HUG_ADMIN_SECRET (same pattern as Sapo).
+ *   /h/:token    — public; token is opaque, no PII on URL.
+ *   /optin/:token — public; form posts to /webhook/hug/optin/created (generic handler).
+ *   /hug/*       — HMAC-secured via HUG_ADMIN_SECRET (same pattern as Sapo).
+ *
+ * Opt-in capture: the landing form POSTs to POST /webhook/hug/optin/created which goes
+ * through the existing generic webhook handler. That handler stores:
+ *   source_system = 'hug'  (from URL path segment)
+ *   payload = { source_system, entity_type: 'optin', action: 'created', payload: <body>, received_at }
+ * The local consumer (hug_webhook_consumer.py) reads entity_type from the wrapper
+ * after parsing the JSON payload column. Inner payload contract:
+ *   { token, phone, name?, consent: { phone: bool, ts: iso }, ts: iso }
  *
  * Routing model (discussion-hug.md §7):
  *   targeting JSON = { field: [val, ...], ... }
@@ -480,6 +490,212 @@ interface HugCampaignRow {
     quota_total?: number | null;
     quota_used?: number;
     status?: string;
+}
+
+// ---------------------------------------------------------------------------
+// GET /optin/:token  — opt-in landing page (public, no HMAC)
+//
+// Campaign destination_url points here (e.g. https://hug.fjp.vn/optin/TOKEN).
+// Serves a self-contained mobile-first Vietnamese HTML page with:
+//   - Zalo OA follow CTA (link from HUG_ZALO_OA_URL env var, safe placeholder fallback)
+//   - Phone + name form + consent checkbox
+//   - On submit: POST JSON to /webhook/hug/optin/created, then show success state
+//
+// Token is embedded in the page for the form; no D1 lookup needed at landing time.
+// The form submit validates phone client-side; server-side validation is in
+// the generic /webhook handler (token/phone required, VN phone normalisation).
+// ---------------------------------------------------------------------------
+
+/** Zalo OA follow URL from env; placeholder prevents broken links in dev/staging. */
+function getZaloOaUrl(env: Env): string {
+    return env.HUG_ZALO_OA_URL ?? 'https://zalo.me/YOUR_OA_ID';
+}
+
+/** Vietnamese phone normalisation: strip spaces/dashes, rewrite 0XX → +84XX, validate. */
+export function normaliseVnPhone(raw: string): string | null {
+    // Remove all non-digit characters except leading +
+    const stripped = raw.replace(/[\s\-().]/g, '');
+    // Rewrite +84 prefix to 0 for normalisation, then back
+    let digits = stripped;
+    if (digits.startsWith('+84')) {
+        digits = '0' + digits.slice(3);
+    } else if (digits.startsWith('84') && digits.length === 11) {
+        digits = '0' + digits.slice(2);
+    }
+    // Vietnamese mobile: 10 digits starting with 0[3-9]
+    if (/^0[3-9]\d{8}$/.test(digits)) {
+        return digits;
+    }
+    return null;
+}
+
+export async function handleHugOptinLanding(
+    _request: Request,
+    env: Env,
+    token: string
+): Promise<Response> {
+    // Reject obviously invalid tokens early (empty or path-traversal chars)
+    if (!token || token.length > 128 || /[<>"'`\\/]/.test(token)) {
+        return new Response('Bad Request', { status: 400 });
+    }
+
+    const zaloUrl = getZaloOaUrl(env);
+    // Escape token for safe embedding in HTML/JS — it's alphanumeric but be explicit
+    const safeToken = token.replace(/[<>&"']/g, '');
+
+    const html = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Nhận ưu đãi từ chúng tôi</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#222;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px}
+  .card{background:#fff;border-radius:16px;padding:28px 24px;max-width:420px;width:100%;box-shadow:0 2px 16px rgba(0,0,0,.08)}
+  h1{font-size:1.3rem;font-weight:700;margin-bottom:8px;color:#1a1a2e}
+  .sub{font-size:.95rem;color:#555;margin-bottom:20px;line-height:1.5}
+  .zalo-btn{display:flex;align-items:center;justify-content:center;gap:10px;background:#0068FF;color:#fff;text-decoration:none;border-radius:10px;padding:14px;font-size:1rem;font-weight:600;margin-bottom:24px;transition:opacity .15s}
+  .zalo-btn:hover{opacity:.88}
+  .zalo-icon{width:24px;height:24px;flex-shrink:0}
+  .divider{display:flex;align-items:center;gap:8px;margin-bottom:20px;color:#aaa;font-size:.85rem}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:#e0e0e0}
+  label{display:block;font-size:.9rem;font-weight:600;margin-bottom:6px;color:#333}
+  input[type=tel],input[type=text]{width:100%;border:1px solid #ddd;border-radius:8px;padding:12px;font-size:1rem;margin-bottom:14px;outline:none;transition:border-color .15s}
+  input:focus{border-color:#0068FF}
+  .consent{display:flex;gap:10px;align-items:flex-start;margin-bottom:20px}
+  .consent input{margin-top:3px;width:18px;height:18px;flex-shrink:0;cursor:pointer}
+  .consent span{font-size:.85rem;color:#555;line-height:1.5}
+  .submit-btn{width:100%;background:#e8231a;color:#fff;border:none;border-radius:10px;padding:14px;font-size:1rem;font-weight:700;cursor:pointer;transition:opacity .15s}
+  .submit-btn:hover{opacity:.88}
+  .submit-btn:disabled{opacity:.5;cursor:not-allowed}
+  .error{color:#e8231a;font-size:.85rem;margin-bottom:12px;display:none}
+  .success{display:none;text-align:center;padding:20px 0}
+  .success h2{color:#00a651;font-size:1.2rem;margin-bottom:10px}
+  .success p{color:#555;font-size:.9rem;line-height:1.5;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="card">
+  <!-- Value proposition -->
+  <h1>Nhận ưu đãi dành riêng cho bạn</h1>
+  <p class="sub">Theo dõi Zalo OA để nhận thông báo ưu đãi và hỗ trợ nhanh nhất. Hoặc để lại số điện thoại để chúng tôi liên hệ trực tiếp.</p>
+
+  <!-- Zalo OA follow CTA -->
+  <a class="zalo-btn" href="${zaloUrl}" target="_blank" rel="noopener">
+    <svg class="zalo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="48" height="48" rx="12" fill="#fff"/>
+      <text x="6" y="34" font-size="28" font-family="Arial,sans-serif" font-weight="900" fill="#0068FF">Z</text>
+    </svg>
+    Theo dõi Zalo OA
+  </a>
+
+  <div class="divider">hoặc để lại số điện thoại</div>
+
+  <!-- Opt-in form -->
+  <form id="optin-form" novalidate>
+    <label for="phone">Số điện thoại <span style="color:#e8231a">*</span></label>
+    <input type="tel" id="phone" name="phone" placeholder="0912 345 678" autocomplete="tel" inputmode="numeric">
+
+    <label for="name">Họ tên (không bắt buộc)</label>
+    <input type="text" id="name" name="name" placeholder="Nguyễn Văn A" autocomplete="name">
+
+    <div class="consent">
+      <input type="checkbox" id="consent" name="consent">
+      <span>Tôi đồng ý để <strong>Fine Japan Vietnam</strong> liên hệ tư vấn và gửi thông tin ưu đãi qua số điện thoại này.</span>
+    </div>
+
+    <div class="error" id="form-error">Vui lòng kiểm tra lại thông tin.</div>
+    <button class="submit-btn" type="submit" id="submit-btn">Nhận ưu đãi ngay</button>
+  </form>
+
+  <!-- Success state (shown after submit) -->
+  <div class="success" id="success-state">
+    <h2>Đã nhận thông tin!</h2>
+    <p>Cảm ơn bạn. Chúng tôi sẽ liên hệ sớm nhất có thể.</p>
+    <a class="zalo-btn" href="${zaloUrl}" target="_blank" rel="noopener">
+      <svg class="zalo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="48" height="48" rx="12" fill="#fff"/>
+        <text x="6" y="34" font-size="28" font-family="Arial,sans-serif" font-weight="900" fill="#0068FF">Z</text>
+      </svg>
+      Theo dõi Zalo OA
+    </a>
+  </div>
+</div>
+
+<script>
+(function(){
+  var TOKEN = ${JSON.stringify(safeToken)};
+  var SUBMIT_URL = '/webhook/hug/optin/created';
+
+  function normPhone(raw) {
+    var s = raw.replace(/[\\s\\-().]/g, '');
+    if (s.startsWith('+84')) s = '0' + s.slice(3);
+    else if (/^84\\d{9}$/.test(s)) s = '0' + s.slice(2);
+    return /^0[3-9]\\d{8}$/.test(s) ? s : null;
+  }
+
+  var form = document.getElementById('optin-form');
+  var errEl = document.getElementById('form-error');
+  var btn = document.getElementById('submit-btn');
+  var successEl = document.getElementById('success-state');
+
+  function showError(msg) {
+    errEl.textContent = msg;
+    errEl.style.display = 'block';
+  }
+  function clearError() { errEl.style.display = 'none'; }
+
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    clearError();
+
+    var phoneRaw = document.getElementById('phone').value.trim();
+    var name = document.getElementById('name').value.trim();
+    var consentChecked = document.getElementById('consent').checked;
+    var phone = normPhone(phoneRaw);
+
+    if (!phone) { showError('Số điện thoại không hợp lệ. Vui lòng nhập lại (VD: 0912 345 678).'); return; }
+    if (!consentChecked) { showError('Bạn cần đồng ý để chúng tôi liên hệ.'); return; }
+
+    btn.disabled = true;
+    btn.textContent = 'Đang gửi…';
+
+    var ts = new Date().toISOString();
+    var body = {
+      token: TOKEN,
+      phone: phone,
+      consent: { phone: true, ts: ts },
+      ts: ts
+    };
+    if (name) body.name = name;
+
+    fetch(SUBMIT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    })
+    .then(function(r) {
+      if (!r.ok) throw new Error('server_error_' + r.status);
+      form.style.display = 'none';
+      successEl.style.display = 'block';
+    })
+    .catch(function(err) {
+      btn.disabled = false;
+      btn.textContent = 'Nhận ưu đãi ngay';
+      showError('Gửi thất bại, vui lòng thử lại. (' + err.message + ')');
+    });
+  });
+})();
+</script>
+</body>
+</html>`;
+
+    return new Response(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
 }
 
 export async function handleHugCampaignUpsert(request: Request, env: Env): Promise<Response> {

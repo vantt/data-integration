@@ -57,16 +57,17 @@ OPTIN_INNER = {
     "ts": "2026-06-19T10:01:00Z",
 }
 
+# NOTE: the real D1 `webhooks` row has NO top-level entity_type column —
+# entity_type lives inside the wrapper JSON (the `payload` column). Fixtures must
+# mirror that exactly, else they hide the consumer's wrapper-parsing logic.
 SCAN_MSG = {
     "msg_id": "msg_scan_001",
-    "entity_type": "scan",
     "source_system": "hug",
     "payload": _make_wrapper("scan", SCAN_INNER),
 }
 
 OPTIN_MSG = {
     "msg_id": "msg_optin_001",
-    "entity_type": "optin",
     "source_system": "hug",
     "payload": _make_wrapper("optin", OPTIN_INNER),
 }
@@ -153,7 +154,6 @@ class TestHugEventDispatcher:
         """A message whose inner payload has no 'token' must be skipped; valid messages still process."""
         no_token_msg = {
             "msg_id": "msg_bad_001",
-            "entity_type": "scan",
             "source_system": "hug",
             "payload": _make_wrapper("scan", {"op_type": "package_insert"}),  # no token
         }
@@ -170,7 +170,6 @@ class TestHugEventDispatcher:
     def test_bad_json_payload_skips_without_aborting_batch(self):
         bad_json_msg = {
             "msg_id": "msg_bad_json",
-            "entity_type": "scan",
             "source_system": "hug",
             "payload": "NOT VALID JSON {{{{",
         }
@@ -182,7 +181,6 @@ class TestHugEventDispatcher:
     def test_unknown_entity_type_skipped(self):
         unknown_msg = {
             "msg_id": "msg_unk",
-            "entity_type": "voucher",
             "source_system": "hug",
             "payload": _make_wrapper("voucher", {"token": "TKN999"}),
         }
