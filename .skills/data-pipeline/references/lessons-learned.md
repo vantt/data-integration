@@ -4211,3 +4211,22 @@ elif filter_priority == "high":
 4. A passing unit test that mocks the upstream contract can hide a real integration bug — when an edge enqueues `entity_type` *inside* the payload wrapper (not as a top-level column), the consumer must parse the wrapper; fixtures must mirror the real row shape exactly.
 
 **Reference:** `scripts/ensure_hug_safety_placeholder.py`, `transformation/models/staging/src_hug_*.sql`, `transformation/models/sources.yml` (hug_raw), `docker-compose.yml` (data_platform command). Fixed 2026-06-20, commits 1f1171a + 9e1a1a6.
+
+---
+
+### L135 — A router factory missing `return router` disabled an entire shared-try mount block
+
+**Group:** SERVE
+
+**Symptom:** After rebuilding the CRM container, startup logged `WARNING hug stations unavailable ('NoneType' object has no attribute 'routes') — /hug/claim and /hug/mint disabled`. All three Hug screens (claim, mint, review) were down — not just the newly added one.
+
+**Root cause:** `make_hug_review_router()` defined its routes but was missing the final `return router`, so it returned `None`. `app.include_router(None)` raises `'NoneType' object has no attribute 'routes'`. In `composition.py` all three hug routers are mounted inside ONE `try/except`, so the new router's failure aborted the block and the warning made claim+mint look disabled too. The task's unit tests passed because they exercised the FastAPI-free `_data`/`_html` helper modules directly and never called the router factory (the factory contract — "returns an APIRouter" — was untested).
+
+**Fix:** Add `return router` at the end of the factory. Verified: `hug stations mounted at /hug/claim, /hug/mint, /hug/review`, `GET /hug/review` → 200.
+
+**Rules:**
+1. A `make_*_router()` factory MUST end with `return router` — grep new factories for it; a silent `None` return surfaces only at runtime mount.
+2. Mounting several routers in a single `try/except` means one bad factory takes down ALL of them. Mount independent surfaces in their own try/except (or assert each factory returns a non-None APIRouter before include) so blast radius = the broken one only.
+3. Splitting rendering into framework-free helpers is great for testability but leaves the thin FastAPI adapter (the factory + route wiring) untested — add at least one smoke test that the app builds and the route returns 200, or the integration seam is a blind spot.
+
+**Reference:** `crm/src/adapters/inbound/web/screen_hug_review.py`, `crm/src/composition.py` (hug stations block). Fixed 2026-06-20, commit 8a8073e.
