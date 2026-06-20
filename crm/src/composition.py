@@ -96,6 +96,7 @@ from adapters.inbound.web.screen_hug_claim import make_hug_claim_router
 from adapters.inbound.web.screen_hug_mint import make_hug_mint_router
 from adapters.inbound.web.screen_hug_review import make_hug_review_router
 from adapters.inbound.web.screen_hug_campaign import make_hug_campaign_router
+from adapters.inbound.web.screen_hug_voucher_attribution import make_hug_voucher_attribution_router
 
 # ── Hug — local token-provisioning master (separate Python-owned hug.db) ──────
 from hug import db as hug_db
@@ -366,7 +367,11 @@ def create_app() -> FastAPI:
         campaign_router = make_hug_campaign_router(conn)
         assert campaign_router is not None, "make_hug_campaign_router returned None"
         app.include_router(campaign_router)
-        log.info("hug stations mounted at /hug/claim, /hug/mint, /hug/review, /hug/campaigns")
+        # Attribution readout — crm.db only; read-only screen.
+        attribution_router = make_hug_voucher_attribution_router(conn)
+        assert attribution_router is not None, "make_hug_voucher_attribution_router returned None"
+        app.include_router(attribution_router)
+        log.info("hug stations mounted at /hug/claim, /hug/mint, /hug/review, /hug/campaigns, /hug/vouchers")
     except Exception as exc:  # noqa: BLE001
         log.warning("hug stations unavailable (%s) — /hug/claim and /hug/mint disabled", exc)
 
