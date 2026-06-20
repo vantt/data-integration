@@ -19,8 +19,8 @@
 -- which the edge enqueues with entity_type='optin'. The consumer maps this to
 -- table 'optin_event', so this source reads from hug_raw/optin_event/.
 --
--- Payload contract (as of 2026-06-19, landing page not yet built):
---   token, buyer_customer_id, phone?, zalo_uid?, name?, consent{}, ts
+-- Payload contract:
+--   token, buyer_customer_id, phone?, zalo_uid?, name?, consent{}, ts, campaign_id?
 -- All nullable fields are extracted with COALESCE to empty string where downstream
 -- logic requires non-null; consent is kept as raw JSON string for flexibility.
 -- =================================================================================================
@@ -82,7 +82,9 @@ extracted AS (
         -- consent is a nested object; keep as JSON string for identity bridge
         json_extract_string(payload, '$.consent')            AS consent_json,
         -- ts = opt-in timestamp as recorded by the landing page
-        json_extract_string(payload, '$.ts')                 AS opted_in_at_raw
+        json_extract_string(payload, '$.ts')                 AS opted_in_at_raw,
+        -- campaign attribution: set by landing page when ?hug_campaign= param is present
+        json_extract_string(payload, '$.campaign_id')        AS campaign_id
 
     FROM deduped
     WHERE rn = 1
@@ -94,7 +96,8 @@ SELECT * FROM (
     UNION ALL
     SELECT
         entity_id, entity_type, event_timestamp, ingest_method, _dlt_load_id,
-        token, buyer_customer_id, phone, zalo_uid, name, consent_json, opted_in_at_raw
+        token, buyer_customer_id, phone, zalo_uid, name, consent_json, opted_in_at_raw,
+        campaign_id
     FROM {{ this }}
     WHERE entity_id IN (SELECT DISTINCT entity_id FROM extracted)
     {% endif %}

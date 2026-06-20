@@ -530,7 +530,7 @@ export function normaliseVnPhone(raw: string): string | null {
 }
 
 export async function handleHugOptinLanding(
-    _request: Request,
+    request: Request,
     env: Env,
     token: string
 ): Promise<Response> {
@@ -542,6 +542,36 @@ export async function handleHugOptinLanding(
     const zaloUrl = getZaloOaUrl(env);
     // Escape token for safe embedding in HTML/JS — it's alphanumeric but be explicit
     const safeToken = token.replace(/[<>&"']/g, '');
+
+    // Read campaign attribution from URL param (appended by scan redirect)
+    const url = new URL(request.url);
+    const rawCampaignId = url.searchParams.get('hug_campaign');
+    // Allow only reasonable alphanumeric IDs (matches campaign_id column values)
+    const campaignId: string | null =
+        rawCampaignId && /^[\w-]{1,64}$/.test(rawCampaignId) ? rawCampaignId : null;
+
+    // Fetch offer_ref from D1 for this campaign — graceful fallback: missing/unknown = no code shown
+    let offerCode: string | null = null;
+    if (campaignId) {
+        try {
+            const row = await env.DB.prepare(
+                "SELECT offer_ref FROM hug_campaign WHERE campaign_id = ? AND status = 'active' LIMIT 1"
+            ).bind(campaignId).first<{ offer_ref: string | null }>();
+            // Sanitise offer code: Sapo codes are alphanumeric; strip any stray HTML chars
+            const raw = row?.offer_ref ?? null;
+            offerCode = raw ? raw.replace(/[<>&"']/g, '') : null;
+        } catch {
+            // D1 lookup failure must never crash the landing page — show no code
+            offerCode = null;
+        }
+    }
+
+    // Inline success content: show offer code if available, otherwise generic message
+    const successContent = offerCode
+        ? `<p style="margin-bottom:12px">Mã ưu đãi của bạn:</p>
+        <p style="font-size:1.6rem;font-weight:700;color:#e8231a;letter-spacing:.1em;margin-bottom:8px">${offerCode}</p>
+        <p style="color:#555;font-size:.85rem;margin-bottom:20px">Nhập mã này khi đặt hàng để được giảm giá.</p>`
+        : `<p>Cảm ơn bạn. Chúng tôi sẽ liên hệ sớm nhất có thể.</p>`;
 
     const html = `<!DOCTYPE html>
 <html lang="vi">
@@ -613,7 +643,7 @@ export async function handleHugOptinLanding(
   <!-- Success state (shown after submit) -->
   <div class="success" id="success-state">
     <h2>Đã nhận thông tin!</h2>
-    <p>Cảm ơn bạn. Chúng tôi sẽ liên hệ sớm nhất có thể.</p>
+    ${successContent}
     <a class="zalo-btn" href="${zaloUrl}" target="_blank" rel="noopener">
       <svg class="zalo-icon" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect width="48" height="48" rx="12" fill="#fff"/>
@@ -627,6 +657,7 @@ export async function handleHugOptinLanding(
 <script>
 (function(){
   var TOKEN = ${JSON.stringify(safeToken)};
+  var CAMPAIGN_ID = ${JSON.stringify(campaignId ?? '')};
   var SUBMIT_URL = '/webhook/hug/optin/created';
 
   function normPhone(raw) {
@@ -670,6 +701,8 @@ export async function handleHugOptinLanding(
       ts: ts
     };
     if (name) body.name = name;
+    // Include campaign attribution so the pipeline can tie this opt-in to a campaign
+    if (CAMPAIGN_ID) body.campaign_id = CAMPAIGN_ID;
 
     fetch(SUBMIT_URL, {
       method: 'POST',

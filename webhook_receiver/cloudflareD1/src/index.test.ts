@@ -460,6 +460,69 @@ describe('Hug opt-in landing page (GET /optin/:token)', () => {
         // Token must appear correctly in output (not stripped or corrupted for safe tokens)
         expect(body).toContain(JSON.stringify('tok-safe-123'));
     });
+
+    it('shows offer code in success state when campaign has offer_ref', async () => {
+        // Seed a campaign with a known offer code
+        await (env as unknown as Env).DB.prepare(
+            "INSERT OR REPLACE INTO hug_campaign (campaign_id, name, targeting, destination_type, destination_url, offer_ref, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        ).bind('camp-offer', 'A2 Test', '{}', 'url', 'https://example.com', 'HUG50', 'active').run();
+
+        const token = 'tok-camp-test';
+        const testEnv = { ...env, HUG_ZALO_OA_URL: 'https://zalo.me/test_oa' };
+        const request = new Request(`http://example.com/optin/${token}?hug_campaign=camp-offer`, { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        // Offer code must appear prominently in the success state
+        expect(body).toContain('HUG50');
+        // CAMPAIGN_ID must be baked into page JS for form submission
+        expect(body).toContain(JSON.stringify('camp-offer'));
+    });
+
+    it('shows generic success when campaign has no offer_ref', async () => {
+        // Seed campaign without offer code
+        await (env as unknown as Env).DB.prepare(
+            "INSERT OR REPLACE INTO hug_campaign (campaign_id, name, targeting, destination_type, destination_url, offer_ref, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        ).bind('camp-no-offer', 'Generic Campaign', '{}', 'url', 'https://example.com', null, 'active').run();
+
+        const token = 'tok-no-offer';
+        const request = new Request(`http://example.com/optin/${token}?hug_campaign=camp-no-offer`, { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        // Generic fallback message
+        expect(body).toContain('Chúng tôi sẽ liên hệ sớm');
+    });
+
+    it('returns 200 with no offer code when campaign_id is unknown', async () => {
+        // No DB row for 'camp-unknown' — must degrade gracefully
+        const request = new Request('http://example.com/optin/tok-unk?hug_campaign=camp-unknown', { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        expect(body).toContain('Chúng tôi sẽ liên hệ sớm');
+    });
+
+    it('returns 200 with no offer code when hug_campaign param is absent', async () => {
+        const request = new Request('http://example.com/optin/tok-no-param', { method: 'GET' });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+        const body = await response.text();
+        // CAMPAIGN_ID baked as empty string when not provided
+        expect(body).toContain('var CAMPAIGN_ID = ""');
+    });
 });
 
 describe('Hug opt-in capture (POST /webhook/hug/optin/created)', () => {
@@ -545,6 +608,37 @@ describe('Hug opt-in capture (POST /webhook/hug/optin/created)', () => {
         ).all();
         const inner = JSON.parse(results[0].payload as string).payload;
         expect(inner.name).toBe('Nguyễn Thị B');
+    });
+
+    it('includes campaign_id in stored payload when provided', async () => {
+        await (env as unknown as Env).DB.prepare("DELETE FROM webhooks WHERE source_system = 'hug'").run();
+
+        const ts = new Date().toISOString();
+        const body = JSON.stringify({
+            token: 'tok-optin-camp',
+            phone: '0912000001',
+            consent: { phone: true, ts },
+            ts,
+            campaign_id: 'camp-a2',
+        });
+
+        const request = new Request(OPTIN_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+        });
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, env as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        expect(response.status).toBe(200);
+
+        const { results } = await (env as unknown as Env).DB.prepare(
+            "SELECT * FROM webhooks WHERE source_system = 'hug'"
+        ).all();
+        expect(results.length).toBe(1);
+        const inner = JSON.parse(results[0].payload as string).payload;
+        expect(inner.campaign_id).toBe('camp-a2');
     });
 
     it('accepts the request without HMAC when CHECK_HMAC is not set (default deployment)', async () => {

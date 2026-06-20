@@ -32,6 +32,8 @@ SELECT
     )                                                       AS opted_in_at,
     try_cast(event_timestamp AS TIMESTAMPTZ)                AS ingested_at,
     ingest_method,
-    _dlt_load_id
+    _dlt_load_id,
+    -- campaign attribution (null for pre-campaign opt-ins)
+    campaign_id
 
 FROM src

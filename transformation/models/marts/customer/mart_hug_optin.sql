@@ -26,6 +26,7 @@ WITH latest_per_pair AS (
         zalo_uid,
         name,
         consent_json,
+        campaign_id,
         opted_in_at        AS event_ts,
         ingested_at,
         -- Dedup: for the same (token, phone) keep the most recent opt-in.
@@ -45,6 +46,7 @@ SELECT
     zalo_uid,
     name,
     consent_json,
+    campaign_id,
     event_ts,
     ingested_at
 FROM latest_per_pair

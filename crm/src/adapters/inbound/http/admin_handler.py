@@ -92,6 +92,71 @@ def _hug_resolve_run() -> None:
         hug_conn.close()
 
 
+def _hug_voucher_issue_run() -> None:
+    """Issue vouchers for newly-resolved opt-ins whose campaign carries an offer_ref.
+
+    Runs AFTER hug_resolve (crm_identity_link is populated for this cycle) and
+    BEFORE hug_customer_push. Skips cleanly when olap.duckdb is absent (pre-deploy)
+    so it never aborts the refresh.
+    """
+    import os as _os
+    import pathlib
+    import sqlite3
+
+    from crm.sync.config import olap_path
+    from hug.voucher_issuer import issue_vouchers
+
+    olap = olap_path()
+    if not _os.path.exists(olap):
+        log.info("hug_voucher_issue: olap.duckdb absent — skipping (pre-deploy)")
+        return
+
+    data_dir = _os.environ.get("CRM_DATA_DIR", "./data")
+    crm_db_path = str(pathlib.Path(data_dir) / "crm.db")
+    watermark = str(pathlib.Path(data_dir) / "hug_voucher_watermark.json")
+
+    crm_conn = sqlite3.connect(crm_db_path)
+    crm_conn.row_factory = sqlite3.Row
+    try:
+        n = issue_vouchers(crm_conn, olap, watermark)
+        log.info("hug_voucher_issue: %d vouchers issued", n)
+    finally:
+        crm_conn.close()
+
+
+def _hug_voucher_redeem_run() -> None:
+    """Match redeemed coupon codes in fact_orders → set crm_hug_voucher.redeemed_at.
+
+    Runs AFTER hug_voucher_issue so freshly-issued rows can be matched in the same
+    cycle if the customer already placed the order before the refresh ran.
+    Skips silently when olap.duckdb is absent (pre-deploy) so it never aborts
+    the refresh.
+    """
+    import os as _os
+    import pathlib
+    import sqlite3
+
+    from crm.sync.config import olap_path
+    from hug.voucher_redeem_matcher import match_redeemed_vouchers
+
+    olap = olap_path()
+    if not _os.path.exists(olap):
+        log.info("hug_voucher_redeem: olap.duckdb absent — skipping (pre-deploy)")
+        return
+
+    data_dir = _os.environ.get("CRM_DATA_DIR", "./data")
+    crm_db_path = str(pathlib.Path(data_dir) / "crm.db")
+    watermark = str(pathlib.Path(data_dir) / "hug_redeem_watermark.json")
+
+    crm_conn = sqlite3.connect(crm_db_path)
+    crm_conn.row_factory = sqlite3.Row
+    try:
+        n = match_redeemed_vouchers(crm_conn, olap, watermark)
+        log.info("hug_voucher_redeem: %d vouchers matched", n)
+    finally:
+        crm_conn.close()
+
+
 def _hug_customer_push_run() -> None:
     """Push refreshed hug_customer rows to the Cloudflare Worker edge replica.
 
@@ -154,6 +219,28 @@ def create_admin_router() -> APIRouter:
                 )
             except Exception as resolve_exc:
                 log.error("admin: hug_resolve failed (non-critical): %s", resolve_exc)
+            # Issue vouchers for opt-ins whose campaign carries an offer_ref and whose
+            # token is now resolved (hug_resolve ran first this cycle).
+            # Best-effort: failure must not abort the rest of the refresh.
+            log.info("admin: hug_voucher_issue starting")
+            try:
+                await asyncio.wait_for(
+                    loop.run_in_executor(None, _hug_voucher_issue_run),
+                    timeout=_REFRESH_TIMEOUT_S,
+                )
+            except Exception as issue_exc:
+                log.error("admin: hug_voucher_issue failed (non-critical): %s", issue_exc)
+            # Match redeemed coupon codes in fact_orders against crm_hug_voucher.
+            # Runs after hug_voucher_issue so same-cycle issuance + redeem is possible.
+            # Best-effort: failure must not abort the rest of the refresh.
+            log.info("admin: hug_voucher_redeem starting")
+            try:
+                await asyncio.wait_for(
+                    loop.run_in_executor(None, _hug_voucher_redeem_run),
+                    timeout=_REFRESH_TIMEOUT_S,
+                )
+            except Exception as redeem_exc:
+                log.error("admin: hug_voucher_redeem failed (non-critical): %s", redeem_exc)
             # Push hug_customer replica to edge AFTER wh_customer_tier is fresh.
             # Best-effort: a push failure must not abort the rest of the refresh.
             log.info("admin: hug_customer_push starting")
