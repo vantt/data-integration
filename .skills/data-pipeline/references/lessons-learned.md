@@ -4249,3 +4249,21 @@ elif filter_priority == "high":
 3. Day-zero (no data yet) is a first-class state for any new pipeline branch — every reader must handle the empty/absent case without erroring, or it spams ERROR logs on every scheduled run.
 
 **Reference:** `crm/src/hug/identity_resolver_io.py` (fetch_new_optins), `transformation/models/marts/customer/mart_hug_optin.sql`. Fixed 2026-06-20, commit a01dcd2.
+
+---
+
+### L137 — fact_orders exposes customer_key (surrogate), NOT raw customer_id — join dim_customers to get it
+
+**Group:** SERVE
+
+**Symptom:** A new local job querying the serving DB failed at runtime: `Binder Error: Referenced column "customer_id" not found in FROM clause!` on `SELECT customer_id ... FROM main_marts.fact_orders`. Its unit tests passed (they injected rows via a seam, never hitting the real schema).
+
+**Root cause:** `fact_orders` only carries `customer_key` (a `generate_surrogate_key` hash). The raw Sapo `customer_id` is used INSIDE the model's JOINs (`orders.customer_id` → surrogate) but is NOT in the final SELECT. Code that needs the natural Sapo customer_id (e.g. to join a CRM table keyed on it, like `crm_hug_voucher.customer_id`) cannot read it from fact_orders.
+
+**Fix:** Join `main_marts.dim_customers` (which exposes BOTH `customer_key` and raw `customer_id`) on `customer_key`: `FROM main_marts.fact_orders f JOIN main_marts.dim_customers d ON f.customer_key = d.customer_key` → use `d.customer_id`. No mart change / serving rebuild needed (dim_customers already serves both).
+
+**Rules:**
+1. Fact tables in this warehouse key customers by the surrogate `customer_key`, not the raw `customer_id`. To bridge to anything keyed on the natural Sapo customer_id, go through `dim_customers` (has both). Don't assume a fact table re-exposes a natural key just because it's used in its joins.
+2. Seam/mock unit tests that inject already-shaped rows do NOT validate the SQL against the real serving schema — pair them with at least one live run (or a `dbt`/DuckDB bind check) before declaring a mart-reader done. (Same failure mode as [[L134]] rule 4 and L136.)
+
+**Reference:** `crm/src/hug/voucher_redeem_matcher.py`, `transformation/models/marts/sales/fact_orders.sql`, `transformation/models/marts/core/dim_customers.sql`. Fixed 2026-06-20, commit 6da9cee.
