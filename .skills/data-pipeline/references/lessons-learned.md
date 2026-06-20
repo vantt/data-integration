@@ -4189,3 +4189,25 @@ elif filter_priority == "high":
 3. See also [[L132]] — magic number thresholds out of sync with domain constants compound this: even after fixing partial filtering, wrong thresholds would still cause empty results.
 
 **Reference:** `crm/src/adapters/inbound/web/screen_worklist.py`, `worklist_fragment.html`. Fixed 2026-06-19, commit 2dede55.
+
+---
+
+### L134 — New dbt source over an empty parquet glob reds the whole shared dbt run (cascades to unrelated jobs)
+
+**Group:** INGEST
+
+**Symptom:** After adding new dbt source/staging models for a brand-new data source (Hug: `src_hug_scan`, `src_hug_optin_event`), Dagster runs went "tùm lum": `ERROR creating sql incremental model ... src_hug_optin_event` AND `KeyError: 'model.sapo_warehouse.src_hug_optin_event'` — and the failures landed on the **Sapo** realtime/incremental jobs, which had nothing to do with the new models.
+
+**Root cause:** Two compounding issues.
+1. The new sources read `read_parquet('.../hug_raw/{name}/.../*.parquet', ...)`. The ingest had never run, so the glob matched **zero files** → DuckDB raises "No files found". Because `sapo_dbt_assets` builds the **entire dbt project** in one run, one broken source reds the shared run and every job that triggers it — including Sapo.
+2. Dagster pre-parses the dbt manifest at container startup; adding nodes without restarting `data_platform` → the new node is missing from the in-memory manifest → `KeyError` on the dbt step.
+
+**Fix:** Mirror the existing `ensure_shopee_safety_placeholder.py` pattern: a `scripts/ensure_hug_safety_placeholder.py` writes a sentinel parquet (`entity_id='_safety_placeholder'`) into each `hug_raw/{table}/ingest_method=placeholder/` path so the glob is never empty; wire it into the `data_platform` startup command (before `dbt parse`); filter the sentinel out in each `src_` model (`WHERE entity_id <> '_safety_placeholder'`). Then `docker compose up -d data_platform` (recreate) to re-parse the manifest. Verified: post-restart `pipeline_sapo_v2_incremental` RUN_SUCCESS, hug models build, clean.
+
+**Rules:**
+1. A new dbt source backed by a parquet glob MUST ship with a safety-placeholder so the glob is non-empty on day one — otherwise the shared project run breaks for *everyone*, not just the new domain. Reuse `ensure_*_safety_placeholder.py`.
+2. Adding any dbt node requires recreating `data_platform` (manifest is pre-parsed at startup, not hot-reloaded) or it KeyErrors.
+3. Because one project-wide `dbt_assets` builds all models together, a failure in a brand-new, low-traffic source has blast radius = every job. Treat new sources as production-critical from the first commit.
+4. A passing unit test that mocks the upstream contract can hide a real integration bug — when an edge enqueues `entity_type` *inside* the payload wrapper (not as a top-level column), the consumer must parse the wrapper; fixtures must mirror the real row shape exactly.
+
+**Reference:** `scripts/ensure_hug_safety_placeholder.py`, `transformation/models/staging/src_hug_*.sql`, `transformation/models/sources.yml` (hug_raw), `docker-compose.yml` (data_platform command). Fixed 2026-06-20, commits 1f1171a + 9e1a1a6.
