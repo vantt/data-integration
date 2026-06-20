@@ -52,6 +52,46 @@ def _reverse_etl_run() -> None:
     reverse_etl_warehouse_to_crm.run()
 
 
+def _hug_resolve_run() -> None:
+    """Resolve new Hug opt-in events into crm_identity_link (identity bridge).
+
+    Runs AFTER reverse_etl (so cache.wh_order_hdr is fresh for order→customer
+    lookup) and BEFORE the customer push (so newly-linked customers show as
+    contactable in the same refresh). Reads mart_hug_optin from olap.duckdb
+    (read-only) + crm.db + hug.db. Skips cleanly when olap.duckdb is absent
+    (pre-deploy) so it never aborts the refresh.
+    """
+    import os as _os
+    import pathlib
+    import sqlite3
+
+    from crm.sync.config import cache_db_path, olap_path
+    from hug import config as hug_config
+    from hug.identity_resolver import resolve_new_optins
+
+    olap = olap_path()
+    if not _os.path.exists(olap):
+        log.info("hug_resolve: olap.duckdb not found at %s — skipping (pre-deploy)", olap)
+        return
+
+    data_dir = _os.environ.get("CRM_DATA_DIR", "./data")
+    crm_db = str(pathlib.Path(data_dir) / "crm.db")
+    watermark = str(pathlib.Path(data_dir) / "hug_resolver_watermark.json")
+
+    crm_conn = sqlite3.connect(crm_db)
+    crm_conn.row_factory = sqlite3.Row
+    hug_conn = sqlite3.connect(hug_config.hug_db_path())
+    hug_conn.row_factory = sqlite3.Row
+    try:
+        # The resolver reads order→customer from cache.wh_order_hdr.
+        crm_conn.execute("ATTACH DATABASE ? AS cache", (cache_db_path(),))
+        n = resolve_new_optins(crm_conn, hug_conn, olap, watermark)
+        log.info("hug_resolve: processed %d opt-in rows", n)
+    finally:
+        crm_conn.close()
+        hug_conn.close()
+
+
 def _hug_customer_push_run() -> None:
     """Push refreshed hug_customer rows to the Cloudflare Worker edge replica.
 
@@ -103,6 +143,17 @@ def create_admin_router() -> APIRouter:
                 loop.run_in_executor(None, _reverse_etl_run),
                 timeout=_REFRESH_TIMEOUT_S,
             )
+            # Resolve new Hug opt-ins → crm_identity_link BEFORE the push, so a
+            # customer just made contactable is reflected in the same refresh.
+            # Best-effort: resolver failure must not abort the rest of the refresh.
+            log.info("admin: hug_resolve starting")
+            try:
+                await asyncio.wait_for(
+                    loop.run_in_executor(None, _hug_resolve_run),
+                    timeout=_REFRESH_TIMEOUT_S,
+                )
+            except Exception as resolve_exc:
+                log.error("admin: hug_resolve failed (non-critical): %s", resolve_exc)
             # Push hug_customer replica to edge AFTER wh_customer_tier is fresh.
             # Best-effort: a push failure must not abort the rest of the refresh.
             log.info("admin: hug_customer_push starting")
