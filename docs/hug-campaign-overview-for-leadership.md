@@ -3,6 +3,7 @@
 > Giải thích **toàn bộ chiến dịch Hug** + **kịch bản khai thác từng tập khách** bằng ngôn ngữ kinh doanh.
 > Số liệu lấy **trực tiếp từ dữ liệu sống** (`mart_customer_tier` + `fact_orders`), cập nhật 2026-06-21. Tổng ~7.565 khách.
 > Dựa trên 3 nghiên cứu sâu trong `plans/reports/`: Shopee/Tiki seller reactivation · masked-repeat economics · **margin anomalies root-cause**.
+> 📄 **Cần bản A2 đọc nhanh 1 trang?** → [`hug-a2-campaign-onepager.md`](./hug-a2-campaign-onepager.md) (one-pager tóm tắt chiến dịch A2; tài liệu này vẫn là chiến lược Hug đầy đủ).
 
 ---
 
