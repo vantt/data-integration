@@ -17,6 +17,7 @@ Stage này chứa các kế hoạch hành động đã cam kết triển khai: c
 | PLAN-001 | [B2C reactivation phases](./PLAN-001-b2c-reactivation-phases.md) | Lộ trình P0-P4 từ quick wins đến retention operating system | committed |
 | PLAN-002 | [Action flows](./PLAN-002-action-flows.md) | 5 luồng hành động, lịch tuần, offer matrix, holdout, checklist, onboarding | committed |
 | PLAN-003 | [US gift recipients](./PLAN-003-us-gift-recipients.md) | Luồng người nhận quà US; test 51 khách nóng trước khi mở rộng | pending |
+| PLAN-004 | [Dead-stock → customer targeting engine](./PLAN-004-deadstock-customer-targeting-engine.md) | Engine ghép SKU ế × khách past-purchase → outreach 2 kênh (Hug voucher + Shopee); P0 dọn noise → P1 mart match → P2 serving/routing → P3 đo+ngưỡng | committed |
 
 ## Cảnh Báo PII
 

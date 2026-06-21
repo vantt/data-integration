@@ -18,6 +18,7 @@ status: living
 | OPP-002 | [retail offline plays](./OPP-002-retail-offline-plays.md) | 7 cơ hội bán lẻ ngoài hệ thống | idea |
 | OPP-003 | [messaging core](./OPP-003-messaging-core.md) | Lõi thông điệp → adapter kênh; ads gác lại | idea |
 | OPP-004 | [data backlog](./OPP-004-data-backlog.md) | Data opportunities: dùng ngay / build nhỏ / build lớn | idea |
+| OPP-005 | [dead-stock customer targeting engine](./OPP-005-deadstock-customer-targeting-engine.md) | Engine ghép SKU ế/slow → khách xếp hạng (match key = SKU past-purchase); owner-call build full | idea |
 | TEMPLATE | [_TEMPLATE-OPP-opportunity](./_TEMPLATE-OPP-opportunity.md) | Scaffold mở cho opportunity mới | template |
 
 ## Opportunity Index
@@ -31,6 +32,7 @@ Các nhóm đang đáng chú ý nhất:
 | Gateway SKU + catalog kênh nhà | [FIND-005](../02-understand/FIND-005-product-performance-assessment.md), [FIND-007](../02-understand/FIND-007-fresh-scan-data-market.md) | PLAN |
 | Message Core → telesales/listing/ads deferred | [OPP-003](./OPP-003-messaging-core.md) | PLAN / copy |
 | Data gaps: payment, return_reason, contactable, US gift recipient | [OPP-004](./OPP-004-data-backlog.md) | 02 / 05 |
+| Dead-stock → customer targeting engine (SKU past-purchase match) | [FIND-008](../02-understand/FIND-008-deadstock-customer-targeting-granularity.md) | PLAN |
 
 ## Cách Thêm Cơ Hội Mới
 

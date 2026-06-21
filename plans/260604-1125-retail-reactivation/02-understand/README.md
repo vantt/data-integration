@@ -28,6 +28,7 @@ Mục đích: hiểu vấn đề bằng số thật, field evidence, caveat và 
 | FIND-005 | [product performance assessment](./FIND-005-product-performance-assessment.md) | Không cần pipeline product lớn; portfolio là sức khỏe người lớn tuổi; retention theo sản phẩm |
 | FIND-006 | [margin activation signals](./FIND-006-margin-activation-signals.md) | Margin thật, delivery, activation signals refresh 2026-06-11 |
 | FIND-007 | [fresh scan data market](./FIND-007-fresh-scan-data-market.md) | Fresh scan 2026-06-13: data nội bộ + thị trường + 4 mâu thuẫn cần chốt |
+| FIND-008 | [dead-stock customer targeting granularity](./FIND-008-deadstock-customer-targeting-granularity.md) | Probe 2026-06-20: chỉ SKU past-purchase có precision; cây cầu product→customer đang thiếu → OPP-005 |
 
 ## Investigations / Questions Đang Mở
 

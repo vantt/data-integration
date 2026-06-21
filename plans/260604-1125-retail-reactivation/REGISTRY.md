@@ -2,7 +2,7 @@
 title: "REG-000 — Workflow Registry"
 status: living
 role: registry
-updated: 2026-06-15
+updated: 2026-06-21
 ---
 
 # REG-000 — Workflow Registry
@@ -25,6 +25,7 @@ Registry là index cross-stage để thấy mỗi item xuất phát từ đâu v
 | <a id="find-005"></a>FIND-005 | finding | 02 | Product performance assessment | resolved | 4-agent assessment | OPP / PLAN | [FIND-005](./02-understand/FIND-005-product-performance-assessment.md) |
 | <a id="find-006"></a>FIND-006 | finding | 02 | Margin and activation signals | resolved | refresh 2026-06-11 | OPP / PLAN | [FIND-006](./02-understand/FIND-006-margin-activation-signals.md) |
 | <a id="find-007"></a>FIND-007 | finding | 02 | Fresh scan data + market | resolved | 6-agent scan 2026-06-13 | DEC / OPP / PLAN | [FIND-007](./02-understand/FIND-007-fresh-scan-data-market.md) |
+| <a id="find-008"></a>FIND-008 | finding | 02 | Dead-stock → customer targeting + match granularity | resolved | data-probe 2026-06-20 | OPP-005 | [FIND-008](./02-understand/FIND-008-deadstock-customer-targeting-granularity.md) |
 | <a id="inv-001"></a>INV-001 | investigation | 02 | Cashflow collection AR | blocked | FIND-004 | DEC / OPP-004 | [INV-001](./02-understand/INV-001-cashflow-collection-ar.md) |
 | <a id="inv-002"></a>INV-002 | investigation | 02 | Demand migration recon | mostly-resolved | PERS-001 | DEC / OPP | [INV-002](./02-understand/INV-002-demand-migration-recon.md) |
 | <a id="inv-003"></a>INV-003 | investigation | 02 | VOC customer interviews | open | DEC-001 focus retail | FIND / OPP | [INV-003](./02-understand/INV-003-voc-customer-interviews.md) |
@@ -37,9 +38,11 @@ Registry là index cross-stage để thấy mỗi item xuất phát từ đâu v
 | <a id="opp-002"></a>OPP-002 | opportunity | 04 | Retail offline plays | idea | PERS-002 | PLAN | [OPP-002](./04-opportunities/OPP-002-retail-offline-plays.md) |
 | <a id="opp-003"></a>OPP-003 | opportunity | 04 | Messaging core | idea | PERS-002 / DEC-001 | PLAN | [OPP-003](./04-opportunities/OPP-003-messaging-core.md) |
 | <a id="opp-004"></a>OPP-004 | opportunity | 04 | Data backlog | idea | FIND / Q | INV / PLAN | [OPP-004](./04-opportunities/OPP-004-data-backlog.md) |
+| <a id="opp-005"></a>OPP-005 | opportunity | 04 | Dead-stock → customer targeting engine | built | FIND-008 | PLAN-004 | [OPP-005](./04-opportunities/OPP-005-deadstock-customer-targeting-engine.md) |
 | <a id="plan-001"></a>PLAN-001 | action_plan | 05 | B2C reactivation phases | committed | DEC-001 / OPP | EXEC | [PLAN-001](./05-action-plans/PLAN-001-b2c-reactivation-phases.md) |
 | <a id="plan-002"></a>PLAN-002 | action_plan | 05 | Action flows | committed | PLAN-001 | EXEC | [PLAN-002](./05-action-plans/PLAN-002-action-flows.md) |
 | <a id="plan-003"></a>PLAN-003 | action_plan | 05 | US gift recipients | pending | OPP / archive §6 | EXEC / FIND | [PLAN-003](./05-action-plans/PLAN-003-us-gift-recipients.md) |
+| <a id="plan-004"></a>PLAN-004 | action_plan | 05 | Dead-stock → customer targeting engine | in-progress (P0/P1/P2 data path deployed 2026-06-21; Hug/Shopee activation pending) | OPP-005 | EXEC | [PLAN-004](./05-action-plans/PLAN-004-deadstock-customer-targeting-engine.md) |
 | <a id="exec-001"></a>EXEC-001 | execution | 06 | Execute board: KPI, log, dashboard | tracking | PLAN | FIND / DEC / PLAN update | [EXEC-001](./06-execute/README.md) |
 | <a id="exec-board"></a>EXEC-BOARD | operating_board | 06 | Operating board | living | all stages | weekly execution management | [EXEC-BOARD](./06-execute/operating-board.md) |
 

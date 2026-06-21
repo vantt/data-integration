@@ -4,7 +4,7 @@ stage: 6
 status: living
 role: operating-board
 source: ../NAVIGATION.md; ../REGISTRY.md; stage README files
-updated: 2026-06-15
+updated: 2026-06-21
 ---
 
 # EXEC-BOARD - Operating Board
@@ -42,6 +42,7 @@ File này dùng để quản lý danh mục làm việc sau khi người đọc 
 | OPP-004 | Payment/contactability/data backlog | 04 | idea | Data owner | Promote only blockers needed for active work |
 | OPP-003 | Messaging core | 04 | idea | Marketing/CSKH | Adapt after VOC/product truth |
 | PLAN-003 | US gift recipients | 05 | pending | Sales/CSKH | Test 51 hot recipients if capacity exists |
+| PLAN-004 | Dead-stock → customer targeting engine | 05→06 | P0/P1/P2 DEPLOYED (data path) · Hug/Shopee activation pending | Marketing (Hug voucher config) + Ops (Shopee) + Data (brand_code fix) | LIVE 2026-06-21: mart 498 rows/4 FJV SKU/414 khách, 17 dbt test PASS, cache.db sync OK. Next: (1) fix 4 SKU NULL-brand_code 6.85M (owner); (2) activate Hug "deadstock-resell" (voucher min-order+SKU-guard + dest URL); (3) tune holdout 23.5%→~20%; (4) verify Shopee quota VN |
 
 ## Stage Health
 
