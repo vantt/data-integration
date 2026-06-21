@@ -1348,9 +1348,10 @@ models:
         tests: [not_null]
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - product_key
-            - customer_key
+          arguments:
+            combination_of_columns:
+              - product_key
+              - customer_key
 
   - name: int_customer_entry_attributes
     description: "One row per retail customer — entry-point attributes derived from their first order. Source for mart_cohort_retention cohort axis assignment."
