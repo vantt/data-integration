@@ -206,5 +206,13 @@ Hạ tầng QR (`hug.fjp.vn`) · sinh & in tem cuộn · trạm gắn tem · tra
 3. Phối hợp kho **phủ tem mọi đơn masked**.
 4. Theo dõi ROI ở `/hug/vouchers`, mở rộng theo dữ liệu.
 
-> **Khuyến nghị bước đi:** chạy **PILOT có holdout** (Hug A2 trên Vùng 1 Bucket C+ · test Shopee broadcast trên 1 lát Vùng 2) ~2–4 tuần để học opt-in/redeem/R thật, rồi mới scale. Chi tiết: xem **kế hoạch pilot** trong `plans/`.
+### Khuyến nghị bước đi — PILOT có holdout (~2–4 tuần) trước khi scale
+| Arm | Tệp | Treat/Control | Đo gì | Cửa đọc |
+|---|---|---|---|---|
+| **A — Hug tem** | Vùng 1 active (AOV≥1M, loại B2B) | ~40 / ~22 | opt-in + mua-lại | 60–90 ngày |
+| **B — Shopee broadcast** | Vùng 2 dormant ≤720d | ~130 / ~70 | reactivation **R** (định hướng) | 120–180 ngày |
+
+Mỗi arm 1 mã riêng; loại tài khoản zero-net-revenue khỏi tính toán. **Cổng:** đạt ngưỡng opt-in/redeem/R → scale; không → chỉnh hoặc dừng. Mục tiêu: chi tiền nhỏ để **học con số thật** thay vì đoán.
+
+*(Backing kỹ thuật — tùy chọn, không cần để nắm chiến lược: `plans/260620-2357-hug-a2-pilot-holdout/`, `plans/260620-1408-crm-hug-voucher-a2-golive/`, `plans/reports/`.)*
 </content>

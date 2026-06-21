@@ -54,19 +54,18 @@ Phễu: **phủ tem → quét → opt-in (tỷ-lệ-thoát-mask) → mua lại �
 ## 10. Quyết định còn chờ chốt
 Offer (50K vs %/quà bậc) · xác nhận Shopee broadcast VN · kho phân biệt tem theo khách (cho control) · bật holdout · *(rộng hơn Hug)* sửa lỗi dữ liệu export/zero-revenue ~23,7 tỷ.
 
+## 11. Pilot — đo trước khi scale (~2–4 tuần)
+| Arm | Tệp | Treat/Control | Đo gì | Đọc |
+|---|---|---|---|---|
+| **A — Hug tem** | Vùng 1 active (AOV≥1M, loại B2B) | ~40 / ~22 | opt-in + mua-lại | 60–90 ngày |
+| **B — Shopee broadcast** | Vùng 2 dormant ≤720d | ~130 / ~70 | reactivation **R** (định hướng) | 120–180 ngày |
+
+- Mỗi arm **1 mã riêng**; loại tài khoản zero-net-revenue khỏi mọi phép tính.
+- **Cổng quyết định:** opt-in / redeem / R đạt ngưỡng → scale; không đạt → chỉnh offer/landing hoặc dừng.
+- Bản chất: chi tiền nhỏ để **học con số thật** (opt-in, redeem, R) thay vì đoán.
+
 ---
 
-## Nguồn chi tiết (canonical — one-pager này chỉ tóm tắt, KHÔNG thay thế)
-
-| Chủ đề | File |
-|---|---|
-| Chiến lược Hug tổng + 3 vùng + kinh tế + quyết định | [`hug-campaign-overview-for-leadership.md`](./hug-campaign-overview-for-leadership.md) |
-| Thiết kế gốc + luồng "Chị Lan" §12 + build-order M5 | `plans/260619-1030-crm-nba-resell-engine/discussion-hug.md`, `build-order.md` |
-| Runbook go-live A2 (B0 Sapo, config-row, smoke test) | `plans/260620-1408-crm-hug-voucher-a2-golive/phase-05-a2-golive-runbook.md` |
-| Cơ chế voucher issue/redeem (code) | `plans/260620-1408-crm-hug-voucher-a2-golive/` |
-| Campaign admin UI (`/hug/campaigns`) | `plans/260620-1148-crm-hug-campaign-admin-ui/` |
-| Kế hoạch PILOT + holdout + đo lường | `plans/260620-2357-hug-a2-pilot-holdout/` |
-| Nghiên cứu nền (Shopee reactivation · economics · margin anomalies) | `plans/reports/*shopee-tiki*`, `*masked-repeat-economics*`, `*margin-anomalies*` |
-
-> Lưu ý: one-pager là **bản gom đọc nhanh**; mọi chi tiết/cập nhật sâu vẫn ở các file nguồn trên (không bị di chuyển/xoá).
+> 📎 *Tài liệu kỹ thuật/backing (TÙY CHỌN — one-pager này đã đủ để nắm + hành động, không cần mở):*
+> chiến lược tổng `hug-campaign-overview-for-leadership.md` · go-live runbook & code `plans/260620-1408-crm-hug-voucher-a2-golive/` · campaign UI `plans/260620-1148-crm-hug-campaign-admin-ui/` · pilot đầy đủ `plans/260620-2357-hug-a2-pilot-holdout/` · nghiên cứu nền `plans/reports/`.
 </content>
