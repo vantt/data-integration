@@ -52,7 +52,7 @@ Nếu party có `crm_note.note_type='contact_pref'` và `pinned=true` → banner
 │  📋 Task: "Follow-up sau cuộc gọi"                                │
 │                                                                    │
 │  HÌNH THỨC *                                                       │
-│  [● Cuộc gọi] [Zalo] [Facebook] [Email] [Viếng thăm] [Khác]     │
+│  [📞 Cuộc gọi                                              ▾]    │
 │                                                                    │
 │  SỐ ĐIỆN THOẠI  (section động theo hình thức)                     │
 │  [● 0901234567 (chính)]  [Dùng số khác]                           │
@@ -170,12 +170,12 @@ interactions:
     action: mutate
     effects: [activity_or_note.save, modal.close, ui.toast.show, timeline_or_notes.reload]
   - id: A-M08-004
-    element: hinh_thuc_pills
+    element: hinh_thuc_select
     region: body
-    trigger: click
+    trigger: change
     guard: "mode == 'log'"
     action: mutate
-    effects: [channel_section.show_active, outcome_pills.rebuild, callback_sec.hide, body_placeholder.update]
+    effects: [select_trigger.update_icon_label, channel_section.show_active, outcome_pills.rebuild, callback_sec.hide, body_placeholder.update]
   - id: A-M08-005
     element: outcome_pills
     region: body

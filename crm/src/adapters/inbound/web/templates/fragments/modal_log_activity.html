@@ -147,29 +147,36 @@
         <input type="hidden" name="channel_value" id="m08-chan-val" value="">
         <input type="hidden" name="outcome" id="m08-out" value="">
 
-        {# Step 1 — HÌNH THỨC #}
+        {# Step 1 — HÌNH THỨC (custom select with icon) #}
         <div class="field">
           <span class="field__label">HÌNH THỨC<span class="field__req"> *</span></span>
-          <div class="radioset" id="m08-ht-set">
-            <label class="radio-pill radio-pill--on" onclick="m08OnHinhThuc('call',this)">
-              {% include "icons/phone.svg" %} Cuộc gọi
-            </label>
-            <label class="radio-pill" onclick="m08OnHinhThuc('zalo',this)">
-              {% include "icons/chat.svg" %} Zalo
-            </label>
-            <label class="radio-pill" onclick="m08OnHinhThuc('fb',this)">
-              {% include "icons/facebook.svg" %} Facebook
-            </label>
-            <label class="radio-pill" onclick="m08OnHinhThuc('email',this)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.3" y="3.5" width="11.4" height="9" rx="1.4"/><path d="M2.6 4.3 8 8.4l5.4-4.1"/></svg> Email
-            </label>
-            <label class="radio-pill" onclick="m08OnHinhThuc('visit',this)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14s4.3-4.1 4.3-7.2A4.3 4.3 0 0 0 8 2.5a4.3 4.3 0 0 0-4.3 4.3C3.7 9.9 8 14 8 14z"/><circle cx="8" cy="6.7" r="1.5"/></svg> Viếng thăm
-            </label>
-            <label class="radio-pill" onclick="m08OnHinhThuc('other',this)">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="4" cy="8" r=".9"/><circle cx="8" cy="8" r=".9"/><circle cx="12" cy="8" r=".9"/></svg> Khác
-            </label>
-          </div>
+          <details class="m08-ht-sel" id="m08-ht-sel">
+            <summary class="m08-ht-sel__trigger">
+              <span class="m08-ht-sel__ico" id="m08-ht-ico">{% include "icons/phone.svg" %}</span>
+              <span class="m08-ht-sel__lbl" id="m08-ht-lbl">Cuộc gọi</span>
+              <span class="m08-ht-sel__chev">{% include "icons/chevdown.svg" %}</span>
+            </summary>
+            <div class="m08-ht-sel__list">
+              <button type="button" class="m08-ht-sel__opt m08-ht-sel__opt--on" data-ht="call" data-lbl="Cuộc gọi" onclick="m08PickHT(this)">
+                <span class="m08-ht-sel__ico">{% include "icons/phone.svg" %}</span> Cuộc gọi
+              </button>
+              <button type="button" class="m08-ht-sel__opt" data-ht="zalo" data-lbl="Zalo" onclick="m08PickHT(this)">
+                <span class="m08-ht-sel__ico">{% include "icons/zalo.svg" %}</span> Zalo
+              </button>
+              <button type="button" class="m08-ht-sel__opt" data-ht="fb" data-lbl="Facebook" onclick="m08PickHT(this)">
+                <span class="m08-ht-sel__ico">{% include "icons/facebook.svg" %}</span> Facebook
+              </button>
+              <button type="button" class="m08-ht-sel__opt" data-ht="email" data-lbl="Email" onclick="m08PickHT(this)">
+                <span class="m08-ht-sel__ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.3" y="3.5" width="11.4" height="9" rx="1.4"/><path d="M2.6 4.3 8 8.4l5.4-4.1"/></svg></span> Email
+              </button>
+              <button type="button" class="m08-ht-sel__opt" data-ht="visit" data-lbl="Viếng thăm" onclick="m08PickHT(this)">
+                <span class="m08-ht-sel__ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 14s4.3-4.1 4.3-7.2A4.3 4.3 0 0 0 8 2.5a4.3 4.3 0 0 0-4.3 4.3C3.7 9.9 8 14 8 14z"/><circle cx="8" cy="6.7" r="1.5"/></svg></span> Viếng thăm
+              </button>
+              <button type="button" class="m08-ht-sel__opt" data-ht="other" data-lbl="Khác" onclick="m08PickHT(this)">
+                <span class="m08-ht-sel__ico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="4" cy="8" r=".9"/><circle cx="8" cy="8" r=".9"/><circle cx="12" cy="8" r=".9"/></svg></span> Khác
+              </button>
+            </div>
+          </details>
         </div>
 
         {# Step 2 — KÊNH CỤ THỂ (one section per ht; JS shows active one) #}
@@ -463,12 +470,22 @@
     document.getElementById('m08-chan-val').value = '';
   }
 
+  /* ── HT picker (updates trigger display + fires HT change) ── */
+  window.m08PickHT = function(btn) {
+    var val = btn.dataset.ht;
+    var ico = btn.querySelector('.m08-ht-sel__ico');
+    document.getElementById('m08-ht-lbl').textContent = btn.dataset.lbl;
+    if (ico) document.getElementById('m08-ht-ico').innerHTML = ico.innerHTML;
+    document.querySelectorAll('#m08-ht-sel .m08-ht-sel__opt').forEach(function(o) { o.classList.remove('m08-ht-sel__opt--on'); });
+    btn.classList.add('m08-ht-sel__opt--on');
+    document.getElementById('m08-ht-sel').removeAttribute('open');
+    m08OnHinhThuc(val);
+  };
+
   /* ── HT change ────────────────────────────────────────── */
-  window.m08OnHinhThuc = function(val, pill) {
+  window.m08OnHinhThuc = function(val) {
     m08CurHT = val; m08CurOut = null;
     document.getElementById('m08-ht').value = val;
-    document.querySelectorAll('#m08-ht-set .radio-pill').forEach(function(p) { p.classList.remove('radio-pill--on'); });
-    if (pill) pill.classList.add('radio-pill--on');
     document.querySelectorAll('[data-chan-sec]').forEach(function(s) { s.style.display='none'; });
     if (val !== 'visit' && val !== 'other') {
       var sec = document.querySelector('[data-chan-sec="'+val+'"]');
@@ -588,10 +605,16 @@
     if (el) el.value = dateStr;
   };
 
+  /* ── Close HT select on outside click ────────────────── */
+  document.addEventListener('click', function(e) {
+    var sel = document.getElementById('m08-ht-sel');
+    if (sel && !sel.contains(e.target)) sel.removeAttribute('open');
+  });
+
   /* ── Init ─────────────────────────────────────────────── */
   (function() {
-    var firstPill = document.querySelector('#m08-ht-set .radio-pill');
-    if (firstPill) m08OnHinhThuc('call', firstPill);
+    var firstOpt = document.querySelector('#m08-ht-sel .m08-ht-sel__opt');
+    if (firstOpt) m08PickHT(firstOpt);
   })();
 })();
 {% endif %}

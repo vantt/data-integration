@@ -332,6 +332,18 @@
 /* ── Button size variant ─────────────────────────────────── */
 .btn--xs { padding: 5px 10px; font-size: 12px; }
 
+/* ── M08 Hình Thức custom select ────────────────────────── */
+.m08-ht-sel { position: relative; }
+.m08-ht-sel > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 0 10px; height: 36px; background: var(--bg-surface); border: 1px solid var(--border-strong); border-radius: var(--radii-control); cursor: pointer; color: var(--fg-1); font-size: 13.5px; }
+.m08-ht-sel > summary::-webkit-details-marker { display: none; }
+.m08-ht-sel__chev { margin-left: auto; opacity: .55; display: flex; align-items: center; }
+.m08-ht-sel__ico { flex: none; display: flex; align-items: center; }
+.m08-ht-sel__list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 60; background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--radii-control); box-shadow: 0 4px 16px rgba(0,0,0,.12); overflow: hidden; }
+.m08-ht-sel__opt { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 9px 14px; background: transparent; border: 0; color: var(--fg-1); font-size: 13.5px; cursor: pointer; }
+.m08-ht-sel__opt:hover { background: var(--bg-surface); }
+.m08-ht-sel__opt--on { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.m08-ht-sel__opt--on:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+
 @media (max-width: 1000px) {
   .dedup-grid, .inbox-grid, .conv-detail, .builder-grid, .ads-grid, .settings-grid { grid-template-columns: 1fr; }
   .board { grid-template-columns: repeat(2, 1fr); }
