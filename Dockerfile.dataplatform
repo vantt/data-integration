@@ -17,6 +17,11 @@ COPY webhook_consumer/cloudflared1_consumer/requirements.txt /app/webhook_consum
 RUN pip install --no-cache-dir -r ingestion/requirements.txt
 RUN pip install --no-cache-dir -r webhook_consumer/cloudflared1_consumer/requirements.txt
 
+# dlt 1.25.0 bug: create_dataset() calls makedirs without exist_ok=True, crashing when
+# the dataset directory already exists on second+ runs. Patch until dlt fixes upstream.
+RUN sed -i 's/self\.fs_client\.makedirs(self\.dataset_path)$/self.fs_client.makedirs(self.dataset_path, exist_ok=True)/' \
+    /usr/local/lib/python3.10/site-packages/dlt/destinations/impl/filesystem/filesystem.py
+
 # Install Playwright browsers and dependencies
 # We use --with-deps to install system dependencies (requires apt-get)
 # We limit to chromium to save space, remove "chromium" to install all
