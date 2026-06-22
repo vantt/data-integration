@@ -14,8 +14,8 @@ regions: [body, actions]
 
 ## Purpose
 
-Popover nhỏ anchor-positioned (gần element kích hoạt) cho phép NV đổi `due_at` của một task
-mà không cần mở full M05. Pre-populate date + time từ `task.due_at` hiện tại (ICT display).
+Modal nhỏ (`modal--sm`) cho phép NV đổi `due_at` của một task mà không cần mở full M05.
+Pre-populate date + time từ `task.due_at` hiện tại (ICT display). Mở qua `#modal-root` (cùng pattern với các modal khác), không phải anchor-positioned.
 
 ## Layout
 
