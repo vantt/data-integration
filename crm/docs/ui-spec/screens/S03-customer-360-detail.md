@@ -69,7 +69,7 @@ Target: point-lookup ≤ 200ms (view `crm_party_360`). `refreshed_at` hiển th�
 - **sapo-code**: `wh_customer_base.customer_code`
 - **sex**: `party.gender`
 - **owner**: `party.owner_user_id`
-- **consent**: `party.consent_contact` → icon ✓ "Cho phép liên lạc" hoặc ✕ "Không liên lạc (R1)"
+- **consent**: `party.consent_contact` → ✓ "Cho phép liên lạc" / ✕ "Không liên lạc (R1)" / — "N/A" (default, chưa xác nhận)
 - [✎] → M15 (tab: core)
 
 ### Head Line

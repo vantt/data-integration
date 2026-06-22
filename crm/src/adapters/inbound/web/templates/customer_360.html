@@ -147,6 +147,27 @@
       </div>
     </div>
 
+    {# Tags — A-S03-017 (M03) #}
+    <div class="scard">
+      <div class="row-between" style="margin-bottom:var(--sp-3)">
+        <span class="caption">Tags</span>
+        <button class="ghost-link"
+                hx-get="/modals/m03?party_id={{ party.party_id }}"
+                hx-target="#modal-root" hx-swap="innerHTML">
+          {% include "icons/edit.svg" %} Sửa
+        </button>
+      </div>
+      {% if party.tags %}
+      <div class="chips">
+        {% for tag in party.tags %}
+        <span class="chip">{{ tag.display_label or tag.name }}</span>
+        {% endfor %}
+      </div>
+      {% else %}
+      <span class="muted" style="font-size:13px">Chưa có tag</span>
+      {% endif %}
+    </div>
+
     {# Liên Lạc — channels + address merged block — A-S03-013 / A-S03-014 / A-S03-016 #}
     <div class="scard">
       <div class="row-between" style="margin-bottom:var(--sp-3)">
@@ -272,27 +293,6 @@
           <span class="fact__v mono">{{ first_date | days_since if first_date else "—" }}</span>
         </div>
       </div>
-    </div>
-
-    {# Tags — A-S03-017 (M03) #}
-    <div class="scard">
-      <div class="row-between" style="margin-bottom:var(--sp-3)">
-        <span class="caption">Tags</span>
-        <button class="ghost-link"
-                hx-get="/modals/m03?party_id={{ party.party_id }}"
-                hx-target="#modal-root" hx-swap="innerHTML">
-          {% include "icons/edit.svg" %} Sửa
-        </button>
-      </div>
-      {% if party.tags %}
-      <div class="chips">
-        {% for tag in party.tags %}
-        <span class="chip">{{ tag.display_label or tag.name }}</span>
-        {% endfor %}
-      </div>
-      {% else %}
-      <span class="muted" style="font-size:13px">Chưa có tag</span>
-      {% endif %}
     </div>
 
   </aside>

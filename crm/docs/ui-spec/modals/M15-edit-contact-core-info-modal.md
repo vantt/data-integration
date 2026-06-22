@@ -79,14 +79,14 @@ Mở từ S03 sidebar với tab được preselect theo button clicked (A-S03-01
 │  Email           [email@domain.com________]      │
 │  Ngày sinh       [dd/mm/yyyy]                    │
 │  Giới tính       [Nam ▼]  -- Nam / Nữ / Khác    │
-│  Đồng ý LH       [● Cho phép  ○ Không liên lạc] │
+│  Đồng ý LH       [● N/A  ○ Cho phép  ○ Không cho phép] │
 ├───────────────────────────────────────────────────┤
 │  [Hủy]                                  [Lưu]   │
 └───────────────────────────────────────────────────┘
 ```
 
 - `Giới tính` maps to `party.gender`; options: `male`, `female`, `other`, `unknown`
-- `Đồng ý LH` maps to `party.consent_contact` (boolean); unchecked = R1 rule enforced
+- `Đồng ý LH` maps to `party.consent_contact` (enum: `na` default / `allowed` / `denied`); `denied` = R1 rule enforced; `na` = chưa xác nhận, không bị R1 gating nhưng không được chủ động outreach
 
 ## Business Rules
 
