@@ -1,16 +1,33 @@
 {# @surface P04 · Tasks Panel | @source crm/docs/ui-spec/panels/P04-tasks-panel.md | @kind PANEL #}
 {# HTMX fragment for /customers/{party_id}/panel?panel=tasks[&filter=open|all]
-   Data: party_id (str), tasks (list[Task]), filter (str, default "open")
-   A-P04-001: btn_create_task   → hx-get /modals/m05?party_id=…   → #modal-root
-   A-P04-002: task_checkbox     → hx-patch /tasks/{id}/done        → #task-{id} outerHTML
-   A-P04-003: task_row_edit     → hx-get /modals/m05?task_id=…    → #modal-root
-   A-P04-004: filter_status     → hx-get /customers/{id}/panel?panel=tasks&filter=…
+   Data: party_id (str), tasks (list[Task]), filter (str), user_map (dict), now_utc (str)
+   A-P04-001: btn_create_task → hx-get /modals/m05?party_id=…               → #modal-root
+   A-P04-002: btn_log        → hx-get /modals/m08?…&task_id=…              → #modal-root
+   A-P04-003: btn_done_quick → hx-patch /customers/{pid}/tasks/{id}/done    → #c360-tasks-root outerHTML
+   A-P04-004: menu_edit      → hx-get /modals/m05?task_id=…                → #modal-root
+   A-P04-005: menu_postpone  → hx-get /modals/o03?…                        → #modal-root
+   A-P04-006: menu_cancel    → hx-patch /customers/{pid}/tasks/{id}/cancel  → #c360-tasks-root outerHTML
+   A-P04-007: filter_status  → hx-get panel?panel=tasks&filter=…           → #c360-tasks-root outerHTML
 #}
 {% set filter = filter | default('open') %}
+{% set now_utc = now_utc | default('') %}
+{% set party_name = party_name | default('') %}
+
+{# Classify tasks: derive overdue flag + sort order #}
+{% set ns = namespace(active=[], done_cancelled=[]) %}
+{% for t in tasks %}
+  {% set is_terminal = t.status in ('done', 'cancelled') %}
+  {% if is_terminal %}
+    {% set ns.done_cancelled = ns.done_cancelled + [t] %}
+  {% elif filter == 'open' or filter == 'all' %}
+    {% set ns.active = ns.active + [t] %}
+  {% endif %}
+{% endfor %}
+
 {% if filter == 'open' %}
-  {% set visible_tasks = tasks | rejectattr('status', 'in', ['done', 'cancelled']) | list %}
+  {% set visible_tasks = ns.active %}
 {% else %}
-  {% set visible_tasks = tasks %}
+  {% set visible_tasks = ns.active + ns.done_cancelled %}
 {% endif %}
 
 <div class="stack stack-4" id="c360-tasks-root">
@@ -20,13 +37,14 @@
     <span class="panel-title">Tasks</span>
     <div class="flex-wrap">
 
-      {# A-P04-004: filter select — HTMX includes name=filter as query param on change #}
+      {# A-P04-007: filter select #}
       <div class="fsel">
         <div class="fsel__label caption">Trạng thái</div>
         <div class="fsel__field">
           <select name="filter"
                   hx-get="/customers/{{ party_id }}/panel?panel=tasks"
-                  hx-trigger="change" hx-target="#c360-tasks-root" hx-swap="outerHTML">
+                  hx-trigger="change" hx-include="[name='filter']"
+                  hx-target="#c360-tasks-root" hx-swap="outerHTML">
             <option value="open" {% if filter == 'open' %}selected{% endif %}>Đang mở</option>
             <option value="all"  {% if filter == 'all'  %}selected{% endif %}>Tất cả</option>
           </select>
@@ -34,7 +52,7 @@
         </div>
       </div>
 
-      {# A-P04-001: tạo task → M05 #}
+      {# A-P04-001: create task → M05 #}
       <button class="btn btn--secondary" style="padding:8px 12px"
               hx-get="/modals/m05?party_id={{ party_id }}"
               hx-target="#modal-root" hx-swap="innerHTML">
@@ -44,13 +62,18 @@
     </div>
   </div>
 
-  {# ── Empty state ──────────────────────────────────────── #}
+  {# ── Empty states ─────────────────────────────────────── #}
   {% if not visible_tasks %}
   <div class="state">
     <div class="state__inner">
       <div class="state__icon">{% include "icons/tasks.svg" %}</div>
-      <div class="state__title">Không có task nào</div>
-      <p class="state__sub">Tạo follow-up task cho khách này.</p>
+      {% if filter == 'open' %}
+      <div class="state__title">Không có task nào đang mở.</div>
+      <p class="state__sub">Tạo follow-up task hoặc xem tất cả task.</p>
+      {% else %}
+      <div class="state__title">Chưa có task nào.</div>
+      <p class="state__sub">Tạo task đầu tiên cho khách này.</p>
+      {% endif %}
     </div>
   </div>
 
@@ -58,54 +81,134 @@
   {# ── Task list ─────────────────────────────────────────── #}
   <div class="wl-list">
     {% for t in visible_tasks %}
+
+    {# Derive display state #}
+    {% set is_terminal = t.status in ('done', 'cancelled') %}
+    {% set is_overdue = (not is_terminal) and t.due_at and now_utc and (t.due_at < now_utc) %}
+    {% set is_auto = t.source == 'action_queue' %}
+
     {% if t.priority >= 2 %}{% set prio_label = 'P1' %}
     {% elif t.priority == 1 %}{% set prio_label = 'P2' %}
     {% else %}{% set prio_label = 'P3' %}{% endif %}
-    {% set is_done = t.status in ('done', 'cancelled') %}
 
-    <div class="wl-row{% if is_done %} wl-row--done{% endif %}" id="task-{{ t.task_id }}">
+    {# Status indicator color #}
+    {% if is_terminal %}{% set ind_cls = 'task-ind task-ind--done' %}
+    {% elif is_overdue %}{% set ind_cls = 'task-ind task-ind--overdue' %}
+    {% elif t.status == 'doing' %}{% set ind_cls = 'task-ind task-ind--doing' %}
+    {% else %}{% set ind_cls = 'task-ind task-ind--open' %}{% endif %}
 
-      {# A-P04-002: checkbox → mark done #}
-      <button class="wl-check{% if is_done %} wl-check--on{% endif %}" type="button"
-              aria-label="Đánh dấu hoàn thành"
-              hx-patch="/tasks/{{ t.task_id }}/done"
-              hx-target="#task-{{ t.task_id }}" hx-swap="outerHTML">
-        {% if is_done %}{% include "icons/check.svg" %}{% endif %}
-      </button>
+    <div class="wl-row{% if is_terminal %} wl-row--done{% endif %}" id="task-{{ t.task_id }}"
+         style="grid-template-columns:auto 1fr;cursor:default">
+
+      {# Status indicator dot #}
+      <span class="{{ ind_cls }}" aria-hidden="true">
+        {% if t.status == 'done' %}
+        <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M2 6l3 3 5-5"/>
+        </svg>
+        {% endif %}
+      </span>
 
       <div class="wl-row__main">
+        {# Line 1: AUTO badge · title · priority · assignee #}
         <div class="wl-row__top">
-          {% if t.source == 'action_queue' %}<span class="auto-tag">AUTO</span>{% endif %}
-          <span class="wl-row__name" style="cursor:default">{{ t.title }}</span>
-        </div>
-        <div class="wl-row__meta">
-          {% if is_done and t.completed_at %}
-          <span class="wl-row__due">{% include "icons/clock.svg" %} Done: {{ t.completed_at | format_ict }}</span>
-          {% elif t.due_at %}
-          <span class="wl-row__due">{% include "icons/clock.svg" %} Due: {{ t.due_at | format_ict }}</span>
-          {% endif %}
+          {% if is_auto %}<span class="auto-tag">AUTO</span>{% endif %}
+          <span class="wl-row__name{% if is_terminal %} muted{% endif %}" style="cursor:default">{{ t.title }}</span>
           {% if t.priority > 0 %}
-          <span class="prio prio--{{ prio_label }}">{{ prio_label }}</span>
+          <span class="prio prio--{{ prio_label }}" style="margin-left:auto">{{ prio_label }}</span>
           {% endif %}
           {% if t.assignee_user_id %}
           <span class="muted" style="font-size:11px">{{ user_map.get(t.assignee_user_id, t.assignee_user_id) }}</span>
           {% endif %}
         </div>
-        {% if t.description %}
-        <div class="wl-row__desc muted" style="font-size:12px;margin-top:2px;white-space:pre-wrap">{{ t.description }}</div>
+
+        {# Line 2: due/overdue label · snippet #}
+        <div class="wl-row__meta">
+          {% if t.status == 'done' and t.completed_at %}
+          <span class="wl-row__due muted">{% include "icons/check.svg" %} Done: {{ t.completed_at | format_ict }}</span>
+          {% elif t.status == 'cancelled' %}
+          <span class="wl-row__due muted">Đã huỷ</span>
+          {% elif is_overdue %}
+          <span class="wl-row__due" style="color:var(--coral-500)">{% include "icons/clock.svg" %} Quá hạn: {{ t.due_at | format_ict }}</span>
+          {% elif t.due_at %}
+          <span class="wl-row__due">{% include "icons/clock.svg" %}
+            {% if t.due_at[:10] == now_utc[:10] %}Hôm nay{% else %}{{ t.due_at | format_ict }}{% endif %}
+          </span>
+          {% endif %}
+          {% if t.description %}
+          <span class="muted" style="font-size:11px;margin-left:var(--sp-2)">· {{ t.description | truncate_str(60) }}</span>
+          {% endif %}
+        </div>
+
+        {# Line 3: action row — hidden for terminal tasks #}
+        {% if not is_terminal %}
+        <div class="task-actions" style="margin-top:var(--sp-2);display:flex;gap:var(--sp-2);align-items:center">
+
+          {# A-P04-002: Ghi log → M08 with task_id #}
+          <button class="btn btn--secondary btn--xs"
+                  hx-get="/modals/m08?party_id={{ party_id }}&mode=log&task_id={{ t.task_id }}"
+                  hx-target="#modal-root" hx-swap="innerHTML">
+            Ghi log
+          </button>
+
+          {# A-P04-003: Xong nhanh → reload tasks panel #}
+          <button class="btn btn--secondary btn--xs"
+                  hx-patch="/customers/{{ party_id }}/tasks/{{ t.task_id }}/done?filter={{ filter }}"
+                  hx-target="#c360-tasks-root" hx-swap="outerHTML"
+                  hx-confirm="Đánh dấu task này là xong?">
+            Xong nhanh
+          </button>
+
+          {# Context menu via native <details> #}
+          <details class="task-menu" style="position:relative">
+            <summary class="icon-btn icon-btn--sm" aria-label="Thêm tuỳ chọn">···</summary>
+            <div class="task-menu__pop">
+              {# A-P04-004: Sửa task → M05 #}
+              <button class="task-menu__item" type="button"
+                      hx-get="/modals/m05?task_id={{ t.task_id }}&party_id={{ party_id }}"
+                      hx-target="#modal-root" hx-swap="innerHTML"
+                      onclick="this.closest('details').removeAttribute('open')">
+                Sửa task
+              </button>
+
+              {# A-P04-005: Tạm hoãn → O03 #}
+              <button class="task-menu__item" type="button"
+                      hx-get="/modals/o03?task_id={{ t.task_id }}&party_id={{ party_id }}&due_at={{ t.due_at | default('') | urlencode }}"
+                      hx-target="#modal-root" hx-swap="innerHTML"
+                      onclick="this.closest('details').removeAttribute('open')">
+                Tạm hoãn
+              </button>
+
+              {# A-P04-006: Huỷ task → reload panel #}
+              <button class="task-menu__item task-menu__item--danger" type="button"
+                      hx-patch="/customers/{{ party_id }}/tasks/{{ t.task_id }}/cancel?filter={{ filter }}"
+                      hx-target="#c360-tasks-root" hx-swap="outerHTML"
+                      hx-confirm="Huỷ task này?"
+                      onclick="this.closest('details').removeAttribute('open')">
+                Huỷ task
+              </button>
+            </div>
+          </details>
+
+        </div>
         {% endif %}
+
       </div>
-
-      {# A-P04-003: edit → M05 #}
-      <button class="icon-btn icon-btn--sm" type="button" aria-label="Chỉnh sửa task"
-              hx-get="/modals/m05?task_id={{ t.task_id }}&party_id={{ party_id }}"
-              hx-target="#modal-root" hx-swap="innerHTML">
-        {% include "icons/edit.svg" %}
-      </button>
-
     </div>
     {% endfor %}
   </div>
   {% endif %}
 
 </div>
+
+<script>
+/* Close any open task-menu <details> when clicking outside */
+(function () {
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('.task-menu[open]').forEach(function (d) {
+      if (!d.contains(e.target)) d.removeAttribute('open');
+    });
+  });
+})();
+</script>

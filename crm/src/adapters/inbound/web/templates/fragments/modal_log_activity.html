@@ -6,6 +6,8 @@
 {% set party_id = party_id | default('') %}
 {% set note_id = note_id | default('') %}
 {% set party_name = party_name | default('') %}
+{% set task_id = task_id | default('') %}
+{% set task_title = task_title | default('') %}
 {% set contact_pref_notes = contact_pref_notes | default([]) %}
 {% set identities = identities | default([]) %}
 {% set note_body = note_body | default('') %}
@@ -76,6 +78,7 @@
     <form hx-post="{{ save_url }}" hx-target="#modal-root" hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
       {% if note_id %}<input type="hidden" name="note_id" value="{{ note_id }}">{% endif %}
+      {% if task_id %}<input type="hidden" name="task_id" value="{{ task_id }}">{% endif %}
 
       <div class="modal__body">
 
@@ -84,6 +87,14 @@
         <div class="caveat caveat--warn">
           <span class="caveat__mark">⚠</span>
           <span><b>Lưu ý liên hệ:</b> {{ contact_pref_notes | map(attribute='body') | join(' · ') }}</span>
+        </div>
+        {% endif %}
+
+        {# ── Task context banner (log mode only) ── #}
+        {% if mode not in ('edit_note', 'note_only') and task_id %}
+        <div class="caveat caveat--info">
+          <span class="caveat__mark">📋</span>
+          <span><b>Task:</b> {{ task_title or task_id }}</span>
         </div>
         {% endif %}
 
@@ -340,6 +351,21 @@
           </label>
         </div>
 
+        {# ── Đánh dấu task hoàn thành (log mode + task_id only) ── #}
+        {% if task_id %}
+        <div class="m8-rule"></div>
+        <label class="chk-row" onclick="m08ToggleCompleteTask()">
+          <span class="chk-box chk-box--on" id="m08-complete-task-box">
+            <svg width="10" height="10" viewBox="0 0 12 12" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M2 6l3 3 5-5"/>
+            </svg>
+          </span>
+          <input type="checkbox" name="complete_task" value="1" id="m08-complete-task-chk" checked class="sr-only">
+          <span class="chk-row__text">Đánh dấu task "{{ task_title or task_id }}" hoàn thành</span>
+        </label>
+        {% endif %}
+
         {% endif %}
 
       </div>{# /.modal__body #}
@@ -479,6 +505,27 @@
       }
     }
     m08UpdateBody(m08CurHT, val);
+    m08SmartCompleteTask(val);
+  };
+
+  /* ── Smart default: complete_task checkbox ────────────── */
+  var COMPLETE_TASK_OUTCOMES = ['answered', 'met', 'replied', 'refused'];
+  function m08SmartCompleteTask(outcome) {
+    var chk = document.getElementById('m08-complete-task-chk');
+    if (!chk) return;
+    var done = COMPLETE_TASK_OUTCOMES.indexOf(outcome) >= 0;
+    chk.checked = done;
+    var box = document.getElementById('m08-complete-task-box');
+    if (box) box.classList.toggle('chk-box--on', done);
+  }
+
+  /* ── Complete-task toggle (manual override) ───────────── */
+  window.m08ToggleCompleteTask = function() {
+    var chk = document.getElementById('m08-complete-task-chk');
+    if (!chk) return;
+    chk.checked = !chk.checked;
+    var box = document.getElementById('m08-complete-task-box');
+    if (box) box.classList.toggle('chk-box--on', chk.checked);
   };
 
   /* ── Channel row selection (2+ identities) ────────────── */

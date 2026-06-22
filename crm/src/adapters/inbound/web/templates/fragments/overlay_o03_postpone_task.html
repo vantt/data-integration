@@ -1,0 +1,62 @@
+{# @surface O03 · Postpone Task Overlay | @source crm/docs/ui-spec/overlays/O03-postpone-task-overlay.md | @kind OVERLAY #}
+{# GET /modals/o03?task_id=<id>&party_id=<id>&due_at=<iso-utc>
+   Data: task_id (str), party_id (str), due_at_prefill_date (str), due_at_prefill_time (str)
+   A-O03-001: btn_cancel  → close overlay
+   A-O03-002: scrim click → close overlay
+   A-O03-003: btn_confirm → PATCH /customers/{party_id}/tasks/{task_id}/postpone → #c360-tasks-root outerHTML
+#}
+{% set task_id = task_id | default('') %}
+{% set party_id = party_id | default('') %}
+{% set prefill_date = due_at_prefill_date | default('') %}
+{% set prefill_time = due_at_prefill_time | default('') %}
+
+<div class="modal-scrim"
+     hx-get=""
+     hx-target="#modal-root"
+     hx-swap="innerHTML"
+     hx-trigger="click[!event.target.closest('.modal')]">
+  <div class="modal modal--sm" role="dialog" aria-modal="true" aria-label="Hoãn task">
+
+    <div class="modal__head">
+      <div class="modal__title">Hoãn đến:</div>
+      <button class="icon-btn" hx-get="" hx-target="#modal-root" hx-swap="innerHTML" aria-label="Đóng">
+        <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M2 2l10 10M12 2L2 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <form hx-patch="/customers/{{ party_id }}/tasks/{{ task_id }}/postpone"
+          hx-target="#c360-tasks-root"
+          hx-swap="outerHTML"
+          hx-on::after-settle="document.getElementById('modal-root').innerHTML=''">
+
+      <div class="modal__body">
+        <div class="field-row" style="gap:var(--sp-2)">
+          <label class="field" style="flex:2">
+            <span class="field__label">NGÀY</span>
+            <input type="date" name="due_date" class="inp inp--mono"
+                   value="{{ prefill_date }}" required
+                   id="o03-date"
+                   oninput="document.getElementById('o03-confirm').disabled=!this.value">
+          </label>
+          <label class="field" style="flex:1">
+            <span class="field__label">GIỜ</span>
+            <input type="time" name="due_time" class="inp inp--mono"
+                   value="{{ prefill_time }}"
+                   placeholder="09:00">
+          </label>
+        </div>
+      </div>
+
+      <div class="modal__actions">
+        <button type="button" class="btn btn--ghost"
+                hx-get="" hx-target="#modal-root" hx-swap="innerHTML">Huỷ</button>
+        <button type="submit" id="o03-confirm" class="btn btn--primary"
+                {% if not prefill_date %}disabled{% endif %}>Xác nhận</button>
+      </div>
+
+    </form>
+  </div>
+</div>

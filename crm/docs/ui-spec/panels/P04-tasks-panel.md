@@ -15,8 +15,18 @@ regions: [toolbar, task_list]
 ## Purpose
 
 Panel tab "Tasks" trong Customer 360 (S03). Hiển thị tất cả task gắn party này (`crm_task`
-WHERE party_id = current), sort due_at ASC. NV tạo follow-up task mới, đánh dấu done, hoặc
-chỉnh sửa. Task từ action_queue có badge "AUTO" + source_ref.
+WHERE party_id = current), sort: overdue trước → open → doing → done cuối. NV ghi log kết quả,
+đánh dấu xong nhanh, hoặc tạo task mới. Task từ action_queue có badge "AUTO" + source_ref.
+
+## Task Status
+
+| Status | Indicator | Nghĩa |
+|--------|-----------|-------|
+| `open` | ● xám | Chưa bắt đầu |
+| `doing` | ⟳ xanh | Đang xử lý |
+| `overdue` | ● đỏ | `due_at < now` AND `status IN (open, doing)` — derived |
+| `done` | ✓ mờ | Hoàn thành |
+| `cancelled` | — mờ | Đã huỷ |
 
 ## Layout
 
@@ -24,16 +34,40 @@ chỉnh sửa. Task từ action_queue có badge "AUTO" + source_ref.
 ┌ TOOLBAR ──────────────────────────────────────────────────────────┐
 │  Tasks   [+ Tạo task]   [Filter: open/all ▼]                     │
 ├ TASK LIST ────────────────────────────────────────────────────────┤
-│  ☐ [AUTO] Follow-up sau cuộc gọi    Due: 20/06  P2  NV A        │
-│  ☐ Gửi catalogue mới                Due: 25/06  P3  NV A        │
-│  ✓ Gọi giới thiệu SP X              Done: 13/06                  │
+│  ● [AUTO] Follow-up sau cuộc gọi               P2  NV A          │
+│    Quá hạn 2 ngày · "Khách cân nhắc SP X, hẹn lại"              │
+│    [Ghi log]  [Xong nhanh]  [···]                                │
+├───────────────────────────────────────────────────────────────────┤
+│  ⟳ Win-back — Gửi catalogue mới                P1  NV A          │
+│    Đến hạn: hôm nay                                               │
+│    [Ghi log]  [Xong nhanh]  [···]                                │
+├───────────────────────────────────────────────────────────────────┤
+│  ✓ Gọi giới thiệu SP X              Done: 13/06  NV A            │
+│    "Đã nghe · Khách đặt đơn ORD-2406"                            │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+## Task Item Structure
+
+- **Line 1**: `[indicator] [AUTO?] [title]  [priority] [assignee]`
+- **Line 2**: `[due/overdue label] · [rationale hoặc last log snippet — max 60 chars]`
+- **Line 3 — actions**: `[Ghi log]` `[Xong nhanh]` `[···]` — ẩn khi `status = done/cancelled`
+
+Task done: Line 1 + 2 chỉ, title mờ, không có action row.
+
+## Context Menu (`···`)
+
+| Action | Guard | Effect |
+|--------|-------|--------|
+| Sửa task | always | open M05 prefilled |
+| Tạm hoãn | `status != done` | open O03 prefilled với `due_at` hiện tại |
+| Huỷ task | `status != done` | confirm → `task.status = cancelled` |
 
 ## States
 
 - ST-LOADING: Tasks fetch in-flight
-- ST-EMPTY: Không có task nào
+- ST-EMPTY-OPEN: Không có task đang mở → "Không có task nào đang mở."
+- ST-EMPTY-ALL: Filter = all, chưa có task nào
 
 ## Interactions
 
@@ -47,19 +81,43 @@ interactions:
     target: M05
     payload: { party_id: "$party.id" }
   - id: A-P04-002
-    element: task_checkbox
+    element: btn_log
     region: task_list
     trigger: click
-    action: mutate
-    effects: [task.status.set_done, task.completed_at.set_now]
+    guard: "task.status != 'done' && task.status != 'cancelled'"
+    action: open_overlay
+    target: M08
+    payload: { party_id: "$party.id", mode: "log", task_id: "$task.id", party_name: "$party.display_name" }
   - id: A-P04-003
-    element: task_row_edit
+    element: btn_done_quick
+    region: task_list
+    trigger: click
+    guard: "task.status != 'done' && task.status != 'cancelled'"
+    action: mutate
+    effects: [task.status.set_done, task.completed_at.set_now, task_list.reload]
+  - id: A-P04-004
+    element: menu_edit
     region: task_list
     trigger: click
     action: open_overlay
     target: M05
     payload: { task_id: "$task.id" }
-  - id: A-P04-004
+  - id: A-P04-005
+    element: menu_postpone
+    region: task_list
+    trigger: click
+    guard: "task.status != 'done' && task.status != 'cancelled'"
+    action: open_overlay
+    target: O03
+    payload: { task_id: "$task.id", due_at: "$task.due_at" }
+  - id: A-P04-006
+    element: menu_cancel
+    region: task_list
+    trigger: click
+    guard: "task.status != 'done'"
+    action: mutate
+    effects: [task.status.set_cancelled, task_list.reload]
+  - id: A-P04-007
     element: filter_status
     region: toolbar
     trigger: change

@@ -46,7 +46,7 @@ Internal Retail CRM · ~10 users · Desktop-first · Go + templ/HTMX · SQLite W
 | M05 | Create / Edit Task Modal | S01, S03, S07, P04 |
 | M06 | Custom Fields Edit Modal | S03 |
 | M07 | Create / Edit Campaign Modal | S10, S11 |
-| M08 | Log Activity Modal | S03, S06, P02, P03, P05 |
+| M08 | Log Activity Modal | S03, S01, S06, P02, P03, P04, P05 |
 | M09 | Assign Conversation Modal | S05, S06 |
 | M10 | Close Conversation Modal | S06 |
 | M11 | Link Party to Conversation Modal | S06 |
@@ -60,6 +60,7 @@ Internal Retail CRM · ~10 users · Desktop-first · Go + templ/HTMX · SQLite W
 |---|---|---|
 | O01 | Confirm / Toast Overlay | S03, S05, S13, P05 |
 | O02 | Quick Customer Preview Overlay | S01, S07 |
+| O03 | Postpone Task Overlay | P04, S07 |
 
 ### Components
 

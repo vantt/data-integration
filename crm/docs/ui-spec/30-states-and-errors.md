@@ -91,6 +91,16 @@ Messages loading.
 
 ---
 
+## P04 — Tasks Panel States
+
+### ST-EMPTY-OPEN
+Filter = open (default), không có task đang mở. Show "Không có task nào đang mở." + CTA tạo task.
+
+### ST-EMPTY-ALL
+Filter = all, chưa có task nào gắn party này.
+
+---
+
 ## S07 — Tasks Board States
 
 ### ST-TASKS-EMPTY
