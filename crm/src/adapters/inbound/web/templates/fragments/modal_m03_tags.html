@@ -45,15 +45,14 @@
           <span class="field__label">Đang có</span>
           <div class="chips" id="m03-chips">
             {% for tag in all_tags %}
-            {% if tag.tag_id in party_tag_ids %}
             <span class="chip{% if tag.color and tag.color != 'default' %} chip--{{ tag.color }}{% endif %}"
                   id="m03-chip-{{ tag.tag_id }}"
-                  data-tag-id="{{ tag.tag_id }}">
+                  data-tag-id="{{ tag.tag_id }}"
+                  {% if tag.tag_id not in party_tag_ids %}style="display:none"{% endif %}>
               {{ tag.display_label or tag.name }}
               <button type="button" class="chip-x" aria-label="Xóa tag {{ tag.display_label or tag.name }}"
-                      onclick="m03Remove('{{ tag.tag_id }}')">✕</button>
+                      onclick="m03Remove('{{ tag.tag_id }}')">×</button>
             </span>
-            {% endif %}
             {% endfor %}
             <span id="m03-no-tags" class="muted" style="font-size:13px{% if all_tags | selectattr('tag_id', 'in', party_tag_ids) | list %};display:none{% endif %}">
               Chưa gắn tag nào.

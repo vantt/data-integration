@@ -172,8 +172,12 @@ html[data-font="source"]    { --font-display: 'Source Sans 3', sans-serif; --fon
 .data-health__warn-icon { margin-right: 2px; }
 
 /* chip-x: remove button inside an editable chip (M03 TagChips edit mode) */
+/* uses system-ui to avoid monospace letter-spacing/weight from parent .chip */
 .chip-x {
   border: 0; background: transparent; color: inherit;
-  cursor: pointer; padding: 0 2px; opacity: .7; line-height: 1;
+  cursor: pointer; padding: 0; margin-left: 2px;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 16px; font-weight: 500; letter-spacing: 0; text-transform: none;
+  line-height: 1; opacity: .45;
 }
 .chip-x:hover { opacity: 1; }

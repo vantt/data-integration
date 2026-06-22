@@ -160,7 +160,7 @@
       {% if party.tags %}
       <div class="chips">
         {% for tag in party.tags %}
-        <span class="chip">{{ tag.display_label or tag.name }}</span>
+        <span class="chip{% if tag.color and tag.color != 'default' %} chip--{{ tag.color }}{% endif %}">{{ tag.display_label or tag.name }}</span>
         {% endfor %}
       </div>
       {% else %}
