@@ -72,21 +72,21 @@
     <div class="panel-head"><span class="panel-title">Signals</span></div>
     <div class="signal-grid">
       <div class="signal-cell">
-        <div class="signal-cell__k">Customer status</div>
+        <div class="signal-cell__k" data-tooltip="active ≤90 ngày&#10;at_risk 90–180 ngày&#10;churned >180 ngày không mua">Customer status</div>
         <div class="signal-cell__v">
           <span class="{{ ins.customer_status | bdg_cls('customer_status') }}" data-tooltip="{{ ins.customer_status | bdg_tip('customer_status') }}">{{ ins.customer_status }}</span>
         </div>
       </div>
       {% if insight.tier and insight.tier.strategic_tier %}
       <div class="signal-cell">
-        <div class="signal-cell__k">Strategic tier</div>
+        <div class="signal-cell__k" data-tooltip="Phân nhóm chiến lược theo tần suất&#10;và giá trị đơn hàng lịch sử">Strategic tier</div>
         <div class="signal-cell__v">
           <span class="{{ insight.tier.strategic_tier | bdg_cls('strategic_tier') }}" data-tooltip="{{ insight.tier.strategic_tier | bdg_tip('strategic_tier') }}">{{ insight.tier.strategic_tier }}</span>
         </div>
       </div>
       {% endif %}
       <div class="signal-cell">
-        <div class="signal-cell__k">Next purchase</div>
+        <div class="signal-cell__k" data-tooltip="Dự đoán dựa trên chu kỳ mua lịch sử&#10;của khách hàng này">Next purchase</div>
         <div class="signal-cell__v">
           <span class="{{ ins.next_purchase_signal | bdg_cls('purchase_signal') }}" data-tooltip="{{ ins.next_purchase_signal | bdg_tip('purchase_signal') }}">{{ ins.next_purchase_signal }}</span>
           {% if ins.predicted_next_purchase_date %}
@@ -95,12 +95,12 @@
         </div>
       </div>
       <div class="signal-cell">
-        <div class="signal-cell__k">Discount sensitivity</div>
+        <div class="signal-cell__k" data-tooltip="Tần suất mua khi giảm giá vs giá gốc&#10;HIGH = chủ yếu mua khi sale&#10;LOW = không phụ thuộc khuyến mãi">Discount sensitivity</div>
         <div class="signal-cell__v">{{ ins.discount_sensitivity or "—" }}</div>
       </div>
       {% if ins.top_affinity_product %}
       <div class="signal-cell">
-        <div class="signal-cell__k">Top affinity</div>
+        <div class="signal-cell__k" data-tooltip="Danh mục/sản phẩm chiếm tỷ trọng&#10;doanh thu cao nhất của khách">Top affinity</div>
         <div class="signal-cell__v" style="font-size:14px">{{ ins.top_affinity_product }}</div>
       </div>
       {% endif %}
@@ -116,17 +116,17 @@
     <div class="rfm">
       <div class="rfm__cell">
         <div class="rfm__glyph">R</div>
-        <div class="rfm__name">Recency</div>
+        <div class="rfm__name" data-tooltip="Chu kỳ mua TB (ngày giữa 2 đơn)&#10;Thấp = mua thường xuyên hơn">Recency</div>
         <div class="rfm__val">{{ ins.avg_days_between_orders | round | int }}<span style="font-size:12px;color:var(--fg-tertiary)"> ngày</span></div>
       </div>
       <div class="rfm__cell">
         <div class="rfm__glyph">F</div>
-        <div class="rfm__name">Frequency</div>
+        <div class="rfm__name" data-tooltip="Số đơn hoàn thành&#10;(không tính đơn hủy)">Frequency</div>
         <div class="rfm__val">{{ insight.recent_orders | length }}<span style="font-size:12px;color:var(--fg-tertiary)"> đơn</span></div>
       </div>
       <div class="rfm__cell">
         <div class="rfm__glyph">M</div>
-        <div class="rfm__name">Monetary</div>
+        <div class="rfm__name" data-tooltip="Giá trị TB mỗi đơn&#10;(doanh thu VAT inclusive)">Monetary</div>
         <div class="rfm__val" style="font-size:16px">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
       </div>
     </div>
@@ -177,20 +177,20 @@
     {# Single 4-col grid: LTV spans 2 cols so rows align top↔bottom #}
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)">
       <div class="kpi kpi--hero" style="grid-column:span 2">
-        <div class="kpi__label">Lifetime value</div>
+        <div class="kpi__label" data-tooltip="Contribution margin tích lũy&#10;= doanh thu thuần − COGS, cộng dồn tất cả đơn">Lifetime value</div>
         <div class="kpi__val">{{ ins.lifetime_contribution_margin | int | fmt_vnd }}</div>
       </div>
       <div class="kpi">
-        <div class="kpi__label">Total orders</div>
+        <div class="kpi__label" data-tooltip="Số đơn hoàn thành&#10;(không tính đơn hủy)">Total orders</div>
         <div class="kpi__val">{{ insight.recent_orders | length }}</div>
       </div>
       <div class="kpi">
-        <div class="kpi__label">Avg order value</div>
+        <div class="kpi__label" data-tooltip="Doanh thu TB mỗi đơn&#10;(bao gồm VAT)">Avg order value</div>
         <div class="kpi__val">{{ ins.avg_order_spend | int | fmt_vnd }}</div>
       </div>
       {# Row 2 — 4 equal cells aligning with 4 columns above #}
       <div class="signal-cell">
-        <div class="signal-cell__k">Gross margin</div>
+        <div class="signal-cell__k" data-tooltip="Ước tính thô từ LTV ÷ AOV&#10;Xem mục Profitability bên dưới&#10;để có số chính xác theo COGS thực">Gross margin</div>
         <div class="signal-cell__v">
           {% if ins.is_margin_negative is not none and not ins.is_margin_negative %}
           <span style="color:var(--moss-500);font-weight:600">{{ "%.1f"|format(ins.lifetime_contribution_margin / [ins.avg_order_spend, 1] | max * 100) }}%</span>
@@ -198,7 +198,7 @@
         </div>
       </div>
       <div class="signal-cell">
-        <div class="signal-cell__k">Cancel rate</div>
+        <div class="signal-cell__k" data-tooltip="Tỷ lệ đơn hủy ÷ tổng đơn đặt&#10;>10% = rủi ro cao">Cancel rate</div>
         <div class="signal-cell__v">
           {% if ins.cancel_rate > 0 %}
           <span style="color:{{ 'var(--coral-500)' if ins.cancel_rate > 0.1 else 'var(--fg-2)' }}">{{ "%.0f"|format(ins.cancel_rate * 100) }}%</span>
@@ -206,11 +206,11 @@
         </div>
       </div>
       <div class="signal-cell">
-        <div class="signal-cell__k">Avg cycle</div>
+        <div class="signal-cell__k" data-tooltip="Chu kỳ mua TB (ngày)&#10;Dùng để dự đoán lần mua tiếp theo">Avg cycle</div>
         <div class="signal-cell__v mono">{{ ins.avg_days_between_orders | round | int }}d</div>
       </div>
       <div class="signal-cell">
-        <div class="signal-cell__k">Channel</div>
+        <div class="signal-cell__k" data-tooltip="Kênh bán hàng chiếm tỷ trọng&#10;doanh thu cao nhất">Channel</div>
         <div class="signal-cell__v">{{ ins.channel_preference or "—" }}</div>
       </div>
     </div>
@@ -223,15 +223,15 @@
     <div class="panel-head"><span class="panel-title">Profitability & Returns</span></div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:var(--sp-3)">
       <div class="kpi">
-        <div class="kpi__label">Gross profit</div>
+        <div class="kpi__label" data-tooltip="Doanh thu thuần − COGS&#10;từ dữ liệu MISA (giá vốn thực)">Gross profit</div>
         <div class="kpi__val" style="font-size:15px">{{ dim_metrics.total_gross_profit | int | fmt_vnd }}</div>
       </div>
       <div class="kpi">
-        <div class="kpi__label">Total COGS</div>
+        <div class="kpi__label" data-tooltip="Giá vốn hàng bán từ MISA&#10;(nguồn chính xác nhất cho biên lợi nhuận)">Total COGS</div>
         <div class="kpi__val" style="font-size:15px">{{ dim_metrics.total_cogs | int | fmt_vnd if dim_metrics.total_cogs is not none else "—" }}</div>
       </div>
       <div class="signal-cell">
-        <div class="signal-cell__k">Avg margin</div>
+        <div class="signal-cell__k" data-tooltip="Gross margin % TB&#10;chỉ tính đơn có đủ dữ liệu COGS">Avg margin</div>
         <div class="signal-cell__v">
           {% if dim_metrics.avg_gross_margin_pct is not none %}
           <span style="color:var(--moss-500);font-weight:600">{{ "%.1f"|format(dim_metrics.avg_gross_margin_pct * 100) }}%</span>
@@ -242,7 +242,7 @@
         </div>
       </div>
       <div class="signal-cell">
-        <div class="signal-cell__k">Returns</div>
+        <div class="signal-cell__k" data-tooltip="Tổng giá trị đơn hoàn/trả hàng&#10;ảnh hưởng trực tiếp đến dòng tiền">Returns</div>
         <div class="signal-cell__v">
           {% if dim_metrics.total_return_amount %}
           <span style="color:var(--coral-500)">{{ dim_metrics.total_return_amount | int | fmt_vnd }}</span>

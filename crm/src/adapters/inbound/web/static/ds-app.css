@@ -367,6 +367,7 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
 .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--sp-3); }
 .kpi { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radii-control); padding: var(--sp-4); }
 .kpi__label { font-family: var(--font-mono); font-size: 9.5px; text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary); }
+.kpi__label[data-tooltip] { cursor: help; }
 .kpi__val { font-family: var(--num-font); font-size: 26px; letter-spacing: var(--tracking-mono); color: var(--fg); margin-top: 8px; line-height: 1; }
 .kpi__sub { font-size: 12px; color: var(--fg-muted); margin-top: 8px; }
 .kpi--hero { grid-column: span 2; }
@@ -378,6 +379,7 @@ html[data-theme="light"] .strip-cell[data-tip]:hover::after { background: var(--
 .rfm__cell { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radii-control); padding: var(--sp-5) var(--sp-4); text-align: center; }
 .rfm__glyph { font-family: var(--font-display); font-size: 40px; color: var(--accent); line-height: 1; }
 .rfm__name { font-family: var(--font-mono); font-size: 10px; letter-spacing: var(--tracking-eyebrow); text-transform: uppercase; color: var(--fg-tertiary); margin-top: var(--sp-3); }
+.rfm__name[data-tooltip] { cursor: help; }
 .rfm__val { font-family: var(--num-font); font-size: 20px; color: var(--fg); margin-top: 6px; letter-spacing: var(--tracking-mono); }
 
 /* ─────────────────────────────────────────────────────────

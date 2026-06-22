@@ -145,6 +145,7 @@
 .signal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
 .signal-cell { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radii-control); padding: var(--sp-3) var(--sp-4); }
 .signal-cell__k { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary); }
+.signal-cell__k[data-tooltip] { cursor: help; }
 .signal-cell__v { font-size: 15px; color: var(--fg); margin-top: 5px; display: inline-flex; align-items: center; gap: 7px; }
 .signal-dot { width: 8px; height: 8px; border-radius: var(--radii-pill); flex: none; }
 
