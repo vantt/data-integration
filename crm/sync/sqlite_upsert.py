@@ -251,6 +251,12 @@ def upsert_deadstock_target(conn: sqlite3.Connection, rows: list[dict]) -> int:
 
     values = [tuple(row.get(c) for c in cols) for row in rows]
     with conn:
+        # True full-replace: the mart is the complete snapshot each run, so rows
+        # that dropped out of it (now-excluded B2B accounts, resolved SKUs, etc.)
+        # must be cleared — upsert alone would leave them stale in cache.
+        # Guarded by the empty-rows check above so a transient empty fetch can
+        # never wipe the table.
+        conn.execute("DELETE FROM wh_deadstock_target")
         conn.executemany(sql, values)
     return len(rows)
 

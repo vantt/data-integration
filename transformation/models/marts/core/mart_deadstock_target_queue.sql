@@ -120,12 +120,17 @@ tier_eligible AS (
 ),
 
 -- ── 5. Enrich: replenishment signal + discount sensitivity from dim_customers ─
+-- Also carries B2B markers (customer_type, acquisition_source) used to exclude
+-- wholesale/dealer accounts downstream — they buy in bulk to resell, so a
+-- consumer voucher + personal replenishment nudge is the wrong instrument.
 customer_enrich AS (
     SELECT
         dc.customer_key,
         dc.next_purchase_signal,
         dc.predicted_next_purchase_date,
-        dc.discount_sensitivity
+        dc.discount_sensitivity,
+        dc.customer_type,
+        dc.acquisition_source
     FROM {{ ref('dim_customers') }} dc
 ),
 
@@ -191,6 +196,11 @@ assembled AS (
     FROM matched m
     INNER JOIN tier_eligible t  ON m.customer_key = t.customer_key
     LEFT  JOIN customer_enrich e ON m.customer_key = e.customer_key
+    -- Keep B2C only. Wholesale/cross-border distributors and dealer-acquired
+    -- accounts purchase in bulk to resell; excluding them keeps this a consumer
+    -- clearance funnel and avoids burning vouchers on resale margin.
+    WHERE COALESCE(e.customer_type, 'RETAIL') NOT IN ('WHOLESALE', 'CROSSBORDER')
+      AND COALESCE(e.acquisition_source, '') <> 'Đại Lý'
 )
 
 -- ── 7. Final SELECT: rank + reason fragment ───────────────────────────────────
