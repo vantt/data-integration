@@ -9,6 +9,15 @@ Covers:
   C6  HUG_WORKER_URL unset → skips cleanly, no HTTP, no crash
   C7  crm_identity_link needs_review row is NOT counted as contactable
   C8  Null scanner_phone in identity_link is NOT counted as contactable
+
+Incremental content-diff push (hug_push_state.db):
+  D1  First run bootstraps store and pushes all rows
+  D2  Second run, no change → zero API calls
+  D3  One row's tier changed → only that row pushed, store updated
+  D4  Batch failure does NOT update store for that batch's rows
+  D5  force=True bypasses store and pushes all rows
+  D6  HUG_CUSTOMER_PUSH_FULL=1 env var triggers force run
+  D7  New customer not in store is pushed; unchanged customers skipped
 """
 from __future__ import annotations
 
@@ -94,6 +103,50 @@ def tmp_dir():
         yield d
 
 
+@pytest.fixture()
+def state_db(tmp_dir):
+    """Path to a fresh hug_push_state.db (created lazily by run())."""
+    return str(pathlib.Path(tmp_dir) / "hug_push_state.db")
+
+
+def _capturing_urlopen(captured: list[dict]):
+    """Return a fake urlopen that records each POST body and returns HTTP 200."""
+    def fake(req, timeout=None):
+        captured.append({"url": req.full_url, "body": req.data})
+        resp = MagicMock()
+        resp.status = 200
+        resp.__enter__ = lambda s: s
+        resp.__exit__ = MagicMock(return_value=False)
+        return resp
+    return fake
+
+
+def _state_count(path: str) -> int:
+    conn = sqlite3.connect(path)
+    try:
+        return conn.execute("SELECT COUNT(*) FROM hug_customer_push_state").fetchone()[0]
+    finally:
+        conn.close()
+
+
+def _state_content(path: str, customer_id: str) -> str | None:
+    conn = sqlite3.connect(path)
+    try:
+        row = conn.execute(
+            "SELECT content FROM hug_customer_push_state WHERE customer_id = ?",
+            (customer_id,),
+        ).fetchone()
+        return row[0] if row else None
+    finally:
+        conn.close()
+
+
+_ROW_1 = {"customer_key": "k1", "customer_id": 1, "strategic_tier": "LIVE_CORE",
+          "recency_days": 3, "value_group": "VIP", "is_contactable": 1}
+_ROW_2 = {"customer_key": "k2", "customer_id": 2, "strategic_tier": "GRAVEYARD",
+          "recency_days": 400, "value_group": "LOW", "is_contactable": 0}
+
+
 # ─── _build_edge_rows unit tests (pure logic, no I/O) ─────────────────────
 
 def test_crm_overlay_makes_masked_customer_contactable():
@@ -143,7 +196,7 @@ def test_edge_row_shape_matches_contract():
 
 # ─── HTTP mock: verify auth headers ──────────────────────────────────────────
 
-def test_push_sets_hmac_and_explicit_user_agent(tmp_dir, monkeypatch):
+def test_push_sets_hmac_and_explicit_user_agent(tmp_dir, monkeypatch, state_db):
     """C5: POST to Worker carries HMAC signature and a non-default User-Agent."""
     cache_path = str(pathlib.Path(tmp_dir) / "cache.db")
     crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
@@ -172,7 +225,7 @@ def test_push_sets_hmac_and_explicit_user_agent(tmp_dir, monkeypatch):
         return resp
 
     with patch("urllib.request.urlopen", side_effect=fake_urlopen):
-        result = customer_push.run(cache_db=cache_path, crm_db=crm_path)
+        result = customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
 
     assert not result.get("skipped")
     assert result.get("ok", 0) >= 1
@@ -251,3 +304,172 @@ def test_null_scanner_phone_not_counted_as_contactable(tmp_dir):
     ])
     contactable = customer_push._load_crm_contactable_ids(crm_path)
     assert "66" not in contactable
+
+
+# ─── Incremental content-diff push (hug_push_state.db) ───────────────────────
+
+def _enable_push(monkeypatch):
+    monkeypatch.setenv("HUG_WORKER_URL", "https://worker.example.com")
+    monkeypatch.setenv("HUG_ADMIN_SECRET", "test-secret")
+
+
+def test_first_run_bootstraps_store_and_pushes_all(tmp_dir, monkeypatch, state_db):
+    """D1: empty store → all rows pushed, store seeded with their content."""
+    cache_path = str(pathlib.Path(tmp_dir) / "cache.db")
+    crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
+    _make_cache_db(cache_path, [_ROW_1, _ROW_2])
+    _make_crm_db(crm_path, [])
+    _enable_push(monkeypatch)
+
+    captured: list[dict] = []
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen(captured)):
+        result = customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+
+    assert not result.get("skipped")
+    assert result["ok"] == 2
+    assert len(captured) >= 1
+    assert pathlib.Path(state_db).exists()
+    assert _state_count(state_db) == 2
+    # Content matches the pushed-field contract.
+    assert _state_content(state_db, "1") == "LIVE_CORE|3|VIP|1"
+
+
+def test_second_run_no_change_skips_all_api(tmp_dir, monkeypatch, state_db):
+    """D2: unchanged mart → no-change skip, zero urlopen calls."""
+    cache_path = str(pathlib.Path(tmp_dir) / "cache.db")
+    crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
+    _make_cache_db(cache_path, [_ROW_1, _ROW_2])
+    _make_crm_db(crm_path, [])
+    _enable_push(monkeypatch)
+
+    # First run populates the store.
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen([])):
+        customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+
+    # Second run on identical data must not hit the network.
+    with patch("urllib.request.urlopen") as mock_open:
+        result = customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+
+    assert result == {"skipped": True, "reason": "no-change"}
+    mock_open.assert_not_called()
+
+
+def test_changed_row_pushes_only_that_row(tmp_dir, monkeypatch, state_db):
+    """D3: one customer's tier changed → exactly that row pushed, store updated."""
+    cache_v1 = str(pathlib.Path(tmp_dir) / "cache_v1.db")
+    cache_v2 = str(pathlib.Path(tmp_dir) / "cache_v2.db")
+    crm_path = str(pathlib.Path(tmp_dir) / "crm.db")
+    _make_cache_db(cache_v1, [_ROW_1, _ROW_2])
+    # cid=1 tier flips; cid=2 unchanged.
+    row_1_changed = {**_ROW_1, "strategic_tier": "SECOND_ORDER"}
+    _make_cache_db(cache_v2, [row_1_changed, _ROW_2])
+    _make_crm_db(crm_path, [])
+    _enable_push(monkeypatch)
+
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen([])):
+        customer_push.run(cache_db=cache_v1, crm_db=crm_path, state_db=state_db)
+
+    captured: list[dict] = []
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen(captured)):
+        result = customer_push.run(cache_db=cache_v2, crm_db=crm_path, state_db=state_db)
+
+    assert result["total"] == 1
+    assert result["ok"] == 1
+    # Exactly one row in the POST body, and it is the changed customer.
+    body = json.loads(captured[0]["body"])
+    assert len(body["rows"]) == 1
+    assert body["rows"][0]["customer_id"] == "1"
+    assert body["rows"][0]["tier"] == "SECOND_ORDER"
+    # Store: cid=1 updated, cid=2 unchanged.
+    assert _state_content(state_db, "1") == "SECOND_ORDER|3|VIP|1"
+    assert _state_content(state_db, "2") == "GRAVEYARD|400|LOW|0"
+
+
+def test_failed_batch_does_not_update_store(tmp_dir, monkeypatch, state_db):
+    """D4: a failed batch leaves the store untouched → retried next run."""
+    cache_path = str(pathlib.Path(tmp_dir) / "cache.db")
+    crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
+    _make_cache_db(cache_path, [_ROW_1, _ROW_2])
+    _make_crm_db(crm_path, [])
+    _enable_push(monkeypatch)
+
+    # post_signed failure shape: {"ok": False, "error": "http 500"} (no status key).
+    fail = {"ok": False, "error": "http 500"}
+    with patch("hug.customer_push.post_signed", return_value=fail) as mock_post:
+        result = customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+
+    assert result["failed"] == 2
+    assert result["ok"] == 0
+    # No batch succeeded → store stays empty.
+    assert _state_count(state_db) == 0
+
+    # Next run retries (store still empty → all rows still "changed").
+    with patch("hug.customer_push.post_signed", return_value=fail) as mock_post2:
+        customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+    assert mock_post2.called
+
+
+def test_force_param_pushes_all_despite_current_store(tmp_dir, monkeypatch, state_db):
+    """D5: force=True bypasses the diff and re-pushes everything."""
+    cache_path = str(pathlib.Path(tmp_dir) / "cache.db")
+    crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
+    _make_cache_db(cache_path, [_ROW_1, _ROW_2])
+    _make_crm_db(crm_path, [])
+    _enable_push(monkeypatch)
+
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen([])):
+        customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+
+    captured: list[dict] = []
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen(captured)):
+        result = customer_push.run(
+            cache_db=cache_path, crm_db=crm_path, state_db=state_db, force=True,
+        )
+
+    assert not result.get("skipped")
+    assert result["ok"] == 2
+    assert len(captured) >= 1
+
+
+def test_env_var_triggers_force_run(tmp_dir, monkeypatch, state_db):
+    """D6: HUG_CUSTOMER_PUSH_FULL=1 forces a full push via env (no force kwarg)."""
+    cache_path = str(pathlib.Path(tmp_dir) / "cache.db")
+    crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
+    _make_cache_db(cache_path, [_ROW_1, _ROW_2])
+    _make_crm_db(crm_path, [])
+    _enable_push(monkeypatch)
+
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen([])):
+        customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+
+    monkeypatch.setenv("HUG_CUSTOMER_PUSH_FULL", "1")
+    captured: list[dict] = []
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen(captured)):
+        result = customer_push.run(cache_db=cache_path, crm_db=crm_path, state_db=state_db)
+
+    assert not result.get("skipped")
+    assert result["ok"] == 2
+
+
+def test_new_customer_pushed_unchanged_skipped(tmp_dir, monkeypatch, state_db):
+    """D7: a customer absent from the store is pushed; unchanged ones are skipped."""
+    cache_v1 = str(pathlib.Path(tmp_dir) / "cache_v1.db")
+    cache_v2 = str(pathlib.Path(tmp_dir) / "cache_v2.db")
+    crm_path = str(pathlib.Path(tmp_dir) / "crm.db")
+    _make_cache_db(cache_v1, [_ROW_1])            # store seeded with cid=1 only
+    _make_cache_db(cache_v2, [_ROW_1, _ROW_2])    # cid=2 is new
+    _make_crm_db(crm_path, [])
+    _enable_push(monkeypatch)
+
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen([])):
+        customer_push.run(cache_db=cache_v1, crm_db=crm_path, state_db=state_db)
+
+    captured: list[dict] = []
+    with patch("urllib.request.urlopen", side_effect=_capturing_urlopen(captured)):
+        result = customer_push.run(cache_db=cache_v2, crm_db=crm_path, state_db=state_db)
+
+    assert result["total"] == 1
+    assert result["ok"] == 1
+    body = json.loads(captured[0]["body"])
+    assert len(body["rows"]) == 1
+    assert body["rows"][0]["customer_id"] == "2"
