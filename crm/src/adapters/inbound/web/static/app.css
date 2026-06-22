@@ -170,3 +170,10 @@ html[data-font="source"]    { --font-display: 'Source Sans 3', sans-serif; --fon
 .data-health__sep   { opacity: 0.4; }
 .data-health__item--warn { color: var(--tone-warn, #b45309); }
 .data-health__warn-icon { margin-right: 2px; }
+
+/* chip-x: remove button inside an editable chip (M03 TagChips edit mode) */
+.chip-x {
+  border: 0; background: transparent; color: inherit;
+  cursor: pointer; padding: 0 2px; opacity: .7; line-height: 1;
+}
+.chip-x:hover { opacity: 1; }

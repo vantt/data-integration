@@ -2,8 +2,8 @@
    @source   crm/docs/ui-spec/modals/M03-tag-management-modal.md
    @kind     MODAL
    M03 Tag Management modal — served at GET /modals/m03?party_id=...
-   Data: party_id (str), all_tags (list[Tag]), party_tag_ids (set[str]).
-   Tag fields: tag_id, name, category, color.
+   Data: party_id (str), all_tags (list[Tag]), party_tag_ids (set[str]), party_name (str).
+   Tag fields: tag_id, name, display_label, category, color.
    POST target: /customers/{party_id}/tags.
    Response swaps back into #modal-root via hx-target="#modal-root".
 #}
@@ -14,11 +14,13 @@
     {# ── Header ── #}
     <div class="modal__head">
       <div>
-        <div class="modal__title">Quản lý Tags</div>
+        <div class="modal__title">Quản lý tag</div>
+        {% if party_name %}<div class="modal__sub">Tag cho: {{ party_name }}</div>{% endif %}
       </div>
-      <button class="icon-btn"
-              onclick="document.getElementById('modal-root').innerHTML=''"
-              aria-label="Đóng">✕</button>
+      <button class="icon-btn" aria-label="Đóng"
+              onclick="document.getElementById('modal-root').innerHTML=''">
+        {% include "icons/close.svg" %}
+      </button>
     </div>
 
     <form hx-post="/customers/{{ party_id }}/tags"
@@ -26,58 +28,72 @@
           hx-swap="innerHTML">
       <input type="hidden" name="party_id" value="{{ party_id }}">
 
-      <div class="modal__body">
-        {% if all_tags %}
-          {# ── Group tags by category ── #}
-          {% set ns = namespace(categories={}, category_order=[]) %}
-          {% for tag in all_tags %}
-            {% set cat = tag.category if tag.category else "Chung" %}
-            {% if cat not in ns.category_order %}
-              {% set _ = ns.category_order.append(cat) %}
-              {% set _ = ns.categories.update({cat: []}) %}
+      {# sr-only checkboxes drive form submission; JS manages visible state #}
+      {% for tag in all_tags %}
+      <input type="checkbox"
+             id="m03-chk-{{ tag.tag_id }}"
+             name="tag_ids"
+             value="{{ tag.tag_id }}"
+             class="sr-only"
+             {% if tag.tag_id in party_tag_ids %}checked{% endif %}>
+      {% endfor %}
+
+      <div class="modal__body stack stack-4">
+
+        {# ── Current tags ── #}
+        <div class="field">
+          <span class="field__label">Đang có</span>
+          <div class="chips" id="m03-chips">
+            {% for tag in all_tags %}
+            {% if tag.tag_id in party_tag_ids %}
+            <span class="chip{% if tag.color and tag.color != 'default' %} chip--{{ tag.color }}{% endif %}"
+                  id="m03-chip-{{ tag.tag_id }}"
+                  data-tag-id="{{ tag.tag_id }}">
+              {{ tag.display_label or tag.name }}
+              <button type="button" class="chip-x" aria-label="Xóa tag {{ tag.display_label or tag.name }}"
+                      onclick="m03Remove('{{ tag.tag_id }}')">✕</button>
+            </span>
             {% endif %}
-            {% set _ = ns.categories[cat].append(tag) %}
-          {% endfor %}
-
-          {% set show_categories = ns.category_order | length > 1 %}
-
-          {% for cat in ns.category_order %}
-            {% if show_categories %}
-              <div class="caption"
-                   style="color:var(--fg-tertiary);margin:var(--sp-4) 0 var(--sp-2);border-bottom:1px solid var(--border);padding-bottom:var(--sp-1)">
-                {{ cat }}
-              </div>
-            {% endif %}
-
-            <div class="chips" style="flex-wrap:wrap;">
-              {% for tag in ns.categories[cat] %}
-                {% set is_active = tag.tag_id in party_tag_ids %}
-                {# Hidden checkbox — carries the form value; toggled by JS #}
-                <input type="checkbox"
-                       id="m03-chk-{{ tag.tag_id }}"
-                       name="tag_ids"
-                       value="{{ tag.tag_id }}"
-                       class="sr-only"
-                       {% if is_active %}checked{% endif %}>
-                {# Visible chip label — clicking toggles checkbox + class #}
-                <label for="m03-chk-{{ tag.tag_id }}"
-                       class="chip {% if is_active %}chip--active{% endif %}"
-                       {% if tag.color %}style="--chip-color:{{ tag.color }};"{% endif %}
-                       onclick="m03ToggleTag(this)"
-                       title="{{ tag.display_label or tag.name }}"
-                       tabindex="0"
-                       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();m03ToggleTag(this)}">
-                  {{ tag.display_label or tag.name }}
-                </label>
-              {% endfor %}
-            </div>
-          {% endfor %}
-
-        {% else %}
-          <div style="font-size:13.5px;color:var(--fg-muted);text-align:center;padding:var(--sp-6);">
-            Chưa có tag nào trong hệ thống.
+            {% endfor %}
+            <span id="m03-no-tags" class="muted" style="font-size:13px{% if all_tags | selectattr('tag_id', 'in', party_tag_ids) | list %};display:none{% endif %}">
+              Chưa gắn tag nào.
+            </span>
           </div>
-        {% endif %}
+        </div>
+
+        {# ── Search + available tags ── #}
+        <div class="field">
+          <span class="field__label">Thêm tag</span>
+          <input type="text" class="inp" id="m03-q"
+                 placeholder="🔍 Tìm hoặc tạo tag mới..."
+                 oninput="m03Filter(this.value)"
+                 autocomplete="off">
+        </div>
+
+        <div class="flex-wrap" id="m03-avail">
+          {% for tag in all_tags %}
+          <button type="button"
+                  class="fchip"
+                  id="m03-fchip-{{ tag.tag_id }}"
+                  data-tag-id="{{ tag.tag_id }}"
+                  data-label="{{ (tag.display_label or tag.name) | lower }}"
+                  onclick="m03Add('{{ tag.tag_id }}')"
+                  {% if tag.tag_id in party_tag_ids %}style="display:none"{% endif %}>
+            {% include "icons/plus.svg" %} {{ tag.display_label or tag.name }}
+          </button>
+          {% endfor %}
+          <span id="m03-no-match" class="muted" style="font-size:13px;display:none">
+            Không có tag khớp.
+          </span>
+        </div>
+
+        <button type="button" class="ghost-link"
+                hx-get="/settings/tags/modal/create"
+                hx-target="#modal-root"
+                hx-swap="innerHTML">
+          {% include "icons/plus.svg" %} Tạo tag mới
+        </button>
+
       </div>{# .modal__body #}
 
       <div class="modal__actions">
@@ -90,20 +106,61 @@
   </div>{# .modal #}
 </div>{# .modal-scrim #}
 
-<style>
-  #modal-root label.chip { cursor: pointer; }
-  /* CSS fallback: chip--active via checkbox state (works even if m03ToggleTag fails) */
-  #modal-root input[type=checkbox]:checked + label.chip {
-    color: var(--amber-500); background: rgba(58,42,20,0.60); border-color: rgba(232,163,65,0.55); font-weight: var(--fw-semibold);
-  }
-</style>
 <script>
-  function m03ToggleTag(labelEl) {
-    // Browser's native label→checkbox toggle fires AFTER this handler returns,
-    // so we predict the post-toggle state by inverting the current checked value.
-    var chk = document.getElementById(labelEl.htmlFor);
-    if (chk) {
-      labelEl.classList.toggle('chip--active', !chk.checked);
+  function m03Remove(id) {
+    var chip = document.getElementById('m03-chip-' + id);
+    var chk  = document.getElementById('m03-chk-' + id);
+    var fchip = document.getElementById('m03-fchip-' + id);
+    if (chip)  chip.style.display = 'none';
+    if (chk)   chk.checked = false;
+    if (fchip) {
+      fchip.style.display = '';
+      // re-apply current filter
+      var q = (document.getElementById('m03-q') || {}).value || '';
+      if (q && fchip.dataset.label.indexOf(q.toLowerCase()) === -1) {
+        fchip.style.display = 'none';
+      }
     }
+    _m03SyncEmptyStates();
   }
+
+  function m03Add(id) {
+    var chip  = document.getElementById('m03-chip-' + id);
+    var chk   = document.getElementById('m03-chk-' + id);
+    var fchip = document.getElementById('m03-fchip-' + id);
+    if (chk)   chk.checked = true;
+    if (fchip) fchip.style.display = 'none';
+    if (chip)  chip.style.display = '';
+    _m03SyncEmptyStates();
+  }
+
+  function m03Filter(q) {
+    var ql = q.toLowerCase();
+    var fchips = document.querySelectorAll('#m03-avail .fchip');
+    var anyVisible = false;
+    fchips.forEach(function(fc) {
+      var chk = document.getElementById('m03-chk-' + fc.dataset.tagId);
+      if (chk && chk.checked) { fc.style.display = 'none'; return; }
+      var match = !ql || fc.dataset.label.indexOf(ql) !== -1;
+      fc.style.display = match ? '' : 'none';
+      if (match) anyVisible = true;
+    });
+    var noMatch = document.getElementById('m03-no-match');
+    if (noMatch) noMatch.style.display = (!anyVisible && fchips.length > 0) ? '' : 'none';
+  }
+
+  function _m03SyncEmptyStates() {
+    // "Đang có" empty state
+    var chips = document.querySelectorAll('#m03-chips .chip');
+    var anyChip = false;
+    chips.forEach(function(c) { if (c.style.display !== 'none') anyChip = true; });
+    var noTags = document.getElementById('m03-no-tags');
+    if (noTags) noTags.style.display = anyChip ? 'none' : '';
+    // re-run filter to sync no-match state
+    var q = (document.getElementById('m03-q') || {}).value || '';
+    m03Filter(q);
+  }
+
+  // init: apply filter (handles pre-selected tags hiding their fchips)
+  m03Filter('');
 </script>

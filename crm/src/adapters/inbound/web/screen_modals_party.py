@@ -115,10 +115,18 @@ def make_party_modals_router(
         all_tags = profile.list_tags("")
         current = profile.list_party_tags(party_id)
         party_tag_ids = {t.tag_id for t in current}
+        party_name = ""
+        try:
+            p360 = profile.get_party_360(party_id)
+            if p360:
+                party_name = p360.display_name
+        except Exception:
+            pass
         return templates.TemplateResponse(
             "fragments/modal_m03_tags.html",
             {"request": request, "party_id": party_id,
-             "all_tags": all_tags, "party_tag_ids": party_tag_ids},
+             "all_tags": all_tags, "party_tag_ids": party_tag_ids,
+             "party_name": party_name},
         )
 
     # ── GET /modals/m04 — Assign Owner ────────────────────────────────────────
