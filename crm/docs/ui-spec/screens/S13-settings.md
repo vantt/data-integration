@@ -22,20 +22,44 @@ Không cần migration khi thêm field mới (schema-less JSON1).
 
 ## Layout
 
+### Tab: Custom Fields (default)
+
 ```
 ┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
 │               │  TOPBAR: Cài đặt                                             │
 │               ├────────────────┬─────────────────────────────────────────────┤
 │               │  SETTINGS NAV  │  SETTINGS CONTENT                           │
-│               │  > Custom Fields│  Custom Fields                             │
-│               │    Tags         │  ┌─────────────────────────────────────┐   │
-│               │    Người dùng   │  │ Tên field    Loại     Bắt buộc  [✕] │   │
-│               │                 │  │ Da nhạy cảm  bool     không    [✕]  │   │
-│               │                 │  │ Nguồn KH     select   không    [✕]  │   │
-│               │                 │  │ [+ Thêm field]                      │   │
-│               │                 │  └─────────────────────────────────────┘   │
+│               │  > Custom Fields│  Custom Fields                   [+ Thêm]  │
+│               │    Tags         │  ┌────────────────────────────────────────┐ │
+│               │    Người dùng   │  │ Tên field    Loại     Bắt buộc  [Edit] │ │
+│               │                 │  │ Da nhạy cảm  bool     không    [Edit]  │ │
+│               │                 │  │ Nguồn KH     select   không    [Edit]  │ │
+│               │                 │  └────────────────────────────────────────┘ │
 └───────────────┴────────────────┴─────────────────────────────────────────────┘
 ```
+
+### Tab: Tags
+
+```
+┌─ C01 SIDEBAR ─┬──────────────────────────────────────────────────────────────┐
+│               │  TOPBAR: Cài đặt                                             │
+│               ├────────────────┬─────────────────────────────────────────────┤
+│               │  SETTINGS NAV  │  SETTINGS CONTENT                           │
+│               │    Custom Fields│  Tags                           [+ Tạo tag] │
+│               │  > Tags         │  ┌──────────────────────────────────────────┐│
+│               │    Người dùng   │  │Nhãn     Tên(slug)  Category  Màu  [•][✕]││
+│               │                 │  │[VIP]    vip-repeat vip_tier   ●   [✏][✕]││
+│               │                 │  │[Deal]   deal       behavioral —   [✏][✕]││
+│               │                 │  └──────────────────────────────────────────┘│
+└───────────────┴────────────────┴─────────────────────────────────────────────┘
+```
+
+**Columns:**
+- **Nhãn** — chip colored via `.chip--{color}` DS modifier (moss/coral/amber/default)
+- **Tên (slug)** — mono muted; the raw `name` field
+- **Category** — enum label or `—` if unset
+- **Màu** — 10px dot `tag-dot` colored `background: var(--{color}-500)`; `—` if unset or default
+- **Actions** — `[✏ Edit]` + `[✕ Delete]` icon buttons, no-wrap, right-aligned
 
 ## States
 
@@ -85,12 +109,26 @@ interactions:
     target: O01
     payload: { confirm_type: "delete_field", field_def_id: "$field.id" }
   - id: A-S13-007
-    element: btn_add_tag_category
+    element: btn_add_tag
     region: settings_content
     trigger: click
     action: open_overlay
     target: M14
   - id: A-S13-008
+    element: btn_edit_tag
+    region: settings_content
+    trigger: click
+    action: open_overlay
+    target: M14
+    payload: { tag_id: "$tag.tag_id" }
+  - id: A-S13-009
+    element: btn_delete_tag
+    region: settings_content
+    trigger: click
+    action: mutate
+    effects: [tag.delete, tag_row.remove]
+    notes: "HTMX confirm dialog; removes row via outerHTML swap"
+  - id: A-S13-010
     element: btn_edit_user_role
     region: settings_content
     trigger: click

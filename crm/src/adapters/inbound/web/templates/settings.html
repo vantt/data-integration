@@ -63,13 +63,13 @@
           <div class="state__title">Chưa có tag nào.</div>
         </div></div>
         {% else %}<div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Nhãn</th><th>Tên (slug)</th><th>Category</th><th>Màu</th><th class="th-go"></th></tr></thead>
+          <thead><tr><th>Nhãn</th><th>Tên (slug)</th><th>Category</th><th>Màu</th><th style="text-align:right"></th></tr></thead>
           <tbody>{% for tag in tags %}<tr id="tag-row-{{ tag.tag_id }}">
-            <td><span class="chip{% if tag.color %} chip--custom{% endif %}"{% if tag.color %} style="--tag-color:{{ tag.color }}"{% endif %}>{{ tag.display_label or tag.name }}</span></td>
+            <td><span class="chip{% if tag.color and tag.color != 'default' %} chip--{{ tag.color }}{% endif %}">{{ tag.display_label or tag.name }}</span></td>
             <td class="mono muted">{{ tag.name }}</td>
             <td>{% if tag.category %}{{ tag.category }}{% else %}<span class="muted">—</span>{% endif %}</td>
-            <td>{% if tag.color %}<span class="tag-dot" style="--tag-color:{{ tag.color }}"></span>{% else %}<span class="muted">—</span>{% endif %}</td>
-            <td class="td-go"><div class="flex-wrap justify-end" style="gap:var(--sp-1)">
+            <td>{% if tag.color and tag.color != 'default' %}<span class="tag-dot" style="background:var(--{{ tag.color }}-500)"></span>{% else %}<span class="muted">—</span>{% endif %}</td>
+            <td style="text-align:right"><div style="display:flex;flex-wrap:nowrap;gap:var(--sp-1);justify-content:flex-end">
               <button class="icon-btn icon-btn--sm" aria-label="Sửa"
                       hx-get="/settings/tags/{{ tag.tag_id }}/modal/edit"
                       hx-target="#modal-root" hx-swap="innerHTML">{% include "icons/edit.svg" %}</button>
