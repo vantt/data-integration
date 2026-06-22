@@ -212,15 +212,20 @@
             <span class="field__label">ĐỒNG Ý LIÊN LẠC</span>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4)">
               <div class="radioset">
-                <label class="radio-pill {% if party.consent_contact %}radio-pill--on{% endif %}">
+                <label class="radio-pill {% if not party.consent_contact or party.consent_contact == 'na' %}radio-pill--on{% endif %}">
                   <span class="radio-pill__dot"></span>
-                  <input type="radio" name="consent_contact" value="1"
-                         {% if party.consent_contact %}checked{% endif %} class="sr-only"> Cho phép
+                  <input type="radio" name="consent_contact" value="na"
+                         {% if not party.consent_contact or party.consent_contact == 'na' %}checked{% endif %} class="sr-only"> N/A
                 </label>
-                <label class="radio-pill {% if not party.consent_contact %}radio-pill--on{% endif %}">
+                <label class="radio-pill {% if party.consent_contact == 'allowed' %}radio-pill--on{% endif %}">
                   <span class="radio-pill__dot"></span>
-                  <input type="radio" name="consent_contact" value="0"
-                         {% if not party.consent_contact %}checked{% endif %} class="sr-only"> Không liên lạc
+                  <input type="radio" name="consent_contact" value="allowed"
+                         {% if party.consent_contact == 'allowed' %}checked{% endif %} class="sr-only"> Cho phép
+                </label>
+                <label class="radio-pill {% if party.consent_contact == 'denied' %}radio-pill--on{% endif %}">
+                  <span class="radio-pill__dot"></span>
+                  <input type="radio" name="consent_contact" value="denied"
+                         {% if party.consent_contact == 'denied' %}checked{% endif %} class="sr-only"> Không cho phép
                 </label>
               </div>
               <button type="button" class="btn btn--secondary" style="white-space:nowrap"

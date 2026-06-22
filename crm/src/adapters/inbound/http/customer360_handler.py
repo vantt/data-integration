@@ -70,7 +70,7 @@ class PutProfileBody(BaseModel):
     birthday: Optional[str] = None
     address: Optional[str] = None
     preferences: Optional[str] = None
-    consent_contact: bool = True
+    consent_contact: Optional[str] = None  # 'allowed' | 'denied' | None (na)
     custom_fields: Optional[dict[str, str]] = None
 
 

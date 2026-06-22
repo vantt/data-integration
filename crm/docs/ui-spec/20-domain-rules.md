@@ -18,7 +18,9 @@ validator kiểm tra bidirectional với frontmatter `rules:` của từng surfa
 
 ## R1 — Consent Gating (consent_contact)
 
-Party có `consent_contact=false` **phải bị loại** khỏi campaign target và không được gửi liên lạc chủ động.
+`consent_contact` là enum 3 giá trị: `null`/`na` (default — chưa từng thu thập) / `allowed` / `denied`.
+Party có `consent_contact='denied'` **phải bị loại** khỏi campaign target và không được gửi liên lạc chủ động.
+Party có `consent_contact=null`/`na` không bị hard-block nhưng không được outreach chủ động cho đến khi xác nhận.
 Áp dụng tại: segment materialization (server), campaign target creation, và hiển thị cảnh báo trong UI.
 
 ## R2 — No-Recompute Insight
@@ -64,7 +66,7 @@ Fuzzy match (FTS5 tên + prefix SĐT) → tạo `crm_dedup_candidate` status=pen
 
 ## R10 — Segment Dynamic Consent Re-evaluation
 
-Mỗi lần segment materialize, parties với `consent_contact=false` bị loại khỏi `crm_segment_member`.
+Mỗi lần segment materialize, parties với `consent_contact='denied'` bị loại khỏi `crm_segment_member`.
 UI hiển thị count bị loại do consent.
 
 ## R11 — Conversion Attribution Window

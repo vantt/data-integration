@@ -136,7 +136,7 @@ class CampaignService:
     def generate_targets(self, campaign_id: str) -> int:
         """Create campaign_target rows from the campaign's segment members.
 
-        COMPLIANCE: parties with consent_contact=0 are excluded.
+        COMPLIANCE: parties with consent_contact='denied' are excluded; NULL/na are allowed through.
         Idempotent: existing targets are left unchanged (upsert-ignore semantics).
         Returns the count of targets created (skips already-existing rows).
         """
@@ -151,8 +151,7 @@ class CampaignService:
 
         created = 0
         for m in members:
-            # Default consent = True when no profile row exists.
-            if consent_map.get(m.party_id, True) is False:
+            if consent_map.get(m.party_id) == "denied":
                 continue
             self._campaign_repo.upsert_target(
                 CampaignTarget(
@@ -257,22 +256,21 @@ class CampaignService:
 
     # ── Private helpers ────────────────────────────────────────────────────────
 
-    def _fetch_consent_map(self) -> dict[str, bool]:
-        """Return {party_id: bool} from crm_customer_profile.consent_contact.
+    def _fetch_consent_map(self) -> dict[str, str | None]:
+        """Return {party_id: consent_value} from crm_customer_profile.consent_contact.
 
-        Graceful-empty: returns {} when the profile table does not yet exist
-        (bare test environment). Any other error is propagated to prevent silently
-        treating all parties as consenting (compliance bypass).
+        Values: 'allowed' | 'denied' | None (na — not collected).
+        Graceful-empty: returns {} when the profile table does not yet exist.
         """
         try:
             cur = self._conn.execute(
-                "SELECT party_id, consent_contact FROM crm_customer_profile"
+                "SELECT party_id, consent_enum FROM crm_customer_profile"
             )
         except Exception as exc:
             if _is_missing_table_error(exc):
                 return {}
             raise
-        return {row[0]: bool(row[1]) for row in cur.fetchall()}
+        return {row[0]: row[1] for row in cur.fetchall()}
 
     def _find_earliest_order(
         self, party_id: str, scheduled_date_key: int

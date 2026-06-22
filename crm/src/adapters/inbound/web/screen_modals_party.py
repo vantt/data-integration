@@ -394,10 +394,11 @@ def make_party_modals_router(
     @router.post("/customers/{party_id}/consent", response_class=HTMLResponse)
     async def post_consent(
         party_id: str,
-        consent_contact: str = Form("1"),
+        consent_contact: str = Form("na"),
     ) -> Response:
+        value = consent_contact if consent_contact in ("allowed", "denied", "na") else None
         try:
-            profile.upsert_profile(party_id, consent_contact=consent_contact == "1")
+            profile.upsert_profile(party_id, consent_contact=value)
         except Exception as exc:
             log.error("post_consent %s: %s", party_id, exc)
             return HTMLResponse(f"Lỗi cập nhật đồng ý liên lạc: {exc}", status_code=500)
@@ -452,11 +453,12 @@ def make_party_modals_router(
         primary_email: str = Form(""),
         birthday: str = Form(""),
         gender: str = Form(""),
-        consent_contact: str = Form("1"),
+        consent_contact: str = Form("na"),
     ) -> Response:
         display_name = display_name.strip()
         if not display_name:
             return HTMLResponse("Tên hiển thị không được bỏ trống", status_code=400)
+        consent_value = consent_contact if consent_contact in ("allowed", "denied", "na") else None
         try:
             party = party_repo.get_by_id(party_id)
             if party is not None:
@@ -467,7 +469,7 @@ def make_party_modals_router(
                 party_id,
                 birthday=birthday.strip() or None,
                 gender=gender.strip() or None,
-                consent_contact=consent_contact == "1",
+                consent_contact=consent_value,
             )
         except Exception as exc:
             log.error("post_core %s: %s", party_id, exc)

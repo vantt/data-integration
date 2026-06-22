@@ -54,7 +54,7 @@ def _row_to_profile(row: sqlite3.Row) -> CustomerProfile:
         address=address,
         preferences=preferences,
         custom=custom,
-        consent_contact=bool(row["consent_contact"]),
+        consent_contact=row["consent_contact"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -83,8 +83,6 @@ def _parse_tags_json(tags_json: Optional[str], party_id: str) -> list[PartyTag]:
 
 
 def _row_to_party360(row: sqlite3.Row) -> Party360:
-    consent_raw = row["consent_contact"]
-    consent = bool(consent_raw) if consent_raw is not None else False
     keys = row.keys()
     return Party360(
         party_id=row["party_id"],
@@ -104,7 +102,7 @@ def _row_to_party360(row: sqlite3.Row) -> Party360:
         address=row["address"],
         preferences=row["preferences"],
         custom=row["custom"] or "",
-        consent_contact=consent,
+        consent_contact=row["consent_contact"],
         profile_updated_at=row["profile_updated_at"] or "",
         address_line=row["address_line"] if "address_line" in keys else None,
         ward=row["ward"] if "ward" in keys else None,
@@ -130,7 +128,8 @@ class SQLiteProfileRepository:
 
     _SQL_GET = """
         SELECT party_id, owner_user_id, lifecycle_stage, acquisition_source,
-               birthday, address, preferences, custom, consent_contact,
+               birthday, address, preferences, custom,
+               consent_enum AS consent_contact,
                created_at, updated_at
         FROM crm_customer_profile
         WHERE party_id = ?
@@ -140,7 +139,7 @@ class SQLiteProfileRepository:
     _SQL_UPSERT = """
         INSERT INTO crm_customer_profile (
           party_id, owner_user_id, lifecycle_stage, acquisition_source,
-          birthday, gender, address, preferences, custom, consent_contact,
+          birthday, gender, address, preferences, custom, consent_enum,
           created_at, updated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT (party_id) DO UPDATE SET
@@ -152,7 +151,7 @@ class SQLiteProfileRepository:
           address            = excluded.address,
           preferences        = excluded.preferences,
           custom             = excluded.custom,
-          consent_contact    = excluded.consent_contact,
+          consent_enum       = excluded.consent_enum,
           updated_at         = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
     """
 
@@ -199,7 +198,7 @@ class SQLiteProfileRepository:
             address_json,
             prefs_json,
             custom_json,
-            int(profile.consent_contact),
+            profile.consent_contact,
             profile.created_at,
             profile.updated_at,
         ))

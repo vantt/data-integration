@@ -52,10 +52,10 @@ VALID_CUSTOM_DATA_TYPES = [
 class CustomerProfile:
     """Enrichment data owned by the CRM for one party (1:1 with crm_customer_profile)."""
     party_id: str                           # FK → crm_party (also PK — 1:1)
-    consent_contact: bool                   # false = opted out (blocks campaigns)
     created_at: str                         # UTC ISO-8601 with 'Z'
     updated_at: str                         # UTC ISO-8601 with 'Z'
-    owner_user_id: Optional[str] = None     # FK → crm_app_user (assigned sales rep)
+    consent_contact: Optional[str] = None   # None=na (not collected) | 'allowed' | 'denied'
+    owner_user_id: Optional[str] = None
     lifecycle_stage: Optional[str] = None   # lead|new|active|at_risk|churned
     acquisition_source: Optional[str] = None
     birthday: Optional[str] = None          # YYYY-MM-DD or None
@@ -159,7 +159,7 @@ class Party360:
     party_created_at: str
     party_updated_at: str
     # Profile fields (zero/None when no profile exists)
-    consent_contact: bool = False
+    consent_contact: Optional[str] = None   # NULL/None=na | 'allowed' | 'denied'
     profile_updated_at: str = ""
     owner_user_id: Optional[str] = None
     lifecycle_stage: Optional[str] = None

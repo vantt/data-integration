@@ -148,7 +148,7 @@ class ProfileService:
         else:
             profile = CustomerProfile(
                 party_id=party_id,
-                consent_contact=kwargs.pop("consent_contact", True),
+                consent_contact=kwargs.pop("consent_contact", None),
                 created_at=now,
                 updated_at=now,
                 **{k: v for k, v in kwargs.items() if k not in ("created_at", "updated_at")},
@@ -190,7 +190,6 @@ class ProfileService:
             self._profiles.upsert_profile(CustomerProfile(
                 party_id=party_id,
                 custom=existing,
-                consent_contact=True,
                 created_at=now,
                 updated_at=now,
             ))
