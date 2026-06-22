@@ -198,6 +198,7 @@ Người trung niên và cao tuổi lo ngại sức khỏe tim mạch; người 
 **Bổ trợ / cross-sell hợp lý**
 - **Fucoidan** — hỗ trợ miễn dịch + một số nghiên cứu về tuần hoàn; cặp hợp lý cho người cao tuổi.
 - **Cordyceps Plus** — tăng năng lượng + hỗ trợ tim mạch từ góc sức sống tổng thể.
+- **Gaba blood pressure** *(nếu là sản phẩm FineJapan)* — data thực tế: 92 đơn Natto Kinase + Gaba cùng đơn, top pair. Cặp tự nhiên cho người quan tâm huyết áp + tim mạch.
 
 **Xử lý nghi ngờ thường gặp**
 - *"Tôi đang uống thuốc huyết áp — có dùng được không?"* → "Cần hỏi bác sĩ điều trị trước để đảm bảo an toàn khi dùng đồng thời. TPCN không thay thế thuốc."
@@ -484,3 +485,31 @@ Chủ DN cần cung cấp thông tin từ nhãn thực tế để hoàn chỉnh 
 ---
 
 *Ghi chú: Sau khi chủ DN điền các placeholder, CS có thể dùng tài liệu này ngay không cần chỉnh lại phần còn lại.*
+
+---
+
+## §E — Top pairs được xác nhận bởi data (2026-06-22)
+
+> **Nguồn:** `plans/reports/finejapan-basket-analysis-and-discount-motivation-260622-report.md` + `finejapan-entry-to-premium-upgrade-path-260622-1241-report.md`. Retail active orders, n=6,345.
+
+### Supplement pairs có ý nghĩa chiến lược
+
+| Entry / Product A | Premium / Product B | Đơn cùng mua | % đơn discount | Ghi chú |
+|---|---|---|---|---|
+| Metabo Green Tea | Cordyceps | 139 | 0.7% | Top 1 pair |
+| Metabo Green Tea | Fucoidan | 131 | 2.9% | |
+| Metabo Green Tea | Shark Cartilage | 113 | 0.0% | |
+| Cordyceps | **Gaba blood pressure** | 132 | 3.5% | Chưa theo dõi trong playbook — cần investigate |
+| Natto Kinase | **Gaba blood pressure** | 92 | 3.2% | Idem |
+| Metabo Green Tea | Natto Kinase | 59 | 3.0% | |
+| Cordyceps | Hyaluron & Collagen | 61 | 8.8% | |
+| Metabo Green Tea | Hyaluron & Collagen | 55 | 3.2% | |
+| Hyaluron & Collagen | Shark Cartilage | 52 | 0.0% | |
+| Shark Cartilage | **Gaba blood pressure** | 52 | 0.0% | |
+| Cordyceps | Coix Beauty | 46 | 2.2% | 2026-Q2 playbook đang hồi sinh |
+| Royal Reishi | Metabo Green Tea | 44 | 0.0% | |
+
+**Nhận xét cho CS:**
+- Gần như **100% đơn top pairs là full price** — rep không cần discount để bundle, chỉ cần gợi ý đúng lúc.
+- Metabo Green Tea là "hub" của phần lớn pairs — ưu tiên bundle Metabo + Cordyceps/Fucoidan/Shark khi có khách quan tâm Metabo.
+- Gaba blood pressure xuất hiện với 3 premium SKU (Cordyceps/Natto/Shark) — nếu là sản phẩm FineJapan, cần đưa vào tư vấn chính thức.
