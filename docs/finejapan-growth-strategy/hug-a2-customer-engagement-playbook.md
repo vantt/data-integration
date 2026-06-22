@@ -1,7 +1,7 @@
 # Hug A2 — Playbook tiếp cận & bắt contact khách (masked)
 
 > Kịch bản làm việc với khách: **vì sao, offer gì, dẫn dắt thế nào** để khách ẩn danh (Shopee/Tiki) chịu để lại liên hệ → thoát mask.
-> Self-contained (đọc 1 mạch). Cập nhật 2026-06-21. Tổng quan A2: `docs/hug-a2-campaign-onepager.md`.
+> Self-contained (đọc 1 mạch). Cập nhật 2026-06-21. Tổng quan A2: `docs/finejapan-growth-strategy/hug-a2-campaign-onepager.md`.
 
 ---
 
@@ -48,6 +48,8 @@ Nguyên tắc: **cho trước (xác thực) → xin sau**; **xin cái dễ trư�
 → Tránh chồng 2 cái thành giảm quá sâu.
 
 ## 7. Script cụ thể từng điểm chạm
+
+> **Nội dung tư vấn SKU** (công dụng, lộ trình cảm nhận, cross-sell, xử lý nghi ngờ theo từng sản phẩm) và **lộ trình 90 ngày** (Day 0/14/45/90) → xem `docs/finejapan-growth-strategy/hug-consultation-roadmap-and-sku-advisory.md §B & §C`. Tài liệu đó là nguồn thông tin sản phẩm cho CS khi khách hỏi cụ thể.
 
 **7.1 — Thẻ trong kiện (hook để quét):**
 > 🇯🇵 *Cảm ơn bạn đã chọn FineJapan chính hãng.*

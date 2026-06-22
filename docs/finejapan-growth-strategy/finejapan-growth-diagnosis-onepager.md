@@ -52,4 +52,4 @@ SKU `VTST23042L001` (Natto Kinase) biên **−32,7%**, doanh thu 112M → **đan
 - Cohort & retention: `plans/reports/cohort-retention-diagnostic-260621-2121-report.md`
 - SKU repeat × margin: `plans/reports/sku-repeat-margin-triage-260621-2121-report.md`
 - Acquisition collapse theo kênh: `plans/reports/acquisition-collapse-channel-localization-260621-2139-report.md`
-- Triển khai giữ-chân (Hug A2): `docs/hug-a2-campaign-onepager.md`
+- Triển khai giữ-chân (Hug A2): `docs/finejapan-growth-strategy/hug-a2-campaign-onepager.md`

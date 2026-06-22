@@ -11,7 +11,7 @@ created: 2026-06-21
 
 ## Context
 
-- Strategy doc: `docs/hug-campaign-overview-for-leadership.md`
+- Strategy doc: `docs/finejapan-growth-strategy/hug-campaign-overview-for-leadership.md`
 - Segment data (live): `plans/reports/analytics-260620-2213-masked-repeat-economics-reachability-report.md`
 - Shopee messaging: `plans/reports/researcher-260620-2217-shopee-seller-messaging-masked-buyers-re-engagement-report.md`
 - Tech build (DONE): `plans/260620-1408-crm-hug-voucher-a2-golive/plan.md`
