@@ -1,0 +1,187 @@
+{# @surface S01 · Worklist row macro | @kind MACRO
+   Usage: {% from "fragments/_wl_row.html" import wl_row %}
+          {{ wl_row(row, party_extras) }}
+
+   row        WorklistRow  — .kind('action'|'task'), .band, .urgency, .value,
+                              .neglect_days, .ref_id, .payload
+   party_extras dict       — {party_id: {preferred_identity, contact_pref_notes}}
+#}
+{% macro wl_row(row, party_extras) %}
+{% set a = row.payload %}
+{% set pid = a.party_id %}
+{% set extras = party_extras.get(pid, {}) if pid else {} %}
+{% set pref_id = extras.get('preferred_identity') %}
+{% set cp_notes = extras.get('contact_pref_notes', []) %}
+
+{# ── Shared quick-contact button ──────────────────────────────────────────── #}
+{% macro contact_btn(party_id, pref_id) %}
+  {% if pref_id and pref_id.identity_type in ('phone', 'phone_secondary') %}
+  <button class="btn btn--secondary" style="padding:8px 12px"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=phone"
+          hx-target="#modal-root" hx-swap="innerHTML"
+          title="Gọi điện" onclick="event.stopPropagation()">📞 Gọi</button>
+  {% elif pref_id and pref_id.identity_type == 'zalo' %}
+  <button class="btn btn--secondary" style="padding:8px 12px"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=zalo"
+          hx-target="#modal-root" hx-swap="innerHTML"
+          title="Zalo" onclick="event.stopPropagation()">💬 Zalo</button>
+  {% elif pref_id and pref_id.identity_type == 'facebook' %}
+  <button class="btn btn--secondary" style="padding:8px 12px"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt&channel=facebook"
+          hx-target="#modal-root" hx-swap="innerHTML"
+          title="Facebook" onclick="event.stopPropagation()">📘 Facebook</button>
+  {% else %}
+  <button class="btn btn--secondary" style="padding:8px 12px"
+          hx-get="/modals/m08?party_id={{ party_id }}&mode=contact_attempt"
+          hx-target="#modal-root" hx-swap="innerHTML"
+          onclick="event.stopPropagation()">📞 Gọi</button>
+  {% endif %}
+{% endmacro %}
+
+{% if row.kind == 'action' %}
+{# ════════════════════════════════════════════════════════════
+   ACTION ROW
+   Dismiss (✕ Bỏ qua) = intentional skip, distinct from task done (checkbox).
+   Row click navigates to customer 360; action buttons stop propagation.
+   ════════════════════════════════════════════════════════════ #}
+<div class="wl-row wl-row--action wl-row--b{{ row.band }}"
+     id="aq-{{ a.action_id }}"
+     hx-get="/customers/{{ a.party_id }}" hx-target="body" hx-push-url="true"
+     hx-trigger="click[!event.target.closest('button,a,details,summary')]">
+
+  {# Left gutter: empty spacer to align with task checkbox column #}
+  <div class="wl-row__gutter" aria-hidden="true"></div>
+
+  <div class="wl-row__main">
+    <div class="wl-row__top">
+      <span class="{{ a.action_type | bdg_cls('action_type') }}"
+            data-tooltip="{{ a.action_type | bdg_tip('action_type') or a.action_type }}">{{ a.action_type }}</span>
+      {% if a.customer_name %}<span class="wl-row__name">{{ a.customer_name }}</span>{% endif %}
+      <span class="wl-row__phone">{{ a.customer_key }}</span>
+      {# Neglect badge: shown when action has waited 1–6 days (7+ days → band 3) #}
+      {% if row.neglect_days >= 1 and row.neglect_days <= 6 %}
+      <span class="wl-neglect-badge" title="Chưa được xử lý trong {{ row.neglect_days }} ngày">
+        đã chờ {{ row.neglect_days }} ngày
+      </span>
+      {% endif %}
+    </div>
+    <div class="wl-row__why">{{ a.rationale_vi }}</div>
+    {% for cpn in cp_notes %}
+    <div class="wl-row__pref">💬 {{ cpn.body }}</div>
+    {% endfor %}
+    <div class="wl-row__meta">
+      {% if a.value_at_stake_vnd > 0 %}
+      <span class="wl-row__value">{% include "icons/money.svg" %} {{ a.value_at_stake_vnd | fmt_vnd }}</span>
+      {% endif %}
+      <span class="wl-row__due">{% include "icons/clock.svg" %}
+        Chờ từ {{ a.pending_since if a.pending_since else a.generated_date }}
+        {% if row.neglect_days >= 1 %} · {{ row.neglect_days }} ngày{% endif %}
+      </span>
+    </div>
+  </div>
+
+  <div class="wl-row__aside">
+    {% if pid %}{{ contact_btn(pid, pref_id) }}{% endif %}
+
+    {# Snooze dropdown — no-JS <details> popover #}
+    <details class="wl-snooze" onclick="event.stopPropagation()">
+      <summary class="btn btn--ghost" style="padding:8px 10px;list-style:none;cursor:pointer"
+               title="Tạm hoãn">⏰</summary>
+      <div class="wl-snooze__menu">
+        {% for days, label in [(1,'1 ngày'),(3,'3 ngày'),(7,'1 tuần')] %}
+        <button class="btn btn--ghost" style="padding:6px 10px;text-align:left;width:100%"
+                hx-patch="/worklist/actions/{{ a.action_id }}/snooze?days={{ days }}"
+                hx-target="#aq-{{ a.action_id }}" hx-swap="delete">{{ label }}</button>
+        {% endfor %}
+      </div>
+    </details>
+
+    {# Dismiss: intentional skip — visually distinct from task "done" checkbox #}
+    <button class="btn btn--ghost wl-dismiss-btn" type="button"
+            title="Bỏ qua action này"
+            hx-patch="/worklist/actions/{{ a.action_id }}/dismiss"
+            hx-target="#aq-{{ a.action_id }}" hx-swap="delete"
+            onclick="event.stopPropagation()">✕ Bỏ qua</button>
+
+    {% if pid %}
+    <a href="/customers/{{ pid }}" class="btn btn--ghost" style="padding:8px 10px"
+       onclick="event.stopPropagation()">Xem 360 {% include "icons/chevron.svg" %}</a>
+    {% endif %}
+  </div>
+</div>
+
+{% else %}
+{# ════════════════════════════════════════════════════════════
+   TASK ROW
+   Done = checkbox (completion). Visually distinct from action dismiss (✕ text button).
+   Band 0 overdue tasks get extra reschedule + cancel controls.
+   ════════════════════════════════════════════════════════════ #}
+{% set t = a %}
+{% if t.priority >= 2 %}{% set prio_label = 'P1' %}
+{% elif t.priority == 1 %}{% set prio_label = 'P2' %}
+{% else %}{% set prio_label = 'P3' %}{% endif %}
+
+<div class="wl-row wl-row--task wl-row--b{{ row.band }}{% if t.status in ('done', 'cancelled') %} wl-row--done{% endif %}"
+     id="task-{{ t.task_id }}">
+
+  {# Checkbox marks task complete — different visual meaning than action dismiss #}
+  <button class="wl-check{% if t.status == 'done' %} wl-check--on{% endif %}"
+          type="button"
+          hx-patch="/tasks/{{ t.task_id }}/done"
+          hx-target="#task-{{ t.task_id }}" hx-swap="outerHTML"
+          aria-label="Đánh dấu hoàn thành"
+          onclick="event.stopPropagation()">
+    {% if t.status == 'done' %}{% include "icons/check.svg" %}{% endif %}
+  </button>
+
+  <div class="wl-row__main">
+    <div class="wl-row__top">
+      <span class="prio prio--{{ prio_label }}">{{ prio_label }}</span>
+      {% if pid %}
+      <a class="wl-row__name" href="/customers/{{ pid }}"
+         onclick="event.stopPropagation()">{{ t.title }}</a>
+      {% else %}
+      <span class="wl-row__name">{{ t.title }}</span>
+      {% endif %}
+      {# Neglect badge for overdue tasks: days overdue (row.neglect_days) #}
+      {% if row.band == 0 and row.neglect_days >= 1 %}
+      <span class="wl-neglect-badge wl-neglect-badge--overdue"
+            title="Quá hạn {{ row.neglect_days }} ngày">
+        quá hạn {{ row.neglect_days }} ngày
+      </span>
+      {% endif %}
+    </div>
+    {% if t.description %}<div class="wl-row__why">{{ t.description }}</div>{% endif %}
+    {% for cpn in cp_notes %}
+    <div class="wl-row__pref">💬 {{ cpn.body }}</div>
+    {% endfor %}
+    <div class="wl-row__meta">
+      {% if t.due_at %}
+      <span class="wl-row__due">{% include "icons/clock.svg" %} Due: {{ t.due_at | format_ict }}</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="wl-row__aside">
+    {% if pid %}{{ contact_btn(pid, pref_id) }}{% endif %}
+
+    {# Band 0 (overdue) tasks get reschedule + cancel controls #}
+    {% if row.band == 0 %}
+    <button class="btn btn--ghost" style="padding:8px 10px"
+            hx-get="/modals/m05?task_id={{ t.task_id }}"
+            hx-target="#modal-root" hx-swap="innerHTML"
+            title="Dời hạn task này" onclick="event.stopPropagation()">Dời hạn</button>
+    <button class="btn btn--ghost" style="padding:8px 10px;color:var(--coral-500)"
+            hx-patch="/tasks/{{ t.task_id }}/cancel"
+            hx-target="#task-{{ t.task_id }}" hx-swap="delete"
+            title="Hủy task này" onclick="event.stopPropagation()">Dọn</button>
+    {% endif %}
+
+    {% if pid %}
+    <a href="/customers/{{ pid }}" class="btn btn--ghost" style="padding:8px 10px"
+       onclick="event.stopPropagation()">Mở hồ sơ {% include "icons/chevron.svg" %}</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endmacro %}

@@ -1,0 +1,171 @@
+{# @surface S01 · Worklist filter bar | @kind PARTIAL #}
+{#
+  Context (from worklist_fragment.html):
+    filters             dict  — {assignee, priority, types:list, q, min_value}
+    available_types     list  — distinct action_type values from UNFILTERED data
+                                (chips derived from live data so new mart action
+                                 types appear automatically without code changes)
+    active_filter_count int   — non-default filter count (for badge)
+
+  Query-param contract (matches screen_worklist._parse_filters):
+    priority   str        — all|high|urgent
+    type       str        — comma-separated action_type list (empty = all)
+    q          str        — free-text search (customer name / rationale / title)
+    min_value  int        — minimum value_at_stake_vnd; 0 = no filter
+
+  HTMX pattern: one <form hx-get> wraps every control. Hidden inputs carry the
+  current state; each visible control mutates just its own value. On change/click
+  HTMX serialises the form and issues GET /worklist/fragment?… targeting
+  #worklist-container outerHTML. This guarantees all active filters are preserved
+  when any single control changes — no manual URL merging required.
+
+  NOTE — assignee ("Người nhận") toggle is NOT rendered.
+  Task.assignee_user_id exists in crm_task, but the worklist router has no access
+  to the authenticated user identity (no session/auth middleware surfaces a
+  user_id to requests), so "Của tôi" cannot be resolved. Wire this toggle once
+  auth context is available via the request lifecycle.
+#}
+
+{# ── Normalise context ─────────────────────────────────────────────────────── #}
+{% set filters     = filters     | default({}) %}
+{% set fp          = filters.priority  | default('all') %}
+{% set fq          = filters.q         | default('') %}
+{% set ftypes      = filters.types     | default([]) %}
+{% set fmin        = filters.min_value | default(0) %}
+{% set avail       = available_types   | default([]) %}
+{% set badge_count = active_filter_count | default(0) %}
+
+{#
+  Form approach: hidden inputs for priority, type (joined), min_value carry the
+  current state. Each button or input updates its hidden sibling via a tiny
+  onclick/oninput before submitting, OR buttons are rendered as <button
+  type="button"> that set hidden values then trigger hx-submit on the form.
+
+  Simpler: render each group as its own mini-form that includes all other params
+  as hidden inputs (no JS needed). This is pure HTMX with zero JS.
+#}
+
+{# ── Helper: render hidden inputs for all EXCEPT the key being changed ──────── #}
+{# We use one <form> per control group for simplicity. Each form carries all
+   current filter values as hidden inputs, overriding only what it controls. #}
+
+{# ── Root container ────────────────────────────────────────────────────────── #}
+<div class="toolbar"
+     id="wl-filter-bar"
+     style="flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-3);align-items:center;">
+
+  {# ── Priority toggles ──────────────────────────────────────────────────── #}
+  <div style="display:flex;align-items:center;gap:var(--sp-2)">
+    <span class="caption" style="color:var(--fg-tertiary)">Ưu tiên:</span>
+    {% for val, label in [('all', 'Tất cả'), ('high', 'Cao'), ('urgent', 'Khẩn')] %}
+    <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+          style="display:contents">
+      <input type="hidden" name="priority"  value="{{ val }}">
+      {% if ftypes %}<input type="hidden" name="type"     value="{{ ftypes | join(',') }}">{% endif %}
+      {% if fq     %}<input type="hidden" name="q"        value="{{ fq | e }}">{% endif %}
+      {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+      <button type="submit" class="tab" aria-selected="{{ 'true' if fp == val else 'false' }}">
+        {{ label }}
+      </button>
+    </form>
+    {% endfor %}
+  </div>
+
+  {# ── Action-type multi-select chips ────────────────────────────────────── #}
+  {#
+    Selecting a chip toggles that action_type in the comma-list.
+    When any type is selected, manual tasks are hidden (only action rows remain).
+    This is documented in screen_worklist: tasks always pass through the type
+    filter; selecting types implicitly focuses the view on actions only.
+  #}
+  {% if avail %}
+  <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap">
+    <span class="caption" style="color:var(--fg-tertiary)">Loại:</span>
+    {% for atype in avail %}
+      {# Compute new type list: toggle membership for this chip. #}
+      {% if atype in ftypes %}
+        {% set new_types = ftypes | reject('equalto', atype) | list %}
+      {% else %}
+        {% set new_types = ftypes + [atype] %}
+      {% endif %}
+      <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+            style="display:contents">
+        <input type="hidden" name="priority" value="{{ fp }}">
+        {% if new_types %}<input type="hidden" name="type" value="{{ new_types | join(',') }}">{% endif %}
+        {% if fq        %}<input type="hidden" name="q"    value="{{ fq | e }}">{% endif %}
+        {% if fmin      %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+        <button type="submit"
+                class="tab chip"
+                aria-selected="{{ 'true' if atype in ftypes else 'false' }}"
+                title="{{ atype }}">
+          {{ atype | replace('_', ' ') | title }}
+        </button>
+      </form>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {# ── Search input ──────────────────────────────────────────────────────── #}
+  <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+        style="display:flex;align-items:center;gap:var(--sp-2)">
+    <input type="hidden" name="priority" value="{{ fp }}">
+    {% if ftypes %}<input type="hidden" name="type"     value="{{ ftypes | join(',') }}">{% endif %}
+    {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+    <span class="caption" style="color:var(--fg-tertiary)">Tìm:</span>
+    <input type="search"
+           name="q"
+           value="{{ fq | e }}"
+           placeholder="Tên / SĐT / lý do…"
+           class="input input--sm"
+           style="min-width:160px"
+           hx-get="/worklist/fragment"
+           hx-include="closest form"
+           hx-trigger="keyup changed delay:400ms, search"
+           hx-target="#worklist-container"
+           hx-swap="outerHTML">
+  </form>
+
+  {# ── Value toggle — "chỉ giá trị cao" ─────────────────────────────────── #}
+  {#
+    1_000_000 VND (1 M) is the high-value threshold. screen_worklist filters
+    actions where value_at_stake_vnd >= min_value. Toggle is a simple on/off:
+    clicking again restores min_value=0 (no filter).
+  #}
+  <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+        style="display:contents">
+    <input type="hidden" name="priority" value="{{ fp }}">
+    {% if ftypes %}<input type="hidden" name="type"     value="{{ ftypes | join(',') }}">{% endif %}
+    {% if fq     %}<input type="hidden" name="q"        value="{{ fq | e }}">{% endif %}
+    {% if fmin == 0 %}
+    <input type="hidden" name="min_value" value="1000000">
+    {% endif %}
+    {# When fmin > 0: omit min_value → defaults to 0 (filter off). #}
+    <button type="submit"
+            class="tab"
+            aria-selected="{{ 'true' if fmin > 0 else 'false' }}"
+            title="Chỉ hiện hành động có giá trị từ 1 triệu VND trở lên">
+      💰 Giá trị cao
+    </button>
+  </form>
+
+  {# ── Spacer ────────────────────────────────────────────────────────────── #}
+  <span style="flex:1"></span>
+
+  {# ── Active-filter count badge + clear-all ─────────────────────────────── #}
+  {% if badge_count > 0 %}
+  <div style="display:flex;align-items:center;gap:var(--sp-2)">
+    <span class="badge badge--primary"
+          title="{{ badge_count }} bộ lọc đang bật">
+      {{ badge_count }}
+    </span>
+    <a class="btn btn--ghost btn--sm"
+       hx-get="/worklist/fragment"
+       hx-target="#worklist-container"
+       hx-swap="outerHTML"
+       title="Xóa tất cả bộ lọc">
+      Xóa filter
+    </a>
+  </div>
+  {% endif %}
+
+</div>

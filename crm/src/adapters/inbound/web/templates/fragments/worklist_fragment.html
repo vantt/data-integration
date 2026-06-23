@@ -1,30 +1,36 @@
-{# @surface S01 · Worklist / Dashboard | @source crm/docs/ui-spec/screens/S01-worklist-dashboard.md | @kind SCREEN #}
-{# HTMX-refreshable inner fragment — served at GET /worklist/fragment[?assignee=me&priority=all]
-   Data: tasks (list[Task]), actions (list[ActionQueueItem]),
-         party_extras (dict[party_id, {preferred_identity, contact_pref_notes}]),
-         refreshed_at (str), is_stale (bool),
-         filter_assignee (str), filter_priority (str)
+{# @surface S01 · Worklist / Dashboard | @source crm/docs/ui-spec/screens/S01-worklist-dashboard.md | @kind FRAGMENT #}
+{# HTMX-refreshable inner fragment — served at GET /worklist/fragment.
+   Context: bands[], value_total, counts, urgent_count, task_open, available_types,
+   active_filter_count, filters, party_extras, refreshed_at, is_stale.
 #}
-{% set filter_assignee = filter_assignee | default('me') %}
-{% set filter_priority = filter_priority | default('all') %}
+{% set filters = filters | default({}) %}
 {% set party_extras = party_extras | default({}) %}
-
-{# KPI computation #}
-{% set open_count = tasks | length %}
-{% set value_total = actions | sum(attribute='value_at_stake_vnd') %}
-{% set p1_count = tasks | selectattr('priority', 'ge', 2) | list | length %}
+{% set bands = bands | default([]) %}
+{% set value_total = value_total | default(0) %}
+{% set counts = counts | default({}) %}
+{% set urgent_count = urgent_count | default(0) %}
+{% set task_open = task_open | default(0) %}
+{% set available_types = available_types | default([]) %}
+{% set active_filter_count = active_filter_count | default(0) %}
+{% set refreshed_at = refreshed_at | default('') %}
+{% set is_stale = is_stale | default(false) %}
 
 <div id="worklist-container">
 
-  {# ── KPI strip ────────────────────────────────────────────── #}
+  {# ── KPI strip ────────────────────────────────────────────────────────────
+     value_total  = sum of value_at_stake across ALL value-bearing rows.
+     urgent_count = rows in bands 0+1 (overdue + today/urgent), both actions and tasks.
+     task_open    = count of open tasks after filtering.
+     counts       = {actions, tasks, total} after filtering.
+  #}
   <div class="kpi-strip" style="margin-bottom:var(--sp-4)">
     <div class="kpi">
       <div class="kpi__label">Task mở</div>
-      <div class="kpi__val">{{ open_count }}</div>
+      <div class="kpi__val">{{ task_open }}</div>
     </div>
     <div class="kpi">
       <div class="kpi__label">Hành động AQ</div>
-      <div class="kpi__val">{{ actions | length }}</div>
+      <div class="kpi__val">{{ counts.actions | default(0) }}</div>
     </div>
     <div class="kpi">
       <div class="kpi__label">Giá trị tiềm năng</div>
@@ -32,230 +38,37 @@
       <div class="kpi__sub">value_at_stake</div>
     </div>
     <div class="kpi">
-      <div class="kpi__label">Ưu tiên cao</div>
-      <div class="kpi__val">{{ p1_count }}</div>
+      <div class="kpi__label">Cần xử lý ngay</div>
+      <div class="kpi__val">{{ urgent_count }}</div>
+      <div class="kpi__sub">quá hạn + hôm nay</div>
     </div>
   </div>
 
-  {# ── Filter bar ───────────────────────────────────────────── #}
-  <div class="toolbar" style="flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-3)">
-    <div style="display:flex;align-items:center;gap:var(--sp-2)">
-      <span class="caption" style="color:var(--fg-tertiary)">Người nhận:</span>
-      {% for val, label in [('me', 'Của tôi'), ('all', 'Tất cả')] %}
-      <button class="tab" aria-selected="{{ 'true' if filter_assignee == val else 'false' }}"
-              hx-get="/worklist/fragment?assignee={{ val }}&priority={{ filter_priority }}"
-              hx-target="#worklist-container" hx-swap="outerHTML">
-        {{ label }}
-      </button>
-      {% endfor %}
+  {# ── Completion progress bar ───────────────────────────────────────────────
+     Y = counts.total (all open rows after filtering).
+     X = 0 as server-side baseline — no session tracking needed; refreshes reset it.
+     The bar communicates scale, not precise done-count, so 0/Y is correct here.
+  #}
+  {% set total_count = counts.total | default(0) %}
+  {% if total_count > 0 %}
+  <div class="wl-progress" style="margin-bottom:var(--sp-3)">
+    <div class="wl-progress__label">
+      <span class="caption" style="color:var(--fg-tertiary)">Đã xong</span>
+      <span class="caption" style="color:var(--fg-tertiary)">0/{{ total_count }}</span>
     </div>
-    <div style="display:flex;align-items:center;gap:var(--sp-2)">
-      <span class="caption" style="color:var(--fg-tertiary)">Ưu tiên:</span>
-      {% for val, label in [('all', 'Tất cả'), ('high', 'Cao'), ('urgent', 'Khẩn')] %}
-      <button class="tab" aria-selected="{{ 'true' if filter_priority == val else 'false' }}"
-              hx-get="/worklist/fragment?assignee={{ filter_assignee }}&priority={{ val }}"
-              hx-target="#worklist-container" hx-swap="outerHTML">
-        {{ label }}
-      </button>
-      {% endfor %}
+    <div class="wl-progress__track">
+      <div class="wl-progress__fill" style="width:0%"></div>
     </div>
   </div>
-
-  {# ── Empty / done states ──────────────────────────────────── #}
-  {% if not actions and not tasks %}
-  <div class="state">
-    <div class="state__inner">
-      <div class="state__title">Hôm nay không có task nào</div>
-      <p class="state__sub">Không có task theo bộ lọc hiện tại.</p>
-      <div class="state__actions">
-        <a href="/customers" class="btn btn--secondary">Duyệt khách hàng</a>
-      </div>
-    </div>
-  </div>
-  {% else %}
-
-  {# ── Unified wl-list ──────────────────────────────────────── #}
-  <div class="wl-list">
-
-    {# ── Action queue items as wl-rows ── #}
-    {% for a in actions %}
-    {% set extras = party_extras.get(a.party_id, {}) %}
-    {% set pref_id = extras.get('preferred_identity') %}
-    {% set cp_notes = extras.get('contact_pref_notes', []) %}
-    <div class="wl-row" id="aq-{{ a.action_id }}"
-         hx-get="/customers/{{ a.party_id }}" hx-target="body" hx-push-url="true"
-         hx-trigger="click[!event.target.closest('button,a,details')]">
-      {# Dismiss checkbox #}
-      <button class="wl-check" type="button" aria-label="Bỏ qua action này"
-              title="Bỏ qua"
-              hx-patch="/worklist/actions/{{ a.action_id }}/dismiss"
-              hx-target="#aq-{{ a.action_id }}"
-              hx-swap="delete"
-              onclick="event.stopPropagation()">
-        {% include "icons/check.svg" %}
-      </button>
-      <div class="wl-row__main">
-        <div class="wl-row__top">
-          <span class="{{ a.action_type | bdg_cls('action_type') }}" data-tooltip="{{ a.action_type | bdg_tip('action_type') }}">{{ a.action_type }}</span>
-          {% if a.customer_name %}
-          <span class="wl-row__name">{{ a.customer_name }}</span>
-          {% endif %}
-          <span class="wl-row__phone">{{ a.customer_key }}</span>
-        </div>
-        <div class="wl-row__why">{{ a.rationale_vi }}</div>
-        {# contact_pref inline (★★★ spec feature) #}
-        {% for cpn in cp_notes %}
-        <div class="wl-row__pref">💬 {{ cpn.body }}</div>
-        {% endfor %}
-        <div class="wl-row__meta">
-          {% if a.value_at_stake_vnd > 0 %}
-          <span class="wl-row__value">{% include "icons/money.svg" %} {{ a.value_at_stake_vnd | fmt_vnd }}</span>
-          {% endif %}
-          <span class="wl-row__due">{% include "icons/clock.svg" %}
-            Chờ từ {{ a.pending_since if a.pending_since else a.generated_date }}
-          </span>
-        </div>
-      </div>
-      {# Quick-action buttons + navigate + snooze (★★★ spec A-S01-007/008) #}
-      <div class="wl-row__aside">
-        {% if pref_id %}
-          {% if pref_id.identity_type in ('phone', 'phone_secondary') %}
-          <button class="btn btn--secondary" style="padding:8px 12px"
-                  hx-get="/modals/m08?party_id={{ a.party_id }}&mode=contact_attempt&channel=phone"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  title="Gọi điện" onclick="event.stopPropagation()">
-            📞 Gọi
-          </button>
-          {% elif pref_id.identity_type == 'zalo' %}
-          <button class="btn btn--secondary" style="padding:8px 12px"
-                  hx-get="/modals/m08?party_id={{ a.party_id }}&mode=contact_attempt&channel=zalo"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  title="Zalo" onclick="event.stopPropagation()">
-            💬 Zalo
-          </button>
-          {% elif pref_id.identity_type == 'facebook' %}
-          <button class="btn btn--secondary" style="padding:8px 12px"
-                  hx-get="/modals/m08?party_id={{ a.party_id }}&mode=contact_attempt&channel=facebook"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  title="Facebook" onclick="event.stopPropagation()">
-            📘 Facebook
-          </button>
-          {% endif %}
-        {% else %}
-          {# Fallback: open M08 without pre-selecting channel #}
-          <button class="btn btn--secondary" style="padding:8px 12px"
-                  hx-get="/modals/m08?party_id={{ a.party_id }}&mode=contact_attempt"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  onclick="event.stopPropagation()">
-            📞 Gọi
-          </button>
-        {% endif %}
-        {# Snooze dropdown #}
-        <details style="position:relative" onclick="event.stopPropagation()">
-          <summary class="btn btn--ghost" style="padding:8px 10px;list-style:none;cursor:pointer"
-                   title="Tạm hoãn">⏰</summary>
-          <div style="position:absolute;right:0;top:100%;background:var(--surface-raised,#fff);
-                      border:1px solid var(--border);border-radius:6px;padding:4px;
-                      min-width:110px;z-index:20;display:flex;flex-direction:column;gap:2px">
-            {% for days, label in [(1,'1 ngày'),(3,'3 ngày'),(7,'1 tuần')] %}
-            <button class="btn btn--ghost" style="padding:6px 10px;text-align:left;width:100%"
-                    hx-patch="/worklist/actions/{{ a.action_id }}/snooze?days={{ days }}"
-                    hx-target="#aq-{{ a.action_id }}"
-                    hx-swap="delete">
-              {{ label }}
-            </button>
-            {% endfor %}
-          </div>
-        </details>
-        {% if a.party_id %}
-        <a href="/customers/{{ a.party_id }}" class="btn btn--ghost" style="padding:8px 10px"
-           onclick="event.stopPropagation()">
-          Xem 360 {% include "icons/chevron.svg" %}
-        </a>
-        {% endif %}
-      </div>
-    </div>
-    {% endfor %}
-
-    {# ── Manual / non-action-queue tasks ── #}
-    {% for t in tasks if t.source != 'action_queue' %}
-    {% set extras = party_extras.get(t.party_id, {}) if t.party_id else {} %}
-    {% set pref_id = extras.get('preferred_identity') %}
-    {% set cp_notes = extras.get('contact_pref_notes', []) %}
-    {% if t.priority >= 2 %}{% set prio_label = 'P1' %}
-    {% elif t.priority == 1 %}{% set prio_label = 'P2' %}
-    {% else %}{% set prio_label = 'P3' %}{% endif %}
-    <div class="wl-row{% if t.status in ('done', 'cancelled') %} wl-row--done{% endif %}"
-         id="task-{{ t.task_id }}">
-      {# A-S01-003: checkbox → PATCH done #}
-      <button class="wl-check{% if t.status == 'done' %} wl-check--on{% endif %}"
-              hx-patch="/tasks/{{ t.task_id }}/done"
-              hx-target="#task-{{ t.task_id }}"
-              hx-swap="outerHTML"
-              aria-label="done">
-        {% if t.status == 'done' %}{% include "icons/check.svg" %}{% endif %}
-      </button>
-      <div class="wl-row__main">
-        <div class="wl-row__top">
-          <span class="prio prio--{{ prio_label }}">{{ prio_label }}</span>
-          {% if t.party_id %}
-          <a class="wl-row__name" href="/customers/{{ t.party_id }}"
-             onclick="event.stopPropagation()">{{ t.title }}</a>
-          {% else %}
-          <span class="wl-row__name">{{ t.title }}</span>
-          {% endif %}
-        </div>
-        {% if t.description %}
-        <div class="wl-row__why">{{ t.description }}</div>
-        {% endif %}
-        {# contact_pref inline (★★★ spec feature) #}
-        {% for cpn in cp_notes %}
-        <div class="wl-row__pref">💬 {{ cpn.body }}</div>
-        {% endfor %}
-        <div class="wl-row__meta">
-          {% if t.due_at %}
-          <span class="wl-row__due">{% include "icons/clock.svg" %} Due: {{ t.due_at | format_ict }}</span>
-          {% endif %}
-        </div>
-      </div>
-      <div class="wl-row__aside">
-        {# Quick-action buttons (A-S01-007/008) #}
-        {% if t.party_id %}
-          {% if pref_id and pref_id.identity_type in ('phone', 'phone_secondary') %}
-          <button class="btn btn--secondary" style="padding:8px 12px"
-                  hx-get="/modals/m08?party_id={{ t.party_id }}&mode=contact_attempt&channel=phone"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  onclick="event.stopPropagation()">
-            📞 Gọi
-          </button>
-          {% elif pref_id and pref_id.identity_type == 'zalo' %}
-          <button class="btn btn--secondary" style="padding:8px 12px"
-                  hx-get="/modals/m08?party_id={{ t.party_id }}&mode=contact_attempt&channel=zalo"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  onclick="event.stopPropagation()">
-            💬 Zalo
-          </button>
-          {% else %}
-          <button class="btn btn--secondary" style="padding:8px 12px"
-                  hx-get="/modals/m08?party_id={{ t.party_id }}&mode=contact_attempt"
-                  hx-target="#modal-root" hx-swap="innerHTML"
-                  onclick="event.stopPropagation()">
-            📞 Gọi
-          </button>
-          {% endif %}
-          <a href="/customers/{{ t.party_id }}" class="btn btn--ghost" style="padding:8px 10px"
-             onclick="event.stopPropagation()">
-            Mở hồ sơ {% include "icons/chevron.svg" %}
-          </a>
-        {% endif %}
-      </div>
-    </div>
-    {% endfor %}
-
-  </div>{# /.wl-list #}
   {% endif %}
 
-  {# ── Freshness footer (R2, R8) ───────────────────────────── #}
+  {# ── Filter bar (assignee/priority + type chips + search + value toggle) ── #}
+  {% include "fragments/_wl_filter_bar.html" %}
+
+  {# ── Banded rows (urgency bands rendered via the wl_row macro) ── #}
+  {% include "fragments/_wl_bands.html" %}
+
+  {# ── Freshness footer ─────────────────────────────────────── #}
   <div class="row-between" style="padding-top:var(--sp-3);margin-top:var(--sp-2);border-top:1px solid var(--border)">
     {% if is_stale %}
     <div class="caveat caveat--warn" style="margin:0">

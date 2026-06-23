@@ -1,0 +1,78 @@
+{# @surface S01 · Worklist banded collapsible rows | @kind PARTIAL
+   Iterates `bands` (always 4 entries from the ranking output).
+   Bands 0/1/2 expanded by default; Band 3 collapsed — long-pending items
+   shouldn't crowd today's urgent work.
+   Per-band cap: 10 rows visible (Band 3: 5); overflow in a <details> expander
+   so no extra round-trip is needed.
+
+   Context:
+     bands         list[dict]  — [{id, label, icon, rows, count, total_value}]
+     party_extras  dict        — {party_id: {preferred_identity, contact_pref_notes}}
+     counts        dict        — {actions, tasks, total}
+#}
+{% from "fragments/_wl_row.html" import wl_row %}
+{% set bands = bands | default([]) %}
+{% set party_extras = party_extras | default({}) %}
+{% set total_count = counts.total | default(0) %}
+
+{# ── Empty / all-done state ──────────────────────────────────────────────── #}
+{% if total_count == 0 %}
+<div class="state" id="wl-empty-state">
+  <div class="state__inner">
+    <div class="state__title">Hôm nay không có task nào</div>
+    <p class="state__sub">Không có task theo bộ lọc hiện tại.</p>
+    <div class="state__actions">
+      <a href="/customers" class="btn btn--secondary">Duyệt khách hàng</a>
+    </div>
+  </div>
+</div>
+
+{% else %}
+
+{# ── Band loop ───────────────────────────────────────────────────────────── #}
+<div class="wl-bands">
+{% for band in bands %}
+{% if band.count > 0 %}
+
+{# Band caps: Band 3 (neglected/long-pending) gets a tighter cap of 5
+   so it doesn't overwhelm the view; all other bands cap at 10. #}
+{% set cap = 5 if band.id == 3 else 10 %}
+{% set visible_rows = band.rows[:cap] %}
+{% set overflow_rows = band.rows[cap:] %}
+
+{# Bands 0/1/2 are open by default; Band 3 collapsed to reduce noise #}
+<details class="wl-band" {% if band.id != 3 %}open{% endif %}>
+  <summary class="wl-band__header wl-band__header--b{{ band.id }}">
+    <span class="wl-band__icon" aria-hidden="true">{{ band.icon }}</span>
+    <span class="wl-band__label">{{ band.label }}</span>
+    <span class="wl-band__count">{{ band.count }}</span>
+    {% if band.total_value > 0 %}
+    <span class="wl-band__value">{{ band.total_value | fmt_vnd }}</span>
+    {% endif %}
+    <span class="wl-band__chevron" aria-hidden="true"></span>
+  </summary>
+
+  <div class="wl-list wl-list--b{{ band.id }}">
+    {# Visible rows up to cap #}
+    {% for row in visible_rows %}
+    {{ wl_row(row, party_extras) }}
+    {% endfor %}
+
+    {# Overflow rows expand inline — no round-trip needed #}
+    {% if overflow_rows %}
+    <details class="wl-more">
+      <summary class="wl-more__toggle">
+        Xem thêm ({{ overflow_rows | length }})
+      </summary>
+      {% for row in overflow_rows %}
+      {{ wl_row(row, party_extras) }}
+      {% endfor %}
+    </details>
+    {% endif %}
+  </div>
+</details>
+
+{% endif %}
+{% endfor %}{# /bands #}
+</div>{# /.wl-bands #}
+{% endif %}{# /total_count #}

@@ -300,6 +300,117 @@
 .twk-sw { display: inline-flex; align-items: center; gap: 7px; }
 .twk-sw__dot { width: 12px; height: 12px; border-radius: var(--radii-hairline); border: 1px solid var(--border-strong); }
 
+/* ── Worklist banded collapsible UI (S01) ───────────────────────────────── */
+
+/* Band container: stacks band sections vertically */
+.wl-bands { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* Band section wraps header + row list in a native <details> */
+.wl-band { border: 1px solid var(--border); border-radius: var(--radii-control); overflow: hidden; background: var(--bg-surface); }
+
+/* Band header: clickable <summary> with icon, label, count, optional value */
+.wl-band__header {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
+  cursor: pointer;
+  font-size: 13px; font-weight: var(--fw-medium); color: var(--fg-1);
+  user-select: none; list-style: none;
+  border-left: 3px solid transparent;
+  transition: background var(--dur-fast) var(--ease-fast);
+}
+.wl-band__header::-webkit-details-marker { display: none; }
+.wl-band__header:hover { background: var(--bg-raised); }
+
+/* Left-border tone per band communicates urgency at a glance */
+.wl-band__header--b0 { border-left-color: var(--coral-500); }
+.wl-band__header--b1 { border-left-color: var(--coral-500); }
+.wl-band__header--b2 { border-left-color: var(--border-strong); }
+.wl-band__header--b3 { border-left-color: transparent; color: var(--fg-muted); }
+
+.wl-band__icon { font-size: 15px; flex: none; }
+.wl-band__label { flex: 1; }
+.wl-band__count {
+  font-family: var(--font-mono); font-size: 10.5px; letter-spacing: var(--tracking-mono);
+  color: var(--fg-tertiary); padding: 1px 6px;
+  border: 1px solid var(--border); border-radius: var(--radii-pill);
+}
+.wl-band__value {
+  font-family: var(--num-font); font-size: 11.5px;
+  color: var(--fg-tertiary); letter-spacing: var(--tracking-mono);
+  margin-left: auto; padding-right: var(--sp-2);
+}
+/* Chevron rotates when band is open */
+.wl-band__chevron {
+  width: 12px; height: 12px; flex: none; margin-left: var(--sp-1);
+  border-right: 2px solid var(--fg-tertiary); border-bottom: 2px solid var(--fg-tertiary);
+  transform: rotate(45deg); transition: transform var(--dur-fast) var(--ease-fast);
+}
+.wl-band[open] .wl-band__chevron { transform: rotate(-135deg); }
+
+/* Row list inside an open band — inherits wl-row styles */
+.wl-list--b0 .wl-row,
+.wl-list--b1 .wl-row { border-left: 3px solid color-mix(in srgb, var(--coral-500) 45%, transparent); }
+.wl-list--b2 .wl-row { border-left: 3px solid transparent; }
+/* Band 3 rows: compact padding — long-pending items need less visual weight */
+.wl-list--b3 .wl-row { padding: var(--sp-3) var(--sp-4); font-size: 13px; }
+.wl-list--b3 .wl-row__name { font-size: 14px; }
+.wl-list--b3 .wl-row__why { font-size: 12.5px; }
+
+/* "Xem thêm" expander inside a band */
+.wl-more { }
+.wl-more__toggle {
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--sp-2) var(--sp-4);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: var(--tracking-mono);
+  color: var(--fg-tertiary); cursor: pointer; list-style: none;
+  border-top: 1px dashed var(--border);
+  transition: color var(--dur-fast) var(--ease-fast), background var(--dur-fast) var(--ease-fast);
+}
+.wl-more__toggle::-webkit-details-marker { display: none; }
+.wl-more__toggle:hover { color: var(--fg-1); background: var(--bg-raised); }
+
+/* Action row: no left-gutter checkbox, use a zero-width spacer to align columns */
+.wl-row--action .wl-row__gutter { width: 22px; flex: none; }
+
+/* Snooze dropdown popover */
+.wl-snooze { position: relative; }
+.wl-snooze__menu {
+  position: absolute; right: 0; top: 100%;
+  background: var(--bg-raised, #fff); border: 1px solid var(--border);
+  border-radius: var(--radii-control); padding: 4px; min-width: 110px;
+  z-index: 20; display: flex; flex-direction: column; gap: 2px;
+}
+
+/* Dismiss button: text-style to distinguish from task done checkbox */
+.wl-dismiss-btn { font-size: 11.5px; color: var(--fg-tertiary); }
+.wl-dismiss-btn:hover { color: var(--coral-500); }
+
+/* Neglect badge: "đã chờ N ngày" shown on actions pending 1–6 days */
+.wl-neglect-badge {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: var(--tracking-mono);
+  padding: 1px 6px; border-radius: var(--radii-pill);
+  color: var(--honey-500);
+  background: color-mix(in srgb, var(--amber-bg) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--honey-500) 30%, transparent);
+}
+/* Overdue variant for band-0 tasks */
+.wl-neglect-badge--overdue {
+  color: var(--coral-500);
+  background: color-mix(in srgb, var(--coral-bg) 60%, transparent);
+  border-color: color-mix(in srgb, var(--coral-500) 30%, transparent);
+}
+
+/* Completion progress bar */
+.wl-progress { display: flex; flex-direction: column; gap: 4px; }
+.wl-progress__label { display: flex; justify-content: space-between; }
+.wl-progress__track {
+  height: 6px; background: var(--border); border-radius: 3px; overflow: hidden;
+}
+.wl-progress__fill {
+  height: 100%; background: var(--moss-500); border-radius: 3px;
+  transition: width 0.3s var(--ease-fast);
+}
+
 /* small util */
 .btn { white-space: nowrap; }
 .crm-pagehead__title { max-width: 36ch; }

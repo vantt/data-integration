@@ -1,0 +1,23 @@
+{# @surface S01 · Task done confirmation row | @kind FRAGMENT
+   Served by PATCH /tasks/{task_id}/done — replaces the live task row via
+   hx-swap="outerHTML" on #task-{task_id}.
+   Context: task (Task entity with all fields).
+#}
+{% set t = task %}
+<div class="wl-row wl-row--task wl-row--done" id="task-{{ t.task_id }}" aria-label="Task hoàn thành">
+  {# Filled checkbox signals completion — distinct appearance from action dismiss button #}
+  <button class="wl-check wl-check--on" type="button" disabled aria-label="Đã hoàn thành">
+    {% include "icons/check.svg" %}
+  </button>
+  <div class="wl-row__main">
+    <div class="wl-row__top">
+      <span class="wl-row__name" style="text-decoration:line-through;color:var(--fg-tertiary)">{{ t.title }}</span>
+    </div>
+    {% if t.completed_at %}
+    <div class="wl-row__meta">
+      <span class="wl-row__due">Đã xong {{ t.completed_at | format_ict }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="wl-row__aside"></div>
+</div>

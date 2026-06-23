@@ -74,7 +74,10 @@ _CATALOG: dict[str, dict[str, BadgeDef]] = {
     "action_type": {
         "call_now":         BadgeDef("bad",    "Gọi ngay — khách có nguy cơ rời bỏ cao"),
         "reorder_nudge":    BadgeDef("warn",   "Nhắc tái đặt hàng — sắp đến chu kỳ"),
+        "reorder_preempt":  BadgeDef("warn",   "Nhắc trước chu kỳ — sắp tới hạn mua"),
         "win_back":         BadgeDef("warn",   "Tái kích hoạt — đã lâu không mua"),
+        "second_order":     BadgeDef("warn",   "Đẩy đơn 2 — mới mua lần đầu"),
+        "high_cancel_risk": BadgeDef("bad",    "Tỷ lệ huỷ cao — cần xác nhận đơn"),
         "upsell":           BadgeDef("good",   "Upsell — tiềm năng nâng hạng"),
         "cross_sell":       BadgeDef("good",   "Cross-sell — đề xuất sản phẩm bổ sung"),
         "collect_feedback": BadgeDef("accent", "Thu thập phản hồi từ khách"),

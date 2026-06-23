@@ -4,7 +4,7 @@ FastAPI router mirroring screen_worklist.go.
 Serves full HTML page + HTMX-refreshable fragment + task-done PATCH.
 Also handles action lifecycle: dismiss (PATCH /worklist/actions/{id}/dismiss)
 and snooze (PATCH /worklist/actions/{id}/snooze?days=N).
-No business logic — thin adapter only.
+No business logic — thin adapter only. All ranking delegated to worklist_ranking.
 """
 from __future__ import annotations
 
@@ -20,6 +20,13 @@ from crm.src.domain.entities.cache_insight import ActionQueueItem
 from crm.src.domain.entities.profile import Note
 from crm.src.domain.entities.party import PartyIdentity
 from crm.src.domain.entities.task import Task
+from crm.src.application.worklist_ranking import rank_worklist, today_ict
+from crm.src.application.worklist_filters import (
+    active_filter_count,
+    apply_filters,
+    available_action_types,
+    parse_filters,
+)
 
 log = logging.getLogger(__name__)
 
@@ -63,10 +70,12 @@ def make_worklist_router(
     """Return APIRouter wired with all Worklist routes."""
     router = APIRouter()
 
-    def _load_worklist_data(
-        filter_assignee: str = "me",
-        filter_priority: str = "all",
-    ) -> tuple[list[ActionQueueItem], list[Task], str, bool, dict]:
+    def _load_worklist_data(filters: dict) -> dict:
+        """Fetch, filter, rank, and return everything the template needs.
+
+        Filters are applied before ranking so ranking only sees the relevant
+        subset. Filter logic lives in the pure worklist_filters module.
+        """
         try:
             all_actions = action_queue.list_all_action_queue()
         except Exception as exc:
@@ -79,21 +88,18 @@ def make_worklist_router(
             log.error("worklist: list tasks: %s", exc)
             all_tasks = []
 
-        # Priority constants: 0=normal, 1=high, 2=urgent (TASK_PRIORITY_* in task.py)
-        if filter_priority == "urgent":
-            all_tasks = [t for t in all_tasks if t.priority >= 2]
-            all_actions = [a for a in all_actions if a.priority >= 2]
-        elif filter_priority == "high":
-            all_tasks = [t for t in all_tasks if t.priority >= 1]
-            all_actions = [a for a in all_actions if a.priority >= 1]
+        # Chips derive from unfiltered data, then narrow the working set.
+        available_types = available_action_types(all_actions)
+        all_actions, all_tasks = apply_filters(all_actions, all_tasks, filters)
 
+        # --- Metadata for freshness footer --------------------------------
         refreshed_at = ""
         is_stale = False
         if all_actions:
             refreshed_at = all_actions[0].refreshed_at
             is_stale = _is_cache_stale(refreshed_at)
 
-        # Batch-load contact_pref notes + preferred identity per party
+        # --- Enrich party extras (contact pref, preferred identity) -------
         party_extras: dict = {}
         if party_contacts is not None:
             seen: set[str] = set()
@@ -110,49 +116,44 @@ def make_worklist_router(
                 except Exception as exc:
                     log.warning("worklist: enrich party %s: %s", pid, exc)
 
-        return all_actions, all_tasks, refreshed_at, is_stale, party_extras
+        # --- Rank into banded structure ------------------------------------
+        today = today_ict()
+        ranked = rank_worklist(all_actions, all_tasks, today)
+
+        return {
+            **ranked,
+            "party_extras": party_extras,
+            "refreshed_at": refreshed_at,
+            "is_stale": is_stale,
+            "available_types": available_types,
+            "active_filter_count": active_filter_count(filters),
+            "filters": filters,
+            # Pass raw lists for templates that might still iterate directly.
+            "actions": all_actions,
+            "tasks": all_tasks,
+        }
 
     # ── Full page ─────────────────────────────────────────────────────────────
 
     @router.get("/", response_class=HTMLResponse)
     @router.get("/worklist", response_class=HTMLResponse)
     async def handle_worklist(request: Request) -> Response:
-        fa = request.query_params.get("assignee", "me")
-        fp = request.query_params.get("priority", "all")
-        actions, task_list, refreshed_at, is_stale, party_extras = _load_worklist_data(fa, fp)
+        filters = parse_filters(request.query_params)
+        data = _load_worklist_data(filters)
         return templates.TemplateResponse(
             "worklist.html",
-            {
-                "request": request,
-                "actions": actions,
-                "tasks": task_list,
-                "refreshed_at": refreshed_at,
-                "is_stale": is_stale,
-                "party_extras": party_extras,
-                "filter_assignee": fa,
-                "filter_priority": fp,
-            },
+            {"request": request, **data, **filters},
         )
 
     # ── HTMX fragment (refreshable inner container) ───────────────────────────
 
     @router.get("/worklist/fragment", response_class=HTMLResponse)
     async def handle_worklist_fragment(request: Request) -> Response:
-        fa = request.query_params.get("assignee", "me")
-        fp = request.query_params.get("priority", "all")
-        actions, task_list, refreshed_at, is_stale, party_extras = _load_worklist_data(fa, fp)
+        filters = parse_filters(request.query_params)
+        data = _load_worklist_data(filters)
         return templates.TemplateResponse(
             "fragments/worklist_fragment.html",
-            {
-                "request": request,
-                "actions": actions,
-                "tasks": task_list,
-                "refreshed_at": refreshed_at,
-                "is_stale": is_stale,
-                "party_extras": party_extras,
-                "filter_assignee": fa,
-                "filter_priority": fp,
-            },
+            {"request": request, **data, **filters},
         )
 
     # ── HTMX task-done PATCH ──────────────────────────────────────────────────
@@ -182,6 +183,19 @@ def make_worklist_router(
             "fragments/task_done_row.html",
             {"request": request, "task": task},
         )
+
+    # ── Task cancel ("Dọn" on overdue rows) ───────────────────────────────
+    # Worklist-local cancel: row is removed client-side via hx-swap="delete",
+    # so an empty 200 body suffices (the c360 cancel route returns a full panel
+    # and is not interchangeable here).
+    @router.patch("/tasks/{task_id}/cancel", response_class=HTMLResponse)
+    async def handle_cancel_task(request: Request, task_id: str) -> Response:
+        try:
+            task_writer.transition_status(task_id, "cancelled")
+        except Exception as exc:
+            log.error("worklist: cancel task %s: %s", task_id, exc)
+            return HTMLResponse("failed to cancel task", status_code=500)
+        return HTMLResponse("", status_code=200)
 
     # ── Action lifecycle: dismiss ─────────────────────────────────────────
 

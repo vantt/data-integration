@@ -1,0 +1,267 @@
+"""Pure ranking module — merges action-queue items and manual tasks into one
+urgency-banded, sorted worklist structure.
+
+No HTTP or DB imports — fully unit-testable. Called by screen_worklist adapter.
+
+Two opposite priority scales must be normalized before comparison:
+  - wh_action_queue.priority (priority_rank): lower number = more urgent (1=CALL_NOW)
+  - crm_task.priority: higher number = more urgent (2=urgent)
+Normalize both to urgency_score where higher = more urgent.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Optional
+
+
+# ---------------------------------------------------------------------------
+# ICT helper
+# ---------------------------------------------------------------------------
+
+def today_ict() -> date:
+    """Return the current date in ICT (UTC+7) to avoid 0h–7h boundary drift."""
+    return datetime.now(timezone(timedelta(hours=7))).date()
+
+
+# ---------------------------------------------------------------------------
+# Urgency normalization
+# ---------------------------------------------------------------------------
+
+def urgency_score(kind: str, priority_or_rank: int) -> int:
+    """Normalize priority to urgency_score where higher = more urgent.
+
+    Actions use priority_rank (warehouse tier): lower rank = more urgent.
+      urgency = 10 - priority_rank  → CALL_NOW(rank=1) → 9, ELSE(rank=9) → 1
+    Tasks use crm priority: 0=normal, 1=high, 2=urgent (higher = more urgent).
+      urgency = 7 + priority       → normal → 7, urgent → 9
+
+    Both scales produce scores in [1, 9]; an urgent task and CALL_NOW share
+    urgency=9 so they interleave by value when tied.
+    """
+    if kind == "action":
+        return max(1, min(9, 10 - int(priority_or_rank)))
+    # kind == "task"
+    return 7 + int(priority_or_rank)
+
+
+# ---------------------------------------------------------------------------
+# WorklistRow
+# ---------------------------------------------------------------------------
+
+@dataclass
+class WorklistRow:
+    """Unified row for the ranked worklist.
+
+    payload holds the original ActionQueueItem or Task object so templates
+    can access all fields without re-fetching.
+    """
+    kind: str           # 'action' | 'task'
+    band: int           # 0=overdue, 1=today/urgent, 2=on-track, 3=neglected
+    urgency: int        # normalized urgency_score (higher = more urgent)
+    value: int          # value_at_stake_vnd (action) or 0 (task)
+    neglect_days: int   # days since pending_since / due_at (for badge display)
+    ref_id: str         # action_id or task_id
+    payload: Any        # original entity (ActionQueueItem | Task)
+
+
+# ---------------------------------------------------------------------------
+# Date parsing helpers
+# ---------------------------------------------------------------------------
+
+def _parse_date(value: Optional[str]) -> Optional[date]:
+    """Parse YYYY-MM-DD or ISO datetime string to a date. Returns None on failure.
+
+    Mirrors the multi-format try/except style of _is_cache_stale to handle
+    warehouse strings (YYYY-MM-DD) and task timestamps (ISO-8601 with time).
+    """
+    if not value:
+        return None
+    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S.%fZ", "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S+00:00"):
+        try:
+            return datetime.strptime(value[:26], fmt[:len(fmt)]).date()
+        except ValueError:
+            continue
+    # Fallback: try slicing to first 10 chars (YYYY-MM-DD)
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Band assignment
+# ---------------------------------------------------------------------------
+
+def assign_band(
+    kind: str,
+    urgency: int,
+    due_date: Optional[date],
+    pending_date: Optional[date],
+    snoozed_until: Optional[date],
+    status: str,
+    today: date,
+) -> int:
+    """Assign urgency band (first match wins).
+
+    Band 0 — overdue manual tasks: deadline already passed; surface first so
+              deadlines are never buried.
+    Band 1 — today / urgent: task due today, urgency>=9 (urgent task or CALL_NOW
+              action), or woke-up snoozed action (was snoozed, now past due).
+    Band 3 — neglected actions: pending >= 7 days and not already in band 1.
+              Collapsed by default in UI to reduce overwhelm.
+    Band 2 — on-track: everything else.
+    """
+    if kind == "task" and due_date is not None and due_date < today:
+        return 0
+
+    if kind == "task" and due_date == today:
+        return 1
+    if urgency >= 9:
+        return 1
+    if kind == "action" and status == "snoozed" and snoozed_until is not None and snoozed_until <= today:
+        return 1
+
+    if kind == "action" and pending_date is not None:
+        if (today - pending_date).days >= 7:
+            return 3
+
+    return 2
+
+
+# ---------------------------------------------------------------------------
+# Band sort keys
+# ---------------------------------------------------------------------------
+
+def _sort_key_b0(row: WorklistRow) -> tuple:
+    """Band 0: overdue tasks — most overdue first (due_at asc), then value desc."""
+    due = _parse_date(getattr(row.payload, "due_at", None))
+    due_ord = due.toordinal() if due else 99999  # missing due sorts last
+    return (due_ord, -row.value)
+
+
+def _sort_key_b1(row: WorklistRow) -> tuple:
+    """Band 1: today/urgent — urgency desc, value desc, due asc."""
+    due = _parse_date(getattr(row.payload, "due_at", None))
+    due_ord = due.toordinal() if due else 99999
+    return (-row.urgency, -row.value, due_ord)
+
+
+def _sort_key_b2(row: WorklistRow) -> tuple:
+    """Band 2: on-track — urgency desc, value desc, then oldest pending first."""
+    ps = _parse_date(getattr(row.payload, "pending_since", None))
+    ps_ord = ps.toordinal() if ps else 99999  # missing pending sorts last
+    return (-row.urgency, -row.value, ps_ord)
+
+
+def _sort_key_b3(row: WorklistRow) -> tuple:
+    """Band 3: neglected actions — value desc (highest opportunity first)."""
+    return (-row.value,)
+
+
+_BAND_SORT_KEYS = {0: _sort_key_b0, 1: _sort_key_b1, 2: _sort_key_b2, 3: _sort_key_b3}
+
+# ---------------------------------------------------------------------------
+# Band metadata
+# ---------------------------------------------------------------------------
+
+_BAND_META = {
+    0: {"id": 0, "label": "Quá hạn",        "icon": "🔴"},
+    1: {"id": 1, "label": "Hôm nay / Khẩn", "icon": "⏰"},
+    2: {"id": 2, "label": "Trong hạn",       "icon": "📋"},
+    3: {"id": 3, "label": "Treo lâu",        "icon": "💤"},
+}
+
+
+# ---------------------------------------------------------------------------
+# Main ranking function
+# ---------------------------------------------------------------------------
+
+def rank_worklist(
+    actions: list,   # list[ActionQueueItem]
+    tasks: list,     # list[Task]
+    today: date,
+) -> dict:
+    """Merge actions + tasks into an urgency-banded sorted structure.
+
+    Returns a dict with:
+      bands       — list of band dicts [{id, label, icon, rows, count, total_value}]
+                    ordered 0→1→2→3. Empty bands are included (count=0) so the
+                    template always has a stable structure.
+      value_total — sum of value_at_stake_vnd across all actions in the result.
+      counts      — {actions: int, tasks: int, total: int}
+      task_open   — count of tasks with status not done/cancelled (for KPI strip)
+      urgent_count — count of rows in bands 0+1 (for progress KPI)
+    """
+    rows: list[WorklistRow] = []
+
+    for a in actions:
+        rank = int(getattr(a, "priority", 9) or 9)
+        us = urgency_score("action", rank)
+        pending = _parse_date(getattr(a, "pending_since", None))
+        snooze_d = _parse_date(getattr(a, "snoozed_until", None))
+        status = getattr(a, "status", "open") or "open"
+        band = assign_band("action", us, None, pending, snooze_d, status, today)
+        neglect = (today - pending).days if pending else 0
+        rows.append(WorklistRow(
+            kind="action",
+            band=band,
+            urgency=us,
+            value=int(getattr(a, "value_at_stake_vnd", 0) or 0),
+            neglect_days=neglect,
+            ref_id=str(getattr(a, "action_id", "")),
+            payload=a,
+        ))
+
+    for t in tasks:
+        prio = int(getattr(t, "priority", 0) or 0)
+        us = urgency_score("task", prio)
+        due = _parse_date(getattr(t, "due_at", None))
+        band = assign_band("task", us, due, None, None, "", today)
+        neglect = (today - due).days if due and due < today else 0
+        rows.append(WorklistRow(
+            kind="task",
+            band=band,
+            urgency=us,
+            value=0,
+            neglect_days=neglect,
+            ref_id=str(getattr(t, "task_id", "")),
+            payload=t,
+        ))
+
+    # Group into bands and sort within each band
+    bands_map: dict[int, list[WorklistRow]] = {0: [], 1: [], 2: [], 3: []}
+    for row in rows:
+        bands_map[row.band].append(row)
+
+    for band_id, band_rows in bands_map.items():
+        band_rows.sort(key=_BAND_SORT_KEYS[band_id])
+
+    # Build output structure
+    bands = []
+    for band_id in (0, 1, 2, 3):
+        band_rows = bands_map[band_id]
+        total_val = sum(r.value for r in band_rows)
+        bands.append({
+            **_BAND_META[band_id],
+            "rows": band_rows,
+            "count": len(band_rows),
+            "total_value": total_val,
+        })
+
+    value_total = sum(int(getattr(a, "value_at_stake_vnd", 0) or 0) for a in actions)
+    total_rows = len(rows)
+    urgent_count = len(bands_map[0]) + len(bands_map[1])
+
+    return {
+        "bands": bands,
+        "value_total": value_total,
+        "counts": {
+            "actions": len(actions),
+            "tasks": len(tasks),
+            "total": total_rows,
+        },
+        "task_open": len(tasks),      # all tasks passed in are open (filter applied upstream)
+        "urgent_count": urgent_count,  # rows needing attention today
+    }
