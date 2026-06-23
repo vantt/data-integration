@@ -3,6 +3,7 @@ import os
 import time
 import argparse
 import dlt
+import requests
 
 # Add src to path so imports work
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
@@ -76,8 +77,25 @@ def run(argv=None):
         except Exception as e:
             print(f"❌ Pipeline Error: {e}")
             if args.once:
-                # In once mode, we want to fail hard so Dagster knows
-                raise e
+                # In once mode, fail hard so Dagster knows
+                raise
+            # Classify error: unrecoverable errors should not be silently retried.
+            # auth/config/connection errors won't heal on their own — exit non-zero.
+            is_unrecoverable = isinstance(e, (
+                requests.exceptions.ConnectionError,  # wrong WORKER_URL / network down
+                KeyError,                             # missing required config key
+                ValueError,                           # bad config values
+            ))
+            # Also treat HTTP 401/403 as unrecoverable (misconfigured auth)
+            if not is_unrecoverable and isinstance(e, requests.exceptions.HTTPError):
+                status = getattr(e.response, "status_code", None)
+                if status in (401, 403):
+                    is_unrecoverable = True
+
+            if is_unrecoverable:
+                print(f"💥 Unrecoverable error ({type(e).__name__}): {e} — exiting loop.")
+                sys.exit(1)
+
             time.sleep(current_sleep)
 
 if __name__ == "__main__":

@@ -18,7 +18,11 @@ if os.name == 'nt':
     import msvcrt
 
     def lock_file(f):
-        # Allow 10 retries for locking
+        # Lock 1 byte at the current file position.
+        # NOTE: msvcrt.locking only locks 1 byte, not the full file region.
+        # Concurrent processes can still read/write outside the locked byte on NTFS.
+        # This is best-effort defense-in-depth; atomic rename in _write_cookie_file
+        # is the primary concurrency guard.  Allow 10 retries before raising.
         for _ in range(10):
             try:
                 msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
@@ -412,18 +416,33 @@ class SharedCookieManager:
     def get_valid_cookies(self) -> Dict[str, str]:
         """
         Get valid cookies - load from file or login if needed.
+
+        Concurrency guard: a file-based exclusive lock around the
+        check-and-refresh cycle prevents concurrent Dagster workers from
+        spawning parallel Playwright browser sessions when cookies expire.
+        Atomic rename in _write_cookie_file is still the primary safety net;
+        the lock here prevents the redundant double-login scenario.
+
+        Note on Windows: msvcrt.locking is best-effort (locks 1 byte).
+        The atomic rename remains the primary concurrency guard; the lock
+        reduces (but cannot fully eliminate) the race window on Windows.
         """
-        # Try load from file first
-        if not self.cookies:
-            self.load_cookies()
+        # Fast path: in-process cache still valid
+        if self.is_cookie_valid():
+            return self.cookies
 
-        # If not valid, try re-load (another process might have logged in)
-        if not self.is_cookie_valid():
-            self.load_cookies()
-
-            # If still not valid, login
-            if not self.is_cookie_valid():
-                self.login_and_save_cookies()
+        # Slow path: acquire process-level file lock before check-and-refresh
+        lock_path = self.cookie_file.with_suffix('.lock')
+        with open(lock_path, 'a') as lock_fh:
+            try:
+                self._acquire_lock(lock_fh, timeout=30)
+                # Re-check after acquiring lock — another process may have
+                # refreshed cookies while we were waiting
+                self.load_cookies()
+                if not self.is_cookie_valid():
+                    self.login_and_save_cookies()
+            finally:
+                self._release_lock(lock_fh)
 
         return self.cookies
 

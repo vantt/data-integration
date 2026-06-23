@@ -906,6 +906,8 @@ export async function handleHugCampaignPreview(
 
     // Full-table scan: no SQL WHERE filter — matchesTargeting applied in TS loop.
     // D1 scan of ~7.5k rows is estimated <10ms at D1 latency (acceptable admin action).
+    // GUARD: if hug_customer row count exceeds ~20k, add server-side WHERE filters
+    // for tier/value_group/customer_type to avoid D1 result-set limits and timeout.
     const { results } = await env.DB.prepare(
         `SELECT customer_id, tier, recency_days, value_group,
                 is_contactable, customer_type, updated_at

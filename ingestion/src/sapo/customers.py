@@ -66,6 +66,10 @@ from tenacity import (
 def sapo_customers_source(
     max_pages: int = 1000,
     page_size: int = 100,
+    # min_overlap_items=500 with page_size=100 means up to 5 extra pages fetched per run.
+    # Sort order is created_on DESC (Sapo does not support modified_on sort), so overlap
+    # is intentionally generous to catch recent edits near the page boundary.
+    # Reduce to page_size * 2 (200) if API quota is a concern.
     min_overlap_items: int = 500,
     full_refresh: bool = False
 ):

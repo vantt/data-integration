@@ -167,6 +167,15 @@ def history_log(
     limit: int = None,
     debug: bool = False,
     full_refresh: bool = False,
+    # Cursor path: "sync_metadata.event_timestamp" (nested JSON path).
+    # dlt v1.24.0 compiles this via compile_path() and uses JSONPath find_values()
+    # for nested dict traversal — confirmed working in dlt/extract/incremental/transform.py.
+    # However, this function does NOT rely on dlt's incremental row filter for correctness:
+    # last_value is read from state (first_timestamp.last_value) and the early-stop
+    # comparison is done manually below.  Even if dlt's nested path filtering failed
+    # silently, the manual consecutive_old_items loop would still terminate correctly.
+    # `event_timestamp` also exists at root level of the envelope (for dlt schema), but
+    # the cursor path points specifically to sync_metadata.event_timestamp.
     first_timestamp=dlt.sources.incremental("sync_metadata.event_timestamp")
 ) -> Iterator[List[Dict[Any, Any]]]:
     """
@@ -466,7 +475,10 @@ def history_log(
                         print(f"🛑 Limit of {limit} reached.")
                         break
 
-                    # Route to destination table via entity registry
+                    # Route to destination table via entity registry.
+                    # env["entity_type"] already holds effective_entity_type (resolved table
+                    # name), so get_table_name() is a redundant re-lookup that returns the
+                    # same value.  Harmless; left intentionally for symmetry with other pipelines.
                     table_name = get_table_name(env["entity_type"])
                     yield dlt.mark.with_table_name(env, table_name)
                     stats["yielded"] += 1

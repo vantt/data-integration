@@ -38,6 +38,9 @@ def get_sapo_client() -> Any:
     if not base_url:
         raise ValueError("Missing 'domain' or 'base_url' in config (secrets.toml / env)")
     if not login_url:
+        # Navigate to /orders as the starting page; Sapo SSO redirects to login if not
+        # authenticated.  sapo_login_strategy waits for **/admin** so this is safe even
+        # if the SSO flow changes — the strategy waits for the redirect, not the landing URL.
         login_url = f"{base_url}/orders"
 
     # Default selectors
