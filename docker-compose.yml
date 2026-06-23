@@ -61,7 +61,7 @@ services:
       - caddy_net
     volumes:
       - ./app_data/metabase_data:/home/metabase/data
-      - ./app_data/data_lake:/app/var/data_lake
+      - ./app_data/data_lake:/app/var/data_lake:ro
       - monitoring_db:/app/var/data_lake/monitoring
     labels:
       caddy: bi.lan.fwg.vn
@@ -82,7 +82,7 @@ services:
       - caddy_net
     volumes:
       - ./rill:/app/rill
-      - ./app_data/data_lake:/app/var/data_lake
+      - ./app_data/data_lake:/app/var/data_lake:ro
       - ./app_data/rill:/app/rill/.rill
     command: ["start", "--no-open", "--port", "9009", "--env", "RILL_EXPORT_ROOT=/app/var/data_lake/export/rill/current"]
     labels:
@@ -167,11 +167,10 @@ services:
       - CRM_CACHE_DB=/data/cache.db
       - CRM_PORT=8090
       # Shared secret for POST /admin/refresh (X-Refresh-Token header). Dagster
-      # uses this to trigger reverse-ETL on demand. Unset = endpoint unprotected.
-      - CRM_REFRESH_TOKEN=change-me-crm-refresh
+      # uses this to trigger reverse-ETL on demand. MUST be set in .env.docker — no default.
+      - CRM_REFRESH_TOKEN=${CRM_REFRESH_TOKEN:?CRM_REFRESH_TOKEN must be set in .env.docker}
       - TZ=Asia/Ho_Chi_Minh
-      # Dev: uncomment to enable uvicorn --reload + Jinja2 auto_reload (template edits apply instantly).
-      - CRM_DEV_RELOAD=1
+      # Dev: enable uvicorn --reload + Jinja2 auto_reload. Set in docker-compose.override.yml only.
       # Hug edge push: claim station signs POST /hug/token/upsert to the Worker.
       # Secret via root .env substitution (gitignored) — not baked into this tracked file.
       - HUG_WORKER_URL=https://hug.fjp.vn

@@ -1,6 +1,9 @@
 FROM node:20-slim
 WORKDIR /app
 
+# curl required for HEALTHCHECK
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Install Evidence CLI + plugins at image build time (cached separately from config)
 COPY evidence/package*.json ./
 RUN npm install --include=dev
@@ -12,6 +15,12 @@ COPY evidence/evidence.config.yaml ./
 RUN mkdir -p pages sources scripts
 
 EXPOSE 3000
+
+# Healthcheck: Evidence preview server serves HTTP once static build is complete.
+# start-period is long because Evidence build (sources + build) takes 60-120s.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=180s --retries=5 \
+    CMD curl -f http://localhost:3000/ || exit 1
+
 # 1. Copy olap.duckdb into sources/datalake/ for Evidence to use
 # 2. Run Evidence sources; 3. Build static site
 # 4. Patch built HTML: default theme 'dark' instead of 'system'

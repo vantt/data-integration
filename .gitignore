@@ -28,3 +28,7 @@ app_data
 .DS_Store
 .claude/settings.local.json
 .claude/session-state/
+
+# Temporary / ad-hoc analysis scripts — belong in poc/ or scripts/analysis/ if permanent
+_tmp_*.py
+_tmp_*.sh

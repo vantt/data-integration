@@ -59,3 +59,19 @@ crm/plans/
 crm/*.db
 crm/**/__pycache__/
 crm/**/node_modules/
+
+# Documentation & planning (no runtime value in image)
+plans/
+docs/
+
+# Ad-hoc root-level analysis scripts (not needed in any image)
+check_*.py
+_tmp_*.py
+_tmp_*.sh
+
+# Python tooling artifacts
+.pytest_cache/
+**/.pytest_cache/
+**/.mypy_cache/
+node_modules/
+**/node_modules/

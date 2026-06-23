@@ -10,6 +10,7 @@ RUN groupadd -r metabase && useradd -r -g metabase metabase
 
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # /home/metabase/plugins will hold the plugins
@@ -28,5 +29,9 @@ RUN chmod 755 /home/metabase/metabase.jar && \
 EXPOSE 3000
 
 USER metabase
+
+# Healthcheck: Metabase REST API health endpoint (available after JVM + DB init).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=5 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
 
 CMD ["java", "-jar", "/home/metabase/metabase.jar"]
