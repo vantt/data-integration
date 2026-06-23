@@ -142,10 +142,11 @@ class TaskService:
     ) -> list[Task]:
         """Return tasks filtered by optional assignee and/or status."""
         tasks = self._task_repo.list_by_assignee_and_status(
-            assignee_user_id=assignee_id or "",
-            status=status or "",
+            assignee_id or "",
+            [status] if status else [],
+            limit,
         )
-        return tasks[:limit]
+        return tasks
 
     # ------------------------------------------------------------------
     # Auto-generation from warehouse action queue
