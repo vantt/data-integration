@@ -4305,3 +4305,23 @@ elif filter_priority == "high":
 3. Don't put a `;` in a migration inline comment if your runner is fragile — but better, make the runner robust (rule 1) so SQL stays freely commentable.
 
 **Reference:** `crm/src/adapters/outbound/sqlite/migrations.py` (`_split_statements`), `crm/migrations/0002_party_identity_golden_record.up.sql`, `crm/src/tests/test_migrations_split.py`. Fixed 2026-06-23, commit 0c4dbda.
+
+### L140 — Worklist rendered empty despite healthy data: stale uvicorn process (new template shape + un-reloaded Python) + a swallowed TypeError
+
+**Group:** OPS
+
+**Symptom:** After deploying the S01 worklist redesign, `/worklist` showed the empty state ("Hôm nay không có task nào") with all KPIs 0 — even though `wh_action_queue` held 531 fresh rows (generated that day) and a direct repo+`rank_worklist` call in-container returned 527 correctly-banded actions. No traceback on the page; logs showed only a swallowed `list tasks` error.
+
+**Root cause:** Two compounding issues.
+1. The CRM container mounts `./crm/src` (so Jinja TEMPLATES are read live per request) but runs uvicorn WITHOUT `--reload` outside dev mode, so edited PYTHON modules are not reloaded on save. The running process kept executing the OLD `_load_worklist_data`, which returned the old context keys (`actions`/`tasks`); the NEW `worklist_fragment.html` reads `bands`/`counts`/`value_total` (each `| default(...)`), so every new key resolved empty → empty-state branch + KPI 0. Data and logic were both correct; only the in-memory code was stale.
+2. Separately/pre-existing: `task_service.list_tasks` called the SQLite repo with wrong kwargs (`assignee_user_id=`/`status=`) vs the repo signature `(assignee_id, statuses: list, limit)`. The `TypeError` was swallowed by the worklist's broad `except Exception: return []`, so the task band was silently always empty.
+
+**Fix:** `docker compose restart crm` to load the new Python (primary fix). Corrected the call to positional `(assignee_id or "", [status] if status else [], limit)`. Verified live endpoint: 527 actions + 4 tasks, banded, no empty state, clean logs.
+
+**Rules:**
+1. In this CRM, editing server-rendered TEMPLATES is live (mounted, re-read per request) but editing PYTHON requires `docker compose restart crm` — `--reload` is only enabled in dev mode. A changed template-context contract + un-reloaded view = silent EMPTY render (new keys default-empty), not an error.
+2. Diagnose "UI empty but data exists" bottom-up: query the DB → call the repo/logic directly in-container → hit the HTTP endpoint. If DB + logic are fine but the endpoint is empty, suspect a stale process or context-shape mismatch — do NOT re-run the data pipeline on a render bug.
+3. A broad `except Exception: return []` in an adapter hides signature/kwarg mismatches as a silent empty list (looks identical to "no data"). Keep the call-site `log.error` (this one had it → grep logs) and prefer narrow excepts.
+4. When a template's context contract changes, the producing view and the template must deploy together; a half-reloaded process serves new templates against old data shapes.
+
+**Reference:** `crm/src/adapters/inbound/web/screen_worklist.py` (`_load_worklist_data`), `crm/src/adapters/inbound/web/templates/fragments/worklist_fragment.html`, `crm/src/application/task_service.py` (`list_tasks`), `crm/entrypoint.sh` (`--reload` only in dev). Fixed 2026-06-23, commit 15b57c6.
