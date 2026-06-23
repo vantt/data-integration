@@ -239,9 +239,9 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 | MODEL | 7 | 0 | 14 | 21 |
 | SERVE | 1 + serving-layer.md | 0 | 1 (shared) | 2 + full doc |
 | TRUST | 11 | 0 | 0 | 11 |
-| OPS | 38 | 14 | 0 | 52 |
+| OPS | 39 | 14 | 0 | 53 |
 | Cross-cutting | 15 (overlap from above) | 0 | 0 | 15 |
-| **Total unique** | **77** | **14** | **14** | **105** |
+| **Total unique** | **78** | **14** | **14** | **105** |
 
 *Gaps: L34 (skipped), L77-L80 (reserved) — append-only numbering, audit trail preserved*
 *Lessons appearing in multiple groups are listed in primary group; cross-cutting table notes secondary references.*

@@ -4325,3 +4325,21 @@ elif filter_priority == "high":
 4. When a template's context contract changes, the producing view and the template must deploy together; a half-reloaded process serves new templates against old data shapes.
 
 **Reference:** `crm/src/adapters/inbound/web/screen_worklist.py` (`_load_worklist_data`), `crm/src/adapters/inbound/web/templates/fragments/worklist_fragment.html`, `crm/src/application/task_service.py` (`list_tasks`), `crm/entrypoint.sh` (`--reload` only in dev). Fixed 2026-06-23, commit 15b57c6.
+
+### L141 — CRM web screens crash on first hit: routes call service methods that don't exist / wrong call shape (kwargs vs dict)
+
+**Group:** OPS
+
+**Symptom:** Whole-stack audit found `POST /campaigns`, `POST /campaigns/{id}/targets/{pid}/convert`, `PATCH /campaigns/{id}/targets/{pid}/status` (and `POST /segments`) would raise `AttributeError`/`TypeError` on the first real request — `screen_management.py` called `campaigns_svc.record_conversion()`, `.update_target_status()`, `.get_target()` (none existed on `CampaignService`) and `create_campaign(name=..., ...)` / `create_segment(name=..., ...)` with kwargs while the services take a single `dict`. Never caught because no request had exercised those routes yet.
+
+**Root cause:** Interface-contract drift between the inbound web adapter and the application service. The screen was written/edited against an assumed service surface that diverged from the actual one. Same family as L140 #2 (worklist called the task repo with wrong kwargs). No static type-check gate (mypy) and broad `except` patterns let signature mismatches survive until runtime. Also a hexagonal breach: `segment_service.py` / `campaign_service.py` imported `sqlite3` and ran raw SQL directly in the application layer instead of going through an outbound port/adapter — so the "service surface" itself was ill-defined.
+
+**Fix:** Realigned screen→service calls (dict args, real method names), added the missing `get_campaign`/`get_target`/`update_target_status`/`record_conversion` to `CampaignService`, moved SQL out of the application services into `campaign_repository`/`segment_repository` behind the port. Verified: 514 crm/src tests pass.
+
+**Rules:**
+1. In this hexagonal CRM, the inbound web screen and the application service it calls form a contract — they must be reviewed/edited together. A screen calling a non-existent method or wrong arg shape is invisible until that exact route is hit, so untested mutation routes are latent crashes.
+2. Application services must NOT import `sqlite3`/`duckdb`/`fastapi` — SQL belongs in `adapters/outbound/sqlite/` behind a port. A service that runs raw SQL has no stable surface, which is what lets call-site drift go unnoticed.
+3. Prefer a contract test (or mypy) over trusting a green run: existing tests passed while three routes were dead. When adding/auditing a screen route, grep the service for the method + check the call shape (dict vs kwargs) before assuming it works.
+4. Broad `except Exception` in adapters/screens hides these `TypeError`/`AttributeError` as empty/200 responses — keep call-site logging and narrow excepts (see L140).
+
+**Reference:** `crm/src/adapters/inbound/web/screen_management.py`, `crm/src/application/campaign_service.py`, `crm/src/application/segment_service.py`, `crm/src/adapters/outbound/sqlite/{campaign,segment}_repository.py`. Found in full-stack audit 2026-06-23, commit adbd7b1.
