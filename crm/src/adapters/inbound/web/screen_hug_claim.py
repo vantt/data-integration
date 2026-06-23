@@ -21,10 +21,11 @@ at wiring time — single writer, matching the CRM SQLite discipline.
 from __future__ import annotations
 
 import html
+import json as _json
 import logging
 import sqlite3
 
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from hug import config as hug_config
@@ -51,14 +52,21 @@ def make_hug_claim_router(conn: sqlite3.Connection) -> APIRouter:
         return HTMLResponse(_render_page(order_code=order))
 
     @router.post("/hug/claim", response_class=HTMLResponse)
-    async def claim_submit(
-        token: str = Form(default=""),
-        order_code: str = Form(default=""),
-        is_gift: str = Form(default=""),
-    ) -> HTMLResponse:
-        token = normalize_input(token)
-        order_code = order_code.strip()
-        gift = is_gift in ("1", "true", "on", "yes")
+    async def claim_submit(request: Request) -> HTMLResponse:
+        # Read all form fields generically so adding a new CLAIM_FIELDS entry
+        # requires no change here — the loop below picks it up automatically.
+        form = await request.form()
+        fields: dict = {}
+        for f in CLAIM_FIELDS:
+            raw = form.get(f["key"], "")
+            if f["type"] == "bool":
+                fields[f["key"]] = raw in ("1", "true", "on", "yes")
+            else:
+                fields[f["key"]] = str(raw).strip()
+
+        token = normalize_input(str(form.get("token", "")))
+        order_code = fields.get("order_code", "")
+        gift = fields.get("is_gift", False)
 
         if not order_code:
             return _render_result(False, "Thiếu mã đơn", order_code, token)
@@ -313,6 +321,38 @@ def _render_page(
         result_html = _result_block(success, message, edge)
         play = '"ok"' if success else '"err"'
 
+    # Build config-driven field HTML from CLAIM_FIELDS.
+    # Adding a new field to CLAIM_FIELDS automatically renders it here — no edit needed.
+    # Note: when a 2nd prefill field is added, refactor _render_page to accept a
+    # generic prefill dict instead of named order_code param.
+    fields_html = ""
+    for f in CLAIM_FIELDS:
+        key = html.escape(f["key"])
+        label = html.escape(f["label"])
+        if f["type"] == "bool":
+            fields_html += (
+                f'<div class="row"><div class="grp toggle">'
+                f'<label style="margin:0" for="f_{key}">{label}</label>'
+                f'<input type="checkbox" id="f_{key}" name="{key}" value="1">'
+                f'</div></div>'
+            )
+        else:  # text
+            required_attr = "required" if f["required"] else ""
+            # Prefill: order_code uses the order_code param; extend to dict when 2nd prefill field arrives
+            prefill_val = html.escape(order_code) if f["key"] == "order_code" else ""
+            fields_html += (
+                f'<label for="f_{key}">{label}</label>'
+                f'<input type="text" id="f_{key}" name="{key}" value="{prefill_val}"'
+                f' placeholder="{label}" autocomplete="off" inputmode="text" {required_attr}>'
+                f'<small id="lbl_{key}" class="sublabel"></small>'
+            )
+
+    # Serialise CLAIM_FIELDS for the JS block (validate key stripped by claim_fields_json).
+    # _json.dumps always escapes < > & so embedding in <script> is XSS-safe.
+    claim_fields_json = _json.dumps(
+        [{k: v for k, v in f.items() if k != "validate"} for f in CLAIM_FIELDS]
+    )
+
     return f"""<!doctype html>
 <html lang="vi" data-surface="HUG-CLAIM">
 <head>
@@ -333,15 +373,17 @@ def _render_page(
   input[type=text] {{ width: 100%; padding: 14px 16px; font-size: 20px;
           border-radius: 10px; border: 1px solid #334155; background: #0f172a;
           color: #f1f5f9; outline: none; }}
-  input#token {{ font-size: 26px; letter-spacing: 3px; text-align: center;
+  input#f_token {{ font-size: 26px; letter-spacing: 3px; text-align: center;
           font-variant-numeric: tabular-nums; }}
   input:focus {{ border-color: #38bdf8; box-shadow: 0 0 0 3px rgba(56,189,248,.25); }}
   .row {{ display: flex; gap: 16px; align-items: center; margin-top: 16px; flex-wrap: wrap; }}
   .row .grp {{ flex: 1; min-width: 160px; }}
-  select {{ width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155;
-          background: #0f172a; color: #f1f5f9; font-size: 15px; }}
   .toggle {{ display: flex; align-items: center; gap: 8px; font-size: 15px; }}
   .toggle input {{ width: 22px; height: 22px; }}
+  .sublabel {{ display: block; font-size: 12px; margin-top: 3px; min-height: 16px; }}
+  .sublabel-ok  {{ color: #4ade80; }}
+  .sublabel-err {{ color: #f87171; }}
+  .sublabel-warn {{ color: #fbbf24; }}
   .result {{ margin-top: 22px; text-align: center; border-radius: 12px; padding: 0; }}
   .result.ok {{ background: #064e3b; padding: 20px; }}
   .result.err {{ background: #7f1d1d; padding: 20px; }}
@@ -359,26 +401,24 @@ def _render_page(
     <h1>Hug · Claim station</h1>
     <p class="sub">Quét tem → tự bind vào đơn → bíp + xanh → dán.</p>
     <form id="claim" method="post" action="/hug/claim" autocomplete="off">
-      <label for="order_code">Mã đơn (Sapo)</label>
-      <input type="text" id="order_code" name="order_code" value="{oc}"
-             placeholder="SO1234" inputmode="text">
-      <label for="token">Tem (quét mã 2D)</label>
-      <input type="text" id="token" name="token" value="{tk}"
+      {fields_html}
+      <label for="f_token">Tem (quét mã 2D)</label>
+      <input type="text" id="f_token" name="token" value="{tk}"
              placeholder="quét tem…" autofocus autocapitalize="characters" spellcheck="false">
-      <div class="row">
-        <div class="grp toggle">
-          <label style="margin:0">Đơn là quà tặng?</label>
-          <input type="checkbox" id="is_gift" name="is_gift" value="1">
-          <span>Tick nếu người NHẬN hàng khác người ĐẶT mua</span>
-        </div>
-      </div>
+      <small id="lbl_token" class="sublabel"></small>
       <button type="submit">Gắn tem vào đơn</button>
     </form>
     {result_html}
     <p class="hint">Tem = 12 ký tự. Máy quét tự xuống dòng → tự gửi.</p>
   </main>
 <script>
-  // Audio cues via WebAudio — no asset files needed.
+  // ── Config injected from Python CLAIM_FIELDS (validate key stripped) ──────
+  const FIELDS = {claim_fields_json};
+  // One UUID per page-load; persists across re-scans within the same session.
+  // Reset only on full page reload or fresh navigation.
+  const SESSION_ID = crypto.randomUUID();
+
+  // ── Audio cues via WebAudio — no asset files needed ───────────────────────
   function beep(ok) {{
     try {{
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -391,27 +431,39 @@ def _render_page(
       osc.stop(ctx.currentTime + (ok ? 0.2 : 0.5));
     }} catch (e) {{}}
   }}
+
+  // Play sound on full-page re-render (no-JS fallback POST path result).
   const lastResult = {play};
   if (lastResult) beep(lastResult === "ok");
 
-  const tokenEl = document.getElementById("token");
-  const orderEl = document.getElementById("order_code");
-  // Focus the right field: token if order already filled, else the order field.
-  if (orderEl.value.trim()) {{ tokenEl.focus(); tokenEl.select(); }}
-  else {{ orderEl.focus(); }}
+  // ── DOM helpers ───────────────────────────────────────────────────────────
+  function getFieldEl(key)  {{ return document.getElementById('f_' + key); }}
+  function getLabelEl(key)  {{ return document.getElementById('lbl_' + key); }}
 
-  // Auto-submit when a full token has been scanned/typed (scanner sends Enter,
-  // but also auto-fire once 12 valid chars are present for robustness).
-  // Normalization mirrors the server-side normalize_input() logic so that
-  // printed human codes (HUG-XXXX-XXXX-XXXX) and scanned full URLs auto-submit.
+  function showSubLabel(key, text, state) {{
+    // state: 'ok' | 'err' | 'warn'
+    const el = getLabelEl(key);
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'sublabel sublabel-' + state;
+  }}
+
+  function clearSubLabel(key) {{
+    const el = getLabelEl(key);
+    if (el) {{ el.textContent = ''; el.className = 'sublabel'; }}
+  }}
+
+  // ── Token normalisation — mirrors server-side normalize_input() logic ─────
+  // Printed human codes (HUG-XXXX-XXXX-XXXX) and scanned full QR URLs are
+  // both reduced to the raw 12-char token so they auto-check correctly.
   const RE = /^[2-9A-HJKMNP-Z]{{12}}$/;
   function normalizeToken(v) {{
     v = v.trim().toUpperCase();
-    // If a scanner emits the full QR URL, extract the token from the last path segment.
+    // Full QR URL emitted by scanner → extract last path segment.
     if (v.includes("://")) {{
       v = v.split("?")[0].split("#")[0].replace(/\\/+$/, "").split("/").pop();
     }}
-    // Remove separator characters: dashes, underscores, dots, and whitespace.
+    // Remove separator characters: dashes, underscores, dots, whitespace.
     // Matches the Worker normalizeToken separator set so all three copies accept the same inputs.
     v = v.replace(/[-_.\\s]/g, "");
     // Strip a "HUG" prefix only when the result is exactly 15 chars (= "HUG" + 12-char token).
@@ -419,12 +471,144 @@ def _render_page(
     if (v.length === 15 && v.startsWith("HUG")) v = v.slice(3);
     return v;
   }}
-  tokenEl.addEventListener("input", () => {{
-    tokenEl.value = normalizeToken(tokenEl.value);
-    if (RE.test(tokenEl.value)) document.getElementById("claim").submit();
-  }});
-  // After a successful claim, clear the token field for the next scan.
-  if (lastResult === "ok") {{ tokenEl.value = ""; tokenEl.focus(); }}
+
+  // ── Per-field live validation (text fields with validate set) ─────────────
+  async function checkField(key, value) {{
+    try {{
+      const r = await fetch('/hug/claim/check-field?key=' + encodeURIComponent(key)
+                            + '&value=' + encodeURIComponent(value)
+                            + '&session=' + encodeURIComponent(SESSION_ID));
+      return await r.json();
+    }} catch (_) {{
+      return {{ ok: null, message: 'Lỗi kết nối' }};
+    }}
+  }}
+
+  // Wire debounced check-field to every text FIELD that has a validate key.
+  // This loop makes adding a new validated text field require zero frontend edits.
+  const fieldTimers = {{}};
+  for (const f of FIELDS) {{
+    if (f.type !== 'text') continue;
+    const el = getFieldEl(f.key);
+    if (!el) continue;
+    el.addEventListener('input', () => {{
+      clearTimeout(fieldTimers[f.key]);
+      fieldTimers[f.key] = setTimeout(async () => {{
+        const v = el.value.trim();
+        if (!v) {{ clearSubLabel(f.key); return; }}
+        const res = await checkField(f.key, v);
+        if (res.ok === true)       showSubLabel(f.key, res.message, 'ok');
+        else if (res.ok === false) {{ showSubLabel(f.key, res.message, 'err'); beep(false); }}
+        else                       showSubLabel(f.key, res.message || 'Không thể kiểm tra', 'warn');
+      }}, 600);
+    }});
+    // Pre-fill from query param: if field already has a value on page load,
+    // trigger the check immediately so the sub-label shows state without user interaction.
+    if (el.value.trim()) {{
+      setTimeout(() => el.dispatchEvent(new Event('input')), 0);
+    }}
+  }}
+
+  // ── Token field: normalise → check-token → doBind ────────────────────────
+  const tokenEl = getFieldEl('token');
+
+  async function checkToken(value) {{
+    let res;
+    try {{
+      const r = await fetch('/hug/claim/check-token?token=' + encodeURIComponent(value)
+                            + '&session=' + encodeURIComponent(SESSION_ID));
+      res = await r.json();
+    }} catch (_) {{
+      res = {{ state: 'error', message: 'Lỗi kết nối' }};
+    }}
+
+    if (res.state === 'ready' || res.state === 'rebind_ok') {{
+      const isAmber = res.state === 'rebind_ok';
+      showSubLabel('token', res.message, isAmber ? 'warn' : 'ok');
+      beep(true);
+      await doBind(value);
+    }} else {{
+      showSubLabel('token', res.message, 'err');
+      beep(false);
+    }}
+  }}
+
+  async function doBind(token) {{
+    // Collect current values from all CLAIM_FIELDS inputs.
+    const fields = {{}};
+    for (const f of FIELDS) {{
+      const el = getFieldEl(f.key);
+      if (!el) continue;
+      fields[f.key] = f.type === 'bool' ? el.checked : el.value.trim();
+    }}
+
+    // Guard: order_code must be present before binding — show amber hint and wait.
+    if (!fields['order_code']) {{
+      showSubLabel('token', 'Nhập mã đơn trước', 'warn');
+      return;
+    }}
+
+    let res;
+    try {{
+      const r = await fetch('/hug/claim/bind', {{
+        method: 'POST',
+        headers: {{ 'Content-Type': 'application/json' }},
+        body: JSON.stringify({{ session_id: SESSION_ID, token, fields }}),
+      }});
+      res = await r.json();
+    }} catch (_) {{
+      res = {{ ok: false, message: 'Lỗi kết nối khi gắn tem' }};
+    }}
+
+    const resultEl = document.getElementById('result');
+    if (res.ok) {{
+      if (resultEl) {{
+        resultEl.className = 'result ok';
+        resultEl.innerHTML = '<div class="big">✓</div>'
+          + '<div class="msg"><strong>' + res.message + '</strong></div>'
+          + (res.edge ? '<div class="edge">' + res.edge + '</div>' : '');
+      }}
+      beep(true);
+      // Clear token field + sub-label; keep order field so next sticker binds to same order.
+      if (tokenEl) {{ tokenEl.value = ''; tokenEl.focus(); }}
+      clearSubLabel('token');
+    }} else {{
+      if (resultEl) {{
+        resultEl.className = 'result err';
+        resultEl.innerHTML = '<div class="big">✕</div>'
+          + '<div class="msg"><strong>' + res.message + '</strong></div>';
+      }}
+      beep(false);
+    }}
+  }}
+
+  // Token field input: normalise → check against RE → trigger async check+bind.
+  // Last scan always wins (no debounce; 12-char RE is the gate).
+  if (tokenEl) {{
+    tokenEl.addEventListener('input', async () => {{
+      const v = normalizeToken(tokenEl.value);
+      tokenEl.value = v;
+      clearSubLabel('token');
+      if (RE.test(v)) {{
+        await checkToken(v);
+      }}
+    }});
+  }}
+
+  // ── Initial focus ─────────────────────────────────────────────────────────
+  const orderEl = getFieldEl('order_code');
+  // If order_code already pre-filled (e.g. from ?order=), focus token for scanning.
+  if (orderEl && orderEl.value.trim()) {{
+    if (tokenEl) {{ tokenEl.focus(); tokenEl.select(); }}
+  }} else if (orderEl) {{
+    orderEl.focus();
+  }}
+
+  // Post-form-POST clear: after a full-page re-render on the no-JS fallback path,
+  // clear the token field and refocus so the kiosk is ready for the next scan.
+  if (lastResult === "ok") {{
+    if (tokenEl) {{ tokenEl.value = ""; tokenEl.focus(); }}
+  }}
 </script>
 </body>
 </html>"""

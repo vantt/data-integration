@@ -50,8 +50,8 @@ CLAIM_FIELDS config (claim_fields.py)
 | # | Name | Effort | Risk | Status | Deployable alone |
 |---|------|--------|------|--------|-----------------|
 | 1 | Worker `/h/:token` normalization | 2h | Low | ✅ DONE (merged `afd271d`, deployed `02c2165e`, live e2e PASS) | Yes — `wrangler deploy` |
-| 2 | Dynamic claim-field foundation | 4h | Medium | pending | Yes — crm restart |
-| 3 | Claim station frontend | 3h | Medium | pending | Yes — crm restart |
+| 2 | Dynamic claim-field foundation | 4h | Medium | ✅ DONE (merged `2d38bec`) | Yes — crm restart |
+| 3 | Claim station frontend | 3h | Medium | ✅ DONE (live e2e 12/12 PASS on container) | Yes — crm restart |
 | 4 | Edge-promotion seam | 3h | Low-Medium | pending | Yes — coordinated deploy (D1 migration then wrangler deploy then crm restart) |
 
 **Dependencies:** Phase 2 → Phase 3 (frontend depends on backend endpoints). Phase 4 is independent of 2/3 but logically sequenced after 2 (needs `bind_attributes` column + d1_push attribute subset to exist before push reaches D1).

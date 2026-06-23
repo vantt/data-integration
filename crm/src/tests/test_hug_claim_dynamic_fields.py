@@ -516,3 +516,133 @@ def test_bind_attributes_not_exposed_in_d1_payload(hug_conn):
     payload = d1_push._row_to_payload(row)
     assert "bind_attributes" not in payload
     assert "attributes" not in payload
+
+
+# ── 9. Phase 3: _render_page config-driven output ────────────────────────────
+
+try:
+    # _render_page is a pure function; FastAPI is only needed for the router.
+    # Import screen_hug_claim only when FastAPI is available (it imports APIRouter at module level).
+    if _FASTAPI_AVAILABLE:
+        from adapters.inbound.web.screen_hug_claim import _render_page as _rp  # noqa: E402
+        _RENDER_PAGE_AVAILABLE = True
+    else:
+        _RENDER_PAGE_AVAILABLE = False
+except ImportError:
+    _RENDER_PAGE_AVAILABLE = False
+
+_render_only = pytest.mark.skipif(
+    not _RENDER_PAGE_AVAILABLE,
+    reason="_render_page not importable (FastAPI not installed in this environment)",
+)
+
+
+@_render_only
+def test_render_page_contains_session_id_declaration():
+    """JS block must declare SESSION_ID via crypto.randomUUID()."""
+    html = _rp()
+    assert "SESSION_ID" in html
+    assert "crypto.randomUUID()" in html
+
+
+@_render_only
+def test_render_page_contains_bind_endpoint():
+    """AJAX bind endpoint path must be embedded in the rendered page."""
+    html = _rp()
+    assert "/hug/claim/bind" in html
+
+
+@_render_only
+def test_render_page_contains_check_token_endpoint():
+    """Token live-check endpoint path must be embedded."""
+    html = _rp()
+    assert "check-token" in html
+
+
+@_render_only
+def test_render_page_contains_check_field_endpoint():
+    """Per-field live-check endpoint path must be embedded."""
+    html = _rp()
+    assert "check-field" in html
+
+
+@_render_only
+def test_render_page_has_order_code_input():
+    """Config-driven render must produce id='f_order_code' input."""
+    html = _rp()
+    assert 'id="f_order_code"' in html
+
+
+@_render_only
+def test_render_page_has_is_gift_input():
+    """Config-driven render must produce id='f_is_gift' checkbox."""
+    html = _rp()
+    assert 'id="f_is_gift"' in html
+
+
+@_render_only
+def test_render_page_has_token_input_with_f_prefix():
+    """Token input must use id='f_token' to match getFieldEl('token')."""
+    html = _rp()
+    assert 'id="f_token"' in html
+
+
+@_render_only
+def test_render_page_prefills_order_code():
+    """When order_code param given, the input value must reflect it."""
+    html = _rp(order_code="SO9876")
+    assert 'value="SO9876"' in html
+
+
+@_render_only
+def test_render_page_embeds_claim_fields_as_valid_json():
+    """FIELDS constant in <script> must be parseable JSON containing CLAIM_FIELDS keys."""
+    import re
+    page = _rp()
+    # Extract the FIELDS = ...; assignment from the script block
+    match = re.search(r'const FIELDS = (\[.*?\]);', page, re.DOTALL)
+    assert match, "const FIELDS = [...] not found in rendered HTML"
+    parsed = json.loads(match.group(1))
+    keys = [f["key"] for f in parsed]
+    assert "order_code" in keys
+    assert "is_gift" in keys
+
+
+@_render_only
+def test_render_page_claim_fields_json_strips_validate():
+    """Frontend FIELDS JSON must not expose the 'validate' backend key."""
+    import re
+    page = _rp()
+    match = re.search(r'const FIELDS = (\[.*?\]);', page, re.DOTALL)
+    assert match
+    parsed = json.loads(match.group(1))
+    for field in parsed:
+        assert "validate" not in field
+
+
+@_render_only
+def test_render_page_no_js_form_present():
+    """No-JS fallback: <form method='post' action='/hug/claim'> must remain."""
+    html = _rp()
+    assert 'method="post"' in html
+    assert 'action="/hug/claim"' in html
+
+
+@_render_only
+def test_render_page_result_div_present():
+    """result div with id='result' must be present for AJAX updates."""
+    html = _rp()
+    assert 'id="result"' in html
+
+
+@_render_only
+def test_render_page_syntax_warning_clean():
+    """Module must import with -W error::SyntaxWarning (no invalid escapes)."""
+    import subprocess, sys
+    result = subprocess.run(
+        [sys.executable, "-W", "error::SyntaxWarning", "-c",
+         "from adapters.inbound.web.screen_hug_claim import _render_page"],
+        capture_output=True, text=True,
+        cwd=str(pathlib.Path(__file__).parents[1]),
+    )
+    assert result.returncode == 0, f"SyntaxWarning raised:\n{result.stderr}"
