@@ -132,20 +132,26 @@ function invalidateCampaignCache(): void {
  *   op_type       string  → in list
  *   tier          string  → in list
  *   channel       string  → in list
+ *   sku           string  → in list  (open domain; per-scan / touchpoint-level)
  *   value_group   string  → in list
  *   is_contactable number → in list (0 or 1)
  *   recency_days  number  → supports gte / lte (object form: { gte: N } | { lte: N })
  *
  * Targeting format:
  *   Simple equality list:  { "tier": ["VIP", "CORE"] }
+ *   Negated list:          { "tier": { "not_in": ["WHOLESALE", "STAFF"] } }
  *   Numeric range:         { "recency_days": { "gte": 30, "lte": 90 } }
  *   Mixed:                 { "op_type": ["package_insert"], "tier": ["VIP"] }
  *   Empty object {}:       matches everything (DEFAULT).
  *
+ * not_in semantics: ctxValue not in excluded array → True.
+ *   null/undefined ctxValue → True (absent value is not in the excluded set —
+ *   consistent set-logic for an exclusion rule; unknown attributes pass through).
+ *
  * Returns true if ALL keys match (AND), false if any key fails.
  * Missing key in targeting = no constraint (pass through).
  */
-function matchesTargeting(targetingJson: string, ctx: ScanContext): boolean {
+export function matchesTargeting(targetingJson: string, ctx: ScanContext): boolean {
     let targeting: Record<string, unknown>;
     try {
         targeting = JSON.parse(targetingJson);
@@ -171,14 +177,26 @@ function matchesTargeting(targetingJson: string, ctx: ScanContext): boolean {
             );
             if (!matched) return false;
         } else if (typeof rule === 'object' && rule !== null) {
-            // Numeric range object: { gte?: N, lte?: N, gt?: N, lt?: N }
-            const numCtx = typeof ctxValue === 'number' ? ctxValue : null;
-            if (numCtx === null) return false;
-            const r = rule as Record<string, number>;
-            if (r.gte !== undefined && !(numCtx >= r.gte)) return false;
-            if (r.lte !== undefined && !(numCtx <= r.lte)) return false;
-            if (r.gt  !== undefined && !(numCtx >  r.gt))  return false;
-            if (r.lt  !== undefined && !(numCtx <  r.lt))  return false;
+            const ruleObj = rule as Record<string, unknown>;
+            if ('not_in' in ruleObj) {
+                // Negated list membership: ctxValue must NOT be in the not_in array.
+                // null/undefined ctxValue → passes (an unknown attr is not a member
+                // of the excluded set; exclusion rules should not block unknown values).
+                if (ctxValue !== null && ctxValue !== undefined) {
+                    const notInList = ruleObj['not_in'] as unknown[];
+                    const inList = notInList.some((v) => String(v) === String(ctxValue));
+                    if (inList) return false;
+                }
+            } else {
+                // Numeric range object: { gte?: N, lte?: N, gt?: N, lt?: N }
+                const numCtx = typeof ctxValue === 'number' ? ctxValue : null;
+                if (numCtx === null) return false;
+                const r = ruleObj as Record<string, number>;
+                if (r.gte !== undefined && !(numCtx >= r.gte)) return false;
+                if (r.lte !== undefined && !(numCtx <= r.lte)) return false;
+                if (r.gt  !== undefined && !(numCtx >  r.gt))  return false;
+                if (r.lt  !== undefined && !(numCtx <  r.lt))  return false;
+            }
         } else {
             // Scalar equality
             if (ctxValue === null || ctxValue === undefined) return false;

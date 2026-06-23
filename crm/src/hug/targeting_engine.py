@@ -1,25 +1,30 @@
 """targeting_engine.py — Python port of the edge Worker's matchesTargeting().
 
 This module is the AUTHORITATIVE Python mirror of the Cloudflare Worker logic in
-webhook_receiver/cloudflareD1/src/hug-handler.ts  (matchesTargeting, lines 148–189).
+webhook_receiver/cloudflareD1/src/hug-handler.ts  (matchesTargeting).
 Any semantic change to the Worker MUST be reflected here, and vice-versa.
 
 Exported surface (consumed by Phase 4 validation and Phase 5 preview/overlap):
   matches_targeting(targeting, ctx)           → bool
   preview_match_customers(targeting, db_path) → dict
 
-Design decisions mapped to TS source lines:
-  TS  153–155  malformed JSON string → match-all
+Design decisions mapped to TS source lines (hug-handler.ts matchesTargeting):
+  TS  empty-dict check   malformed JSON string → match-all
                Python: pre-parsed dict arrives here; wrap entire eval in
                try/except → return True on any unexpected error.
-  TS  158–159  empty dict → True (DEFAULT campaign).
-  TS  165–172  Array rule → ctxValue None → False;
+  TS  empty dict → True (DEFAULT campaign).
+  TS  Array rule → ctxValue None → False;
                any(String(v) == String(ctxValue)) — string-coerced OR.
                Python: str(v) == str(ctx_value) on both sides.
-  TS  173–180  Object rule → ctxValue not a number → numCtx=None → False;
+  TS  Object rule, not_in key → negated list membership (new):
+               {"not_in": ["X","Y"]} — ctxValue NOT in array → True.
+               null/None ctx_value → True (unknown attr is not in the excluded
+               set; exclusion rules should not block unknown values).
+               Python: ctx_value is None → pass; str coercion on both sides.
+  TS  Object rule, no not_in key → ctxValue not a number → numCtx=None → False;
                check gte/gt/lte/lt bounds.
                Python: isinstance(ctx_value, (int, float)) and not bool.
-  TS  182–186  Scalar rule → ctxValue None → False;
+  TS  Scalar rule → ctxValue None → False;
                String(rule) != String(ctxValue) → False.
 
 Module is PURE: no DB, no HTTP.  preview_match_customers is the only I/O path
@@ -27,7 +32,7 @@ Module is PURE: no DB, no HTTP.  preview_match_customers is the only I/O path
 
 Preview limitation: wh_customer_tier holds customer-level attrs only
 (tier, recency_days, value_group, is_contactable). Touchpoint-level attrs
-(op_type, channel — marked touchpoint_level=True in TARGETING_CATALOG) are
+(op_type, channel, sku — marked touchpoint_level=True in TARGETING_CATALOG) are
 per-scan and cannot be evaluated in a customer count preview. The preview
 treats these attrs as "no constraint" (missing from the customer context dict),
 which means the returned count is an UPPER BOUND when such attrs are present.
@@ -76,20 +81,29 @@ def matches_targeting(targeting: dict, ctx: dict) -> bool:
                     return False
 
             elif isinstance(rule, dict):
-                # TS lines 173–180: numeric range.  ctx_value must already be
-                # a real number (int or float but NOT bool, which TS typeof
-                # would yield 'boolean' not 'number').
-                if isinstance(ctx_value, bool) or not isinstance(ctx_value, (int, float)):
-                    return False
-                num = ctx_value
-                if "gte" in rule and not (num >= rule["gte"]):
-                    return False
-                if "lte" in rule and not (num <= rule["lte"]):
-                    return False
-                if "gt"  in rule and not (num >  rule["gt"]):
-                    return False
-                if "lt"  in rule and not (num <  rule["lt"]):
-                    return False
+                if "not_in" in rule:
+                    # Negated list membership: ctx_value must NOT be in not_in array.
+                    # None ctx_value → passes (unknown attr is not in the excluded set;
+                    # exclusion rules should not block unknown values).
+                    # Mirrors TS: ctxValue null/undefined → passes not_in check.
+                    if ctx_value is not None:
+                        in_list = any(str(v) == str(ctx_value) for v in rule["not_in"])
+                        if in_list:
+                            return False
+                else:
+                    # Numeric range: ctx_value must be a real number (int or float
+                    # but NOT bool — TS typeof bool yields 'boolean' not 'number').
+                    if isinstance(ctx_value, bool) or not isinstance(ctx_value, (int, float)):
+                        return False
+                    num = ctx_value
+                    if "gte" in rule and not (num >= rule["gte"]):
+                        return False
+                    if "lte" in rule and not (num <= rule["lte"]):
+                        return False
+                    if "gt"  in rule and not (num >  rule["gt"]):
+                        return False
+                    if "lt"  in rule and not (num <  rule["lt"]):
+                        return False
 
             else:
                 # TS lines 182–186: scalar equality with String() coercion.

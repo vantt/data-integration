@@ -39,6 +39,13 @@ TARGETING_CATALOG: dict[str, dict] = {
         "values": ["shopee", "tiki", "lazada", "website", "pos", "other"],
         "touchpoint_level": True,
     },
+    "sku": {
+        "type": "list",
+        "description": "SKU sản phẩm chính trên đơn hàng",
+        # No fixed domain: SKU set is open (new products added continuously).
+        # validate_targeting skips domain check when 'values' is absent.
+        "touchpoint_level": True,
+    },
     "tier": {
         "type": "list",
         "description": "Phân khúc khách hàng",
@@ -101,9 +108,32 @@ def validate_targeting(targeting: dict) -> list[str]:
         spec = TARGETING_CATALOG[key]
 
         if spec["type"] == "list":
+            if isinstance(rule, dict):
+                # Accept {"not_in": [...]} as a negated-list rule for list-type attrs.
+                not_in_val = rule.get("not_in")
+                extra_keys = [k for k in rule if k != "not_in"]
+                if extra_keys:
+                    errors.append(
+                        f"'{key}': not_in object must contain only 'not_in' key; "
+                        f"unexpected keys: {extra_keys}"
+                    )
+                elif not isinstance(not_in_val, list) or len(not_in_val) == 0:
+                    errors.append(f"'{key}': not_in value must be a non-empty list")
+                else:
+                    domain = spec.get("values")
+                    if domain is not None:
+                        # Compare as strings to match edge String() coercion.
+                        domain_strs = {str(v) for v in domain}
+                        for v in not_in_val:
+                            if str(v) not in domain_strs:
+                                errors.append(
+                                    f"'{key}': not_in value {v!r} not in allowed domain {domain}"
+                                )
+                continue  # dict rule handled above; skip plain-list checks below
             if not isinstance(rule, list):
                 errors.append(
-                    f"'{key}': expected a list, got {type(rule).__name__}"
+                    f"'{key}': expected a list or {{\"not_in\": [...]}} object, "
+                    f"got {type(rule).__name__}"
                 )
                 continue
             if len(rule) == 0:

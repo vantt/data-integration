@@ -1,7 +1,7 @@
 import { env, createExecutionContext, waitOnExecutionContext } from 'cloudflare:test';
 import { describe, it, expect, beforeAll } from 'vitest';
 import worker, { Env } from './index';
-import { normaliseVnPhone } from './hug-handler';
+import { normaliseVnPhone, matchesTargeting } from './hug-handler';
 
 const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS webhooks (
@@ -522,6 +522,106 @@ describe('Hug opt-in landing page (GET /optin/:token)', () => {
         const body = await response.text();
         // CAMPAIGN_ID baked as empty string when not provided
         expect(body).toContain('var CAMPAIGN_ID = ""');
+    });
+});
+
+// ---------------------------------------------------------------------------
+// matchesTargeting — not_in operator unit tests
+// Parity with Python matches_targeting in crm/src/hug/targeting_engine.py.
+// ScanContext is satisfied by a minimal object cast via unknown.
+// ---------------------------------------------------------------------------
+describe('matchesTargeting — not_in operator', () => {
+    // Helper: build a minimal JSON ScanContext-compatible record.
+    function ctx(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+        return {
+            op_type: 'package_insert',
+            tier: null,
+            channel: null,
+            value_group: null,
+            recency_days: null,
+            is_contactable: 0,
+            customer_id: null,
+            order_code: null,
+            ship_date: null,
+            sku: null,
+            ...overrides,
+        };
+    }
+
+    it('not_in: value absent from excluded list → true', () => {
+        // tier="VIP" is not in ["WHOLESALE","STAFF"] → campaign matches
+        const result = matchesTargeting(
+            JSON.stringify({ tier: { not_in: ['WHOLESALE', 'STAFF'] } }),
+            ctx({ tier: 'VIP' }) as any,
+        );
+        expect(result).toBe(true);
+    });
+
+    it('not_in: value in excluded list → false', () => {
+        // tier="WHOLESALE" is in the excluded list → campaign does NOT match
+        const result = matchesTargeting(
+            JSON.stringify({ tier: { not_in: ['WHOLESALE', 'STAFF'] } }),
+            ctx({ tier: 'WHOLESALE' }) as any,
+        );
+        expect(result).toBe(false);
+    });
+
+    it('not_in: null/undefined ctx value → true (passes — unknown is not excluded)', () => {
+        // tier=null (customer has no tier) → should NOT be blocked by an exclusion rule
+        const result = matchesTargeting(
+            JSON.stringify({ tier: { not_in: ['WHOLESALE', 'STAFF'] } }),
+            ctx({ tier: null }) as any,
+        );
+        expect(result).toBe(true);
+    });
+
+    it('not_in: string coercion parity with Python — int value in rule', () => {
+        // is_contactable={"not_in":[0]} with ctx value 0 → in list → false
+        const resultIn = matchesTargeting(
+            JSON.stringify({ is_contactable: { not_in: [0] } }),
+            ctx({ is_contactable: 0 }) as any,
+        );
+        expect(resultIn).toBe(false);
+
+        // is_contactable={"not_in":[0]} with ctx value 1 → not in list → true
+        const resultOut = matchesTargeting(
+            JSON.stringify({ is_contactable: { not_in: [0] } }),
+            ctx({ is_contactable: 1 }) as any,
+        );
+        expect(resultOut).toBe(true);
+    });
+
+    it('not_in combined with positive list rule (AND) — both must pass', () => {
+        // tier NOT in WHOLESALE/STAFF AND op_type IS package_insert → true when both pass
+        const targeting = JSON.stringify({
+            tier: { not_in: ['WHOLESALE', 'STAFF'] },
+            op_type: ['package_insert'],
+        });
+        const passCtx = ctx({ tier: 'VIP', op_type: 'package_insert' });
+        expect(matchesTargeting(targeting, passCtx as any)).toBe(true);
+
+        // tier passes but op_type fails → overall false
+        const failCtx = ctx({ tier: 'VIP', op_type: 'loyalty_card' });
+        expect(matchesTargeting(targeting, failCtx as any)).toBe(false);
+
+        // tier fails (excluded) even if op_type passes → overall false
+        const failTierCtx = ctx({ tier: 'WHOLESALE', op_type: 'package_insert' });
+        expect(matchesTargeting(targeting, failTierCtx as any)).toBe(false);
+    });
+
+    it('numeric range still works alongside not_in detection', () => {
+        // recency_days range object (no not_in key) must still route to range branch
+        const result = matchesTargeting(
+            JSON.stringify({ recency_days: { gte: 30, lte: 90 } }),
+            ctx({ recency_days: 60 }) as any,
+        );
+        expect(result).toBe(true);
+
+        const outOfRange = matchesTargeting(
+            JSON.stringify({ recency_days: { gte: 30, lte: 90 } }),
+            ctx({ recency_days: 100 }) as any,
+        );
+        expect(outOfRange).toBe(false);
     });
 });
 
