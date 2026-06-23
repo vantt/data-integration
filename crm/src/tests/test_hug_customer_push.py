@@ -55,14 +55,15 @@ def _make_cache_db(path: str, rows: list[dict]) -> None:
             strategic_tier  TEXT,
             recency_days    INTEGER,
             value_group     TEXT,
-            is_contactable  INTEGER
+            is_contactable  INTEGER,
+            customer_type   TEXT
         )
     """)
     for r in rows:
         conn.execute(
             "INSERT INTO wh_customer_tier "
-            "(customer_key, customer_id, strategic_tier, recency_days, value_group, is_contactable) "
-            "VALUES (:customer_key, :customer_id, :strategic_tier, :recency_days, :value_group, :is_contactable)",
+            "(customer_key, customer_id, strategic_tier, recency_days, value_group, is_contactable, customer_type) "
+            "VALUES (:customer_key, :customer_id, :strategic_tier, :recency_days, :value_group, :is_contactable, :customer_type)",
             r,
         )
     conn.commit()
@@ -142,9 +143,9 @@ def _state_content(path: str, customer_id: str) -> str | None:
 
 
 _ROW_1 = {"customer_key": "k1", "customer_id": 1, "strategic_tier": "LIVE_CORE",
-          "recency_days": 3, "value_group": "VIP", "is_contactable": 1}
+          "recency_days": 3, "value_group": "VIP", "is_contactable": 1, "customer_type": "RETAIL"}
 _ROW_2 = {"customer_key": "k2", "customer_id": 2, "strategic_tier": "GRAVEYARD",
-          "recency_days": 400, "value_group": "LOW", "is_contactable": 0}
+          "recency_days": 400, "value_group": "LOW", "is_contactable": 0, "customer_type": "WHOLESALE"}
 
 
 # ─── _build_edge_rows unit tests (pure logic, no I/O) ─────────────────────
@@ -153,7 +154,7 @@ def test_crm_overlay_makes_masked_customer_contactable():
     """C1: warehouse is_contactable=0, CRM has linked phone → edge must show 1."""
     tier_rows = [
         {"customer_id": 42, "strategic_tier": "MASKED_REPEAT",
-         "recency_days": 10, "value_group": "GOLD", "is_contactable": 0},
+         "recency_days": 10, "value_group": "GOLD", "is_contactable": 0, "customer_type": "RETAIL"},
     ]
     crm_contactable = {"42"}  # CRM captured a phone for customer 42
     rows = customer_push._build_edge_rows(tier_rows, crm_contactable)
@@ -165,7 +166,7 @@ def test_warehouse_contactable_stays_contactable():
     """C2: warehouse is_contactable=1 (no CRM entry) → edge must show 1."""
     tier_rows = [
         {"customer_id": 7, "strategic_tier": "LIVE_CORE",
-         "recency_days": 5, "value_group": "VIP", "is_contactable": 1},
+         "recency_days": 5, "value_group": "VIP", "is_contactable": 1, "customer_type": "RETAIL"},
     ]
     rows = customer_push._build_edge_rows(tier_rows, set())
     assert rows[0]["is_contactable"] == 1
@@ -175,7 +176,7 @@ def test_non_contactable_stays_zero():
     """C3: neither warehouse nor CRM → is_contactable=0."""
     tier_rows = [
         {"customer_id": 99, "strategic_tier": "GRAVEYARD",
-         "recency_days": 400, "value_group": "BRONZE", "is_contactable": 0},
+         "recency_days": 400, "value_group": "BRONZE", "is_contactable": 0, "customer_type": None},
     ]
     rows = customer_push._build_edge_rows(tier_rows, set())
     assert rows[0]["is_contactable"] == 0
@@ -185,11 +186,11 @@ def test_edge_row_shape_matches_contract():
     """C4: every edge row has exactly the fields the Worker expects."""
     tier_rows = [
         {"customer_id": 1, "strategic_tier": "SECOND_ORDER",
-         "recency_days": 30, "value_group": "SILVER", "is_contactable": 1},
+         "recency_days": 30, "value_group": "SILVER", "is_contactable": 1, "customer_type": "WHOLESALE"},
     ]
     rows = customer_push._build_edge_rows(tier_rows, set())
     assert len(rows) == 1
-    assert set(rows[0].keys()) == {"customer_id", "tier", "recency_days", "value_group", "is_contactable"}
+    assert set(rows[0].keys()) == {"customer_id", "tier", "recency_days", "value_group", "is_contactable", "customer_type"}
     assert rows[0]["tier"] == "SECOND_ORDER"   # strategic_tier mapped to "tier"
     assert rows[0]["customer_id"] == "1"        # cast to str
 
@@ -202,7 +203,7 @@ def test_push_sets_hmac_and_explicit_user_agent(tmp_dir, monkeypatch, state_db):
     crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
     _make_cache_db(cache_path, [
         {"customer_key": "k1", "customer_id": 1, "strategic_tier": "LIVE_CORE",
-         "recency_days": 3, "value_group": "VIP", "is_contactable": 1},
+         "recency_days": 3, "value_group": "VIP", "is_contactable": 1, "customer_type": "RETAIL"},
     ])
     _make_crm_db(crm_path, [])
 
@@ -244,12 +245,12 @@ def test_push_sets_hmac_and_explicit_user_agent(tmp_dir, monkeypatch, state_db):
     ).hexdigest()
     assert sig_header == expected
 
-    # Body must be valid JSON with "rows" list.
+    # Body must be valid JSON with "rows" list including customer_type.
     body = json.loads(call["body"])
     assert "rows" in body
     assert isinstance(body["rows"], list)
     row = body["rows"][0]
-    assert set(row.keys()) == {"customer_id", "tier", "recency_days", "value_group", "is_contactable"}
+    assert set(row.keys()) == {"customer_id", "tier", "recency_days", "value_group", "is_contactable", "customer_type"}
 
 
 # ─── Config-gating ────────────────────────────────────────────────────────────
@@ -260,7 +261,7 @@ def test_skip_when_worker_url_unset(tmp_dir, monkeypatch):
     crm_path   = str(pathlib.Path(tmp_dir) / "crm.db")
     _make_cache_db(cache_path, [
         {"customer_key": "k1", "customer_id": 1, "strategic_tier": "LIVE_CORE",
-         "recency_days": 3, "value_group": "VIP", "is_contactable": 1},
+         "recency_days": 3, "value_group": "VIP", "is_contactable": 1, "customer_type": "RETAIL"},
     ])
     _make_crm_db(crm_path, [])
 
@@ -330,8 +331,8 @@ def test_first_run_bootstraps_store_and_pushes_all(tmp_dir, monkeypatch, state_d
     assert len(captured) >= 1
     assert pathlib.Path(state_db).exists()
     assert _state_count(state_db) == 2
-    # Content matches the pushed-field contract.
-    assert _state_content(state_db, "1") == "LIVE_CORE|3|VIP|1"
+    # Content matches the pushed-field contract (5-field format including customer_type).
+    assert _state_content(state_db, "1") == "LIVE_CORE|3|VIP|1|RETAIL"
 
 
 def test_second_run_no_change_skips_all_api(tmp_dir, monkeypatch, state_db):
@@ -381,8 +382,8 @@ def test_changed_row_pushes_only_that_row(tmp_dir, monkeypatch, state_db):
     assert body["rows"][0]["customer_id"] == "1"
     assert body["rows"][0]["tier"] == "SECOND_ORDER"
     # Store: cid=1 updated, cid=2 unchanged.
-    assert _state_content(state_db, "1") == "SECOND_ORDER|3|VIP|1"
-    assert _state_content(state_db, "2") == "GRAVEYARD|400|LOW|0"
+    assert _state_content(state_db, "1") == "SECOND_ORDER|3|VIP|1|RETAIL"
+    assert _state_content(state_db, "2") == "GRAVEYARD|400|LOW|0|WHOLESALE"
 
 
 def test_failed_batch_does_not_update_store(tmp_dir, monkeypatch, state_db):
@@ -473,3 +474,60 @@ def test_new_customer_pushed_unchanged_skipped(tmp_dir, monkeypatch, state_db):
     body = json.loads(captured[0]["body"])
     assert len(body["rows"]) == 1
     assert body["rows"][0]["customer_id"] == "2"
+
+
+# ─── customer_type passthrough tests ─────────────────────────────────────────
+
+def test_customer_type_passed_through_to_edge_row():
+    """E1: customer_type from mart passes through to the edge row dict unchanged."""
+    tier_rows = [
+        {"customer_id": 10, "strategic_tier": "VIP", "recency_days": 2,
+         "value_group": "HIGH", "is_contactable": 1, "customer_type": "WHOLESALE"},
+    ]
+    rows = customer_push._build_edge_rows(tier_rows, set())
+    assert rows[0]["customer_type"] == "WHOLESALE"
+
+
+def test_customer_type_none_when_missing_from_mart():
+    """E2: row with customer_type=None in mart → None in edge row (not an error)."""
+    tier_rows = [
+        {"customer_id": 11, "strategic_tier": "NEW", "recency_days": 0,
+         "value_group": "LOW", "is_contactable": 0, "customer_type": None},
+    ]
+    rows = customer_push._build_edge_rows(tier_rows, set())
+    assert rows[0]["customer_type"] is None
+
+
+def test_customer_type_empty_string_normalized_to_none():
+    """E3: empty string customer_type from mart normalizes to None in edge row."""
+    tier_rows = [
+        {"customer_id": 12, "strategic_tier": "CASUAL", "recency_days": 60,
+         "value_group": "MID", "is_contactable": 0, "customer_type": ""},
+    ]
+    rows = customer_push._build_edge_rows(tier_rows, set())
+    # _build_edge_rows uses `r.get("customer_type") or None` → "" becomes None.
+    assert rows[0]["customer_type"] is None
+
+
+def test_content_str_includes_customer_type():
+    """E4: _content_str produces 5-field pipe-delimited string with customer_type last."""
+    row = {"tier": "VIP", "recency_days": 5, "value_group": "HIGH",
+           "is_contactable": 1, "customer_type": "RETAIL"}
+    result = customer_push._content_str(row)
+    assert result == "VIP|5|HIGH|1|RETAIL"
+
+
+def test_content_str_null_customer_type_uses_empty_string():
+    """E5: _content_str with None customer_type produces empty trailing field."""
+    row = {"tier": "CORE", "recency_days": 30, "value_group": "MID",
+           "is_contactable": 0, "customer_type": None}
+    result = customer_push._content_str(row)
+    assert result == "CORE|30|MID|0|"
+
+
+def test_content_str_field_count_is_five():
+    """E6: _content_str always produces exactly 5 pipe-separated fields."""
+    row = {"tier": "NEW", "recency_days": 0, "value_group": "LOW",
+           "is_contactable": 0, "customer_type": "CROSSBORDER"}
+    parts = customer_push._content_str(row).split("|")
+    assert len(parts) == 5

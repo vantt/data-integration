@@ -154,7 +154,8 @@ def preview_match_customers(targeting: dict, cache_db_path: str) -> dict[str, An
                    strategic_tier,
                    recency_days,
                    value_group,
-                   is_contactable
+                   is_contactable,
+                   customer_type
             FROM   wh_customer_tier
             WHERE  customer_id IS NOT NULL
             """
@@ -179,6 +180,8 @@ def preview_match_customers(targeting: dict, cache_db_path: str) -> dict[str, An
             # is_contactable is INTEGER 0|1 in SQLite; keep as int for numeric
             # range rules (unlikely but consistent) and str() coercion in list rules.
             "is_contactable": row["is_contactable"],
+            # customer_type: None when unclassified — passes not_in exclusion rules.
+            "customer_type":  row["customer_type"],
         }
         if matches_targeting(targeting, ctx):
             matched += 1

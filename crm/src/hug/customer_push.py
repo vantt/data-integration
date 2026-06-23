@@ -114,7 +114,8 @@ def _load_tier_rows(cache_db: str) -> list[dict[str, Any]]:
                    strategic_tier,
                    recency_days,
                    value_group,
-                   is_contactable
+                   is_contactable,
+                   customer_type
             FROM   wh_customer_tier
             WHERE  customer_id IS NOT NULL
             """
@@ -145,6 +146,9 @@ def _build_edge_rows(
             "recency_days":  int(r["recency_days"] or 0),
             "value_group":   r["value_group"] or "UNKNOWN",
             "is_contactable": 1 if (wh_contactable or crm_contactable_flag) else 0,
+            # customer_type: None when mart has no value (unclassified customer).
+            # Worker column is nullable; null passes not_in exclusion rules.
+            "customer_type": r.get("customer_type") or None,
         })
     return out
 
@@ -181,12 +185,21 @@ def _load_push_state(conn: sqlite3.Connection) -> dict[str, str]:
 
 
 def _content_str(row: dict[str, Any]) -> str:
-    """Pipe-join the 4 edge-pushed fields into a stable comparison key.
+    """Pipe-join the 5 edge-pushed fields into a stable comparison key.
 
     Readable string (not a hash): collision-free for these distinct-type fields
     and debuggable — the stored value shows the exact tier/recency last pushed.
+
+    Field order is locked after first production push — reordering invalidates
+    all stored content strings and triggers a full resync. customer_type added
+    as the 5th field; prior 4-field stored strings will never match the new
+    5-field format, so every existing row will re-push exactly once after deploy.
+    This is the designed recovery mechanism — no separate force flag needed.
     """
-    return f"{row['tier']}|{row['recency_days']}|{row['value_group']}|{row['is_contactable']}"
+    return (
+        f"{row['tier']}|{row['recency_days']}|{row['value_group']}"
+        f"|{row['is_contactable']}|{row.get('customer_type') or ''}"
+    )
 
 
 def _utc_now_iso() -> str:

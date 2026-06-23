@@ -1,0 +1,19 @@
+-- Add customer_type to hug_customer to enable B2B vs retail targeting.
+-- Values mirror mart_customer_tier.customer_type: WHOLESALE / CROSSBORDER /
+-- PARTNER / STAFF / KOL / RETAIL. NULL = not yet pushed (legacy rows before
+-- this column was introduced).
+--
+-- Apply with (BEFORE deploying the Worker build that reads this column):
+--   wrangler d1 execute fgcare-webhook-db --remote \
+--     --file=webhook_receiver/cloudflareD1/migrations/add_hug_customer_type_column.sql
+--
+-- Deploy ordering:
+--   1. Run this migration (D1 schema updated)
+--   2. Deploy Worker (reads the new column in handleHugCustomerUpsert + handleHugScan)
+--   3. Trigger full resync from CRM:
+--        HUG_CUSTOMER_PUSH_FULL=1 <trigger admin refresh>
+--      or inside crm container: python -c "from hug.customer_push import run; run(force=True)"
+--
+-- Rollback: column cannot be dropped via ALTER TABLE in SQLite.
+-- If Worker is reverted, the nullable column is silently ignored — no breakage.
+ALTER TABLE hug_customer ADD COLUMN customer_type TEXT;

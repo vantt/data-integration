@@ -56,6 +56,7 @@ interface HugCustomer {
     recency_days: number | null;
     value_group: string | null;
     is_contactable: number;  // 0 | 1
+    customer_type: string | null;  // WHOLESALE | CROSSBORDER | PARTNER | STAFF | KOL | RETAIL | null
     updated_at: string;
 }
 
@@ -87,6 +88,7 @@ interface ScanContext {
     order_code: string | null;
     ship_date: string | null;
     sku: string | null;
+    customer_type: string | null;  // WHOLESALE | CROSSBORDER | PARTNER | STAFF | KOL | RETAIL | null
 }
 
 // ---------------------------------------------------------------------------
@@ -135,6 +137,7 @@ function invalidateCampaignCache(): void {
  *   sku           string  → in list  (open domain; per-scan / touchpoint-level)
  *   value_group   string  → in list
  *   is_contactable number → in list (0 or 1)
+ *   customer_type string  → in list  (WHOLESALE | CROSSBORDER | PARTNER | STAFF | KOL | RETAIL)
  *   recency_days  number  → supports gte / lte (object form: { gte: N } | { lte: N })
  *
  * Targeting format:
@@ -250,9 +253,9 @@ export async function handleHugScan(
             return Response.redirect(getFallbackUrl(env), 302);
         }
 
-        // 1. Look up token in D1 (left join customer for tier)
+        // 1. Look up token in D1 (left join customer for tier + customer_type)
         const row = await env.DB.prepare(
-            `SELECT t.*, c.tier, c.recency_days, c.value_group, c.is_contactable
+            `SELECT t.*, c.tier, c.recency_days, c.value_group, c.is_contactable, c.customer_type
              FROM hug_token t
              LEFT JOIN hug_customer c ON c.customer_id = t.customer_id
              WHERE t.token = ? AND t.status = 'bound'`
@@ -269,6 +272,7 @@ export async function handleHugScan(
             order_code:    row.order_code ?? null,
             ship_date:     row.ship_date ?? null,
             sku:           row.sku ?? null,
+            customer_type: row.customer_type ?? null,
         } : null;
 
         // 2. Select winning campaign (or fallback)
@@ -447,6 +451,7 @@ interface HugCustomerRow {
     recency_days?: number | null;
     value_group?: string | null;
     is_contactable?: number;  // 0 | 1
+    customer_type?: string | null;  // WHOLESALE | CROSSBORDER | PARTNER | STAFF | KOL | RETAIL | null
 }
 
 export async function handleHugCustomerUpsert(request: Request, env: Env): Promise<Response> {
@@ -475,20 +480,22 @@ export async function handleHugCustomerUpsert(request: Request, env: Env): Promi
 
     const stmts = rows.map((r) =>
         env.DB.prepare(
-            `INSERT INTO hug_customer (customer_id, tier, recency_days, value_group, is_contactable, updated_at)
-             VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
+            `INSERT INTO hug_customer (customer_id, tier, recency_days, value_group, is_contactable, customer_type, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
              ON CONFLICT(customer_id) DO UPDATE SET
                tier           = excluded.tier,
                recency_days   = excluded.recency_days,
                value_group    = excluded.value_group,
                is_contactable = excluded.is_contactable,
+               customer_type  = excluded.customer_type,
                updated_at     = excluded.updated_at`
         ).bind(
             r.customer_id,
             r.tier ?? null,
             r.recency_days ?? null,
             r.value_group ?? null,
-            r.is_contactable ?? 0
+            r.is_contactable ?? 0,
+            r.customer_type ?? null
         )
     );
 

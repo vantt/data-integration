@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS hug_customer (
     recency_days  INTEGER,                   -- days since last order
     value_group   TEXT,                      -- HIGH | MID | LOW
     is_contactable INTEGER NOT NULL DEFAULT 0,  -- 0/1; 1 = has phone or zalo uid
+    customer_type TEXT,                      -- WHOLESALE | CROSSBORDER | PARTNER | STAFF | KOL | RETAIL | NULL
+                                             -- Added via migrations/add_hug_customer_type_column.sql
     updated_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 

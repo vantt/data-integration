@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS hug_customer (
     recency_days INTEGER,
     value_group TEXT,
     is_contactable INTEGER NOT NULL DEFAULT 0,
+    customer_type TEXT,
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );
 
@@ -764,5 +765,163 @@ describe('Hug opt-in capture (POST /webhook/hug/optin/created)', () => {
         await waitOnExecutionContext(ctx);
 
         expect(response.status).toBe(200);
+    });
+});
+
+// ---------------------------------------------------------------------------
+// hug_customer customer_type — upsert + scan context + targeting tests
+// ---------------------------------------------------------------------------
+describe('hug_customer customer_type', () => {
+    const UPSERT_URL = 'http://example.com/hug/customer/upsert';
+    const SCAN_TOKEN = 'SCANCTYPE001';  // exactly 12 chars (Crockford base32 format)
+
+    async function signedUpsert(body: string): Promise<Response> {
+        const sig = await generateSignature('test-hmac-secret', body);
+        const request = new Request(UPSERT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-hug-signature': sig,
+            },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: 'test-hmac-secret' };
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        return response;
+    }
+
+    beforeAll(async () => {
+        // Seed a token bound to customer 'cust-ct-1'
+        await (env as unknown as Env).DB.prepare(
+            `INSERT OR REPLACE INTO hug_token
+             (token, customer_id, op_type, status)
+             VALUES (?, 'cust-ct-1', 'package_insert', 'bound')`
+        ).bind(SCAN_TOKEN).run();
+    });
+
+    it('CT1: upsert stores customer_type in hug_customer', async () => {
+        const body = JSON.stringify({
+            rows: [{ customer_id: 'cust-ct-1', tier: 'VIP', recency_days: 5, value_group: 'HIGH', is_contactable: 1, customer_type: 'RETAIL' }],
+        });
+        const resp = await signedUpsert(body);
+        expect(resp.status).toBe(200);
+
+        const row = await (env as unknown as Env).DB.prepare(
+            "SELECT customer_type FROM hug_customer WHERE customer_id = 'cust-ct-1'"
+        ).first<{ customer_type: string | null }>();
+        expect(row?.customer_type).toBe('RETAIL');
+    });
+
+    it('CT2: upsert accepts null customer_type (nullable column)', async () => {
+        const body = JSON.stringify({
+            rows: [{ customer_id: 'cust-ct-null', tier: 'CORE', recency_days: 10, value_group: 'MID', is_contactable: 0, customer_type: null }],
+        });
+        const resp = await signedUpsert(body);
+        expect(resp.status).toBe(200);
+
+        const row = await (env as unknown as Env).DB.prepare(
+            "SELECT customer_type FROM hug_customer WHERE customer_id = 'cust-ct-null'"
+        ).first<{ customer_type: string | null }>();
+        expect(row?.customer_type).toBeNull();
+    });
+
+    it('CT3: upsert omitting customer_type field treats it as null', async () => {
+        const body = JSON.stringify({
+            rows: [{ customer_id: 'cust-ct-omit', tier: 'CASUAL', recency_days: 20, value_group: 'LOW', is_contactable: 0 }],
+        });
+        const resp = await signedUpsert(body);
+        expect(resp.status).toBe(200);
+
+        const row = await (env as unknown as Env).DB.prepare(
+            "SELECT customer_type FROM hug_customer WHERE customer_id = 'cust-ct-omit'"
+        ).first<{ customer_type: string | null }>();
+        expect(row?.customer_type).toBeNull();
+    });
+
+    it('CT4: handleHugScan includes customer_type in ScanContext — matchesTargeting not_in works', async () => {
+        // Upsert the customer with customer_type='WHOLESALE' so scan context resolves it.
+        const upsertBody = JSON.stringify({
+            rows: [{ customer_id: 'cust-ct-1', tier: 'VIP', recency_days: 5, value_group: 'HIGH', is_contactable: 1, customer_type: 'WHOLESALE' }],
+        });
+        await signedUpsert(upsertBody);
+
+        // Use the campaign upsert endpoint so handleHugCampaignUpsert calls
+        // invalidateCampaignCache() — direct DB writes bypass the cache flush.
+        const testEnvHmac = { ...env, HUG_ADMIN_SECRET: 'test-hmac-secret' };
+
+        const campBody = JSON.stringify({
+            rows: [
+                // Excludes WHOLESALE: RETAIL/etc pass, WHOLESALE blocked (priority 50 = higher).
+                {
+                    campaign_id: 'camp-ct-excl',
+                    name: 'Exclude Wholesale',
+                    targeting: { customer_type: { not_in: ['WHOLESALE', 'STAFF'] } },
+                    destination_type: 'url',
+                    destination_url: 'https://fgcare.vn/retail',
+                    status: 'active',
+                    priority: 50,
+                },
+                // DEFAULT catches everyone including WHOLESALE (priority 999 = lower).
+                {
+                    campaign_id: 'camp-ct-default',
+                    name: 'Default',
+                    targeting: {},
+                    destination_type: 'url',
+                    destination_url: 'https://fgcare.vn/default',
+                    status: 'active',
+                    priority: 999,
+                },
+            ],
+        });
+        const campSig = await generateSignature('test-hmac-secret', campBody);
+        const campResp = await worker.fetch(
+            new Request('http://example.com/hug/campaign/upsert', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-hug-signature': campSig },
+                body: campBody,
+            }),
+            testEnvHmac as unknown as Env,
+            createExecutionContext(),
+        );
+        expect(campResp.status).toBe(200); // confirms campaign upsert + cache invalidation
+
+        const scanRequest = new Request(`http://example.com/h/${SCAN_TOKEN}`);
+        const testEnv = { ...env, HUG_ADMIN_SECRET: 'test-hmac-secret', HUG_FALLBACK_URL: 'https://fgcare.vn/fallback' };
+        const ctx = createExecutionContext();
+        const response = await worker.fetch(scanRequest, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+
+        // WHOLESALE customer: excluded from camp-ct-excl → falls to camp-ct-default (priority 999)
+        expect(response.status).toBe(302);
+        const location = response.headers.get('Location') ?? '';
+        // The Worker appends ?hug_token=...&hug_campaign=... query params to the destination URL.
+        // Assert base URL is the DEFAULT campaign destination, NOT the retail-only exclusion campaign.
+        expect(location).toContain('https://fgcare.vn/default');
+        expect(location).not.toContain('https://fgcare.vn/retail');
+        expect(location).toContain('camp-ct-default');
+    });
+
+    it('CT5: matchesTargeting customer_type not_in — RETAIL passes exclusion, STAFF blocked', () => {
+        // Verify the matcher itself handles customer_type correctly without a full scan.
+        // ScanContext helper (customer_type added).
+        function ctxWithType(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+            return {
+                op_type: 'package_insert', tier: null, channel: null,
+                value_group: null, recency_days: null, is_contactable: 0,
+                customer_id: null, order_code: null, ship_date: null, sku: null,
+                customer_type: null,
+                ...overrides,
+            };
+        }
+
+        const notInRule = JSON.stringify({ customer_type: { not_in: ['WHOLESALE', 'STAFF'] } });
+
+        expect(matchesTargeting(notInRule, ctxWithType({ customer_type: 'RETAIL' }) as any)).toBe(true);
+        expect(matchesTargeting(notInRule, ctxWithType({ customer_type: 'STAFF' }) as any)).toBe(false);
+        expect(matchesTargeting(notInRule, ctxWithType({ customer_type: 'WHOLESALE' }) as any)).toBe(false);
+        // null customer_type passes (unknown is not in the excluded set).
+        expect(matchesTargeting(notInRule, ctxWithType({ customer_type: null }) as any)).toBe(true);
     });
 });

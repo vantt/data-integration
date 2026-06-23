@@ -59,6 +59,15 @@ TARGETING_CATALOG: dict[str, dict] = {
         "description": "Nhóm giá trị đơn",
         "values": ["HIGH", "MID", "LOW", "UNKNOWN"],
     },
+    "customer_type": {
+        "type": "list",
+        "description": "Loại khách hàng (B2B vs bán lẻ)",
+        # Closed domain from mart_customer_tier / dim_customers.
+        # null customer_type (unclassified) passes not_in exclusion rules at the edge.
+        "values": ["WHOLESALE", "CROSSBORDER", "PARTNER", "STAFF", "KOL", "RETAIL"],
+        # No touchpoint_level key → defaults to False (customer-level attribute,
+        # available in hug_customer for exact preview counts in Phase 3 D1 preview).
+    },
     "is_contactable": {
         "type": "list",
         "description": "Có thể liên hệ (0 = không, 1 = có)",

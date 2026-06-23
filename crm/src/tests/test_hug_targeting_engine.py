@@ -87,14 +87,15 @@ def _make_cache_db(tmp_dir: str, rows: list[dict]) -> str:
             strategic_tier TEXT,
             recency_days   INTEGER,
             value_group    TEXT,
-            is_contactable INTEGER
+            is_contactable INTEGER,
+            customer_type  TEXT
         )
     """)
     for r in rows:
         conn.execute(
             "INSERT INTO wh_customer_tier "
-            "(customer_key, customer_id, strategic_tier, recency_days, value_group, is_contactable) "
-            "VALUES (:customer_key, :customer_id, :strategic_tier, :recency_days, :value_group, :is_contactable)",
+            "(customer_key, customer_id, strategic_tier, recency_days, value_group, is_contactable, customer_type) "
+            "VALUES (:customer_key, :customer_id, :strategic_tier, :recency_days, :value_group, :is_contactable, :customer_type)",
             r,
         )
     conn.commit()
@@ -286,7 +287,7 @@ def test_validate_rejects_non_numeric_range_value():
 
 
 def test_validate_accepts_all_six_catalog_attrs():
-    """V09: all 6 v1 attrs with valid rules → no errors."""
+    """V09: all 6 original v1 attrs with valid rules → no errors."""
     valid = {
         "op_type":       ["package_insert"],
         "tier":          ["VIP"],
@@ -307,9 +308,9 @@ def test_preview_empty_targeting_matches_all_customers():
     with tempfile.TemporaryDirectory() as tmp:
         db = _make_cache_db(tmp, [
             {"customer_key": "a", "customer_id": 1, "strategic_tier": "VIP",
-             "recency_days": 10, "value_group": "HIGH", "is_contactable": 1},
+             "recency_days": 10, "value_group": "HIGH", "is_contactable": 1, "customer_type": "RETAIL"},
             {"customer_key": "b", "customer_id": 2, "strategic_tier": "CORE",
-             "recency_days": 50, "value_group": "MID",  "is_contactable": 0},
+             "recency_days": 50, "value_group": "MID",  "is_contactable": 0, "customer_type": "WHOLESALE"},
         ])
         result = preview_match_customers({}, db)
     assert result["total"] == 2
@@ -322,11 +323,11 @@ def test_preview_tier_filter_counts_only_matching_customers():
     with tempfile.TemporaryDirectory() as tmp:
         db = _make_cache_db(tmp, [
             {"customer_key": "a", "customer_id": 1, "strategic_tier": "VIP",
-             "recency_days": 5,  "value_group": "HIGH", "is_contactable": 1},
+             "recency_days": 5,  "value_group": "HIGH", "is_contactable": 1, "customer_type": "RETAIL"},
             {"customer_key": "b", "customer_id": 2, "strategic_tier": "CORE",
-             "recency_days": 30, "value_group": "MID",  "is_contactable": 0},
+             "recency_days": 30, "value_group": "MID",  "is_contactable": 0, "customer_type": "WHOLESALE"},
             {"customer_key": "c", "customer_id": 3, "strategic_tier": "VIP",
-             "recency_days": 15, "value_group": "HIGH", "is_contactable": 1},
+             "recency_days": 15, "value_group": "HIGH", "is_contactable": 1, "customer_type": None},
         ])
         result = preview_match_customers({"tier": ["VIP"]}, db)
     assert result["total"] == 3
@@ -428,6 +429,21 @@ def test_validate_accepts_all_seven_catalog_attrs_including_sku():
     assert validate_targeting(valid) == []
 
 
+def test_validate_accepts_all_eight_catalog_attrs_including_customer_type():
+    """V16: all 8 v1 attrs (customer_type added) with valid rules → no errors."""
+    valid = {
+        "op_type":       ["package_insert"],
+        "tier":          ["VIP"],
+        "channel":       ["shopee"],
+        "sku":           ["FJ-OMEGA3-60"],
+        "value_group":   ["HIGH"],
+        "is_contactable": [1],
+        "customer_type": ["RETAIL"],
+        "recency_days":  {"gte": 0},
+    }
+    assert validate_targeting(valid) == []
+
+
 def test_validate_accepts_not_in_for_list_attr():
     """V11: not_in with domain-valid tier values → no errors."""
     # Use domain-valid values (DORMANT_VALUABLE, LAPSED_VALUABLE are in tier domain).
@@ -456,4 +472,75 @@ def test_validate_rejects_empty_not_in_list():
 def test_validate_not_in_sku_open_domain_no_domain_check():
     """V15: sku has no 'values' domain → not_in accepts any string, no domain error."""
     assert validate_targeting({"sku": {"not_in": ["ANY-SKU-CODE-XYZ"]}}) == []
+
+
+# ---------------------------------------------------------------------------
+# customer_type — matching parity + preview
+# ---------------------------------------------------------------------------
+
+def test_customer_type_in_list_matches():
+    """M24: {"customer_type": ["RETAIL"]} + ctx RETAIL → True."""
+    assert matches_targeting({"customer_type": ["RETAIL"]}, {"customer_type": "RETAIL"}) is True
+
+
+def test_customer_type_not_in_list_excludes():
+    """M25: {"customer_type": {"not_in": ["WHOLESALE","STAFF"]}} + ctx WHOLESALE → False."""
+    assert matches_targeting(
+        {"customer_type": {"not_in": ["WHOLESALE", "STAFF"]}},
+        {"customer_type": "WHOLESALE"},
+    ) is False
+
+
+def test_customer_type_not_in_retail_passes():
+    """M26: RETAIL is not in excluded [WHOLESALE,STAFF] → True."""
+    assert matches_targeting(
+        {"customer_type": {"not_in": ["WHOLESALE", "STAFF"]}},
+        {"customer_type": "RETAIL"},
+    ) is True
+
+
+def test_customer_type_none_passes_not_in():
+    """M27: null customer_type passes not_in exclusion (unknown is not in excluded set)."""
+    assert matches_targeting(
+        {"customer_type": {"not_in": ["WHOLESALE", "STAFF"]}},
+        {"customer_type": None},
+    ) is True
+
+
+def test_validate_customer_type_in_domain_valid():
+    """V17: customer_type list with valid domain values → no errors."""
+    assert validate_targeting({"customer_type": ["RETAIL", "CROSSBORDER"]}) == []
+
+
+def test_validate_customer_type_not_in_valid():
+    """V18: customer_type not_in with valid domain values → no errors."""
+    assert validate_targeting({"customer_type": {"not_in": ["WHOLESALE", "STAFF"]}}) == []
+
+
+def test_validate_customer_type_out_of_domain_rejected():
+    """V19: customer_type with value outside domain → error."""
+    errors = validate_targeting({"customer_type": ["B2B"]})
+    assert any("customer_type" in e and "domain" in e for e in errors)
+
+
+def test_preview_customer_type_not_in_excludes_wholesale():
+    """P04: customer_type not_in ["WHOLESALE"] → RETAIL counted, WHOLESALE excluded."""
+    with tempfile.TemporaryDirectory() as tmp:
+        db = _make_cache_db(tmp, [
+            {"customer_key": "a", "customer_id": 1, "strategic_tier": "VIP",
+             "recency_days": 5, "value_group": "HIGH", "is_contactable": 1,
+             "customer_type": "RETAIL"},
+            {"customer_key": "b", "customer_id": 2, "strategic_tier": "CORE",
+             "recency_days": 30, "value_group": "MID", "is_contactable": 0,
+             "customer_type": "WHOLESALE"},
+            {"customer_key": "c", "customer_id": 3, "strategic_tier": "NEW",
+             "recency_days": 1, "value_group": "LOW", "is_contactable": 0,
+             "customer_type": None},
+        ])
+        result = preview_match_customers(
+            {"customer_type": {"not_in": ["WHOLESALE"]}}, db
+        )
+    # RETAIL passes, NULL passes (not in excluded set), WHOLESALE fails.
+    assert result["total"] == 3
+    assert result["matched"] == 2
     assert validate_targeting({"sku": ["FJ-COLLAGEN-90"]}) == []
