@@ -12,15 +12,7 @@ from .screen_modals import init_modals, router as modals_router
 from .templating import make_templates
 
 
-class WebDeps:
-    """Concrete service references injected at startup."""
-    party_creator: object
-    profile_querier: object
-    owner_assigner: object
-    app_users: object
-
-
-def mount_web(app: FastAPI, deps: WebDeps, templates_dir: str, static_dir: str) -> None:
+def mount_web(app: FastAPI, deps: object, templates_dir: str, static_dir: str) -> None:
     """Attach all web sub-routers and static mounts to *app*.
 
     Call once during application startup, after all services are wired.

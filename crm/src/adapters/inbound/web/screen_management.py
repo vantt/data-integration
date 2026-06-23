@@ -73,10 +73,13 @@ def make_management_router(
     @router.get("/segments", response_class=HTMLResponse)
     def segments_list(request: Request):
         segs = _safe(segments_svc.list_segments, [], "segments list")
-        counts = {}
-        for s in segs:
-            members = _safe(lambda sid=s.segment_id: segments_svc.list_members(sid), [], "")
-            counts[s.segment_id] = len(members)
+        # Batch count in one query instead of N per-segment queries.
+        seg_ids = [s.segment_id for s in segs]
+        counts = _safe(
+            lambda: segments_svc.count_members_for_segments(seg_ids),
+            {sid: 0 for sid in seg_ids},
+            "segment member counts",
+        )
         return templates.TemplateResponse("segments.html", {
             "request": request, "segments": segs, "member_counts": counts,
         })

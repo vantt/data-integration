@@ -151,6 +151,23 @@ class SQLiteSegmentRepository:
             for r in rows
         ]
 
+    def count_members_bulk(self, segment_ids: list[str]) -> dict[str, int]:
+        """Return member counts for multiple segments in a single query.
+
+        Returns a dict mapping segment_id → count. Missing segments get 0.
+        """
+        if not segment_ids:
+            return {}
+        placeholders = ",".join("?" * len(segment_ids))
+        rows = self._conn.execute(
+            f"SELECT segment_id, COUNT(*) AS cnt FROM crm_segment_member"
+            f" WHERE segment_id IN ({placeholders}) GROUP BY segment_id",
+            segment_ids,
+        ).fetchall()
+        counts = {r["segment_id"]: r["cnt"] for r in rows}
+        # Fill 0 for segments with no members (not in result).
+        return {sid: counts.get(sid, 0) for sid in segment_ids}
+
     def delete_rule_members(self, segment_id: str) -> int:
         """Delete all rule-sourced members for a segment; returns count deleted."""
         cur = self._conn.execute(

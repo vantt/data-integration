@@ -116,6 +116,10 @@ class SegmentService:
         """Return all members of a segment."""
         return self._repo.list_members(segment_id)
 
+    def count_members_for_segments(self, segment_ids: list[str]) -> dict[str, int]:
+        """Return member counts for multiple segments in one batch query."""
+        return self._repo.count_members_bulk(segment_ids)
+
     # ── Dynamic refresh ────────────────────────────────────────────────────────
 
     def refresh_dynamic_segment(self, segment_id: str) -> int:
