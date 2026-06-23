@@ -1,7 +1,7 @@
 ---
 title: "Hug claim/scan robustness — token normalization + dynamic claim fields + edge-promotion seam"
 description: "Worker /h/:token normalizes typed codes; claim station gains a config-driven multi-field form, per-field live validation, AJAX bind, session idempotency, and a one-time edge-promotion seam that makes adding new edge-matchable bind fields config-only forever after."
-status: pending
+status: in-progress
 priority: P1
 effort: 12h
 branch: main
@@ -49,7 +49,7 @@ CLAIM_FIELDS config (claim_fields.py)
 
 | # | Name | Effort | Risk | Status | Deployable alone |
 |---|------|--------|------|--------|-----------------|
-| 1 | Worker `/h/:token` normalization | 2h | Low | pending | Yes — `wrangler deploy` |
+| 1 | Worker `/h/:token` normalization | 2h | Low | ✅ DONE (merged `afd271d`, deployed `02c2165e`, live e2e PASS) | Yes — `wrangler deploy` |
 | 2 | Dynamic claim-field foundation | 4h | Medium | pending | Yes — crm restart |
 | 3 | Claim station frontend | 3h | Medium | pending | Yes — crm restart |
 | 4 | Edge-promotion seam | 3h | Low-Medium | pending | Yes — coordinated deploy (D1 migration then wrangler deploy then crm restart) |
@@ -87,9 +87,14 @@ Phase 1 is fully independent of all others.
   3. `docker compose restart crm` (d1_push starts sending `attributes` JSON in upsert payload).
   Rollback: revert steps in reverse order. Worker reads `attributes` only when non-null; if column absent, returns undefined → no ScanContext key injected. Worker deploy can be reverted without the D1 column being dropped.
 
-## Sapo API strategy (Phase 2 investigation confirmed from Phase 3 original plan)
+## Order-code validation strategy — HYBRID, soft-fail (decided 2026-06-23)
 
-`ingestion/src/sapo/client.py` uses headless Playwright cookie auth — not portable to crm container. Decision (carried forward): thin proxy in claim router using Sapo REST API key (`SAPO_API_URL`, `SAPO_API_KEY`). Sapo validator in `VALIDATORS` registry (`claim_fields.py`). Must be soft-fail: Sapo down → `{ok: null}` → amber → allow proceed.
+VERIFIED: Sapo has NO REST API key. `ingestion/src/sapo/client.py` authenticates via headless Playwright cookie login (`sapo_login_strategy`, `SharedCookieManager`, `#pos-login-form`) — session cookies maintained by the ingestion pipeline, not a stable per-call key. So the `sapo_order` validator is HYBRID:
+  1. **cache.db `wh_order_hdr`** lookup first — local, instant, no auth. Found → green (valid).
+  2. Not found → best-effort live check reusing the shared Sapo cookie IF cleanly reachable from the crm container (INVESTIGATE; if cookie store not reachable, skip this tier). Catches brand-new orders not yet replicated into cache.db.
+  3. Any miss / Sapo unreachable / cookie expired → amber "không kiểm tra được", ALLOW proceed. NEVER hard-block claims on a Sapo outage.
+
+`order_code` is just one entry in `claim_fields.py` with `validate="sapo_order"`; changing strategy later = editing one validator function, no form/schema change.
 
 ## Cross-plan Reference
 
@@ -97,6 +102,6 @@ Phase 4 `targeting_catalog.py` entries for new edge-promoted bind fields are coo
 
 ## Unresolved Questions
 
-1. Does `fwg.mysapogo.com` support `Authorization: Bearer <key>` REST API auth, or only cookie sessions? If key auth unavailable, `sapo_order` validator always soft-fails → amber → no hard block (acceptable degradation).
+1. ~~Does `fwg.mysapogo.com` support REST API key auth?~~ RESOLVED: cookie-only (no key). Order validation switched to HYBRID (cache.db first → best-effort Sapo cookie → amber) — see strategy section above. Open sub-question for Phase 2: is the ingestion `SharedCookieManager` cookie store cleanly reachable from the crm container (shared volume / path)? If not, tier-2 (live Sapo) is skipped and cache.db + amber stand alone.
 2. Phase 4: should `order_code` (currently a promoted column in D1 `hug_token`) also be replicated in `attributes` JSON for symmetry, or kept as a dedicated column only? Recommendation: dedicated column only (it was always there; no need to duplicate). Confirm before Phase 4 implementation.
 3. Stale-bind UX (from original Phase 2 Q): staff scans token A, abandons, then scans token B. Token A remains bound; if staff reloads and re-scans A, new session blocks. Leave as-is (no "release token" affordance) unless raised by ops.

@@ -45,6 +45,19 @@ CREATE INDEX IF NOT EXISTS idx_hug_token_status ON hug_token(status);
 CREATE INDEX IF NOT EXISTS idx_hug_token_order  ON hug_token(order_code);
 """
 
+# ALTER TABLE column migrations — run separately after executescript because
+# SQLite does not support ADD COLUMN IF NOT EXISTS syntax.  Each statement is
+# attempted individually; an OperationalError (duplicate column) is swallowed,
+# making the sequence idempotent.  Pattern mirrors crm/sync/sqlite_upsert.py.
+_COLUMN_MIGRATIONS = [
+    # Session idempotency: same session → mid-operation correction allowed;
+    # different non-None session → AlreadyBoundError (another operator's op).
+    "ALTER TABLE hug_token ADD COLUMN bind_session_id TEXT",
+    # Dynamic non-promoted bind fields as JSON blob. Future local-only metadata
+    # fields land here automatically without schema change.
+    "ALTER TABLE hug_token ADD COLUMN bind_attributes TEXT",
+]
+
 _PRAGMAS = (
     "PRAGMA journal_mode=WAL",
     "PRAGMA busy_timeout=5000",
@@ -70,4 +83,10 @@ def connect(db_path: str | None = None) -> sqlite3.Connection:
         conn.execute(stmt)
     conn.executescript(_SCHEMA)
     conn.commit()
+    for stmt in _COLUMN_MIGRATIONS:
+        try:
+            conn.execute(stmt)
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass  # column already exists — idempotent
     return conn

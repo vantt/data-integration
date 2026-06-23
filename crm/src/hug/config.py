@@ -12,6 +12,13 @@ Env vars:
                      else works locally. Set after the Worker (M2) is deployed.
   HUG_ADMIN_SECRET — shared secret for the HMAC X-Hug-Signature header on the
                      admin upsert route. Required only when HUG_WORKER_URL is set.
+  SAPO_API_URL     — base URL for Sapo REST API (e.g. https://fwg.mysapogo.com).
+                     When unset, the Sapo order validator soft-fails (amber).
+  SAPO_API_KEY     — Sapo REST API key for Authorization: Bearer.
+                     When unset, the Sapo order validator soft-fails (amber).
+                     NOTE: as of 2026-06-23 Sapo only supports cookie-based auth
+                     (Playwright SharedCookieManager); these vars are reserved for
+                     future use if a REST key becomes available.
 """
 from __future__ import annotations
 
@@ -54,3 +61,13 @@ def admin_secret() -> str:
 def push_enabled() -> bool:
     """True only when the Worker URL is configured (post-M2-deploy)."""
     return bool(worker_url())
+
+
+def sapo_api_url() -> str:
+    """Base URL for Sapo REST API (no trailing slash). Empty when unconfigured."""
+    return os.environ.get("SAPO_API_URL", "").rstrip("/")
+
+
+def sapo_api_key() -> str:
+    """Sapo REST API key for Authorization: Bearer. Empty when unconfigured."""
+    return os.environ.get("SAPO_API_KEY", "")

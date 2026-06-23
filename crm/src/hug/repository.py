@@ -5,6 +5,7 @@ d1_push.py and is invoked by the claim caller after a successful local bind).
 """
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timezone
 
@@ -88,6 +89,15 @@ def list_recent_batches(conn: sqlite3.Connection, limit: int = 20) -> list[sqlit
     return cur.fetchall()
 
 
+class AlreadyBoundError(ValueError):
+    """Raised when a token is already bound to a DIFFERENT session.
+
+    This is a blocking condition: the operator trying to claim this token did
+    not originate the original bind operation.  The caller should show a red
+    "token claimed in another operation" message and refuse the bind.
+    """
+
+
 def bind_token(
     conn: sqlite3.Connection,
     token: str,
@@ -96,21 +106,45 @@ def bind_token(
     is_gift: bool = False,
     channel: str | None = None,
     campaign_hint: str | None = None,
+    bind_session_id: str | None = None,
+    bind_attributes: dict | None = None,
 ) -> sqlite3.Row:
     """Bind a printed token to a Sapo order_code (claim). Returns the bound row.
 
-    Idempotent-ish: re-binding the SAME token to the SAME order_code is allowed
-    (updates attributes, refreshes bound_at). Binding an already-bound token to
-    a DIFFERENT order_code raises — operators must mint a new tem instead.
+    Idempotency rules (in precedence order):
+    1. Already bound to a DIFFERENT order_code → ValueError (operator error; mint new sticker).
+    2. Already bound, SAME session (bind_session_id match) → allow re-bind.
+       Rationale: same-session rebind = mid-operation correction (staff re-scanned
+       same token before moving on; overwriting is safe because it's the same op).
+    3. Already bound, DIFFERENT session (both non-None, not equal) → AlreadyBoundError.
+       Rationale: another operator's operation owns this token; blocking prevents
+       accidental double-claim.
+    4. Either side None → allow re-bind (form-POST/no-JS path sets no session).
+
+    bind_attributes: optional dict of dynamic non-promoted fields (currently empty
+    at MVP; future local-only metadata fields land here without schema change).
+    Stored as JSON in bind_attributes column.
+
     order->customer_id resolution happens ASYNC in the pipeline, not here.
     """
     row = get_token(conn, token)
     if row is None:
         raise KeyError(f"unknown token: {token}")
-    if row["status"] == "bound" and row["order_code"] and row["order_code"] != order_code:
-        raise ValueError(
-            f"token already bound to a different order ({row['order_code']})"
-        )
+
+    if row["status"] == "bound":
+        # Guard 1: different order entirely
+        if row["order_code"] and row["order_code"] != order_code:
+            raise ValueError(
+                f"token already bound to a different order ({row['order_code']})"
+            )
+        # Guard 2/3: session check
+        stored_session = row["bind_session_id"]
+        if stored_session and bind_session_id and stored_session != bind_session_id:
+            # Different non-None sessions → another operator owns this bind
+            raise AlreadyBoundError(
+                "token already claimed in a different operation"
+            )
+        # Same session (or either side None) → fall through to UPDATE (re-bind)
 
     bound_at = _utc_now()
     # op_type is a MINT-time (batch) property of the physical sticker — do NOT
@@ -119,7 +153,7 @@ def bind_token(
         "UPDATE hug_token SET "
         "  status='bound', order_code=?, is_gift=?, "
         "  channel=COALESCE(?, channel), campaign_hint=COALESCE(?, campaign_hint), "
-        "  bound_at=? "
+        "  bound_at=?, bind_session_id=?, bind_attributes=? "
         "WHERE token=?",
         (
             order_code,
@@ -127,6 +161,8 @@ def bind_token(
             channel,
             campaign_hint,
             bound_at,
+            bind_session_id,
+            json.dumps(bind_attributes or {}),
             token,
         ),
     )

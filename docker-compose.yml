@@ -176,6 +176,11 @@ services:
       # Secret via root .env substitution (gitignored) — not baked into this tracked file.
       - HUG_WORKER_URL=https://hug.fjp.vn
       - HUG_ADMIN_SECRET=${HUG_ADMIN_SECRET}
+      # Sapo REST API — reserved for future order-code live validation.
+      # Currently soft-fails (amber) because Sapo uses cookie-only auth.
+      # Set both vars if a REST key becomes available.
+      - SAPO_API_URL=${SAPO_API_URL:-}
+      - SAPO_API_KEY=${SAPO_API_KEY:-}
     networks:
       - caddy_net
     volumes:

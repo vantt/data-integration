@@ -10,7 +10,7 @@
 
 ## Overview
 - **Priority:** P1 — silent scan failures from typed human codes are invisible to operators
-- **Status:** pending
+- **Status:** ✅ DONE — merged `afd271d`, deployed version `02c2165e` to `hug.fjp.vn`, live e2e PASS (bare/dashed/HUG-/lowercase/underscore/dot/%20 all → campaign; unknown/short → fallback)
 - **Scope:** Worker TS only. No D1 schema change. No Python/JS changes (those are called out separately below as a recommendation).
 
 ## The bug (verified)
