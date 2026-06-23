@@ -257,3 +257,26 @@ Direction: rely on atomic rename as primary concurrency guard; document that the
 
 **Compile check:** `python -m py_compile` on all 10 modified Python files → ALL OK (Python 3.14.2)
 **TypeScript check:** `tsc --noEmit` in `webhook_receiver/cloudflareD1` → TSC OK
+
+---
+
+## SECOND-WAVE FIXES 260623-2318
+
+| Finding | Status | File(s) changed | Notes |
+|---------|--------|-----------------|-------|
+| M8 — loop swallows unrecoverable errors | APPLIED | `ingestion/run_sapo_v2_webhook_consumer.py:73-94` | Added `requests` import; unrecoverable errors (`ConnectionError`, `KeyError`, `ValueError`, HTTP 401/403) now `sys.exit(1)` in loop mode; transient errors still sleep-and-retry; `--once` path unchanged (re-raises as before) |
+| M5 — TOCTOU cookie validity check | APPLIED | `ingestion/src/utils/shared_cookie_manager.py:412-442` | Replaced bare check-and-refresh with file-based exclusive lock (`self.cookie_file.with_suffix('.lock')`); acquires lock before check, re-reads after lock acquired, only calls `login_and_save_cookies()` once per lock holder; fast path skips lock when cookies already valid in-process |
+| L7 — msvcrt 1-byte lock best-effort | APPLIED (comment) | `ingestion/src/utils/shared_cookie_manager.py:20-29` | Added comment explaining msvcrt.locking locks only 1 byte; atomic rename is primary guard; lock is best-effort defense-in-depth |
+| H3 — dlt nested cursor path | APPLIED (comment + INVESTIGATED) | `ingestion/src/sapo/history_log.py:163-180` | **Investigated dlt v1.24.0 source** (`dlt/extract/incremental/transform.py`): dotted paths compile via `compile_path()` and `find_values()` for JSONPath traversal — nested dict extraction works correctly. Moreover, history_log does NOT rely on dlt's row filter for correctness; `last_value` is read from state and manual early-stop loop handles filtering. Risk is effectively nil. Added inline comment explaining this at the cursor declaration. |
+| L1 — redundant double-lookup in history_log | APPLIED (comment) | `ingestion/src/sapo/history_log.py:469-472` | Added comment explaining `env["entity_type"]` is already the resolved table name; `get_table_name()` is a harmless re-lookup kept for symmetry |
+| L2 — min_overlap_items > page_size waste | APPLIED (comment) | `ingestion/src/sapo/orders.py:54-60`, `ingestion/src/sapo/customers.py:65-72` | Added inline comments explaining why 500 is conservative (5 extra pages) and when to reduce to `page_size * 2` |
+| L3 — login_url defaults to orders page | APPLIED (comment) | `ingestion/src/sapo/client.py:40-44` | Added comment: `/orders` is a valid SSO trigger; sapo_login_strategy waits for `**/admin**` redirect, not the landing URL |
+| L5 — full-table scan in campaign preview | APPLIED (comment) | `webhook_receiver/cloudflareD1/src/hug-handler.ts:907-914` | Added `GUARD:` comment: if `hug_customer` exceeds ~20k rows, add server-side WHERE filter for tier/value_group/customer_type |
+| M2 — dead-letter queue | NOTED | — | Requires `retry_count` column added to D1 schema — out of scope (schema change). Design: add `retry_count INTEGER DEFAULT 0` to `webhooks` table; consumer increments on skip; Worker rejects or moves to `webhooks_dead` after threshold (e.g. 5). |
+| M3 — campaign cache cross-isolate staleness | CONFIRMED acceptable | — | Audit confirmed: each Worker isolate has its own `_campaignCache`; invalidation is per-isolate only. Acceptable at current scale. Quota enforcement should be at D1 write time, not read time. |
+| M4 — unbounded D1 bind params | CONFIRMED acceptable | — | Consumer default `poll_limit=100`, well below SQLite `SQLITE_MAX_VARIABLE_NUMBER`. Only becomes an issue if `--poll-limit > 999`. Document: chunk ACK in batches of 500 when raising limit. |
+| M7 — customers sort/cursor mismatch | CONFIRMED known gap | — | Sapo API does not support `sort=modified_on`. Compensated by history_log channel. Comment added via L2 (same source function). |
+
+**Compile check (second wave):** `python -m py_compile` on 6 modified Python files → ALL OK
+**TypeScript check (second wave):** `tsc --noEmit` in `webhook_receiver/cloudflareD1` → TSC OK
+**Tests:** No test files found in `ingestion/` — N/A

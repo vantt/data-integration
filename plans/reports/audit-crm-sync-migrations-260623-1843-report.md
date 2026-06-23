@@ -144,3 +144,18 @@ All 6 tests pass (T1–T6, `pytest crm/sync/tests/test_reverse_etl_warehouse_to_
 | L2 seed_hug missing foreign_keys=ON | APPLIED | `seed_hug_deadstock_resell_campaign.py:75` | Added `PRAGMA foreign_keys=ON` to `_open_crm_db` |
 | L3 fetch_order_hdr >= HWM perf trade-off | DEFERRED | `duckdb_reader.py:451` | Documented in audit as acceptable; no change |
 | L4 0026 duplicate trigger/index defs | DEFERRED | `crm/migrations/0026_...up.sql` | Audit confirmed no-op at runtime (`IF NOT EXISTS` guards); no change needed |
+
+---
+
+## SECOND-WAVE FIXES 260623-2318
+
+All 12 tests pass (T1–T6 + 6 search_index tests, `pytest crm/sync/tests/`).
+
+| Finding | Status | File:line | Notes |
+|---------|--------|-----------|-------|
+| M1 `_COLUMN_MIGRATIONS` partial-dedup atomicity | APPLIED | `sqlite_upsert.py:65-133` | Refactored `apply_schema`: removed module-level `_COLUMN_MIGRATIONS` list; split into Group A (4 individual ADD COLUMN — still one-by-one with dup-column guard) and Group B (DELETE + ALTER + UPDATE + CREATE INDEX, now wrapped in `with conn:` single transaction). Group B gated on `_column_exists(conn, "wh_action_queue", "pending_since")` — skipped as no-op on current DBs. UNIQUE index also added to `cache_schema.sql` (line 182) so new DBs get it from schema DDL; Group B path handles old pre-`pending_since` DBs atomically. |
+| M2 migration 0023 (and all files) outside transaction | APPLIED | `crm/src/adapters/outbound/sqlite/migrations.py:90-154` | Runner now wraps each migration file in a `SAVEPOINT {outer}` so all statements in the file are atomic; inner `SAVEPOINT {outer}_stmt` per-statement lets `duplicate column name` roll back just that statement without aborting the outer savepoint. On prod: 0023 already applied (skipped by version check) — no re-run risk. New migrations get full atomicity. |
+| M3 missing down migrations | NOTED (accepted policy) | `crm/migrations/` | Rollback = restore from backup. No down-migration files added. No change. |
+| M5 `search_index` read phase uses write connection | APPLIED | `search_index.py:161-210` | Split into two connections: `crm_ro_conn` (read-only URI `?mode=ro`) for the load phase (parties + identity mapping), closed before write phase; `crm_rw_conn` (plain connect) opened only for the brief DELETE+INSERT write phase. Minimises write-lock window during the long read phase; Go app concurrent readers unblocked during reads. |
+| L3 HWM perf note | NOTED | `duckdb_reader.py:451` | Acceptable trade-off per audit; no change. |
+| L4 0026 duplicate defs | NOTED | `crm/migrations/0026_...up.sql` | Runtime no-op per audit; no change. |

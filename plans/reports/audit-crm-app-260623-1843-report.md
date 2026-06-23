@@ -328,3 +328,21 @@ Both files define a `WebDeps` class. The one in `routes.py` is different (fewer 
 **Unresolved questions (inherited):**
 - Q3: Is `crm_party_360` a VIEW exposing `consent_contact` alias? Needed before fixing M3.
 - Q4: ETA/sequencing for Tag ACL (H4) and i18n (H5) plans.
+
+---
+
+## SECOND-WAVE FIXES 260623-2318
+
+| # | Finding | Status | File:line | Notes |
+|---|---------|--------|-----------|-------|
+| L3 | `screen_resolver.py` bare import | APPLIED | `screen_resolver.py:19` | Changed `from domain.entities.party import Party` → `from crm.src.domain.entities.party import Party` (consistent with all other web adapters) |
+| L4 | Dead `WebDeps` in `routes.py` | APPLIED | `routes.py:15` | Removed stale `WebDeps` class; `mount_web` parameter type narrowed to `object`; `routes.py` itself is never imported (dead module), left in place to avoid phantom reference confusion |
+| M3 | `consent_contact` alias inconsistency | NOTED | `profile_repository.py:132,170` | Schema confirmed: `crm_party_360` IS a VIEW (migrations 0016 + 0026 both `DROP VIEW IF EXISTS … CREATE VIEW`). Migration 0026 maps `cp.consent_enum AS consent_contact` so the view column is `consent_contact`. `_SQL_GET_360` (line 165) selects `consent_contact` from the view — correct. `_SQL_GET` (line 129) reads from `crm_customer_profile` directly with `consent_enum AS consent_contact` alias — correct. `_SQL_UPSERT` (line 201) writes `profile.consent_contact` value into the `consent_enum` column — correct. No `_SQL_UPDATE_PROFILE` updating `consent_contact` exists. The audit's risk of "a future real `consent_contact` column shadowing the alias" remains valid: the table has an old INTEGER `consent_contact` column (migration 0026 CREATE TABLE block) **and** a TEXT `consent_enum` column. If someone adds `consent_contact TEXT` to the table, the view alias `AS consent_contact` would collide. Mitigation: the old `consent_contact INTEGER` column already exists; a future migration should DROP it and expose only `consent_enum`. No code change made; this is a schema-cleanup task for a future migration. |
+| M4 | No CSRF on state-changing POSTs | APPLIED | `composition.py:113-146` | Added `_HTMXCSRFMiddleware` (Starlette `BaseHTTPMiddleware`) that returns 403 on POST/PUT/PATCH/DELETE if `HX-Request: true` header is absent. Exempts `/api/*` (server-to-server JSON endpoints) and `/hug/claim/bind` (external kiosk JSON endpoint). Mounted via `app.add_middleware()` at app startup. No per-handler changes; single composition-root change. |
+| M6 | N+1 queries — segments list | APPLIED | `segment_repository.py:154`, `segment_service.py:119`, `screen_management.py:74` | Added `count_members_bulk()` to `SQLiteSegmentRepository` (single `GROUP BY` query). Added `count_members_for_segments()` to `SegmentService`. `segments_list` now calls the batch method instead of N `list_members()` calls. Campaign list N+1 already deduped by `segment_id not in seg_names` guard — left as-is. Dedup `_build_dedup_party_names` already uses a `seen` set dedup — left as-is. |
+
+**Test result:** 514 passed, 42 skipped (unchanged from baseline). `test_web_templating.py` excluded — pre-existing host-env `ModuleNotFoundError: fastapi`.
+
+**Unresolved questions carried forward:**
+- Q4: ETA/sequencing for Tag ACL (H4) and i18n (H5) plans.
+- M3 schema note: old `consent_contact INTEGER` column on `crm_customer_profile` should be dropped in a future migration once all reads have fully migrated to `consent_enum`. No urgency — no current code reads the old column directly.
