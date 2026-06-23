@@ -65,6 +65,13 @@ FROM customers
 WHERE updated_at >= (SELECT MAX(updated_at) FROM {{ this }})
 {% endif %}
 
+-- Unknown sentinel: always included outside the incremental WHERE so every run guarantees
+-- the surrogate key for guest/unresolved orders exists. The unique_key='customer_key'
+-- delete+insert strategy in DuckDB incremental prevents duplicate sentinel rows —
+-- delete removes the old sentinel by customer_key, then insert re-adds exactly one.
+-- WARNING: this relies on DuckDB incremental dedup semantics. A test (see schema.yml)
+-- validates exactly-one 'Unknown' row on each dbt test run.
+-- NOT exported to the Serving Layer (Metabase) — use dim_customers instead.
 UNION ALL
 
 SELECT

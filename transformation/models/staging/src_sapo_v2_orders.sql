@@ -61,11 +61,13 @@ deduped AS (
             PARTITION BY entity_id
             ORDER BY
                 try_cast(json_extract_string(payload, '$.modified_on') AS TIMESTAMPTZ) DESC NULLS LAST,
+                -- Priority: webhook=1 (highest) > history_log=2 > other=3 (ASC → lowest wins).
+                -- Matches biz dedup encoding below (QUALIFY block) — keep both in sync.
                 CASE
-                    WHEN ingest_method = 'webhook' THEN 3
+                    WHEN ingest_method = 'webhook' THEN 1
                     WHEN ingest_method = 'history_log' THEN 2
-                    ELSE 1
-                END DESC
+                    ELSE 3
+                END ASC
         ) AS rn
     FROM raw_data
 ),
@@ -201,9 +203,11 @@ QUALIFY ROW_NUMBER() OVER (
     PARTITION BY order_id
     ORDER BY
         try_cast(modified_on AS TIMESTAMPTZ) DESC NULLS LAST,
+        -- Priority: webhook=1 (highest) > history_log=2 > other=3 (ASC → lowest wins).
+        -- Matches tech dedup encoding above (deduped CTE) — keep both in sync.
         CASE ingest_method
             WHEN 'webhook' THEN 1
             WHEN 'history_log' THEN 2
             ELSE 3
-        END
+        END ASC
 ) = 1

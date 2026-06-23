@@ -677,11 +677,11 @@ models:
                 to: ref('dim_time')
                 field: time_key
       - name: gross_revenue
-        description: "Giá bán × SL (trước chiết khấu & thuế). Formula: net_revenue + discount_amount"
+        description: "Giá bán × SL trước chiết khấu (ĐÃ GỒM VAT). Formula: total_amount + total_discount_amount. WARNING: VAT-INCLUSIVE — do NOT subtract vat_amount to get pre-tax gross (that double-counts discount). Use net_revenue for VAT-exclusive revenue."
       - name: discount_amount
         description: "Tổng chiết khấu (coupon, promotion, combo)"
       - name: net_revenue
-        description: "Doanh thu thuần (sau chiết khấu, trước thuế). Field gốc từ Sapo $.total"
+        description: "Doanh thu thuần (sau chiết khấu, ĐÃ TRỪ VAT). Field gốc từ Sapo $.total − $.total_tax"
       - name: vat_amount
         description: "Thuế VAT (8% hoặc 10%) nhúng trong giá bán Sapo ($.total_tax)"
       - name: total_collected
@@ -755,9 +755,9 @@ models:
       - name: status
         description: "Trạng thái đơn hàng (từ fact_orders)"
       - name: gross_revenue
-        description: "Giá bán × SL (trước chiết khấu & thuế)"
+        description: "Giá bán × SL trước chiết khấu (ĐÃ GỒM VAT). WARNING: VAT-INCLUSIVE — not pre-tax gross revenue."
       - name: net_revenue
-        description: "Doanh thu thuần (sau chiết khấu, trước thuế)"
+        description: "Doanh thu thuần (sau chiết khấu, ĐÃ TRỪ VAT)"
         tests: [not_null]
       - name: cogs_amount
         description: "Giá vốn hàng bán (primary: Sapo-MAC moving-avg cost; fallback: MISA TK632). NULL nếu không có dữ liệu COGS."
@@ -772,7 +772,7 @@ models:
               config:
                 where: "cogs_source IS NOT NULL"
       - name: gross_profit
-        description: "Lãi gộp = net_revenue - COGS. Nếu không có COGS thì = net_revenue."
+        description: "Lãi gộp = net_revenue - COGS. NULL khi không có COGS (has_cogs=FALSE) — luôn filter WHERE has_cogs trước khi SUM để tránh thổi phồng margin."
       - name: gross_margin_pct
         description: "Biên lãi gộp = gross_profit / net_revenue"
       - name: shopee_platform_fees
@@ -941,6 +941,10 @@ models:
         description: "Gross profit = MISA net revenue − COGS. NULL when no MISA data."
       - name: gross_margin_pct
         description: "Gross margin % based on MISA revenue. NULL when no MISA data."
+        meta:
+          deprecated: true
+          use_instead: realized_margin_pct
+          reason: "Uses MISA book revenue as denominator; H010 SKUs (~5 SKUs) have ~2× COGS error uncorrected here. realized_margin_pct uses Sapo net_revenue and has the H010 fix applied."
       - name: realized_gross_profit
         description: "Commercial gross profit = Sapo net_revenue − cogs_amount. Preferred over gross_profit for pricing/dashboards (CAVEAT #7 in SQL)."
       - name: realized_margin_pct
@@ -1223,17 +1227,21 @@ models:
           this month), derive via a window over the filtered set in the consuming query.
 
   - name: mart_customer_status_snapshot_monthly
+    meta:
+      is_survivorship_biased: true
+      use_instead_for_retention: mart_retention_waterfall_monthly
+      deprecated_for_use_cases: ["retention trend charts", "churn rate KPIs", "period-over-period retention"]
     description: >
       Per-customer monthly status snapshot. Grain: (customer_key, snapshot_month).
       Rolling 24-month window. Useful for customer-attribute lookups, LTV slicing, and
       value_group analysis at a point in time.
 
-      WARNING — survivorship bias: the `status` column is derived from
-      dim_customers.last_order_date (the CURRENT last order), NOT from fact_orders
-      as-of month-end. Any customer still active today is stamped ACTIVE retroactively
-      at all past months, inflating historical ACTIVE counts and masking churn events
-      that have since recovered. This bias can make the 2025 near-death churn event
-      invisible in trend charts.
+      WARNING — survivorship bias (is_survivorship_biased: true): the `status` column is
+      derived from dim_customers.last_order_date (the CURRENT last order), NOT from
+      fact_orders as-of month-end. Any customer still active today is stamped ACTIVE
+      retroactively at all past months, inflating historical ACTIVE counts and masking
+      churn events that have since recovered. This bias can make the 2025 near-death
+      churn event invisible in trend charts.
 
       DO NOT use this model for retention trend charts, churn rate KPIs, or any
       period-over-period retention analysis — use mart_retention_waterfall_monthly
@@ -1362,7 +1370,16 @@ models:
           - not_null
 
   - name: mart_cohort_retention
-    description: "Long-format multi-dimensional cohort retention table. One row per (cohort_dimension × cohort_value × window_type × period_n). Scope: retail only. Min cohort_size = 10."
+    description: >
+      Long-format multi-dimensional cohort retention table. One row per
+      (cohort_dimension × cohort_value × window_type × period_n). Scope: retail only.
+      Min cohort_size = 10.
+
+      REVENUE BASIS: period_revenue and m0_revenue use total_collected (VAT-inclusive,
+      same basis as Sapo $.total). This is internally consistent across all cohort periods
+      but overstates revenue vs fact_order_economics (which uses net_revenue, VAT-exclusive)
+      by ~8–10%. Do NOT compare cohort revenue retention rates directly to margin dashboards
+      without accounting for this basis difference.
     columns:
       - name: cohort_dimension
         tests:

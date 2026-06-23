@@ -25,10 +25,14 @@ SELECT
     channel_key,
     date_key,
 
-    -- Actual US deal revenue (excl. 8% VAT) — primary reporting metric
+    -- Actual US deal revenue (excl. VAT) — primary reporting metric.
+    -- CAVEAT: VAT rate is encoded in the source Google Sheet (stg_us_shipment_prices)
+    -- per-SKU as separate us_price_excl_vat / us_price_incl_vat columns — NOT hardcoded
+    -- here. If any US product moves to a different VAT rate (e.g. personal-care 10%
+    -- reclassification), the price list sheet must be updated; this SQL is unaffected.
     SUM(line_revenue_excl_vat)                           AS total_us_revenue_excl_vat,
 
-    -- Actual US deal revenue incl. 8% VAT — for VAT reporting
+    -- Actual US deal revenue incl. VAT — for VAT reporting
     SUM(line_revenue_incl_vat)                           AS total_us_revenue_incl_vat,
 
     -- Line item count

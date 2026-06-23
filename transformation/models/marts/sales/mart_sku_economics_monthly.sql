@@ -387,6 +387,9 @@ final AS (
         )                                                       AS cogs_per_unit,
         COALESCE(mc.gross_profit, sa.net_revenue - smac.sapo_mac_cogs_amount)
                                                                 AS gross_profit,
+        -- DEPRECATED: use realized_margin_pct instead (see schema.yml meta.deprecated).
+        -- gross_margin_pct uses MISA book revenue as denominator; H010 SKUs (~5 SKUs)
+        -- have an uncorrected ~2× COGS error here. realized_margin_pct has the fix.
         ROUND(
             COALESCE(
                 mc.gross_profit * 100.0 / NULLIF(mc.misa_revenue_net, 0),

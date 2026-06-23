@@ -57,9 +57,7 @@ source AS (
     FROM {{ ref('int_sapo_inventories') }}
     {% if is_incremental() %}
     -- Only ingest snapshots for dates not yet in the table
-    {% if is_incremental() %}
     WHERE snapshot_date NOT IN (SELECT snapshot_date FROM already_loaded)
-    {% endif %}
     {% endif %}
 ),
 

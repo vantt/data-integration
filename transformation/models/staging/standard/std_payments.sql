@@ -9,17 +9,26 @@
 
 WITH source_data AS (
     SELECT * FROM {{ ref('stg_sapo_v2_payments') }}
+),
+
+payment_method_ref AS (
+    SELECT
+        cast(id as varchar) as payment_method_id,
+        type               as payment_method_type
+    FROM {{ ref('ref_payment_methods') }}
 )
 
 SELECT
     -- Identity
     payment_id,
     order_id,
-    
+
     -- Payment Details
-    payment_method_id, -- Keep ID or join with ref table for name
-    'CASH' as payment_method_type, -- Placeholder; ideally map payment_method_id to Type
-    
+    s.payment_method_id,
+    -- Map payment_method_id → type via ref_payment_methods seed (cod/cash/transfer/etc.)
+    -- Falls back to 'unknown' when id not in seed (new method not yet catalogued)
+    COALESCE(pm.payment_method_type, 'unknown') as payment_method_type,
+
     amount,
     
     -- Status
@@ -43,4 +52,5 @@ SELECT
     'sapo_v2' as source_system,
     'v2'   as source_version
 
-FROM source_data
+FROM source_data s
+LEFT JOIN payment_method_ref pm ON s.payment_method_id = pm.payment_method_id

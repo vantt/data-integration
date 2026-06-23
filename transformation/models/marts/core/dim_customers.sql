@@ -254,5 +254,8 @@ FROM joined_data
 -- Use source_updated_at (not last_modified_at) as watermark.
 -- metric_calculated_at = current_timestamp on every run, which pushes the watermark
 -- past new customers whose source updated_at predates the current run → they get silently skipped.
+-- OR guard: catches new customers whose Sapo profile timestamp predates the watermark
+-- (e.g. customer created long ago in Sapo, first order only now triggers int_customer_metrics).
 WHERE source_updated_at >= (SELECT MAX(updated_at) FROM {{ this }})
+   OR customer_key NOT IN (SELECT customer_key FROM {{ this }})
 {% endif %}

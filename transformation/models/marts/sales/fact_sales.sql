@@ -55,7 +55,9 @@ SELECT
     -- Team attribution (see docs/context/team-management.md)
     COALESCE(t.team_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as team_key,
     {{ dbt_utils.generate_surrogate_key(['o.status']) }} as status_key,
-    coalesce(cast(strftime(o.created_at, '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD
+    -- ICT explicit: AT TIME ZONE ensures 0h–7h ICT orders get correct local date
+    -- regardless of session TimeZone setting (matches fact_orders.date_key derivation).
+    coalesce(cast(strftime(o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD
     (extract(hour from o.created_at) * 100) + extract(minute from o.created_at) as time_key,
     
     -- Degenerate Keys

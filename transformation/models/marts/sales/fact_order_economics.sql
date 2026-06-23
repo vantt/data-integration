@@ -124,12 +124,19 @@ SELECT
     -- Promo goods cost (revenue=0 gift lines; marketing cost, NOT COGS — phase-03)
     pg.promo_goods_cost,
 
-    -- Gross Profit = Net Revenue - COGS
-    o.net_revenue - COALESCE(m.cogs_amount, 0) AS gross_profit,
+    -- Gross Profit = Net Revenue - COGS.
+    -- NULL when no COGS data (has_cogs=FALSE) so un-gated SUM() fails obviously rather
+    -- than silently inflating to net_revenue (100% margin). Filter WHERE has_cogs before summing.
+    CASE
+        WHEN m.cogs_source IS NOT NULL AND m.cogs_source != 'none'
+        THEN o.net_revenue - COALESCE(m.cogs_amount, 0)
+        ELSE NULL
+    END AS gross_profit,
 
     -- Gross Margin %
     CASE
         WHEN o.net_revenue = 0 THEN NULL
+        WHEN m.cogs_source IS NULL OR m.cogs_source = 'none' THEN NULL
         ELSE (o.net_revenue - COALESCE(m.cogs_amount, 0))::DOUBLE / o.net_revenue
     END AS gross_margin_pct,
 
@@ -150,7 +157,9 @@ SELECT
     sf.order_code IS NOT NULL AS has_platform_fees,
 
     -- Channel Net Profit = Net Revenue - COGS - |Shopee fees| - |Shopee taxes|
-    -- For non-Shopee orders: same as gross_profit
+    -- For non-Shopee orders: same as gross_profit.
+    -- MAINTENANCE NOTE: this formula is repeated verbatim in channel_net_margin_pct below.
+    -- If adding a new fee column (e.g. Lazada), update BOTH occurrences.
     o.net_revenue
         - COALESCE(m.cogs_amount, 0)
         + COALESCE(sf.total_platform_fees, 0)   -- negative values from Shopee
@@ -159,7 +168,7 @@ SELECT
         + COALESCE(sf.shopee_taxes, 0)
         AS channel_net_profit,
 
-    -- Channel Net Margin %
+    -- Channel Net Margin % (same formula as channel_net_profit above — see maintenance note)
     CASE
         WHEN o.net_revenue = 0 THEN NULL
         ELSE (

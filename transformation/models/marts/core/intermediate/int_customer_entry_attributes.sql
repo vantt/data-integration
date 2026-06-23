@@ -118,6 +118,12 @@ SELECT
 FROM customers_entry
 
 {% if is_incremental() %}
--- Entry attributes never change: skip customers we've already processed
+-- Entry attributes are immutable: only process customers not yet present.
+-- IMMUTABILITY ASSUMPTION: first-order status is treated as fixed at capture time.
+-- If a customer's first order is later cancelled and re-included by a status change,
+-- their entry attributes will NOT update — run dbt --full-refresh to correct.
+-- NOT IN performance degrades as the table grows; acceptable while customer count
+-- remains in the hundreds of thousands. Switch to NOT EXISTS if scan time becomes
+-- noticeable (each run full-scans {{ this }}).
 WHERE customer_key NOT IN (SELECT customer_key FROM {{ this }})
 {% endif %}

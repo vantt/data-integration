@@ -81,7 +81,7 @@ discount_order_summary AS (
 ),
 
 channel_scope AS (
-    SELECT channel_key, is_sales_channel
+    SELECT channel_key, is_sales_channel, channel_format
     FROM {{ ref('dim_channels') }}
 ),
 
@@ -144,7 +144,9 @@ SELECT
     -- Uses seller email → team_members (SCD2) → teams
     COALESCE(t.team_key, {{ dbt_utils.generate_surrogate_key(["'Unknown'"]) }}) as team_key,
     {{ dbt_utils.generate_surrogate_key(['status']) }} as status_key,
-    coalesce(cast(strftime(created_at, '%Y%m%d') as integer), 19000101) as date_key,
+    -- ICT explicit: AT TIME ZONE ensures 0h–7h ICT orders (which are prior UTC date)
+    -- get the correct local date regardless of session TimeZone setting.
+    coalesce(cast(strftime(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', '%Y%m%d') as integer), 19000101) as date_key,
     (extract(hour from created_at) * 100) + extract(minute from created_at) as time_key,
     
     -- Status Metrics
@@ -182,9 +184,18 @@ SELECT
     -- (see docs/analytics-handbook/semantic/segments.md)
     COALESCE(ch.is_sales_channel, false)                                       AS scope_sales,
     COALESCE(ch.is_sales_channel, false)
-        AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL'                  AS scope_retail,
+        AND COALESCE(cu2.customer_type, 'RETAIL') = 'RETAIL'
+        -- Exclude Đại Lý (B2B channel orders): ~92 dealers are tagged customer_type=RETAIL
+        -- due to incomplete migration; channel_format='B2B' identifies their Đại Lý orders.
+        -- Consistent with mart_deadstock_target_queue exclusion (acquisition_source='Đại Lý').
+        -- Note: orders from these dealers placed on non-B2B channels remain a known residual
+        -- leak (cannot resolve without dim_customers — circular dep).
+        AND COALESCE(ch.channel_format, '') <> 'B2B'                          AS scope_retail,
     COALESCE(ch.is_sales_channel, false)
-        AND COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER') AS scope_b2b,
+        AND (
+            COALESCE(cu2.customer_type, 'RETAIL') IN ('WHOLESALE', 'PARTNER')
+            OR COALESCE(ch.channel_format, '') = 'B2B'
+        )                                                                       AS scope_b2b,
     -- Status gate: use with scope_* for revenue metrics; omit for order counts (includes cancelled/draft)
     orders.status NOT IN ('CANCELLED', 'DRAFT')                                AS is_active_order
 
