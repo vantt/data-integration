@@ -295,6 +295,9 @@ def _long_dbt_rw_holder(context) -> str | None:
 
 # Jobs that use duckdb_lock (write to DuckDB). Health checks should yield to these.
 # IMPORTANT: Update this list when adding new ingestion/transform jobs!
+# Maintenance note: every job listed here should have tags=SYNC_TAGS (concurrency_group=dbt_rw).
+# To avoid drift, this list should match [j.name for j in <all jobs> if j.tags.get("concurrency_group") == "dbt_rw"].
+# Currently maintained manually — add any new SYNC_TAGS jobs here.
 _INGESTION_JOBS = [
     "pipeline_sapo_v2_realtime_job",
     "pipeline_hug_realtime_job",
@@ -310,7 +313,14 @@ _INGESTION_JOBS = [
 
 
 def _has_active_ingestion(context) -> str | None:
-    """Return job_name of any active ingestion job, or None if all idle."""
+    """Return job_name of any active ingestion job, or None if all idle.
+
+    Issues one get_runs() query per job (N=10 SQLite reads per call). Called
+    during the post-purge backup-sensor window (every 60 s while ingestion
+    active) — acceptable load. A future optimisation would batch into a single
+    get_run_records(filters=RunsFilter(job_names=[...], statuses=...)) call if
+    the Dagster API adds multi-job filter support.
+    """
     for job_name in _INGESTION_JOBS:
         runs = context.instance.get_runs(
             filters=RunsFilter(job_name=job_name, statuses=_ACTIVE_STATUSES),
@@ -422,6 +432,14 @@ _ICT = timezone(timedelta(hours=7))  # Asia/Ho_Chi_Minh, no pytz dependency
 # Fast path: fires immediately after purge succeeds (normally ~02:35).
 # run_key=date deduplicates with the fallback schedule below — only one
 # backup runs per calendar day, whichever triggers first.
+#
+# Re-evaluation note: @run_status_sensor with minimum_interval_seconds=60 is
+# re-evaluated on every polling tick (not just once per matched event). If the
+# sensor returns SkipReason (ingestion still active) on the first tick, Dagster
+# re-evaluates it on the next tick 60 s later — it does NOT consume the event
+# on the first SkipReason. This means the skip-then-retry logic works correctly
+# as long as ingestion finishes within a reasonable window. If ingestion is
+# still active at 06:00, the fallback schedule is the guaranteed backup path.
 @run_status_sensor(
     run_status=DagsterRunStatus.SUCCESS,
     monitored_jobs=[maintain_purge_runs_job],
@@ -439,13 +457,15 @@ def trigger_backup_after_purge(context: RunStatusSensorContext):
     return RunRequest(run_key=date_key)
 
 
-# Fallback: fires at 06:00 if sensor didn't trigger backup (purge failed).
+# Fallback: fires at 06:05 if sensor didn't trigger backup (purge failed).
+# Offset by 5 min from health_report_digest_schedule (06:00) to separate
+# concurrent run submission and reduce SQLite pressure at the same second.
 # Also retries if sensor triggered but backup FAILED — run_key=None so Dagster
 # does NOT deduplicate against a previously failed run with same date key.
 # Dedup is handled manually: skip if a SUCCESS already exists today.
 @schedule(
     job=maintain_backup_platform_job,
-    cron_schedule="0 6 * * *",
+    cron_schedule="5 6 * * *",
     execution_timezone="Asia/Ho_Chi_Minh",
 )
 def maintain_backup_fallback_schedule(context):
@@ -571,7 +591,7 @@ def health_report_digest_schedule(context):
     return RunRequest(run_key=None)
 
 
-# 02:30 daily — purge old Dagster runs to reclaim disk space.
+# 01:00 daily — purge old Dagster runs to reclaim disk space.
 # Window choice: ingestion is quietest in the small hours (realtime tick
 # every 3 min still fires, but no nightly/recon/health overlap), which
 # minimises SQLite "database is locked" contention against event_logs

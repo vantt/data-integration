@@ -142,6 +142,11 @@ def build_serving_db(context: AssetExecutionContext):
         "Materializes all views in olap.duckdb into a self-contained standalone "
         "DuckDB file (sapo_export_<ts>.duckdb) for offline and AI analysis use."
     ),
+    # Holds duckdb_lock so backup op cannot cp sapo_export_latest.duckdb
+    # while this asset is writing the output file. olap.duckdb is opened
+    # READ_ONLY here, but the output .duckdb is a live write — a concurrent
+    # backup cp would produce a torn file.
+    op_tags={"dagster/concurrency_key": "duckdb_lock"},
 )
 def build_standalone_export(context: AssetExecutionContext):
     output_lines = _run_provisioning_script(

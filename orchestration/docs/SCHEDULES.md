@@ -6,30 +6,33 @@
 
 | Schedule                         | Cron           | Timezone         | Job                          |
 | -------------------------------- | -------------- | ---------------- | ---------------------------- |
-| `pipeline_sapov2_realtime_schedule`  | `*/1 * * * *`  | Asia/Ho_Chi_Minh | pipeline_sapov2_realtime_job     |
-| `pipeline_sapov2_incremental_schedule` | `*/10 * * * *` | Asia/Ho_Chi_Minh | pipeline_sapov2_incremental_job  |
-| `pipeline_batch_nightly_schedule` | `0 4 * * *`    | Asia/Ho_Chi_Minh | pipeline_batch_nightly_job  |
+| `pipeline_sapo_v2_realtime_schedule`  | `*/3 * * * *`  | Asia/Ho_Chi_Minh | pipeline_sapo_v2_realtime_job     |
+| `pipeline_sapo_v2_incremental_schedule` | `*/10 0-2,4-23 * * *` | Asia/Ho_Chi_Minh | pipeline_sapo_v2_incremental_job  |
+| `pipeline_sapo_v2_hourly_schedule` | `25 0-2,4-23 * * *` | Asia/Ho_Chi_Minh | pipeline_sapo_v2_hourly_job |
+| `pipeline_batch_nightly_schedule` | `0 3 * * *`    | Asia/Ho_Chi_Minh | pipeline_batch_nightly_job  |
+| `maintain_purge_runs_schedule`    | `0 1 * * *`    | Asia/Ho_Chi_Minh | maintain_purge_runs_job      |
+| `maintain_backup_fallback_schedule` | `0 6 * * *`  | Asia/Ho_Chi_Minh | maintain_backup_platform_job |
 
 ---
 
 ## Schedule Definitions
 
-### pipeline_sapov2_realtime_schedule
+### pipeline_sapo_v2_realtime_schedule
 
-**Purpose:** Process webhook events every minute.
+**Purpose:** Process webhook events every 3 minutes.
 
 ```python
-from dagster import ScheduleDefinition
+from dagster import schedule
 
-pipeline_sapov2_realtime_schedule = ScheduleDefinition(
-    job=pipeline_sapov2_realtime_job,
-    cron_schedule="*/1 * * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-    default_status=DefaultScheduleStatus.RUNNING
-)
+@schedule(job=pipeline_sapo_v2_realtime_job, cron_schedule="*/3 * * * *",
+          execution_timezone="Asia/Ho_Chi_Minh")
+def pipeline_sapo_v2_realtime_schedule(context):
+    ...
 ```
 
-**Timing:** Every minute, 24/7
+**Timing:** Every 3 minutes, 24/7
+
+**Note:** Changed from `*/1` to `*/3` to allow dbt OTP to complete within one schedule cycle.
 
 **Expected Duration:** < 30 seconds
 
@@ -59,19 +62,17 @@ pipeline_sapov2_incremental_schedule = ScheduleDefinition(
 **Purpose:** Full reconciliation and mart refresh.
 
 ```python
-pipeline_batch_nightly_schedule = ScheduleDefinition(
-    job=pipeline_batch_nightly_job,
-    cron_schedule="0 4 * * *",
-    execution_timezone="Asia/Ho_Chi_Minh",
-    default_status=DefaultScheduleStatus.RUNNING
-)
+@schedule(job=pipeline_batch_nightly_job, cron_schedule="0 3 * * *",
+          execution_timezone="Asia/Ho_Chi_Minh")
+def pipeline_batch_nightly_schedule(context):
+    ...
 ```
 
-**Timing:** 04:00 AM daily (Vietnam time)
+**Timing:** 03:00 AM daily (Vietnam time)
 
-**Expected Duration:** 10-30 minutes
+**Expected Duration:** 30-60 minutes
 
-**Why 04:00 AM:**
+**Why 03:00 AM:**
 
 - After business hours (store closes ~22:00)
 - Before morning reporting (starts ~07:00)

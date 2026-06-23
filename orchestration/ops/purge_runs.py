@@ -337,7 +337,16 @@ def _cleanup_orphan_asset_check_executions(instance, log) -> int:
     run_dir = _get_run_db_dir(instance)
     index_path = os.path.join(run_dir, 'index.db')
     runs_path = os.path.join(os.path.dirname(run_dir), 'runs.db')
-    if not os.path.exists(index_path) or not os.path.exists(runs_path):
+    # runs_path is inferred from Dagster's internal SQLite layout (runs.db is one
+    # level above the runs/ directory). This is not a public API — log a warning
+    # if the layout changes so breakage is visible rather than silently returning 0.
+    if not os.path.exists(index_path):
+        return 0
+    if not os.path.exists(runs_path):
+        log.warning(
+            f"_cleanup_orphan_asset_check_executions: runs.db not found at {runs_path} "
+            "— Dagster storage layout may have changed. Orphan check skipped."
+        )
         return 0
 
     _result: list[int] = []

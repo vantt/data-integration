@@ -1,6 +1,12 @@
 ﻿"""Dagster assets for Sapo ingestion via DLT batch runners.
 
 Writes to ingestion_health via orchestration.ops.ingestion_health on every run.
+
+CWD contract: each asset calls os.chdir(DLT_DIR) before invoking the DLT run
+module, then restores the original CWD in a finally block. This is safe because
+Dagster's multiprocess executor runs each step in an isolated child process.
+NEVER switch these assets to in_process_executor — shared process CWD would
+create races between concurrently executing in-process assets.
 """
 from dagster import asset, Output, MetadataValue
 import sys

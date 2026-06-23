@@ -135,6 +135,16 @@ def sapo_dbt_assets(context: AssetExecutionContext, dbt: DbtCliResource):
     # on disk is always fresh relative to the current schema before dbt build runs.
     # Note: context is intentionally omitted — dbt parse does not accept --select,
     # and passing context causes dagster-dbt to append selection args, breaking the command.
+    #
+    # Concurrency note: parse runs BEFORE yield-from (i.e., before the op-level
+    # duckdb_lock slot is formally acquired by Dagster's slot machinery). However,
+    # parse only writes manifest.json / manifest.concurrent-update-lock — it does
+    # NOT open DuckDB. Race between two simultaneous parses is benign (last writer
+    # wins on manifest.json; run_dagster.ps1 cleans up stale .concurrent-update-lock
+    # at startup). The authoritative guard against two dbt runs overlapping is the
+    # dbt_rw=1 tag-concurrency limit in dagster.yaml — only one run with
+    # concurrency_group=dbt_rw is dequeued at a time, so concurrent parse is not
+    # possible in normal operation.
     dbt.cli(["parse"]).wait()
 
     # Run dbt with watchdog timeout to prevent infinite hang on DuckDB checkpoint stall

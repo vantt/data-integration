@@ -10,6 +10,7 @@ Design:
     re-add the file or manually trigger to retry.
   - Old cursor format {"mtime": float} migrates to empty set, re-dispatching
     any files currently in the drop zone.
+  - Cursor is capped at CURSOR_LIMIT most-recent keys to prevent unbounded growth.
 """
 from __future__ import annotations
 
@@ -24,6 +25,12 @@ from dagster import (
     SkipReason,
     sensor,
 )
+
+# Max dispatched file keys retained in cursor. Keeps cursor JSON small and sensor
+# ticks fast even after months of file-drops. Oldest keys are dropped first;
+# re-dispatching an old dropped key is safe — run_key deduplication in Dagster
+# prevents duplicate runs for the same file.
+CURSOR_LIMIT = 500
 
 # Env var if set, otherwise Docker default (/app/var/input_source/).
 # Local dev: set SHOPEE_INPUT_DIR / MISA_INPUT_DIR / MISA_ACCOUNT_LEDGER_INPUT_DIR in .env.local.
@@ -100,7 +107,10 @@ def ingest_filedrop_shopee_sensor(context: SensorEvaluationContext):
     if not run_requests:
         return SkipReason("No new/modified Shopee files")
 
-    context.update_cursor(json.dumps({"processed": list(new_dispatched)}))
+    # Cap cursor to most-recent CURSOR_LIMIT keys to prevent unbounded growth.
+    # run_key deduplication prevents re-dispatching even if an old key is evicted.
+    capped = sorted(new_dispatched)[-CURSOR_LIMIT:]
+    context.update_cursor(json.dumps({"processed": capped}))
     return run_requests
 
 
@@ -136,7 +146,9 @@ def ingest_filedrop_misa_sensor(context: SensorEvaluationContext):
     if not run_requests:
         return SkipReason("No new/modified MISA files")
 
-    context.update_cursor(json.dumps({"processed": list(new_dispatched)}))
+    # Cap cursor to most-recent CURSOR_LIMIT keys to prevent unbounded growth.
+    capped = sorted(new_dispatched)[-CURSOR_LIMIT:]
+    context.update_cursor(json.dumps({"processed": capped}))
     return run_requests
 
 
@@ -172,5 +184,7 @@ def ingest_filedrop_misa_account_ledger_sensor(context: SensorEvaluationContext)
     if not run_requests:
         return SkipReason("No new/modified MISA account-ledger files")
 
-    context.update_cursor(json.dumps({"processed": list(new_dispatched)}))
+    # Cap cursor to most-recent CURSOR_LIMIT keys to prevent unbounded growth.
+    capped = sorted(new_dispatched)[-CURSOR_LIMIT:]
+    context.update_cursor(json.dumps({"processed": capped}))
     return run_requests

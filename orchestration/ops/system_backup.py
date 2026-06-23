@@ -24,7 +24,13 @@ BACKUP_SH = PROJECT_ROOT / "scripts" / "backup" / "backup.sh"
 
 
 def _run_and_log(context: OpExecutionContext, cmd: list[str], env: dict | None = None) -> None:
-    """Run a subprocess, stream output to Dagster logs, raise on failure."""
+    """Run a subprocess, stream output to Dagster logs, raise on failure.
+
+    Uses capture_output=True (buffers all stdout/stderr in memory). Safe as long
+    as backup.sh output stays modest (file listing). If backup script ever becomes
+    verbose (rsync --progress, large file lists), migrate to the Popen + line
+    iteration pattern used in serving.py to avoid OS pipe buffer fill and deadlock.
+    """
     merged_env = {**os.environ, **(env or {})}
     result = subprocess.run(
         cmd,
