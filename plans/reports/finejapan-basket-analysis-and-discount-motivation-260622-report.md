@@ -143,3 +143,27 @@ Nhiều entry lines có zero hoặc near-zero net_revenue (promotions/samples). 
 - **Gift bundle channel** có P&L riêng không? Corporate gift orders có margin profile khác retail không?
 - **Entry avg_line_rev = 61K** — bao nhiêu % là zero-revenue lines (samples/gifts)? Cần filter trước khi tính disc_share.
 - **3,832 đơn có NULL max_discount_rate** — đây là 60% total. Là không có discount (đúng NULL=0), hay là data không được track đầy đủ?
+
+---
+
+## ⚠️ Addendum — 2026-06-22 (sau khi phân tích zero-rev)
+
+**Phát hiện đảo ngược mô hình entry/trigger:**
+
+Phân tích `net_revenue / quantity` theo từng line cho thấy:
+
+| Sản phẩm | Solo → zero-rev% | Multi-SKU → zero-rev% |
+|---|---|---|
+| Metabo Green Tea | 10% | **75%** |
+| Gaba blood pressure | 32% | **78%** |
+| Coix Beauty | 11% | **67%** |
+
+**Trong multi-SKU orders, 67–78% dòng entry SKU có net_revenue = 0 → là quà tặng, không phải sản phẩm trigger.**
+
+Products xuất hiện cùng khi entry SKU là gift: Shark Cartilage (209 lần, avg 3.2M), Natto Kinase (207 lần, avg 1.87M), Cordyceps (203+175 lần, avg 3–4.3M), Fucoidan (179 lần, avg 3M) — toàn bộ là premium SKUs.
+
+**Mô hình đúng:** Premium là trigger (khách mua premium) → rep TẶNG Metabo/Gaba như promotional gift. Không phải Metabo kéo khách đến premium.
+
+Solo entry orders vẫn là real purchases (90% Metabo solo, 89% Coix solo có revenue thật) — đây là pool entry khách mới hợp lệ để upsell về sau.
+
+→ Xem report chi tiết: `plans/reports/finejapan-gift-entry-sku-zero-rev-260622-1720-report.md`

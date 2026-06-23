@@ -32,9 +32,10 @@ Sản phẩm **không** mắc, **không** kém tác dụng, **không** cần đ�
 
 > **Tóm gốc:** Premium là sản phẩm **kiếm tiền (back-end)**, không phải sản phẩm **bắt khách (front-end)**. 2022 thắng nhờ **mồi rẻ → khách → premium lặp**. Khi mất mồi rẻ + dồn hết vào 1 sàn + không giữ chân → vừa hết khách mới vừa rụng khách cũ. Cảm giác "mắc, khốc liệt" = **đặt sản phẩm sai chỗ trong phễu**, không phải sản phẩm tồi.
 
-**Cơ chế upsell đã được xác nhận bằng data (2026-06-22):**
-- Playbook "mồi → premium" hoạt động theo **đồng đơn (co-purchase)**, không phải trình tự đơn 1 → đơn 2. 554 khách mua entry+premium cùng đơn đầu vs chỉ 20 khách upgrade qua đơn kế (tỷ lệ 27:1). → **Rep phải bundle ngay trong đơn, không thể chờ khách tự upgrade**.
-- **Metabo Green Tea là entry SKU #1**, không phải UV Care hay Calcium. Metabo dẫn đến Cordyceps (139 đơn), Fucoidan (131), Shark Cartilage (113) trong cùng đơn.
+**Cơ chế order đã được xác nhận + cập nhật (2026-06-22):**
+- Bundle xảy ra **đồng đơn (co-purchase)**, không phải trình tự đơn 1 → đơn 2. 554 khách mua entry+premium cùng đơn đầu vs chỉ 20 khách upgrade qua đơn kế (tỷ lệ 27:1). → **Rep phải bundle ngay trong đơn, không thể chờ khách tự upgrade**.
+- **Đảo ngược quan trọng:** Trong multi-SKU orders, **75% dòng Metabo và 78% dòng Gaba có net_revenue = 0** → là quà tặng rep tặng kèm, không phải sản phẩm khách tự chọn. **Premium SKU là trigger thực sự** (Shark/Natto/Cordyceps/Fucoidan, avg revenue 1.9–4.3M/đơn); rep TẶNG Metabo/Gaba như gift để tăng giá trị đơn hàng.
+- Solo entry orders (Metabo 90% có revenue thật, Coix 89%) = pool khách entry mới — upsell premium về sau khi rep follow-up.
 - 50% đơn retail là single-item — basket nhỏ là norm. Entry-only buyer chỉ có 2% quay lại với premium nếu không có rep bundle.
 - **Discount không phải lever**: chỉ 2.4% đơn có giảm giá; multi-item orders không được discount nhiều hơn single-item.
 
@@ -61,4 +62,5 @@ SKU `VTST23042L001` (Natto Kinase) biên **−32,7%**, doanh thu 112M → **đan
 - Acquisition collapse theo kênh: `plans/reports/acquisition-collapse-channel-localization-260621-2139-report.md`
 - Entry → premium upgrade paths (Path A/B, 554 vs 20): `plans/reports/finejapan-entry-to-premium-upgrade-path-260622-1241-report.md`
 - Basket size & discount motivation: `plans/reports/finejapan-basket-analysis-and-discount-motivation-260622-report.md`
+- Entry SKU = gift in multi-SKU orders (zero-rev analysis): `plans/reports/finejapan-gift-entry-sku-zero-rev-260622-1720-report.md`
 - Triển khai giữ-chân (Hug A2): `docs/finejapan-growth-strategy/hug-a2-campaign-onepager.md`
