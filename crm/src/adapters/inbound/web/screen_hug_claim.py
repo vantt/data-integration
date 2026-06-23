@@ -241,8 +241,9 @@ def _render_page(
     if (v.includes("://")) {{
       v = v.split("?")[0].split("#")[0].replace(/\\/+$/, "").split("/").pop();
     }}
-    // Remove dashes and spaces (handles HUG-XXXX-XXXX-XXXX and stray whitespace).
-    v = v.replace(/-/g, "").replace(/\\s+/g, "");
+    // Remove separator characters: dashes, underscores, dots, and whitespace.
+    // Matches the Worker normalizeToken separator set so all three copies accept the same inputs.
+    v = v.replace(/[-_.\s]/g, "");
     // Strip a "HUG" prefix only when the result is exactly 15 chars (= "HUG" + 12-char token).
     // A genuine 12-char token starting with HUG stays intact — length 12 never triggers this.
     if (v.length === 15 && v.startsWith("HUG")) v = v.slice(3);

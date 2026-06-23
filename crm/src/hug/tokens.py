@@ -12,6 +12,7 @@ the rare collision.
 """
 from __future__ import annotations
 
+import re
 import secrets
 
 # 31 readable symbols: digits 2-9 and A-Z minus I, L, O.
@@ -58,6 +59,7 @@ def normalize_input(raw: str) -> str:
       - Printed human code:      ``HUG-7K2N-Q9XR-WAB4``  (also mixed-case / extra spaces)
       - Full scan URL:           ``https://hug.fjp.vn/h/7K2NQ9XRWAB4``
       - Any URL whose path ends with the token (last path segment)
+      - Underscore or dot separators: ``7K2N_Q9XR_WAB4``, ``7K2N.Q9XR.WAB4``
 
     This function does NOT validate — the caller is expected to pass the result
     to ``is_valid_token``.
@@ -83,8 +85,10 @@ def normalize_input(raw: str) -> str:
         path_part = s.split("?")[0].split("#")[0]  # strip query + fragment
         s = path_part.rstrip("/").rsplit("/", 1)[-1]
 
-    # Remove all dashes and spaces (handles both HUG-XXXX-XXXX-XXXX and stray spaces).
-    s = s.replace("-", "").replace(" ", "")
+    # Remove all separator characters: dashes, underscores, dots, and whitespace.
+    # Covers printed sticker (HUG-XXXX-XXXX-XXXX), manually typed codes using
+    # _, . or spaces, and any mix a typist might reach for.
+    s = re.sub(r"[-_.\s]", "", s)
 
     # Strip the "HUG" prefix only when the result is unmistakably the human_code
     # form (15 chars = "HUG" prefix + 12 token chars).  Never strip when the

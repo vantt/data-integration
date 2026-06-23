@@ -30,7 +30,7 @@
  *   DEFAULT campaign = targeting '{}' at max priority (always matches).
  */
 
-import { Env, verifySignature } from './utils';
+import { Env, verifySignature, normalizeToken } from './utils';
 
 // ---------------------------------------------------------------------------
 // Types for D1 rows
@@ -221,6 +221,17 @@ export async function handleHugScan(
     token: string
 ): Promise<Response> {
     try {
+        // Normalize: accept dashed grouped codes, HUG- prefixed printed codes,
+        // full scan URLs, and any mix of -, _, ., space separators typed by staff.
+        token = normalizeToken(token);
+
+        // Guard: a valid bare token is exactly 12 chars.  Anything else after
+        // normalization (garbage, truncated, wrong input) redirects immediately
+        // without burning a D1 read.
+        if (token.length !== 12) {
+            return Response.redirect(getFallbackUrl(env), 302);
+        }
+
         // 1. Look up token in D1 (left join customer for tier)
         const row = await env.DB.prepare(
             `SELECT t.*, c.tier, c.recency_days, c.value_group, c.is_contactable
