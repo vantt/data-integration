@@ -320,7 +320,9 @@ def fetch_customer_tier(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
         "  contact_quality, "
         "  strategic_tier, "
         "  tier_reason, "
-        "  strftime(tier_generated_at, '%Y-%m-%dT%H:%M:%S') AS tier_generated_at "
+        # tier_generated_at is TIMESTAMPTZ; session TZ=Asia/Ho_Chi_Minh so the rendered
+        # wall-clock is ICT.  Append '+07:00' so the stored TEXT is unambiguous ISO-8601.
+        "  strftime(tier_generated_at, '%Y-%m-%dT%H:%M:%S') || '+07:00' AS tier_generated_at "
         "FROM main_marts.mart_customer_tier"
     )
     rows = _fetch(conn, sql)
@@ -410,7 +412,9 @@ def fetch_deadstock_targets(conn: "duckdb.DuckDBPyConnection") -> list[dict]:
         "  CAST(is_holdout AS INTEGER) AS is_holdout, "
         "  CAST(target_rank AS INTEGER) AS target_rank, "
         "  reason_fragment, "
-        "  strftime(queue_generated_at, '%Y-%m-%dT%H:%M:%S') AS queue_generated_at "
+        # queue_generated_at is TIMESTAMPTZ; session TZ=Asia/Ho_Chi_Minh so the rendered
+        # wall-clock is ICT.  Append '+07:00' so the stored TEXT is unambiguous ISO-8601.
+        "  strftime(queue_generated_at, '%Y-%m-%dT%H:%M:%S') || '+07:00' AS queue_generated_at "
         "FROM main_marts.mart_deadstock_target_queue"
     )
     rows = _fetch(conn, sql)

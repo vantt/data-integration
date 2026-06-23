@@ -1,18 +1,19 @@
 #!/bin/sh
 # entrypoint.sh — CRM container startup sequence (Python-only).
-# All pre-server steps are best-effort: a failure logs a warning but does NOT
-# crash the container so the UI is always reachable (graceful-empty mode).
+# Schema migrations (Step 1) are HARD-FAIL: a partial schema is unsafe to serve.
+# Data steps (Steps 2-3) are graceful-empty: missing warehouse → UI still serves.
 set -e
 
 echo "[entrypoint] CRM starting — data dir: ${CRM_DATA_DIR}"
 
 # ── Step 1: Apply crm.db schema migrations ────────────────────────────────────
+# HARD-FAIL: a migration failure leaves crm.db in an unknown state; serving on a
+# half-migrated DB causes silent data corruption or wrong query results.
+# Let the failure propagate (set -e will exit non-zero) — orchestrator will restart
+# the container and ops will see the error in container logs.
 echo "[entrypoint] running migrations …"
-if python3 -c "import sys,os; sys.path.insert(0,'/app'); from crm.src.adapters.outbound.sqlite.migrations import apply_migrations; apply_migrations(os.environ.get('CRM_DATA_DIR','/data'))"; then
-    echo "[entrypoint] migrations OK"
-else
-    echo "[entrypoint] WARN: migrations failed" >&2
-fi
+python3 -c "import sys,os; sys.path.insert(0,'/app'); from crm.src.adapters.outbound.sqlite.migrations import apply_migrations; apply_migrations(os.environ.get('CRM_DATA_DIR','/data'))"
+echo "[entrypoint] migrations OK"
 
 # ── Step 2: Reverse-ETL (warehouse → cache.db) ────────────────────────────────
 # Reads olap.duckdb read-only; writes cache.db.

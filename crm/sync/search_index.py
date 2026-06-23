@@ -192,12 +192,14 @@ def rebuild_search_index(crm_db_path: str, cache_db_path: str) -> int:
     ]
 
     try:
-        crm_conn.execute("DELETE FROM crm_party_search")
-        crm_conn.executemany(
-            "INSERT INTO crm_party_search (party_id, tokens) VALUES (?, ?)",
-            rows,
-        )
-        crm_conn.commit()
+        # Single transaction: if executemany fails, DELETE is rolled back so the
+        # search index is not left empty (crm_party_search stays fully intact).
+        with crm_conn:
+            crm_conn.execute("DELETE FROM crm_party_search")
+            crm_conn.executemany(
+                "INSERT INTO crm_party_search (party_id, tokens) VALUES (?, ?)",
+                rows,
+            )
     finally:
         crm_conn.close()
 

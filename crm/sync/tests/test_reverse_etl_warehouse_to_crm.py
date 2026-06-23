@@ -222,6 +222,52 @@ def _make_warehouse(path: str) -> duckdb.DuckDBPyConnection:
           ('ord-003', 'HD003', 'key-cust-001', 'ch-online', 20260601, 500000, 'completed')
     """)
 
+    # mart_deadstock_target_queue — dead-stock targeting engine source
+    # Columns match _MART_DEADSTOCK_TARGET_COLS in duckdb_reader.py
+    conn.execute("""
+        CREATE TABLE main_marts.mart_deadstock_target_queue (
+            product_key TEXT,
+            sku TEXT,
+            product_name TEXT,
+            category TEXT,
+            brand_code TEXT,
+            health_class TEXT,
+            is_dead_stock BOOLEAN,
+            dead_stock_value_at_risk BIGINT,
+            stock_value_at_mac BIGINT,
+            days_since_last_sale INTEGER,
+            customer_key TEXT,
+            full_name TEXT,
+            strategic_tier TEXT,
+            source_contact_quality TEXT,
+            next_purchase_signal TEXT,
+            predicted_next_purchase_date DATE,
+            discount_sensitivity TEXT,
+            value_group TEXT,
+            lifetime_value BIGINT,
+            recency_days INTEGER,
+            order_count INTEGER,
+            buyer_sku_qty INTEGER,
+            buyer_sku_last_date DATE,
+            route_channel TEXT,
+            voucher_eligible BOOLEAN,
+            is_holdout BOOLEAN,
+            target_rank INTEGER,
+            reason_fragment TEXT,
+            queue_generated_at TIMESTAMPTZ
+        )
+    """)
+    conn.execute("""
+        INSERT INTO main_marts.mart_deadstock_target_queue VALUES
+          ('pk-001', 'SKU-A', 'Kem Duong Am A', 'Skincare', 'BX', 'DEAD',
+           true, 5000000, 4000000, 120,
+           'key-cust-001', 'Nguyen Van A', 'LIVE_CORE', 'unverified',
+           'DUE_SOON', '2026-07-01', 'LOW', 'VIP',
+           4250000, 14, 5, 2, '2026-01-10',
+           'HUG', true, false, 1, 'Bought 2x; 120d no reorder',
+           '2026-06-19T10:00:00+07:00')
+    """)
+
     conn.close()
     # Re-open read-only as production code does.
     return duckdb.connect(path, read_only=True)
@@ -260,6 +306,7 @@ def test_t1_all_tables_populated(warehouse_and_cache):
             "wh_product": 2,
             "wh_order_hdr": 3,
             "wh_party_seed": 2,
+            "wh_deadstock_target": 1,
         }
         for table, expected in checks.items():
             count = db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
@@ -276,6 +323,7 @@ def test_t2_idempotent(warehouse_and_cache):
     _wh_tables = [
         "wh_customer_insight", "wh_product_insight", "wh_action_queue",
         "wh_customer_tier", "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
+        "wh_deadstock_target",
     ]
 
     run(olap_conn=olap_conn, cache_db=cache_path)
@@ -339,6 +387,7 @@ def test_t4_sync_run_logged_ok(warehouse_and_cache):
         expected_tables = [
             "wh_customer_insight", "wh_product_insight", "wh_action_queue",
             "wh_customer_tier", "wh_customer_base", "wh_product", "wh_order_hdr", "wh_party_seed",
+            "wh_deadstock_target",
         ]
         for t in expected_tables:
             assert t in statuses, f"wh_sync_run missing entry for {t}"
@@ -483,5 +532,20 @@ def _create_minimal_dim_tables(conn: duckdb.DuckDBPyConnection) -> None:
             channel_preference TEXT, is_contactable BOOLEAN,
             source_contact_quality TEXT, contact_quality TEXT,
             strategic_tier TEXT, tier_reason TEXT, tier_generated_at TIMESTAMPTZ
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS main_marts.mart_deadstock_target_queue (
+            product_key TEXT, sku TEXT, product_name TEXT, category TEXT,
+            brand_code TEXT, health_class TEXT, is_dead_stock BOOLEAN,
+            dead_stock_value_at_risk BIGINT, stock_value_at_mac BIGINT,
+            days_since_last_sale INTEGER, customer_key TEXT, full_name TEXT,
+            strategic_tier TEXT, source_contact_quality TEXT,
+            next_purchase_signal TEXT, predicted_next_purchase_date DATE,
+            discount_sensitivity TEXT, value_group TEXT, lifetime_value BIGINT,
+            recency_days INTEGER, order_count INTEGER, buyer_sku_qty INTEGER,
+            buyer_sku_last_date DATE, route_channel TEXT, voucher_eligible BOOLEAN,
+            is_holdout BOOLEAN, target_rank INTEGER, reason_fragment TEXT,
+            queue_generated_at TIMESTAMPTZ
         )
     """)

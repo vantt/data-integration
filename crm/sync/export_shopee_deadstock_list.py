@@ -26,6 +26,8 @@ import pathlib
 import sqlite3
 import sys
 
+from crm.sync.sqlite_upsert import open_cache_db
+
 
 # Default export dir is app_data/exports/ relative to repo root.
 # This path is outside git-tracked directories — PII must not be committed.
@@ -82,8 +84,9 @@ def export(cache_db: str, output_dir: str) -> str:
 
     _ensure_export_dir(output_dir)
 
-    conn = sqlite3.connect(cache_db)
-    conn.row_factory = sqlite3.Row
+    # Use open_cache_db so WAL + busy_timeout=5000ms are applied — prevents
+    # immediate SQLITE_BUSY failure if reverse_etl holds a write lock.
+    conn = open_cache_db(cache_db)
     try:
         rows = _fetch_shopee_targets(conn)
     finally:

@@ -11,9 +11,12 @@ Python is the SOLE writer of cache.db; Go ATTACHes it read-only.
 
 from __future__ import annotations
 
+import logging
 import pathlib
 import sqlite3
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 
 _SCHEMA_SQL = pathlib.Path(__file__).with_name("cache_schema.sql").read_text(encoding="utf-8")
@@ -68,8 +71,12 @@ def apply_schema(conn: sqlite3.Connection) -> None:
         try:
             conn.execute(stmt)
             conn.commit()
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        except sqlite3.OperationalError as exc:
+            # Swallow only "duplicate column name" — that is the expected idempotency
+            # signal for ALTER TABLE ADD COLUMN on re-runs.  All other OperationalError
+            # variants (disk full, table missing, syntax error) must propagate.
+            if "duplicate column name" not in str(exc).lower():
+                raise
 
 
 # ─── Upsert helpers ──────────────────────────────────────────────────────────
@@ -231,8 +238,18 @@ def upsert_deadstock_target(conn: sqlite3.Connection, rows: list[dict]) -> int:
     Full-replace semantics: all columns updated on conflict (queue refreshes daily).
     Tracked separately from wh_action_queue (NBA customer-state).
     Returns number of rows processed.
+
+    Empty-rows guard: when rows == 0, the DELETE is skipped and existing cache rows are
+    preserved.  This is intentional — a zero-row fetch is indistinguishable from a mart
+    failure (upstream error, DuckDB lock, mart rebuild window).  Callers that expect a
+    non-zero mart should raise before calling this function if the empty result signals
+    an upstream failure.  The warning below makes the condition observable in logs.
     """
     if not rows:
+        log.warning(
+            "upsert_deadstock_target: mart returned 0 rows — skipping DELETE to preserve "
+            "existing cache rows.  Verify mart_deadstock_target_queue is not empty upstream."
+        )
         return 0
 
     cols = list(rows[0].keys())
