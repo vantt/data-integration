@@ -179,6 +179,8 @@ CREATE TABLE IF NOT EXISTS wh_deadstock_target (
 -- ─── INDEXES ─────────────────────────────────────────────────────────────────
 
 CREATE INDEX IF NOT EXISTS idx_wh_customer_insight_customer_id  ON wh_customer_insight (customer_id);
+-- Enforce one active row per (customer_key, action_type) — required by upsert_action_queue ON CONFLICT.
+CREATE UNIQUE INDEX IF NOT EXISTS uidx_wh_action_queue_customer_type ON wh_action_queue (customer_key, action_type);
 CREATE INDEX IF NOT EXISTS idx_wh_action_queue_customer_key_pri  ON wh_action_queue (customer_key, priority);
 CREATE INDEX IF NOT EXISTS idx_wh_customer_base_customer_id      ON wh_customer_base (customer_id);
 CREATE INDEX IF NOT EXISTS idx_wh_product_sku                    ON wh_product (sku);

@@ -21,30 +21,6 @@ log = logging.getLogger(__name__)
 
 _SCHEMA_SQL = pathlib.Path(__file__).with_name("cache_schema.sql").read_text(encoding="utf-8")
 
-# ALTER TABLE migrations for columns added after initial schema creation.
-# SQLite has no ADD COLUMN IF NOT EXISTS; catch OperationalError and continue.
-# Statements run in order; idempotent by design (ALTER raises on re-run → caught).
-_COLUMN_MIGRATIONS = [
-    "ALTER TABLE wh_party_seed ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
-    "ALTER TABLE wh_party_seed ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
-    "ALTER TABLE wh_customer_base ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
-    "ALTER TABLE wh_customer_base ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
-    # wh_action_queue episode-based dedup: keep only the latest row per (customer_key, action_type)
-    # before adding the UNIQUE index (prevents index creation failure on existing dbs with duplicates).
-    """DELETE FROM wh_action_queue WHERE action_id IN (
-        SELECT a.action_id FROM wh_action_queue a
-        WHERE EXISTS (
-            SELECT 1 FROM wh_action_queue b
-            WHERE b.customer_key = a.customer_key
-              AND b.action_type  = a.action_type
-              AND b.generated_date > a.generated_date
-        )
-    )""",
-    "ALTER TABLE wh_action_queue ADD COLUMN pending_since TEXT",
-    "UPDATE wh_action_queue SET pending_since = generated_date WHERE pending_since IS NULL",
-    "CREATE UNIQUE INDEX IF NOT EXISTS uidx_wh_action_queue_customer_type ON wh_action_queue (customer_key, action_type)",
-]
-
 
 def open_cache_db(path: str) -> sqlite3.Connection:
     """
@@ -62,12 +38,38 @@ def open_cache_db(path: str) -> sqlite3.Connection:
     return conn
 
 
+def _column_exists(conn: sqlite3.Connection, table: str, column: str) -> bool:
+    """Return True if *column* is present in *table* (reads PRAGMA table_info)."""
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return any(row[1] == column for row in rows)
+
+
 def apply_schema(conn: sqlite3.Connection) -> None:
     """Apply cache_schema.sql (CREATE TABLE / INDEX IF NOT EXISTS — idempotent).
-    Also runs ALTER TABLE column migrations for existing databases."""
+    Also runs ALTER TABLE column migrations for existing databases.
+
+    Column migrations are split into two groups:
+
+    Group A — individual ADD COLUMN statements that are safe to retry one-by-one
+    (each is idempotent via the duplicate-column-name guard).
+
+    Group B — the wh_action_queue dedup + schema-change block:
+        DELETE duplicates → ALTER ADD COLUMN → UPDATE → CREATE UNIQUE INDEX.
+    These five steps must succeed or fail together to avoid a half-applied state
+    (e.g. duplicates deleted but index not yet created).  The group is gated on
+    the presence of the `pending_since` column so it is a true no-op on re-run.
+    """
     conn.executescript(_SCHEMA_SQL)
     conn.commit()
-    for stmt in _COLUMN_MIGRATIONS:
+
+    # Group A: simple ADD COLUMN migrations — idempotent one-by-one.
+    _group_a = [
+        "ALTER TABLE wh_party_seed ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
+        "ALTER TABLE wh_party_seed ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
+        "ALTER TABLE wh_customer_base ADD COLUMN source_contact_quality TEXT NOT NULL DEFAULT 'real'",
+        "ALTER TABLE wh_customer_base ADD COLUMN contact_quality TEXT NOT NULL DEFAULT 'real'",
+    ]
+    for stmt in _group_a:
         try:
             conn.execute(stmt)
             conn.commit()
@@ -77,6 +79,34 @@ def apply_schema(conn: sqlite3.Connection) -> None:
             # variants (disk full, table missing, syntax error) must propagate.
             if "duplicate column name" not in str(exc).lower():
                 raise
+
+    # Group B: wh_action_queue dedup + schema migration — must be atomic.
+    # Gate on pending_since column: if already present the whole group is a no-op.
+    # This avoids a partial-apply where dedup DELETE committed but index creation
+    # did not (crash between the two independent commits in the old design).
+    if not _column_exists(conn, "wh_action_queue", "pending_since"):
+        with conn:
+            conn.execute(
+                """DELETE FROM wh_action_queue WHERE action_id IN (
+                    SELECT a.action_id FROM wh_action_queue a
+                    WHERE EXISTS (
+                        SELECT 1 FROM wh_action_queue b
+                        WHERE b.customer_key = a.customer_key
+                          AND b.action_type  = a.action_type
+                          AND b.generated_date > a.generated_date
+                    )
+                )"""
+            )
+            conn.execute(
+                "ALTER TABLE wh_action_queue ADD COLUMN pending_since TEXT"
+            )
+            conn.execute(
+                "UPDATE wh_action_queue SET pending_since = generated_date WHERE pending_since IS NULL"
+            )
+            conn.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uidx_wh_action_queue_customer_type"
+                " ON wh_action_queue (customer_key, action_type)"
+            )
 
 
 # ─── Upsert helpers ──────────────────────────────────────────────────────────

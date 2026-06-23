@@ -93,11 +93,20 @@ def run_migrations(conn: sqlite3.Connection) -> None:
     Safe to call on every startup — already-applied migrations are skipped.
     Raises RuntimeError on SQL failure (wraps the original sqlite3.Error).
 
+    Atomicity:
+    - Each migration file runs inside a single SAVEPOINT so that all its statements
+      either all commit or all roll back.  A mid-file crash can no longer leave a
+      half-applied schema (e.g. DROP TABLE committed but RENAME not yet executed).
+    - The outer SAVEPOINT is released (committed) only after the version row is
+      inserted into schema_migrations, so the tracking table is always consistent
+      with the applied schema.
+
     Idempotency:
-    - "duplicate column name" on ALTER TABLE ADD COLUMN is silently ignored so that
-      migrations can safely add CREATE TABLE IF NOT EXISTS + ALTER TABLE ADD COLUMN
-      as a recovery pattern (if the table was previously recreated with the column
-      already present, the ALTER is a no-op).
+    - "duplicate column name" on ALTER TABLE ADD COLUMN is silently ignored via an
+      inner SAVEPOINT: the failing statement is rolled back to the inner savepoint
+      while the outer file-level savepoint remains open, allowing subsequent
+      statements in the same file to proceed.
+    - All other OperationalError variants propagate and roll back the entire file.
     """
     conn.execute(_INIT_TRACKING_TABLE)
     conn.commit()
@@ -111,27 +120,39 @@ def run_migrations(conn: sqlite3.Connection) -> None:
             continue
 
         sql = path.read_text(encoding="utf-8")
+        sp_outer = f"mig_{version.replace('.', '_').replace('-', '_')}"
         try:
+            conn.execute(f"SAVEPOINT {sp_outer}")
+
             for stmt in _split_statements(sql):
                 stmt = stmt.strip()
                 if not stmt:
                     continue
+
+                # Inner savepoint: lets us roll back a single statement (the
+                # duplicate-column-name case) without aborting the outer savepoint.
+                conn.execute(f"SAVEPOINT {sp_outer}_stmt")
                 try:
                     conn.execute(stmt)
-                    conn.commit()
+                    conn.execute(f"RELEASE {sp_outer}_stmt")
                 except sqlite3.OperationalError as stmt_exc:
-                    conn.rollback()
+                    conn.execute(f"ROLLBACK TO {sp_outer}_stmt")
+                    conn.execute(f"RELEASE {sp_outer}_stmt")
                     if "duplicate column name" in str(stmt_exc).lower():
-                        # ALTER TABLE ADD COLUMN — column already exists; skip idempotently
+                        # ALTER TABLE ADD COLUMN — column already exists; skip idempotently.
                         continue
                     raise
 
             conn.execute(
                 "INSERT INTO schema_migrations (version) VALUES (?)", (version,)
             )
-            conn.commit()
+            conn.execute(f"RELEASE {sp_outer}")
         except sqlite3.Error as exc:
-            conn.rollback()
+            try:
+                conn.execute(f"ROLLBACK TO {sp_outer}")
+                conn.execute(f"RELEASE {sp_outer}")
+            except sqlite3.Error:
+                pass
             raise RuntimeError(
                 f"Migration failed [{version}]: {exc}"
             ) from exc

@@ -157,15 +157,16 @@ def rebuild_search_index(crm_db_path: str, cache_db_path: str) -> int:
     """Full rebuild of crm_party_search. Returns count of indexed parties."""
     log.info("rebuild_search_index: starting full rebuild")
 
-    # ── 1. Load party data from crm.db ───────────────────────────────────────
-    crm_conn = sqlite3.connect(crm_db_path)
-    crm_conn.row_factory = sqlite3.Row
+    # ── 1. Load party data from crm.db (read-only connection for read phase) ─
+    # Open read-only so the Go CRM app is not blocked by a competing writer during
+    # the potentially long load phase (SQLite WAL allows concurrent readers).
+    crm_ro_conn = sqlite3.connect(f"file:{crm_db_path}?mode=ro", uri=True)
+    crm_ro_conn.row_factory = sqlite3.Row
     try:
-        parties = _load_parties(crm_conn)
-        customer_id_to_party = _build_customer_id_to_party(crm_conn)
+        parties = _load_parties(crm_ro_conn)
+        customer_id_to_party = _build_customer_id_to_party(crm_ro_conn)
     finally:
-        # Keep crm_conn open for the final write — close after insert
-        pass
+        crm_ro_conn.close()
 
     # ── 2. Load supplementary tokens from cache.db (read-only) ──────────────
     cache_conn = sqlite3.connect(f"file:{cache_db_path}?mode=ro", uri=True)
@@ -191,17 +192,21 @@ def rebuild_search_index(crm_db_path: str, cache_db_path: str) -> int:
         if tokens  # skip parties with nothing to index
     ]
 
+    # Open a separate write connection only for the brief write phase, minimising
+    # the window during which a second writer holds crm.db.
+    crm_rw_conn = sqlite3.connect(crm_db_path)
+    crm_rw_conn.row_factory = sqlite3.Row
     try:
         # Single transaction: if executemany fails, DELETE is rolled back so the
         # search index is not left empty (crm_party_search stays fully intact).
-        with crm_conn:
-            crm_conn.execute("DELETE FROM crm_party_search")
-            crm_conn.executemany(
+        with crm_rw_conn:
+            crm_rw_conn.execute("DELETE FROM crm_party_search")
+            crm_rw_conn.executemany(
                 "INSERT INTO crm_party_search (party_id, tokens) VALUES (?, ?)",
                 rows,
             )
     finally:
-        crm_conn.close()
+        crm_rw_conn.close()
 
     count = len(rows)
     log.info("rebuild_search_index: indexed %d parties", count)
