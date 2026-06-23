@@ -8,6 +8,8 @@
  *   POST /hug/customer/upsert        — admin: batch upsert hug_customer rows
  *   POST /hug/campaign/upsert        — admin: upsert hug_campaign rows
  *
+ *   POST /hug/campaign/preview          — admin: D1-backed campaign match-count preview
+ *
  * Auth:
  *   /h/:token    — public; token is opaque, no PII on URL.
  *   /optin/:token — public; form posts to /webhook/hug/optin/created (generic handler).
@@ -840,4 +842,120 @@ export async function handleHugCampaignUpsert(request: Request, env: Env): Promi
         console.error('[hug-campaign-upsert]', (e as Error).message);
         return new Response('Internal Server Error', { status: 500 });
     }
+}
+
+// ---------------------------------------------------------------------------
+// POST /hug/campaign/preview
+// ---------------------------------------------------------------------------
+
+/**
+ * Admin endpoint: count and list hug_customer rows that match a given targeting.
+ *
+ * Reuses matchesTargeting (single source of truth) — the same function the hot-path
+ * scan uses — applied in a TS loop over all hug_customer rows fetched from D1.
+ * No SQL WHERE filter; matching happens in TS so no logic duplication.
+ *
+ * Touchpoint-level attrs (op_type, channel, sku) live in hug_token, not hug_customer.
+ * Rather than returning a misleading "0 matches" (null ctx value fails a constrained
+ * key), those keys are stripped from targeting before matching and upper_bound:true is
+ * returned so the UI can show a caveat. Customer-level attrs (tier, recency_days,
+ * value_group, is_contactable, customer_type) are exact.
+ *
+ * hug_customer holds only customer_id + segmentation signals — no name/phone/email.
+ * Listing customer_ids in the response is within PII-boundary.
+ *
+ * Request body:  {targeting: object, limit?: number, offset?: number}
+ * Response:      {count, total_customers, data_as_of, upper_bound, customers: [...]}
+ *   count           — number of hug_customer rows matching (after touchpoint strip)
+ *   total_customers — total rows scanned
+ *   data_as_of      — max(updated_at) across all rows (ISO UTC string | null)
+ *   upper_bound     — true when targeting contained touchpoint-level attrs (stripped)
+ *   customers       — paginated slice of matched rows
+ */
+export async function handleHugCampaignPreview(
+    request: Request,
+    env: Env,
+): Promise<Response> {
+    const body = await request.text();
+    if (!(await verifyAdminHmac(request, body, env))) {
+        return new Response('Unauthorized', { status: 401 });
+    }
+
+    let parsed: { targeting?: Record<string, unknown>; limit?: number; offset?: number };
+    try {
+        parsed = JSON.parse(body);
+    } catch {
+        return new Response('Invalid JSON', { status: 400 });
+    }
+
+    const limit  = Math.min(parsed.limit  ?? 50, 200);
+    const offset = Math.max(parsed.offset ?? 0,  0);
+
+    // Touchpoint-level attrs are not in hug_customer (they live in hug_token).
+    // Strip them from targeting so they are treated as "no constraint" rather than
+    // "no match" — a null ctx value always fails a constrained key, which would
+    // produce a misleading zero count. Caller is notified via upper_bound:true.
+    const TOUCHPOINT_ATTRS = new Set(['op_type', 'channel', 'sku']);
+    const rawTargeting = parsed.targeting ?? {};
+    const upperBound = Object.keys(rawTargeting).some((k) => TOUCHPOINT_ATTRS.has(k));
+    const targeting: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(rawTargeting)) {
+        if (!TOUCHPOINT_ATTRS.has(k)) targeting[k] = v;
+    }
+    const targetingJson = JSON.stringify(targeting);
+
+    // Full-table scan: no SQL WHERE filter — matchesTargeting applied in TS loop.
+    // D1 scan of ~7.5k rows is estimated <10ms at D1 latency (acceptable admin action).
+    const { results } = await env.DB.prepare(
+        `SELECT customer_id, tier, recency_days, value_group,
+                is_contactable, customer_type, updated_at
+         FROM hug_customer
+         ORDER BY customer_id`
+    ).all<HugCustomer>();
+
+    const allRows = results ?? [];
+    const totalCustomers = allRows.length;
+
+    // Derive data freshness: lexicographic max over ISO UTC strings is safe.
+    let dataAsOf: string | null = null;
+    for (const r of allRows) {
+        if (r.updated_at && (dataAsOf === null || r.updated_at > dataAsOf)) {
+            dataAsOf = r.updated_at;
+        }
+    }
+
+    // Apply matchesTargeting per customer row.
+    // Touchpoint fields (op_type, channel, sku, order_code, ship_date) are absent from
+    // hug_customer → set null. They were already stripped from targeting above, so they
+    // never trigger a false-negative match.
+    const matched: HugCustomer[] = [];
+    for (const row of allRows) {
+        const ctx = {
+            tier:           row.tier,
+            recency_days:   row.recency_days,
+            value_group:    row.value_group,
+            is_contactable: row.is_contactable,
+            customer_type:  row.customer_type ?? null,
+            customer_id:    row.customer_id,
+            op_type:        null,
+            channel:        null,
+            sku:            null,
+            order_code:     null,
+            ship_date:      null,
+        } as unknown as ScanContext;
+
+        if (matchesTargeting(targetingJson, ctx)) {
+            matched.push(row);
+        }
+    }
+
+    const page = matched.slice(offset, offset + limit);
+
+    return Response.json({
+        count:           matched.length,
+        total_customers: totalCustomers,
+        data_as_of:      dataAsOf,
+        upper_bound:     upperBound,
+        customers:       page,
+    });
 }

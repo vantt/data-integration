@@ -925,3 +925,224 @@ describe('hug_customer customer_type', () => {
         expect(matchesTargeting(notInRule, ctxWithType({ customer_type: null }) as any)).toBe(true);
     });
 });
+
+// ---------------------------------------------------------------------------
+// POST /hug/campaign/preview — D1-backed match count + customer list
+// ---------------------------------------------------------------------------
+describe('POST /hug/campaign/preview', () => {
+    const ADMIN_SECRET = 'preview-test-secret';
+    const PREVIEW_URL = 'http://example.com/hug/campaign/preview';
+
+    async function signBody(body: string): Promise<string> {
+        return generateSignature(ADMIN_SECRET, body);
+    }
+
+    // Seed a small hug_customer dataset shared across the preview tests.
+    beforeAll(async () => {
+        const db = (env as unknown as Env).DB;
+        await db.prepare('DELETE FROM hug_customer').run();
+        // 3 customers: 2 VIP (one RETAIL, one WHOLESALE), 1 CORE RETAIL
+        await db.prepare(
+            `INSERT OR REPLACE INTO hug_customer
+             (customer_id, tier, recency_days, value_group, is_contactable, customer_type, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind('c001', 'VIP',  10, 'HIGH', 1, 'RETAIL',    '2026-06-22T10:00:00Z').run();
+        await db.prepare(
+            `INSERT OR REPLACE INTO hug_customer
+             (customer_id, tier, recency_days, value_group, is_contactable, customer_type, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind('c002', 'VIP',  30, 'HIGH', 0, 'WHOLESALE', '2026-06-22T11:00:00Z').run();
+        await db.prepare(
+            `INSERT OR REPLACE INTO hug_customer
+             (customer_id, tier, recency_days, value_group, is_contactable, customer_type, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`
+        ).bind('c003', 'CORE', 60, 'MID',  1, 'RETAIL',    '2026-06-22T09:00:00Z').run();
+    });
+
+    it('PR01: returns 401 when X-Hug-Signature header is missing', async () => {
+        const body = JSON.stringify({ targeting: {} });
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(401);
+    });
+
+    it('PR02: returns 401 when signature is invalid', async () => {
+        const body = JSON.stringify({ targeting: {} });
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-hug-signature': 'sha256=badhash',
+            },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(401);
+    });
+
+    it('PR03: empty targeting {} matches all 3 customers; upper_bound false', async () => {
+        const body = JSON.stringify({ targeting: {} });
+        const sig = await signBody(body);
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-hug-signature': sig },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(200);
+        const data = await resp.json() as any;
+        expect(data.count).toBe(3);
+        expect(data.total_customers).toBe(3);
+        expect(data.upper_bound).toBe(false);
+        // data_as_of is the max updated_at across rows (lexicographic max of ISO strings)
+        expect(data.data_as_of).toBe('2026-06-22T11:00:00Z');
+        expect(Array.isArray(data.customers)).toBe(true);
+        expect(data.customers.length).toBe(3);
+    });
+
+    it('PR04: tier filter ["VIP"] → 2 customers; includes both VIP rows', async () => {
+        const body = JSON.stringify({ targeting: { tier: ['VIP'] } });
+        const sig = await signBody(body);
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-hug-signature': sig },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(200);
+        const data = await resp.json() as any;
+        expect(data.count).toBe(2);
+        expect(data.upper_bound).toBe(false);
+        const ids = data.customers.map((c: any) => c.customer_id);
+        expect(ids).toContain('c001');
+        expect(ids).toContain('c002');
+    });
+
+    it('PR05: not_in targeting customer_type → excludes WHOLESALE', async () => {
+        const body = JSON.stringify({
+            targeting: { customer_type: { not_in: ['WHOLESALE'] } },
+        });
+        const sig = await signBody(body);
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-hug-signature': sig },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(200);
+        const data = await resp.json() as any;
+        // c001 (RETAIL) + c003 (RETAIL) pass; c002 (WHOLESALE) excluded
+        expect(data.count).toBe(2);
+        const ids = data.customers.map((c: any) => c.customer_id);
+        expect(ids).not.toContain('c002');
+    });
+
+    it('PR06: touchpoint attr (op_type) in targeting → stripped; upper_bound true; count = empty targeting count', async () => {
+        // op_type is a touchpoint-level attr not in hug_customer.
+        // The Worker must strip it, set upper_bound:true, and count all rows (same as {}).
+        const body = JSON.stringify({
+            targeting: { op_type: ['package_insert'] },
+        });
+        const sig = await signBody(body);
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-hug-signature': sig },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(200);
+        const data = await resp.json() as any;
+        // Stripped targeting = {} → all 3 rows match
+        expect(data.count).toBe(3);
+        expect(data.upper_bound).toBe(true);
+    });
+
+    it('PR07: sku attr in targeting → stripped; upper_bound true', async () => {
+        const body = JSON.stringify({
+            targeting: { tier: ['VIP'], sku: ['FJ-OMEGA3-60'] },
+        });
+        const sig = await signBody(body);
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-hug-signature': sig },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(200);
+        const data = await resp.json() as any;
+        // sku stripped; tier=["VIP"] remains → 2 VIP rows
+        expect(data.count).toBe(2);
+        expect(data.upper_bound).toBe(true);
+    });
+
+    it('PR08: limit/offset pagination — offset=1 shifts customer slice', async () => {
+        // Full match ({}) = 3 rows sorted by customer_id: c001, c002, c003.
+        // offset=1, limit=2 → slice [1..3) = c002, c003
+        const body = JSON.stringify({ targeting: {}, limit: 2, offset: 1 });
+        const sig = await signBody(body);
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-hug-signature': sig },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(200);
+        const data = await resp.json() as any;
+        // count reflects total matched (all 3), not page size
+        expect(data.count).toBe(3);
+        // Page contains only 2 rows due to limit
+        expect(data.customers.length).toBe(2);
+        // offset=1 skips first matched row (c001)
+        expect(data.customers[0].customer_id).toBe('c002');
+        expect(data.customers[1].customer_id).toBe('c003');
+    });
+
+    it('PR09: customer_type attr targeting → exact count (not upper_bound)', async () => {
+        // customer_type is a customer-level attr — not stripped, not upper_bound
+        const body = JSON.stringify({
+            targeting: { customer_type: ['RETAIL'] },
+        });
+        const sig = await signBody(body);
+        const request = new Request(PREVIEW_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-hug-signature': sig },
+            body,
+        });
+        const testEnv = { ...env, HUG_ADMIN_SECRET: ADMIN_SECRET };
+        const ctx = createExecutionContext();
+        const resp = await worker.fetch(request, testEnv as unknown as Env, ctx);
+        await waitOnExecutionContext(ctx);
+        expect(resp.status).toBe(200);
+        const data = await resp.json() as any;
+        expect(data.count).toBe(2);   // c001 + c003 are RETAIL
+        expect(data.upper_bound).toBe(false);
+    });
+});

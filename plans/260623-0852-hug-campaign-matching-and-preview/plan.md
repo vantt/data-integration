@@ -1,7 +1,7 @@
 ---
 title: "Hug Campaign: sku+not_in targeting, customer_type edge field, D1 preview endpoint"
 description: "Three phased additions: catalog-only sku attr, not_in negation operator (TS+Python parity), customer_type edge column + content-diff resync, and a new Worker preview endpoint replacing cache.db for live match counts."
-status: pending
+status: implemented (pending coordinated deploy)
 priority: P1
 effort: 10h
 branch: main
@@ -21,9 +21,11 @@ Three gaps block current Hug campaign operations:
 
 | # | Name | Status | Effort | Key risk |
 |---|------|--------|--------|----------|
-| 1 | `sku` catalog entry + `not_in` operator (TS + Python) | pending | 3h | TS↔Python drift on new operator shape |
-| 2 | `customer_type` edge column + content-diff resync | pending | 3.5h | Full re-push on rollout; D1 migration ordering |
-| 3 | `POST /hug/campaign/preview` Worker endpoint + CRM UI | pending | 4h | Worker deploy prerequisite; D1 scan latency |
+| 1 | `sku` catalog entry + `not_in` operator (TS + Python) | ✅ DONE (`ed6bdfa`) | 3h | TS↔Python drift on new operator shape |
+| 2 | `customer_type` edge column + content-diff resync | ✅ DONE (`43c6b65`) | 3.5h | Full re-push on rollout; D1 migration ordering |
+| 3 | `POST /hug/campaign/preview` Worker endpoint + CRM UI | ✅ DONE (code; needs deploy) | 4h | Worker deploy prerequisite; D1 scan latency |
+
+**Pending coordinated deploy** (all three phases share one Worker deploy): run the D1 migration `webhook_receiver/cloudflareD1/migrations/add_hug_customer_type_column.sql` FIRST, then `wrangler deploy` (ships not_in matcher + customer_type scan/upsert + the preview endpoint), then trigger a CRM full resync (`HUG_CUSTOMER_PUSH_FULL=1`) so hug_customer rows carry customer_type. Until deployed: not_in/customer_type are inert (only the `default {}` campaign exists) and the preview falls back to cache.db.
 
 ## Sequencing rationale
 

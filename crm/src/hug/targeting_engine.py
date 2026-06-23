@@ -4,9 +4,10 @@ This module is the AUTHORITATIVE Python mirror of the Cloudflare Worker logic in
 webhook_receiver/cloudflareD1/src/hug-handler.ts  (matchesTargeting).
 Any semantic change to the Worker MUST be reflected here, and vice-versa.
 
-Exported surface (consumed by Phase 4 validation and Phase 5 preview/overlap):
-  matches_targeting(targeting, ctx)           → bool
-  preview_match_customers(targeting, db_path) → dict
+Exported surface:
+  matches_targeting(targeting, ctx)                       → bool
+  preview_match_customers(targeting, db_path)             → dict  (cache.db path)
+  preview_match_customers_d1(targeting, limit, offset)    → dict  (D1 live replica)
 
 Design decisions mapped to TS source lines (hug-handler.ts matchesTargeting):
   TS  empty-dict check   malformed JSON string → match-all
@@ -195,3 +196,76 @@ def preview_match_customers(targeting: dict, cache_db_path: str) -> dict[str, An
                 })
 
     return {"matched": matched, "total": total, "sample": sample}
+
+
+def _default_cache_db_path() -> str:
+    """Resolve cache.db path from env (mirrors screen_hug_campaign.py._cache_db_path).
+
+    Priority: CRM_CACHE_DB env var → {CRM_DATA_DIR}/cache.db → ./data/cache.db.
+    """
+    import os
+    default_dir = os.environ.get("CRM_DATA_DIR", "./data")
+    return os.environ.get("CRM_CACHE_DB", os.path.join(default_dir, "cache.db"))
+
+
+def preview_match_customers_d1(
+    targeting: dict,
+    limit: int = 50,
+    offset: int = 0,
+) -> dict[str, Any]:
+    """Preview campaign match count using the live D1 hug_customer replica.
+
+    Calls POST /hug/campaign/preview on the Cloudflare Worker (HMAC-secured).
+    Returns a dict with the same shape as preview_match_customers(), extended with
+    source and data_as_of:
+      {"matched": int, "total": int, "sample": list[dict],
+       "source": "d1", "data_as_of": str|None, "upper_bound": bool}
+
+    Falls back to preview_match_customers(cache.db) when:
+      - HUG_WORKER_URL is not set (push_enabled() == False)
+      - HUG_ADMIN_SECRET is not set
+      - Worker call fails (timeout, 4xx, 5xx, network error)
+
+    Fallback result includes "source": "cache" and "fallback_reason": str so the
+    UI can show a non-intrusive notice. Never raises.
+    """
+    from hug.config import admin_secret, push_enabled, worker_url
+    from hug.d1_transport import post_signed_and_read
+
+    if not push_enabled():
+        result = preview_match_customers(targeting, _default_cache_db_path())
+        result["source"] = "cache"
+        result["fallback_reason"] = "D1 preview not configured (HUG_WORKER_URL unset)"
+        return result
+
+    secret = admin_secret()
+    if not secret:
+        result = preview_match_customers(targeting, _default_cache_db_path())
+        result["source"] = "cache"
+        result["fallback_reason"] = "HUG_ADMIN_SECRET not set"
+        return result
+
+    url = worker_url() + "/hug/campaign/preview"
+    payload: dict[str, Any] = {"targeting": targeting, "limit": limit, "offset": offset}
+    resp = post_signed_and_read(url, secret, payload)
+
+    if not resp["ok"]:
+        log.warning(
+            "preview_match_customers_d1: Worker call failed (%s), falling back to cache.db",
+            resp.get("error"),
+        )
+        result = preview_match_customers(targeting, _default_cache_db_path())
+        result["source"] = "cache"
+        result["fallback_reason"] = f"D1 preview failed: {resp.get('error')}"
+        return result
+
+    data = resp["data"]
+    customers = data.get("customers", [])
+    return {
+        "matched":     data.get("count", 0),
+        "total":       data.get("total_customers", 0),
+        "sample":      customers,   # up to `limit` rows (not capped at 5 like cache.db path)
+        "source":      "d1",
+        "data_as_of":  data.get("data_as_of"),
+        "upper_bound": data.get("upper_bound", False),
+    }

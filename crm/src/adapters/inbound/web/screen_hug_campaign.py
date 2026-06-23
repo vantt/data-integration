@@ -37,7 +37,7 @@ from hug.campaign_repository import (
     upsert_campaign,
 )
 from hug.targeting_catalog import TARGETING_CATALOG, validate_targeting
-from hug.targeting_engine import preview_match_customers
+from hug.targeting_engine import preview_match_customers_d1
 from hug.campaign_overlap import find_overlapping_campaigns
 from adapters.inbound.web.screen_hug_campaign_html_list import render_campaign_list
 from adapters.inbound.web.screen_hug_campaign_html_form import (
@@ -282,13 +282,6 @@ def _rerender(form_multi, errors, conn, *, is_new: bool) -> str:
     )
 
 
-def _cache_db_path() -> str:
-    """Resolve cache.db path — reads CRM_CACHE_DB env var, same as customer_push.py."""
-    import os
-    default_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "data")
-    return os.environ.get("CRM_CACHE_DB", os.path.join(default_dir, "cache.db"))
-
-
 def _touchpoint_warning(targeting: dict) -> str | None:
     """Return a warning string if targeting constrains op_type or channel.
 
@@ -320,8 +313,9 @@ def _rerender_with_preview(
     if not is_new:
         partial["campaign_id"] = exclude_id or form_multi.get("campaign_id", [""])[0]
 
-    # Run preview against wh_customer_tier (never raises — returns error dict on failure).
-    preview_result = preview_match_customers(targeting, _cache_db_path())
+    # Run preview: prefers D1 live replica when Worker is configured, falls back to
+    # cache.db snapshot automatically. Never raises — returns error dict on failure.
+    preview_result = preview_match_customers_d1(targeting)
     ub_warn = _touchpoint_warning(targeting)
     if ub_warn:
         preview_result["upper_bound_warning"] = ub_warn

@@ -544,3 +544,141 @@ def test_preview_customer_type_not_in_excludes_wholesale():
     assert result["total"] == 3
     assert result["matched"] == 2
     assert validate_targeting({"sku": ["FJ-COLLAGEN-90"]}) == []
+
+
+# ---------------------------------------------------------------------------
+# PD series — preview_match_customers_d1 (D1 live preview with fallback)
+# ---------------------------------------------------------------------------
+
+from unittest.mock import patch  # noqa: E402
+
+
+def test_PD01_falls_back_to_cache_when_push_disabled():
+    """PD01: push_enabled()==False → source="cache", fallback_reason mentions HUG_WORKER_URL."""
+    from hug.targeting_engine import preview_match_customers_d1
+
+    with (
+        patch("hug.config.push_enabled", return_value=False),
+        tempfile.TemporaryDirectory() as tmp,
+    ):
+        db = _make_cache_db(tmp, [
+            {"customer_key": "a", "customer_id": 1, "strategic_tier": "VIP",
+             "recency_days": 5, "value_group": "HIGH", "is_contactable": 1,
+             "customer_type": "RETAIL"},
+        ])
+        # Override the env-resolved cache path via CRM_CACHE_DB
+        import os
+        old = os.environ.get("CRM_CACHE_DB")
+        os.environ["CRM_CACHE_DB"] = db
+        try:
+            result = preview_match_customers_d1({})
+        finally:
+            if old is None:
+                os.environ.pop("CRM_CACHE_DB", None)
+            else:
+                os.environ["CRM_CACHE_DB"] = old
+
+    assert result["source"] == "cache"
+    assert "fallback_reason" in result
+    assert "HUG_WORKER_URL" in result["fallback_reason"]
+    # Underlying cache.db preview must still work: 1 customer, 1 match
+    assert result["matched"] == 1
+    assert result["total"] == 1
+
+
+def test_PD02_falls_back_on_worker_call_failure():
+    """PD02: push_enabled()==True but post_signed_and_read returns ok=False → source="cache"."""
+    from hug.targeting_engine import preview_match_customers_d1
+
+    with (
+        patch("hug.config.push_enabled", return_value=True),
+        patch("hug.config.admin_secret", return_value="secret"),
+        patch("hug.config.worker_url", return_value="http://worker.example.com"),
+        patch(
+            "hug.d1_transport.post_signed_and_read",
+            return_value={"ok": False, "error": "http 502"},
+        ),
+        tempfile.TemporaryDirectory() as tmp,
+    ):
+        db = _make_cache_db(tmp, [
+            {"customer_key": "a", "customer_id": 1, "strategic_tier": "VIP",
+             "recency_days": 5, "value_group": "HIGH", "is_contactable": 1,
+             "customer_type": "RETAIL"},
+        ])
+        import os
+        old = os.environ.get("CRM_CACHE_DB")
+        os.environ["CRM_CACHE_DB"] = db
+        try:
+            result = preview_match_customers_d1({"tier": ["VIP"]})
+        finally:
+            if old is None:
+                os.environ.pop("CRM_CACHE_DB", None)
+            else:
+                os.environ["CRM_CACHE_DB"] = old
+
+    assert result["source"] == "cache"
+    assert "fallback_reason" in result
+    assert "502" in result["fallback_reason"]
+
+
+def test_PD03_returns_d1_data_on_success():
+    """PD03: Worker returns valid JSON → source="d1", matched/total/data_as_of populated."""
+    from hug.targeting_engine import preview_match_customers_d1
+
+    worker_response = {
+        "ok": True,
+        "status": 200,
+        "data": {
+            "count": 42,
+            "total_customers": 100,
+            "data_as_of": "2026-06-22T11:00:00Z",
+            "upper_bound": False,
+            "customers": [
+                {"customer_id": "c001", "tier": "VIP", "customer_type": "RETAIL"},
+            ],
+        },
+    }
+
+    with (
+        patch("hug.config.push_enabled", return_value=True),
+        patch("hug.config.admin_secret", return_value="secret"),
+        patch("hug.config.worker_url", return_value="http://worker.example.com"),
+        patch("hug.d1_transport.post_signed_and_read", return_value=worker_response),
+    ):
+        result = preview_match_customers_d1({"tier": ["VIP"]}, limit=50, offset=0)
+
+    assert result["source"] == "d1"
+    assert result["matched"] == 42
+    assert result["total"] == 100
+    assert result["data_as_of"] == "2026-06-22T11:00:00Z"
+    assert result["upper_bound"] is False
+    assert result["sample"] == worker_response["data"]["customers"]
+
+
+def test_PD04_upper_bound_flag_propagated_from_worker_response():
+    """PD04: Worker returns upper_bound=True (touchpoint attrs stripped) → flag propagated."""
+    from hug.targeting_engine import preview_match_customers_d1
+
+    worker_response = {
+        "ok": True,
+        "status": 200,
+        "data": {
+            "count": 100,
+            "total_customers": 100,
+            "data_as_of": "2026-06-22T11:00:00Z",
+            "upper_bound": True,
+            "customers": [],
+        },
+    }
+
+    with (
+        patch("hug.config.push_enabled", return_value=True),
+        patch("hug.config.admin_secret", return_value="secret"),
+        patch("hug.config.worker_url", return_value="http://worker.example.com"),
+        patch("hug.d1_transport.post_signed_and_read", return_value=worker_response),
+    ):
+        # Targeting with op_type (touchpoint-level) — Worker strips it, returns upper_bound:true
+        result = preview_match_customers_d1({"op_type": ["package_insert"]})
+
+    assert result["source"] == "d1"
+    assert result["upper_bound"] is True

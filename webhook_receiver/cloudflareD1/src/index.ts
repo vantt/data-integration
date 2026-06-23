@@ -7,6 +7,7 @@ import {
     handleHugTokenUpsert,
     handleHugCustomerUpsert,
     handleHugCampaignUpsert,
+    handleHugCampaignPreview,
 } from './hug-handler';
 
 export default {
@@ -33,6 +34,9 @@ export default {
         }
         if (request.method === "POST" && url.pathname === "/hug/campaign/upsert") {
             return handleHugCampaignUpsert(request, env);
+        }
+        if (request.method === "POST" && url.pathname === "/hug/campaign/preview") {
+            return handleHugCampaignPreview(request, env);
         }
 
         // ── Existing webhook queue routes (UNCHANGED) ─────────────────────
