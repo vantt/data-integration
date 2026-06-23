@@ -68,8 +68,12 @@ def _split_statements(sql: str) -> list[str]:
 
         buf.append(line)
 
-        # Split on ';' only when not inside a BEGIN...END block
-        if ";" in line and depth == 0:
+        # Split on ';' only when not inside a BEGIN...END block. Ignore a ';'
+        # that sits inside a trailing '-- comment' — it is not a statement
+        # terminator (e.g. "col TEXT  -- set on undo; prevents double-undo"),
+        # otherwise the statement is cut mid-definition → "incomplete input".
+        code_part = line.split("--", 1)[0]
+        if ";" in code_part and depth == 0:
             stmt = "\n".join(buf).strip()
             if stmt:
                 stmts.append(stmt)
