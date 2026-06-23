@@ -4343,3 +4343,21 @@ elif filter_priority == "high":
 4. Broad `except Exception` in adapters/screens hides these `TypeError`/`AttributeError` as empty/200 responses — keep call-site logging and narrow excepts (see L140).
 
 **Reference:** `crm/src/adapters/inbound/web/screen_management.py`, `crm/src/application/campaign_service.py`, `crm/src/application/segment_service.py`, `crm/src/adapters/outbound/sqlite/{campaign,segment}_repository.py`. Found in full-stack audit 2026-06-23, commit adbd7b1.
+
+### L142 — Sapo order payload stores payments under `$.prepayments`, not `$.payments` — whole payment pipeline silently empty
+
+**Group:** MODEL
+
+**Symptom:** `stg_sapo_v2_payments` = 0 rows → `std_payments` = 0 → `fact_payments` empty (1 placeholder) → `dim_customers.payment_behavior` uniformly `PAYMENT_PREPAID`/NULL, no `PAYMENT_COD`. No error anywhere; everything "ran green". An earlier audit misattributed the uniform PREPAID to a hardcoded `'CASH'` in std_payments — but the real cause was zero input rows.
+
+**Root cause:** Payments are NOT a separate ingestion entity — they're embedded in the Sapo order payload. `src_sapo_v2_orders.sql` extracted `json_extract_string(payload, '$.payments') as payments_json`, but the Sapo API stores payment records under **`$.prepayments`**. `$.payments` does not exist in ANY order payload (verified across batch_sync + history_log). So `payments_json` was NULL for all 15.5K orders, and `stg_sapo_v2_payments` (which filters out NULL/`[]`) produced nothing. Verified on raw parquet: 0 orders have non-empty `$.payments`, ~57% have non-empty `$.prepayments` (each item: `id, payment_method_id, amount, paid_on, source` e.g. `cod_transfer`; `payment_method_id=1958911` = COD per `ref_payment_methods` seed).
+
+**Fix:** `src_sapo_v2_orders.sql:175` `$.payments` → `$.prepayments`. Because `src_sapo_v2_orders` is an INCREMENTAL table, existing rows keep NULL `payments_json` — a one-time `dbt build --full-refresh -s src_sapo_v2_orders+` is required to backfill (a normal incremental run won't reprocess old orders). Downstream incrementals `int_customer_metrics` + `dim_customers` also need full-refresh for `payment_behavior` to recompute historically (see [[feedback_dim_customers_incremental_full_refresh]]).
+
+**Rules:**
+1. Verify JSON extraction PATHS against a real raw payload sample, not the assumed key name. A wrong `$.path` yields silent NULLs, not an error — downstream "0 rows" looks identical to "no data exists". When a staging model is unexpectedly empty, sample the RAW parquet payload (read one file, not all — OOM) and confirm the key actually exists.
+2. "Empty mart" ≠ "missing data" — trace the path key-by-key from raw payload → src extraction → stg filter. Here the data was present all along under a different key.
+3. An extraction-path fix on an INCREMENTAL src table only affects NEW rows; historical backfill needs `--full-refresh` on the src AND any downstream incremental that derives from the changed column.
+4. Don't trust an audit's stated impact mechanism without checking input cardinality first — "hardcoded CASH corrupts behavior" was moot when the table had 0 rows.
+
+**Reference:** `transformation/models/staging/src_sapo_v2_orders.sql:175`, `stg_sapo_v2_payments.sql`, `ref_payment_methods.csv` (id 1958911 = COD). Raw: `sapo_v2_raw/order/...parquet` `$.prepayments`. Found via full-stack audit verification 2026-06-24, commit 8624772.
