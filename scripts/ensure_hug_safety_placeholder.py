@@ -11,6 +11,12 @@ filter the sentinel out so it never reaches staging/marts.
 
 Idempotent — creates each file only if missing. Safe on every container start.
 Mirrors scripts/ensure_shopee_safety_placeholder.py.
+
+IMPORTANT: The placeholder path must have the same Hive partition depth as the real
+DLT output: ingest_method=*/year=*/month=*. DuckDB's hive_partitioning=1 auto-detects
+partition keys from path depth and raises a Binder Error when files in the same glob
+have different partition key sets (e.g. one file has only ingest_method= while others
+have ingest_method=/year=/month=).
 """
 from __future__ import annotations
 
@@ -21,12 +27,22 @@ import pandas as pd
 
 DATA_LAKE_ROOT = os.environ.get("DBT_DATA_LAKE_PATH", "/app/var/data_lake")
 
-# ingest_method is a hive partition (read from the path), so it is NOT a file
-# column — this matches the real DLT output layout hug_raw/{name}/ingest_method=*/.
+# ingest_method, year, month are all hive partitions (read from path), NOT file columns.
+# Path depth must match the real DLT output: ingest_method=*/year=*/month=*.
 _SENTINEL_ID = "_safety_placeholder"
 
 
 def _placeholder_path(table: str) -> Path:
+    # year=1970/month=1 matches the 3-level partition depth of real webhook output:
+    # ingest_method=webhook/year=YYYY/month=M/
+    return Path(DATA_LAKE_ROOT) / (
+        f"hug_raw/{table}/ingest_method=placeholder/year=1970/month=1/"
+        f"hug_{table}_safety_placeholder.parquet"
+    )
+
+
+def _old_placeholder_path(table: str) -> Path:
+    """Pre-fix location (single-level partition). Removed to prevent Binder Error."""
     return Path(DATA_LAKE_ROOT) / (
         f"hug_raw/{table}/ingest_method=placeholder/"
         f"hug_{table}_safety_placeholder.parquet"
@@ -34,7 +50,7 @@ def _placeholder_path(table: str) -> Path:
 
 
 def _sentinel_frame(entity_type: str) -> pd.DataFrame:
-    # Columns the src_hug_* models read (besides path-derived ingest_method).
+    # Columns the src_hug_* models read (besides path-derived ingest_method/year/month).
     # payload is a JSON string so json_extract_string(...) yields NULLs cleanly.
     return pd.DataFrame({
         "entity_id":       [_SENTINEL_ID],
@@ -48,6 +64,13 @@ def _sentinel_frame(entity_type: str) -> pd.DataFrame:
 def ensure_placeholders() -> None:
     print("-> [Auto-Setup] checking Hug raw safety placeholders...")
     for table, entity_type in (("scan", "scan"), ("optin_event", "optin")):
+        # Remove stale single-level placeholder that causes Binder Error when real
+        # data (3-level: ingest_method/year/month) coexists in the same glob.
+        old_path = _old_placeholder_path(table)
+        if old_path.exists():
+            old_path.unlink()
+            print(f"   [-] Removed stale shallow placeholder: {old_path}")
+
         path = _placeholder_path(table)
         if path.exists():
             print(f"   [=] Already present: {path}")
