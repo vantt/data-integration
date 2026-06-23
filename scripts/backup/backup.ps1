@@ -97,7 +97,31 @@ try {
         $ExitCode = 1
     }
 
-    # --- Step 3: Backup config files ---
+    # --- Step 3: Backup crm_data Docker named volume ---
+    # crm_data is a Docker named volume (not on Windows filesystem), so robocopy can't reach it.
+    # docker run mounts the volume read-only and copies files into the backup dir.
+    Log "Backing up crm_data (Docker named volume)..."
+    $crmDataDst = Join-Path $BackupDir "crm_data"
+    try {
+        New-Item -ItemType Directory -Path $crmDataDst -Force | Out-Null
+        docker run --rm `
+            -v "crm_data:/crm_src:ro" `
+            -v "${crmDataDst}:/crm_dst" `
+            alpine sh -c "cp -a /crm_src/. /crm_dst/"
+        if ($LASTEXITCODE -ne 0) {
+            Log "WARNING: crm_data backup exited with code $LASTEXITCODE"
+            $ExitCode = 1
+        } else {
+            $crmSize = (Get-ChildItem $crmDataDst -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+            $crmSizeMB = [math]::Round(([long](if ($null -eq $crmSize) { 0 } else { $crmSize })) / 1MB, 1)
+            Log "crm_data backed up: ${crmSizeMB}MB"
+        }
+    } catch {
+        Log "WARNING: crm_data backup failed: $($_.Exception.Message)"
+        $ExitCode = 1
+    }
+
+    # --- Step 4: Backup config files ---
     Log "Backing up config files..."
     $configDst = Join-Path $BackupDir "config"
     try {
@@ -125,7 +149,7 @@ try {
         Log "WARNING: Config backup skipped — could not create config dir: $($_.Exception.Message)"
     }
 } finally {
-    # --- Step 4: Always restart containers (unless SkipRestart) ---
+    # --- Step 5: Always restart containers (unless SkipRestart) ---
     # Wrapped in try/catch so a thrown error (e.g. docker not on PATH) never
     # prevents Pop-Location from running and stranding the shell in $ProjectRoot.
     if (-not $SkipRestart) {
@@ -150,7 +174,7 @@ try {
     Pop-Location
 }
 
-# --- Step 5: Remove failed backup directory to avoid polluting rotation ---
+# --- Step 6: Remove failed backup directory to avoid polluting rotation ---
 $BackupDirRemoved = $false
 if (-not $BackupDataSucceeded) {
     try {
@@ -163,7 +187,7 @@ if (-not $BackupDataSucceeded) {
     }
 }
 
-# --- Step 6: Rotate old backups ---
+# --- Step 7: Rotate old backups ---
 Log "Rotating backups (keeping last $KeepCount)..."
 try {
     $allBackups = Get-ChildItem -Path $BackupRoot -Directory |

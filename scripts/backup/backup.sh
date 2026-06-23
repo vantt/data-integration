@@ -149,7 +149,7 @@ if [ -d "${PROJECT_ROOT}/app_data" ]; then
 else
     # Docker volume layout: all data dirs under DATA_ROOT (/app/var/)
     mkdir -p "${BACKUP_DIR}/app_data"
-    for vol_name in data_lake dagster_home input_source; do
+    for vol_name in data_lake dagster_home input_source crm_data; do
         candidate="${DATA_ROOT}/${vol_name}"
         if [ -d "$candidate" ]; then
             log "Backing up ${vol_name} from ${candidate}..."

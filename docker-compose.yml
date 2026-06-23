@@ -35,6 +35,8 @@ services:
       - ./app_data/dagster_home:/app/var/dagster_home
       - ./app_data/backups:/app/var/backups
       - ./app_data/input_source:/app/var/input_source
+      # CRM SQLite databases (read-only — for backup access only)
+      - crm_data:/app/var/crm_data:ro
       # Config (read-only)
       - ./.env.docker:/app/.env.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
