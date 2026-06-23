@@ -182,9 +182,11 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
             received_at: new Date().toISOString()
         };
 
-        // Queue depth guard: reject if too many unprocessed messages
+        // Queue depth guard: reject if too many unprocessed messages.
+        // Count both NEW and stuck PROCESSING rows so a crashed consumer cannot
+        // bypass the cap by leaving rows locked in PROCESSING state indefinitely.
         const depthResult = await env.DB.prepare(
-            "SELECT COUNT(*) as cnt FROM webhooks WHERE status = 'NEW'"
+            "SELECT COUNT(*) as cnt FROM webhooks WHERE status IN ('NEW', 'PROCESSING')"
         ).first<{ cnt: number }>();
         if ((depthResult?.cnt ?? 0) > 10000) {
             return new Response("Queue full", { status: 503 });
@@ -213,7 +215,7 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
 async function handlePoll(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     const now = Date.now();
-    const LOCK_TIMEOUT = 60000; // 60 seconds
+    const LOCK_TIMEOUT = 300000; // 300 seconds (5 min) — aligns with documented intent; covers worst-case batch of 1000 msgs including Sapo API calls during history_log processing
 
     // Parse params
     const limitParam = parseInt(url.searchParams.get("limit") || "10", 10);
