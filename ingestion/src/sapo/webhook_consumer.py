@@ -10,11 +10,14 @@ import json
 import time
 import hashlib
 from typing import Iterator, Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 class CloudflareWorkerClient:
     def __init__(self, worker_url: str):
         self.worker_url = worker_url.rstrip('/')
+        self.session = requests.Session()
+        # Cloudflare Bot Fight Mode blocks default python-requests UA (error-1010).
+        self.session.headers.update({"User-Agent": "DataIntegration-Worker/1.0"})
 
     def poll_messages(self, source_system: str = None, limit: int = 100) -> list:
         """
@@ -23,10 +26,10 @@ class CloudflareWorkerClient:
         params = {'limit': limit}
         if source_system:
             params['source_system'] = source_system
-        
+
         url = f"{self.worker_url}/poll"
         try:
-            response = requests.get(url, params=params, timeout=30)
+            response = self.session.get(url, params=params, timeout=30)
             # print(f"Response Status: {response.status_code}")
             # print(f"Response Text: {response.text}")
             response.raise_for_status()
@@ -48,7 +51,7 @@ class CloudflareWorkerClient:
 
         url = f"{self.worker_url}/ack-batch"
         try:
-            response = requests.post(url, json={'ids': message_ids}, timeout=30)
+            response = self.session.post(url, json={'ids': message_ids}, timeout=30)
             response.raise_for_status()
             print(f"Successfully acknowledged {len(message_ids)} messages.")
         except requests.exceptions.RequestException as e:
@@ -57,12 +60,169 @@ class CloudflareWorkerClient:
                 print(f"Response: {e.response.text}")
             raise  # Let caller decide on retry/alert
 
+class PendingAck:
+    """Holds client + message IDs that must be ACKed after a successful dlt load."""
+    def __init__(self, client: "CloudflareWorkerClient"):
+        self.client = client
+        self.ids: List[Any] = []
+
+    def ack(self) -> None:
+        """Send batch ACK. Raises on failure so the caller can decide to retry/alert."""
+        if self.ids:
+            self.client.batch_ack(self.ids)
+
+
+def build_sapo_webhook_source(
+    worker_url: str,
+    source_system: str = None,
+    poll_limit: int = 100,
+) -> tuple:
+    """
+    Returns (dlt_source, pending_ack).
+
+    Caller MUST call pending_ack.ack() AFTER pipeline.run() returns successfully
+    to achieve at-least-once delivery.  If pipeline.run() raises, do NOT ack —
+    messages stay in D1 and will be re-delivered on the next poll.
+    """
+    client = CloudflareWorkerClient(worker_url)
+    pending = PendingAck(client)
+    source = _sapo_webhook_source_internal(client, pending, source_system, poll_limit)
+    return source, pending
+
+
+# Legacy single-return entry-point kept for backward compatibility.
+# WARNING: ACK fires during extraction (before load completes) → at-most-once risk.
+# Prefer build_sapo_webhook_source() for at-least-once semantics.
 @dlt.source
 def sapo_webhook_source(worker_url: str, source_system: str = None, poll_limit: int = 100):
     """
     DLT Source that consumes messages from Cloudflare D1 and dispatches to tables.
     """
     return webhook_dispatcher(worker_url, source_system, poll_limit)
+
+
+@dlt.source
+def _sapo_webhook_source_internal(
+    client: "CloudflareWorkerClient",
+    pending: PendingAck,
+    source_system: str = None,
+    poll_limit: int = 100,
+):
+    return _webhook_dispatcher_internal(client, pending, source_system, poll_limit)
+
+
+@dlt.resource(
+    primary_key="entity_id",
+    write_disposition="append",
+    table_format="delta",
+    columns={
+        "entity_id": {"data_type": "text"},
+        "entity_type": {"data_type": "text"},
+        "payload": {"data_type": "json"},
+        "sync_metadata": {"data_type": "json"},
+        "ingest_method": {"data_type": "text", "partition": True},
+        "event_type": {"data_type": "text"},
+        "event_timestamp": {"data_type": "timestamp"},
+        "payload_hash": {"data_type": "text"},
+        "year": {"data_type": "text", "partition": True},
+        "month": {"data_type": "text", "partition": True}
+    }
+)
+def _webhook_dispatcher_internal(
+    client: "CloudflareWorkerClient",
+    pending: PendingAck,
+    source_system: str = None,
+    poll_limit: int = 100,
+) -> Iterator[Any]:
+    """
+    Internal dispatcher used by build_sapo_webhook_source().
+    Yields envelopes; does NOT ack — the caller acks after pipeline.run().
+    """
+    print(f"Polling D1 Webhooks from {client.worker_url}...")
+    messages = client.poll_messages(source_system=source_system, limit=poll_limit)
+
+    if not messages:
+        return
+
+    print(f"Received {len(messages)} messages.")
+
+    for msg in messages:
+        try:
+            msg_id = msg.get('msg_id') or msg.get('id')
+            entity_type = msg.get('entity_type', 'unknown')
+            et_lower = entity_type.lower()
+            if et_lower in ['order', 'orders']:
+                table_name = 'order'
+            elif et_lower in ['customer', 'customers']:
+                table_name = 'customer'
+            elif et_lower in ['product', 'products']:
+                table_name = 'product'
+            else:
+                table_name = et_lower
+
+            raw_payload_str = msg.get('payload')
+            wrapper = {}
+            if isinstance(raw_payload_str, str):
+                try:
+                    wrapper = json.loads(raw_payload_str)
+                except json.JSONDecodeError:
+                    print(f"⚠️ Failed to decode payload for {msg_id}. Skipping. Raw: {raw_payload_str[:100]}...")
+                    continue
+            elif isinstance(raw_payload_str, dict):
+                wrapper = raw_payload_str
+            else:
+                print(f"Unexpected payload type for {msg_id}: {type(raw_payload_str)}. Skipping.")
+                continue
+
+            inner_payload = wrapper.get('payload')
+            if not isinstance(inner_payload, dict):
+                print(f"⚠️ No inner payload dict for {msg_id}. Wrapper keys: {list(wrapper.keys())}. Skipping.")
+                continue
+
+            entity_id = inner_payload.get('id')
+            if not entity_id:
+                print(f"⚠️ No entity ID in inner payload for {msg_id}. Payload keys: {list(inner_payload.keys())}. Skipping.")
+                continue
+
+            received_at_str = wrapper.get('received_at')
+            if received_at_str:
+                try:
+                    dt = datetime.fromisoformat(received_at_str.replace("Z", "+00:00"))
+                except ValueError:
+                    dt = datetime.now(timezone.utc)
+            else:
+                dt = datetime.now(timezone.utc)
+
+            payload_str = json.dumps(inner_payload, sort_keys=True)
+            payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
+            event_type = wrapper.get("action", "unknown")
+            now_utc = datetime.now(timezone.utc).isoformat()
+
+            envelope = {
+                "entity_id": str(entity_id),
+                "entity_type": table_name,
+                "ingest_method": "webhook",
+                "event_type": event_type,
+                "event_timestamp": received_at_str or now_utc,
+                "payload_hash": payload_hash,
+                "year": str(dt.year),
+                "month": str(dt.month),
+                "payload": inner_payload,
+                "sync_metadata": {
+                    "source_system": source_system or "sapo_v2",
+                    "event_timestamp": received_at_str or now_utc,
+                    "processing_timestamp": now_utc,
+                    "original_event_id": str(msg_id)
+                }
+            }
+
+            if msg_id:
+                pending.ids.append(msg_id)
+            yield dlt.mark.with_table_name(envelope, table_name)
+
+        except Exception as e:
+            print(f"Error processing message {msg.get('msg_id')}: {e}")
+
 
 @dlt.resource(
     primary_key="entity_id",
@@ -83,30 +243,27 @@ def sapo_webhook_source(worker_url: str, source_system: str = None, poll_limit: 
 )
 def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: int = 100) -> Iterator[Any]:
     """
-    Polls messages and yields them with dynamic table names using Envelope Schema.
+    Legacy dispatcher.  Kept for backward compatibility with existing Dagster sensors
+    that call sapo_webhook_source() directly.
+    ACK fires after extraction (before load) — at-most-once semantics.
+    Prefer build_sapo_webhook_source() for at-least-once delivery.
     """
     client = CloudflareWorkerClient(worker_url)
-    
+
     print(f"Polling D1 Webhooks from {worker_url}...")
-    
     messages = client.poll_messages(source_system=source_system, limit=poll_limit)
-    
+
     if not messages:
         return
 
     print(f"Received {len(messages)} messages.")
-    
+
     ids_to_ack = []
-    
+
     for msg in messages:
         try:
-            # 1. Capture ID for ACK (appended only after successful envelope construction)
             msg_id = msg.get('msg_id') or msg.get('id')
-            
-            # 2. Determine Entity Type
             entity_type = msg.get('entity_type', 'unknown')
-            
-            # Singularize
             et_lower = entity_type.lower()
             if et_lower in ['order', 'orders']:
                 table_name = 'order'
@@ -116,97 +273,70 @@ def webhook_dispatcher(worker_url: str, source_system: str = None, poll_limit: i
                 table_name = 'product'
             else:
                 table_name = et_lower
-            
-            # 3. Parse Payload
-            # The 'payload' column in D1 is a JSON string containing the wrapper:
-            # { "source_system": "...", "entity_type": "...", "action": "...", "received_at": "...", "payload": { ...real_data... } }
+
             raw_payload_str = msg.get('payload')
             wrapper = {}
             if isinstance(raw_payload_str, str):
                 try:
                     wrapper = json.loads(raw_payload_str)
                 except json.JSONDecodeError:
-                    print(f"⚠️ Failed to decode payload for {msg_id}. Skipping. Raw content: {raw_payload_str[:100]}...")
+                    print(f"⚠️ Failed to decode payload for {msg_id}. Skipping. Raw: {raw_payload_str[:100]}...")
                     continue
             elif isinstance(raw_payload_str, dict):
                 wrapper = raw_payload_str
             else:
                 print(f"Unexpected payload type for {msg_id}: {type(raw_payload_str)}. Skipping.")
                 continue
-            
-            # Extract Inner Payload (The actual Entity)
+
             inner_payload = wrapper.get('payload')
             if not isinstance(inner_payload, dict):
-                 # Fallback: maybe the wrapper IS the payload if structure changed?
-                 # But based on index.ts, it is nested.
-                 print(f"⚠️ No inner payload dict found for {msg_id}. Wrapper keys: {wrapper.keys()}. Skipping.")
-                 continue
-
-            # 4. Extract Entity ID
-            entity_id = inner_payload.get('id')
-            if not entity_id:
-                print(f"⚠️ No entity ID in inner payload for {msg_id}. Payload keys: {inner_payload.keys()}. Skipping.")
+                print(f"⚠️ No inner payload dict for {msg_id}. Wrapper keys: {list(wrapper.keys())}. Skipping.")
                 continue
 
-            # 5. Metadata & Partitioning
-            # received_at is in the WRAPPER, not the D1 row message
+            entity_id = inner_payload.get('id')
+            if not entity_id:
+                print(f"⚠️ No entity ID in inner payload for {msg_id}. Payload keys: {list(inner_payload.keys())}. Skipping.")
+                continue
+
             received_at_str = wrapper.get('received_at')
             if received_at_str:
                 try:
                     dt = datetime.fromisoformat(received_at_str.replace("Z", "+00:00"))
                 except ValueError:
-                    dt = datetime.utcnow()
+                    dt = datetime.now(timezone.utc)
             else:
-                dt = datetime.utcnow()
+                dt = datetime.now(timezone.utc)
 
-            # 6. Construct Envelope
-            
-            # Calculate Payload Hash
             payload_str = json.dumps(inner_payload, sort_keys=True)
             payload_hash = hashlib.md5(payload_str.encode('utf-8')).hexdigest()
-            
             event_type = wrapper.get("action", "unknown")
+            now_utc = datetime.now(timezone.utc).isoformat()
 
             envelope = {
                 "entity_id": str(entity_id),
                 "entity_type": table_name,
                 "ingest_method": "webhook",
                 "event_type": event_type,
-                "event_timestamp": received_at_str or datetime.utcnow().isoformat(),
+                "event_timestamp": received_at_str or now_utc,
                 "payload_hash": payload_hash,
                 "year": str(dt.year),
                 "month": str(dt.month),
-                "payload": inner_payload, # Use the unwrapped entity data
+                "payload": inner_payload,
                 "sync_metadata": {
                     "source_system": source_system or "sapo_v2",
-                    "event_timestamp": received_at_str or datetime.utcnow().isoformat(),
-                    "processing_timestamp": datetime.utcnow().isoformat(),
+                    "event_timestamp": received_at_str or now_utc,
+                    "processing_timestamp": now_utc,
                     "original_event_id": str(msg_id)
                 }
             }
 
-            # ACK only successfully-parsed messages (P18: avoid silently deleting invalid messages)
             if msg_id:
                 ids_to_ack.append(msg_id)
             yield dlt.mark.with_table_name(envelope, table_name)
-            
+
         except Exception as e:
             print(f"Error processing message {msg.get('msg_id')}: {e}")
-            # Continue to next message, don't break batch
-    
-    # 7. ACK processed messages
-    # In dlt resource, we yield items. The pipeline runs.
-    # We should ACK *after* successful yield? 
-    # Technically dlt runs extraction first. If we ACK here, it means we ACK when extracted.
-    # If load fails later, we lose data? 
-    # Ideally we use `dlt.state` or similar, but for now, ACK-ing after yield is 'at-most-once' risk.
-    # To do 'at-least-once' safely, we should ideally ACK in a later stage or separate step.
-    # However, given this is an immediate generator, if this function finishes without error, 
-    # it means items were yielded to the pipeline.
-    # A safer approach is to ACK only if we are sure?
-    # For now, let's ACK here. If `pipeline.run` crashes *during* load, we might have ACKed data that wasn't saved.
-    # IMPROVEMENT: Use `dlt` state or post-load hook. 
-    # Current limitation: We ACK immediately after fetching/yielding in this batch.
-    
+
+    # ACK after extraction (at-most-once — use build_sapo_webhook_source for at-least-once)
     if ids_to_ack:
         client.batch_ack(ids_to_ack)

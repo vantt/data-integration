@@ -11,7 +11,7 @@ import hashlib
 import json
 import random
 from typing import Iterator, Dict, Any, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -434,10 +434,10 @@ def history_log(
                             "month": str(dt.month),
                             "payload": entity_payload,
                             "sync_metadata": {
-                                "source_system": "sapo",
+                                "source_system": "sapo_v2",
                                 "source": "history_log",
                                 "event_timestamp": item_occur_at,
-                                "processing_timestamp": datetime.utcnow().isoformat() + "Z",
+                                "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                                 "original_event_id": str(item.get("id")),
                                 "actor_name": item.get("actorName"),
                                 "description": item.get("description"),

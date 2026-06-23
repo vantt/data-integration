@@ -9,7 +9,7 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional, Callable, Any
 import requests
 
@@ -393,7 +393,12 @@ class SharedCookieManager:
             except Exception as e:
                 print(f"❌ [{self.source}] Login failed: {e}")
                 try:
-                    error_shot = f"{self.source}_login_error.png"
+                    # Write to a logs/ subdir with timestamp to avoid same-second overwrite
+                    # when multiple pipelines fail login concurrently.
+                    logs_dir = os.path.join(tempfile.gettempdir(), "data_integration_logs")
+                    os.makedirs(logs_dir, exist_ok=True)
+                    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+                    error_shot = os.path.join(logs_dir, f"{self.source}_login_error_{ts}.png")
                     page.screenshot(path=error_shot, full_page=True)
                     print(f"📸 Screenshot saved to {error_shot}")
                 except Exception as sc_e:

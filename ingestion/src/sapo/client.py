@@ -33,11 +33,12 @@ def get_sapo_client() -> Any:
         if not login_url:
             login_url = f"https://{domain}/admin/orders" # Default to orders or just admin/login? Usually admin/login but user uses orders
             
-    # Fallbacks
+    # Fail fast: no hardcoded production URL fallback — silently connecting to a
+    # production store with mismatched credentials would be a silent data hazard.
     if not base_url:
-         base_url = "https://fwg.mysapogo.com/admin"
+        raise ValueError("Missing 'domain' or 'base_url' in config (secrets.toml / env)")
     if not login_url:
-         login_url = f"{base_url}/orders"
+        login_url = f"{base_url}/orders"
 
     # Default selectors
     default_selectors = {

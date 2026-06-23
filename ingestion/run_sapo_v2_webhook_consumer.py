@@ -7,7 +7,7 @@ import dlt
 # Add src to path so imports work
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from sapo.webhook_consumer import sapo_webhook_source
+from sapo.webhook_consumer import build_sapo_webhook_source
 from utils.pipeline_runner import setup_dlt_env
 
 def run(argv=None):
@@ -52,9 +52,11 @@ def run(argv=None):
     # Loop Logic
     while True:
         try:
-            source = sapo_webhook_source(worker_url=worker_url, poll_limit=args.poll_limit)
+            source, pending = build_sapo_webhook_source(worker_url=worker_url, poll_limit=args.poll_limit)
             info = pipeline.run(source, loader_file_format="parquet")
-            
+            # ACK only after successful load (at-least-once: if run() raises, messages stay in D1)
+            pending.ack()
+
             if info:
                 print(info)
                 current_sleep = min_sleep
@@ -63,11 +65,11 @@ def run(argv=None):
                 if not args.once:
                     time.sleep(current_sleep)
                     current_sleep = min(current_sleep * 2, max_sleep)
-            
+
             if args.once:
                 # Return info for run_once callers (Dagster)
                 return info
-                
+
         except KeyboardInterrupt:
             print("🛑 Consumer stopped by user.")
             break

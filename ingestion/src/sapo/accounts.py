@@ -24,7 +24,7 @@ SAPO Account Response Structure:
 import dlt
 import requests
 from typing import Iterator, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -198,9 +198,9 @@ def accounts(
                             "month": str(dt.month),
                             "payload": raw_item,
                             "sync_metadata": {
-                                "source_system": "sapo",
+                                "source_system": "sapo_v2",
                                 "event_timestamp": item_modified_on, # Syncing by Modified Time
-                                "processing_timestamp": datetime.utcnow().isoformat(),
+                                "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                             }
                         }
 

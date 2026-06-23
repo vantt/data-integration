@@ -39,7 +39,7 @@ Nested arrays stored as JSON in payload:
 import dlt
 import requests
 from typing import Iterator, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -212,9 +212,9 @@ def products(
                             "month": str(dt.month),
                             "payload": raw_product,
                             "sync_metadata": {
-                                "source_system": "sapo",
+                                "source_system": "sapo_v2",
                                 "event_timestamp": product_modified_on,
-                                "processing_timestamp": datetime.utcnow().isoformat(),
+                                "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                                 "original_event_id": None
                             }
                         }

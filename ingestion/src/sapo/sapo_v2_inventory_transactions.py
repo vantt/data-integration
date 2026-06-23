@@ -182,7 +182,7 @@ def _inventory_transactions_v2(
             retry_after = int(resp.headers.get("Retry-After", 60))
             print(f"[..] Rate limited (429). Waiting {retry_after}s...")
             time.sleep(retry_after)
-            resp = session.get(url, params=params, headers=ajax_headers, timeout=30)
+            raise requests.exceptions.RequestException(f"Rate limited (429); retried after {retry_after}s")
 
         resp.raise_for_status()
         return resp.json()
@@ -276,7 +276,7 @@ def _build_envelopes(
 ) -> List[Dict[str, Any]]:
     """Convert raw API items into envelope dicts. Skips items missing issued_at_utc."""
     envelopes = []
-    processing_ts = datetime.utcnow().isoformat()
+    processing_ts = datetime.now(timezone.utc).isoformat()
 
     for item in items:
         issued_at_utc = item.get("issued_at_utc")
@@ -308,7 +308,7 @@ def _build_envelopes(
             "month":           str(dt.month),
             "payload":         item,
             "sync_metadata": {
-                "source_system":        "sapo",
+                "source_system":        "sapo_v2",
                 "source":               "batch_sync",
                 "source_version":       "v2",
                 "event_timestamp":      issued_at_utc,

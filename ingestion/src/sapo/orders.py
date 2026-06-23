@@ -43,7 +43,7 @@ SAPO Order Response Structure:
 import dlt
 import requests
 from typing import Iterator, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -180,7 +180,8 @@ def orders(
             retry_after = int(response.headers.get('Retry-After', 60))
             print(f"⏳ Rate limited (429). Waiting {retry_after}s...")
             time.sleep(retry_after)
-            response = current_session.get(url, params=params, timeout=30)
+            # Re-raise as RequestException so tenacity's retry decorator handles the next attempt
+            raise requests.exceptions.RequestException(f"Rate limited (429); retried after {retry_after}s")
 
         response.raise_for_status()
         return response.json()
@@ -241,14 +242,9 @@ def orders(
                             "month": str(dt.month),
                             "payload": raw_order, # Full raw data
                             "sync_metadata": {
-                                "source_system": "sapo",
-                                "source": "batch_sync", # Deprecated but kept for backward compat inside JSON if needed, or remove? Plan says remove 'source' from Envelop root, but inside sync_metadata we can keep 'source_system'. Let's follow the plan:
-                                # "source_system": "sapo", 
-                                # Wait, plan said 'source' in sync_metadata is replaced by 'source_system'. 
-                                # Code below:
-                                "source_system": "sapo",
+                                "source_system": "sapo_v2",
                                 "event_timestamp": order_modified_on, # Syncing by Modified Time
-                                "processing_timestamp": datetime.utcnow().isoformat(),
+                                "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                                 "original_event_id": None # Not applicable for batch
                             }
                         }

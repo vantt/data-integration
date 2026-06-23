@@ -54,7 +54,7 @@ SAPO Customer Response Structure:
 import dlt
 import requests
 from typing import Iterator, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -176,7 +176,7 @@ def customers(
             retry_after = int(response.headers.get('Retry-After', 60))
             print(f"⏳ Rate limited (429). Waiting {retry_after}s...")
             time.sleep(retry_after)
-            response = current_session.get(url, params=params, timeout=30)
+            raise requests.exceptions.RequestException(f"Rate limited (429); retried after {retry_after}s")
 
         response.raise_for_status()
         return response.json()
@@ -232,9 +232,9 @@ def customers(
                             "month": str(dt.month),
                             "payload": raw_customer,
                             "sync_metadata": {
-                                "source_system": "sapo",
+                                "source_system": "sapo_v2",
                                 "event_timestamp": customer_modified_on,
-                                "processing_timestamp": datetime.utcnow().isoformat(),
+                                "processing_timestamp": datetime.now(timezone.utc).isoformat(),
                                 "original_event_id": None
                             }
                         }
