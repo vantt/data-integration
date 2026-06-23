@@ -4,7 +4,6 @@ Pure domain + ports only; no adapter imports.
 """
 from __future__ import annotations
 
-import sqlite3
 from datetime import datetime, timezone, timedelta
 from typing import Any
 
@@ -61,12 +60,10 @@ class CampaignService:
         campaign_repo: Any,
         segment_repo: Any,
         party_repo: Any,
-        conn: sqlite3.Connection,
     ) -> None:
         self._campaign_repo = campaign_repo
         self._segment_repo = segment_repo
         self._party_repo = party_repo
-        self._conn = conn
 
     # ── CRUD ──────────────────────────────────────────────────────────────────
 
@@ -127,6 +124,10 @@ class CampaignService:
         c.updated_at = _utc_now()
         self._campaign_repo.update(c)
 
+    def get_campaign(self, campaign_id: str) -> Campaign | None:
+        """Return a campaign by ID, or None if not found."""
+        return self._campaign_repo.get_by_id(campaign_id)
+
     def list_campaigns(self) -> list[Campaign]:
         """Return all campaigns."""
         return self._campaign_repo.list()
@@ -181,6 +182,41 @@ class CampaignService:
             t.last_touch_at = _utc_now()
         if "assigned_user_id" in kwargs:
             t.assigned_user_id = kwargs["assigned_user_id"]
+        self._campaign_repo.update_target(t)
+
+    def get_target(self, campaign_id: str, party_id: str) -> CampaignTarget | None:
+        """Return a single campaign target, or None if not found."""
+        return self._campaign_repo.get_target(campaign_id, party_id)
+
+    def update_target_status(
+        self, campaign_id: str, party_id: str, status: str
+    ) -> None:
+        """Transition a target to a new status with validation."""
+        self.update_target(campaign_id, party_id, status=status)
+
+    def record_conversion(
+        self,
+        campaign_id: str,
+        party_id: str,
+        order_code: str | None = None,
+        revenue_vnd: int | None = None,
+    ) -> None:
+        """Manually mark a target as converted with optional order details."""
+        t = self._campaign_repo.get_target(campaign_id, party_id)
+        if t is None:
+            raise ValueError(f"target ({campaign_id}, {party_id}) not found")
+        allowed = TARGET_ALLOWED_TRANSITIONS.get(t.status, [])
+        if "converted" not in allowed:
+            raise ValueError(
+                f"cannot transition target from {t.status!r} to 'converted'"
+            )
+        t.status = "converted"
+        t.last_touch_at = _utc_now()
+        if order_code is not None:
+            t.converted_order_code = order_code
+        if revenue_vnd is not None:
+            t.converted_revenue_vnd = revenue_vnd
+        t.converted_at = _utc_now()
         self._campaign_repo.update_target(t)
 
     def list_targets(self, campaign_id: str, status: str | None = None) -> list[CampaignTarget]:
@@ -257,47 +293,11 @@ class CampaignService:
     # ── Private helpers ────────────────────────────────────────────────────────
 
     def _fetch_consent_map(self) -> dict[str, str | None]:
-        """Return {party_id: consent_value} from crm_customer_profile.consent_contact.
-
-        Values: 'allowed' | 'denied' | None (na — not collected).
-        Graceful-empty: returns {} when the profile table does not yet exist.
-        """
-        try:
-            cur = self._conn.execute(
-                "SELECT party_id, consent_enum FROM crm_customer_profile"
-            )
-        except Exception as exc:
-            if _is_missing_table_error(exc):
-                return {}
-            raise
-        return {row[0]: row[1] for row in cur.fetchall()}
+        """Delegate to the campaign repository adapter which owns the SQL."""
+        return self._campaign_repo.fetch_consent_map()
 
     def _find_earliest_order(
         self, party_id: str, scheduled_date_key: int
     ) -> tuple[str, int, str] | None:
-        """Look up the earliest qualifying order for a party via sapo_customer identity.
-
-        Returns (order_code, net_revenue, converted_at_iso) or None if no order found.
-        """
-        sql = """
-            SELECT oh.order_code, oh.net_revenue, oh.date_key
-            FROM cache.wh_order_hdr oh
-            JOIN crm_party_identity pi2
-                ON pi2.identity_type = 'sapo_customer'
-                AND oh.customer_id = CAST(pi2.identity_value AS INTEGER)
-            WHERE pi2.party_id = ?
-              AND oh.date_key >= ?
-            ORDER BY oh.date_key ASC
-            LIMIT 1
-        """
-        cur = self._conn.execute(sql, (party_id, scheduled_date_key))
-        row = cur.fetchone()
-        if row is None:
-            return None
-        order_code, net_revenue, date_key = row
-        dk = str(date_key)
-        if len(dk) == 8:
-            date_str = f"{dk[:4]}-{dk[4:6]}-{dk[6:]}T00:00:00.000Z"
-        else:
-            date_str = _utc_now()
-        return (order_code or "", int(net_revenue or 0), date_str)
+        """Delegate to the campaign repository adapter which owns the SQL."""
+        return self._campaign_repo.find_earliest_order(party_id, scheduled_date_key)

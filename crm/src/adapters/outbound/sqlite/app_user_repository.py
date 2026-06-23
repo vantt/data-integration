@@ -86,6 +86,8 @@ class SQLiteAppUserRepository:
         Accepted kwargs: email, full_name, role, is_active, staff_id, updated_at.
         Raises ValueError when no valid kwargs are supplied.
         """
+        # Hardcoded whitelist — only column names in this set are interpolated into SQL.
+        # User-supplied values are always passed as query parameters (?), never interpolated.
         _ALLOWED = {"email", "full_name", "role", "is_active", "staff_id", "updated_at"}
         fields = {k: v for k, v in kwargs.items() if k in _ALLOWED}
         if not fields:

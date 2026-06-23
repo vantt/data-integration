@@ -57,46 +57,36 @@ class SQLiteCampaignRepository:
             return None
         return self._campaign_from_row(row)
 
-    def update(self, campaign_id: str, **kwargs) -> None:
-        """Persist mutable campaign fields (name, objective, channel, segment_id, status, scheduled_at)."""
-        campaign = kwargs.get("campaign")
-        if campaign is not None:
-            # Accept a full Campaign object for ergonomic use
-            self._conn.execute(
-                """
-                UPDATE crm_campaign
-                SET name         = ?,
-                    objective    = ?,
-                    channel      = ?,
-                    segment_id   = ?,
-                    status       = ?,
-                    scheduled_at = ?,
-                    updated_at   = ?
-                WHERE campaign_id = ?
-                """,
-                (
-                    campaign.name,
-                    campaign.objective,
-                    campaign.channel or None,
-                    campaign.segment_id,
-                    campaign.status,
-                    campaign.scheduled_at,
-                    campaign.updated_at,
-                    campaign_id,
-                ),
-            )
-        else:
-            # Build a partial UPDATE from keyword args
-            allowed = {"name", "objective", "channel", "segment_id", "status", "scheduled_at", "updated_at"}
-            fields = {k: v for k, v in kwargs.items() if k in allowed}
-            if not fields:
-                return
-            set_clause = ", ".join(f"{col} = ?" for col in fields)
-            values = list(fields.values()) + [campaign_id]
-            self._conn.execute(
-                f"UPDATE crm_campaign SET {set_clause} WHERE campaign_id = ?", values
-            )
+    def update(self, campaign: Campaign) -> None:
+        """Persist mutable campaign fields — accepts a full Campaign object (port contract)."""
+        self._conn.execute(
+            """
+            UPDATE crm_campaign
+            SET name         = ?,
+                objective    = ?,
+                channel      = ?,
+                segment_id   = ?,
+                status       = ?,
+                scheduled_at = ?,
+                updated_at   = ?
+            WHERE campaign_id = ?
+            """,
+            (
+                campaign.name,
+                campaign.objective,
+                campaign.channel or None,
+                campaign.segment_id,
+                campaign.status,
+                campaign.scheduled_at,
+                campaign.updated_at,
+                campaign.campaign_id,
+            ),
+        )
         self._conn.commit()
+
+    def list(self) -> list[Campaign]:
+        """Return all campaigns ordered by created_at DESC (port contract name)."""
+        return self.list_campaigns()
 
     def list_campaigns(self) -> list[Campaign]:
         """Return all campaigns ordered by created_at DESC."""
@@ -135,47 +125,30 @@ class SQLiteCampaignRepository:
         )
         self._conn.commit()
 
-    def update_target(self, campaign_id: str, party_id: str, **kwargs) -> None:
-        """Persist mutable target fields (status, assigned_user_id, last_touch_at,
-        converted_order_code, converted_revenue_vnd, converted_at)."""
-        target = kwargs.get("target")
-        if target is not None:
-            self._conn.execute(
-                """
-                UPDATE crm_campaign_target
-                SET status                = ?,
-                    assigned_user_id      = ?,
-                    last_touch_at         = ?,
-                    converted_order_code  = ?,
-                    converted_revenue_vnd = ?,
-                    converted_at          = ?
-                WHERE campaign_id = ? AND party_id = ?
-                """,
-                (
-                    target.status,
-                    target.assigned_user_id,
-                    target.last_touch_at,
-                    target.converted_order_code,
-                    target.converted_revenue_vnd,
-                    target.converted_at,
-                    campaign_id,
-                    party_id,
-                ),
-            )
-        else:
-            allowed = {
-                "status", "assigned_user_id", "last_touch_at",
-                "converted_order_code", "converted_revenue_vnd", "converted_at",
-            }
-            fields = {k: v for k, v in kwargs.items() if k in allowed}
-            if not fields:
-                return
-            set_clause = ", ".join(f"{col} = ?" for col in fields)
-            values = list(fields.values()) + [campaign_id, party_id]
-            self._conn.execute(
-                f"UPDATE crm_campaign_target SET {set_clause} WHERE campaign_id = ? AND party_id = ?",
-                values,
-            )
+    def update_target(self, target: CampaignTarget) -> None:
+        """Persist mutable target fields — accepts a full CampaignTarget object (port contract)."""
+        self._conn.execute(
+            """
+            UPDATE crm_campaign_target
+            SET status                = ?,
+                assigned_user_id      = ?,
+                last_touch_at         = ?,
+                converted_order_code  = ?,
+                converted_revenue_vnd = ?,
+                converted_at          = ?
+            WHERE campaign_id = ? AND party_id = ?
+            """,
+            (
+                target.status,
+                target.assigned_user_id,
+                target.last_touch_at,
+                target.converted_order_code,
+                target.converted_revenue_vnd,
+                target.converted_at,
+                target.campaign_id,
+                target.party_id,
+            ),
+        )
         self._conn.commit()
 
     def get_target(self, campaign_id: str, party_id: str) -> Optional[CampaignTarget]:
@@ -222,6 +195,58 @@ class SQLiteCampaignRepository:
                 (campaign_id, limit),
             ).fetchall()
         return [self._target_from_row(r) for r in rows]
+
+    # ── Mapping helpers ───────────────────────────────────────────────────────
+
+    # ── Query helpers (pulled out of application layer for hex boundary) ─────────
+
+    def fetch_consent_map(self) -> dict:
+        """Return {party_id: consent_value} from crm_customer_profile.consent_enum.
+
+        Values: 'allowed' | 'denied' | None (na — not collected).
+        Graceful-empty: returns {} when the profile table does not yet exist.
+        """
+        try:
+            cur = self._conn.execute(
+                "SELECT party_id, consent_enum FROM crm_customer_profile"
+            )
+        except Exception as exc:
+            if "no such table" in str(exc).lower():
+                return {}
+            raise
+        return {row[0]: row[1] for row in cur.fetchall()}
+
+    def find_earliest_order(
+        self, party_id: str, scheduled_date_key: int
+    ) -> "tuple[str, int, str] | None":
+        """Look up the earliest qualifying order for a party via sapo_customer identity.
+
+        Returns (order_code, net_revenue, converted_at_iso) or None.
+        Raises on errors other than missing cache tables (caller catches those).
+        """
+        sql = """
+            SELECT oh.order_code, oh.net_revenue, oh.date_key
+            FROM cache.wh_order_hdr oh
+            JOIN crm_party_identity pi2
+                ON pi2.identity_type = 'sapo_customer'
+                AND oh.customer_id = CAST(pi2.identity_value AS INTEGER)
+            WHERE pi2.party_id = ?
+              AND oh.date_key >= ?
+            ORDER BY oh.date_key ASC
+            LIMIT 1
+        """
+        cur = self._conn.execute(sql, (party_id, scheduled_date_key))
+        row = cur.fetchone()
+        if row is None:
+            return None
+        order_code, net_revenue, date_key = row[0], row[1], row[2]
+        dk = str(date_key)
+        if len(dk) == 8:
+            date_str = f"{dk[:4]}-{dk[4:6]}-{dk[6:]}T00:00:00.000Z"
+        else:
+            from datetime import datetime, timezone
+            date_str = datetime.now(timezone.utc).isoformat()
+        return (order_code or "", int(net_revenue or 0), date_str)
 
     # ── Mapping helpers ───────────────────────────────────────────────────────
 

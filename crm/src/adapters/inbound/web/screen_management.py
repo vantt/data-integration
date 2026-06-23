@@ -75,7 +75,7 @@ def make_management_router(
         segs = _safe(segments_svc.list_segments, [], "segments list")
         counts = {}
         for s in segs:
-            members = _safe(lambda: segments_svc.list_members(s.segment_id), [], "")
+            members = _safe(lambda sid=s.segment_id: segments_svc.list_members(sid), [], "")
             counts[s.segment_id] = len(members)
         return templates.TemplateResponse("segments.html", {
             "request": request, "segments": segs, "member_counts": counts,
@@ -102,12 +102,12 @@ def make_management_router(
         definition = _build_rule_definition(
             rule_value_group, rule_customer_status, rule_days_since, rule_channel
         )
-        seg = segments_svc.create_segment(
-            name=name.strip(),
-            description=description.strip(),
-            is_dynamic=(is_dynamic == "true"),
-            definition=definition,
-        )
+        seg = segments_svc.create_segment({
+            "name": name.strip(),
+            "description": description.strip(),
+            "is_dynamic": (is_dynamic == "true"),
+            "definition": definition,
+        })
         return Response(status_code=200, headers={"HX-Redirect": f"/segments/{seg.segment_id}"})
 
     @router.get("/segments/{segment_id}", response_class=HTMLResponse)
@@ -175,7 +175,7 @@ def make_management_router(
         seg_names: dict[str, str] = {}
         for c in cps:
             if c.segment_id and c.segment_id not in seg_names:
-                s = _safe(lambda: segments_svc.get_segment(c.segment_id), None, "")
+                s = _safe(lambda sid=c.segment_id: segments_svc.get_segment(sid), None, "")
                 if s:
                     seg_names[c.segment_id] = s.name
         return templates.TemplateResponse("campaigns.html", {
@@ -199,12 +199,25 @@ def make_management_router(
         scheduled_at: str = Form(""),
     ):
         sid = segment_id.strip() or None
-        ts = (scheduled_at.strip() + "T00:00:00+07:00") if scheduled_at.strip() else None
-        c = campaigns_svc.create_campaign(
-            name=name.strip(), objective=objective.strip(),
-            channel=channel.strip(), segment_id=sid,
-            scheduled_at=ts, status="draft",
-        )
+        if scheduled_at.strip():
+            from datetime import datetime, timezone, timedelta
+            _ICT = timezone(timedelta(hours=7))
+            ts = (
+                datetime.strptime(scheduled_at.strip(), "%Y-%m-%d")
+                .replace(tzinfo=_ICT)
+                .astimezone(timezone.utc)
+                .strftime("%Y-%m-%dT%H:%M:%S.000Z")
+            )
+        else:
+            ts = None
+        c = campaigns_svc.create_campaign({
+            "name": name.strip(),
+            "objective": objective.strip(),
+            "channel": channel.strip(),
+            "segment_id": sid,
+            "scheduled_at": ts,
+            "status": "draft",
+        })
         return Response(status_code=200, headers={"HX-Redirect": f"/campaigns/{c.campaign_id}"})
 
     @router.get("/campaigns/{campaign_id}", response_class=HTMLResponse)
@@ -497,7 +510,8 @@ def _build_party_names(parties_svc: Any, targets: list) -> dict[str, str]:
     for t in targets:
         if t.party_id in out:
             continue
-        p = _safe(lambda: parties_svc.get_by_id(t.party_id), None, "")
+        # Default-capture pid to avoid late-binding if lambdas are ever deferred.
+        p = _safe(lambda pid=t.party_id: parties_svc.get_by_id(pid), None, "")
         if p:
             out[t.party_id] = p.display_name
     return out
@@ -511,7 +525,8 @@ def _build_dedup_party_names(parties_svc: Any, candidates: list) -> dict[str, st
             if pid in seen:
                 continue
             seen.add(pid)
-            p = _safe(lambda: parties_svc.get_by_id(pid), None, "")
+            # Default-capture pid to avoid late-binding if lambdas are ever deferred.
+            p = _safe(lambda pid=pid: parties_svc.get_by_id(pid), None, "")
             if p:
                 out[pid] = p.display_name
     return out

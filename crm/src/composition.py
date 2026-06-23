@@ -147,8 +147,8 @@ def create_app() -> FastAPI:
     activity_svc = ActivityService(activity_repo)
     task_svc = TaskService(task_repo, party_repo, cache_repo)
     conv_svc = ConversationService(conv_repo, party_repo)
-    segment_svc = SegmentService(segment_repo, conn)
-    campaign_svc = CampaignService(campaign_repo, segment_repo, party_repo, conn)
+    segment_svc = SegmentService(segment_repo)
+    campaign_svc = CampaignService(campaign_repo, segment_repo, party_repo)
 
     # 4. DuckDB repos — non-fatal if olap.duckdb is unavailable.
     order_repo: Optional[DuckDBOrderRepository] = None

@@ -83,6 +83,10 @@ class SQLiteSegmentRepository:
         )
         self._conn.commit()
 
+    def list(self) -> list[Segment]:
+        """Return all segments ordered by created_at DESC (port contract name)."""
+        return self.list_segments()
+
     def list_segments(self) -> list[Segment]:
         """Return all segments ordered by created_at DESC."""
         rows = self._conn.execute(
@@ -97,8 +101,8 @@ class SQLiteSegmentRepository:
 
     # ── SegmentMember CRUD ────────────────────────────────────────────────────
 
-    def upsert_member(self, segment_id: str, party_id: str, source: str, added_at: str) -> None:
-        """INSERT or UPDATE a segment member.
+    def upsert_member(self, member: "SegmentMember") -> None:
+        """INSERT or UPDATE a segment member — accepts a SegmentMember object (port contract).
 
         Manual membership is never overwritten by a rule re-evaluation
         (mirrors the SQL: keep 'manual' source if already set).
@@ -113,7 +117,7 @@ class SQLiteSegmentRepository:
                               ELSE excluded.source END,
               added_at = excluded.added_at
             """,
-            (segment_id, party_id, source, added_at),
+            (member.segment_id, member.party_id, member.source, member.added_at),
         )
         self._conn.commit()
 
@@ -155,6 +159,35 @@ class SQLiteSegmentRepository:
         )
         self._conn.commit()
         return cur.rowcount
+
+    def evaluate_rule(self, rule: dict) -> list[str]:
+        """Translate a validated rule dict into SQL and return matching party_ids.
+
+        Pulled from the application layer to keep the hexagonal boundary clean:
+        adapters own all SQL; services own only domain logic.
+
+        SECURITY INVARIANT: column names are hard-coded; only values are parameterised.
+        """
+        from application.segment_service import (  # noqa: PLC0415
+            _build_query_no_having,
+            _build_query_with_having,
+            _is_missing_table_error,
+        )
+        needs_orders = bool(rule.get("days_since_last_order_gte"))
+        needs_insight = bool(
+            rule.get("value_group") or rule.get("customer_status") or rule.get("channel_preference")
+        )
+        if needs_orders:
+            query, args = _build_query_with_having(rule, needs_insight)
+        else:
+            query, args = _build_query_no_having(rule, needs_insight)
+        try:
+            cur = self._conn.execute(query, args)
+        except Exception as exc:
+            if _is_missing_table_error(exc):
+                return []
+            raise
+        return [row[0] for row in cur.fetchall()]
 
     # ── Mapping helper ────────────────────────────────────────────────────────
 

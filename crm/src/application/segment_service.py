@@ -10,7 +10,6 @@ members and returns 0 (no error).
 from __future__ import annotations
 
 import json
-import sqlite3
 import uuid
 from datetime import datetime, timezone
 from typing import Any
@@ -37,9 +36,8 @@ def _is_missing_table_error(exc: Exception) -> bool:
 class SegmentService:
     """Handles segment CRUD and dynamic member refresh."""
 
-    def __init__(self, segment_repo: Any, conn: sqlite3.Connection) -> None:
+    def __init__(self, segment_repo: Any) -> None:
         self._repo = segment_repo
-        self._conn = conn
 
     # ── CRUD ──────────────────────────────────────────────────────────────────
 
@@ -155,23 +153,8 @@ class SegmentService:
         return len(party_ids)
 
     def _evaluate_rule(self, rule: dict) -> list[str]:
-        """Translate a validated rule dict into SQL and return matching party_ids."""
-        needs_orders = bool(rule.get("days_since_last_order_gte"))
-        needs_insight = bool(
-            rule.get("value_group") or rule.get("customer_status") or rule.get("channel_preference")
-        )
-        if needs_orders:
-            query, args = _build_query_with_having(rule, needs_insight)
-        else:
-            query, args = _build_query_no_having(rule, needs_insight)
-
-        try:
-            cur = self._conn.execute(query, args)
-        except Exception as exc:
-            if _is_missing_table_error(exc):
-                return []
-            raise
-        return [row[0] for row in cur.fetchall()]
+        """Delegate rule evaluation to the repository adapter (which owns the SQL)."""
+        return self._repo.evaluate_rule(rule)
 
 
 # ── Rule parsing helpers (module-level for testability) ────────────────────────

@@ -43,6 +43,11 @@ class SegmentRepository(Protocol):
         Called before re-evaluating a dynamic segment to purge stale members."""
         ...
 
+    def evaluate_rule(self, rule: dict) -> list[str]:
+        """Execute the rule SQL and return matching party_ids.
+        SQL building is adapter-owned; application passes only the validated rule dict."""
+        ...
+
 
 class CampaignRepository(Protocol):
     """Outbound port for Campaign and CampaignTarget persistence."""
@@ -85,4 +90,14 @@ class CampaignRepository(Protocol):
         self, campaign_id: str, status: str
     ) -> list[CampaignTarget]:
         """Return targets filtered by status (empty string = all)."""
+        ...
+
+    def fetch_consent_map(self) -> dict:
+        """Return {party_id: consent_value} from crm_customer_profile.consent_enum."""
+        ...
+
+    def find_earliest_order(
+        self, party_id: str, scheduled_date_key: int
+    ) -> "tuple[str, int, str] | None":
+        """Return (order_code, net_revenue, converted_at_iso) or None."""
         ...

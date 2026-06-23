@@ -13,7 +13,7 @@
 {% macro wf_row(op, label, caption="", amt="", pct="", neg=false, total=false, result=false) %}
 <div class="wf-row--pl{% if total %} wf-row--total{% endif %}{% if result %} wf-row--result{% endif %}">
   <span class="wf-op{% if op == '+' %} wf-op--add{% elif op in ('-','−') %} wf-op--sub{% elif op == '=' %} wf-op--eq{% endif %}">{{ op }}</span>
-  <span class="wf-label">{{ label | safe }}{% if caption %} <span class="caption" style="margin-left:6px">{{ caption }}</span>{% endif %}</span>
+  <span class="wf-label">{{ label }}{% if caption %} <span class="caption" style="margin-left:6px">{{ caption }}</span>{% endif %}</span>
   <span class="wf-pct">{{ pct }}</span>
   <span class="wf-amt{% if neg %} wf-amt--neg{% endif %}">{{ amt }}</span>
 </div>
@@ -174,13 +174,13 @@
 
         {# COGS with % of net revenue #}
         {% set cogs_pct = (f.cogs_amount / f.net_revenue) | fmt_pct if f.net_revenue > 0 else "" %}
-        {% set cogs_label = "COGS" %}
         {% if not f.cogs_source or f.cogs_source == "none" %}
-          {% set cogs_label = "COGS <span class='bdg bdg--warn'>unverified</span>" %}
+          {{ wf_row("−", "COGS", "unverified", f.cogs_amount | int | fmt_vnd, pct=cogs_pct, neg=true) }}
         {% elif f.cogs_source in ("sapo_mac", "both") %}
-          {% set cogs_label = "COGS <span class='caption' style='margin-left:6px'>Sapo-MAC</span>" %}
+          {{ wf_row("−", "COGS", "Sapo-MAC", f.cogs_amount | int | fmt_vnd, pct=cogs_pct, neg=true) }}
+        {% else %}
+          {{ wf_row("−", "COGS", "", f.cogs_amount | int | fmt_vnd, pct=cogs_pct, neg=true) }}
         {% endif %}
-        {{ wf_row("−", cogs_label, "", f.cogs_amount | int | fmt_vnd, pct=cogs_pct, neg=true) }}
 
         {% if f.promo_goods_cost > 0 %}
         <div class="wf-row--pl">
