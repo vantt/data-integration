@@ -4267,3 +4267,22 @@ elif filter_priority == "high":
 2. Seam/mock unit tests that inject already-shaped rows do NOT validate the SQL against the real serving schema — pair them with at least one live run (or a `dbt`/DuckDB bind check) before declaring a mart-reader done. (Same failure mode as [[L134]] rule 4 and L136.)
 
 **Reference:** `crm/src/hug/voucher_redeem_matcher.py`, `transformation/models/marts/sales/fact_orders.sql`, `transformation/models/marts/core/dim_customers.sql`. Fixed 2026-06-20, commit 6da9cee.
+
+---
+
+### L138 — Safety-placeholder parquet must match the real DLT output's Hive-partition DEPTH, or the shared dbt run reds once real data lands
+
+**Group:** INGEST
+
+**Symptom:** `src_hug_scan` (and by cascade the whole `pipeline_sapo_v2_realtime_job` / `_incremental_job`) started failing on EVERY run with `Binder Error: Hive partition mismatch between file ".../ingest_method=placeholder/hug_scan_safety_placeholder.parquet" and ".../ingest_method=webhook/year=2026/month=6/part-*.parquet"`. The dbt model and its `sources.yml` were unchanged; the failure began the moment the first real scan event was ingested. A zero-data placeholder had worked for months.
+
+**Root cause:** `sources.yml` reads `read_parquet('.../hug_raw/{name}/ingest_method=*/**/*.parquet', hive_partitioning=1, union_by_name=true)`. DuckDB's `hive_partitioning=1` derives the partition KEY SET from each file's path DEPTH. The placeholder was one level deep (`ingest_method=placeholder/` → keys `{ingest_method}`) while real DLT output is three (`ingest_method=webhook/year=YYYY/month=M/` → `{ingest_method, year, month}`). While only the placeholder existed the glob saw one consistent depth and bound fine; once real 3-level data coexisted, DuckDB rejected the mixed depths. `union_by_name=true` reconciles differing FILE COLUMNS only — NOT differing PATH partition keys.
+
+**Fix:** Write the placeholder at the SAME 3-level depth as real output (`ingest_method=placeholder/year=1970/month=1/...`) — mirroring the already-correct Shopee placeholder — and delete the stale shallow file on startup (idempotent). Applied to both `scan` and `optin_event`. Verified: live Dagster run `RUN_SUCCESS`, all 4 `src_hug_scan` tests pass, glob binds placeholder + real partitions together.
+
+**Rules:**
+1. A Hive-partitioned safety/seed placeholder MUST replicate the real producer's FULL partition key path (same depth + key names), not just the first level. A shallower placeholder is a time-bomb: it passes at day-zero and reds the shared run the instant real data lands. Copy the depth from a sibling that already works.
+2. `hive_partitioning=1` + `union_by_name=true` does NOT save you from path-level partition mismatches — `union_by_name` is file-columns only. Partition-key consistency across a glob is a separate hard invariant.
+3. Day-zero-vs-has-data is a distinct failure axis (cf. [[L134]], L136): a placeholder/glob that works empty can break when populated. When adding a placeholder for a new DLT table, diff its path against the real output layout before the first real row arrives.
+
+**Reference:** `scripts/ensure_hug_safety_placeholder.py`, `transformation/models/staging/sources.yml`, `transformation/models/staging/src_hug_scan.sql`. Fixed 2026-06-23, commit d4593d3.
