@@ -40,8 +40,8 @@ Inventory queries do not use `scope_sales`, `scope_retail`, or any order filter.
 ```json metabase-filter
 {
   "slug": "location_name",
-  "type": "string/=",
-  "field_id": 610
+  "type": "category",
+  "field_id": 1106
 }
 ```
 
@@ -50,8 +50,8 @@ Inventory queries do not use `scope_sales`, `scope_retail`, or any order filter.
 ```json metabase-filter
 {
   "slug": "category",
-  "type": "string/=",
-  "field_id": 606
+  "type": "category",
+  "field_id": 1102
 }
 ```
 
@@ -87,8 +87,8 @@ Số SKU đang hết hàng (on_hand ≤ 0) theo snapshot gần nhất.
 
 ```sql
 SELECT COUNT(DISTINCT sku) AS "SKU Hết Hàng"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND is_oos = true
   [[AND {{location_name}}]]
   [[AND {{category}}]]
@@ -114,8 +114,8 @@ Số SKU cảnh báo sắp hết (on_hand > 0 và ≤ min_value).
 
 ```sql
 SELECT COUNT(DISTINCT sku) AS "SKU Sắp Hết"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND is_low_stock = true
   [[AND {{location_name}}]]
   [[AND {{category}}]]
@@ -141,8 +141,8 @@ Tổng giá trị tồn kho theo MAC (Moving Average Cost).
 
 ```sql
 SELECT ROUND(SUM(stock_value_at_mac) / 1e6, 1) AS "Giá Trị Tồn Kho (triệu VND)"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND on_hand > 0
   [[AND {{location_name}}]]
   [[AND {{category}}]]
@@ -168,8 +168,8 @@ Tổng số SKU đang có hàng trên tất cả locations.
 
 ```sql
 SELECT COUNT(DISTINCT sku) AS "SKU Có Hàng"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND on_hand > 0
   [[AND {{location_name}}]]
   [[AND {{category}}]]
@@ -194,9 +194,11 @@ WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
 SKU bán chạy nhưng sắp/đã hết hàng — ưu tiên nhập. Nguồn: mart_product_health.oos_risk (velocity cao + is_oos/is_low_stock/days_of_supply<14).
 
 ```sql
-SELECT COUNT(DISTINCT sku) AS "SKU OOS Risk"
-FROM mart_product_health
-WHERE oos_risk = true
+SELECT COUNT(DISTINCT mart_inventory_health.sku) AS "SKU OOS Risk"
+FROM main_marts.mart_inventory_health
+LEFT JOIN main_marts.mart_product_health ON mart_inventory_health.sku = mart_product_health.sku
+WHERE mart_inventory_health.snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
+  AND mart_product_health.oos_risk = true
   [[AND {{category}}]]
 ```
 
@@ -226,8 +228,8 @@ SELECT
     ROUND(SUM(stock_value_at_mac) / 1e6, 2)           AS "Giá Trị (triệu VND)",
     COUNT(DISTINCT CASE WHEN is_oos THEN sku END)     AS "SKU OOS",
     COUNT(DISTINCT CASE WHEN is_low_stock THEN sku END) AS "SKU Low Stock"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   [[AND {{location_name}}]]
   [[AND {{category}}]]
 GROUP BY location_name
@@ -254,23 +256,23 @@ Top 20 SKU chiếm giá trị vốn tồn cao nhất — snapshot gần nhất, 
 
 ```sql
 SELECT
-    h.sku                                                     AS "SKU",
-    h.product_name                                            AS "Tên Sản Phẩm",
-    h.location_name                                           AS "Kho",
-    ROUND(h.on_hand, 0)                                       AS "Tồn (units)",
-    ROUND(h.mac, 0)                                           AS "MAC (VND/unit)",
-    ROUND(h.stock_value_at_mac / 1e6, 2)                      AS "Giá Trị (triệu VND)",
-    h.bin_location                                            AS "Vị Trí Kệ",
+    mart_inventory_health.sku                                                     AS "SKU",
+    mart_inventory_health.product_name                                            AS "Tên Sản Phẩm",
+    mart_inventory_health.location_name                                           AS "Kho",
+    ROUND(mart_inventory_health.on_hand, 0)                                       AS "Tồn (units)",
+    ROUND(mart_inventory_health.mac, 0)                                           AS "MAC (VND/unit)",
+    ROUND(mart_inventory_health.stock_value_at_mac / 1e6, 2)                      AS "Giá Trị (triệu VND)",
+    mart_inventory_health.bin_location                                            AS "Vị Trí Kệ",
     COALESCE(p.health_class, '-')                             AS "Health Class",
     COALESCE(p.abc_class, '-')                                AS "ABC"
-FROM mart_inventory_health h
-LEFT JOIN mart_product_health p ON h.sku = p.sku
-WHERE h.snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
-  AND h.on_hand > 0
-  AND h.mac IS NOT NULL
+FROM main_marts.mart_inventory_health
+LEFT JOIN main_marts.mart_product_health p ON mart_inventory_health.sku = p.sku
+WHERE mart_inventory_health.snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
+  AND mart_inventory_health.on_hand > 0
+  AND mart_inventory_health.mac IS NOT NULL
   [[AND {{location_name}}]]
   [[AND {{category}}]]
-ORDER BY h.stock_value_at_mac DESC NULLS LAST
+ORDER BY mart_inventory_health.stock_value_at_mac DESC NULLS LAST
 LIMIT 20
 ```
 
@@ -294,23 +296,23 @@ Chi tiết các SKU đang hết hàng — để gửi reorder alert. Enriched v�
 
 ```sql
 SELECT
-    h.sku                                                     AS "SKU",
-    h.product_name                                            AS "Tên Sản Phẩm",
-    h.location_name                                           AS "Kho",
-    ROUND(h.on_hand, 0)                                       AS "Tồn (units)",
-    ROUND(h.committed, 0)                                     AS "Committed",
-    ROUND(h.incoming, 0)                                      AS "Đang Về",
-    ROUND(h.days_of_supply, 0)                                AS "Days of Supply",
+    mart_inventory_health.sku                                                     AS "SKU",
+    mart_inventory_health.product_name                                            AS "Tên Sản Phẩm",
+    mart_inventory_health.location_name                                           AS "Kho",
+    ROUND(mart_inventory_health.on_hand, 0)                                       AS "Tồn (units)",
+    ROUND(mart_inventory_health.committed, 0)                                     AS "Committed",
+    ROUND(mart_inventory_health.incoming, 0)                                      AS "Đang Về",
+    ROUND(mart_inventory_health.days_of_supply, 0)                                AS "Days of Supply",
     COALESCE(p.health_class, '-')                             AS "Health Class",
     COALESCE(p.abc_class, '-')                                AS "ABC",
     CASE WHEN p.oos_risk THEN '🚨' ELSE '' END                AS "OOS Risk"
-FROM mart_inventory_health h
-LEFT JOIN mart_product_health p ON h.sku = p.sku
-WHERE h.snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
-  AND h.is_oos = true
+FROM main_marts.mart_inventory_health
+LEFT JOIN main_marts.mart_product_health p ON mart_inventory_health.sku = p.sku
+WHERE mart_inventory_health.snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
+  AND mart_inventory_health.is_oos = true
   [[AND {{location_name}}]]
   [[AND {{category}}]]
-ORDER BY h.sku, h.location_name
+ORDER BY mart_inventory_health.sku, mart_inventory_health.location_name
 ```
 
 ```json metabase-viz
@@ -368,8 +370,8 @@ Tổng giá trị vốn trong hàng tồn chậm (không bán > 30 ngày hoặc 
 
 ```sql
 SELECT ROUND(SUM(slow_mover_value_at_risk) / 1e6, 1) AS "Giá Trị Slow-Mover (triệu VND)"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND is_slow_mover = true
   AND on_hand > 0
   [[AND {{location_name}}]]
@@ -396,8 +398,8 @@ Tổng giá trị vốn trong hàng tồn chết (không bán > 90 ngày).
 
 ```sql
 SELECT ROUND(SUM(dead_stock_value_at_risk) / 1e6, 1) AS "Giá Trị Dead Stock (triệu VND)"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND is_dead_stock = true
   AND on_hand > 0
   [[AND {{location_name}}]]
@@ -424,8 +426,8 @@ Số SKU đang là hàng chậm.
 
 ```sql
 SELECT COUNT(DISTINCT sku) AS "SKU Hàng Chậm"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND is_slow_mover = true
   AND on_hand > 0
   [[AND {{location_name}}]]
@@ -452,8 +454,8 @@ Số SKU đang là hàng tồn chết.
 
 ```sql
 SELECT COUNT(DISTINCT sku) AS "SKU Hàng Chết"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND is_dead_stock = true
   AND on_hand > 0
   [[AND {{location_name}}]]
@@ -480,27 +482,27 @@ Chi tiết SKU hàng chậm — vốn bị chôn, days_of_supply, enriched với
 
 ```sql
 SELECT
-    h.sku                                                     AS "SKU",
-    h.product_name                                            AS "Tên Sản Phẩm",
-    h.category                                                AS "Nhóm",
-    h.location_name                                           AS "Kho",
-    ROUND(h.on_hand, 0)                                       AS "Tồn (units)",
-    ROUND(h.days_of_supply, 0)                                AS "Days of Supply",
-    ROUND(h.slow_mover_value_at_risk / 1e6, 2)                AS "Vốn Bị Chôn (triệu)",
-    h.velocity_month                                          AS "Tháng Velocity",
-    ROUND(h.daily_velocity, 2)                                AS "Velocity (units/ngày)",
-    h.is_dead_stock                                           AS "Tồn Chết?",
+    mart_inventory_health.sku                                                     AS "SKU",
+    mart_inventory_health.product_name                                            AS "Tên Sản Phẩm",
+    mart_inventory_health.category                                                AS "Nhóm",
+    mart_inventory_health.location_name                                           AS "Kho",
+    ROUND(mart_inventory_health.on_hand, 0)                                       AS "Tồn (units)",
+    ROUND(mart_inventory_health.days_of_supply, 0)                                AS "Days of Supply",
+    ROUND(mart_inventory_health.slow_mover_value_at_risk / 1e6, 2)                AS "Vốn Bị Chôn (triệu)",
+    mart_inventory_health.velocity_month                                          AS "Tháng Velocity",
+    ROUND(mart_inventory_health.daily_velocity, 2)                                AS "Velocity (units/ngày)",
+    mart_inventory_health.is_dead_stock                                           AS "Tồn Chết?",
     COALESCE(p.health_class, '-')                             AS "Health Class",
     COALESCE(p.abc_class, '-')                                AS "ABC",
     COALESCE(p.velocity_momentum, '-')                        AS "Momentum"
-FROM mart_inventory_health h
-LEFT JOIN mart_product_health p ON h.sku = p.sku
-WHERE h.snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
-  AND h.is_slow_mover = true
-  AND h.on_hand > 0
+FROM main_marts.mart_inventory_health
+LEFT JOIN main_marts.mart_product_health p ON mart_inventory_health.sku = p.sku
+WHERE mart_inventory_health.snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
+  AND mart_inventory_health.is_slow_mover = true
+  AND mart_inventory_health.on_hand > 0
   [[AND {{location_name}}]]
   [[AND {{category}}]]
-ORDER BY h.slow_mover_value_at_risk DESC NULLS LAST
+ORDER BY mart_inventory_health.slow_mover_value_at_risk DESC NULLS LAST
 LIMIT 50
 ```
 
@@ -525,17 +527,17 @@ Phân bổ dead stock theo health_class — DOG + DEAD = ưu tiên thanh lý cao
 ```sql
 SELECT
     COALESCE(p.health_class, 'N/A (No COGS)')             AS "Health Class",
-    COUNT(DISTINCT h.sku)                                   AS "Số SKU",
-    ROUND(SUM(h.dead_stock_value_at_risk) / 1e6, 2)         AS "Vốn Dead Stock (triệu VND)"
-FROM mart_inventory_health h
-LEFT JOIN mart_product_health p ON h.sku = p.sku
-WHERE h.snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
-  AND h.is_dead_stock = true
-  AND h.on_hand > 0
+    COUNT(DISTINCT mart_inventory_health.sku)                                   AS "Số SKU",
+    ROUND(SUM(mart_inventory_health.dead_stock_value_at_risk) / 1e6, 2)         AS "Vốn Dead Stock (triệu VND)"
+FROM main_marts.mart_inventory_health
+LEFT JOIN main_marts.mart_product_health p ON mart_inventory_health.sku = p.sku
+WHERE mart_inventory_health.snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
+  AND mart_inventory_health.is_dead_stock = true
+  AND mart_inventory_health.on_hand > 0
   [[AND {{location_name}}]]
   [[AND {{category}}]]
 GROUP BY p.health_class
-ORDER BY SUM(h.dead_stock_value_at_risk) DESC NULLS LAST
+ORDER BY SUM(mart_inventory_health.dead_stock_value_at_risk) DESC NULLS LAST
 ```
 
 ```json metabase-viz
@@ -561,8 +563,8 @@ SELECT
     COALESCE(category, 'Không phân loại')             AS "Nhóm Sản Phẩm",
     COUNT(DISTINCT sku)                                AS "Số SKU",
     ROUND(SUM(slow_mover_value_at_risk) / 1e6, 2)     AS "Giá Trị (triệu VND)"
-FROM mart_inventory_health
-WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM mart_inventory_health)
+FROM main_marts.mart_inventory_health
+WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM main_marts.mart_inventory_health)
   AND is_slow_mover = true
   AND on_hand > 0
   [[AND {{location_name}}]]
@@ -628,7 +630,7 @@ Xu hướng tổng giá trị tồn kho 90 ngày gần nhất.
 SELECT
     snapshot_date                                     AS "Ngày",
     ROUND(SUM(stock_value_at_mac) / 1e6, 2)          AS "Giá Trị Tồn (triệu VND)"
-FROM mart_inventory_health
+FROM main_marts.mart_inventory_health
 WHERE snapshot_date >= current_date - INTERVAL '90 days'
   AND on_hand > 0
   [[AND {{location_name}}]]
@@ -666,7 +668,7 @@ SELECT
         / NULLIF(COUNT(DISTINCT sku), 0),
         1
     )                                                                     AS "OOS Rate (%)"
-FROM mart_inventory_health
+FROM main_marts.mart_inventory_health
 WHERE snapshot_date >= current_date - INTERVAL '90 days'
   [[AND {{location_name}}]]
   [[AND {{category}}]]
@@ -700,7 +702,7 @@ SELECT
     snapshot_date                                     AS "Ngày",
     location_name                                     AS "Kho",
     ROUND(SUM(stock_value_at_mac) / 1e6, 2)          AS "Giá Trị (triệu VND)"
-FROM mart_inventory_health
+FROM main_marts.mart_inventory_health
 WHERE snapshot_date >= current_date - INTERVAL '30 days'
   AND on_hand > 0
   AND mac IS NOT NULL
@@ -735,7 +737,7 @@ SELECT
     snapshot_date                                     AS "Ngày",
     ROUND(SUM(slow_mover_value_at_risk) / 1e6, 2)    AS "Slow-Mover (triệu VND)",
     ROUND(SUM(dead_stock_value_at_risk) / 1e6, 2)    AS "Dead Stock (triệu VND)"
-FROM mart_inventory_health
+FROM main_marts.mart_inventory_health
 WHERE snapshot_date >= current_date - INTERVAL '90 days'
   AND on_hand > 0
   [[AND {{location_name}}]]
@@ -775,7 +777,7 @@ FROM (
     SELECT
         snapshot_date,
         SUM(stock_value_at_mac) AS daily_total
-    FROM mart_inventory_health
+    FROM main_marts.mart_inventory_health
     WHERE snapshot_date >= current_date - INTERVAL '12 months'
       AND on_hand > 0
       [[AND {{location_name}}]]

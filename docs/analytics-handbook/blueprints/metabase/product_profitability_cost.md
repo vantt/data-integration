@@ -42,7 +42,7 @@ All margin queries: `WHERE NOT is_promo_line AND revenue_net_of_discount > 0`.
   "slug": "date_range",
   "type": "date/all-options",
   "default": "past30days",
-  "field_id": 324
+  "field_id": 984
 }
 ```
 
@@ -52,7 +52,7 @@ All margin queries: `WHERE NOT is_promo_line AND revenue_net_of_discount > 0`.
 {
   "slug": "channel",
   "type": "string/=",
-  "field_id": 349
+  "field_id": 1010
 }
 ```
 
@@ -65,8 +65,8 @@ All margin queries: `WHERE NOT is_promo_line AND revenue_net_of_discount > 0`.
 ```sql
 SELECT
     '📅 Dữ liệu tháng: ' || strftime(snapshot_month, '%m/%Y') AS "Chu kỳ báo cáo"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
 LIMIT 1
 ```
 
@@ -102,8 +102,8 @@ LIMIT 1
 
 ```sql
 SELECT COUNT(DISTINCT product_code) AS "SKU có COGS"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
 ```
 
 ```json metabase-viz
@@ -125,8 +125,8 @@ SELECT
         SUM(realized_gross_profit) * 100.0 / NULLIF(SUM(net_revenue), 0),
         1
     ) AS "Avg Margin %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
 ```
 
 ```json metabase-viz
@@ -150,8 +150,8 @@ Số SKU có realized margin < 10%.
 
 ```sql
 SELECT COUNT(*) AS "SKU margin thap (< 10%)"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND realized_margin_pct < 10
   AND net_revenue > 0
 ```
@@ -173,8 +173,8 @@ WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_month
 SELECT
     product_name AS "San pham",
     ROUND(realized_margin_pct, 1) AS "Margin %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
   AND order_count >= 3
 ORDER BY realized_margin_pct DESC
@@ -200,8 +200,8 @@ LIMIT 1
 SELECT
     product_name AS "San pham",
     ROUND(realized_margin_pct, 1) AS "Margin %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
   AND order_count >= 3
 ORDER BY realized_margin_pct ASC
@@ -239,8 +239,8 @@ Horizontal bar — top 20 sản phẩm đóng góp lãi gộp nhiều nhất.
 SELECT
     product_name AS "San pham",
     realized_gross_profit AS "Lai gop"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 ORDER BY realized_gross_profit DESC
 LIMIT 20
@@ -279,8 +279,8 @@ Horizontal bar — 20 sản phẩm margin thấp nhất.
 SELECT
     product_name AS "San pham",
     ROUND(realized_margin_pct, 1) AS "Gross Margin %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
   AND order_count >= 2
 ORDER BY realized_margin_pct ASC
@@ -336,8 +336,8 @@ SELECT
     COALESCE(top_channel_name, 'Khac')          AS "Kenh chinh",
     net_revenue                                 AS "Doanh thu",
     ROUND(realized_margin_pct, 1)               AS "Gross Margin %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 ORDER BY net_revenue DESC
 LIMIT 20
@@ -387,8 +387,8 @@ SELECT
     cogs_amount                         AS "Gia von",
     realized_gross_profit               AS "Lai gop",
     ROUND(realized_margin_pct, 1)       AS "Gross Margin %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 ORDER BY realized_gross_profit DESC
 ```
@@ -449,8 +449,8 @@ ORDER BY realized_gross_profit DESC
 ```sql
 SELECT
     '📅 Dữ liệu tháng: ' || strftime(snapshot_month, '%m/%Y') AS "Chu kỳ báo cáo"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
 LIMIT 1
 ```
 
@@ -476,8 +476,8 @@ LIMIT 1
 
 ```sql
 SELECT COUNT(DISTINCT product_code) AS "Tong SKU"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 ```
 
@@ -500,8 +500,8 @@ SELECT
         SUM(realized_gross_profit) * 100.0 / NULLIF(SUM(net_revenue), 0),
         1
     ) AS "Avg Margin %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 ```
 
@@ -527,7 +527,7 @@ Số SKU có COGS/unit lệch > 10% so với trung bình 3 tháng trước.
 ```sql
 WITH filter_bounds AS (
     SELECT MIN(posting_date)::DATE AS p_start, MAX(posting_date)::DATE AS p_end
-    FROM int_misa_sales_lines
+    FROM main_marts.int_misa_sales_lines
     WHERE NOT is_promo_line
       AND quantity > 0
       [[AND {{date_range}}]]
@@ -537,7 +537,7 @@ current_cogs AS (
     SELECT
         product_code,
         SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_current
-    FROM int_misa_sales_lines, filter_bounds
+    FROM main_marts.int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
       AND quantity > 0
       AND posting_date >= filter_bounds.p_start
@@ -549,7 +549,7 @@ avg_3m AS (
     SELECT
         product_code,
         SUM(cogs_amount) / NULLIF(SUM(quantity), 0) AS cogs_per_unit_3m_avg
-    FROM int_misa_sales_lines, filter_bounds
+    FROM main_marts.int_misa_sales_lines, filter_bounds
     WHERE NOT is_promo_line
       AND quantity > 0
       AND posting_date >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
@@ -598,8 +598,8 @@ SELECT
     net_revenue                                 AS "Doanh thu",
     ROUND(realized_margin_pct, 1)               AS "Gross Margin %",
     order_count                                 AS "So don"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 ORDER BY net_revenue DESC
 LIMIT 200
@@ -655,8 +655,8 @@ SELECT
     ROUND(cogs_per_unit, 0)             AS "COGS/don vi",
     ROUND(cogs_per_unit_3m_avg, 0)      AS "COGS avg 3M",
     ROUND(cogs_variance_pct, 1)         AS "COGS variance %"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 ORDER BY net_revenue DESC
 LIMIT 50
@@ -744,8 +744,8 @@ SELECT
         ELSE                                 '> 60% (star)'
     END AS "Nhom margin",
     COUNT(*) AS "So SKU"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND net_revenue > 0
 GROUP BY 1
 ORDER BY MIN(realized_margin_pct)
@@ -791,8 +791,8 @@ SELECT
     ROUND(cogs_per_unit_3m_avg, 0) AS "COGS avg 3M",
     ROUND(cogs_variance_pct, 1)    AS "Variance %",
     order_count                    AS "So don"
-FROM mart_sku_economics_monthly
-WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM mart_sku_economics_monthly)
+FROM main_marts.mart_sku_economics_monthly
+WHERE snapshot_month = (SELECT MAX(snapshot_month) FROM main_marts.mart_sku_economics_monthly)
   AND cogs_variance_pct IS NOT NULL
 ORDER BY ABS(cogs_variance_pct) DESC
 LIMIT 30

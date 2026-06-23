@@ -73,7 +73,7 @@ Snapshot date — reflects latest mart_product_health run.
 SELECT
   '📅 Cập nhật: ' || strftime(MAX(calculated_at::TIMESTAMP), '%H:%M %d/%m/%Y')
   AS "Chu kỳ báo cáo"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 ```
 
 ```json metabase-viz
@@ -98,7 +98,7 @@ Total distinct products tracked.
 
 ```sql
 SELECT COUNT(*) AS "🛒 Tổng SP"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 ```
 
 ```json metabase-viz
@@ -122,7 +122,7 @@ Products classified as STAR (high velocity + high margin).
 
 ```sql
 SELECT COUNT(*) AS "⭐ STAR"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE health_class = 'STAR'
 [[AND {{category}}]]
 [[AND {{abc_class}}]]
@@ -149,7 +149,7 @@ Products with is_dead_stock = true (no sale in 90+ days, on_hand > 0).
 
 ```sql
 SELECT COUNT(*) AS "🐌 Hàng tồn"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE is_dead_stock = true
 [[AND {{category}}]]
 [[AND {{abc_class}}]]
@@ -176,7 +176,7 @@ Total capital at risk from dead stock (VND).
 
 ```sql
 SELECT COALESCE(SUM(dead_stock_value_at_risk), 0) AS "💸 Giá trị tồn rủi ro"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE is_dead_stock = true
 [[AND {{category}}]]
 [[AND {{abc_class}}]]
@@ -212,7 +212,7 @@ Products with oos_risk = true (fast-moving but low/zero stock).
 
 ```sql
 SELECT COUNT(*) AS "🚨 Rủi ro hết hàng"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE oos_risk = true
 [[AND {{category}}]]
 [[AND {{abc_class}}]]
@@ -251,7 +251,7 @@ Health classification distribution — BCG-style velocity × margin matrix.
 SELECT
   COALESCE(health_class, 'N/A (thiếu COGS)') AS "Health Class",
   COUNT(*) AS "Số SP"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE 1=1
 [[AND {{category}}]]
 [[AND {{abc_class}}]]
@@ -299,7 +299,7 @@ ABC Pareto class distribution — revenue contribution tiers.
 SELECT
   COALESCE(abc_class, 'N/A') AS "ABC Class",
   COUNT(*) AS "Số SP"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE 1=1
 [[AND {{category}}]]
 [[AND {{health_class}}]]
@@ -342,7 +342,7 @@ Lifecycle stage distribution — NEW/GROWING/MATURE/DECLINING/DORMANT.
 SELECT
   COALESCE(lifecycle_stage, 'N/A') AS "Lifecycle Stage",
   COUNT(*) AS "Số SP"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE 1=1
 [[AND {{category}}]]
 [[AND {{health_class}}]]
@@ -406,7 +406,7 @@ SELECT
   is_dead_stock                  AS "Tồn chết",
   oos_risk                       AS "Rủi ro HH",
   ROUND(revenue_share_pct, 2)    AS "Revenue Share %"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE 1=1
 [[AND {{category}}]]
 [[AND {{health_class}}]]
@@ -497,7 +497,7 @@ Action queue snapshot date.
 SELECT
   '📅 Queue: ' || strftime(MAX(queue_generated_at::TIMESTAMP), '%H:%M %d/%m/%Y')
   AS "Chu kỳ báo cáo"
-FROM mart_product_action_queue
+FROM main_marts.mart_product_action_queue
 ```
 
 ```json metabase-viz
@@ -522,8 +522,9 @@ Products needing immediate restocking (fast-moving, low stock).
 
 ```sql
 SELECT COUNT(*) AS "🚨 Nhập ngay"
-FROM mart_product_action_queue
-WHERE action_type = 'RESTOCK_NOW'
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
+WHERE mart_product_action_queue.action_type = 'RESTOCK_NOW'
 [[AND {{category}}]]
 ```
 
@@ -548,8 +549,9 @@ Dead stock needing clearance to free capital.
 
 ```sql
 SELECT COUNT(*) AS "🐌 Thanh lý tồn"
-FROM mart_product_action_queue
-WHERE action_type = 'CLEAR_DEADSTOCK'
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
+WHERE mart_product_action_queue.action_type = 'CLEAR_DEADSTOCK'
 [[AND {{category}}]]
 ```
 
@@ -574,8 +576,9 @@ Products with margin anomaly requiring price/COGS review.
 
 ```sql
 SELECT COUNT(*) AS "📉 Review margin"
-FROM mart_product_action_queue
-WHERE action_type = 'REVIEW_MARGIN'
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
+WHERE mart_product_action_queue.action_type = 'REVIEW_MARGIN'
 [[AND {{category}}]]
 ```
 
@@ -600,8 +603,9 @@ High margin but low velocity — needs promotion push.
 
 ```sql
 SELECT COUNT(*) AS "📣 Đẩy bán"
-FROM mart_product_action_queue
-WHERE action_type = 'PROMOTE'
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
+WHERE mart_product_action_queue.action_type = 'PROMOTE'
 [[AND {{category}}]]
 ```
 
@@ -626,8 +630,9 @@ Dogs + dead stock candidates for delisting.
 
 ```sql
 SELECT COUNT(*) AS "🗑️ Cân nhắc delist"
-FROM mart_product_action_queue
-WHERE action_type = 'DELIST'
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
+WHERE mart_product_action_queue.action_type = 'DELIST'
 [[AND {{category}}]]
 ```
 
@@ -671,10 +676,11 @@ SELECT
     ELSE action_type
   END AS "Loại hành động",
   COALESCE(SUM(value_at_stake), 0) AS "Giá trị (VND)"
-FROM mart_product_action_queue
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
 WHERE 1=1
 [[AND {{category}}]]
-GROUP BY action_type
+GROUP BY mart_product_action_queue.action_type
 ORDER BY MIN(priority_rank)
 ```
 
@@ -720,10 +726,11 @@ SELECT
     ELSE action_type
   END AS "Loại hành động",
   COUNT(*) AS "Số SP"
-FROM mart_product_action_queue
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
 WHERE 1=1
 [[AND {{category}}]]
-GROUP BY action_type
+GROUP BY mart_product_action_queue.action_type
 ORDER BY MIN(priority_rank)
 ```
 
@@ -761,27 +768,28 @@ Full action queue ranked by priority_rank.
 
 ```sql
 SELECT
-  priority_rank         AS "P",
-  sku                   AS "SKU",
-  product_name          AS "Sản phẩm",
-  CASE action_type
+  mart_product_action_queue.priority_rank         AS "P",
+  mart_product_action_queue.sku                   AS "SKU",
+  mart_product_action_queue.product_name          AS "Sản phẩm",
+  CASE mart_product_action_queue.action_type
     WHEN 'RESTOCK_NOW'      THEN '🚨 Nhập ngay'
     WHEN 'CLEAR_DEADSTOCK'  THEN '🐌 Thanh lý tồn'
     WHEN 'REVIEW_MARGIN'    THEN '📉 Review margin'
     WHEN 'PROMOTE'          THEN '📣 Đẩy bán'
     WHEN 'DELIST'           THEN '🗑️ Delist'
-    ELSE action_type
+    ELSE mart_product_action_queue.action_type
   END                   AS "Hành động",
-  action_rationale      AS "Lý do",
-  value_at_stake        AS "Giá trị",
-  abc_class             AS "ABC",
-  COALESCE(health_class, 'N/A') AS "Health",
-  ROUND(days_of_supply, 0) AS "Ngày tồn",
-  ROUND(realized_margin_pct, 1) AS "Margin %"
-FROM mart_product_action_queue
+  mart_product_action_queue.action_rationale      AS "Lý do",
+  mart_product_action_queue.value_at_stake        AS "Giá trị",
+  mart_product_action_queue.abc_class             AS "ABC",
+  COALESCE(mart_product_action_queue.health_class, 'N/A') AS "Health",
+  ROUND(mart_product_action_queue.days_of_supply, 0) AS "Ngày tồn",
+  ROUND(mart_product_action_queue.realized_margin_pct, 1) AS "Margin %"
+FROM main_marts.mart_product_action_queue
+LEFT JOIN main_marts.mart_product_health ON mart_product_action_queue.sku = mart_product_health.sku
 WHERE 1=1
 [[AND {{category}}]]
-ORDER BY priority_rank ASC
+ORDER BY mart_product_action_queue.priority_rank ASC
 LIMIT 200
 ```
 

@@ -33,7 +33,8 @@ Dashboard theo doi hieu suat + velocity san pham — doanh thu, so luong, xu huo
 ```json metabase-filter
 {
   "slug": "product_type",
-  "type": "string/="
+  "type": "category",
+  "field_id": 1515
 }
 ```
 
@@ -46,8 +47,8 @@ Dashboard theo doi hieu suat + velocity san pham — doanh thu, so luong, xu huo
 ```sql
 WITH filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
-    FROM fact_orders o
-    JOIN fact_sales s ON s.order_id = o.order_id
+    FROM main_marts.fact_orders o
+    JOIN main_marts.fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
@@ -109,29 +110,29 @@ Hero metric — tong doanh thu san pham this period vs previous period.
 WITH
 filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
-    FROM fact_orders o
-    JOIN fact_sales s ON s.order_id = o.order_id
+    FROM main_marts.fact_orders o
+    JOIN main_marts.fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
 ),
 this_period AS (
     SELECT COALESCE(SUM(s.net_revenue), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(s.net_revenue), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND o.ordered_at::DATE <  filter_bounds.p_start
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 )
 SELECT
     t.val as "Doanh thu san pham",
@@ -167,29 +168,29 @@ Supporting KPI — tong quantity sold this period vs previous period.
 WITH
 filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
-    FROM fact_orders o
-    JOIN fact_sales s ON s.order_id = o.order_id
+    FROM main_marts.fact_orders o
+    JOIN main_marts.fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
 ),
 this_period AS (
     SELECT COALESCE(SUM(s.quantity), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
     SELECT COALESCE(SUM(s.quantity), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND o.ordered_at::DATE <  filter_bounds.p_start
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 )
 SELECT
     t.val as "So luong ban",
@@ -216,29 +217,29 @@ Supporting KPI — distinct products co sales this period vs previous period.
 WITH
 filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
-    FROM fact_orders o
-    JOIN fact_sales s ON s.order_id = o.order_id
+    FROM main_marts.fact_orders o
+    JOIN main_marts.fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
 ),
 this_period AS (
     SELECT COUNT(DISTINCT s.product_key) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
     SELECT COUNT(DISTINCT s.product_key) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND o.ordered_at::DATE <  filter_bounds.p_start
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 )
 SELECT
     t.val as "So san pham ban duoc",
@@ -265,8 +266,8 @@ Supporting KPI — revenue per distinct product this period vs previous period.
 WITH
 filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
-    FROM fact_orders o
-    JOIN fact_sales s ON s.order_id = o.order_id
+    FROM main_marts.fact_orders o
+    JOIN main_marts.fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
@@ -276,24 +277,24 @@ this_period AS (
         CASE WHEN COUNT(DISTINCT s.product_key) = 0 THEN 0
              ELSE ROUND(SUM(s.net_revenue) / COUNT(DISTINCT s.product_key), 0)
         END as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 ),
 prev_period AS (
     SELECT
         CASE WHEN COUNT(DISTINCT s.product_key) = 0 THEN 0
              ELSE ROUND(SUM(s.net_revenue) / COUNT(DISTINCT s.product_key), 0)
         END as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id, filter_bounds
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id, filter_bounds
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at::DATE >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND o.ordered_at::DATE <  filter_bounds.p_start
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 )
 SELECT
     t.val as "DT trung binh/SP",
@@ -341,24 +342,24 @@ this_month AS (
     SELECT
         date(o.ordered_at) as ngay,
         COALESCE(SUM(s.net_revenue), 0) as doanh_thu
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY date(o.ordered_at)
 ),
 last_month AS (
     SELECT
         date(o.ordered_at) + INTERVAL '30 days' as ngay,
         COALESCE(SUM(s.net_revenue), 0) as doanh_thu
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY date(o.ordered_at) + INTERVAL '30 days'
 )
 SELECT
@@ -404,24 +405,24 @@ this_month AS (
     SELECT
         date(o.ordered_at) as ngay,
         COALESCE(SUM(s.quantity), 0) as so_luong
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY date(o.ordered_at)
 ),
 last_month AS (
     SELECT
         date(o.ordered_at) + INTERVAL '30 days' as ngay,
         COALESCE(SUM(s.quantity), 0) as so_luong
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY date(o.ordered_at) + INTERVAL '30 days'
 )
 SELECT
@@ -471,8 +472,8 @@ Ranking loai SP theo doanh thu — horizontal bar.
 SELECT
     pt.product_type_name as "Loai san pham",
     COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
-FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
+FROM main_marts.fact_sales s
+JOIN main_marts.fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
 WHERE o.status != 'CANCELLED'
   AND o.ordered_at >= current_date - INTERVAL '30 days'
@@ -509,8 +510,8 @@ Phan bo % doanh thu theo loai SP — donut chart.
 SELECT
     pt.product_type_name as "Loai san pham",
     COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
-FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
+FROM main_marts.fact_sales s
+JOIN main_marts.fact_orders o ON s.order_id = o.order_id
 LEFT JOIN dim_product_types pt ON s.product_type_key = pt.product_type_key
 WHERE o.status != 'CANCELLED'
   AND o.ordered_at >= current_date - INTERVAL '30 days'
@@ -554,8 +555,8 @@ ORDER BY "Doanh thu" DESC
 ```sql
 WITH filter_bounds AS (
     SELECT MIN(o.ordered_at)::DATE AS p_start, MAX(o.ordered_at)::DATE AS p_end
-    FROM fact_orders o
-    JOIN fact_sales s ON s.order_id = o.order_id
+    FROM main_marts.fact_orders o
+    JOIN main_marts.fact_sales s ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
@@ -617,13 +618,13 @@ Ranking san pham theo revenue — horizontal bar.
 SELECT
     p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END as "San pham",
     COALESCE(SUM(s.net_revenue), 0) as "Doanh thu"
-FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
-LEFT JOIN dim_products p ON s.product_key = p.product_key
+FROM main_marts.fact_sales s
+JOIN main_marts.fact_orders o ON s.order_id = o.order_id
+LEFT JOIN main_marts.dim_products p ON s.product_key = p.product_key
 WHERE o.status != 'CANCELLED'
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
-  [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+  [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 GROUP BY p.product_name, p.variant_name
 ORDER BY "Doanh thu" DESC
 LIMIT 20
@@ -656,13 +657,13 @@ Ranking san pham theo quantity — horizontal bar.
 SELECT
     p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END as "San pham",
     COALESCE(SUM(s.quantity), 0) as "So luong"
-FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
-LEFT JOIN dim_products p ON s.product_key = p.product_key
+FROM main_marts.fact_sales s
+JOIN main_marts.fact_orders o ON s.order_id = o.order_id
+LEFT JOIN main_marts.dim_products p ON s.product_key = p.product_key
 WHERE o.status != 'CANCELLED'
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
-  [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+  [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 GROUP BY p.product_name, p.variant_name
 ORDER BY "So luong" DESC
 LIMIT 20
@@ -705,25 +706,25 @@ this_period AS (
         s.product_key,
         MIN(p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END) as ten_sp,
         COALESCE(SUM(s.net_revenue), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
-    LEFT JOIN dim_products p ON s.product_key = p.product_key
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
+    LEFT JOIN main_marts.dim_products p ON s.product_key = p.product_key
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY s.product_key
 ),
 prev_period AS (
     SELECT
         s.product_key,
         COALESCE(SUM(s.net_revenue), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY s.product_key
 )
 SELECT
@@ -763,25 +764,25 @@ this_period AS (
         s.product_key,
         MIN(p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END) as ten_sp,
         COALESCE(SUM(s.net_revenue), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
-    LEFT JOIN dim_products p ON s.product_key = p.product_key
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
+    LEFT JOIN main_marts.dim_products p ON s.product_key = p.product_key
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '30 days'
       AND o.ordered_at < current_date
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY s.product_key
 ),
 prev_period AS (
     SELECT
         s.product_key,
         COALESCE(SUM(s.net_revenue), 0) as val
-    FROM fact_sales s
-    JOIN fact_orders o ON s.order_id = o.order_id
+    FROM main_marts.fact_sales s
+    JOIN main_marts.fact_orders o ON s.order_id = o.order_id
     WHERE o.status != 'CANCELLED'
       AND o.ordered_at >= current_date - INTERVAL '60 days'
       AND o.ordered_at < current_date - INTERVAL '30 days'
-      [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+      [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
     GROUP BY s.product_key
 )
 SELECT
@@ -828,13 +829,13 @@ Units/day — san pham quay nhanh nhat.
 SELECT
     p.product_name || CASE WHEN p.variant_name IS NOT NULL AND p.variant_name != '' THEN ' - ' || p.variant_name ELSE '' END as "San pham",
     ROUND(SUM(s.quantity) * 1.0 / 30, 2) as "Units/ngay"
-FROM fact_sales s
-JOIN fact_orders o ON s.order_id = o.order_id
-LEFT JOIN dim_products p ON s.product_key = p.product_key
+FROM main_marts.fact_sales s
+JOIN main_marts.fact_orders o ON s.order_id = o.order_id
+LEFT JOIN main_marts.dim_products p ON s.product_key = p.product_key
 WHERE o.status != 'CANCELLED'
   AND o.ordered_at >= current_date - INTERVAL '30 days'
   AND o.ordered_at < current_date
-  [[AND s.product_type_key IN (SELECT product_type_key FROM dim_product_types WHERE product_type_name = {{product_type}})]]
+  [[AND s.product_type_key IN (SELECT product_type_key FROM main_marts.dim_product_types WHERE product_type_name = {{product_type}})]]
 GROUP BY p.product_name, p.variant_name
 HAVING SUM(s.quantity) > 0
 ORDER BY "Units/ngay" DESC
@@ -903,7 +904,7 @@ SELECT
     COALESCE(lifecycle_stage, 'UNKNOWN') as "Giai doan",
     COUNT(*) as "So san pham",
     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 1) as "Ti trong %"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE product_key IS NOT NULL
 GROUP BY lifecycle_stage
 ORDER BY "So san pham" DESC
@@ -934,7 +935,7 @@ San pham theo momentum — ACCELERATING / STABLE / DECELERATING.
 SELECT
     COALESCE(velocity_momentum, 'UNKNOWN') as "Momentum",
     COUNT(*) as "So san pham"
-FROM mart_product_health
+FROM main_marts.mart_product_health
 WHERE product_key IS NOT NULL
 GROUP BY velocity_momentum
 ORDER BY
@@ -984,7 +985,7 @@ SELECT
     COALESCE(ph.units_sold, 0) as "Units (thang)",
     ROUND(COALESCE(ph.revenue_share_pct, 0) * 100, 2) as "Revenue Share %",
     COALESCE(ph.health_class, 'N/A') as "Health Class"
-FROM mart_product_health ph
+FROM main_marts.mart_product_health ph
 WHERE ph.velocity_momentum = 'ACCELERATING'
 ORDER BY COALESCE(ph.daily_velocity, 0) DESC
 LIMIT 30
@@ -1037,7 +1038,7 @@ SELECT
     COALESCE(ph.units_sold, 0) as "Units (thang)",
     ROUND(COALESCE(ph.revenue_share_pct, 0) * 100, 2) as "Revenue Share %",
     COALESCE(ph.health_class, 'N/A') as "Health Class"
-FROM mart_product_health ph
+FROM main_marts.mart_product_health ph
 WHERE ph.velocity_momentum = 'DECELERATING'
 ORDER BY COALESCE(ph.revenue_share_pct, 0) DESC
 LIMIT 30
@@ -1091,7 +1092,7 @@ SELECT
     ROUND(COALESCE(ph.realized_margin_pct, 0) * 100, 1) as "Margin %",
     COALESCE(ph.units_sold, 0) as "Units (thang)",
     ROUND(COALESCE(ph.revenue_share_pct, 0) * 100, 2) as "Revenue Share %"
-FROM mart_product_health ph
+FROM main_marts.mart_product_health ph
 WHERE ph.health_class IS NOT NULL
 ORDER BY
     CASE ph.health_class
