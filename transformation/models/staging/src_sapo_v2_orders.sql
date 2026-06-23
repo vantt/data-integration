@@ -172,7 +172,9 @@ extracted AS (
 
         -- Nested JSON arrays (as text for downstream unnest models)
         json_extract_string(payload, '$.order_line_items') as order_line_items_json,
-        json_extract_string(payload, '$.payments') as payments_json,
+        -- Sapo API returns payment records under 'prepayments', not 'payments'
+        -- ($.payments does not exist in any order payload; verified across all ingest methods)
+        json_extract_string(payload, '$.prepayments') as payments_json,
         json_extract_string(payload, '$.fulfillments') as fulfillments_json,
         json_extract_string(payload, '$.discount_items') as discount_items_json
 

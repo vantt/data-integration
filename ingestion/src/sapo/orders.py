@@ -31,7 +31,7 @@ SAPO Order Response Structure:
         "order_line_items": {"data_type": "json"},
         "fulfillments": {"data_type": "json"},
         "returns": {"data_type": "json"},
-        "prepayments": {"data_type": "json"},
+        "prepayments": {"data_type": "json"},  # Sapo's payment records (NOT 'payments' — that key doesn't exist in API response)
         "tags": {"data_type": "json"},
         "order_return_exchange": {"data_type": "json"},
         "order_returns": {"data_type": "json"},
