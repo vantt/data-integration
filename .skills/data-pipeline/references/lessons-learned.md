@@ -4286,3 +4286,22 @@ elif filter_priority == "high":
 3. Day-zero-vs-has-data is a distinct failure axis (cf. [[L134]], L136): a placeholder/glob that works empty can break when populated. When adding a placeholder for a new DLT table, diff its path against the real output layout before the first real row arrives.
 
 **Reference:** `scripts/ensure_hug_safety_placeholder.py`, `transformation/models/staging/sources.yml`, `transformation/models/staging/src_hug_scan.sql`. Fixed 2026-06-23, commit d4593d3.
+
+---
+
+### L139 — A naive `;`-splitting SQL migration runner breaks on a semicolon inside an inline `-- comment`
+
+**Group:** OPS
+
+**Symptom:** Every CRM test that applies migrations to a FRESH sqlite db errored at setup with `sqlite3.OperationalError: incomplete input` on migration `0002_party_identity_golden_record.up.sql` — yet production CRM ran fine and the `.sql` file is valid SQLite. Manifested as ~25 errors across `test_hug_identity_resolver`, `test_hug_review_queue`, etc.
+
+**Root cause:** The migration runner (`crm/src/adapters/outbound/sqlite/migrations.py`) splits each `.up.sql` on `;` and `conn.execute()`s the pieces (so per-statement idempotency like "duplicate column" can be caught). Its splitter tracked BEGIN...END trigger depth but did NOT account for a `;` inside a trailing line comment: `undone_at TEXT  -- set when UndoMerge is applied; prevents double-undo`. That comment `;` was treated as a terminator → the `CREATE TABLE crm_party_merge_log` was cut mid-definition ("incomplete input"), and the leftover `);` became its own `near ")": syntax error`. Production was immune only because `0002` was already recorded in `schema_migrations` and never re-parsed — the bug bites only fresh DBs (tests, new deploys, disaster recovery).
+
+**Fix:** Before scanning a line for the `;` terminator, strip the trailing `-- comment` (`line.split("--", 1)[0]`). BEGIN...END handling unchanged. Added a regression test (`test_migrations_split.py`) covering comment-`;`, trigger body, and real terminators. Full CRM suite went 1 failed + 25 errors → 419 passed / 0 errors.
+
+**Rules:**
+1. A hand-rolled SQL statement splitter must ignore `;` inside both BEGIN...END bodies AND `-- line comments` (and, if strings can contain `;`, string literals). Prefer `conn.executescript()` for whole-file DDL unless per-statement error handling forces a manual split — and if you must split, comment-strip first.
+2. A migration bug that only triggers on a FRESH database is invisible in production (already-applied migrations are skipped) but reds every test setup and would bite a clean redeploy / DR rebuild. "Works in prod" ≠ "applies cleanly from zero" — exercise migrations against an empty DB in CI.
+3. Don't put a `;` in a migration inline comment if your runner is fragile — but better, make the runner robust (rule 1) so SQL stays freely commentable.
+
+**Reference:** `crm/src/adapters/outbound/sqlite/migrations.py` (`_split_statements`), `crm/migrations/0002_party_identity_golden_record.up.sql`, `crm/src/tests/test_migrations_split.py`. Fixed 2026-06-23, commit 0c4dbda.
