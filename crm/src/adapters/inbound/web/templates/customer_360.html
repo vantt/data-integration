@@ -180,7 +180,7 @@
       </div>
 
       {# Contact channels #}
-      {% set _ch_labels = {'phone': 'SĐT', 'phone_secondary': 'SĐT 2', 'zalo': 'Zalo', 'facebook': 'FB', 'email': 'Email'} %}
+      {% set _ch_labels = {'phone': 'SĐT', 'phone_secondary': 'Số phụ', 'zalo': 'Zalo', 'facebook': 'FB', 'email': 'Email'} %}
       {% set _ch_list = identities | selectattr('identity_type', 'in', ['phone', 'phone_secondary', 'zalo', 'facebook', 'email']) | sort(attribute='is_preferred', reverse=true) | list %}
       {% set _has_address = party.address_line or party.ward or party.district or party.province %}
       {% if _ch_list or _has_address %}

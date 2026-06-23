@@ -168,8 +168,11 @@
                 <div class="inp-sel">
                   <select name="add_identity_type" id="m15-add-type"
                           onchange="
-                            var p={'phone_secondary':'0901234567','zalo':'0901234567','facebook':'Link hoặc tên FB','email':'email@domain.com'};
+                            var p={'phone':'0901234567','phone_secondary':'0901234567','zalo':'0901234567','facebook':'Link hoặc tên FB','email':'email@domain.com'};
                             document.getElementById('m15-add-value').placeholder=p[this.value]||'';">
+                    {% if not (identities | selectattr('identity_type', 'equalto', 'phone') | list) %}
+                    <option value="phone">Số chính</option>
+                    {% endif %}
                     <option value="phone_secondary">Số phụ</option>
                     <option value="zalo">Zalo</option>
                     <option value="facebook">Facebook</option>
