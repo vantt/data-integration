@@ -49,22 +49,32 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 - [x] **`history_log.py` page skip** — removed the rogue `page += 1` in the except branch (same page retried).
   Report: `plans/reports/from-ingestion-reliability-agent-ack-reraise-pageskip-260624-1802-report.md`. (Applies on next ingestion run — code volume-mounted.)
 
-### MEDIUM — serving correctness
-- [x] **`fact_orders.time_key` + `fact_sales.time_key` UTC-hour bug** — both wrapped in `AT TIME ZONE 'Asia/Ho_Chi_Minh'` (mirrors date_key). External materialization → no full-refresh; auto-applies on next Dagster dbt run (realtime job rebuilds marts + serving). Report: `from-timekey-fix-agent-fact-orders-ict-260624-1802-report.md`.
-- [ ] **`dim_customers` non-atomic `post_hook COPY`** — COPY failure on locked file leaves serving parquet stale but dbt marks SUCCESS. Convert to native `external` + `location=`.
-- [ ] **detailView `order_cogs_items.sql` queries `int_*`** — violates "serving views only" contract; arch test doesn't catch it. Expose via a mart view.
+### MEDIUM — serving correctness — ✅ DONE + verified (deployed)
+- [x] **`fact_orders`/`fact_sales` time_key UTC bug** → ICT (verified 0 serving mismatches).
+- [x] **`dim_customers` non-atomic post_hook** → native `external`+`location=` (verified: dbt run SUCCESS, serving 7573 rows).
+- [x] **`mart_sku_economics_monthly.gross_margin_pct`** (deprecated) → NULLed, 0 consumers (verified: serving non-null=0).
+- [dropped] **detailView `order_cogs_items.sql` int_***  — detailView is being RETIRED (CRM replaces); no fix needed.
 
-### MEDIUM — security (private network lowers urgency)
-- [ ] **CRM mutation APIs no auth** (`crm/.../inbound/http/*`). Add internal-token middleware. (Lower priority — Docker net private.)
-- [⏸️] **CRM Messenger ingest no HMAC** (`conversation_handler.py:101`) — DEFERRED (user, 2026-06-24): no live Messenger data flow yet. Add `X-Hub-Signature-256` HMAC before the integration goes live.
-- [ ] **Containers run as root** (all except metabase) — add non-root `USER` to Dockerfiles.
-- [~] **Ports `0.0.0.0` bypass Caddy** — DEFERRED per user (firewall check).
+### MEDIUM — CRM data integrity — ✅ DONE (deployed, crm healthy)
+- [x] **identity_resolver** watermark in-txn + Zalo-only dedup by `(token, zalo_uid)`.
+- [x] **segment refresh** wrapped in single transaction (`replace_rule_members`).
 
-### LOW — minor
-- [ ] **Dynamic `_INGESTION_JOBS`** in `definitions.py` — manual list can drift; build from jobs with `concurrency_group=dbt_rw` so backup sensor never misses a new ingestion job.
+### MEDIUM/HIGH — security
+- [x] **CRM `/api` mutation auth** — `X-CRM-Token` dependency added to all mutation routes (web UI uses separate routes, unaffected; messenger/ingest excluded). Backward-compatible: **CRM_API_TOKEN unset = LAN-trust (current)**. tests 514 pass, crm boots healthy. ⏭ ENFORCE later by setting `CRM_API_TOKEN` (+ update Dagster caller to send it).
+- [x] **`CRM_REFRESH_TOKEN` now required** at compose level (`:?`), already set in `.env.docker`.
+- [x] **`.env.docker` file-mount removed** from data_platform; **resource limits** added to all services (verified up).
+- [partial] **Containers non-root** — `evidence` done (applies on next image rebuild); data_platform/crm/rill SKIPPED (named-volume write perms need a uid+ownership strategy).
+- [⏸️] CRM Messenger HMAC · ports `0.0.0.0` — DEFERRED per user.
 
-### Done this session (was backlog)
-build_serving_db duckdb_lock ✅ · quick-win gitignore/hygiene ✅ · Worker bearer-token + Sapo HMAC enforced ✅ · run_monitoring + stuck-sensor ✅ · dagster.yaml tracked ✅ · Hug in morning_digest ✅ · cookie tz ✅ · margin (moot, order-level already correct) ✅ · `fact_order_transitions`/`mart_hug_optin` (by-design, not bugs) ✅
+### LOW — ✅ DONE
+- [x] `system_backup` pipe-deadlock → Popen line-iter · gsheet tz partition keys · `_INGESTION_JOBS` semi-dynamic · morning_digest sapo_inventory label · recon thresholds → ingestion_sla.yaml.
+
+### Done earlier this session
+build_serving_db duckdb_lock ✅ · gitignore/hygiene ✅ · Worker bearer-token + Sapo HMAC enforced ✅ · run_monitoring + stuck-sensor ✅ · dagster.yaml tracked ✅ · Hug SLA ✅ · cookie tz ✅ · ingestion reliability (ack/re-raise/page-skip) ✅ · margin moot ✅
+
+### Truly remaining (deferred / needs decision)
+- **Enforce CRM_API_TOKEN** (code ready; needs caller coordination) · **non-root data_platform/crm/rill** (volume-ownership) · **apply evidence non-root** (image rebuild)
+- Deferred: Phase 03 service-account · ports `0.0.0.0` · Messenger HMAC · Worker replay-protection · HUG_ZALO_OA_URL · config.toml sheet IDs · sheets `rows_written` · >200 LOC modularization
 
 ## Open questions
 - See audit report §"Unresolved questions" (8 items — webhook posture, LAN trust, realized_margin_pct availability, etc.).
