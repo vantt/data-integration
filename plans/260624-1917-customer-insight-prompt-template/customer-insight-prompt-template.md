@@ -57,6 +57,12 @@ QUY TẮC NGHIỆP VỤ (áp dụng theo thứ tự ưu tiên):
   trọng, có thể không phải người quyết định mua.
 - lifecycle_stage = "LIFECYCLE_CHURNED" → kịch bản win-back, thừa nhận đã
   lâu không gặp; không giả vờ như khách vừa mua.
+- ƯU TIÊN recency_days HƠN lifecycle_stage khi hai trường mâu thuẫn.
+  lifecycle_stage="LIFECYCLE_NEW" CHỈ đáng tin khi recency_days nhỏ (vài
+  chục ngày). Nếu recency_days lớn (hàng trăm/nghìn ngày) → đây là khách
+  ngủ đông, dùng kịch bản win-back, TUYỆT ĐỐI không dùng giọng chào mừng
+  người mới. Tương tự, "OVERDUE" trên khách recency rất lớn = đã mất, không
+  phải "sắp tới kỳ mua".
 
 [DATA]
 data_as_of: {{data_as_of}}

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>M08 — Ghi nhận tiếp xúc</title>
+
+<link rel="stylesheet" href="_ds/precision-design-system-c4fb20e2-a7c2-4891-8146-ada590b7c2c5/styles.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,400&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="crm/crm-extra.css" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  html, body { min-height: 100%; }
+  body { background-attachment: fixed; margin: 0; }
+  #root { min-height: 100vh; }
+
+  .h8-rail {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 320px; z-index: 300;
+    background: var(--bg-raised); border-right: 1px solid var(--border-strong);
+    display: flex; flex-direction: column; padding: var(--sp-6) var(--sp-5); gap: var(--sp-5); overflow-y: auto;
+  }
+  .h8-eyebrow { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); color: var(--accent); }
+  .h8-title { font-family: var(--font-display); font-size: 26px; letter-spacing: var(--tracking-tight); color: var(--fg); line-height: 1.15; margin-top: 4px; }
+  .h8-lede { font-size: 13px; color: var(--fg-muted); line-height: 1.55; margin-top: 8px; }
+  .h8-sec { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: var(--tracking-eyebrow); color: var(--fg-tertiary); margin-bottom: var(--sp-2); }
+  .h8-scn { display: flex; flex-direction: column; gap: var(--sp-2); }
+  .h8-card {
+    text-align: left; cursor: pointer; padding: 11px var(--sp-3); border: 1px solid var(--border);
+    border-radius: var(--radii-control); background: var(--bg-surface); color: var(--fg-1);
+    transition: all var(--dur-fast) var(--ease-fast); display: flex; flex-direction: column; gap: 3px;
+  }
+  .h8-card:hover { border-color: var(--border-strong); }
+  .h8-card--on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, transparent); }
+  .h8-card__t { font-size: 13.5px; color: var(--fg); }
+  .h8-card__d { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: var(--tracking-mono); color: var(--fg-tertiary); line-height: 1.4; }
+  .h8-foot { margin-top: auto; font-size: 11.5px; color: var(--fg-tertiary); line-height: 1.5; border-top: 1px solid var(--border); padding-top: var(--sp-4); }
+  .h8-reopen { position: fixed; inset: 0; left: 320px; display: grid; place-items: center; z-index: 1; }
+
+  .h8-toast {
+    position: fixed; left: 50%; bottom: 32px; transform: translateX(-50%); z-index: 400;
+    display: inline-flex; align-items: center; gap: 9px; padding: 11px 18px;
+    background: var(--bg-raised); border: 1px solid var(--border-strong); border-radius: var(--radii-control);
+    font-size: 13px; color: var(--fg); box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    animation: t8 var(--dur-settle) var(--ease-settle);
+  }
+  @keyframes t8 { from { transform: translate(-50%, 8px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+  .h8-toast__dot { width: 7px; height: 7px; border-radius: 999px; background: var(--moss-500); box-shadow: 0 0 8px color-mix(in srgb, var(--moss-500) 40%, transparent); }
+  /* review harness: render the surface in normal flow (no full-bleed fixed scrim → always visible & capturable) */
+  .modal-scrim { position: static; inset: auto; left: auto; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none;
+    margin-left: 320px; min-height: 100vh; padding: 48px var(--sp-6); align-items: flex-start; justify-content: center; overflow: visible; animation: none; }
+  .modal { animation: none; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="crm/helpers.jsx"></script>
+<script type="text/babel" src="crm/modal_m08.jsx"></script>
+
+<script type="text/babel">
+const { useState } = React;
+
+const RICH = [
+  { identity_id: "id_a1", identity_type: "phone", identity_value: "+84901234567", is_primary: true, contact_status: "active" },
+  { identity_id: "id_a2", identity_type: "phone_secondary", identity_value: "+84908765432", is_primary: false, contact_status: "active" },
+  { identity_id: "id_a3", identity_type: "phone_secondary", identity_value: "+84905000111", is_primary: false, contact_status: "inactive" },
+  { identity_id: "id_a4", identity_type: "zalo", identity_value: "+84901234567", is_primary: true, contact_status: "active" },
+  { identity_id: "id_a5", identity_type: "facebook", identity_value: "An Nguyễn", is_primary: true, contact_status: "active" },
+  { identity_id: "id_a6", identity_type: "email", identity_value: "an.nguyen@gmail.com", is_primary: true, contact_status: "active" },
+];
+
+const SCENARIOS = [
+  {
+    id: "rich", t: "Đầy đủ kênh", d: "2 số · Zalo · FB · Email · cảnh báo",
+    ctx: { party_name: "Nguyễn Văn An", identities: RICH, hinh_thuc: "call",
+      contact_pref_notes: ["Chỉ gọi sau 18h", "Không nhắn Zalo cuối tuần"] },
+  },
+  {
+    id: "one", t: "Một số điện thoại", d: "1 số → tự chọn, chip read-only",
+    ctx: { party_name: "Lê Thị Hồng", hinh_thuc: "call", identities: [
+      { identity_id: "h1", identity_type: "phone", identity_value: "+84934112233", is_primary: true, contact_status: "active" },
+    ] },
+  },
+  {
+    id: "nozalo", t: "Thiếu kênh (chọn Zalo)", d: "Có SĐT + Email, không có Zalo",
+    ctx: { party_name: "Phạm Quốc Bảo", hinh_thuc: "zalo", identities: [
+      { identity_id: "b1", identity_type: "phone", identity_value: "+84977445566", is_primary: true, contact_status: "active" },
+      { identity_id: "b2", identity_type: "email", identity_value: "bao.pham@example.com", is_primary: true, contact_status: "active" },
+    ] },
+  },
+  {
+    id: "edit", t: "Sửa ghi chú", d: "edit_note — form rút gọn",
+    ctx: { party_name: "Nguyễn Văn An", mode: "edit_note",
+      note_body: "Khách thích dòng gentle, không thích chiết khấu thấp.",
+      note_type_val: "preference", note_pinned: true, note_visibility: "team" },
+  },
+];
+
+function Harness() {
+  const [scn, setScn] = useState(SCENARIOS[0].id);
+  const [open, setOpen] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [toast, setToast] = useState(null);
+
+  const active = SCENARIOS.find((s) => s.id === scn);
+  const showToast = (msg) => { setToast({ msg, id: Date.now() }); setTimeout(() => setToast((t) => (t && t.id ? null : t)), 2600); };
+  const pick = (id) => { setScn(id); setOpen(true); setReloadKey((k) => k + 1); setToast(null); };
+  const reopen = () => { setOpen(true); setReloadKey((k) => k + 1); };
+
+  const M08 = window.M08;
+
+  return (
+    <React.Fragment>
+      <aside className="h8-rail">
+        <div>
+          <div className="h8-eyebrow">§ M08 · Modal</div>
+          <div className="h8-title">Ghi nhận tiếp xúc</div>
+          <div className="h8-lede">Một luồng thống nhất thay cho 3 tab cũ: chọn hình thức → kênh cụ thể → kết quả → nội dung, kèm tùy chọn lưu thành ghi chú hồ sơ.</div>
+        </div>
+        <div>
+          <div className="h8-sec">Tình huống dữ liệu</div>
+          <div className="h8-scn">
+            {SCENARIOS.map((s) => (
+              <button key={s.id} className={"h8-card" + (scn === s.id ? " h8-card--on" : "")} onClick={() => pick(s.id)}>
+                <span className="h8-card__t">{s.t}</span>
+                <span className="h8-card__d">{s.d}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="h8-foot">
+          Mọi trạng thái còn lại (Hẹn lại, mở rộng ghi chú, kết quả theo kênh) hiện ngay trong modal khi bạn thao tác. Đổi tình huống để nạp bộ identity khác.
+        </div>
+      </aside>
+
+      {open
+        ? <M08 key={active.id + reloadKey} ctx={active.ctx} close={() => setOpen(false)} toast={showToast} />
+        : <div className="h8-reopen"><button className="btn btn--primary" onClick={reopen}>Mở lại modal</button></div>}
+
+      {toast && <div className="h8-toast"><span className="h8-toast__dot" />{toast.msg}</div>}
+    </React.Fragment>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Harness />);
+</script>
+</body>
+</html>

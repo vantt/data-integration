@@ -38,3 +38,7 @@ check_*.py
 
 # Rill temp artifacts
 rill/tmp/
+
+# Cloudflare Worker compiled output + nested local Claude config
+webhook_receiver/cloudflareD1/dist/
+crm/.claude/
