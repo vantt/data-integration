@@ -4,8 +4,17 @@
 
 Remediation backlog from the full-stack health audit (ingestion → CRM). Items added incrementally; execute only after per-phase approval.
 
-## Done (pre-plan)
-- [x] **Retire `webhook_consumer/cloudflared1_consumer/`** — dead; D1 polling lives in Dagster `ingest_sapo_v2_webhook_consumer_asset` → `ingestion/`. Removed + `AGENTS.md` label fixed. (2026-06-24)
+## Done (2026-06-24)
+- [x] **Retire `webhook_consumer/cloudflared1_consumer/`** — dead; D1 polling lives in Dagster `ingest_sapo_v2_webhook_consumer_asset` → `ingestion/`. Removed + `AGENTS.md` label fixed.
+- [x] **Phase 01** — rename `sapo_assets.py` → `sapo_v2_assets.py` (key_prefix unchanged).
+- [x] **Repo hygiene** — `.gitignore` += `check_*.py`, `rill/tmp/` (`*.duckdb` already present); untracked 9 root `check_*.py` via `git rm --cached` (local kept). No `.duckdb`/`rill/tmp` were tracked.
+- [x] **`build_serving_db` duckdb_lock op_tag** added (`serving.py`).
+- [x] **Hug asset → morning_digest** KNOWN_ASSETS + ASSET_DISPLAY (visibility). _Asset-checks (freshness/trend) still pending — needs Hug SLA thresholds in `ingestion_sla.yaml` first._
+- [x] **SQLite conn leak** guarded with try/finally (`reconciliation.py`).
+- [x] **YAML BOM** stripped from `ingestion_sla.yaml` (was breaking strict PyYAML).
+- [x] **argparse `--debug` no-op** fixed (`run_sapo_v2_history_log.py`).
+- [x] **Duplicate assignment** removed (`shared_cookie_manager.py`).
+- [~] **Cookie naive-datetime** — DEFERRED: tz-aware fix changes cookie JSON format → invalidates existing files; do at next forced re-login.
 
 ## Phases
 | # | Phase | Priority | Status |
