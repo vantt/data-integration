@@ -57,6 +57,36 @@ MIN_RUNTIME_BEFORE_KILL = timedelta(minutes=10)
 # a 10 min buffer for initialization overhead.
 QUEUE_STUCK_THRESHOLD = timedelta(minutes=20)
 
+# Absolute max runtime per job class. A STARTED run older than this is
+# terminated even when last_event_time is unavailable (SQLite locked during
+# VACUUM, etc.). This is the backstop that catches dead-process zombies that
+# survive despite no log activity — the scenario that let the incident run sit
+# for 7h.
+#
+# Realtime/incremental/hourly: max legitimate ~10 min → 45 min gives 4× headroom.
+# Nightly/fullrefresh: max legitimate ~90 min → 120 min gives 33% headroom.
+# Health jobs: max legitimate ~5 min → 30 min gives 6× headroom.
+# Default (unlisted jobs): 90 min conservative.
+_JOB_MAX_RUNTIME: dict[str, timedelta] = {
+    "pipeline_sapo_v2_realtime_job": timedelta(minutes=45),
+    "pipeline_hug_realtime_job": timedelta(minutes=45),
+    "pipeline_sapo_v2_incremental_job": timedelta(minutes=45),
+    "pipeline_sapo_v2_hourly_job": timedelta(minutes=45),
+    "ingest_sheets_sync_job": timedelta(minutes=45),
+    "ingest_filedrop_shopee_job": timedelta(minutes=45),
+    "ingest_filedrop_misa_job": timedelta(minutes=45),
+    "ingest_filedrop_misa_account_ledger_job": timedelta(minutes=45),
+    "pipeline_batch_nightly_job": timedelta(minutes=120),
+    "pipeline_batch_fullrefresh_job": timedelta(minutes=120),
+    "health_checks_asset_job": timedelta(minutes=30),
+    "health_recon_daily_job": timedelta(minutes=30),
+    "health_kpi_closure_job": timedelta(minutes=30),
+    "health_report_digest_job": timedelta(minutes=30),
+    "maintain_purge_runs_job": timedelta(minutes=60),
+    "maintain_backup_platform_job": timedelta(minutes=60),
+}
+_JOB_MAX_RUNTIME_DEFAULT = timedelta(minutes=90)
+
 # Max run_ids kept in cursor to prevent unbounded growth.
 CURSOR_LIMIT = 100
 
@@ -181,22 +211,41 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
         # Check last activity time
         last_event_time = _get_last_event_time(context, run.run_id)
 
-        # If we can't read the event log (e.g. SQLite locked by purge_runs VACUUM),
-        # skip this run for this tick — don't false-positive kill a healthy job.
+        # Absolute max runtime for this job (fallback for unknown jobs).
+        job_max = _JOB_MAX_RUNTIME.get(run.job_name, _JOB_MAX_RUNTIME_DEFAULT)
+
         if last_event_time is None:
-            continue
+            # Event log unreadable (SQLite locked during VACUUM, etc.).
+            # Normal policy: skip to avoid false-positive kills.
+            # Exception: if the run has exceeded its absolute max runtime the
+            # process is certainly dead — no healthy job runs this long without
+            # writing any events. Terminate regardless to unblock the queue.
+            if runtime < job_max:
+                continue
+            inactivity = runtime  # treat entire runtime as inactivity
+            termination_reason = (
+                f"no event log readable after {runtime.total_seconds()//60:.0f} min "
+                f"(exceeded absolute max {job_max.total_seconds()//60:.0f} min)"
+            )
+            logger.warning(
+                "Auto-terminating stuck run %s (%s) - %s",
+                run.run_id[:8], run.job_name, termination_reason,
+            )
+        else:
+            inactivity = now - last_event_time
 
-        inactivity = now - last_event_time
+            # Only terminate if inactive for threshold
+            if inactivity < INACTIVITY_THRESHOLD:
+                continue
 
-        # Only terminate if inactive for threshold
-        if inactivity < INACTIVITY_THRESHOLD:
-            continue
-
-        # This run is stuck - terminate it
-        logger.warning(
-            "Auto-terminating stuck run %s (%s) - no activity for %s, runtime %s",
-            run.run_id[:8], run.job_name, inactivity, runtime
-        )
+            termination_reason = (
+                f"no activity for {inactivity.total_seconds()//60:.0f} min, "
+                f"runtime {runtime.total_seconds()//60:.0f} min"
+            )
+            logger.warning(
+                "Auto-terminating stuck run %s (%s) - %s",
+                run.run_id[:8], run.job_name, termination_reason,
+            )
 
         try:
             # Try graceful termination first
@@ -212,10 +261,7 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
                 DagsterRunStatus.FAILURE,
                 DagsterRunStatus.CANCELED,
             ]:
-                instance.report_run_failed(
-                    run,
-                    f"Auto-terminated: no activity for {inactivity.total_seconds()//60:.0f} minutes"
-                )
+                instance.report_run_failed(run, f"Auto-terminated: {termination_reason}")
         except Exception as exc:
             logger.warning("Failed to mark run as failed: %s", exc)
 
@@ -239,7 +285,7 @@ def health_alert_stuckrun_sensor(context: SensorEvaluationContext):
                 "Job": run.job_name,
                 "Run ID": run.run_id[:8],
                 "Runtime": f"{runtime.total_seconds()//60:.0f} min",
-                "Inactive": f"{inactivity.total_seconds()//60:.0f} min",
+                "Reason": termination_reason,
                 "Action": "Auto-terminated, slots freed",
             },
         )
