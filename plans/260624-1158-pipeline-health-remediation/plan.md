@@ -20,7 +20,10 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 | # | Phase | Priority | Status |
 |---|-------|----------|--------|
 | 01 | [Rename sapo_assets.py → sapo_v2_assets.py](phase-01-rename-sapo-assets-to-sapo-v2.md) | Low (consistency) | ✅ DONE |
-| 02 | [Enforce HMAC on Sapo webhook (observe→enforce)](phase-02-sapo-webhook-hmac-enforce.md) | HIGH (security) | ⬜ TODO |
+| 02 | [Worker security: queue bearer-token + Sapo webhook HMAC](phase-02-sapo-webhook-hmac-enforce.md) | HIGH (security) | 🟡 bearer-token code done; HMAC + deploy pending |
+| 03 | [Google Sheets via service account](phase-03-gsheets-service-account.md) | Medium (security) | ⬜ TODO (needs SA key) |
+| 04 | [Corrected margin at order/CEO level](phase-04-order-level-corrected-margin.md) | Medium (BI correctness) | ⬜ TODO (research first) |
+| 09 | Hug asset freshness SLA | Low (monitoring) | ✅ DONE |
 
 ## Decisions (from user, 2026-06-24)
 - **Docker network is private** → Worker queue endpoints (`/poll`,`/ack`,`/release`) need a simple **bearer-token**, not HMAC (HMAC is for inbound Sapo `/webhook/*` only). CRM mutation-API auth = lower priority (private net).

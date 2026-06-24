@@ -1,7 +1,27 @@
-# Phase 02 — Enforce HMAC on Sapo webhook (observe → confirm → enforce)
+# Phase 02 — Worker security: queue bearer-token + Sapo webhook HMAC
 
-**Priority:** HIGH (security) | **Status:** ⬜ TODO
-**Context:** [plan](plan.md) · audit finding "CHECK_HMAC off by default" · Sapo OAuth doc https://support.sapo.vn/oauth + webhook doc https://support.sapo.vn/sapo-webhook
+**Priority:** HIGH (security) | **Status:** 🟡 IN PROGRESS (bearer-token code done; HMAC pending)
+**Context:** [plan](plan.md) · audit findings "queue endpoints unauth" + "CHECK_HMAC off by default" · Sapo OAuth doc https://support.sapo.vn/oauth + webhook doc https://support.sapo.vn/sapo-webhook
+
+---
+
+## Part A — Queue endpoint bearer-token (CODE DONE 2026-06-24, deploy pending)
+
+`/poll` `/ack` `/ack-batch` `/release` are server-to-server (Dagster consumer → Worker), NOT Sapo-signed → bearer token is the right control (not HMAC). Docker net is private, so this is defense-in-depth.
+
+**Implemented:**
+- Worker `src/index.ts`: `requireQueueToken()` guards the 4 queue routes. Backward-compatible — if `POLL_TOKEN` unset, check is skipped (no break window).
+- Consumer `ingestion/src/sapo/webhook_consumer.py`: sends `Authorization: Bearer <WORKER_POLL_TOKEN>` if that env var is set.
+
+**Deploy steps (to enforce):**
+1. Pick a strong token. Set on Worker: `wrangler secret put POLL_TOKEN`.
+2. Set same value as `WORKER_POLL_TOKEN` env on the Dagster `data_platform` container (`.env.docker`).
+3. Restart consumer / redeploy Worker. Verify `/poll` returns 200 with header, 401 without.
+4. Order matters: set consumer env FIRST (or simultaneously) so polling doesn't 401 the moment `POLL_TOKEN` lands.
+
+---
+
+## Part B — Sapo webhook HMAC (observe → confirm → enforce)
 
 ## Problem
 `webhook_receiver/cloudflareD1/src/index.ts:98` gates HMAC on `env.CHECK_HMAC === 'true'`. CHECK_HMAC is NOT set in `wrangler.toml` → defaults false → `/webhook/*` currently accepts **unauthenticated** payloads into the D1 queue. Cannot blindly flip to true: a wrong secret/header would 401 all real Sapo webhooks and silently stop ingestion.
