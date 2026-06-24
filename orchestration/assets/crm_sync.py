@@ -96,6 +96,44 @@ def crm_cache_refresh(context: AssetExecutionContext):
     )
 
 
+CRM_BACKUP_URL = os.environ.get("CRM_BACKUP_URL", "http://crm:8090/admin/backup")
+# Backup reads + checksums all rows then snapshots — seconds, not ms. Generous cap.
+CRM_BACKUP_TIMEOUT_SEC = int(os.environ.get("CRM_BACKUP_TIMEOUT_SEC", "120"))
+
+
+@asset(
+    group_name="ops_maintenance",
+    description=(
+        "Daily CRM backup: POST /admin/backup → verified SQLite snapshot (crm/ops/backup_crm) "
+        "to the crm_backups volume. Independent of the warehouse. FAILS LOUDLY on a backup-gate "
+        "failure so the failure sensor alerts (silent backup stoppage is the zombie-run lesson)."
+    ),
+)
+def crm_backup(context: AssetExecutionContext):
+    context.log.info(f"Triggering CRM backup → {CRM_BACKUP_URL}")
+    headers = {}
+    if CRM_REFRESH_TOKEN:
+        headers["X-Refresh-Token"] = CRM_REFRESH_TOKEN
+    request = urllib.request.Request(CRM_BACKUP_URL, method="POST", headers=headers, data=b"")
+    try:
+        with urllib.request.urlopen(request, timeout=CRM_BACKUP_TIMEOUT_SEC) as resp:
+            status, body_text = resp.status, resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        status = exc.code
+        body_text = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
+    except urllib.error.URLError as exc:
+        raise Exception(f"CRM backup unreachable: {exc.reason}")  # noqa: TRY002 — surface to Dagster
+
+    if status != 200:
+        # Unlike crm_cache_refresh (fire-and-forget), a failed BACKUP must red the run.
+        raise Exception(f"CRM backup FAILED (HTTP {status}): {_summarize_body(body_text)}")  # noqa: TRY002
+    context.log.info(f"CRM backup OK: {_summarize_body(body_text)}")
+    return Output(
+        value="CRM backup OK",
+        metadata={"response_body": MetadataValue.md(f"```json\n{body_text}\n```")},
+    )
+
+
 def _summarize_body(body_text: str) -> str:
     """Best-effort one-line summary of the CRM JSON response for logs."""
     try:

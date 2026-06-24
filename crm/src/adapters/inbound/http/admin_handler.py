@@ -327,6 +327,36 @@ def create_admin_router() -> APIRouter:
             content={"status": "accepted", "started_at": started_at.isoformat()},
         )
 
+    @r.post("/admin/backup")
+    async def post_backup(
+        x_refresh_token: str | None = Header(default=None),
+    ) -> JSONResponse:
+        """Take a verified CRM backup (crm/ops/backup_crm). Triggered by the Dagster
+        daily schedule. Auth mirrors /admin/refresh (X-Refresh-Token == CRM_REFRESH_TOKEN).
+        Returns 200 on success, 500 on backup-gate failure so the caller reds + alerts.
+        """
+        token = os.environ.get("CRM_REFRESH_TOKEN", "")
+        if token and x_refresh_token != token:
+            raise HTTPException(status_code=401, detail={"status": "unauthorized"})
+        if not token:
+            log.warning("admin: CRM_REFRESH_TOKEN unset — /admin/backup is UNPROTECTED (LAN-trust only)")
+
+        from crm.ops.backup_crm import backup_crm  # ops tooling (mounted into the container)
+
+        data_dir = os.environ.get("CRM_DATA_DIR", "/data")
+        dest = os.environ.get("CRM_BACKUP_DEST", "/backups")
+        keep = int(os.environ.get("CRM_BACKUP_KEEP", "7"))
+        try:
+            # backup_crm reads + checksums all rows → run off the event loop.
+            manifest = await asyncio.to_thread(backup_crm, data_dir, dest, keep)
+        except Exception as exc:  # backup gate failed → 500 so Dagster reds + the failure sensor alerts
+            log.error("admin: backup FAILED: %s", exc)
+            return JSONResponse(status_code=500, content={"status": "error", "error": str(exc)})
+        log.info("admin: backup OK (partial=%s)", manifest.get("partial"))
+        return JSONResponse(status_code=200, content={
+            "status": "ok", "partial": manifest.get("partial", False), "dbs": list(manifest["dbs"]),
+        })
+
     @r.get("/admin/status")
     async def get_status() -> JSONResponse:
         # Read-only; no token required so ops/Dagster can poll freely.

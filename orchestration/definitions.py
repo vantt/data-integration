@@ -16,6 +16,7 @@ from dagster import (
     AssetSelection,
     AssetKey,
     schedule,
+    DefaultScheduleStatus,
     RunRequest,
     SkipReason,
     RunsFilter,
@@ -624,6 +625,20 @@ dbt_exe = shutil.which("dbt")
 if not dbt_exe:
     dbt_exe = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ingestion", "venv", "Scripts", "dbt.exe")
 
+# Daily CRM backup — independent of the warehouse (no dbt_rw lock); triggers the CRM
+# /admin/backup endpoint (verified SQLite snapshot to the crm_backups volume). The asset
+# fails loudly on a backup-gate failure so health_alert_failure_sensor alerts.
+crm_backup_job = define_asset_job(
+    name="crm_backup_job",
+    selection=AssetSelection.assets(crm_sync.crm_backup),
+)
+crm_backup_schedule = ScheduleDefinition(
+    name="crm_backup_schedule",
+    job=crm_backup_job,
+    cron_schedule="0 2 * * *",  # 02:00 ICT daily (outside the 03:00-06:00 maintenance window)
+    default_status=DefaultScheduleStatus.RUNNING,  # auto-enable (schedules in defs are off by default — L49)
+)
+
 defs = Definitions(
     assets=all_assets,
     # Jobs must be listed explicitly so sensors can reference them by name.
@@ -652,6 +667,7 @@ defs = Definitions(
         # maintain_*
         maintain_backup_platform_job,
         maintain_purge_runs_job,
+        crm_backup_job,
     ],
     schedules=[
         # ingest_*
@@ -669,6 +685,7 @@ defs = Definitions(
         # maintain_*
         maintain_purge_runs_schedule,
         maintain_backup_fallback_schedule,
+        crm_backup_schedule,
     ],
     sensors=[
         # ingest_*
