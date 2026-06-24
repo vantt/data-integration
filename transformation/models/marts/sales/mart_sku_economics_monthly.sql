@@ -387,17 +387,11 @@ final AS (
         )                                                       AS cogs_per_unit,
         COALESCE(mc.gross_profit, sa.net_revenue - smac.sapo_mac_cogs_amount)
                                                                 AS gross_profit,
-        -- DEPRECATED: use realized_margin_pct instead (see schema.yml meta.deprecated).
-        -- gross_margin_pct uses MISA book revenue as denominator; H010 SKUs (~5 SKUs)
-        -- have an uncorrected ~2× COGS error here. realized_margin_pct has the fix.
-        ROUND(
-            COALESCE(
-                mc.gross_profit * 100.0 / NULLIF(mc.misa_revenue_net, 0),
-                (sa.net_revenue - smac.sapo_mac_cogs_amount) * 100.0
-                    / NULLIF(sa.net_revenue, 0)
-            ),
-            4
-        )                                                       AS gross_margin_pct,
+        -- DEPRECATED: column retained for schema compatibility; value intentionally NULL.
+        -- Use realized_margin_pct instead (H010-corrected, Sapo net_revenue denominator).
+        -- gross_margin_pct used MISA book revenue; H010 SKUs had uncorrected ~2× COGS error.
+        -- Zero BI consumers confirmed (blueprints + rill + crm all use realized_margin_pct).
+        CAST(NULL AS DOUBLE)                                    AS gross_margin_pct,
 
         -- ── Realized margin (Sapo net_revenue basis = true commercial margin) ─
         -- gross_margin_pct above is MISA-book (gross_profit / misa_revenue_net).

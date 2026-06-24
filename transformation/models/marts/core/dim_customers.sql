@@ -1,10 +1,6 @@
 {{ config(
-    materialized='incremental',
-    unique_key='customer_key',
     tags=['mart', 'dim'],
-    post_hook=[
-      "COPY (SELECT * FROM {{ this }}) TO '{{ get_rolling_location() }}' (FORMAT PARQUET)"
-    ]
+    location="{{ get_rolling_location() }}"
 ) }}
 
 WITH customers AS (
