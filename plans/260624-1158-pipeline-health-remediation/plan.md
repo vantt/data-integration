@@ -25,7 +25,7 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 |---|-------|----------|--------|
 | 01 | [Rename sapo_assets.py → sapo_v2_assets.py](phase-01-rename-sapo-assets-to-sapo-v2.md) | Low (consistency) | ✅ DONE |
 | 02 | [Worker security: queue bearer-token + Sapo webhook HMAC](phase-02-sapo-webhook-hmac-enforce.md) | HIGH (security) | ✅ DONE — bearer-token + Sapo HMAC both ENFORCED |
-| 03 | [Google Sheets via service account](phase-03-gsheets-service-account.md) | Medium (security) | ⬜ TODO (needs SA key) |
+| 03 | [Google Sheets via service account](phase-03-gsheets-service-account.md) | Medium (security) | ⏸️ DEFERRED (user, 2026-06-24) |
 | 04 | [Corrected margin at order/CEO level](phase-04-order-level-corrected-margin.md) | Medium (BI correctness) | ✅ CLOSED — moot (order-level already H010-correct) |
 | 05 | Run-monitoring + stuck-sensor reliability fix | HIGH (reliability) | ✅ DONE + deployed |
 | 09 | Hug asset freshness SLA | Low (monitoring) | ✅ DONE + deployed |
@@ -43,13 +43,14 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 
 ## Remaining open work (prioritized) — as of 2026-06-24 end of session
 
-### HIGH — reliability (silent data loss / silent green)
-- [ ] **Webhook ACK-before-load** in `ingestion/src/hug/hug_webhook_consumer.py` — ACKs inside the dlt generator before load commits → at-most-once, Hug events lost on load failure. (Sapo webhook consumer already got the at-least-once fix 2026-06-23; Hug did NOT.) Apply the `PendingAck` pattern.
-- [ ] **Batch pipelines swallow exceptions → Dagster green on failure** — `ingestion/src/sapo/{orders,customers,history_log}.py` break after MAX_ERRORS and return cleanly; Dagster marks asset success with 0 rows. Re-raise / `sys.exit(1)` after MAX_ERRORS.
-- [ ] **`history_log.py:501`** advances `page` on transient error → permanently skips that page's records. Don't increment page on transient errors.
+### HIGH — reliability (silent data loss / silent green) — ✅ DONE 2026-06-24
+- [x] **Webhook ACK-before-load** — `hug_webhook_consumer.py` refactored to at-least-once (`build_hug_webhook_source` + `PendingAck`, ack after `pipeline.run()`); runner updated. py_compile OK.
+- [x] **Batch pipelines swallow exceptions** — `orders.py`/`customers.py`/`history_log.py` now RE-RAISE after MAX_ERRORS → Dagster fails loudly instead of green.
+- [x] **`history_log.py` page skip** — removed the rogue `page += 1` in the except branch (same page retried).
+  Report: `plans/reports/from-ingestion-reliability-agent-ack-reraise-pageskip-260624-1802-report.md`. (Applies on next ingestion run — code volume-mounted.)
 
 ### MEDIUM — serving correctness
-- [ ] **`fact_orders.time_key` UTC-hour bug** — uses `extract(hour from created_at)` (UTC) while `date_key` is ICT → ~30% of orders (17:00–24:00 ICT) get wrong `dim_time` join (business_hour/peak_hour). Wrap in `AT TIME ZONE 'Asia/Ho_Chi_Minh'`. (Cheapest high-value correctness fix left.)
+- [x] **`fact_orders.time_key` + `fact_sales.time_key` UTC-hour bug** — both wrapped in `AT TIME ZONE 'Asia/Ho_Chi_Minh'` (mirrors date_key). External materialization → no full-refresh; auto-applies on next Dagster dbt run (realtime job rebuilds marts + serving). Report: `from-timekey-fix-agent-fact-orders-ict-260624-1802-report.md`.
 - [ ] **`dim_customers` non-atomic `post_hook COPY`** — COPY failure on locked file leaves serving parquet stale but dbt marks SUCCESS. Convert to native `external` + `location=`.
 - [ ] **detailView `order_cogs_items.sql` queries `int_*`** — violates "serving views only" contract; arch test doesn't catch it. Expose via a mart view.
 
