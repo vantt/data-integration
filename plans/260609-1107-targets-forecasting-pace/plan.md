@@ -1,8 +1,9 @@
 # Plan: Targets and Forecasting Pace
 
 > Created: 2026-06-09
-> Status: ✅ Partially done
+> Status: ✅ Partially done — In progress
 > Origin: `analytics_improvement_opportunities.md` § Targets and Forecasting Inputs
+> (updated 2026-06-24: untouched by 260623 audit work; GMV target baseline live; pace/forecast/gap-bridge not yet built)
 
 ## Objective
 

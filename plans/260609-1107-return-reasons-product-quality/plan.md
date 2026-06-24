@@ -3,6 +3,7 @@
 > Created: 2026-06-09
 > Status: ✅ Partially done
 > Origin: `analytics_improvement_opportunities.md` § Return Reasons and Product Quality
+> (updated 2026-06-24: untouched by 260623 audit work; data layer + dashboard live but reason ranking/product quality queue awaits volume)
 
 ## Objective
 

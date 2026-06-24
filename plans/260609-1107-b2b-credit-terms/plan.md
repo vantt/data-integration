@@ -1,8 +1,9 @@
 # Plan: B2B Credit Terms
 
 > Created: 2026-06-09
-> Status: ⚠️ Partially ready
+> Status: ⚠️ Partially ready — Not started
 > Origin: `analytics_improvement_opportunities.md` § B2B Credit Terms
+> (updated 2026-06-24: untouched by 260623 audit work; data layer prerequisites not yet built)
 
 ## Objective
 

@@ -2,6 +2,7 @@
 title: "Hug Customer Push — Incremental Content-Diff"
 description: "Per-row content-diff + push state store to eliminate ~99% of redundant D1 upserts (480 full pushes/day → 1–2 changed-rows-only pushes/day)"
 status: done
+# (updated 2026-06-24: confirmed done — all 4 phases implemented, 15/15 tests pass; untouched by 260623 audit)
 priority: P1
 effort: 3h
 branch: main

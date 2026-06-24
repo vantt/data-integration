@@ -2,6 +2,7 @@
 title: "Hug Campaign: sku+not_in targeting, customer_type edge field, D1 preview endpoint"
 description: "Three phased additions: catalog-only sku attr, not_in negation operator (TS+Python parity), customer_type edge column + content-diff resync, and a new Worker preview endpoint replacing cache.db for live match counts."
 status: implemented (pending coordinated deploy)
+# (updated 2026-06-24: P1+P2 code done (ed6bdfa, 43c6b65); P3 preview endpoint code done; Worker deploy + D1 migration + full resync still pending — see deploy note in plan body)
 priority: P1
 effort: 10h
 branch: main

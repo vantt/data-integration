@@ -2,6 +2,7 @@
 title: "C2 — Hug Campaign Admin UI"
 description: "Self-serve admin to create/edit Hug campaign routing rules with preview and overlap warning."
 status: pending
+# (updated 2026-06-24: untouched by 260623 audit work; all phases 1-6 pending; Phase 7 deferred)
 priority: P2
 effort: 10h
 branch: main

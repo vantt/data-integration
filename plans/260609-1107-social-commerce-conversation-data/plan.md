@@ -3,6 +3,7 @@
 > Created: 2026-06-09
 > Status: ❌ Not started
 > Origin: `analytics_improvement_opportunities.md` § Social Commerce Conversation Data
+> (updated 2026-06-24: untouched by 260623 audit work; no conversation data source connected)
 
 ## Objective
 

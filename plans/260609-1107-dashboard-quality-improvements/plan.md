@@ -3,6 +3,7 @@
 > Created: 2026-06-09
 > Status: In Progress
 > Origin: `analytics_improvement_opportunities.md` §§ 1–2 (Perspectives + Current Issues)
+> (updated 2026-06-24: Issues 3-5 largely done; Issues 1/2/7 and domain-specific items still open; 260623 audit fixed Metabase Binder Errors on boards 107-110 commit a925c74 but did not touch action-table or threshold work)
 
 ## Objective
 

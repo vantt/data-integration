@@ -1,7 +1,8 @@
 ---
 title: "Product Health Analytics — domain enrich + health classification + board set"
 created: 2026-06-12
-status: completed
+status: done
+# (updated 2026-06-24: confirmed done — all P0-P5 completed; boards #107-#110 live in Merchandising & Product; old boards #30/#36/#76/#94 retired; Metabase field filter Binder Errors on boards 107-110 fixed by audit commit a925c74)
 approach: pipeline-first → boards → consolidate, with user validation gate before retire
 refs:
   - ./pipeline-design.md

@@ -2,6 +2,7 @@
 title: "Order Status Transition Pipeline from Sapo history_log"
 description: "Recover approximate order status transitions from history_log payload snapshots → lifecycle metrics mart + Metabase cards"
 status: pending
+# (updated 2026-06-24: untouched by 260623 audit work; stg_sapo_order_history and fact_order_status_transitions not yet built)
 priority: P2
 effort: 11h
 branch: main

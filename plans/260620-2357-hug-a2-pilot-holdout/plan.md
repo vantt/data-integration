@@ -2,6 +2,7 @@
 title: "Hug A2 Pilot — Holdout Experiment (Zone 1 + Zone 2)"
 description: "Measured rollout with control arms to learn opt-in rate, redemption, reactivation R, and incrementality before scaling."
 status: pending
+# (updated 2026-06-24: untouched by 260623 audit work; awaiting M5 voucher go-live completion before pilot can launch)
 priority: P1
 effort: 8w
 branch: main

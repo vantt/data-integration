@@ -1,7 +1,8 @@
 ---
 title: "Customer Margin + Activation — Build Plan (5 việc)"
 created: 2026-06-11
-status: active
+status: done
+# (updated 2026-06-24: all phases P0-P4 + P3a/P3b-mart/P3b-dash completed by 2026-06-12; dashboards #14/#99/#102 live; one open framing decision on Tab B margin — untouched by 260623 audit)
 parent: ../260604-1125-retail-reactivation/plan.md
 source: ../260604-1125-retail-reactivation/02-understand/enriched-data-margin-and-activation-signals.md
 ---

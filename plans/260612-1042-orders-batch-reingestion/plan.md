@@ -3,6 +3,7 @@
 **Goal:** Re-ingest toàn bộ orders từ Sapo API qua `batch_sync` để nạp lại các orders bị thiếu (đặc biệt Shopee). So sánh before/after.
 
 **Status:** Ready to execute
+(updated 2026-06-24: untouched by 260623 audit work; pre-flight Dagster asset fix still required before running)
 
 ---
 

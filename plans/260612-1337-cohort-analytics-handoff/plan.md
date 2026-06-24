@@ -2,6 +2,7 @@
 
 > Design CHỐT (§5 `handoff-prompt.md`). Spec v1 locked. Build new alongside → validate → retire (gate user).
 > Status tracker — cập nhật tới đâu ghi tới đó.
+> **Status: Done** (updated 2026-06-24: all phases P0-P5+P4b completed 2026-06-12; mart_cohort_retention 9181 rows, dashboards #111/#112 live, old board retired; untouched by 260623 audit)
 
 ## Phases
 

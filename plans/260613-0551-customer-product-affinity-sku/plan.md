@@ -2,6 +2,7 @@
 title: "Customer Product Affinity (SKU-level) — Implementation Spec"
 created: 2026-06-13
 status: ready-to-build
+# (updated 2026-06-24: untouched by 260623 audit work; backlog item awaiting activation)
 parent_plan: ../260604-1125-retail-reactivation/05-action-plans/b2c-reactivation-phases.md (P1)
 owner: Data
 ---

@@ -1,7 +1,8 @@
 # Plan: Overhead Budgeted-Rate Branch for Open Months
 
 **Created:** 2026-06-09  
-**Status:** Not Started  
+**Status:** Not Started
+(updated 2026-06-24: untouched by 260623 audit work; int_overhead_pool_monthly UNION branch not built)  
 **Priority:** Medium — P4-3 from `260604-1030-unified-order-pl-cogs-overhead`
 
 ## Problem

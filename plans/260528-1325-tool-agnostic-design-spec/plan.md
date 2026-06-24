@@ -1,6 +1,7 @@
 ---
 title: "Tool-Agnostic Design Spec"
-status: active
+status: active — Not started
+# (updated 2026-06-24: untouched by 260623 audit work; all phases not_started; decisions locked but no implementation begun)
 created: 2026-05-28
 updated: 2026-05-28
 ---

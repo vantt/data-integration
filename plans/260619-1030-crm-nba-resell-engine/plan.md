@@ -1,6 +1,6 @@
 # Plan — CRM Re-sell: Funnel-First Roadmap
 
-> Status: **DESIGN / DISCUSSION**. Sequencing CHỐT 2026-06-19 (data probe §16–17): **funnel rẻ-ROI-cao TRƯỚC, engine 3 chặng SAU**.
+> Status: **In progress** (updated 2026-06-24: A1 tier mart implemented; Hug platform design complete; A2/A3/A4 designed; M5 voucher go-live + A2 pilot pending; Stage B deferred). Untouched by 260623 audit work.
 > Thiết kế: [`discussion.md`](./discussion.md) · Probe: `plans/reports/data-probe-core-boundary-shopee-masked-identity-260619-1054-report.md`
 
 ## Chẩn đoán (data tươi, N=7563)

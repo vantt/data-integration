@@ -1,6 +1,7 @@
 # Plan: Messenger Webhook HMAC Verification
 
-**Status:** DEFERRED — no live FB traffic yet; implement when real token is available.
+**Status:** Deferred / Not started
+(updated 2026-06-24: explicitly deferred — Messenger integration not live; FB app secret not yet provisioned; plan is ready to execute when real token is available)
 
 ## Context
 

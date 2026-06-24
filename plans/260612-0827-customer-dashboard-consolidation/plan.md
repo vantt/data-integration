@@ -1,7 +1,8 @@
 ---
 title: "Customer Dashboard Consolidation — 5→4 by Job + Customer sub-collection"
 created: 2026-06-12
-status: active
+status: done
+# (updated 2026-06-24: all phases P0-P4 completed by 2026-06-12; 4 new boards deployed, 5 old boards retired per user approval; untouched by 260623 audit work)
 approach: parallel-build-then-retire
 source: ../reports/customer-dashboard-portfolio-ia-evaluation-260612-0818-report.md
 ---

@@ -3,6 +3,7 @@
 > Created: 2026-06-09
 > Status: Backlog
 > Origin: `docs/analytics-handbook/guides/analytics_improvement_opportunities.md` § Marketing Attribution
+> (updated 2026-06-24: untouched by 260623 audit work; MISA account_ledger available but transformation layer not built)
 
 ---
 

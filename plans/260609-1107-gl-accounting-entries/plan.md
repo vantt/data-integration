@@ -3,6 +3,7 @@
 > Created: 2026-06-09
 > Status: ❌ Not started
 > Origin: `analytics_improvement_opportunities.md` § Full GL / Accounting Entries
+> (updated 2026-06-24: untouched by 260623 audit work; no GL extract or fact_gl_entries yet)
 
 ## Objective
 

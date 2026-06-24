@@ -1,8 +1,9 @@
 # Plan: Cash Flow and Liquidity
 
 > Created: 2026-06-09
-> Status: ❌ Not started
+> Status: In progress
 > Origin: `analytics_improvement_opportunities.md` § Cash Flow and Liquidity
+> (updated 2026-06-24: payment pipeline unblocked — $.prepayments fix commit 8624772, fact_payments now 9272 rows with payment_behavior COD populated; dashboard + AR/DSO work still not started)
 
 ## Objective
 
@@ -26,9 +27,10 @@ Move from sales/payment reporting to treasury visibility — cash balance, daily
 
 ## Current state
 
-- `fact_payments` exists as a table but contains **1 null row** — no real payment data loaded
-- Ingestion pipeline for payments has not been built
-- `fact_orders` has `total_collected` and payment status fields — limited cash proxy only
+- `fact_payments` now has **9,272 rows** with payment_behavior COD populated (commit 8624772: extract from `$.prepayments` not `$.payments`)
+- Ingestion pipeline is live; payment method field corrected (commit 2b97835)
+- `fact_orders` has `total_collected` and payment status fields — still the primary cash proxy
+- **Remaining:** bank balance snapshots, AR/DSO analytics, and Cash Flow dashboard still not built
 
 ## Implementation steps
 

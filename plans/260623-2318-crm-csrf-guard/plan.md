@@ -1,6 +1,7 @@
 # Plan — CRM CSRF guard (deferred from audit M4)
 
-**Status:** Not started · **Priority:** Low (LAN-only, no-auth app — low CSRF threat) · **Created:** 2026-06-23
+**Status:** Deferred / Not started · **Priority:** Low (LAN-only, no-auth app — low CSRF threat) · **Created:** 2026-06-23
+(updated 2026-06-24: deferred — user chose to defer; naive header guard would break /hug kiosk external POSTs; inventory + classification required before safe implementation)
 
 ## Context
 - Audit finding M4 (`plans/reports/audit-crm-app-260623-1843-report.md`): no CSRF protection on state-changing CRM endpoints.

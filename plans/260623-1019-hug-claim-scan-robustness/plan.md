@@ -2,6 +2,7 @@
 title: "Hug claim/scan robustness — token normalization + dynamic claim fields + edge-promotion seam"
 description: "Worker /h/:token normalizes typed codes; claim station gains a config-driven multi-field form, per-field live validation, AJAX bind, session idempotency, and a one-time edge-promotion seam that makes adding new edge-matchable bind fields config-only forever after."
 status: in-progress
+# (updated 2026-06-24: Phases 1-3 done (afd271d/02c2165e/2d38bec); Phase 4 edge-promotion seam pending coordinated deploy)
 priority: P1
 effort: 12h
 branch: main

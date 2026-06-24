@@ -2,6 +2,7 @@
 title: "M5 — A2 Go-Live: Hug Voucher Issuance/Redeem + A2 Campaign"
 description: "Closes the voucher loop (issuance ledger + redeem matcher) and launches A2 to 364 MASKED_REPEAT customers (683M VND CM)."
 status: pending
+# (updated 2026-06-24: untouched by 260623 audit work; all phases P1-P5 not started; 5 open architecture questions unresolved)
 priority: P1
 effort: 6h
 branch: main
