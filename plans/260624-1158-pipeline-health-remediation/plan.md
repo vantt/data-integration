@@ -18,6 +18,7 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 - [x] **Worker bearer-token DEPLOYED + ENFORCED** — `wrangler deploy` (v3d9e7d47) + `POLL_TOKEN` secret + `WORKER_POLL_TOKEN` in `.env.docker`; verified authed `/ack`→400, unauth→401. `data_platform` recreated to load env + Hug SLA.
 - [x] **INCIDENT (pre-existing) resolved** — Sapo webhook ingestion stalled ~7h (zombie realtime run `35c42d4d` STARTED@09:45 blocked self-overlap guard; stuck-sensor missed it). Marked 3 zombies FAILURE → recovery confirmed (fresh realtime launches). Root-cause fix = Phase 05.
 - [x] **Phase 05 — reliability fix DEPLOYED** — enabled Dagster `run_monitoring` (MonitoringDaemon now active, `max_runtime_seconds: 14400` coarse backstop) + hardened `stuck_run_alerter.py` (per-job max-runtime + `last_event_time=None` blind-spot). Worst-case stuck detection 7h→≤45min. Report: `plans/reports/from-reliability-agent-*-260624-1656-report.md`.
+- [x] **dagster.yaml now version-controlled** — was gitignored (volume-only) → whole instance config (concurrency lock, run_monitoring, retention) would be silently lost on fresh deploy. Tracked `orchestration/dagster.yaml` as source + copy-if-absent at boot in `docker-compose.yml` (never clobbers live volume copy). Boot verified clean.
 
 ## Phases
 | # | Phase | Priority | Status |
