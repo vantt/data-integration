@@ -43,13 +43,19 @@ export default {
         // Match /webhook/<source_system>/<entity_type>/<action>
         if (request.method === "POST" && url.pathname.startsWith("/webhook/")) {
             return handleWebhook(request, env);
-        } else if (request.method === "GET" && url.pathname === "/poll") {
-            return handlePoll(request, env);
-        } else if (request.method === "DELETE" && url.pathname === "/ack") {
-            return handleAck(request, env);
-        } else if (request.method === "POST" && url.pathname === "/ack-batch") {
-            return handleBatchAck(request, env);
-        } else if (request.method === "POST" && url.pathname === "/release") {
+        } else if (
+            (request.method === "GET" && url.pathname === "/poll") ||
+            (request.method === "DELETE" && url.pathname === "/ack") ||
+            (request.method === "POST" && url.pathname === "/ack-batch") ||
+            (request.method === "POST" && url.pathname === "/release")
+        ) {
+            // Server-to-server queue management — gate with a bearer token.
+            const authErr = requireQueueToken(request, env);
+            if (authErr) return authErr;
+
+            if (url.pathname === "/poll") return handlePoll(request, env);
+            if (url.pathname === "/ack") return handleAck(request, env);
+            if (url.pathname === "/ack-batch") return handleBatchAck(request, env);
             return handleRelease(request, env);
         }
 
@@ -210,6 +216,20 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
         return new Response("Internal Server Error", { status: 500 });
     }
 
+}
+
+// Bearer-token guard for the server-to-server queue endpoints (/poll, /ack,
+// /ack-batch, /release). These are NOT Sapo-signed, so HMAC doesn't apply — a
+// shared secret is the right control. Backward-compatible: if POLL_TOKEN is
+// unset the check is skipped, so deploying this code never breaks the consumer
+// before the secret is provisioned. To enforce: set POLL_TOKEN (wrangler secret)
+// AND the consumer's WORKER_POLL_TOKEN env var to the same value.
+function requireQueueToken(request: Request, env: Env): Response | null {
+    const expected = env.POLL_TOKEN;
+    if (!expected) return null; // not yet provisioned — allow, no break window
+    const got = request.headers.get("authorization");
+    if (got === `Bearer ${expected}`) return null;
+    return new Response("Unauthorized", { status: 401 });
 }
 
 async function handlePoll(request: Request, env: Env): Promise<Response> {

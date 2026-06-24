@@ -5,6 +5,7 @@ Unified Transaction Log Strategy (Envelope Schema)
 """
 
 import dlt
+import os
 import requests
 import json
 import time
@@ -18,6 +19,11 @@ class CloudflareWorkerClient:
         self.session = requests.Session()
         # Cloudflare Bot Fight Mode blocks default python-requests UA (error-1010).
         self.session.headers.update({"User-Agent": "DataIntegration-Worker/1.0"})
+        # Bearer token for the Worker's queue endpoints (poll/ack/release).
+        # Optional: only sent if WORKER_POLL_TOKEN is set; must match POLL_TOKEN on the Worker.
+        poll_token = os.environ.get("WORKER_POLL_TOKEN")
+        if poll_token:
+            self.session.headers.update({"Authorization": f"Bearer {poll_token}"})
 
     def poll_messages(self, source_system: str = None, limit: int = 100) -> list:
         """
