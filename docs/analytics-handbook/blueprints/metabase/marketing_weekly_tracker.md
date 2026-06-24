@@ -680,8 +680,9 @@ WITH this_week AS (
     JOIN dim_channels         dc ON oe.channel_key  = dc.channel_key
     WHERE oe.scope_retail
       AND oe.is_active_order
-      AND oe.ordered_at >= date_trunc('week', current_date) - INTERVAL '7 days'
-      AND oe.ordered_at <  date_trunc('week', current_date)
+      AND oe.has_cogs
+      AND oe.date_key >= CAST(strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%Y%m%d') AS INTEGER)
+      AND oe.date_key <  CAST(strftime(date_trunc('week', current_date)::DATE, '%Y%m%d') AS INTEGER)
     GROUP BY dc.channel_name
 ),
 last_week AS (
@@ -694,8 +695,9 @@ last_week AS (
     JOIN dim_channels         dc ON oe.channel_key  = dc.channel_key
     WHERE oe.scope_retail
       AND oe.is_active_order
-      AND oe.ordered_at >= date_trunc('week', current_date) - INTERVAL '14 days'
-      AND oe.ordered_at <  date_trunc('week', current_date) - INTERVAL '7 days'
+      AND oe.has_cogs
+      AND oe.date_key >= CAST(strftime((date_trunc('week', current_date) - INTERVAL '14 days')::DATE, '%Y%m%d') AS INTEGER)
+      AND oe.date_key <  CAST(strftime((date_trunc('week', current_date) - INTERVAL '7 days')::DATE, '%Y%m%d') AS INTEGER)
     GROUP BY dc.channel_name
 )
 SELECT

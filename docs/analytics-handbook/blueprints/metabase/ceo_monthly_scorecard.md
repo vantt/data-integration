@@ -661,6 +661,7 @@ this_month AS (
     SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE scope_sales
+      AND has_cogs
       AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
       AND date_key <  CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
 ),
@@ -668,6 +669,7 @@ prev_month AS (
     SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE scope_sales
+      AND has_cogs
       AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%Y%m%d') AS INTEGER)
       AND date_key <  CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
 ),
@@ -675,6 +677,7 @@ prev_year AS (
     SELECT ROUND(SUM(gross_profit) / NULLIF(SUM(net_revenue), 0) * 100, 1) AS val
     FROM fact_order_economics
     WHERE scope_sales
+      AND has_cogs
       AND date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '13 months')::DATE, '%Y%m%d') AS INTEGER)
       AND date_key <  CAST(strftime((date_trunc('month', current_date) - INTERVAL '12 months')::DATE, '%Y%m%d') AS INTEGER)
 )

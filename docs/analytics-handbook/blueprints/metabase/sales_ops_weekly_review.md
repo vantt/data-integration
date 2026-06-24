@@ -1559,13 +1559,14 @@ this_week AS (
         c.channel_name                                                         AS channel,
         COUNT(DISTINCT e.order_id)                                             AS orders_tw,
         COALESCE(SUM(e.net_revenue), 0)                                        AS revenue_tw,
-        COALESCE(SUM(e.gross_profit), 0)                                       AS gp_tw
+        SUM(e.gross_profit)                                                    AS gp_tw
     FROM fact_order_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id
     JOIN dim_channels c ON e.channel_key = c.channel_key
     JOIN filter_bounds ON TRUE
     WHERE fo.scope_retail
       AND fo.is_active_order
+      AND e.has_cogs
       AND fo.ordered_at >= filter_bounds.p_start
       AND fo.ordered_at <  filter_bounds.p_end + INTERVAL '1 day'
     GROUP BY 1
@@ -1573,7 +1574,7 @@ this_week AS (
 last_week AS (
     SELECT
         c.channel_name                                                         AS channel,
-        COALESCE(SUM(e.gross_profit), 0)                                       AS gp_lw,
+        SUM(e.gross_profit)                                                    AS gp_lw,
         COALESCE(SUM(e.net_revenue), 0)                                        AS revenue_lw
     FROM fact_order_economics e
     JOIN fact_orders fo ON e.order_id = fo.order_id
@@ -1581,6 +1582,7 @@ last_week AS (
     JOIN filter_bounds ON TRUE
     WHERE fo.scope_retail
       AND fo.is_active_order
+      AND e.has_cogs
       AND fo.ordered_at >= (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)
       AND fo.ordered_at <  filter_bounds.p_start
     GROUP BY 1

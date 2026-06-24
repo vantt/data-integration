@@ -585,6 +585,7 @@ CROSS JOIN filter_bounds
 WHERE dim_channels.channel_name ILIKE '%shopee%'
   AND fact_order_economics.status = 'COMPLETED'
   AND NOT fact_order_economics.has_platform_fees
+  AND fact_order_economics.has_cogs
   AND dim_date.date_actual BETWEEN filter_bounds.p_start AND filter_bounds.p_end
 ORDER BY dim_date.date_actual DESC, fact_order_economics.net_revenue DESC
 LIMIT 200

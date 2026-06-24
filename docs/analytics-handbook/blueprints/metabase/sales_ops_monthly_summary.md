@@ -1956,14 +1956,15 @@ this_period AS (
         c.channel_name                                                        AS channel,
         COUNT(DISTINCT e.order_id)                                            AS orders_tm,
         COALESCE(SUM(e.net_revenue), 0)                                       AS revenue_tm,
-        COALESCE(SUM(e.gross_profit), 0)                                      AS gp_tm,
+        SUM(e.gross_profit)                                                   AS gp_tm,
         ROUND(
-            COALESCE(SUM(e.gross_profit), 0)
+            SUM(e.gross_profit)
             / NULLIF(SUM(e.net_revenue), 0) * 100
         , 1)                                                                  AS margin_pct_tm
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key, filter_bounds
     WHERE e.scope_sales
+      AND e.has_cogs
       AND e.is_active_order
       AND e.date_key >= CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
       AND e.date_key <= CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
@@ -1973,12 +1974,13 @@ prev_period AS (
     SELECT
         c.channel_name                                                        AS channel,
         ROUND(
-            COALESCE(SUM(e.gross_profit), 0)
+            SUM(e.gross_profit)
             / NULLIF(SUM(e.net_revenue), 0) * 100
         , 1)                                                                  AS margin_pct_pp
     FROM fact_order_economics e
     JOIN dim_channels c ON e.channel_key = c.channel_key, filter_bounds
     WHERE e.scope_sales
+      AND e.has_cogs
       AND e.is_active_order
       AND e.date_key >= CAST(strftime((filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1)::DATE, '%Y%m%d') AS INTEGER)
       AND e.date_key <  CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)

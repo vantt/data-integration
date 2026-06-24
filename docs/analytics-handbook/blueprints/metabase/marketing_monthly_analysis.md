@@ -1933,10 +1933,11 @@ perf AS (
         SUM(o.gross_profit)       AS gross_profit,
         SUM(o.channel_net_profit) AS net_profit
     FROM fact_order_economics o
-    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.ordered_at <  date_trunc('month', current_date)
+    WHERE o.date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
+      AND o.date_key <  CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
       AND o.scope_retail
       AND o.is_active_order
+      AND o.has_cogs
     GROUP BY o.channel_key
 ),
 prev_perf AS (
@@ -1944,8 +1945,8 @@ prev_perf AS (
         o.channel_key,
         SUM(o.net_revenue) AS rev
     FROM fact_order_economics o
-    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.ordered_at <  date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE o.date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%Y%m%d') AS INTEGER)
+      AND o.date_key <  CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY o.channel_key
@@ -2060,8 +2061,8 @@ profit_cur AS (
         o.channel_key,
         SUM(o.channel_net_profit) AS net_profit
     FROM fact_order_economics o
-    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '1 month'
-      AND o.ordered_at <  date_trunc('month', current_date)
+    WHERE o.date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
+      AND o.date_key <  CAST(strftime(date_trunc('month', current_date)::DATE, '%Y%m%d') AS INTEGER)
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY o.channel_key
@@ -2071,8 +2072,8 @@ profit_prev AS (
         o.channel_key,
         SUM(o.channel_net_profit) AS net_profit
     FROM fact_order_economics o
-    WHERE o.ordered_at >= date_trunc('month', current_date) - INTERVAL '2 months'
-      AND o.ordered_at <  date_trunc('month', current_date) - INTERVAL '1 month'
+    WHERE o.date_key >= CAST(strftime((date_trunc('month', current_date) - INTERVAL '2 months')::DATE, '%Y%m%d') AS INTEGER)
+      AND o.date_key <  CAST(strftime((date_trunc('month', current_date) - INTERVAL '1 month')::DATE, '%Y%m%d') AS INTEGER)
       AND o.scope_retail
       AND o.is_active_order
     GROUP BY o.channel_key

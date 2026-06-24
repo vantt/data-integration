@@ -475,6 +475,7 @@ current_econ AS (
         SUM(e.gross_profit)  AS gross_profit
     FROM fact_order_economics e, filter_bounds
     WHERE e.status = 'COMPLETED'
+      AND e.has_cogs
       AND e.date_key BETWEEN CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
                          AND CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
     GROUP BY e.channel_key
@@ -501,6 +502,7 @@ prior_econ AS (
         SUM(e.gross_profit) AS gross_profit
     FROM fact_order_economics e, filter_bounds
     WHERE e.status = 'COMPLETED'
+      AND e.has_cogs
       AND e.date_key >= CAST(strftime(
             (filter_bounds.p_start - (filter_bounds.p_end - filter_bounds.p_start)::INTEGER - 1),
             '%Y%m%d') AS INTEGER)
@@ -614,6 +616,7 @@ channel_econ AS (
         SUM(e.gross_profit) AS gross_profit
     FROM fact_order_economics e, filter_bounds
     WHERE e.status = 'COMPLETED'
+      AND e.has_cogs
       AND e.date_key BETWEEN CAST(strftime(filter_bounds.p_start, '%Y%m%d') AS INTEGER)
                          AND CAST(strftime(filter_bounds.p_end,   '%Y%m%d') AS INTEGER)
     GROUP BY e.channel_key
