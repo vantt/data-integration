@@ -102,7 +102,9 @@ def _run_provisioning_script(
 @asset(
     deps=[sapo_dbt_assets],
     group_name="serving_layer",
-    description="Generates the Serving Layer (DuckDB OLAP) from DBT Marts."
+    description="Generates the Serving Layer (DuckDB OLAP) from DBT Marts.",
+    # serializes DuckDB writes to olap.duckdb with dbt assets
+    op_tags={"dagster/concurrency_key": "duckdb_lock"},
 )
 def build_serving_db(context: AssetExecutionContext):
     output_lines = _run_provisioning_script(context, SCRIPT_PATH, "refresh_rolling")

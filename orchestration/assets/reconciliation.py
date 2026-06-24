@@ -133,6 +133,7 @@ def _file_drop_source_count(ingestion_asset_key: str, window_start: datetime) ->
     This uses Phase 1 records (rows_written = rows inserted from file).
     Returns None if no successful runs exist in the window.
     """
+    conn = None
     try:
         conn = sqlite3.connect(get_db_path())
         row = conn.execute(
@@ -145,13 +146,18 @@ def _file_drop_source_count(ingestion_asset_key: str, window_start: datetime) ->
             """,
             [ingestion_asset_key, window_start.isoformat()],
         ).fetchone()
-        conn.close()
         if row and row[0] is not None:
             return int(row[0])
         return None
     except Exception as exc:
         logger.error("_file_drop_source_count: health DB query failed — %s", exc)
         return None
+    finally:
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
 
 
 def _parquet_dest_count(parquet_path: str, window_start: datetime, label: str) -> Optional[int]:

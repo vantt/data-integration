@@ -1,4 +1,4 @@
-﻿# SLA configuration for ingestion asset checks.
+# SLA configuration for ingestion asset checks.
 # Editing this file is the ONLY action needed to tighten or loosen any SLA.
 # Restart the Dagster webserver after changes.
 

@@ -44,6 +44,7 @@ KNOWN_ASSETS: list[tuple[str, str, Optional[str]]] = [
     ("sheet_team",     "sheets/sheets_team_config_asset",                     None),
     ("sheet_us_prices","sheets/sheets_us_shipment_prices_asset",              None),
     ("sheet_overhead", "sheets/sheets_overhead_classification_asset",         None),
+    ("hug",            "hug/ingest_hug_webhook_consumer_asset",               None),
 ]
 
 # ---------------------------------------------------------------------------
@@ -70,6 +71,7 @@ ASSET_DISPLAY: dict[str, tuple[str, str, str]] = {
     "sheet_team":     ("Google Sheet — Cấu hình nhóm",            "file_drop", "dòng"),
     "sheet_us_prices":("Google Sheet — Giá vận chuyển US",        "file_drop", "dòng"),
     "sheet_overhead": ("Google Sheet — Phân loại overhead",       "file_drop", "dòng"),
+    "hug":            ("Hug webhook consumer",                    "cursor",    "events"),
 }
 
 # ---------------------------------------------------------------------------
