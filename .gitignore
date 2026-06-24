@@ -32,3 +32,9 @@ app_data
 # Temporary / ad-hoc analysis scripts — belong in poc/ or scripts/analysis/ if permanent
 _tmp_*.py
 _tmp_*.sh
+
+# Ad-hoc debug/check scripts at repo root
+check_*.py
+
+# Rill temp artifacts
+rill/tmp/
