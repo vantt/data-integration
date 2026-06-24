@@ -1,4 +1,6 @@
-FROM rilldata/rill:latest
+# Pinned to the version running as of 2026-06-24 (was :latest — auto-upgrades can break dashboards).
+# To upgrade deliberately: bump this tag, rebuild, verify Rill dashboards, then commit.
+FROM rilldata/rill:v0.85.3
 
 # Default project dir — mount your rill/ folder here
 WORKDIR /app/rill
