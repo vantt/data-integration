@@ -1,0 +1,70 @@
+# ==============================================================================
+# CRITICAL CONFIGURATION: DAGSTER CONCURRENCY
+# ==============================================================================
+# PURPOSE: Enforce SINGLE-THREADED access to DuckDB to prevent file locking errors.
+# WARNING: DO NOT REMOVE THIS FILE OR THE CONCURRENCY LIMITS BELOW.
+#          DUCKDB DOES NOT SUPPORT CONCURRENT WRITERS.
+# NOTE: This is the VERSION-CONTROLLED source. At container boot, docker-compose
+#       copies it to $DAGSTER_HOME (/app/var/dagster_home/dagster.yaml) ONLY IF
+#       absent (copy-if-absent — never clobbers a live-tuned volume copy).
+#       Edit here for reproducible changes; on a fresh deploy this seeds the instance.
+# ==============================================================================
+
+telemetry:
+  enabled: false
+
+# Disable Dagster-native FreshnessDaemon — we use custom @asset_check + ingestion_health.duckdb
+# instead of Dagster's FreshnessPolicy. The daemon was hammering SQLite event_log with
+# IN(...) queries across ~90 assets, causing lock contention that starved the gRPC server
+# (DagsterUserCodeUnreachableError). No assets in this project use FreshnessPolicy, so
+# disabling is safe — see plans/260415-1749-ingestion-trust-engineering/.
+freshness:
+  enabled: false
+
+# Purge schedule/sensor tick history older than 30 days. Without this, schedules.db
+# grew to 87M, slowing every sensor evaluation. Tick history beyond a month has no
+# operational value (we still keep run history separately).
+retention:
+  schedule:
+    purge_after_days: 30
+  sensor:
+    purge_after_days: 30
+
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 5
+    tag_concurrency_limits:
+      - key: "concurrency_group"
+        value: "dbt_rw"
+        limit: 1
+
+# Run monitoring: auto-fails STARTED runs whose run worker has died (zombie
+# detection after container restart).  Because this launcher (DefaultRunLauncher)
+# does NOT implement supports_check_run_worker_health, the daemon falls through to
+# check_run_timeout — so max_runtime_seconds is the effective kill-switch for
+# zombie STARTED runs.
+#
+# Settings:
+#   enabled: true  — activates the RunMonitoringDaemon loop
+#   start_timeout_seconds: 300  — fail STARTING/NOT_STARTED runs stuck >5 min
+#   max_runtime_seconds: 14400  — COARSE 4h backstop; fail any STARTED run > 4h.
+#     Generous on purpose so it never false-kills a legit nightly/full-refresh.
+#     PRECISE per-job kills are done by orchestration/sensors/stuck_run_alerter.py
+#     (45 min realtime/incremental, 120 min nightly). Two-layer: sensor = fast/precise,
+#     run_monitoring = slow/catch-all. Override per-run via dagster/max_runtime_seconds tag.
+#   max_resume_run_attempts: 0  — no auto-resume (launcher doesn't support it)
+#   poll_interval_seconds: 120  — default; one monitoring sweep every 2 min
+#   cancel_timeout_seconds: 300  — fail CANCELING runs stuck >5 min
+run_monitoring:
+  enabled: true
+  start_timeout_seconds: 300
+  cancel_timeout_seconds: 300
+  max_runtime_seconds: 14400  # 4h coarse backstop — generous so it never false-kills a legit nightly/full-refresh; precise per-job kills done by stuck_run_alerter (45min realtime, 120min nightly)
+  max_resume_run_attempts: 0
+  poll_interval_seconds: 120
+
+# Maintain standard storage (Sqlite by default in local/docker if not specified,
+# but usually good to be explicit if we wanted postgres. sticking to default for now).
+# We just need the coordinator config.

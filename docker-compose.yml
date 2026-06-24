@@ -42,7 +42,7 @@ services:
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./Dockerfile.dataplatform:/app/Dockerfile.dataplatform:ro
       - ./Dockerfile.metabase:/app/Dockerfile.metabase:ro
-    command: sh -c "python scripts/ensure_dbt_directories.py && python scripts/ensure_shopee_safety_placeholder.py && python scripts/ensure_hug_safety_placeholder.py && (python scripts/maintenance/recover_health_db.py || true) && dbt deps --project-dir /app/transformation && dagster instance concurrency set duckdb_lock 1 && dbt parse --project-dir /app/transformation --profiles-dir /app/transformation && (python scripts/maintenance/unstick_concurrency_pools.py || true) && (python scripts/provisioning/bootstrap_reporting.py || true) && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
+    command: sh -c "mkdir -p /app/var/dagster_home && { [ -f /app/var/dagster_home/dagster.yaml ] || cp /app/orchestration/dagster.yaml /app/var/dagster_home/dagster.yaml; } && python scripts/ensure_dbt_directories.py && python scripts/ensure_shopee_safety_placeholder.py && python scripts/ensure_hug_safety_placeholder.py && (python scripts/maintenance/recover_health_db.py || true) && dbt deps --project-dir /app/transformation && dagster instance concurrency set duckdb_lock 1 && dbt parse --project-dir /app/transformation --profiles-dir /app/transformation && (python scripts/maintenance/unstick_concurrency_pools.py || true) && (python scripts/provisioning/bootstrap_reporting.py || true) && dagster dev -h 0.0.0.0 -p 3001 -f orchestration/definitions.py"
     labels:
       caddy: etl.lan.fwg.vn
       caddy.reverse_proxy: "{{upstreams 3001}}"
