@@ -25,8 +25,9 @@
 
 ### Progress (2026-06-24)
 - ✅ Observe-mode logging deployed (Worker v8b2c35e5): when a secret is set but `CHECK_HMAC` off, each `/webhook/*` logs `HMAC_OBSERVE` to D1 `webhook_errors` with the request's header names + which header/encoding the HMAC matches — WITHOUT rejecting. Code in `src/index.ts` `handleWebhook` (marked temporary, remove after enforce).
-- ✅ Secrets set: `SAPO_SECRET` + `WEBHOOK_SECRET` (same value) via wrangler.
-- ✅ Self-test validated logic: a request signed with the secret over the raw body → `match=MATCH header=x-sapo-hmac-sha256 enc=base64` (matches `SOURCE_CONFIGS['sapo']`). Bogus test message was deleted from the queue (status was NEW).
+- ✅ Secret: `SAPO_V2_SECRET` (version-scoped) via wrangler. Old `SAPO_SECRET`/`WEBHOOK_SECRET` deleted; dead `'sapo'` config entry removed. `SOURCE_CONFIGS['sapo_v2']` = {SAPO_V2_SECRET, x-sapo-hmac-sha256, base64}.
+- ✅ Self-test + REAL Sapo test validated: real event `path=/webhook/sapo_v2/order/update` (x-sapo-test header) → `match=MATCH header=x-sapo-hmac-sha256 enc=base64`. Confirms enforcement will accept genuine Sapo.
+- ℹ️ `CHECK_HMAC` exists as a secret but is NOT `'true'` (observe ran on the real event → enforcement confirmed OFF).
 
 ### NEXT (you / monitoring) — confirm on REAL Sapo traffic, then enforce
 1. Wait for genuine Sapo webhook events, then read the observe log:
@@ -35,7 +36,7 @@
      --command "SELECT created_at, error_message FROM webhook_errors WHERE error_type='HMAC_OBSERVE' ORDER BY id DESC LIMIT 20"
    ```
    Confirm REAL requests show `match=MATCH` (note the actual `path=` and `header=` Sapo uses — if path is `/webhook/sapo_v2/...` it falls to DEFAULT_CONFIG/WEBHOOK_SECRET, which is also set).
-2. If real events MATCH consistently → enforce: `npx wrangler secret put CHECK_HMAC` (value `true`) OR add `CHECK_HMAC = "true"` to `wrangler.toml [vars]` + `wrangler deploy`. Also set `HMAC_HEADER_NAME=x-sapo-hmac-sha256` if Sapo uses the DEFAULT_CONFIG path.
+2. Real event already MATCHED (sapo_v2 has explicit config now — no HMAC_HEADER_NAME needed). To enforce: set `CHECK_HMAC` = `true` (`npx wrangler secret put CHECK_HMAC`).
 3. After enforcing + confirming ingestion unaffected: REMOVE the temporary observe block from `index.ts` and redeploy.
 4. Rollback: unset/false `CHECK_HMAC` → instant revert to accept-all.
 - If real events show `no-match` → the secret or scheme differs; do NOT enforce. Inspect the logged header list + adjust secret/header/encoding.

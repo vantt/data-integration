@@ -15,18 +15,12 @@ export const SOURCE_CONFIGS: Record<string, SourceConfig> = {
         * Server của anh (Cloudflare Worker) cũng lấy nội dung nhận được + SAPO_SECRET (anh cấu hình) -> Tự tính lại HMAC.
         * Nếu 2 chuỗi khớp nhau -> Request chuẩn từ Sapo. Không khớp -> Request giả mạo.
      */
-    'sapo': {
-        // 'SAPO_SECRET' is the NAME of the environment variable containing the actual secret.
-        // You must set SAPO_SECRET in .dev.vars (local) or Cloudflare Dashboard (production).
-        secretKey: 'SAPO_SECRET',
-        headerNames: ['x-sapo-hmac-sha256'],
-        encoding: 'base64'
-    },
-    // Sapo actually posts to /webhook/sapo_v2/... (verified 2026-06-24 from a real
-    // test event: header x-sapo-hmac-sha256, base64 HMAC-SHA256). Same scheme as
-    // 'sapo' above; this is the path Sapo is registered to.
+    // Sapo posts to /webhook/sapo_v2/... (verified 2026-06-24 from a real test event:
+    // header x-sapo-hmac-sha256, base64 HMAC-SHA256). Secret env var is version-scoped
+    // SAPO_V2_SECRET (matches the source_system={system}_{version} convention; a future
+    // sapo_v3 would get its own SAPO_V3_SECRET entry). Set via `wrangler secret put`.
     'sapo_v2': {
-        secretKey: 'SAPO_SECRET',
+        secretKey: 'SAPO_V2_SECRET',
         headerNames: ['x-sapo-hmac-sha256'],
         encoding: 'base64'
     },
