@@ -1,6 +1,6 @@
 # Phase 02 — Worker security: queue bearer-token + Sapo webhook HMAC
 
-**Priority:** HIGH (security) | **Status:** 🟡 IN PROGRESS (bearer-token code done; HMAC pending)
+**Priority:** HIGH (security) | **Status:** 🟡 Part A done+enforced; Part B OBSERVE deployed (awaiting real-traffic confirmation before enforce)
 **Context:** [plan](plan.md) · audit findings "queue endpoints unauth" + "CHECK_HMAC off by default" · Sapo OAuth doc https://support.sapo.vn/oauth + webhook doc https://support.sapo.vn/sapo-webhook
 
 ---
@@ -22,6 +22,23 @@
 ---
 
 ## Part B — Sapo webhook HMAC (observe → confirm → enforce)
+
+### Progress (2026-06-24)
+- ✅ Observe-mode logging deployed (Worker v8b2c35e5): when a secret is set but `CHECK_HMAC` off, each `/webhook/*` logs `HMAC_OBSERVE` to D1 `webhook_errors` with the request's header names + which header/encoding the HMAC matches — WITHOUT rejecting. Code in `src/index.ts` `handleWebhook` (marked temporary, remove after enforce).
+- ✅ Secrets set: `SAPO_SECRET` + `WEBHOOK_SECRET` (same value) via wrangler.
+- ✅ Self-test validated logic: a request signed with the secret over the raw body → `match=MATCH header=x-sapo-hmac-sha256 enc=base64` (matches `SOURCE_CONFIGS['sapo']`). Bogus test message was deleted from the queue (status was NEW).
+
+### NEXT (you / monitoring) — confirm on REAL Sapo traffic, then enforce
+1. Wait for genuine Sapo webhook events, then read the observe log:
+   ```
+   cd webhook_receiver/cloudflareD1 && npx wrangler d1 execute fgcare-webhook-db --remote \
+     --command "SELECT created_at, error_message FROM webhook_errors WHERE error_type='HMAC_OBSERVE' ORDER BY id DESC LIMIT 20"
+   ```
+   Confirm REAL requests show `match=MATCH` (note the actual `path=` and `header=` Sapo uses — if path is `/webhook/sapo_v2/...` it falls to DEFAULT_CONFIG/WEBHOOK_SECRET, which is also set).
+2. If real events MATCH consistently → enforce: `npx wrangler secret put CHECK_HMAC` (value `true`) OR add `CHECK_HMAC = "true"` to `wrangler.toml [vars]` + `wrangler deploy`. Also set `HMAC_HEADER_NAME=x-sapo-hmac-sha256` if Sapo uses the DEFAULT_CONFIG path.
+3. After enforcing + confirming ingestion unaffected: REMOVE the temporary observe block from `index.ts` and redeploy.
+4. Rollback: unset/false `CHECK_HMAC` → instant revert to accept-all.
+- If real events show `no-match` → the secret or scheme differs; do NOT enforce. Inspect the logged header list + adjust secret/header/encoding.
 
 ## Problem
 `webhook_receiver/cloudflareD1/src/index.ts:98` gates HMAC on `env.CHECK_HMAC === 'true'`. CHECK_HMAC is NOT set in `wrangler.toml` → defaults false → `/webhook/*` currently accepts **unauthenticated** payloads into the D1 queue. Cannot blindly flip to true: a wrong secret/header would 401 all real Sapo webhooks and silently stop ingestion.
