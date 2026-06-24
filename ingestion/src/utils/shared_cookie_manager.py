@@ -269,7 +269,13 @@ class SharedCookieManager:
             expiry_str = data.get('expiry')
 
             if expiry_str:
-                self.cookie_expiry = datetime.fromisoformat(expiry_str)
+                exp = datetime.fromisoformat(expiry_str)
+                # Normalize to UTC-aware: legacy cookie files stored naive local
+                # timestamps; treat those as UTC so comparison stays consistent
+                # across Windows host (ICT) and Linux container (UTC).
+                if exp.tzinfo is None:
+                    exp = exp.replace(tzinfo=timezone.utc)
+                self.cookie_expiry = exp
 
             if self.is_cookie_valid():
                 self.user_agent = data.get('user_agent')
@@ -292,7 +298,7 @@ class SharedCookieManager:
         """
         if not self.cookies or not self.cookie_expiry:
             return False
-        return datetime.now() < self.cookie_expiry
+        return datetime.now(timezone.utc) < self.cookie_expiry
 
     def login_and_save_cookies(self) -> Dict[str, str]:
         """
@@ -376,7 +382,7 @@ class SharedCookieManager:
 
                 self.user_agent = page.evaluate("navigator.userAgent")
                 
-                self.cookie_expiry = datetime.now() + timedelta(hours=self.cookie_ttl_hours)
+                self.cookie_expiry = datetime.now(timezone.utc) + timedelta(hours=self.cookie_ttl_hours)
 
                 # Save to file
                 cookie_data = {
@@ -384,7 +390,7 @@ class SharedCookieManager:
                     'cookies': self.cookies,
                     'user_agent': self.user_agent,
                     'expiry': self.cookie_expiry.isoformat(),
-                    'created_at': datetime.now().isoformat(),
+                    'created_at': datetime.now(timezone.utc).isoformat(),
                     'login_url': self.login_url,
                 }
 
