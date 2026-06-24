@@ -9,6 +9,8 @@ services:
       dockerfile: Dockerfile.dataplatform
     container_name: data_platform
     restart: unless-stopped
+    mem_limit: 8g
+    cpus: 4
     ports:
       - "3000:3001"
     env_file:
@@ -38,7 +40,6 @@ services:
       # CRM SQLite databases (read-only — for backup access only)
       - crm_data:/app/var/crm_data:ro
       # Config (read-only)
-      - ./.env.docker:/app/.env.docker:ro
       - ./docker-compose.yml:/app/docker-compose.yml:ro
       - ./Dockerfile.dataplatform:/app/Dockerfile.dataplatform:ro
       - ./Dockerfile.metabase:/app/Dockerfile.metabase:ro
@@ -53,6 +54,8 @@ services:
       dockerfile: Dockerfile.metabase
     container_name: metabase
     restart: unless-stopped
+    mem_limit: 4g
+    cpus: 2
     ports:
       - "3001:3000"
     env_file:
@@ -73,6 +76,8 @@ services:
       dockerfile: Dockerfile.rill
     container_name: rill
     restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1
     ports:
       - "3002:9009"
     environment:
@@ -95,6 +100,8 @@ services:
       dockerfile: Dockerfile.evidence
     container_name: evidence
     restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1
     ports:
       - "3006:3000"
     environment:
@@ -115,6 +122,8 @@ services:
     image: caddy:alpine
     container_name: data_fileserver
     restart: unless-stopped
+    mem_limit: 512m
+    cpus: 0.5
     ports:
       - "3004:8080"
     networks:
@@ -136,6 +145,8 @@ services:
       dockerfile: Dockerfile.detailview
     container_name: detail_view
     restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1
     ports:
       - "3005:8000"
     env_file:
@@ -159,6 +170,8 @@ services:
       dockerfile: Dockerfile.crm
     container_name: crm
     restart: unless-stopped
+    mem_limit: 2g
+    cpus: 1
     ports:
       - "3007:8090"
     environment:

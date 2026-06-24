@@ -4,6 +4,9 @@ WORKDIR /app
 # curl required for HEALTHCHECK
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
+# Non-root user — created before npm install so node_modules are owned correctly
+RUN useradd -r -u 1001 -g node app
+
 # Install Evidence CLI + plugins at image build time (cached separately from config)
 COPY evidence/package*.json ./
 RUN npm install --include=dev
@@ -11,8 +14,10 @@ RUN npm install --include=dev
 # Config files (copied after npm install to preserve cache on pkg change)
 COPY evidence/evidence.config.yaml ./
 
-# Placeholders replaced by volume mounts at runtime
-RUN mkdir -p pages sources scripts
+# Placeholders replaced by volume mounts at runtime; chown so non-root can write at startup
+RUN mkdir -p pages sources scripts && chown -R 1001:node /app
+
+USER 1001
 
 EXPOSE 3000
 
