@@ -4380,3 +4380,22 @@ elif filter_priority == "high":
 5. **Don't batch-apply a gate uniformly across cards of different KINDS.** A `has_cogs` gate is right for an aggregation/KPI card (keeps SUM/AVG consistent) but WRONG for a row-level diagnostic/exception card whose job is to surface broken rows — there the gate HIDES the very anomalies it should show. (Card 1520 "Shopee Orders Missing Fee Data" got the gate in the batch sweep and hid order SON06338 = no-fees + no-cogs, the worst case. A NULL `gross_profit` cell is harmless in a table card; remove the gate, label the no-cogs rows instead.) Classify card intent (aggregate vs exception-list) before applying a uniform fix.
 
 **Reference:** `transformation/models/marts/sales/fact_order_economics.sql` (has_cogs/gross_profit), `docs/analytics-handbook/blueprints/metabase/{ceo_monthly_scorecard,marketing_roi,finance_accounting_recon,...}.md`. Audits `plans/reports/from-metabase-auditor-gross-profit-null-impact-260624-0840-report.md` + `from-metabase-verifier-card-1520-recon-semantics-260624-1036-report.md`. Fixed 2026-06-24, commits bfcaace (8 cards) + 418f240 (card 1520 gate removal).
+
+---
+
+### L144 — A UTF-8 BOM in a YAML config silently breaks strict PyYAML; the error points at the wrong line
+
+**Group:** OPS
+
+**Symptom:** Loading `orchestration/config/ingestion_sla.yaml` raised `yaml.parser.ParserError: expected '<document start>', but found '<block mapping start>'` pointing at **line 5** (`defaults:`) — the first non-comment line. The file *looked* perfectly valid; lines 1-4 are comments. Production (container PyYAML) parsed it fine for months; only surfaced on a dev box with a stricter PyYAML. This in turn broke `orchestration/asset_checks._build_asset_def_map()` load on that environment.
+
+**Root cause:** The file started with a UTF-8 BOM (bytes `EF BB BF`) at offset 0. Some PyYAML builds treat the BOM as stray content before the document, so the first real mapping is read as a second/invalid document — and the reported line is the first mapping (line 5), NOT the BOM (byte 0). The misleading line number sends you hunting in the wrong place. Editors on Windows can re-introduce a BOM on save.
+
+**Fix:** Re-saved the file as UTF-8 **without** BOM (content byte-identical otherwise). Verify: `open(path,'rb').read(3)` must NOT be `b'\xef\xbb\xbf'`; then `yaml.safe_load(open(path,encoding='utf-8'))` succeeds.
+
+**Rules:**
+1. When a YAML/JSON `ParserError` points at the first non-comment line and the syntax looks correct, check byte 0 for a BOM: `python -c "print(open(F,'rb').read(3))"`. The reported line is often a red herring.
+2. Config files consumed by parsers (YAML/TOML/JSON) must be saved UTF-8 **no BOM**. On Windows, never trust the displayed text — check the raw bytes.
+3. "Works in prod" ≠ "valid": library-version differences in BOM tolerance mean a file can load in the container but fail in dev (or vice-versa). Normalize encoding so it parses everywhere.
+
+**Reference:** `orchestration/config/ingestion_sla.yaml`. Found during the `sapo_assets`→`sapo_v2_assets` rename import-validation, fixed 2026-06-24 commit f6355ab.

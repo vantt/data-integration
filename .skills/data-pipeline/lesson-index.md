@@ -139,6 +139,7 @@ Largest group — Dagster orchestration, schedules, sensors, concurrency, mainte
 | L38 | Activity-based stuck detection vs fixed timeout | `references/lessons-learned.md#L38` |
 | L39 | Concurrency pool janitor auto-cleanup | `references/lessons-learned.md#L39` |
 | L40 | Health checks phải mutual-exclude với ingestion/dbt jobs | `references/lessons-learned.md#L40` |
+| L144 | UTF-8 BOM in YAML config breaks strict PyYAML; ParserError points at wrong line | `references/lessons-learned.md#L144` |
 
 ### Stuck Run Prevention
 
