@@ -55,7 +55,8 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 - [ ] **detailView `order_cogs_items.sql` queries `int_*`** — violates "serving views only" contract; arch test doesn't catch it. Expose via a mart view.
 
 ### MEDIUM — security (private network lowers urgency)
-- [ ] **CRM mutation APIs no auth** (`crm/.../inbound/http/*`) + Messenger ingest no HMAC. Add internal-token middleware. (Lower priority — Docker net private.)
+- [ ] **CRM mutation APIs no auth** (`crm/.../inbound/http/*`). Add internal-token middleware. (Lower priority — Docker net private.)
+- [⏸️] **CRM Messenger ingest no HMAC** (`conversation_handler.py:101`) — DEFERRED (user, 2026-06-24): no live Messenger data flow yet. Add `X-Hub-Signature-256` HMAC before the integration goes live.
 - [ ] **Containers run as root** (all except metabase) — add non-root `USER` to Dockerfiles.
 - [~] **Ports `0.0.0.0` bypass Caddy** — DEFERRED per user (firewall check).
 
