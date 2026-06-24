@@ -22,34 +22,53 @@ _ICT = timezone(timedelta(hours=7))
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 BACKUP_SH = PROJECT_ROOT / "scripts" / "backup" / "backup.sh"
 
+_BACKUP_TIMEOUT_SEC = 600  # 10 min max
+
 
 def _run_and_log(context: OpExecutionContext, cmd: list[str], env: dict | None = None) -> None:
-    """Run a subprocess, stream output to Dagster logs, raise on failure.
+    """Run a subprocess, stream output to Dagster logs line-by-line, raise on failure.
 
-    Uses capture_output=True (buffers all stdout/stderr in memory). Safe as long
-    as backup.sh output stays modest (file listing). If backup script ever becomes
-    verbose (rsync --progress, large file lists), migrate to the Popen + line
-    iteration pattern used in serving.py to avoid OS pipe buffer fill and deadlock.
+    Uses Popen + stdout-stream + stderr=STDOUT + wait(timeout) pattern.
+    DO NOT use capture_output=True — that pattern deadlocks when output exceeds
+    the OS pipe buffer (~64 KB). backup.sh can emit large file listings or rsync
+    --progress output that fills the buffer, causing a 10-min hang until timeout.
+    Mirrors the pattern in orchestration/assets/serving.py _run_provisioning_script().
     """
     merged_env = {**os.environ, **(env or {})}
-    result = subprocess.run(
+
+    proc = subprocess.Popen(
         cmd,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,  # merge stderr into stdout stream
         text=True,
-        timeout=600,  # 10 min max
+        bufsize=1,  # line-buffered — required for real-time streaming
         env=merged_env,
     )
 
-    if result.stdout:
-        for line in result.stdout.strip().splitlines():
+    output_lines: list[str] = []
+    try:
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            line = line.rstrip()
+            output_lines.append(line)
             context.log.info(line)
-    if result.stderr:
-        for line in result.stderr.strip().splitlines():
-            context.log.warning(line)
-
-    if result.returncode != 0:
+        proc.wait(timeout=_BACKUP_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
         raise Failure(
-            description=f"Backup script exited with code {result.returncode}. Check logs above."
+            description=(
+                f"Backup script exceeded {_BACKUP_TIMEOUT_SEC}s timeout — killed. "
+                "Check for slow I/O or large backup set."
+            )
+        )
+
+    if proc.returncode != 0:
+        raise Failure(
+            description=(
+                f"Backup script exited with code {proc.returncode}. "
+                f"Last output: {output_lines[-20:] if output_lines else '(empty)'}"
+            )
         )
 
 

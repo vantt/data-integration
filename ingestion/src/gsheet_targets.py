@@ -2,7 +2,7 @@ import sys
 import os
 import re
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def _load_dotenv_local():
@@ -197,9 +197,10 @@ def fetch_and_save_targets():
         date_col = "cycle_start_date"
         df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
         
-        # Partition columns
-        df["year"] = df[date_col].dt.year.fillna(datetime.now().year).astype(int)
-        df["month"] = df[date_col].dt.month.fillna(datetime.now().month).astype(int)
+        # Partition columns — fallback to UTC now() to avoid wrong year/month at midnight rollover
+        _now_utc = datetime.now(timezone.utc)
+        df["year"] = df[date_col].dt.year.fillna(_now_utc.year).astype(int)
+        df["month"] = df[date_col].dt.month.fillna(_now_utc.month).astype(int)
 
         # Format date
         df[date_col] = df[date_col].dt.strftime("%Y-%m-%d")

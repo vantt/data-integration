@@ -7,6 +7,8 @@ defaults:
   trend_min_ratio: 0.5         # current-24h >= 50% of 7-day median
   empty_check_min_age_hours: 1 # don't complain until asset has run at least once
   cursor_empty_streak: 3
+  recon_drift_warn_pct: 0.01   # |drift_pct| > 1%  → WARN  (used by reconciliation_checks.py)
+  recon_drift_error_pct: 0.05  # |drift_pct| > 5%  → ERROR (used by reconciliation_checks.py)
 
 assets:
   sapo/ingest_sapo_v2_webhook_consumer_asset:

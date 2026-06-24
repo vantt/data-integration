@@ -294,21 +294,23 @@ def _long_dbt_rw_holder(context) -> str | None:
 
 
 # Jobs that use duckdb_lock (write to DuckDB). Health checks should yield to these.
-# IMPORTANT: Update this list when adding new ingestion/transform jobs!
-# Maintenance note: every job listed here should have tags=SYNC_TAGS (concurrency_group=dbt_rw).
-# To avoid drift, this list should match [j.name for j in <all jobs> if j.tags.get("concurrency_group") == "dbt_rw"].
-# Currently maintained manually — add any new SYNC_TAGS jobs here.
+# Built dynamically from all jobs defined in this module that carry SYNC_TAGS
+# (concurrency_group == "dbt_rw") — eliminates the drift risk of a manual list.
+_ALL_SYNC_JOBS = [
+    pipeline_sapo_v2_realtime_job,
+    pipeline_hug_realtime_job,
+    pipeline_sapo_v2_incremental_job,
+    pipeline_sapo_v2_hourly_job,
+    ingest_sheets_sync_job,
+    ingest_filedrop_shopee_job,
+    ingest_filedrop_misa_job,
+    ingest_filedrop_misa_account_ledger_job,
+    pipeline_batch_nightly_job,
+    pipeline_batch_fullrefresh_job,
+]
 _INGESTION_JOBS = [
-    "pipeline_sapo_v2_realtime_job",
-    "pipeline_hug_realtime_job",
-    "pipeline_sapo_v2_incremental_job",
-    "pipeline_sapo_v2_hourly_job",
-    "ingest_sheets_sync_job",
-    "ingest_filedrop_shopee_job",
-    "ingest_filedrop_misa_job",
-    "ingest_filedrop_misa_account_ledger_job",
-    "pipeline_batch_nightly_job",
-    "pipeline_batch_fullrefresh_job",
+    j.name for j in _ALL_SYNC_JOBS
+    if j.tags.get("concurrency_group") == "dbt_rw"
 ]
 
 

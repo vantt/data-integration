@@ -16,7 +16,7 @@ import sys
 import os
 import re
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Load .env.local if exists (for local development)
 def _load_dotenv_local():
@@ -299,9 +299,10 @@ def fetch_and_save_team_config():
             else:
                 valid_teams[col] = valid_teams[col].fillna("").astype(str).str.strip()
 
-        # Add partition columns (use current date for config tables)
-        valid_teams["year"] = datetime.now().year
-        valid_teams["month"] = datetime.now().month
+        # Add partition columns (use current UTC date for config tables — container runs UTC)
+        _now_utc = datetime.now(timezone.utc)
+        valid_teams["year"] = _now_utc.year
+        valid_teams["month"] = _now_utc.month
 
         # 2. Validate TEAM_MEMBERS tab
         if sheet_name_members not in sheets:
@@ -328,8 +329,8 @@ def fetch_and_save_team_config():
                 "staff_email", "team_code", "effective_from", "effective_to",
                 "year", "month", "ingest_method"
             ])
-            valid_members["year"] = datetime.now().year
-            valid_members["month"] = datetime.now().month
+            valid_members["year"] = _now_utc.year
+            valid_members["month"] = _now_utc.month
         else:
             # Clean members data
             valid_members["staff_email"] = valid_members["staff_email"].astype(str).str.strip().str.lower()
@@ -347,9 +348,9 @@ def fetch_and_save_team_config():
             else:
                 valid_members["effective_to"] = None
 
-            # Partition by current date (config tables are always "current snapshot")
-            valid_members["year"] = datetime.now().year
-            valid_members["month"] = datetime.now().month
+            # Partition by current UTC date (config tables are always "current snapshot")
+            valid_members["year"] = _now_utc.year
+            valid_members["month"] = _now_utc.month
 
         # 3. Save to Data Lake
         print("\nSaving to Data Lake...")

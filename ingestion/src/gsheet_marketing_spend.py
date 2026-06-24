@@ -1,7 +1,7 @@
 import sys
 import os
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 import io
 
@@ -144,12 +144,13 @@ def fetch_and_save_marketing_spend():
             print(f"WARNING: Unknown Target Channels found (Check Spelling or Update Seeds): {missing_channel}")
 
         # 2. Clean and Standardize
+        _current_year = datetime.now(timezone.utc).year  # UTC-aware — avoids wrong year at midnight in UTC container
         def clean_date(val):
             val = str(val).strip()
             # Handle MM/DD or DD/MM (e.g. "12/25") by appending Year
             # Heuristic: if length is short (e.g. 5 chars "12/25") and has /
             if len(val) <= 5 and '/' in val:
-                return f"{val}/{datetime.now().year}"
+                return f"{val}/{_current_year}"
             return val
             
         df['date'] = df['date'].apply(clean_date)

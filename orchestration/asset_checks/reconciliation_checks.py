@@ -2,13 +2,12 @@
 
 One check per recon asset. Reads the most recent recon row from
 ingestion_health.db and enforces:
-  |drift_pct| > 5%  → ERROR
-  |drift_pct| > 1%  → WARN
+  |drift_pct| > 5%  → ERROR  (recon_drift_error_pct in ingestion_sla.yaml)
+  |drift_pct| > 1%  → WARN   (recon_drift_warn_pct in ingestion_sla.yaml)
   source_count=None → WARN (live API unavailable, can't measure drift)
 
-# TODO: expose thresholds in orchestration/config/ingestion_sla.yaml once
-#       Phase 2 SLA YAML is extended with a 'recon_drift_warn_pct' key.
-#       Until then, thresholds are hardcoded constants here.
+Thresholds are read from ingestion_sla.yaml defaults block at import time,
+with hardcoded fallbacks for safe startup if the YAML key is absent.
 
 RECON_CHECKS is exported and registered in definitions.py alongside ALL_CHECKS.
 """
@@ -26,6 +25,7 @@ from dagster import (
 )
 
 from orchestration.asset_checks.health_db import open_readonly
+from orchestration.asset_checks.sla_loader import get_defaults
 from orchestration.assets.reconciliation import (
     recon_misa_daily,
     recon_sapo_customers_daily,
@@ -36,10 +36,12 @@ from orchestration.assets.reconciliation import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Drift thresholds
+# Drift thresholds — sourced from ingestion_sla.yaml defaults block.
+# Fallback to hardcoded values if the YAML key is absent (safe startup).
 # ---------------------------------------------------------------------------
-_WARN_THRESHOLD = 0.01   # |drift_pct| > 1%  → WARN
-_ERROR_THRESHOLD = 0.05  # |drift_pct| > 5%  → ERROR
+_sla_defaults = get_defaults()
+_WARN_THRESHOLD: float = _sla_defaults.get("recon_drift_warn_pct", 0.01)    # |drift_pct| > 1%  → WARN
+_ERROR_THRESHOLD: float = _sla_defaults.get("recon_drift_error_pct", 0.05)  # |drift_pct| > 5%  → ERROR
 
 
 # ---------------------------------------------------------------------------

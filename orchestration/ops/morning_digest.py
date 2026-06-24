@@ -62,7 +62,7 @@ ASSET_DISPLAY: dict[str, tuple[str, str, str]] = {
     "sapo_customers": ("Sapo khách hàng",                         "batch",     "khách"),
     "sapo_products":  ("Sapo sản phẩm",                           "batch",     "sản phẩm"),
     "sapo_accounts":  ("Sapo tài khoản",                          "batch",     "tài khoản"),
-    "sapo_inventory": ("Sapo tồn kho (batch)",                    "batch",     "giao dịch"),
+    "sapo_inventory": ("Sapo tồn kho (hourly)",                   "cursor",    "giao dịch"),
     "shopee":         ("Shopee — file thu nhập",                  "file_drop", "dòng"),
     "misa":           ("MISA — file bán hàng",                    "file_drop", "dòng"),
     "misa_acct":      ("MISA — sổ chi tiết tài khoản",            "file_drop", "dòng"),
