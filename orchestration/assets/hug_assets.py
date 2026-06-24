@@ -1,6 +1,6 @@
 """Dagster assets for Hug ingestion via the hug_webhook_consumer DLT runner.
 
-Mirrors ingest_sapo_v2_webhook_consumer_asset from sapo_assets.py.
+Mirrors ingest_sapo_v2_webhook_consumer_asset from sapo_v2_assets.py.
 Lands events into hug_raw/ (not sapo_v2_raw/) to avoid path collision.
 """
 

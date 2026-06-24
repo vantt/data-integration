@@ -1,6 +1,6 @@
 """Shared DLT metrics helpers for ingestion asset health reporting.
 
-Extracted from sapo_assets.py::_extract_rows_written so all DLT-based
+Extracted from sapo_v2_assets.py::_extract_rows_written so all DLT-based
 asset modules share a single implementation (DRY).
 
 Public API:

@@ -26,7 +26,7 @@ dagster dev
 orchestration/
 ├── definitions.py          # Main definitions entry point
 ├── assets/
-│   ├── sapo_assets.py      # Ingestion asset definitions
+│   ├── sapo_v2_assets.py   # Ingestion asset definitions
 │   ├── dbt.py              # dbt asset integration
 │   └── serving.py          # Serving layer assets
 ├── jobs/

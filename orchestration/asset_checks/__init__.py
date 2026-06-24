@@ -28,18 +28,18 @@ _log = logging.getLogger(__name__)
 def _build_asset_def_map() -> dict[str, Any]:
     from orchestration.assets import (  # noqa: PLC0415  (deferred import — intentional)
         misa_amis_assets,
-        sapo_assets,
+        sapo_v2_assets,
         sheets_assets,
         shopee_assets,
     )
 
     return {
-        "sapo/ingest_sapo_v2_webhook_consumer_asset": sapo_assets.ingest_sapo_v2_webhook_consumer_asset,
-        "sapo/ingest_sapo_v2_history_log_asset": sapo_assets.ingest_sapo_v2_history_log_asset,
-        "sapo/ingest_sapo_v2_orders_batch_asset": sapo_assets.ingest_sapo_v2_orders_batch_asset,
-        "sapo/ingest_sapo_v2_customers_batch_asset": sapo_assets.ingest_sapo_v2_customers_batch_asset,
-        "sapo/ingest_sapo_v2_accounts_batch_asset": sapo_assets.ingest_sapo_v2_accounts_batch_asset,
-        "sapo/ingest_sapo_v2_products_batch_asset": sapo_assets.ingest_sapo_v2_products_batch_asset,
+        "sapo/ingest_sapo_v2_webhook_consumer_asset": sapo_v2_assets.ingest_sapo_v2_webhook_consumer_asset,
+        "sapo/ingest_sapo_v2_history_log_asset": sapo_v2_assets.ingest_sapo_v2_history_log_asset,
+        "sapo/ingest_sapo_v2_orders_batch_asset": sapo_v2_assets.ingest_sapo_v2_orders_batch_asset,
+        "sapo/ingest_sapo_v2_customers_batch_asset": sapo_v2_assets.ingest_sapo_v2_customers_batch_asset,
+        "sapo/ingest_sapo_v2_accounts_batch_asset": sapo_v2_assets.ingest_sapo_v2_accounts_batch_asset,
+        "sapo/ingest_sapo_v2_products_batch_asset": sapo_v2_assets.ingest_sapo_v2_products_batch_asset,
         # shopee_income_file_drop_asset is @multi_asset; @asset_check(asset=) requires a
         # single key. Use order_revenue as the representative anchor — the check logic
         # still queries health DB via the "shopee/shopee_income_file_drop_asset" string key.

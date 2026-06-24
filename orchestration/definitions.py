@@ -28,7 +28,7 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets
+from orchestration.assets import sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
 from orchestration.ops.purge_runs import maintain_purge_runs_job
@@ -43,7 +43,7 @@ from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_s
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
 # Don't call it from here: definitions.py is re-imported on every gRPC code
 # server spawn (e.g. each `dagster job launch`), which would add noise.
-all_assets = load_assets_from_modules([sapo_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets])
+all_assets = load_assets_from_modules([sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -79,7 +79,7 @@ SYNC_TAGS = {"concurrency_group": "dbt_rw"}
 # 1. Realtime Job (Webhook)
 pipeline_sapo_v2_realtime_job = define_asset_job(
     name="pipeline_sapo_v2_realtime_job",
-    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
+    selection=AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_webhook_consumer_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
     tags=SYNC_TAGS,
 )
 
@@ -93,7 +93,7 @@ pipeline_hug_realtime_job = define_asset_job(
 # 2. Incremental Job (History Log)
 pipeline_sapo_v2_incremental_job = define_asset_job(
     name="pipeline_sapo_v2_incremental_job",
-    selection=AssetSelection.assets(sapo_assets.ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
+    selection=AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_history_log_asset) | all_dbt_assets | AssetSelection.assets(serving.build_serving_db) | AssetSelection.assets(rill.build_rill_publish) | AssetSelection.assets(crm_sync.crm_cache_refresh),
     tags={**SYNC_TAGS, "dagster/max_retries": "0"},
 )
 
@@ -177,11 +177,11 @@ ingest_filedrop_misa_account_ledger_job = define_asset_job(
 
 # 3. Nightly Reconciliation Job (Batch — incremental from last cursor)
 _nightly_batch_selection = (
-    AssetSelection.assets(sapo_assets.ingest_sapo_v2_orders_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapo_v2_customers_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapo_v2_accounts_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapo_v2_products_batch_asset) |
-    AssetSelection.assets(sapo_assets.ingest_sapo_v2_inventory_transactions_asset) |
+    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_orders_batch_asset) |
+    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_customers_batch_asset) |
+    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_accounts_batch_asset) |
+    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_products_batch_asset) |
+    AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_inventory_transactions_asset) |
     AssetSelection.assets(sheets_assets.sheets_targets_asset) |
     AssetSelection.assets(sheets_assets.sheets_marketing_spend_asset) |
     AssetSelection.assets(sheets_assets.sheets_team_config_asset) |
@@ -220,7 +220,7 @@ pipeline_batch_fullrefresh_job = define_asset_job(
 pipeline_sapo_v2_hourly_job = define_asset_job(
     name="pipeline_sapo_v2_hourly_job",
     selection=(
-        AssetSelection.assets(sapo_assets.ingest_sapo_v2_inventory_transactions_asset)
+        AssetSelection.assets(sapo_v2_assets.ingest_sapo_v2_inventory_transactions_asset)
         | AssetSelection.keys(
             AssetKey(["staging", "src_sapo_v2_inventory_transactions"]),
             AssetKey(["staging", "std_inventory_movements"]),
