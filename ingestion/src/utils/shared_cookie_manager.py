@@ -101,8 +101,6 @@ class SharedCookieManager:
         self.username = username
         self.password = password
         self.cookie_ttl_hours = cookie_ttl_hours
-        self.password = password
-        self.cookie_ttl_hours = cookie_ttl_hours
         self.headless = headless
         self.login_strategy = login_strategy
         self.user_agent = None

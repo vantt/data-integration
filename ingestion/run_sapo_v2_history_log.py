@@ -12,7 +12,7 @@ def run(argv=None):
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--page-size", type=int, default=100)
     parser.add_argument("--limit", type=int, default=None) # Optional limit
-    parser.add_argument("--debug", action="store_true", default=True)
+    parser.add_argument("--debug", action="store_true", default=False)
     args, _ = parser.parse_known_args(argv)
 
     # Configure source arguments
