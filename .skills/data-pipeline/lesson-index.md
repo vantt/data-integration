@@ -164,6 +164,7 @@ Largest group — Dagster orchestration, schedules, sensors, concurrency, mainte
 | L49 | Schedules in `defs.schedules=[...]` are NOT auto-enabled | `references/lessons-learned.md#L49` |
 | L50 | Backup rotation MUST run via `trap … EXIT`, not after `cp` | `references/lessons-learned.md#L50` |
 | L51 | Exclude regenerable data from backup (`dagster_home/history/`) | `references/lessons-learned.md#L51` |
+| L146 | Critical config in a gitignored volume is silently lost on fresh deploy — track source + copy-if-absent at boot | `references/lessons-learned.md#L146` |
 | L53 | Phantom Dagster instigator states after code renames | `references/lessons-learned.md#L53` |
 | L54 | `run_status_sensor` pattern for hard job ordering (backup-after-purge) | `references/lessons-learned.md#L54` |
 | L55 | `asset_check_executions` table not cleaned by `delete_run()` | `references/lessons-learned.md#L55` |

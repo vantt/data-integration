@@ -4420,3 +4420,22 @@ elif filter_priority == "high":
 5. Diagnose a stalled schedule by reading the scheduler log for `skipped: previous run still active (<id>)` then checking that run's status + age in `dagster_home/history/runs.db`. Builds on [[L48]] (zombie NOT_STARTED) + dagster-Lesson-13 — new angle: STARTED/QUEUED zombie + sensor blind spot.
 
 **Reference:** `app_data/dagster_home/dagster.yaml` (run_monitoring), `orchestration/sensors/stuck_run_alerter.py` (per-job max-runtime), `orchestration/definitions.py` (`_has_active_run`/`_ACTIVE_STATUSES`). Incident + fix 2026-06-24. Report: `plans/reports/from-reliability-agent-*-260624-1656-report.md`.
+
+---
+
+### L146 — Critical runtime config living ONLY in a gitignored volume is silently lost on a fresh deploy
+
+**Group:** OPS
+
+**Symptom:** `dagster.yaml` — holding the DuckDB single-writer concurrency lock (the one AGENTS.md says "DO NOT REMOVE"), `run_monitoring`, freshness-off, and retention — existed ONLY in `app_data/dagster_home/` (gitignored volume). No tracked template, no copy mechanism. It worked on the live box, but a fresh `app_data` (new machine, wiped volume, disaster recovery) would silently come up with DEFAULT Dagster config: no concurrency lock → parallel DuckDB writers → lock storms; no zombie auto-fail; FreshnessDaemon re-enabled → SQLite contention. All the hard-won fixes, gone, with zero error at deploy time.
+
+**Root cause:** runtime state dirs (DAGSTER_HOME, data lakes) are correctly gitignored, but a *config* file that happens to live inside one was never separated out into version control. "It's in the volume and the volume persists" hides the gap until the volume doesn't persist.
+
+**Fix:** Track the config as source (`orchestration/dagster.yaml`) and seed DAGSTER_HOME at container boot with **copy-if-absent**: `mkdir -p $DH && { [ -f $DH/dagster.yaml ] || cp /app/orchestration/dagster.yaml $DH/dagster.yaml; }` prepended to the compose `command`. Copy-if-absent (NOT unconditional cp) so a live-tuned volume copy is never clobbered; the tracked file only seeds a fresh instance. Verified boot stays clean (webserver + MonitoringDaemon).
+
+**Rules:**
+1. Audit what lives in gitignored volumes: anything that is *config/behavior* (not pure data/state) must have a version-controlled source. "Persisted in a Docker volume" is NOT "version-controlled" — it dies with the volume.
+2. Seed config into runtime dirs with **copy-if-absent** at boot, never unconditional copy (which would overwrite live hand-tuning) and never rely on a volume mount of a gitignored file.
+3. Trigger to apply this lesson: any time you edit a file under a gitignored path (`git ls-files --error-unmatch <path>` errors), stop and ask "is this config that must survive a fresh deploy?" If yes, track a source + seed it.
+
+**Reference:** `orchestration/dagster.yaml` (tracked source), `docker-compose.yml` (data_platform `command` copy-if-absent), `.gitignore` (`app_data/` ignored). Fixed 2026-06-24 commit d4e098a.
