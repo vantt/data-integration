@@ -86,8 +86,9 @@ See `docs/ANALYTICS_2SKILL_SPEC.md` for full specification.
 ### 3. Webhook Consumer (`data-integration2/webhook_consumer`)
 
 - **Purpose:** Workers that polling/consume buffered webhooks and load them into the warehouse.
-- **Implementations:**
-  - **`cloudflared1_consumer` (Active):** Python, `dlt`. Polls the Cloudflare Worker API. Path: `/webhook_consumer/cloudflared1_consumer/`
+- **Active implementation:** Cloudflare D1 polling now lives in the Dagster asset `ingest_sapo_v2_webhook_consumer_asset` (runs every minute) → `ingestion/run_sapo_v2_webhook_consumer.py` → `ingestion/src/sapo/webhook_consumer.py`. There is NO standalone consumer process.
+- **Retired implementations:**
+  - **`cloudflared1_consumer` (Retired 2026-06-24):** standalone Python `dlt` poller — superseded by the Dagster asset above. Removed from the tree (recoverable via git history).
   - **`supabase_consumer` (Deprecated):** TypeScript, Node.js. Path: `/webhook_consumer/supabase_consumer/`
 
 ### 4. Orchestration (`data-integration2/orchestration`)
