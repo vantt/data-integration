@@ -147,7 +147,7 @@ SELECT
     -- ICT explicit: AT TIME ZONE ensures 0h–7h ICT orders (which are prior UTC date)
     -- get the correct local date regardless of session TimeZone setting.
     coalesce(cast(strftime(created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', '%Y%m%d') as integer), 19000101) as date_key,
-    (extract(hour from created_at) * 100) + extract(minute from created_at) as time_key,
+    (extract(hour from created_at AT TIME ZONE 'Asia/Ho_Chi_Minh') * 100) + extract(minute from created_at AT TIME ZONE 'Asia/Ho_Chi_Minh') as time_key,  -- ICT hour+minute, mirrors date_key TZ conversion
     
     -- Status Metrics
     status,

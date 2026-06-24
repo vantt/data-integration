@@ -58,7 +58,7 @@ SELECT
     -- ICT explicit: AT TIME ZONE ensures 0h–7h ICT orders get correct local date
     -- regardless of session TimeZone setting (matches fact_orders.date_key derivation).
     coalesce(cast(strftime(o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh', '%Y%m%d') as integer), 19000101) as date_key, -- Link to dim_date YYYYMMDD
-    (extract(hour from o.created_at) * 100) + extract(minute from o.created_at) as time_key,
+    (extract(hour from o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh') * 100) + extract(minute from o.created_at AT TIME ZONE 'Asia/Ho_Chi_Minh') as time_key,  -- ICT hour+minute, mirrors date_key TZ conversion
     
     -- Degenerate Keys
     i.order_id,
