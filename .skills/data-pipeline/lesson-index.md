@@ -236,7 +236,7 @@ Lessons that cut across multiple groups — canonical home is `playbooks/cross-c
 | Group | lessons-learned.md | dagster-patterns.md | dbt-patterns.md | Total |
 |-------|--------------------|---------------------|-----------------|-------|
 | INGEST | 20 | 0 | 0 | 20 |
-| MODEL | 8 | 0 | 14 | 22 |
+| MODEL | 9 | 0 | 14 | 23 |
 | SERVE | 1 + serving-layer.md | 0 | 1 (shared) | 2 + full doc |
 | TRUST | 11 | 0 | 0 | 11 |
 | OPS | 39 | 14 | 0 | 53 |

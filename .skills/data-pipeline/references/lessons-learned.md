@@ -4361,3 +4361,21 @@ elif filter_priority == "high":
 4. Don't trust an audit's stated impact mechanism without checking input cardinality first — "hardcoded CASH corrupts behavior" was moot when the table had 0 rows.
 
 **Reference:** `transformation/models/staging/src_sapo_v2_orders.sql:175`, `stg_sapo_v2_payments.sql`, `ref_payment_methods.csv` (id 1958911 = COD). Raw: `sapo_v2_raw/order/...parquet` `$.prepayments`. Found via full-stack audit verification 2026-06-24, commit 8624772.
+
+### L143 — Making a widely-consumed mart column NULL silently breaks BI cards that SUM/AVG it without a gate
+
+**Group:** MODEL
+
+**Symptom:** A dbt fix made `fact_order_economics.gross_profit`/`gross_margin_pct` NULL when `has_cogs=FALSE` (don't show profit when cost unknown). Parse-clean, "looks done". But a Metabase audit found **31 cards** referencing those columns; **20 had no `has_cogs` gate** → after the change they drop the ~10% no-cogs orders from aggregates (15532 total, 13917 has_cogs → 1615 no-cogs). Two cards used `COALESCE(SUM(gross_profit),0)` — SUM ignores NULL so they **silently understate** margin with NO visible error, on CEO/Finance dashboards.
+
+**Root cause:** A mart column is a public contract consumed by many BI cards. Flipping its values to NULL changes every downstream `SUM`/`AVG`/`FILTER` that doesn't explicitly handle the new NULL. `SUM` skips NULL (understates), `AVG` skips NULL (shifts), `COALESCE(SUM,...)` masks the drop entirely. None of these error — they just produce wrong numbers.
+
+**Fix:** Decision was to KEEP the NULL behavior + gate the consumers: add `has_cogs` to each affected card's WHERE/FILTER so margin is computed over cogs-known orders consistently (8 cards needed it; 12 already had a gate). Done via blueprint edits + `deploy_from_markdown.js` redeploy (NEVER manual API/UI — blueprints are source of truth), each verified via `POST /api/card/:id/query`. Alternative considered: switch consumers to `realized_*` (changes meaning) or revert the NULL change (restores cards but shows uncorrected gross).
+
+**Rules:**
+1. Before changing a mart column's value distribution (esp. introducing NULLs, or renaming), AUDIT consumers first: grep blueprints + query Metabase cards for the column. A green dbt parse says nothing about 31 downstream cards.
+2. `SUM`/`AVG` over a newly-NULLable column silently changes the number; `COALESCE(SUM(x),0)` HIDES the drop. Gate the no-cogs rows explicitly (`WHERE has_cogs`) rather than relying on NULL propagation.
+3. Fix BI cards only via blueprints + deploy script (analytics-as-code source of truth), never manual API/UI ([[feedback_metabase_redeploy_use_skill]]). Verify each card with a live query run after deploy.
+4. When a mart column has a "corrected" sibling, prefer steering consumers to it ([[reference_realized_vs_gross_margin_pct]]) over mutating the original's semantics, which has wider blast radius.
+
+**Reference:** `transformation/models/marts/sales/fact_order_economics.sql` (has_cogs/gross_profit), `docs/analytics-handbook/blueprints/metabase/{ceo_monthly_scorecard,marketing_roi,...}.md`. Audit `plans/reports/from-metabase-auditor-gross-profit-null-impact-260624-0840-report.md`. Fixed 2026-06-24, commit bfcaace.
