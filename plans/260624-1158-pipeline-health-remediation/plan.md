@@ -41,13 +41,28 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 - **Orphan src_ models** (`purchase_orders`, `stock_adjustments`) → keep for future integration (do NOT disable/delete).
 - **Cookie tz** → fix now + force re-login (done).
 
-## Audit backlog (not yet phased — pull into phases as prioritized)
-**Reliability (high):** webhook ACK-before-load (`hug_webhook_consumer.py`); batch pipelines swallow exceptions → Dagster green on failure (`orders/customers/history_log`); `history_log.py:501` skips failed page.
-**Serving correctness:** `fact_order_transitions` + `mart_hug_optin` `materialized='table'` (never served); `fact_orders.time_key` UTC-hour bug; `dim_customers` non-atomic post_hook COPY; detailView `order_cogs_items.sql` queries `int_*`.
-**Concurrency:** `build_serving_db` missing `duckdb_lock` op_tag.
-**Security:** Worker `/poll`/`/ack`/`/release` unauth + `CHECK_HMAC` off; CRM mutation APIs no auth; ports `0.0.0.0` bypass Caddy; containers run root.
-**Human-facing margin:** `gross_margin_pct` (pre-H010) on Evidence CEO page + detailView → use `realized_margin_pct`.
-**Quick wins:** gitignore `*.duckdb`/`rill/tmp/`/`check_*.py`; Hug asset in morning_digest; dynamic `_INGESTION_JOBS`.
+## Remaining open work (prioritized) — as of 2026-06-24 end of session
+
+### HIGH — reliability (silent data loss / silent green)
+- [ ] **Webhook ACK-before-load** in `ingestion/src/hug/hug_webhook_consumer.py` — ACKs inside the dlt generator before load commits → at-most-once, Hug events lost on load failure. (Sapo webhook consumer already got the at-least-once fix 2026-06-23; Hug did NOT.) Apply the `PendingAck` pattern.
+- [ ] **Batch pipelines swallow exceptions → Dagster green on failure** — `ingestion/src/sapo/{orders,customers,history_log}.py` break after MAX_ERRORS and return cleanly; Dagster marks asset success with 0 rows. Re-raise / `sys.exit(1)` after MAX_ERRORS.
+- [ ] **`history_log.py:501`** advances `page` on transient error → permanently skips that page's records. Don't increment page on transient errors.
+
+### MEDIUM — serving correctness
+- [ ] **`fact_orders.time_key` UTC-hour bug** — uses `extract(hour from created_at)` (UTC) while `date_key` is ICT → ~30% of orders (17:00–24:00 ICT) get wrong `dim_time` join (business_hour/peak_hour). Wrap in `AT TIME ZONE 'Asia/Ho_Chi_Minh'`. (Cheapest high-value correctness fix left.)
+- [ ] **`dim_customers` non-atomic `post_hook COPY`** — COPY failure on locked file leaves serving parquet stale but dbt marks SUCCESS. Convert to native `external` + `location=`.
+- [ ] **detailView `order_cogs_items.sql` queries `int_*`** — violates "serving views only" contract; arch test doesn't catch it. Expose via a mart view.
+
+### MEDIUM — security (private network lowers urgency)
+- [ ] **CRM mutation APIs no auth** (`crm/.../inbound/http/*`) + Messenger ingest no HMAC. Add internal-token middleware. (Lower priority — Docker net private.)
+- [ ] **Containers run as root** (all except metabase) — add non-root `USER` to Dockerfiles.
+- [~] **Ports `0.0.0.0` bypass Caddy** — DEFERRED per user (firewall check).
+
+### LOW — minor
+- [ ] **Dynamic `_INGESTION_JOBS`** in `definitions.py` — manual list can drift; build from jobs with `concurrency_group=dbt_rw` so backup sensor never misses a new ingestion job.
+
+### Done this session (was backlog)
+build_serving_db duckdb_lock ✅ · quick-win gitignore/hygiene ✅ · Worker bearer-token + Sapo HMAC enforced ✅ · run_monitoring + stuck-sensor ✅ · dagster.yaml tracked ✅ · Hug in morning_digest ✅ · cookie tz ✅ · margin (moot, order-level already correct) ✅ · `fact_order_transitions`/`mart_hug_optin` (by-design, not bugs) ✅
 
 ## Open questions
 - See audit report §"Unresolved questions" (8 items — webhook posture, LAN trust, realized_margin_pct availability, etc.).
