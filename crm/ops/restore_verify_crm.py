@@ -148,8 +148,7 @@ def gate_b_functional(dest: Path, image: str, manifest: dict) -> None:
     _get(base, "/healthz", expect=200)
     _get(base, "/api/dedup/candidates", expect=200)
     print(f"   reads OK; manifest crm_party rows = {parties}")
-    # Write→delete round-trip (LAN-trust: no token set on the ephemeral app)
-    _write_delete_roundtrip(base)
+    _assert_writable()
 
 
 def _poll_health(base: str, timeout: int = 90) -> None:
@@ -179,20 +178,22 @@ def _get(base: str, path: str, expect: int) -> bytes:
         return b""
 
 
-def _write_delete_roundtrip(base: str) -> None:
-    # Create a throwaway tag, read it back, delete it — proves the restored schema is writable.
-    payload = json.dumps({"name": "__restore_verify_probe__"}).encode()
-    req = urllib.request.Request(f"{base}/api/tags", data=payload,
-                                method="POST", headers={"Content-Type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=10) as r:
-            ok = r.status in (200, 201)
-    except urllib.error.HTTPError as e:
-        ok = e.code in (200, 201, 409)  # 409 = already exists (still proves write path)
-    except Exception as e:  # endpoint shape may differ; treat as soft-skip with a note
-        print(f"   write-probe skipped ({e}) — read-path verified")
-        return
-    print(f"   write probe: {'OK' if ok else 'reachable'}")
+def _assert_writable() -> None:
+    """Real write to the restored DB inside the running app container (not a vacuous HTTP probe).
+
+    Proves the restored crm.db + container FS accept writes. Also asserts the app's own
+    migration step reported success at boot (a real write to schema_migrations).
+    """
+    code = ("import sqlite3;c=sqlite3.connect('/data/crm.db');"
+            "c.execute('CREATE TABLE IF NOT EXISTS _verify_probe(x INTEGER)');"
+            "c.execute('INSERT INTO _verify_probe VALUES(1)');"
+            "c.execute('DELETE FROM _verify_probe');c.execute('DROP TABLE _verify_probe');"
+            "c.commit();c.close();print('WRITABLE')")
+    r = subprocess.run(["docker", "exec", VERIFY_NAME, "python3", "-c", code],
+                       capture_output=True, text=True)
+    if "WRITABLE" not in (r.stdout or ""):
+        _fail(f"restored DB not writable in app container: {(r.stderr or r.stdout or '').strip()}")
+    print("   write probe: OK (create/insert/drop on restored crm.db in the running app container)")
 
 
 # --------------------------------------------------------------------------- #
