@@ -14,12 +14,24 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 - [x] **YAML BOM** stripped from `ingestion_sla.yaml` (was breaking strict PyYAML).
 - [x] **argparse `--debug` no-op** fixed (`run_sapo_v2_history_log.py`).
 - [x] **Duplicate assignment** removed (`shared_cookie_manager.py`).
-- [~] **Cookie naive-datetime** — DEFERRED: tz-aware fix changes cookie JSON format → invalidates existing files; do at next forced re-login.
+- [x] **Cookie naive-datetime** — tz-aware UTC fix applied (`shared_cookie_manager.py`), made robust to legacy naive files (load normalizes naive→UTC). User accepts forced re-login.
 
 ## Phases
 | # | Phase | Priority | Status |
 |---|-------|----------|--------|
 | 01 | [Rename sapo_assets.py → sapo_v2_assets.py](phase-01-rename-sapo-assets-to-sapo-v2.md) | Low (consistency) | ✅ DONE |
+| 02 | [Enforce HMAC on Sapo webhook (observe→enforce)](phase-02-sapo-webhook-hmac-enforce.md) | HIGH (security) | ⬜ TODO |
+
+## Decisions (from user, 2026-06-24)
+- **Docker network is private** → Worker queue endpoints (`/poll`,`/ack`,`/release`) need a simple **bearer-token**, not HMAC (HMAC is for inbound Sapo `/webhook/*` only). CRM mutation-API auth = lower priority (private net).
+- **Ports firewall check** → deferred.
+- **Sapo `/webhook/*` HMAC** → prioritize: see Phase 02 (observe→confirm→enforce).
+- **Google Sheets are public** → switch to a **service account** (share sheets to SA email, read via Sheets API) to remove public exposure; quick interim = stop tracking the IDs in `config.toml`.
+- **Serving session TZ = ICT (target).** Verified: Evidence opens its own DuckDB copy with NO `SET TimeZone` → session = UTC default → existing `AT TIME ZONE 'Asia/Ho_Chi_Minh'` in `ceo-weekly-pulse` is CORRECT (not double-converting). No change needed.
+- **`mart_hug_optin`** = warehouse-only by design (CRM reads warehouse directly) → `materialized='table'` is FINE, not a bug. **`fact_order_transitions`** has no consumer yet → leave; convert to external only when a BI card needs it.
+- **`realized_margin_pct` NOT in `fact_order_economics`** (only `gross_margin_pct` at line 141; realized_* lives in SKU/product marts) → Evidence/detailView margin swap is NOT trivial; needs adding a realized margin to the order-level fact or re-sourcing — separate decision, not done.
+- **Orphan src_ models** (`purchase_orders`, `stock_adjustments`) → keep for future integration (do NOT disable/delete).
+- **Cookie tz** → fix now + force re-login (done).
 
 ## Audit backlog (not yet phased — pull into phases as prioritized)
 **Reliability (high):** webhook ACK-before-load (`hug_webhook_consumer.py`); batch pipelines swallow exceptions → Dagster green on failure (`orders/customers/history_log`); `history_log.py:501` skips failed page.
