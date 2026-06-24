@@ -496,9 +496,10 @@ def history_log(
             print(f"❌ Error at page {page}: {e}")
             consecutive_errors += 1
             if consecutive_errors >= MAX_ERRORS:
-                print("Too many errors, giving up.")
-                break
-            page += 1
+                raise RuntimeError(
+                    f"Aborting history_log pipeline after {MAX_ERRORS} consecutive errors on page {page}."
+                ) from e
+            # Do NOT increment page — retry the same page
 
     print("\n📊 Run Summary:")
     print(f"Items Processed from API: {stats['processed']}")

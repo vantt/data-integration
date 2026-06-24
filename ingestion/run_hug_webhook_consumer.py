@@ -17,7 +17,7 @@ import dlt
 
 sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 
-from hug.hug_webhook_consumer import hug_webhook_source
+from hug.hug_webhook_consumer import build_hug_webhook_source
 from utils.pipeline_runner import setup_dlt_env
 
 
@@ -69,10 +69,12 @@ def run(argv=None):
 
     while True:
         try:
-            source = hug_webhook_source(
+            source, pending_ack = build_hug_webhook_source(
                 worker_url=worker_url, poll_limit=args.poll_limit
             )
             info = pipeline.run(source, loader_file_format="parquet")
+            # ACK only after successful load — at-least-once delivery.
+            pending_ack.ack()
 
             if info:
                 print(info)

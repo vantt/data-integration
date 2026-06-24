@@ -266,6 +266,7 @@ def customers(
             print(f"❌ Error at page {page}: {e}")
             consecutive_errors += 1
             if consecutive_errors >= MAX_ERRORS:
-                 print("Too many errors. Stopping.")
-                 break
+                raise RuntimeError(
+                    f"Aborting customers pipeline after {MAX_ERRORS} consecutive errors on page {page}."
+                ) from e
             # Do NOT increment page — retry the same page
