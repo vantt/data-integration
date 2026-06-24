@@ -133,7 +133,9 @@ SELECT
         ELSE NULL
     END AS gross_profit,
 
-    -- Gross Margin %
+    -- Gross Margin % — uses Sapo-MAC COGS only (from int_order_cogs_reconciled);
+    -- immune to the H010 MISA-multiplier bug that affects mart_sku_economics_monthly's
+    -- MISA-basis columns. This order-level margin is correct; safe for CEO/BI use.
     CASE
         WHEN o.net_revenue = 0 THEN NULL
         WHEN m.cogs_source IS NULL OR m.cogs_source = 'none' THEN NULL
