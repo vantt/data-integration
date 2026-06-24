@@ -572,12 +572,16 @@ WITH filter_bounds AS (
       [[AND {{date_range}}]]
 )
 SELECT
-    fact_order_economics.order_code        AS "Ma don hang",
-    dim_date.date_actual::DATE             AS "Ngay dat hang",
-    fact_order_economics.gross_revenue     AS "Doanh thu gop (VND)",
-    fact_order_economics.net_revenue       AS "Doanh thu thuan (VND)",
-    fact_order_economics.gross_profit      AS "Gross Profit (VND)",
-    'MISSING_SHOPEE_FEES'                  AS "Loai exception"
+    fact_order_economics.order_code                                AS "Ma don hang",
+    dim_date.date_actual::DATE                                     AS "Ngay dat hang",
+    fact_order_economics.gross_revenue                             AS "Doanh thu gop (VND)",
+    fact_order_economics.net_revenue                               AS "Doanh thu thuan (VND)",
+    -- NULL when has_cogs=FALSE (no MISA match); shown as blank — diagnostic card, not a margin KPI
+    fact_order_economics.gross_profit                              AS "Gross Profit (VND)",
+    CASE
+        WHEN NOT fact_order_economics.has_cogs THEN 'MISSING_SHOPEE_FEES + NO_COGS'
+        ELSE 'MISSING_SHOPEE_FEES'
+    END                                                            AS "Loai exception"
 FROM fact_order_economics
 JOIN dim_date ON dim_date.date_key = fact_order_economics.date_key
 JOIN dim_channels ON dim_channels.channel_key = fact_order_economics.channel_key
@@ -585,7 +589,6 @@ CROSS JOIN filter_bounds
 WHERE dim_channels.channel_name ILIKE '%shopee%'
   AND fact_order_economics.status = 'COMPLETED'
   AND NOT fact_order_economics.has_platform_fees
-  AND fact_order_economics.has_cogs
   AND dim_date.date_actual BETWEEN filter_bounds.p_start AND filter_bounds.p_end
 ORDER BY dim_date.date_actual DESC, fact_order_economics.net_revenue DESC
 LIMIT 200
