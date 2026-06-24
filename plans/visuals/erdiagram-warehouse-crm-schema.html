@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ERD — Warehouse + CRM Schema</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --border: #2d3148;
+    --text: #e2e4f0; --muted: #8b8fa8; --accent: #7c6af7;
+    --tag-green: #1e3a2f; --tag-green-text: #4ade80;
+    --tag-blue: #1a2744; --tag-blue-text: #60a5fa;
+    --tag-amber: #2d2010; --tag-amber-text: #fbbf24;
+    --tag-red: #2d1414; --tag-red-text: #f87171;
+  }
+  .light {
+    --bg: #f5f6fa; --surface: #ffffff; --border: #e0e3ef;
+    --text: #1e2033; --muted: #6b7094; --accent: #5b4cf0;
+    --tag-green: #dcfce7; --tag-green-text: #166534;
+    --tag-blue: #dbeafe; --tag-blue-text: #1e40af;
+    --tag-amber: #fef3c7; --tag-amber-text: #92400e;
+    --tag-red: #fee2e2; --tag-red-text: #991b1b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+  header {
+    padding: 20px 32px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border); padding-bottom: 16px;
+  }
+  header h1 { font-size: 1.2rem; font-weight: 600; color: var(--text); }
+  header p { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .theme-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--text); padding: 6px 14px; border-radius: 6px;
+    cursor: pointer; font-size: 0.82rem; transition: all .15s;
+  }
+  .theme-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  nav {
+    display: flex; gap: 4px; padding: 12px 32px;
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto; flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;
+    border: 1px solid var(--border); background: transparent; color: var(--muted);
+    transition: all .15s; white-space: nowrap;
+  }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+  .content { padding: 24px 32px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .panel-header { margin-bottom: 20px; }
+  .panel-header h2 { font-size: 1rem; font-weight: 600; color: var(--text); }
+  .panel-header p { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+  .tags { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .tag {
+    font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 500;
+  }
+  .tag-green { background: var(--tag-green); color: var(--tag-green-text); }
+  .tag-blue  { background: var(--tag-blue);  color: var(--tag-blue-text); }
+  .tag-amber { background: var(--tag-amber); color: var(--tag-amber-text); }
+  .tag-red   { background: var(--tag-red);   color: var(--tag-red-text); }
+
+  .diagram-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 24px; overflow-x: auto;
+  }
+  .diagram-box .mermaid { min-width: 600px; }
+
+  .legend {
+    margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap;
+    font-size: 0.75rem; color: var(--muted);
+  }
+  .legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+  .legend .l-pk::before { background: #7c6af7; }
+  .legend .l-fk::before { background: #f59e0b; }
+  .legend .l-rel::before { background: #3b82f6; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>ERD — Warehouse + CRM Pipeline Schema</h1>
+    <p>6 sub-diagrams · Warehouse ingestion → analytics → CRM cache → CRM native</p>
+  </div>
+  <button class="theme-btn" onclick="toggleTheme()">☀ / ☾ Toggle</button>
+</header>
+
+<nav>
+  <button class="tab-btn active" onclick="showPanel('p1',this)">① Sources & Staging</button>
+  <button class="tab-btn" onclick="showPanel('p2',this)">② Standard (Gold) Layer</button>
+  <button class="tab-btn" onclick="showPanel('p3',this)">③ Intermediate & Core Dims</button>
+  <button class="tab-btn" onclick="showPanel('p4',this)">④ Fact Tables</button>
+  <button class="tab-btn" onclick="showPanel('p5',this)">⑤ CRM Cache (cache.db)</button>
+  <button class="tab-btn" onclick="showPanel('p6',this)">⑥ CRM Native (crm.db)</button>
+</nav>
+
+<div class="content">
+
+<!-- ① Sources & Staging -->
+<div id="p1" class="panel active">
+  <div class="panel-header">
+    <h2>① Sources & Staging Layer</h2>
+    <p>Raw JSON parquet từ Sapo API, MISA file-drop, Shopee export, Google Sheets → staging models flatten và normalize</p>
+    <div class="tags">
+      <span class="tag tag-green">Sapo V2 Raw</span>
+      <span class="tag tag-amber">MISA Raw</span>
+      <span class="tag tag-blue">Shopee Raw</span>
+      <span class="tag tag-red">GSheet Raw</span>
+    </div>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+erDiagram
+    sapo_order {
+        int order_id PK
+        int customer_id FK
+        int seller_user_id FK
+        string order_code
+        string status
+        string payment_status
+        string fulfillment_status
+        int total_amount
+        int total_discount
+        int total_tax
+        timestamp modified_on
+    }
+    sapo_order_item {
+        int item_id PK
+        int order_id FK
+        int variant_id FK
+        string sku
+        int quantity
+        int unit_price
+        int line_amount
+        int discount_amount
+    }
+    sapo_customer {
+        int customer_id PK
+        string customer_code
+        string full_name
+        string phone_number
+        string email
+        string customer_group
+        int loyalty_point
+        timestamp modified_on
+    }
+    sapo_variant {
+        int variant_id PK
+        int product_id FK
+        string sku
+        string barcode
+        int retail_price
+        int import_price
+        string status
+    }
+    sapo_product {
+        int product_id PK
+        string product_name
+        string product_type
+        string brand
+        string category
+        string status
+    }
+    sapo_fulfillment {
+        int fulfillment_id PK
+        int order_id FK
+        string status
+        timestamp packed_on
+        timestamp shipped_on
+        timestamp received_on
+    }
+    sapo_order_return {
+        int return_id PK
+        int order_id FK
+        string return_status
+        int refund_amount
+        int return_quantity
+    }
+    sapo_account {
+        int account_id PK
+        string staff_name
+        string email
+        string status
+    }
+    sapo_inventory_txn {
+        string entity_id PK
+        int variant_id FK
+        int location_id FK
+        string trans_type
+        int export_quantity
+        int import_quantity
+        int onhand
+        float mac
+        int export_amount
+        timestamp issued_at_utc
+    }
+    misa_sales_line {
+        string voucher_no PK
+        int line_no PK
+        string product_code
+        date posting_date
+        int quantity
+        int cogs_amount
+        int revenue_gross
+        string cogs_account
+        string channel_code
+    }
+    shopee_order {
+        string order_code PK
+        int total_paid_amount
+        int total_discounts
+        int total_platform_fees
+        int total_taxes
+        timestamp order_placed_at
+    }
+    gsheet_overhead_classification {
+        string account PK
+        string treatment
+        string pool_id
+        string base_metric
+        date effective_from
+        date effective_to
+    }
+
+    sapo_order ||--o{ sapo_order_item : "contains"
+    sapo_order ||--o{ sapo_fulfillment : "fulfilled by"
+    sapo_order ||--o{ sapo_order_return : "returned via"
+    sapo_order }o--|| sapo_customer : "placed by"
+    sapo_order }o--|| sapo_account : "sold by"
+    sapo_order_item }o--|| sapo_variant : "references"
+    sapo_variant }o--|| sapo_product : "belongs to"
+    sapo_inventory_txn }o--|| sapo_variant : "tracks"
+    misa_sales_line }o--o| sapo_order : "reconciles"
+    shopee_order }o--o| sapo_order : "maps to"
+    </div>
+  </div>
+  <div class="legend">
+    <span class="l-pk">PK — Primary Key</span>
+    <span class="l-fk">FK — Foreign Key</span>
+    <span class="l-rel">misa_sales_line ↔ sapo_order: soft join via voucher_no heuristic</span>
+  </div>
+</div>
+
+<!-- ② Standard (Gold) Layer -->
+<div id="p2" class="panel">
+  <div class="panel-header">
+    <h2>② Standard (Gold) Layer</h2>
+    <p>Staging models sau khi dedup (2-phase: tech dedup by entity_id → biz dedup by business key) → các std_* models chuẩn hóa</p>
+    <div class="tags">
+      <span class="tag tag-green">std_* models</span>
+      <span class="tag tag-amber">Deduped & Normalized</span>
+    </div>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+erDiagram
+    std_orders {
+        string order_id PK
+        int customer_id FK
+        int seller_user_id FK
+        string order_code
+        string status
+        string payment_status
+        string fulfillment_status
+        int total_amount
+        int total_discount_amount
+        int vat_amount
+        timestamp issued_at
+        timestamp completed_at
+        timestamp cancelled_at
+    }
+    std_order_items {
+        string order_line_id PK
+        string order_id FK
+        int variant_id FK
+        string sku
+        int quantity
+        int unit_price
+        int line_amount
+        int discount_amount
+        int distributed_discount_amount
+    }
+    std_customers {
+        int customer_id PK
+        string customer_code
+        string full_name
+        string phone
+        string email
+        string customer_group
+        string province
+        string gender
+        date birth_date
+        int loyalty_points
+        timestamp modified_on
+    }
+    std_variants {
+        int variant_id PK
+        int product_id FK
+        string sku
+        string barcode
+        string variant_name
+        int retail_price
+        int import_price
+        int is_packsize
+        int packsize_quantity
+        string status
+    }
+    std_products {
+        int product_id PK
+        string product_name
+        string brand
+        string category
+        string category_code
+        string product_type
+        string status
+    }
+    std_fulfillments {
+        int fulfillment_id PK
+        string order_id FK
+        string fulfillment_code
+        string status
+        timestamp packed_on
+        timestamp shipped_on
+        timestamp received_on
+    }
+    std_payments {
+        string payment_id PK
+        string order_id FK
+        string payment_method_id
+        int amount
+        string status
+    }
+    std_order_returns {
+        string return_id PK
+        string order_id FK
+        string return_status
+        string refund_status
+        int refund_amount
+        int return_quantity
+    }
+    std_inventory_movements {
+        string movement_id PK
+        int variant_id FK
+        int location_id FK
+        string direction
+        int quantity_delta
+        int onhand
+        int cogs_amount
+        float mac
+        timestamp issued_at_utc
+    }
+    std_misa_sales_lines {
+        string voucher_no PK
+        int line_no PK
+        string sku
+        date posting_date
+        int quantity
+        int cogs_amount
+        int revenue_gross
+        int discount_amount
+        string cogs_account
+        string channel_code
+        string cost_account_group
+    }
+
+    std_orders ||--o{ std_order_items : "contains"
+    std_orders ||--o{ std_payments : "paid via"
+    std_orders ||--o{ std_fulfillments : "fulfilled by"
+    std_orders ||--o{ std_order_returns : "returned via"
+    std_orders }o--|| std_customers : "placed by"
+    std_order_items }o--|| std_variants : "references SKU"
+    std_variants }o--|| std_products : "variant of"
+    std_inventory_movements }o--|| std_variants : "tracks"
+    std_misa_sales_lines }o--o| std_variants : "reconciles COGS"
+    </div>
+  </div>
+</div>
+
+<!-- ③ Intermediate & Core Dims -->
+<div id="p3" class="panel">
+  <div class="panel-header">
+    <h2>③ Intermediate Layer → Core Dimension Tables</h2>
+    <p>int_* models tổng hợp RFM, economics, COGS reconciliation → feed vào dim_customers và dim_products</p>
+    <div class="tags">
+      <span class="tag tag-amber">Intermediate</span>
+      <span class="tag tag-blue">Core Dims</span>
+    </div>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+erDiagram
+    dim_customers_base {
+        string customer_key PK
+        int customer_id
+        string customer_code
+        string full_name
+        string phone
+        string email
+        string customer_group
+        string province
+        string gender
+        timestamp created_at
+        timestamp updated_at
+    }
+    int_customer_metrics {
+        string customer_key PK
+        date first_order_date
+        date last_order_date
+        int recency_days
+        int frequency
+        int monetary_value
+        int lifespan_days
+        float avg_days_between_orders
+        float avg_order_spend
+        float cancel_rate
+        float discount_order_rate
+        string channel_preference
+        string product_affinity
+        string payment_behavior
+        string top_affinity_product
+        string last_purchased_sku
+        date predicted_next_purchase_date
+        string acquisition_source
+    }
+    int_customer_economics {
+        string customer_key PK
+        int lifetime_gross_profit
+        int lifetime_contribution_margin
+        float avg_order_contribution_margin_pct
+        float margin_cogs_coverage_pct
+        int is_margin_negative
+    }
+    int_order_cogs_reconciled {
+        string order_code PK
+        string sku PK
+        int cogs_goods_sapo
+        int cogs_goods_misa
+        int cogs_goods_primary
+        float cogs_variance_pct
+        string cogs_source
+    }
+    dim_customers {
+        string customer_key PK
+        int customer_id
+        string customer_type
+        string value_group
+        string lifecycle_stage
+        string customer_status
+        string geo_region
+        string next_purchase_signal
+        string discount_sensitivity
+        string channel_preference
+        string top_affinity_product
+        string last_purchased_sku
+        string source_contact_quality
+        string contact_quality
+        int is_contactable
+        int is_margin_negative
+        int lifetime_value
+        int lifetime_contribution_margin
+        int recency_days
+        float avg_days_between_orders
+        date predicted_next_purchase_date
+    }
+    dim_products {
+        string product_key PK
+        int product_id
+        int variant_id
+        string sku
+        string product_name
+        string brand_name
+        string category
+        string category_code
+        int is_packsize
+        int packsize_quantity
+        int is_active
+        string product_source
+    }
+    dim_channels {
+        string channel_key PK
+        string channel_name
+        string channel_code
+        string channel_category
+        string channel_format
+        string platform
+        int is_marketplace
+        int is_sales_channel
+    }
+
+    dim_customers_base ||--|| dim_customers : "base of"
+    int_customer_metrics ||--|| dim_customers : "enriches"
+    int_customer_economics ||--|| dim_customers : "enriches"
+    dim_customers_base ||--|| int_customer_metrics : "feeds"
+    dim_customers_base ||--|| int_customer_economics : "feeds"
+    </div>
+  </div>
+</div>
+
+<!-- ④ Fact Tables -->
+<div id="p4" class="panel">
+  <div class="panel-header">
+    <h2>④ Fact Tables & Action Queues</h2>
+    <p>Star schema: fact_orders + fact_sales + fact_order_economics → customer & product action queues</p>
+    <div class="tags">
+      <span class="tag tag-red">Facts</span>
+      <span class="tag tag-green">Action Queues</span>
+    </div>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+erDiagram
+    fact_orders {
+        string order_id PK
+        string customer_key FK
+        string channel_key FK
+        string seller_staff_key FK
+        string team_key FK
+        int date_key FK
+        string order_code
+        int gross_revenue
+        int net_revenue
+        int discount_amount
+        int vat_amount
+        string status
+        string payment_status
+        int is_active_order
+        int scope_retail
+        int scope_b2b
+        timestamp ordered_at
+    }
+    fact_sales {
+        string order_line_id PK
+        string order_id FK
+        string product_key FK
+        string customer_key FK
+        string channel_key FK
+        int date_key FK
+        string sku
+        int quantity
+        int net_revenue
+        int discount_amount
+        timestamp ordered_at
+    }
+    fact_order_economics {
+        string order_id PK
+        string channel_key FK
+        int date_key FK
+        int gross_profit
+        int channel_net_profit
+        int cogs_amount
+        string cogs_source
+        float gross_margin_pct
+        float channel_net_margin_pct
+        int shopee_platform_fees
+        int allocated_overhead
+        int fully_loaded_net_profit
+        int is_margin_negative
+    }
+    mart_customer_action_queue {
+        string customer_key PK
+        string action_type
+        int priority_rank
+        string action_rationale
+        int value_at_stake
+        string value_group
+        string customer_status
+        string next_purchase_signal
+        string discount_sensitivity
+        string top_affinity_product
+        int is_contactable
+        int is_margin_negative
+        int recency_days
+        timestamp queue_generated_at
+    }
+    mart_product_action_queue {
+        string product_key PK
+        string action_type
+        int priority_rank
+        string action_rationale
+        int value_at_stake
+        string abc_class
+        string health_class
+        string oos_risk
+        int is_dead_stock
+        float realized_margin_pct
+        int on_hand
+        float days_of_supply
+        int dead_stock_value_at_risk
+        timestamp queue_generated_at
+    }
+    dim_customers {
+        string customer_key PK
+        string value_group
+        string customer_status
+        string next_purchase_signal
+        string discount_sensitivity
+    }
+    dim_channels {
+        string channel_key PK
+        string channel_name
+        string channel_format
+    }
+    dim_products {
+        string product_key PK
+        string sku
+        string product_name
+    }
+
+    fact_orders }o--|| dim_customers : "customer"
+    fact_orders }o--|| dim_channels : "channel"
+    fact_sales ||--o{ fact_orders : "line of"
+    fact_sales }o--|| dim_products : "product"
+    fact_sales }o--|| dim_channels : "channel"
+    fact_order_economics ||--|| fact_orders : "economics of"
+    dim_customers ||--o{ mart_customer_action_queue : "generates actions"
+    dim_products ||--o{ mart_product_action_queue : "generates actions"
+    </div>
+  </div>
+</div>
+
+<!-- ⑤ CRM Cache -->
+<div id="p5" class="panel">
+  <div class="panel-header">
+    <h2>⑤ CRM Cache — cache.db (wh_* tables)</h2>
+    <p>Python reverse_etl writes warehouse snapshots into SQLite. Go ATTACHes read-only. 1-writer rule: Python only.</p>
+    <div class="tags">
+      <span class="tag tag-amber">cache.db</span>
+      <span class="tag tag-green">Python writes</span>
+      <span class="tag tag-blue">Go reads</span>
+    </div>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+erDiagram
+    wh_customer_base {
+        string customer_key PK
+        int customer_id
+        string customer_code
+        string display_name
+        string phone
+        string email
+        string customer_group
+        string first_order_date
+        string refreshed_at
+    }
+    wh_customer_insight {
+        string customer_key PK
+        int customer_id
+        string value_group
+        string customer_status
+        string next_purchase_signal
+        float avg_days_between_orders
+        float avg_order_spend
+        string discount_sensitivity
+        float cancel_rate
+        string last_purchased_sku
+        string top_affinity_product
+        string second_affinity_product
+        string channel_preference
+        float lifetime_contribution_margin
+        int is_margin_negative
+        string refreshed_at
+    }
+    wh_action_queue {
+        string action_id PK
+        string customer_key FK
+        string action_type
+        string rationale_vi
+        int value_at_stake_vnd
+        int priority
+        string generated_date
+        string refreshed_at
+    }
+    wh_order_hdr {
+        string order_id PK
+        string order_code
+        int customer_id FK
+        int date_key
+        int net_revenue
+        string status
+        string channel
+        int item_count
+        string refreshed_at
+    }
+    wh_product {
+        string product_key PK
+        string sku
+        int variant_id
+        string product_name
+        string brand
+        int unit_price
+        int is_active
+        string refreshed_at
+    }
+    wh_product_insight {
+        string product_key PK
+        string sku
+        string abc_class
+        string health_class
+        string lifecycle_stage
+        string velocity_momentum
+        string oos_risk
+        float realized_margin_pct
+        string discount_dependency
+        string refreshed_at
+    }
+    wh_party_seed {
+        int customer_id PK
+        string customer_key
+        string seen_at
+        string source_contact_quality
+        string contact_quality
+    }
+    wh_sync_run {
+        string run_id PK
+        string source_table
+        int row_count
+        string status
+        string started_at
+        string finished_at
+        string error
+    }
+
+    wh_customer_base ||--o| wh_customer_insight : "insight for"
+    wh_customer_base ||--o{ wh_action_queue : "actions via customer_key"
+    wh_customer_base ||--o{ wh_order_hdr : "orders via customer_id"
+    wh_customer_base ||--o| wh_party_seed : "seeds CRM party"
+    wh_product ||--o| wh_product_insight : "insight for"
+    </div>
+  </div>
+  <div class="legend">
+    <span class="l-rel">wh_party_seed → handoff channel: Go reads và tạo crm_party + crm_party_identity trong crm.db</span>
+  </div>
+</div>
+
+<!-- ⑥ CRM Native -->
+<div id="p6" class="panel">
+  <div class="panel-header">
+    <h2>⑥ CRM Native — crm.db (crm_* tables)</h2>
+    <p>Go là sole writer. Identity resolution, golden record, engagement tracking, segments & campaigns.</p>
+    <div class="tags">
+      <span class="tag tag-blue">crm.db</span>
+      <span class="tag tag-red">Go writes</span>
+      <span class="tag tag-green">Identity + Engagement + Campaigns</span>
+    </div>
+  </div>
+  <div class="diagram-box">
+    <div class="mermaid">
+erDiagram
+    crm_app_user {
+        string user_id PK
+        int staff_id
+        string email
+        string full_name
+        string role
+        int is_active
+    }
+    crm_party {
+        string party_id PK
+        string party_type
+        string display_name
+        string primary_phone
+        string primary_email
+        string status
+        int is_merged
+        string merged_into FK
+    }
+    crm_party_identity {
+        string identity_id PK
+        string party_id FK
+        string source_system
+        string identity_type
+        string identity_value
+        string source_contact_quality
+        string contact_quality
+        float confidence
+        int is_primary
+    }
+    crm_customer_profile {
+        string party_id PK
+        string owner_user_id FK
+        string lifecycle_stage
+        string acquisition_source
+        string birthday
+        string address
+        string custom
+        int consent_contact
+    }
+    crm_tag {
+        string tag_id PK
+        string name
+        string category
+        string color
+    }
+    crm_party_tag {
+        string party_id PK
+        string tag_id PK
+        string tagged_by FK
+        string tagged_at
+    }
+    crm_note {
+        string note_id PK
+        string party_id FK
+        string body
+        string author_user_id FK
+        string created_at
+    }
+    crm_activity {
+        string activity_id PK
+        string party_id FK
+        string activity_type
+        string channel
+        string outcome
+        string related_order_code
+        string staff_user_id FK
+        string occurred_at
+    }
+    crm_task {
+        string task_id PK
+        string party_id FK
+        string title
+        string status
+        string due_at
+        int priority
+        string assignee_user_id FK
+        string source
+        string source_ref
+    }
+    crm_conversation {
+        string conversation_id PK
+        string party_id FK
+        string channel
+        string external_thread_id
+        string status
+        string assignee_user_id FK
+        string last_message_at
+        int unread_count
+    }
+    crm_message {
+        string message_id PK
+        string conversation_id FK
+        string direction
+        string body
+        string sent_at
+    }
+    crm_dedup_candidate {
+        string candidate_id PK
+        string party_a FK
+        string party_b FK
+        string match_rule
+        float match_score
+        string status
+        string reviewed_by FK
+    }
+    crm_segment {
+        string segment_id PK
+        string name
+        int is_dynamic
+        string definition
+        string owner_user_id FK
+    }
+    crm_segment_member {
+        string segment_id PK
+        string party_id PK
+        string source
+        string added_at
+    }
+    crm_campaign {
+        string campaign_id PK
+        string name
+        string objective
+        string segment_id FK
+        string status
+        string created_by FK
+    }
+    crm_campaign_target {
+        string campaign_id PK
+        string party_id PK
+        string status
+        string assigned_user_id FK
+        string converted_order_code
+        int converted_revenue_vnd
+    }
+
+    crm_party ||--o{ crm_party_identity : "identified by"
+    crm_party ||--o| crm_customer_profile : "has profile"
+    crm_party ||--o{ crm_party_tag : "tagged with"
+    crm_party ||--o{ crm_note : "has notes"
+    crm_party ||--o{ crm_activity : "has activities"
+    crm_party ||--o{ crm_task : "has tasks"
+    crm_party ||--o{ crm_conversation : "has conversations"
+    crm_party }o--o{ crm_dedup_candidate : "dedup pair"
+    crm_conversation ||--o{ crm_message : "contains"
+    crm_tag ||--o{ crm_party_tag : "used in"
+    crm_segment ||--o{ crm_segment_member : "has members"
+    crm_segment_member }o--|| crm_party : "member is"
+    crm_campaign }o--|| crm_segment : "targets segment"
+    crm_campaign ||--o{ crm_campaign_target : "has targets"
+    crm_campaign_target }o--|| crm_party : "targets party"
+    crm_app_user ||--o{ crm_task : "assigned to"
+    crm_app_user ||--o{ crm_activity : "performs"
+    crm_customer_profile }o--|| crm_app_user : "owned by"
+    crm_dedup_candidate }o--|| crm_app_user : "reviewed by"
+    </div>
+  </div>
+  <div class="legend">
+    <span class="l-rel">crm_party_identity.identity_type: sapo_customer | phone | email | psid | zalo_uid | customer_code</span>
+    <span class="l-rel">crm_task.source: manual | action_queue | campaign — idempotency via source_ref UNIQUE</span>
+  </div>
+</div>
+
+</div><!-- end .content -->
+
+<script>
+async function showPanel(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  // Render diagrams that weren't visible during initial load
+  const nodes = document.querySelectorAll('#' + id + ' .mermaid:not([data-processed="true"])');
+  if (nodes.length) await mermaid.run({ nodes });
+}
+function toggleTheme() {
+  document.body.classList.toggle('light');
+}
+mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+// Render only the active panel on load
+mermaid.run({ nodes: document.querySelectorAll('#p1 .mermaid') });
+</script>
+</body>
+</html>

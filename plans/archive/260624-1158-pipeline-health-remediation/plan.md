@@ -4,6 +4,8 @@
 
 Remediation backlog from the full-stack health audit (ingestion → CRM). Items added incrementally; execute only after per-phase approval.
 
+> **✅ STATUS: COMPLETE (2026-06-24) — ARCHIVED.** All in-scope items done, deployed, verified, committed + pushed. Unfinished/deferred items split into **[260624-1958-pipeline-hardening-followups](../../260624-1958-pipeline-hardening-followups/plan.md)** (incl. the CRITICAL Cloudflare token rotation from the push-protection incident).
+
 ## Done (2026-06-24)
 - [x] **Retire `webhook_consumer/cloudflared1_consumer/`** — dead; D1 polling lives in Dagster `ingest_sapo_v2_webhook_consumer_asset` → `ingestion/`. Removed + `AGENTS.md` label fixed.
 - [x] **Phase 01** — rename `sapo_assets.py` → `sapo_v2_assets.py` (key_prefix unchanged).
@@ -72,9 +74,8 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 ### Done earlier this session
 build_serving_db duckdb_lock ✅ · gitignore/hygiene ✅ · Worker bearer-token + Sapo HMAC enforced ✅ · run_monitoring + stuck-sensor ✅ · dagster.yaml tracked ✅ · Hug SLA ✅ · cookie tz ✅ · ingestion reliability (ack/re-raise/page-skip) ✅ · margin moot ✅
 
-### Truly remaining (deferred / needs decision)
-- **non-root data_platform/crm/rill** (volume-ownership) · **apply evidence non-root** (image rebuild)
-- Deferred: Phase 03 service-account · ports `0.0.0.0` · Messenger HMAC · Worker replay-protection · HUG_ZALO_OA_URL · config.toml sheet IDs · sheets `rows_written` · >200 LOC modularization
+### Remaining / deferred → moved to follow-ups plan
+All unfinished + deferred items (non-root containers, evidence rebuild, service-account, ports, Messenger HMAC, Worker replay, etc.) + the **CRITICAL Cloudflare token rotation** are tracked in **[260624-1958-pipeline-hardening-followups](../../260624-1958-pipeline-hardening-followups/plan.md)**.
 
 ## Open questions
 - See audit report §"Unresolved questions" (8 items — webhook posture, LAN trust, realized_margin_pct availability, etc.).
