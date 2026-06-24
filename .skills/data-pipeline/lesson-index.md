@@ -111,6 +111,7 @@ Lessons covering data trust: health recording, digest, composite PK, KPI closure
 | L84 | UTC storage + ICT display là architecture chuẩn cho pipeline Việt Nam | `references/lessons-learned.md#L84` |
 | L110 | MISA `invoice_no` resets monthly — never a standalone join key (use invoice_no+month+amount) | `references/lessons-learned.md#L110` |
 | L111 | MISA `VCSC*` = Sapo `VTSC*` same product — alias gap inflates reconciliation variance | `references/lessons-learned.md#L111` |
+| L147 | A verification probe that swallows its own failure path is vacuous — passes without testing | `references/lessons-learned.md#L147` |
 
 **Full TRUST knowledge base:** `references/ingestion-health-digest.md` (canonical TRUST reference)
 

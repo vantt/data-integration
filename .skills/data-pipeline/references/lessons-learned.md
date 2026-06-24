@@ -4439,3 +4439,23 @@ elif filter_priority == "high":
 3. Trigger to apply this lesson: any time you edit a file under a gitignored path (`git ls-files --error-unmatch <path>` errors), stop and ask "is this config that must survive a fresh deploy?" If yes, track a source + seed it.
 
 **Reference:** `orchestration/dagster.yaml` (tracked source), `docker-compose.yml` (data_platform `command` copy-if-absent), `.gitignore` (`app_data/` ignored). Fixed 2026-06-24 commit d4e098a.
+
+---
+
+### L147 — A verification probe that swallows its own failure path is VACUOUS — it passes without testing anything
+
+**Symptom:** A restore-verify drill claimed a "write→read→delete round-trip" proved the restored CRM was writable. It POSTed to `/api/tags` — an endpoint that **does not exist** (real routes were `/api/parties/{id}/tags`, `/settings/tags`). The 404 landed in a broad `except Exception: print("write-probe skipped — read-path verified"); return`. So the write test **never ran**; the drill reported PASS having verified nothing about writes. Invisible in testing because the happy path AND the 4 negative-tamper tests only exercised the *read/integrity* gate.
+
+**Group:** TRUST
+
+**Root cause:** Two compounding test anti-patterns: (1) a probe whose failure is caught and downgraded to a soft "skipped" — so the assertion can never fail; (2) the negative/tamper suite didn't cover the write path, so the vacuous probe was never caught by "does a known-bad input make this fail?". A check that cannot fail proves nothing.
+
+**Fix:** Replace the endpoint-guessing soft-skip with a REAL, deterministic write that can actually fail: `docker exec <container> python3 -c "open restored crm.db; CREATE TEMP-ish table; INSERT; DELETE; DROP; commit; print('WRITABLE')"` and assert `WRITABLE` in stdout (else FAIL). No broad except, no fallback that masks failure.
+
+**Rules:**
+1. Every verification/probe must have a reachable FAILURE path. If the only outcomes are "pass" and "skipped", it's vacuous — delete it or make it assert.
+2. NEVER `except: ... return`/"skip" around the thing you're trying to prove. Catching the failure of an assertion turns the assertion off.
+3. The negative-test suite must tamper EVERY dimension the check claims to cover (here: a write-path tamper, not only read/integrity tampers). If a deliberately-broken input still PASSes, the check for that dimension is vacuous — this is how you catch a dead probe. (See also L143 rule on non-vacuous gates.)
+4. Prefer a deterministic low-level assertion (direct SQLite write) over guessing a high-level API shape — fewer false "skips", and it fails loudly when wrong.
+
+**Reference:** `crm/ops/restore_verify_crm.py` `_assert_writable` (was `_write_delete_roundtrip`). Found by `code-reviewer` (report `plans/260624-2010-crm-backup-checkpoint-restore-verify/reports/from-code-reviewer-backup-restore-260624-2243-report.md`). Fixed 2026-06-24 commit 41ad75a.
