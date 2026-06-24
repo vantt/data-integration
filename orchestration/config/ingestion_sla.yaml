@@ -37,3 +37,7 @@ assets:
   sheets/sheets_team_config_asset:
     freshness_hours: 168        # 7 days — team config rarely changes
     trend_min_ratio: null
+  hug/ingest_hug_webhook_consumer_asset:
+    freshness_hours: 12         # 3min schedule but sporadic opt-in events; alert only if the asset stops RUNNING
+    business_hours_only: false
+    trend_min_ratio: null       # sporadic by nature; trend check would false-alarm on quiet days

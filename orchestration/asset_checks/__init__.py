@@ -27,6 +27,7 @@ _log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 def _build_asset_def_map() -> dict[str, Any]:
     from orchestration.assets import (  # noqa: PLC0415  (deferred import — intentional)
+        hug_assets,
         misa_amis_assets,
         sapo_v2_assets,
         sheets_assets,
@@ -48,6 +49,7 @@ def _build_asset_def_map() -> dict[str, Any]:
         "sheets/sheets_targets_asset": sheets_assets.sheets_targets_asset,
         "sheets/sheets_marketing_spend_asset": sheets_assets.sheets_marketing_spend_asset,
         "sheets/sheets_team_config_asset": sheets_assets.sheets_team_config_asset,
+        "hug/ingest_hug_webhook_consumer_asset": hug_assets.ingest_hug_webhook_consumer_asset,
     }
 
 
