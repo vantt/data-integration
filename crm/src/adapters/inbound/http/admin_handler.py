@@ -296,12 +296,22 @@ def create_admin_router() -> APIRouter:
     @r.post("/admin/refresh")
     async def post_refresh(
         x_refresh_token: str | None = Header(default=None),
+        x_crm_token: str | None = Header(default=None),
     ) -> JSONResponse:
-        token = os.environ.get("CRM_REFRESH_TOKEN", "")
-        if token and x_refresh_token != token:
+        # Accept either CRM_REFRESH_TOKEN (legacy) or CRM_API_TOKEN (unified).
+        # If both are unset: warn + allow (LAN-trust mode, backward-compatible).
+        # If either is set: the corresponding header must match.
+        refresh_tok = os.environ.get("CRM_REFRESH_TOKEN", "")
+        api_tok = os.environ.get("CRM_API_TOKEN", "")
+        if refresh_tok and x_refresh_token != refresh_tok:
             raise HTTPException(status_code=401, detail={"status": "unauthorized"})
+        if api_tok and x_crm_token != api_tok and not refresh_tok:
+            # Only enforce CRM_API_TOKEN when CRM_REFRESH_TOKEN is absent
+            # (CRM_REFRESH_TOKEN takes precedence for callers that use it).
+            raise HTTPException(status_code=401, detail={"status": "unauthorized"})
+        token = refresh_tok or api_tok  # any token set = protected
         if not token:
-            log.warning("admin: CRM_REFRESH_TOKEN unset — /admin/refresh is UNPROTECTED (LAN-trust only)")
+            log.warning("admin: CRM_REFRESH_TOKEN/CRM_API_TOKEN unset — /admin/refresh is UNPROTECTED (LAN-trust only)")
 
         async with _lock:
             if _guard["running"]:

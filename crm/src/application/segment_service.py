@@ -142,18 +142,19 @@ class SegmentService:
         rule = _parse_and_validate_rule(seg.definition)
         party_ids = self._evaluate_rule(rule)
 
-        # Purge stale rule members, then insert fresh set.
-        self._repo.delete_rule_members(segment_id)
+        # Replace all rule-sourced members atomically (delete + insert in one transaction).
+        # Manual members are preserved by the repository's DELETE filter on source='rule'.
         now = _utc_now()
-        for pid in party_ids:
-            self._repo.upsert_member(
-                SegmentMember(
-                    segment_id=segment_id,
-                    party_id=pid,
-                    source=MEMBER_SOURCE_RULE,
-                    added_at=now,
-                )
+        members = [
+            SegmentMember(
+                segment_id=segment_id,
+                party_id=pid,
+                source=MEMBER_SOURCE_RULE,
+                added_at=now,
             )
+            for pid in party_ids
+        ]
+        self._repo.replace_rule_members(segment_id, members)
         return len(party_ids)
 
     def _evaluate_rule(self, rule: dict) -> list[str]:

@@ -177,6 +177,41 @@ class SQLiteSegmentRepository:
         self._conn.commit()
         return cur.rowcount
 
+    def replace_rule_members(self, segment_id: str, members: list["SegmentMember"]) -> int:
+        """Atomically replace all rule-sourced members for a segment.
+
+        Deletes existing rule-source rows and inserts the new set in a SINGLE
+        transaction.  Manual members are preserved (the DELETE filters by
+        source = 'rule').  The ON CONFLICT clause keeps 'manual' source if a
+        party was also added manually.
+
+        Returns the number of rows inserted.
+        """
+        self._conn.execute("BEGIN")
+        try:
+            self._conn.execute(
+                "DELETE FROM crm_segment_member WHERE segment_id = ? AND source = 'rule'",
+                (segment_id,),
+            )
+            for m in members:
+                self._conn.execute(
+                    """
+                    INSERT INTO crm_segment_member (segment_id, party_id, source, added_at)
+                    VALUES (?, ?, ?, ?)
+                    ON CONFLICT (segment_id, party_id) DO UPDATE SET
+                      source   = CASE WHEN crm_segment_member.source = 'manual'
+                                      THEN 'manual'
+                                      ELSE excluded.source END,
+                      added_at = excluded.added_at
+                    """,
+                    (m.segment_id, m.party_id, m.source, m.added_at),
+                )
+            self._conn.execute("COMMIT")
+        except Exception:
+            self._conn.execute("ROLLBACK")
+            raise
+        return len(members)
+
     def evaluate_rule(self, rule: dict) -> list[str]:
         """Translate a validated rule dict into SQL and return matching party_ids.
 

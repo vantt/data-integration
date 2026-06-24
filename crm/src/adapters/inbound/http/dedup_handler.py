@@ -1,6 +1,7 @@
 """FastAPI router — dedup HTTP handlers.
 
-Auth: DEFERRED — LAN-trust only, no auth middleware.
+Auth: POST mutations require X-CRM-Token header (CRM_API_TOKEN env var).
+GET endpoints are read-only and unauthenticated.
 Routes mirror dedup_handler.go (chi → FastAPI).
 """
 from __future__ import annotations
@@ -8,8 +9,10 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, Protocol
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from adapters.inbound.http.auth_dependency import require_api_token
 
 from crm.src.domain.entities.party import DedupCandidate
 
@@ -69,7 +72,7 @@ def make_dedup_router(querier: DedupQuerier, merger: DedupMerger) -> APIRouter:
         }
 
     # POST /api/dedup/merge/{candidate_id}
-    @router.post("/dedup/merge/{candidate_id}")
+    @router.post("/dedup/merge/{candidate_id}", dependencies=[Depends(require_api_token)])
     def merge_candidate(candidate_id: str, body: MergeRequest) -> Any:
         if not body.surviving_id or not body.merged_id:
             raise HTTPException(
@@ -92,7 +95,7 @@ def make_dedup_router(querier: DedupQuerier, merger: DedupMerger) -> APIRouter:
         return {"status": "ok", "merge_id": merge_id, "candidate_id": candidate_id}
 
     # POST /api/dedup/undo/{merge_id}
-    @router.post("/dedup/undo/{merge_id}")
+    @router.post("/dedup/undo/{merge_id}", dependencies=[Depends(require_api_token)])
     def undo_merge(merge_id: str, body: UndoMergeRequest = UndoMergeRequest()) -> Any:
         try:
             merger.undo_merge(merge_id, body.undone_by)

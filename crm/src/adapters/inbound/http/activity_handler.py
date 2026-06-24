@@ -1,16 +1,18 @@
 """HTTP adapter — Activity endpoints.
 
-Auth: DEFERRED — LAN-trust only.
+Auth: POST mutation requires X-CRM-Token header (CRM_API_TOKEN env var).
+GET endpoints are read-only and unauthenticated.
 """
 from __future__ import annotations
 
 import dataclasses
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from adapters.inbound.http.auth_dependency import require_api_token
 from application.activity_service import ActivityService
 
 log = logging.getLogger(__name__)
@@ -51,7 +53,7 @@ def _service() -> ActivityService:
 
 # ── endpoints ─────────────────────────────────────────────────────────────────
 
-@router.post("/parties/{party_id}/activities", status_code=201)
+@router.post("/parties/{party_id}/activities", status_code=201, dependencies=[Depends(require_api_token)])
 def log_activity(party_id: str, req: LogActivityRequest):
     """POST /api/parties/{id}/activities — log a touchpoint for a party."""
     data = req.model_dump()

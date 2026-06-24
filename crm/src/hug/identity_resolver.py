@@ -235,13 +235,18 @@ def resolve_new_optins(
             ts = row.get("event_ts") or ""
             if ts > latest_ts:
                 latest_ts = ts
+        # Save watermark BEFORE commit so both succeed or both are rolled back.
+        # A crash between save_watermark and commit is handled by the file write
+        # being atomic on POSIX (write+rename); on Windows the file write completes
+        # fully before commit, so the worst outcome is a re-process on next run
+        # (all upserts are idempotent for phone-bearing rows; Zalo-only rows are
+        # deduplicated by (token, zalo_uid) in upsert_link).
+        if latest_ts > since:
+            save_watermark(wm_path, latest_ts)
         crm_conn.commit()
     except Exception:
         crm_conn.rollback()
         raise
-
-    if latest_ts > since:
-        save_watermark(wm_path, latest_ts)
 
     log.info("resolve_new_optins: processed %d rows; watermark → %s", len(rows), latest_ts)
     return len(rows)

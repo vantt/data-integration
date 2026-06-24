@@ -1,16 +1,18 @@
 """HTTP adapter — Task endpoints.
 
-Auth: DEFERRED — LAN-trust only.
+Auth: POST/PATCH mutations require X-CRM-Token header (CRM_API_TOKEN env var).
+GET endpoints are read-only and unauthenticated.
 """
 from __future__ import annotations
 
 import dataclasses
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+from adapters.inbound.http.auth_dependency import require_api_token
 from application.task_service import TaskService
 
 log = logging.getLogger(__name__)
@@ -58,7 +60,7 @@ def _service() -> TaskService:
 
 # ── endpoints ─────────────────────────────────────────────────────────────────
 
-@router.post("/tasks", status_code=201)
+@router.post("/tasks", status_code=201, dependencies=[Depends(require_api_token)])
 def create_task(req: CreateTaskRequest):
     """POST /api/tasks — create a manual task."""
     try:
@@ -84,7 +86,7 @@ def get_task(task_id: str):
     return dataclasses.asdict(task)
 
 
-@router.patch("/tasks/{task_id}")
+@router.patch("/tasks/{task_id}", dependencies=[Depends(require_api_token)])
 def update_task(task_id: str, req: UpdateTaskRequest):
     """PATCH /api/tasks/{id} — update status and/or assignee."""
     svc = _service()
@@ -116,7 +118,7 @@ def list_tasks(assignee: str = "", status: str = "", limit: int = 100):
     return {"tasks": [dataclasses.asdict(t) for t in tasks]}
 
 
-@router.post("/tasks/generate")
+@router.post("/tasks/generate", dependencies=[Depends(require_api_token)])
 def generate_tasks(req: GenerateTasksRequest):
     """POST /api/tasks/generate — batch-generate tasks from wh_action_queue."""
     try:

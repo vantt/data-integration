@@ -1,6 +1,7 @@
 """Segment HTTP handlers — FastAPI APIRouter prefix=/api.
 
-Auth: DEFERRED — LAN-trust only (per plan).
+Auth: POST/PATCH/DELETE mutations require X-CRM-Token header (CRM_API_TOKEN env var).
+GET endpoints are read-only and unauthenticated.
 """
 from __future__ import annotations
 
@@ -8,8 +9,10 @@ import logging
 from dataclasses import asdict
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+
+from adapters.inbound.http.auth_dependency import require_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +67,7 @@ def make_segment_router(
 
     # ── POST /segments ───────────────────────────────────────────────────────
 
-    @router.post("/segments", status_code=201)
+    @router.post("/segments", status_code=201, dependencies=[Depends(require_api_token)])
     def create_segment(body: SegmentCreateBody):
         try:
             seg = segment_svc.create_segment(body.model_dump())
@@ -77,7 +80,7 @@ def make_segment_router(
 
     # ── PATCH /segments/{id} ─────────────────────────────────────────────────
 
-    @router.patch("/segments/{segment_id}")
+    @router.patch("/segments/{segment_id}", dependencies=[Depends(require_api_token)])
     def update_segment(segment_id: str, body: SegmentUpdateBody):
         patch = {k: v for k, v in body.model_dump().items() if v is not None}
         try:
@@ -93,7 +96,7 @@ def make_segment_router(
 
     # ── POST /segments/{id}/refresh ──────────────────────────────────────────
 
-    @router.post("/segments/{segment_id}/refresh")
+    @router.post("/segments/{segment_id}/refresh", dependencies=[Depends(require_api_token)])
     def refresh_segment(segment_id: str):
         try:
             n = segment_svc.refresh_dynamic_segment(segment_id)
@@ -117,7 +120,7 @@ def make_segment_router(
 
     # ── POST /segments/{id}/members ──────────────────────────────────────────
 
-    @router.post("/segments/{segment_id}/members", status_code=201)
+    @router.post("/segments/{segment_id}/members", status_code=201, dependencies=[Depends(require_api_token)])
     def add_member(segment_id: str, body: AddMemberBody):
         try:
             segment_svc.add_member(segment_id, body.party_id)
@@ -128,7 +131,7 @@ def make_segment_router(
 
     # ── DELETE /segments/{id}/members/{party_id} ─────────────────────────────
 
-    @router.delete("/segments/{segment_id}/members/{party_id}")
+    @router.delete("/segments/{segment_id}/members/{party_id}", dependencies=[Depends(require_api_token)])
     def remove_member(segment_id: str, party_id: str):
         try:
             segment_svc.remove_member(segment_id, party_id)

@@ -1,6 +1,10 @@
 """FastAPI router: Conversation inbox + Messenger ingest endpoints.
 
-Auth: DEFERRED — LAN-trust only (per plan). FB webhook signature verification also deferred.
+Auth:
+  PATCH /api/conversations/{id}  — requires X-CRM-Token (CRM_API_TOKEN env var).
+  GET endpoints                   — unauthenticated (read-only).
+  POST /api/conversations/messenger/ingest — NO CRM token (external FB webhook;
+      Facebook signs payloads with X-Hub-Signature-256, not our internal token).
 """
 from __future__ import annotations
 
@@ -8,9 +12,10 @@ import logging
 from dataclasses import asdict
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
+from adapters.inbound.http.auth_dependency import require_api_token
 from application.conversation_service import ConversationService
 from application.messenger_parser import parse_messenger_webhook
 
@@ -55,7 +60,7 @@ def list_conversations(
 # PATCH /api/conversations/{id}
 # ---------------------------------------------------------------------------
 
-@router.patch("/conversations/{conversation_id}")
+@router.patch("/conversations/{conversation_id}", dependencies=[Depends(require_api_token)])
 def update_conversation(
     conversation_id: str,
     body: UpdateConversationBody,

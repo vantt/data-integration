@@ -137,18 +137,71 @@ def upsert_link(
     confidence: float,
     status: str,
 ) -> None:
-    """Write or update a crm_identity_link row (idempotent on token+phone)."""
+    """Write or update a crm_identity_link row.
+
+    Phone-bearing rows: idempotent on UNIQUE(token, scanner_phone) via ON CONFLICT.
+    Zalo-only rows (scanner_phone IS NULL): SQLite treats NULL != NULL so the
+    UNIQUE constraint doesn't fire.  We deduplicate by (token, scanner_zalo_uid)
+    with an explicit UPDATE-then-INSERT to avoid duplicate rows on re-run.
+    """
+    norm_phone = scanner_phone or None
+    norm_zalo = scanner_zalo_uid or None
+    now = _utc_now()
+
+    if norm_phone is None and norm_zalo is not None:
+        # Zalo-only path: dedupe by (token, scanner_zalo_uid).
+        # Try to update an existing row first; insert only when none exists.
+        cur = crm_conn.execute(
+            """
+            UPDATE crm_identity_link SET
+                buyer_customer_id    = ?,
+                resolved_customer_id = ?,
+                confidence           = ?,
+                status               = ?,
+                ts                   = ?
+            WHERE token = ? AND scanner_phone IS NULL AND scanner_zalo_uid = ?
+            """,
+            (
+                buyer_customer_id or None,
+                resolved_customer_id or None,
+                confidence,
+                status,
+                now,
+                token,
+                norm_zalo,
+            ),
+        )
+        if cur.rowcount == 0:
+            crm_conn.execute(
+                """
+                INSERT INTO crm_identity_link
+                    (token, buyer_customer_id, scanner_phone, scanner_zalo_uid,
+                     resolved_customer_id, confidence, status, ts)
+                VALUES (?, ?, NULL, ?, ?, ?, ?, ?)
+                """,
+                (
+                    token,
+                    buyer_customer_id or None,
+                    norm_zalo,
+                    resolved_customer_id or None,
+                    confidence,
+                    status,
+                    now,
+                ),
+            )
+        return
+
     crm_conn.execute(
         _SQL_UPSERT_LINK,
         (
             token,
             buyer_customer_id or None,
-            scanner_phone or None,
-            scanner_zalo_uid or None,
+            norm_phone,
+            norm_zalo,
             resolved_customer_id or None,
             confidence,
             status,
-            _utc_now(),
+            now,
         ),
     )
 

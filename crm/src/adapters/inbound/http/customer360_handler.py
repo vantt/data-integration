@@ -1,6 +1,7 @@
 """FastAPI router — Customer 360 HTTP handlers.
 
-Auth: DEFERRED — LAN-trust only, no auth middleware.
+Auth: PUT/POST/DELETE mutations require X-CRM-Token header (CRM_API_TOKEN env var).
+GET endpoints are read-only and unauthenticated.
 Routes mirror customer360_handler.go (chi → FastAPI).
 """
 from __future__ import annotations
@@ -8,7 +9,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional, Protocol
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from adapters.inbound.http.auth_dependency import require_api_token
 from pydantic import BaseModel
 
 from crm.src.domain.entities.cache_insight import CacheInsight
@@ -132,7 +135,7 @@ def make_customer360_router(
         return p
 
     # PUT /api/parties/{id}/profile
-    @router.put("/parties/{id}/profile")
+    @router.put("/parties/{id}/profile", dependencies=[Depends(require_api_token)])
     def put_profile(id: str, body: PutProfileBody) -> Any:
         kwargs: dict[str, Any] = {
             k: v for k, v in body.model_dump(exclude={"custom_fields"}).items()
@@ -169,7 +172,7 @@ def make_customer360_router(
         return {"entity_type": entity_type, "fields": defs or []}
 
     # POST /api/custom-fields
-    @router.post("/custom-fields", status_code=201)
+    @router.post("/custom-fields", status_code=201, dependencies=[Depends(require_api_token)])
     def create_custom_field(body: CreateCustomFieldBody) -> Any:
         if body.data_type not in VALID_CUSTOM_DATA_TYPES:
             raise HTTPException(
@@ -191,7 +194,7 @@ def make_customer360_router(
         return created
 
     # POST /api/parties/{id}/tags
-    @router.post("/parties/{id}/tags")
+    @router.post("/parties/{id}/tags", dependencies=[Depends(require_api_token)])
     def attach_tag(id: str, body: AttachTagBody) -> Any:
         try:
             tags.attach_tag(id, body.tag_id, body.tagged_by)
@@ -200,13 +203,13 @@ def make_customer360_router(
         return {"status": "ok"}
 
     # DELETE /api/parties/{id}/tags/{tag_id}
-    @router.delete("/parties/{id}/tags/{tag_id}")
+    @router.delete("/parties/{id}/tags/{tag_id}", dependencies=[Depends(require_api_token)])
     def detach_tag(id: str, tag_id: str) -> Any:
         tags.detach_tag(id, tag_id)
         return {"status": "ok"}
 
     # POST /api/parties/{id}/notes
-    @router.post("/parties/{id}/notes", status_code=201)
+    @router.post("/parties/{id}/notes", status_code=201, dependencies=[Depends(require_api_token)])
     def add_note(id: str, body: AddNoteBody) -> Any:
         if not body.body.strip():
             raise HTTPException(status_code=400, detail="body required")

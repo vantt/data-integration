@@ -1,6 +1,7 @@
 """Campaign HTTP handlers — FastAPI APIRouter prefix=/api.
 
-Auth: DEFERRED — LAN-trust only (per plan).
+Auth: POST/PATCH mutations require X-CRM-Token header (CRM_API_TOKEN env var).
+GET endpoints are read-only and unauthenticated.
 """
 from __future__ import annotations
 
@@ -8,8 +9,10 @@ import logging
 from dataclasses import asdict
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+
+from adapters.inbound.http.auth_dependency import require_api_token
 
 logger = logging.getLogger(__name__)
 
@@ -65,7 +68,7 @@ def make_campaign_router(campaign_svc: Any) -> APIRouter:
 
     # ── POST /campaigns ──────────────────────────────────────────────────────
 
-    @router.post("/campaigns", status_code=201)
+    @router.post("/campaigns", status_code=201, dependencies=[Depends(require_api_token)])
     def create_campaign(body: CampaignCreateBody):
         try:
             campaign = campaign_svc.create_campaign(body.model_dump())
@@ -78,7 +81,7 @@ def make_campaign_router(campaign_svc: Any) -> APIRouter:
 
     # ── PATCH /campaigns/{id} ────────────────────────────────────────────────
 
-    @router.patch("/campaigns/{campaign_id}")
+    @router.patch("/campaigns/{campaign_id}", dependencies=[Depends(require_api_token)])
     def update_campaign(campaign_id: str, body: CampaignUpdateBody):
         patch = {k: v for k, v in body.model_dump().items() if v is not None}
         try:
@@ -94,7 +97,7 @@ def make_campaign_router(campaign_svc: Any) -> APIRouter:
 
     # ── POST /campaigns/{id}/generate-targets ────────────────────────────────
 
-    @router.post("/campaigns/{campaign_id}/generate-targets")
+    @router.post("/campaigns/{campaign_id}/generate-targets", dependencies=[Depends(require_api_token)])
     def generate_targets(campaign_id: str):
         try:
             n = campaign_svc.generate_targets(campaign_id)
@@ -123,7 +126,7 @@ def make_campaign_router(campaign_svc: Any) -> APIRouter:
     # ── PATCH /campaigns/{id}/targets/{party_id} ─────────────────────────────
     # body: {"status": "sent"} or {"assigned_user_id": "..."} or both
 
-    @router.patch("/campaigns/{campaign_id}/targets/{party_id}")
+    @router.patch("/campaigns/{campaign_id}/targets/{party_id}", dependencies=[Depends(require_api_token)])
     def update_target(campaign_id: str, party_id: str, body: TargetUpdateBody):
         patch = {k: v for k, v in body.model_dump().items() if v is not None}
         if not patch:
@@ -143,7 +146,7 @@ def make_campaign_router(campaign_svc: Any) -> APIRouter:
 
     # ── POST /campaigns/{id}/scan-conversions ────────────────────────────────
 
-    @router.post("/campaigns/{campaign_id}/scan-conversions")
+    @router.post("/campaigns/{campaign_id}/scan-conversions", dependencies=[Depends(require_api_token)])
     def scan_conversions(campaign_id: str):
         try:
             n = campaign_svc.scan_conversions(campaign_id)
