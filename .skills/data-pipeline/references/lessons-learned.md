@@ -4399,3 +4399,24 @@ elif filter_priority == "high":
 3. "Works in prod" ≠ "valid": library-version differences in BOM tolerance mean a file can load in the container but fail in dev (or vice-versa). Normalize encoding so it parses everywhere.
 
 **Reference:** `orchestration/config/ingestion_sla.yaml`. Found during the `sapo_assets`→`sapo_v2_assets` rename import-validation, fixed 2026-06-24 commit f6355ab.
+
+---
+
+### L145 — A zombie STARTED/QUEUED run blocks the self-overlap guard forever; run_monitoring OFF + an activity-only stuck-sensor both miss it
+
+**Group:** OPS
+
+**Symptom:** Sapo webhook ingestion silently stalled ~7h. The realtime schedule logged every tick: `pipeline_sapo_v2_realtime_schedule skipped: previous run still active (35c42d4d)`. Meanwhile `health_alert_stuckrun_sensor` logged `No stuck runs detected` the entire time. Run `35c42d4d` had been `STARTED` since 09:45 (its process long dead); two more were stuck `QUEUED`.
+
+**Root cause (3 compounding):** (1) The schedule's self-overlap guard `_has_active_run()` treats STARTED/STARTING/QUEUED/NOT_STARTED as "active" (correct by design) → it skips while ANY such run exists. (2) Dagster `run_monitoring` was **disabled** in `dagster.yaml`, so dead run-workers were never auto-failed — a zombie sits `STARTED` indefinitely. (3) The stuck-sensor decided staleness from event-log activity only; when `last_event_time` came back `None` (no events / transient SQLite lock) it did an unconditional `continue` (skip), so a run with a dead process AND no events was never flagged. A container `--force-recreate` also orphans in-flight runs without failing them. Net: nothing ever cleared the zombie, and the guard skipped forever.
+
+**Fix:** (a) Recover now — mark zombies failed: `DagsterInstance.get().report_run_failed(run, "...")` (CLI has no `dagster run terminate` in 1.13). (b) Enable `run_monitoring` in `dagster.yaml` (`enabled: true`, generous `max_runtime_seconds` coarse backstop — set ABOVE the longest legit job, e.g. 14400s, so it never false-kills nightly/full-refresh). (c) Harden the stuck-sensor with a per-job absolute max-runtime backstop so a STARTED/QUEUED run past its ceiling is terminated even when `last_event_time is None`. Apply via container recreate; confirm `MonitoringDaemon` appears in the daemon list.
+
+**Rules:**
+1. A self-overlap "skip if previous still active" guard is only safe if SOMETHING reliably terminates dead runs. Pair it with `run_monitoring` enabled, OR a sensor that kills on absolute max-runtime — never rely on activity/heartbeat alone (a dead process emits no events → looks "not stuck").
+2. `run_monitoring.max_runtime_seconds` is a BLUNT global kill — set it generously above the longest legit job; do precise per-job kills in the sensor. A too-tight global silently murders the nightly.
+3. After any container `--force-recreate`/restart, in-flight runs become zombies. With `run_monitoring` on they self-heal; without it they block schedules forever. Always check `non-terminal runs == 0` after a recreate.
+4. Recovery: `instance.report_run_failed(run)` (or `report_run_canceled`) flips a zombie to terminal so the guard stops skipping. `dagster run` has no `terminate` subcommand in 1.13.
+5. Diagnose a stalled schedule by reading the scheduler log for `skipped: previous run still active (<id>)` then checking that run's status + age in `dagster_home/history/runs.db`. Builds on [[L48]] (zombie NOT_STARTED) + dagster-Lesson-13 — new angle: STARTED/QUEUED zombie + sensor blind spot.
+
+**Reference:** `app_data/dagster_home/dagster.yaml` (run_monitoring), `orchestration/sensors/stuck_run_alerter.py` (per-job max-runtime), `orchestration/definitions.py` (`_has_active_run`/`_ACTIVE_STATUSES`). Incident + fix 2026-06-24. Report: `plans/reports/from-reliability-agent-*-260624-1656-report.md`.

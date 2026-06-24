@@ -155,6 +155,7 @@ Largest group — Dagster orchestration, schedules, sensors, concurrency, mainte
 | L63 | Purge job bị stuck-run alerter kill do VACUUM chạy im lặng quá 5 phút | `references/lessons-learned.md#L63` |
 | L64 | Ingestion NOT_STARTED 90 min: dbt_rw slot contention | `references/lessons-learned.md#L64` |
 | L75 | Dagster ops without `context.log` invisible to inactivity watchdog | `references/lessons-learned.md#L75` |
+| L145 | Zombie STARTED/QUEUED run blocks self-overlap guard forever; run_monitoring OFF + activity-only sensor miss it | `references/lessons-learned.md#L145` |
 
 ### Maintenance Cron & Schedule Design
 
