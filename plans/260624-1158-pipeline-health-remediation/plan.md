@@ -60,7 +60,7 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 - [x] **segment refresh** wrapped in single transaction (`replace_rule_members`).
 
 ### MEDIUM/HIGH — security
-- [x] **CRM `/api` mutation auth** — `X-CRM-Token` dependency added to all mutation routes (web UI uses separate routes, unaffected; messenger/ingest excluded). Backward-compatible: **CRM_API_TOKEN unset = LAN-trust (current)**. tests 514 pass, crm boots healthy. ⏭ ENFORCE later by setting `CRM_API_TOKEN` (+ update Dagster caller to send it).
+- [x] **CRM `/api` mutation auth — ENFORCED** — `X-CRM-Token` required on all `/api/*` mutation routes; `CRM_API_TOKEN` set in root `.env` + wired in compose. Verified: no-token→401, token→422(passes), read→200. Web UI (separate routes) + Dagster `/admin/refresh` (X-Refresh-Token) unaffected; messenger/ingest excluded. Zero internal `/api` callers confirmed.
 - [x] **`CRM_REFRESH_TOKEN` now required** at compose level (`:?`), already set in `.env.docker`.
 - [x] **`.env.docker` file-mount removed** from data_platform; **resource limits** added to all services (verified up).
 - [partial] **Containers non-root** — `evidence` done (applies on next image rebuild); data_platform/crm/rill SKIPPED (named-volume write perms need a uid+ownership strategy).
@@ -73,7 +73,7 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 build_serving_db duckdb_lock ✅ · gitignore/hygiene ✅ · Worker bearer-token + Sapo HMAC enforced ✅ · run_monitoring + stuck-sensor ✅ · dagster.yaml tracked ✅ · Hug SLA ✅ · cookie tz ✅ · ingestion reliability (ack/re-raise/page-skip) ✅ · margin moot ✅
 
 ### Truly remaining (deferred / needs decision)
-- **Enforce CRM_API_TOKEN** (code ready; needs caller coordination) · **non-root data_platform/crm/rill** (volume-ownership) · **apply evidence non-root** (image rebuild)
+- **non-root data_platform/crm/rill** (volume-ownership) · **apply evidence non-root** (image rebuild)
 - Deferred: Phase 03 service-account · ports `0.0.0.0` · Messenger HMAC · Worker replay-protection · HUG_ZALO_OA_URL · config.toml sheet IDs · sheets `rows_written` · >200 LOC modularization
 
 ## Open questions

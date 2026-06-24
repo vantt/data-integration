@@ -182,6 +182,8 @@ services:
       # Shared secret for POST /admin/refresh (X-Refresh-Token header). Dagster
       # uses this to trigger reverse-ETL on demand. MUST be set in .env.docker — no default.
       - CRM_REFRESH_TOKEN=${CRM_REFRESH_TOKEN:?CRM_REFRESH_TOKEN must be set in .env.docker}
+      # Shared secret for /api/* mutation routes (X-CRM-Token header). Enforced when set.
+      - CRM_API_TOKEN=${CRM_API_TOKEN:?CRM_API_TOKEN must be set in root .env}
       - TZ=Asia/Ho_Chi_Minh
       # Dev: enable uvicorn --reload + Jinja2 auto_reload. Set in docker-compose.override.yml only.
       # Hug edge push: claim station signs POST /hug/token/upsert to the Worker.
