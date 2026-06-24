@@ -1,6 +1,8 @@
 # Phase 04 — Corrected margin at order/CEO level (research → decide → implement)
 
-**Priority:** Medium (BI correctness) | **Status:** ⬜ TODO (research first — CEO-facing, do NOT blind-edit)
+**Priority:** Medium (BI correctness) | **Status:** ✅ CLOSED — MOOT (verified 2026-06-24)
+
+> **Verdict A (research done):** Order-level margin is ALREADY correct. `fact_order_economics.gross_margin_pct` = (Sapo net_revenue − Sapo-MAC COGS)/net_revenue, sourced from `int_order_cogs_reconciled` which uses Sapo moving-average cost and **never references `misa_qty_multiplier`** — so it's immune to H010. H010 = 5 "Hộp 10" pack SKUs with a 10× MISA multiplier (fixed in seed 2026-06-10); it only afflicts `mart_sku_economics_monthly`'s MISA-basis `gross_margin_pct`, NOT the order-level fact. Evidence CEO page + detailView need **NO change**. Added a clarifying comment in `fact_order_economics.sql`. Report: `plans/reports/from-margin-research-agent-order-level-h010-260624-1656-report.md`.
 **Context:** [plan](plan.md) · audit finding "Evidence CEO + detailView show gross_margin_pct (H010-uncorrected)" · [[reference_realized_vs_gross_margin_pct]] · L143 (don't break BI consumers)
 
 ## Problem (as flagged)
