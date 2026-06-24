@@ -1,6 +1,6 @@
 # Phase 02 — Worker security: queue bearer-token + Sapo webhook HMAC
 
-**Priority:** HIGH (security) | **Status:** 🟡 Part A done+enforced; Part B OBSERVE deployed (awaiting real-traffic confirmation before enforce)
+**Priority:** HIGH (security) | **Status:** ✅ DONE — Part A (queue bearer-token) + Part B (Sapo HMAC) both ENFORCED 2026-06-24. `CHECK_HMAC=true`; observe block removed (v d7e2725a). Verified: forged/missing→401, valid→200, 2 real Sapo test events matched via `SAPO_V2_SECRET`.
 **Context:** [plan](plan.md) · audit findings "queue endpoints unauth" + "CHECK_HMAC off by default" · Sapo OAuth doc https://support.sapo.vn/oauth + webhook doc https://support.sapo.vn/sapo-webhook
 
 ---

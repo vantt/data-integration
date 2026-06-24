@@ -24,7 +24,7 @@ Remediation backlog from the full-stack health audit (ingestion → CRM). Items 
 | # | Phase | Priority | Status |
 |---|-------|----------|--------|
 | 01 | [Rename sapo_assets.py → sapo_v2_assets.py](phase-01-rename-sapo-assets-to-sapo-v2.md) | Low (consistency) | ✅ DONE |
-| 02 | [Worker security: queue bearer-token + Sapo webhook HMAC](phase-02-sapo-webhook-hmac-enforce.md) | HIGH (security) | 🟡 bearer-token DEPLOYED+enforced; Sapo HMAC (Part B) pending |
+| 02 | [Worker security: queue bearer-token + Sapo webhook HMAC](phase-02-sapo-webhook-hmac-enforce.md) | HIGH (security) | ✅ DONE — bearer-token + Sapo HMAC both ENFORCED |
 | 03 | [Google Sheets via service account](phase-03-gsheets-service-account.md) | Medium (security) | ⬜ TODO (needs SA key) |
 | 04 | [Corrected margin at order/CEO level](phase-04-order-level-corrected-margin.md) | Medium (BI correctness) | ✅ CLOSED — moot (order-level already H010-correct) |
 | 05 | Run-monitoring + stuck-sensor reliability fix | HIGH (reliability) | ✅ DONE + deployed |

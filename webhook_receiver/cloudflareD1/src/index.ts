@@ -169,28 +169,6 @@ async function handleWebhook(request: Request, env: Env): Promise<Response> {
             }
         }
 
-        // OBSERVE MODE (temporary): when a secret IS configured but CHECK_HMAC is
-        // off, log the real request's header names + which header/encoding the HMAC
-        // matches — WITHOUT rejecting — so we can confirm Sapo's exact signature
-        // header/encoding before flipping CHECK_HMAC=true. Remove after enforcing.
-        if (secret && !checkHmac) {
-            try {
-                const allHeaders = [...request.headers.keys()];
-                let matchInfo = "no-match";
-                for (const [hname, hval] of request.headers.entries()) {
-                    if (!hval) continue;
-                    const clean = hval.replace(/^sha256=/, '');
-                    if (await verifySignature(secret, clean, textBody, 'base64')) { matchInfo = `MATCH header=${hname} enc=base64`; break; }
-                    if (await verifySignature(secret, clean, textBody, 'hex'))    { matchInfo = `MATCH header=${hname} enc=hex`; break; }
-                }
-                await logError(env, 'HMAC_OBSERVE',
-                    `path=${path} match=${matchInfo} headers=[${allHeaders.join(',')}]`,
-                    undefined, undefined, textBody.substring(0, 200));
-            } catch (obsErr) {
-                console.error("HMAC_OBSERVE error", obsErr);  // never break ingestion
-            }
-        }
-
         let jsonBody;
         try {
             jsonBody = JSON.parse(textBody);
