@@ -200,10 +200,14 @@ services:
     volumes:
       # Persistent CRM databases (crm.db + cache.db) — named volume avoids Windows filesystem lock issues.
       - crm_data:/data
+      # Verified SQLite backups (crm/ops/backup_crm.py) — named volume (Defender-safe), NOT a host bind.
+      - crm_backups:/backups
       # Read-only: whole data_lake mounted so olap.duckdb views can resolve their parquet paths.
       - ./app_data/data_lake:/app/var/data_lake:ro
       # Dev live-reload: mount source so template/static edits are visible without rebuild.
       - ./crm/src:/app/crm/src
+      # Ops tooling (backup/restore) — mounted so it's available to `docker exec` without a rebuild.
+      - ./crm/ops:/app/crm/ops
       - ./crm/src/adapters/inbound/web/static:/app/crm/src/adapters/inbound/web/static
       # Migrations: mount so new *.up.sql files are picked up on restart without image rebuild.
       - ./crm/migrations:/app/crm/migrations
@@ -216,5 +220,7 @@ volumes:
     # Stored in Docker VM — isolated from Windows filesystem scanning (no dllhost/Defender lock)
   crm_data:
     # CRM SQLite databases (crm.db + cache.db) — stored in Docker VM for consistent locking.
+  crm_backups:
+    # Verified CRM SQLite backup snapshots (crm/ops/backup_crm.py) — Docker VM, Defender-safe.
 
 # H2 File Note: The database file will be metabase.db.mv.db (Multi-Version store)

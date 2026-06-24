@@ -97,29 +97,12 @@ try {
         $ExitCode = 1
     }
 
-    # --- Step 3: Backup crm_data Docker named volume ---
-    # crm_data is a Docker named volume (not on Windows filesystem), so robocopy can't reach it.
-    # docker run mounts the volume read-only and copies files into the backup dir.
-    Log "Backing up crm_data (Docker named volume)..."
-    $crmDataDst = Join-Path $BackupDir "crm_data"
-    try {
-        New-Item -ItemType Directory -Path $crmDataDst -Force | Out-Null
-        docker run --rm `
-            -v "crm_data:/crm_src:ro" `
-            -v "${crmDataDst}:/crm_dst" `
-            alpine sh -c "cp -a /crm_src/. /crm_dst/"
-        if ($LASTEXITCODE -ne 0) {
-            Log "WARNING: crm_data backup exited with code $LASTEXITCODE"
-            $ExitCode = 1
-        } else {
-            $crmSize = (Get-ChildItem $crmDataDst -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
-            $crmSizeMB = [math]::Round(([long](if ($null -eq $crmSize) { 0 } else { $crmSize })) / 1MB, 1)
-            Log "crm_data backed up: ${crmSizeMB}MB"
-        }
-    } catch {
-        Log "WARNING: crm_data backup failed: $($_.Exception.Message)"
-        $ExitCode = 1
-    }
+    # --- Step 3: crm_data backup — DISABLED (deprecated) ---
+    # A raw `cp -a` of the live crm_data volume is WAL-unsafe (torn SQLite snapshot).
+    # CRM is now backed up by crm/ops/backup_crm.py — a verified, consistent SQLite
+    # online-backup snapshot written to the `crm_backups` volume. See
+    # crm/docs/backup-restore-runbook.md. Do NOT re-enable this raw copy.
+    Log "crm_data raw copy SKIPPED — handled by crm/ops/backup_crm.py (verified snapshot)"
 
     # --- Step 4: Backup config files ---
     Log "Backing up config files..."
