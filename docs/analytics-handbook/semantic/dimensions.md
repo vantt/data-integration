@@ -1540,3 +1540,196 @@ Use for spend distribution analysis without computing `CASE WHEN` on raw spend a
 
 #### ❌ Anti-patterns
 *None.*
+
+---
+
+## Product Health Dimensions
+
+Tất cả columns dưới đây là pre-computed trong `mart_product_health` (1 row/SKU, current state). **Không re-derive** — dùng trực tiếp từ mart.
+
+> **Source table:** `mart_product_health` | **Grain:** 1 row per `product_key`
+> **Caveat:** `health_class` chỉ populated cho ~42 SKU có `has_margin_data = TRUE` (MISA COGS available). ~643 SKU còn lại có `health_class = NULL`.
+
+---
+
+### health_class
+
+> **Type:** Dimension | **Column:** `mart_product_health.health_class` | **Status:** `active`
+> **Values:** `STAR`, `WORKHORSE`, `QUESTION`, `DOG`, `BALANCED`, `NULL` | **Source:** `mart_product_health`
+
+**Definition:** 2D product health classification dựa trên NTILE(5) của `velocity_90d` (vel_score) và `realized_margin_pct` (margin_score) — chỉ trên tập SKU có `has_margin_data = TRUE`.
+
+| health_class | vel_score | margin_score | Ý nghĩa |
+|---|---|---|---|
+| `STAR` | ≥ 4 | ≥ 4 | Bán nhiều + margin cao — core portfolio |
+| `WORKHORSE` | ≥ 4 | ≤ 2 | Bán nhiều nhưng margin mỏng — volume driver, cần review giá/chiết khấu |
+| `QUESTION` | ≤ 2 | ≥ 4 | Margin tốt nhưng bán chậm — tiềm năng chưa khai thác, cần promote |
+| `DOG` | ≤ 2 | ≤ 2 | Bán chậm + margin thấp — ứng viên DELIST |
+| `BALANCED` | giữa | giữa | Trung bình, không nổi bật chiều nào |
+| `NULL` | — | — | Không có MISA COGS — không thể classify |
+
+**Scoring methodology:** `vel_score` = NTILE(5) theo `velocity_90d`; `margin_score` = NTILE(5) theo `realized_margin_pct`. Cả hai tính **portfolio-wide** (không phải per-category). Score 1 = bottom 20%, score 5 = top 20%. Ngưỡng threshold (≥4 / ≤2) cố định — không tái tính thủ công.
+
+**Use in SQL:**
+```sql
+-- SKUs cần review giá (bán nhiều nhưng margin kém)
+SELECT sku, product_name, daily_velocity, realized_margin_pct
+FROM mart_product_health
+WHERE health_class = 'WORKHORSE'
+ORDER BY daily_velocity DESC
+
+-- Luôn filter NULL ra nếu chỉ muốn classified SKUs
+WHERE health_class IS NOT NULL  -- tương đương has_margin_data = TRUE
+```
+
+#### 🎯 When to Use
+Merchandise review, pricing decisions, và action queue targeting. Kết hợp với `abc_class`: A-class WORKHORSE cần fix giá ngay hơn C-class WORKHORSE.
+
+#### ⚠️ Conflicts
+- `health_class = NULL` ≠ "product is healthy" — chỉ nghĩa là thiếu COGS data.
+- Không so sánh health_class giữa các category — NTILE là portfolio-wide, category nhỏ có thể không có STAR nào.
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| `abc_class` | Revenue concentration (all-time), không dùng margin | Biết SP có doanh thu lớn không |
+| `lifecycle_stage` | Trend/age-based, không dùng margin | Biết SP đang tăng/giảm/già |
+| `velocity_momentum` | Short-term trend (30d vs 90d) | Detect momentum shift gần đây |
+
+#### ❌ Anti-patterns
+```sql
+-- WRONG: dùng health_class cho tất cả SKU rồi kết luận "không có DOG nào"
+WHERE health_class = 'DOG'
+-- Sẽ bỏ sót ~93% SKU (NULL) — thêm has_margin_data = FALSE nếu muốn xử lý cả hai nhóm
+
+-- WRONG: re-compute classification thủ công
+CASE WHEN daily_velocity > X AND realized_margin_pct > Y THEN 'STAR' ...
+-- NTILE thay đổi khi data cập nhật; chỉ dùng pre-computed column
+```
+
+---
+
+### abc_class
+
+> **Type:** Dimension | **Column:** `mart_product_health.abc_class` | **Status:** `active`
+> **Values:** `A`, `B`, `C` | **Source:** `mart_product_health`
+
+**Definition:** Phân loại ABC theo doanh thu lũy kế all-time. Cumulative revenue share toàn portfolio:
+- **A**: top SKU chiếm 80% tổng doanh thu
+- **B**: tier tiếp theo, từ 80% đến 95%
+- **C**: còn lại (long-tail)
+
+**Use in SQL:**
+```sql
+SELECT sku, product_name, abc_class, health_class, oos_risk
+FROM mart_product_health
+WHERE abc_class = 'A'
+ORDER BY revenue_share_pct DESC
+```
+
+#### 🎯 When to Use
+Ưu tiên hóa attention: A-class SKU cần monitoring chặt hơn (OOS risk, margin erosion). Kết hợp với `health_class` và `oos_risk` cho action prioritization.
+
+#### ⚠️ Conflicts
+- Portfolio-wide, không phải per-category. Một category nhỏ có thể không có SKU class A nào.
+- All-time cumulative — SKU mới bán tốt vẫn có thể là class C vì chưa đủ lịch sử.
+
+#### ❌ Anti-patterns
+*None.*
+
+---
+
+### velocity_momentum
+
+> **Type:** Dimension | **Column:** `mart_product_health.velocity_momentum` | **Status:** `active`
+> **Values:** `ACCELERATING`, `STABLE`, `DECELERATING`, `NULL` | **Source:** `int_product_velocity_trend`
+
+**Definition:** So sánh tốc độ bán 30 ngày gần nhất vs trung bình 90 ngày rolling. Ngưỡng: >+15% → `ACCELERATING`; <−15% → `DECELERATING`; còn lại → `STABLE`. `NULL` khi SP có < 3 tháng dữ liệu trailing.
+
+**Use in SQL:**
+```sql
+SELECT sku, product_name, velocity_momentum, daily_velocity, on_hand
+FROM mart_product_health
+WHERE velocity_momentum = 'DECELERATING'
+  AND abc_class IN ('A', 'B')
+```
+
+#### 🎯 When to Use
+Short-term trend detection trong 30 ngày qua. Tốt hơn `lifecycle_stage` cho real-time signal. Dùng cho reorder alert (ACCELERATING + low stock) và clearance trigger (DECELERATING + high stock).
+
+#### ⚠️ Conflicts
+- `NULL` khi SP mới < 3 tháng — dùng `lifecycle_stage = 'NEW'` thay thế.
+
+#### 🔗 Similar (not synonym)
+| Dimension | Key difference | Use instead when |
+|---|---|---|
+| `lifecycle_stage` | Longer horizon, bao gồm age + dormancy | Phân loại SP theo vòng đời tổng thể |
+
+#### ❌ Anti-patterns
+*None.*
+
+---
+
+### lifecycle_stage
+
+> **Type:** Dimension | **Column:** `mart_product_health.lifecycle_stage` | **Status:** `active`
+> **Values:** `NEW`, `GROWING`, `MATURE`, `DECLINING`, `DORMANT` | **Source:** `mart_product_health`
+
+**Definition:** Vòng đời sản phẩm — priority-ordered (điều kiện đầu tiên match wins):
+
+| lifecycle_stage | Điều kiện |
+|---|---|
+| `NEW` | `first_sale_month` < 90 ngày trước |
+| `DORMANT` | `days_since_last_sale` > 90 |
+| `DECLINING` | `velocity_momentum = 'DECELERATING'` |
+| `GROWING` | `velocity_momentum = 'ACCELERATING'` |
+| `MATURE` | còn lại (default) |
+
+**Use in SQL:**
+```sql
+-- SP ngủ đông còn tồn kho — ứng viên clearance
+SELECT sku, product_name, days_since_last_sale, on_hand, dead_stock_value_at_risk
+FROM mart_product_health
+WHERE lifecycle_stage = 'DORMANT'
+  AND on_hand > 0
+```
+
+#### 🎯 When to Use
+Segmentation cho merchandising decisions. `DORMANT + on_hand > 0` = dead stock candidate. `NEW` = cần đủ thời gian trước khi kết luận `health_class`.
+
+#### ⚠️ Conflicts
+- Priority order quan trọng: SP vừa mới vừa không bán được vẫn là `NEW`, không phải `DORMANT`.
+- `GROWING`/`DECLINING` derive từ `velocity_momentum` — nếu `velocity_momentum = NULL` (SP < 3 tháng), fall-through sang `MATURE` thay vì đúng stage. Dùng thêm `lifecycle_stage = 'NEW'` check khi cần phân biệt.
+
+#### ❌ Anti-patterns
+```sql
+-- WRONG: dùng lifecycle_stage = 'GROWING' để đo YoY/MoM growth
+-- lifecycle_stage GROWING = velocity_momentum ACCELERATING (30d vs 90d rolling)
+-- Dùng mart_sku_economics_monthly.mom_growth_pct cho trend dài hạn
+```
+
+---
+
+### oos_risk
+
+> **Type:** Dimension | **Column:** `mart_product_health.oos_risk` | **Status:** `active`
+> **Values:** `TRUE`, `FALSE` | **Source:** `mart_product_health`
+
+**Definition:** `TRUE` khi SP quan trọng (vel_score ≥ 3 HOẶC abc_class = 'A') VÀ đang có tín hiệu tồn kho nguy hiểm (`is_oos = TRUE` OR `is_low_stock = TRUE` OR `days_of_supply < 14`).
+
+**Use in SQL:**
+```sql
+SELECT sku, product_name, abc_class, days_of_supply, on_hand
+FROM mart_product_health
+WHERE oos_risk = TRUE
+ORDER BY abc_class, daily_velocity DESC
+```
+
+#### 🎯 When to Use
+Restock alert và prioritization. Chỉ fire cho SP quan trọng — filter noise từ long-tail C-class low-velocity.
+
+#### ⚠️ Conflicts
+- `oos_risk = FALSE` ≠ "tồn kho ổn" — có thể SP không đủ quan trọng để alert. Dùng `is_oos`/`is_low_stock` trực tiếp nếu muốn trạng thái tồn kho không phân biệt tầm quan trọng.
+
+#### ❌ Anti-patterns
+*None.*
