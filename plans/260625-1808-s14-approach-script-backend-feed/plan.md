@@ -2,6 +2,8 @@
 
 Backend cho màn S14 (Call Mode Cockpit) đọc kịch bản tiếp cận AI. **File-direct sau repository interface** (YAGNI: chưa lên DB vì JSON còn tạo tay/đổi schema). UI để sau (`ui-port`) consume contract này.
 
+> ✅ **NGHIỆM THU 2026-06-26** — Giai đoạn C đạt: S14 cockpit (tab "Gọi" trong S03, dùng chung sidebar) + worklist filter "Có kịch bản" chạy live; backend file-feed + quy trình tay vận hành; 13+31 test pass, code review + fix xong. Còn lại đều tùy chọn/gác (auto-gen Dagster, B2 auth).
+
 ## Quyết định kiến trúc
 - **Lưu:** JSON files `{data_dir}/approach_scripts/{customer_id}.json` — cạnh cache.db trong volume `crm_data` ⇒ **KHÔNG cần docker mount mới**.
 - **Đọc qua interface** (hexagonal, giống `CacheRepository`): hôm nay `FileApproachScriptRepository`; mai swap `SQLiteApproachScriptRepository` → S14 không đổi.
