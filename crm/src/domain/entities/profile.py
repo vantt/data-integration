@@ -119,7 +119,7 @@ class Note:
     pinned: bool = False
     visibility: str = "team"        # team|private
     task_id: Optional[str] = None           # FK → crm_task (retail activation chain)
-    source_activity_id: Optional[str] = None  # FK → crm_activity (migration 0019)
+    source_activity_id: Optional[str] = None  # FK → crm_activity_log (migration 0019)
     deleted_at: Optional[str] = None  # soft delete
 
 

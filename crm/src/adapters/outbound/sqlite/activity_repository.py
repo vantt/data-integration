@@ -15,7 +15,7 @@ from crm.src.adapters.outbound.sqlite.connection import CRMDatabase
 # ---------------------------------------------------------------------------
 
 _INSERT = """
-INSERT INTO crm_activity (
+INSERT INTO crm_activity_log (
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
   staff_user_id, occurred_at, created_at
@@ -27,7 +27,7 @@ SELECT
   activity_id, party_id, activity_type, direction, channel,
   subject, body, outcome, related_order_code,
   staff_user_id, occurred_at, created_at
-FROM crm_activity
+FROM crm_activity_log
 WHERE party_id = ?
 ORDER BY occurred_at DESC
 LIMIT ?

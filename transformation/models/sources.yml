@@ -172,3 +172,19 @@ sources:
             description: "Source Excel filename"
           - name: ingested_at
             description: "Ingestion timestamp (UTC)"
+
+  - name: crm_export
+    schema: main
+    tables:
+      - name: crm_last_contact
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_last_contact.parquet')"
+      - name: crm_activity_log
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_activity_log/**/*.parquet', hive_partitioning=1, union_by_name=true)"
+      - name: crm_hug_voucher
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_hug_voucher.parquet')"
+      - name: crm_campaign_target
+        meta:
+          external_location: "read_parquet('{{ env_var('DBT_DATA_LAKE_PATH') }}/crm_export/crm_campaign_target.parquet')"

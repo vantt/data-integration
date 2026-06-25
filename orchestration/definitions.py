@@ -29,7 +29,7 @@ from orchestration.asset_checks import ALL_CHECKS
 from orchestration.asset_checks.reconciliation_checks import RECON_CHECKS
 from orchestration.asset_checks.kpi_closure_checks import KPI_CHECKS
 from dagster_dbt import DbtCliResource
-from orchestration.assets import sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets
+from orchestration.assets import sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets
 from orchestration.ops.system_backup import maintain_backup_platform_job
 from orchestration.ops.morning_digest import health_report_digest_job
 from orchestration.ops.purge_runs import maintain_purge_runs_job
@@ -44,7 +44,7 @@ from orchestration.sensors.health_db_watchdog_sensor import health_db_watchdog_s
 # (docker-compose.yml command: `python scripts/ensure_dbt_directories.py && ...`).
 # Don't call it from here: definitions.py is re-imported on every gRPC code
 # server spawn (e.g. each `dagster job launch`), which would add noise.
-all_assets = load_assets_from_modules([sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets])
+all_assets = load_assets_from_modules([sapo_v2_assets, sheets_assets, shopee_assets, misa_amis_assets, dbt, serving, rill, reconciliation, kpi_closure, crm_sync, hug_assets, crm_writeback_assets])
 
 # ------------------------------------------------------------------------------
 # ASSET SELECTIONS
@@ -191,6 +191,7 @@ _nightly_batch_selection = (
     AssetSelection.assets(shopee_assets.shopee_income_file_drop_asset) |
     AssetSelection.assets(misa_amis_assets.misa_sales_file_drop_asset) |
     AssetSelection.assets(misa_amis_assets.misa_account_ledger_file_drop_asset) |
+    AssetSelection.groups("crm_writeback") |
     all_dbt_assets |
     AssetSelection.assets(serving.build_serving_db) |
     AssetSelection.assets(serving.build_standalone_export) |

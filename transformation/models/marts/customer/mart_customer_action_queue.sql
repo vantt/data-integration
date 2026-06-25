@@ -71,6 +71,10 @@ classified AS (
             ELSE NULL
         END AS action_type
     FROM customers
+),
+
+last_contact AS (
+    SELECT * FROM {{ ref('stg_crm__last_contact') }}
 )
 
 SELECT
@@ -136,8 +140,17 @@ SELECT
         WHEN 'SECOND_ORDER'  THEN ROUND(COALESCE(avg_order_spend, 0))::BIGINT
         ELSE NULL
     END AS value_at_stake,
-    current_timestamp AS queue_generated_at
+    current_timestamp AS queue_generated_at,
+    lc.last_contacted_at,
+    lc.last_contact_result,
+    lc.last_contact_channel,
+    CASE
+        WHEN lc.last_contact_result IN ('answered', 'replied', 'met')
+         AND lc.last_contacted_at >= (NOW() AT TIME ZONE 'UTC') - INTERVAL '24 hours'
+        THEN TRUE ELSE FALSE
+    END                                                AS is_recently_contacted_positively
 
 FROM classified
+LEFT JOIN last_contact lc ON classified.customer_id::INTEGER = lc.customer_id
 WHERE action_type IS NOT NULL
 ORDER BY priority_rank, lifetime_value DESC

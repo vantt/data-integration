@@ -20,7 +20,7 @@ REJECTED_OUTCOMES = frozenset({"refused"})
 class LastContact:
     """Snapshot of the most recent contact attempt for one party."""
     party_id: str
-    last_activity_id: str           # FK → crm_activity.activity_id
+    last_activity_id: str           # FK → crm_activity_log.activity_id
     last_contacted_at: str          # UTC ISO-8601 (occurred_at from activity)
     last_contact_result: str        # enum: answered|no_answer|callback|refused|replied|no_reply|met|not_met|other
     channel: Optional[str] = None   # call|zalo|fb|email|visit|other
