@@ -35,6 +35,15 @@ Backend cho màn S14 (Call Mode Cockpit) đọc kịch bản tiếp cận AI. **
 | Production auto-gen (Dagster + GPT → cache table) | ⬜ chưa làm | — |
 | B2 auth endpoint (gác — chính sách LAN-trust, nhất quán `/insight`) | ⬜ gác | — |
 
+## Việc còn lại (chưa làm)
+1. **Production auto-gen** — Dagster asset: cohort → gọi GPT → ghi `cache.wh_approach_script`; swap `FileApproachScriptRepository` → `SQLiteApproachScriptRepository` (cùng port, S14/worklist không đổi). Cần xác nhận LLM API client/key trong repo. → hết "tạo tay".
+2. **B2 auth** — thêm `auth_dependency` cho GET `/approach-script` khi quyết siết auth GET toàn cục (làm cùng `/insight`).
+3. **Dữ liệu `recommended=false`** — pilot toàn `recommended=true` → STOP state chỉ demo được bằng patch tay; có data thật/synthetic thì badge "không gọi" mới hiện tự nhiên.
+
+## Ngoài scope dự án này (không chặn)
+- 2 test fail pre-existing (xác nhận có trước phase 05) — không thuộc S14.
+- Design-folder reorg + plan session khác đang nằm uncommitted trong working tree — chủ của chúng tự xử lý.
+
 **Verify live:** per-customer render + STOP gate R14. URL `http://localhost:3007/customers/895489673` → tab "Gọi".
 
 ## Ngoài scope (bàn giao tiếp)
