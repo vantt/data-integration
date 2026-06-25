@@ -36,7 +36,7 @@ Backend cho màn S14 (Call Mode Cockpit) đọc kịch bản tiếp cận AI. **
 | B2 auth endpoint (gác — chính sách LAN-trust, nhất quán `/insight`) | ⬜ gác | — |
 
 ## Việc còn lại (chưa làm)
-1. **Production auto-gen** — Dagster asset: cohort → gọi GPT → ghi `cache.wh_approach_script`; swap `FileApproachScriptRepository` → `SQLiteApproachScriptRepository` (cùng port, S14/worklist không đổi). Cần xác nhận LLM API client/key trong repo. → hết "tạo tay".
+1. **Sinh script — quy trình TAY** (đã chốt làm tay, KHÔNG auto-gen): xem [manual-workflow.md](manual-workflow.md). 3 bước: `build_approach_prompts.py` (prep) → dán GPT (tay) → `load_approach_scripts.py` (nạp). *(Auto-gen Dagster+GPT là tùy chọn tương lai khi muốn hết tạo tay — swap File→SQLite repo, cùng port.)*
 2. **B2 auth** — thêm `auth_dependency` cho GET `/approach-script` khi quyết siết auth GET toàn cục (làm cùng `/insight`).
 3. **Dữ liệu `recommended=false`** — pilot toàn `recommended=true` → STOP state chỉ demo được bằng patch tay; có data thật/synthetic thì badge "không gọi" mới hiện tự nhiên.
 
