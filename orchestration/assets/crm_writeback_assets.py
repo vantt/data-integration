@@ -14,6 +14,20 @@ CRM_EXPORT = os.path.join(DATA_LAKE, "crm_export")
 
 _DEFAULT_CURSOR = "1970-01-01T00:00:00.000Z"
 
+# All bare CRM table names that may appear in export queries (needs crm_src. prefix after ATTACH).
+_CRM_TABLE_NAMES = [
+    "crm_last_contact", "crm_party_identity", "crm_hug_voucher",
+    "crm_campaign_target", "crm_task", "crm_action_state", "crm_activity_log",
+]
+
+
+def _qualify_for_attach(query: str) -> str:
+    """Prefix bare crm_* table names with crm_src. schema after ATTACH."""
+    qualified = query
+    for t in _CRM_TABLE_NAMES:
+        qualified = qualified.replace(t, f"crm_src.{t}")
+    return qualified
+
 
 @dataclass
 class CrmWritebackTable:
@@ -81,10 +95,11 @@ CRM_WRITEBACK_TABLES: list[CrmWritebackTable] = [
 def _snapshot_export(crm_db: str, query: str, out_path: str) -> int:
     """Export full table as single parquet (overwrite)."""
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    qualified = _qualify_for_attach(query)
     with duckdb.connect() as con:
         con.execute(f"ATTACH '{crm_db}' AS crm_src (TYPE sqlite, READ_ONLY)")
         con.execute(
-            f"COPY (SELECT * FROM crm_src.({query}) q) "
+            f"COPY ({qualified}) "
             f"TO '{out_path}' (FORMAT PARQUET, OVERWRITE_OR_IGNORE TRUE)"
         )
         return con.execute(f"SELECT COUNT(*) FROM read_parquet('{out_path}')").fetchone()[0]
@@ -109,12 +124,7 @@ def _incremental_export(
 
     with duckdb.connect() as con:
         con.execute(f"ATTACH '{crm_db}' AS crm_src (TYPE sqlite, READ_ONLY)")
-        # Replace bare table names with schema-qualified crm_src.<table>
-        qualified = (
-            query
-            .replace("crm_activity_log", "crm_src.crm_activity_log")
-            .replace("crm_party_identity", "crm_src.crm_party_identity")
-        )
+        qualified = _qualify_for_attach(query)
         con.execute(f"COPY ({qualified}) TO '{out_path}' (FORMAT PARQUET)")
         n = con.execute(f"SELECT COUNT(*) FROM read_parquet('{out_path}')").fetchone()[0]
         if n == 0:
