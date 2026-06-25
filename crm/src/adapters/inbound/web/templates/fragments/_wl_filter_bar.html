@@ -33,6 +33,7 @@
 {% set fmin        = filters.min_value       | default(0) %}
 {% set fprod       = filters.product         | default('') %}
 {% set fhide       = filters.hide_contacted  | default(false) %}
+{% set fscript     = filters.has_script      | default(false) %}
 {% set avail       = available_types         | default([]) %}
 {% set prods       = core_products           | default([]) %}
 {% set badge_count = active_filter_count     | default(0) %}
@@ -119,6 +120,14 @@
              hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
              hx-trigger="change" hx-include="#wl-filter-form">
       <span class="caption">✅ Ẩn đã liên hệ</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer"
+           title="Chỉ hiện hành động có kịch bản tiếp cận AI">
+      <input type="checkbox" name="has_script" value="1"
+             {% if fscript %}checked{% endif %}
+             hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+             hx-trigger="change" hx-include="#wl-filter-form">
+      <span class="caption">📋 Có kịch bản</span>
     </label>
   </div>
 

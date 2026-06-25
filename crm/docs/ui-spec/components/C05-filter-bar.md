@@ -32,6 +32,12 @@ khi bất kỳ filter thay đổi để host screen reload list. Active filter c
 
 ## Emits
 
+### S01-specific filters (Worklist)
+
+- `has_script` (checkbox, value=1): keeps only action items whose `customer_id ∈ script_cids`
+  (set computed via `os.scandir(approach_scripts/)` each load — no restart for new files).
+  Tasks are not filtered (v1). Chip label: "📋 Có kịch bản".
+
 ```yaml crm-contract
 emits:
   - id: A-C05-001

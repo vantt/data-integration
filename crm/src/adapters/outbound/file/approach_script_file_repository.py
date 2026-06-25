@@ -4,11 +4,15 @@ Reads {scripts_dir}/{customer_id}.json (UTF-8).
 - Missing file → None (graceful empty state ST-CALL-NO-SCRIPT)
 - Malformed JSON → log warning + None (no raise)
 - refreshed_at = file mtime as ISO-8601 UTC ("...Z")
+- list_customer_ids() uses os.scandir each call — no cache — so newly-dropped
+  files are auto-reflected at next worklist load without restart.
 """
 from __future__ import annotations
 
 import json
 import logging
+import os
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -45,3 +49,23 @@ class FileApproachScriptRepository:
 
         refreshed_at = datetime.fromtimestamp(mtime, tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         return ApproachScript.from_json(customer_id, data, refreshed_at)
+
+    def list_customer_ids(self) -> set[int]:
+        """Return set of customer_ids with a script file (no cache — auto-reflects new drops).
+
+        Uses os.scandir for efficiency; ignores non-matching filenames silently.
+        Pattern: ^(\\d+)\\.json$  — e.g. 603264280.json → 603264280.
+        """
+        _PATTERN = re.compile(r"^(\d+)\.json$")
+        result: set[int] = set()
+        try:
+            with os.scandir(self._scripts_dir) as it:
+                for entry in it:
+                    if not entry.is_file():
+                        continue
+                    m = _PATTERN.match(entry.name)
+                    if m:
+                        result.add(int(m.group(1)))
+        except OSError as exc:
+            log.warning("approach_script: scandir failed for dir=%s: %s", self._scripts_dir, exc)
+        return result

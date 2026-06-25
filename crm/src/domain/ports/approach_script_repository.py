@@ -16,3 +16,11 @@ class ApproachScriptRepository(Protocol):
     def get_by_customer_id(self, customer_id: int) -> ApproachScript | None:
         """Return the script for customer_id, or None if not found."""
         ...
+
+    def list_customer_ids(self) -> set[int]:
+        """Return the set of customer_ids that have a script file.
+
+        Called once per worklist load — no cache, so newly-dropped files are
+        reflected on the next request without a server restart.
+        """
+        ...

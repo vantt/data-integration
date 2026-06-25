@@ -67,6 +67,7 @@ def parse_filters(query_params: Mapping) -> dict:
         "min_value": min_value,
         "product": product if product in valid_keys else "",
         "hide_contacted": query_params.get("hide_contacted", "") == "1",
+        "has_script": query_params.get("has_script", "") == "1",
     }
 
 
@@ -99,15 +100,27 @@ def active_filter_count(filters: dict) -> int:
         count += 1
     if filters.get("hide_contacted"):
         count += 1
+    if filters.get("has_script"):
+        count += 1
     return count
 
 
-def apply_filters(actions: list, tasks: list, filters: dict) -> tuple[list, list]:
-    """Return (actions, tasks) narrowed by priority/type/search/min_value.
+def apply_filters(
+    actions: list,
+    tasks: list,
+    filters: dict,
+    script_cids: set[int] | None = None,
+) -> tuple[list, list]:
+    """Return (actions, tasks) narrowed by priority/type/search/min_value/has_script.
 
     Priority uses normalized urgency (high = urgency>=8, urgent = urgency>=9) so
     the two opposite raw scales compare correctly — CALL_NOW (rank=1 → urgency=9)
     lands in "urgent" instead of being wrongly excluded by a raw >=2 test.
+
+    script_cids: set of customer_ids that have an approach script (passed in from
+    the caller — kept pure, no DB/file access here). When None and has_script is
+    active, actions are conservatively kept (safe degraded mode).
+    Tasks are NOT filtered by has_script in v1 (manual tasks, no customer_id).
     """
     fp = filters["priority"]
     if fp == "urgent":
@@ -156,5 +169,11 @@ def apply_filters(actions: list, tasks: list, filters: dict) -> tuple[list, list
         mv = filters["min_value"]
         actions = [a for a in actions
                    if int(getattr(a, "value_at_stake_vnd", 0) or 0) >= mv]
+
+    # has_script filter: keep only actions whose customer_id is in the script set.
+    # Tasks are not filtered (manual tasks lack customer_id; v1 scope).
+    if filters.get("has_script") and script_cids is not None:
+        actions = [a for a in actions
+                   if getattr(a, "customer_id", None) in script_cids]
 
     return actions, tasks

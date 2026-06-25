@@ -48,8 +48,7 @@
         <div style="display:flex;align-items:center;gap:var(--sp-3);margin-top:var(--sp-3)">
           <button class="btn btn--secondary"
                   style="font-size:13px;padding:5px 10px"
-                  hx-get="/modals/m08?party_id={{ party_id }}"
-                  hx-target="#modal-root" hx-swap="innerHTML">
+                  onclick="(function(){ var t=Array.from(document.querySelectorAll('[role=tab]')).find(function(b){ return b.textContent.trim()==='Gọi'; }); if(t) t.click(); })()">
             {% include "icons/phone.svg" %} Gọi ngay
           </button>
           <button class="ghost-link"

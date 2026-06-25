@@ -6,13 +6,14 @@
                               .neglect_days, .ref_id, .payload
    party_extras dict       — {party_id: {preferred_identity, contact_pref_notes}}
 #}
-{% macro wl_row(row, party_extras) %}
+{% macro wl_row(row, party_extras, script_cids=none) %}
 {% set a = row.payload %}
 {% set pid = a.party_id %}
 {% set extras = party_extras.get(pid, {}) if pid else {} %}
 {% set pref_id = extras.get('preferred_identity') %}
 {% set cp_notes = extras.get('contact_pref_notes', []) %}
 {% set last_contact = extras.get('last_contact') %}
+{% set _has_script = script_cids is not none and a.customer_id is not none and a.customer_id in script_cids %}
 {% set _LC_LABELS = {'answered': 'Đã nghe', 'no_answer': 'Không bắt', 'callback': 'Hẹn lại', 'refused': 'Từ chối', 'replied': 'Đã phản hồi', 'no_reply': 'Không phản hồi', 'met': 'Gặp được', 'not_met': 'Không gặp được', 'other': 'Khác'} %}
 {% set _LC_POSITIVE = ('answered', 'replied', 'met') %}
 
@@ -61,6 +62,10 @@
             data-tooltip="{{ a.action_type | bdg_tip('action_type') or a.action_type }}">{{ a.action_type }}</span>
       {% if a.customer_name %}<span class="wl-row__name">{{ a.customer_name }}</span>{% endif %}
       <span class="wl-row__phone">{{ a.customer_key }}</span>
+      {# Approach-script badge: customer has an AI-generated call script #}
+      {% if _has_script %}
+      <span class="badge badge--info" title="Khách này có kịch bản tiếp cận AI">📋 Có kịch bản</span>
+      {% endif %}
       {# Neglect badge: shown when action has waited 1–6 days (7+ days → band 3) #}
       {% if row.neglect_days >= 1 and row.neglect_days <= 6 %}
       <span class="wl-neglect-badge" title="Chưa được xử lý trong {{ row.neglect_days }} ngày">
@@ -108,7 +113,13 @@
   </div>
 
   <div class="wl-row__aside">
-    {% if pid %}{{ contact_btn(pid, pref_id) }}{% endif %}
+    {# Script "Gọi" button: navigates to S14 call cockpit — action_queue.call_mode_requested #}
+    {% if _has_script and pid %}
+    <a class="btn btn--primary" style="padding:8px 12px"
+       href="/customers/{{ pid }}?tab=call_cockpit"
+       title="Mở kịch bản gọi — S14 Call Cockpit"
+       onclick="event.stopPropagation()">📋 Gọi</a>
+    {% elif pid %}{{ contact_btn(pid, pref_id) }}{% endif %}
 
     {# Snooze dropdown — no-JS <details> popover #}
     <details class="wl-snooze" onclick="event.stopPropagation()">

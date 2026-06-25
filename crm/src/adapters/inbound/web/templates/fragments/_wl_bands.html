@@ -13,6 +13,7 @@
 {% from "fragments/_wl_row.html" import wl_row %}
 {% set bands = bands | default([]) %}
 {% set party_extras = party_extras | default({}) %}
+{% set script_cids = script_cids | default(none) %}
 {% set total_count = counts.total | default(0) %}
 
 {# ── Empty / all-done state ──────────────────────────────────────────────── #}
@@ -55,7 +56,7 @@
   <div class="wl-list wl-list--b{{ band.id }}">
     {# Visible rows up to cap #}
     {% for row in visible_rows %}
-    {{ wl_row(row, party_extras) }}
+    {{ wl_row(row, party_extras, script_cids) }}
     {% endfor %}
 
     {# Overflow rows expand inline — no round-trip needed #}
@@ -65,7 +66,7 @@
         Xem thêm ({{ overflow_rows | length }})
       </summary>
       {% for row in overflow_rows %}
-      {{ wl_row(row, party_extras) }}
+      {{ wl_row(row, party_extras, script_cids) }}
       {% endfor %}
     </details>
     {% endif %}

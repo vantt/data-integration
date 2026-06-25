@@ -116,6 +116,7 @@ class ActionQueueItem:
     refreshed_at: str
     customer_name: str = ""             # display_name from wh_customer_base; empty when not found
     party_id: Optional[str] = None      # CRM party_id resolved via crm_party_identity; None when not synced
+    customer_id: Optional[int] = None   # warehouse natural key from wh_customer_base; None when base row absent
     status: str = "open"                # open|dismissed|snoozed (from crm_action_state)
     snoozed_until: Optional[str] = None # YYYY-MM-DD; set when status = 'snoozed'
     top_affinity_product: str = ""      # product customer buys most (for CS context + search)

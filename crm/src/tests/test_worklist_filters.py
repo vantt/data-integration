@@ -14,10 +14,10 @@ from crm.src.application.worklist_filters import (
 )
 
 
-def _action(action_type="CALL_NOW", priority=1, name="A", rationale="", value=0):
+def _action(action_type="CALL_NOW", priority=1, name="A", rationale="", value=0, customer_id=None):
     return SimpleNamespace(
         action_type=action_type, priority=priority, customer_name=name,
-        rationale_vi=rationale, value_at_stake_vnd=value,
+        rationale_vi=rationale, value_at_stake_vnd=value, customer_id=customer_id,
     )
 
 
@@ -29,7 +29,7 @@ def _task(priority=0, title="T", description=""):
 
 def test_parse_filters_defaults():
     f = parse_filters({})
-    assert f == {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0, "product": "", "hide_contacted": False}
+    assert f == {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0, "product": "", "hide_contacted": False, "has_script": False}
 
 
 def test_parse_filters_type_comma_list_and_trim():
@@ -121,3 +121,49 @@ def test_no_filters_passes_everything_through():
     tasks = [_task(), _task(priority=2)]
     out_acts, out_tasks = apply_filters(acts, tasks, parse_filters({}))
     assert len(out_acts) == 2 and len(out_tasks) == 2
+
+
+# ── apply_filters: has_script ───────────────────────────────────────────────
+
+def test_has_script_keeps_only_actions_with_customer_id_in_set():
+    """has_script=1 narrows actions to those whose customer_id is in script_cids."""
+    acts = [
+        _action("CALL_NOW", customer_id=100),
+        _action("WIN_BACK", customer_id=200),
+        _action("UPSELL",   customer_id=None),
+    ]
+    tasks = [_task()]
+    f = parse_filters({"has_script": "1"})
+    script_cids = {100, 300}
+    out_acts, out_tasks = apply_filters(acts, tasks, f, script_cids)
+    assert [a.customer_id for a in out_acts] == [100]
+    assert len(out_tasks) == 1   # tasks not filtered by has_script
+
+
+def test_has_script_off_returns_all_actions():
+    """has_script filter absent — no change regardless of script_cids."""
+    acts = [_action(customer_id=100), _action(customer_id=999)]
+    f = parse_filters({})
+    out_acts, _ = apply_filters(acts, [], f, {100})
+    assert len(out_acts) == 2
+
+
+def test_has_script_none_cids_does_not_filter():
+    """When script_cids is None (approach_repo unavailable), actions are kept."""
+    acts = [_action(customer_id=100), _action(customer_id=200)]
+    f = parse_filters({"has_script": "1"})
+    out_acts, _ = apply_filters(acts, [], f, script_cids=None)
+    assert len(out_acts) == 2
+
+
+def test_has_script_counted_in_active_filter_count():
+    f = parse_filters({"has_script": "1"})
+    assert active_filter_count(f) == 1
+
+
+def test_parse_filters_has_script_default_false():
+    assert parse_filters({})["has_script"] is False
+
+
+def test_parse_filters_has_script_on():
+    assert parse_filters({"has_script": "1"})["has_script"] is True

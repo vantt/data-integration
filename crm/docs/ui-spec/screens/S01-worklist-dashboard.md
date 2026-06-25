@@ -167,4 +167,21 @@ interactions:
     action: navigate
     target: S14
     payload: { party_id: "$event.party_id" }
+  - id: A-S01-010
+    element: filter_has_script
+    region: topbar
+    trigger: change
+    action: mutate
+    effects: [task_list.reload_with_filters]
+  - id: A-S01-011
+    element: btn_script_call
+    region: task_list
+    trigger: click
+    action: navigate
+    target: S14
+    payload: { party_id: "$action.party_id", tab: "call_cockpit" }
+  - id: A-S01-LSN09
+    listens_to: worklist.load_complete
+    action: mutate
+    effects: [action_rows.badge_has_script.render]
 ```

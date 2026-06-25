@@ -132,13 +132,14 @@ class SQLiteCacheRepository:
                    a.generated_date, a.refreshed_at,
                    COALESCE(bc.display_name, '') AS customer_name,
                    pi.party_id AS party_id,
+                   bc.customer_id AS customer_id,
                    COALESCE(s.status, 'open') AS status,
                    s.snoozed_until,
                    COALESCE(a.top_affinity_product, '') AS top_affinity_product,
                    COALESCE(a.last_purchased_product, '') AS last_purchased_product
             FROM cache.wh_action_queue a
+            LEFT JOIN cache.wh_customer_base bc ON bc.customer_key = a.customer_key
             LEFT JOIN cache.wh_party_seed ps ON ps.customer_key = a.customer_key
-            LEFT JOIN cache.wh_customer_base bc ON bc.customer_id = ps.customer_id
             LEFT JOIN crm_party_identity pi
                    ON pi.identity_type = 'sapo_customer'
                   AND pi.identity_value = CAST(ps.customer_id AS TEXT)
@@ -172,6 +173,7 @@ class SQLiteCacheRepository:
                 refreshed_at=row["refreshed_at"] or "",
                 customer_name=row["customer_name"] or "",
                 party_id=row["party_id"],
+                customer_id=row["customer_id"],
                 status=row["status"] or "open",
                 snoozed_until=row["snoozed_until"],
                 top_affinity_product=row["top_affinity_product"] or "",

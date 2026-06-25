@@ -78,11 +78,14 @@ def make_worklist_router(
     """Return APIRouter wired with all Worklist routes."""
     router = APIRouter()
 
-    def _load_worklist_data(filters: dict) -> dict:
+    def _load_worklist_data(filters: dict, script_cids: set | None = None) -> dict:
         """Fetch, filter, rank, and return everything the template needs.
 
         Filters are applied before ranking so ranking only sees the relevant
         subset. Filter logic lives in the pure worklist_filters module.
+
+        script_cids: set[int] of customer_ids with an approach script, computed
+        once per request by the route handler from approach_repo.list_customer_ids().
         """
         try:
             all_actions = action_queue.list_all_action_queue()
@@ -98,7 +101,7 @@ def make_worklist_router(
 
         # Chips derive from unfiltered data, then narrow the working set.
         available_types = available_action_types(all_actions)
-        all_actions, all_tasks = apply_filters(all_actions, all_tasks, filters)
+        all_actions, all_tasks = apply_filters(all_actions, all_tasks, filters, script_cids)
 
         # --- Metadata for freshness footer --------------------------------
         refreshed_at = ""
@@ -165,6 +168,9 @@ def make_worklist_router(
             "active_filter_count": active_filter_count(filters),
             "filters": filters,
             "core_products": CORE_PRODUCTS,
+            # script_cids: set[int] used by _wl_row template to badge actions that
+            # have an approach script. Empty set when approach_repo is unavailable.
+            "script_cids": script_cids if script_cids is not None else set(),
             # Pass raw lists for templates that might still iterate directly.
             "actions": all_actions,
             "tasks": all_tasks,
@@ -172,11 +178,23 @@ def make_worklist_router(
 
     # ── Full page ─────────────────────────────────────────────────────────────
 
+    def _get_script_cids(request: Request) -> set:
+        """Fetch script customer_id set from approach_repo; empty set on error."""
+        approach_repo = getattr(request.app.state, "approach_repo", None)
+        if approach_repo is None:
+            return set()
+        try:
+            return approach_repo.list_customer_ids()
+        except Exception as exc:
+            log.warning("worklist: list_customer_ids failed: %s", exc)
+            return set()
+
     @router.get("/", response_class=HTMLResponse)
     @router.get("/worklist", response_class=HTMLResponse)
     async def handle_worklist(request: Request) -> Response:
         filters = parse_filters(request.query_params)
-        data = _load_worklist_data(filters)
+        script_cids = _get_script_cids(request)
+        data = _load_worklist_data(filters, script_cids)
         return templates.TemplateResponse(
             "worklist.html",
             {"request": request, **data, **filters},
@@ -187,7 +205,8 @@ def make_worklist_router(
     @router.get("/worklist/fragment", response_class=HTMLResponse)
     async def handle_worklist_fragment(request: Request) -> Response:
         filters = parse_filters(request.query_params)
-        data = _load_worklist_data(filters)
+        script_cids = _get_script_cids(request)
+        data = _load_worklist_data(filters, script_cids)
         return templates.TemplateResponse(
             "fragments/worklist_fragment.html",
             {"request": request, **data, **filters},

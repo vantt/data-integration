@@ -16,6 +16,9 @@ A-S01-LSN05,S01,action_queue.card_clicked,navigate,S03,,
 A-S01-LSN06,S01,filter_bar.changed,mutate,,,
 A-S01-LSN07,S01,filter_bar.cleared,mutate,,,
 A-S01-LSN08,S01,action_queue.call_mode_requested,navigate,S14,,
+A-S01-010,S01,change,mutate,,,topbar
+A-S01-011,S01,click,navigate,S14,,task_list
+A-S01-LSN09,S01,worklist.load_complete,mutate,,,
 A-S02-001,S02,click,navigate,S03,,result_list
 A-S02-002,S02,click,open_overlay,M02,,main
 A-S02-003,S02,change,mutate,,,topbar

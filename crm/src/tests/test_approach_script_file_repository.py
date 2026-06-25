@@ -138,3 +138,50 @@ def test_missing_approach_key_defaults_recommended_true(tmp_path):
     assert result is not None
     assert result.recommended is True
     assert result.confidence == "low"
+
+
+# ── list_customer_ids ──────────────────────────────────────────────────────────
+
+def test_list_customer_ids_returns_int_set(tmp_path):
+    """Valid JSON files → set of customer_id ints."""
+    _write_json(tmp_path, 100, _VALID_DATA)
+    _write_json(tmp_path, 603264280, _VALID_DATA)
+    repo = FileApproachScriptRepository(tmp_path)
+
+    result = repo.list_customer_ids()
+
+    assert result == {100, 603264280}
+
+
+def test_list_customer_ids_empty_dir(tmp_path):
+    """Empty directory → empty set (no error)."""
+    repo = FileApproachScriptRepository(tmp_path)
+    assert repo.list_customer_ids() == set()
+
+
+def test_list_customer_ids_ignores_non_matching_files(tmp_path):
+    """Non-matching filenames (no .json, letters, etc.) are silently ignored."""
+    (tmp_path / "garbage.txt").write_text("x")
+    (tmp_path / "abc123.json").write_text("{}")
+    (tmp_path / "README.md").write_text("doc")
+    _write_json(tmp_path, 42, _VALID_DATA)
+    repo = FileApproachScriptRepository(tmp_path)
+
+    result = repo.list_customer_ids()
+
+    assert result == {42}
+
+
+def test_list_customer_ids_reflects_new_file_without_reinit(tmp_path):
+    """Newly dropped file appears on next call — no restart / re-init required."""
+    _write_json(tmp_path, 10, _VALID_DATA)
+    repo = FileApproachScriptRepository(tmp_path)
+
+    first_call = repo.list_customer_ids()
+    assert first_call == {10}
+
+    # Drop a new file AFTER the first call (simulates loader/Dagster dropping file).
+    _write_json(tmp_path, 20, _VALID_DATA)
+
+    second_call = repo.list_customer_ids()
+    assert second_call == {10, 20}   # new file auto-reflected, no restart
