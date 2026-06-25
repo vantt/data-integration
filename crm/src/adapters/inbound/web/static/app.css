@@ -73,6 +73,18 @@ html[data-font="source"]    { --font-display: 'Source Sans 3', sans-serif; --fon
 /* narrowed select for inline table cells (role picker, etc.) */
 .inp-sel--narrow { max-width: 12rem; }
 
+/* ── Last-contact strip (worklist rows) ──────────────────────────────────── */
+.wl-lc-strip { display: flex; align-items: center; gap: var(--sp-2); margin-top: 3px; }
+.wl-lc-badge {
+  font-size: 11px; padding: 1px 8px; border-radius: var(--radii-pill);
+  border: 1px solid; line-height: 1.7;
+}
+.wl-lc-badge--pos { color: var(--moss-600, #2d6a4f); background: color-mix(in srgb, var(--moss-500, #52b788) 12%, transparent); border-color: color-mix(in srgb, var(--moss-500, #52b788) 30%, transparent); }
+.wl-lc-badge--neg { color: var(--coral-600, #c1440e); background: color-mix(in srgb, var(--coral-500) 10%, transparent); border-color: color-mix(in srgb, var(--coral-500) 25%, transparent); }
+.wl-lc-badge--neu { color: var(--fg-muted); background: color-mix(in srgb, var(--fg-muted) 8%, transparent); border-color: color-mix(in srgb, var(--fg-muted) 20%, transparent); }
+.wl-lc-link { font-size: 11px; color: var(--fg-tertiary); text-decoration: none; opacity: .6; }
+.wl-lc-link:hover { opacity: 1; color: var(--accent); }
+
 /* ── Theme switcher panel (C07) ───────────────────────────────────────────── */
 .theme-panel {
   position: fixed; right: 24px; top: 70px; z-index: 260;

@@ -29,7 +29,7 @@ def _task(priority=0, title="T", description=""):
 
 def test_parse_filters_defaults():
     f = parse_filters({})
-    assert f == {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0}
+    assert f == {"assignee": "me", "priority": "all", "types": [], "q": "", "min_value": 0, "hide_contacted": False}
 
 
 def test_parse_filters_type_comma_list_and_trim():

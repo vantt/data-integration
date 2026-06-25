@@ -33,6 +33,7 @@ from adapters.outbound.sqlite.tag_note_repository import SQLiteTagRepository, SQ
 from adapters.outbound.sqlite.cache_repository import SQLiteCacheRepository
 from adapters.outbound.sqlite.action_state_repository import SQLiteActionStateRepository
 from adapters.outbound.sqlite.activity_repository import SQLiteActivityRepository
+from adapters.outbound.sqlite.last_contact_repository import SQLiteLastContactRepository
 from adapters.outbound.sqlite.task_repository import SQLiteTaskRepository
 from adapters.outbound.sqlite.conversation_repository import SQLiteConversationRepository
 from adapters.outbound.sqlite.segment_repository import SQLiteSegmentRepository
@@ -135,6 +136,7 @@ def create_app() -> FastAPI:
     tag_repo = SQLiteTagRepository(db)
     note_repo = SQLiteNoteRepository(db)
     activity_repo = SQLiteActivityRepository(db)
+    last_contact_repo = SQLiteLastContactRepository(db)
     task_repo = SQLiteTaskRepository(db)
     conv_repo = SQLiteConversationRepository(db)
     segment_repo = SQLiteSegmentRepository(conn)
@@ -144,7 +146,7 @@ def create_app() -> FastAPI:
     # 3. Application services.
     merge_svc = MergeService(party_repo, dedup_repo)
     profile_svc = ProfileService(profile_repo, cf_repo, tag_repo, note_repo)
-    activity_svc = ActivityService(activity_repo)
+    activity_svc = ActivityService(activity_repo, last_contact_repo)
     task_svc = TaskService(task_repo, party_repo, cache_repo)
     conv_svc = ConversationService(conv_repo, party_repo)
     segment_svc = SegmentService(segment_repo)
@@ -288,6 +290,7 @@ def create_app() -> FastAPI:
         tasks=task_svc,
         task_writer=task_svc,
         action_state=action_state_repo,
+        last_contact=last_contact_repo,
     ))
     app.include_router(make_customer_list_router(
         templates=templates,

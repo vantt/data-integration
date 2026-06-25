@@ -28,12 +28,13 @@
 
 {# ── Normalise context ─────────────────────────────────────────────────────── #}
 {% set filters     = filters     | default({}) %}
-{% set fp          = filters.priority  | default('all') %}
-{% set fq          = filters.q         | default('') %}
-{% set ftypes      = filters.types     | default([]) %}
-{% set fmin        = filters.min_value | default(0) %}
-{% set avail       = available_types   | default([]) %}
-{% set badge_count = active_filter_count | default(0) %}
+{% set fp          = filters.priority        | default('all') %}
+{% set fq          = filters.q               | default('') %}
+{% set ftypes      = filters.types           | default([]) %}
+{% set fmin        = filters.min_value       | default(0) %}
+{% set fhide       = filters.hide_contacted  | default(false) %}
+{% set avail       = available_types         | default([]) %}
+{% set badge_count = active_filter_count     | default(0) %}
 
 {#
   Form approach: hidden inputs for priority, type (joined), min_value carry the
@@ -61,9 +62,10 @@
     <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
           style="display:contents">
       <input type="hidden" name="priority"  value="{{ val }}">
-      {% if ftypes %}<input type="hidden" name="type"     value="{{ ftypes | join(',') }}">{% endif %}
-      {% if fq     %}<input type="hidden" name="q"        value="{{ fq | e }}">{% endif %}
+      {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
+      {% if fq     %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
       {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+      {% if fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
       <button type="submit" class="tab" aria-selected="{{ 'true' if fp == val else 'false' }}">
         {{ label }}
       </button>
@@ -91,9 +93,10 @@
       <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
             style="display:contents">
         <input type="hidden" name="priority" value="{{ fp }}">
-        {% if new_types %}<input type="hidden" name="type" value="{{ new_types | join(',') }}">{% endif %}
-        {% if fq        %}<input type="hidden" name="q"    value="{{ fq | e }}">{% endif %}
+        {% if new_types %}<input type="hidden" name="type"      value="{{ new_types | join(',') }}">{% endif %}
+        {% if fq        %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
         {% if fmin      %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+        {% if fhide     %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
         <button type="submit"
                 class="tab chip"
                 aria-selected="{{ 'true' if atype in ftypes else 'false' }}"
@@ -109,8 +112,9 @@
   <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
         style="display:flex;align-items:center;gap:var(--sp-2)">
     <input type="hidden" name="priority" value="{{ fp }}">
-    {% if ftypes %}<input type="hidden" name="type"     value="{{ ftypes | join(',') }}">{% endif %}
+    {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
     {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+    {% if fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
     <span class="caption" style="color:var(--fg-tertiary)">Tìm:</span>
     <input type="search"
            name="q"
@@ -134,17 +138,35 @@
   <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
         style="display:contents">
     <input type="hidden" name="priority" value="{{ fp }}">
-    {% if ftypes %}<input type="hidden" name="type"     value="{{ ftypes | join(',') }}">{% endif %}
-    {% if fq     %}<input type="hidden" name="q"        value="{{ fq | e }}">{% endif %}
+    {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
+    {% if fq     %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
     {% if fmin == 0 %}
     <input type="hidden" name="min_value" value="1000000">
     {% endif %}
     {# When fmin > 0: omit min_value → defaults to 0 (filter off). #}
+    {% if fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
     <button type="submit"
             class="tab"
             aria-selected="{{ 'true' if fmin > 0 else 'false' }}"
             title="Chỉ hiện hành động có giá trị từ 1 triệu VND trở lên">
       💰 Giá trị cao
+    </button>
+  </form>
+
+  {# ── Hide recently contacted (positive outcome, within 24h) ────────────── #}
+  <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+        style="display:contents">
+    <input type="hidden" name="priority" value="{{ fp }}">
+    {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
+    {% if fq     %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
+    {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+    {% if not fhide %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
+    {# When fhide: omit hide_contacted → defaults to false (filter off). #}
+    <button type="submit"
+            class="tab"
+            aria-selected="{{ 'true' if fhide else 'false' }}"
+            title="Ẩn khách đã liên hệ thành công trong 24h qua">
+      ✅ Ẩn đã liên hệ
     </button>
   </form>
 

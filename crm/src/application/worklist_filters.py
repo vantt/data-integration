@@ -28,6 +28,7 @@ def parse_filters(query_params: Mapping) -> dict:
         "types": types_list,        # action_type strings to include (empty = all)
         "q": query_params.get("q", "").strip(),
         "min_value": min_value,
+        "hide_contacted": query_params.get("hide_contacted", "") == "1",
     }
 
 
@@ -55,6 +56,8 @@ def active_filter_count(filters: dict) -> int:
     if filters["q"]:
         count += 1
     if filters["min_value"] > 0:
+        count += 1
+    if filters.get("hide_contacted"):
         count += 1
     return count
 

@@ -12,6 +12,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Protocol
 
+from crm.src.domain.entities.last_contact import LastContact, POSITIVE_OUTCOMES
+
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -56,6 +58,10 @@ class PartyContactReader(Protocol):
     def list_pinned_contact_pref_notes(self, party_id: str) -> list[Note]: ...
 
 
+class LastContactReader(Protocol):
+    def get_map_for_parties(self, party_ids: list[str]) -> dict[str, LastContact]: ...
+
+
 # ── Router factory ────────────────────────────────────────────────────────────
 
 
@@ -66,6 +72,7 @@ def make_worklist_router(
     task_writer: TaskWriter,
     action_state: Optional[ActionStateWriter] = None,
     party_contacts: Optional[PartyContactReader] = None,
+    last_contact: Optional[LastContactReader] = None,
 ) -> APIRouter:
     """Return APIRouter wired with all Worklist routes."""
     router = APIRouter()
@@ -101,20 +108,48 @@ def make_worklist_router(
 
         # --- Enrich party extras (contact pref, preferred identity) -------
         party_extras: dict = {}
+        all_party_ids = list({
+            *(a.party_id for a in all_actions if a.party_id),
+            *(t.party_id for t in all_tasks if t.party_id),
+        })
         if party_contacts is not None:
-            seen: set[str] = set()
-            party_ids = [a.party_id for a in all_actions if a.party_id]
-            party_ids += [t.party_id for t in all_tasks if t.party_id]
-            for pid in party_ids:
-                if pid in seen:
-                    continue
-                seen.add(pid)
+            for pid in all_party_ids:
                 try:
                     pref = party_contacts.get_preferred_identity(pid)
                     cp_notes = party_contacts.list_pinned_contact_pref_notes(pid)
                     party_extras[pid] = {"preferred_identity": pref, "contact_pref_notes": cp_notes}
                 except Exception as exc:
                     log.warning("worklist: enrich party %s: %s", pid, exc)
+
+        # --- Merge last_contact snapshot into party_extras ----------------
+        if last_contact is not None:
+            try:
+                lc_map = last_contact.get_map_for_parties(all_party_ids)
+                for pid, lc in lc_map.items():
+                    if pid not in party_extras:
+                        party_extras[pid] = {"preferred_identity": None, "contact_pref_notes": []}
+                    party_extras[pid]["last_contact"] = lc
+            except Exception as exc:
+                log.warning("worklist: last_contact fetch: %s", exc)
+
+        # --- hide_contacted: suppress actions contacted in last 24h -------
+        if filters.get("hide_contacted"):
+            now_utc = datetime.now(timezone.utc)
+
+            def _recently_contacted_positively(pid: str) -> bool:
+                lc = party_extras.get(pid or "", {}).get("last_contact")
+                if lc is None or lc.last_contact_result not in POSITIVE_OUTCOMES:
+                    return False
+                try:
+                    lc_dt = datetime.fromisoformat(
+                        lc.last_contacted_at.replace("Z", "+00:00")
+                    )
+                    return (now_utc - lc_dt).total_seconds() <= 86400
+                except Exception:
+                    return False
+
+            all_actions = [a for a in all_actions
+                           if not _recently_contacted_positively(a.party_id)]
 
         # --- Rank into banded structure ------------------------------------
         today = today_ict()

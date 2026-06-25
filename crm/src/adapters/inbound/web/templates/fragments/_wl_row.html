@@ -12,6 +12,9 @@
 {% set extras = party_extras.get(pid, {}) if pid else {} %}
 {% set pref_id = extras.get('preferred_identity') %}
 {% set cp_notes = extras.get('contact_pref_notes', []) %}
+{% set last_contact = extras.get('last_contact') %}
+{% set _LC_LABELS = {'answered': 'Đã nghe', 'no_answer': 'Không bắt', 'callback': 'Hẹn lại', 'refused': 'Từ chối', 'replied': 'Đã phản hồi', 'no_reply': 'Không phản hồi', 'met': 'Gặp được', 'not_met': 'Không gặp được', 'other': 'Khác'} %}
+{% set _LC_POSITIVE = ('answered', 'replied', 'met') %}
 
 {# ── Shared quick-contact button ──────────────────────────────────────────── #}
 {% macro contact_btn(party_id, pref_id) %}
@@ -75,6 +78,24 @@
     {% for cpn in cp_notes %}
     <div class="wl-row__pref">💬 {{ cpn.body }}</div>
     {% endfor %}
+    {% if last_contact %}
+    <div class="wl-lc-strip">
+      <span class="wl-lc-badge wl-lc-badge--{% if last_contact.last_contact_result in _LC_POSITIVE %}pos{% elif last_contact.last_contact_result == 'refused' %}neg{% else %}neu{% endif %}">
+        {% if last_contact.last_contact_result == 'answered' %}✅
+        {% elif last_contact.last_contact_result == 'replied' %}💬
+        {% elif last_contact.last_contact_result == 'met' %}🤝
+        {% elif last_contact.last_contact_result == 'refused' %}🚫
+        {% elif last_contact.last_contact_result == 'callback' %}⏰
+        {% elif last_contact.last_contact_result == 'no_answer' %}📵
+        {% else %}📞{% endif %}
+        {{ last_contact.last_contacted_at | format_relative }} · {{ _LC_LABELS.get(last_contact.last_contact_result, last_contact.last_contact_result) }}
+      </span>
+      {% if pid %}
+      <a href="/customers/{{ pid }}?tab=activities" class="wl-lc-link"
+         onclick="event.stopPropagation()" title="Xem lịch sử liên hệ">→</a>
+      {% endif %}
+    </div>
+    {% endif %}
     <div class="wl-row__meta">
       {% if a.value_at_stake_vnd > 0 %}
       <span class="wl-row__value">{% include "icons/money.svg" %} {{ a.value_at_stake_vnd | fmt_vnd }}</span>
@@ -161,6 +182,24 @@
     {% for cpn in cp_notes %}
     <div class="wl-row__pref">💬 {{ cpn.body }}</div>
     {% endfor %}
+    {% if last_contact %}
+    <div class="wl-lc-strip">
+      <span class="wl-lc-badge wl-lc-badge--{% if last_contact.last_contact_result in _LC_POSITIVE %}pos{% elif last_contact.last_contact_result == 'refused' %}neg{% else %}neu{% endif %}">
+        {% if last_contact.last_contact_result == 'answered' %}✅
+        {% elif last_contact.last_contact_result == 'replied' %}💬
+        {% elif last_contact.last_contact_result == 'met' %}🤝
+        {% elif last_contact.last_contact_result == 'refused' %}🚫
+        {% elif last_contact.last_contact_result == 'callback' %}⏰
+        {% elif last_contact.last_contact_result == 'no_answer' %}📵
+        {% else %}📞{% endif %}
+        {{ last_contact.last_contacted_at | format_relative }} · {{ _LC_LABELS.get(last_contact.last_contact_result, last_contact.last_contact_result) }}
+      </span>
+      {% if pid %}
+      <a href="/customers/{{ pid }}?tab=activities" class="wl-lc-link"
+         onclick="event.stopPropagation()" title="Xem lịch sử liên hệ">→</a>
+      {% endif %}
+    </div>
+    {% endif %}
     <div class="wl-row__meta">
       {% if t.due_at %}
       <span class="wl-row__due">{% include "icons/clock.svg" %} Due: {{ t.due_at | format_ict }}</span>
