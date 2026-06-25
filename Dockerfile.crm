@@ -28,6 +28,7 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
 
 COPY crm/entrypoint.sh /app/entrypoint.sh
 COPY crm/refresh.sh /app/refresh.sh
-RUN chmod +x /app/entrypoint.sh /app/refresh.sh
+# Strip Windows CRLF line endings from shell scripts (git autocrlf=true on Windows host)
+RUN sed -i 's/\r//' /app/entrypoint.sh /app/refresh.sh && chmod +x /app/entrypoint.sh /app/refresh.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]
