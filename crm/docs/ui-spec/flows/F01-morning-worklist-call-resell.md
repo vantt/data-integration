@@ -30,7 +30,7 @@ ghi log, tạo follow-up task. Tương ứng J1 trong PRD.
 
 1. NV mở S01 lúc 8h → thấy danh sách task hôm nay (CALL_NOW, REORDER_NUDGE)
 2. NV click task_row → navigate S03, tab Insight mặc định (P01)
-3. NV đọc rationale_vi + value_at_stake, xem lịch sử đơn (P02)
+3. NV đọc rationale_vi + value_at_stake, nhấn "Đặt Lịch" trên C03 → M05 mở để tạo follow-up task
 4. NV gọi điện (ngoài app), sau đó click btn_log_activity → M08
 5. NV điền outcome note, loại=call, lưu → activity ghi vào P03 timeline
 6. NV click btn_create_task → M05, tạo follow-up due 7 ngày
@@ -52,7 +52,7 @@ flow:
   steps:
     - A-S01-001
     - A-S03-004
-    - A-P01-001
+    - A-C03-002
     - A-S03-011
     - A-M08-003
     - A-S03-012

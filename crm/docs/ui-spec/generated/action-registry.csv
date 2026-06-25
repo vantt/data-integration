@@ -5,6 +5,9 @@ A-S01-003,S01,click,mutate,,,task_list
 A-S01-004,S01,click,open_overlay,M05,,topbar
 A-S01-005,S01,change,mutate,,,topbar
 A-S01-006,S01,change,mutate,,,topbar
+A-S01-007,S01,click,open_overlay,M08,,task_list
+A-S01-008,S01,click,open_overlay,M08,,task_list
+A-S01-009,S01,click,navigate,S14,,task_list
 A-S01-LSN01,S01,cache.refreshed,mutate,,,
 A-S01-LSN02,S01,task.due.soon,mutate,,,
 A-S01-LSN03,S01,nav.item.selected,navigate,S01,,
@@ -12,6 +15,7 @@ A-S01-LSN04,S01,action_queue.task_requested,open_overlay,M05,,
 A-S01-LSN05,S01,action_queue.card_clicked,navigate,S03,,
 A-S01-LSN06,S01,filter_bar.changed,mutate,,,
 A-S01-LSN07,S01,filter_bar.cleared,mutate,,,
+A-S01-LSN08,S01,action_queue.call_mode_requested,navigate,S14,,
 A-S02-001,S02,click,navigate,S03,,result_list
 A-S02-002,S02,click,open_overlay,M02,,main
 A-S02-003,S02,change,mutate,,,topbar
@@ -35,9 +39,14 @@ A-S03-006,S03,click,mutate,,,tab_bar
 A-S03-007,S03,click,mutate,,,tab_bar
 A-S03-008,S03,click,mutate,,,tab_bar
 A-S03-009,S03,click,mutate,,,tab_bar
-A-S03-010,S03,click,open_overlay,M06,,left_col
+A-S03-010,S03,click,open_overlay,M06,,sidebar
 A-S03-011,S03,click,open_overlay,M08,,topbar
 A-S03-012,S03,click,open_overlay,M05,,topbar
+A-S03-013,S03,click,open_overlay,M15,,sidebar
+A-S03-014,S03,click,open_overlay,M15,,sidebar
+A-S03-015,S03,click,open_overlay,M15,,sidebar
+A-S03-016,S03,click,open_overlay,M08,,sidebar
+A-S03-017,S03,click,open_overlay,M03,,sidebar
 A-S03-LSN01,S03,cache.refreshed,mutate,,,
 A-S03-LSN02,S03,party.merged,mutate,,,
 A-S03-LSN03,S03,tag_chips.add_requested,open_overlay,M03,,
@@ -119,23 +128,46 @@ A-S13-004,S13,click,open_overlay,M13,,settings_content
 A-S13-005,S13,click,open_overlay,M13,,settings_content
 A-S13-006,S13,click,open_overlay,O01,,settings_content
 A-S13-007,S13,click,open_overlay,M14,,settings_content
-A-S13-008,S13,click,mutate,,,settings_content
-A-P01-001,P01,click,open_overlay,M05,,action_queue
-A-P01-002,P01,click,mutate,,,signals_block
+A-S13-008,S13,click,open_overlay,M14,,settings_content
+A-S13-009,S13,click,mutate,,,settings_content
+A-S13-010,S13,click,mutate,,,settings_content
+A-S14-001,S14,click,mutate,,,talk_track
+A-S14-002,S14,click,mutate,,,talk_track
+A-S14-003,S14,click,mutate,,,talking_points
+A-S14-004,S14,click,mutate,,,objection_handling
+A-S14-005,S14,change,mutate,,,objection_handling
+A-S14-006,S14,click,open_overlay,M08,,identity_bar
+A-S14-007,S14,click,navigate,S03,,identity_bar
+A-S14-008,S14,click,navigate,S01,,topbar
+A-S14-009,S14,click,open_overlay,M08,,outcome_bar
+A-S14-010,S14,click,navigate,S14,,outcome_bar
+A-S14-011,S14,click,open_overlay,M05,,stop_banner
+A-S14-LSN01,S14,cache.refreshed,mutate,,,
+A-P01-001,P01,click,mutate,,,signals_block
+A-P01-002,P01,click,open_overlay,M16,,rep_insights_block
+A-P01-003,P01,click,open_overlay,M16,,rep_insights_block
+A-P01-004,P01,click,mutate,,,rep_insights_block
 A-P01-LSN01,P01,cache.refreshed,mutate,,,
 A-P01-LSN02,P01,freshness_badge.hovered,mutate,,,
+A-P01-LSN03,P01,action_queue.call_mode_requested,navigate,S14,,
+A-P01-LSN04,P01,action_queue.task_requested,open_overlay,M05,,
 A-P02-001,P02,click,mutate,,,order_list
 A-P02-002,P02,click,open_overlay,M08,,toolbar
 A-P03-001,P03,click,open_overlay,M08,,toolbar
 A-P03-002,P03,change,mutate,,,toolbar
 A-P03-003,P03,click,navigate,S06,,timeline
 A-P04-001,P04,click,open_overlay,M05,,toolbar
-A-P04-002,P04,click,mutate,,,task_list
-A-P04-003,P04,click,open_overlay,M05,,task_list
-A-P04-004,P04,change,mutate,,,toolbar
+A-P04-002,P04,click,open_overlay,M08,task.status != 'done' && task.status != 'cancelled',task_list
+A-P04-003,P04,click,mutate,,task.status != 'done' && task.status != 'cancelled',task_list
+A-P04-004,P04,click,open_overlay,M05,,task_list
+A-P04-005,P04,click,open_overlay,O03,task.status != 'done' && task.status != 'cancelled',task_list
+A-P04-006,P04,click,mutate,,task.status != 'done',task_list
+A-P04-007,P04,change,mutate,,,toolbar
 A-P05-001,P05,click,open_overlay,M08,,toolbar
 A-P05-002,P05,click,open_overlay,M08,,notes_list
 A-P05-003,P05,click,open_overlay,O01,,notes_list
+A-P05-004,P05,click,mutate,,,toolbar
+A-P05-005,P05,click,open_overlay,M16,,notes_list
 A-P06-001,P06,click,navigate,S06,,conv_list
 A-P06-002,P06,change,mutate,,,toolbar
 A-M01-001,M01,click,close_overlay,return_to_invoker,,header
@@ -168,7 +200,12 @@ A-M07-003,M07,change,mutate,,,body
 A-M07-004,M07,click,mutate,,form.name != '' && form.segment_id != null && form.scheduled_at != null,actions
 A-M08-001,M08,click,close_overlay,return_to_invoker,,header
 A-M08-002,M08,click,close_overlay,return_to_invoker,,actions
-A-M08-003,M08,click,mutate,,form.content != '',actions
+A-M08-003,M08,click,mutate,,mode=='log' ? outcome!=null : form.body!='',actions
+A-M08-004,M08,change,mutate,,mode == 'log',body
+A-M08-005,M08,click,mutate,,mode == 'log',body
+A-M08-006,M08,click,mutate,,,body
+A-M08-007,M08,click,mutate,,,body
+A-M08-008,M08,click,mutate,,outcome == 'callback',body
 A-M09-001,M09,click,close_overlay,return_to_invoker,,header
 A-M09-002,M09,click,close_overlay,return_to_invoker,,actions
 A-M09-003,M09,click,mutate,,selected_user_id != null,actions
@@ -188,16 +225,29 @@ A-M12-004,M12,click,mutate,,form.order_code != '' || form.manual_revenue != null
 A-M13-001,M13,click,close_overlay,return_to_invoker,,header
 A-M13-002,M13,click,close_overlay,return_to_invoker,,actions
 A-M13-003,M13,change,mutate,,,body
-A-M13-004,M13,click,mutate,,form.field_name != '' && form.display_label != '' && form.data_type != null,actions
+A-M13-004,M13,click,mutate,,form.entity_type != null && form.field_name != '' && form.display_label != '' && form.data_type != null,actions
 A-M14-001,M14,click,close_overlay,return_to_invoker,,header
 A-M14-002,M14,click,close_overlay,return_to_invoker,,actions
-A-M14-003,M14,click,mutate,,form.name != '' && form.display_label != '',actions
+A-M14-003,M14,click,mutate,,form.name != '' && form.display_label != '' && form.category != null,actions
+A-M15-001,M15,click,close_overlay,return_to_invoker,,header
+A-M15-002,M15,click,mutate,,,tab_bar
+A-M15-003,M15,click,mutate,,,tab_bar
+A-M15-004,M15,click,mutate,,,tab_bar
+A-M15-005,M15,click,mutate,,,body
+A-M15-006,M15,click,mutate,,,body
+A-M15-007,M15,click,mutate,,active_tab == 'core' ? form.display_name != '' : true,actions
+A-M16-001,M16,click,close_overlay,return_to_invoker,,header
+A-M16-002,M16,click,close_overlay,return_to_invoker,,actions
+A-M16-003,M16,click,mutate,,form.insight_type != null && form.body != '',actions
 A-O01-001,O01,click,close_overlay,,,content
 A-O01-002,O01,click,close_overlay,,,actions
 A-O01-003,O01,click,mutate,,,actions
 A-O02-001,O02,click,close_overlay,,,content
 A-O02-002,O02,click,close_overlay,,,content
 A-O02-003,O02,click,navigate,S03,,actions
+A-O03-001,O03,click,close_overlay,return_to_invoker,,actions
+A-O03-002,O03,click,close_overlay,return_to_invoker,,body
+A-O03-003,O03,click,mutate,,form.date != '',actions
 A-C01-001,C01,click,emit_event,,,
 A-C01-002,C01,click,emit_event,,,
 A-C01-003,C01,click,emit_event,,,
@@ -212,6 +262,7 @@ A-C02-002,C02,input,emit_event,,,
 A-C02-003,C02,click,emit_event,,,
 A-C03-001,C03,click,emit_event,,,
 A-C03-002,C03,click,emit_event,,,
+A-C03-003,C03,click,emit_event,,,
 A-C04-001,C04,click,emit_event,,,
 A-C04-002,C04,click,emit_event,,,
 A-C04-003,C04,click,emit_event,,,

@@ -86,16 +86,24 @@ v1: CRM chỉ ingest + hiển thị Messenger. Không gửi tin nhắn ra. Gửi
 
 Khi rep lưu địa chỉ qua M15 → `address_source` tự động set `manual`. Chỉ reset về `sapo_sync` nếu rep xóa địa chỉ manual.
 
+## R14 — AI Approach-Script Gate (recommended=false)
+
+Kịch bản tiếp cận do AI sinh (`cache.wh_approach_script`) có cờ `recommended`. Khi `recommended=false`
+(tài khoản nghi B2B gán nhầm RETAIL, dữ liệu margin mâu thuẫn `is_margin_negative=false` nhưng
+`avg_order_contribution_margin_pct<0`, hoặc khách chết-sâu kèm margin âm) → surface **phải** vào
+STOP state: ẩn talk-track/lời thoại/talking_points/objection, hiển thị cảnh báo + `reason_if_not_recommended`
++ CTA tạo task xác minh tài khoản. Không cho copy/gọi theo kịch bản. Mirror gate ở tầng sinh (prompt template).
+
 ---
 
 ```yaml crm-contract
 rules:
   - id: R1
     name: Consent Gating
-    surfaces: [S09, S10, S11, M07]
+    surfaces: [S09, S10, S11, M07, S14]
   - id: R2
     name: No-Recompute Insight
-    surfaces: [S01, S03, P01, P02, S12]
+    surfaces: [S01, S03, P01, P02, S12, S14]
   - id: R3
     name: Value-Link No-FK
     surfaces: [S03, P02, S11]
@@ -107,7 +115,7 @@ rules:
     surfaces: [S02, S04, M01, M02]
   - id: R6
     name: ICT Display Convention
-    surfaces: [S01, S03, S05, S06, S11, S12]
+    surfaces: [S01, S03, S05, S06, S11, S12, S14]
   - id: R7
     name: realized_margin_pct Only
     surfaces: [P01, S03]
@@ -129,4 +137,7 @@ rules:
   - id: R13
     name: Address Source Priority
     surfaces: [M15, S03]
+  - id: R14
+    name: AI Approach-Script Gate
+    surfaces: [S14]
 ```

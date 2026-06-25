@@ -125,6 +125,13 @@ interactions:
     action: open_overlay
     target: M08
     payload: { party_id: "$task.party_id", task_id: "$task.id", mode: "contact_attempt", channel: "zalo" }
+  - id: A-S01-009
+    element: btn_call_mode
+    region: task_list
+    trigger: click
+    action: navigate
+    target: S14
+    payload: { party_id: "$task.party_id" }
   - id: A-S01-LSN01
     listens_to: cache.refreshed
     action: mutate
@@ -155,4 +162,9 @@ interactions:
     listens_to: filter_bar.cleared
     action: mutate
     effects: [task_list.reload]
+  - id: A-S01-LSN08
+    listens_to: action_queue.call_mode_requested
+    action: navigate
+    target: S14
+    payload: { party_id: "$event.party_id" }
 ```

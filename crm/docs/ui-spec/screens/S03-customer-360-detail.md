@@ -7,7 +7,7 @@ hosts: [P01, P02, P03, P04, P05, P06]
 tab_labels: ["Value & Behavior", "Đơn hàng", "Timeline", "Tasks", "Ghi chú", "Chat"]
 status: active
 design_ref: ""
-rules: [R2, R3, R6, R7]
+rules: [R2, R3, R6, R7, R13]
 regions: [topbar, sidebar, main_col, tab_bar]
 ---
 
@@ -168,6 +168,13 @@ interactions:
     trigger: click
     action: mutate
     effects: [main_col.show_panel_P06]
+  - id: A-S03-010
+    element: btn_edit_custom_fields
+    region: sidebar
+    trigger: click
+    action: open_overlay
+    target: M06
+    payload: { party_id: "$party.id" }
   - id: A-S03-011
     element: btn_log_activity
     region: topbar

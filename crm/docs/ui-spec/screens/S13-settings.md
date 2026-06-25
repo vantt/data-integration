@@ -66,6 +66,8 @@ Không cần migration khi thêm field mới (schema-less JSON1).
 - ST-SETTINGS-SAVED: Toast "Đã lưu" sau mỗi thay đổi
 - ST-LOADING: Settings content loading
 
+Delete tag (btn_delete_tag) uses an HTMX confirm dialog; on confirm removes the row via `outerHTML` swap without a full page reload.
+
 ## Interactions
 
 ```yaml crm-contract
@@ -127,7 +129,6 @@ interactions:
     trigger: click
     action: mutate
     effects: [tag.delete, tag_row.remove]
-    notes: "HTMX confirm dialog; removes row via outerHTML swap"
   - id: A-S13-010
     element: btn_edit_user_role
     region: settings_content

@@ -13,6 +13,7 @@ surfaces:
   - S11
   - S12
   - S13
+  - S14
   - P01
   - P02
   - P03
@@ -33,8 +34,11 @@ surfaces:
   - M12
   - M13
   - M14
+  - M15
+  - M16
   - O01
   - O02
+  - O03
   - C01
   - C02
   - C03
@@ -100,6 +104,39 @@ edges:
     effects:
       - task_list.reload
     region: topbar
+  - id: A-S01-007
+    from: S01
+    element: btn_quick_call
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $task.party_id
+      task_id: $task.id
+      mode: contact_attempt
+      channel: phone
+    region: task_list
+  - id: A-S01-008
+    from: S01
+    element: btn_quick_zalo
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $task.party_id
+      task_id: $task.id
+      mode: contact_attempt
+      channel: zalo
+    region: task_list
+  - id: A-S01-009
+    from: S01
+    element: btn_call_mode
+    trigger: click
+    action: navigate
+    target: S14
+    payload:
+      party_id: $task.party_id
+    region: task_list
   - id: A-S01-LSN01
     from: S01
     listens_to: cache.refreshed
@@ -146,6 +183,13 @@ edges:
     action: mutate
     effects:
       - task_list.reload
+  - id: A-S01-LSN08
+    from: S01
+    listens_to: action_queue.call_mode_requested
+    action: navigate
+    target: S14
+    payload:
+      party_id: $event.party_id
   - id: A-S02-001
     from: S02
     element: customer_row
@@ -279,7 +323,7 @@ edges:
     trigger: click
     action: mutate
     effects:
-      - right_col.show_panel_P01
+      - main_col.show_panel_P01
     region: tab_bar
   - id: A-S03-005
     from: S03
@@ -287,7 +331,7 @@ edges:
     trigger: click
     action: mutate
     effects:
-      - right_col.show_panel_P02
+      - main_col.show_panel_P02
     region: tab_bar
   - id: A-S03-006
     from: S03
@@ -295,7 +339,7 @@ edges:
     trigger: click
     action: mutate
     effects:
-      - right_col.show_panel_P03
+      - main_col.show_panel_P03
     region: tab_bar
   - id: A-S03-007
     from: S03
@@ -303,7 +347,7 @@ edges:
     trigger: click
     action: mutate
     effects:
-      - right_col.show_panel_P04
+      - main_col.show_panel_P04
     region: tab_bar
   - id: A-S03-008
     from: S03
@@ -311,7 +355,7 @@ edges:
     trigger: click
     action: mutate
     effects:
-      - right_col.show_panel_P05
+      - main_col.show_panel_P05
     region: tab_bar
   - id: A-S03-009
     from: S03
@@ -319,7 +363,7 @@ edges:
     trigger: click
     action: mutate
     effects:
-      - right_col.show_panel_P06
+      - main_col.show_panel_P06
     region: tab_bar
   - id: A-S03-010
     from: S03
@@ -329,7 +373,7 @@ edges:
     target: M06
     payload:
       party_id: $party.id
-    region: left_col
+    region: sidebar
   - id: A-S03-011
     from: S03
     element: btn_log_activity
@@ -348,6 +392,56 @@ edges:
     payload:
       party_id: $party.id
     region: topbar
+  - id: A-S03-013
+    from: S03
+    element: btn_edit_contacts
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload:
+      party_id: $party.id
+      tab: contacts
+    region: sidebar
+  - id: A-S03-014
+    from: S03
+    element: btn_edit_address
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload:
+      party_id: $party.id
+      tab: address
+    region: sidebar
+  - id: A-S03-015
+    from: S03
+    element: btn_edit_core_info
+    trigger: click
+    action: open_overlay
+    target: M15
+    payload:
+      party_id: $party.id
+      tab: core
+    region: sidebar
+  - id: A-S03-016
+    from: S03
+    element: contact_channel_quick_action
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $party.id
+      mode: contact_attempt
+      channel: $channel.type
+    region: sidebar
+  - id: A-S03-017
+    from: S03
+    element: btn_edit_tags
+    trigger: click
+    action: open_overlay
+    target: M03
+    payload:
+      party_id: $party.id
+    region: sidebar
   - id: A-S03-LSN01
     from: S03
     listens_to: cache.refreshed
@@ -976,12 +1070,30 @@ edges:
     region: settings_content
   - id: A-S13-007
     from: S13
-    element: btn_add_tag_category
+    element: btn_add_tag
     trigger: click
     action: open_overlay
     target: M14
     region: settings_content
   - id: A-S13-008
+    from: S13
+    element: btn_edit_tag
+    trigger: click
+    action: open_overlay
+    target: M14
+    payload:
+      tag_id: $tag.tag_id
+    region: settings_content
+  - id: A-S13-009
+    from: S13
+    element: btn_delete_tag
+    trigger: click
+    action: mutate
+    effects:
+      - tag.delete
+      - tag_row.remove
+    region: settings_content
+  - id: A-S13-010
     from: S13
     element: btn_edit_user_role
     trigger: click
@@ -990,18 +1102,112 @@ edges:
       - user.role.update
       - ui.toast.show
     region: settings_content
-  - id: A-P01-001
-    from: P01
-    element: action_queue_item
+  - id: A-S14-001
+    from: S14
+    element: btn_copy_talk_track
+    trigger: click
+    action: mutate
+    effects:
+      - ui.clipboard.copy_opening_message
+    region: talk_track
+  - id: A-S14-002
+    from: S14
+    element: toggle_channel
+    trigger: click
+    action: mutate
+    effects:
+      - talk_track.swap_channel_message
+    region: talk_track
+  - id: A-S14-003
+    from: S14
+    element: talking_point_checkbox
+    trigger: click
+    action: mutate
+    effects:
+      - talking_point.toggle_done
+    region: talking_points
+  - id: A-S14-004
+    from: S14
+    element: objection_card
+    trigger: click
+    action: mutate
+    effects:
+      - objection.toggle_response
+    region: objection_handling
+  - id: A-S14-005
+    from: S14
+    element: objection_search
+    trigger: change
+    action: mutate
+    effects:
+      - objection_handling.filter
+    region: objection_handling
+  - id: A-S14-006
+    from: S14
+    element: btn_call
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $party.id
+      mode: contact_attempt
+      channel: phone
+    region: identity_bar
+  - id: A-S14-007
+    from: S14
+    element: btn_view_360
+    trigger: click
+    action: navigate
+    target: S03
+    payload:
+      party_id: $party.id
+    region: identity_bar
+  - id: A-S14-008
+    from: S14
+    element: btn_back_worklist
+    trigger: click
+    action: navigate
+    target: S01
+    region: topbar
+  - id: A-S14-009
+    from: S14
+    element: btn_log_outcome
+    trigger: click
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $party.id
+      mode: outcome
+      source: call_cockpit
+    region: outcome_bar
+  - id: A-S14-010
+    from: S14
+    element: btn_next_in_queue
+    trigger: click
+    action: navigate
+    target: S14
+    payload:
+      party_id: $queue.next_party_id
+    region: outcome_bar
+  - id: A-S14-011
+    from: S14
+    element: btn_verify_account
     trigger: click
     action: open_overlay
     target: M05
     payload:
-      source: action_queue
-      action_id: $item.action_id
       party_id: $party.id
-    region: action_queue
-  - id: A-P01-002
+      source: verify_account
+      prefill_title: Xác minh loại tài khoản (nghi B2B)
+    region: stop_banner
+  - id: A-S14-LSN01
+    from: S14
+    listens_to: cache.refreshed
+    action: mutate
+    effects:
+      - script.reload
+      - freshness_bar.update
+  - id: A-P01-001
     from: P01
     element: affinity_product_link
     trigger: click
@@ -1009,6 +1215,34 @@ edges:
     effects:
       - ui.tooltip.show_product_insight
     region: signals_block
+  - id: A-P01-002
+    from: P01
+    element: btn_add_insight
+    trigger: click
+    action: open_overlay
+    target: M16
+    payload:
+      party_id: $party.id
+    region: rep_insights_block
+  - id: A-P01-003
+    from: P01
+    element: insight_edit_btn
+    trigger: click
+    action: open_overlay
+    target: M16
+    payload:
+      party_id: $party.id
+      insight_id: $insight.id
+    region: rep_insights_block
+  - id: A-P01-004
+    from: P01
+    element: insight_invalidate_btn
+    trigger: click
+    action: mutate
+    effects:
+      - insight.is_active.set_false
+      - rep_insights_block.reload
+    region: rep_insights_block
   - id: A-P01-LSN01
     from: P01
     listens_to: cache.refreshed
@@ -1022,6 +1256,22 @@ edges:
     action: mutate
     effects:
       - ui.tooltip.show_refresh_details
+  - id: A-P01-LSN03
+    from: P01
+    listens_to: action_queue.call_mode_requested
+    action: navigate
+    target: S14
+    payload:
+      party_id: $event.party_id
+  - id: A-P01-LSN04
+    from: P01
+    listens_to: action_queue.task_requested
+    action: open_overlay
+    target: M05
+    payload:
+      source: action_queue
+      action_id: $event.action_id
+      party_id: $event.party_id
   - id: A-P02-001
     from: P02
     element: order_row
@@ -1077,23 +1327,59 @@ edges:
     region: toolbar
   - id: A-P04-002
     from: P04
-    element: task_checkbox
+    element: btn_log
     trigger: click
+    guard: task.status != 'done' && task.status != 'cancelled'
+    action: open_overlay
+    target: M08
+    payload:
+      party_id: $party.id
+      mode: log
+      task_id: $task.id
+      party_name: $party.display_name
+    region: task_list
+  - id: A-P04-003
+    from: P04
+    element: btn_done_quick
+    trigger: click
+    guard: task.status != 'done' && task.status != 'cancelled'
     action: mutate
     effects:
       - task.status.set_done
       - task.completed_at.set_now
+      - task_list.reload
     region: task_list
-  - id: A-P04-003
+  - id: A-P04-004
     from: P04
-    element: task_row_edit
+    element: menu_edit
     trigger: click
     action: open_overlay
     target: M05
     payload:
       task_id: $task.id
     region: task_list
-  - id: A-P04-004
+  - id: A-P04-005
+    from: P04
+    element: menu_postpone
+    trigger: click
+    guard: task.status != 'done' && task.status != 'cancelled'
+    action: open_overlay
+    target: O03
+    payload:
+      task_id: $task.id
+      due_at: $task.due_at
+    region: task_list
+  - id: A-P04-006
+    from: P04
+    element: menu_cancel
+    trigger: click
+    guard: task.status != 'done'
+    action: mutate
+    effects:
+      - task.status.set_cancelled
+      - task_list.reload
+    region: task_list
+  - id: A-P04-007
     from: P04
     element: filter_status
     trigger: change
@@ -1119,7 +1405,7 @@ edges:
     target: M08
     payload:
       note_id: $note.id
-      mode: edit
+      mode: edit_note
     region: notes_list
   - id: A-P05-003
     from: P05
@@ -1130,6 +1416,25 @@ edges:
     payload:
       confirm_type: delete_note
       note_id: $note.id
+    region: notes_list
+  - id: A-P05-004
+    from: P05
+    element: tab_filter
+    trigger: click
+    action: mutate
+    effects:
+      - notes_list.reload_with_type_filter
+    region: toolbar
+  - id: A-P05-005
+    from: P05
+    element: btn_promote_insight
+    trigger: click
+    action: open_overlay
+    target: M16
+    payload:
+      party_id: $party.id
+      source_note_id: $note.id
+      prefill_body: $note.body
     region: notes_list
   - id: A-P06-001
     from: P06
@@ -1346,6 +1651,7 @@ edges:
       - profile.custom.update
       - modal.close
       - ui.toast.show
+      - left_col.custom_fields.reload
     region: actions
   - id: A-M07-001
     from: M07
@@ -1399,14 +1705,64 @@ edges:
     from: M08
     element: btn_save
     trigger: click
-    guard: form.content != ''
+    guard: 'mode==''log'' ? outcome!=null : form.body!='''''
     action: mutate
     effects:
-      - activity.save
+      - activity_or_note.save
       - modal.close
       - ui.toast.show
-      - timeline.reload
+      - timeline_or_notes.reload
     region: actions
+  - id: A-M08-004
+    from: M08
+    element: hinh_thuc_select
+    trigger: change
+    guard: mode == 'log'
+    action: mutate
+    effects:
+      - select_trigger.update_icon_label
+      - channel_section.show_active
+      - outcome_pills.rebuild
+      - callback_sec.hide
+      - body_placeholder.update
+    region: body
+  - id: A-M08-005
+    from: M08
+    element: outcome_pills
+    trigger: click
+    guard: mode == 'log'
+    action: mutate
+    effects:
+      - callback_sec.toggle
+      - followup_sec.toggle
+      - body_required.update
+      - complete_task_checkbox.smart_default
+    region: body
+  - id: A-M08-006
+    from: M08
+    element: schedule_followup_checkbox
+    trigger: click
+    action: mutate
+    effects:
+      - followup_date_opts.toggle
+    region: body
+  - id: A-M08-007
+    from: M08
+    element: save_as_note_checkbox
+    trigger: click
+    action: mutate
+    effects:
+      - note_opts.toggle
+    region: body
+  - id: A-M08-008
+    from: M08
+    element: create_callback_task_checkbox
+    trigger: click
+    guard: outcome == 'callback'
+    action: mutate
+    effects:
+      - create_callback_task.toggle
+    region: body
   - id: A-M09-001
     from: M09
     element: btn_close
@@ -1568,12 +1924,13 @@ edges:
     from: M13
     element: btn_save
     trigger: click
-    guard: form.field_name != '' && form.display_label != '' && form.data_type != null
+    guard: form.entity_type != null && form.field_name != '' && form.display_label != '' && form.data_type != null
     action: mutate
     effects:
       - custom_field_def.save
       - modal.close
       - ui.toast.show
+      - settings_list.reload
     region: actions
   - id: A-M14-001
     from: M14
@@ -1593,12 +1950,98 @@ edges:
     from: M14
     element: btn_create_tag
     trigger: click
-    guard: form.name != '' && form.display_label != ''
+    guard: form.name != '' && form.display_label != '' && form.category != null
     action: mutate
     effects:
       - tag.create
       - modal.close
       - ui.toast.show
+    region: actions
+  - id: A-M15-001
+    from: M15
+    element: btn_close
+    trigger: click
+    action: close_overlay
+    target: return_to_invoker
+    region: header
+  - id: A-M15-002
+    from: M15
+    element: tab_contacts
+    trigger: click
+    action: mutate
+    effects:
+      - body.show_contacts_tab
+    region: tab_bar
+  - id: A-M15-003
+    from: M15
+    element: tab_address
+    trigger: click
+    action: mutate
+    effects:
+      - body.show_address_tab
+    region: tab_bar
+  - id: A-M15-004
+    from: M15
+    element: tab_core
+    trigger: click
+    action: mutate
+    effects:
+      - body.show_core_tab
+    region: tab_bar
+  - id: A-M15-005
+    from: M15
+    element: btn_add_channel
+    trigger: click
+    action: mutate
+    effects:
+      - add_channel_form.show
+    region: body
+  - id: A-M15-006
+    from: M15
+    element: btn_deactivate_channel
+    trigger: click
+    action: mutate
+    effects:
+      - identity.contact_status.set_invalid
+      - contacts_list.reload
+    region: body
+  - id: A-M15-007
+    from: M15
+    element: btn_save
+    trigger: click
+    guard: 'active_tab == ''core'' ? form.display_name != '''' : true'
+    action: mutate
+    effects:
+      - party_or_identity.save
+      - modal.close
+      - ui.toast.show
+      - sidebar.reload
+    region: actions
+  - id: A-M16-001
+    from: M16
+    element: btn_close
+    trigger: click
+    action: close_overlay
+    target: return_to_invoker
+    region: header
+  - id: A-M16-002
+    from: M16
+    element: btn_cancel
+    trigger: click
+    action: close_overlay
+    target: return_to_invoker
+    region: actions
+  - id: A-M16-003
+    from: M16
+    element: btn_save
+    trigger: click
+    guard: form.insight_type != null && form.body != ''
+    action: mutate
+    effects:
+      - party_insight.save
+      - modal.close
+      - ui.toast.show
+      - P01.rep_insights.reload
     region: actions
   - id: A-O01-001
     from: O01
@@ -1642,6 +2085,33 @@ edges:
     target: S03
     payload:
       party_id: $party.id
+    region: actions
+  - id: A-O03-001
+    from: O03
+    element: btn_cancel
+    trigger: click
+    action: close_overlay
+    target: return_to_invoker
+    region: actions
+  - id: A-O03-002
+    from: O03
+    element: scrim
+    trigger: click
+    action: close_overlay
+    target: return_to_invoker
+    region: body
+  - id: A-O03-003
+    from: O03
+    element: btn_confirm
+    trigger: click
+    guard: form.date != ''
+    action: mutate
+    effects:
+      - task.due_at.update
+      - task.status.reset_to_open_if_doing
+      - timeline.log_postpone
+      - overlay.close
+      - task_list.reload
     region: actions
   - id: A-C01-001
     from: C01
@@ -1742,7 +2212,17 @@ edges:
       prefill_query: $input.value
   - id: A-C03-001
     from: C03
-    element: card_create_task_btn
+    element: card_call_now_btn
+    trigger: click
+    action: emit_event
+    event: action_queue.call_mode_requested
+    payload:
+      action_id: $action.action_id
+      party_id: $party_id
+      action_type: $action.action_type
+  - id: A-C03-002
+    from: C03
+    element: card_schedule_btn
     trigger: click
     action: emit_event
     event: action_queue.task_requested
@@ -1750,7 +2230,7 @@ edges:
       action_id: $action.action_id
       party_id: $party_id
       action_type: $action.action_type
-  - id: A-C03-002
+  - id: A-C03-003
     from: C03
     element: card_body
     trigger: click

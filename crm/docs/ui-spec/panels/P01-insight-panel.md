@@ -90,33 +90,26 @@ Grid 4 cột, 2 hàng:
 ```yaml crm-contract
 interactions:
   - id: A-P01-001
-    element: action_queue_item
-    region: action_queue
-    trigger: click
-    action: open_overlay
-    target: M05
-    payload: { source: "action_queue", action_id: "$item.action_id", party_id: "$party.id" }
-  - id: A-P01-002
     element: affinity_product_link
     region: signals_block
     trigger: click
     action: mutate
     effects: [ui.tooltip.show_product_insight]
-  - id: A-P01-003
+  - id: A-P01-002
     element: btn_add_insight
     region: rep_insights_block
     trigger: click
     action: open_overlay
     target: M16
     payload: { party_id: "$party.id" }
-  - id: A-P01-004
+  - id: A-P01-003
     element: insight_edit_btn
     region: rep_insights_block
     trigger: click
     action: open_overlay
     target: M16
     payload: { party_id: "$party.id", insight_id: "$insight.id" }
-  - id: A-P01-005
+  - id: A-P01-004
     element: insight_invalidate_btn
     region: rep_insights_block
     trigger: click
@@ -130,4 +123,14 @@ interactions:
     listens_to: freshness_badge.hovered
     action: mutate
     effects: [ui.tooltip.show_refresh_details]
+  - id: A-P01-LSN03
+    listens_to: action_queue.call_mode_requested
+    action: navigate
+    target: S14
+    payload: { party_id: "$event.party_id" }
+  - id: A-P01-LSN04
+    listens_to: action_queue.task_requested
+    action: open_overlay
+    target: M05
+    payload: { source: "action_queue", action_id: "$event.action_id", party_id: "$event.party_id" }
 ```

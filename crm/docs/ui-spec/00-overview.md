@@ -1,6 +1,6 @@
 # CRM UI Spec — Overview
 
-Internal Retail CRM · ~10 users · Desktop-first · Go + templ/HTMX · SQLite WAL
+Internal Retail CRM · ~10 users · Desktop-first · Python (FastAPI, server-rendered) · SQLite WAL
 
 ---
 
@@ -23,12 +23,13 @@ Internal Retail CRM · ~10 users · Desktop-first · Go + templ/HTMX · SQLite W
 | S11 | Campaign Detail / Targets | M6 | Manager, Sales Rep |
 | S12 | Ads Tracking | M6 | Manager |
 | S13 | Settings | — | Admin, Manager |
+| S14 | Call Mode / Strategy Cockpit | M4 | Sales Rep |
 
 ### Panels (hosted inside S03)
 
 | ID | Name | Tab |
 |---|---|---|
-| P01 | Insight Panel | Insight |
+| P01 | Value & Behavior Panel | Insight |
 | P02 | Order History Panel | Đơn hàng |
 | P03 | Activity Timeline Panel | Timeline |
 | P04 | Tasks Panel | Tasks |
@@ -46,13 +47,15 @@ Internal Retail CRM · ~10 users · Desktop-first · Go + templ/HTMX · SQLite W
 | M05 | Create / Edit Task Modal | S01, S03, S07, P04 |
 | M06 | Custom Fields Edit Modal | S03 |
 | M07 | Create / Edit Campaign Modal | S10, S11 |
-| M08 | Log Activity Modal | S03, S01, S06, P02, P03, P04, P05 |
+| M08 | Log Activity Modal | S03, S01, S06, S14, P02, P03, P04, P05 |
 | M09 | Assign Conversation Modal | S05, S06 |
 | M10 | Close Conversation Modal | S06 |
 | M11 | Link Party to Conversation Modal | S06 |
 | M12 | Record Conversion Modal | S11 |
 | M13 | Custom Field Definition Modal | S13 |
 | M14 | Create Tag Modal | S13, M03 |
+| M15 | Edit Contact & Core Info Modal | S03 |
+| M16 | Promote / Create Insight Modal | P01, P05 |
 
 ### Overlays
 
@@ -113,7 +116,8 @@ crm/docs/ui-spec/
 │   ├── S10-campaigns-list.md
 │   ├── S11-campaign-detail-targets.md
 │   ├── S12-ads-tracking.md
-│   └── S13-settings.md
+│   ├── S13-settings.md
+│   └── S14-call-mode-cockpit.md
 ├── panels/
 │   ├── P01-insight-panel.md
 │   ├── P02-order-history-panel.md
@@ -135,7 +139,9 @@ crm/docs/ui-spec/
 │   ├── M11-link-party-to-conversation-modal.md
 │   ├── M12-record-conversion-modal.md
 │   ├── M13-custom-field-def-modal.md
-│   └── M14-create-tag-modal.md
+│   ├── M14-create-tag-modal.md
+│   ├── M15-edit-contact-core-info-modal.md
+│   └── M16-promote-insight-modal.md
 ├── overlays/
 │   ├── O01-confirm-toast-overlay.md
 │   ├── O02-quick-customer-preview-overlay.md
@@ -162,18 +168,20 @@ crm/docs/ui-spec/
 
 | Rule | Name | Key surfaces |
 |---|---|---|
-| R1 | Consent Gating | S09, S10, S11, M07 |
-| R2 | No-Recompute Insight | S01, S03, P01, P02, S12 |
+| R1 | Consent Gating | S09, S10, S11, M07, S14 |
+| R2 | No-Recompute Insight | S01, S03, P01, P02, S12, S14 |
 | R3 | Value-Link No-FK | S03, P02, S11 |
 | R4 | Merge Reversibility | S04, M01 |
 | R5 | Phone E.164 Normalization | S02, S04, M01, M02 |
-| R6 | ICT Display Convention | S01, S03, S05, S06, S11, S12 |
+| R6 | ICT Display Convention | S01, S03, S05, S06, S11, S12, S14 |
 | R7 | realized_margin_pct Only | P01, S03 |
 | R8 | Idempotent Task Generation | S01, S07 |
 | R9 | Dedup Fuzzy → Candidate Queue | S04, M01 |
 | R10 | Segment Dynamic Consent Re-eval | S09, S10 |
 | R11 | Conversion Attribution Window | S11, S07 |
 | R12 | Messenger Read-Only v1 | S05, S06 |
+| R13 | Address Source Priority | M15, S03 |
+| R14 | AI Approach-Script Gate | S14 |
 
 ---
 
@@ -181,7 +189,7 @@ crm/docs/ui-spec/
 
 | Event | Surfaces that listen |
 |---|---|
-| `cache.refreshed` | S01, S03, P01 |
+| `cache.refreshed` | S01, S03, P01, S14 |
 | `chat.message.received` | S05, S06 |
 | `dedup.candidate.created` | S04 |
 | `campaign.target.converted` | S11 |

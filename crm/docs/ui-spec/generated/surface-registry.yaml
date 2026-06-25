@@ -51,10 +51,11 @@ surfaces:
       - R3
       - R6
       - R7
+      - R13
     regions:
       - topbar
-      - left_col
-      - right_col
+      - sidebar
+      - main_col
       - tab_bar
   S04:
     type: screen
@@ -214,9 +215,33 @@ surfaces:
       - sidebar
       - settings_nav
       - settings_content
+  S14:
+    type: screen
+    name: Call Mode / Strategy Cockpit
+    platforms:
+      - desktop
+    hosts: []
+    status: active
+    file: screens/S14-call-mode-cockpit.md
+    rules:
+      - R1
+      - R2
+      - R6
+      - R14
+    regions:
+      - topbar
+      - identity_bar
+      - strategy_summary
+      - talk_track
+      - talking_points
+      - objection_handling
+      - guardrails
+      - trust_footer
+      - outcome_bar
+      - stop_banner
   P01:
     type: panel
-    name: Insight Panel
+    name: Value & Behavior Panel
     platforms:
       - desktop
     hosts:
@@ -228,8 +253,10 @@ surfaces:
       - R7
     regions:
       - action_queue
-      - rfm_block
+      - rfm_segments_block
+      - value_metrics_block
       - signals_block
+      - rep_insights_block
       - freshness_bar
   P02:
     type: panel
@@ -286,6 +313,7 @@ surfaces:
     rules: []
     regions:
       - toolbar
+      - pinned_section
       - notes_list
   P06:
     type: panel
@@ -416,9 +444,11 @@ surfaces:
       - desktop
     hosts:
       - S03
+      - S01
       - S06
       - P02
       - P03
+      - P04
       - P05
     status: active
     file: modals/M08-log-activity-modal.md
@@ -426,6 +456,7 @@ surfaces:
       - R6
     regions:
       - header
+      - contact_pref_banner
       - body
       - actions
   M09:
@@ -517,6 +548,38 @@ surfaces:
       - header
       - body
       - actions
+  M15:
+    type: modal
+    name: Edit Contact & Core Info Modal
+    platforms:
+      - desktop
+    hosts:
+      - S03
+    status: active
+    file: modals/M15-edit-contact-core-info-modal.md
+    rules:
+      - R5
+      - R13
+    regions:
+      - header
+      - tab_bar
+      - body
+      - actions
+  M16:
+    type: modal
+    name: Promote / Create Insight Modal
+    platforms:
+      - desktop
+    hosts:
+      - P01
+      - P05
+    status: active
+    file: modals/M16-promote-insight-modal.md
+    rules: []
+    regions:
+      - header
+      - body
+      - actions
   O01:
     type: overlay
     name: Confirm / Toast Overlay
@@ -547,6 +610,21 @@ surfaces:
       - R2
     regions:
       - content
+      - actions
+  O03:
+    type: overlay
+    name: Postpone Task Overlay
+    platforms:
+      - desktop
+    hosts:
+      - P04
+      - S07
+    status: active
+    file: overlays/O03-postpone-task-overlay.md
+    rules:
+      - R6
+    regions:
+      - body
       - actions
   C01:
     type: component

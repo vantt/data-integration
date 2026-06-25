@@ -2,13 +2,13 @@
 
 # Coverage Report (generated)
 
-Surfaces: 49 · Actions: 225 · Flows: 6
+Surfaces: 53 · Actions: 276 · Flows: 6
 
 ## Flow → Actions
 
 | Flow | Goal | Steps | Missing action refs |
 |---|---|---|---|
-| F01 | Sales Rep xử lý worklist sáng: xem hồ sơ, gọi điện, ghi log, tạo follow-up | A-S01-001 → A-S03-004 → A-P01-001 → A-S03-011 → A-M08-003 → A-S03-012 → A-M05-003 | — |
+| F01 | Sales Rep xử lý worklist sáng: xem hồ sơ, gọi điện, ghi log, tạo follow-up | A-S01-001 → A-S03-004 → A-C03-002 → A-S03-011 → A-M08-003 → A-S03-012 → A-M05-003 | — |
 | F02 | Manager tạo segment win-back, campaign, gán NV, theo dõi conversion | A-S08-001 → A-S09-006 → A-S08-003 → A-S10-001 → A-M07-004 → A-S11-003 → A-M12-004 | — |
 | F03 | CSKH link PSID Messenger vào party CRM, ghi note, đóng conversation | A-S05-001 → A-S06-005 → A-M11-003 → A-M11-005 → A-S06-003 → A-M08-003 → A-S06-002 → A-M10-003 | — |
 | F04 | Manager merge dedup candidate rồi làm giàu hồ sơ surviving party | A-S04-002 → A-M01-003 → A-S03-010 → A-M06-003 → A-S03-003 → A-M03-005 → A-S03-002 → A-M04-003 | — |

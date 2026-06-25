@@ -56,6 +56,9 @@ Party exists but `crm_customer_profile` not yet created. Show "Tạo hồ sơ" C
 ### ST-360-MERGED
 Party has `is_merged=true`. Show warning banner and link to surviving party.
 
+### ST-360-WARNING
+Party has one or more active warning notes (`crm_note.note_type='warning'` AND `is_active=true`). Show red banner at top of sidebar.
+
 ---
 
 ## S04 — Dedup Review States
@@ -159,6 +162,20 @@ No ad campaigns ingested yet. Show instructions for Python ingest job.
 
 ### ST-SETTINGS-SAVED
 Toast confirmation after saving custom field / tag / user changes.
+
+---
+
+## S14 — Call Mode / Strategy Cockpit States
+
+### ST-CALL-NO-SCRIPT
+Không có row `cache.wh_approach_script` cho `customer_id` → empty state + CTA quay lại Worklist / Xem 360.
+
+### ST-CALL-STOP
+`recommended=false` (R14) → STOP banner: ẩn talk-track/talking_points/objection, hiện lý do + CTA tạo task xác minh tài khoản.
+
+### ST-CALL-LOW-CONFIDENCE
+`confidence=low` → talk-track hiển thị nhạt + nhãn "độ tin thấp, kiểm chứng".
+(Stale → dùng lại `ST-STALE-CACHE`; loading → `ST-LOADING`.)
 
 ---
 
