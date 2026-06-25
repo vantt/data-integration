@@ -4442,6 +4442,24 @@ elif filter_priority == "high":
 
 ---
 
+### L148 — Windows git autocrlf=true injects CRLF into shell scripts, silently breaking Linux containers at exec time
+
+**Symptom:** Docker container built successfully (`chmod +x entrypoint.sh` ran in layer) but crashed immediately with `exec /app/entrypoint.sh: no such file or directory`. The file was physically present; the error is the kernel failing to find the interpreter `/bin/bash\r` (shebang `#!/bin/bash\r` with a carriage return).
+
+**Group:** OPS
+
+**Root cause:** `git config core.autocrlf=true` on the Windows dev machine converts LF→CRLF when checking out files. Shell scripts committed with LF are stored on disk with CRLF. `docker build` COPY transfers the CRLF file into the Linux image. The Linux kernel's `exec()` sees `#!/bin/bash\r` as a literal interpreter path — `/bin/bash\r` doesn't exist — and returns "no such file or directory". The container build layer (`chmod +x`) succeeds; the runtime exec fails. Previous builds masked the bug by reusing a cached layer built on a machine (or at a time) where the file was LF.
+
+**Fix:** Add `RUN sed -i 's/\r//' /app/entrypoint.sh /app/refresh.sh` in Dockerfile immediately after COPY, before `chmod +x`. This strips CRLF in the image regardless of what the host injected. Alternatively, add `.gitattributes`: `*.sh text eol=lf` to enforce LF in the repo and prevent checkout conversion.
+
+**Rules:**
+1. Any `exec /app/foo.sh: no such file or directory` where the file exists → suspect CRLF shebang first.
+2. Shell scripts in repos used on Windows hosts MUST be guarded: either `.gitattributes eol=lf` or `sed -i 's/\r//'` in Dockerfile.
+3. A clean Docker build does NOT prove runtime works — `chmod +x` succeeds even on CRLF files; the failure only surfaces at container startup.
+4. Never rely on Docker layer cache to hide a host-environment dependency (CRLF/LF, path separators, UID). A fresh build on a different machine will break.
+
+**Reference:** `Dockerfile.crm` line `RUN sed -i 's/\r//' /app/entrypoint.sh /app/refresh.sh`. Fixed 2026-06-25 commit c95e318.
+
 ### L147 — A verification probe that swallows its own failure path is VACUOUS — it passes without testing anything
 
 **Symptom:** A restore-verify drill claimed a "write→read→delete round-trip" proved the restored CRM was writable. It POSTed to `/api/tags` — an endpoint that **does not exist** (real routes were `/api/parties/{id}/tags`, `/settings/tags`). The 404 landed in a broad `except Exception: print("write-probe skipped — read-path verified"); return`. So the write test **never ran**; the drill reported PASS having verified nothing about writes. Invisible in testing because the happy path AND the 4 negative-tamper tests only exercised the *read/integrity* gate.
