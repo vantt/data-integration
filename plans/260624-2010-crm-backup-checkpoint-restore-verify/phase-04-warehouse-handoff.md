@@ -1,10 +1,13 @@
 ---
 phase: 4
-title: "Warehouse Handoff"
-status: pending
+title: Warehouse Handoff
+status: completed
 priority: P3
-effort: "0.5d"
-dependencies: [1, 2, 3]
+effort: 0.5d
+dependencies:
+  - 1
+  - 2
+  - 3
 ---
 
 # Phase 4: Warehouse Handoff
@@ -35,10 +38,10 @@ Capture what the CRM pilot proved, then **write a follow-up plan** for warehouse
 3. **Carry forward the CRM red-team hardening** (these generalize): backup is a GATE that compares against the live source (not a blind dump); content checksums not just row counts; restore-verify runs **isolated** from prod (no prod mounts/network) with image-digest pinning; the drill must test the **cross-version / rebuild-from-source** recovery path (warehouse: restore raw parquet → `dbt run` → verify marts), not byte-identical files; state **RPO** + add an offsite copy + backup-failure alerting. See `plans/.../reports/from-redteam-*-crm-backup-260624-2010-report.md`.
 4. Cross-link both plans (`blocks`/`blockedBy` as appropriate).
 
-## Success Criteria
-- [ ] Lessons report written from the actual CRM pilot (not speculation).
-- [ ] Warehouse-DR follow-up plan exists with correct source-of-truth analysis + DuckDB consistency strategy.
-- [ ] No warehouse implementation done in this plan (scope held).
+## Success Criteria — ✅ DONE (2026-06-24)
+- [x] Lessons report written from the actual CRM pilot (`plans/reports/from-crm-dr-pilot-lessons-260624-2010-report.md`).
+- [x] Warehouse-DR follow-up plan exists with source-of-truth analysis + parquet-first strategy (`plans/260624-2010-warehouse-pipeline-dr-verified-restore/`).
+- [x] No warehouse implementation done in this plan (scope held).
 
 ## Risk Assessment
 - **Over-engineering early** → keep this phase to lessons + plan; resist building warehouse DR before CRM proves the pattern.

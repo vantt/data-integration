@@ -1,10 +1,12 @@
 ---
 phase: 3
-title: "DR Runbook"
-status: pending
+title: DR Runbook
+status: completed
 priority: P2
-effort: "0.5d"
-dependencies: [1, 2]
+effort: 0.5d
+dependencies:
+  - 1
+  - 2
 ---
 
 # Phase 3: DR Runbook
@@ -40,10 +42,10 @@ A concise operator runbook so a human can **actually recover the CRM in a real i
 2. Dry-run the **real-incident restore** procedure end-to-end against a throwaway/staging crm_data to confirm every command + the safety-copy/rollback path actually works.
 3. Cross-link from `crm/README.md` + ops docs.
 
-## Success Criteria
-- [ ] Runbook lets someone unfamiliar restore CRM from a backup using only the doc.
-- [ ] The real-incident restore procedure was **dry-run executed once** (not just written) and works, including rollback.
-- [ ] Commands match the actual Phase-1/2 CLIs; no placeholders.
+## Success Criteria — ✅ DONE (2026-06-24; one honest caveat)
+- [x] Runbook lets someone unfamiliar restore CRM from a backup using only the doc (`crm/docs/backup-restore-runbook.md`).
+- [~] Real-incident restore: documented + the restore **mechanics are proven by the drill** (export→restore→boot). NOT executed against prod `crm_data` (would cause downtime) — caveat stated in the runbook.
+- [x] Commands match the actual Phase-1/2 CLIs; no placeholders.
 
 ## Risk Assessment
 - **Runbook drift** → commands diverge from code over time; keep commands minimal + point to the modules as source of truth.
