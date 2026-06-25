@@ -32,9 +32,20 @@
 {% set fq          = filters.q               | default('') %}
 {% set ftypes      = filters.types           | default([]) %}
 {% set fmin        = filters.min_value       | default(0) %}
+{% set fprod       = filters.product         | default('') %}
 {% set fhide       = filters.hide_contacted  | default(false) %}
 {% set avail       = available_types         | default([]) %}
 {% set badge_count = active_filter_count     | default(0) %}
+{# Macro: emit all "carry-through" hidden inputs except the one being changed. #}
+{# Callers emit their OWN control value separately so they can control toggle logic. #}
+{% macro carry(skip_priority=false, skip_type=false, skip_q=false, skip_min=false, skip_prod=false, skip_hide=false) %}
+  {% if not skip_priority %}<input type="hidden" name="priority"  value="{{ fp }}">{% endif %}
+  {% if not skip_type and ftypes %}<input type="hidden" name="type" value="{{ ftypes | join(',') }}">{% endif %}
+  {% if not skip_q    and fq     %}<input type="hidden" name="q"    value="{{ fq | e }}">{% endif %}
+  {% if not skip_min  and fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+  {% if not skip_prod and fprod  %}<input type="hidden" name="product"   value="{{ fprod }}">{% endif %}
+  {% if not skip_hide and fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
+{% endmacro %}
 
 {#
   Form approach: hidden inputs for priority, type (joined), min_value carry the
@@ -61,11 +72,8 @@
     {% for val, label in [('all', 'Tất cả'), ('high', 'Cao'), ('urgent', 'Khẩn')] %}
     <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
           style="display:contents">
-      <input type="hidden" name="priority"  value="{{ val }}">
-      {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
-      {% if fq     %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
-      {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
-      {% if fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
+      {{ carry(skip_priority=true) }}
+      <input type="hidden" name="priority" value="{{ val }}">
       <button type="submit" class="tab" aria-selected="{{ 'true' if fp == val else 'false' }}">
         {{ label }}
       </button>
@@ -92,11 +100,8 @@
       {% endif %}
       <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
             style="display:contents">
-        <input type="hidden" name="priority" value="{{ fp }}">
-        {% if new_types %}<input type="hidden" name="type"      value="{{ new_types | join(',') }}">{% endif %}
-        {% if fq        %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
-        {% if fmin      %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
-        {% if fhide     %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
+        {{ carry(skip_type=true) }}
+        {% if new_types %}<input type="hidden" name="type" value="{{ new_types | join(',') }}">{% endif %}
         <button type="submit"
                 class="tab chip"
                 aria-selected="{{ 'true' if atype in ftypes else 'false' }}"
@@ -111,10 +116,7 @@
   {# ── Search input ──────────────────────────────────────────────────────── #}
   <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
         style="display:flex;align-items:center;gap:var(--sp-2)">
-    <input type="hidden" name="priority" value="{{ fp }}">
-    {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
-    {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
-    {% if fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
+    {{ carry(skip_q=true) }}
     <span class="caption" style="color:var(--fg-tertiary)">Tìm:</span>
     <input type="search"
            name="q"
@@ -137,14 +139,9 @@
   #}
   <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
         style="display:contents">
-    <input type="hidden" name="priority" value="{{ fp }}">
-    {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
-    {% if fq     %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
-    {% if fmin == 0 %}
-    <input type="hidden" name="min_value" value="1000000">
-    {% endif %}
+    {{ carry(skip_min=true) }}
+    {% if fmin == 0 %}<input type="hidden" name="min_value" value="1000000">{% endif %}
     {# When fmin > 0: omit min_value → defaults to 0 (filter off). #}
-    {% if fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
     <button type="submit"
             class="tab"
             aria-selected="{{ 'true' if fmin > 0 else 'false' }}"
@@ -156,10 +153,7 @@
   {# ── Hide recently contacted (positive outcome, within 24h) ────────────── #}
   <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
         style="display:contents">
-    <input type="hidden" name="priority" value="{{ fp }}">
-    {% if ftypes %}<input type="hidden" name="type"      value="{{ ftypes | join(',') }}">{% endif %}
-    {% if fq     %}<input type="hidden" name="q"         value="{{ fq | e }}">{% endif %}
-    {% if fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
+    {{ carry(skip_hide=true) }}
     {% if not fhide %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
     {# When fhide: omit hide_contacted → defaults to false (filter off). #}
     <button type="submit"
@@ -169,6 +163,34 @@
       ✅ Ẩn đã liên hệ
     </button>
   </form>
+
+  {# ── Core product chips (Fine Japan 8 SKU) ─────────────────────────────── #}
+  <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;width:100%">
+    <span class="caption" style="color:var(--fg-tertiary)">Sản phẩm:</span>
+    {% for pkey, plabel in [
+      ('cordyceps_vien',   'Cordyceps Viên'),
+      ('cordyceps_plus',   'Cordyceps Plus'),
+      ('fucoidan',         'Fucoidan'),
+      ('collagen_plus',    'Collagen Plus'),
+      ('collagen_swallow', "Collagen Swallow's Nest"),
+      ('shark_cartilage',  'Shark Cartilage'),
+      ('natto',            'Natto Kinase'),
+      ('metabo',           'Metabo'),
+    ] %}
+    <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+          style="display:contents">
+      {{ carry(skip_prod=true) }}
+      {% if fprod != pkey %}<input type="hidden" name="product" value="{{ pkey }}">{% endif %}
+      {# When already selected: omit product → clears filter (toggle off). #}
+      <button type="submit"
+              class="tab chip"
+              aria-selected="{{ 'true' if fprod == pkey else 'false' }}"
+              title="{{ plabel }}">
+        {{ plabel }}
+      </button>
+    </form>
+    {% endfor %}
+  </div>
 
   {# ── Spacer ────────────────────────────────────────────────────────────── #}
   <span style="flex:1"></span>

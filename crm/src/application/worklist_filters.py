@@ -9,6 +9,41 @@ from typing import Mapping
 
 from .worklist_ranking import urgency_score
 
+# Fine Japan 8 core SKUs — (url_key, display_label).
+# Matching uses keyword logic in _matches_core_product().
+CORE_PRODUCTS: list[tuple[str, str]] = [
+    ("cordyceps_vien",    "Cordyceps Viên"),
+    ("cordyceps_plus",    "Cordyceps Plus"),
+    ("fucoidan",          "Fucoidan"),
+    ("collagen_plus",     "Collagen Plus"),
+    ("collagen_swallow",  "Collagen Swallow's Nest"),
+    ("shark_cartilage",   "Shark Cartilage"),
+    ("natto",             "Natto Kinase"),
+    ("metabo",            "Metabo"),
+]
+
+
+def _matches_core_product(product_str: str, key: str) -> bool:
+    """Return True if product_str belongs to the given core product key."""
+    s = (product_str or "").lower()
+    if key == "cordyceps_vien":
+        return "cordyceps" in s and "plus" not in s
+    if key == "cordyceps_plus":
+        return "cordyceps plus" in s
+    if key == "fucoidan":
+        return "fucoidan" in s
+    if key == "collagen_plus":
+        return "collagen plus" in s
+    if key == "collagen_swallow":
+        return "swallow" in s
+    if key == "shark_cartilage":
+        return "shark" in s
+    if key == "natto":
+        return "natto" in s
+    if key == "metabo":
+        return "metabo" in s
+    return False
+
 
 def parse_filters(query_params: Mapping) -> dict:
     """Normalize raw query params into a canonical filter dict.
@@ -22,12 +57,15 @@ def parse_filters(query_params: Mapping) -> dict:
         min_value = int(raw_min) if raw_min else 0
     except ValueError:
         min_value = 0
+    product = query_params.get("product", "").strip()
+    valid_keys = {k for k, _ in CORE_PRODUCTS}
     return {
         "assignee": query_params.get("assignee", "me"),
         "priority": query_params.get("priority", "all"),
         "types": types_list,        # action_type strings to include (empty = all)
         "q": query_params.get("q", "").strip(),
         "min_value": min_value,
+        "product": product if product in valid_keys else "",
         "hide_contacted": query_params.get("hide_contacted", "") == "1",
     }
 
@@ -56,6 +94,8 @@ def active_filter_count(filters: dict) -> int:
     if filters["q"]:
         count += 1
     if filters["min_value"] > 0:
+        count += 1
+    if filters.get("product"):
         count += 1
     if filters.get("hide_contacted"):
         count += 1
@@ -100,6 +140,15 @@ def apply_filters(actions: list, tasks: list, filters: dict) -> tuple[list, list
             t for t in tasks
             if q in (getattr(t, "title", "") or "").lower()
             or q in (getattr(t, "description", "") or "").lower()
+        ]
+
+    # Product filter: match top_affinity_product or last_purchased_product (actions only).
+    product_key = filters.get("product", "")
+    if product_key:
+        actions = [
+            a for a in actions
+            if _matches_core_product(getattr(a, "top_affinity_product", "") or "", product_key)
+            or _matches_core_product(getattr(a, "last_purchased_product", "") or "", product_key)
         ]
 
     # Minimum value filter (actions only; tasks have no monetary value).
