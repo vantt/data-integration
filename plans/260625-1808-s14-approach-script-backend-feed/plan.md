@@ -20,6 +20,7 @@ Backend cho màn S14 (Call Mode Cockpit) đọc kịch bản tiếp cận AI. **
 | 02 | [File adapter + tests](phase-02-file-adapter.md) | ✅ |
 | 03 | [HTTP endpoint + wiring + tests](phase-03-http-endpoint-wiring.md) | ✅ |
 | 04 | [Data prep loader + e2e verify](phase-04-data-prep-loader.md) | ✅ |
+| 05 | [Worklist "Có kịch bản" filter (auto-handle scripts mới)](phase-05-worklist-has-script-filter.md) | ✅ |
 
 ## Trạng thái Giai đoạn C — S14 trong CRM (cập nhật 2026-06-25)
 | Bước | Trạng thái | Commit |
@@ -30,6 +31,7 @@ Backend cho màn S14 (Call Mode Cockpit) đọc kịch bản tiếp cận AI. **
 | Glue: route call_cockpit → repo (per-customer) + verify live | ✅ | e45cb45 |
 | Code review (2 HIGH + 3 MED → fix) | ✅ | a113db5 |
 | Test hardening B1 (13 test: R14 gate + 500/404) | ✅ | 2917a80 |
+| Worklist "Có kịch bản" filter — phase 05 (auto-handle scripts mới) | ✅ | 62ff52c |
 | Production auto-gen (Dagster + GPT → cache table) | ⬜ chưa làm | — |
 | B2 auth endpoint (gác — chính sách LAN-trust, nhất quán `/insight`) | ⬜ gác | — |
 
