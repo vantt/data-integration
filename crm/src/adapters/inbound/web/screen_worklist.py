@@ -24,6 +24,7 @@ from crm.src.domain.entities.party import PartyIdentity
 from crm.src.domain.entities.task import Task
 from crm.src.application.worklist_ranking import rank_worklist, today_ict
 from crm.src.application.worklist_filters import (
+    CORE_PRODUCTS,
     active_filter_count,
     apply_filters,
     available_action_types,
@@ -163,6 +164,7 @@ def make_worklist_router(
             "available_types": available_types,
             "active_filter_count": active_filter_count(filters),
             "filters": filters,
+            "core_products": CORE_PRODUCTS,
             # Pass raw lists for templates that might still iterate directly.
             "actions": all_actions,
             "tasks": all_tasks,

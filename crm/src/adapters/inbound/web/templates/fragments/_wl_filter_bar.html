@@ -1,23 +1,22 @@
 {# @surface S01 · Worklist filter bar | @kind PARTIAL #}
 {#
   Context (from worklist_fragment.html):
-    filters             dict  — {assignee, priority, types:list, q, min_value}
+    filters             dict  — {assignee, priority, types:list, q, min_value, product, hide_contacted}
     available_types     list  — distinct action_type values from UNFILTERED data
-                                (chips derived from live data so new mart action
-                                 types appear automatically without code changes)
+    core_products       list  — [(key, label), …] for Fine Japan 8 core SKUs
     active_filter_count int   — non-default filter count (for badge)
 
   Query-param contract (matches screen_worklist._parse_filters):
-    priority   str        — all|high|urgent
-    type       str        — comma-separated action_type list (empty = all)
-    q          str        — free-text search (customer name / rationale / title)
-    min_value  int        — minimum value_at_stake_vnd; 0 = no filter
+    priority        str   — all|high|urgent
+    type            str   — single action_type (empty = all)
+    q               str   — free-text search
+    min_value       int   — 1000000 when checkbox checked; absent/0 = no filter
+    product         str   — core product key (empty = all)
+    hide_contacted  str   — "1" when checked; absent = false
 
-  HTMX pattern: one <form hx-get> wraps every control. Hidden inputs carry the
-  current state; each visible control mutates just its own value. On change/click
-  HTMX serialises the form and issues GET /worklist/fragment?… targeting
-  #worklist-container outerHTML. This guarantees all active filters are preserved
-  when any single control changes — no manual URL merging required.
+  HTMX pattern: one <form id="wl-filter-form"> with display:contents wraps every
+  control. Each control carries hx-get + hx-include="#wl-filter-form" so all
+  filter state is serialised together on any change. No hidden-input bookkeeping.
 
   NOTE — assignee ("Người nhận") toggle is NOT rendered.
   Task.assignee_user_id exists in crm_task, but the worklist router has no access
@@ -35,161 +34,92 @@
 {% set fprod       = filters.product         | default('') %}
 {% set fhide       = filters.hide_contacted  | default(false) %}
 {% set avail       = available_types         | default([]) %}
+{% set prods       = core_products           | default([]) %}
 {% set badge_count = active_filter_count     | default(0) %}
-{# Macro: emit all "carry-through" hidden inputs except the one being changed. #}
-{# Callers emit their OWN control value separately so they can control toggle logic. #}
-{% macro carry(skip_priority=false, skip_type=false, skip_q=false, skip_min=false, skip_prod=false, skip_hide=false) %}
-  {% if not skip_priority %}<input type="hidden" name="priority"  value="{{ fp }}">{% endif %}
-  {% if not skip_type and ftypes %}<input type="hidden" name="type" value="{{ ftypes | join(',') }}">{% endif %}
-  {% if not skip_q    and fq     %}<input type="hidden" name="q"    value="{{ fq | e }}">{% endif %}
-  {% if not skip_min  and fmin   %}<input type="hidden" name="min_value" value="{{ fmin }}">{% endif %}
-  {% if not skip_prod and fprod  %}<input type="hidden" name="product"   value="{{ fprod }}">{% endif %}
-  {% if not skip_hide and fhide  %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
-{% endmacro %}
-
-{#
-  Form approach: hidden inputs for priority, type (joined), min_value carry the
-  current state. Each button or input updates its hidden sibling via a tiny
-  onclick/oninput before submitting, OR buttons are rendered as <button
-  type="button"> that set hidden values then trigger hx-submit on the form.
-
-  Simpler: render each group as its own mini-form that includes all other params
-  as hidden inputs (no JS needed). This is pure HTMX with zero JS.
-#}
-
-{# ── Helper: render hidden inputs for all EXCEPT the key being changed ──────── #}
-{# We use one <form> per control group for simplicity. Each form carries all
-   current filter values as hidden inputs, overriding only what it controls. #}
+{% set ftype_val   = ftypes[0] if ftypes else '' %}
 
 {# ── Root container ────────────────────────────────────────────────────────── #}
 <div class="toolbar"
      id="wl-filter-bar"
      style="flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-3);align-items:center;">
 
-  {# ── Priority toggles ──────────────────────────────────────────────────── #}
+{# Single form — display:contents makes children participate in toolbar flex layout
+   while hx-include="#wl-filter-form" serialises all inputs on any change. #}
+<form id="wl-filter-form" style="display:contents">
+
+  {# ── Priority select ───────────────────────────────────────────────────── #}
   <div style="display:flex;align-items:center;gap:var(--sp-2)">
-    <span class="caption" style="color:var(--fg-tertiary)">Ưu tiên:</span>
-    {% for val, label in [('all', 'Tất cả'), ('high', 'Cao'), ('urgent', 'Khẩn')] %}
-    <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-          style="display:contents">
-      {{ carry(skip_priority=true) }}
-      <input type="hidden" name="priority" value="{{ val }}">
-      <button type="submit" class="tab" aria-selected="{{ 'true' if fp == val else 'false' }}">
-        {{ label }}
-      </button>
-    </form>
-    {% endfor %}
+    <label class="caption" for="wl-priority" style="color:var(--fg-tertiary)">Ưu tiên:</label>
+    <select id="wl-priority" name="priority" class="input input--sm"
+            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+            hx-trigger="change" hx-include="#wl-filter-form">
+      <option value="all"    {% if fp == 'all'    %}selected{% endif %}>Tất cả</option>
+      <option value="high"   {% if fp == 'high'   %}selected{% endif %}>Cao</option>
+      <option value="urgent" {% if fp == 'urgent' %}selected{% endif %}>Khẩn</option>
+    </select>
   </div>
 
-  {# ── Action-type multi-select chips ────────────────────────────────────── #}
-  {#
-    Selecting a chip toggles that action_type in the comma-list.
-    When any type is selected, manual tasks are hidden (only action rows remain).
-    This is documented in screen_worklist: tasks always pass through the type
-    filter; selecting types implicitly focuses the view on actions only.
-  #}
+  {# ── Action-type select ────────────────────────────────────────────────── #}
   {% if avail %}
-  <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap">
-    <span class="caption" style="color:var(--fg-tertiary)">Loại:</span>
-    {% for atype in avail %}
-      {# Compute new type list: toggle membership for this chip. #}
-      {% if atype in ftypes %}
-        {% set new_types = ftypes | reject('equalto', atype) | list %}
-      {% else %}
-        {% set new_types = ftypes + [atype] %}
-      {% endif %}
-      <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-            style="display:contents">
-        {{ carry(skip_type=true) }}
-        {% if new_types %}<input type="hidden" name="type" value="{{ new_types | join(',') }}">{% endif %}
-        <button type="submit"
-                class="tab chip"
-                aria-selected="{{ 'true' if atype in ftypes else 'false' }}"
-                title="{{ atype }}">
-          {{ atype | replace('_', ' ') | title }}
-        </button>
-      </form>
-    {% endfor %}
+  <div style="display:flex;align-items:center;gap:var(--sp-2)">
+    <label class="caption" for="wl-type" style="color:var(--fg-tertiary)">Loại:</label>
+    <select id="wl-type" name="type" class="input input--sm"
+            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+            hx-trigger="change" hx-include="#wl-filter-form">
+      <option value="">Tất cả</option>
+      {% for atype in avail %}
+      <option value="{{ atype }}" {% if atype == ftype_val %}selected{% endif %}>
+        {{ atype | replace('_', ' ') | title }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endif %}
+
+  {# ── Product select ────────────────────────────────────────────────────── #}
+  {% if prods %}
+  <div style="display:flex;align-items:center;gap:var(--sp-2)">
+    <label class="caption" for="wl-product" style="color:var(--fg-tertiary)">Sản phẩm:</label>
+    <select id="wl-product" name="product" class="input input--sm"
+            hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+            hx-trigger="change" hx-include="#wl-filter-form">
+      <option value="">Tất cả</option>
+      {% for pkey, plabel in prods %}
+      <option value="{{ pkey }}" {% if fprod == pkey %}selected{% endif %}>{{ plabel }}</option>
+      {% endfor %}
+    </select>
   </div>
   {% endif %}
 
   {# ── Search input ──────────────────────────────────────────────────────── #}
-  <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-        style="display:flex;align-items:center;gap:var(--sp-2)">
-    {{ carry(skip_q=true) }}
-    <span class="caption" style="color:var(--fg-tertiary)">Tìm:</span>
-    <input type="search"
-           name="q"
-           value="{{ fq | e }}"
+  <div style="display:flex;align-items:center;gap:var(--sp-2)">
+    <label class="caption" for="wl-search" style="color:var(--fg-tertiary)">Tìm:</label>
+    <input id="wl-search" type="search" name="q" value="{{ fq | e }}"
            placeholder="Tên / SĐT / lý do…"
-           class="input input--sm"
-           style="min-width:160px"
-           hx-get="/worklist/fragment"
-           hx-include="closest form"
+           class="input input--sm" style="min-width:160px"
+           hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
            hx-trigger="keyup changed delay:400ms, search"
-           hx-target="#worklist-container"
-           hx-swap="outerHTML">
-  </form>
+           hx-include="#wl-filter-form">
+  </div>
 
-  {# ── Value toggle — "chỉ giá trị cao" ─────────────────────────────────── #}
-  {#
-    1_000_000 VND (1 M) is the high-value threshold. screen_worklist filters
-    actions where value_at_stake_vnd >= min_value. Toggle is a simple on/off:
-    clicking again restores min_value=0 (no filter).
-  #}
-  <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-        style="display:contents">
-    {{ carry(skip_min=true) }}
-    {% if fmin == 0 %}<input type="hidden" name="min_value" value="1000000">{% endif %}
-    {# When fmin > 0: omit min_value → defaults to 0 (filter off). #}
-    <button type="submit"
-            class="tab"
-            aria-selected="{{ 'true' if fmin > 0 else 'false' }}"
-            title="Chỉ hiện hành động có giá trị từ 1 triệu VND trở lên">
-      💰 Giá trị cao
-    </button>
-  </form>
-
-  {# ── Hide recently contacted (positive outcome, within 24h) ────────────── #}
-  <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-        style="display:contents">
-    {{ carry(skip_hide=true) }}
-    {% if not fhide %}<input type="hidden" name="hide_contacted" value="1">{% endif %}
-    {# When fhide: omit hide_contacted → defaults to false (filter off). #}
-    <button type="submit"
-            class="tab"
-            aria-selected="{{ 'true' if fhide else 'false' }}"
-            title="Ẩn khách đã liên hệ thành công trong 24h qua">
-      ✅ Ẩn đã liên hệ
-    </button>
-  </form>
-
-  {# ── Core product chips (Fine Japan 8 SKU) ─────────────────────────────── #}
-  <div style="display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;width:100%">
-    <span class="caption" style="color:var(--fg-tertiary)">Sản phẩm:</span>
-    {% for pkey, plabel in [
-      ('cordyceps_vien',   'Cordyceps Viên'),
-      ('cordyceps_plus',   'Cordyceps Plus'),
-      ('fucoidan',         'Fucoidan'),
-      ('collagen_plus',    'Collagen Plus'),
-      ('collagen_swallow', "Collagen Swallow's Nest"),
-      ('shark_cartilage',  'Shark Cartilage'),
-      ('natto',            'Natto Kinase'),
-      ('metabo',           'Metabo'),
-    ] %}
-    <form hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
-          style="display:contents">
-      {{ carry(skip_prod=true) }}
-      {% if fprod != pkey %}<input type="hidden" name="product" value="{{ pkey }}">{% endif %}
-      {# When already selected: omit product → clears filter (toggle off). #}
-      <button type="submit"
-              class="tab chip"
-              aria-selected="{{ 'true' if fprod == pkey else 'false' }}"
-              title="{{ plabel }}">
-        {{ plabel }}
-      </button>
-    </form>
-    {% endfor %}
+  {# ── Checkboxes: high-value + hide-contacted ────────────────────────────── #}
+  <div style="display:flex;align-items:center;gap:var(--sp-4)">
+    <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer"
+           title="Chỉ hiện hành động có giá trị từ 1 triệu VND trở lên">
+      <input type="checkbox" name="min_value" value="1000000"
+             {% if fmin > 0 %}checked{% endif %}
+             hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+             hx-trigger="change" hx-include="#wl-filter-form">
+      <span class="caption">💰 Giá trị cao</span>
+    </label>
+    <label style="display:flex;align-items:center;gap:var(--sp-2);cursor:pointer"
+           title="Ẩn khách đã liên hệ thành công trong 24h qua">
+      <input type="checkbox" name="hide_contacted" value="1"
+             {% if fhide %}checked{% endif %}
+             hx-get="/worklist/fragment" hx-target="#worklist-container" hx-swap="outerHTML"
+             hx-trigger="change" hx-include="#wl-filter-form">
+      <span class="caption">✅ Ẩn đã liên hệ</span>
+    </label>
   </div>
 
   {# ── Spacer ────────────────────────────────────────────────────────────── #}
@@ -212,4 +142,5 @@
   </div>
   {% endif %}
 
+</form>
 </div>
