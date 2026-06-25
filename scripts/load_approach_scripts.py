@@ -44,10 +44,14 @@ def _default_src() -> Path:
 
 
 def _default_dest() -> Path:
-    """Derive dest from CRM_DB_PATH env var, then common fallbacks."""
-    db_path = os.getenv("CRM_DB_PATH")
-    if db_path:
-        return Path(db_path).parent / "approach_scripts"
+    """Derive dest mirroring composition.py: CRM_APPROACH_SCRIPT_DIR override,
+    else {CRM_DATA_DIR}/approach_scripts, then common fallbacks."""
+    explicit = os.getenv("CRM_APPROACH_SCRIPT_DIR")
+    if explicit:
+        return Path(explicit)
+    data_dir = os.getenv("CRM_DATA_DIR")  # docker-compose sets CRM_DATA_DIR=/data
+    if data_dir:
+        return Path(data_dir) / "approach_scripts"
     # Docker default
     docker_data = Path("/data/approach_scripts")
     if docker_data.parent.exists():

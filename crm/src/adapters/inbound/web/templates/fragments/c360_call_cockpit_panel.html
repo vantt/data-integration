@@ -2,9 +2,10 @@
 {# HTMX fragment for /customers/{party_id}/panels/call_cockpit
    Rendered inside S03's #tab-panel — reuses S03's right sidebar (not duplicated here).
    Data contract:
-     script   : dict | None  — deserialized wh_approach_script JSON (see pinned contract below)
-     meta     : dict         — { recommended: bool, confidence: str, refreshed_at: str }
-     party    : Party360     — party entity (name, phone, province, status, owner_user_id)
+     script   : dict | None  — deserialized wh_approach_script JSON (see pinned contract below);
+                               served by screen_customer_360 call_cockpit branch from
+                               app.state.approach_repo.get_by_customer_id(customer_id)
+     meta     : dict | None  — { recommended: bool, confidence: str, refreshed_at: str }
      party_id : str
    Rules enforced: R1 (consent gating checked upstream), R2 (refreshed_at visible), R14 (STOP state)
 
@@ -15,11 +16,6 @@
               opening_message, fallback_message, talking_points[], cross_sell[],
               objection_handling[{objection,response}], do_not[]},
      confidence, data_gaps[]
-
-   TODO (fixture → repo): The `script` and `meta` dicts are currently seeded from static JSON
-   fixtures in the route handler (see screen_customer_360.py `handle_customer_360_panel` for
-   the "call_cockpit" branch). Replace the fixture load with a real repository call to
-   `ApproachScriptReader.get_by_customer_id(customer_id)` once the backend repo is wired.
 #}
 
 {% if not script %}
