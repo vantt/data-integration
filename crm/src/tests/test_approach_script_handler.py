@@ -4,6 +4,10 @@ Cases:
   - party with sapo_customer identity + script file → 200, correct script + meta
   - party with no sapo_customer identity → 404
   - party with sapo_customer identity but no script file → 200, script=null, meta=null
+  - recommended=False in script → 200, meta.recommended is False AND script.approach.recommended is False
+  - list_identities raises exception → 500
+  - identities present but none is sapo_customer type → 404
+  - sapo_customer identity_value is non-numeric → 404
 
 Uses FastAPI TestClient (requires httpx: pip install httpx).
 Repos are wired with minimal mocks — no DB required.
@@ -56,6 +60,15 @@ _VALID_DATA = {
     "data_gaps": [],
 }
 
+_STOP_DATA = {
+    **_VALID_DATA,
+    "approach": {
+        **_VALID_DATA["approach"],
+        "recommended": False,
+        "reason_if_not_recommended": "Contact quality too low to call.",
+    },
+}
+
 
 def _make_identity(identity_type: str, identity_value: str) -> PartyIdentity:
     return PartyIdentity(
@@ -74,10 +87,6 @@ def _make_identity(identity_type: str, identity_value: str) -> PartyIdentity:
 
 def _make_app(party_repo, approach_repo) -> FastAPI:
     """Build a minimal FastAPI app with approach_script_handler wired."""
-    # Reset module-level holders between tests.
-    approach_script_handler._party_repo = None
-    approach_script_handler._approach_repo = None
-
     wire_approach_script_router(party_repo, approach_repo)
     app = FastAPI()
     app.include_router(approach_script_handler.router)
@@ -98,6 +107,22 @@ def _party_repo_no_identity():
     repo = MagicMock()
     repo.list_identities.return_value = []
     return repo
+
+
+# ── Isolation fixture ─────────────────────────────────────────────────────────
+
+@pytest.fixture(autouse=True)
+def reset_handler_globals():
+    """Reset module-level repo globals before AND after every test.
+
+    Prevents state from one test leaking into the next regardless of test
+    ordering or which file imported the handler first.
+    """
+    approach_script_handler._party_repo = None
+    approach_script_handler._approach_repo = None
+    yield
+    approach_script_handler._party_repo = None
+    approach_script_handler._approach_repo = None
 
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
@@ -148,3 +173,84 @@ def test_party_with_identity_but_no_file_returns_200_null(tmp_path):
     body = resp.json()
     assert body["script"] is None
     assert body["meta"] is None
+
+
+# ── F8 new cases ──────────────────────────────────────────────────────────────
+
+def test_recommended_false_script_returns_200_with_stop_meta(tmp_path):
+    """recommended=False script → 200; meta.recommended is False AND script.approach.recommended is False.
+
+    Locks the R14 STOP gate: the API must propagate the false value faithfully
+    so the call-cockpit UI can render the STOP state.
+    """
+    customer_id = 603264281
+    script_file = tmp_path / f"{customer_id}.json"
+    script_file.write_text(json.dumps(_STOP_DATA, ensure_ascii=False), encoding="utf-8")
+
+    party_repo = _party_repo_with_sapo_customer(customer_id)
+    approach_repo = FileApproachScriptRepository(tmp_path)
+    client = TestClient(_make_app(party_repo, approach_repo))
+
+    resp = client.get("/api/parties/p-stop/approach-script")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["script"] is not None
+    # meta gate value must be False
+    assert body["meta"]["recommended"] is False
+    # raw script dict must also carry False so the template can read ap.recommended
+    assert body["script"]["approach"]["recommended"] is False
+    # reason must be present for STOP-state display
+    assert body["script"]["approach"]["reason_if_not_recommended"] == "Contact quality too low to call."
+
+
+def test_list_identities_exception_returns_500(tmp_path):
+    """list_identities raises → handler returns HTTP 500, not an unhandled crash."""
+    party_repo = MagicMock()
+    party_repo.list_identities.side_effect = RuntimeError("db connection lost")
+    approach_repo = FileApproachScriptRepository(tmp_path)
+    client = TestClient(_make_app(party_repo, approach_repo), raise_server_exceptions=False)
+
+    resp = client.get("/api/parties/p-db-fail/approach-script")
+
+    assert resp.status_code == 500
+    assert "identity" in resp.json()["detail"].lower()
+
+
+def test_identities_present_but_no_sapo_customer_type_returns_404(tmp_path):
+    """Party has identities but none is sapo_customer type → 404.
+
+    Covers the case where only phone/email identities exist; the handler must
+    not match on unrelated identity types and fall through to 404.
+    """
+    party_repo = MagicMock()
+    party_repo.list_identities.return_value = [
+        _make_identity("phone", "0901234567"),
+        _make_identity("email", "test@example.com"),
+    ]
+    approach_repo = FileApproachScriptRepository(tmp_path)
+    client = TestClient(_make_app(party_repo, approach_repo))
+
+    resp = client.get("/api/parties/p-no-sapo/approach-script")
+
+    assert resp.status_code == 404
+    assert "sapo_customer" in resp.json()["detail"]
+
+
+def test_sapo_customer_identity_with_non_numeric_value_returns_404(tmp_path):
+    """sapo_customer identity whose value cannot be cast to int → 404.
+
+    int("abc") raises ValueError; the handler must skip the identity and,
+    finding no usable customer_id, return 404.
+    """
+    party_repo = MagicMock()
+    party_repo.list_identities.return_value = [
+        _make_identity("sapo_customer", "abc-not-a-number"),
+    ]
+    approach_repo = FileApproachScriptRepository(tmp_path)
+    client = TestClient(_make_app(party_repo, approach_repo))
+
+    resp = client.get("/api/parties/p-bad-cid/approach-script")
+
+    assert resp.status_code == 404
+    assert "sapo_customer" in resp.json()["detail"]
