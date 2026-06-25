@@ -11,7 +11,9 @@ Identifier resolution on the full-page route:
 """
 from __future__ import annotations
 
+import json
 import logging
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Protocol
@@ -347,6 +349,47 @@ def make_customer_360_router(
             return templates.TemplateResponse(
                 "fragments/c360_notes_panel.html",
                 {**ctx, "notes": note_list, "type_filter": type_filter},
+            )
+        if panel == "call_cockpit":
+            # ── Approach-script panel (S14 cockpit embedded in S03) ──────────
+            # Default path reads the real approach script from the repository
+            # (FileApproachScriptRepository, exposed on app.state by composition).
+            # ?fixture=stop forces the STOP-state demo — the current pilot data has
+            # no recommended=false rows yet, so the gated state needs a fixture.
+            party360, ids = _load_base(party_id)
+            customer_id = _sapo_customer_id(ids)
+            script_dict = None
+            meta_dict = None
+            if request.query_params.get("fixture", "") == "stop":
+                stop_path = os.path.normpath(os.path.join(
+                    os.path.dirname(__file__), "..", "..", "..", "..", "..", "..", "..",
+                    "plans", "260624-1917-customer-insight-prompt-template",
+                    "baselines", "output-claude-03-churned_highvalue_winback.json"))
+                try:
+                    with open(stop_path, encoding="utf-8") as fh:
+                        script_dict = json.load(fh)
+                    ap = script_dict.get("approach", {})
+                    meta_dict = {"recommended": ap.get("recommended", True),
+                                 "confidence": script_dict.get("confidence"),
+                                 "refreshed_at": script_dict.get("refreshed_at", "")}
+                except Exception as exc:
+                    log.warning("c360 call_cockpit: stop fixture %s: %s", stop_path, exc)
+            else:
+                approach_repo = getattr(request.app.state, "approach_repo", None)
+                if customer_id and approach_repo is not None:
+                    try:
+                        scr = approach_repo.get_by_customer_id(customer_id)
+                        if scr is not None:
+                            script_dict = scr.data
+                            meta_dict = {"recommended": scr.recommended,
+                                         "confidence": scr.confidence,
+                                         "refreshed_at": scr.refreshed_at}
+                    except Exception as exc:
+                        log.warning("c360 call_cockpit: load script %s: %s", party_id, exc)
+            return templates.TemplateResponse(
+                "fragments/c360_call_cockpit_panel.html",
+                {**ctx, "script": script_dict, "meta": meta_dict,
+                 "party": party360},
             )
         return HTMLResponse("panel not found", status_code=404)
 

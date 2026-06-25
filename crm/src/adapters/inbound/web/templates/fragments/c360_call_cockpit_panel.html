@@ -1,0 +1,442 @@
+{# @surface S14 · Call Mode / Strategy Cockpit (main-section tab) | @source crm/docs/ui-spec/screens/S14-call-mode-cockpit.md | @kind PANEL #}
+{# HTMX fragment for /customers/{party_id}/panels/call_cockpit
+   Rendered inside S03's #tab-panel — reuses S03's right sidebar (not duplicated here).
+   Data contract:
+     script   : dict | None  — deserialized wh_approach_script JSON (see pinned contract below)
+     meta     : dict         — { recommended: bool, confidence: str, refreshed_at: str }
+     party    : Party360     — party entity (name, phone, province, status, owner_user_id)
+     party_id : str
+   Rules enforced: R1 (consent gating checked upstream), R2 (refreshed_at visible), R14 (STOP state)
+
+   Pinned context dict shape (script):
+     profile_read, value_assessment{tier,lifetime_value_vnd,margin_health,invest_level},
+     opportunity{headline,rationale,evidence[]}, risk{headline,type,rationale},
+     approach{recommended, reason_if_not_recommended, primary_channel, fallback_channel, timing,
+              opening_message, fallback_message, talking_points[], cross_sell[],
+              objection_handling[{objection,response}], do_not[]},
+     confidence, data_gaps[]
+
+   TODO (fixture → repo): The `script` and `meta` dicts are currently seeded from static JSON
+   fixtures in the route handler (see screen_customer_360.py `handle_customer_360_panel` for
+   the "call_cockpit" branch). Replace the fixture load with a real repository call to
+   `ApproachScriptReader.get_by_customer_id(customer_id)` once the backend repo is wired.
+#}
+
+{% if not script %}
+{# ── ST-CALL-NO-SCRIPT ──────────────────────────────────────────────────── #}
+<div class="state">
+  <div class="state__inner">
+    <div class="state__title">Chưa có kịch bản tiếp cận</div>
+    <p class="state__sub">Chưa có row <code>cache.wh_approach_script</code> cho khách này. Lô sinh kịch bản đêm chưa phủ khách này.</p>
+    <div style="display:flex;flex-wrap:wrap;gap:var(--sp-2);justify-content:center;margin-top:var(--sp-4)">
+      <a href="/customers" class="btn btn--secondary">Quay lại Danh sách</a>
+    </div>
+  </div>
+</div>
+
+{% else %}
+
+{# ── Resolve locals ──────────────────────────────────────────────────────── #}
+{% set ap = script.approach %}
+{% set is_stop = (ap.recommended == false) %}
+{% set confidence = script.confidence | default('medium') %}
+{% set conf_label = {'high': 'cao', 'medium': 'vừa', 'low': 'thấp'}.get(confidence, 'vừa') %}
+{% set conf_tone  = {'high': 'good', 'medium': 'warn', 'low': 'bad'}.get(confidence, 'warn') %}
+{% set refreshed_at = meta.refreshed_at | default('') %}
+{% set opp  = script.opportunity %}
+{% set risk = script.risk %}
+{% set va   = script.value_assessment %}
+
+<div class="s14-cockpit-wrap" data-party-id="{{ party_id }}" id="s14-panel-root">
+
+  {# ── STRATEGY SUMMARY ───────────────────────────────────────── #}
+  <div class="s14-card s14-summary">
+    <div class="s14-summary__grid">
+      <div class="s14-sig s14-sig--opp">
+        <span class="s14-sig__dot"></span>
+        <div>
+          <div class="s14-sig__k">Cơ hội</div>
+          <div class="s14-sig__v">{{ opp.headline if opp and opp.headline else "—" }}</div>
+        </div>
+      </div>
+      <div class="s14-sig s14-sig--risk">
+        <span class="s14-sig__dot"></span>
+        <div>
+          <div class="s14-sig__k">Rủi ro</div>
+          <div class="s14-sig__v">{{ risk.headline if risk and risk.headline else "—" }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="s14-summary__read">
+      <span class="s14-summary__label">Chân dung</span> {{ script.profile_read or "—" }}
+    </div>
+    <div class="s14-summary__foot">
+      {% if va %}
+      <span class="s14-meta-chip">{{ va.tier }}</span>
+      {% if va.invest_level and va.invest_level != "—" %}
+      <span class="s14-meta-chip">Đầu tư: {{ va.invest_level }}</span>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  {% if is_stop %}
+  {# ── ST-CALL-STOP (R14) ────────────────────────────────────── #}
+  <div class="s14-stop">
+    <div class="s14-stop__head">
+      <span class="s14-stop__sign">
+        <svg class="ico" width="20" height="20" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+      </span>
+      <div>
+        <div class="s14-stop__title">KHÔNG GỌI THEO KỊCH BẢN — CẦN XÁC MINH</div>
+        <div class="s14-stop__sub mono">recommended = false · R14 AI Approach-Script Gate</div>
+      </div>
+    </div>
+    {% if ap.reason_if_not_recommended %}
+    <div class="s14-stop__reason">
+      <div class="s14-stop__reason-k">Lý do</div>
+      {{ ap.reason_if_not_recommended }}
+    </div>
+    {% endif %}
+    {% if script.data_gaps and script.data_gaps | length > 0 %}
+    <div class="s14-stop__gaps">
+      {% for g in script.data_gaps %}
+      <span class="s14-gap">{{ g }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <div class="s14-stop__act">
+      <button class="btn btn--primary"
+              hx-get="/modals/m05?party_id={{ party_id }}&prefill_title={{ 'Xác minh loại tài khoản (nghi B2B)' | urlencode }}&source=verify_account"
+              hx-target="#modal-root" hx-swap="innerHTML">
+        <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/></svg>
+        Tạo task xác minh tài khoản
+      </button>
+      <a href="/customers/{{ party_id }}" class="btn btn--ghost">Xem hồ sơ 360</a>
+    </div>
+  </div>
+
+  {% else %}
+  {# ── TALK TRACK ────────────────────────────────────────────── #}
+  <div class="s14-block" id="s14-talktrack-block">
+    {# Channel toggle — A-S14-002: swaps opening_message ↔ fallback_message via JS #}
+    <div class="s14-rhead">
+      <span class="s14-rhead__label" id="s14-chan-label">Lời thoại · Gọi điện</span>
+      <div class="s14-rhead__right">
+        <div class="s14-chan" role="group" aria-label="Kênh liên lạc">
+          <button class="s14-chan__btn s14-chan__btn--on"
+                  id="s14-chan-primary"
+                  type="button"
+                  onclick="s14SwitchChannel('primary')"
+                  aria-pressed="true">
+            <svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3.5c0 5.5 4 9.5 10 10l1.5-3-2.5-1.5-1 1.5c-1.5-.5-3.5-2.5-4-4l1.5-1L7 3 3 3.5z"/></svg>
+            Gọi
+          </button>
+          <button class="s14-chan__btn"
+                  id="s14-chan-fallback"
+                  type="button"
+                  onclick="s14SwitchChannel('fallback')"
+                  aria-pressed="false">
+            <svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="12" height="9" rx="1.5"/><path d="M2 5l6 4 6-4"/></svg>
+            Zalo
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {% if confidence == 'low' %}
+    <div class="s14-lowconf">
+      <svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+      Độ tin thấp — kiểm chứng khi nói chuyện, đừng cam kết chắc.
+    </div>
+    {% endif %}
+
+    <div class="s14-track{% if confidence == 'low' %} s14-track--dim{% endif %}" id="s14-track-box">
+      <p class="s14-track__text" id="s14-opening-text">"{{ ap.opening_message }}"</p>
+      {# A-S14-001: Copy talk track to clipboard #}
+      <button class="s14-copy" type="button" id="s14-copy-btn"
+              onclick="s14CopyOpening()"
+              title="Copy lời mở đầu">
+        <svg class="ico" id="s14-copy-icon" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="8" height="10" rx="1.2"/><path d="M3 12V3a1 1 0 0 1 1-1h6"/></svg>
+        <span id="s14-copy-label">Copy</span>
+      </button>
+    </div>
+
+    {% if ap.timing %}
+    <div class="s14-timing">
+      <svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2 1.5"/></svg>
+      {{ ap.timing }}
+    </div>
+    {% endif %}
+  </div>
+
+  {# ── TALKING POINTS ───────────────────────────────────────── #}
+  {% if ap.talking_points and ap.talking_points | length > 0 %}
+  <div class="s14-block">
+    <div class="s14-rhead">
+      <span class="s14-rhead__label">Điểm nói · tick khi đã nói</span>
+      <span class="s14-rhead__right">
+        <span class="s14-count mono" id="s14-tp-count">0/{{ ap.talking_points | length }}</span>
+      </span>
+    </div>
+    <div class="s14-tplist" id="s14-tplist">
+      {% for tp in ap.talking_points %}
+      <button class="s14-tp"
+              type="button"
+              data-tp-idx="{{ loop.index0 }}"
+              onclick="s14ToggleTP(this)"
+              aria-pressed="false">
+        <span class="s14-tp__box" aria-hidden="true">
+          <svg class="ico" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:none" aria-hidden="true"><path d="M2 7l4 4L12 3"/></svg>
+        </span>
+        <span class="s14-tp__text">{{ tp }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    {% if ap.cross_sell and ap.cross_sell | length > 0 %}
+    <div class="s14-cross">
+      <span class="s14-cross__label">Gợi thêm</span>
+      {% for c in ap.cross_sell %}
+      <span class="s14-cross__chip">{{ c }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {# ── OBJECTION HANDLING ───────────────────────────────────── #}
+  {% if ap.objection_handling and ap.objection_handling | length > 0 %}
+  <div class="s14-block">
+    <div class="s14-rhead">
+      <span class="s14-rhead__label">Xử lý từ chối</span>
+      <span class="s14-rhead__right">
+        {# A-S14-005: objection search — inline filter via JS (no HTMX needed; client-only) #}
+        <div class="s14-objsearch" role="search" aria-label="Tìm tình huống">
+          <svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="7" r="4.5"/><path d="M10.5 10.5 14 14"/></svg>
+          <input type="search"
+                 id="s14-obj-search"
+                 placeholder="khách vừa nói gì?"
+                 aria-label="Tìm tình huống"
+                 oninput="s14FilterObj(this.value)"
+                 autocomplete="off">
+          <button class="s14-objsearch__x" type="button" onclick="s14ClearObjSearch()" aria-label="Xóa" style="display:none" id="s14-obj-clear">✕</button>
+        </div>
+      </span>
+    </div>
+    <div class="s14-objlist" id="s14-objlist">
+      {% for obj in ap.objection_handling %}
+      <div class="s14-obj"
+           data-obj-q="{{ obj.objection | lower }}"
+           data-obj-a="{{ obj.response | lower }}">
+        {# A-S14-004: accordion expand/collapse #}
+        <button class="s14-obj__q"
+                type="button"
+                onclick="s14ToggleObj(this)"
+                aria-expanded="false">
+          <span class="s14-obj__chev">
+            <svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+          </span>
+          <span class="s14-obj__qtext">"{{ obj.objection }}"</span>
+          <span class="s14-obj__hint">xem câu trả lời</span>
+        </button>
+        <div class="s14-obj__a" hidden>{{ obj.response }}</div>
+      </div>
+      {% endfor %}
+      <div class="s14-obj-empty" id="s14-obj-empty" style="display:none">Không có tình huống khớp.</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {# ── GUARDRAILS ────────────────────────────────────────────── #}
+  {% if ap.do_not and ap.do_not | length > 0 %}
+  <div class="s14-guard" role="note" aria-label="Guardrails">
+    <span class="s14-guard__sign" aria-hidden="true">
+      <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+    </span>
+    <div class="s14-guard__list">
+      {% for d in ap.do_not %}
+      <span class="s14-guard__item">{{ d }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% endif %}{# /is_stop #}
+
+  {# ── TRUST FOOTER — R2: refreshed_at must always be visible ─ #}
+  <div class="s14-trust" aria-label="Trust metadata">
+    <span class="s14-trust__item">
+      Độ tin: <b class="s14-conf s14-conf--{{ conf_tone }}">{{ conf_label }}</b>
+    </span>
+    <span class="s14-trust__sep" aria-hidden="true">·</span>
+    <span class="s14-trust__item{% if refreshed_at %} js-s14-stale{% endif %}"
+          id="s14-trust-freshness"
+          title="{{ refreshed_at | format_datetime_ict if refreshed_at else '' }}">
+      script {{ refreshed_at | format_datetime_ict if refreshed_at else "—" }}
+    </span>
+    <span class="s14-trust__sep" aria-hidden="true">·</span>
+    <span class="s14-trust__caveat">
+      <svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg>
+      AI gợi ý — dùng phán đoán của bạn
+    </span>
+  </div>
+
+  {# ── OUTCOME BAR (sticky) — only shown when recommended=true (not STOP) ── #}
+  {% if not is_stop %}
+  <div class="s14-outcome" role="group" aria-label="Ghi kết quả cuộc gọi">
+    <div class="s14-outcome__row">
+      <div class="s14-outcome__btns">
+        {# A-S14-009: log outcome → M08 with outcome_hint #}
+        <button class="s14-oc s14-oc--good" type="button"
+                hx-get="/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=call&outcome=answered"
+                hx-target="#modal-root" hx-swap="innerHTML">
+          <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 7l4 4L12 3"/></svg>
+          Gọi được
+        </button>
+        <button class="s14-oc s14-oc--miss" type="button"
+                hx-get="/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=call&outcome=no_answer"
+                hx-target="#modal-root" hx-swap="innerHTML">
+          <svg class="ico" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><line x1="1" y1="1" x2="13" y2="13"/><line x1="13" y1="1" x2="1" y2="13"/></svg>
+          Không nghe
+        </button>
+        <button class="s14-oc s14-oc--later" type="button"
+                hx-get="/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=call&outcome=callback"
+                hx-target="#modal-root" hx-swap="innerHTML">
+          <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 5v3.5l2 1.5"/></svg>
+          Hẹn lại
+        </button>
+        <button class="s14-oc s14-oc--buy" type="button"
+                hx-get="/modals/m08?party_id={{ party_id }}&mode=log&hinh_thuc=call&outcome=purchased"
+                hx-target="#modal-root" hx-swap="innerHTML">
+          <svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.5" cy="12.5" r="1.2" fill="currentColor" stroke="none"/><circle cx="11.5" cy="12.5" r="1.2" fill="currentColor" stroke="none"/><path d="M1.5 2.5h2l2 7h6l1.5-5h-11"/></svg>
+          Đã mua
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>{# /.s14-cockpit-wrap #}
+
+{# ── Inline JS for purely client-side interactions ────────────────────────
+   All interactions that don't need server data stay here (copy, toggle TP,
+   channel switch, obj accordion/search). No HTMX needed for these.
+   A-S14-001/002/003/004/005.
+#}
+<script>
+(function () {
+  // Data baked from server at render time — safe, no eval
+  var PRIMARY_MSG  = {{ ap.opening_message | tojson }};
+  var FALLBACK_MSG = {{ ap.fallback_message | tojson }};
+  var TP_TOTAL     = {{ (ap.talking_points | length) if ap.talking_points else 0 }};
+
+  var _channel = 'primary'; // current channel state
+  var _doneTPs = [];         // array of done tp indices
+
+  // ── A-S14-002: Channel toggle ─────────────────────────────
+  window.s14SwitchChannel = function (chan) {
+    _channel = chan;
+    var isPrimary = (chan === 'primary');
+    var textEl    = document.getElementById('s14-opening-text');
+    var labelEl   = document.getElementById('s14-chan-label');
+    var btnP      = document.getElementById('s14-chan-primary');
+    var btnF      = document.getElementById('s14-chan-fallback');
+
+    if (textEl)   textEl.textContent = '"' + (isPrimary ? PRIMARY_MSG : FALLBACK_MSG) + '"';
+    if (labelEl)  labelEl.textContent = 'Lời thoại · ' + (isPrimary ? 'Gọi điện' : 'Zalo');
+    if (btnP)  { btnP.classList.toggle('s14-chan__btn--on', isPrimary);  btnP.setAttribute('aria-pressed', isPrimary ? 'true' : 'false'); }
+    if (btnF)  { btnF.classList.toggle('s14-chan__btn--on', !isPrimary); btnF.setAttribute('aria-pressed', isPrimary ? 'false' : 'true'); }
+  };
+
+  // ── A-S14-001: Copy opening message ──────────────────────
+  window.s14CopyOpening = function () {
+    var msg  = (_channel === 'primary') ? PRIMARY_MSG : FALLBACK_MSG;
+    var icon = document.getElementById('s14-copy-icon');
+    var lbl  = document.getElementById('s14-copy-label');
+    var box  = document.getElementById('s14-track-box');
+    var done = function () {
+      if (lbl)  lbl.textContent = 'Đã copy';
+      if (box)  { box.classList.add('s14-track--flash'); }
+      setTimeout(function () {
+        if (lbl) lbl.textContent = 'Copy';
+        if (box) box.classList.remove('s14-track--flash');
+      }, 1500);
+    };
+    try { navigator.clipboard.writeText(msg).then(done, done); } catch (e) { done(); }
+  };
+
+  // ── A-S14-003: Talking point toggle ──────────────────────
+  window.s14ToggleTP = function (btn) {
+    var idx   = parseInt(btn.getAttribute('data-tp-idx'), 10);
+    var isOn  = btn.classList.toggle('s14-tp--on');
+    var box   = btn.querySelector('.s14-tp__box');
+    var svg   = btn.querySelector('.s14-tp__box svg');
+    btn.setAttribute('aria-pressed', isOn ? 'true' : 'false');
+    if (box) box.classList.toggle('s14-tp__box--on', isOn);
+    if (svg) svg.style.display = isOn ? '' : 'none';
+
+    if (isOn && !_doneTPs.includes(idx)) { _doneTPs.push(idx); }
+    else if (!isOn) { _doneTPs = _doneTPs.filter(function (i) { return i !== idx; }); }
+
+    var countEl = document.getElementById('s14-tp-count');
+    if (countEl) countEl.textContent = _doneTPs.length + '/' + TP_TOTAL;
+  };
+
+  // ── A-S14-004: Objection accordion ───────────────────────
+  window.s14ToggleObj = function (btn) {
+    var card   = btn.closest('.s14-obj');
+    var answer = card ? card.querySelector('.s14-obj__a') : null;
+    var hint   = btn.querySelector('.s14-obj__hint');
+    var isOpen = card ? card.classList.toggle('s14-obj--open') : false;
+    btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (answer) answer.hidden = !isOpen;
+    if (hint)   hint.textContent = isOpen ? 'thu gọn' : 'xem câu trả lời';
+  };
+
+  // ── A-S14-005: Objection search/filter ───────────────────
+  window.s14FilterObj = function (q) {
+    var qLow    = (q || '').trim().toLowerCase();
+    var list    = document.getElementById('s14-objlist');
+    var empty   = document.getElementById('s14-obj-empty');
+    var clearBtn = document.getElementById('s14-obj-clear');
+    if (!list) return;
+    var cards   = list.querySelectorAll('.s14-obj');
+    var visible = 0;
+    cards.forEach(function (card) {
+      var haystack = (card.getAttribute('data-obj-q') || '') + ' ' + (card.getAttribute('data-obj-a') || '');
+      var show = !qLow || haystack.includes(qLow);
+      card.style.display = show ? '' : 'none';
+      if (show) visible++;
+    });
+    if (empty) empty.style.display = (qLow && visible === 0) ? '' : 'none';
+    if (clearBtn) clearBtn.style.display = qLow ? '' : 'none';
+  };
+
+  window.s14ClearObjSearch = function () {
+    var inp = document.getElementById('s14-obj-search');
+    if (inp) { inp.value = ''; }
+    s14FilterObj('');
+    if (inp) inp.focus();
+  };
+
+  // ── Stale badge: mark refreshed_at if > 24 h ─────────────
+  (function () {
+    var el = document.getElementById('s14-trust-freshness');
+    if (!el) return;
+    var ts = {{ (refreshed_at | tojson) if refreshed_at else '""' }};
+    if (!ts) return;
+    try {
+      var d   = new Date(ts);
+      var age = (Date.now() - d.getTime()) / 3600000; // hours
+      if (age > 24) {
+        el.classList.add('s14-trust__item--stale');
+        el.title = el.title + ' (quá 24h)';
+        el.insertAdjacentHTML('afterbegin',
+          '<svg class="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 2 13h12L8 3z"/><line x1="8" y1="7" x2="8" y2="10"/><circle cx="8" cy="12" r="0.4" fill="currentColor" stroke="none"/></svg> ');
+      }
+    } catch (e) {}
+  }());
+}());
+</script>
+
+{% endif %}{# /if not script #}

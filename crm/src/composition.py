@@ -70,6 +70,13 @@ from adapters.inbound.http.segment_handler import make_segment_router
 from adapters.inbound.http.campaign_handler import make_campaign_router
 from adapters.inbound.http.json_api_mirror_handler import make_json_api_mirror_router
 from adapters.inbound.http.dataquality_handler import make_dataquality_router
+from adapters.inbound.http.approach_script_handler import (
+    wire_approach_script_router,
+    router as approach_script_router,
+)
+
+# ── Outbound: File ────────────────────────────────────────────────────────────
+from adapters.outbound.file.approach_script_file_repository import FileApproachScriptRepository
 
 # ── Inbound: Web UI screens ───────────────────────────────────────────────────
 from adapters.inbound.web.format_helpers import (
@@ -143,6 +150,13 @@ def create_app() -> FastAPI:
     campaign_repo = SQLiteCampaignRepository(conn)
     app_user_repo = SQLiteAppUserRepository(conn)
 
+    # 2b. File-based repos.
+    scripts_dir = os.getenv(
+        "CRM_APPROACH_SCRIPT_DIR",
+        os.path.join(data_dir, "approach_scripts"),
+    )
+    approach_repo = FileApproachScriptRepository(scripts_dir)
+
     # 3. Application services.
     merge_svc = MergeService(party_repo, dedup_repo)
     profile_svc = ProfileService(profile_repo, cf_repo, tag_repo, note_repo)
@@ -193,8 +207,9 @@ def create_app() -> FastAPI:
     # 5. FastAPI app.
     app = FastAPI(title="CRM", docs_url="/api/docs", redoc_url=None)
 
-    # Store conversation_service on app.state (used by conversation_handler.py via request.app.state).
+    # Store services/repos on app.state for web screens that call them directly.
     app.state.conversation_service = conv_svc
+    app.state.approach_repo = approach_repo  # used by screen_call_cockpit (S14)
 
     # 6. Templates + static.
     templates = make_templates(str(_TEMPLATES_DIR))
@@ -244,6 +259,9 @@ def create_app() -> FastAPI:
 
     wire_insight_router(party_repo, cache_repo)
     app.include_router(insight_router)
+
+    wire_approach_script_router(party_repo, approach_repo)
+    app.include_router(approach_script_router)
 
     wire_activity_router(activity_svc)
     app.include_router(activity_router)
