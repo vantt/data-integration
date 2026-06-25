@@ -1,0 +1,64 @@
+{
+  "profile_read": "Khách hàng VIP Nguyễn Tính NT 17 (khu vực TP.HCM) có giá trị trọn đời 121.256.000đ qua 24 đơn hàng, nhưng đã ngừng mua 135 ngày (gấp ~4 lần chu kỳ mua trung bình 35 ngày). Khách nhạy cảm với khuyến mãi (PROMO_DEPENDENT), ưu tiên sản phẩm Fine Japan (Collagen & Đông trùng hạ thảo), biên lợi nhuận đơn hàng mỏng (~32.7%).",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 121256000,
+    "margin_health": "thin",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Kích hoạt lại khách VIP đang quá hạn mua bằng cách nhắc nhở sản phẩm yêu thích kết hợp ưu đãi nhỏ giữ biên lợi nhuận.",
+    "rationale": "Khách có giá trị cao, chu kỳ mua đều đặn trước đây, và tín hiệu OVERDUE cho thấy khả năng cao sẽ quay lại nếu được nhắc đúng sản phẩm họ ưa chuộng.",
+    "evidence": [
+      "value_group: VALUE_VIP",
+      "lifetime_value: 121256000",
+      "next_purchase_signal: OVERDUE",
+      "top_affinity_sku: VCSL19001H010 (Collagen Fine Japan)",
+      "recency_days: 135 vs avg_days_between_orders: 35"
+    ]
+  },
+  "risk": {
+    "headline": "Khách đã rời bỏ (Churned) hơn 4 tháng với thông tin liên lạc chưa xác minh, dễ mất vĩnh viễn nếu tiếp cận sai cách.",
+    "type": "churn",
+    "rationale": "Recency 135 ngày vượt xa chu kỳ mua 35 ngày, kết hợp contact_quality 'unverified' khiến việc tiếp cận qua số điện thoại có thể thất bại hoặc bị từ chối thẳng."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Liên hệ ngay trong tuần này vì khách đã quá hạn mua (135 ngày so với chu kỳ 35 ngày), để tránh khách chuyển sang đối thủ.",
+    "opening_message": "Dạ chào anh/chị Tính, em là [Tên] từ [Tên cửa hàng]. Em thấy anh/chị là khách VIP quen thuộc của shop, đợt này em gọi để hỏi thăm sức khỏe và nhắc anh/chị về lô Nước uống Collagen Fine Japan mới về, đúng loại anh/chị hay dùng ạ.",
+    "fallback_message": "Chào anh/chị Tính, em [Tên] từ [Tên cửa hàng]. Em có lô Collagen Fine Japan mới về đúng loại anh/chị ưa thích, kèm quà tặng nhỏ cho khách VIP. Anh/chị tiện thì nhắn em tư vấn nhé!",
+    "talking_points": [
+      "Nhắc lại sản phẩm yêu thích: Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus (top affinity) và Đông trùng hạ thảo Cordyceps (last purchased).",
+      "Đề xuất quà tặng nhỏ (không giảm giá sâu) để giữ biên lợi nhuận 32.7%, ví dụ: tặng thêm 1 chai collagen mini hoặc voucher tích lũy cho đơn tiếp theo."
+    ],
+    "cross_sell": [
+      "Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp (VCSL19001H010)",
+      "Thực phẩm bảo vệ sức khỏe Cordyceps (VTSC20001L001)"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Anh/chị không cần nữa / Đang dùng sản phẩm khác.",
+        "response": "Dạ em hiểu ạ. Anh/chị có thể chia sẻ lý do để shop cải thiện không? Nếu anh/chị vẫn quan tâm đến sức khỏe, bên em có dòng Đông trùng hạ thảo mới rất tốt, em gửi mẫu dùng thử miễn phí để anh/chị trải nghiệm nhé?"
+      },
+      {
+        "objection": "Giá cao quá / Đang đợi khuyến mãi.",
+        "response": "Dạ sản phẩm Fine Japan là hàng nhập khẩu nguyên hộp nên giá ổn định ạ. Nhưng riêng anh/chị là khách VIP, em xin tặng thêm [quà tặng nhỏ] kèm đơn hàng để tri ân, không cần đợi đợt khuyến mãi lớn đâu ạ."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không giảm giá sâu (>10%) vì biên lợi nhuận đã mỏng (~32.7%), dễ gây lỗ.",
+      "Không giả vờ như khách vừa mua hay khen sản phẩm tốt vì không có dữ liệu recent_notes/conversations.",
+      "Không dùng giọng B2B hoặc hard-sell vì khách là RETAIL, cần sự quan tâm cá nhân."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Thiếu birth_date và gender để cá nhân hóa lời chào.",
+    "Không có recent_notes/recent_conversations để hiểu lý do khách rời bỏ.",
+    "contact_quality 'unverified' khiến số điện thoại có thể không chính xác.",
+    "Tên 'Nguyễn Tính NT 17' có thể là tên cửa hàng (NT) nhưng customer_type vẫn là RETAIL, cần xác minh lại phân loại B2B/B2C."
+  ]
+}

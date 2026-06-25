@@ -1,0 +1,63 @@
+{
+  "profile_read": "Khách hàng Leflair là khách VIP thuộc khu vực TP.HCM, đã mua 31 đơn với giá trị vòng đời hơn 260 triệu VND. Tuy nhiên, khách đã ngưng mua gần 3 năm (1073 ngày) dù trước đây có chu kỳ mua rất đều đặn (trung bình 22 ngày/đơn). Sản phẩm khách gắn bó nhất là Viên uống giảm cân Calorie Burn - Chitosan và thực phẩm chức năng hỗ trợ gan/nghệ.",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 260594479,
+    "margin_health": "negative",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Cơ hội win-back khách VIP cũ bằng các chương trình khuyến mãi đúng gu sản phẩm sức khỏe Nhật Bản.",
+    "rationale": "Khách có giá trị vòng đời lớn, thuộc nhóm VIP, nhạy cảm với khuyến mãi và có affinity rõ ràng với thực phẩm chức năng Nhật Bản, dù đã vắng mặt lâu nhưng vẫn có thể phản hồi nếu có ưu đãi tốt.",
+    "evidence": [
+      "lifetime_value: 260594479.0",
+      "value_group: VALUE_VIP",
+      "discount_sensitivity: PROMO_DEPENDENT",
+      "product_affinity: PRODUCT_FINE_JAPAN"
+    ]
+  },
+  "risk": {
+    "headline": "Khách đã ngưng mua quá lâu (gần 3 năm) và biên lợi nhuận đơn hàng trung bình đang âm.",
+    "type": "churn",
+    "rationale": "Recency lên tới 1073 ngày cho thấy khách có thể đã chuyển sang đối thủ hoặc không còn nhu cầu. Việc dùng khuyến mãi để kéo lại có thể tiếp tục làm mỏng lợi nhuận (avg margin -1.5%)."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Gọi điện vào khung giờ hành chính hoặc đầu giờ chiều (14h-15h) để hỏi thăm sức khỏe và thông báo chương trình tri ân khách hàng thân thiết.",
+    "opening_message": "Dạ chào anh/chị Leflair, em gọi từ cửa hàng. Lâu quá không thấy anh/chị ghé, nay shop có chương trình tri ân đặc biệt dành riêng cho khách hàng VIP kèm ưu đãi cực tốt cho dòng Calorie Burn và thực phẩm chức năng Nhật Bản, em nhắn mình xem qua nhé!",
+    "fallback_message": "Chào anh/chị Leflair, shop vừa gửi mình voucher tri ân khách hàng VIP qua Zalo. Mình kiểm tra tin nhắn để nhận ưu đãi cho dòng Calorie Burn và Clam Extract nhé ạ!",
+    "talking_points": [
+      "Hỏi thăm sức khỏe và nhắc lại sự gắn bó của khách với dòng Viên uống giảm cân Calorie Burn - Chitosan trước đây.",
+      "Thông báo chương trình ưu đãi độc quyền dành riêng cho khách hàng VIP lâu năm, nhấn mạnh vào giá trị sản phẩm Nhật Bản cao cấp.",
+      "Giới thiệu combo hoặc quà tặng kèm khi mua lại liệu trình để tăng giá trị đơn hàng mà không giảm giá quá sâu."
+    ],
+    "cross_sell": [
+      "Clam Extract with Liver Hydrolysate and Turmeric Premium - Gói",
+      "Các dòng thực phẩm chức năng hỗ trợ sức khỏe và giải độc gan khác của Nhật."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Lâu rồi không dùng nữa, giờ không có nhu cầu.",
+        "response": "Dạ em hiểu, nhưng dòng Calorie Burn nay đã có công thức cải tiến. Shop đang có quà tặng dùng thử kèm voucher cho khách VIP, mình cứ nhận ưu đãi để dành khi cần ạ."
+      },
+      {
+        "objection": "Giá bên em cao quá, chị đang dùng loại khác rồi.",
+        "response": "Dạ hàng Nhật chuẩn auth bên em luôn đảm bảo chất lượng và an toàn tuyệt đối. Nay em áp dụng mức giá tri ân riêng cho mình, tính ra mỗi ngày chỉ tốn vài nghìn cho sức khỏe thôi ạ."
+      }
+    ],
+    "do_not": [
+      "Giả vờ như khách vừa mới mua hoặc sắp đến kỳ mua lại.",
+      "Giảm giá quá sâu làm trầm trọng thêm vấn đề lợi nhuận âm.",
+      "Gọi điện quá nhiều lần nếu khách không bắt máy hoặc từ chối."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Thiếu thông tin ngày sinh và giới tính cụ thể để cá nhân hóa lời chào.",
+    "Không có ghi chú CRM hay lịch sử hội thoại gần nhất để biết lý do chính xác khách rời bỏ.",
+    "Trạng thái consent_contact là 'unknown', chưa rõ khách có đồng ý nhận tin nhắn quảng cáo hay không."
+  ]
+}

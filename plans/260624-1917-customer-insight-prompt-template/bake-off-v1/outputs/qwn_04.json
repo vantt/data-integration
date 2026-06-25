@@ -1,0 +1,64 @@
+{
+  "profile_read": "Chị Huế là khách hàng cá nhân (RETAIL) tại TP.HCM, thuộc nhóm giá trị GOLD với tổng chi tiêu hơn 44 triệu VND chỉ qua 2 đơn hàng. Dù hệ thống gắn nhãn 'khách mới' nhưng thực tế chị đã ngưng mua hàng 1101 ngày (khoảng 3 năm), rơi vào trạng thái Churned. Sản phẩm chị từng mua là Đông trùng hạ thảo (Cordyceps Plus) thuộc dòng cao cấp Nhật Bản, có biên lợi nhuận rất tốt (~65.5%) và chị có xu hướng phụ thuộc vào khuyến mãi.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 44016000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Win-back khách hàng giá trị cao bằng ưu đãi độc quyền cho dòng sản phẩm sức khỏe cao cấp Nhật Bản.",
+    "rationale": "Chị Huế có mức chi tiêu trung bình rất lớn (~22 triệu/đơn) cho sản phẩm Đông trùng hạ thảo, biên lợi nhuận dày (~65.5%) cho phép tung ra các gói khuyến mãi/quà tặng hấp dẫn để kích thích nhu cầu mua lại sau 3 năm vắng bóng.",
+    "evidence": [
+      "lifetime_value: 44016000.0",
+      "order_count: 2",
+      "avg_order_contribution_margin_pct: 0.6557352207869609",
+      "discount_sensitivity: PROMO_DEPENDENT"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đã rời bỏ (Churned) quá lâu (3 năm) và số điện thoại chưa được xác minh (unverified) nên tỷ lệ phản hồi có thể rất thấp.",
+    "type": "churn",
+    "rationale": "recency_days lên đến 1101 ngày, customer_status là Churned, và contact_quality là unverified. Kịch bản tiếp thị có thể bị coi là spam nếu không tinh tế."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Gọi vào giờ hành chính hoặc đầu giờ tối (sau 18h) vì khách mua thực phẩm sức khỏe cao cấp, có thể là người bận rộn. Cần tiếp cận với tâm thế thăm hỏi, tri ân khách hàng cũ thay vì bán hàng ngay.",
+    "opening_message": "Dạ em chào chị Huế, em gọi từ cửa hàng ở TP.HCM đây ạ. Em thấy chị là khách hàng thân thiết từng ủng hộ dòng Đông trùng hạ thảo Cordyceps Plus bên em cách đây vài năm. Nay cửa hàng có đợt tri ân đặc biệt dành riêng cho khách hàng VIP cũ, em xin phép gọi để gửi tặng chị ưu đãi độc quyền khi chị ghé lại cửa hàng ạ.",
+    "fallback_message": "Dạ chào chị Huế, em từ cửa hàng ở TP.HCM. Em có gửi tặng riêng chị voucher tri ân VIP cho dòng Đông trùng hạ thảo Nhật Bản qua Zalo. Chị kiểm tra tin nhắn Zalo giúp em để nhận ưu đãi trước khi hết hạn chị nhé!",
+    "talking_points": [
+      "Nhắc lại kỷ niệm: Thăm hỏi sức khỏe và nhắc lại dòng Cordyceps Plus chị từng dùng, nhấn mạnh các công dụng bồi bổ để gợi nhớ nhu cầu.",
+      "Đánh vào khuyến mãi: Thông báo gói quà tặng/quyền lợi VIP đặc biệt chỉ dành cho khách hàng thân thiết quay lại, phù hợp với tâm lý thích ưu đãi của chị.",
+      "Mời trải nghiệm tại cửa hàng: Hẹn chị ghé trực tiếp cửa hàng để được tư vấn sức khỏe và nhận quà tri ân, phù hợp với thói quen mua sắm offline của chị."
+    ],
+    "cross_sell": [
+      "Liệu trình Đông trùng hạ thảo Nhật Bản dài hạn (combo 3-6 tháng)",
+      "Các sản phẩm bồi bổ sức khỏe cao cấp khác cùng dòng Fine Japan"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Lâu rồi chị không dùng nữa / Chị quên sản phẩm này rồi.",
+        "response": "Dạ không sao đâu chị, dòng Cordyceps Plus này vẫn là sản phẩm chủ lực giúp bồi bổ sức khỏe rất tốt. Nay bên em có liệu trình mới, em mời chị ghé cửa hàng dùng thử và nhận quà tri ân để chị trải nghiệm lại nhé."
+      },
+      {
+        "objection": "Chị bận lắm, không ghé cửa hàng được đâu.",
+        "response": "Dạ em hiểu chị bận rộn. Vậy em xin phép gửi trước thông tin liệu trình và mã ưu đãi VIP qua Zalo cho chị. Khi nào tiện chị nhắn em, bên em hỗ trợ giao hàng tận nơi luôn cho chị tiện ạ."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không dùng giọng điệu chào mừng khách hàng mới (dù hệ thống báo LIFECYCLE_NEW) vì khách đã vắng mặt 3 năm.",
+      "Không ép doanh số hay hard-sell ngay cuộc gọi đầu tiên vì khách đã Churned quá lâu.",
+      "Không tiết lộ các chỉ số nội bộ như biên lợi nhuận hay tổng chi tiêu chính xác của khách."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Thiếu lý do cụ thể khiến khách ngừng mua từ 1101 ngày trước (không có recent_notes hay recent_conversations).",
+    "contact_quality đang là 'unverified', chưa chắc chắn số điện thoại có còn hoạt động và chính chủ hay không.",
+    "Thiếu birth_date và gender chi tiết để cá nhân hóa lời chúc hoặc quà tặng sinh nhật.",
+    "Không có dữ liệu về lý do khách hàng thích channel OFFLINE nhưng lại không đến cửa hàng trong 3 năm qua."
+  ]
+}

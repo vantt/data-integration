@@ -1,0 +1,43 @@
+{
+  "profile_read": "Hồ sơ gắn nhãn RETAIL nhưng nhiều dấu hiệu KHÔNG phải người tiêu dùng cá nhân: tên 'Leflair' (giống tên sàn/doanh nghiệp), 31 đơn ~260 triệu nhưng biên đóng góp trung bình ÂM nặng (-150%), và đã 1073 ngày (~3 năm) không mua. Đây gần như chắc chắn là tài khoản đại lý/sàn bị gán nhầm RETAIL, không nên đối xử như khách lẻ.",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 260594479,
+    "margin_health": "negative",
+    "invest_level": "low"
+  },
+  "opportunity": {
+    "headline": "Không có cơ hội tiếp cận cá nhân hợp lệ cho đến khi xác minh bản chất tài khoản",
+    "rationale": "Trước khi nói tới win-back, cần xác minh đây là ai: tài khoản sàn/đại lý hay người thật. Tiếp cận cá nhân hóa lên một tài khoản tổ chức 3 năm không hoạt động vừa sai đối tượng vừa lỗ.",
+    "evidence": ["full_name='Leflair' (giống tên sàn)", "avg_order_contribution_margin_pct=-1.50", "recency_days=1073"]
+  },
+  "risk": {
+    "headline": "Dữ liệu mâu thuẫn + tài khoản nghi B2B 3 năm chết — cao rủi ro hành động sai",
+    "type": "other",
+    "rationale": "is_margin_negative=false NHƯNG avg_order_contribution_margin_pct=-1.50 → cờ tổng và biên trung bình mâu thuẫn, không tin được trạng thái kinh tế. Tên giống tổ chức + 3 năm im lặng → khả năng cao đã chết và không phải khách lẻ."
+  },
+  "approach": {
+    "recommended": false,
+    "reason_if_not_recommended": "Tài khoản nghi là sàn/đại lý gán nhầm RETAIL, biên âm bất thường và đã ~3 năm không mua. Cần xác minh bản chất tài khoản + làm sạch dữ liệu margin trước; KHÔNG soạn kịch bản win-back cá nhân lúc này.",
+    "primary_channel": "none",
+    "fallback_channel": "none",
+    "timing": "Hoãn outreach. Chuyển cho bộ phận dữ liệu xác minh loại tài khoản trước.",
+    "opening_message": "",
+    "fallback_message": "",
+    "talking_points": [],
+    "cross_sell": [],
+    "objection_handling": [],
+    "do_not": [
+      "KHÔNG soạn lời thoại win-back cá nhân cho tài khoản này.",
+      "KHÔNG coi 260 triệu là giá trị khách lẻ thật khi biên đang âm và bản chất tài khoản chưa rõ.",
+      "KHÔNG đề xuất khuyến mãi để 'kéo lại' một tài khoản đang lỗ biên."
+    ]
+  },
+  "confidence": "low",
+  "data_gaps": [
+    "Bản chất tài khoản: 'Leflair' là sàn/doanh nghiệp hay người thật? — cần xác minh trước mọi hành động.",
+    "Mâu thuẫn margin: is_margin_negative=false vs avg_order_contribution_margin_pct=-1.50 — dữ liệu kinh tế không đáng tin, cần điều tra.",
+    "consent_contact=unknown.",
+    "Không rõ vì sao ngừng mua 3 năm (đổi mô hình kinh doanh? đóng tài khoản?)."
+  ]
+}

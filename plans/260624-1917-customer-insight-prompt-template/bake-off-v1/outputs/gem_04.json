@@ -1,0 +1,64 @@
+{
+"profile_read": "Chị Huế là khách hàng bán lẻ thuộc nhóm Giá trị Vàng, đã chi hơn 44 triệu đồng chỉ qua 2 đơn hàng nhưng đã ngừng mua sắm từ rất lâu (1101 ngày). Khách có xu hướng mua sắm trực tiếp tại cửa hàng, thường thanh toán trước và rất nhạy cảm với các chương trình khuyến mãi. Sản phẩm chị đặc biệt quan tâm là dòng Thực phẩm bảo vệ sức khỏe Cordyceps Plus của Fine Japan.",
+"value_assessment": {
+"tier": "GOLD",
+"lifetime_value_vnd": 44016000.0,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Kích hoạt lại khách hàng VIP đã ngủ đông bằng ưu đãi đặc quyền cho dòng chăm sóc sức khỏe cao cấp.",
+"rationale": "Dù đã hơn 3 năm không mua, giá trị trung bình mỗi đơn của chị rất cao (hơn 22 triệu/đơn), biên lợi nhuận tốt (gần 66%), và chị là người rất thích khuyến mãi. Một chương trình tri ân đủ hấp dẫn có thể kéo chị quay lại mua sắm trực tiếp.",
+"evidence": [
+"lifetime_value: 44016000.0",
+"avg_order_contribution_margin_pct: 0.6557352207869609",
+"discount_sensitivity: PROMO_DEPENDENT",
+"recency_days: 1101"
+]
+},
+"risk": {
+"headline": "Khách hàng đã rời bỏ quá lâu và thông tin liên hệ chưa được xác thực.",
+"type": "churn",
+"rationale": "Khoảng cách từ lần mua cuối lên tới 1101 ngày khiến khả năng khách đã chuyển sang thương hiệu khác rất cao. Cùng với đó, tình trạng số điện thoại là 'unverified' tiềm ẩn nguy cơ không liên lạc được hoặc gọi nhầm số."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Vào buổi sáng hoặc chiều giữa tuần. Tránh gọi cuối tuần nếu khách có thói quen đi cửa hàng vào cuối tuần, ưu tiên mời gọi trước để khách sắp xếp thời gian ghé qua.",
+"opening_message": "Dạ em chào chị Huế ạ. Em gọi cho mình từ cửa hàng [Tên cửa hàng]. Đã lâu lắm rồi tụi em chưa được đón chị ghé chơi. Đợt này bên em đang có ưu đãi tri ân đặc biệt giảm giá sâu tặng riêng cho khách VIP, nhất là với dòng Đông trùng hạ thảo Cordyceps Plus mà trước đây chị từng dùng đó ạ.",
+"fallback_message": "Dạ em chào chị Huế, em là CSKH bên [Tên cửa hàng]. Lâu rồi không thấy chị ghé sắm đồ, bên em đang có voucher VIP giảm giá sâu tặng riêng chị cho dòng Thực phẩm bảo vệ sức khỏe Cordyceps Plus. Chị rảnh nhắn lại em để em gửi ưu đãi cho mình nha!",
+"talking_points": [
+"Hỏi thăm sức khỏe hiện tại của khách và người nhà, nhắc lại trải nghiệm sử dụng Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp (SKU: VCSL21002H010) trước đây để tạo sự gần gũi.",
+"Nhấn mạnh ngay vào chương trình khuyến mãi 'đặc quyền giảm giá sâu' hoặc tặng quà giá trị cao để đánh trúng tâm lý phụ thuộc ưu đãi của khách hàng.",
+"Mời khách ghé trực tiếp cửa hàng (vì khách thích mua kênh offline) để nhận thêm mẫu thử hoặc trải nghiệm trực tiếp các sản phẩm mới."
+],
+"cross_sell": [
+"Các dòng thực phẩm chức năng cao cấp khác của Fine Japan",
+"Các sản phẩm hỗ trợ xương khớp, bồi bổ cơ thể dành cho người lớn tuổi có biên lợi nhuận cao"
+],
+"objection_handling": [
+{
+"objection": "Chị đang dùng loại khác rồi / Chị không có nhu cầu đổi loại mới.",
+"response": "Dạ em hiểu ạ, sức khỏe gia đình ổn định là mừng rồi chị. Đợt này bên em cũng về nhiều dòng sản phẩm chăm sóc từ Nhật rất tốt. Em xin phép kết bạn Zalo gửi chị mã giảm giá VIP, chị lưu lại để sau này cần bồi bổ thêm cho mình hoặc mua tặng người thân thì lấy ra dùng nha chị."
+},
+{
+"objection": "Dạo này chị bận lắm, không có thời gian ghé cửa hàng.",
+"response": "Dạ không sao đâu chị, dù là hàng giá trị cao thì tụi em vẫn có chế độ đóng gói cẩn thận và giao tận nhà miễn phí cho khách VIP như mình. Chị cứ xem qua ưu đãi, ưng món nào nhắn em một tiếng là các bạn giao tới tận cửa luôn ạ."
+}
+],
+"do_not": [
+"Tuyệt đối không dùng kịch bản chào mừng khách mới dù hệ thống ghi nhận LIFECYCLE_NEW, vì thực tế khách đã rời bỏ 1101 ngày (khách ngủ đông).",
+"Không nhắc trực tiếp số ngày khách đã rời bỏ (ví dụ: 'đã hơn 3 năm rồi chị chưa ghé') để tránh tạo cảm giác tính toán, soi mói.",
+"Không cố gắng bán giá gốc nguyên bản hoặc thiếu ưu đãi hấp dẫn, vì khách này rất nhạy cảm với khuyến mãi."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Số điện thoại chưa được xác thực (unverified), có khả năng không liên lạc được.",
+"Không có sở thích sản phẩm thứ hai (second_affinity_product) để làm phong phú gợi ý bán kèm.",
+"Thiếu thông tin ngày sinh để có thể tận dụng cớ 'tặng quà sinh nhật' giúp tăng tỷ lệ chốt.",
+"Không rõ điểm tích lũy hiện tại (loyalty_points) để dùng làm đòn bẩy thêm vào ưu đãi."
+]
+}

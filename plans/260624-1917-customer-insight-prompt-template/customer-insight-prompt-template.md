@@ -35,14 +35,29 @@ RÀNG BUỘC CỨNG (vi phạm = output sai):
 5. Đây là công cụ nội bộ; không lộ số liệu nhạy cảm ra ngoài kịch bản
    gửi khách (kịch bản chỉ chứa lời thoại, không chứa con số nội bộ trừ
    khi tự nhiên & có lợi, ví dụ điểm tích lũy của chính khách).
+6. KHÔNG bịa cảm nhận, đánh giá, mức độ hài lòng hay lời nói của khách khi
+   recent_notes/recent_conversations trống. Cấm viết kiểu "lần trước anh/chị
+   khen sản phẩm tốt" nếu không có dữ liệu chứng minh.
 
 QUY TẮC NGHIỆP VỤ (áp dụng theo thứ tự ưu tiên):
 - consent_contact = "denied"  → approach.recommended = false; chỉ ghi chú
   nội bộ, KHÔNG soạn lời mời liên hệ.
 - is_contactable = false       → approach.recommended = false; đề xuất
   cách thu thập số liên hệ thay vì outreach.
+- GATE DỮ LIỆU ĐÁNG NGỜ → approach.recommended = false (hoãn outreach, chuyển
+  XÁC MINH loại tài khoản, KHÔNG soạn win-back/kịch bản cá nhân; ghi lý do vào
+  reason_if_not_recommended + data_gaps) nếu BẤT KỲ điều sau:
+    • full_name giống tên tổ chức/sàn/cửa hàng (vd "Leflair", hoặc chứa
+      Shop/Store/Mart/Cty/Công ty/TNHH) dù customer_type=RETAIL — nghi B2B gán nhầm;
+    • is_margin_negative=false NHƯNG avg_order_contribution_margin_pct < 0
+      (cờ margin mâu thuẫn → dữ liệu kinh tế không đáng tin);
+    • recency_days rất lớn (≳ 365) ĐỒNG THỜI margin âm hoặc mâu thuẫn (khách gần
+      như đã mất + không chắc còn lời → outreach cá nhân không đáng).
 - is_margin_negative = true    → KHÔNG đề xuất giảm giá/khuyến mãi thêm;
   hướng tới bán kèm giá trị cao hoặc giữ nguyên giá.
+- margin DƯƠNG nhưng MỎNG (avg_order_contribution_margin_pct < 0.35) → ưu đãi
+  VỪA PHẢI; ưu tiên chăm sóc/giá trị/quà tặng nhỏ, KHÔNG giảm giá sâu dù khách
+  PROMO_DEPENDENT (giảm sâu trên biên mỏng dễ bào hết lời).
 - discount_sensitivity = "FULL_PRICE" → bán bằng giá trị/sản phẩm, không
   dùng khuyến mãi làm đòn bẩy chính.
 - discount_sensitivity = "PROMO_DEPENDENT" → khuyến mãi/ưu đãi là đòn bẩy
@@ -228,3 +243,11 @@ Bối cảnh domain bắt buộc nhớ:
 1. **Multi-channel:** `primary_channel` + `fallback_channel` + lời nhắn dự phòng.
 2. **Không** `priority_score` — xếp ưu tiên để tầng SQL/segment lo, không nhờ AI.
 3. **Thuần Việt:** lời thoại Việt hóa tối đa, chỉ giữ mã SKU/tên riêng khi cần.
+
+## Thay đổi v2 (2026-06-25 — sau bake-off-v1)
+Vá lỗi bake-off (cả 4 writer sa bẫy C3 Leflair):
+1. **GATE dữ liệu đáng ngờ → `recommended=false`** cho tài khoản nghi B2B
+   (tên giống tổ chức) / margin mâu thuẫn / chết-sâu-margin-âm. (lỗi chung C3)
+2. **Chống bịa cảm nhận khách** khi notes/conversations trống. (lỗi lẻ dpsk C4)
+3. **Kỷ luật margin mỏng** (avg_order_contribution_margin_pct < 0.35): ưu đãi
+   vừa phải, không giảm sâu dù PROMO_DEPENDENT. (đã chốt áp 2026-06-25)

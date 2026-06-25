@@ -1,0 +1,62 @@
+{
+  "profile_read": "Khách hàng Phương Nguyễn, khu vực Miền Trung, thuộc nhóm giá trị Vàng với LTV 36.680.000 VNĐ qua 2 đơn hàng. Khách có biên lợi nhuận rất tốt (gần 75%), ưa chuộng dòng thực phẩm bảo vệ sức khỏe Cordyceps Plus và thanh toán trả trước. Tuy nhiên, khách đã ngừng mua gần 4 năm (1399 ngày) dù hệ thống đang gắn thẻ khách mới, thực chất đây là khách hàng ngủ đông cần chiến dịch win-back.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 36680000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Khôi phục khách hàng giá trị cao có thói quen thanh toán trả trước và biên lợi nhuận xuất sắc.",
+    "rationale": "Khách có LTV lớn và tỷ suất lợi nhuận đơn hàng lên tới gần 75%, lại không phụ thuộc vào khuyến mãi, nên chỉ cần đánh thức nhu cầu bằng giá trị sản phẩm là có thể mang lại doanh thu và lợi nhuận ròng rất tốt.",
+    "evidence": [
+      "value_group: VALUE_GOLD",
+      "lifetime_value: 36680000.0",
+      "avg_order_contribution_margin_pct: 0.749138494750734",
+      "discount_sensitivity: FULL_PRICE"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đã ngủ đông quá lâu dẫn đến nguy cơ mất kết nối hoặc không còn nhu cầu sử dụng sản phẩm.",
+    "type": "churn",
+    "rationale": "Recency_days lên tới 1399 ngày, đồng thời thiếu hụt hoàn toàn các ghi chú hay lịch sử hội thoại gần đây khiến việc cá nhân hóa lời chào hỏi trở nên khó khăn và dễ bị xem là spam."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "zalo",
+    "fallback_channel": "phone",
+    "timing": "Liên hệ vào khung giờ hành chính hoặc đầu giờ tối qua Zalo, vì khách thuộc nhóm trả trước và thích kênh mạng xã hội, tránh gọi điện đột ngột khi chưa có tín hiệu phản hồi Zalo.",
+    "opening_message": "Dạ chào chị Phương Nguyễn, em là [Tên] từ cửa hàng. Em thấy mình từng tin tưởng sử dụng liệu trình Cordyceps Plus hộp Nhật Bản bên em cách đây khá lâu. Không biết dạo này sức khỏe chị thế nào, chị còn duy trì dùng đều đặn không ạ?",
+    "fallback_message": "Dạ chào chị Phương, em nhắn Zalo mà sợ tin nhắn bị trôi nên em mạo muội nhắn số này. Em muốn hỏi thăm sức khỏe chị và cập nhật thông tin mới về dòng Cordyceps Plus chị từng dùng. Chị tiện thì phản hồi Zalo giúp em nhé!",
+    "talking_points": [
+      "Hỏi thăm tình hình sức khỏe và lý do chị ngưng sử dụng sản phẩm cách đây vài năm (do bận rộn, hết nhu cầu hay chuyển sang loại khác).",
+      "Cập nhật những cải tiến mới hoặc lô hàng Nhật Bản mới nhất của Cordyceps Plus, nhấn mạnh vào chất lượng và giá trị sức khỏe lâu dài thay vì giá cả."
+    ],
+    "cross_sell": [
+      "Các liệu trình duy trì sức khỏe định kỳ từ Nhật Bản",
+      "Combo quà tặng sức khỏe cao cấp cho người thân"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Chị không dùng nữa hoặc chị chuyển sang dùng loại khác rồi.",
+        "response": "Dạ em hiểu ạ. Dòng Cordyceps Plus bên em vẫn được nhiều khách hàng tin chọn nhờ nguồn gốc Nhật Bản chuẩn chỉnh. Nếu chị có người thân cần bồi bổ, em xin phép thỉnh thoảng gửi chị thông tin các liệu trình sức khỏe để chị tham khảo làm quà tặng nhé."
+      },
+      {
+        "objection": "Lâu quá rồi em mới nhắn, chị quên shop rồi.",
+        "response": "Dạ do hệ thống bên em nâng cấp và lưu trữ dữ liệu khách hàng thân thiết nên em mới có cơ hội tìm lại được hồ sơ của chị. Em rất tiếc vì đã để lỡ mất thời gian đồng hành cùng chị, nay nhắn tin chủ yếu là để hỏi thăm và tri ân những khách hàng giá trị như chị ạ."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không dùng giọng điệu chào mừng 'khách hàng mới' dù hệ thống báo LIFECYCLE_NEW.",
+      "Không chào mời giảm giá, khuyến mãi sốc vì khách thuộc nhóm FULL_PRICE và biên lợi nhuận đang rất tốt, việc giảm giá chỉ làm mất đi giá trị cao cấp của sản phẩm."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "contact_quality: unverified - chưa xác thực được số điện thoại/Zalo có chính chủ và đang hoạt động hay không.",
+    "recent_notes và recent_conversations trống - không có dữ liệu về lý do thực sự khiến khách rời bỏ hoặc trải nghiệm lần cuối của khách.",
+    "birth_date và gender thiếu - không thể cá nhân hóa lời chúc sinh nhật hay xưng hô chuẩn xác theo giới tính.",
+    "consent_contact: unknown - chưa rõ khách có đồng ý nhận tin nhắn tiếp thị hay không, cần dò phản ứng ở tin nhắn đầu tiên."
+  ]
+}

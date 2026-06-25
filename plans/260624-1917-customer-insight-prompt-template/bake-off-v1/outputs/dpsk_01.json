@@ -1,0 +1,63 @@
+{
+  "profile_read": "Khách hàng Hoàng Thức thuộc nhóm Bạc, đã có 3 đơn hàng với tổng giá trị 14.550.000 VNĐ. Gần nhất mua Combo 2 hộp Shark Cartilage (SKU PVN150) cách đây 84 ngày, trong khi chu kỳ mua trung bình là 73 ngày, đã hơi quá kỳ mua. Khách ưa chuộng sản phẩm Nhật Bản (PRODUCT_FINE_JAPAN), nhạy với khuyến mãi, thường thanh toán COD và chọn kênh liên hệ trực tiếp.",
+  "value_assessment": {
+    "tier": "SILVER",
+    "lifetime_value_vnd": 14550000.0,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Khách sắp đến kỳ mua lại, gắn bó với dòng sản phẩm Nhật, biên lợi nhuận cao, có thể chốt đơn ngay với ưu đãi.",
+    "rationale": "Khách đã quá chu kỳ mua trung bình 11 ngày nhưng chưa có dấu hiệu rời bỏ hẳn; sản phẩm yêu thích có biên lợi nhuận khỏe (70,4%), kết hợp với tâm lý ưu đãi sẽ dễ chốt đơn.",
+    "evidence": [
+      "recency_days = 84 > avg_days_between_orders = 73",
+      "next_purchase_signal = 'DUE_SOON'",
+      "product_affinity = 'PRODUCT_FINE_JAPAN'",
+      "last_purchased_product = 'Combo 2 hộp Shark Cartilage'",
+      "avg_order_contribution_margin_pct = 0.7044"
+    ]
+  },
+  "risk": {
+    "headline": "Nguy cơ khách rời bỏ nếu không tương tác kịp thời do đã quá chu kỳ mua và trạng thái 'At Risk'.",
+    "type": "churn",
+    "rationale": "Recency 84 ngày lớn hơn chu kỳ trung bình 73 ngày, trạng thái khách hàng 'At Risk' cho thấy tín hiệu suy giảm gắn kết, cần hành động để giữ chân."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Ngay trong 1-2 ngày tới, vì khách đã quá chu kỳ mua 11 ngày, cần liên hệ sớm tránh mất khách.",
+    "opening_message": "Alo, chào anh Thức ạ, em là [Tên] bên [Cửa hàng]. Dạo này anh khoẻ không? Em thấy lần trước anh mua Combo 2 hộp Shark Cartilage bên em cũng hơn 2 tháng rồi, chắc anh cũng sắp hết. Bên em đang có ưu đãi riêng cho khách quen, em gọi xem anh có muốn đặt thêm không ạ.",
+    "fallback_message": "Chào anh Thức, em là [Tên] từ [Cửa hàng]. Combo Shark Cartilage anh mua lần trước chắc đã gần hết. Bên em có ưu đãi riêng cho khách thân, anh cần đặt thêm không ạ? Em để link sản phẩm bên dưới nhé.",
+    "talking_points": [
+      "Nhấn mạnh tiện lợi thanh toán khi nhận hàng (COD), đúng sở thích của anh.",
+      "Gợi ý dùng thêm Shark Cartilage Extract dạng lọ để tăng cường hiệu quả, có thể đặt cùng combo cho tiết kiệm phí ship.",
+      "Chương trình ưu đãi dành riêng cho khách thân thiết, có thể áp dụng ngay hôm nay."
+    ],
+    "cross_sell": [
+      "Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ (SKU VCST21004L001)"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Anh chưa dùng hết, để sau đi.",
+        "response": "Dạ, hộp combo thường dùng trong 2-3 tháng, nay đã gần 3 tháng chắc anh cũng sắp hết. Anh đặt trước kẻo lúc cần lại hết hàng ạ, bên em giao hàng miễn phí, thanh toán khi nhận rất tiện."
+      },
+      {
+        "objection": "Anh muốn tham khảo thêm đã.",
+        "response": "Dạ, em gửi anh thông tin chi tiết qua Zalo, khi nào quyết định anh nhắn em nhé. Nhưng ưu đãi này chỉ còn đến cuối tuần, anh cân nhắc sớm để được giá tốt ạ."
+      }
+    ],
+    "do_not": [
+      "Không dùng giọng chào mừng khách mới vì khách đã có lịch sử mua hàng.",
+      "Không giới thiệu sản phẩm ngoài dòng Nhật Bản yêu thích.",
+      "Không ép mua hay tạo áp lực quá mức, giữ nhịp tư vấn thân thiện."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Thiếu thông tin giới tính, ngày sinh để cá nhân hóa lời chúc mừng.",
+    "Không có ghi chú CRM hay lịch sử trò chuyện gần đây để hiểu thêm ngữ cảnh.",
+    "consent_contact = 'unknown', chưa xác nhận rõ ràng khách đồng ý nhận tin."
+  ]
+}

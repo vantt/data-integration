@@ -1,0 +1,69 @@
+{
+"profile_read": "Khách Nguyễn Tính NT 17 là khách bán lẻ nhóm VIP, đã mua 24 đơn với tổng giá trị 121.256.000 VND. Khách đang có dấu hiệu ngủ đông/mất lại vì đã 135 ngày chưa mua, trong khi chu kỳ mua trung bình là 35 ngày và tín hiệu mua tiếp theo là quá hạn. Khách có xu hướng mua trực tiếp, thanh toán trước, nhạy với khuyến mãi và có thiện cảm với nhóm sản phẩm Fine Japan, đặc biệt là Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp và sản phẩm Cordyceps.",
+"value_assessment": {
+"tier": "VIP",
+"lifetime_value_vnd": 121256000,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là gọi lại để kéo khách VIP quay lại mua đúng nhóm sản phẩm quen thuộc.",
+"rationale": "Khách có giá trị cao, đã mua nhiều lần, hiện quá hạn so với chu kỳ mua trung bình nên nên ưu tiên kịch bản chăm sóc lại thay vì bán như khách mới.",
+"evidence": [
+"value_group = VALUE_VIP",
+"lifetime_value = 121.256.000 VND",
+"order_count = 24",
+"recency_days = 135",
+"avg_days_between_orders = 35",
+"next_purchase_signal = OVERDUE",
+"top_affinity_product = Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách đã rời chu kỳ mua quen thuộc và có thể đang mua ở nơi khác.",
+"type": "churn",
+"rationale": "Khách đã 135 ngày chưa mua, cao hơn nhiều so với chu kỳ mua trung bình 35 ngày; trạng thái khách hàng là Churned và giai đoạn vòng đời là LIFECYCLE_AT_RISK."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Nên gọi trong khung giờ hành chính hoặc đầu buổi tối gần nhất, vì khách đang quá hạn mua lại và kênh ưu tiên là liên hệ trực tiếp.",
+"opening_message": "Dạ em chào Anh/Chị Tính, em gọi từ cửa hàng mình từng mua sản phẩm chăm sóc sức khỏe và làm đẹp Fine Japan ạ. Em thấy cũng lâu rồi mình chưa ghé lại, nên em gọi hỏi thăm xem Anh/Chị còn dùng dòng nước uống dưỡng da Fine Japan hay Cordyceps không để em hỗ trợ đúng món quen của mình ạ.",
+"fallback_message": "Dạ em chào Anh/Chị Tính, em từ cửa hàng mình từng mua sản phẩm Fine Japan và Cordyceps ạ. Khi nào tiện Anh/Chị phản hồi giúp em, em hỗ trợ lại đúng sản phẩm mình hay dùng nha.",
+"talking_points": [
+"Nhắc lại sản phẩm quen thuộc của khách, ưu tiên Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus và Cordyceps.",
+"Dùng ưu đãi như lý do để khách quay lại, nhưng không nói quá nhiều về giảm giá ngay từ đầu.",
+"Vì khách từng thanh toán trước và mua trực tiếp, nên tư vấn nhanh, rõ món, rõ cách đặt lại để khách dễ chốt."
+],
+"cross_sell": [
+"Gợi ý mua lại Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp, SKU VCSL19001H010.",
+"Bán kèm hoặc gợi ý thêm Cordyceps, SKU VTSC20001L001, vì đây là sản phẩm khách vừa mua gần nhất và cũng nằm trong nhóm yêu thích thứ hai."
+],
+"objection_handling": [
+{
+"objection": "Anh/Chị chưa có nhu cầu.",
+"response": "Dạ em hiểu ạ. Vì mình từng dùng dòng này rồi nên em chỉ xin hỏi nhanh là mình còn dùng tiếp không, nếu còn thì em hỗ trợ đúng sản phẩm quen để mình khỏi mất thời gian chọn lại nha."
+},
+{
+"objection": "Giá sao, có ưu đãi không?",
+"response": "Dạ có ạ, em kiểm tra ưu đãi hiện tại cho đúng sản phẩm mình hay dùng rồi báo Anh/Chị ngay. Mình ưu tiên lấy lại dòng Fine Japan Hyaluron & Collagen hay Cordyceps trước ạ?"
+}
+],
+"do_not": [
+"Không chào như khách mới vì khách đã mua 24 đơn.",
+"Không để lộ các số liệu nội bộ như tổng giá trị mua, biên lợi nhuận hoặc trạng thái churn khi nói với khách.",
+"Không chỉ bán bằng khuyến mãi; nên mở bằng chăm sóc lại và đúng sản phẩm quen.",
+"Không khẳng định số điện thoại chắc chắn chính chủ vì chất lượng liên hệ đang là unverified."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Không có ghi chú CRM gần nhất nên chưa biết lý do khách ngừng mua.",
+"Không có hội thoại gần nhất nên chưa biết phản hồi, sở thích hoặc phản đối gần đây của khách.",
+"Không có ngày sinh, giới tính và điểm tích lũy nên không thể cá nhân hóa theo dịp hoặc quyền lợi điểm.",
+"Số điện thoại có chất lượng unverified nên khả năng liên hệ thành công chưa chắc chắn.",
+"consent_contact = unknown nên cần nhân viên tuân thủ quy định nội bộ trước khi liên hệ."
+]
+}

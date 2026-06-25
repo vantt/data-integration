@@ -1,0 +1,59 @@
+{
+"profile_read": "Khách hàng VIP 'Leflair' có tổng chi tiêu rất cao (hơn 260 triệu VNĐ) qua 31 đơn hàng, chủ yếu mua Viên uống giảm cân Calorie Burn. Mặc dù chu kỳ mua từng rất ngắn (22 ngày/đơn), khách đã ngủ đông 1073 ngày (gần 3 năm) và thuộc nhóm LIFECYCLE_CHURNED. Khách hàng này nhạy cảm với khuyến mãi (PROMO_DEPENDENT) và thường thanh toán trả trước qua kênh trực tiếp.",
+"value_assessment": {
+"tier": "VIP",
+"lifetime_value_vnd": 260594479,
+"margin_health": "negative",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Khôi phục lại nguồn doanh thu lớn từ khách hàng VIP có lịch sử chi tiêu mạnh.",
+"rationale": "Khách hàng từng mua rất đều đặn với giá trị cao (31 đơn hàng), nếu tìm ra lý do rời bỏ và kích hoạt lại thành công, sẽ mang lại giá trị dài hạn rất tốt.",
+"evidence": [
+"lifetime_value: 260594479.0",
+"order_count: 31",
+"avg_days_between_orders: 22"
+]
+},
+"risk": {
+"headline": "Nguy cơ lỗ gộp do biên lợi nhuận âm kết hợp thói quen phụ thuộc khuyến mãi.",
+"type": "margin",
+"rationale": "Mức đóng góp biên lợi nhuận trung bình đang ở mức -1.5%, trong khi khách có đặc tính PROMO_DEPENDENT. Việc lạm dụng giảm giá sâu để win-back sẽ gây thiệt hại trực tiếp về lợi nhuận."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Giờ hành chính (Sáng 9h-11h, Chiều 14h-16h) vì khách hàng thanh toán trả trước và tên 'Leflair' có dấu hiệu là tổ chức/doanh nghiệp dù được gán nhãn RETAIL.",
+"opening_message": "Dạ em chào anh/chị, em gọi đến từ cửa hàng [Tên Cửa Hàng]. Lâu lắm rồi bên em chưa có dịp phục vụ anh/chị Leflair. Hôm nay bên em đang có ưu đãi tri ân đặc biệt cho khách VIP lâu năm với dòng viên uống giảm cân Calorie Burn Chitosan mà trước đây mình rất hay dùng, nên em xin phép gọi để cập nhật thông tin đến mình ạ.",
+"fallback_message": "Dạ chào anh/chị, em là [Tên] từ cửa hàng [Tên Cửa Hàng]. Đã lâu rồi không thấy anh/chị đặt hàng. Hiện tại viên uống giảm cân Calorie Burn đang có quà tặng tri ân đặc biệt cho khách VIP quay lại, anh/chị có nhu cầu bổ sung thêm thì nhắn lại giúp em nhé. Em cảm ơn ạ!",
+"talking_points": [
+"Hỏi thăm khéo léo lý do khách ngừng mua hàng trong gần 3 năm qua (nhu cầu thay đổi, dùng hãng khác, hay trải nghiệm chưa tốt lần trước).",
+"Giới thiệu chương trình tri ân VIP bằng quà tặng kèm, mua số lượng lớn hoặc ưu đãi freeship thay vì giảm giá trực tiếp để bảo vệ biên lợi nhuận."
+],
+"cross_sell": [
+"Giới thiệu thêm sản phẩm tinh chất hàu nghệ 'Clam Extract with Liver Hydrolysate and Turmeric Premium - Gói' vì đây là sản phẩm khách có quan tâm thứ 2 trên hệ thống."
+],
+"objection_handling": [
+{
+"objection": "Dạo này bên mình không có nhu cầu dùng giảm cân nữa em nhé.",
+"response": "Dạ em hiểu ạ. Nếu hiện tại mình chưa cần dùng Calorie Burn, bên em cũng đang có sẵn dòng tinh chất hàu nghệ (Clam Extract) giúp hỗ trợ sức khỏe rất tốt mà trước đây mình từng quan tâm. Em xin phép gửi thông tin qua Zalo để anh/chị tham khảo thêm nhé ạ?"
+},
+{
+"objection": "Bên em có giảm giá thêm không? Bình thường mua được khuyến mãi nhiều mà.",
+"response": "Dạ vì anh/chị là khách VIP nên mức giá em báo đã là tốt nhất rồi ạ. Để thay lời tri ân anh/chị quay lại, em xin phép hỗ trợ tặng thêm quà tặng kèm sản phẩm hoặc ưu đãi miễn phí vận chuyển cho đơn hàng này luôn ạ."
+}
+],
+"do_not": [
+"TUYỆT ĐỐI không chào hỏi như khách vừa mới mua vì khách đã ngừng giao dịch 1073 ngày.",
+"Tuyệt đối không dùng chiến lược giảm giá sâu trên giá bán để kéo khách vì biên lợi nhuận đang âm."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Tên khách hàng là 'Leflair' giống một doanh nghiệp thương mại điện tử nhưng lại phân loại là 'RETAIL' thay vì WHOLESALE/PARTNER.",
+"Số điện thoại 'unverified' và khách đã ngừng mua 1073 ngày, rủi ro cao là số điện thoại đã thay đổi hoặc không còn liên lạc được.",
+"Thông tin giới tính 'other' và không có tên cá nhân gây khó khăn trong việc xưng hô."
+]
+}

@@ -1,0 +1,63 @@
+{
+  "profile_read": "Chị Huế là khách hàng bán lẻ tại TP.HCM, thuộc nhóm VALUE_GOLD với tổng giá trị vòng đời hơn 44 triệu đồng từ 2 đơn hàng. Tuy nhiên, khách đã không mua sắm trong 1101 ngày (khoảng 3 năm) và trạng thái hiện tại là Churned. Khách có xu hướng nhạy cảm với khuyến mãi và đặc biệt quan tâm đến các dòng thực phẩm bảo vệ sức khỏe Nhật Bản, nổi bật là Cordyceps Plus.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 44016000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Khách hàng có biên lợi nhuận tốt và nhạy cảm với khuyến mãi, dễ dàng kích thích mua lại bằng ưu đãi độc quyền.",
+    "rationale": "Biên lợi nhuận đóng góp trung bình lên đến 65.5% cho thấy khách mua các dòng cao cấp với giá trị cao. Kết hợp với việc khách nhạy cảm với khuyến mãi, một ưu đãi giới hạn có thể là đòn bẩy mạnh để kéo khách quay lại sau 3 năm.",
+    "evidence": [
+      "avg_order_contribution_margin_pct: 0.6557",
+      "discount_sensitivity: PROMO_DEPENDENT",
+      "product_affinity: PRODUCT_FINE_JAPAN"
+    ]
+  },
+  "risk": {
+    "headline": "Khách đã ngủ đông hơn 3 năm và chất lượng liên hệ chưa được xác minh, tỷ lệ phản hồi thấp hoặc số điện thoại không liên lạc được.",
+    "type": "churn",
+    "rationale": "Recency_days lên tới 1101 ngày và customer_status là Churned. Contact_quality là unverified nên có thể số điện thoại không còn liên lạc được hoặc khách không còn nhu cầu."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Gọi điện vào giờ hành chính (9h-11h hoặc 14h-16h) để mời khách ghé cửa hàng trải nghiệm sản phẩm mới, vì khách ưu tiên kênh offline.",
+    "opening_message": "Dạ em chào chị Huế, em là [Tên] gọi từ [Tên cửa hàng]. Lâu rồi không gặp chị, hôm nay bên em có chương trình đặc quyền dành riêng cho các khách hàng thân thiết ở khu vực mình, em nhắn mời chị ghé cửa hàng nhận quà và trải nghiệm dòng Đông trùng hạ ngoại nhập mới về ạ.",
+    "fallback_message": "Dạ chị Huế ơi, em là [Tên] ở [Tên cửa hàng]. Lâu rồi chị chưa ghé, bên em đang có ưu đãi đặc biệt dành cho khách hàng cũ khi mua dòng Cordyceps Plus. Chị ghé cửa hàng hoặc nhắn em tư vấn thêm nhé!",
+    "talking_points": [
+      "Hỏi thăm sức khỏe và nhắc lại sản phẩm cũ: Hỏi chị có còn sử dụng Cordyceps Plus không, dạo này sức khỏe thế nào.",
+      "Ưu đãi kéo lại: Nhấn mạnh việc tặng voucher hoặc quà tặng độc quyền khi ghé cửa hàng trực tiếp (phù hợp với kênh offline).",
+      "Giới thiệu sản phẩm mới: Cập nhật các dòng thực phẩm bảo vệ sức khỏe Nhật Bản mới nhất, nhấn mạnh nguồn gốc rõ ràng."
+    ],
+    "cross_sell": [
+      "Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp (SKU: VCSL21002H010) - sản phẩm khách đã mua và có độ affinity cao nhất.",
+      "Các dòng thực phẩm bảo vệ sức khỏe Nhật Bản khác thuộc nhóm Fine Japan - dựa trên product_affinity của khách."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Chị không có nhu cầu / Sức khỏe chị bình thường rồi.",
+        "response": "Dạ em hiểu ạ, mình duy trì sức khỏe tốt là quý nhất rồi. Sẵn tiện chị ghé cửa hàng em tặng chị phần quà tri ân khách hàng cũ, tiện thể chị xem luôn dòng mới bên em, biết đâu lại có ích cho người thân trong nhà ạ."
+      },
+      {
+        "objection": "Lâu rồi chị không mua, quên mất cửa hàng ở đâu / ngại đến.",
+        "response": "Dạ không sao ạ, cửa hàng mình vẫn ở [Địa chỉ]. Em kết bạn Zalo gửi chị bản đồ và mã ưu đãi giữ chỗ trước nhé, khi nào rảnh chị tạt qua em tiếp đón riêng cho chị luôn ạ."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không dùng giọng chào mừng khách mới (vì recency 1101 ngày, khách đã ngủ đông 3 năm).",
+      "Không giảm giá sâu trực tiếp vào sản phẩm, hãy dùng quà tặng kèm hoặc voucher ghé cửa hàng để giữ biên lợi nhuận tốt.",
+      "Không bịa đặt các lời khen ngợi hay phản hồi của khách trong quá khứ vì không có ghi chú CRM."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Thiếu thông tin ngày sinh, giới tính chi tiết để cá nhân hóa ưu đãi.",
+    "Contact_quality là 'unverified' - chưa xác nhận số điện thoại có liên lạc được hay không.",
+    "Không có ghi chú CRM (recent_notes) hoặc lịch sử hội thoại (recent_conversations) để hiểu lý do khách ngừng mua sau 2 đơn hàng đầu tiên.",
+    "Dữ liệu lifecycle_stage là 'LIFECYCLE_NEW' mâu thuẫn với recency_days 1101 và customer_status 'Churned'."
+  ]
+}

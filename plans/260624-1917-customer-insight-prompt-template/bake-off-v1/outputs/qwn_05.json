@@ -1,0 +1,64 @@
+{
+  "profile_read": "Phương Nguyễn là khách hàng lẻ khu vực miền Trung, thuộc nhóm giá trị Vàng với tổng chi tiêu 36.680.000 VNĐ qua 2 đơn hàng. Khách có tỷ suất lợi nhuận đóng góp rất tốt (~74.9%) và thói quen thanh toán trả trước. Tuy nhiên, khách đã ngừng mua hàng 1399 ngày (gần 4 năm), thuộc trạng thái ngủ đông/mất khách, sản phẩm khách gắn bó nhất là Đông trùng hạ thảo Cordyceps Plus (VCSL21002H010).",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 36680000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Khôi phục khách hàng giá trị cao đã ngủ đông bằng câu chuyện chất lượng sản phẩm sức khỏe cao cấp.",
+    "rationale": "Khách có lịch sử chi tiêu lớn, lợi nhuận đơn hàng cao và ưa chuộng dòng sản phẩm Nhật Bản cao cấp. Khách không nhạy cảm về giá nên có thể tiếp cận bằng giá trị thực và lợi ích sức khỏe thay vì dùng khuyến mãi.",
+    "evidence": [
+      "value_group: VALUE_GOLD",
+      "lifetime_value: 36680000.0",
+      "avg_order_contribution_margin_pct: 0.749",
+      "discount_sensitivity: FULL_PRICE",
+      "product_affinity: PRODUCT_FINE_JAPAN"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đã mất liên lạc và ngừng mua gần 4 năm, cộng với số liên lạc chưa được xác minh nên tỷ lệ phản hồi có thể rất thấp.",
+    "type": "churn",
+    "rationale": "Thời gian không mua hàng (recency_days) lên tới 1399 ngày, trạng thái hệ thống là Churned và contact_quality là unverified."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "zalo",
+    "fallback_channel": "phone",
+    "timing": "Liên hệ vào khung giờ hành chính hoặc đầu giờ tối. Tiếp cận dưới góc độ hỏi thăm sức khỏe như một người quen lâu ngày gặp lại, tránh đề cập trực tiếp đến việc khách đã bỏ shop quá lâu.",
+    "opening_message": "Chào Phương, em là [Tên] từ [Tên Shop]. Lâu rồi shop chưa có dịp hỏi thăm sức khỏe Phương. Đợt này shop vừa có lô Đông trùng hạ thảo Cordyceps Plus chuẩn Nhật Bản mà Phương từng dùng, em nhắn gửi Phương ít thông tin mới để bồi bổ sức khỏe ạ.",
+    "fallback_message": "Chào Phương, em có gọi/nhắn Zalo mà chưa thấy Phương phản hồi. Shop đang có dòng Đông trùng hạ thảo Cordyceps Plus Nhật Bản rất tốt cho sức khỏe, khi nào rảnh Phương nhắn lại shop tư vấn kỹ hơn nhé!",
+    "talking_points": [
+      "Hỏi thăm sức khỏe và nhắc lại trải nghiệm tốt với dòng Đông trùng hạ thảo Cordyceps Plus chuẩn Nhật Bản trước đây.",
+      "Nhấn mạnh vào giá trị bảo vệ sức khỏe, nguồn gốc xuất xứ và chất lượng cao cấp, không bàn luận nhiều về giá cả hay khuyến mãi."
+    ],
+    "cross_sell": [
+      "Các liệu trình bồi bổ sức khỏe dài hạn từ Nhật Bản",
+      "Quà tặng sức khỏe cao cấp cho người thân"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Lâu rồi không mua, giờ không có nhu cầu nữa.",
+        "response": "Dạ em hiểu, cuộc sống bận rộn nên đôi khi mình quên mất việc chăm sóc bản thân. Dòng Cordyceps Plus này vẫn luôn là lựa chọn hàng đầu để duy trì thể lực, Phương cứ xem qua thông tin em gửi, khi nào cần bồi bổ thì ới shop nhé."
+      },
+      {
+        "objection": "Đợt này kinh tế khó khăn, chị/em cân nhắc thêm.",
+        "response": "Dạ sản phẩm bên em là hàng chuẩn Nhật Bản, tập trung vào chất lượng và hiệu quả lâu dài cho sức khỏe nên mức giá vẫn giữ nguyên như giá trị thực của nó ạ. Đổi lại Phương sẽ hoàn toàn yên tâm khi sử dụng, sức khỏe là quan trọng nhất mà."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không dùng giọng điệu chào mừng khách hàng mới (do dữ liệu lifecycle_stage bị mâu thuẫn với recency_days).",
+      "Không tung ra các mã giảm giá, khuyến mãi sốc để câu kéo vì khách thuộc nhóm FULL_PRICE.",
+      "Không chất vấn lý do vì sao khách ngừng mua suốt gần 4 năm qua."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "contact_quality là unverified: chưa rõ số điện thoại/Zalo có còn hoạt động hay chính chủ hay không.",
+    "consent_contact là unknown: chưa rõ khách có đồng ý nhận tin nhắn quảng cáo/tiếp thị hay không.",
+    "birth_date và gender bị thiếu hoặc không rõ (other), khó cá nhân hóa lời chúc sinh nhật hay xưng hô chuẩn xác.",
+    "Không có dữ liệu về lý do khách ngừng mua (churn reason) suốt 1399 ngày qua."
+  ]
+}

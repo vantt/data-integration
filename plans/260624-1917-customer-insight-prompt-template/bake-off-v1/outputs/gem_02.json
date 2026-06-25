@@ -1,0 +1,60 @@
+{
+"profile_read": "Khách hàng Nguyễn Tính NT 17 là khách lẻ hạng VIP tại TP.HCM, mang lại giá trị rất cao với 24 đơn hàng và tổng chi tiêu 121.256.000đ. Khách rất ưa chuộng các dòng sản phẩm của Fine Japan, đặc biệt là Nước uống Collagen và viên uống Cordyceps, thích thanh toán trả trước và rất nhạy cảm với khuyến mãi. Tuy nhiên, khách đang trong trạng thái báo động (Churned) vì đã 135 ngày chưa mua hàng, vượt xa chu kỳ mua sắm trung bình là 35 ngày.",
+"value_assessment": {
+"tier": "VIP",
+"lifetime_value_vnd": 121256000,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Kéo lại khách VIP bằng chương trình khuyến mãi sâu cho dòng sản phẩm Fine Japan yêu thích.",
+"rationale": "Khách hàng cực kỳ nhạy cảm với khuyến mãi, có thói quen mua sắm lớn và biên lợi nhuận của khách hiện tại rất ổn định (32.7%). Việc thiết kế một combo giảm giá tốt đánh đúng vào 2 sản phẩm khách hay mua sẽ kích thích khách chốt đơn trả trước ngay.",
+"evidence": [
+"discount_sensitivity: PROMO_DEPENDENT",
+"product_affinity: PRODUCT_FINE_JAPAN",
+"avg_order_contribution_margin_pct: 0.327429",
+"payment_behavior: PAYMENT_PREPAID"
+]
+},
+"risk": {
+"headline": "Nguy cơ mất trắng tệp khách hàng VIP mang lại doanh thu lớn.",
+"type": "churn",
+"rationale": "Khách đã ngừng mua 135 ngày (gấp gần 4 lần chu kỳ mua trung bình 35 ngày), tín hiệu mua hàng báo OVERDUE. Nếu không tiếp cận ngay, khách có thể đã chuyển sang mua của đối thủ cạnh tranh."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Liên hệ ngay lập tức trong giờ hành chính vì khách đã quá hạn mua từ lâu. Ưu tiên gọi điện để thể hiện sự chăm sóc đặc biệt cho khách VIP.",
+"opening_message": "Dạ em chào anh/chị Tính ạ, em gọi cho mình từ cửa hàng. Hơn 4 tháng rồi bên em chưa thấy anh/chị ghé mua thêm liệu trình mới. Đợt này bên em đang có suất ưu đãi đặc biệt dành riêng cho khách VIP dòng Nước uống Collagen Fine Japan và viên uống Cordyceps mà mình hay dùng, nên em phải gọi báo liền để giữ suất cho anh/chị ạ.",
+"fallback_message": "Dạ chào anh/chị Tính, em là CSKH bên cửa hàng. Đã lâu không thấy anh/chị ghé, đợt này dòng nước uống Collagen Fine Japan và Cordyceps anh/chị hay dùng đang có deal cực tốt và độc quyền cho khách VIP. Anh/chị xem được tin nhắn thì phản hồi lại để em giữ suất ưu đãi cho mình nhé ạ!",
+"talking_points": [
+"Hỏi thăm chân thành về lý do gián đoạn liệu trình: 'Không biết đợt vừa rồi mình dùng sản phẩm thấy thế nào ạ? Bận quá nên anh/chị quên mua thêm để duy trì hay sao ạ?'",
+"Đánh mạnh vào đòn bẩy khuyến mãi: Nhấn mạnh đây là deal cực kỳ hời, chỉ cấp cho một số ít khách VIP và rất lâu mới có một lần. Báo giá sau khi đã giảm hoặc quà tặng kèm để kích thích chốt đơn.",
+"Gợi ý hình thức chuyển khoản trước (như thói quen của khách) để được ưu tiên giao hàng hỏa tốc trong khu vực TP.HCM."
+],
+"cross_sell": [
+"Đề xuất mua theo Combo: Kết hợp 'Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus' (VCSL19001H010) và 'Thực phẩm bảo vệ sức khỏe Cordyceps' (VTSC20001L001) để có mức chiết khấu tốt nhất, vì khách có độ tương thích cao với cả hai mã này."
+],
+"objection_handling": [
+{
+"objection": "Dạo này chị/anh kẹt tiền hoặc kinh tế khó khăn.",
+"response": "Dạ chính vì vậy em mới canh đúng đợt khuyến mãi sâu này để báo cho mình luôn đó ạ. Giá đợt này tính ra chia theo ngày thì rất rẻ mà vẫn duy trì được sức khỏe. Mình cứ chốt ưu đãi này trả trước, em hỗ trợ giữ hàng và giao luôn cho mình nha."
+},
+{
+"objection": "Đang dùng thử loại khác rồi / Sản phẩm ở nhà vẫn còn.",
+"response": "Dạ em hiểu ạ. Dòng Fine Japan thì anh/chị đã dùng quen 24 lần bên em rồi nên mình rõ chất lượng nhất. Deal này rất hiếm, date bên em cũng còn xa lắm nên anh/chị cứ lấy thêm để dành uống luân phiên hoặc tặng người thân đều cực kỳ hợp lý ạ."
+}
+],
+"do_not": [
+"TUYỆT ĐỐI KHÔNG giả vờ như khách vừa mới mua hoặc dùng kịch bản chào mừng người mới, phải thừa nhận đã lâu không gặp khách.",
+"KHÔNG chào bán với nguyên giá (full price) mà không có ưu đãi vì khách rất nhạy cảm với khuyến mãi."
+]
+},
+"confidence": "high",
+"data_gaps": [
+"Thiếu thông tin giới tính (gender = null), nhân viên cần chú ý xưng hô (anh/chị) linh hoạt lúc bắt máy.",
+"Không có thông tin điểm tích lũy (loyalty_points) để sử dụng làm vũ khí giảm giá thêm."
+]
+}

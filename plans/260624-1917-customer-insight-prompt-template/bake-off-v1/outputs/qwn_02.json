@@ -1,0 +1,62 @@
+{
+  "profile_read": "Khách hàng VIP khu vực TP.HCM, đã mua 24 đơn với tổng giá trị hơn 121 triệu VND, chủ yếu quan tâm đến thực phẩm chức năng Fine Japan (Đông trùng hạ thảo, Collagen). Tuy nhiên, khách đã ngừng mua hơn 4 tháng (135 ngày), vượt xa chu kỳ mua trung bình 35 ngày và đang ở trạng thái rủi ro rời bỏ (Churned).",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 121256000,
+    "margin_health": "healthy",
+    "invest_level": "high"
+  },
+  "opportunity": {
+    "headline": "Win-back khách hàng VIP bằng ưu đãi độc quyền cho dòng sản phẩm Fine Japan khách yêu thích.",
+    "rationale": "Khách có độ nhạy cảm với khuyến mãi, biên lợi nhuận đơn hàng tốt và đã quá hạn mua lại các sản phẩm thế mạnh của shop.",
+    "evidence": [
+      "discount_sensitivity: PROMO_DEPENDENT",
+      "avg_order_contribution_margin_pct: ~32.7%",
+      "next_purchase_signal: OVERDUE",
+      "value_group: VALUE_VIP"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đã thực sự rời bỏ do thời gian không mua hàng quá dài và chất lượng dữ liệu liên hệ chưa được xác minh.",
+    "type": "churn",
+    "rationale": "Trạng thái LIFECYCLE_AT_RISK và Churned, recency_days lên tới 135 ngày (gấp gần 4 lần chu kỳ mua 35 ngày), cộng với contact_quality là unverified và consent_contact là unknown."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "zalo",
+    "fallback_channel": "phone",
+    "timing": "Liên hệ vào giữa tuần (Thứ 3 - Thứ 5) khung giờ trưa hoặc chiều tối, vì đây là khách hàng mua thực phẩm chức năng, thường rảnh rỗi nghỉ ngơi hoặc quan tâm sức khỏe bản thân vào các khung giờ này.",
+    "opening_message": "Dạ em chào anh/chị Tính, em là [Tên] từ cửa hàng. Lâu rồi không thấy anh/chị ghé ủng hộ shop, em nhắn tin hỏi thăm sức khỏe anh/chị luôn ạ. Đợt này shop vừa về lô Đông trùng hạ thảo và Nước uống Collagen Fine Japan mới, em dành riêng một ưu đãi tri ân đặc biệt cho khách hàng VIP như mình, anh/chị xem qua nhé!",
+    "fallback_message": "Dạ em chào anh/chị Tính, em gọi mà chưa thấy anh/chị bắt máy. Em là [Tên] từ cửa hàng ạ. Shop đang có chương trình ưu đãi riêng dành tặng khách VIP cho dòng Fine Japan, em gửi anh/chị xem qua Zalo tin nhắn này luôn nhé. Chúc anh/chị một ngày nhiều sức khỏe ạ!",
+    "talking_points": [
+      "Hỏi thăm tình hình sức khỏe và trải nghiệm của khách với các liệu trình Đông trùng hạ thảo, Collagen đã mua trước đây.",
+      "Giới thiệu chương trình ưu đãi/quà tặng tri ân dành riêng cho khách VIP quay lại, nhấn mạnh vào giá trị sức khỏe và sắc đẹp thay vì chỉ giảm giá đơn thuần."
+    ],
+    "cross_sell": [
+      "Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp (VCSL19001H010)",
+      "Thực phẩm bảo vệ sức khỏe Cordyceps (VTSC20001L001)"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Anh/chị không có nhu cầu mua nữa hoặc đã dùng hãng khác rồi.",
+        "response": "Dạ em hiểu ạ. Vậy anh/chị dùng thử hãng mới thấy thế nào ạ? Nếu khi nào cần tư vấn lại về liệu trình sức khỏe hay muốn đổi vị, anh/chị cứ nhắn em nhé, shop luôn có sẵn quà tặng dùng thử cho khách hàng thân thiết ạ."
+      },
+      {
+        "objection": "Dạo này anh/chị bận quá, chưa để ý đến sức khỏe được.",
+        "response": "Dạ công việc bận rộn càng cần giữ sức khỏe anh/chị nhỉ. Em gửi mình liệu trình uống Collagen hoặc Đông trùng hạ thảo gói nhỏ tiện lợi mang theo đi làm, lại đang có giá tri ân VIP, anh/chị tham khảo nhé!"
+      }
+    ],
+    "do_not": [
+      "Không giả vờ như khách vừa mới mua hàng hoặc hỏi 'sao lâu rồi không thấy anh/chị quay lại' một cách sáo rỗng, hãy tiếp cận bằng sự quan tâm sức khỏe.",
+      "Không spam tin nhắn hoặc gọi điện dồn dập nếu khách không phản hồi, vì chất lượng số điện thoại chưa được xác minh."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "consent_contact: unknown (không rõ khách có đồng ý nhận tin nhắn quảng cáo hay không)",
+    "birth_date và gender bị thiếu, không thể cá nhân hóa lời chúc sinh nhật hoặc xưng hô giới tính chuẩn xác",
+    "contact_quality: unverified (chưa xác minh được số điện thoại có chính chủ và đang hoạt động hay không)",
+    "loyalty_points: null (không rõ điểm tích lũy hiện tại để làm đòn bẩy khuyến mãi)"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+"profile_read": "Khách hàng mua lẻ VIP với tổng chi tiêu rất cao (hơn 121 triệu VNĐ) qua 24 đơn hàng, thanh toán trả trước và chuộng dòng sản phẩm sức khỏe/làm đẹp như Fine Japan, Cordyceps. Chu kỳ mua sắm trung bình khá ngắn (35 ngày) nhưng hiện đã ngưng giao dịch 135 ngày, rơi vào nhóm khách hàng có rủi ro rời bỏ cao. Mặc dù khách có xu hướng phụ thuộc khuyến mãi (PROMO_DEPENDENT), nhưng biên lợi nhuận đóng góp trung bình của khách hiện khá mỏng (chỉ đạt ~32.7%).",
+"value_assessment": {
+"tier": "VIP",
+"lifetime_value_vnd": 121256000.0,
+"margin_health": "thin",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Kéo khách hàng VIP quay lại bằng cách nhắc nhở bổ sung chu kỳ sản phẩm thiết yếu đã cạn.",
+"rationale": "Khách hàng thường xuyên mua các sản phẩm dạng uống định kỳ (Nước uống Hyaluron & Collagen, Cordyceps) nhưng đã quá hạn mua từ lâu. Việc tiếp cận dựa trên đúng dòng sản phẩm yêu thích sẽ tạo lý do liên hệ rất tự nhiên và dễ chuyển đổi.",
+"evidence": [
+"next_purchase_signal = OVERDUE",
+"avg_days_between_orders = 35",
+"recency_days = 135",
+"top_affinity_product = Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus",
+"last_purchased_product = (*) Thực phẩm bảo vệ sức khỏe Cordyceps"
+]
+},
+"risk": {
+"headline": "Bào mòn lợi nhuận nếu cố gắng dùng giảm giá sâu để níu kéo khách hàng nhạy cảm với khuyến mãi.",
+"type": "margin",
+"rationale": "Khách hàng thuộc nhóm PROMO_DEPENDENT, tuy nhiên tỷ suất lợi nhuận đóng góp (margin) đang mỏng (dưới 35%). Nếu áp dụng các chương trình giảm giá sâu để win-back, cửa hàng có thể đối mặt với rủi ro biên lợi nhuận bằng không hoặc âm."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Liên hệ vào giờ hành chính (khoảng 9h30 - 11h sáng hoặc 14h - 16h chiều), gọi càng sớm càng tốt vì khách đã trễ chu kỳ rất lâu (135 ngày).",
+"opening_message": "Dạ em chào anh/chị Tính ạ, em gọi từ cửa hàng đây. Lâu lắm rồi không thấy anh/chị ghé ủng hộ, không biết dạo này sức khỏe mình vẫn tốt chứ ạ? Em thấy đợt trước mình hay dùng Nước uống dưỡng da Fine Japan và viên Cordyceps, chắc giờ cũng hết lâu rồi nên em gọi hỏi thăm, tiện thể cửa hàng đang có ưu đãi tặng quà nhỏ tri ân riêng cho khách VIP nhà mình ạ.",
+"fallback_message": "Dạ chào anh/chị Tính, em là nhân viên chăm sóc khách VIP từ cửa hàng. Đã lâu không thấy anh/chị ghé thăm, cửa hàng có chuẩn bị một phần quà tri ân nhỏ gửi tặng riêng anh/chị khi bổ sung lại Nước uống dưỡng da Fine Japan hoặc viên Cordyceps. Lúc nào tiện anh/chị nhắn lại Zalo này để em hỗ trợ mình nhận ưu đãi nhé ạ!",
+"talking_points": [
+"Gợi nhắc một cách khéo léo và quan tâm về chu kỳ sử dụng sản phẩm Nước uống Fine Japan (mã VCSL19001H010) và viên Cordyceps (mã VTSC20001L001) đã ngắt quãng khá lâu.",
+"Nhấn mạnh lợi ích của việc sử dụng đều đặn thực phẩm chức năng/làm đẹp để duy trì hiệu quả tối ưu.",
+"Đưa ra ưu đãi tặng kèm quà tặng vật lý nhỏ hoặc dịch vụ chăm sóc ưu tiên (tuyệt đối không giảm giá sâu bằng tiền) để kích thích mua lại, kết hợp ghi nhận vị thế khách hàng VIP."
+],
+"cross_sell": [
+"Các dòng thực phẩm bảo vệ sức khỏe bổ trợ khác cùng thương hiệu Fine Japan",
+"Sản phẩm vitamin dùng hàng ngày hoặc mỹ phẩm bôi ngoài da hỗ trợ nâng cao hiệu quả của collagen"
+],
+"objection_handling": [
+{
+"objection": "Dạo này anh/chị đổi sang loại khác rồi/Chưa có nhu cầu mua lại.",
+"response": "Dạ vâng, thực phẩm bảo vệ sức khỏe thỉnh thoảng mình đổi dòng hoặc giãn cách một thời gian cũng rất tốt ạ. Nếu anh/chị đang trải nghiệm sản phẩm mới, em xin phép vẫn gửi danh mục ưu đãi quà tặng VIP qua Zalo, khi nào anh/chị cần bổ sung lại dòng Fine Japan quen thuộc thì cứ nhắn em hỗ trợ ngay nhé."
+},
+{
+"objection": "Giá bên em dạo này cao, có giảm giá nhiều không thì chị/anh mới mua.",
+"response": "Dạ em hiểu ạ. Thay vì chạy đua giảm giá đại trà, đợt này bên em tập trung bảo đảm nguồn hàng 100% chính hãng mới nhất và giữ mức giá ổn định nhất có thể ạ. Đặc biệt riêng với khách VIP như anh/chị, bên em sẽ hỗ trợ thêm quà tặng kèm giá trị khi mua hàng, tính ra vẫn rất có lợi và lại an tâm tuyệt đối về sức khỏe anh/chị nhé."
+}
+],
+"do_not": [
+"Tuyệt đối không chào mời các chương trình giảm giá sâu, cắt máu (clearance, sale up to 50%) vì margin đang mỏng.",
+"Không giả vờ như khách vừa mới mua hàng, phải thừa nhận thực tế khách đã vắng bóng một thời gian dài để tạo sự chân thật.",
+"Không dùng từ ngữ đao to búa lớn hay cam kết công dụng quá lố, cần tập trung vào sự quan tâm sức khỏe cá nhân."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Không rõ giới tính khách hàng (tên Nguyễn Tính có thể là nam hoặc nữ).",
+"Tên khách hàng có hậu tố 'NT 17' khá bất thường, có thể là ký hiệu nội bộ hoặc đánh dấu đặc biệt nhưng chưa rõ ý nghĩa.",
+"Thiếu dữ liệu lịch sử hội thoại (recent_conversations) và ghi chú (recent_notes) để hiểu lý do chính xác khách hàng ngừng mua suốt 135 ngày qua.",
+"Chưa thể chắc chắn 100% về chất lượng số điện thoại do trạng thái contact_quality vẫn là 'unverified'."
+]
+}

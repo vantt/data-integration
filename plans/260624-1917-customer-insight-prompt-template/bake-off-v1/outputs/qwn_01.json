@@ -1,0 +1,63 @@
+{
+  "profile_read": "Khách hàng Hoàng Thức là khách lẻ khu vực miền Trung, đã mua 3 đơn với tổng giá trị 14.5 triệu đồng, biên lợi nhuận trung bình rất tốt (~70%). Khách có tín hiệu sắp đến kỳ mua lại (trung bình 73 ngày/đơn, hiện đã 84 ngày chưa mua) và rất nhạy cảm với khuyến mãi. Sản phẩm khách ưa thích nhất là sụn vi cá mập Shark Cartilage Extract.",
+  "value_assessment": {
+    "tier": "SILVER",
+    "lifetime_value_vnd": 14550000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Khách đang đến chu kỳ mua lại và rất nhạy cảm với khuyến mãi, dễ chốt đơn nếu có ưu đãi hấp dẫn.",
+    "rationale": "recency_days (84) đã vượt avg_days_between_orders (73), next_purchase_signal là DUE_SOON, kết hợp với discount_sensitivity PROMO_DEPENDENT.",
+    "evidence": [
+      "recency_days: 84",
+      "avg_days_between_orders: 73",
+      "next_purchase_signal: DUE_SOON",
+      "discount_sensitivity: PROMO_DEPENDENT"
+    ]
+  },
+  "risk": {
+    "headline": "Khách đang ở trạng thái At Risk và có thể đã quên hoặc chuyển sang đối thủ nếu không có ưu đãi kịp thời.",
+    "type": "churn",
+    "rationale": "customer_status là At Risk, recency_days (84) đã vượt chu kỳ mua trung bình (73 ngày), nếu không tiếp cận sớm khách có thể rời bỏ."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "sms",
+    "timing": "Gọi điện vào giờ hành chính (9h-11h hoặc 14h-16h) vì khách mua thực phẩm bảo vệ sức khỏe và thanh toán COD, thường rảnh vào giờ này.",
+    "opening_message": "Dạ chào anh Thức, em gọi từ [Tên cửa hàng]. Em thấy anh đã dùng Shark Cartilage được hơn 2 tháng rồi, không biết anh thấy sức khỏe dạo này thế nào ạ? Sắp tới bên em đang có chương trình ưu đãi đặc biệt dành riêng cho khách hàng thân thiết ở miền Trung, em nhắn tin gửi anh xem qua nhé?",
+    "fallback_message": "Chào anh Thức, [Tên cửa hàng] xin lỗi vì lỡ gọi nhỡ. Bên em đang có ưu đãi đặc biệt cho dòng Shark Cartilage anh hay dùng. Anh xem chi tiết tại [link] hoặc phản hồi tin nhắn này để em tư vấn nhé!",
+    "talking_points": [
+      "Hỏi thăm sức khỏe và trải nghiệm sử dụng sản phẩm Shark Cartilage trong 2 tháng qua.",
+      "Thông báo chương trình ưu đãi độc quyền (vì khách PROMO_DEPENDENT) áp dụng cho lần mua tiếp theo.",
+      "Nhắc nhở anh nên duy trì liệu trình để đạt hiệu quả tốt nhất, tránh gián đoạn."
+    ],
+    "cross_sell": [
+      "Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ (VCST21004L001)",
+      "Combo 2 hộp Shark Cartilage (PVN150)"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Anh vẫn còn hàng, chưa dùng hết.",
+        "response": "Dạ, anh duy trì liệu trình liên tục sẽ tốt hơn ạ. Hay để em giữ trước ưu đãi này cho anh trong 7 ngày, khi nào dùng gần hết anh nhắn em giao ngay để anh không bị gián đoạn và vẫn được giá tốt nhất nhé?"
+      },
+      {
+        "objection": "Giá bên em cao quá / Bên khác đang rẻ hơn.",
+        "response": "Dạ, dòng Shark Cartilage bên em là hàng chính hãng Nhật Bản, đảm bảo nguồn gốc và hiệu quả rõ rệt. Hơn nữa hôm nay em đang có mã ưu đãi riêng cho anh, tính ra rất tiết kiệm so với mua lẻ bên ngoài ạ."
+      }
+    ],
+    "do_not": [
+      "Không gọi điện chào mời khi khách đang bận hoặc gọi quá giờ nghỉ ngơi.",
+      "Không quên áp dụng ưu đãi/khuyến mãi vì khách rất nhạy cảm về giá.",
+      "Không tư vấn các sản phẩm không thuộc nhóm Nhật Bản / Sụn vi cá mập."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "contact_quality: unverified - chưa xác nhận số điện thoại có liên hệ được không.",
+    "loyalty_points: null - không rõ điểm tích lũy để dùng làm ưu đãi.",
+    "birth_date: null, gender: null - thiếu thông tin cá nhân để cá nhân hóa lời chúc mừng sinh nhật hoặc quà tặng."
+  ]
+}

@@ -1,0 +1,62 @@
+{
+"profile_read": "Khách hàng Hoàng Thức là khách lẻ hạng Silver khu vực miền Trung, mang lại doanh thu 14.550.000đ qua 3 đơn hàng. Tần suất mua trung bình là 73 ngày, nhưng hiện đã 84 ngày chưa mua lại, đưa khách vào nhóm có nguy cơ rời bỏ (At Risk). Khách ưa chuộng các sản phẩm sụn cá mập của Fine Japan, thường thanh toán COD và rất nhạy cảm với khuyến mãi.",
+"value_assessment": {
+"tier": "SILVER",
+"lifetime_value_vnd": 14550000,
+"margin_health": "healthy",
+"invest_level": "medium"
+},
+"opportunity": {
+"headline": "Đón đầu nhu cầu sử dụng tiếp sụn cá mập đang bị trễ nhịp.",
+"rationale": "Với chu kỳ mua 73 ngày và khoảng cách hiện tại là 84 ngày, khách hàng rất có thể đã dùng hết hoặc sắp hết Combo 2 hộp mua lần trước, tạo thời điểm hoàn hảo để chốt đơn lặp lại.",
+"evidence": [
+"avg_days_between_orders: 73",
+"recency_days: 84",
+"next_purchase_signal: DUE_SOON",
+"last_purchased_product: Combo 2 hộp Shark Cartilage"
+]
+},
+"risk": {
+"headline": "Nguy cơ khách rời bỏ sang đối thủ nếu không có ưu đãi kích cầu kịp thời.",
+"type": "promo_dependency",
+"rationale": "Khách hàng có tính nhạy cảm cao với khuyến mãi (PROMO_DEPENDENT) và đã trễ chu kỳ mua 11 ngày. Nếu không có mã giảm giá hoặc quà tặng, khách có thể trì hoãn việc mua lại."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Liên hệ ngay trong hôm nay hoặc ngày mai vào giờ hành chính vì khách đã vượt quá chu kỳ mua trung bình.",
+"opening_message": "Dạ em chào anh/chị Thức, em gọi từ bộ phận chăm sóc khách hàng. Em thấy đợt trước mình có dùng Combo 2 hộp sụn cá mập Shark Cartilage, chắc tầm này mình cũng gần dùng hết rồi nên em gọi báo đợt này bên em đang có mã giảm giá riêng dành cho khách quen ạ.",
+"fallback_message": "Dạ chào anh/chị Thức, em thấy mình sắp dùng hết Combo 2 hộp sụn cá mập đợt trước. Hiện hệ thống đang có mã giảm giá đặc biệt riêng cho khách quen, anh/chị phản hồi tin nhắn này để em kích hoạt ưu đãi gửi hàng cho mình nhé!",
+"talking_points": [
+"Hỏi thăm trải nghiệm sử dụng Combo sụn cá mập đợt trước xem khách có thấy cải thiện sức khỏe không.",
+"Nhấn mạnh chương trình khuyến mãi hiện tại (giảm giá hoặc tặng quà) vì biên lợi nhuận cho phép linh hoạt ưu đãi và đây là yếu tố chốt sale chính với khách hàng này.",
+"Đề xuất gửi hàng COD về địa chỉ cũ ở miền Trung để khách kiểm tra hàng trước khi thanh toán như thói quen."
+],
+"cross_sell": [
+"Gợi ý mua lại Combo 2 hộp Shark Cartilage (PVN150) hoặc nâng cấp mua Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ (VCST21004L001).",
+"Bán kèm các sản phẩm bồi bổ sức khỏe cùng thương hiệu Fine Japan."
+],
+"objection_handling": [
+{
+"objection": "Nhà vẫn còn thuốc, chưa uống hết.",
+"response": "Dạ không sao ạ, đợt này mã giảm giá đang tốt nhất tháng nên anh/chị có thể lấy trước để dành, hạn sử dụng lô hàng mới bên em còn rất xa, chốt ưu đãi bây giờ sẽ tiết kiệm hơn nhiều ạ."
+},
+{
+"objection": "Dạo này kẹt tiền, chưa muốn mua combo.",
+"response": "Dạ em hiểu ạ, vậy đợt này em báo kho tách lẻ gửi mình 1 lọ trước để duy trì uống đều đặn nhé, chi phí sẽ nhẹ hơn mà bên em vẫn sẽ áp dụng ưu đãi cho mình ạ."
+}
+],
+"do_not": [
+"Tuyệt đối không chào bán nguyên giá (full-price) mà không đính kèm ưu đãi.",
+"Không ép khách mua lại ngay từ đầu câu chuyện, cần tiếp cận khéo léo như một dịch vụ nhắc nhở liệu trình sức khỏe."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Số điện thoại chưa được xác minh (unverified) và chưa rõ sự đồng ý nhận cuộc gọi (consent_contact: unknown).",
+"Thiếu thông tin giới tính nên nhân viên cần linh hoạt khi xưng hô lúc bắt máy.",
+"Không có lịch sử ghi chú các cuộc hội thoại trước đó nên không rõ thái độ và rào cản cụ thể của khách."
+]
+}

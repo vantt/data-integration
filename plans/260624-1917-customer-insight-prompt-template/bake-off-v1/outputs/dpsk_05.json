@@ -1,0 +1,62 @@
+{
+  "profile_read": "Khách hàng Phương Nguyễn thuộc nhóm Vàng với tổng chi tiêu 36.680.000 VND qua 2 đơn hàng chỉ trong 1 ngày, tập trung vào dòng cao cấp Nhật Bản - cụ thể là 'Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp' (SKU VCSL21002H010). Tuy nhiên, đã 1399 ngày (gần 4 năm) không có giao dịch mới dù hệ thống ghi nhận trạng thái 'Mới' và tín hiệu mua 'Quá hạn', cho thấy đây thực tế là khách hàng đã rời bỏ, cần chiến lược win-back. Kênh ưu tiên là mạng xã hội, khách có xu hướng trả trước và không ưa khuyến mãi.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 36680000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Khôi phục khách hàng Vàng từng sẵn sàng chi mạnh tay cho thực phẩm bảo vệ sức khỏe Nhật Bản.",
+    "rationale": "Giá trị trọn đời cao chỉ sau 2 giao dịch cho thấy sức mua lớn; nếu chăm sóc lại đúng cách, có thể kích hoạt nhu cầu mua định kỳ mặt hàng sức khỏe cao cấp.",
+    "evidence": [
+      "lifetime_value = 36.680.000 VND, order_count = 2",
+      "product_affinity = PRODUCT_FINE_JAPAN",
+      "avg_order_contribution_margin_pct ~74.9%, biên lợi nhuận tốt"
+    ]
+  },
+  "risk": {
+    "headline": "Mất liên lạc hoàn toàn do thời gian không tương tác quá dài.",
+    "type": "churn",
+    "rationale": "recency_days lên tới 1399, contact_quality ở mức 'unverified', không có ghi chú hay hội thoại gần đây; khả năng số điện thoại không còn sử dụng hoặc khách không nhớ thương hiệu là rất cao."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "zalo",
+    "fallback_channel": "sms",
+    "timing": "Ngày thường, 9h-11h hoặc 14h-16h, tránh đầu tuần và cuối tuần. Đây là khung giờ người dùng mạng xã hội thường rảnh, tăng tỉ lệ phản hồi.",
+    "opening_message": "Chị Phương ơi, em là [Tên] bên cửa hàng [Tên cửa hàng] ạ. Dạ đã lâu lắm rồi mới liên hệ lại, không biết chị còn nhớ sản phẩm Cordyceps Plus hộp bên em chị dùng trước đây không? Em gọi chỉ để hỏi thăm sức khoẻ chị dạo này thế nào ạ. Nếu chị vẫn quan tâm đến dòng thực phẩm bảo vệ sức khoẻ Nhật, bên em đang có một số thông tin hữu ích gửi chị tham khảo nha.",
+    "fallback_message": "Chào chị Phương, em là [Tên] từ [Cửa hàng]. Lâu quá không thấy chị ghé, sản phẩm Cordyceps Plus chị dùng trước đây không biết còn hợp không ạ? Khi nào chị rảnh, em xin phép gọi điện trao đổi nhanh ạ. Cảm ơn chị!",
+    "talking_points": [
+      "Nhấn mạnh chất lượng và nguồn gốc Nhật Bản của Cordyceps Plus, phù hợp với tâm lý mua hàng chính hãng, không cần khuyến mãi.",
+      "Gợi nhắc trải nghiệm tích cực trước đây (giá trị đơn hàng cao cho thấy sự hài lòng) và chia sẻ kiến thức mới về lợi ích của đông trùng hạ thảo đối với sức khỏe hậu đại dịch."
+    ],
+    "cross_sell": [
+      "Các dòng thực phẩm bổ sung cùng phân khúc cao cấp Nhật Bản như viên uống đẹp da, vitamin tổng hợp (cần thăm dò thêm nhu cầu vì chưa có dữ liệu affinity thứ hai)."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Tôi không có nhu cầu dùng nữa.",
+        "response": "Dạ em hiểu ạ. Em chỉ muốn gửi chị một vài tài liệu mới về lợi ích của đông trùng hạ thảo với sức khoẻ hậu Covid, biết đâu có lúc chị cần. Mình kết bạn Zalo để em chia sẻ, không mua gì cũng được chị nha."
+      },
+      {
+        "objection": "Giá cao quá, có khuyến mãi không?",
+        "response": "Dạ đúng là sản phẩm Nhật cao cấp có giá xứng đáng với chất lượng chị ạ. Bên em không chạy khuyến mãi ồ ạt mà giữ ổn định để đảm bảo hàng chính hãng. Nhưng với khách thân thiết như chị, em có thể tư vấn thêm về chương trình tích luỹ hoặc quà tặng nhỏ kèm theo đơn ạ."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không dùng giọng chào mừng khách mới hay nói 'lâu rồi mới thấy chị quay lại' như thể khách vừa mua gần đây.",
+      "Không đề cập giảm giá hay khuyến mãi trực tiếp (FULL_PRICE).",
+      "Không gây áp lực mua ngay, tránh làm khách khó chịu."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "contact_quality ở mức 'unverified', chưa xác nhận số điện thoại còn hoạt động.",
+    "Chưa rõ nguyên nhân ngưng mua sau 2 đơn hàng.",
+    "Giới tính ghi 'other', cách xưng hô 'chị' có thể chưa chính xác tuyệt đối.",
+    "Thiếu dữ liệu sản phẩm bán kèm tiềm năng (second_affinity_product = null).",
+    "Không có tài khoản mạng xã hội cụ thể (Zalo ID, Facebook) để tiếp cận trực tiếp."
+  ]
+}

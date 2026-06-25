@@ -1,0 +1,65 @@
+{
+  "profile_read": "Khách hàng Nguyễn Tính NT 17 thuộc nhóm VIP với tổng chi tiêu trọn đời 121.256.000 VNĐ qua 24 đơn hàng. Hiện tại đã 135 ngày không mua (gấp gần 4 lần chu kỳ mua trung bình 35 ngày), trạng thái 'Churned', tín hiệu mua kế tiếp 'OVERDUE'. Ưa thích dòng sản phẩm Fine Japan, đặc biệt là Nước uống dưỡng da Hyaluron & Collagen Plus; lần mua gần nhất là TPBVSK Cordyceps. Nhạy cảm khuyến mãi (PROMO_DEPENDENT), thanh toán trả trước và thường chọn kênh trực tiếp.",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 121256000,
+    "margin_health": "healthy",
+    "invest_level": "high"
+  },
+  "opportunity": {
+    "headline": "Win-back khách VIP đã quá kỳ mua bằng sản phẩm ái lực cao nhất (Fine Japan Collagen) kết hợp ưu đãi đặc biệt.",
+    "rationale": "Khách có giá trị trọn đời lớn, biên lợi nhuận khỏe, đang bỏ lỡ chu kỳ mua và có sản phẩm yêu thích rõ ràng. Kết hợp đúng đòn bẩy khuyến mãi nhiều khả năng kéo lại mua hàng.",
+    "evidence": [
+      "lifetime_value = 121.256.000 VNĐ, order_count = 24",
+      "recency_days = 135, avg_days_between_orders = 35, next_purchase_signal = OVERDUE",
+      "top_affinity_product: Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus",
+      "discount_sensitivity = PROMO_DEPENDENT, avg_order_contribution_margin_pct = 0.327 (dư địa khuyến mãi)"
+    ]
+  },
+  "risk": {
+    "headline": "Khách rời bỏ vĩnh viễn do chờ đợi khuyến mãi không được đáp ứng hoặc đã tìm thấy ưu đãi ở nơi khác.",
+    "type": "churn",
+    "rationale": "Recency 135 ngày, trạng thái Churned, đồng thời nhạy cảm PROMO_DEPENDENT khiến khách dễ so sánh giá và mất kiên nhẫn nếu không nhận được khuyến khích kịp thời."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Gọi vào sáng sớm hoặc chiều muộn giữa tuần (thứ Ba - thứ Năm) để tránh giờ cao điểm bận rộn. Cần liên hệ ngay vì tín hiệu quá hạn đã kéo dài.",
+    "opening_message": "Dạ thưa anh/chị Nguyễn Tính NT 17, em là [Tên nhân viên] từ [Tên cửa hàng]. Lâu quá không thấy anh/chị ghé mua hay đặt hàng, hôm nay em gọi hỏi thăm sức khỏe của anh/chị, đồng thời có chương trình ưu đãi riêng cho sản phẩm Fine Japan mà trước đây anh/chị rất thích ạ.",
+    "fallback_message": "Chào anh/chị Nguyễn Tính NT 17, em [Tên] bên [Cửa hàng]. Lâu rồi không gặp, em có ưu đãi dành cho Nước dưỡng da Fine Japan Collagen anh/chị từng quan tâm. Khi nào rảnh anh/chị nhắn lại em nhé ạ.",
+    "talking_points": [
+      "Hỏi thăm trải nghiệm với Cordyceps đợt trước và gợi nhắc hiệu quả, sau đó dẫn dắt sang nhu cầu chăm sóc da, xương khớp với Collagen Hyaluron.",
+      "Nhấn mạnh đây là ưu đãi dành riêng cho khách VIP lâu năm, có thể là chiết khấu % hoặc quà tặng kèm trị giá (tận dụng PROMO_DEPENDENT nhưng trong biên độ margin cho phép).",
+      "Đề cập đến nguồn gốc Nhật Bản chính hãng, sự tin tưởng của các khách VIP khác để củng cố giá trị, tránh chỉ nói về giá."
+    ],
+    "cross_sell": [
+      "Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp (SKU: VCSL19001H010) – sản phẩm ái lực cao nhất.",
+      "Thực phẩm bảo vệ sức khỏe Cordyceps (SKU: VTSC20001L001) – sản phẩm mua gần nhất, dễ tái mua.",
+      "Combo Cordyceps + Collagen: bảo vệ sức khỏe từ bên trong và làm đẹp da."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Tôi không có nhu cầu mua thêm lúc này.",
+        "response": "Dạ, em không ép mua đâu ạ. Em chỉ muốn hỏi thăm xem anh/chị dùng Cordyceps thấy thế nào và nhân tiện giới thiệu ưu đãi cho Collagen, lỡ sau này anh/chị cần thì có thể tham khảo ạ."
+      },
+      {
+        "objection": "Giá cao quá, chỗ khác rẻ hơn.",
+        "response": "Dạ, bên em cam kết hàng chính hãng Nhật, có hóa đơn rõ ràng. Hơn nữa với khách VIP như anh/chị, em có quà tặng kèm hoặc ưu đãi riêng để tổng giá trị tốt hơn nhiều so với mua lẻ nơi khác ạ."
+      }
+    ],
+    "do_not": [
+      "Không giả vờ như khách vừa mới ghé mua; phải thừa nhận đã lâu không liên lạc.",
+      "Không đưa ra mức giảm giá quá sâu làm ảnh hưởng đến margin dù đang khỏe; chỉ dùng ưu đãi vừa phải hoặc quà tặng.",
+      "Không hard-sell, không tạo áp lực mua ngay trong cuộc gọi đầu win-back."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "consent_contact = unknown, chưa rõ khách đã đồng ý nhận liên lạc marketing hay chưa",
+    "Thiếu giới tính, tuổi, ngày sinh để cá nhân hóa lời chào và ưu đãi",
+    "Không có ghi chú CRM hay lịch sử hội thoại gần đây để hiểu nguyên nhân rời bỏ",
+    "Không có thông tin điểm tích lũy hay phản hồi từ các lần liên hệ trước"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+"profile_read": "Phương Nguyễn là khách hàng lẻ hạng GOLD khu vực miền Trung, mang lại giá trị cao (LTV: 36.680.000 VNĐ) chỉ qua 2 đơn hàng với biên lợi nhuận cực tốt (74.9%). Khách sẵn sàng mua hàng nguyên giá và thường thanh toán trả trước, chủ yếu quan tâm đến Thực phẩm bảo vệ sức khỏe Cordyceps Plus. Tuy nhiên, khách đã ngừng giao dịch 1399 ngày (khoảng 4 năm), dấu hiệu cho thấy khách đã ngủ đông hoàn toàn dù hệ thống vẫn ghi nhận là khách mới.",
+"value_assessment": {
+"tier": "GOLD",
+"lifetime_value_vnd": 36680000,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Khơi gợi lại nhu cầu chăm sóc sức khỏe cao cấp với khách hàng có sức mua lớn.",
+"rationale": "Khách hàng có LTV lên đến gần 37 triệu chỉ với 2 đơn và thường xuyên mua sản phẩm nguyên giá, thanh toán trước, cho thấy năng lực tài chính tốt và sự trân trọng giá trị thực của các sản phẩm sức khỏe.",
+"evidence": [
+"lifetime_value: 36680000.0",
+"discount_sensitivity: FULL_PRICE",
+"payment_behavior: PAYMENT_PREPAID"
+]
+},
+"risk": {
+"headline": "Khách hàng đã mất kết nối quá lâu, khả năng số điện thoại Zalo/gọi điện không còn sử dụng là rất cao.",
+"type": "churn",
+"rationale": "Đã 1399 ngày kể từ lần mua cuối và chất lượng liên hệ chưa được xác minh (unverified). Thời gian ngủ đông quá dài khiến việc kết nối lại trở nên khó khăn và rủi ro tốn nguồn lực mà không phản hồi."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "zalo",
+"fallback_channel": "phone",
+"timing": "Buổi sáng (9:00 - 10:00) hoặc chiều (15:00 - 16:00) các ngày trong tuần. Ưu tiên tiếp cận nhẹ nhàng với tâm thế tri ân và hỏi thăm khách hàng cũ lâu năm.",
+"opening_message": "Dạ em chào anh/chị Phương, em gọi từ cửa hàng. Đã một thời gian khá dài từ lần cuối anh/chị mua dòng Cordyceps Plus bên em. Hôm nay bên em đang rà soát lại danh sách khách hàng thân thiết hạng Gold mảng chăm sóc sức khỏe để gửi lời tri ân, em xin phép hỏi thăm xem dạo này sức khỏe của mình thế nào rồi ạ?",
+"fallback_message": "Dạ chào anh/chị Phương, em là chuyên viên CSKH từ cửa hàng. Lâu rồi không thấy anh/chị ghé thăm, hiện bên em đang có phiên bản mới cập nhật của dòng Thực phẩm bảo vệ sức khỏe Cordyceps Plus mà trước anh/chị hay dùng. Nếu anh/chị quan tâm và cần tư vấn thêm về các dòng bồi bổ sức khỏe cao cấp, anh/chị cứ phản hồi lại tin nhắn này để em hỗ trợ mình nhé ạ. Chúc anh/chị nhiều sức khỏe!",
+"talking_points": [
+"Nhắc lại sự quen thuộc của dòng Cordyceps Plus mà khách đã từng tin dùng và khéo léo hỏi thăm tình hình sức khỏe hiện tại.",
+"Giới thiệu các nâng cấp về chất lượng hoặc sản phẩm chăm sóc sức khỏe nội địa Nhật (thuộc nhóm Fine Japan) cao cấp đang có tại cửa hàng.",
+"Nhấn mạnh dịch vụ chăm sóc cá nhân hóa và các ưu đãi đặc quyền về trải nghiệm cho khách hàng Gold lâu năm thay vì chèo kéo giảm giá."
+],
+"cross_sell": [
+"Các dòng sản phẩm nội địa Nhật (Fine Japan) cao cấp khác có cùng công dụng bồi bổ sức khỏe toàn diện hoặc chống lão hóa."
+],
+"objection_handling": [
+{
+"objection": "Chị/Anh đang dùng loại khác rồi, không có nhu cầu mua thêm lúc này.",
+"response": "Dạ em hiểu ạ, việc chăm sóc sức khỏe cần duy trì đều đặn nên anh/chị có sản phẩm đang dùng phù hợp là rất tốt. Khi nào anh/chị cần đa dạng hóa dòng sản phẩm hoặc muốn tham khảo thêm dòng nội địa Nhật chuẩn bên em, anh/chị cứ nhắn lại Zalo này để em tư vấn kỹ hơn nhé. Em cảm ơn anh/chị ạ."
+},
+{
+"objection": "Lâu quá rồi anh/chị không nhớ bên em là cửa hàng nào.",
+"response": "Dạ vâng, cũng hơn 3 năm rồi nên anh/chị không nhớ là rất bình thường ạ. Trước đây anh/chị từng ủng hộ dòng Cordyceps Plus bên em và là khách hàng hạng Gold. Cuộc gọi này em chủ yếu muốn gửi lại liên hệ chăm sóc khách hàng mới nhất thôi ạ, khi nào anh/chị cần các sản phẩm bổ trợ sức khỏe thì cứ nhớ đến bên em nhé."
+}
+],
+"do_not": [
+"TUYỆT ĐỐI không dùng kịch bản chào mừng người mới (bất chấp lifecycle_stage là LIFECYCLE_NEW) vì khách đã ngừng mua 1399 ngày.",
+"Không dùng các chương trình giảm giá sâu, xả hàng làm đòn bẩy chính vì khách có độ nhạy cảm giá FULL_PRICE và biên lợi nhuận đang rất tốt.",
+"Không thúc ép chốt sale ngay trong lần liên hệ đầu tiên để tránh gây phản cảm với một khách hàng đã mất kết nối quá lâu."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Thiếu thông tin giới tính chính xác (gender đang là 'other') để có thể xưng hô anh/chị chuẩn xác 100%.",
+"Lịch sử ghi chú và hội thoại trống hoàn toàn, không thể biết lý do thực sự khách hàng dừng mua cách đây 1399 ngày.",
+"Trạng thái liên hệ 'unverified' khiến việc chắc chắn số điện thoại này còn thuộc về Phương Nguyễn sau 4 năm là một dấu hỏi lớn."
+]
+}

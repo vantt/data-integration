@@ -1,0 +1,50 @@
+{
+  "profile_read": "Khách hàng mang tên 'Leflair' (nghi là tổ chức) được phân loại RETAIL, nhóm VIP, giá trị vòng đời 260.594.479 VND qua 31 đơn hàng. Lần mua cuối cách đây 1073 ngày, trạng thái Churned. Sản phẩm ưa thích nhất là Viên uống giảm cân cao cấp Calorie Burn - Chitosan (375v) thuộc dòng Fine Japan. Dữ liệu kinh tế mâu thuẫn: is_margin_negative = false nhưng tỷ suất lợi nhuận đóng góp bình quân -1,5%.",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 260594479,
+    "margin_health": "unknown",
+    "invest_level": "low"
+  },
+  "opportunity": {
+    "headline": "Tiềm năng khôi phục khách hàng VIP giá trị cao nếu xác minh được loại tài khoản và dữ liệu chính xác.",
+    "rationale": "Khách từng chi tiêu rất lớn (LTV 260 triệu VND), mua 31 đơn, có ái lực với sản phẩm Fine Japan – hoàn toàn có cơ hội kích hoạt lại nếu là khách thật và dữ liệu kinh tế đáng tin.",
+    "evidence": [
+      "lifetime_value = 260.594.479 VND",
+      "order_count = 31",
+      "product_affinity = PRODUCT_FINE_JAPAN",
+      "top_affinity_product: Viên uống giảm cân cao cấp Calorie Burn - Chitosan (375v)"
+    ]
+  },
+  "risk": {
+    "headline": "Dữ liệu đáng ngờ, dễ dẫn đến tiếp cận sai đối tượng và lãng phí nguồn lực.",
+    "type": "other",
+    "rationale": "Tên 'Leflair' giống sàn thương mại điện tử, nghi là B2B gán nhầm RETAIL. Cờ margin mâu thuẫn (avg_order_contribution_margin_pct = -1,5% nhưng is_margin_negative = false). Recency 1073 ngày – quá lâu, khả năng đã mất hoàn toàn. Kết hợp các yếu tố này, dữ liệu không đủ tin cậy để cá nhân hóa tiếp cận."
+  },
+  "approach": {
+    "recommended": false,
+    "reason_if_not_recommended": "Nghi ngờ sai loại tài khoản (tên giống sàn thương mại điện tử 'Leflair'), mâu thuẫn dữ liệu lợi nhuận (biên đóng góp bình quân -1,5% nhưng is_margin_negative=false), và khách đã rời bỏ quá lâu (1073 ngày). Cần xác minh lại loại hình khách hàng và số liệu tài chính trước khi tiếp cận.",
+    "primary_channel": "none",
+    "fallback_channel": "none",
+    "timing": "Tạm hoãn, chưa tiếp cận cho đến khi hoàn tất xác minh dữ liệu.",
+    "opening_message": "",
+    "fallback_message": "",
+    "talking_points": [],
+    "cross_sell": [],
+    "objection_handling": [],
+    "do_not": [
+      "Tiếp cận khi chưa xác minh loại tài khoản và tính chính xác của biên lợi nhuận.",
+      "Giả định đây là khách lẻ để áp dụng kịch bản chăm sóc cá nhân.",
+      "Dùng khuyến mãi hoặc ưu đãi khi chưa có dữ liệu lợi nhuận thực."
+    ]
+  },
+  "confidence": "low",
+  "data_gaps": [
+    "Loại tài khoản thực tế (cá nhân hay doanh nghiệp) – tên 'Leflair' nghi là tổ chức",
+    "Số liệu biên lợi nhuận chính xác (cờ âm và tỷ lệ mâu thuẫn)",
+    "Thông tin liên hệ đã xác minh (contact_quality = unverified)",
+    "Lịch sử giao dịch sau lần mua cuối 1073 ngày trước",
+    "Tình trạng đồng ý liên hệ (consent_contact = unknown)",
+    "Ghi chú CRM và hội thoại gần đây đều trống, không có manh mối về hành vi gần đây"
+  ]
+}

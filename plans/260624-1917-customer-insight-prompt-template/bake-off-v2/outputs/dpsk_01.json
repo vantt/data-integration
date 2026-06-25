@@ -1,0 +1,63 @@
+{
+  "profile_read": "Anh Hoàng Thức, khách lẻ tại miền Trung, nhóm SILVER, tổng chi tiêu 14,55 triệu đồng qua 3 đơn hàng. Quan tâm dòng Fine Japan, gần nhất mua Combo 2 hộp Shark Cartilage (PVN150). Đã 84 ngày chưa mua lại, lệch nhịp so với chu kỳ 73 ngày, tín hiệu DUE_SOON và trạng thái At Risk. Biên lợi nhuận góp khỏe (70,4%), ưa khuyến mãi, thanh toán COD.",
+  "value_assessment": {
+    "tier": "SILVER",
+    "lifetime_value_vnd": 14550000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Khách sắp đến kỳ mua lại, margin cao, có thể kích hoạt bằng ưu đãi khéo léo để giữ chân.",
+    "rationale": "Chu kỳ mua 73 ngày, đã qua 84 ngày, tín hiệu DUE_SOON cho thấy khách chuẩn bị mua. Biên lợi nhuận góp 70,4% cho phép dùng ưu đãi nhẹ để khuyến khích quay lại, phù hợp với mức độ nhạy khuyến mãi của khách.",
+    "evidence": [
+      "recency_days = 84, avg_days_between_orders = 73, next_purchase_signal = DUE_SOON",
+      "avg_order_contribution_margin_pct = 0.7044",
+      "discount_sensitivity = PROMO_DEPENDENT"
+    ]
+  },
+  "risk": {
+    "headline": "Khách đang At Risk, có dấu hiệu rời bỏ nếu không tái kết nối đúng lúc.",
+    "type": "churn",
+    "rationale": "Trạng thái At Risk, recency đã vượt chu kỳ mua trung bình, không có ghi chú hay hội thoại gần đây để hiểu trải nghiệm. Kết hợp mức độ phụ thuộc khuyến mãi, nếu không có ưu đãi kịp thời, khách dễ chuyển sang nơi khác có giá tốt hơn."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Liên hệ trong 1-2 ngày tới, vào giờ hành chính. Khách đang DUE_SOON, tiếp cận sớm để đón đầu nhu cầu mua lại, tránh để recency kéo dài thêm.",
+    "opening_message": "Chào anh Thức ạ, em là [Tên] từ [Cửa hàng]. Dạ lâu rồi mình chưa gặp anh, hôm nay em gọi thăm anh dùng Combo 2 hộp Shark Cartilage lần trước thấy thế nào ạ? Bên em đang có chương trình tri ân khách thân thiết, muốn gửi tặng anh một ưu đãi nho nhỏ cho lần mua tới ạ.",
+    "fallback_message": "Chào anh Thức, em [Tên] bên [Cửa hàng] ạ. Lâu quá không thấy anh ghé, em nhắn hỏi thăm sức khỏe anh dạo này thế nào? Sản phẩm Shark Cartilage bên em đang có ưu đãi riêng cho khách quen, anh xem tiện thì em gửi thông tin nhé.",
+    "talking_points": [
+      "Hỏi thăm trải nghiệm với Combo 2 hộp Shark Cartilage (PVN150) và lắng nghe phản hồi.",
+      "Nhấn mạnh nguồn gốc Fine Japan, chất lượng sản phẩm đang dùng, phù hợp chăm sóc sức khỏe dài hạn.",
+      "Giới thiệu ưu đãi riêng (tặng quà, chiết khấu nhẹ hoặc miễn phí vận chuyển) dành cho khách hàng thân thiết, không giảm giá sâu để giữ giá trị sản phẩm."
+    ],
+    "cross_sell": [
+      "Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ (VCST21004L001) – sản phẩm có ái lực cao nhất, bán kèm khi khách mua combo lần tới.",
+      "Các sản phẩm Fine Japan khác cùng dòng, nếu khách có nhu cầu đa dạng hơn."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Dạo này tôi chưa có nhu cầu mua thêm.",
+        "response": "Dạ em hiểu, em chỉ gọi thăm anh thôi ạ. Shark Cartilage thường dùng đều đặn sẽ tốt cho khớp, em sợ anh bận quá quên lịch mua. Bên em đang có ưu đãi nhỏ cho khách quen, nếu anh cần em giữ chỗ giúp anh, không mua cũng không sao ạ."
+      },
+      {
+        "objection": "Bên em có khuyến mãi gì không? Giá còn cao quá.",
+        "response": "Dạ sản phẩm này chất lượng Nhật cao cấp, giá đã niêm yết rất tốt rồi anh. Nhưng vì anh là khách thân thiết, bên em có quà tặng kèm hoặc miễn phí vận chuyển ạ. Em cam kết đây là ưu đãi tốt nhất cho khách quen của em."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không đề cập trạng thái At Risk hay tạo cảm giác thúc ép mua.",
+      "Không giảm giá sâu dù biên lợi nhuận cao vì có thể tạo kỳ vọng sai, làm xói mòn giá trị sản phẩm.",
+      "Không bịa đặt trải nghiệm của khách như “lần trước anh khen…” vì không có ghi chú hay hội thoại nào chứng minh."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Chất lượng liên hệ unverified – số điện thoại chưa được xác nhận chính xác.",
+    "Trạng thái đồng ý liên hệ (consent_contact) là unknown, cần xác nhận khi kết nối.",
+    "Thiếu ngày sinh, giới tính để cá nhân hóa chăm sóc.",
+    "Không có ghi chú gần đây hay nhật ký hội thoại để hiểu mức độ hài lòng hay lý do chưa mua lại."
+  ]
+}

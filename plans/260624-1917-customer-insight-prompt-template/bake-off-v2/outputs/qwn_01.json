@@ -1,0 +1,61 @@
+{
+  "profile_read": "Khách hàng Hoàng Thức, khu vực Miền Trung, thuộc nhóm Silver với 3 đơn hàng mang lại doanh thu trọn đời 14.550.000 VND. Khách có biên lợi nhuận rất tốt (hơn 70%) và có xu hướng mua các sản phẩm hỗ trợ xương khớp như Shark Cartilage Extract, tuy nhiên đã 84 ngày chưa quay lại (vượt chu kỳ trung bình 73 ngày) nên hệ thống đánh giá là At Risk và đến kỳ mua sắm.",
+  "value_assessment": {
+    "tier": "SILVER",
+    "lifetime_value_vnd": 14550000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Kích hoạt lại khách hàng đang đến kỳ mua bằng ưu đãi nhẹ vì biên lợi nhuận cao và thói quen phụ thuộc khuyến mãi.",
+    "rationale": "Khách có biên lợi nhuận rất tốt và rất nhạy cảm với khuyến mãi, đồng thời tín hiệu mua sắm đã đến hạn.",
+    "evidence": [
+      "next_purchase_signal: DUE_SOON",
+      "avg_order_contribution_margin_pct: 0.704",
+      "discount_sensitivity: PROMO_DEPENDENT",
+      "customer_status: At Risk"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đang ở trạng thái At Risk với thời gian vắng mặt vượt quá chu kỳ mua hàng trung bình, dễ dẫn đến rời bỏ.",
+    "type": "churn",
+    "rationale": "Đã 84 ngày kể từ lần mua cuối trong khi chu kỳ trung bình chỉ 73 ngày, nếu không tiếp cận kịp thời khách có thể chuyển sang đối thủ."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Liên hệ ngay trong khung giờ hành chính hoặc đầu giờ tối vì tín hiệu DUE_SOON và đã vượt chu kỳ mua trung bình.",
+    "opening_message": "Dạ alo, em chào anh Hoàng Thức ạ. Em gọi từ cửa hàng mình, thấy mình hay dùng viên uống sụn vi cá mập Shark Cartilage để hỗ trợ xương khớp. Đợt này anh dùng gần hết chưa ạ, bên em đang có chương trình hỗ trợ giá tốt cho khách hàng thân thiết, em nhắn mình tham khảo nhé?",
+    "fallback_message": "Dạ em chào anh Hoàng Thức, em gọi mà chưa thấy anh bắt máy. Bên em đang có ưu đãi riêng cho khách hàng thân thiết khi mua lại Combo Shark Cartilage, anh xem tin nhắn và phản hồi em nhé!",
+    "talking_points": [
+      "Hỏi thăm tình trạng sử dụng sản phẩm Shark Cartilage Extract, nhắc nhẹ đã đến kỳ mua lại để không gián đoạn liệu trình.",
+      "Giới thiệu chương trình ưu đãi hoặc quà tặng nhỏ để chốt đơn Combo 2 hộp, phù hợp với tâm lý thích khuyến mãi của khách."
+    ],
+    "cross_sell": [
+      "Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ",
+      "Combo 2 hộp Shark Cartilage"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Anh chưa dùng hết / Vẫn còn",
+        "response": "Dạ vậy anh cứ dùng tiếp cho hết nhé, em cứ nhắn thông tin ưu đãi để anh tiện lưu lại, khi nào gần hết anh ới em gửi hàng ngay ạ, tránh để gián đoạn liệu trình anh nhé."
+      },
+      {
+        "objection": "Giá bên em cao quá / Đang bận",
+        "response": "Dạ hiểu ạ, đợt này bên em đang có hỗ trợ giá đặc biệt cho khách hàng thân thiết kèm freeship COD tận nơi, anh cứ cho em xin địa chỉ em gửi trước, anh nhận hàng kiểm tra ưng ý mới thanh toán ạ."
+      }
+    ],
+    "do_not": [
+      "Không tự bịa ra việc khách đã khen ngợi sản phẩm do không có ghi chú lịch sử.",
+      "Không ép mua dồn dập vì khách thanh toán COD và đang ở trạng thái At Risk, cần sự tinh tế."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Thiếu ngày sinh và giới tính để cá nhân hóa lời chúc hoặc xưng hô chính xác hơn.",
+    "Không có lịch sử ghi chú hay hội thoại gần nhất để biết thái độ và phản hồi thực tế của khách với sản phẩm.",
+    "Chất lượng số điện thoại là unverified và chưa rõ trạng thái đồng ý liên hệ."
+  ]
+}

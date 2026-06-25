@@ -1,0 +1,64 @@
+{
+  "profile_read": "Chị Huế, khách lẻ tại TP.HCM, xếp nhóm VÀNG nhờ tổng chi tiêu 44.016.000đ chỉ sau 2 đơn hàng. Cả hai đơn đều mua Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp (biên lợi nhuận 65,6%), cách nhau chỉ 6 ngày nhưng đã ngưng giao dịch 1101 ngày. Nhạy cảm khuyến mãi, ưa dùng hàng Nhật Bản và chưa có tương tác nào gần đây.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 44016000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Tái kích hoạt khách hàng GOLD biên lợi nhuận rất tốt bằng ưu đãi chào mừng quay lại đúng sản phẩm yêu thích.",
+    "rationale": "Đơn hàng cũ có giá trị trung bình cao (~22 triệu đồng/lần) và biên lợi nhuận lên tới 65,6%, đủ dư địa để dùng khuyến mãi lôi kéo khách quay lại mua sản phẩm Nhật Bản mà cô đã từng tin dùng.",
+    "evidence": [
+      "lifetime_value = 44.016.000đ, order_count = 2",
+      "avg_order_contribution_margin_pct = 65,57%",
+      "top_affinity_sku = VCSL21002H010 (Cordyceps Plus - Hộp)",
+      "discount_sensitivity = PROMO_DEPENDENT"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đã ngưng mua hơn 3 năm, nguy cơ đã chuyển sang sản phẩm khác hoặc không còn nhu cầu.",
+    "type": "churn",
+    "rationale": "recency_days = 1101, customer_status = Churned, không có ghi chú hay hội thoại nào sau lần mua cuối cùng, hoàn toàn mất kết nối."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "sms",
+    "timing": "Giờ hành chính (9h-11h hoặc 14h-17h), ưu tiên thứ Ba - thứ Năm để tỉ lệ bắt máy cao hơn, tránh đầu tuần bận rộn.",
+    "opening_message": "Dạ em chào chị Huế, em là [Tên] từ cửa hàng [Tên cửa hàng] bên em đây ạ. Cũng khá lâu rồi mình chưa gặp chị, hôm nay em gọi chỉ để hỏi thăm sức khoẻ của chị, và xem chị còn quan tâm đến dòng thực phẩm bảo vệ sức khoẻ Cordyceps Plus bên em không ạ. Bên em đang có chương trình tri ân đặc biệt cho khách hàng cũ, nếu chị có nhu cầu thì em gửi ưu đãi riêng chị tham khảo ạ.",
+    "fallback_message": "Chào chị Huế, em là [Tên] từ [Cửa hàng]. Lâu quá không thấy chị ghé, bên em có quà tặng nhỏ dành cho khách hàng cũ khi mua lại Cordyceps Plus hoặc các sản phẩm Nhật Bản khác. Chị bớt chút thời gian gọi lại em số [SĐT] nhé. Cảm ơn chị!",
+    "talking_points": [
+      "Nhấn mạnh chị từng tin dùng Cordyceps Plus hàng nội địa Nhật cao cấp, chất lượng ổn định.",
+      "Chương trình ưu đãi chào mừng quay lại: giảm ngay 12% khi mua từ 2 hộp hoặc tặng kèm quà tặng sức khoẻ cùng thương hiệu Nhật Bản.",
+      "Hỗ trợ giao nhanh trong nội thành TP.HCM, chị có thể chuyển khoản trước như thói quen cũ để tiện nhận hàng."
+    ],
+    "cross_sell": [
+      "Các sản phẩm Nhật Bản bổ trợ như Nấm linh chi viên uống, Collagen nội địa hoặc Vitamin tổng hợp Nhật để kết hợp chăm sóc sức khoẻ toàn diện."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Tôi không còn dùng nữa, đã lâu rồi.",
+        "response": "Dạ em hiểu mà, lâu quá rồi nên em mới gọi xem sức khoẻ chị thế nào. Nếu chị đã ngưng thì em cũng muốn lắng nghe lý do để bên em cải thiện hơn ạ. Còn nếu chị đang tìm sản phẩm khác hỗ trợ sức đề kháng hay làm đẹp, bên em có nhiều dòng Nhật mới lắm, em có thể tư vấn thêm cho chị."
+      },
+      {
+        "objection": "Giá bên em cao hơn chỗ khác.",
+        "response": "Dạ, giá bên em có thể nhỉnh hơn một chút vì cam kết hàng nội địa Nhật chính hãng, đầy đủ giấy tờ kiểm định. Với chương trình tri ân hiện tại, chị được giảm giá và tặng quà, tính ra tổng giá trị nhận được sẽ rất tốt. Em đảm bảo chị yên tâm về chất lượng ạ."
+      }
+    ],
+    "do_not": [
+      "Không dùng giọng chào mừng khách mới; không nhắc tới \"lần trước chị khen sản phẩm\" vì không có dữ liệu chứng minh.",
+      "Không gây áp lực mua ngay, giữ nhịp tư vấn nhẹ nhàng như hỏi thăm sức khoẻ.",
+      "Không tiết lộ biên lợi nhuận hay các số liệu nội bộ khác.",
+      "Không tự ý hứa giảm giá quá sâu làm xói mòn biên lợi nhuận đang rất tốt."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Chất lượng số điện thoại chưa được xác minh (contact_quality = unverified), có thể số không còn dùng hoặc chủ thuê bao đã đổi.",
+    "Hoàn toàn thiếu ghi chú CRM và lịch sử hội thoại để hiểu lý do chị ngưng mua.",
+    "Không có ngày sinh để cá nhân hoá chương trình chăm sóc.",
+    "Chưa có sản phẩm ái lực thứ hai, hạn chế khả năng bán chéo chính xác hơn ngoài nhóm hàng Nhật chung chung."
+  ]
+}

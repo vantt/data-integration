@@ -1,0 +1,68 @@
+{
+"profile_read": "Mã tham chiếu: KH-20260625-895489673. Anh Hoàng Thức là khách bán lẻ, nhóm SILVER, đã có 3 đơn với tổng giá trị 14.550.000 VND. Khách mua gần nhất cách 84 ngày, trong khi chu kỳ mua trung bình là 73 ngày, nên đang có tín hiệu sắp đến kỳ mua lại. Sản phẩm gắn bó chính là nhóm Shark Cartilage, đặc biệt SKU VCST21004L001 và lần mua gần nhất là Combo 2 hộp Shark Cartilage.",
+"value_assessment": {
+"tier": "SILVER",
+"lifetime_value_vnd": 14550000,
+"margin_health": "healthy",
+"invest_level": "medium"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là nhắc khách mua lại nhóm Shark Cartilage đúng thời điểm chu kỳ.",
+"rationale": "Khách có lịch sử mua 3 đơn, sản phẩm yêu thích rõ ràng và tín hiệu mua tiếp là DUE_SOON, nên nên tiếp cận bằng đúng sản phẩm khách từng quan tâm thay vì giới thiệu lan man.",
+"evidence": [
+"order_count = 3",
+"recency_days = 84",
+"avg_days_between_orders = 73",
+"next_purchase_signal = DUE_SOON",
+"top_affinity_product = Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ",
+"last_purchased_product = Combo 2 hộp Shark Cartilage"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách đang ở trạng thái At Risk và đã quá chu kỳ mua trung bình.",
+"type": "churn",
+"rationale": "Khách mua gần nhất cách 84 ngày, cao hơn chu kỳ mua trung bình 73 ngày. Dù lifecycle vẫn là ACTIVE, trạng thái khách hàng là At Risk nên cần tiếp cận sớm theo hướng chăm sóc và nhắc mua lại."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "sms",
+"timing": "Nên gọi trong khung giờ hành chính hoặc đầu buổi tối, ưu tiên sớm vì khách đã 84 ngày chưa mua và tín hiệu mua tiếp là DUE_SOON.",
+"opening_message": "Dạ em chào anh Thức, em gọi từ cửa hàng mình từng mua Combo 2 hộp Shark Cartilage. Em thấy cũng đã một thời gian rồi nên gọi hỏi thăm anh dùng sản phẩm có ổn không, và xem mình có cần em hỗ trợ đặt tiếp đúng loại anh hay dùng không ạ?",
+"fallback_message": "Dạ em chào anh Thức, em là nhân viên cửa hàng mình từng mua Combo 2 hộp Shark Cartilage. Khi nào tiện anh phản hồi giúp em, em hỗ trợ kiểm tra và tư vấn lại đúng sản phẩm anh hay dùng ạ.",
+"talking_points": [
+"Nhắc lại đúng sản phẩm khách đã mua để tạo cảm giác được chăm sóc cá nhân.",
+"Tập trung vào nhu cầu dùng tiếp và sự tiện lợi khi đặt lại đúng loại quen dùng.",
+"Vì khách có xu hướng phụ thuộc ưu đãi, có thể nhắc ưu đãi nếu đang có và phù hợp, nhưng không dùng giảm giá làm toàn bộ lý do mua."
+],
+"cross_sell": [
+"Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ, SKU VCST21004L001",
+"Combo 2 hộp Shark Cartilage, SKU PVN150"
+],
+"objection_handling": [
+{
+"objection": "Anh chưa cần mua lại.",
+"response": "Dạ em hiểu ạ. Vậy em ghi chú lại để không làm phiền anh nhiều. Khi nào anh cần dùng tiếp Shark Cartilage, anh nhắn em là em hỗ trợ đúng loại anh từng mua cho nhanh ạ."
+},
+{
+"objection": "Có ưu đãi gì không?",
+"response": "Dạ để em kiểm tra chương trình hiện tại cho anh. Em sẽ ưu tiên tư vấn đúng loại anh đã dùng trước, nếu có ưu đãi phù hợp em báo anh luôn ạ."
+}
+],
+"do_not": [
+"Không nói như khách mới vì khách đã có 3 đơn mua trước đó.",
+"Không tiết lộ các số liệu nội bộ như nhóm giá trị, biên lợi nhuận hay trạng thái At Risk cho khách.",
+"Không hứa tác dụng vượt quá thông tin sản phẩm trong dữ liệu.",
+"Không gọi quá dồn dập vì chất lượng liên hệ chưa được xác minh."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Không có ghi chú CRM gần nhất để biết trải nghiệm hoặc phản hồi của khách.",
+"Không có hội thoại gần nhất để biết khách từng từ chối vì lý do gì.",
+"Số điện thoại có chất lượng unverified nên chưa chắc liên hệ thành công.",
+"Không có thông tin ưu đãi, giá bán hiện tại hoặc tồn kho để đưa vào lời chào.",
+"Không có điểm tích lũy, ngày sinh và giới tính để cá nhân hóa sâu hơn."
+]
+}

@@ -1,0 +1,45 @@
+{
+"profile_read": "Khách hàng mang tên tổ chức 'Leflair' (có thể bị phân loại nhầm thành RETAIL) từng là VIP với tổng chi tiêu đạt 260.594.479 VNĐ qua 31 đơn hàng. Tuy nhiên, khách đã ngừng giao dịch 1073 ngày (LIFECYCLE_CHURNED). Dữ liệu lợi nhuận đang mâu thuẫn nghiêm trọng khi cờ margin báo an toàn nhưng tỷ lệ thực tế lại ở mức âm. Khách từng chủ yếu mua 'Viên uống giảm cân cao cấp Calorie Burn - Chitosan (375v)' và có xu hướng phụ thuộc vào khuyến mãi.",
+"value_assessment": {
+"tier": "VIP",
+"lifetime_value_vnd": 260594479.0,
+"margin_health": "unknown",
+"invest_level": "low"
+},
+"opportunity": {
+"headline": "Khôi phục tài khoản có lịch sử mua hàng giá trị cao nếu xác minh đúng đối tượng.",
+"rationale": "Khách hàng từng có lịch sử đặt 31 đơn hàng với tổng giá trị hơn 260 triệu VNĐ, mua đều đặn với khoảng cách trung bình 22 ngày/đơn trước khi rời bỏ.",
+"evidence": [
+"lifetime_value: 260594479.0",
+"order_count: 31",
+"avg_days_between_orders: 22"
+]
+},
+"risk": {
+"headline": "Dữ liệu rác/phân loại sai, tỷ suất lợi nhuận mâu thuẫn và khách đã rời bỏ từ rất lâu.",
+"type": "other",
+"rationale": "Tên khách hàng là 'Leflair' nghi ngờ là đối tác B2B/sàn thương mại nhưng gán nhầm RETAIL; dữ liệu margin mâu thuẫn (cờ dương nhưng tỷ suất âm); khách đã không mua hàng 1073 ngày đi kèm rủi ro bào mòn lợi nhuận."
+},
+"approach": {
+"recommended": false,
+"reason_if_not_recommended": "GATE DỮ LIỆU ĐÁNG NGỜ: Tên khách giống tổ chức/sàn (Leflair) dù phân loại RETAIL; dữ liệu margin mâu thuẫn (is_margin_negative=false nhưng avg_order_contribution_margin_pct < 0); và recency_days quá lớn (1073 ngày). Yêu cầu xác minh nội bộ loại hình tài khoản thay vì cố gắng liên hệ.",
+"primary_channel": "phone",
+"fallback_channel": "none",
+"timing": "Tạm hoãn. Không tiếp cận cho đến khi quản lý hoặc bộ phận dữ liệu xác minh xong trạng thái và loại hình tài khoản thực sự.",
+"opening_message": "",
+"fallback_message": "",
+"talking_points": [],
+"cross_sell": [],
+"objection_handling": [],
+"do_not": [
+"TUYỆT ĐỐI không gửi kịch bản cá nhân hay chương trình khuyến mãi khi chưa xác minh được đây là khách lẻ hay khách sỉ/B2B.",
+"Không được chào mời hay tự ý áp dụng bất kỳ mã giảm giá nào vì dữ liệu tỷ suất lợi nhuận đang ghi nhận rủi ro âm."
+]
+},
+"confidence": "low",
+"data_gaps": [
+"Tên 'Leflair' mâu thuẫn với customer_type 'RETAIL' (nghi ngờ phân loại sai, thực chất là B2B).",
+"is_margin_negative là false nhưng avg_order_contribution_margin_pct lại hiển thị âm (-1.504092127206177).",
+"Không có recent_notes hoặc recent_conversations trong hệ thống để hiểu bối cảnh khách ngừng mua hơn 3 năm qua."
+]
+}

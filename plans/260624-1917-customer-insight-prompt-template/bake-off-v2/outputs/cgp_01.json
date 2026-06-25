@@ -1,0 +1,68 @@
+{
+"profile_read": "Khách Hoàng Thức là khách bán lẻ thuộc nhóm SILVER, đã mua 3 đơn với tổng giá trị 14.550.000 VND. Khách đang ở trạng thái At Risk, lần mua gần nhất cách 84 ngày, trong khi chu kỳ mua bình quân là 73 ngày nên nên tiếp cận lại sớm. Khách có xu hướng mua nhóm Fine Japan, sản phẩm gần nhất là Combo 2 hộp Shark Cartilage, và sản phẩm có mức quan tâm cao nhất là Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ. Khách ưu tiên kênh trực tiếp, thanh toán COD và có độ nhạy khuyến mãi PROMO_DEPENDENT.",
+"value_assessment": {
+"tier": "SILVER",
+"lifetime_value_vnd": 14550000,
+"margin_health": "healthy",
+"invest_level": "medium"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là nhắc mua lại đúng nhóm Shark Cartilage khi khách đã gần/qua chu kỳ mua bình quân.",
+"rationale": "Khách có lịch sử mua Shark Cartilage, sản phẩm quan tâm cao nhất cũng thuộc cùng nhóm, đồng thời tín hiệu mua tiếp theo là DUE_SOON.",
+"evidence": [
+"recency_days = 84",
+"avg_days_between_orders = 73",
+"next_purchase_signal = DUE_SOON",
+"last_purchased_product = Combo 2 hộp Shark Cartilage",
+"top_affinity_product = Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách rơi vào trạng thái ngủ đông nếu không được chăm sóc lại kịp thời.",
+"type": "churn",
+"rationale": "Khách đang được ghi nhận At Risk, lần mua gần nhất cách 84 ngày và đã vượt chu kỳ mua bình quân 73 ngày."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "sms",
+"timing": "Nên gọi trong tuần này, ưu tiên khung giờ hành chính hoặc đầu buổi tối vì khách đã 84 ngày chưa mua lại, trong khi chu kỳ mua bình quân là 73 ngày.",
+"opening_message": "Dạ em chào anh Hoàng Thức, em gọi từ cửa hàng mình từng mua Combo 2 hộp Shark Cartilage ạ. Em thấy cũng đã một thời gian mình chưa đặt lại, nên em gọi hỏi thăm xem anh còn đang dùng sản phẩm này không để em hỗ trợ tư vấn đúng loại cho mình ạ.",
+"fallback_message": "Dạ em chào anh Hoàng Thức, em là nhân viên cửa hàng. Em có gọi hỏi thăm mình về sản phẩm Shark Cartilage anh từng mua. Khi nào tiện anh phản hồi giúp em, em hỗ trợ tư vấn lại đúng sản phẩm cho mình ạ.",
+"talking_points": [
+"Nhắc lại đúng sản phẩm khách từng mua là Combo 2 hộp Shark Cartilage, tránh giới thiệu lan man.",
+"Tập trung tư vấn nhóm Shark Cartilage vì đây là nhóm sản phẩm khách có lịch sử mua và mức quan tâm cao.",
+"Có thể dùng ưu đãi vừa phải hoặc quà tặng nhỏ làm lý do quay lại, vì khách có xu hướng phụ thuộc khuyến mãi và biên hiện tại đang khỏe."
+],
+"cross_sell": [
+"Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ, mã VCST21004L001",
+"Combo 2 hộp Shark Cartilage, mã PVN150"
+],
+"objection_handling": [
+{
+"objection": "Anh chưa cần mua lại.",
+"response": "Dạ em hiểu ạ. Vậy em xin phép ghi nhận để không làm phiền mình nhiều. Khi nào anh cần dùng tiếp Shark Cartilage, anh nhắn em, em hỗ trợ đúng loại mình từng mua cho nhanh ạ."
+},
+{
+"objection": "Có khuyến mãi gì không?",
+"response": "Dạ em kiểm tra chương trình phù hợp cho mình trước rồi báo lại rõ ràng ạ. Em ưu tiên tư vấn đúng sản phẩm anh từng dùng, nếu có ưu đãi hoặc quà tặng phù hợp em sẽ gửi anh luôn ạ."
+}
+],
+"do_not": [
+"Không nói như khách vừa mua gần đây vì lần mua gần nhất đã cách 84 ngày.",
+"Không bịa rằng khách từng khen sản phẩm hoặc hài lòng vì không có ghi chú/hội thoại gần nhất.",
+"Không giảm giá sâu ngay từ đầu; chỉ dùng ưu đãi vừa phải hoặc quà tặng nhỏ nếu cần.",
+"Không đưa số liệu nội bộ như biên lợi nhuận hay phân nhóm rủi ro vào lời thoại với khách.",
+"Không dùng giọng bán sỉ vì customer_type là RETAIL."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Không có ghi chú CRM gần nhất để biết nhu cầu, phản hồi hoặc lý do khách chưa mua lại.",
+"Không có hội thoại gần nhất nên không thể xác định mức độ hài lòng hay phản đối trước đây.",
+"Số điện thoại có contact_quality = unverified nên khả năng liên hệ thực tế chưa chắc chắn.",
+"Không có ngày sinh, giới tính và điểm tích lũy để cá nhân hóa lời chào hoặc ưu đãi.",
+"consent_contact = unknown nên cần kiểm tra quy định nội bộ trước khi liên hệ nếu cửa hàng yêu cầu xác nhận đồng ý liên hệ."
+]
+}

@@ -1,0 +1,62 @@
+{
+  "profile_read": "Khách hàng Leflair thuộc nhóm VIP với tổng giá trị mua hàng lên tới 260.594.479 VND qua 31 đơn hàng, nhưng đã ngưng mua hơn 1073 ngày (gần 3 năm). Sản phẩm yêu thích nhất là Viên uống giảm cân cao cấp Calorie Burn - Chitosan (375v), SKU VCST22014G001. Đặc điểm mua sắm: ưa khuyến mãi (PROMO_DEPENDENT), ưu tiên kênh trực tiếp, thanh toán trả trước. Biên lợi nhuận trung bình đơn hàng ở mức âm nhẹ (-1.5%).",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 260594479,
+    "margin_health": "negative",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Cơ hội kích hoạt lại khách VIP đã lâu không mua, với sản phẩm giảm cân Fine Japan quen thuộc và ưu đãi phù hợp.",
+    "rationale": "Khách có lịch sử giao dịch dày (cứ 22 ngày mua một lần) và giá trị đơn hàng cao, hiện đang trong trạng thái quá hạn mua (OVERDUE). Sản phẩm yêu thích chính xác là mặt hàng đã mua cuối cùng, tạo cơ sở nhắc mua tự nhiên. Khách nhạy cảm với khuyến mãi nên có thể dùng ưu đãi nhẹ nhàng để thu hút trở lại.",
+    "evidence": [
+      "lifecycle_stage = LIFECYCLE_CHURNED, recency_days = 1073",
+      "next_purchase_signal = OVERDUE",
+      "top_affinity_sku = VCST22014G001, last_purchased_sku = VCST22014G001",
+      "discount_sensitivity = PROMO_DEPENDENT"
+    ]
+  },
+  "risk": {
+    "headline": "Nguy cơ khách đã chuyển sang nhà cung cấp khác hoặc không còn nhu cầu, đồng thời biên lợi nhuận âm đòi hỏi cân nhắc kỹ khi áp dụng khuyến mãi.",
+    "type": "churn",
+    "rationale": "Thời gian không mua hàng đã rất lâu (1073 ngày), cho thấy mức độ rời bỏ cao. Bên cạnh đó, đặc điểm phụ thuộc khuyến mãi (PROMO_DEPENDENT) kết hợp với mức đóng góp trung bình đơn hàng âm (-1.5%) có thể khiến các nỗ lực kích hoạt lại kém hiệu quả về mặt lợi nhuận nếu không kiểm soát chặt chẽ ưu đãi."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Gọi điện vào giờ hành chính, ngày trong tuần (tránh cuối tuần) để tăng khả năng bắt máy. Bắt đầu bằng giọng thăm hỏi tự nhiên, không tạo áp lực mua.",
+    "opening_message": "Chào anh/chị Leflair, em là [tên] từ [cửa hàng]. Dạo này anh/chị khỏe không ạ? Lâu quá không thấy anh/chị ghé mua Viên uống giảm cân Calorie Burn bên em, nên em gọi hỏi thăm xem sản phẩm còn phù hợp không và anh/chị có cần em hỗ trợ gì không ạ.",
+    "fallback_message": "Chào anh/chị Leflair, em [tên] từ [cửa hàng] đây ạ. Lâu rồi không thấy anh/chị đặt hàng, sản phẩm Viên uống giảm cân Calorie Burn của Nhật bên em vẫn có sẵn và đang có chương trình ưu đãi cho khách thân thiết. Nếu anh/chị quan tâm, nhắn lại em nhé!",
+    "talking_points": [
+      "Nhấn mạnh chất lượng và hiệu quả của dòng sản phẩm Fine Japan, đặc biệt là Viên uống giảm cân Calorie Burn mà anh/chị đã tin dùng trước đây.",
+      "Thông báo về chương trình ưu đãi dành riêng cho khách VIP như anh/chị (có thể là tích điểm, freeship hoặc quà tặng kèm khi mua lại sản phẩm quen thuộc).",
+      "Nếu anh/chị đã chuyển sang dòng khác, em sẵn sàng tư vấn thêm sản phẩm bổ trợ như Clam Extract hỗ trợ gan và sức khỏe tổng thể."
+    ],
+    "cross_sell": [
+      "Clam Extract with Liver Hydrolysate and Turmeric Premium - Gói (sản phẩm có ái lực cao thứ hai)"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Tôi đã dùng sản phẩm khác rồi.",
+        "response": "Dạ không sao ạ, em chỉ gọi thăm hỏi thôi. Nếu sau này anh/chị muốn đổi sang dòng Nhật chất lượng cao, bên em còn có sản phẩm Clam Extract hỗ trợ gan rất tốt ạ."
+      },
+      {
+        "objection": "Tôi không có nhu cầu nữa.",
+        "response": "Dạ em cảm ơn anh/chị đã chia sẻ. Khi nào có nhu cầu về dinh dưỡng hay hàng Nhật, anh/chị cứ nhắn em, em luôn sẵn lòng hỗ trợ ạ."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không nhắc đến việc khách 'bỏ lâu' với giọng trách móc hay tạo áp lực mua ngay.",
+      "Không đề xuất giảm giá sâu hoặc khuyến mãi mạnh tay vì biên lợi nhuận trên đơn hàng của khách đã âm."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "consent_contact hiện ở trạng thái unknown, chưa xác nhận khách đồng ý nhận liên lạc tiếp thị.",
+    "contact_quality là unverified, chưa đảm bảo số điện thoại đang hoạt động chính xác.",
+    "Không có ghi chú hay hội thoại gần đây, thiếu thông tin về lý do rời bỏ hoặc tình trạng hiện tại của khách.",
+    "Không có thông tin điểm tích lũy (loyalty_points null) hay ngày sinh để cá nhân hóa chăm sóc."
+  ]
+}

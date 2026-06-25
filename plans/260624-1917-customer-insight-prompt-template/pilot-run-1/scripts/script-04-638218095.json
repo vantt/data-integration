@@ -1,0 +1,70 @@
+{
+"profile_read": "Mã tham chiếu: SR-260625-001. Chị Yến là khách bán lẻ thuộc nhóm VIP, đã mua 6 đơn với tổng giá trị 113.662.727 VND. Khách mới mua cách đây 23 ngày, chu kỳ mua trung bình 95 ngày và tín hiệu mua tiếp hiện đang đúng nhịp, nên chưa cần thúc ép mua lại quá sớm. Khách có xu hướng mua qua kênh xã hội, thanh toán trước và có độ nhạy với ưu đãi; sản phẩm gắn bó chính là TPBVSK Fine Japan Cordyceps Plus - Hộp 10 chai, SKU VTSL24009H010.",
+"value_assessment": {
+"tier": "VIP",
+"lifetime_value_vnd": 113662727,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là chăm sóc sớm để giữ nhịp mua lại sản phẩm Fine Japan Cordyceps Plus khi khách gần đến chu kỳ tiếp theo.",
+"rationale": "Khách có giá trị cao, đã mua nhiều lần, sản phẩm yêu thích rõ ràng và biên lợi nhuận đang tốt, nên đáng đầu tư chăm sóc cá nhân hóa qua kênh xã hội.",
+"evidence": [
+"value_group = VALUE_VIP",
+"lifetime_value = 113662727.0",
+"order_count = 6",
+"recency_days = 23",
+"avg_days_between_orders = 95",
+"top_affinity_sku = VTSL24009H010",
+"avg_order_contribution_margin_pct = 0.5574675994437138"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách nhạy ưu đãi, nếu chăm sóc không khéo có thể chờ khuyến mãi thay vì mua theo nhu cầu.",
+"type": "promo_dependency",
+"rationale": "Dữ liệu ghi nhận discount_sensitivity là PROMO_DEPENDENT, trong khi khách vẫn đang đúng nhịp mua nên không nên dùng giảm giá quá sớm hoặc quá mạnh."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "zalo",
+"fallback_channel": "phone",
+"timing": "Nên liên hệ nhẹ trong giai đoạn chăm sóc sau mua, vì khách mới mua cách đây 23 ngày và chu kỳ trung bình là 95 ngày. Mục tiêu là hỏi thăm trải nghiệm, nhắc đúng sản phẩm quen dùng và giữ quan hệ trước khi đến kỳ mua tiếp theo.",
+"opening_message": "Dạ em chào Chị Yến, em bên cửa hàng ạ. Em nhắn hỏi thăm chị dùng Fine Japan Cordyceps Plus đợt vừa rồi có ổn không ạ? Nếu chị cần dùng tiếp, em có thể hỗ trợ giữ đúng loại chị hay lấy để mình tiện đặt lại khi cần nha.",
+"fallback_message": "Dạ em chào Chị Yến, em bên cửa hàng. Em có nhắn Zalo hỏi thăm sản phẩm Fine Japan Cordyceps Plus chị từng mua, khi nào tiện chị phản hồi giúp em nha.",
+"talking_points": [
+"Nhắc đúng sản phẩm khách hay mua: Fine Japan Cordyceps Plus - Hộp 10 chai, SKU VTSL24009H010.",
+"Tập trung chăm sóc và sự tiện lợi khi đặt lại, không mở đầu bằng giảm giá.",
+"Có thể dùng ưu đãi vừa phải như quà nhỏ hoặc hỗ trợ giữ hàng nếu khách có nhu cầu, vì khách có xu hướng phản hồi tốt với ưu đãi."
+],
+"cross_sell": [
+"Gợi ý mua thêm cùng dòng Cordyceps Plus vì sản phẩm yêu thích và sản phẩm gần nhất đều thuộc nhóm này.",
+"Gợi ý chuẩn bị trước Fine Japan Cordyceps Plus - Hộp 10 chai cho kỳ dùng tiếp theo."
+],
+"objection_handling": [
+{
+"objection": "Chị chưa cần mua lại.",
+"response": "Dạ không sao chị ạ. Em chỉ nhắn hỏi thăm trước để khi nào chị gần hết thì em hỗ trợ đúng loại chị hay dùng, tránh mất công tìm lại."
+},
+{
+"objection": "Có ưu đãi gì không?",
+"response": "Dạ để em kiểm tra chương trình phù hợp cho đúng sản phẩm chị hay dùng. Em ưu tiên hỗ trợ phần nào có lợi nhất cho chị nhưng vẫn giữ đúng hàng chị đã quen dùng ạ."
+}
+],
+"do_not": [
+"Không nói khách từng khen sản phẩm hoặc hài lòng vì không có ghi chú hay hội thoại gần đây chứng minh.",
+"Không tiết lộ tổng giá trị mua hàng, biên lợi nhuận hoặc phân nhóm VIP trong lời thoại gửi khách.",
+"Không thúc ép mua lại ngay vì next_purchase_signal đang ON_TRACK và khách mới mua cách đây 23 ngày.",
+"Không giảm giá sâu ngay từ đầu dù khách nhạy ưu đãi."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Chất lượng liên hệ chưa được xác minh: contact_quality = unverified.",
+"Không có ghi chú CRM gần nhất.",
+"Không có hội thoại gần nhất để biết phản hồi, sở thích cụ thể hoặc mức độ hài lòng.",
+"Không có điểm tích lũy để đưa vào lời chăm sóc.",
+"Không có ngày sinh để cá nhân hóa theo dịp đặc biệt.",
+"Không có dữ liệu giá bán, tồn kho hoặc chương trình ưu đãi hiện tại cho sản phẩm."
+]
+}

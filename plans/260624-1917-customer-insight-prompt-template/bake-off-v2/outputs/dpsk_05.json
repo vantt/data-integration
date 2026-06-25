@@ -1,0 +1,62 @@
+{
+  "profile_read": "Khách hàng Phương Nguyễn, hạng Vàng, tổng chi tiêu 36.680.000đ qua 2 đơn hàng, lần mua cuối cách đây 1399 ngày. Sản phẩm đã mua: Cordyceps Plus - Hộp (Fine Japan), biên lợi nhuận cao 74.9%, thuộc nhóm khách mua giá gốc (FULL_PRICE). Thông tin liên hệ chưa xác minh, không có ghi chú hay trò chuyện gần đây.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 36680000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Biên lợi nhuận rất cao (74.9%) từ sản phẩm Nhật Bản, giá trị đơn hàng lớn (~18.3 triệu đồng/đơn) – cơ hội kích hoạt lại khách hàng chi tiêu mạnh nếu tiếp cận đúng.",
+    "rationale": "Khách hàng từng chi trả trung bình 18.34 triệu đồng cho mỗi đơn Cordyceps Plus, biên lợi nhuận dồi dào, cho phép đầu tư chăm sóc và quà tặng nhỏ để thuyết phục quay lại mà không cần giảm giá.",
+    "evidence": [
+      "avg_order_contribution_margin_pct = 0.749",
+      "lifetime_value = 36.680.000đ, order_count = 2",
+      "top_affinity_product = Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đã rời bỏ gần 4 năm và số liên lạc chưa xác minh – nguy cơ cao không liên lạc được hoặc khách không còn nhu cầu.",
+    "type": "churn",
+    "rationale": "recency_days = 1399 ngày (gấp 3.8 lần ngưỡng 365 ngày), contact_quality = unverified, không có tương tác nào trong dữ liệu gần đây để đánh giá thiện chí quay lại."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "zalo",
+    "fallback_channel": "sms",
+    "timing": "Liên hệ trong 1-2 ngày tới, vào giờ hành chính (9-11h sáng hoặc 14-16h chiều), tránh cuối tuần. Lý do: tận dụng khung giờ khách có thể kiểm tra tin nhắn cá nhân và phản hồi thoải mái.",
+    "opening_message": "Chào chị Phương ạ, em [Tên] từ [Cửa hàng]. Lâu rồi không thấy chị ghé shop, hôm nay em tình cờ xem lại danh sách khách quen, nhớ chị từng dùng Cordyceps Plus bên em. Không biết dạo này chị còn quan tâm đến thực phẩm bảo vệ sức khỏe Nhật không ạ? Em chỉ muốn hỏi thăm và nếu chị cần thêm thông tin sản phẩm mới thì em sẵn lòng chia sẻ ạ.",
+    "fallback_message": "Chào chị Phương, em bên [Cửa hàng] ạ. Lâu rồi không thấy chị mua hàng, bên em có thêm nhiều dòng thực phẩm bảo vệ sức khỏe Nhật mới. Nếu chị còn quan tâm, nhắn lại em gửi thông tin nha. Chúc chị ngày tốt lành!",
+    "talking_points": [
+      "Chất lượng sản phẩm Nhật Bản chính hãng, an toàn, hiệu quả lâu dài – lý do chị từng chọn Cordyceps Plus.",
+      "Dịch vụ chăm sóc khách hàng tận tâm, hỗ trợ tư vấn miễn phí, đặc biệt với khách quen như chị.",
+      "Có thể gửi tặng mẫu thử hoặc quà tặng nhỏ khi chị quay lại mua sắm, không giảm giá để giữ đúng giá trị sản phẩm."
+    ],
+    "cross_sell": [
+      "Các dòng Fine Japan khác: Viên uống bổ não DHA, Collagen peptide, Tinh chất hàu – cùng phân khúc cao cấp, dễ kết hợp với Cordyceps Plus."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Tôi không còn nhu cầu sử dụng nữa.",
+        "response": "Dạ vâng, em hiểu ạ. Cảm ơn chị đã phản hồi. Sau này nếu cần, chị cứ nhắn em, em luôn sẵn lòng tư vấn sản phẩm phù hợp ạ."
+      },
+      {
+        "objection": "Tôi mua bên khác rồi.",
+        "response": "Dạ không sao chị. Bên em vẫn luôn có chính sách hậu mãi tốt cho khách quen, lần sau chị muốn đổi mới có thể tham khảo thêm bên em, em sẽ hỗ trợ thông tin đầy đủ và có quà tặng nho nhỏ cho lần đầu quay lại ạ."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không đề xuất giảm giá, khuyến mãi, chiết khấu vì khách thuộc nhóm FULL_PRICE.",
+      "Không gọi điện thoại trực tiếp khi chưa có sự đồng ý từ khách.",
+      "Không nhắc đến thời gian 4 năm vắng mặt như một lời trách móc hay tạo cảm giác tiêu cực."
+    ]
+  },
+  "confidence": "low",
+  "data_gaps": [
+    "Số điện thoại chưa được xác minh (contact_quality: unverified), rủi ro không liên lạc được.",
+    "Không có ghi chú hay lịch sử trò chuyện gần đây để hiểu lý do khách ngừng mua.",
+    "Thiếu thông tin ngày sinh, điểm tích lũy, giới tính, sở thích sản phẩm thứ hai khiến cá nhân hóa bị hạn chế.",
+    "avg_days_between_orders = 1 ngày (hai đơn hàng cách nhau 1 ngày) có thể là dữ liệu bất thường so với hành vi mua sắm thông thường, cần xác minh."
+  ]
+}

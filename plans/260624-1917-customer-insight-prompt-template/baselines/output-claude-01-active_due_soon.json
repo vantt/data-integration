@@ -1,0 +1,48 @@
+{
+  "profile_read": "Khách lẻ ở miền Trung, hạng Bạc, đã mua 3 đơn (~14,5 triệu), trung thành dòng Shark Cartilage (Fine Japan). Mua gần nhất cách 84 ngày, chu kỳ thường ~73 ngày → vừa qua kỳ mua lại, đang là thời điểm vàng để nhắc. Biên đóng góp tốt (~70%), thanh toán COD, nhạy khuyến mãi.",
+  "value_assessment": {
+    "tier": "SILVER",
+    "lifetime_value_vnd": 14550000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Nhắc mua lại đúng dòng Shark Cartilage ngay khi vừa qua chu kỳ",
+    "rationale": "Đã 84 ngày so với chu kỳ 73 ngày → khách có thể sắp hết hàng dùng. Đúng thời điểm chốt đơn lặp lại, biên cao nên đáng đầu tư.",
+    "evidence": ["recency_days=84 > avg_days_between_orders=73", "next_purchase_signal=DUE_SOON", "top_affinity=Shark Cartilage Extract"]
+  },
+  "risk": {
+    "headline": "Mới 3 đơn, nhạy khuyến mãi — dễ trôi nếu không có lý do quay lại",
+    "type": "churn",
+    "rationale": "customer_status đã chớm 'At Risk'; khách PROMO_DEPENDENT nên cần một ưu đãi nhẹ hoặc lý do cụ thể để mua lại, nếu không dễ quên."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Trong vài ngày tới, càng sớm càng tốt vì đã qua chu kỳ mua thường lệ.",
+    "opening_message": "Em chào anh Thức ạ, em gọi từ bên mình. Anh dùng Shark Cartilage chắc cũng sắp hết rồi đúng không ạ? Em gọi xem có cần chuẩn bị hàng cho anh kịp dùng không, và đợt này bên em đang có ưu đãi nhẹ cho khách quen ạ.",
+    "fallback_message": "Dạ anh Thức, bên em thấy anh dùng Shark Cartilage chắc sắp hết. Em giữ hàng + ưu đãi khách quen cho anh nhé, anh nhắn em là em gửi ngay ạ.",
+    "talking_points": [
+      "Nhắc khéo theo chu kỳ dùng: hỏi còn đủ hàng dùng không, tránh để đứt.",
+      "Ưu đãi nhẹ cho khách quen làm lý do quay lại (margin còn dư địa).",
+      "Gợi ý combo 2 hộp để tiện dùng dài ngày, đỡ phải đặt lại nhiều lần."
+    ],
+    "cross_sell": ["Combo 2 hộp Shark Cartilage (anh từng mua) — tiện trữ dùng, giảm số lần đặt lại."],
+    "objection_handling": [
+      {"objection": "Anh vẫn còn dùng, chưa cần.", "response": "Dạ vâng, em chỉ giữ trước phần hàng + ưu đãi cho anh, khi nào gần hết anh nhắn em gửi liền, khỏi lo hết hàng ạ."},
+      {"objection": "Đợt này giá sao em?", "response": "Em có mức ưu đãi khách quen cho anh đợt này, để em báo anh con số cụ thể rồi mình chốt luôn cho tiện ạ."}
+    ],
+    "do_not": [
+      "Không gọi như khách mới — anh đã mua 3 lần, nói giọng khách quen.",
+      "Không ép combo lớn ngay; khách mới 3 đơn, giữ nhẹ nhàng."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "consent_contact=unknown — xác nhận quyền liên hệ trước khi gọi.",
+    "Không có ghi chú/hội thoại CRM gần đây để cá nhân hóa sâu.",
+    "Không có birth_date/loyalty_points."
+  ]
+}

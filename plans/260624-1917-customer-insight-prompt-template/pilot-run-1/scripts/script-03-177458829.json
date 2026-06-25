@@ -1,0 +1,69 @@
+{
+"profile_read": "Mã tham chiếu: HA-625Q. Khách Mr. Tùng Lương là khách bán lẻ nhóm GOLD tại GEO_HCMC, đã mua 6 đơn với tổng giá trị 40.000.100 VND. Khách đang ở trạng thái Churned, lần mua gần nhất cách 252 ngày, trong khi chu kỳ mua trung bình là 213 ngày nên nên tiếp cận theo hướng nhắc mua lại nhẹ nhàng. Sản phẩm có độ phù hợp cao là Cordyceps, đơn gần nhất là Thực phẩm bảo vệ sức khỏe Cordyceps - Lọ 120 viên, SKU VCSC20001L001; khách có xu hướng phụ thuộc khuyến mãi nhưng biên lợi nhuận trung bình 0,697088860214928 nên còn đủ dư địa ưu đãi vừa phải.",
+"value_assessment": {
+"tier": "GOLD",
+"lifetime_value_vnd": 40000100,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là gọi lại để nhắc mua Cordyceps đúng nhóm sản phẩm khách từng mua và có mức quan tâm cao.",
+"rationale": "Khách có giá trị tích lũy cao, đã từng mua nhiều đơn, sản phẩm yêu thích và sản phẩm mua gần nhất đều xoay quanh Cordyceps; tín hiệu mua tiếp là DUE_SOON nên nên ưu tiên kịch bản nhắc mua lại.",
+"evidence": [
+"value_group = VALUE_GOLD",
+"lifetime_value = 40000100.0",
+"order_count = 6",
+"next_purchase_signal = DUE_SOON",
+"top_affinity_product = Cordyceps",
+"last_purchased_product = Thực phẩm bảo vệ sức khỏe Cordyceps - Lọ 120 viên"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách đã rời chu kỳ mua khá lâu nên dễ khó phản hồi hoặc chưa có nhu cầu ngay.",
+"type": "churn",
+"rationale": "Khách có lifecycle_stage là LIFECYCLE_CHURNED, customer_status là Churned và recency_days là 252 ngày; vì vậy không nên dùng giọng như khách mới mua gần đây."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "zalo",
+"fallback_channel": "sms",
+"timing": "Nên liên hệ vào đầu giờ chiều hoặc cuối giờ chiều trong ngày làm việc để nhắc mua lại, vì khách đang có tín hiệu DUE_SOON và đã cách lần mua gần nhất 252 ngày.",
+"opening_message": "Dạ em chào anh Tùng, em bên cửa hàng mình từng hỗ trợ anh sản phẩm Cordyceps ạ. Em thấy đã khá lâu mình chưa ghé lại, nên em nhắn hỏi thăm xem anh còn đang dùng Cordyceps không để em tư vấn lại đúng loại anh từng mua nha.",
+"fallback_message": "Dạ em chào anh Tùng, em bên cửa hàng từng hỗ trợ anh Cordyceps. Khi nào tiện anh phản hồi giúp em, em tư vấn lại đúng loại anh từng mua và gửi ưu đãi phù hợp cho mình ạ.",
+"talking_points": [
+"Nhắc đúng sản phẩm khách từng mua: Thực phẩm bảo vệ sức khỏe Cordyceps - Lọ 120 viên.",
+"Tư vấn theo nhu cầu dùng tiếp Cordyceps, không nói như khách mới vì khách đã lâu chưa mua lại.",
+"Có thể dùng ưu đãi vừa phải làm lý do quay lại, nhưng không giảm giá sâu."
+],
+"cross_sell": [
+"Cordyceps",
+"Thực phẩm bảo vệ sức khỏe Cordyceps - Lọ 120 viên"
+],
+"objection_handling": [
+{
+"objection": "Anh chưa có nhu cầu.",
+"response": "Dạ em hiểu ạ. Vậy em không làm phiền nhiều, em chỉ gửi lại đúng sản phẩm Cordyceps anh từng dùng để khi nào cần mình xem nhanh hơn nha."
+},
+{
+"objection": "Có khuyến mãi gì không?",
+"response": "Dạ có ạ, em sẽ kiểm tra ưu đãi phù hợp cho đúng sản phẩm Cordyceps anh từng mua. Em ưu tiên gửi mức tốt nhưng vẫn đúng hàng và đúng nhu cầu của mình ạ."
+}
+],
+"do_not": [
+"Không nói khách vừa mua gần đây hoặc giả vờ thân quen quá mức.",
+"Không bịa rằng khách từng khen sản phẩm vì recent_notes và recent_conversations đang trống.",
+"Không đưa số liệu nội bộ như biên lợi nhuận, nhóm giá trị hay trạng thái churn vào lời nhắn cho khách.",
+"Không giảm giá sâu làm đòn bẩy chính dù khách có xu hướng phụ thuộc khuyến mãi."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"contact_quality = unverified nên chưa chắc kênh liên hệ hiện tại còn chính xác.",
+"recent_notes trống nên không có ghi chú về nhu cầu, phản hồi hay lý do ngừng mua.",
+"recent_conversations trống nên không có lịch sử trao đổi gần nhất để cá nhân hóa lời thoại.",
+"loyalty_points = null nên không thể dùng điểm tích lũy làm lý do tiếp cận.",
+"birth_date = null nên không thể đề xuất kịch bản sinh nhật hoặc dịp cá nhân.",
+"gender = other nên không nên suy đoán cách xưng hô theo giới tính."
+]
+}

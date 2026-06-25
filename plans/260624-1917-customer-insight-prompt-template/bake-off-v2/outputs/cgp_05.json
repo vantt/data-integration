@@ -1,0 +1,73 @@
+{
+"profile_read": "REF-250626-001 — Khách hàng Phương Nguyễn là khách bán lẻ, nhóm VALUE_GOLD với tổng giá trị mua hàng 36.680.000 VND qua 2 đơn. Sản phẩm gắn bó rõ nhất là Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp, SKU VCSL21002H010, đồng thời cũng là sản phẩm mua gần nhất. Tuy hồ sơ ghi lifecycle_stage là LIFECYCLE_NEW, recency_days = 1399 và customer_status = Churned cho thấy nên xem đây là khách đã ngủ đông lâu, cần tiếp cận theo hướng gợi nhớ và chăm sóc lại. Khách có xu hướng mua full price, thanh toán trả trước và kênh ưu tiên là social.",
+"value_assessment": {
+"tier": "GOLD",
+"lifetime_value_vnd": 36680000,
+"margin_health": "healthy",
+"invest_level": "medium"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là win-back bằng đúng sản phẩm khách từng mua: Cordyceps Plus - Hộp.",
+"rationale": "Khách có giá trị mua cao, biên lợi nhuận khỏe, không phụ thuộc khuyến mãi và sản phẩm yêu thích trùng với sản phẩm mua gần nhất, nên nên tiếp cận bằng chăm sóc và giá trị sản phẩm thay vì giảm giá.",
+"evidence": [
+"value_group = VALUE_GOLD",
+"lifetime_value = 36680000.0",
+"order_count = 2",
+"top_affinity_product = Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp",
+"last_purchased_sku = VCSL21002H010",
+"discount_sensitivity = FULL_PRICE",
+"avg_order_contribution_margin_pct = 0.749138494750734"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách đã rời bỏ quá lâu nên khả năng phản hồi thấp.",
+"type": "churn",
+"rationale": "recency_days = 1399 và customer_status = Churned cho thấy khách đã rất lâu chưa quay lại, trong khi chất lượng liên hệ chỉ ở mức unverified nên cần tiếp cận mềm, không bán ép."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "zalo",
+"fallback_channel": "phone",
+"timing": "Nên liên hệ trong khung giờ hành chính hoặc đầu buổi tối, ưu tiên nhắn trước qua Zalo vì channel_preference = CHANNEL_SOCIAL và contact_quality = unverified; nếu không phản hồi thì gọi lại ngắn gọn.",
+"opening_message": "Dạ em chào Anh/Chị Phương, em bên cửa hàng mình ạ. Em thấy trước đây Anh/Chị từng mua Cordyceps Plus, nay bên em nhắn lại để hỗ trợ nếu Anh/Chị còn nhu cầu dùng tiếp hoặc cần tư vấn chọn sản phẩm phù hợp hơn ạ.",
+"fallback_message": "Dạ em chào Anh/Chị Phương, em bên cửa hàng mình. Em có nhắn Zalo về sản phẩm Cordyceps Plus Anh/Chị từng mua, khi nào tiện Anh/Chị xem giúp em nhé ạ.",
+"talking_points": [
+"Nhắc lại đúng sản phẩm khách từng mua là Cordyceps Plus - Hộp, tránh giới thiệu lan man.",
+"Tập trung vào nhu cầu dùng tiếp, tư vấn lại và hỗ trợ chọn đúng sản phẩm, không mở đầu bằng khuyến mãi.",
+"Vì khách từng thanh toán trả trước, có thể nhắc nhẹ phương thức thanh toán quen thuộc nếu khách hỏi cách đặt lại."
+],
+"cross_sell": [
+"Ưu tiên bán lại Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp, SKU VCSL21002H010 vì đây vừa là sản phẩm mua gần nhất vừa là sản phẩm có affinity cao nhất.",
+"Chưa đủ dữ liệu để gợi ý sản phẩm bán kèm khác vì second_affinity_product = null."
+],
+"objection_handling": [
+{
+"objection": "Tôi chưa có nhu cầu.",
+"response": "Dạ em hiểu ạ. Vậy em xin phép lưu lại nhu cầu, khi nào Anh/Chị cần dùng lại Cordyceps Plus thì nhắn em hỗ trợ nhanh, không cần tìm lại thông tin sản phẩm từ đầu ạ."
+},
+{
+"objection": "Giờ tôi chưa muốn mua.",
+"response": "Dạ không sao ạ. Em nhắn lại chủ yếu để Anh/Chị biết bên em vẫn hỗ trợ sản phẩm Cordyceps Plus, khi nào cần dùng tiếp em tư vấn lại cho đúng nhu cầu của mình ạ."
+}
+],
+"do_not": [
+"Không dùng giọng chào mừng khách mới dù lifecycle_stage = LIFECYCLE_NEW, vì recency_days = 1399 và customer_status = Churned.",
+"Không nói khách từng khen, hài lòng hoặc có phản hồi tốt vì recent_notes và recent_conversations đều trống.",
+"Không lấy khuyến mãi làm lý do chính vì discount_sensitivity = FULL_PRICE.",
+"Không đề xuất sản phẩm bán kèm cụ thể khác khi second_affinity_product không có dữ liệu.",
+"Không nêu các chỉ số nội bộ như lifetime value, margin hoặc trạng thái churn trong lời nhắn gửi khách."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"contact_quality = unverified nên chưa chắc kênh liên hệ còn đúng hoặc còn hoạt động.",
+"consent_contact = unknown nên cần tiếp cận lịch sự, có thể dừng nếu khách không muốn nhận tư vấn.",
+"recent_notes trống nên không có thông tin về nhu cầu, phản hồi hoặc lý do khách ngừng mua.",
+"recent_conversations trống nên không có ngữ cảnh trao đổi gần nhất.",
+"second_affinity_product = null nên chưa đủ cơ sở gợi ý sản phẩm bán kèm khác ngoài sản phẩm khách từng mua.",
+"loyalty_points = null nên không thể dùng điểm tích lũy làm lý do tiếp cận.",
+"birth_date = null và gender = other nên không cá nhân hóa theo ngày sinh hoặc giới tính.",
+"lifecycle_stage = LIFECYCLE_NEW mâu thuẫn với recency_days = 1399 và customer_status = Churned; ưu tiên đánh giá theo recency_days."
+]
+}

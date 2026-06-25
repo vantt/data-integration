@@ -1,0 +1,60 @@
+{
+"profile_read": "Chị Huế là khách hàng bán lẻ thuộc nhóm VALUE_GOLD tại khu vực TP.HCM với sức mua cực kỳ lớn, tổng giá trị vòng đời (LTV) lên tới 44.016.000đ chỉ sau 2 đơn hàng. Tuy nhiên, khách đã 'ngủ đông' rất lâu (1.101 ngày) kể từ lần cuối mua sản phẩm Thực phẩm bảo vệ sức khỏe Cordyceps Plus. Đặc tính nổi bật là khách thích mua sắm trực tiếp (CHANNEL_OFFLINE), thanh toán trả trước và rất nhạy cảm với các chương trình khuyến mãi (PROMO_DEPENDENT).",
+"value_assessment": {
+"tier": "GOLD",
+"lifetime_value_vnd": 44016000,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Kéo khách hàng VIP quay lại cửa hàng bằng ưu đãi sâu nhờ biên lợi nhuận cực kỳ lý tưởng.",
+"rationale": "Biên lợi nhuận gộp của khách hàng rất cao (gần 66%), tạo dư địa lớn để thiết kế các chương trình khuyến mãi đủ hấp dẫn nhằm đánh đúng tâm lý thích ưu đãi của khách (PROMO_DEPENDENT), qua đó khôi phục lại sức mua rất lớn của tập khách này.",
+"evidence": [
+"avg_order_contribution_margin_pct: 0.6557352207869609",
+"discount_sensitivity: PROMO_DEPENDENT",
+"lifetime_value: 44016000.0"
+]
+},
+"risk": {
+"headline": "Nguy cơ mất liên lạc hoặc khách đã chuyển sang dùng thương hiệu khác sau 3 năm ngừng mua.",
+"type": "churn",
+"rationale": "Thời gian ngừng mua (recency_days) lên tới 1.101 ngày kết hợp với chất lượng thông tin liên hệ chưa được xác thực (unverified), dẫn đến rủi ro số điện thoại hiện tại không còn liên lạc được hoặc thói quen tiêu dùng đã thay đổi hoàn toàn."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Vào khung giờ hành chính (9h-10h sáng hoặc 14h-15h chiều), ưu tiên gọi hỏi thăm sức khỏe sau thời gian dài không gặp.",
+"opening_message": "Dạ em chào chị Huế, em gọi từ cửa hàng [Tên Cửa Hàng] ạ. Đã lâu lắm rồi bên em chưa có dịp phục vụ chị. Đợt này cửa hàng đang có ưu đãi đặc biệt lớn dành riêng cho khách hàng VIP hạng Gold, em gọi điện hỏi thăm sức khỏe chị và muốn mời chị ghé qua cửa hàng để nhận ưu đãi ạ.",
+"fallback_message": "Dạ em chào chị Huế, em là nhân viên bên [Tên Cửa Hàng]. Đã khá lâu không thấy chị ghé qua, hiện tại dòng sản phẩm Thực phẩm bảo vệ sức khỏe Cordyceps Plus (mã VCSL21002H010) chị từng dùng đang có chương trình tri ân giảm giá cực sâu cho khách VIP. Khi nào tiện, chị phản hồi tin nhắn này hoặc ghé trực tiếp cửa hàng để em hỗ trợ chị nhé. Em cảm ơn chị ạ.",
+"talking_points": [
+"Nhấn mạnh chương trình khuyến mãi đặc biệt (giảm giá/quà tặng) thiết kế riêng cho khách hàng Gold lâu năm quay lại.",
+"Mời khách ghé trực tiếp cửa hàng để nhận ưu đãi, đánh đúng sở thích mua sắm OFFLINE của khách.",
+"Hỏi thăm trải nghiệm sử dụng Thực phẩm bảo vệ sức khỏe Cordyceps Plus từ đợt trước để nắm bắt tình trạng sức khỏe hiện tại của khách."
+],
+"cross_sell": [
+"Giới thiệu thêm các dòng thực phẩm chức năng cao cấp cùng phân khúc thuộc nhóm PRODUCT_FINE_JAPAN."
+],
+"objection_handling": [
+{
+"objection": "Chị đang dùng loại khác rồi, không có nhu cầu mua nữa em nhé.",
+"response": "Dạ em hiểu ạ. Thực ra đợt này bên em chủ yếu muốn mời chị ghé thăm lại cửa hàng để nhận phần quà tri ân nhỏ vì chị là khách hàng VIP lâu năm bên em, chị không mua cũng không sao cả ạ. Nếu tiện đường chị cứ ghé qua cho tụi em vui chị nhé."
+},
+{
+"objection": "Dạo này chị bận lắm, không ghé cửa hàng được đâu.",
+"response": "Dạ vâng, nếu chị bận thì em có thể giữ lại suất ưu đãi đặc biệt này và gửi thông tin qua Zalo cho chị tham khảo trước. Lúc nào chị cần bồi bổ thêm sức khỏe thì chị nhắn em, em hỗ trợ giao hàng tận nơi cho chị luôn ạ."
+}
+],
+"do_not": [
+"TUYỆT ĐỐI KHÔNG dùng giọng điệu chào mừng khách hàng mới dù hệ thống ghi nhận LIFECYCLE_NEW, vì thực tế khách đã không mua trong 1.101 ngày.",
+"KHÔNG nhắc đến con số lợi nhuận 65% hay khoảng cách mua hàng giữa 2 đơn trong quá khứ."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Không rõ lý do tại sao khách lại ngừng mua đột ngột sau 2 đơn hàng có giá trị rất cao chỉ cách nhau 6 ngày.",
+"Thiếu các ghi chú lịch sử chăm sóc (recent_notes) để hiểu bối cảnh khách mua hàng lần cuối.",
+"Số điện thoại chưa được xác minh (unverified) nên có rủi ro không liên lạc được."
+]
+}

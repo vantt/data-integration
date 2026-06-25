@@ -1,0 +1,71 @@
+{
+"profile_read": "Khách Nguyễn Tính NT 17 là khách bán lẻ tại GEO_HCMC, thuộc nhóm VALUE_VIP với tổng giá trị mua 121256000 VND qua 24 đơn. Khách đã 135 ngày chưa mua lại, trong khi chu kỳ mua trung bình là 35 ngày nên tín hiệu mua lại đang quá hạn. Sản phẩm gần nhất là (*) Thực phẩm bảo vệ sức khỏe Cordyceps, còn sản phẩm có mức quan tâm cao nhất là Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp. Khách có xu hướng phụ thuộc khuyến mãi, nhưng biên lợi nhuận trung bình chỉ 0.32742918143234667 nên không nên dùng giảm giá sâu.",
+"value_assessment": {
+"tier": "VIP",
+"lifetime_value_vnd": 121256000,
+"margin_health": "thin",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Cơ hội lớn nhất là gọi chăm sóc win-back và gợi ý mua lại đúng nhóm sản phẩm Fine Japan khách đã có lịch sử mua.",
+"rationale": "Khách có giá trị cao, đã mua nhiều lần và đang quá chu kỳ mua lại, nên nên ưu tiên tiếp cận trực tiếp để nhắc mua lại sản phẩm quen thuộc, đồng thời gợi ý thêm sản phẩm cùng nhóm quan tâm.",
+"evidence": [
+"value_group = VALUE_VIP",
+"lifetime_value = 121256000.0",
+"order_count = 24",
+"recency_days = 135",
+"avg_days_between_orders = 35",
+"next_purchase_signal = OVERDUE",
+"product_affinity = PRODUCT_FINE_JAPAN",
+"top_affinity_sku = VCSL19001H010",
+"last_purchased_sku = VTSC20001L001"
+]
+},
+"risk": {
+"headline": "Rủi ro lớn nhất là khách đã có dấu hiệu rời bỏ và có thể không phản hồi nếu tiếp cận không đúng lý do mua lại.",
+"type": "churn",
+"rationale": "customer_status là Churned, lifecycle_stage là LIFECYCLE_AT_RISK và khách đã 135 ngày chưa mua lại, cao hơn nhiều so với chu kỳ trung bình 35 ngày."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Nên gọi trong khung giờ hành chính hoặc đầu buổi tối, ưu tiên tiếp cận sớm vì khách đã quá chu kỳ mua lại so với lịch sử mua trung bình.",
+"opening_message": "Dạ em chào Anh/Chị Tính, em gọi từ cửa hàng mình từng mua sản phẩm Fine Japan ạ. Em thấy cũng khá lâu rồi mình chưa đặt lại, nên em gọi hỏi thăm xem Anh/Chị còn dùng dòng Cordyceps hoặc nước uống dưỡng da Fine Japan không để em hỗ trợ tư vấn lại đúng sản phẩm mình hay dùng ạ.",
+"fallback_message": "Dạ em chào Anh/Chị Tính, em là nhân viên cửa hàng. Em thấy mình từng mua sản phẩm Fine Japan nên nhắn hỏi thăm xem Anh/Chị có cần em hỗ trợ đặt lại Cordyceps hoặc nước uống dưỡng da Fine Japan Hyaluron & Collagen không ạ?",
+"talking_points": [
+"Nhắc lại đúng sản phẩm khách từng mua là Cordyceps để tạo cảm giác được chăm sóc theo lịch sử mua hàng.",
+"Gợi ý thêm Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp vì đây là sản phẩm khách có mức quan tâm cao nhất.",
+"Có thể dùng ưu đãi nhẹ hoặc quà tặng nhỏ để kích hoạt lại đơn, nhưng không lấy giảm giá sâu làm lý do chính."
+],
+"cross_sell": [
+"Gợi ý mua lại VTSC20001L001 - (*) Thực phẩm bảo vệ sức khỏe Cordyceps.",
+"Gợi ý bán kèm VCSL19001H010 - Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus 10 Chai 50ml - Hộp."
+],
+"objection_handling": [
+{
+"objection": "Anh/Chị chưa có nhu cầu mua lại.",
+"response": "Dạ không sao ạ. Em ghi nhận trước, khi nào Anh/Chị cần dùng lại Cordyceps hoặc dòng nước uống dưỡng da Fine Japan thì nhắn em, em hỗ trợ chọn đúng loại mình từng dùng cho tiện ạ."
+},
+{
+"objection": "Có giảm giá nhiều không?",
+"response": "Dạ hiện em sẽ kiểm tra ưu đãi phù hợp nhất cho sản phẩm Anh/Chị cần, nhưng em ưu tiên tư vấn đúng dòng mình từng dùng để tránh mua nhầm hoặc mua dư ạ."
+}
+],
+"do_not": [
+"Không đề xuất giảm giá sâu vì biên lợi nhuận trung bình đang mỏng.",
+"Không nói khách từng khen, từng hài lòng hoặc từng phản hồi tốt vì không có ghi chú hay hội thoại gần đây.",
+"Không dùng giọng chào khách mới vì khách đã có 24 đơn và đang quá chu kỳ mua lại.",
+"Không đưa số liệu nội bộ như biên lợi nhuận, nhóm giá trị hay trạng thái churn vào lời thoại gửi khách."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"contact_quality = unverified nên chưa chắc số liên hệ hiện tại còn chính xác.",
+"consent_contact = unknown nên cần tuân thủ quy định liên hệ nội bộ trước khi gọi.",
+"recent_notes trống nên không có thông tin về nhu cầu, phản hồi hoặc lý do ngừng mua gần đây.",
+"recent_conversations trống nên không có ngữ cảnh hội thoại để cá nhân hóa sâu hơn.",
+"loyalty_points, birth_date và gender đều thiếu nên không thể dùng điểm tích lũy, sinh nhật hoặc xưng hô cá nhân hóa theo giới tính."
+]
+}

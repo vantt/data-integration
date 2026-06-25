@@ -1,0 +1,62 @@
+{
+  "profile_read": "Khách hàng Nguyễn Tính NT 17 thuộc nhóm VIP với tổng chi tiêu 121.256.000đ qua 24 đơn hàng, chu kỳ mua trung bình 35 ngày. Đã 135 ngày chưa quay lại (quá hạn mua 100 ngày), giai đoạn 'có nguy cơ rời bỏ'. Ưa thích dòng Fine Japan, từng mua nhiều Cordyceps và Nước uống dưỡng da Collagen, thanh toán trả trước, rất nhạy cảm với khuyến mãi nhưng biên lợi nhuận mỏng (32,7%).",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 121256000,
+    "margin_health": "thin",
+    "invest_level": "high"
+  },
+  "opportunity": {
+    "headline": "Khách hàng VIP gắn bó sâu với Fine Japan, tín hiệu quá hạn mua – kích hoạt lại bằng ưu đãi vừa phải sẽ có tỉ lệ quay lại cao.",
+    "rationale": "Khách có ái lực cực mạnh với Fine Japan (top affinity và lần mua cuối đều là sản phẩm này), lại thuộc nhóm PROMO_DEPENDENT nên một lời nhắc đúng thời điểm kèm ưu đãi nhỏ có thể kéo khách quay lại.",
+    "evidence": [
+      "top_affinity_product: Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus",
+      "second_affinity_product: (*) Thực phẩm bảo vệ sức khỏe Cordyceps",
+      "next_purchase_signal: OVERDUE, recency_days 135 so với chu kỳ trung bình 35 ngày",
+      "discount_sensitivity: PROMO_DEPENDENT"
+    ]
+  },
+  "risk": {
+    "headline": "Nguy cơ rời bỏ cao do vượt 100 ngày so với chu kỳ mua hàng, khách nghiện khuyến mãi trong khi biên lợi nhuận mỏng khiến khó dùng chiết khấu sâu để giữ chân.",
+    "type": "churn",
+    "rationale": "Với 135 ngày không mua (overdue), trạng thái 'Churned' và giai đoạn vòng đời 'LIFECYCLE_AT_RISK', kết hợp tính cách PROMO_DEPENDENT trên nền biên lợi nhuận chỉ 32,7%: nếu giảm giá sâu sẽ bào mòn lợi nhuận, nếu không có ưu đãi đủ hấp dẫn khách dễ bỏ đi hẳn."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Liên hệ vào sáng 9-11h hoặc chiều 14-16h các ngày trong tuần, tránh giờ nghỉ trưa. Đây là thời điểm khách cá nhân dễ nghe máy và sẵn sàng trao đổi. Gọi càng sớm càng tốt vì đã quá hạn mua hơn 3 tháng.",
+    "opening_message": "Alo, chào anh/chị Tính NT 17 ạ. Em là [tên] bên [cửa hàng] đây ạ. Dạ lâu quá không thấy anh/chị ghé shop, hôm nay em gọi hỏi thăm sức khoẻ anh/chị dạo này thế nào ạ? Em thấy trước đây mình hay dùng bên Fine Japan với Cordyceps, em cũng có chương trình tri ân nhỏ cho khách quen nên gọi tiện báo luôn ạ.",
+    "fallback_message": "Chào anh/chị Tính NT 17, em [tên] bên [cửa hàng] đây ạ. Lâu rồi không thấy anh/chị mua hàng, em nhắn hỏi thăm và gửi lời cảm ơn vì đã ủng hộ shop thời gian qua. Khi nào tiện anh/chị phản hồi, em có chương trình quà tặng nho nhỏ cho khách thân thiết muốn chia sẻ ạ. Cảm ơn anh/chị!",
+    "talking_points": [
+      "Gợi nhắc tự nhiên về 2 sản phẩm quen thuộc: Cordyceps và Nước uống dưỡng da Fine Japan Hyaluron & Collagen mà trước đây anh/chị rất hay dùng, hỏi thăm tình trạng da và sức khỏe hiện tại.",
+      "Chương trình tri ân khách VIP: tặng kèm quà nhỏ (ví dụ mặt nạ Fine Japan, kem dưỡng mẫu hoặc điểm tích lũy) thay vì giảm giá trực tiếp. Nhấn mạnh giá trị món quà tinh tế, phù hợp với gu dùng hàng Nhật."
+    ],
+    "cross_sell": [
+      "Mua Cordyceps (VTSC20001L001) kèm Nước uống dưỡng da Fine Japan Hyaluron & Collagen Plus (VCSL19001H010) – combo quen thuộc, có thể ưu đãi phí ship hoặc tặng mẫu dùng thử viên uống trắng da Fine Japan.",
+      "Nếu khách chỉ mua lại Collagen, gợi ý mua thêm Cordyceps (sản phẩm ái lực thứ hai) để được tặng quà đặc biệt hoặc tích điểm nhanh hơn."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Tôi không có nhu cầu mua thêm bây giờ.",
+        "response": "Dạ không sao ạ, em gọi chủ yếu để hỏi thăm thôi. Vì lâu rồi mình chưa ghé nên em cũng muốn gửi anh/chị món quà nhỏ tri ân, mình cứ nhận quà ạ, không cần mua gì đâu. Lần sau cần thì anh/chị gọi em nhé."
+      },
+      {
+        "objection": "Tôi đang mua bên khác rồi.",
+        "response": "Dạ vâng, em hiểu ạ. Nếu anh/chị đã quen bên đó thì em cũng mừng. Khi nào tiện ghé lại, bên em vẫn giữ chế độ ưu đãi riêng cho khách thân thiết như anh/chị. Có chương trình hay quà tặng mới em sẽ báo anh/chị sau ạ."
+      }
+    ],
+    "do_not": [
+      "Đề xuất giảm giá phần trăm hoặc chiết khấu sâu vì biên lợi nhuận mỏng (32,7%), chỉ dùng quà tặng nhỏ/điểm thưởng.",
+      "Tạo áp lực phải mua ngay; tuyệt đối không nói những câu kiểu 'lần trước anh/chị khen sản phẩm tốt' vì không có dữ liệu xác nhận khách từng khen."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "consent_contact = 'unknown': chưa rõ khách có đồng ý nhận cuộc gọi tiếp thị hay không, cần ưu tiên hỏi lại ở đầu cuộc gọi.",
+    "recent_notes và recent_conversations trống: không có thông tin về lý do khách ngưng mua hay thái độ gần đây.",
+    "Thiếu birth_date, gender: không thể cá nhân hóa sâu theo dịp sinh nhật hoặc sở thích theo giới tính.",
+    "contact_quality = 'unverified': chất lượng số điện thoại chưa được xác minh, cần kiểm tra số đúng của khách khi liên hệ."
+  ]
+}

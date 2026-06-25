@@ -1,0 +1,48 @@
+{
+  "profile_read": "Khách lẻ VIP ở HCM, giá trị lớn (~121 triệu / 24 đơn), trung thành dòng Fine Japan (Nước uống Hyaluron & Collagen Plus, Cordyceps). Chu kỳ mua đều ~35 ngày nhưng đã 135 ngày không quay lại → đang rớt khỏi nhịp mua, rủi ro mất khách giá trị cao. Trả trước, biên đóng góp vừa (~33%).",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 121256000,
+    "margin_health": "thin",
+    "invest_level": "high"
+  },
+  "opportunity": {
+    "headline": "Cứu khách VIP trước khi mất hẳn — kéo về đúng dòng đang dùng",
+    "rationale": "Khách giá trị cao, 24 đơn đều đặn, chỉ mới lệch nhịp ~100 ngày. Còn kịp kéo lại; mất khách này tốn hơn nhiều so với chi phí một cuộc gọi chăm sóc.",
+    "evidence": ["lifetime_value=121,256,000", "order_count=24", "recency_days=135 vs avg_days_between_orders=35"]
+  },
+  "risk": {
+    "headline": "Đã lệch nhịp ~100 ngày — cửa sổ cứu đang hẹp dần",
+    "type": "churn",
+    "rationale": "Vượt xa chu kỳ 35 ngày, customer_status đã 'Churned'. Biên chỉ ~33% nên không nên cứu bằng giảm giá sâu; ưu tiên chăm sóc + lý do quay lại."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Trong 1-2 ngày tới, ưu tiên cao vì là khách VIP đang rớt nhịp.",
+    "opening_message": "Em chào chị, em gọi từ bên mình ạ. Lâu rồi không thấy chị ghé lại, em gọi hỏi thăm xem dạo này chị còn dùng dòng Hyaluron & Collagen với Cordyceps đều không ạ, và xem bên em hỗ trợ được gì cho chị không.",
+    "fallback_message": "Dạ chị ơi, lâu rồi bên em chưa được phục vụ chị. Em vẫn giữ dòng Hyaluron & Collagen chị hay dùng, chị cần em chuẩn bị là có ngay ạ.",
+    "talking_points": [
+      "Hỏi thăm chân thành trước, không vội bán — khách VIP cần được trân trọng.",
+      "Nhắc đúng 2 dòng quen (Hyaluron & Collagen Plus, Cordyceps) để gợi nhịp dùng.",
+      "Ưu đãi tri ân khách thân thiết vừa phải (biên mỏng, không giảm sâu); nhấn quyền lợi/chăm sóc thay vì hạ giá."
+    ],
+    "cross_sell": ["Cordyceps (dòng chị từng mua) đi kèm Hyaluron & Collagen — bộ chăm sóc quen của chị."],
+    "objection_handling": [
+      {"objection": "Dạo này chị bận/chưa mua.", "response": "Dạ em hiểu ạ, em chỉ gọi hỏi thăm là chính. Em ghi nhận để khi nào chị cần là hỗ trợ chị nhanh nhất, chị không phải chờ ạ."},
+      {"objection": "Chị mua chỗ khác rồi.", "response": "Dạ vâng ạ, vậy để em gửi chị ưu đãi tri ân khách thân thiết, lúc nào tiện chị quay lại bên em ủng hộ nhé, em luôn giữ phần chăm sóc tốt nhất cho chị ạ."}
+    ],
+    "do_not": [
+      "KHÔNG giảm giá sâu — biên chỉ ~33%, cứu bằng chăm sóc không phải bằng giá.",
+      "Không trách khách vì lâu không mua; giọng hỏi thăm, trân trọng."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "consent_contact=unknown — xác nhận quyền liên hệ trước khi gọi.",
+    "Tên 'Nguyễn Tính NT 17' có hậu tố mã nội bộ ('NT 17') — xác minh đây là khách lẻ thật, không phải tài khoản gộp/nhân viên quản lý.",
+    "Không có ghi chú/hội thoại CRM để biết lý do ngừng mua."
+  ]
+}

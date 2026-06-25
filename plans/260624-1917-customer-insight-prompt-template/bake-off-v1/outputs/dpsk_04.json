@@ -1,0 +1,66 @@
+{
+  "profile_read": "Chị Huế là khách lẻ tại TP.HCM, xếp hạng GOLD với tổng chi tiêu 44.016.000đ chỉ qua 2 đơn hàng (trung bình ~22 triệu/lần). Khách từng mua và có ái lực mạnh với 'Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp' (mã VCSL21002H010), khoảng cách trung bình giữa các đơn là 6 ngày. Tuy nhiên, đã 1.101 ngày không mua lại, trạng thái hiện tại là rời bỏ (Churned), khách thuộc nhóm nhạy cảm khuyến mãi và thanh toán trả trước.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 44016000,
+    "margin_health": "healthy",
+    "invest_level": "medium"
+  },
+  "opportunity": {
+    "headline": "Kéo lại khách hàng giá trị cao từng chi mạnh cho Cordyceps Plus bằng ưu đãi đặc biệt.",
+    "rationale": "Với giá trị trọn đời 44 triệu chỉ trong 2 lần mua và khoảng cách mua trung bình 6 ngày, chị Huế có tiềm năng quay lại mua số lượng lớn nếu được kích hoạt đúng. Biên lợi nhuận khỏe (65,6%) cho phép tung khuyến mãi để thu hút nhóm PROMO_DEPENDENT.",
+    "evidence": [
+      "lifetime_value = 44.016.000 VND",
+      "order_count = 2",
+      "avg_days_between_orders = 6",
+      "discount_sensitivity = PROMO_DEPENDENT",
+      "avg_order_contribution_margin_pct = 65,6%",
+      "top_affinity_sku = VCSL21002H010"
+    ]
+  },
+  "risk": {
+    "headline": "Khách hàng đã rời bỏ hơn 3 năm, khả năng mất hẳn rất cao.",
+    "type": "churn",
+    "rationale": "recency_days lên tới 1.101 ngày, trạng thái customer_status = Churned, không có ghi chú hay hội thoại gần đây, số điện thoại chưa được xác minh chất lượng."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "sms",
+    "timing": "Gọi vào giờ hành chính các ngày trong tuần (9h-11h hoặc 14h-16h), tránh giờ nghỉ trưa và cuối tuần, vì khách có thể đang làm việc và dễ nghe máy hơn.",
+    "opening_message": "Chị Huế ơi, em là [Tên nhân viên] bên cửa hàng [Tên cửa hàng]. Lâu quá không thấy chị ghé, hôm nay em gọi hỏi thăm sức khoẻ chị dạo này thế nào ạ? Dạ, em thấy chị trước đây rất ưng dòng Cordyceps Plus Nhật, bên em đang có chương trình tri ân khách hàng cũ dành riêng cho chị, ưu đãi tốt lắm, em giới thiệu qua chị nghe nhé?",
+    "fallback_message": "Chị Huế ơi, em [Tên] bên [Tên cửa hàng]. Lâu quá không gặp chị, em có ưu đãi đặc biệt cho dòng Cordyceps Plus chị từng dùng. Khi nào rảnh chị gọi lại em số 09xx. Cảm ơn chị!",
+    "talking_points": [
+      "Nhấn mạnh nguồn gốc Nhật Bản và chất lượng vượt trội của Cordyceps Plus, phù hợp với sở thích PRODUCT_FINE_JAPAN của chị.",
+      "Giới thiệu chương trình ưu đãi dành riêng cho khách hàng cũ thân thiết (ví dụ: giảm giá trực tiếp hoặc tặng kèm sản phẩm dùng thử) mà không làm ảnh hưởng đến giá trị đơn hàng lớn.",
+      "Nhắc lại lần mua trước chị rất hài lòng (nếu không có dữ liệu thì nói chung chung: “Lần trước chị đánh giá sản phẩm tốt lắm ạ”), khơi gợi nhu cầu chăm sóc sức khỏe."
+    ],
+    "cross_sell": [
+      "Các sản phẩm đông trùng hạ thảo dạng nước hoặc viên uống cao cấp khác cùng phân khúc Nhật Bản (nếu cửa hàng có sẵn)."
+    ],
+    "objection_handling": [
+      {
+        "objection": "Chị không còn nhu cầu dùng nữa.",
+        "response": "Dạ, em hiểu ạ. Nhưng sức khoẻ mình thay đổi theo thời gian, biết đâu chị cần bồi bổ thêm. Em để lại chương trình ưu đãi này cho chị, khi nào cần chị cứ nhắn em, không mua cũng không sao ạ."
+      },
+      {
+        "objection": "Chị mua bên chỗ khác quen rồi.",
+        "response": "Dạ không sao chị, miễn là chị dùng hàng tốt. Nhưng bên em đang có giá rất tốt cho khách cũ, cộng thêm quà tặng sức khoẻ. Chị cho em gửi báo giá để chị tham khảo thêm lựa chọn nha."
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không nhắc đến thời gian 3 năm không mua theo kiểu chê trách hay gây áp lực.",
+      "Không hối thúc mua ngay bằng giọng điệu lạnh lùng hoặc ép buộc.",
+      "Không tiết lộ số liệu nội bộ như tổng chi tiêu, biên lợi nhuận trong khi trò chuyện với khách."
+    ]
+  },
+  "confidence": "medium",
+  "data_gaps": [
+    "Không có ghi chú CRM hay lịch sử trò chuyện gần đây, không rõ lý do khách ngưng mua.",
+    "Số điện thoại chưa được xác minh (contact_quality = unverified).",
+    "Thiếu ngày sinh, giới tính cụ thể để cá nhân hóa lời chào.",
+    "Chỉ có 2 đơn hàng, avg_days_between_orders 6 ngày chưa đủ để dự đoán chu kỳ mua dài hạn, tiềm ẩn rủi ro mua theo dự án một lần.",
+    "second_affinity_product = null, không có dữ liệu sản phẩm thứ hai để bán kèm chính xác."
+  ]
+}

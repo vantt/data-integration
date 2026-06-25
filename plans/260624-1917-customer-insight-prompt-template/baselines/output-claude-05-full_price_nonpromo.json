@@ -1,0 +1,49 @@
+{
+  "profile_read": "Khách lẻ ở miền Trung, hạng Vàng (~36,7 triệu / 2 đơn), từng mua Cordyceps Plus (Fine Japan). Nhãn 'NEW' nhưng thực chất ngủ đông rất sâu: 2 đơn mua cách nhau 1 ngày rồi biến mất 1399 ngày (~3,8 năm). Đặc biệt KHÔNG nhạy khuyến mãi (FULL_PRICE) — mua vì giá trị, không vì giảm giá. Biên đóng góp cao (~75%).",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 36680000,
+    "margin_health": "healthy",
+    "invest_level": "low"
+  },
+  "opportunity": {
+    "headline": "Một lần chạm win-back bằng giá trị, không bằng khuyến mãi",
+    "rationale": "Khách FULL_PRICE biên cao nên nếu quay lại rất có lời; nhưng ~3,8 năm im lặng → kỳ vọng rất thấp, chỉ đáng một chạm chi phí thấp, ưu tiên áp chót.",
+    "evidence": ["discount_sensitivity=FULL_PRICE", "avg_order_contribution_margin_pct=0.75", "recency_days=1399 (ngủ đông sâu)"]
+  },
+  "risk": {
+    "headline": "Gần như đã mất + dữ liệu liên hệ rất cũ — ROI thấp",
+    "type": "churn",
+    "rationale": "1399 ngày im lặng, chỉ 2 đơn lịch sử. Nhãn NEW gây nhầm, ưu tiên recency → khách ngủ đông sâu. Số/kênh 3,8 năm dễ chết. Đừng bỏ nhiều công."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "zalo",
+    "fallback_channel": "phone",
+    "timing": "Áp chót trong danh sách chăm sóc khách cũ; một lần chạm chi phí thấp, không gấp.",
+    "opening_message": "Dạ em chào chị Phương ạ, em nhắn từ bên mình. Lâu lắm rồi bên em chưa được phục vụ chị. Em nhớ chị từng dùng Cordyceps Plus — nay bên em vẫn có dòng đó với chất lượng giữ nguyên, em gửi chị thông tin xem có hợp để chị dùng lại không ạ.",
+    "fallback_message": "Dạ chị Phương, lâu rồi bên em chưa gặp lại chị. Dòng Cordyceps Plus chị từng dùng vẫn còn, chị cần em hỗ trợ lại bất cứ lúc nào ạ.",
+    "talking_points": [
+      "Thừa nhận đã rất lâu, giọng hỏi thăm — không nói như khách mới.",
+      "Bán bằng GIÁ TRỊ/chất lượng sản phẩm, KHÔNG dùng khuyến mãi làm mồi (khách FULL_PRICE).",
+      "Nhắc đúng Cordyceps Plus để gợi lại trải nghiệm cũ."
+    ],
+    "cross_sell": ["Chưa cross-sell — chỉ tập trung gợi lại đúng sản phẩm cũ."],
+    "objection_handling": [
+      {"objection": "Lâu rồi chị không dùng nữa.", "response": "Dạ em hiểu ạ. Em chỉ muốn chị biết dòng cũ vẫn còn và chất lượng giữ nguyên, khi nào chị cần chăm sóc sức khỏe lại thì bên em luôn sẵn ạ."},
+      {"objection": "Có giảm giá gì không em?", "response": "Bên em ưu tiên giữ đúng chất lượng và dịch vụ cho chị ạ; nếu chị quay lại em sẽ chăm sóc chu đáo từ tư vấn tới giao hàng, đó mới là phần đáng giá ạ."}
+    ],
+    "do_not": [
+      "KHÔNG dẫn dắt bằng khuyến mãi/giảm giá — khách FULL_PRICE, làm vậy phản tác dụng.",
+      "KHÔNG dùng giọng chào mừng khách mới dù nhãn ghi NEW.",
+      "Không đầu tư nhiều công — ROI thấp, một lần chạm là đủ."
+    ]
+  },
+  "confidence": "low",
+  "data_gaps": [
+    "consent_contact=unknown — số/kênh sau ~3,8 năm nhiều khả năng đã đổi.",
+    "channel_preference=CHANNEL_OFFLINE/SOCIAL — cần xác định kênh số còn liên hệ được.",
+    "Không rõ vì sao chỉ mua 2 đơn sát nhau rồi ngừng."
+  ]
+}

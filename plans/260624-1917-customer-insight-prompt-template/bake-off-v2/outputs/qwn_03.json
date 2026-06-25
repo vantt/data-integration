@@ -1,0 +1,56 @@
+{
+  "profile_read": "Hồ sơ mang tên 'Leflair' (nghi vấn là tổ chức/sàn TMĐT) nhưng đang được phân loại là khách lẻ (RETAIL). Đây là khách hàng VIP với giá trị vòng đời hơn 260 triệu VND từ 31 đơn hàng, tuy nhiên đã ngưng giao dịch tới 1073 ngày (gần 3 năm). Dữ liệu cho thấy mâu thuẫn nghiêm trọng khi cờ biên lợi nhuận được bật là dương nhưng thực tế biên trung bình lại âm (-1.5%).",
+  "value_assessment": {
+    "tier": "VIP",
+    "lifetime_value_vnd": 260594479,
+    "margin_health": "negative",
+    "invest_level": "low"
+  },
+  "opportunity": {
+    "headline": "Khách hàng có lịch sử mua hàng giá trị cao và tần suất dày đặc trong quá khứ.",
+    "rationale": "Nếu xác minh đây là tài khoản hợp lệ (khách lẻ trùng tên hoặc đối tác B2B cần chuyển đổi), có thể khôi phục lại chu kỳ mua hàng dựa trên thói quen mua mỗi 22 ngày/đơn trước đây.",
+    "evidence": [
+      "lifetime_value: 260594479.0",
+      "order_count: 31",
+      "avg_days_between_orders: 22"
+    ]
+  },
+  "risk": {
+    "headline": "Dữ liệu khách hàng có nhiều điểm bất hợp lý: tên giống tổ chức, mâu thuẫn biên lợi nhuận và đã ngưng mua hơn 3 năm.",
+    "type": "other",
+    "rationale": "Tên 'Leflair' giống sàn TMĐT nhưng gán nhãn RETAIL (nghi B2B gán nhầm); is_margin_negative=false nhưng avg margin âm (-1.5%); recency_days 1073 ngày kết hợp margin âm. Rủi ro cao về việc gán nhầm tài khoản và dữ liệu kinh tế không đáng tin cậy."
+  },
+  "approach": {
+    "recommended": false,
+    "reason_if_not_recommended": "GATE DỮ LIỆU ĐÁNG NGỜ: (1) Tên 'Leflair' giống tổ chức/sàn TMĐT nhưng đang gán nhãn RETAIL - nghi ngờ B2B gán nhầm; (2) Mâu thuẫn biên lợi nhuận (is_margin_negative=false nhưng avg margin âm -1.5%); (3) recency_days rất lớn (1073 ngày) kết hợp margin âm. Cần hoãn outreach, ưu tiên XÁC MINH lại loại tài khoản và làm sạch dữ liệu.",
+    "primary_channel": "phone",
+    "fallback_channel": "none",
+    "timing": "Không áp dụng. Cần hoãn mọi hoạt động outreach để xác minh loại tài khoản và rà soát lại dữ liệu biên lợi nhuận.",
+    "opening_message": "Không áp dụng do chưa xác minh được chủ tài khoản thực tế (nghi vấn tên tổ chức/sàn TMĐT).",
+    "fallback_message": "Không áp dụng.",
+    "talking_points": [
+      "Không áp dụng - cần xác minh tài khoản trước.",
+      "Không áp dụng - cần làm sạch dữ liệu biên lợi nhuận."
+    ],
+    "cross_sell": [
+      "Không áp dụng"
+    ],
+    "objection_handling": [
+      {
+        "objection": "Không áp dụng",
+        "response": "Không áp dụng"
+      }
+    ],
+    "do_not": [
+      "Tuyệt đối không soạn kịch bản win-back hay cá nhân hóa khi chưa xác minh được 'Leflair' là khách lẻ hay tài khoản B2B/sàn.",
+      "Không đề xuất khuyến mãi hay giảm giá vì biên lợi nhuận đang âm và dữ liệu mâu thuẫn, dễ làm lỗ thêm."
+    ]
+  },
+  "confidence": "low",
+  "data_gaps": [
+    "Thiếu thông tin xác thực chủ sở hữu số điện thoại 0366****92 (có phải là tài khoản B2B gán nhầm RETAIL, nhân viên sàn, hay khách lẻ trùng tên).",
+    "Dữ liệu biên lợi nhuận mâu thuẫn: cờ is_margin_negative = false nhưng avg_order_contribution_margin_pct = -1.504.",
+    "Thiếu ghi chú CRM và lịch sử hội thoại (recent_notes, recent_conversations trống) nên không thể xác định lý do ngưng mua hoặc ngữ cảnh trước đó.",
+    "Không có thông tin ngày sinh, giới tính cụ thể, điểm tích lũy để cá nhân hóa nếu sau này xác minh là khách lẻ."
+  ]
+}

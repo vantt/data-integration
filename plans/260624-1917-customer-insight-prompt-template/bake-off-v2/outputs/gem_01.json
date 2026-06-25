@@ -1,0 +1,64 @@
+{
+"profile_read": "Khách hàng bán lẻ hạng SILVER tại khu vực miền Trung, đã hoàn tất 3 đơn hàng với tổng chi tiêu 14.550.000đ. Khách ưa chuộng hình thức mua sắm trực tiếp, thanh toán COD và đặc biệt quan tâm tới dòng sản phẩm sụn cá mập (Shark Cartilage) của FINE JAPAN. Với biên lợi nhuận đóng góp của khách hàng rất cao (hơn 70%), khách hiện đang ở trạng thái có nguy cơ rời bỏ (At Risk) do đã qua 84 ngày chưa phát sinh đơn mới, vượt mức chu kỳ mua trung bình là 73 ngày.",
+"value_assessment": {
+"tier": "SILVER",
+"lifetime_value_vnd": 14550000,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Đón đầu nhu cầu sử dụng tiếp sụn cá mập kết hợp đòn bẩy khuyến mãi.",
+"rationale": "Khách hàng có độ nhạy với khuyến mãi (PROMO_DEPENDENT) và đã đến thời điểm cần mua lại (DUE_SOON, vượt nhẹ chu kỳ 73 ngày). Biên lợi nhuận cực kỳ tốt (70.4%) tạo dư địa lớn để cửa hàng cung cấp một ưu đãi đủ mạnh nhằm chốt đơn nhanh chóng.",
+"evidence": [
+"next_purchase_signal = DUE_SOON",
+"discount_sensitivity = PROMO_DEPENDENT",
+"avg_order_contribution_margin_pct = 0.7044489535839779",
+"avg_days_between_orders = 73",
+"recency_days = 84"
+]
+},
+"risk": {
+"headline": "Khách hàng có nguy cơ rời bỏ do chu kỳ ngủ đông đang kéo dài.",
+"type": "churn",
+"rationale": "Thời gian từ lần mua cuối (84 ngày) đã vượt quá khoảng cách mua hàng trung bình (73 ngày), đẩy khách vào trạng thái At Risk. Kết hợp với việc số điện thoại chưa được xác thực (unverified), có rủi ro mất liên lạc và mất khách hàng giá trị cao nếu không chăm sóc kịp thời."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "phone",
+"fallback_channel": "zalo",
+"timing": "Liên hệ ngay trong 1-2 ngày tới vào giờ hành chính, ưu tiên đầu giờ chiều để đón đầu chu kỳ khách hàng sắp cạn sản phẩm.",
+"opening_message": "Dạ em chào anh/chị Thức, em gọi đến từ cửa hàng ạ. Em thấy đợt trước mình có lấy combo 2 hộp sụn cá mập Shark Cartilage bên em, đợt này chắc mình cũng dùng gần hết rồi nên em gọi báo mình chương trình ưu đãi đặc biệt dành riêng cho khách quen ạ.",
+"fallback_message": "Dạ chào anh/chị Thức, em là chuyên viên CSKH bên cửa hàng. Đợt trước mình có dùng combo sụn cá mập Shark Cartilage, hiện bên em đang có ưu đãi giảm giá đặc biệt để mình mua dùng tiếp. Anh/chị cần tư vấn hoặc giữ mã ưu đãi thì phản hồi lại tin nhắn này giúp em nhé!",
+"talking_points": [
+"Hỏi thăm khách sử dụng Combo 2 hộp Shark Cartilage đợt trước có thấy ưng ý không.",
+"Nhấn mạnh đây là chương trình khuyến mãi/chiết khấu tốt nhất trong tháng dành riêng cho khách hạng Bạc (SILVER) mua lại dòng sản phẩm FINE JAPAN.",
+"Nhắc lại sự tiện lợi: Vẫn hỗ trợ giao hàng tận nơi về khu vực miền Trung, cho phép kiểm tra hàng trước khi thanh toán COD như những lần trước."
+],
+"cross_sell": [
+"Gợi ý mua lọ dung tích lớn hơn (Thực phẩm bảo vệ sức khỏe Shark Cartilage Extract - Lọ - SKU: VCST21004L001) để tiết kiệm hơn so với combo nhỏ."
+],
+"objection_handling": [
+{
+"objection": "Chưa dùng hết, chưa muốn mua thêm.",
+"response": "Dạ vâng, chương trình ưu đãi giảm giá này có giới hạn thời gian, anh/chị có thể chốt đơn giữ mã trước để dành dùng dần vì hạn sử dụng của lô hàng này bên em còn rất xa ạ."
+},
+{
+"objection": "Giá đợt này còn cao quá, để khi nào rẻ hơn thì mua.",
+"response": "Dạ mức giá em báo là đã áp dụng ưu đãi sâu nhất cho khách hàng thân thiết rồi ạ. Anh/chị lấy đợt này là tiết kiệm nhất, bên em vẫn hỗ trợ gửi COD tận nhà cho mình nên mình hoàn toàn yên tâm ạ."
+}
+],
+"do_not": [
+"Tuyệt đối không chào bán nguyên giá (full price) vì khách hàng phụ thuộc vào khuyến mãi.",
+"Không nhắc đến việc khách 'đang có nguy cơ rời bỏ' hay 'lâu quá không thấy mua', chỉ tập trung vào chăm sóc khách hàng thân thiết và ưu đãi.",
+"Không đưa ra các lời khuyên sức khỏe quá sâu nếu chưa hỏi rõ tình trạng do thiếu dữ liệu về độ tuổi và giới tính."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Thiếu thông tin giới tính (gender) nên không thể xác định đại từ xưng hô chính xác (anh/chị).",
+"Thiếu ngày sinh (birth_date) nên không rõ độ tuổi để điều chỉnh kịch bản tư vấn sức khỏe phù hợp.",
+"recent_notes và recent_conversations trống, không có lịch sử phản hồi về độ hài lòng của khách khi dùng sụn cá mập.",
+"contact_quality đang là unverified, có rủi ro số điện thoại không liên lạc được."
+]
+}

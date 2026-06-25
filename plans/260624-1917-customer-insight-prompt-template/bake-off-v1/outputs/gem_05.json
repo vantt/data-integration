@@ -1,0 +1,63 @@
+{
+"profile_read": "Khách hàng Phương Nguyễn thuộc nhóm GOLD, có sức mua rất ấn tượng với tổng chi tiêu hơn 36.6 triệu VNĐ chỉ sau 2 đơn hàng liên tiếp. Tuy nhiên, khách đã 'ngủ đông' một thời gian rất dài (1399 ngày) kể từ lần cuối mua sản phẩm Đông trùng hạ thảo Cordyceps Plus. Đây là kiểu khách hàng quan tâm đến chất lượng (thanh toán trả trước, không nhạy cảm về giá) và ưa thích tương tác qua các nền tảng mạng xã hội.",
+"value_assessment": {
+"tier": "GOLD",
+"lifetime_value_vnd": 36680000,
+"margin_health": "healthy",
+"invest_level": "high"
+},
+"opportunity": {
+"headline": "Tái kích hoạt tệp khách hàng giá trị cao bằng các sản phẩm chăm sóc sức khỏe cao cấp mới.",
+"rationale": "Khách có biên lợi nhuận đóng góp cao và từng sẵn sàng chi trả mức giá nguyên bản cho các sản phẩm bồi bổ sức khỏe đắt tiền, chứng tỏ họ đánh giá cao chất lượng hơn là các chương trình giảm giá.",
+"evidence": [
+"lifetime_value: 36680000.0",
+"discount_sensitivity: FULL_PRICE",
+"top_affinity_product: Thực phẩm bảo vệ sức khỏe Cordyceps Plus - Hộp",
+"avg_order_contribution_margin_pct: 0.749138494750734"
+]
+},
+"risk": {
+"headline": "Nguy cơ mất kết nối và sai số liên lạc do thời gian gián đoạn quá lâu.",
+"type": "churn",
+"rationale": "Với recency_days lên tới 1399 ngày và chất lượng liên hệ 'unverified', số điện thoại có thể đã thay đổi hoặc khách hàng đã hình thành thói quen mua sắm ở thương hiệu khác. Tiếp cận lúc này hoàn toàn mang tính chất 'win-back' và dễ bị coi là cuộc gọi lạnh (cold-call)."
+},
+"approach": {
+"recommended": true,
+"reason_if_not_recommended": null,
+"primary_channel": "zalo",
+"fallback_channel": "sms",
+"timing": "Giờ hành chính, khoảng 9h-10h sáng hoặc 15h-16h chiều các ngày giữa tuần. Tránh thứ 2 bận rộn. Gửi lời mời kết bạn Zalo trước kèm lời nhắn gọn gàng.",
+"opening_message": "Dạ em chào anh/chị Phương, em là nhân viên chăm sóc khách hàng từ [Tên Cửa Hàng]. Đã khá lâu rồi bên em chưa có dịp phục vụ anh/chị. Hôm nay em xin phép nhắn tin qua Zalo để hỏi thăm sức khỏe và xin chút cảm nhận của mình về dòng sản phẩm Cordyceps Plus anh/chị từng sử dụng ạ.",
+"fallback_message": "Chào anh/chị Phương, em là CSKH từ [Tên Cửa Hàng]. Đã lâu cửa hàng chưa được phục vụ anh/chị. Hiện bên em đang có dòng sản phẩm Fine Japan cao cấp mới rất phù hợp. Anh/chị kiểm tra Zalo để em hỗ trợ chi tiết hơn nhé. Chúc anh/chị nhiều sức khỏe!",
+"talking_points": [
+"Hỏi thăm chân thành về tình hình sức khỏe hiện tại, tuyệt đối không vồ vập bán hàng ngay.",
+"Gợi nhớ về sản phẩm Cordyceps Plus: 'Không biết trước đây mình dùng nấm đông trùng hạ thảo bên em có thấy sức khỏe cải thiện nhiều không ạ?'",
+"Cập nhật nhẹ nhàng về các dòng thực phẩm bảo vệ sức khỏe nội địa Nhật (Fine Japan) mới nhất, nhấn mạnh vào công nghệ và thành phần cao cấp."
+],
+"cross_sell": [
+"Các dòng sản phẩm bồi bổ sức khỏe, chống lão hóa cao cấp của thương hiệu Fine Japan",
+"Thực phẩm chức năng hỗ trợ miễn dịch cùng phân khúc cao cấp như Cordyceps Plus"
+],
+"objection_handling": [
+{
+"objection": "Chị/Anh đang dùng sản phẩm của chỗ khác quen rồi.",
+"response": "Dạ em hiểu ạ. Sức khỏe là quan trọng nhất nên tìm được sản phẩm phù hợp là tốt lắm rồi ạ. Bên em hiện cũng về nhiều dòng sản phẩm nội địa Nhật chuyên biệt. Em xin phép thỉnh thoảng cập nhật thông tin qua Zalo, biết đâu sau này có dịp anh/chị lại cần đến ạ."
+},
+{
+"objection": "Anh/chị đang bận, không có nhu cầu.",
+"response": "Dạ em xin lỗi vì đã làm phiền anh/chị lúc này ạ. Em xin phép để lại thông tin các dòng sản phẩm sức khỏe mới qua Zalo, khi nào tiện anh/chị xem qua nhé. Chúc anh/chị một ngày làm việc hiệu quả!"
+}
+],
+"do_not": [
+"TUYỆT ĐỐI KHÔNG sử dụng kịch bản chào mừng khách hàng mới (bỏ qua tag LIFECYCLE_NEW do khách đã mua từ 4 năm trước).",
+"KHÔNG dùng giảm giá, khuyến mãi để mồi chài (khách thuộc nhóm FULL_PRICE).",
+"KHÔNG vội vàng chốt sale; hãy coi đây là bước hâm nóng lại mối quan hệ."
+]
+},
+"confidence": "medium",
+"data_gaps": [
+"Thiếu giới tính chính xác (gender: other) khiến việc xưng hô có thể hơi gượng (phải dùng anh/chị).",
+"Không có ngày sinh (birth_date) nên không nắm được độ tuổi cụ thể để cá nhân hóa chính xác loại bệnh lý/vấn đề sức khỏe cần tư vấn.",
+"Trạng thái contact_quality là 'unverified' sau gần 4 năm, không chắc chắn Zalo/số điện thoại này còn hoạt động hay thuộc về chính chủ."
+]
+}

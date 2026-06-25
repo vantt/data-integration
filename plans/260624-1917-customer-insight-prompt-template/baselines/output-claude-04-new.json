@@ -1,0 +1,48 @@
+{
+  "profile_read": "Khách lẻ ở HCM, hạng Vàng (~44 triệu / 2 đơn). Hệ thống gắn nhãn 'NEW' nhưng ĐÂY KHÔNG phải khách mới: hai đơn mua sát nhau (cách 6 ngày) rồi BIẾN MẤT 1101 ngày (~3 năm). Thực chất là khách ngủ đông sâu, từng mua Cordyceps Plus (Fine Japan). Biên đóng góp tốt (~66%) nên nếu kéo lại được thì có lời.",
+  "value_assessment": {
+    "tier": "GOLD",
+    "lifetime_value_vnd": 44016000,
+    "margin_health": "healthy",
+    "invest_level": "low"
+  },
+  "opportunity": {
+    "headline": "Win-back nhẹ một khách từng chi tốt nhưng đã ngủ đông 3 năm",
+    "rationale": "Giá trị/đơn cao và biên lành, nên đáng MỘT lần chạm thử để gợi lại. Nhưng đã 3 năm im lặng → kỳ vọng thấp, chỉ bỏ công vừa phải.",
+    "evidence": ["value_group=VALUE_GOLD", "avg_order_contribution_margin_pct=0.66", "recency_days=1101 (ngủ đông)"]
+  },
+  "risk": {
+    "headline": "Nhãn lifecycle 'NEW' gây hiểu nhầm — thực ra khách đã gần như mất",
+    "type": "churn",
+    "rationale": "lifecycle_stage=NEW nhưng recency_days=1101 → ưu tiên recency: đây là khách ngủ đông, KHÔNG dùng giọng chào mừng người mới. Số liên hệ 3 năm có thể đã đổi."
+  },
+  "approach": {
+    "recommended": true,
+    "reason_if_not_recommended": null,
+    "primary_channel": "phone",
+    "fallback_channel": "zalo",
+    "timing": "Một lần chạm trong đợt chăm sóc khách cũ; ưu tiên thấp, không gấp.",
+    "opening_message": "Em chào chị Huế ạ, em gọi từ bên mình. Lâu lắm rồi chị chưa ghé lại, hôm nay em gọi hỏi thăm chị chút và xem dạo này chị còn dùng Cordyceps Plus không, bên em có ưu đãi mời chị cũ quay lại ạ.",
+    "fallback_message": "Dạ chị Huế, lâu rồi bên em chưa được phục vụ chị. Em có ưu đãi nhỏ mời chị cũ quay lại với dòng Cordyceps Plus chị từng dùng, chị quan tâm em gửi chi tiết nhé ạ.",
+    "talking_points": [
+      "Thừa nhận đã lâu không gặp, giọng hỏi thăm — TUYỆT ĐỐI không nói như khách mới.",
+      "Nhắc đúng sản phẩm cũ (Cordyceps Plus) để gợi trí nhớ.",
+      "Ưu đãi 'mời khách cũ quay lại' làm lý do (margin lành nên có dư địa)."
+    ],
+    "cross_sell": ["Tạm chưa cross-sell — ưu tiên kéo khách quay lại với đúng sản phẩm cũ trước."],
+    "objection_handling": [
+      {"objection": "Lâu quá rồi chị không nhớ/không mua nữa.", "response": "Dạ em hiểu ạ, em chỉ gọi hỏi thăm và gửi chị chút ưu đãi khách cũ thôi. Khi nào chị cần thì bên em luôn sẵn sàng phục vụ chị ạ."},
+      {"objection": "Sao biết số của chị?", "response": "Dạ chị từng mua bên em trước đây ạ, em gọi để tri ân và chăm sóc lại khách cũ thôi, nếu chị không tiện em xin phép không làm phiền ạ."}
+    ],
+    "do_not": [
+      "KHÔNG dùng giọng chào mừng khách mới dù nhãn ghi NEW.",
+      "Không đầu tư nhiều công — 3 năm im lặng, chỉ một lần chạm thử."
+    ]
+  },
+  "confidence": "low",
+  "data_gaps": [
+    "consent_contact=unknown — và số điện thoại 3 năm có thể đã đổi.",
+    "Vì sao chỉ mua 2 đơn sát nhau rồi ngừng hẳn — không có ghi chú CRM.",
+    "Không có birth_date/loyalty_points."
+  ]
+}
