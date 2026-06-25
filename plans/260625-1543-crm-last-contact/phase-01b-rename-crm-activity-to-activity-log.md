@@ -1,6 +1,6 @@
 # Phase 01b — Rename crm_activity → crm_activity_log
 
-**Status:** 🔲 TODO
+**Status:** ✅ DONE (shipped 2026-06-25, commit f597bd5)
 **Must complete before:** Phase 2 implementation (export query references table name)
 
 ## Scope

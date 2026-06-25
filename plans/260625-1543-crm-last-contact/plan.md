@@ -1,6 +1,6 @@
 # Plan: CRM Last Contact Entity + Warehouse Write-Back
 
-**Status:** Phase 1 ✅ DONE · Phase 2 🔲 IN DESIGN
+**Status:** ✅ ALL DONE (shipped 2026-06-25)
 
 ## Context
 
@@ -12,16 +12,15 @@ action next day. Two-part fix:
 
 2. **Phase 2** — Generic CRM-to-warehouse write-back pipeline: Dagster reads
    from `crm.db` (already RO-mounted at `/app/var/crm_data`), writes parquet,
-   dbt enriches `mart_customer_action_queue` with contact metadata. Designed for
-   extensibility to future CRM tables. *(IN DESIGN)*
+   dbt enriches `mart_customer_action_queue` with contact metadata. *(DONE)*
 
 ## Phases
 
 | # | Phase | Status | File |
 |---|-------|--------|------|
 | 1 | CRM entity, migration, worklist badge + filter | ✅ DONE | [phase-01](phase-01-crm-entity-and-worklist.md) |
-| 1b | Rename `crm_activity` → `crm_activity_log` (migration + code) | 🔲 TODO | [phase-01b](phase-01b-rename-crm-activity-to-activity-log.md) |
-| 2 | Warehouse write-back — 6 tables, generic Dagster→parquet→dbt | 🔲 DESIGN | [phase-02](phase-02-warehouse-writeback.md) |
+| 1b | Rename `crm_activity` → `crm_activity_log` (migration + code) | ✅ DONE | [phase-01b](phase-01b-rename-crm-activity-to-activity-log.md) |
+| 2 | Warehouse write-back — 4 tables, Dagster→parquet→dbt | ✅ DONE | [phase-02](phase-02-warehouse-writeback.md) |
 
 ## Phase 2 scope
 

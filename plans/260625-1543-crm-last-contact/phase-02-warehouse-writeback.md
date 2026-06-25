@@ -1,6 +1,6 @@
 # Phase 02 — Generic CRM-to-Warehouse Write-Back Pipeline
 
-**Status:** 🔲 IN DESIGN
+**Status:** ✅ DONE (shipped 2026-06-25, commits f597bd5 + d435f59)
 **Depends on:** Phase 01 (crm_last_contact table in crm.db)
 
 ## Goal
